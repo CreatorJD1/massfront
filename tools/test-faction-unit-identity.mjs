@@ -48,7 +48,16 @@ const rows=[];
 for(const fac of ['nova','legion','syndicate']){
   const ground=inspect(`${fac}/ground`,doctrine[fac].ground());
   const air=inspect(`${fac}/air`,doctrine[fac].air());
-  if(!ground.mats.has(MAT.LAMP)||!air.mats.has(MAT.LAMP)) throw new Error(`${fac}: missing authored energy/light language`);
+  /* There are TWO authored emissive roles, not one: materials.js binds
+     'emissive.light' -> MAT.LAMP and 'emissive.energy' -> MAT.SYN_CONDUIT, and
+     models.js maps them onto the HOT and ENERGY colour keys respectively. This
+     assertion used to demand LAMP alone, which only Legion satisfies —
+     mdlNovaDoctrine is built entirely from ENERGY, so Nova's energy language is
+     emphatically present, just in the other role. Syndicate is the same. Accept
+     either; the point of the check is that a doctrine shell has SOME authored
+     light language, not which of the two it chose. */
+  const lit=s=>s.has(MAT.LAMP)||s.has(MAT.SYN_CONDUIT);
+  if(!lit(ground.mats)||!lit(air.mats)) throw new Error(`${fac}: missing authored energy/light language`);
   const bespoke=production.filter(t=>kits[fac]&&kits[fac][t]).length;
   rows.push({faction:fac,productionTypes:production.length,bespoke,
     doctrineFallback:production.length-bespoke,groundVerts:ground.verts,airVerts:air.verts});
@@ -109,7 +118,7 @@ const renderSrc=fs.readFileSync(path.join(root,'src/ui/render3d.js'),'utf8');
 const simSrc=fs.readFileSync(path.join(root,'src/game/sim.js'),'utf8');
 for(const marker of ['BIOLEG_CONST','bioLimb','float lead=sin(aAnim','float lag=sin(aAnim*.73'])
   if(!meshSrc.includes(marker)) throw new Error(`Organic spring shader missing ${marker}`);
-for(const marker of ['perfScale>.36','orthoSpan<2700','DROP_MESH[key]','aiDeployArrivals'])
+for(const marker of ['perfScale>.36','orthoSpan<organicSpan','DROP_MESH[key]','aiDeployArrivals'])
   if(!renderSrc.includes(marker)) throw new Error(`Faction render path missing ${marker}`);
 /* Opponent faction and unit faction are independent. Rendering must begin at
    the exact faction registry; any UNIT_MESH-first path can leak Brood slots

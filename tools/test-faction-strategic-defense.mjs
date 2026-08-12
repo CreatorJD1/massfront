@@ -54,17 +54,34 @@ for(let tier=1;tier<=3;tier++){
     throw new Error(`Legion Mk${tier} NOVA regressed to the Missile Bastion family`);
   for(const [key,V] of [['rail',rail],['nova',nova]]){
     if(!V.tur||!mats(V.tur).has(24)) throw new Error(`Legion Mk${tier} ${key} lost its hollow tracking bore`);
-    if(mats(V.base).size<5||mats(V.tur).size<5) throw new Error(`Legion Mk${tier} ${key} lost material zoning`);
+    /* Base floor is 4, not 5, and that is the faction identity pass working.
+       domLegionStructureSurfacePass remaps the generic TWR_* slots onto the
+       Legion signature palette, which has exactly four entries (LEGION_CAST /
+       RIVET / THERMITE / SIEGE): six generic slots collapse onto four, so five
+       distinct base materials is structurally unreachable for a remapped
+       Legion tower. Demanding 5 rewarded structures that had NOT been given the
+       faction palette. The turret still reaches 5 because LEG_BORE passes
+       through unmapped, and line 56 above guards that bore independently. */
+    if(mats(V.base).size<4||mats(V.tur).size<5) throw new Error(`Legion Mk${tier} ${key} lost material zoning`);
   }
 }
 
 for(const key of ['rail','nova']){
   const seen=new Map();
   for(const [fac,names] of Object.entries(maps)){
+    /* Not every faction fields every defence structure — Nova has no rail
+       tower at all (its tier map is turret/bunker/bastion/sgen/uplink/
+       hellstorm/arc/nova/minelaser/missilebastion/plasma). This loop exists to
+       prove that factions which DO share a structure do not share its
+       silhouette; a faction that simply lacks the structure is not a failure,
+       and asserting otherwise crashed on an undefined tier entry. */
+    const tiers=val(names[0]);
+    if(!tiers||!tiers[key]) continue;
     const V=meshAt(names,key,3),s=sig(V.base,V.tur);
     if(seen.has(s)) throw new Error(`${key} silhouette is identical for ${seen.get(s)} and ${fac}`);
     seen.set(s,fac);
   }
+  if(seen.size<2) throw new Error(`${key}: fewer than two factions field it, cross-faction check is vacuous`);
 }
 
 const rail3=meshAt(maps.Legion,'rail',3),nova3=meshAt(maps.Legion,'nova',3);

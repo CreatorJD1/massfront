@@ -89,3 +89,55 @@ and cannot fix the race.
 **Proper fix (separate change):** have the test wait for readiness rather than
 existence, e.g. `waitForFunction(() => typeof heightF !== 'undefined' && !!heightF)`
 before calling `resetWorld()`.
+
+---
+
+## Resolution — both material tests were TEST DRIFT, not regressions (2026-08-12)
+
+Investigated with a decisive control: the **v1.33.7 shipped copy** under
+`android/app/src/main/assets/public/src/` produces **byte-for-byte the same
+material sets** as current `src/` for both assertions, while the trees genuinely
+differ (`materials.js` 68 KB → 546 KB, `mesh.js` 100 KB → 116 KB). Nothing
+regressed between 1.33.7 and 1.33.31 — both tests fail identically against the
+older shipped build too. **The shipped faction palettes are intact.**
+
+### `test-faction-unit-identity.mjs` — FIXED, now PASSES
+Two drifts, one behind the other:
+
+1. **:51 demanded `MAT.LAMP` alone.** There are *two* authored emissive roles —
+   `materials.js:83` binds `'emissive.light' → MAT.LAMP` **and**
+   `'emissive.energy' → MAT.SYN_CONDUIT`, wired to the `HOT` and `ENERGY` colour
+   keys at `models.js:117`. `mdlNovaDoctrine` (`models.js:2068-2093`) is built
+   *entirely* from `ENERGY`, so Nova's energy language is emphatically present —
+   in the other role. Syndicate likewise. Now accepts either.
+2. **:121 asserted the literal `orthoSpan<2700`.** That was refactored to
+   `orthoSpan<organicSpan` with `GFX.organicSpan ?? 2700`
+   (`render3d.js:1203-1204`) — same default, now configurable. Marker updated.
+
+### `test-faction-strategic-defense.mjs` — FIXED, now PASSES
+1. **:57 required ≥5 base materials.** Structurally unreachable *because the
+   faction identity pass works*: `domLegionStructureSurfacePass`
+   (`models-legion.js:552-567`) remaps six generic `TWR_*` slots onto the Legion
+   signature palette, which has exactly **four** entries (`materials.js:44`:
+   `LEGION_CAST/RIVET/THERMITE/SIEGE`). Demanding 5 *rewarded structures that had
+   not been given the faction palette*. Floor is now 4 for the base; the turret
+   still requires 5 (`LEG_BORE` passes through unmapped) and :56 guards the bore
+   independently.
+2. **:69 assumed every faction fields a `rail` tower.** Nova does not — its tier
+   map is turret/bunker/bastion/sgen/uplink/hellstorm/arc/nova/minelaser/
+   missilebastion/plasma. The loop now skips factions lacking the structure and
+   asserts at least two still field it, so the cross-faction check cannot go
+   vacuously green.
+
+### Gating status
+Neither test is in CI — `.github/workflows/ios-ipa.yml` runs only
+`tools/pack-www.mjs`. Both are listed as focused gates in
+`docs/HANDOFF_CLAUDE_CODE.md:240` and `docs/HANDOFF_CODEX_SPARK.md:211`.
+
+### Genuine (pre-existing, non-regressive) art gap found on the way
+`BLD_MDL_LEGION.nova` is **missing from the remap key list** at
+`src/engine/models-legion.js:566`, so the Legion NOVA tower base is the only
+Legion structure still wearing the generic `TWR_*` palette instead of the
+`LEGION_*` signature set (its turret also deliberately borrows the `hellstorm`
+pack at `:569`). Worth folding into the art pass — it is an identity
+inconsistency, not a test failure.
