@@ -307,6 +307,49 @@ function applyColor(){
   mmPColA='rgba('+L.c[0]+','+L.c[1]+','+L.c[2]+',.9)';
 }
 
+/* ---------- shared livery swatch row ---------------------------------------
+   ONE renderer and ONE tap binder for the five commander colours. The same
+   markup used to be written out three separate times — the legacy renderArmory
+   below, storeui.js's armColorsHTML(), and now Profile → Identity — which is
+   exactly how a row ends up showing a colour as selected on one screen and not
+   the other. Callers own the BEHAVIOUR (select here, stage a purchase there);
+   these two own the MARKUP and the binding, and nothing else.
+   The wrapper id is a parameter because two of these rows are in the document
+   at the same time: #colorRow lives in #storeList and #idLiveryRow in the
+   profile pane, and getElementById would silently return the wrong one if they
+   shared a name. */
+function mfLiveryRowHTML(rowId){
+  let h='<div id="'+(rowId||'colorRow')+'">';
+  for(const key in COLORS){
+    const C=COLORS[key], owned=key==='azure'||!!META.owned['col_'+key];
+    h+='<div class="swatch'+(META.color===key?' sel':'')+(owned?'':' lockd')+'" data-col="'+key+'" '
+      +'style="background:rgb('+C.c[0]+','+C.c[1]+','+C.c[2]+')">'
+      +(owned?'':'<span>⬡'+C.cost+'</span>')+'</div>';
+  }
+  return h+'</div>';
+}
+function mfLiveryRowWire(rootEl,onPick){
+  if(!rootEl||typeof onPick!=='function') return;
+  /* [data-col] rather than a bare .swatch: the emblem picker reuses the same
+     class and must not be captured by a livery binding. */
+  rootEl.querySelectorAll('.swatch[data-col]').forEach(el=>{
+    const go=()=>onPick(el.dataset.col,el);
+    if(typeof mfBindTap==='function') mfBindTap(el,go); else el.addEventListener('click',go);
+  });
+}
+/* playerLivery()'s azure→faction fallback is invisible in the UI: azure is the
+   default nobody chose, so it yields to the faction and the swatch you can see
+   selected is NOT the colour your army is painted in. Say so out loud. */
+function mfLiveryHint(){
+  const key=COLORS[META.color]?META.color:'azure';
+  const nm=COLORS[key].nm.toUpperCase();
+  if(key==='azure'){
+    const pf=(((typeof playerFaction!=='undefined'&&playerFaction)||'nova')+'').toUpperCase();
+    return nm+" — your faction's colours ("+pf+"). Pick another to override.";
+  }
+  return nm+" — overrides your faction's colours.";
+}
+
 /* ---------- store (permanent perks, bought with ⬡ cores) ---------- */
 const STORE=[
  {id:'cache',    em:'📦', nm:'Supply Cache',    ds:'Start every match with +300 mass, +1200 energy', max:1, cost:[250]},
@@ -1181,6 +1224,41 @@ function renderIdentityPickers(){
   chips('titleRow',TITLES,P.title||'',v=>{P.title=v;});
   chips('frameRow',FRAMES,P.frame||'steel',v=>{P.frame=v;});
 
+  /* ---- battle livery -------------------------------------------------------
+     Which colours your army wears is an identity choice, so it is made here
+     with the callsign and the emblem rather than three taps deep in a shop
+     tab. The colour itself stays on META (career-wide, account-synced), NOT on
+     the profile record — the row is only the control surface.
+     Buying is deliberately NOT duplicated here: the Arsenal's earned-core
+     basket is the one and only place cores are debited, so a locked swatch is
+     staged there and the player is handed to that checkout. */
+  const lvHost=document.getElementById('idLiveryRow');
+  if(lvHost){
+    /* The shared helper emits its own wrapper, so swap the placeholder node
+       instead of nesting a second #idLiveryRow inside it. */
+    lvHost.outerHTML=mfLiveryRowHTML('idLiveryRow');
+    mfLiveryRowWire(document.getElementById('idLiveryRow'),key=>{
+      const C=COLORS[key]; if(!C) return;
+      const owned=key==='azure'||!!META.owned['col_'+key];
+      if(typeof sfx==='function'){try{sfx('ui');}catch(e){}}
+      if(!owned){
+        if(typeof armCartAdd==='function'){
+          if(typeof armTab!=='undefined') armTab='identity';
+          armCartAdd('color',key);
+          if(typeof renderMetaHead==='function') renderMetaHead();
+          if(typeof renderArmory==='function') renderArmory();
+          if(typeof showFrontScreen==='function') showFrontScreen('armory');
+          if(typeof toast==='function') toast(C.nm+' staged in the Arsenal basket — confirm to unlock');
+        } else if(typeof toast==='function') toast(C.nm+' unlocks in the Arsenal for ⬡'+C.cost);
+        return;
+      }
+      META.color=key; metaSave(); applyColor();
+      renderProfile(); renderMetaHead();
+    });
+  }
+  const lvHint=document.getElementById('idLiveryHint');
+  if(lvHint) lvHint.textContent=mfLiveryHint();
+
   const hint=document.getElementById('charHint');
   if(hint){
     const nextC=CHARACTERS.find(c=>c.unlock>r), nextT=TITLES.find(t=>t.unlock>r), nextF=FRAMES.find(f=>f.unlock>r);
@@ -1310,14 +1388,7 @@ function renderArmory(){
       +'<div class="sDs">'+it.ds+'</div></div>'
       +'<div class="sBuy">'+(maxed?'✓ MAX':'⬡ '+cost)+'</div></div>';
   }
-  h+='<div class="sHead">COMMANDER COLORS</div><div id="colorRow">';
-  for(const key in COLORS){
-    const C=COLORS[key], owned=key==='azure'||META.owned['col_'+key];
-    h+='<div class="swatch'+(META.color===key?' sel':'')+(owned?'':' lockd')+'" data-col="'+key+'" '
-      +'style="background:rgb('+C.c[0]+','+C.c[1]+','+C.c[2]+')">'
-      +(owned?'':'<span>⬡'+C.cost+'</span>')+'</div>';
-  }
-  h+='</div>';
+  h+='<div class="sHead">COMMANDER COLORS</div>'+mfLiveryRowHTML('colorRow');
   list.innerHTML=h;
   list.querySelectorAll('.sItem').forEach(el=>{
     el.addEventListener('pointerdown',()=>{
@@ -1331,18 +1402,16 @@ function renderArmory(){
       renderMetaHead(); renderArmory();
     });
   });
-  list.querySelectorAll('.swatch').forEach(el=>{
-    el.addEventListener('pointerdown',()=>{
-      const key=el.dataset.col, C=COLORS[key];
-      const owned=key==='azure'||META.owned['col_'+key];
-      if(!owned){
-        if(META.cores<C.cost){ toast('Not enough cores'); sfx('alarm'); return; }
-        META.cores-=C.cost; META.owned['col_'+key]=1;
-        toast('🎨 '+C.nm+' unlocked'); sfx('level');
-      } else sfx('ui');
-      META.color=key; metaSave(); applyColor();
-      renderMetaHead(); renderArmory();
-    });
+  mfLiveryRowWire(list,key=>{
+    const C=COLORS[key]; if(!C) return;
+    const owned=key==='azure'||META.owned['col_'+key];
+    if(!owned){
+      if(META.cores<C.cost){ toast('Not enough cores'); sfx('alarm'); return; }
+      META.cores-=C.cost; META.owned['col_'+key]=1;
+      toast('🎨 '+C.nm+' unlocked'); sfx('level');
+    } else sfx('ui');
+    META.color=key; metaSave(); applyColor();
+    renderMetaHead(); renderArmory();
   });
 }
 

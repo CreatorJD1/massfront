@@ -36,7 +36,7 @@ ARM_CATS.splice(0,ARM_CATS.length,
   {id:'market',em:'⬡',nm:'MARKET',ds:'Permanent upgrades and daily requisitions.',items:['cache','trade','salvage','droppod','reactor','targeting','armor','bastion','neural','capacitor','orbital']},
   {id:'inventory',em:'◇',nm:'VAULT',ds:'Account storage for recovered gear and mission supplies.',items:[]},
   {id:'loadout',em:'⬢',nm:'LOADOUT',ds:'Three gear slots and two operation supplies.',items:[]},
-  {id:'identity',em:'✦',nm:'STYLE',ds:'Visual identity with no combat advantage.',items:[]});
+  {id:'identity',em:'✦',nm:'STYLE',ds:'Unlock commander liveries with earned cores. Choose the one you wear in Profile → Identity.',items:[]});
 let armTab='market',armMarketFilter='all',armCart=[],armCartOpen=false;
 let armInvFilter='all',armInvSelectedKind='',armInvSelectedId='';
 const ARM_MARKET_FILTERS=[
@@ -351,16 +351,17 @@ function armSessionLoadoutHTML(){
     +armLoadSupplySlotHTML(0,b)+armLoadSupplySlotHTML(1,b)+'</div>'+armSessionEffectsHTML(b)
     +'<button type="button" class="armReturnVault" data-open-vault="1">▦ OPEN ACCOUNT ARMORY</button>';
 }
+/* The STYLE tab is now the UNLOCK counter, not the wardrobe: choosing which
+   livery you wear moved to Profile → Identity, next to the callsign and the
+   emblem it belongs with. This tab stays because it owns the only col_* debit
+   path there is — armCartCheckout's 'color' branch — and because deleting a
+   category would also break the tab-count row above. Markup comes from
+   meta.js's mfLiveryRowHTML so the two rows can never drift apart. */
 function armColorsHTML(){
-  let h='<div class="sHead">COMMANDER COLORS</div><div id="colorRow">';
-  for(const key in COLORS){
-    const C=COLORS[key], owned=key==='azure'||META.owned['col_'+key];
-    h+='<div class="swatch'+(META.color===key?' sel':'')+(owned?'':' lockd')+'" data-col="'+key+'" '
-      +'style="background:rgb('+C.c[0]+','+C.c[1]+','+C.c[2]+')">'
-      +(owned?'':'<span>⬡'+C.cost+'</span>')+'</div>';
-  }
-  h+='</div>';
-  return h;
+  return '<div class="sHead">COMMANDER LIVERY — UNLOCK</div>'
+    +mfLiveryRowHTML('colorRow')
+    +'<div class="armCatIntro armLiveryNote"><span>Tap a locked colour to stage it in the earned-core basket. '
+    +'Your active livery is chosen in <b>Profile → Identity</b>.</span></div>';
 }
 
 /* ---- tabs -------------------------------------------------------------- */

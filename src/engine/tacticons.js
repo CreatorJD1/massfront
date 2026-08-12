@@ -359,6 +359,28 @@ function mfIconInk(team){
   return l>0.52?[10,14,20]:[238,246,255];
 }
 
+/* ---------------------------------------------------------------------------
+   AUTHORED SHEET OVERRIDE
+   The procedural cells above are PLACEHOLDERS. When an authored sheet exists at
+   assets/textures/ui/tacticons.png it replaces them wholesale — same 8x8 / 128px
+   grid, same cell order (MF_ICON_ORDER), so no code changes when the art lands.
+   The load is async and non-blocking: the placeholder sheet renders until the
+   real one decodes, then one flag swap re-uploads. A missing or broken file is
+   not an error, it just means placeholders stay.
+   Contract for the artist: docs/TACTICON_ART_SPEC.md
+   --------------------------------------------------------------------------- */
+const MF_ICON_SHEET_URL='assets/textures/ui/tacticons.png';
+let mfIcoAuthored=null, mfIcoAuthoredTried=false;
+function mfIconLoadAuthored(){
+  if(mfIcoAuthoredTried) return; mfIcoAuthoredTried=true;
+  try{
+    const img=new Image();
+    img.onload=()=>{ mfIcoAuthored=img; mfIcoTex=null; };   // next frame re-uploads
+    img.onerror=()=>{};                                     // placeholders stand
+    img.src=(typeof mf2AssetURL==='function')?mf2AssetURL(MF_ICON_SHEET_URL):('./'+MF_ICON_SHEET_URL);
+  }catch(e){}
+}
+
 /* LAZY. Rasterising a 1024 sheet, uploading it and generating mipmaps is real
    work, and the tier that needs it only engages past ~2200 span — many
    sessions never reach it. Doing it during boot also pushed buildTerrain()
@@ -369,11 +391,12 @@ function mfIconInk(team){
 function mfIconEnsure(){
   if(mfIcoTex) return true;
   if(typeof gl==='undefined'||!gl) return false;
+  mfIconLoadAuthored();
   if(!mfIcoCanvas) buildIconAtlas();
   const t=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,t);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,mfIcoCanvas);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,mfIcoAuthored||mfIcoCanvas);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
