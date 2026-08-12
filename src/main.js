@@ -2005,6 +2005,7 @@ async function boot(){
   initBillboards();              // sprite layer for smoke, fire and energy
   initModels();                  // procedural geometry for every unit, structure and prop
   atlasTex=buildAtlas();         // (2D atlas retained for HUD icons and the minimap)
+  if(typeof mfIconInitGL==='function') mfIconInitGL();   // tactical icon sheet + its batch
   buildDetailTex();
   loadTerrainTextures();   // real tileable ground art (async decode)
   initFloatText();

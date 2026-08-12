@@ -73,6 +73,7 @@ function glrRebuildResources(){
   step('initBillboards',()=>{ if(typeof initBillboards==='function') initBillboards(); });
   step('initModels',    ()=>initModels());
   step('buildAtlas',    ()=>{ if(typeof buildAtlas==='function') atlasTex=buildAtlas(); });
+  step('mfIconInitGL',  ()=>{ if(typeof mfIconInitGL==='function') mfIconInitGL(); });
   step('buildDetailTex',()=>{ if(typeof buildDetailTex==='function') buildDetailTex(); });
   step('terrainTextures',()=>{ terrGroundTex=terrSoilTex=terrPaveTex=terrGrassTex=null;
     terrGroundNrm=terrSoilNrm=terrPaveNrm=terrGrassNrm=null;

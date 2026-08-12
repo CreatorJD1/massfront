@@ -131,13 +131,16 @@ function initBillboards(){
 }
 /* Orthographic world-size to clip-size. X includes the viewport aspect ratio;
    the anchor projection already contains camera orbit and terrain depth. */
-function beginBB(){
+/* `tex` lets a caller run this same program over a different sheet — the
+   tactical icons live in their own atlas because the shared one is exactly
+   full. Omitting it keeps the original behaviour for every existing caller. */
+function beginBB(tex){
   gl.useProgram(progBB);
   gl.uniformMatrix4fv(UBB.uVP,false,matVP);
   const asp=VW/Math.max(1,VH);
   gl.uniform2f(UBB.uScale,2/(Math.max(1,orthoSpan)*asp),2/Math.max(1,orthoSpan));
   gl.uniform1i(UBB.uTex,0);
   gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D,atlasTex);
+  gl.bindTexture(gl.TEXTURE_2D,tex||atlasTex);
 }
 
