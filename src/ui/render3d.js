@@ -1124,6 +1124,34 @@ function render(dtDraw){
       ((typeof FACTIONS!=='undefined'&&FACTIONS[ownFac]&&FACTIONS[ownFac].kit)||'nova');
     const unitKit=uteam[i]===0?ownKit:uteam[i]===2?'horde':
       (uteam[i]===1&&AI.fac&&FACTIONS[AI.fac]?FACTIONS[AI.fac].kit:null);
+    /* STRATEGIC TIER. Past the point where this unit's own footprint stops
+       reading (~24 px fading to ~15 px — per type, not per camera constant) a
+       flat symbol carries role and allegiance better than a smear of mesh.
+       The plate silhouette is the FACTION and the glyph is the role, so an
+       icon claims the same allegiance its mesh would; resolved from the same
+       unitKit the 3D path uses rather than a parallel guess.
+
+       Sited after the kit resolves but before factionUnitMeshFor(), so a fully
+       iconised unit still skips the mesh lookup, doctrine shells, equipped
+       modules and organic motion — the tier saves CPU as well as pixels.
+
+       The mesh is never faded, only dropped: the icon reaches full opacity
+       while the mesh is still a ~15 px smear, and fading a mesh by screen
+       footprint is precisely what flattened every building in
+       docs/POSTMORTEM-1.33.31-REGRESSION.md. */
+    const uIcon=(typeof mfIconQ==='function')?mfIconQ(mfUnitSpan(T)):0;
+    if(uIcon>0&&mfIconEnsure()){
+      const ih=(T.naval?1.5:gh(X,Y)+(T.air?58:0))+2,
+            body=mfIconBody(uteam[i]), ink=mfIconInk(uteam[i]),
+            dpx=clamp(18+mfUnitSpan(T)*0.12,22,40)*mfWorldPx(),
+            ia=255*uIcon,
+            iKit=unitKit||(uteam[i]===2?'horde':null);
+      bbIcon.add(mfIconPlateFor(iKit,T),X,Y,ih,dpx,0,body[0],body[1],body[2],ia);
+      bbIcon.add(mfIconCellForUnit(T),X,Y,ih,dpx*0.60,0,ink[0],ink[1],ink[2],ia);
+      if(uImportant){ const br=(typeof TEAMB!=='undefined'&&TEAMB[uteam[i]])||body;
+        bbIcon.add(MF_ICO.pl_ring,X,Y,ih,dpx*1.26,0,br[0],br[1],br[2],ia); }
+      if(uIcon>=1) continue;          // fully iconised: no mesh work at all
+    }
     /* Never begin from UNIT_MESH and then hope an override exists. That made
        the mixed global registry an accidental cross-faction fallback: Blue
        slot 12 became a Ravager and a missing Brood slot became a tank. */
@@ -2297,6 +2325,23 @@ function render(dtDraw){
     gl.depthMask(false);
     gpfxFrame((typeof dtDraw==='number'?dtDraw:0.016)||0.016,matVP,(typeof innerHeight!=='undefined')?innerHeight:900);
   }
+  /* Tactical icons last, and deliberately without a depth test. The camera
+     pitch band allows a ridge to stand in front of a unit, and a strategic
+     symbol that disappears behind terrain defeats the purpose of zooming out.
+     Disclosure is still owned by fog: nothing reaches this batch that
+     fogEntityVisible() rejected. One extra draw call for the whole map. */
+  if(typeof bbIcon!=='undefined'&&bbIcon&&bbIcon.n){
+    /* Recorded before flush(), which zeroes the count — a harness sampling
+       bbIcon.n after the frame would always read 0 and conclude the tier is
+       dead. */
+    mfIconLast=bbIcon.n;
+    gl.depthMask(false);
+    gl.disable(gl.DEPTH_TEST);
+    beginBB(mfIcoTex);
+    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+    bbIcon.flush(gl);
+    gl.enable(gl.DEPTH_TEST);
+  } else if(typeof mfIconLast!=='undefined') mfIconLast=0;
 
   gl.depthMask(true);
   gl.disable(gl.BLEND);

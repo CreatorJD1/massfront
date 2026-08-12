@@ -57,3 +57,35 @@ node tools/test-faction-unit-identity.mjs; node tools/test-faction-strategic-def
 
 Real-GPU capture harness (headed Chrome, `--use-angle=d3d11`) is the authoritative visual
 check; SwiftShader output is **not** trustworthy for material/detail questions.
+
+---
+
+## Addendum — `test-fog-pickups` is racy (found during the icon work)
+
+After the icon tier landed, this test began failing *earlier* than its baseline
+line, with `TypeError: Cannot read properties of null` in `hAt` (`gl.js:2491`) via
+`resetWorld()` → `setupDoodads()` — i.e. `heightF` was still null.
+
+Measured directly against the same server the test uses:
+
+| moment | `heightF` |
+|---|---|
+| when the test's `waitForFunction` is satisfied (**+217 ms**) | **false** |
+| ~1 s later | true |
+
+with **zero console errors** throughout. The test waits only for *function
+declarations* (`resetWorld`, `render`, …), which hoist and exist almost
+immediately, then calls `resetWorld()` — but `heightF` is only populated later by
+`buildTerrain()` during async init. The pass/fail therefore depends on which side
+of a ~1 s boot step the evaluate lands, and **any** timing change flips it.
+
+This is a pre-existing defect in the test, not a product regression: the game
+boots clean and terrain is present a second later. Making the icon atlas build
+lazily (it now rasterises on first icon draw rather than on the boot path) was
+worth doing on its own merits — no session should pay 1024² rasterisation plus a
+mipmap upload for a feature that only engages past ~2200 span — but it does not
+and cannot fix the race.
+
+**Proper fix (separate change):** have the test wait for readiness rather than
+existence, e.g. `waitForFunction(() => typeof heightF !== 'undefined' && !!heightF)`
+before calling `resetWorld()`.

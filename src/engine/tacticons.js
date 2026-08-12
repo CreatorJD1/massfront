@@ -127,6 +127,9 @@ function mfTierReport(){
    ============================================================================ */
 const MF_ICON_ATLAS=1024, MF_ICON_CELL=128, MF_ICON_INSET=5;
 let mfIcoCanvas=null, mfIcoCtx=null, mfIcoCell=0, mfIcoTex=null, bbIcon=null;
+/* Instances submitted on the last frame. Sampled by the acceptance harness,
+   which cannot read bbIcon.n because flush() zeroes it. */
+let mfIconLast=0;
 const MF_ICO={};
 
 function mfDefIcon(name, fn){
@@ -164,17 +167,108 @@ function buildIconAtlas(){
   mfIcoCanvas.width=mfIcoCanvas.height=MF_ICON_ATLAS;
   mfIcoCtx=mfIcoCanvas.getContext('2d'); mfIcoCell=0;
 
-  /* ---- domain plates (5) ---- */
-  mfDefIcon('plate_land', mfPlate((c,r)=>{ const k=r*.86,rr=r*.26; c.beginPath();
+  /* ---- faction plates (4 factions x 4 domains, + neutral) ----
+     The FRAME carries allegiance, the glyph carries role. A player should know
+     whose army that is from the silhouette alone, before the livery colour
+     registers — the same job the unit meshes already do in 3D, and the reason
+     these are not generic NATO boxes. Language per faction, brutish and
+     angular in the Supreme Commander 2 / Tiberium Wars register:
+
+       nova      precise chamfered hex, engineered, clean cut corners
+       legion    heavy slab, hard 45-degree bevels, siege mass
+       syndicate skewed shard, asymmetric machine geometry
+       horde     chitin carapace, spurred, grown rather than built
+
+     Domain deforms the same silhouette instead of replacing it: air rises to a
+     peak, naval drops a keel, structures sit on a flat anchored base. */
+  const FACS=['nova','legion','syndicate','horde'];
+  const DOMS=['gnd','air','nav','str'];
+  /* Vertical bias per domain: [topStretch, bottomStretch, squareness] */
+  const DOMK={ gnd:[1,1,0], air:[1.16,.86,0], nav:[.84,1.12,0], str:[.94,.98,1] };
+
+  /* Each plate is a reduction of that faction's CREST, so the tactical layer
+     and the brand are one design scheme rather than two. Read at 26 px the
+     crest detail is gone, but its defining gesture survives:
+
+       nova      winged chevron  — swept shoulders rising to a spear point
+       legion    inverted spearhead — flat crown, barbs, driven to a point DOWN
+       syndicate nested triangle — apex up, flat base, geometric
+       horde     clawed radial   — curved spurs around an organic core
+
+     Opposed gestures on purpose: nova points up and outward, legion points
+     down, syndicate is a stable triangle, horde is radial. Those four read
+     apart at a glance even before colour registers, which is the whole job. */
+  function facePts(fac,dom,r){
+    const k=DOMK[dom]||DOMK.gnd, up=k[0], dn=k[1], sq=k[2];
+    const R=r*.95;
+    if(fac==='nova'){
+      /* WINGED CHEVRON: spear point at the crown, wings swept back and up,
+         body tapering to a keel. Interior stays open for the role glyph. */
+      const w=R*(sq?1.02:.98), h=R;
+      return [[0,-h*up],                     // spear point
+              [w*.40,-h*up*.50],             // inner shoulder
+              [w,-h*up*.58],                 // wing tip (raised, swept out)
+              [w*.80,-h*up*.06],             // wing underside
+              [w*.46, h*dn*.46],             // body taper
+              [0, h*dn],                     // keel
+              [-w*.46, h*dn*.46],
+              [-w*.80,-h*up*.06],
+              [-w,-h*up*.58],
+              [-w*.40,-h*up*.50]];
+    }
+    if(fac==='legion'){
+      /* INVERTED SPEARHEAD: broad flat crown, barbed shoulders, mass driven
+         downward to a single point — the red crest's aggression, upside down
+         from Nova on purpose. */
+      const w=R*(sq?1.00:.96), h=R;
+      return [[-w*.62,-h*up],[w*.62,-h*up],  // flat crown
+              [w,-h*up*.34],                 // barb out
+              [w*.56,-h*up*.02],             // notch in
+              [w*.72, h*dn*.34],             // lower barb
+              [0, h*dn],                     // driven point
+              [-w*.72, h*dn*.34],
+              [-w*.56,-h*up*.02],
+              [-w,-h*up*.34]];
+    }
+    if(fac==='syndicate'){
+      /* NESTED TRIANGLE: apex up, flat base, corners clipped so it still
+         holds a glyph. Stable and geometric where the others are aggressive. */
+      const w=R*1.02, h=R, c=R*.20;
+      return [[0,-h*up],                     // apex
+              [w-c*.4, h*dn*.72-c*.2],
+              [w-c*1.2, h*dn*.86],
+              [-(w-c*1.2), h*dn*.86],
+              [-(w-c*.4), h*dn*.72-c*.2]];
+    }
+    /* HORDE — CLAWED RADIAL. Curved spurs sweeping off a central mass, the
+       purple crest reduced to its gesture. Mirrored so it reads as an organism
+       rather than a random polygon. */
+    const h=R, w=R*.98;
+    const half=[
+      [w*.44,-h*up*.74],    // inner claw root
+      [w*.92,-h*up*.34],    // upper claw tip
+      [w*.50,-h*up*.02],    // notch
+      [w*1.00, h*dn*.34],   // lower claw tip
+      [w*.42, h*dn*.52],    // notch
+      [w*.60, h*dn*.88],    // trailing spur
+    ];
+    const p=[[0,-h*up]];
+    for(const q of half) p.push(q);
+    p.push([0,h*dn*.72]);
+    for(let i=half.length-1;i>=0;i--) p.push([-half[i][0],half[i][1]]);
+    return p;
+  }
+  for(const f of FACS) for(const d of DOMS)
+    mfDefIcon('pl_'+f+'_'+d, mfPlate((c,r)=>mfPoly(c,facePts(f,d,r))));
+  /* Neutral/unaligned fallback: no faction claim, so no faction language. */
+  mfDefIcon('pl_neutral', mfPlate((c,r)=>{ const k=r*.84,rr=r*.30; c.beginPath();
     c.moveTo(-k+rr,-k); c.lineTo(k-rr,-k); c.quadraticCurveTo(k,-k,k,-k+rr);
     c.lineTo(k,k-rr); c.quadraticCurveTo(k,k,k-rr,k); c.lineTo(-k+rr,k);
     c.quadraticCurveTo(-k,k,-k,k-rr); c.lineTo(-k,-k+rr); c.quadraticCurveTo(-k,-k,-k+rr,-k); c.closePath(); }));
-  mfDefIcon('plate_air', mfPlate((c,r)=>mfPoly(c,[[0,-r],[r*.92,r*.55],[0,r*.24],[-r*.92,r*.55]])));
-  mfDefIcon('plate_nav', mfPlate((c,r)=>{ c.beginPath(); c.ellipse(0,0,r*.95,r*.62,0,0,Math.PI*2); c.closePath(); }));
-  mfDefIcon('plate_struct', mfPlate((c,r)=>{ const k=r*.82,q=r*.30;
-    mfPoly(c,[[-k+q,-k],[k-q,-k],[k,-k+q],[k,k-q],[k-q,k],[-k+q,k],[-k,k-q],[-k,-k+q]]); }));
-  mfDefIcon('plate_hero', mfPlate((c,r)=>{ const k=r*.92; const p=[];
-    for(let i=0;i<6;i++){ const a=Math.PI/6+i*Math.PI/3; p.push([Math.cos(a)*k,Math.sin(a)*k]); } mfPoly(c,p); }));
+  /* Selection/hero ring, drawn over the plate in the bright accent. */
+  mfDefIcon('pl_ring', (c,r)=>{ c.strokeStyle='#fff'; c.lineWidth=Math.max(7,r*0.17);
+    const p=[]; for(let i=0;i<6;i++){ const a=Math.PI/6+i*Math.PI/3; p.push([Math.cos(a)*r*.95,Math.sin(a)*r*.95]); }
+    mfPoly(c,p); c.stroke(); });
 
   /* ---- unit role glyphs (11, keys mirror UCAT) ---- */
   mfDefIcon('u_inf', mfGlyph((c,r)=>{ c.beginPath(); c.arc(0,-r*.34,r*.24,0,Math.PI*2); c.fill();
@@ -238,12 +332,20 @@ function mfIconCellForBld(B){
   const cat=(B&&B.bcat)||'prod';
   return MF_ICO['b_'+cat]||MF_ICO.b_prod;
 }
-function mfIconPlateForUnit(T){
-  if(!T) return MF_ICO.plate_land;
-  if(T.cat==='hero'||T.hero) return MF_ICO.plate_hero;
-  if(T.air) return MF_ICO.plate_air;
-  if(T.naval) return MF_ICO.plate_nav;
-  return MF_ICO.plate_land;
+/* Allegiance comes from the same kit key the 3D path resolves, so an icon and
+   its mesh always claim the same faction. Team 2 is organic when the Brood is
+   fielding it and unaligned wildlife otherwise, which is exactly the
+   distinction ai.js already encodes in TEAMC[2]. */
+function mfIconDomain(T){
+  if(!T) return 'gnd';
+  if(T.air) return 'air';
+  if(T.naval) return 'nav';
+  return 'gnd';
+}
+function mfIconPlateFor(kit,T,dom){
+  const f=(kit==='nova'||kit==='legion'||kit==='syndicate'||kit==='horde')?kit:null;
+  if(!f) return MF_ICO.pl_neutral;
+  return MF_ICO['pl_'+f+'_'+(dom||mfIconDomain(T))]||MF_ICO.pl_neutral;
 }
 
 /* Livery body + a legible ink. Read from TEAMC/TEAMB at draw time, never from
@@ -257,13 +359,19 @@ function mfIconInk(team){
   return l>0.52?[10,14,20]:[238,246,255];
 }
 
-/* GL objects. Separate from buildIconAtlas so context loss can rebuild them
-   without re-rasterising the canvas. */
-function mfIconInitGL(){
+/* LAZY. Rasterising a 1024 sheet, uploading it and generating mipmaps is real
+   work, and the tier that needs it only engages past ~2200 span — many
+   sessions never reach it. Doing it during boot also pushed buildTerrain()
+   later, which is enough to lose a pre-existing race in tools/test-fog-pickups
+   (it waits only for function declarations, which hoist, and then calls
+   resetWorld() while heightF is still null). Nothing on the boot path should
+   pay for a far-zoom feature. */
+function mfIconEnsure(){
+  if(mfIcoTex) return true;
   if(typeof gl==='undefined'||!gl) return false;
   if(!mfIcoCanvas) buildIconAtlas();
-  mfIcoTex=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,mfIcoTex);
+  const t=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,t);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,mfIcoCanvas);
   gl.generateMipmap(gl.TEXTURE_2D);
@@ -271,10 +379,17 @@ function mfIconInitGL(){
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  mfIcoTex=t;
   /* Whole map fits the view at SPAN_MAX, so budget for the full roster plus
      structures at two instances each. */
-  bbIcon=(typeof BBBatch!=='undefined')?new BBBatch(gl,12000):null;
+  if(!bbIcon&&typeof BBBatch!=='undefined') bbIcon=new BBBatch(gl,12000);
   return !!bbIcon;
+}
+/* Called at boot and on context loss: forget the GPU objects so the next icon
+   frame rebuilds them. Deliberately does no GL work of its own. */
+function mfIconInitGL(){
+  mfIcoTex=null; bbIcon=null;
+  return true;
 }
 
 if(typeof window!=='undefined'){
