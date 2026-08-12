@@ -1,0 +1,15 @@
+# MASSFRONT over-the-air update server.
+#
+# Deploy:  cd cloudflare/massfront-update && npx wrangler deploy
+# The R2 bucket already exists (created via the Cloudflare API); this only binds it.
+
+name = "massfront-update"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[r2_buckets]]
+binding     = "RELEASES"
+bucket_name = "massfront-releases"
+
+[observability]
+enabled = true

@@ -1,0 +1,134 @@
+{
+  "w": 480,
+  "h": 270,
+  "fps": 12,
+  "loopSeconds": 4.0,
+  "creatives": [
+    {
+      "id": "nova_recruit",
+      "brand": "Terran Frontline Command",
+      "tagline": "Order \u00b7 Science \u00b7 Unity",
+      "accent": [
+        110,
+        190,
+        255
+      ],
+      "bg": [
+        17,
+        46,
+        74
+      ],
+      "faction": "nova",
+      "poster": "nova_recruit_poster.jpg",
+      "video": "nova_recruit.mp4",
+      "w": 480,
+      "h": 270,
+      "bytes": 15363
+    },
+    {
+      "id": "ascendancy_conquest",
+      "brand": "Red Ascendancy",
+      "tagline": "Strength Through Ascension",
+      "accent": [
+        255,
+        96,
+        78
+      ],
+      "bg": [
+        58,
+        15,
+        18
+      ],
+      "faction": "ascendancy",
+      "poster": "ascendancy_conquest_poster.jpg",
+      "video": "ascendancy_conquest.mp4",
+      "w": 480,
+      "h": 270,
+      "bytes": 24060
+    },
+    {
+      "id": "syndicate_market",
+      "brand": "Syndicate Exchange",
+      "tagline": "Everything Has A Price",
+      "accent": [
+        150,
+        235,
+        100
+      ],
+      "bg": [
+        12,
+        34,
+        14
+      ],
+      "faction": "syndicate",
+      "poster": "syndicate_market_poster.jpg",
+      "video": "syndicate_market.mp4",
+      "w": 480,
+      "h": 270,
+      "bytes": 18534
+    },
+    {
+      "id": "umbral_broadcast",
+      "brand": "[Unknown Signal]",
+      "tagline": "It Arrives",
+      "accent": [
+        185,
+        122,
+        255
+      ],
+      "bg": [
+        24,
+        10,
+        40
+      ],
+      "faction": "horde",
+      "poster": "umbral_broadcast_poster.jpg",
+      "video": "umbral_broadcast.mp4",
+      "w": 480,
+      "h": 270,
+      "bytes": 50385
+    },
+    {
+      "id": "forge_industries",
+      "brand": "Forge Industries",
+      "tagline": "Built To Outlast",
+      "accent": [
+        255,
+        176,
+        64
+      ],
+      "bg": [
+        42,
+        28,
+        12
+      ],
+      "faction": null,
+      "poster": "forge_industries_poster.jpg",
+      "video": "forge_industries.mp4",
+      "w": 480,
+      "h": 270,
+      "bytes": 8932
+    },
+    {
+      "id": "coolant9",
+      "brand": "Coolant-9",
+      "tagline": "Stay Online",
+      "accent": [
+        70,
+        232,
+        255
+      ],
+      "bg": [
+        8,
+        10,
+        26
+      ],
+      "faction": null,
+      "poster": "coolant9_poster.jpg",
+      "video": "coolant9.mp4",
+      "w": 480,
+      "h": 270,
+      "bytes": 8499
+    }
+  ]
+}

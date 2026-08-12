@@ -1,0 +1,58 @@
+{
+  "version": 2,
+  "atlas": 1024,
+  "tile": 320,
+  "padding": 8,
+  "assets": {
+    "mdlCityTower": {
+      "label": "CityTower",
+      "family": "civilian",
+      "rect": [
+        0.0234375,
+        0.0234375,
+        0.296875,
+        0.296875
+      ]
+    },
+    "mdlCityDome": {
+      "label": "CityDome",
+      "family": "civilian",
+      "rect": [
+        0.3515625,
+        0.0234375,
+        0.296875,
+        0.296875
+      ]
+    },
+    "mdlCityHall": {
+      "label": "CityHall",
+      "family": "military",
+      "rect": [
+        0.6796875,
+        0.0234375,
+        0.296875,
+        0.296875
+      ]
+    },
+    "mdlCityTank": {
+      "label": "CityTank",
+      "family": "military",
+      "rect": [
+        0.0234375,
+        0.3515625,
+        0.296875,
+        0.296875
+      ]
+    },
+    "mdlCivicBlock": {
+      "label": "CivicBlock",
+      "family": "civilian",
+      "rect": [
+        0.3515625,
+        0.3515625,
+        0.296875,
+        0.296875
+      ]
+    }
+  }
+}

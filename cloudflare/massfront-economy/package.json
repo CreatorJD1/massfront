@@ -1,0 +1,13 @@
+{
+  "name": "massfront-economy",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "db:schema": "wrangler d1 execute massfront-accounts --file=schema.sql --remote",
+    "db:schema:local": "wrangler d1 execute massfront-accounts --file=schema.sql --local"
+  },
+  "devDependencies": { "wrangler": "^4" }
+}

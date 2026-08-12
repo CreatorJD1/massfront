@@ -1,0 +1,14 @@
+{
+  "name": "massfront-auth",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "db:create": "wrangler d1 create massfront-accounts",
+    "db:schema": "wrangler d1 execute massfront-accounts --file=schema.sql --remote",
+    "db:schema:local": "wrangler d1 execute massfront-accounts --file=schema.sql --local"
+  },
+  "devDependencies": { "wrangler": "^4" }
+}

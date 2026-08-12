@@ -1,0 +1,16 @@
+{
+  "appId": "com.creatorjd.massfront",
+  "appName": "MASSFRONT",
+  "webDir": "www",
+  "android": { "allowMixedContent": false },
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css"
+    },
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  },
+  "server": { "androidScheme": "https" },
+  "backgroundColor": "#060a12"
+}

@@ -1,0 +1,42 @@
+# MASSFRONT accounts server — registration, sign-in, sessions, cloud saves.
+#
+# The D1 database does NOT exist yet — creating one needs a token permission
+# this project's Cloudflare API token does not have. You (a human, with
+# dashboard or a fuller-scoped token) need to create it once:
+#
+#   cd cloudflare/massfront-auth
+#   npx wrangler d1 create massfront-accounts
+#
+# That prints a `database_id` (a UUID). Paste it over the placeholder in
+# [[d1_databases]] below, then load the schema and deploy:
+#
+#   npx wrangler d1 execute massfront-accounts --file=schema.sql --remote
+#   npx wrangler deploy
+#
+# See docs/ACCOUNTS.md for the full walkthrough, including local testing with
+# `npx wrangler dev --local` (which needs none of the above — it creates its
+# own throwaway local D1 file automatically).
+
+name = "massfront-auth"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding       = "DB"
+database_name = "massfront-accounts"
+database_id = "e3c74e0d-59b8-427e-92b8-ea8a3bbd6573"
+
+[observability]
+enabled = true
+
+# PBKDF2 at the >=100,000-iteration floor this worker uses is CPU-bound work,
+# not I/O wait, so it counts fully against a Worker's CPU-time limit. The
+# Workers Free plan hard-caps that at 10ms/request and cannot be raised —
+# register/login may intermittently fail there with an "exceeded CPU time"
+# error under real load. Workers Paid (a few USD/month) defaults to 30s and
+# is configured here to allow up to 50ms, which is comfortably enough
+# headroom; raise it further if `wrangler tail` ever shows exceededCpu.
+# Harmless to leave in on Free — the platform clamps it back down to 10ms
+# regardless of what's written here. See docs/ACCOUNTS.md "CPU time".
+[limits]
+cpu_ms = 50

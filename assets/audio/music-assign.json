@@ -1,0 +1,15 @@
+{
+  "lufs": -16,
+  "recoveredFrom": "releases/MASSFRONT.apk",
+  "tracks": [
+    {"src":"recovered://nova_black_iron_pulse_1.m4a","title":"Black Iron Pulse","artist":"","faction":"nova","states":["explore","tension"],"locked":true,"dur":92},
+    {"src":"recovered://nova_blackout_crown.m4a","title":"Blackout Crown","artist":"","faction":"nova","states":["combat"],"locked":true,"dur":92},
+    {"src":"recovered://ascendancy_ashes_to_crown.m4a","title":"Ashes to Crown","artist":"","faction":"ascendancy","states":["explore","tension"],"locked":true,"dur":92},
+    {"src":"recovered://ascendancy_iron_crown_1.m4a","title":"Iron Crown","artist":"","faction":"ascendancy","states":["combat"],"locked":true,"dur":92},
+    {"src":"recovered://syndicate_bassquake_chronicles_remastered_1.m4a","title":"Bassquake Chronicles Remastered","artist":"","faction":"syndicate","states":["explore","tension"],"locked":true,"dur":92},
+    {"src":"recovered://syndicate_black_flag_vulture.m4a","title":"Black Flag Vulture","artist":"","faction":"syndicate","states":["combat"],"locked":true,"dur":92},
+    {"src":"recovered://horde_black_helmets.m4a","title":"Black Helmets","artist":"","faction":"horde","states":["explore","tension"],"locked":true,"dur":92},
+    {"src":"recovered://horde_black_iron_pulse.m4a","title":"Black Iron Pulse","artist":"","faction":"horde","states":["combat"],"locked":true,"dur":92},
+    {"src":"recovered://menu_cold_crown.m4a","title":"Cold Crown","artist":"","faction":"menu","states":["explore"],"locked":true,"dur":92}
+  ]
+}

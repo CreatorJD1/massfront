@@ -1,0 +1,1692 @@
+{
+  "version": 1,
+  "packs": {
+    "music": {
+      "label": "MASSFRONT soundtrack",
+      "bytes": 16887479,
+      "files": [
+        {
+          "name": "ascendancy_iron_crown_1_1.m4a",
+          "size": 1563660,
+          "sha256": "6618f4b62100f1150b73dbd4d80949225ff9412d1266ff76c0ff10a765b36dfc"
+        },
+        {
+          "name": "ascendancy_iron_crown_4_1.m4a",
+          "size": 1847923,
+          "sha256": "550bfb540fbafc769c94e50b0312773d7fd1a94894c6ea9b82a25a34528f17e3"
+        },
+        {
+          "name": "horde_omen_in_the_hall_1_1.m4a",
+          "size": 1482032,
+          "sha256": "ec62cac96358b40f01c39df86c3fa5f7823a4407bd2e33855e07be35221a09ab"
+        },
+        {
+          "name": "horde_omen_in_the_hall_2.m4a",
+          "size": 1457995,
+          "sha256": "0056290db95b20d25ace94cdf3bd41452e3a9575531c9ad4bfc83a54be56f5b1"
+        },
+        {
+          "name": "menu_shadow_crown_1_1.m4a",
+          "size": 1309415,
+          "sha256": "6c417dc5725d87fe72cb41abeee2ea5cb5c37832af6d5364a2084f95e9d72d34"
+        },
+        {
+          "name": "menu_shadow_crown_2.m4a",
+          "size": 1328608,
+          "sha256": "245a37da48a6dfec0995b7e98cc79f058f40a4483b3301c5c0cb3c0e3078585d"
+        },
+        {
+          "name": "nova_black_iron_pulse_2.m4a",
+          "size": 1639781,
+          "sha256": "9a673fda3310b64acb33f7cbea4e20f90e80f0c7f4f306d4f9d4239baa5b79b0"
+        },
+        {
+          "name": "nova_blackout_crown_1.m4a",
+          "size": 1847540,
+          "sha256": "df2c2074914a95d6a4457cd2b84accc426d8ea203a12e61810768cc7a7860ea6"
+        },
+        {
+          "name": "splash_cold_crown_1_1.m4a",
+          "size": 957627,
+          "sha256": "1cb67db411e44a2d45ea2baea86876ce65819e345868c8e7788c4c7cecbd147c"
+        },
+        {
+          "name": "syndicate_iron_crown_2_1.m4a",
+          "size": 1719979,
+          "sha256": "a627e5213b6daefa3aa2c9825f1ba5bc9585e00a12f620a6c3c6c662d63eb58b"
+        },
+        {
+          "name": "syndicate_iron_crown_3_1.m4a",
+          "size": 1732919,
+          "sha256": "eb2fab03067eabc4b3dd14f32622dee6f017b86cf789ac20b35d1558d7f94b51"
+        }
+      ]
+    },
+    "voice": {
+      "label": "MASSFRONT voice bank — KEEN narration and command radio",
+      "bytes": 6530249,
+      "files": [
+        {
+          "name": "ascendancy_ability_0.m4a",
+          "size": 16124,
+          "sha256": "51d2ad4d099aa28fece5e65d28d6ee2bd3083c7bfaae3ad0a48182c7cae88608"
+        },
+        {
+          "name": "ascendancy_ability_0.ogg",
+          "size": 15431,
+          "sha256": "c5693fd6fbe67bf673647512fc56aabf0663d1fde9f70957de338893354dcbd1"
+        },
+        {
+          "name": "ascendancy_ability_1.m4a",
+          "size": 16936,
+          "sha256": "f383c605af771a67dbb5f44112e650d57db5671aaec0f81d5227ac763b77a4c2"
+        },
+        {
+          "name": "ascendancy_ability_1.ogg",
+          "size": 16135,
+          "sha256": "47b8b33259cfa92ca93d873b3d083998c7dd727c248c33806b59d0ab7d6b6e3e"
+        },
+        {
+          "name": "ascendancy_ability_2.m4a",
+          "size": 16754,
+          "sha256": "aaafca9c4a8e04737d5acf348302084b366098fa7026a73e0d5e51fbd262e8d1"
+        },
+        {
+          "name": "ascendancy_ability_2.ogg",
+          "size": 15743,
+          "sha256": "3bd66ede7208c4d4d23ad77cebc9cc100e2156f0017da545cdaa28d850db6457"
+        },
+        {
+          "name": "ascendancy_attack_0.m4a",
+          "size": 11528,
+          "sha256": "6ce56c37bd0294500971d08abd2147947cb69bedb4279ea7a746aa7c7ce147fe"
+        },
+        {
+          "name": "ascendancy_attack_0.ogg",
+          "size": 11495,
+          "sha256": "5ff57c0461cf65983e9056003a3b74ff0b781783d4a0a9916c28852ca331a84c"
+        },
+        {
+          "name": "ascendancy_attack_1.m4a",
+          "size": 16539,
+          "sha256": "d64c93cbefc554e7b8b72ab2052e5a5842642938e302d69ceb29e5c716fcbe8b"
+        },
+        {
+          "name": "ascendancy_attack_1.ogg",
+          "size": 15382,
+          "sha256": "557935750ea48dae8cbfcac72aa9fca9d249156484368a4b4f1324c570f6c9ea"
+        },
+        {
+          "name": "ascendancy_attack_2.m4a",
+          "size": 15829,
+          "sha256": "c31804e24f0c3c1981d502c6157902581be7094cb6542108d67519e63a8a7a7c"
+        },
+        {
+          "name": "ascendancy_attack_2.ogg",
+          "size": 15241,
+          "sha256": "0add0d8cd9910eeb9bed2a946b2329eca63c3598638b271fc6755ba12b591f83"
+        },
+        {
+          "name": "ascendancy_build_0.m4a",
+          "size": 17495,
+          "sha256": "0469d0fa4634002d99807bb42ed301c22d3004a38ce2cd0bbb2509856d3857d0"
+        },
+        {
+          "name": "ascendancy_build_0.ogg",
+          "size": 16305,
+          "sha256": "9cbbed13d307a2bf10117bc4ce50a2223f44781776c6785c2b2bbc4c0710bf0d"
+        },
+        {
+          "name": "ascendancy_build_1.m4a",
+          "size": 18522,
+          "sha256": "526aba0871775e1b307dd07a18e7feb2a06bcd063f34885a53dda8f907e2d0a4"
+        },
+        {
+          "name": "ascendancy_build_1.ogg",
+          "size": 17572,
+          "sha256": "cabf9edb050c634d4e6e9190fbf47e399ced43a86bb9d896b6d4cd6b207fdcd9"
+        },
+        {
+          "name": "ascendancy_build_2.m4a",
+          "size": 14630,
+          "sha256": "55a2aebe6766032308d57f5e76e3b3644e5f780ca1bc3ff8ad7cb807e526c092"
+        },
+        {
+          "name": "ascendancy_build_2.ogg",
+          "size": 14418,
+          "sha256": "700ce276efcf7d567a7b8360ae193581aa578884fd6a2beb0232c138ac8fdd59"
+        },
+        {
+          "name": "ascendancy_deploy_0.m4a",
+          "size": 16612,
+          "sha256": "b9f01722da225dc5a7aa712025c52ade45835ac9a15fa8d98583c2ced6146352"
+        },
+        {
+          "name": "ascendancy_deploy_0.ogg",
+          "size": 15643,
+          "sha256": "c14d6ded9069fb7a23d8abc977f55e2c68054f123fb18bd893604f6c5baaeb57"
+        },
+        {
+          "name": "ascendancy_deploy_1.m4a",
+          "size": 16070,
+          "sha256": "73649e59e843b1bac472bf1fa2e8a3cc21c3798c2f9fa8fe3b8f2380b26cd9be"
+        },
+        {
+          "name": "ascendancy_deploy_1.ogg",
+          "size": 15623,
+          "sha256": "3bb5f4e0360a60ea0fe775fec5dc3a4dcc14b04b8a75eacbfd9df493382bc2ab"
+        },
+        {
+          "name": "ascendancy_deploy_2.m4a",
+          "size": 15883,
+          "sha256": "271c534fdbfbd16008c609f683882bc5b1802def1762264348777301ea1373d7"
+        },
+        {
+          "name": "ascendancy_deploy_2.ogg",
+          "size": 15279,
+          "sha256": "95ed2c81c6f97eb4826beb10498f0297bcda256e9659bc9d58c7ddbb01a1eb94"
+        },
+        {
+          "name": "ascendancy_hold_0.m4a",
+          "size": 12708,
+          "sha256": "837112939da1b29a732dc575346942f82f42227501fe19736c55e38d0e15bc81"
+        },
+        {
+          "name": "ascendancy_hold_0.ogg",
+          "size": 12724,
+          "sha256": "98b80694d2783956b2b81c0dd9f2ea1d8e05bcc67d9d405c79bccb220cf65dc4"
+        },
+        {
+          "name": "ascendancy_hold_1.m4a",
+          "size": 15425,
+          "sha256": "44764fd5bc3d15a448855654387f0354537eaf2c6756d118c7ad4cd1e850a64f"
+        },
+        {
+          "name": "ascendancy_hold_1.ogg",
+          "size": 14752,
+          "sha256": "f9c3f2a4dd6954b9efed59e3efc02f514a154943669522f309c244d4efed4d73"
+        },
+        {
+          "name": "ascendancy_hold_2.m4a",
+          "size": 13432,
+          "sha256": "0199d95ed280f95e7cd5e729759e4ecac3d5445b562e31d7fce186ba29acb1f8"
+        },
+        {
+          "name": "ascendancy_hold_2.ogg",
+          "size": 13186,
+          "sha256": "6ad40b898395640a2e753eb3b70ec04a440caad61741fcf0ca89c3dc1d43061f"
+        },
+        {
+          "name": "ascendancy_move_0.m4a",
+          "size": 13868,
+          "sha256": "318b1439e6a4e1696959e4cce96c865c9e2e116c4ab1a64ff85b9a94b3f980d1"
+        },
+        {
+          "name": "ascendancy_move_0.ogg",
+          "size": 13710,
+          "sha256": "3daf559cd4814b8dde78a7d7343a7b91a13af288dd5f3d358d12db1363330647"
+        },
+        {
+          "name": "ascendancy_move_1.m4a",
+          "size": 15393,
+          "sha256": "76fc01f3400d7644202255e721bd2f1c1ce95d46730acc935ba4a960c5614b15"
+        },
+        {
+          "name": "ascendancy_move_1.ogg",
+          "size": 14589,
+          "sha256": "b1e97ce2c9d961be49b1581e31458923deb1f71cf33079b7a351adbc9b9ba473"
+        },
+        {
+          "name": "ascendancy_move_2.m4a",
+          "size": 9444,
+          "sha256": "10c1933a5b700beee6729eb718be489145da16c3764299d01d578ae0e0939d3e"
+        },
+        {
+          "name": "ascendancy_move_2.ogg",
+          "size": 10055,
+          "sha256": "0c7899b8c46ec96a60e3559fc53838691ebc12de4706530141fdaaf093cd2c6a"
+        },
+        {
+          "name": "ascendancy_patrol_0.m4a",
+          "size": 13416,
+          "sha256": "08a4779e6ce3386d1e41fb6128d26992594173799308cb6a96999007677a189c"
+        },
+        {
+          "name": "ascendancy_patrol_0.ogg",
+          "size": 13609,
+          "sha256": "ed23ea7c601b24ec99edd42fe38c2962f59585652da473ab26e040612be2256c"
+        },
+        {
+          "name": "ascendancy_patrol_1.m4a",
+          "size": 11652,
+          "sha256": "ec0e8db1aa5345b16a99f5688aa3a01a3956a6c95df0fc3705f5168ab92a0f0e"
+        },
+        {
+          "name": "ascendancy_patrol_1.ogg",
+          "size": 12015,
+          "sha256": "baecb7268c9e59c77f97f80466c1304f9e21c1744199c120e35620fb2086579e"
+        },
+        {
+          "name": "ascendancy_patrol_2.m4a",
+          "size": 14658,
+          "sha256": "48f8181d7a8f866d36c03084535acd159030687555e62877239c1488e780c34a"
+        },
+        {
+          "name": "ascendancy_patrol_2.ogg",
+          "size": 14092,
+          "sha256": "afdb78183fb3881d14b26936e1b6fb8f08b961676677e13e27863417ac69776b"
+        },
+        {
+          "name": "ascendancy_select_0.m4a",
+          "size": 16392,
+          "sha256": "822360b9a521d76d0bf1e00c10dea5e66ca7c30e5abac40263bd3a03b551419e"
+        },
+        {
+          "name": "ascendancy_select_0.ogg",
+          "size": 15700,
+          "sha256": "d27b8bc4c73f6cb7da888f9ab3038bc60d6b552ccba50bc20f249fa4609846b2"
+        },
+        {
+          "name": "ascendancy_select_1.m4a",
+          "size": 14729,
+          "sha256": "4defc9a3140d679fa9add409469487d439a8bcc411545cfd4ed8cb1831b9d584"
+        },
+        {
+          "name": "ascendancy_select_1.ogg",
+          "size": 14289,
+          "sha256": "5fe98a8eb436975100ca72db4637024bef0add14c837af65f7b0574fe135b1e7"
+        },
+        {
+          "name": "ascendancy_select_2.m4a",
+          "size": 14665,
+          "sha256": "a9e534c74070869ed2a03d76bba6f225405425750cb33953b9606f00fac4706a"
+        },
+        {
+          "name": "ascendancy_select_2.ogg",
+          "size": 13962,
+          "sha256": "c2d6eef300fa49344e67d5c63279da3ed53e89bb8da414ca6c6e1928fdf15d6e"
+        },
+        {
+          "name": "ascendancy_stop_0.m4a",
+          "size": 15886,
+          "sha256": "ae80083cbfcb0cc8b187e4728f71251cc3289d1ff914975cb00b74e4e875394c"
+        },
+        {
+          "name": "ascendancy_stop_0.ogg",
+          "size": 14928,
+          "sha256": "9a4b49a1a86ea0bde5e3f6481485f3eee4de451eee88606e8638a8869d98f00f"
+        },
+        {
+          "name": "ascendancy_stop_1.m4a",
+          "size": 12554,
+          "sha256": "748dc411704693b0c7ddf309bec8b61e1a677ecf20ce857b4e88a01c84037964"
+        },
+        {
+          "name": "ascendancy_stop_1.ogg",
+          "size": 12314,
+          "sha256": "6de34f9750600315c716deb129511e3553b4aad0a6ba0ce06b803bd9b6608c07"
+        },
+        {
+          "name": "ascendancy_stop_2.m4a",
+          "size": 11316,
+          "sha256": "99619fecfd284c6d0c8ee9c2e338da855af88a3e817251e84f41547f03703358"
+        },
+        {
+          "name": "ascendancy_stop_2.ogg",
+          "size": 11654,
+          "sha256": "6f8d7ed4350812cf212b6a471aeda20dd1bbfb75d49d6d89b288f8118e2cd0a2"
+        },
+        {
+          "name": "horde_ability_0.m4a",
+          "size": 15580,
+          "sha256": "f70856b60c9c8a335fc057075c9480d91ffabb03d0c13bc2fe6f25f982edb862"
+        },
+        {
+          "name": "horde_ability_0.ogg",
+          "size": 15061,
+          "sha256": "712d02dc3c00c9e3fe29e4a60e36781f6c050d92765a0cca68e9d899e8826028"
+        },
+        {
+          "name": "horde_ability_1.m4a",
+          "size": 17475,
+          "sha256": "3d1acc55620cff1057301305ffad930d4858e23908311682cd25ccf3c2e7b4ac"
+        },
+        {
+          "name": "horde_ability_1.ogg",
+          "size": 16738,
+          "sha256": "e03d238e2317fc520972974b4eea5489859747de74c9d7a79d9bdcaccec3acb5"
+        },
+        {
+          "name": "horde_ability_2.m4a",
+          "size": 16071,
+          "sha256": "c959cf52bcc157558963c832a17ec6cff3c1825898fa40cae6d8f8cfbd5673ee"
+        },
+        {
+          "name": "horde_ability_2.ogg",
+          "size": 15506,
+          "sha256": "2950f8bb93b6ef57f60951787ee655b63891a3a68c9f09ee0e18f86101196bfe"
+        },
+        {
+          "name": "horde_attack_0.m4a",
+          "size": 10204,
+          "sha256": "5f4207275fb920440db34043475f41fcfb1a03452411429553cf9cb7e1570bd3"
+        },
+        {
+          "name": "horde_attack_0.ogg",
+          "size": 10288,
+          "sha256": "11db93be1acaa8354ffb2e1f373a5d15409cd32efc91197a2899ab0b8098a1fc"
+        },
+        {
+          "name": "horde_attack_1.m4a",
+          "size": 16866,
+          "sha256": "7b2504b33ce061b05fb8b10c2ac4ea2eef288613654cacd229929fc8c2fd6d17"
+        },
+        {
+          "name": "horde_attack_1.ogg",
+          "size": 15660,
+          "sha256": "cfeb0bdc0a0e9188bf97dd7d47cfc83079b1b2fbedd78015d1761105b2523b1d"
+        },
+        {
+          "name": "horde_attack_2.m4a",
+          "size": 14965,
+          "sha256": "404648225f68fc2ea3dbe81f6ce7015bc9cb6617e6c1a56bc1fc83b6afcf1783"
+        },
+        {
+          "name": "horde_attack_2.ogg",
+          "size": 14383,
+          "sha256": "2fd834771af3feadd1e999e3ad65299236c383d4cbff94f79a9a34f95ece2270"
+        },
+        {
+          "name": "horde_build_0.m4a",
+          "size": 15463,
+          "sha256": "9e19206c1d1e1bbe0fdcb4762da9f012eee8165a95051abf6f8d2c6e81e1d3c1"
+        },
+        {
+          "name": "horde_build_0.ogg",
+          "size": 14687,
+          "sha256": "3ad073e597a5e54399964298022f958e16feecd671203ac9259c7975b984eb7b"
+        },
+        {
+          "name": "horde_build_1.m4a",
+          "size": 17762,
+          "sha256": "dd73f7918ed6060e7015668772922269a0344eb4bf521bc5ea0232c2cdffb318"
+        },
+        {
+          "name": "horde_build_1.ogg",
+          "size": 16743,
+          "sha256": "4c07cf3cdf8583754092f8a1d912c992140c28f1c17cf6d2a99e2769ff68e237"
+        },
+        {
+          "name": "horde_build_2.m4a",
+          "size": 12083,
+          "sha256": "7474ffdb983f9109588ef6e5800a2dfa83459939440df0ed3f34a79a992e9909"
+        },
+        {
+          "name": "horde_build_2.ogg",
+          "size": 12464,
+          "sha256": "c3e2df2182412e8ee297ffb28560667f9ed3ac006b87743a42463344f081934c"
+        },
+        {
+          "name": "horde_deploy_0.m4a",
+          "size": 16606,
+          "sha256": "e51fc0a1c4282addc3ba659ab26ec0913d83c5ebf9010086545d872223827c8e"
+        },
+        {
+          "name": "horde_deploy_0.ogg",
+          "size": 15578,
+          "sha256": "ec505afd5254984fe49c014f20a61cf7dc1ff98995311ca7e7ddba082be369d7"
+        },
+        {
+          "name": "horde_deploy_1.m4a",
+          "size": 16349,
+          "sha256": "326698470a430e2a071e0408adc3f98caa1edc1ed0614e66ffb9c8206d713eef"
+        },
+        {
+          "name": "horde_deploy_1.ogg",
+          "size": 15671,
+          "sha256": "183901d52d381628d6c434aa8c03ef049042030f041564d62ce9a0bf1b445c2d"
+        },
+        {
+          "name": "horde_deploy_2.m4a",
+          "size": 16535,
+          "sha256": "66981a21624eff6332f8472c3f9de1dc36495049e94d072f0c564c63e22242ad"
+        },
+        {
+          "name": "horde_deploy_2.ogg",
+          "size": 15559,
+          "sha256": "09005612ea477921ba741b94557199aa0d1052697bab1d25651696ced4a66d86"
+        },
+        {
+          "name": "horde_hold_0.m4a",
+          "size": 10665,
+          "sha256": "13e3a366016f3189475176b5989f5d7f5909d43ae412dae1eb7f8c90d17f1d53"
+        },
+        {
+          "name": "horde_hold_0.ogg",
+          "size": 11063,
+          "sha256": "61c624b983f610ac97f2874626d290937e3d0e4fa31172a1aa15eaccbb4d16d3"
+        },
+        {
+          "name": "horde_hold_1.m4a",
+          "size": 14674,
+          "sha256": "0a7c2345035e65113ca4dcd3ad9c338c2dec1086356580210d9c58357f0da20a"
+        },
+        {
+          "name": "horde_hold_1.ogg",
+          "size": 13983,
+          "sha256": "bc57e34b08b153881b72fc0d3d3f1310bd8a1c49c07449a78f2f604d05651b64"
+        },
+        {
+          "name": "horde_hold_2.m4a",
+          "size": 10860,
+          "sha256": "b4b6b62c450358db4cf8b29f5157d2b9bff1ec6b5fc01a046cdf25061c061e23"
+        },
+        {
+          "name": "horde_hold_2.ogg",
+          "size": 11164,
+          "sha256": "dfe2e7b335638e7e06e707e2daef0143601ad26be925ac3a3d06730ae5176fa3"
+        },
+        {
+          "name": "horde_move_0.m4a",
+          "size": 12800,
+          "sha256": "8b292dea1c1e54b7f37f7b189f8a4ea6585f06f2e6317f892141affdb924c8b7"
+        },
+        {
+          "name": "horde_move_0.ogg",
+          "size": 12917,
+          "sha256": "920a8cd587006a0a99812c54b47bc81bb307df5a0d079a9ffbcf82e10b85a9a0"
+        },
+        {
+          "name": "horde_move_1.m4a",
+          "size": 12859,
+          "sha256": "2a936438b2fe8b035c41528f0e40ebeaf47227cc69973149deb06fafb68d6819"
+        },
+        {
+          "name": "horde_move_1.ogg",
+          "size": 12505,
+          "sha256": "ffccb78a60c1ae6c94625da64e1216e5c2b6777f7ea2d18e1b42abdc1441717f"
+        },
+        {
+          "name": "horde_move_2.m4a",
+          "size": 7718,
+          "sha256": "8d621c0232e4990f06e237cb580457ad9c2735ce59f717df80aac437da5cc8b2"
+        },
+        {
+          "name": "horde_move_2.ogg",
+          "size": 9009,
+          "sha256": "55471330e8763cb2c63ad622ac2163f8fa035200006107fad22accaabe2eb1fe"
+        },
+        {
+          "name": "horde_patrol_0.m4a",
+          "size": 12144,
+          "sha256": "b5ebc2487ab45577c9ad75ed4c7de3b8b5974724e65904e6c6340ef5067401b6"
+        },
+        {
+          "name": "horde_patrol_0.ogg",
+          "size": 12598,
+          "sha256": "45af98d3f9d79027d8994d266c692c8c697321bc523d1e90f498c7adff90ec5c"
+        },
+        {
+          "name": "horde_patrol_1.m4a",
+          "size": 10179,
+          "sha256": "f800837743801495eeb3a01aac57212225be3d94b619de6e09a480cf230952f1"
+        },
+        {
+          "name": "horde_patrol_1.ogg",
+          "size": 10840,
+          "sha256": "065bb48e2f9b69f196444fea78388603bff72c02d50905986a550a200c709880"
+        },
+        {
+          "name": "horde_patrol_2.m4a",
+          "size": 13878,
+          "sha256": "074a9f367ee756271d574a0dc2d74da5d722f94cbf86749f1129e046e4a3ecef"
+        },
+        {
+          "name": "horde_patrol_2.ogg",
+          "size": 13681,
+          "sha256": "5d3094186a783b37ebdd4509a22d46548c74506b635afb5b89f7bcf50a4b191c"
+        },
+        {
+          "name": "horde_select_0.m4a",
+          "size": 15341,
+          "sha256": "6a356dca25b413307fa24159c4145c625639a2d8574fe6aea943473716202b23"
+        },
+        {
+          "name": "horde_select_0.ogg",
+          "size": 14702,
+          "sha256": "ee123847a0285094dd12f63570ab0f044752a2564b96c641e443fb645d07a83e"
+        },
+        {
+          "name": "horde_select_1.m4a",
+          "size": 12384,
+          "sha256": "7a67ecaea2cde023ade3d7e3a2ce3e7ca77bf22a80ca43682409135b192175f8"
+        },
+        {
+          "name": "horde_select_1.ogg",
+          "size": 12490,
+          "sha256": "cd6ea1c0727fe2684268cbd0992109c5a2d25645a4797fdfa952709be7067eeb"
+        },
+        {
+          "name": "horde_select_2.m4a",
+          "size": 13756,
+          "sha256": "ce76102f650027ef9dbdc3ba90ad4b824a8274f2cb7e86530cb2740b4308dddf"
+        },
+        {
+          "name": "horde_select_2.ogg",
+          "size": 13174,
+          "sha256": "7abee94a695212f5157f88c7f941b6e69bea9a39d72a9261d226d44b3a94c83b"
+        },
+        {
+          "name": "horde_stop_0.m4a",
+          "size": 14429,
+          "sha256": "7b5d45cb4c49a5c98a64055fdfc22d4a2d8ccf9051354901787c0f63bd955520"
+        },
+        {
+          "name": "horde_stop_0.ogg",
+          "size": 13772,
+          "sha256": "cbab48204b90e9252c19beaecfe55c716fbca66b0669fdc942eff600e4a74fd6"
+        },
+        {
+          "name": "horde_stop_1.m4a",
+          "size": 10476,
+          "sha256": "60fe087b8446ee395660b1df6cf78dfc06e3b5d7582d0c08a6da13a8c90e17e7"
+        },
+        {
+          "name": "horde_stop_1.ogg",
+          "size": 10814,
+          "sha256": "fb0a43d944764dcf35a819ba1d3e5c22e6f12f6e7b8851a54a190ddde85aabf3"
+        },
+        {
+          "name": "horde_stop_2.m4a",
+          "size": 10418,
+          "sha256": "776ec787951619dbe6b9c1914cf85f640c1f84f4a13e010783351f1a4a8feef9"
+        },
+        {
+          "name": "horde_stop_2.ogg",
+          "size": 10988,
+          "sha256": "f9422601adeceb0e6d5e3b112e9a08b4e318bb94c2f11c7f76b1550809e2a713"
+        },
+        {
+          "name": "keen_done_ability.m4a",
+          "size": 30133,
+          "sha256": "b52bc7affbeecd65d6d5b2e214a3605f9b8452c56dc496a956103cf467f0adf5"
+        },
+        {
+          "name": "keen_done_ability.ogg",
+          "size": 27353,
+          "sha256": "8c9d8663d81c7409941538736d409601e65a5d7195f95d88f14c802568053a9a"
+        },
+        {
+          "name": "keen_done_attack.m4a",
+          "size": 28143,
+          "sha256": "a5356f53004a4c6ddee97e49e75dbf80d52f03f778e66374a1c0bb032bff5193"
+        },
+        {
+          "name": "keen_done_attack.ogg",
+          "size": 25383,
+          "sha256": "c624a8c5ad2dfe3d6d0f60fd7866d7c5e3d1d9a79c16e531ad2648419e8bab08"
+        },
+        {
+          "name": "keen_done_camera.m4a",
+          "size": 27305,
+          "sha256": "c8fd66b76494a854b86684ec1a559bf52a8ea0c5dfa74c25c421104fcff6aea6"
+        },
+        {
+          "name": "keen_done_camera.ogg",
+          "size": 24800,
+          "sha256": "20a5ad0e3c4446936453d1e05df7be2ac7513d4d6dcd2462ef1f1f0831d28aaa"
+        },
+        {
+          "name": "keen_done_cloud.m4a",
+          "size": 11756,
+          "sha256": "fa7f24a74da72fe6b9592a800b0351e76ec2db6560d17ba390109950bfe2affa"
+        },
+        {
+          "name": "keen_done_cloud.ogg",
+          "size": 12077,
+          "sha256": "54476c45c0292590d9467ead7221836ba1ca01a79bddb0c18d946b61abcb5fe7"
+        },
+        {
+          "name": "keen_done_commander.m4a",
+          "size": 29464,
+          "sha256": "64f292df1b2916a9a643289427890f1d2be77ff14ee3eac1a6ce39193e9b47bc"
+        },
+        {
+          "name": "keen_done_commander.ogg",
+          "size": 26267,
+          "sha256": "c776d5c1cbf43673b8a49be080fe794b58d297cbb7074a081098f9df503c9c31"
+        },
+        {
+          "name": "keen_done_deploy.m4a",
+          "size": 20676,
+          "sha256": "55f129c1c3d1a60f027f1927e24320aa04da0b9dd4a38c8a48aa8dd807b46ec2"
+        },
+        {
+          "name": "keen_done_deploy.ogg",
+          "size": 19101,
+          "sha256": "86a4fb9316d980579d7c6be18ebbcbcda42ff57d23bb4cce429ed7fa6b580003"
+        },
+        {
+          "name": "keen_done_fac.m4a",
+          "size": 20876,
+          "sha256": "9b1d0447a46a00d9f0d2ebe1bf7c6db07f801ed6e167290c3105c661a25d86c6"
+        },
+        {
+          "name": "keen_done_fac.ogg",
+          "size": 19170,
+          "sha256": "70a1aa245c84c6299a1c3a284b087eeb25047fdb9aae7b0045752e092cc2ab36"
+        },
+        {
+          "name": "keen_done_fog.m4a",
+          "size": 34854,
+          "sha256": "7e72de69d656ad481c7a3e2f0fed7b5af52e92a4b75b787013ce3839a57bc0e0"
+        },
+        {
+          "name": "keen_done_fog.ogg",
+          "size": 31397,
+          "sha256": "b0bdbaa7c15853e6a000687418277639752841fe4697e59de3e162d98e6a8e8f"
+        },
+        {
+          "name": "keen_done_formation.m4a",
+          "size": 27229,
+          "sha256": "02ee64fffa082f686237700817405e111e69abcd62419438d1120c7df60f90f6"
+        },
+        {
+          "name": "keen_done_formation.ogg",
+          "size": 24777,
+          "sha256": "8e454681823517b3786ae44a30593776676083ac429ae1f4ef2773b15ebe98ca"
+        },
+        {
+          "name": "keen_done_intel.m4a",
+          "size": 55902,
+          "sha256": "3db54d1a1d769633e06e0aa04d989f6ace6d4c437953eb3e6ec6e815a9efd268"
+        },
+        {
+          "name": "keen_done_intel.ogg",
+          "size": 48171,
+          "sha256": "2aa0d7a842023616330254974b62400ece3e3314c646b7777043a88c89f8b10b"
+        },
+        {
+          "name": "keen_done_mex.m4a",
+          "size": 19153,
+          "sha256": "1729c710c30253668f7fcb62d78e906e84992554c99e0683e51d8a4e158a919b"
+        },
+        {
+          "name": "keen_done_mex.ogg",
+          "size": 18182,
+          "sha256": "666bcaee1ef692c5068526b58f3806b1c3a56ee0b00b765f0cd854f15a0bff82"
+        },
+        {
+          "name": "keen_done_objective.m4a",
+          "size": 37064,
+          "sha256": "803fea41f93c42ebc3df33f7849cf0319c0d9654412aa8a0e8a92e4072299c48"
+        },
+        {
+          "name": "keen_done_objective.ogg",
+          "size": 32877,
+          "sha256": "80c6b8530abf511d385b357265a7ad37e5f320649deb7551227cacf41a6d7746"
+        },
+        {
+          "name": "keen_done_pickup.m4a",
+          "size": 34852,
+          "sha256": "733db1faf7de44cb0a16ef8adf744b1c0d2a953c3b35847b702dd0f45d5a4fd5"
+        },
+        {
+          "name": "keen_done_pickup.ogg",
+          "size": 30883,
+          "sha256": "d41bf59d0885bda8721f6bd44add816bdc89f5bdae4cbea66c2b798a5998c75a"
+        },
+        {
+          "name": "keen_done_platoon.m4a",
+          "size": 25691,
+          "sha256": "80f5cc40c19ca5fc075334a994b084de93c1fe08f99a9d7f174f60a47cc3a34a"
+        },
+        {
+          "name": "keen_done_platoon.ogg",
+          "size": 23426,
+          "sha256": "ee48cdde751f97980437f0cbb574ce138c93c1578c2664d3e98147fb4f270ad0"
+        },
+        {
+          "name": "keen_done_power.m4a",
+          "size": 26233,
+          "sha256": "1447d25cf1e05dd057d8024dbd9daccf22b6cbf08e15a5dc83c8c49c3d1d69a7"
+        },
+        {
+          "name": "keen_done_power.ogg",
+          "size": 23695,
+          "sha256": "5a20a9fbfa195f803920e8f8eceadf957c83290c2618e047c1a92900e6aec731"
+        },
+        {
+          "name": "keen_done_queue.m4a",
+          "size": 25623,
+          "sha256": "5f4f8874a8c4a05028ed21f304975030c57f1b022a69739cdfa1af57f618fa58"
+        },
+        {
+          "name": "keen_done_queue.ogg",
+          "size": 23422,
+          "sha256": "8907d7046a529f0bc541e431a8696c0fa66ca073e162c98eb48c129dc7ea48be"
+        },
+        {
+          "name": "keen_done_tech.m4a",
+          "size": 28706,
+          "sha256": "d236e5f2f14d8920e380a87920034a9f22b35ef557aff301ca6cc524b1d86f26"
+        },
+        {
+          "name": "keen_done_tech.ogg",
+          "size": 25895,
+          "sha256": "102d8e0f3ce88e662e82ac1ca5529e2c2fac41ef76f7f4ea46cbe091ce96435b"
+        },
+        {
+          "name": "keen_done_territory.m4a",
+          "size": 15831,
+          "sha256": "5b0ca94ce8295d54283e5383394e0d609c05213ad5651ded01d229f59515a705"
+        },
+        {
+          "name": "keen_done_territory.ogg",
+          "size": 15344,
+          "sha256": "a944f18186cc263d9a2619d142599d7e5044c2c1a1db426e9031ee7c9019ace1"
+        },
+        {
+          "name": "keen_done_train.m4a",
+          "size": 33497,
+          "sha256": "e0f46e4184b449efbe261b5aaf7f393a81c06287865d4e056b7f253370aa4855"
+        },
+        {
+          "name": "keen_done_train.ogg",
+          "size": 29214,
+          "sha256": "afe75553b86221302a2995302086f929a986764b190ed8a7f990f582ffdad88b"
+        },
+        {
+          "name": "keen_done_turret.m4a",
+          "size": 71145,
+          "sha256": "4e088a02bd440815107ff6b892705124b3560d24a91a2fceb7f3264ac532ca35"
+        },
+        {
+          "name": "keen_done_turret.ogg",
+          "size": 59145,
+          "sha256": "518a679db6554ed780c7550b2921bbed66f819b875ca34af4883a0f575e56363"
+        },
+        {
+          "name": "keen_graduation.m4a",
+          "size": 59009,
+          "sha256": "61aa08c241cea112edb308a70354c17b0bae10f37299c0184c5bb699c1e3ea9a"
+        },
+        {
+          "name": "keen_graduation.ogg",
+          "size": 50910,
+          "sha256": "a35709d8f1deac2c8c1c9b55562030aa955fc6b94541a3b82f49f1094d0484e5"
+        },
+        {
+          "name": "keen_greeting.m4a",
+          "size": 58820,
+          "sha256": "206f2efabf4db6c172d6ec4232cf9923ee99a2061bb472f5d0ec199a9061fd09"
+        },
+        {
+          "name": "keen_greeting.ogg",
+          "size": 50099,
+          "sha256": "b7a75975823f2a9416e7564ad474b91a5e5894fb7dbaa5438a8a19319bae07e5"
+        },
+        {
+          "name": "keen_react_base_attack0.m4a",
+          "size": 27995,
+          "sha256": "952817b38c9564c2350a56c2f429085c19f835d645f76b66c01f816df8367d13"
+        },
+        {
+          "name": "keen_react_base_attack0.ogg",
+          "size": 25400,
+          "sha256": "b23730e78b85ead0b1b9f69b38dc78ecef6e2540d4e4de80dac738ca2d862477"
+        },
+        {
+          "name": "keen_react_base_attack1.m4a",
+          "size": 21375,
+          "sha256": "7fbd2a0a15f7037478a0f0ac1c21347035e8a3845eb2d346f28984af2a9af769"
+        },
+        {
+          "name": "keen_react_base_attack1.ogg",
+          "size": 19892,
+          "sha256": "f5e65e2802eb8d3c6b2900ba1f829a2fc2ffb2a7eeace53946065ea447c4d9e8"
+        },
+        {
+          "name": "keen_react_hazard_crater.m4a",
+          "size": 25207,
+          "sha256": "f950bdd7e38969770042c8205cb2f139df23e49b78e7da6c5b39ee14e4055467"
+        },
+        {
+          "name": "keen_react_hazard_crater.ogg",
+          "size": 23557,
+          "sha256": "904e57a9171bd203542e15efe757c4839dbb73eb776f47207c7c07f0b93b1b5c"
+        },
+        {
+          "name": "keen_react_hazard_default.m4a",
+          "size": 29373,
+          "sha256": "3b7973ff5da935679d92ef0d0daee552451f0283605e212bfa26ae90ad9e3920"
+        },
+        {
+          "name": "keen_react_hazard_default.ogg",
+          "size": 26239,
+          "sha256": "3db853005420ea4942bb28aeb323bf4381f62c2ebe876055037d0e6ad34dc302"
+        },
+        {
+          "name": "keen_react_hazard_highland.m4a",
+          "size": 23045,
+          "sha256": "478f8f28d62be55c56fcad6541482778fe3f99ca0037c68e9c6c4d7887d063d0"
+        },
+        {
+          "name": "keen_react_hazard_highland.ogg",
+          "size": 20885,
+          "sha256": "914bf71ad7b557e1230a1c79652ccc6fc1801846417a8092356885961b00bed6"
+        },
+        {
+          "name": "keen_react_hazard_isles.m4a",
+          "size": 24015,
+          "sha256": "d298a718a5e6a77359e7155212eafa632273472e1358765c986c447f6c8885a4"
+        },
+        {
+          "name": "keen_react_hazard_isles.ogg",
+          "size": 22387,
+          "sha256": "6ac348ccf93657b2de82559619f648869e6d9af57a523b7890e188ef2c5697bd"
+        },
+        {
+          "name": "keen_react_hazard_vanguard.m4a",
+          "size": 28762,
+          "sha256": "7989b0eb686540895e19f02259423d56ca61a95d722c6514727ed69653ed5019"
+        },
+        {
+          "name": "keen_react_hazard_vanguard.ogg",
+          "size": 26016,
+          "sha256": "1fccec183ce75c588f5fee7d891ecea4e67b60a156f5f1d5e2838146c63e9830"
+        },
+        {
+          "name": "keen_react_low_power.m4a",
+          "size": 22018,
+          "sha256": "d1cc32ffc0621ed1d69a70bde754fbcd4142df5077c44e832a1f98d5bed92a80"
+        },
+        {
+          "name": "keen_react_low_power.ogg",
+          "size": 20242,
+          "sha256": "88783849afa8a852e88bb9f32dc07bd85875fc2484cdf2cc489da1a79f63d798"
+        },
+        {
+          "name": "keen_react_unit_lost0.m4a",
+          "size": 27020,
+          "sha256": "d73ed00b4c0cdc4ba528cf7150366766cc21b2d35cc0ed2298300d03b911cc35"
+        },
+        {
+          "name": "keen_react_unit_lost0.ogg",
+          "size": 24852,
+          "sha256": "5325e28a8381c4e674df68f7ee250421c4d398f37fe4e2376d18d6f12ffe9923"
+        },
+        {
+          "name": "keen_react_unit_lost1.m4a",
+          "size": 25844,
+          "sha256": "aa007adc4a3605720ae5efd668e1cea66fa1bbcd0f0a6ccbc00907bd78769495"
+        },
+        {
+          "name": "keen_react_unit_lost1.ogg",
+          "size": 23339,
+          "sha256": "fdb07558fbc29cc56f880ff389dea674efc6955850702ca73a3fd230036130bf"
+        },
+        {
+          "name": "keen_react_wave.m4a",
+          "size": 31970,
+          "sha256": "fbd7092aa517507c45b5b657253f6e1b8ca51720496234ef8d4bb77a846af187"
+        },
+        {
+          "name": "keen_react_wave.ogg",
+          "size": 27722,
+          "sha256": "f9eae78e77e4aac9d1ddc6451d0045072ec46d0c93f6e5969a98297d54ee2ba2"
+        },
+        {
+          "name": "keen_skip.m4a",
+          "size": 27287,
+          "sha256": "099353538bde5cad8d9cabec576164cff84f1ec99d732b2bc5441d06ed471fba"
+        },
+        {
+          "name": "keen_skip.ogg",
+          "size": 24968,
+          "sha256": "8ad1fb575348e1796a87de054ac67d51a4bfafd0c7953c9bcf973ddb3868a52f"
+        },
+        {
+          "name": "keen_step_ability.m4a",
+          "size": 42828,
+          "sha256": "2aa3ab7d4ed16ea24547b3feb0e773a85888c85af2163d5d7aa962f414cd774c"
+        },
+        {
+          "name": "keen_step_ability.ogg",
+          "size": 37767,
+          "sha256": "233ee7402f39188d9366ca7fa698dbd463f9bb69eaf47c2db9e97f036d05c2e2"
+        },
+        {
+          "name": "keen_step_attack.m4a",
+          "size": 81371,
+          "sha256": "b926fd5241d08bc8e84b4ffe991b0d139410bda599b3b2e188249200c8b8b8b4"
+        },
+        {
+          "name": "keen_step_attack.ogg",
+          "size": 68678,
+          "sha256": "01611a7edd727e5584ad97a12bfdd1847d5eedfeb6b3b0310f0b3835ae0f4150"
+        },
+        {
+          "name": "keen_step_camera.m4a",
+          "size": 46499,
+          "sha256": "2f26611cae457dfd4ea04b4c174b4c6ee77a044ab241b37f8773fb1580460da9"
+        },
+        {
+          "name": "keen_step_camera.ogg",
+          "size": 40165,
+          "sha256": "14428e470fad93ee54e37e7a0eecd8d055c9a2f594c94a153abeb2b2a40cfdfb"
+        },
+        {
+          "name": "keen_step_cloud.m4a",
+          "size": 59878,
+          "sha256": "8fcea005a2b61fd2cd26afeb969a234e11779e0bb6c4ae7af3fdebc3a78536c4"
+        },
+        {
+          "name": "keen_step_cloud.ogg",
+          "size": 51363,
+          "sha256": "3509205b10b9f3bb73cd105c78e3d36b128f359f4734d51d8356c7d4df007f23"
+        },
+        {
+          "name": "keen_step_commander.m4a",
+          "size": 37217,
+          "sha256": "1f0fb5170195aed2b2f0eb5f61ff7e46727144000c64608924a0a32327dde134"
+        },
+        {
+          "name": "keen_step_commander.ogg",
+          "size": 33448,
+          "sha256": "38d90acfb029fe052c6a9aadd1ccf96d41507f44eb4d77d80bd396a001d3187c"
+        },
+        {
+          "name": "keen_step_deploy.m4a",
+          "size": 34849,
+          "sha256": "6732cdfff1ad1d595a7541d8da13b68c8332e76cc7ec5c660da5bb648078fe17"
+        },
+        {
+          "name": "keen_step_deploy.ogg",
+          "size": 30162,
+          "sha256": "3c31bc49b844fc1ee6ee32c9c5464266e028798f857b3852aeafab3c7f5912c1"
+        },
+        {
+          "name": "keen_step_fac.m4a",
+          "size": 42076,
+          "sha256": "0dda818f908266bf505ffe377eba41b0155dc2bc39f524ff6afb0bc575beeeff"
+        },
+        {
+          "name": "keen_step_fac.ogg",
+          "size": 37332,
+          "sha256": "1caf425028424c2d3821474d10060b9894f3b731be200d5ee234f5a65772feb6"
+        },
+        {
+          "name": "keen_step_fog.m4a",
+          "size": 45800,
+          "sha256": "33b10a4c8bb9c11ffd0779b90a6c091bb470a9dd907b7f1a0d4ca25784f1c6bf"
+        },
+        {
+          "name": "keen_step_fog.ogg",
+          "size": 39678,
+          "sha256": "b39cd36677860a423b4e40a9131f1df2ae3de7c39f4fd2164dfc4bd02126156d"
+        },
+        {
+          "name": "keen_step_formation.m4a",
+          "size": 40234,
+          "sha256": "1803bf6364406fa33d07e36d82ca1e462584250df9e86c8405032706904db86f"
+        },
+        {
+          "name": "keen_step_formation.ogg",
+          "size": 35180,
+          "sha256": "bc7f60a5e62cd834ba4dd6b73cfb5c2b7fb59fe759723a9f56b048b0367a7841"
+        },
+        {
+          "name": "keen_step_intel.m4a",
+          "size": 84820,
+          "sha256": "5fec5d1f05ad6fbb3872ec83175e389e0d13fce4959ee41f10f96ccdab709fce"
+        },
+        {
+          "name": "keen_step_intel.ogg",
+          "size": 71308,
+          "sha256": "a7a55d7dd03860cb43257189484ea38a0ab74cfc28a1d3cccdf322112705e563"
+        },
+        {
+          "name": "keen_step_mex.m4a",
+          "size": 49540,
+          "sha256": "44ba4649c170e54de67fac91c61f4b62d3b0755b452ec9fa3963642c3b1ab553"
+        },
+        {
+          "name": "keen_step_mex.ogg",
+          "size": 42873,
+          "sha256": "892e76671984a6158272915b536046ae475ca07ebf82adee65ca42e2aab81062"
+        },
+        {
+          "name": "keen_step_objective.m4a",
+          "size": 57015,
+          "sha256": "bb60620bd243fdef142b464215d38d3f66fbc3e54ae3b77145a3d7c9e9ea01a0"
+        },
+        {
+          "name": "keen_step_objective.ogg",
+          "size": 48946,
+          "sha256": "c9c365d4a9707416b595b04de897c8dfaad283035cf1c63faf0889e7468cc537"
+        },
+        {
+          "name": "keen_step_pickup.m4a",
+          "size": 42567,
+          "sha256": "a1e5927276c1df05067e5a25f21f4b700cc650adeaa11979dbb3bb766ad5dc7c"
+        },
+        {
+          "name": "keen_step_pickup.ogg",
+          "size": 37862,
+          "sha256": "d0b07ff29ae3d329a785c20ebabb82b5da23b8e5983a182491ae0ca0be48668f"
+        },
+        {
+          "name": "keen_step_platoon.m4a",
+          "size": 48585,
+          "sha256": "96c76eebbf2aecfbafe0af47c979bf752d0bae430cd6b7458dea5f8fbd9a4ff8"
+        },
+        {
+          "name": "keen_step_platoon.ogg",
+          "size": 41661,
+          "sha256": "1dc2b8254563aa03770c927107d5623403f87f58acff34447fb5c2778a80a509"
+        },
+        {
+          "name": "keen_step_power.m4a",
+          "size": 50279,
+          "sha256": "4a5ff1c952d479cf7ba541b1d3541b7fdb4067778b171d772d8634bcafe73e36"
+        },
+        {
+          "name": "keen_step_power.ogg",
+          "size": 43760,
+          "sha256": "e9f9e796ba781950d6a30fb2f4e3e7b662060fb004c3a9dd65582b44af2569f5"
+        },
+        {
+          "name": "keen_step_queue.m4a",
+          "size": 33839,
+          "sha256": "948460f04274b554c7af9ec212e24e376ee99fe97f22737f7b4c190fdc42a706"
+        },
+        {
+          "name": "keen_step_queue.ogg",
+          "size": 29814,
+          "sha256": "e20f839ed014ad40b2f8983f3f4fe3c93ebb5d60ba9f2e31015741573793a6df"
+        },
+        {
+          "name": "keen_step_tech.m4a",
+          "size": 49689,
+          "sha256": "3b01ac8bb7927056bc43c7d374b872e886a5c55f1b1f037ff4bec18a97f0da45"
+        },
+        {
+          "name": "keen_step_tech.ogg",
+          "size": 43732,
+          "sha256": "9b45ffb65060acf13a9a7a501c9083ae20bc1fae124346ed10322967e7d2ab62"
+        },
+        {
+          "name": "keen_step_territory.m4a",
+          "size": 59439,
+          "sha256": "83e4cb20663ff51a75923c43319f3db537af611271554542c31f488a6493a6c5"
+        },
+        {
+          "name": "keen_step_territory.ogg",
+          "size": 50948,
+          "sha256": "7f36c9edbf1eed71d8a2048fb2802e60280589cc123ab5e87dec1bdbafe1d458"
+        },
+        {
+          "name": "keen_step_train.m4a",
+          "size": 36871,
+          "sha256": "d779f1ae1d8b50151dd7a6d378dac3bb280d9ebdd98cfd91f8f7059177bc453f"
+        },
+        {
+          "name": "keen_step_train.ogg",
+          "size": 32901,
+          "sha256": "ff7ae0724630f28765d74a493e63e254a40ea384c7f07aa37ba06c2bb7276265"
+        },
+        {
+          "name": "keen_step_turret.m4a",
+          "size": 38695,
+          "sha256": "2116195d4881066e9b5c7503925366e14d76607756a91e2526885b5df31b6966"
+        },
+        {
+          "name": "keen_step_turret.ogg",
+          "size": 33920,
+          "sha256": "f679c4ef40da07b827fdb1b21690feee448617ce33fcc651007eb00318a6263c"
+        },
+        {
+          "name": "nova_ability_0.m4a",
+          "size": 12238,
+          "sha256": "a56ff2fe649361cfab5a3b5ea6cfea942a674fd6d0bd1b890bc5d08cfb988533"
+        },
+        {
+          "name": "nova_ability_0.ogg",
+          "size": 12437,
+          "sha256": "d0295647aa3a581e47c7de22ad48582fd8191abe805ff2a4805c26a1f742ce4e"
+        },
+        {
+          "name": "nova_ability_1.m4a",
+          "size": 14265,
+          "sha256": "8431d5782444ba1d16e9a5741b2fc5bafef78d1f30d418a6fc26484171e68c76"
+        },
+        {
+          "name": "nova_ability_1.ogg",
+          "size": 14447,
+          "sha256": "c83250bae8ee21c1ccc7f4dc296408b801e85362c594720312a5be39b351a353"
+        },
+        {
+          "name": "nova_ability_2.m4a",
+          "size": 12827,
+          "sha256": "22e2b95f7c97032228baf78099f4491c9b158d066ac978df0a7b3c2f2f6528c4"
+        },
+        {
+          "name": "nova_ability_2.ogg",
+          "size": 12689,
+          "sha256": "cc3c421c74a3058563031db96af1d132462534d942455fba5bce176aa949565c"
+        },
+        {
+          "name": "nova_attack_0.m4a",
+          "size": 9492,
+          "sha256": "36610b6ba67532894fdf3cb0c84fe04e959add69ea8df181c99b2e3189d980b9"
+        },
+        {
+          "name": "nova_attack_0.ogg",
+          "size": 9824,
+          "sha256": "a00a91b6bd813f4cab84151970a575e9886e96a76eff8c568d5f93c85887a8f0"
+        },
+        {
+          "name": "nova_attack_1.m4a",
+          "size": 12943,
+          "sha256": "9808d1f6cc1597d8afe822d958992ee3c08a08979461b4ce53cc0fe36704c6ac"
+        },
+        {
+          "name": "nova_attack_1.ogg",
+          "size": 12957,
+          "sha256": "922a1d2ead8e3412c57e1f32d3f65940fc6a4be6f519de609df5bb65583d4a54"
+        },
+        {
+          "name": "nova_attack_2.m4a",
+          "size": 12590,
+          "sha256": "4b4bae1ace1edbdb255aa3c04334eb8a8f536462e3ba49c286d2b30be0bf128b"
+        },
+        {
+          "name": "nova_attack_2.ogg",
+          "size": 12790,
+          "sha256": "05e101b3ec252abb67354924753c3f21b2dce7c8bb01904396d8cb5c11513cc3"
+        },
+        {
+          "name": "nova_build_0.m4a",
+          "size": 13702,
+          "sha256": "5c8e605efd2702727ff8f1ce1e585b81a11f5f1295e1e5716b777df4eb73d710"
+        },
+        {
+          "name": "nova_build_0.ogg",
+          "size": 13456,
+          "sha256": "04ee3d6f032cde4872ab8226789834f07df34f9e16e71f58f73c74cae048d480"
+        },
+        {
+          "name": "nova_build_1.m4a",
+          "size": 13503,
+          "sha256": "98adb235012987c402972fbfab916622f5de1895d4c7586500bd96202c0f27e9"
+        },
+        {
+          "name": "nova_build_1.ogg",
+          "size": 13771,
+          "sha256": "8585ed3815bfa7718f2e9e0df5a3f9978d1ccabd585e249a3762d906a80f2525"
+        },
+        {
+          "name": "nova_build_2.m4a",
+          "size": 11399,
+          "sha256": "f28f0dcbc048ec2612b4a864b69bbfb2e87f3847281adf0dfa8effd37579fe44"
+        },
+        {
+          "name": "nova_build_2.ogg",
+          "size": 11997,
+          "sha256": "70a243a68559a02a4abb7ff53a08cab6e573b7d9ba777e20abd6acfb2b8d85b3"
+        },
+        {
+          "name": "nova_deploy_0.m4a",
+          "size": 12836,
+          "sha256": "f720fbb850ef44cb3f1aeb3aa099f9f2a276d480937be789837a8983067b3d33"
+        },
+        {
+          "name": "nova_deploy_0.ogg",
+          "size": 12744,
+          "sha256": "3a828464a1872d02772bc3f465c4f625e20c06d96500daac9a11784f566a44b7"
+        },
+        {
+          "name": "nova_deploy_1.m4a",
+          "size": 12269,
+          "sha256": "f3cf17330d6bab0b708bb3c1edcc96c0cd602e8d6dd8e00e8c5fea74e5e0640a"
+        },
+        {
+          "name": "nova_deploy_1.ogg",
+          "size": 12427,
+          "sha256": "525b70a67a872e2a029e8c108f2551201b16e684faaea0b63d1b20f23bf52423"
+        },
+        {
+          "name": "nova_deploy_2.m4a",
+          "size": 12142,
+          "sha256": "193ffcce665300ad67cc116e12e3316c6c35135b1cfcd22b3d82c6bb4d92c770"
+        },
+        {
+          "name": "nova_deploy_2.ogg",
+          "size": 12347,
+          "sha256": "356a4fca4ed8e22956d4f95425e6e4be19ca6871cf0ad72f03f4a5c5d282e548"
+        },
+        {
+          "name": "nova_hold_0.m4a",
+          "size": 10911,
+          "sha256": "09cc8ce4bb8461d2f6fb67ac07bba0e018ab3db5c8d7cda172cb2f57fdf83f5c"
+        },
+        {
+          "name": "nova_hold_0.ogg",
+          "size": 11397,
+          "sha256": "49b2cac98a3705aa983d99f72d5d3a7ee56370cbd9c46a68459980ab34e4478e"
+        },
+        {
+          "name": "nova_hold_1.m4a",
+          "size": 12055,
+          "sha256": "d0c8eeb4e1d3455d2e19e3870d35e536742d338bb7a111bc376ef8e39afd7c37"
+        },
+        {
+          "name": "nova_hold_1.ogg",
+          "size": 12081,
+          "sha256": "79ee7af9b7c1aae0609485347cad1367a552b422f0b31f19bb534d53c6217c91"
+        },
+        {
+          "name": "nova_hold_2.m4a",
+          "size": 10868,
+          "sha256": "8853d6c53fe04b72f9dca7178f3684ada748b3e8e3c8c3d403acc0162bd809a2"
+        },
+        {
+          "name": "nova_hold_2.ogg",
+          "size": 11101,
+          "sha256": "92455b724d60223f0b16759c4eb01ee41bb979c0bccead1c5b5dfc483ce8f92b"
+        },
+        {
+          "name": "nova_move_0.m4a",
+          "size": 10428,
+          "sha256": "5c717570c4b5cbac48af698818f60e0e7bbcb3ca4cbfc88ac06cb7186876ed0e"
+        },
+        {
+          "name": "nova_move_0.ogg",
+          "size": 11061,
+          "sha256": "605b3f4eefd9bd01455bd757a436134529cff29b1485b56851fe5bf0e50cad4a"
+        },
+        {
+          "name": "nova_move_1.m4a",
+          "size": 11577,
+          "sha256": "99345068ae9d2fb10296e656c3483df4aa009a81a0ca289314a4c1d0cd109094"
+        },
+        {
+          "name": "nova_move_1.ogg",
+          "size": 11875,
+          "sha256": "c663468728c170c3d7fff0c00eea20f69651b7c50eda723b192483b8be107a99"
+        },
+        {
+          "name": "nova_move_2.m4a",
+          "size": 8201,
+          "sha256": "ec58cb1f48647c5d589e1538df8a6faf59dc4d6020280f1af64b8202a987157b"
+        },
+        {
+          "name": "nova_move_2.ogg",
+          "size": 9203,
+          "sha256": "1c064d5ce98d1eeacb603fe14feabc7f0ef03637ca89f4756414068004574950"
+        },
+        {
+          "name": "nova_patrol_0.m4a",
+          "size": 11079,
+          "sha256": "902312bbe98ab691c5f8062edb542f009c6a97ea8ca74054e67879aba42893b9"
+        },
+        {
+          "name": "nova_patrol_0.ogg",
+          "size": 11549,
+          "sha256": "f3c466d322777573b5b32a316f78d9fabf13864d58c01a1cbb567b3462292021"
+        },
+        {
+          "name": "nova_patrol_1.m4a",
+          "size": 9510,
+          "sha256": "2b51c8d58b11ac16819fe3bbf402b5004af618ceadca3c3b1e316af5f494b398"
+        },
+        {
+          "name": "nova_patrol_1.ogg",
+          "size": 10269,
+          "sha256": "2c469cb95f6c8e5b03fc2e438190e24b08f5fec4b01268b9f96cb9c4ee1f855a"
+        },
+        {
+          "name": "nova_patrol_2.m4a",
+          "size": 11939,
+          "sha256": "1aac8253ecba10b8fd46425181c5abad4ea44ef67b0badaaa71db2175169200d"
+        },
+        {
+          "name": "nova_patrol_2.ogg",
+          "size": 12071,
+          "sha256": "d06750c1c0d9dba6cd5cd87affa94e24fdc83f3c457260c6e48e2e7111d17869"
+        },
+        {
+          "name": "nova_select_0.m4a",
+          "size": 11828,
+          "sha256": "bc2d7a0f2dd91b4be7d7c46a333d4f375ccf54872c567db12a4d4e5daade3098"
+        },
+        {
+          "name": "nova_select_0.ogg",
+          "size": 12022,
+          "sha256": "603639398456ad5d09b654b1d06fbebe810e1353237e239e3d662d6317b205c2"
+        },
+        {
+          "name": "nova_select_1.m4a",
+          "size": 11809,
+          "sha256": "a4face960871095c3266b7769faa13066eade341891308502842cc688938f446"
+        },
+        {
+          "name": "nova_select_1.ogg",
+          "size": 12120,
+          "sha256": "1b95cdbd24661095eceba4bbab30f5b7ab6c92e35dce06387b1fb0b66b401283"
+        },
+        {
+          "name": "nova_select_2.m4a",
+          "size": 11548,
+          "sha256": "ca89738203ffe59476ddba0d6c9a50372eef82bce82adb87fce632ed359aa6ec"
+        },
+        {
+          "name": "nova_select_2.ogg",
+          "size": 11443,
+          "sha256": "f21d1afb3f58e062bb401517bc08e7a36f38c50e0e85df91d22484975fd94a77"
+        },
+        {
+          "name": "nova_stop_0.m4a",
+          "size": 12281,
+          "sha256": "9e0fd26663ad5f6a287d453c6dd29364e77c6c2b69d9c1930651565b98669b7a"
+        },
+        {
+          "name": "nova_stop_0.ogg",
+          "size": 12230,
+          "sha256": "0f73f59fe29092b10b20e61e64e3cb69ccf4992870b4659e4fb911d6f19d09c6"
+        },
+        {
+          "name": "nova_stop_1.m4a",
+          "size": 9599,
+          "sha256": "a4b02784230358c5f3314e5673b1d97b83937cc88f9cc99aaefd457187850a9e"
+        },
+        {
+          "name": "nova_stop_1.ogg",
+          "size": 10123,
+          "sha256": "24ae57181b3951cbfe5e078185fabf1118c5419c898334c6c1e8cf120447c3e4"
+        },
+        {
+          "name": "nova_stop_2.m4a",
+          "size": 9658,
+          "sha256": "32a2df626a3c74bbf8273acde56c929e3f7a8e1d2fd862184229bd2a6e9fd121"
+        },
+        {
+          "name": "nova_stop_2.ogg",
+          "size": 10221,
+          "sha256": "cf6500540efff3f4b215af08c77e20a2e2327aeab8a00c9649189dcf9b5e9f6b"
+        },
+        {
+          "name": "syndicate_ability_0.m4a",
+          "size": 11400,
+          "sha256": "eb89d8d4e4305764186418e2f62d33ac797c5be5d1cd662d0163e390a9440644"
+        },
+        {
+          "name": "syndicate_ability_0.ogg",
+          "size": 11595,
+          "sha256": "b740f84a226728309204399fed12cc7335185e51311ea4dd2696c311a0e80432"
+        },
+        {
+          "name": "syndicate_ability_1.m4a",
+          "size": 13069,
+          "sha256": "c1e8e96e83587a9aee563428a78b66d9f077c9758fd94a0ff545fb9d3c5a50a2"
+        },
+        {
+          "name": "syndicate_ability_1.ogg",
+          "size": 12942,
+          "sha256": "78f0f15dcabe74751e872147dcfc93a1f1a43fff0bfe6e1d419781958f17e222"
+        },
+        {
+          "name": "syndicate_ability_2.m4a",
+          "size": 11615,
+          "sha256": "2bfc977af7042a6ac5fdf737918594e6dded9330b1e19797a11e12709a3b42a1"
+        },
+        {
+          "name": "syndicate_ability_2.ogg",
+          "size": 11879,
+          "sha256": "adafa3939f99f494005b048f2b38a638643065a2dae3864e354499a8aa9bfad0"
+        },
+        {
+          "name": "syndicate_attack_0.m4a",
+          "size": 8779,
+          "sha256": "bbefc18163710c6ac174ead0bb59623e94deabf37eff8dcf29b9d79ea6bc8656"
+        },
+        {
+          "name": "syndicate_attack_0.ogg",
+          "size": 9300,
+          "sha256": "ba6fd9c0237c974bbb4e446b2cc1a8e08cc0dd5b9b014b8a8433acfd9ccd6f30"
+        },
+        {
+          "name": "syndicate_attack_1.m4a",
+          "size": 12357,
+          "sha256": "53ca29ad8f85eed3e9f018fd33b64904a7b1d41c8efcec0a7b2cf9411661a86e"
+        },
+        {
+          "name": "syndicate_attack_1.ogg",
+          "size": 12390,
+          "sha256": "5dd01c65011912d269b33763acbf7aeefc478779e0b88dfbbba620dd8fa7509e"
+        },
+        {
+          "name": "syndicate_attack_2.m4a",
+          "size": 11656,
+          "sha256": "3e87ee34cbb94db66a5e137eb283ce6e3b758d31add870b529192918d9c3ea4a"
+        },
+        {
+          "name": "syndicate_attack_2.ogg",
+          "size": 12088,
+          "sha256": "308cc60faba382ee0f2814bc3ff0909483136aad0350645628674f64eebbbb0b"
+        },
+        {
+          "name": "syndicate_build_0.m4a",
+          "size": 11896,
+          "sha256": "29ef5edf38276ffd1fa141712db4fb1f19b23ec748ce0c378ed54e1fd2a15d36"
+        },
+        {
+          "name": "syndicate_build_0.ogg",
+          "size": 12010,
+          "sha256": "0068f5bff72d473d64b4f8c576ee817d2ffae029aaee5e69b986b2b4eb257b01"
+        },
+        {
+          "name": "syndicate_build_1.m4a",
+          "size": 12408,
+          "sha256": "ca5c64dcb5f749d982384e5e5c56a313f2489dadcc5332b55e3a9b694a63fbcc"
+        },
+        {
+          "name": "syndicate_build_1.ogg",
+          "size": 12599,
+          "sha256": "44d3a966177f89afb0f1184a85c0697b04930ffca44edb64dbf8b0d7fb6aa279"
+        },
+        {
+          "name": "syndicate_build_2.m4a",
+          "size": 10204,
+          "sha256": "79646a936a04343b80a12baead29c44bdbb2ef26245313931a80c443fee7630e"
+        },
+        {
+          "name": "syndicate_build_2.ogg",
+          "size": 10817,
+          "sha256": "113cbd63cd16ee9a8ad609fddf98beb1ddfc79bbca05a28d7ef867ce97da7612"
+        },
+        {
+          "name": "syndicate_deploy_0.m4a",
+          "size": 12045,
+          "sha256": "566bcaa7b727a36297ba0f792a28366ffe5410bf976be944e901c859757f9e83"
+        },
+        {
+          "name": "syndicate_deploy_0.ogg",
+          "size": 12076,
+          "sha256": "bd541c0a0ffeaeba788dd4ec0e7090860ef492743721b981b4c33a22fae85551"
+        },
+        {
+          "name": "syndicate_deploy_1.m4a",
+          "size": 11339,
+          "sha256": "a6628a8061a0ad39dcb3b1866c26200f8e4b997480813c784d0ec8d21c92e4e8"
+        },
+        {
+          "name": "syndicate_deploy_1.ogg",
+          "size": 11845,
+          "sha256": "8945f13807757c810665b13570d8a39c6c149ba0a797e5467a253c749e09676a"
+        },
+        {
+          "name": "syndicate_deploy_2.m4a",
+          "size": 11213,
+          "sha256": "503088c0b2a03def826993a7c103e00758501e6a216ae92add7357ce798ddfeb"
+        },
+        {
+          "name": "syndicate_deploy_2.ogg",
+          "size": 11576,
+          "sha256": "373a0f8208a71945f9f8a2892c65bcbdc1c4954361e61c430389db0830bd119d"
+        },
+        {
+          "name": "syndicate_hold_0.m4a",
+          "size": 9654,
+          "sha256": "eaeaf5324aabed57fb4c11fca09267bdfe8c952d513845dee5cdae59721c86c6"
+        },
+        {
+          "name": "syndicate_hold_0.ogg",
+          "size": 10216,
+          "sha256": "a968b9f4531becc798a5560136f743e2edd341028e1bbe3388e1d3be4f4d2331"
+        },
+        {
+          "name": "syndicate_hold_1.m4a",
+          "size": 11132,
+          "sha256": "78f2711b8d09d4040a1c70e9cfaccfd1683bf9a2ee693c2005112768d9f1d0a7"
+        },
+        {
+          "name": "syndicate_hold_1.ogg",
+          "size": 11431,
+          "sha256": "5d5c28ccf985703c8c161190406f09635f8e02bbc79d1a85122d3fb9d7dfdac3"
+        },
+        {
+          "name": "syndicate_hold_2.m4a",
+          "size": 9973,
+          "sha256": "c4e55c463f338322e616d190390f85b6c203392de9933212b6f8f16bdcfdce93"
+        },
+        {
+          "name": "syndicate_hold_2.ogg",
+          "size": 10422,
+          "sha256": "82e72b80e4ef1854f63aa17a85b894db2226980e0b615feefd56403ed75aff64"
+        },
+        {
+          "name": "syndicate_move_0.m4a",
+          "size": 9705,
+          "sha256": "e02521de05c6ec7676862bffc2a5ce963e0f7d5c38a4306682d18a706e95e8ca"
+        },
+        {
+          "name": "syndicate_move_0.ogg",
+          "size": 10178,
+          "sha256": "1fcc3fe1d26f23eb92cc075a888d880e063a6440c002f1fb3265c08d0ccc3d7e"
+        },
+        {
+          "name": "syndicate_move_1.m4a",
+          "size": 10841,
+          "sha256": "86c3de7b02f16b235f0fa2a21c992af8b8f5593fda4a0ea806020f98ba1c5c0f"
+        },
+        {
+          "name": "syndicate_move_1.ogg",
+          "size": 11020,
+          "sha256": "6ff6c6122a24050cbb9e03e67b5f39181378f2b9df97b1df561128a6293fe93a"
+        },
+        {
+          "name": "syndicate_move_2.m4a",
+          "size": 8006,
+          "sha256": "101c9a12ec0c25a111ba74fa3a93b66aaf7fe91f7d6042c781489a5b26dcd140"
+        },
+        {
+          "name": "syndicate_move_2.ogg",
+          "size": 8900,
+          "sha256": "d32ff580f97fb5adc99c54673653a347ce537d3190455c7ab9f9fd1e85ad6556"
+        },
+        {
+          "name": "syndicate_patrol_0.m4a",
+          "size": 10230,
+          "sha256": "bbcfff471e8b5928bf5f280f94da9bf2d170b481331c4c194e3c12060d563aba"
+        },
+        {
+          "name": "syndicate_patrol_0.ogg",
+          "size": 10754,
+          "sha256": "79d5ab4069e68f78b92e568dcb386167a5dfd15448ad288a98cca1f25b84174d"
+        },
+        {
+          "name": "syndicate_patrol_1.m4a",
+          "size": 8484,
+          "sha256": "4d30d7bd32093b350bccd217f43b91bd53032c7d5c4993a5531943d130e61254"
+        },
+        {
+          "name": "syndicate_patrol_1.ogg",
+          "size": 9283,
+          "sha256": "0ebd45f3a051d190db8ad01c605467a2d376d4cffc597b072195d3a4b65eb2a8"
+        },
+        {
+          "name": "syndicate_patrol_2.m4a",
+          "size": 10870,
+          "sha256": "6ebabadecb3e488fa3bdac212a644ba59baca5c78f1df78770d30816c540a3a0"
+        },
+        {
+          "name": "syndicate_patrol_2.ogg",
+          "size": 11022,
+          "sha256": "a615eeca52f7669097d683ed79d1adeff7567c7fd6efae389805db40c977200c"
+        },
+        {
+          "name": "syndicate_select_0.m4a",
+          "size": 10935,
+          "sha256": "32af3d1c2f25a066f012002075a85e96711ad755f80ab843665c1af2c93ee3d0"
+        },
+        {
+          "name": "syndicate_select_0.ogg",
+          "size": 11350,
+          "sha256": "fb8f4f7dc02e1a666d028ad2886cb3bc0812a22e9d3a2c94246c4a259801be47"
+        },
+        {
+          "name": "syndicate_select_1.m4a",
+          "size": 10101,
+          "sha256": "af3792334d6866b69f0ee12956e2f556c41df163356d7f82f4b0f4989f671829"
+        },
+        {
+          "name": "syndicate_select_1.ogg",
+          "size": 10562,
+          "sha256": "b6d9a44225c0079dc184e1801557a627ece3cc1261a146ac9e42690c9a7ee6a5"
+        },
+        {
+          "name": "syndicate_select_2.m4a",
+          "size": 10143,
+          "sha256": "9d99b1e61ef7aa1f1762d5ead779c0561d6a7e93c7599d5f416ccbf5d04d68e0"
+        },
+        {
+          "name": "syndicate_select_2.ogg",
+          "size": 10371,
+          "sha256": "964d186b66860980a32094774a8d7dda9660bb2f5751148f43651b18740f0d3a"
+        },
+        {
+          "name": "syndicate_stop_0.m4a",
+          "size": 11782,
+          "sha256": "88264383c24944af77064d44a39afe388d92c68b1bfad5bf2926fe170c0f471e"
+        },
+        {
+          "name": "syndicate_stop_0.ogg",
+          "size": 11804,
+          "sha256": "cc54667a0b2457b1dac8b391b5651d75bc1abb25a6869b0a2540f8d58fe35bd2"
+        },
+        {
+          "name": "syndicate_stop_1.m4a",
+          "size": 8771,
+          "sha256": "0f9866715ec4ec831b2e1eebd9242f277a7185caa428ffd3796713f6ff94afee"
+        },
+        {
+          "name": "syndicate_stop_1.ogg",
+          "size": 9561,
+          "sha256": "1973963991136fc7bf8c9b63b1515a5aea279f68fe5b462d81b1fa689ad5d605"
+        },
+        {
+          "name": "syndicate_stop_2.m4a",
+          "size": 8776,
+          "sha256": "62cfb2e9cbe1f7e328091a6b3ab45a197217334623a67567a0770027004b61ec"
+        },
+        {
+          "name": "syndicate_stop_2.ogg",
+          "size": 9292,
+          "sha256": "5cca6f8cc85c8bbbd23c9c4bfc21ee571f9c493e1a4ff3ef8ee19d981bbef43e"
+        }
+      ]
+    }
+  }
+}

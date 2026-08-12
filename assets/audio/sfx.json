@@ -1,0 +1,259 @@
+{
+  "slots": {
+    "amb_high": {
+      "files": [
+        "amb_high0"
+      ],
+      "gain": 0.26,
+      "gap": 0
+    },
+    "amb_low": {
+      "files": [
+        "amb_low0"
+      ],
+      "gain": 0.3,
+      "gap": 0
+    },
+    "cannon": {
+      "files": [
+        "cannon0",
+        "cannon1"
+      ],
+      "gain": 0.88,
+      "gap": 105,
+      "priority": 5
+    },
+    "carrier_deploy": {
+      "files": [
+        "carrier_deploy0"
+      ],
+      "gain": 0.92,
+      "gap": 900,
+      "priority": 5
+    },
+    "alarm": {
+      "files": [
+        "alarm0"
+      ],
+      "gain": 0.85,
+      "gap": 600,
+      "priority": 5
+    },
+    "gauss": {
+      "files": [
+        "gauss0",
+        "gauss1",
+        "gauss2"
+      ],
+      "gain": 0.55,
+      "gap": 30
+    },
+    "missile": {
+      "files": [
+        "missile0",
+        "missile1",
+        "missile2"
+      ],
+      "gain": 0.7,
+      "gap": 60,
+      "priority": 2
+    },
+    "laser": {
+      "files": [
+        "laser0",
+        "laser1",
+        "laser2"
+      ],
+      "gain": 0.5,
+      "gap": 30,
+      "priority": 1
+    },
+    "heal": {
+      "files": [
+        "heal0"
+      ],
+      "gain": 0.6,
+      "gap": 180
+    },
+    "build": {
+      "files": [
+        "build0"
+      ],
+      "gain": 0.72,
+      "gap": 350,
+      "priority": 4
+    },
+    "boom": {
+      "files": [
+        "boom0",
+        "boom1"
+      ],
+      "gain": 0.85,
+      "gap": 45,
+      "priority": 3
+    },
+    "boomsmall": {
+      "files": [
+        "boomsmall0"
+      ],
+      "gain": 0.7,
+      "gap": 35,
+      "priority": 2
+    },
+    "flyby": {
+      "files": [
+        "flyby0"
+      ],
+      "gain": 0.6,
+      "gap": 500,
+      "priority": 2
+    },
+    "notify": {
+      "files": [
+        "notify0"
+      ],
+      "gain": 0.64,
+      "gap": 450,
+      "priority": 4
+    },
+    "radio": {
+      "files": [
+        "radio0"
+      ],
+      "gain": 0.38,
+      "gap": 240,
+      "priority": 3
+    },
+    "cre_attack": {
+      "files": [
+        "cre_attack0",
+        "cre_attack1",
+        "cre_attack2",
+        "cre_attack3"
+      ],
+      "gain": 0.55,
+      "gap": 140,
+      "priority": 2
+    },
+    "cre_death": {
+      "files": [
+        "cre_death0",
+        "cre_death1",
+        "cre_death2",
+        "cre_death3"
+      ],
+      "gain": 0.6,
+      "gap": 100,
+      "priority": 3
+    },
+    "cre_idle": {
+      "files": [
+        "cre_idle0",
+        "cre_idle1",
+        "cre_idle2",
+        "cre_idle3"
+      ],
+      "gain": 0.35,
+      "gap": 2400,
+      "priority": 1
+    },
+    "cre_pain": {
+      "files": [
+        "cre_pain0",
+        "cre_pain1",
+        "cre_pain2",
+        "cre_pain3"
+      ],
+      "gain": 0.45,
+      "gap": 180,
+      "priority": 2
+    },
+    "alarm_loop": {
+      "files": [
+        "alarm_loop0"
+      ],
+      "gain": 0.28,
+      "gap": 0,
+      "priority": 4
+    },
+    "factory_hum": {
+      "files": [
+        "factory_hum0"
+      ],
+      "gain": 0.2,
+      "gap": 0,
+      "priority": 1
+    },
+    "move_air": {
+      "files": [
+        "move_air0"
+      ],
+      "gain": 0.2,
+      "gap": 0,
+      "priority": 1
+    },
+    "move_brood": {
+      "files": [
+        "move_brood0",
+        "move_brood1"
+      ],
+      "gain": 0.22,
+      "gap": 0,
+      "priority": 1
+    },
+    "move_vehicle": {
+      "files": [
+        "move_vehicle0",
+        "move_vehicle1"
+      ],
+      "gain": 0.24,
+      "gap": 0,
+      "priority": 1
+    },
+    "structure_hum": {
+      "files": [
+        "structure_hum0",
+        "structure_hum1"
+      ],
+      "gain": 0.18,
+      "gap": 0,
+      "priority": 1
+    },
+    "confirm": {
+      "files": [
+        "confirm0"
+      ],
+      "gain": 0.55,
+      "gap": 80,
+      "priority": 5
+    },
+    "pickup": {
+      "files": [
+        "pickup0",
+        "pickup1"
+      ],
+      "gain": 0.55,
+      "gap": 80,
+      "priority": 3
+    },
+    "level": {
+      "files": [
+        "level0",
+        "level1"
+      ],
+      "gain": 0.72,
+      "gap": 500,
+      "priority": 5
+    },
+    "ui": {
+      "files": [
+        "ui0",
+        "ui1",
+        "ui2"
+      ],
+      "gain": 0.38,
+      "gap": 40,
+      "priority": 4
+    }
+  }
+}

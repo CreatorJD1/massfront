@@ -1,0 +1,34 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MASSFRONT updater end-to-end probe</title>
+<pre id="out">checking manifest</pre>
+<script>
+const endpoint = new URLSearchParams(location.search).get('endpoint') ||
+  'https://drive.usercontent.google.com/download?id=12xZHYn7OtSiNCoZRQ3N7xBYWm7xTx2vk&export=download&confirm=t';
+const hex = bytes => Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+(async () => {
+  try {
+    const manifestResponse = await fetch(endpoint + '&t=' + Date.now(), { cache: 'no-store' });
+    const manifest = await manifestResponse.json();
+    const file = manifest.files[0];
+    out.textContent = 'downloading ' + file.path;
+    const response = await fetch(file.url + '&v=' + encodeURIComponent(manifest.version), { cache: 'no-store' });
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const sha256 = hex(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)));
+    out.textContent = JSON.stringify({
+      manifestStatus: manifestResponse.status,
+      version: manifest.version,
+      fileStatus: response.status,
+      responseType: response.type,
+      responseUrl: response.url,
+      expectedBytes: file.size,
+      actualBytes: bytes.length,
+      expectedSha256: file.sha256,
+      actualSha256: sha256,
+      verified: bytes.length === file.size && sha256 === file.sha256,
+    });
+  } catch (error) {
+    out.textContent = JSON.stringify({ error: String(error), name: error.name });
+  }
+})();
+</script>

@@ -1,0 +1,10 @@
+{
+  "name": "massfront-update",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": { "wrangler": "^3" }
+}

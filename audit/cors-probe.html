@@ -1,0 +1,24 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>MASSFRONT updater CORS probe</title>
+<pre id="out">running</pre>
+<script>
+const url = new URLSearchParams(location.search).get('url');
+(async () => {
+  try {
+    const response = await fetch(url, { cache: 'no-store' });
+    const bytes = await response.arrayBuffer();
+    out.textContent = JSON.stringify({
+      ok: response.ok,
+      status: response.status,
+      type: response.type,
+      url: response.url,
+      contentType: response.headers.get('content-type'),
+      contentLength: response.headers.get('content-length'),
+      bytes: bytes.byteLength,
+    });
+  } catch (error) {
+    out.textContent = JSON.stringify({ error: String(error), name: error.name });
+  }
+})();
+</script>

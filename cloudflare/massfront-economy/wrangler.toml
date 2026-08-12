@@ -1,0 +1,34 @@
+# MASSFRONT economy server — balances, purchases/entitlements, ledger.
+#
+# Binds the SAME D1 database as massfront-auth (massfront-accounts). This
+# worker never creates that database — it already exists — it only needs the
+# real database_id below, which is already filled in (copied from
+# cloudflare/massfront-auth/wrangler.toml; both workers point at one D1
+# instance on purpose, see docs/ECONOMY.md "why one database").
+#
+# NOT DEPLOYED. To deploy for real:
+#
+#   cd cloudflare/massfront-economy
+#   npx wrangler d1 execute massfront-accounts --file=schema.sql --remote
+#   npx wrangler deploy
+#
+# See docs/ECONOMY.md for the full walkthrough, including local testing with
+# `npx wrangler dev --local` (creates its own throwaway local D1 automatically
+# — no credentials or the real database_id needed for that).
+
+name = "massfront-economy"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding       = "DB"
+database_name = "massfront-accounts"
+database_id = "e3c74e0d-59b8-427e-92b8-ea8a3bbd6573"
+
+[observability]
+enabled = true
+
+# No PBKDF2 here (this worker never hashes a password — it only reads
+# sessions another worker wrote), so CPU time per request is low. Left
+# unset deliberately: the platform default is fine, unlike massfront-auth
+# which has a documented reason to raise it.

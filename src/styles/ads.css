@@ -1,0 +1,38 @@
+/* ============================================================================
+   ads.css — in-world ad boards
+   ----------------------------------------------------------------------------
+   The billboards themselves are drawn in WebGL (src/adboards.js) and need no
+   CSS at all. The only DOM surface this file owns is the single settings row
+   adRenderSettingsRow() appends to #setList — it already inherits the full
+   look of every other row via the shared .sItem/.setRow/.sTx/.sDs/.sBuy/.togB
+   classes from ui.css, so nothing here is load-bearing. This file only adds a
+   small amount of namespaced polish (.adsRow*) so the row reads as slightly
+   distinct from a purchasable item, using the same theme variables (--cy,
+   --gold, --panelG, --steelB, --fT…) the rest of the settings screen uses,
+   never redefining or overriding a shared class from ui.css.
+   ============================================================================ */
+
+.adsRow{
+  border-color:rgba(65,200,255,.16);
+  background:linear-gradient(180deg,rgba(20,34,50,.95),rgba(8,14,22,.97)) padding-box,var(--steelB) border-box;
+}
+.adsRow .sTx b{
+  display:inline-flex;align-items:center;gap:6px;
+}
+.adsRow .sDs{
+  color:#7fa8c4;
+}
+
+/* Small "loop" pulse on the emoji glyph so the row hints at motion/video even
+   at rest — subtle, off the critical path, and harmless if reduced-motion
+   users never notice it (it's a colour/opacity pulse, not a layout shift). */
+@keyframes adsGlyphPulse{
+  0%,100%{ filter:drop-shadow(0 0 0 rgba(65,200,255,0)); opacity:.92; }
+  50%{ filter:drop-shadow(0 0 5px rgba(65,200,255,.55)); opacity:1; }
+}
+.adsRow .sTx b{
+  animation:adsGlyphPulse 2.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce){
+  .adsRow .sTx b{ animation:none; }
+}

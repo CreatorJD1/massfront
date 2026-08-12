@@ -1,0 +1,1348 @@
+;
+;
+/* ============================================================
+   META — user accounts (profiles), settings, ranks, cores,
+   store, wildcards. All progression is tied to the active profile.
+   ============================================================ */
+const PROF_KEY='massfront_profiles_v1';
+const EMBLEMS=['🎖','⭐','🦅','🐺','💀','🔥','🛡','👑'];
+let PROFILES={active:null,seq:0,list:[]};
+/* ---------- MASSFRONT character profiles ----------------------------------
+   The identity a player wears is now a CHARACTER from the war, not an emoji.
+   Every entry is gated on account rank, so the roster is also the progression
+   readout: a locked card states the rank that opens it rather than hiding.
+
+   The four here are the canonical faction commanders — the portraits and names
+   already exist in assets/factions and src/factions.js, so nothing is invented.
+   Adding another is one line: give it an id, a faction key for the portrait,
+   and the rank index that unlocks it. `unlock:0` means available from Recruit. */
+const CHARACTERS=[
+  {id:'kai',      fac:'nova',       nm:'Captain Elara Kai',   role:'Terran Frontline Command', unlock:0},
+  {id:'renn',     fac:'syndicate',  nm:'Broker Lys Renn',     role:'Syndicate Coalition',      unlock:2},
+  {id:'vex',      fac:'ascendancy', nm:'Lord Darion Vex',     role:'Crimson Dominion',         unlock:5},
+  {id:'sovereign',fac:'horde',      nm:'The Brood Sovereign', role:'Brood Swarm',              unlock:8}
+];
+/* Callsign suffixes. Cosmetic, stacked on top of the chosen commander name. */
+const TITLES=[
+  {id:'',          nm:'— none —',    unlock:0},
+  {id:'IRONSIDE',  nm:'IRONSIDE',    unlock:1},
+  {id:'LONGWATCH', nm:'LONGWATCH',   unlock:3},
+  {id:'BLACKOUT',  nm:'BLACKOUT',    unlock:5},
+  {id:'WARBORN',   nm:'WARBORN',     unlock:7},
+  {id:'SOVEREIGN', nm:'SOVEREIGN',   unlock:9}
+];
+/* Portrait frames — pure CSS, no art dependency, so they cost nothing to ship. */
+const FRAMES=[
+  {id:'steel',    nm:'STEEL',     unlock:0},
+  {id:'bronze',   nm:'BRONZE',    unlock:2},
+  {id:'silver',   nm:'SILVER',    unlock:4},
+  {id:'gold',     nm:'GOLD',      unlock:6},
+  {id:'crimson',  nm:'CRIMSON',   unlock:8},
+  {id:'warmaster',nm:'WARMASTER', unlock:9}
+];
+function charById(id){ return CHARACTERS.find(c=>c.id===id)||null; }
+function charUnlocked(entry){ return metaRankIdx() >= (entry.unlock|0); }
+function charPortrait(id){
+  const c=charById(id); if(!c) return null;
+  return './assets/factions/'+c.fac+'_192.jpg';
+}
+/* The identity actually in force. Falls back to the rank emblem so a profile
+   that predates this system, or one whose character is no longer unlocked
+   (a reset career), still renders something meaningful instead of a gap. */
+function profIdentity(){
+  const P=activeProf()||{}, R=RANKS[metaRankIdx()];
+  const c=charById(P.char);
+  const usable=c&&charUnlocked(c)?c:null;
+  const t=TITLES.find(x=>x.id===P.title&&charUnlocked(x));
+  return {char:usable, portrait:usable?charPortrait(usable.id):null,
+          emblem:P.emblem||R.em, frame:(FRAMES.find(f=>f.id===P.frame&&charUnlocked(f))||FRAMES[0]).id,
+          title:t&&t.id?t.id:'', rank:R};
+}
+
+
+function profSave(){ try{ localStorage.setItem(PROF_KEY,JSON.stringify(PROFILES)); }catch(e){} }
+function profLoad(){
+  try{ const s=localStorage.getItem(PROF_KEY); const o=s&&JSON.parse(s);
+    if(o&&Array.isArray(o.list)) PROFILES=o; }catch(e){}
+  if(!Array.isArray(PROFILES.list)) PROFILES.list=[];
+  if(!PROFILES.list.length){
+    const id='p'+(++PROFILES.seq);
+    PROFILES.list.push({id,name:'Commander',emblem:'🎖'});
+    PROFILES.active=id;
+    try{ const legacy=localStorage.getItem('massfront_meta_v1');   // migrate pre-account progress
+      if(legacy) localStorage.setItem('massfront_meta_'+id,legacy);
+    }catch(e){}
+  }
+  if(!PROFILES.list.find(p=>p.id===PROFILES.active)) PROFILES.active=PROFILES.list[0].id;
+  profSave();
+}
+function activeProf(){ return PROFILES.list.find(p=>p.id===PROFILES.active)||PROFILES.list[0]; }
+
+/* menubg: 'live' | 'dim' | 'off'. Defaults to 'dim' — a moving battlefield at
+   full strength behind a menu is scenery competing with the thing you came here
+   to read. */
+const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:true,dayNight:true,
+                     haptics:true,formationPreview:true,orderPaths:true,
+                     godMode:false,tutorialVoice:true,sfxVol:3,musicVol:2,perf:'auto',menubg:'dim',healthBars:'select',quality:'high'};
+/* CAREER RECORD. The old set was four numbers, which is enough to compute a
+   rank and nothing else — no history, no identity, nothing a player would want
+   to look at. These are the ones a commander would actually care about. */
+/* wcPref defaults to 0, not 1. Every new career was being handed a random
+   danger modifier it never asked for — and one of them (Wildlands) raises the
+   infestation a full tier, which on a fresh account meant the game silently
+   made itself harder than the difficulty the player picked. Wildcards are a
+   reward multiplier you opt into. */
+const META_DEF={xp:0,cores:0,researchData:0,owned:{},color:'azure',wins:0,matches:0,standardMatches:0,kills:0,wcPref:0,
+  losses:0, streak:0, bestStreak:0, playSec:0, built:0, lost:0, structs:0,
+  bestKills:0, fastestWin:0, favFac:'', facWins:{}, mapWins:{}, firstPlayed:0, lastPlayed:0,
+  campaign:{missions:{}},
+  inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
+  settings:{...DEF_SETTINGS}};
+let META={...META_DEF};
+function metaKey(){ return 'massfront_meta_'+PROFILES.active; }
+function metaLoad(){
+  META={...META_DEF, owned:{}, facWins:{}, mapWins:{}, campaign:{missions:{}},settings:{...DEF_SETTINGS}};
+  let loadedCareer=false,loadedStandardCount=false;
+  try{
+    const s=localStorage.getItem(metaKey());
+    if(s){ const o=JSON.parse(s); if(o&&typeof o==='object'){
+      loadedCareer=true;loadedStandardCount=Object.prototype.hasOwnProperty.call(o,'standardMatches');Object.assign(META,o);
+    } }
+  }catch(e){}
+  /* Careers created before the protected-opening counter are veterans, not
+     brand-new players. Migrating from completed matches prevents an update
+     from forcing their next three battles back through onboarding defaults. */
+  if(loadedCareer&&!loadedStandardCount)META.standardMatches=META.matches||0;
+  if(!META.owned||typeof META.owned!=='object') META.owned={};
+  if(!META.campaign||typeof META.campaign!=='object')META.campaign={missions:{}};
+  if(!META.campaign.missions||typeof META.campaign.missions!=='object')META.campaign.missions={};
+  META.settings={...DEF_SETTINGS,...(META.settings||{})};
+  invBag();
+  if(!COLORS[META.color]) META.color='azure';
+}
+/* Local save is the source of truth for progress on THIS device. Harden it so a
+   transient write failure (quota pressure, a WebView hiccup) does not silently
+   drop a career: retry once, and only if that also fails tell the player — and
+   point them at the account backup, which now survives even a reinstall. */
+let metaSaveWarned=false;
+function metaSave(){
+  try{ localStorage.setItem(metaKey(),JSON.stringify(META)); metaSaveWarned=false; return; }
+  catch(e){}
+  try{ localStorage.setItem(metaKey(),JSON.stringify(META)); metaSaveWarned=false; }
+  catch(e2){
+    if(!metaSaveWarned && typeof toast==='function'){
+      metaSaveWarned=true;
+      toast('⚠ Progress could not be saved on this device — sign in to back it up to your account');
+    }
+  }
+}
+/* The live graphics budget. Every quality gate in the renderer reads this
+   rather than testing META.settings itself, so there is exactly one place that
+   decides what a preset means. */
+let GFX={ao:true, bloom:true, grade:true, fxFloor:0, organicSpan:2700, particles:1};
+const GFX_PRESETS={
+  low:      {ao:false, bloom:false, grade:false, fxFloor:0,    organicSpan:0,    particles:0.5},
+  high:     {ao:true,  bloom:true,  grade:true,  fxFloor:0,    organicSpan:2700, particles:1},
+  cinematic:{ao:true,  bloom:true,  grade:true,  fxFloor:0.75, organicSpan:4600, particles:1.5},
+};
+function qualityKey(){
+  const q=(META.settings&&META.settings.quality)||'high';
+  return GFX_PRESETS[q]?q:'high';
+}
+function applyQualityPreset(){
+  const q=qualityKey(), P=GFX_PRESETS[q], s=META.settings;
+  GFX=Object.assign({},P);
+  /* The preset writes the individual toggles so the rows below it stay honest —
+     a player who opens Display after choosing LOW sees Cinematic Lighting OFF,
+     not a stale ON that no longer does anything. Flipping a row afterwards is
+     still allowed; it just means the preset no longer describes the state. */
+  s.perf = (q==='low') ? 'low' : 'auto';
+  s.cine = !!P.bloom;
+  /* CINEMATIC must not be silently undone by the frame-rate scaler. The floor
+     is what makes it a promise rather than a suggestion. */
+  if(typeof perfFloor!=='undefined') perfFloor=P.fxFloor;
+  /* Quality changes also change the mobile render-resolution ceiling. Apply it
+     immediately instead of making the player relaunch before the lower-memory
+     preset can prevent another context loss. */
+  if(typeof resize==='function') resize();
+}
+function applySettings(){
+  const s=META.settings;
+  /* GRAPHICS QUALITY — one dial, not five scattered toggles.
+     The Display tab had Cinematic Lighting, Effects Budget, Menu Backdrop and
+     an invisible AO gate all deciding quality independently, which meant no
+     single control answered "make this look better" or "make this run", and
+     the two settings that mattered most on a weak phone were the two a player
+     was least likely to find. A preset sets all of them coherently; the
+     individual toggles stay underneath as overrides for anyone who wants them.
+
+     LOW        no post-processing at all, capped effect budget, no secondary
+                animation. For phones that were dropping frames.
+     HIGH       the previous default: bloom, colour grade, ambient occlusion,
+                and an effect budget that backs off automatically under load.
+     CINEMATIC  refuses to back off. AO stays on, the effect scaler has a floor
+                so a busy fight does not strip the frame, and organic secondary
+                motion keeps running out to strategic zoom instead of cutting
+                at 2700 — which is where the swarm's articulation actually
+                becomes visible en masse. Costs frames on purpose. */
+  applyQualityPreset();
+  muted=false; sfxOn=!!s.sound; musicOn=!!s.music;
+  if(typeof audApplyLevels==='function') audApplyLevels();
+  shakeMult=s.shake?1:0;
+  bloomOn=s.cine!==false && s.perf!=='low';
+  gradeOn=s.cine!==false;
+  const cv4=document.getElementById('gl');
+  if(cv4) cv4.style.filter=(s.cine!==false)?'contrast(1.12) saturate(1.16) brightness(1.03)':'none';
+  const gr=document.getElementById('grade');
+  if(gr) gr.style.opacity=(s.cine!==false)?'1':'0';
+  /* A body class, not an inline style: the inline one lost to an !important
+     media rule that hid the counter on every phone. */
+  document.body.classList.toggle('fpsOn',!!s.fps);
+  document.body.classList.toggle('godMode',!!s.godMode);
+  const god=document.getElementById('godBadge');
+  if(god){ god.textContent='∞'; god.setAttribute('aria-label','God Mode enabled'); god.title='God Mode enabled'; }
+  const bg=s.menubg||'dim';
+  document.body.classList.toggle('bgDim',bg==='dim');
+  document.body.classList.toggle('bgOff',bg==='off');
+  /* Switching backdrop has to take effect now, not on the next launch. */
+  if(typeof applyMenuBackdrop==='function') applyMenuBackdrop();
+}
+let shakeMult=1;
+function switchProfile(id){
+  metaSave();
+  PROFILES.active=id; profSave();
+  metaLoad(); applyColor(); applySettings();
+  wcChoice=clamp(META.wcPref|0,0,3);
+  document.querySelectorAll('.wbtn').forEach(b=>b.classList.toggle('on',+b.dataset.w===wcChoice));
+  renderMetaHead();
+}
+
+/* ---------- account ranks ---------- */
+const RANKS=[
+ {nm:'Recruit',   em:'🎗', xp:0},
+ {nm:'Private',   em:'🎖', xp:200},
+ {nm:'Corporal',  em:'🥉', xp:500},
+ {nm:'Sergeant',  em:'🥈', xp:1000},
+ {nm:'Lieutenant',em:'🥇', xp:1800},
+ {nm:'Captain',   em:'🏅', xp:3000},
+ {nm:'Major',     em:'⭐', xp:4800},
+ {nm:'Colonel',   em:'🌟', xp:7500},
+ {nm:'General',   em:'✨', xp:11500},
+ {nm:'Warmaster', em:'👑', xp:17000},
+];
+function metaRankIdx(){ let r=0; for(let i=0;i<RANKS.length;i++) if(META.xp>=RANKS[i].xp) r=i; return r; }
+function metaRankProg(){
+  const r=metaRankIdx();
+  if(r>=RANKS.length-1) return 1;
+  return (META.xp-RANKS[r].xp)/(RANKS[r+1].xp-RANKS[r].xp);
+}
+
+/* ---------- commander colors ---------- */
+const COLORS={
+ azure:  {nm:'Azure',   cost:0,   c:[120,205,255], b:[65,200,255]},
+ emerald:{nm:'Emerald', cost:300, c:[110,255,170], b:[45,215,120]},
+ gold:   {nm:'Gold',    cost:300, c:[255,216,110], b:[255,190,40]},
+ violet: {nm:'Violet',  cost:300, c:[204,140,255], b:[178,90,255]},
+ frost:  {nm:'Frost',   cost:300, c:[235,245,255], b:[190,210,235]},
+};
+let mmPCol='#41c8ff', mmPColA='rgba(120,220,255,.9)';
+/* THE FACTION PAINTS THE ARMY, NOT THE SHOP.
+   This is the single biggest reason "every faction looks like the blue one".
+   All four factions ship a complete bespoke building kit and their own chassis,
+   and the battlefield resolves both — but team 0's livery came from META.color,
+   a cosmetic commander-colour purchase that defaults to azure [120,205,255],
+   which is Nova blue. So a Brood player fielded grown tissue painted in Terran
+   Frontline livery and read it as "the same blue base again".
+   ai.js has done the faction-correct thing for team 1 since it shipped; this is
+   the same rule for team 0. Values match FACART's crest colours, so the army,
+   the crest and the UI accent finally agree. */
+const FAC_LIVERY={
+  nova:      {c:[ 93,182,255], b:[ 65,200,255]},
+  ascendancy:{c:[255,107, 88], b:[255, 93, 67]},
+  legion:    {c:[255,107, 88], b:[255, 93, 67]},
+  syndicate: {c:[140,232, 90], b:[108,214, 52]},
+  horde:     {c:[185,120,255], b:[160, 86,244]},
+};
+function playerLivery(){
+  const pf=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
+  /* An explicitly bought commander colour is a personal accent and still wins.
+     Azure is the default nobody chose, so it yields to the faction. */
+  const C=COLORS[META.color];
+  if(C&&META.color&&META.color!=='azure') return {c:C.c.slice(),b:C.b.slice()};
+  /* playerFaction carries ai.js FACTIONS keys (legion/syndicate/horde), not
+     FACART ids, so read the faction's own colours first — that is the same
+     table team 1 is painted from, which keeps both sides honest about who is
+     who. FAC_LIVERY covers nova, which has no ai.js entry because it is never
+     an opponent, plus the FACART aliases a save can carry. */
+  const F=(typeof FACTIONS!=='undefined')&&FACTIONS[pf];
+  if(F&&F.col&&F.colB) return {c:F.col.slice(),b:F.colB.slice()};
+  const L=FAC_LIVERY[pf]||FAC_LIVERY.nova;
+  return {c:L.c.slice(),b:L.b.slice()};
+}
+/* BOTH SIDES IN THE SAME COLOURS IS WORSE THAN THE WRONG COLOURS.
+   Picking the faction you are fighting is a legitimate, common matchup. The
+   player keeps their identity and the ENEMY takes a darkened, blue-shifted
+   variant of its own colour — a different value AND a different hue, which
+   survives colour-blindness better than a hue change alone. */
+function liveryTooClose(a,b){
+  return Math.abs(a[0]-b[0])+Math.abs(a[1]-b[1])+Math.abs(a[2]-b[2])<150;
+}
+function liveryContrast(c){
+  return [Math.round(c[0]*0.46), Math.round(c[1]*0.40+18), Math.round(c[2]*0.52+92)];
+}
+function applyColor(){
+  const L=playerLivery();
+  TEAMC[0][0]=L.c[0]; TEAMC[0][1]=L.c[1]; TEAMC[0][2]=L.c[2];
+  TEAMB[0][0]=L.b[0]; TEAMB[0][1]=L.b[1]; TEAMB[0][2]=L.b[2];
+  if(typeof TEAMC!=='undefined'&&TEAMC[1]&&liveryTooClose(TEAMC[0],TEAMC[1])){
+    const e=liveryContrast(TEAMC[1]), eb=liveryContrast(TEAMB[1]);
+    TEAMC[1][0]=e[0]; TEAMC[1][1]=e[1]; TEAMC[1][2]=e[2];
+    TEAMB[1][0]=eb[0]; TEAMB[1][1]=eb[1]; TEAMB[1][2]=eb[2];
+    if(typeof mmECol!=='undefined'){
+      mmECol='rgb('+eb[0]+','+eb[1]+','+eb[2]+')';
+      mmEColA='rgba('+eb[0]+','+eb[1]+','+eb[2]+',.9)';
+    }
+  }
+  mmPCol='rgb('+L.c[0]+','+L.c[1]+','+L.c[2]+')';
+  mmPColA='rgba('+L.c[0]+','+L.c[1]+','+L.c[2]+',.9)';
+}
+
+/* ---------- store (permanent perks, bought with ⬡ cores) ---------- */
+const STORE=[
+ {id:'cache',    em:'📦', nm:'Supply Cache',    ds:'Start every match with +300 mass, +1200 energy', max:1, cost:[250]},
+ {id:'armor',    em:'🛡', nm:'Composite Armor', ds:'+8% unit HP per tier',            max:3, cost:[400,800,1600]},
+ {id:'targeting',em:'🎯', nm:'Targeting AI',    ds:'+6% unit damage per tier',        max:3, cost:[400,800,1600]},
+ {id:'trade',    em:'🚚', nm:'Trade Network',   ds:'+1.5 mass, +5 energy income per tier', max:3, cost:[350,700,1400]},
+ {id:'neural',   em:'🧠', nm:'Neural Uplink',   ds:'+15% Commander XP per tier',      max:2, cost:[300,600]},
+ {id:'capacitor',em:'⚡', nm:'Rapid Capacitors',ds:'Ability cooldowns −10% per tier', max:2, cost:[300,600]},
+ {id:'salvage', em:'♻', nm:'Salvage Rigs',   ds:'Wrecks and bug bounties pay +40% per tier', max:2, cost:[400,800]},
+ {id:'droppod', em:'📦', nm:'Drop Priority',  ds:'Supply pods arrive 25% more often per tier', max:2, cost:[350,700]},
+ {id:'reactor', em:'☢', nm:'Cold Reactors',  ds:'+12% energy income per tier',    max:3, cost:[380,760,1500]},
+ {id:'bastion', em:'🏰', nm:'Fortified Plating',ds:'Your structures +15% HP per tier', max:2, cost:[420,840]},
+ {id:'orbital', em:'🛰', nm:'Orbital Uplink', ds:'Unlocks the ORBITAL LANCE ability', max:1, cost:[1200]},
+];
+
+/* ---------- field inventory -------------------------------------------------
+   This is intentionally separate from Development's crafted modules. Modules
+   are a planned, wearing build; mission loot is the lighter-weight collection
+   loop the result screen can reward immediately. Gear is persistent and fits
+   one of three slots. Consumables stack and a maximum of two can be readied for
+   the next deployment. Nothing here is sold for money. */
+const INV_RARITIES=[
+ {id:'common',    nm:'COMMON',    col:'#aeb9c6'},
+ {id:'uncommon',  nm:'UNCOMMON',  col:'#61dc86'},
+ {id:'rare',      nm:'RARE',      col:'#4db9ff'},
+ {id:'epic',      nm:'EPIC',      col:'#b67cff'},
+ {id:'legendary', nm:'LEGENDARY', col:'#ffbf45'},
+];
+const INV_GEAR=[
+ {id:'w_rangefinder',slot:'weapon',rarity:'common',nm:'Ballistic Rangefinder',em:'⌖',ds:'+3% unit damage',apply:()=>{armyDmgMult+=0.03;}},
+ {id:'w_pulseoptic', slot:'weapon',rarity:'uncommon',nm:'Pulse Optic',em:'◉',ds:'+5% unit damage',apply:()=>{armyDmgMult+=0.05;}},
+ {id:'w_gaussdir',   slot:'weapon',rarity:'rare',nm:'Gauss Director',em:'➤',ds:'+8% unit damage',apply:()=>{armyDmgMult+=0.08;}},
+ {id:'w_voidlens',   slot:'weapon',rarity:'epic',nm:'Void-Focus Lens',em:'◆',ds:'+12% unit damage',apply:()=>{armyDmgMult+=0.12;}},
+ {id:'w_relicscope', slot:'weapon',rarity:'legendary',nm:'Starfire Targeter',em:'✦',ds:'+16% unit damage',apply:()=>{armyDmgMult+=0.16;}},
+
+ {id:'a_fieldplate', slot:'armor',rarity:'common',nm:'Field Plate',em:'⬢',ds:'+3% unit health',apply:()=>{resHpMult*=1.03;}},
+ {id:'a_reinforced', slot:'armor',rarity:'uncommon',nm:'Reinforced Weave',em:'⬡',ds:'+5% unit health',apply:()=>{resHpMult*=1.05;}},
+ {id:'a_phaseweave', slot:'armor',rarity:'rare',nm:'Phaseweave Armor',em:'◇',ds:'+8% unit health',apply:()=>{resHpMult*=1.08;}},
+ {id:'a_aegis',      slot:'armor',rarity:'epic',nm:'Aegis Lattice',em:'⛨',ds:'+12% unit health',apply:()=>{resHpMult*=1.12;}},
+ {id:'a_starforged', slot:'armor',rarity:'legendary',nm:'Starforged Bulwark',em:'✧',ds:'+16% unit health',apply:()=>{resHpMult*=1.16;}},
+
+ {id:'u_toolkit',    slot:'utility',rarity:'common',nm:'Field Toolkit',em:'⚙',ds:'+5% structure build speed',apply:()=>{bldSpeedMult*=1.05;}},
+ {id:'u_fluxcell',   slot:'utility',rarity:'uncommon',nm:'Flux Cell',em:'ϟ',ds:'+7% energy income',apply:()=>{resEnergyMult*=1.07;}},
+ {id:'u_salvage',    slot:'utility',rarity:'rare',nm:'Salvage Lattice',em:'♻',ds:'+15% salvage recovery',apply:()=>{salvageMult*=1.15;}},
+ {id:'u_chronorig',  slot:'utility',rarity:'epic',nm:'Chrono Rig',em:'◷',ds:'−10% ability cooldowns',apply:()=>{for(let i=0;i<AB_CD.length;i++)AB_CD[i]*=0.90;}},
+ {id:'u_commandcore',slot:'utility',rarity:'legendary',nm:'Command Singularity',em:'◈',ds:'+8% damage and health',apply:()=>{armyDmgMult+=0.08;resHpMult*=1.08;}},
+];
+/* ITEM 5b — CONSUMABLES LOCK TO A CHASSIS.
+   These were five flat global scalars: ready Repair Nanites, the whole army is
+   8% tougher, and the game never asked you a question. `scope:'type'` items now
+   bind to ONE unit type for the match and pay roughly three times as much for
+   it, so the choice is "which of my units is carrying this fight" instead of a
+   rounding error spread across everything. Resources cannot be scoped — a
+   Supply Pack fills a bank, not a chassis — so those stay army-wide.
+   `apply(ty)` receives the locked TYPES index, or -1 for army-wide. */
+const INV_CONSUMABLES=[
+ {id:'c_supply',rarity:'common',nm:'Supply Pack',em:'▰',scope:'army',
+  ds:'Next match: +220 starting mass',apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+220);}},
+ {id:'c_power',rarity:'uncommon',nm:'Charged Power Cell',em:'ϟ',scope:'army',
+  ds:'Next match: +900 starting energy',apply:()=>{resE[0]=Math.min(RES_ECAP[0],resE[0]+900);}},
+ {id:'c_nanites',rarity:'rare',nm:'Repair Nanites',em:'✚',scope:'type',
+  ds:'Next match: +26% health, locked to one chassis',
+  apply:(ty)=>{ if(ty>=0&&typeof typeHpMult!=='undefined') typeHpMult[ty]*=1.26; else resHpMult*=1.08; }},
+ {id:'c_overdrive',rarity:'epic',nm:'Overdrive Protocol',em:'»',scope:'type',
+  ds:'Next match: +32% damage, locked to one chassis',
+  apply:(ty)=>{ if(ty>=0&&typeof typeDmgMult!=='undefined') typeDmgMult[ty]*=1.32; else armyDmgMult+=0.10; }},
+ {id:'c_command',rarity:'legendary',nm:'Supreme Command Cache',em:'★',scope:'type',
+  ds:'Next match: +30% health and +30% damage, locked to one chassis',
+  apply:(ty)=>{ if(ty>=0&&typeof typeHpMult!=='undefined'){ typeHpMult[ty]*=1.30; typeDmgMult[ty]*=1.30; }
+                else { resHpMult*=1.10; armyDmgMult+=0.10; } }},
+ /* Operation-exclusive supplies never enter the random loot pool or store
+    restock. They make the mode choice visible in the Account Armory instead
+    of reducing "boosted rewards" to a line of temporary payout text. */
+ {id:'c_standard_order',rarity:'uncommon',nm:'Skirmish Requisition',em:'⚔',scope:'army',mode:'standard',
+  ds:'Standard victory supply: +280 starting mass and +800 starting energy',
+  apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+280);resE[0]=Math.min(RES_ECAP[0],resE[0]+800);}},
+ {id:'c_campaign_intel',rarity:'rare',nm:'Campaign Command Intel',em:'◇',scope:'army',mode:'campaign',
+  ds:'Campaign mission supply: +6% army damage for one deployment',apply:()=>{armyDmgMult+=0.06;}},
+ {id:'c_warfront_beacon',rarity:'epic',nm:'Warfront Logistics Beacon',em:'☷',scope:'army',mode:'mmo',
+  ds:'MMO warfront supply: +400 starting mass and +1400 starting energy',
+  apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+400);resE[0]=Math.min(RES_ECAP[0],resE[0]+1400);}},
+];
+function invConsumableScope(id){
+  const c=INV_CONSUMABLES.find(x=>x.id===id);
+  return (c&&c.scope)||'army';
+}
+/* The chassis a charge may be locked to: every machine the player can actually
+   field. Derived from TYPES rather than a hand-written list, so a new unit is
+   lockable the day it ships instead of the day someone remembers this file. */
+function invLockableTypes(){
+  const out=[];
+  if(typeof TYPES==='undefined') return out;
+  for(let t=0;t<TYPES.length;t++){
+    const T=TYPES[t];
+    if(!T||!T.name||T.hero||T.brood||T.massflesh) continue;
+    out.push(t);
+  }
+  return out;
+}
+function invLockName(ty){
+  return (typeof TYPES!=='undefined'&&TYPES[ty]&&TYPES[ty].name)||'';
+}
+function invRarity(id){ return INV_RARITIES.find(r=>r.id===id)||INV_RARITIES[0]; }
+function invBag(){
+  let b=META.inventory;
+  if(!b||typeof b!=='object') b=META.inventory={};
+  if(!b.gear||typeof b.gear!=='object') b.gear={};
+  if(!b.consumables||typeof b.consumables!=='object') b.consumables={};
+  if(!b.equipped||typeof b.equipped!=='object') b.equipped={};
+  for(const s of ['weapon','armor','utility']){
+    const id=b.equipped[s]||'', g=INV_GEAR.find(x=>x.id===id);
+    b.equipped[s]=(g&&g.slot===s&&(b.gear[id]||0)>0)?id:'';
+  }
+  if(!Array.isArray(b.ready)) b.ready=[];
+  b.ready=b.ready.filter((id,i,a)=>a.indexOf(id)===i&&INV_CONSUMABLES.some(c=>c.id===id)&&(b.consumables[id]||0)>0).slice(0,2);
+  /* The chassis each readied charge is locked to, kept OUT of b.ready so every
+     existing `b.ready.indexOf(id)` in the Armory keeps working unchanged. A
+     lock with no charge behind it is stale state, so it is dropped here. */
+  if(!b.readyTy||typeof b.readyTy!=='object') b.readyTy={};
+  for(const k in b.readyTy) if(b.ready.indexOf(k)<0) delete b.readyTy[k];
+  return b;
+}
+function invEquipGear(id){
+  const b=invBag(), g=INV_GEAR.find(x=>x.id===id);
+  if(!g||(b.gear[id]||0)<=0) return false;
+  b.equipped[g.slot]=b.equipped[g.slot]===id?'':id;
+  metaSave(); return true;
+}
+function invReadyConsumable(id,ty){
+  const b=invBag(), c=INV_CONSUMABLES.find(x=>x.id===id), at=b.ready.indexOf(id);
+  if(!c||(b.consumables[id]||0)<=0) return false;
+  if(at>=0){ b.ready.splice(at,1); delete b.readyTy[id]; }
+  else{
+    if(b.ready.length>=2){ toast('Only two consumables can be readied per mission'); return false; }
+    if(c.scope==='type'){
+      /* A type-scoped charge with no chassis is the old army-wide behaviour
+         wearing a new label. Refuse it and say what is missing. */
+      if(!(ty>=0)||invLockableTypes().indexOf(ty|0)<0){
+        toast('Pick a chassis to lock '+c.nm+' to'); return false;
+      }
+      b.readyTy[id]=ty|0;
+    }
+    b.ready.push(id);
+  }
+  metaSave(); return true;
+}
+/* Small deterministic hash: the same completed match always yields the same
+   drop, while career number, performance and profile keep rewards varied. */
+function invHash(seed){
+  let h=2166136261;
+  for(let i=0;i<seed.length;i++){ h^=seed.charCodeAt(i); h=Math.imul(h,16777619); }
+  return h>>>0;
+}
+function invRarityRoll(win,seed){
+  let r=invHash(seed)%100;
+  r+=Math.min(10,(typeof wcActive!=='undefined'?wcActive.length:0)*2+Math.floor((stats.kills[0]||0)/180));
+  const d=clamp(difficulty|0,0,2);
+  if(!win){ if(r>=92&&d>0)return 'rare'; return r>=58?'uncommon':'common'; }
+  if(d===2){ if(r>=97)return 'legendary'; if(r>=86)return 'epic'; if(r>=62)return 'rare'; if(r>=30)return 'uncommon'; }
+  else if(d===1){ if(r>=99)return 'legendary'; if(r>=92)return 'epic'; if(r>=72)return 'rare'; if(r>=43)return 'uncommon'; }
+  else { if(r>=97)return 'epic'; if(r>=86)return 'rare'; if(r>=62)return 'uncommon'; }
+  return 'common';
+}
+function invGrantMatchLoot(win){
+  const b=invBag(), p=activeProf(), seed=(p?p.id:'p')+'|'+META.matches+'|'+(stats.kills[0]|0)+'|'+(stats.t|0)+'|'+difficulty;
+  const rarity=invRarityRoll(win,seed), loot={gear:null,consumables:[]};
+  if(typeof matchCommitted==='function'&&!matchCommitted(win)) return loot;
+  /* Victories always award gear. A committed loss can still recover a piece,
+     but a quick surrender cannot be used to farm the inventory. */
+  const gearDrop=win||((stats.t|0)>=180&&(invHash(seed+'|gear')%100)<35);
+  if(gearDrop){
+    const pool=INV_GEAR.filter(g=>g.rarity===rarity);
+    if(pool.length){
+      const unowned=pool.filter(g=>(b.gear[g.id]||0)<=0), src=unowned.length?unowned:pool;
+      const g=src[invHash(seed+'|slot')%src.length];
+      b.gear[g.id]=(b.gear[g.id]||0)+1;
+      if(!b.equipped[g.slot]) b.equipped[g.slot]=g.id;
+      loot.gear={id:g.id,nm:g.nm,em:g.em,rarity:g.rarity,duplicate:!unowned.length,count:b.gear[g.id]};
+    }
+  }
+  const qualityHold=win&&(invHash(seed+'|consQuality')%100)<28;
+  const ri=Math.max(0,INV_RARITIES.findIndex(r=>r.id===rarity)-(qualityHold?0:(win?1:2)));
+  const cr=INV_RARITIES[ri].id, pool=INV_CONSUMABLES.filter(c=>c.rarity===cr&&!c.mode);
+  const c=pool[invHash(seed+'|consumable')%pool.length], count=win?(difficulty>=2?2:1):1;
+  b.consumables[c.id]=(b.consumables[c.id]||0)+count;
+  loot.consumables.push({id:c.id,nm:c.nm,em:c.em,rarity:c.rarity,count});
+  return loot;
+}
+/* Each strategic lane has one explicit reward contract. Standard stays the
+   accessible solo ladder; Campaign pays more for authored constraints; MMO is
+   the long-term persistent lane and its contract can be previewed before the
+   network service is enabled. */
+const MODE_REWARD_CONTRACTS=Object.freeze({
+  standard:{id:'standard',nm:'STANDARD',xp:1.10,item:'c_standard_order',rule:'1 PLAYER · AI ALLIES OPTIONAL',accent:'#63d9ff'},
+  campaign:{id:'campaign',nm:'CAMPAIGN',xp:1.25,item:'c_campaign_intel',rule:'AUTHORED STORY MISSIONS',accent:'#74f0b1'},
+  mmo:{id:'mmo',nm:'MMO WARFRONT',xp:1.50,item:'c_warfront_beacon',rule:'PERSISTENT ONLINE CONQUEST',accent:'#c08cff'},
+  coop:{id:'coop',nm:'CO-OP',xp:1.00,item:'',rule:'TWO COMMANDERS VS AI',accent:'#ffce72'}
+});
+function matchRewardMode(){
+  if(typeof storyCampaignActiveId!=='undefined'&&storyCampaignActiveId)return 'campaign';
+  const m=typeof activeWarMode!=='undefined'?activeWarMode:'standard';
+  return MODE_REWARD_CONTRACTS[m]?m:'standard';
+}
+function modeRewardContract(mode){return MODE_REWARD_CONTRACTS[mode]||MODE_REWARD_CONTRACTS.standard;}
+function invGrantModeReward(win,mode,loot){
+  const C=modeRewardContract(mode),it=C.item&&INV_CONSUMABLES.find(x=>x.id===C.item);
+  if(!win||!it)return null;
+  const b=invBag();b.consumables[it.id]=(b.consumables[it.id]||0)+1;
+  const drop={id:it.id,nm:it.nm,em:it.em,rarity:it.rarity,count:1,mode:C.id,exclusive:true};
+  if(loot&&Array.isArray(loot.consumables))loot.consumables.push(drop);
+  return drop;
+}
+/* Called after permanent perks and Development modules so every multiplier is
+   layered once and the utility-slot build bonus is not reset by applyModules. */
+function invApplyLoadout(){
+  const b=invBag();
+  for(const s of ['weapon','armor','utility']){
+    const g=INV_GEAR.find(x=>x.id===b.equipped[s]);
+    if(g&&(b.gear[g.id]||0)>0) try{g.apply();}catch(e){}
+  }
+  const used=[];
+  for(const id of b.ready){
+    const c=INV_CONSUMABLES.find(x=>x.id===id);
+    if(!c||(b.consumables[id]||0)<=0) continue;
+    /* -1 means army-wide; a type-scoped charge without a lock falls back to the
+       old global effect rather than doing nothing at all. */
+    try{c.apply(b.readyTy&&b.readyTy[id]!=null?b.readyTy[id]:-1);}catch(e){}
+    b.consumables[id]--; used.push(c);
+  }
+  b.ready=[]; b.readyTy={}; metaSave();
+  return used;
+}
+/* MUST stay in lockstep with AB_CD in commander.js — the rebuild loop below is
+   driven by AB_CD.length, so a shorter AB_BASE writes `undefined * cd` = NaN
+   into the extra slots. A NaN cooldown never satisfies `abCool[k]>0`, so the
+   ability reads as permanently ready and its cooldown never displays. Adding
+   the EMP as a fifth ability without this line did exactly that. */
+const AB_BASE=[26,20,30,70,45];      // blast, repair, surge, lance, EMP
+/* The setup screen's supply-drop choice, kept so perks can be re-applied on top
+   of it every match instead of on top of last match's result. */
+let crateRateBase=1;
+function applyMetaPerks(){                    // call AFTER resetWorld, skirmish only
+  const o=META.owned;
+  /* Perks that MULTIPLY must start from the loadout value, not from whatever
+     the previous match left behind. Drop Priority compounded 1.25x per tier per
+     match — ten matches in with tier 2 it had multiplied by roughly fifty. */
+  crateRate=crateRateBase;
+  if(o.cache){ resM[0]=Math.min(RES_MCAP[0],resM[0]+300); resE[0]=Math.min(RES_ECAP[0],resE[0]+1200); }
+  resHpMult*=1+0.08*(o.armor||0);
+  armyDmgMult+=0.06*(o.targeting||0);
+  bonusMass+=1.5*(o.trade||0); bonusEnergy+=5*(o.trade||0);
+  const cd=1-0.10*(o.capacitor||0);
+  for(let i=0;i<AB_CD.length;i++) AB_CD[i]=AB_BASE[i]*cd;
+  salvageMult=1+0.4*(o.salvage||0);
+  if(WC.nofab) salvageMult=0;                       // No Salvage
+  if(WC.brittle) resHpMult*=0.75;                   // Brittle Frames
+  crateRate*=1+0.25*(o.droppod||0);
+  resEnergyMult*=1+0.12*(o.reactor||0);
+  bldHpMult=1+0.15*(o.bastion||0);
+  abUnlock[3]=!!o.orbital;                       // Orbital Lance is a bought ability
+}
+// Neural Uplink: boost commander XP gain
+const _heroXP0=heroXP;
+heroXP=function(x){ _heroXP0(x*(1+0.15*(META.owned.neural||0))); };
+
+/* ============================================================
+   SESSION RULES — victory goal, clock, resource pace, crate rate
+   ============================================================ */
+const GOALS=[
+ {id:'annihilate', em:'☠', nm:'Annihilation', ds:'Destroy every enemy Commander'},
+ {id:'domination', em:'⛳', nm:'Domination',   ds:'Hold the most territory when the clock ends'},
+ {id:'purge',      em:'🐛', nm:'Hive Purge',   ds:'Destroy every alien hive before time runs out'},
+ {id:'survival',   em:'🛡', nm:'Last Stand',   ds:'Keep your Commander alive until the clock ends'},
+];
+/* Ten minutes by default. An open-ended match with no mid-session save is the
+   wrong shape for a phone: an interrupted commute game is a total write-off.
+   Infinity is still there, one tap away under ADVANCED. */
+let goalSel='annihilate', timeLimit=600, resPace=1, crateRate=1;
+/* The backstop for an UNLIMITED match that no victory condition can resolve.
+   See checkVictory() in main.js. */
+const MATCH_HARD_CAP=2400;
+let matchClock=0, goalDone=false;
+function goalDef(){ return GOALS.find(g=>g.id===goalSel)||GOALS[0]; }
+function territoryScore(team){
+  let n=0;
+  for(const B of bldLive) if(B.alive&&B.team===team&&B.prog>=1) n+= (B.type==='hq'?4:B.type==='mex'||B.type==='geo'?2:1);
+  return n;
+}
+function goalStatus(){                    // short HUD line describing progress
+  const g=goalDef();
+  if(g.id==='domination'){
+    const a=territoryScore(0), b=territoryScore(1);
+    return '⛳ '+a+' vs '+b+(a>b?'  LEADING':a<b?'  BEHIND':'  TIED');
+  }
+  if(g.id==='purge'){ const n=liveNests().length; return '🐛 hives left: '+n; }
+  if(g.id==='survival') return '🛡 hold the line';
+  const n=typeof livingEnemyCommanders==='function'?livingEnemyCommanders().length:1;
+  return '☠ enemy commanders left: '+n;
+}
+
+/* ---------- wildcards (danger modifiers → bigger rewards) ---------- */
+const WILDCARDS=[
+ {id:'meteor',  em:'☄',  nm:'Meteor Season',    ds:'Meteor storms strike 3× as often'},
+ {id:'wild',    em:'🐛', nm:'Rampant Wildlife', ds:'Nests swarm — double broods, fast respawns'},
+ {id:'iron',    em:'🩸', nm:'Iron Enemy',       ds:'Enemy units +25% HP'},
+ {id:'moon',    em:'🌑', nm:'Blood Moon',       ds:'The sun never rises'},
+ {id:'veins',   em:'⛏',  nm:'Scarce Veins',     ds:'Your extractors yield −30%'},
+ {id:'fogb',    em:'🌫', nm:'Fog Bank',         ds:'Your vision range −40%'},
+ {id:'titan',   em:'👁',  nm:'Titan Rush',       ds:'The enemy fields TITANs early'},
+ {id:'volatile',em:'💥', nm:'Volatile Cores',   ds:'Every destroyed unit detonates'},
+ /* THESE FIVE PAID OUT FOR NOTHING.
+    endgame.js's OPMODS listed them and payoutMult() counted them, but
+    pickWildcards() resolves a chosen modifier by looking it up HERE — and when
+    the lookup failed it dropped the entry silently. Selecting all five bought a
+    +140% payout on a match that was mechanically identical to an unmodified
+    one, which is free score on the weekly leaderboard: the one system whose
+    entire value is that its numbers can be compared. Each now has a real
+    effect, so the payout is earned. */
+ {id:'swarm',   em:'🐝', nm:'Hiveworld',        ds:'The infestation runs at full strength whoever you fight'},
+ {id:'blitz',   em:'⚡', nm:'Blitz Doctrine',   ds:'Enemy waves come 40% sooner'},
+ {id:'brittle', em:'🥀', nm:'Brittle Frames',   ds:'YOUR units have −25% HP'},
+ {id:'nofab',   em:'🚫', nm:'No Salvage',       ds:'Wrecks and bounties pay nothing'},
+ {id:'dark',    em:'🌘', nm:'Total Eclipse',    ds:'Endless night, and vision suffers for it'},
+];
+let WC={}, wcActive=[], wcChoice=0;   // off by default: a first match should not be rolled
+function pickWildcards(n){
+  WC={}; wcActive=[];
+  /* CHOSEN modifiers win over the dice. If the player has set any in
+     Operations they get exactly those and nothing else — the roulette is a
+     fallback for a player who has never opened that screen, not a tax on one
+     who has. */
+  if(typeof opModsOn==='function'){
+    const chosen=Object.keys(opModsOn()).filter(id=>typeof opModUnlocked!=='function'||opModUnlocked(id)||
+      (typeof weeklyMode!=='undefined'&&weeklyMode));
+    if(chosen.length){
+      for(const id of chosen){
+        const w=WILDCARDS.find(x=>x.id===id);
+        /* Set the flag even for an id with no card here. A modifier the player
+           paid a payout multiplier for must at minimum reach the simulation;
+           dropping it silently is how the five above went unnoticed. */
+        if(w){ WC[w.id]=true; wcActive.push(w); }
+        else { WC[id]=true; wcActive.push({id,em:'?',nm:id,ds:''}); }
+      }
+      return;
+    }
+  }
+  const pool=WILDCARDS.filter(w=>{
+    if(typeof opModUnlocked!=='function') return true;
+    const mod=typeof OPMODS!=='undefined'&&OPMODS.find(o=>o.id===w.id);
+    return !mod||opModUnlocked(mod);
+  });
+  for(let k=0;k<n&&pool.length;k++){
+    const w=pool.splice(Math.random()*pool.length|0,1)[0];
+    WC[w.id]=true; wcActive.push(w);
+  }
+}
+/* Payout now comes from the endgame layer: the threat level the player chose to
+   fight at, multiplied by the modifiers they chose to carry. The old flat +35%
+   per random wildcard priced a cosmetic draw the same as a crippling one. */
+function wcRewardMult(){
+  if(typeof payoutMult==='function') return payoutMult();
+  return 1+0.35*wcActive.length;
+}
+function renderWcRow(){
+  const el=document.getElementById('wcRow');
+  if(!el) return;
+  /* hud.js owns the compact in-match banner. Keeping this setup row visible
+     during a live match duplicated every modifier across the top of the HUD. */
+  if(!wcActive.length||demoMode||matchLive){ el.style.display='none'; return; }
+  el.style.display='flex';
+  el.innerHTML=wcActive.map(w=>'<span class="wcChip" data-wc-id="'+w.id+'" title="'+w.nm+'">'+w.em+'</span>').join('')
+    +'<span class="wcMult">+'+Math.round((wcRewardMult()-1)*100)+'%</span>';
+  el.onclick=()=>toast(wcActive.map(w=>w.em+' '+w.nm+': '+w.ds).join('  ·  '));
+  /* Long-press on individual wildcard chips shows a detailed tooltip card. */
+  el.querySelectorAll('.wcChip').forEach(chip=>{
+    let lpT=null;
+    chip.addEventListener('pointerdown',ev=>{
+      const w=wcActive.find(x=>x.id===chip.dataset.wcId);
+      if(!w) return;
+      lpT=setTimeout(()=>{
+        if(typeof showModTooltip==='function') showModTooltip({id:w.id,em:w.em,nm:w.nm,ds:w.ds,rarity:'legendary',slot:''},'wildcard',ev.clientX,ev.clientY);
+      },500);
+    });
+    const clear=()=>{ if(lpT){clearTimeout(lpT);lpT=null;} hideModTooltip(); };
+    chip.addEventListener('pointerup',clear);
+    chip.addEventListener('pointerleave',clear);
+    chip.addEventListener('pointercancel',clear);
+  });
+}
+
+/* ---------- match rewards ---------- */
+function rewardDayKey(){
+  const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+/* One anti-farm rule for every persistent reward. A real early defeat still
+   counts when the player fought or built; opening a match and immediately
+   quitting cannot mint XP, cores, loot, Data or crafting materials. */
+function matchCommitted(win){
+  return !!win||(stats.t|0)>=180;
+}
+/* Cores used to be one opaque formula dominated by raw kill count. That made a
+   defensive victory feel worse than farming wildlife and gave no clue what the
+   economy valued. This ledger caps farmable categories, pays the objective and
+   chosen difficulty, and rewards a genuinely fortified base. */
+function coreRewardLedger(win){
+  /* Zero was the wrong number for the one player who most needs a reason to
+     press PLAY again: the new commander who gets rushed and loses at forty-five
+     seconds. They saw MISSION FAILED over an empty payout panel — no cores, no
+     XP, not even a breakdown explaining why. The anti-farm rule is still doing
+     its job; it just no longer has to be expressed as nothing. A token that
+     cannot be farmed profitably beats a blank screen. */
+  if(!matchCommitted(win)) return {base:0,parts:[]};
+  const secs=stats.t|0, kills=stats.kills[0]|0;
+  const fort=(typeof fortOf==='function'&&fortOf(0))?fortOf(0).tier|0:0;
+  const completion=secs>=90?18:6;
+  const service=Math.min(24,Math.floor(secs/45)*2);
+  const combat=Math.min(36,Math.round(Math.sqrt(Math.max(0,kills))*3));
+  const defence=Math.min(24,fort*8);
+  const science=Math.min(18,(typeof resDone!=='undefined'?resDone:0)*3);
+  const objective=win?50:0;
+  const challenge=(win?[0,14,30]:[0,7,14])[clamp(difficulty|0,0,2)];
+  const day=rewardDayKey();
+  const firstWin=win&&META.firstWinDay!==day?25:0;
+  if(firstWin) META.firstWinDay=day;
+  return {base:completion+service+combat+defence+science+objective+challenge+firstWin,
+    parts:[['Completion',completion],['Field time',service],['Combat',combat],
+           ['Fortification',defence],['Research',science],['Objective',objective],
+           ['Challenge',challenge],['First win',firstWin]].filter(p=>p[1]>0)};
+}
+function metaGrant(win){
+  const mult=wcRewardMult();
+  const committed=matchCommitted(win);
+  const rewardScale=win?1:(committed?.35:0);
+  /* Boosters apply on top of the wildcard multiplier, so a player who stacked
+     both sees a genuinely large number — which is the point of spending an
+     hour-long booster on a hard match rather than an easy one. */
+  const bx=(typeof boostMul==='function')?boostMul('xp'):1;
+  const bc=(typeof boostMul==='function')?boostMul('cores'):1;
+  const mode=matchRewardMode(),modeContract=modeRewardContract(mode);
+  const conquest=win&&typeof mfConquestReward==='function'?mfConquestReward(typeof curMap!=='undefined'?curMap:''):null;
+  const xp=Math.round(((40+stats.kills[0]*0.35+(win?120:30)+difficulty*40)*mult*bx*rewardScale
+    +(conquest?conquest.xp:0))*modeContract.xp);
+  const ledger=coreRewardLedger(win);
+  const cores=Math.round(ledger.base*mult*bc*rewardScale)+(conquest?conquest.cores:0);
+  if(conquest)ledger.parts.push(['Conquest first clear',conquest.cores]);
+  const data=(typeof researchDataFromMatch==='function')?researchDataFromMatch(win):{total:0,parts:[]};
+  const field={mass:Math.max(0,Math.floor(resM[0]||0)),energy:Math.max(0,Math.floor(resE[0]||0)),
+               reclaimed:Math.max(0,Math.round(stats.reclaimed||0))};
+  const r0=metaRankIdx();
+  META.xp+=xp; META.cores+=cores; META.matches++; META.kills+=stats.kills[0];
+  if(mode==='standard')META.standardMatches=(META.standardMatches||0)+1;
+  META.modeMatches=META.modeMatches||{};META.modeMatches[mode]=(META.modeMatches[mode]||0)+1;
+  /* The record a player would actually look back on: streaks, personal bests,
+     how long they have spent, and which faction they keep beating. */
+  if(win){ META.wins++; META.streak=(META.streak||0)+1;
+           META.bestStreak=Math.max(META.bestStreak||0,META.streak);
+           if(stats.t>0) META.fastestWin=META.fastestWin? Math.min(META.fastestWin,stats.t|0) : (stats.t|0);
+           const f=(typeof AI!=='undefined'&&AI.fac)||'';
+           if(f){ META.facWins=META.facWins||{}; META.facWins[f]=(META.facWins[f]||0)+1;
+                  let best='',bn=0; for(const k in META.facWins) if(META.facWins[k]>bn){bn=META.facWins[k];best=k;}
+                  META.favFac=best; }
+           if(typeof curMap!=='undefined'&&curMap){ META.mapWins=META.mapWins||{};
+                  META.mapWins[curMap]=(META.mapWins[curMap]||0)+1; }
+  } else { META.losses=(META.losses||0)+1; META.streak=0; }
+  META.bestKills=Math.max(META.bestKills||0, stats.kills[0]|0);
+  META.playSec=(META.playSec||0)+(stats.t|0);
+  META.built=(META.built||0)+((stats.built&&stats.built[0])|0);
+  META.lost=(META.lost||0)+(stats.kills[1]|0);
+  if(!META.firstPlayed) META.firstPlayed=Date.now();
+  META.lastPlayed=Date.now();
+  const loot=invGrantMatchLoot(win);
+  const modeReward=invGrantModeReward(win,mode,loot);
+  const r1=metaRankIdx();
+  metaSave();
+  /* Daily orders read what actually happened, never a button press. */
+  if(typeof dailyRecord==='function') dailyRecord({
+    win:!!win, kills:stats.kills[0]|0, built:(stats.built&&stats.built[0])|0,
+    nests:(stats.nests|0), difficulty:difficulty|0,
+    wildcards:(typeof wcActive!=='undefined'?wcActive.length:0), seconds:stats.t|0});
+  if(typeof syncPush==='function') syncPush();     // push the new record if linked
+  return {xp,cores,mult,parts:ledger.parts,data:data.total||0,dataParts:data.parts||[],conquest,
+          mode,modeContract,modeReward,field,loot,rankUp:r1>r0?RANKS[r1]:null};
+}
+
+/* The name we greet a player by. The profile name is what they chose in game
+   and is what the account sync writes back into, so it wins; a signed-in player
+   who never set one falls back to their e-mail's local part rather than to a
+   generic word. */
+function mfGreetName(){
+  const P=(typeof activeProf==='function')?activeProf():null;
+  if(P&&P.name&&P.name.trim()) return P.name.trim();
+  if(typeof AP_SESSION!=='undefined'&&AP_SESSION&&AP_SESSION.email)
+    return String(AP_SESSION.email).split('@')[0];
+  return 'Commander';
+}
+
+/* ---------- menu header + armory UI ---------- */
+function renderMetaHead(){
+  const r=metaRankIdx(), R=RANKS[r], next=RANKS[r+1], P=activeProf();
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  const ID=profIdentity();
+  const glyph=document.getElementById('rankEmGlyph');
+  if(glyph){
+    /* Wearing a commander replaces the emoji with their portrait, framed by
+       whichever frame the account has unlocked and chosen. The level badge is a
+       sibling, so it survives this swap. */
+    if(ID.portrait) glyph.innerHTML='<img class="badgePortrait fr-'+ID.frame+'" src="'+ID.portrait+'" alt="">';
+    else glyph.textContent=ID.emblem;
+  }
+  set('rankLvl', r+1);
+  /* The name / rank label / XP bar / XP count moved to Profile ▸ CAREER
+     (renderCareer). The header keeps the badge and a one-line greeting; the
+     badge's tooltip carries the rank so the symbol is never a mystery. */
+  const be=document.getElementById('rankEm');
+  if(be) be.title=R.nm+(next? ' · '+META.xp+' / '+next.xp+' XP' : ' · MAX RANK');
+  const gl=document.getElementById('greetLine');
+  if(gl) gl.textContent=(mfGreetName()+(ID.title?' \u00b7 '+ID.title:'')).toUpperCase();
+  const gs=document.getElementById('greetSub');
+  if(gs) gs.textContent=R.em+' '+R.nm+(next? ' · '+Math.round(metaRankProg()*100)+'% to '+next.nm : ' · max rank');
+  set('coreV',META.cores);
+  set('coreV2',META.cores);
+  set('metaRec',META.wins+'W / '+(META.matches-META.wins)+'L');
+  /* The menu header is redrawn on every return to the front end, which makes it
+     the one reliable place to refresh the Inbox badge. Without this the dot only
+     appeared after opening the Inbox — which is the one moment it is useless. */
+  if(typeof storyRefreshBadge==='function'){ try{ storyRefreshBadge(); }catch(e){} }
+}
+
+/* ---------- war room ----------
+   Four operations behind one door. Playable modes come first and the locked
+   ones stay VISIBLE rather than hidden — a locked card that explains itself is
+   a roadmap; a hidden one is just a menu that looks small. */
+/* Ordered by development priority, which is also the order a player should meet
+   them: learn, then skirmish, then play other people. The two long-term modes
+   stay visible and honest about being unbuilt. */
+const WAR_MODES=[
+  {id:'training', em:'\u25b6', nm:'TRAINING',  ds:'Field orientation under KEEL guidance',
+   foot:''},
+  /* Standard is the finished local mode. Advertising co-op here while the
+     hosted service is locked creates a false affordance: the player taps a
+     promised mode and lands in single-player setup instead. */
+  {id:'standard', em:'\u2694', nm:'STANDARD',  ds:'Single-player against AI, with optional AI allies',
+   foot:'4 planets \u00b7 16 regions \u00b7 48 conquest battlefields'},
+  {id:'campaign', em:'\u2b21', nm:'CAMPAIGN',  ds:'Guided story missions with authored objectives',
+   foot:'Playable Prologue \u00b7 persistent mission records'},
+  {id:'mmo',      em:'\u2637', nm:'MMO',       ds:'Persistent planets \u00b7 build a commander HQ, take ground',
+   foot:'Browse regions and future warfront operations', locked:'LONG TERM', browse:true},
+  {id:'coop',   em:'\u25c8', nm:'CO-OP', ds:'Two commanders against adaptive AI',
+   foot:'Separate online service \u00b7 no Standard progression', locked:'NETWORK IN DEVELOPMENT', browse:true}
+];
+function renderWarRoom(){
+  const g=document.getElementById('warGrid'); if(!g) return;
+  const T=(typeof trainingUiState==='function')?trainingUiState():null;
+  g.innerHTML=WAR_MODES.map(M=>{
+    let foot=M.foot, sub=M.ds;
+    if(M.id==='training'&&T){
+      foot=T.state;
+      sub=(T.action||'\u25b6 START TRAINING').replace(/^\S+\s+/,'');
+      sub=sub.charAt(0)+sub.slice(1).toLowerCase()+' \u00b7 protected drop, no early rush';
+    }
+    const C=MODE_REWARD_CONTRACTS[M.id],it=C&&C.item?INV_CONSUMABLES.find(x=>x.id===C.item):null;
+    const reward=C?'<span class="warReward" style="--mode:'+C.accent+'"><b>+'+Math.round((C.xp-1)*100)+'% XP</b>'
+      +(it?'<small>'+it.em+' '+it.nm.toUpperCase()+'</small>':'')+'</span>':'';
+    const lock=M.locked
+      ? '<span class="warLock">\ud83d\udd12 '+M.locked+'</span>' : '';
+    return '<button type="button" class="warCard'+(M.locked?' locked':'')+(M.browse?' browse':'')+'" data-mode="'+M.id+'"'
+      +(M.locked&&!M.browse?' aria-disabled="true"':'')+'>'
+      +'<span class="warEm">'+M.em+'</span>'
+      +'<span class="warBody"><span class="warNm">'+M.nm+'</span>'
+      +'<span class="warDs">'+sub+'</span>'
+      +(foot?'<span class="warFootTx">'+foot+'</span>':'')+reward+'</span>'
+      +lock+'</button>';
+  }).join('');
+  g.querySelectorAll('.warCard').forEach(el=>{
+    const go=()=>{
+      const m=el.dataset.mode;
+      if(el.classList.contains('locked')){
+        if((m==='coop'||m==='mmo')&&typeof openPlanetarySetup==='function'){
+          openPlanetarySetup(m); return;
+        }
+        if(typeof sfx==='function'){ try{ sfx('ui'); }catch(e){} }
+        if(typeof toast==='function') toast(el.querySelector('.warNm').textContent+' is still in development.');
+        return;
+      }
+      if(m==='standard'&&typeof openSkirmishSetup==='function') openSkirmishSetup();
+      else if(m==='campaign'&&typeof renderOps==='function'){
+        if(typeof storyCampaignEnsureOps==='function')storyCampaignEnsureOps();
+        MF_TAB_STATE.opsScr='campaign';renderOps();
+        const ops=document.getElementById('opsScr');if(typeof mfSetTabs==='function')mfSetTabs(ops,'campaign',false);
+        if(typeof showFrontScreen==='function')showFrontScreen('opsScr');
+      }
+      else if(m==='training'&&typeof resumeTrainingMission==='function') resumeTrainingMission();
+    };
+    if(typeof mfBindTap==='function') mfBindTap(el,go); else el.addEventListener('click',go);
+  });
+}
+
+/* ---------- profile (account) screen ---------- */
+function fmtDur(s){
+  s=Math.max(0,s|0);
+  const h=(s/3600)|0, m=((s%3600)/60)|0;
+  return h? h+'h '+m+'m' : m+'m';
+}
+/* The career card. Deliberately laid out as labelled figures rather than a
+   sentence: a player checks these at a glance, and a glance wants columns. */
+function renderCareer(){
+  const el=document.getElementById('profStats'); if(!el) return;
+  const R=RANKS[metaRankIdx()];
+  const m=META, played=(m.matches||0), wins=(m.wins||0), losses=played-wins;
+  const wr=played? Math.round(wins/played*100) : 0;
+  const facNm=(typeof FACTIONS!=='undefined'&&m.favFac&&FACTIONS[m.favFac])?FACTIONS[m.favFac].nm:'—';
+  const cell=(v,l)=>'<div class="cCell"><b>'+v+'</b><span>'+l+'</span></div>';
+  const nx=RANKS[metaRankIdx()+1], P=(typeof activeProf==='function'?activeProf():null);
+  el.innerHTML=
+    /* The rank ladder lives here now, not in the menu header. */
+    '<div class="cLadder">'+
+      (()=>{ const I=profIdentity();
+        return I.portrait
+          ? '<div class="cLadEm"><img class="badgePortrait fr-'+I.frame+'" src="'+I.portrait+'" alt=""></div>'
+          : '<div class="cLadEm">'+I.emblem+'</div>'; })()+
+      '<div class="cLadInfo">'+
+        '<div class="cLadNm">'+((P&&P.name)?P.name:'Commander')
+          +((()=>{const I=profIdentity();return I.title?' <i>'+I.title+'</i>':'';})())+'</div>'+
+        '<div class="cLadRank">'+R.em+' '+R.nm+'</div>'+
+        '<div class="cLadBarO"><div class="cLadBarF" style="width:'+(metaRankProg()*100)+'%"></div></div>'+
+        '<div class="cLadXp">'+(nx? (m.xp||0).toLocaleString()+' / '+nx.xp.toLocaleString()+' XP · next: '+nx.nm
+                                  : (m.xp||0).toLocaleString()+' XP · MAX RANK')+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="cRank">'+R.em+' '+R.nm+' · '+(m.xp||0).toLocaleString()+' XP</div>'+
+    '<div class="cGrid">'+
+      cell(played,'MATCHES')+cell(wins+'/'+losses,'W / L')+cell(wr+'%','WIN RATE')+
+      cell(m.bestStreak||0,'BEST STREAK')+cell((m.kills||0).toLocaleString(),'KILLS')+
+      cell((m.bestKills||0).toLocaleString(),'BEST GAME')+
+      cell(fmtDur(m.playSec),'TIME PLAYED')+cell((m.cores||0).toLocaleString(),'CORES')+
+      cell((m.researchData||0).toLocaleString(),'RESEARCH DATA')+
+      cell(m.fastestWin? fmtDur(m.fastestWin):'—','FASTEST WIN')+
+    '</div>'+
+    '<div class="cFoot">Most beaten: '+facNm+
+      (m.streak? ' · on a '+m.streak+'-win run' : '')+'</div>';
+}
+
+/* One category system for the long-form meta screens. It follows the same
+   interaction contract everywhere: one visible sibling panel, remembered
+   selection, 48px targets in CSS, and arrow-key/controller-style traversal. */
+const MF_TAB_STATE={};
+let MF_POINTER_COMMIT=-1e9;
+const mfTapNow=()=>typeof performance!=='undefined'?performance.now():Date.now();
+/* A transformed control may disappear or move in its pointer-up callback. The
+   browser then re-hit-tests the compatibility click against the NEW screen,
+   where an element-local debounce cannot see it. Suppress that one click at
+   document capture. A new pointer-down or keyboard action clears the guard, so
+   fast intentional taps and accessibility activation still pass normally. */
+if(typeof document!=='undefined'&&!document.__mfGhostClickGuard){
+  document.__mfGhostClickGuard=true;
+  document.addEventListener('pointerdown',()=>{ MF_POINTER_COMMIT=-1e9; },true);
+  document.addEventListener('keydown',()=>{ MF_POINTER_COMMIT=-1e9; },true);
+  document.addEventListener('click',e=>{
+    if(mfTapNow()-MF_POINTER_COMMIT<650){
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }
+  },true);
+}
+/* A phone tap is not the same thing as a desktop click. Android WebView can
+   cancel the synthetic click when a finger drifts a few pixels inside a
+   scrollable tab row, even though the player plainly tapped the control. Keep
+   scrolling intact, commit on pointer-up only when the gesture stayed inside
+   a small slop radius, and retain click as the keyboard/accessibility path. */
+function mfBindTap(el,fn){
+  if(!el||typeof fn!=='function') return;
+  let press=null, pointerCommit=-1e9;
+  const now=mfTapNow;
+  el.addEventListener('pointerdown',e=>{
+    if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0)) return;
+    press={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};
+  },{passive:true});
+  el.addEventListener('pointermove',e=>{
+    if(!press||e.pointerId!==press.id) return;
+    if(Math.hypot(e.clientX-press.x,e.clientY-press.y)>12) press.moved=true;
+  },{passive:true});
+  el.addEventListener('pointercancel',e=>{
+    if(press&&e.pointerId===press.id) press=null;
+  },{passive:true});
+  el.addEventListener('pointerup',e=>{
+    if(!press||e.pointerId!==press.id) return;
+    const ok=!press.moved&&el.contains(e.target);
+    press=null;
+    if(!ok||el.disabled) return;
+    pointerCommit=MF_POINTER_COMMIT=now();
+    fn(e);
+  });
+  el.addEventListener('click',e=>{
+    /* A real pointer tap produces pointerup and then click. Swallow only that
+       duplicate; Enter/Space and assistive-tech clicks have no pointer commit. */
+    /* The pointerup callback is allowed to replace its own button (tabbed
+       screens do this). The following click can then be retargeted to a NEW
+       button at that coordinate, so the duplicate guard must be shared across
+       every bound control rather than living only on the removed element. */
+    if(now()-pointerCommit<600||now()-MF_POINTER_COMMIT<600){
+      e.preventDefault(); e.stopImmediatePropagation(); return;
+    }
+    if(!el.disabled) fn(e);
+  });
+}
+function mfSetTabs(root,key,focus){
+  if(!root) return;
+  const tabs=[...root.querySelectorAll('[data-mf-tab]')];
+  const panels=[...root.querySelectorAll('[data-mf-panel]')];
+  if(!tabs.length||!panels.length) return;
+  const active=tabs.some(b=>b.dataset.mfTab===key)?key:tabs[0].dataset.mfTab;
+  MF_TAB_STATE[root.id||'mfTabs']=active;
+  tabs.forEach(b=>{
+    const on=b.dataset.mfTab===active;
+    b.classList.toggle('on',on);
+    b.setAttribute('aria-selected',on?'true':'false');
+    b.tabIndex=on?0:-1;
+  });
+  panels.forEach(p=>{ p.hidden=p.dataset.mfPanel!==active; });
+  /* Feature screens can react to category context without adding a second tap
+     handler to the same button. Operations uses this to keep its persistent
+     deployment plan in sync with the Weekly contract being inspected. */
+  try{ root.dispatchEvent(new CustomEvent('mftabchange',{detail:{key:active,focus:!!focus}})); }catch(e){}
+  if(focus){
+    const scroller=root.querySelector('.settingsScroll,.profileScroll,.opsScroll,.dailyScroll,.inboxScroll');
+    if(scroller) scroller.scrollTop=0;
+    const b=tabs.find(x=>x.dataset.mfTab===active);
+    if(b) try{ b.focus({preventScroll:true}); }catch(e){ b.focus(); }
+    /* Keep the active category fully inside its horizontal rail without using
+       scrollIntoView, which can also move the entire Android page vertically. */
+    if(b){
+      const rail=b.closest('.screenTabs');
+      if(rail) requestAnimationFrame(()=>{
+        const left=b.offsetLeft,right=left+b.offsetWidth,viewL=rail.scrollLeft,viewR=viewL+rail.clientWidth;
+        if(b===tabs[0]) rail.scrollLeft=0;
+        else if(left<viewL+4) rail.scrollLeft=Math.max(0,left-8);
+        else if(right>viewR-4) rail.scrollLeft=Math.max(0,right-rail.clientWidth+8);
+      });
+    }
+    if(typeof sfx==='function') sfx('ui');
+  }
+}
+function mfBindTabs(root,initial){
+  if(!root) return;
+  const tabs=[...root.querySelectorAll('[data-mf-tab]')];
+  if(!tabs.length) return;
+  tabs.forEach(b=>{
+    if(b.dataset.mfTapBound) return;
+    b.dataset.mfTapBound='1';
+    mfBindTap(b,()=>mfSetTabs(root,b.dataset.mfTab,true));
+  });
+  if(!root.dataset.mfTabsBound){
+    root.dataset.mfTabsBound='1';
+    root.addEventListener('keydown',e=>{
+      const b=e.target.closest&&e.target.closest('[data-mf-tab]');
+      if(!b||!root.contains(b)||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+      e.preventDefault();
+      const liveTabs=[...root.querySelectorAll('[data-mf-tab]')];
+      const at=liveTabs.indexOf(b);
+      const next=e.key==='Home'?0:e.key==='End'?liveTabs.length-1:
+        (at+(e.key==='ArrowRight'?1:-1)+liveTabs.length)%liveTabs.length;
+      mfSetTabs(root,liveTabs[next].dataset.mfTab,true);
+    });
+  }
+  mfSetTabs(root,MF_TAB_STATE[root.id||'mfTabs']||initial||tabs[0].dataset.mfTab,false);
+}
+function renderProfile(){
+  renderCareer();
+  if(typeof renderAccount==='function') renderAccount();
+  const P=activeProf(), R=RANKS[metaRankIdx()];
+  const list=document.getElementById('profList');
+  if(!list) return;
+  let h='';
+  for(const p of PROFILES.list){
+    let st={xp:0,wins:0,matches:0};
+    try{ const s=localStorage.getItem('massfront_meta_'+p.id); if(s) st=Object.assign(st,JSON.parse(s)); }catch(e){}
+    let ri=0; for(let i=0;i<RANKS.length;i++) if(st.xp>=RANKS[i].xp) ri=i;
+    h+='<div class="sItem pItem'+(p.id===PROFILES.active?' selP':'')+'" data-pid="'+p.id+'">'
+      +'<div class="sEm">'+p.emblem+'</div>'
+      +'<div class="sTx"><b>'+p.name+'</b><div class="sDs">'+RANKS[ri].em+' '+RANKS[ri].nm
+      +' · '+(st.wins||0)+'W/'+((st.matches||0)-(st.wins||0))+'L</div></div>'
+      +(p.id===PROFILES.active?'<div class="sBuy" style="background:var(--panelG2) padding-box,var(--steelB) border-box;color:#5dff9a">ACTIVE</div>':'')
+      +'</div>';
+  }
+  list.innerHTML=h;
+  list.querySelectorAll('.pItem').forEach(el=>{
+    const choose=()=>{
+      if(el.dataset.pid!==PROFILES.active){ switchProfile(el.dataset.pid); sfx('ui'); }
+      renderProfile();
+    };
+    if(typeof mfBindTap==='function') mfBindTap(el,choose); else el.addEventListener('click',choose);
+  });
+  const inp=document.getElementById('profName');
+  if(inp) inp.value=P.name;
+  const em=document.getElementById('emblemRow');
+  if(em){
+    em.innerHTML=EMBLEMS.map(e=>'<div class="swatch embSw'+(P.emblem===e?' sel':'')+'" data-em="'+e+'" style="background:var(--panelG2)">'
+      +'<span style="background:none;font-size:20px">'+e+'</span></div>').join('');
+    em.querySelectorAll('.embSw').forEach(el=>{
+      const choose=()=>{ P.emblem=el.dataset.em; profSave(); sfx('ui'); renderProfile(); renderMetaHead(); };
+      if(typeof mfBindTap==='function') mfBindTap(el,choose); else el.addEventListener('click',choose);
+    });
+  }
+  renderIdentityPickers();
+  mfBindTabs(document.getElementById('profileScr'),'career');
+  /* The two-line summary that used to live here has been replaced by the
+     career card at the top of the screen — renderCareer() owns #profStats now,
+     and writing over it from here was the reason the card never appeared. */
+}
+
+/* ---------- identity pickers ----------------------------------------------
+   Three rank-gated grids. A locked entry is rendered, dimmed, and states the
+   rank that opens it — the roster doubles as the progression screen. Selecting
+   a locked entry is a no-op with an explanation, never a silent dead tap. */
+function renderIdentityPickers(){
+  const P=activeProf(); if(!P) return;
+  const r=metaRankIdx();
+  const need=e=>'\ud83d\udd12 '+RANKS[e.unlock].nm;
+
+  const cr=document.getElementById('charRow');
+  if(cr){
+    cr.innerHTML=CHARACTERS.map(c=>{
+      const open=r>=c.unlock, sel=P.char===c.id;
+      return '<button type="button" class="charCard'+(open?'':' locked')+(sel?' sel':'')+'" data-char="'+c.id+'">'
+        +'<span class="charPortrait fr-'+((FRAMES.find(f=>f.id===P.frame)||FRAMES[0]).id)+'">'
+          +'<img src="'+charPortrait(c.id)+'" alt="" loading="lazy">'
+        +'</span>'
+        +'<span class="charNm">'+c.nm+'</span>'
+        +'<span class="charRole">'+c.role+'</span>'
+        +(open?(sel?'<span class="charState on">SELECTED</span>':'<span class="charState">TAP TO WEAR</span>')
+              :'<span class="charState lock">'+need(c)+'</span>')
+        +'</button>';
+    }).join('');
+    cr.querySelectorAll('.charCard').forEach(el=>{
+      const go=()=>{
+        const c=charById(el.dataset.char); if(!c) return;
+        if(!charUnlocked(c)){
+          if(typeof sfx==='function'){try{sfx('ui');}catch(e){}}
+          if(typeof toast==='function') toast(c.nm+' unlocks at '+RANKS[c.unlock].nm+'.');
+          return;
+        }
+        P.char=(P.char===c.id)?'':c.id;
+        if(P.char) P.name=c.nm.replace(/^(Captain|Lord|Broker|The)\s+/,'').slice(0,14);
+        profSave(); if(typeof sfx==='function'){try{sfx('ui');}catch(e){}}
+        renderProfile(); renderMetaHead();
+      };
+      if(typeof mfBindTap==='function') mfBindTap(el,go); else el.addEventListener('pointerdown',go);
+    });
+  }
+
+  const chips=(rowId,items,cur,apply)=>{
+    const el=document.getElementById(rowId); if(!el) return;
+    el.innerHTML=items.map(t=>{
+      const open=r>=t.unlock, sel=cur===t.id;
+      return '<button type="button" class="idChip'+(open?'':' locked')+(sel?' sel':'')+'" data-id="'+t.id+'">'
+        +'<b>'+t.nm+'</b>'+(open?'':'<span>'+need(t)+'</span>')+'</button>';
+    }).join('');
+    el.querySelectorAll('.idChip').forEach(b=>{
+      const go=()=>{
+        const t=items.find(x=>x.id===b.dataset.id); if(!t) return;
+        if(r<t.unlock){
+          if(typeof sfx==='function'){try{sfx('ui');}catch(e){}}
+          if(typeof toast==='function') toast(t.nm+' unlocks at '+RANKS[t.unlock].nm+'.');
+          return;
+        }
+        apply(t.id); profSave(); if(typeof sfx==='function'){try{sfx('ui');}catch(e){}}
+        renderProfile(); renderMetaHead();
+      };
+      if(typeof mfBindTap==='function') mfBindTap(b,go); else b.addEventListener('pointerdown',go);
+    });
+  };
+  chips('titleRow',TITLES,P.title||'',v=>{P.title=v;});
+  chips('frameRow',FRAMES,P.frame||'steel',v=>{P.frame=v;});
+
+  const hint=document.getElementById('charHint');
+  if(hint){
+    const nextC=CHARACTERS.find(c=>c.unlock>r), nextT=TITLES.find(t=>t.unlock>r), nextF=FRAMES.find(f=>f.unlock>r);
+    const nx=[nextC&&{n:nextC.nm,u:nextC.unlock},nextT&&{n:nextT.nm+' title',u:nextT.unlock},
+              nextF&&{n:nextF.nm+' frame',u:nextF.unlock}].filter(Boolean).sort((a,b)=>a.u-b.u)[0];
+    hint.textContent = nx ? ('Next unlock: '+nx.n+' at '+RANKS[nx.u].nm)
+                          : 'Every commander, title and frame is unlocked.';
+  }
+}
+
+/* ---------- settings screen ---------- */
+function renderSettings(){
+  const list=document.getElementById('setList');
+  if(!list) return;
+  const tog=(id,nm,ds)=>{
+    const on=!!META.settings[id];
+    return '<div class="sItem setRow" data-set="'+id+'"><div class="sTx"><b>'+nm+'</b>'
+      +(ds?'<div class="sDs">'+ds+'</div>':'')+'</div><div class="sBuy togB'+(on?' onT':'')+'">'+(on?'ON':'OFF')+'</div></div>';
+  };
+  const cyc=(id,nm,ds,val,on)=>'<div class="sItem setRow" data-set="'+id+'"><div class="sTx"><b>'+nm+'</b>'
+      +'<div class="sDs">'+ds+'</div></div><div class="sBuy togB'+(on?' onT':'')+'">'+val+'</div></div>';
+  const group=(id,nm,ds,body)=>'<section class="setGroup mfTabPanel" id="setGroup-'+id+'" role="tabpanel" aria-labelledby="setTab-'+id+'" data-mf-panel="'+id+'"><div class="setGroupHd">'+nm+'</div>'
+      +'<div class="setGroupDs">'+ds+'</div>'+body+'</section>';
+  let h='<div class="screenTabs settingsNav" role="tablist" aria-label="Settings categories">'
+       +'<button class="screenTabBtn on" id="setTab-audio" type="button" role="tab" data-mf-tab="audio" aria-controls="setGroup-audio"><span class="tabGlyph">♪</span><span>AUDIO</span></button>'
+       +'<button class="screenTabBtn" id="setTab-battle" type="button" role="tab" data-mf-tab="battle" aria-controls="setGroup-battle"><span class="tabGlyph">⚔</span><span>BATTLE</span></button>'
+       +'<button class="screenTabBtn" id="setTab-display" type="button" role="tab" data-mf-tab="display" aria-controls="setGroup-display"><span class="tabGlyph">◇</span><span>DISPLAY</span></button>'
+       +'<button class="screenTabBtn" id="setTab-command" type="button" role="tab" data-mf-tab="command" aria-controls="setGroup-command"><span class="tabGlyph">⌁</span><span>COMMAND</span></button>'
+       +'<button class="screenTabBtn" id="setTab-system" type="button" role="tab" data-mf-tab="system" aria-controls="setExtras"><span class="tabGlyph">⚙</span><span>SYSTEM</span></button></div>';
+  const VL=['25%','50%','75%','100%'];
+  const sv=clamp(META.settings.sfxVol|0,0,3), mv=clamp(META.settings.musicVol|0,0,3);
+  h+=group('audio','AUDIO MIX','Separate combat, interface, ambience, and music controls.',
+      tog('sound','Sound Effects','Weapons, movement, construction, alarms, and interface feedback')
+     +cyc('sfxVol','Effects Volume','Tap to cycle the effects bus',VL[sv],true)
+     +tog('music','Adaptive Music','Music intensity follows the battle')
+     +cyc('musicVol','Music Volume','Tap to cycle the music bus',VL[mv],true));
+
+  const hb=META.settings.healthBars||'select';
+  const HBL={always:'ALWAYS',select:'SELECT',off:'HIDDEN'};
+  const HBD={always:'Bars hover over every visible unit and structure',
+             select:'Bars appear above selected units and the opened structure',
+             off:'All battlefield health bars are hidden'};
+  h+=group('battle','BATTLEFIELD READABILITY','Information shown while commanding units.',
+      tog('godMode','God Mode (Solo)','Infinite mass and energy, instant ability recharge, and invulnerable friendly units and structures')
+     +tog('fog','Fog of War','Hide unexplored and unobserved battlefield areas')
+     +cyc('healthBars','3D Health Bars',HBD[hb],HBL[hb],hb!=='off')
+     +tog('shake','Impact Camera Shake','Recoil and explosions move the camera')
+     +tog('haptics','Haptic Feedback','Short vibration cues for confirmations and impacts'));
+
+  const perf=META.settings.perf;
+  const bg=META.settings.menubg||'dim';
+  const BGL={live:'LIVE',dim:'DIMMED',off:'OFF'};
+  const BGD={live:'Full-strength battlefield behind the menu',
+             dim:'Battlefield kept dark and slow so the menu reads first',
+             off:'Flat plate — no 3D scene, lightest on battery'};
+  const QL={low:'LOW',high:'HIGH',cinematic:'CINEMATIC'};
+  const QD={low:'Fastest. No post-processing, capped effects, no secondary animation.',
+            high:'Balanced. Bloom, ambient occlusion, and an effect budget that eases off under load.',
+            cinematic:'Best looking. Holds ambient occlusion and full effects even in a heavy fight, and keeps the swarm animating out to strategic zoom. Costs frames.'};
+  const qk=qualityKey();
+  /* RENDERER STATUS. Three "the map isn't drawing" reports in a row were
+     diagnosed by guesswork because the only evidence — a shader log — goes to
+     a console no phone shows. This line states, in the game, exactly which
+     stage is missing, so one screenshot answers it. */
+  const diag=(typeof mfGraphicsDiag==='function')?mfGraphicsDiag():'unavailable';
+  const diagBad=/MISSING|LOST|ERR/.test(diag);
+  h+=group('display','DISPLAY & PERFORMANCE','Scale the presentation without hiding tactical information.',
+      '<div class="sItem setRow" id="gfxDiagRow"><div class="sTx"><b>Renderer status</b>'
+      +'<div class="sDs" id="gfxDiagTx" style="word-break:break-word">'+diag+'</div></div>'
+      +'<div class="sBuy togB'+(diagBad?'':' onT')+'">'+(diagBad?'FAULT':'OK')+'</div></div>'
+     +cyc('quality','Graphics Quality',QD[qk],QL[qk],qk!=='low')
+     +tog('cine','Cinematic Lighting','Bloom, color grade, smoke glow, and damage treatment')
+     +tog('dayNight','Day / Night Cycle','Animated time of day. OFF locks battles to clear daylight and overrides night-only modifiers')
+     +cyc('perf','Effects Budget','AUTO adapts; LOW caps particles on older phones',perf==='auto'?'AUTO':'LOW',perf==='auto')
+     +tog('fps','FPS Counter','Show the live frame-rate diagnostic')
+     +cyc('menubg','Menu Backdrop',BGD[bg],BGL[bg],bg!=='off'));
+
+  h+=group('command','COMMAND INTERFACE','Planning aids for formations, platoons, and patrol routes.',
+      tog('formationPreview','Formation Preview','Outline where the platoon will end up, on every move order, before it commits')
+     +tog('orderPaths','Route Arrows & Patrol Cues','Flashing arrows along the real pathfinding route, plus numbered waypoints and committed patrol loops'));
+  h+='<section class="setGroup mfTabPanel" id="setExtras" role="tabpanel" aria-labelledby="setTab-system" data-mf-panel="system"><div class="setGroupHd">SERVICES & ACCESSIBILITY</div>'
+    +'<div class="setGroupDs">Tutorial, offline, connectivity, and optional world systems.</div><div id="setExtraRows"></div><div class="setEmpty">No additional services are configured.</div></section>';
+  list.innerHTML=h;
+  mfBindTabs(list,'audio');
+  list.querySelectorAll('.setRow').forEach(el=>{
+    mfBindTap(el,()=>{
+      const k=el.dataset.set;
+      if(k==='sfxVol'||k==='musicVol') META.settings[k]=((META.settings[k]|0)+1)%4;
+      else if(k==='quality'){
+        const o=['low','high','cinematic'];
+        META.settings.quality=o[(o.indexOf(qualityKey())+1)%3];
+      }
+      else if(k==='perf') META.settings.perf=META.settings.perf==='auto'?'low':'auto';
+      else if(k==='menubg'){
+        const o=['live','dim','off'];
+        META.settings.menubg=o[(o.indexOf(META.settings.menubg||'dim')+1)%3];
+      }
+      else if(k==='healthBars'){
+        const o=['always','select','off'];
+        META.settings.healthBars=o[(o.indexOf(META.settings.healthBars||'select')+1)%3];
+      }
+      else META.settings[k]=!META.settings[k];
+      if(k==='fog'&&running&&!demoMode){ fogOn=META.settings.fog; if(fogOn) updateFog(); }
+      metaSave(); applySettings(); sfx('ui'); renderSettings();
+    });
+  });
+  /* Other modules append their own rows after this function returns. Adopt
+     those live nodes into the final group without stripping their listeners. */
+  Promise.resolve().then(()=>{
+    const extras=document.getElementById('setExtras'), rows=document.getElementById('setExtraRows');
+    if(!extras||!rows) return;
+    [...list.children].filter(n=>n.classList&&n.classList.contains('sItem')).forEach(n=>rows.appendChild(n));
+    extras.classList.toggle('setGroupEmpty',!rows.children.length);
+    mfSetTabs(list,MF_TAB_STATE[list.id]||'audio',false);
+  });
+}
+function renderArmory(){
+  const list=document.getElementById('storeList');
+  if(!list) return;
+  let h='';
+  for(const it of STORE){
+    const t=META.owned[it.id]||0, maxed=t>=it.max;
+    const cost=maxed?0:it.cost[t];
+    h+='<div class="sItem'+(maxed?' owned':'')+'" data-id="'+it.id+'">'
+      +'<div class="sEm">'+(typeof itemArt==='function'?itemArt('st_'+it.id,it.em,36):it.em)+'</div>'
+      +'<div class="sTx"><b>'+it.nm+(it.max>1?' <span class="sTier">'+t+'/'+it.max+'</span>':'')+'</b>'
+      +'<div class="sDs">'+it.ds+'</div></div>'
+      +'<div class="sBuy">'+(maxed?'✓ MAX':'⬡ '+cost)+'</div></div>';
+  }
+  h+='<div class="sHead">COMMANDER COLORS</div><div id="colorRow">';
+  for(const key in COLORS){
+    const C=COLORS[key], owned=key==='azure'||META.owned['col_'+key];
+    h+='<div class="swatch'+(META.color===key?' sel':'')+(owned?'':' lockd')+'" data-col="'+key+'" '
+      +'style="background:rgb('+C.c[0]+','+C.c[1]+','+C.c[2]+')">'
+      +(owned?'':'<span>⬡'+C.cost+'</span>')+'</div>';
+  }
+  h+='</div>';
+  list.innerHTML=h;
+  list.querySelectorAll('.sItem').forEach(el=>{
+    el.addEventListener('pointerdown',()=>{
+      const it=STORE.find(s=>s.id===el.dataset.id);
+      const t=META.owned[it.id]||0;
+      if(t>=it.max){ toast(it.nm+' is fully upgraded'); return; }
+      const cost=it.cost[t];
+      if(META.cores<cost){ toast('Not enough cores — earn ⬡ by finishing matches'); sfx('alarm'); return; }
+      META.cores-=cost; META.owned[it.id]=t+1; metaSave();
+      sfx('level'); toast(it.em+' '+it.nm+' → tier '+(t+1));
+      renderMetaHead(); renderArmory();
+    });
+  });
+  list.querySelectorAll('.swatch').forEach(el=>{
+    el.addEventListener('pointerdown',()=>{
+      const key=el.dataset.col, C=COLORS[key];
+      const owned=key==='azure'||META.owned['col_'+key];
+      if(!owned){
+        if(META.cores<C.cost){ toast('Not enough cores'); sfx('alarm'); return; }
+        META.cores-=C.cost; META.owned['col_'+key]=1;
+        toast('🎨 '+C.nm+' unlocked'); sfx('level');
+      } else sfx('ui');
+      META.color=key; metaSave(); applyColor();
+      renderMetaHead(); renderArmory();
+    });
+  });
+}
+

@@ -1,0 +1,37 @@
+node_modules/
+.toolchains/
+www/
+dist/
+android/app/build/
+android/.gradle/
+android/.gradle-mobile/
+android/build/
+*.apk
+
+# --- transient dev artifacts / session QA / caches (prevent clutter + stale-baseline confusion) ---
+archive/
+.tmp/
+.npm-cache/
+.codex-remote-attachments/
+/*.log
+/*.png
+/verify*.mjs
+/planet_*.mjs
+/mfshot.mjs
+/modshot.mjs
+/overflow.mjs
+/tricount.mjs
+/rosteraudit.mjs
+/MASSFRONT-source.zip
+releases/
+
+# --- large raw-source / generated / staged dirs (keep out of the code baseline; use Git LFS or a separate backup) ---
+source-media/
+design/
+android/app/src/main/assets/public/
+ios/App/public/
+
+# staged-www duplicate (Capacitor copies www/ here) + wrangler dev state
+ios/App/App/public/
+.wrangler/
+**/.wrangler/

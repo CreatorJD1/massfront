@@ -1,0 +1,168 @@
+/* ============================================================================
+   AUTH PORTAL — email + password accounts, cloud save push/pull
+   ----------------------------------------------------------------------------
+   Everything with an `ap` prefix belongs to src/authportal.js, which builds
+   this modal entirely in JS (createElement/innerHTML) and appends it to
+   document.body — none of it lives in index.html. Reuses the design tokens
+   declared in src/styles/ui.css's `:root` (--fT, --fU, --panelG, --steelB,
+   --goldB, --redB, --sat, --sab, --cy, --gold) so it reads as part of the
+   same game rather than a bolted-on web form, and reuses ui.css's own
+   `.accBtn` / `.mbtn` / `.spin` component classes on its buttons rather than
+   redefining button chrome from scratch.
+
+   `.apStrip5` widens the existing `.menuStrip` (declared in ui.css) from 4 to
+   5 equal columns — src/authportal.js adds that class to the live
+   `.menuStrip` element in JS when it appends the ACCOUNT button, so the
+   4-button rule in ui.css never has to change and the two files never touch.
+   ============================================================================ */
+
+.apStrip5{grid-template-columns:repeat(5,1fr)}
+
+/* ---------- modal shell ---------- */
+.apOverlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;
+  background:rgba(2,5,11,.82);backdrop-filter:blur(4px);padding:16px;
+  padding-top:calc(var(--sat) + 16px);padding-bottom:calc(var(--sab) + 16px)}
+.apBox{width:min(94vw,404px);max-height:88vh;max-height:88dvh;display:flex;flex-direction:column;
+  border-radius:16px;border:1px solid transparent;
+  background:linear-gradient(180deg,rgba(18,30,48,.98),rgba(9,16,28,.99)) padding-box,
+             linear-gradient(160deg,rgba(140,190,225,.42),rgba(30,60,88,.22)) border-box;
+  box-shadow:0 18px 48px rgba(0,0,0,.7)}
+.apHead{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:14px 8px 10px 20px;flex:0 0 auto}
+.apTitleTx{font-family:var(--fT);font-size:14px;letter-spacing:.22em;color:#8be8ff;font-weight:800;
+  text-shadow:0 0 12px rgba(65,200,255,.5)}
+.apClose{width:38px;height:38px;min-width:44px;min-height:44px;border-radius:10px;font-size:15px;
+  color:#9fc6e0;border:1px solid transparent;
+  background:var(--panelG2) padding-box,var(--steelB) border-box;
+  display:flex;align-items:center;justify-content:center;margin-right:4px}
+.apClose:active{transform:scale(.94)}
+.apScroll{flex:1 1 auto;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  touch-action:pan-y;padding:2px 18px 20px;display:flex;flex-direction:column}
+.apBusy{opacity:.55;pointer-events:none}
+
+/* Visible keyboard focus everywhere inside the portal — ui.css only turns
+   outline:off on the two elements it names explicitly (#profName,
+   #saveCodeBox), so this is additive, not a fight with anything else. */
+.apOverlay button:focus-visible,.apOverlay input:focus-visible{
+  outline:2px solid var(--cy);outline-offset:2px}
+
+/* ---------- tabs (SIGN IN / REGISTER) ---------- */
+.apTabs{display:flex;gap:7px;margin:2px 0 14px}
+.apTab{flex:1 1 0;padding:10px 8px;min-height:44px;border-radius:10px;font-family:var(--fT);
+  font-size:11.5px;letter-spacing:.1em;font-weight:800;color:#8fb6d4;
+  border:1px solid transparent;background:var(--panelG2) padding-box,var(--steelB) border-box}
+.apTab.on{color:#fff;background:linear-gradient(180deg,rgba(46,110,152,.96),rgba(20,52,80,.97)) padding-box,
+  linear-gradient(160deg,#c6f2ff,#41c8ff 40%,#10465f 70%,#8fe0ff) border-box;
+  box-shadow:0 0 12px rgba(65,200,255,.4)}
+.apTab:active{transform:scale(.97)}
+
+/* ---------- form fields ---------- */
+.apLbl{display:block;margin:12px 2px 6px;font-size:10px;letter-spacing:.24em;color:#6f9cbc;
+  font-weight:700;font-family:var(--fT);text-align:left}
+.apOverlay input[type=email],.apOverlay input[type=password],.apOverlay input[type=text]{
+  width:100%;padding:12px 13px;border-radius:10px;font-size:15px;color:#eaf7ff;
+  border:1px solid transparent;
+  background:linear-gradient(rgba(4,10,18,.85),rgba(4,10,18,.85)) padding-box,var(--steelB) border-box;
+  font-family:var(--fU);min-height:44px}
+.apOverlay input::placeholder{color:#5c7d97}
+.apPassWrap{position:relative}
+.apPassWrap input{padding-right:48px!important}
+/* Flush to all three edges of the (>=44px-tall) input rather than inset, so the
+   tap target itself is a full >=44x44 CSS px — matching every other control in
+   this module (.apTab, .apClose, .apBtnCol .accBtn) — not just the 15px glyph
+   drawn inside it. Safe to flush: the button paints no visible box of its own
+   (background:transparent, only the centered glyph shows), so widening the hit
+   area doesn't change how it looks, only how forgiving it is to tap. */
+.apEye{position:absolute;right:0;top:0;bottom:0;width:44px;min-width:44px;
+  border-radius:8px;border:none;background:transparent;color:#8fb6d4;font-size:15px;
+  display:flex;align-items:center;justify-content:center}
+.apEye:active{transform:scale(.92)}
+.apEye[aria-pressed="true"]{color:#8be8ff}
+
+.apErr{margin-top:12px;padding:9px 11px;border-radius:9px;font-size:12px;line-height:1.42;font-weight:700;
+  color:#ffb0a2;text-align:left;border:1px solid transparent;
+  background:linear-gradient(rgba(90,26,18,.4),rgba(90,26,18,.4)) padding-box,var(--redB) border-box}
+
+.apSubmit{width:100%;margin-top:16px!important;min-width:0!important;min-height:44px}
+
+.apFoot{margin-top:14px;font-size:11px;line-height:1.5;color:#8fb3cc;font-weight:600;text-align:center}
+.apFoot b{color:#cfe8ff}
+
+/* ---------- empty state: no server configured ---------- */
+.apEmpty{padding:18px 4px 6px;text-align:center}
+.apEmptyEm{font-size:28px;opacity:.85;filter:drop-shadow(0 0 10px rgba(65,200,255,.4))}
+.apEmptyTx{margin-top:10px;font-family:var(--fT);font-size:13px;letter-spacing:.03em;color:#eaf7ff;font-weight:800}
+.apEmptyHint{margin-top:8px;font-size:12px;line-height:1.55;color:#9fc6e0;font-weight:600}
+.apEmptyHint b{color:#ffe9ad}
+.apEmpty .accBtn{margin-top:16px;min-height:44px}
+
+/* ---------- signed-in ---------- */
+.apAccHead{display:flex;align-items:center;gap:11px;text-align:left;margin-top:4px}
+.apAv{width:42px;height:42px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:18px;color:#cfe8ff;background-color:#16253a;border:1px solid rgba(120,170,205,.35)}
+.apWho{min-width:0}
+.apWho b{display:block;font-family:var(--fT);font-size:13px;color:#eaf7ff;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.apWho span{display:block;margin-top:2px;font-size:10.5px;color:#8fb3cc;font-weight:600}
+.apSyncRow{margin-top:12px;font-size:11px;color:#8fb3cc;font-weight:600;text-align:center;
+  padding:8px;border-radius:9px;border:1px solid transparent;
+  background:var(--panelG2) padding-box,var(--steelB) border-box}
+.apSyncRow.apSyncBusy{color:#bdefff;border-color:rgba(65,200,255,.45)}
+.apSyncRow.apSyncOk{color:#a9f1c8;border-color:rgba(80,220,145,.4)}
+.apSyncRow.apSyncError{color:#ffb0a2;border-color:rgba(255,105,82,.5)}
+.apBtnCol{display:flex;flex-direction:column;gap:9px;margin-top:14px}
+.apBtnCol .accBtn{min-height:44px}
+.apBtnCol .accBtn:disabled{opacity:.45;filter:saturate(.55);pointer-events:none}
+
+@media (max-width:380px){
+  .apTitleTx{font-size:12.5px}
+  .apTab{font-size:10px;padding:9px 6px}
+}
+
+/* ---------- local confirm (career-weight reconcile on push/pull) ----------
+   A second, smaller overlay above .apOverlay — kept separate from the game's
+   own #accDlg (owned by src/account.js / index.html) so this module never
+   reaches into markup it doesn't own. */
+.apConfirmOverlay{position:fixed;inset:0;z-index:320;display:none;align-items:center;justify-content:center;
+  background:rgba(2,5,11,.78);backdrop-filter:blur(3px);padding:22px}
+.apConfirmBox{width:min(92vw,360px);padding:16px;border-radius:14px;border:1px solid transparent;
+  background:linear-gradient(180deg,rgba(18,30,48,.98),rgba(9,16,28,.99)) padding-box,
+             linear-gradient(160deg,rgba(140,190,225,.42),rgba(30,60,88,.22)) border-box;
+  box-shadow:0 14px 40px rgba(0,0,0,.7)}
+.apConfirmTx{font-size:12.5px;line-height:1.5;color:#dfeeff;font-weight:600;text-align:center;white-space:pre-line}
+.apConfirmBtns{display:flex;gap:8px;margin-top:14px}
+.apConfirmBtns .accBtn{flex:1;min-height:44px}
+.apConfirmBtns #apConfirmAlt{display:none}
+.apConfirmBtns.apConfirmTriple{display:grid;grid-template-columns:1fr 1fr}
+.apConfirmBtns.apConfirmTriple #apConfirmAlt{display:block!important}
+.apConfirmBtns.apConfirmTriple #apConfirmNo{grid-column:1/-1;grid-row:2}
+
+
+/* ── Age gate, username, destructive action ────────────────────────────────
+   The date-of-birth row is a NEUTRAL age screen: month + year, computed on the
+   device, only the boolean leaves it. Styled as an ordinary field so it reads
+   as part of sign-up rather than an interrogation. */
+.apDobRow{display:flex;gap:8px;margin-top:5px}
+.apDobRow select{flex:1 1 0;min-width:0;min-height:44px;padding:10px 9px;border-radius:9px;
+  font-family:var(--fT);font-size:12px;font-weight:700;color:#dfeeff;
+  border:1px solid rgba(120,170,205,.3);background:rgba(10,17,28,.85);
+  -webkit-appearance:none;appearance:none}
+.apDobRow select:focus{outline:none;border-color:rgba(139,232,255,.7)}
+.apDobNote{margin-top:5px;font-size:9px;line-height:1.45;color:#8fb3cc}
+.apLbl i{font-style:normal;text-transform:none;letter-spacing:0;color:#7fa8c4;font-weight:600}
+
+.apUserRow{margin-top:11px}
+.apUserSetRow{display:flex;gap:7px;margin-top:5px}
+.apUserSetRow input{flex:1 1 auto;min-width:0}
+.apUserSetRow .accBtn{flex:0 0 auto;width:auto;padding-left:14px;padding-right:14px;margin:0}
+
+.apAgeAsk{margin-top:10px;padding:11px 12px;border-radius:11px;
+  border:1px solid rgba(255,214,111,.36);background:rgba(48,36,10,.5)}
+.apAgeAsk b{display:block;font-family:var(--fT);font-size:9.5px;letter-spacing:.12em;color:#ffd66f}
+.apAgeAsk p{margin:6px 0 0;font-size:10px;line-height:1.5;color:#e2d3ad}
+.apAgeAsk .accBtn{margin-top:9px}
+
+/* Destructive actions look destructive. This is the only red control in the
+   portal, and it is armed by a first tap before it will do anything. */
+.accBtn.danger{color:#ffb0a2;border-color:rgba(255,93,67,.5);background:rgba(46,14,10,.55)}
+.accBtn.danger:active{background:rgba(80,22,16,.75)}
