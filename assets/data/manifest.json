@@ -7,6 +7,7 @@
     "src/terralab.js",
     "src/engine/mesh.js",
     "src/engine/billboard.js",
+    "src/engine/tacticons.js",
     "src/engine/gpufx.js",
     "src/engine/materials.js",
     "src/engine/materials-v2.js",
