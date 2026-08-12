@@ -361,7 +361,7 @@ function armColorsHTML(){
   return '<div class="sHead">COMMANDER LIVERY — UNLOCK</div>'
     +mfLiveryRowHTML('colorRow')
     +'<div class="armCatIntro armLiveryNote"><span>Tap a locked colour to stage it in the earned-core basket. '
-    +'Your active livery is chosen in <b>Profile → Identity</b>.</span></div>';
+    +'Your active livery is chosen in <em>Profile → Identity</em>.</span></div>';
 }
 
 /* ---- tabs -------------------------------------------------------------- */
@@ -639,15 +639,17 @@ renderArmory=function(){
     armCartAdd('restock',c.id);
   }));
 
-  list.querySelectorAll('.swatch').forEach(el=>{
-    mfBindTap(el,()=>{
-      const key=el.dataset.col, C=COLORS[key];
-      const owned=key==='azure'||META.owned['col_'+key];
-      if(!owned){armCartAdd('color',key);return;}
-      sfx('ui');
-      META.color=key; metaSave(); applyColor();
-      renderMetaHead(); renderArmory();
-    });
+  /* Locked swatch: stage it, exactly as before — this is still the only route
+     to the col_* checkout. Owned swatch: applying it here is the same one-line
+     state change Profile → Identity makes, so it keeps working rather than
+     becoming a dead tap. */
+  mfLiveryRowWire(list,key=>{
+    const C=COLORS[key]; if(!C) return;
+    const owned=key==='azure'||META.owned['col_'+key];
+    if(!owned){armCartAdd('color',key);return;}
+    sfx('ui');
+    META.color=key; metaSave(); applyColor();
+    renderMetaHead(); renderArmory();
   });
 
   /* Entrance: stagger indices for the slide/pop, then play the sequence only

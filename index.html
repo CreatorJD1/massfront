@@ -607,6 +607,14 @@ body:not(.mfIntroDone) .overlay{display:none!important}
     <div id="frameRow" class="chipRow"></div>
     <div class="sHead" style="margin-top:12px">EMBLEM</div>
     <div id="emblemRow" style="display:flex;gap:8px;justify-content:center;margin-top:6px;flex-wrap:wrap"></div>
+    <!-- BATTLE LIVERY: the colour your army is painted in. The row id is
+         deliberately NOT colorRow — the Arsenal's #colorRow is in the document
+         at the same time and a duplicate id would make getElementById return
+         whichever overlay happens to come first. renderIdentityPickers()
+         replaces this placeholder with mfLiveryRowHTML('idLiveryRow'). -->
+    <div class="sHead" style="margin-top:14px">BATTLE LIVERY</div>
+    <div class="idHint" id="idLiveryHint">Livery follows your faction until you pick a colour.</div>
+    <div id="idLiveryRow"></div>
     <div class="sHead" style="margin-top:14px">PROFILES ON THIS DEVICE</div>
     <div id="profList" style="width:min(94vw,402px);margin-top:8px;display:flex;flex-direction:column;gap:7px"></div>
     <div class="profileActions">

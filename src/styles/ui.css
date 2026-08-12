@@ -755,7 +755,11 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
   box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
 .sItem.owned .sBuy{color:var(--green);background:var(--panelG2) padding-box,var(--steelB) border-box}
 .sHead{margin-top:8px;font-size:10px;letter-spacing:.34em;color:#6f9cbc;text-align:center;font-weight:700;font-family:var(--fT)}
-#colorRow{display:flex;gap:10px;justify-content:center;margin-top:6px}
+/* Two livery rows exist at once — the Arsenal STYLE tab and Profile → Identity
+   — so they share the layout but never the id. */
+#colorRow,#idLiveryRow{display:flex;gap:10px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.armLiveryNote{margin-top:8px}
+.armLiveryNote em{font-style:normal;font-weight:800;color:#cfe8ff}
 .swatch{width:46px;height:46px;border-radius:11px;border:2px solid rgba(255,255,255,.3);display:flex;align-items:center;justify-content:center;
   box-shadow:inset 0 2px 4px rgba(255,255,255,.45),inset 0 -4px 7px rgba(0,0,0,.35),0 3px 8px rgba(0,0,0,.5);
   clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 9px,100% calc(100% - 9px),calc(100% - 9px) 100%,9px 100%,0 calc(100% - 9px),0 9px)}
