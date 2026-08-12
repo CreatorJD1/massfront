@@ -133,6 +133,12 @@ function apClearSession(){
   AP_SESSION = null;
   AP_SYNC_KIND = 'idle'; AP_SYNC_MESSAGE = '';
   apSaveSession();
+  /* Re-arm the launch gate. apGateSatisfied() latches mf_auth_gate_v1 on a
+     successful sign-in AND on PLAY OFFLINE, but nothing ever cleared it, so
+     once set the portal never appeared again — a player who signed out was
+     left with no launch prompt at all. Signing out is exactly the moment the
+     gate should ask again. */
+  try{ localStorage.removeItem(AP_GATE_KEY); }catch(e){}
   if(typeof renderAccount==='function')renderAccount();
 }
 

@@ -488,10 +488,24 @@ function renderAccount(){
        whole career between devices without a server, login, pasted code, or
        any way for an outage to lock anyone out of their own progress.
        Two dead buttons removed beats two dead buttons explained. */
-    row.innerHTML='';
+    /* ...but removing the social buttons left this branch with NO control at
+       all, and apInjectMenuButton() had already dropped the menu-strip account
+       button on the premise that "the tab is now the only route". The only
+       apOpen() call left in this pane sits in the `portal` branch above, which
+       requires an existing session — so a signed-out player could reach the
+       account screen and find no way to sign in or register from it. The boot
+       gate does not save them either: it latches on mf_auth_gate_v1 the first
+       time PLAY OFFLINE is tapped and never re-arms. This button is the route
+       the portal's own footer already promises ("sign in any time from
+       Profile ▸ Account"). */
+    const join=document.createElement('button'); join.className='accBtn';
+    join.textContent='SIGN IN OR REGISTER';
+    join.onclick=()=>{ if(typeof apOpen==='function') apOpen(join); };
+    row.appendChild(join);
     syncRow.style.display='block';
-    syncRow.innerHTML='Your career is saved on this device. To move it to another '
-      +'phone, export the .mfsave file below and load it there. No account needed.';
+    syncRow.innerHTML='Sign in to keep your career in the cloud, or play on without '
+      +'an account — progress is saved on this device either way, and the .mfsave '
+      +'file below moves it to another phone.';
   }
   renderSaveFile();
 }

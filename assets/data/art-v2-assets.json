@@ -1,0 +1,116 @@
+{
+  "_comment": "Art V2 toolkit manifest — single source of truth for bespoke/Material V2 assets. Consumed by tools/artv2/*. Adding an asset here (plus its authored .blend) is all that a new bespoke pack requires; no new bake script. Budgets are enforced by tools/artv2-verify.mjs.",
+  "_docs": ["docs/ART_V2_TOOLKIT_DESIGN.md", "docs/ART_V2_POLY_LOD_PLAN.md", "docs/ART_V2_PACK_CONTRACT.md"],
+  "version": 1,
+
+  "authoring": {
+    "_comment": "Owner spec for the bespoke V2 model pass. FLOOR 2000 / RECOMMENDED 5000 / MAX 10000 triangles per unit or structure. The floor is a quality decision: no unit or structure mesh may be decimated below 2k, because that is where silhouettes start reading as faceted. Distance is handled by switching to the existing sprite/billboard path, NOT by a sub-2k mesh.",
+    "min_tris": 2000,
+    "recommended_tris": 5000,
+    "max_tris": 10000,
+    "note": "The 2k floor raises per-instance cost, so the visible-set budget is what pays for it: field-of-view culling (renderBand) means only on-screen objects submit geometry. Expanding that culling is the funding source for this floor."
+  },
+
+  "classBudgets": {
+    "_comment": "battle_tris = ceiling for the live instanced tier; never below authoring.min_tris. battle_map = 0 means this class uses the shared atlas + faction tile remap, NOT a unique map set (unique maps do not scale to 1000 instances).",
+    "hero":     { "battle_tris": 6000, "showcase_map": 1024, "battle_map": 512 },
+    "landmark": { "battle_tris": 6000, "showcase_map": 1024, "battle_map": 512 },
+    "heavy":    { "battle_tris": 4000, "showcase_map": 1024, "battle_map": 512 },
+    "vehicle":  { "battle_tris": 3000, "showcase_map": 1024, "battle_map": 0 },
+    "air":      { "battle_tris": 2500, "showcase_map": 1024, "battle_map": 0 },
+    "infantry": { "battle_tris": 2000, "showcase_map":  512, "battle_map": 0 },
+    "prop":     { "battle_tris": 2000, "showcase_map":  512, "battle_map": 0 }
+  },
+
+  "regionMaterials": {
+    "_comment": "Material-region -> flat PBR values baked into the Masks/NRE channels. Extracted verbatim from the proven tools/bake-material-v2-tank.py so behaviour is unchanged. rough/metal/emis; team primary/secondary are flagged by name. Assets may override per-region in their own 'regionOverrides'.",
+    "FACTION_BADGE":  { "rough": 0.32, "metal": 0.24, "emis": 0.24 },
+    "EDGE_STEEL":     { "rough": 0.12, "metal": 0.98, "emis": 0.0 },
+    "TRIM":           { "rough": 0.17, "metal": 0.96, "emis": 0.0 },
+    "STRUCTURE":      { "rough": 0.25, "metal": 0.92, "emis": 0.0 },
+    "MACHINE":        { "rough": 0.56, "metal": 0.82, "emis": 0.0 },
+    "WEAPON":         { "rough": 0.19, "metal": 0.94, "emis": 0.0 },
+    "GLASS":          { "rough": 0.08, "metal": 0.16, "emis": 0.55 },
+    "ENERGY":         { "rough": 0.18, "metal": 0.22, "emis": 1.0 },
+    "TEAM_PRIMARY":   { "rough": 0.34, "metal": 0.66, "emis": 0.0, "team": 1 },
+    "TEAM_SECONDARY": { "rough": 0.34, "metal": 0.50, "emis": 0.0, "team": 2 },
+    "ARMOR":          { "rough": 0.38, "metal": 0.72, "emis": 0.0 },
+    "_default":       { "rough": 0.38, "metal": 0.72, "emis": 0.0 }
+  },
+
+  "bake": {
+    "_comment": "Shared bake settings (were hardcoded in each one-off script).",
+    "engine": "CYCLES",
+    "samples": 8,
+    "margin": 12,
+    "uv": { "angle_limit_deg": 66, "island_margin": 0.006, "area_weight": 0.35 }
+  },
+
+  "toolchain": {
+    "_comment": "Pinned so every agent/machine produces identical bakes. Do NOT fall back to another Blender: 4.x and 5.x differ in bpy API and bake defaults, which silently changes output. artv2 doctor enforces this.",
+    "blender": {
+      "requiredMajorMinor": "5.2",
+      "verifiedVersion": "5.2.0 LTS",
+      "numpy": "2.3.4",
+      "windowsPath": "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe",
+      "envOverride": "BLENDER_EXE"
+    }
+  },
+
+  "agentContract": {
+    "_comment": "This toolkit is designed to be driven by AI agents (Claude, Codex, Antigravity, OpenCode, ...) as well as humans. Every tool obeys these rules so an agent can act without reading source.",
+    "entryPoint": "node tools/artv2.mjs <command> [asset|--all] [--json]",
+    "discover": ["node tools/artv2.mjs help", "node tools/artv2.mjs schema", "node tools/artv2.mjs status --json", "node tools/artv2.mjs next --json"],
+    "rules": [
+      "Every command accepts --json and emits ONE stable JSON envelope on stdout: {ok,command,asset,data,errors,warnings,next}",
+      "Never interactive. No prompts, no TTY assumptions, no hidden env requirements (artv2 doctor reports what is missing).",
+      "Deterministic exit codes: 0=ok, 1=gate/verification failure, 2=usage error, 3=missing dependency/environment, 4=lock held by another agent",
+      "Idempotent: re-running a completed stage is a no-op unless --force. Safe for retries.",
+      "Per-asset locking so multiple agents can work different assets in parallel without clobbering each other.",
+      "Every produced artifact gets a sidecar .artv2.json with source hashes, tool+blender version, timestamp and agent id (env ARTV2_AGENT).",
+      "Tools only write inside source-media/material-v2/**, assets/textures/materials/**, assets/data/*-v2*.js and this manifest. They never edit engine source.",
+      "'next' returns the next actionable stage per asset so an agent never has to infer pipeline order."
+    ],
+    "stages": ["build", "bake", "import", "verify", "preview", "promote"]
+  },
+
+  "assets": {
+    "novaHeavyTankV2": {
+      "faction": "nova",
+      "class": "heavy",
+      "dir": "source-media/material-v2/nova-heavy-tank-v2",
+      "slug": "nova-heavy-tank-v2",
+      "collection": "MF2_NovaHeavyTank",
+      "sourceBlend": "nova-heavy-tank-v2.blend",
+      "build": "tools/build-material-v2-tank.py",
+      "importTarget": "assets/data/material-v2-tank.js",
+      "lods": [
+        { "name": "showcase", "target_tris": 9500, "note": "source/Arsenal tier - MUST be re-authored: the existing mesh is 32018 tris, over the 10000 ceiling" },
+        { "name": "battle",   "target_tris": 3800, "note": "the live instanced mesh; >= 2000 floor, <= 4000 heavy budget" }
+      ],
+      "regions": ["STRUCTURE","ARMOR","EDGE_STEEL","TEAM_PRIMARY","TEAM_SECONDARY","MACHINE","TRIM","WEAPON","GLASS","ENERGY","FACTION_BADGE"],
+      "sockets": ["socket_weapon_primary","socket_weapon_secondary","socket_sensor","socket_reactor","socket_armor_left"],
+      "live": false,
+      "status": "authored"
+    },
+
+    "novaFactoryV2": {
+      "faction": "nova",
+      "class": "landmark",
+      "dir": "source-media/material-v2/nova-factory-v2",
+      "slug": "nova-factory-v2",
+      "collection": "MF2_NovaFactory",
+      "sourceBlend": "nova-factory-v2.blend",
+      "build": "tools/build-material-v2-nova-factory.py",
+      "importTarget": "assets/data/material-v2-nova-factory.js",
+      "lods": [
+        { "name": "showcase", "target_tris": 9500, "note": "source/Arsenal tier - slightly over the 10000 ceiling at 11564, re-author or decimate to <=10k" },
+        { "name": "battle",   "target_tris": 5200, "note": "the live instanced mesh; >= 2000 floor, <= 6000 landmark budget" }
+      ],
+      "regions": ["STRUCTURE","ARMOR","EDGE_STEEL","TEAM_PRIMARY","TEAM_SECONDARY","MACHINE","TRIM","WEAPON","GLASS","ENERGY","FACTION_BADGE"],
+      "sockets": ["socket_defense_left","socket_defense_right","socket_power","socket_production_exit","socket_rally","socket_sensor"],
+      "live": false,
+      "status": "authored"
+    }
+  }
+}

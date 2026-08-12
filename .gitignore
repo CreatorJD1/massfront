@@ -35,3 +35,7 @@ ios/App/public/
 ios/App/App/public/
 .wrangler/
 **/.wrangler/
+
+# python bytecode
+__pycache__/
+*.pyc
