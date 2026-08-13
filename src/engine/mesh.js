@@ -940,8 +940,13 @@ void main(){
     texture(uDetail,vObj.xz*.115).r*dw.y+texture(uDetail,vObj.xy*.115).r*dw.z;
   float surfaceOrganic=(vMat==CHITIN_CONST||vMat==BIOLEG_CONST)?1.0:0.0;
   float glassLike=1.0-step(.45,abs(vMat-GLASS_CONST));
-  float mechanical=(1.0-surfaceOrganic)*(1.0-glassLike)*step(-.5,vMat)*
-    (1.0-step(DAMAGELO_CONST-.5,vMat));
+  /* Battle damage is a BAND, not a tail. This was an open-ended >=SCORCH_METAL
+     test, which was correct while damage held the last ids -- but it silently
+     classed every id above it as non-mechanical, so a new material added past
+     the damage block would lose its micro-tooth and its commander/landmark
+     finish with nothing in the console. For ids 0..105 this is bit-identical. */
+  float damageBand=step(DAMAGELO_CONST-.5,vMat)*(1.0-step(DAMAGEHI_CONST+.5,vMat));
+  float mechanical=(1.0-surfaceOrganic)*(1.0-glassLike)*step(-.5,vMat)*(1.0-damageBand);
   float micro=(detailData-.5)*mechanical;
   ao=clamp(ao-micro*.055,0.0,1.0);
   gloss=clamp(gloss-micro*.13,0.035,0.98);
@@ -1935,6 +1940,7 @@ function initGL3D(){
                 .replace(/CHITIN_CONST/g,MAT.CHITIN.toFixed(1))
                 .replace(/GLASS_CONST/g,MAT.GLASS.toFixed(1))
                 .replace(/DAMAGELO_CONST/g,MAT.SCORCH_METAL.toFixed(1))
+                .replace(/DAMAGEHI_CONST/g,MAT.FALLOUT_GLOW.toFixed(1))
                 .replace(/CRYST_CONST/g,MAT.CRYST.toFixed(1));
   prog3D=mkProg(VSM,FSM,'model');
   progG =mkProg(VSG,FSG,'glow');

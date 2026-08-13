@@ -1090,7 +1090,13 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     id:'nova-rhino-v2', source:'authored', maps:'nova-rhino-v2',
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.NOVA_CARBON,
-      [MAT.TWR_BORE]:MAT.TWR_BORE
+      /* Ribbed appliqué instead of the faction default. Every Nova chassis was
+         pointed at NOVA_COMPOSITE for both PLATE and TWR_ARMOR, so the per-type
+         remap existed but had nothing to say -- a Rhino and a Goliath wore the
+         same armour tile at the same repeat frequency. Keys are RAW pre-remap
+         ids, so this intercepts before TFC_NOVA_MAT reaches for the default. */
+      [MAT.PLATE]:MAT.ARMR_RIB,
+      [MAT.TWR_ARMOR]:MAT.ARMR_RIB
     })
   }),
   2:Object.freeze({

@@ -60,7 +60,17 @@ const MAT={
   // CATEGORY 6: BATTLE DAMAGE.
   SCORCH_METAL:96, MELTED_GLASS:97, SMOLDER_RUIN:98, CRATER_DEBRIS:99,
   BLAST_SLAG:100, CORRODED_RUST:101, SHATTER_CONC:102, EMBER_CORE:103,
-  SHATTER_STEEL:104, FALLOUT_GLOW:105
+  SHATTER_STEEL:104, FALLOUT_GLOW:105,
+  /* CATEGORY 7: CHASSIS ARMOUR PATTERNS.
+     The atlas is 11x11 = 121 cells and only 106 were used, so ids 106-120 cost
+     nothing: no extra VRAM, no draw call, no vertex float, no new binding --
+     they live in canvas already allocated and uploaded every boot.
+     These are what let one chassis differ from another. A unit's material set
+     is chosen per TYPE by the *SurfacePass remap, but every Nova chassis was
+     pointed at the same NOVA_COMPOSITE armour, so the remap had nothing to say.
+     Patterns, not skins: they are luminance-ish and multiply by vertex colour
+     and team tint, so an armour/trim pairing identifies a chassis. */
+  ARMR_RIB:106
 };
 /* Semantic material vocabulary. Models should ask for the JOB a surface does,
    not remember an atlas number or accidentally use hull plating on a window.
@@ -170,7 +180,10 @@ const MAT_RELIEF=[
   1.80, 1.00, 0.60, 1.40, 3.40, 0.40, 2.20,
   // 96..105: Battle Damage
   1.00, 1.40, 0.80, 2.00, 1.60, 3.20, 2.60, 1.80,
-  2.40, 1.00
+  2.40, 1.00,
+  // 106..120: Chassis Armour Patterns -- tile() reads these by index,
+  // and a missing entry is a silently flat tile with no console error.
+  2.10
 ];
 /* Cavity strength: how strongly this material's own recesses occlude. */
 const MAT_AO=[
@@ -196,7 +209,10 @@ const MAT_AO=[
   0.45, 0.50, 0.15, 0.38, 0.40, 0.10, 0.55,
   // 96..105: Battle Damage
   0.25, 0.45, 0.35, 0.70, 0.50, 0.80, 0.60, 0.55,
-  0.40, 0.20
+  0.40, 0.20,
+  // 106..120: Chassis Armour Patterns -- tile() reads these by index,
+  // and a missing entry is a silently flat tile with no console error.
+  0.72
 ];
 /* Gloss (inverse roughness). */
 const MAT_GLOSS=[
@@ -222,7 +238,10 @@ const MAT_GLOSS=[
   0.10, 0.08, 0.55, 0.12, 0.82, 0.60, 0.10,
   // 96..105: Battle Damage
   0.15, 0.35, 0.10, 0.08, 0.10, 0.18, 0.12, 0.40,
-  0.45, 0.30
+  0.45, 0.30,
+  // 106..120: Chassis Armour Patterns -- tile() reads these by index,
+  // and a missing entry is a silently flat tile with no console error.
+  0.42
 ];
 /* Metalness shares the formerly-unused ORM alpha channel. */
 const MAT_METAL=[
@@ -248,7 +267,10 @@ const MAT_METAL=[
   0.00, 0.00, 0.00, 0.00, 0.35, 0.00, 0.00,
   // 96..105: Battle Damage
   0.40, 0.05, 0.00, 0.00, 0.10, 0.45, 0.00, 0.00,
-  0.55, 0.00
+  0.55, 0.00,
+  // 106..120: Chassis Armour Patterns -- tile() reads these by index,
+  // and a missing entry is a silently flat tile with no console error.
+  0.55
 ];
 
 /* Ambient occlusion from the tile's own height signal: a pixel sitting well
@@ -330,6 +352,41 @@ function mtPanels(c,S,n,w){
     if(horiz){ c.moveTo(0,p+w); c.lineTo(S,p+w); } else { c.moveTo(p+w,0); c.lineTo(p+w,S); }
     c.stroke();
   }
+}
+/* Horizontal ribbed appliqué. The BEVEL is the load-bearing part: deriveNormal
+   Sobels this tile's own luminance, so a flat dark band buys albedo contrast and
+   no relief at all. A bright leading edge against a dark trough is what becomes
+   a normal the eight-light loop can catch. */
+function mtRibs(c,S,n,depth,bevel){
+  const band=S/n;
+  for(let k=0;k<n;k++){
+    const y=k*band;
+    c.fillStyle='rgba(0,0,0,'+depth+')';
+    c.fillRect(0,y,S,band*0.34);
+    c.fillStyle='rgba(255,255,255,'+bevel+')';
+    c.fillRect(0,y+band*0.34,S,Math.max(3,band*0.10));
+    /* Shadow immediately under the lit edge. A step from dark to light gives the
+       Sobel one edge; dark-light-dark gives it two, which is what reads as a
+       raised rib rather than a painted stripe. */
+    c.fillStyle='rgba(0,0,0,'+(depth*0.55)+')';
+    c.fillRect(0,y+band*0.34+Math.max(3,band*0.10),S,Math.max(2,band*0.05));
+  }
+}
+/* Per-texel brushed grain. Cheap, and the only thing that puts a gradient in
+   the middle of a flat band where the Sobel can find it. */
+function mtGrain(c,S,amt){
+  const img=c.getImageData(0,0,S,S), d=img.data;
+  for(let y=0;y<S;y++){
+    let run=0;
+    for(let x=0;x<S;x++){
+      if(x%3===0) run=(Math.random()*2-1)*amt*255;
+      const i=(y*S+x)*4;
+      d[i]=Math.max(0,Math.min(255,d[i]+run));
+      d[i+1]=Math.max(0,Math.min(255,d[i+1]+run));
+      d[i+2]=Math.max(0,Math.min(255,d[i+2]+run));
+    }
+  }
+  c.putImageData(img,0,0);
 }
 function mtStreaks(c,S,n,alpha){
   for(let k=0;k<n;k++){
@@ -1427,6 +1484,24 @@ function buildMatAtlas(){
   tile(MAT.EMBER_CORE,(c,S)=>{c.fillStyle='#311d1c';c.fillRect(0,0,S,S);const r=c.createRadialGradient(S/2,S/2,2,S/2,S/2,S*.6);r.addColorStop(0,'#fff2a0');r.addColorStop(.35,'#ee612d');r.addColorStop(1,'rgba(60,20,15,0)');c.fillStyle=r;c.fillRect(0,0,S,S);});
   tile(MAT.SHATTER_STEEL,(c,S)=>{c.fillStyle='#454852';c.fillRect(0,0,S,S);c.strokeStyle='#a9d3df';c.lineWidth=3;for(let k=0;k<12;k++){c.beginPath();c.moveTo(Math.random()*S,Math.random()*S);c.lineTo(Math.random()*S,Math.random()*S);c.stroke();}});
   tile(MAT.FALLOUT_GLOW,(c,S)=>{c.fillStyle='#263a27';c.fillRect(0,0,S,S);c.fillStyle='rgba(136,255,70,.55)';c.fillRect(0,S*.42,S,18);});
+
+  /* Five bands on a 256px tile. At UVS=0.055 one tile spans ~18 world units, so
+     a rib every ~3.6 units on a ~17-unit hull -- coarse enough to survive the
+     mip chain at the 35-56 device pixels a unit actually occupies. Finer ribbing
+     measured well in the tile and vanished on screen. */
+  tile(MAT.ARMR_RIB,(c,S)=>{
+    c.fillStyle='#8e9cae'; c.fillRect(0,0,S,S);
+    /* Two scales on purpose. The ribs carry the READ at distance (sd_64px is
+       what survives the mip chain); the fine grain carries the RELIEF, because
+       deriveNormal Sobels this tile and horizontal bands only produce gradient
+       at their edges -- band interiors stayed perfectly neutral and the normal
+       map was flat across most of its own area. */
+    mtVNoise(c,S,4,0.05);
+    mtRibs(c,S,6,0.40,0.50);
+    mtGrain(c,S,0.10);
+    mtRivets(c,S,52,2.0,0.26);
+    mtStreaks(c,S,3,0.06);
+  });
 
   const numericIds=Object.values(MAT).filter(v=>typeof v==='number');
   const missing=numericIds.filter(v=>!generated[v]);
