@@ -1789,7 +1789,7 @@ void main(){
 let aoFB1=null, aoFB2=null, aoColA=null, aoColB=null, aoDepth=null, aoW=0, aoH=0;
 let glowFB=null, glowTexA=null, glowTexB=null, glowW=0, glowH=0;
 let progBright=null, progBlur=null, UBR={}, UBL={};
-let progAO=null, progCopy=null, UAO={}, UCP={}, aoVAO=null, aoOn=true, aoReady=false;
+let progAO=null, progCopy=null, UAO={}, UCP={}, aoVAO=null, aoOn=true, aoReady=false, aoFailN=0;
 let aoEpoch=-1;
 const VSQ=`#version 300 es
 out vec2 vUv;
@@ -1920,7 +1920,11 @@ function aoAlloc(w,h){
      "the whole screen turned into texture swatches" was. */
   if(w<=0||h<=0) return;
   if(aoW===w&&aoH===h) return;
-  aoW=w; aoH=h;
+  /* Size is NOT committed here. It used to be, and that turned a one-frame
+     allocation failure into a permanent outage: the guard above short-circuits
+     on the committed size, so a failed alloc was never retried. Measured at 316
+     consecutive frames with aoReady=false and no further attempts — AO, FXAA
+     and bloom off for the rest of the session from a single bad resize. */
   const mk=(fmt,ifmt,type,filter)=>{
     const t=gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D,t);
@@ -1931,6 +1935,17 @@ function aoAlloc(w,h){
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     return t;
   };
+  /* Detach BEFORE deleting. A framebuffer attachment keeps a deleted texture
+     alive at its old size, and an FBO left pointing at one silently fails
+     dimension validation later against the new-size attachments. */
+  for(const [fb,att] of [[aoFB1,'COLOR_ATTACHMENT0'],[aoFB1,'DEPTH_ATTACHMENT'],
+                         [aoFB2,'COLOR_ATTACHMENT0'],[aoFB2,'DEPTH_ATTACHMENT'],
+                         [glowFB,'COLOR_ATTACHMENT0']]){
+    if(!fb) continue;
+    gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl[att],gl.TEXTURE_2D,null,0);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   for(const t of [aoColA,aoColB,aoDepth]) if(t) gl.deleteTexture(t);
   aoColA=mk(gl.RGBA,gl.RGBA8,gl.UNSIGNED_BYTE,gl.LINEAR);
   aoColB=mk(gl.RGBA,gl.RGBA8,gl.UNSIGNED_BYTE,gl.LINEAR);
@@ -1957,9 +1972,24 @@ function aoAlloc(w,h){
   const ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
   gl.bindFramebuffer(gl.FRAMEBUFFER,aoFB2);
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,aoColB,0);
+  /* aoResolve() ends EVERY frame by attaching aoDepth to aoFB2 (so the
+     translucent passes still occlude), so aoFB2 carries a depth attachment
+     into this function. Left pointing at the just-deleted old-height texture,
+     status returns INCOMPLETE_DIMENSIONS against the new-height colour — which
+     is the whole flicker: aoReady goes false and the scene skips AO, FXAA and
+     bloom for those frames. Clearing it is the fix; aoResolve re-attaches the
+     current one on its next pass. */
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,null,0);
   const ok2=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   aoReady=ok&&ok2&&!!aoColA&&!!aoColB&&!!aoDepth;
+  /* Commit the size only once the allocation is known good. On failure the
+     size stays uncommitted so the next frame retries — bounded, because an
+     unbounded retry turns a permanent outage into a per-frame realloc storm,
+     which is worse. After the budget is spent the size is committed anyway and
+     AO stays off until something resizes again. */
+  if(aoReady){ aoW=w; aoH=h; aoFailN=0; }
+  else if(++aoFailN>=4){ aoW=w; aoH=h; }
 }
 function initAO(){
   /* Context restoration leaves every WebGL handle truthy but dead. aoAlloc()
@@ -1968,7 +1998,7 @@ function initAO(){
      disappeared while the HTML HUD survived. A new GL epoch owns an entirely
      new post chain. */
   if(aoEpoch!==glEpoch){
-    aoEpoch=glEpoch;aoW=aoH=glowW=glowH=0;aoReady=false;
+    aoEpoch=glEpoch;aoW=aoH=glowW=glowH=0;aoReady=false;aoFailN=0;
     aoColA=aoColB=aoDepth=glowTexA=glowTexB=null;
     aoFB1=aoFB2=glowFB=aoVAO=null;
   }
