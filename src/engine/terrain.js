@@ -605,12 +605,45 @@ function drawTerrainFallback(){
   }
   gl.bindVertexArray(null);
 }
+/* Z-STRIP CULLING.
+   The terrain was the one pass that submitted its whole grid every frame while
+   every other pass was culled against camBounds — 320x320 quads, ~205k
+   triangles, most of them behind the camera or past the far edge.
+
+   This needs no chunking and no rebuild because the index buffer is already
+   row-major in Z (buildTerrainMesh: `for z ... for x`), so grid row z occupies
+   exactly [z*TGRID*6, (z+1)*TGRID*6). A contiguous span of rows is therefore a
+   contiguous span of indices, and culling collapses to a different count and
+   offset on the SAME single drawElements: one draw call, one buffer, no new
+   vertices, and — crucially — no chunk seams, which is the objection the
+   un-chunked design was written around (see the note at the top of this file).
+
+   X is deliberately not culled. Doing so would need one draw per row, trading a
+   free win for 320 draw calls. */
+let terrRowsDrawn=0;
 function drawTerrain(){
   if(terrainStale()&&!terrainSelfHeal()) return;
   if(!terrVAO) return;
   gl.bindVertexArray(terrVAO);
-  gl.drawElements(gl.TRIANGLES,terrIdxCount,gl.UNSIGNED_INT,0);
-  drawCalls++; triCount+=terrIdxCount/3;
+  let first=0, count=terrIdxCount;
+  if(typeof camBounds==='function'){
+    const B=camBounds(), cell=MAP/TGRID;
+    /* Relief pad: terrain rises above the ground plane, so a hill outside the
+       flat footprint can still be on screen. Max relief is about 78 world units
+       and the shallowest pitch leans it ~45 units toward the camera; camBounds
+       already carries +60, so two rows either side is comfortably conservative. */
+    const pad=2;
+    const z0=Math.max(0, Math.floor(B.y0/cell)-pad);
+    const z1=Math.min(TGRID-1, Math.ceil(B.y1/cell)+pad);
+    if(z1<z0) return;                       // wholly off the map
+    first=z0*TGRID*6;
+    count=(z1-z0+1)*TGRID*6;
+    if(count>terrIdxCount-first) count=terrIdxCount-first;
+  }
+  if(count<=0) return;
+  terrRowsDrawn=count/(TGRID*6);   // measured by the capture harness
+  gl.drawElements(gl.TRIANGLES,count,gl.UNSIGNED_INT,first*4);   // offset is in BYTES
+  drawCalls++; triCount+=count/3;
 }
 function drawTerrainEdge(){
   if(!terrEdgeVAO||!terrEdgeIdxCount) return;

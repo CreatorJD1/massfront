@@ -87,6 +87,8 @@ for (const span of SPANS) {
     tris: (typeof triCount === 'number' ? Math.round(triCount) : -1),
     icons: (typeof mfIconLast === 'number' ? mfIconLast : -1),
     units: (typeof unitHigh === 'number' ? unitHigh : -1),
+    terrRows: (typeof terrRowsDrawn === 'number' ? Math.round(terrRowsDrawn) : -1),
+    terrTotal: (typeof TGRID === 'number' ? TGRID : -1),
   }));
   rows.push(m);
   await page.screenshot({ path: `${OUT}/span-${span}.png` });
@@ -96,7 +98,12 @@ for (const span of SPANS) {
 const near = rows[0], far = rows[rows.length - 1];
 const checks = [
   ['draw calls fall as we zoom out', far.drawCalls <= near.drawCalls, `${near.drawCalls} -> ${far.drawCalls}`],
-  ['triangles fall as we zoom out',  far.tris <= near.tris,           `${near.tris} -> ${far.tris}`],
+  /* Terrain triangles now RISE with zoom-out, because Z-strip culling only
+     submits the rows the camera can see. So the meaningful test is no longer
+     'total falls' -- it is that terrain is actually being culled at tactical
+     zoom and that the icon tier still removes unit geometry. */
+  ['terrain culled at tactical zoom', near.terrRows > 0 && near.terrRows < near.terrTotal * 0.75, `${near.terrRows}/${near.terrTotal} rows`],
+  ['terrain grows as we zoom out',    far.terrRows >= near.terrRows,   `${near.terrRows} -> ${far.terrRows} rows`],
   ['icons absent at tactical zoom',  near.icons === 0,                `${near.icons}`],
   ['icons present at strategic zoom',far.icons > 0,                   `${far.icons}`],
   ['no console errors',              errors.length === 0,             `${errors.length}`],
