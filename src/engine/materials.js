@@ -70,7 +70,7 @@ const MAT={
      pointed at the same NOVA_COMPOSITE armour, so the remap had nothing to say.
      Patterns, not skins: they are luminance-ish and multiply by vertex colour
      and team tint, so an armour/trim pairing identifies a chassis. */
-  ARMR_RIB:106
+  ARMR_RIB:106, DECK_PLATE:107
 };
 /* Semantic material vocabulary. Models should ask for the JOB a surface does,
    not remember an atlas number or accidentally use hull plating on a window.
@@ -183,7 +183,8 @@ const MAT_RELIEF=[
   2.40, 1.00,
   // 106..120: Chassis Armour Patterns -- tile() reads these by index,
   // and a missing entry is a silently flat tile with no console error.
-  2.10
+  2.10,
+  2.40
 ];
 /* Cavity strength: how strongly this material's own recesses occlude. */
 const MAT_AO=[
@@ -212,7 +213,8 @@ const MAT_AO=[
   0.40, 0.20,
   // 106..120: Chassis Armour Patterns -- tile() reads these by index,
   // and a missing entry is a silently flat tile with no console error.
-  0.72
+  0.72,
+  0.80
 ];
 /* Gloss (inverse roughness). */
 const MAT_GLOSS=[
@@ -241,7 +243,8 @@ const MAT_GLOSS=[
   0.45, 0.30,
   // 106..120: Chassis Armour Patterns -- tile() reads these by index,
   // and a missing entry is a silently flat tile with no console error.
-  0.42
+  0.42,
+  0.30
 ];
 /* Metalness shares the formerly-unused ORM alpha channel. */
 const MAT_METAL=[
@@ -270,7 +273,8 @@ const MAT_METAL=[
   0.55, 0.00,
   // 106..120: Chassis Armour Patterns -- tile() reads these by index,
   // and a missing entry is a silently flat tile with no console error.
-  0.55
+  0.55,
+  0.45
 ];
 
 /* Ambient occlusion from the tile's own height signal: a pixel sitting well
@@ -1501,6 +1505,37 @@ function buildMatAtlas(){
     mtGrain(c,S,0.10);
     mtRivets(c,S,52,2.0,0.26);
     mtStreaks(c,S,3,0.06);
+  });
+
+  /* Service decks. A structure's pad is two unbroken slabs -- 33x33 and
+     30.8x30.8 -- and from an overhead RTS camera that deck IS the building:
+     measured, it held 85-86% of the visible area on mex/pgen/geo while the
+     detailed body above it held almost none. One flat material over it is what
+     "generic material applied over the whole item" looks like. Hatch panels and
+     a walkway edge break the slab into parts that read at a glance. */
+  tile(MAT.DECK_PLATE,(c,S)=>{
+    c.fillStyle='#6f7783'; c.fillRect(0,0,S,S);
+    mtVNoise(c,S,4,0.05);
+    const cell=S/4;
+    c.strokeStyle='rgba(0,0,0,.55)'; c.lineWidth=Math.max(3,S*0.014);
+    for(let k=0;k<=4;k++){
+      c.beginPath(); c.moveTo(k*cell,0); c.lineTo(k*cell,S); c.stroke();
+      c.beginPath(); c.moveTo(0,k*cell); c.lineTo(S,k*cell); c.stroke();
+    }
+    /* Lit lip on the lower-right of every panel: the Sobel needs a dark-to-light
+       step, not just a dark line, or the grid is painted on rather than cut in. */
+    c.strokeStyle='rgba(255,255,255,.34)'; c.lineWidth=Math.max(2,S*0.008);
+    for(let k=0;k<4;k++){
+      c.beginPath(); c.moveTo(k*cell+c.lineWidth,0); c.lineTo(k*cell+c.lineWidth,S); c.stroke();
+      c.beginPath(); c.moveTo(0,k*cell+c.lineWidth); c.lineTo(S,k*cell+c.lineWidth); c.stroke();
+    }
+    for(let k=0;k<4;k++){                       // recessed hatches, not on every cell
+      const gx=(k%2)*2+0.5, gy=((k/2)|0)*2+0.5;
+      c.fillStyle='rgba(0,0,0,.30)';
+      c.fillRect(gx*cell-cell*0.22,gy*cell-cell*0.22,cell*0.44,cell*0.44);
+    }
+    mtGrain(c,S,0.07);
+    mtRivets(c,S,48,1.8,0.22);
   });
 
   const numericIds=Object.values(MAT).filter(v=>typeof v==='number');

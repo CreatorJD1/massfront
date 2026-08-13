@@ -80,6 +80,9 @@ const NOVA_FAB_ROOF=C(102,124,148), NOVA_FAB_GLASS=C(50,138,204);
    material atlas, not a claim that bespoke UV-authored maps are complete. */
 const NOVA_MEX_ARM=C(126,148,174), NOVA_MEX_CORE=C(34,50,68);
 const NOVA_MEX_TRIM=C(160,180,202), NOVA_MEX_GLOW=C(72,204,255);
+/* Service-deck plating. Its own palette entry so retiring it from a pad
+   cannot disturb TWR_COAT, which many other surfaces still use. */
+const NOVA_DECK=C(111,119,131);
 const NOVA_GEO_ARM=C(122,146,170), NOVA_GEO_CORE=C(30,46,62);
 const NOVA_GEO_TRIM=C(154,178,202), NOVA_GEO_GLOW=C(76,210,255);
 const NOVA_SILO_ARM=C(130,150,174), NOVA_SILO_CORE=C(36,48,62);
@@ -151,6 +154,7 @@ function bindMat(){
   COL_MAT.set(NOVA_FAB_ROOF,matResolve('structure.roof')); COL_MAT.set(NOVA_FAB_GLASS,matResolve('glass.canopy'));
   COL_MAT.set(NOVA_MEX_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_MEX_CORE,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_MEX_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_MEX_GLOW,matResolve('emissive.energy'));
+  COL_MAT.set(NOVA_DECK,MAT.DECK_PLATE);
   COL_MAT.set(NOVA_GEO_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_GEO_CORE,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_GEO_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_GEO_GLOW,matResolve('emissive.energy'));
   COL_MAT.set(NOVA_SILO_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_SILO_CORE,MAT.NOVA_CARBON);
@@ -2320,7 +2324,7 @@ function towerPad(m,r,tier,bearing){
 function novaServicePad(m,w,d,h){
   h=h||2.4;
   m.bevelBox(0,0,0,w,h,d,Math.min(1.35,w*.04,d*.04),TWR_PAD);
-  m.bevelBox(0,h,0,w-2.2,1.0,d-2.2,.45,TWR_COAT);
+  m.bevelBox(0,h,0,w-2.2,1.0,d-2.2,.45,NOVA_DECK);
   m.box(0,h+.98,-d*.43,w*.30,.20,.34,TWR_TEAM);
   m.box(0,h+.98, d*.43,w*.30,.20,.34,TWR_GLOW);
   return h+1.0;
