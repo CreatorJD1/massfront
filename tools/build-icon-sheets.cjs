@@ -165,3 +165,32 @@ for(const G of GROUPS){
 }
 fs.writeFileSync(path.join(OUT,'icon-index.json'),JSON.stringify(index,null,1)+'\n');
 console.log('\nwrote '+path.join(OUT,'icon-index.json'));
+
+/* The runtime maps a role to a CELL NUMBER, and it gets that number by looking
+   the label up in its own copy of this order (src/ui/facticons.js). Two copies
+   of one ordering is a silent-wrong-glyph bug waiting to happen — reorder the
+   pack and every icon shifts by one with nothing failing. So the copies are
+   compared here, and a mismatch stops the build. */
+const RT=path.join(__dirname,'..','src','ui','facticons.js');
+if(fs.existsSync(RT)){
+  const KIT={nova_federation:'nova',red_ascendancy:'legion',
+             syndicate_coalition:'syndicate',horde:'horde'};
+  const src=fs.readFileSync(RT,'utf8');
+  const bad=[];
+  for(const group in KIT){
+    if(!index[group]) continue;
+    const m=src.match(new RegExp(KIT[group]+':\\[([^\\]]*)\\]'));
+    if(!m){ bad.push(KIT[group]+': no MF_FAC_LABELS entry'); continue; }
+    const rt=m[1].split(',').map(s=>s.trim().replace(/^'|'$/g,'')).filter(Boolean);
+    const built=Object.keys(index[group].cells);
+    for(let i=0;i<Math.max(rt.length,built.length);i++)
+      if(rt[i]!==built[i]) bad.push(KIT[group]+' cell '+i+': sheet has '+
+        (built[i]||'(none)')+', facticons.js expects '+(rt[i]||'(none)'));
+  }
+  if(bad.length){
+    console.error('\nCELL ORDER MISMATCH -- src/ui/facticons.js is out of sync:');
+    for(const b of bad) console.error('  '+b);
+    process.exit(1);
+  }
+  console.log('cell order matches src/ui/facticons.js');
+}

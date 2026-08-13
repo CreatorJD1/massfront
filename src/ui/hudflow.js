@@ -511,7 +511,13 @@ mfFlowQueueLayout();
 const CMD_ICON_SHEET='assets/textures/ui/cmdicons.png';
 function cmdIconsBind(){
   try{
-    const url=(typeof mf2AssetURL==='function')?mf2AssetURL(CMD_ICON_SHEET):('./'+CMD_ICON_SHEET);
+    const rel=(typeof mf2AssetURL==='function')?mf2AssetURL(CMD_ICON_SHEET):('./'+CMD_ICON_SHEET);
+    /* MUST be absolute. A relative url() inside a custom property is resolved
+       against the stylesheet that uses it, not the document — so the plain
+       relative form loaded fine for this Image() probe (document-based) and
+       then 404'd as /src/styles/assets/... once CSS substituted it, leaving
+       every tagged button blank: .cmdIcons had already hidden the emoji. */
+    const url=new URL(rel,document.baseURI).href;
     const img=new Image();
     img.onload=()=>{
       /* Hand the resolved URL to CSS rather than repeating it there, so the OTA

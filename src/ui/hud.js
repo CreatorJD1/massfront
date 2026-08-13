@@ -2744,7 +2744,14 @@ function unitIconEl(tIdx,size,kit){
     24:'unit_warden',25:'unit_kestrel',26:'unit_basilisk',27:'unit_harbinger',
     28:'unit_praetor',29:'unit_archon',30:'unit_brood',31:'unit_brood'
   }[tIdx];
-  if(kit==='nova'&&special&&typeof itemArt==='function'){
+  /* The faction sheet leads: it is the only static art that exists for three of
+     the four kits, and it is drawn in that kit's livery rather than Nova's. It
+     returns null before the sheet decodes or when a role has no glyph, so the
+     older paths below stay live as written. */
+  const facIc=(typeof mfFacUnitIcon==='function')?mfFacUnitIcon(tIdx,size,kit):null;
+  if(facIc){
+    w.appendChild(facIc);
+  }else if(kit==='nova'&&special&&typeof itemArt==='function'){
     w.innerHTML=itemArt(special,T.name,size);
     const img=w.firstElementChild; if(img) img.classList.add('rosterArt');
   }else if(kit==='nova'){
@@ -2764,7 +2771,12 @@ function bldIconEl(key,size,kit){
   const live=document.createElement('img');live.alt='';live.setAttribute('aria-hidden','true');
   live.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .16s';
   const special={geo:'bld_geo',gate:'bld_gate'}[key];
-  if(kit==='nova'&&special&&typeof itemArt==='function'){
+  /* Same order as unitIconEl, and it matters more here: 29 structures share
+     only ~15 sprite rows, so the sheet also ends a lot of duplicate art. */
+  const facIc=(typeof mfFacBldIcon==='function')?mfFacBldIcon(key,size,kit):null;
+  if(facIc){
+    d.appendChild(facIc);
+  }else if(kit==='nova'&&special&&typeof itemArt==='function'){
     d.innerHTML=itemArt(special,BT[key].em,size);
     const img=d.firstElementChild; if(img) img.classList.add('rosterArt');
   }else if(kit==='nova'){

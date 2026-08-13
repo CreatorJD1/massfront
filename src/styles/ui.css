@@ -449,6 +449,12 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
    tactical icon atlas uses.
    The sheet is an 8x8 grid of 128px cells; background-size 800% and a
    position of (col*100/7)% (row*100/7)% selects one cell. */
+/* Faction roster icons (src/ui/facticons.js). Unlike the command sheet these
+   keep their authored livery colour, so nothing tints them here; the shadow is
+   what separates a dark-blue Nova glyph from the dark panel behind it. Sizing
+   and cell offset are set inline because the cell is chosen per element. */
+.facIcon{background-repeat:no-repeat;image-rendering:auto;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
 .em[data-icon]{display:inline-block;width:24px;height:24px;background-repeat:no-repeat}
 .camBtn .em[data-icon]{width:20px;height:20px}
 html.cmdIcons .em[data-icon]{

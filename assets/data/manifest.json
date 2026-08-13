@@ -35,6 +35,7 @@
     "src/game/meta.js",
     "src/game/ai.js",
     "src/ui/input.js",
+    "src/ui/facticons.js",
     "src/ui/hud.js",
     "src/ui/render3d.js",
     "src/ui/orderfx.js",
