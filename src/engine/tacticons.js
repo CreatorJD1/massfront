@@ -59,6 +59,41 @@ function mfIconQ(worldSpan){
   return clamp((MF_ICON_PX_IN - px)/(MF_ICON_PX_IN - MF_ICON_PX_OUT), 0, 1);
 }
 
+/* ---------------------------------------------------------------------------
+   COMMANDERS
+   The ramp above asks "is this too small to read?". That is the right question
+   for a Striker and the wrong one for a commander, which is never too small —
+   it is too IMPORTANT to hunt for. Asking the wrong question had a measurable
+   cost: a commander is 96 world units, so it needs orthoSpan 3660 to begin
+   iconising and SPAN_MAX is 3400. At full zoom-out it measured 25.8 px against
+   a 24 px threshold and missed by 1.8, drawing no plate, no star and no ring,
+   while a Striker beside it at 9.7 px drew all three. The single entity a
+   player cannot afford to lose was the only one carrying no symbol. The same
+   arithmetic excludes every other hero and the TITAN.
+
+   So a commander does not measure itself. It measures the smallest thing on the
+   field: once an ordinary unit has stopped being a mesh the view IS a symbol
+   field, and the commander has to be the loudest symbol in it. MF_CMD_REF_SPAN
+   is mfUnitSpan(Striker), which puts full opacity at orthoSpan 2196 — where
+   ordinary units finish converting.
+
+   Expressed as a call into mfIconQ rather than a second ramp, so there stays
+   exactly one definition of scale, still clamped/monotone/continuous and still
+   safe to drive an alpha with.
+   --------------------------------------------------------------------------- */
+const MF_CMD_REF_SPAN = 36;      // = mfUnitSpan(Striker) = 12*3
+const MF_CMD_ICON_MUL = 1.55;    // a commander must out-read its neighbours
+function mfIsCmdType(T){ return !!(T && T.cat==='hero'); }
+function mfCmdIconQ(T){ return mfIsCmdType(T) ? mfIconQ(MF_CMD_REF_SPAN) : 0; }
+
+/* Drawn diameter in world units — the expression render3d has always inlined,
+   plus the commander boost. A commander that merely APPEARS at strategic zoom
+   is not the fix; it has to dominate. */
+function mfIconDpx(T){
+  const base = clamp(18+mfUnitSpan(T)*0.12,22,40)*mfWorldPx();
+  return mfIsCmdType(T) ? base*MF_CMD_ICON_MUL : base;
+}
+
 /* 0 culled | 1 icon | 2 far mesh | 3 near mesh.
 
    `band` is render3d's own renderBand() result, passed in rather than called:

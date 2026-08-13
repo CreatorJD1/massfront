@@ -1140,11 +1140,20 @@ function render(dtDraw){
        footprint is precisely what flattened every building in
        docs/POSTMORTEM-1.33.31-REGRESSION.md. */
     const uIcon=(typeof mfIconQ==='function')?mfIconQ(mfUnitSpan(T)):0;
-    if(uIcon>0&&mfIconEnsure()){
+    /* A commander is marked on a ramp of its own, and ONLY marked: uMark drives
+       the symbol's alpha while uIcon alone still decides whether the mesh is
+       dropped below. Overloading one q for both would delete the commander's
+       silhouette the moment it earned a badge — at SPAN_MIN that is a 229 px
+       hero replaced by a 46 px plate. The icon layers OVER the mesh here; it
+       never replaces or fades one (docs/POSTMORTEM-1.33.31-REGRESSION.md). */
+    const uCmdQ=(typeof mfCmdIconQ==='function')?mfCmdIconQ(T):0;
+    const uMark=uIcon>uCmdQ?uIcon:uCmdQ;
+    if(uMark>0&&mfIconEnsure()){
       const ih=(T.naval?1.5:gh(X,Y)+(T.air?58:0))+2,
             body=mfIconBody(uteam[i]), ink=mfIconInk(uteam[i]),
-            dpx=clamp(18+mfUnitSpan(T)*0.12,22,40)*mfWorldPx(),
-            ia=255*uIcon,
+            dpx=(typeof mfIconDpx==='function')?mfIconDpx(T)
+                :clamp(18+mfUnitSpan(T)*0.12,22,40)*mfWorldPx(),
+            ia=255*uMark,
             iKit=unitKit||(uteam[i]===2?'horde':null);
       bbIcon.add(mfIconPlateFor(iKit,T),X,Y,ih,dpx,0,body[0],body[1],body[2],ia);
       bbIcon.add(mfIconCellForUnit(T),X,Y,ih,dpx*0.60,0,ink[0],ink[1],ink[2],ia);
