@@ -284,6 +284,15 @@ function begin3D(nA){
   /* Unit 8 carries the live fog-of-war map into the MODEL pass so units,
      buildings and remembered scenery darken with the ground they stand on. */
   if(typeof fogTex!=='undefined'&&fogTex){ gl.activeTexture(gl.TEXTURE8); gl.bindTexture(gl.TEXTURE_2D,fogTex); }
+  /* Units 4-6 carry the per-asset baked triplet when a draw declares one. They
+     must reference a COMPLETE texture even when it is unused: WebGL2 validates
+     every sampler the program references at draw time, not only the ones the
+     taken branch reads, and an unbound unit drops the whole draw call -- which
+     is every mesh in the game vanishing while the program still reports as
+     linked. The atlas stands in; uAssetOn keeps it from ever being sampled. */
+  gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D,matTex);
+  gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D,matTex);
+  gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D,matTex);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,matTex);
   gl.uniformMatrix4fv(U3.uVP,false,matVP);
   gl.uniform3f(U3.uEye,eyeX,eyeY,eyeZ);

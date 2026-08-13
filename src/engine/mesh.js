@@ -88,6 +88,9 @@ const UVS=0.055;                     // texture repeats per world unit
    12 (see _mid below for where the bone index actually lives) but the constant
    stays, because nothing should ever walk this array by a literal again. */
 const VFLOATS=12;
+/* Mirrors uAssetOn on the GPU so a draw with no baked maps only pays a
+   uniform write when the previous draw actually turned them on. */
+let MF_ASSET_ON=false;
 class MeshBuilder{
   constructor(){
     this.v=[]; this.i=[]; this.n=0; this.m=0; this.tm=0;
@@ -572,6 +575,10 @@ class InstMesh{
        all — exactly the failure the bone test now gates against. Say so. */
     if((geo.bones||0)>MAX_BONES)
       console.warn('mesh: model needs '+geo.bones+' bones, only '+MAX_BONES+' fit — limbs will be rigid');
+    /* Null until an asset declares a baked triplet; see flush(). Held per mesh
+       because one InstMesh is one geometry -- which is exactly what makes
+       per-asset surfacing possible without widening the vertex. */
+    this.assetMaps=null;
     this.bones=Math.min(geo.bones||0,MAX_BONES);
     if(this.bones){
       this.jointBuf=new Float32Array(this.bones*4);
@@ -660,6 +667,26 @@ class InstMesh{
        call and nothing per unit — a thousand of them still animate on one call.
        Uploaded here rather than at bind time because the program is shared and
        another model's skeleton may be resident. */
+    /* Per-ASSET baked maps, uploaded per draw call for the same reason the
+       skeleton above is: one InstMesh is one geometry, so this costs three
+       binds per draw and nothing per instance. Switched off explicitly when
+       absent -- a stale uAssetOn would paint the last asset's skin onto this
+       one. */
+    if(typeof U3!=='undefined'&&U3.uAssetOn){
+      if(this.assetMaps){
+        gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D,this.assetMaps.base);
+        gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D,this.assetMaps.nre);
+        gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D,this.assetMaps.mask);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.uniform1f(U3.uAssetOn,1.0); MF_ASSET_ON=true;
+      } else if(MF_ASSET_ON){ gl.uniform1f(U3.uAssetOn,0.0); MF_ASSET_ON=false; }
+      /* Only touched once something actually declares maps. flush() is reached
+         with programs other than prog3D bound, and setting a prog3D location
+         then is an INVALID_OPERATION -- which is exactly the warning the shared
+         uBoneN upload above already emits on every such draw. Gating on the
+         flag means this feature contributes none of those until it is in use,
+         instead of adding a second copy of a known-bad pattern. */
+    }
     if(typeof U3!=='undefined'&&U3.uBoneN!==undefined&&U3.uBoneN!==null){
       if(this.bones){
         gl.uniform1i(U3.uBoneN,this.bones);
@@ -863,6 +890,18 @@ uniform sampler2D uNrm;
 uniform sampler2D uOrm;     // r = ambient occlusion, g = gloss, b = emissive, a = metalness
 uniform sampler2D uDamageTex;
 uniform sampler2D uDetail;  // neutral V2 micro-surface grain; shared by every instanced asset
+/* PER-ASSET BAKED TRIPLET (artv2). Off unless the draw call declares it.
+   An asset cannot want both surfacing schemes at once: one that carries its own
+   baked maps has no use for the shared atlas, and one that uses the atlas has no
+   baked maps to sample. So lanes 9-10 (vUV) carry whichever meaning THIS draw
+   declares -- the atlas planar UV as always, or this asset's own 0..1 unwrap --
+   and no vertex lane, attribute or stride had to change to make room.
+   Channel layout is the one materials-v2.js:84-115 already decodes, so the
+   showcase path and this path read identical files. */
+uniform float uAssetOn;
+uniform sampler2D uAssetBase;   // rgb albedo, a ambient occlusion
+uniform sampler2D uAssetNre;    // rg normal xy, b roughness, a emissive
+uniform sampler2D uAssetMask;   // r metal, g/b team masks, a edge wear
 uniform vec3 uHalf;         // normalize(sunDir + viewDir), constant under ortho
 uniform vec3 uEye;          // already uploaded every frame for VS3D; the rim term needs it here too
 out vec4 o;
@@ -907,14 +946,26 @@ void main(){
      building. Supplying the derivatives of the UNWRAPPED coordinate fixes it. */
   vec2 dxu=dFdx(vUV*matFreq(floor(vMat+0.5)))*MSTEP_CONST;
   vec2 dyu=dFdy(vUV*matFreq(floor(vMat+0.5)))*MSTEP_CONST;
-  vec3 tex=textureGrad(uMat,muv,dxu,dyu).rgb;
   /* The bevels, rivets, louvres and panel breaks all live here rather than in
      geometry: perturbing the normal lights them exactly as if they were
      modelled, at a fraction of the vertex cost. */
-  vec3 nT=textureGrad(uNrm,muv,dxu,dyu).rgb*2.0-1.0;
+  vec3 tex; vec3 nT; vec4 orm;
+  if(uAssetOn>0.5){
+    /* Uniform branch: constant for the whole draw call, so it neither diverges
+       nor invalidates the derivatives taken above. */
+    vec4 ba=texture(uAssetBase,vUV), nr=texture(uAssetNre,vUV), mk=texture(uAssetMask,vUV);
+    vec2 nxy=nr.rg*2.0-1.0;
+    tex=ba.rgb;
+    nT=vec3(nxy, sqrt(max(0.02,1.0-dot(nxy,nxy))));
+    /* FS3D carries GLOSS where the bake stores ROUGHNESS. */
+    orm=vec4(ba.a, 1.0-clamp(nr.b,0.055,1.0), nr.a, mk.r);
+  }else{
+    tex=textureGrad(uMat,muv,dxu,dyu).rgb;
+    nT=textureGrad(uNrm,muv,dxu,dyu).rgb*2.0-1.0;
+    orm=textureGrad(uOrm,muv,dxu,dyu);
+  }
   vec3 gN=normalize(vNrm);
   vec3 n=normalize(cotangent(gN,vWorld,vUV)*nT);
-  vec4 orm=textureGrad(uOrm,muv,dxu,dyu);
   float ao=orm.r, gloss=orm.g, emis=orm.b, metal=orm.a;
   /* V2 profile bands are encoded as profile*2 + health damage. Keeping the
      default band at 0..1 makes every existing caller backward-compatible while
@@ -1959,6 +2010,16 @@ function initGL3D(){
      Ravager's knee. */
   if(U3.uBoneN) gl.uniform1i(U3.uBoneN,0);
   gl.uniform1i(U3.uMat,0); gl.uniform1i(U3.uDamageTex,1); gl.uniform1i(U3.uNrm,2); gl.uniform1i(U3.uOrm,3); gl.uniform1i(U3.uDetail,7);
+  /* Units 4-6 were the only free ones in the model pass (0,1,2,3,7,8 taken). */
+  U3.uAssetOn=gl.getUniformLocation(prog3D,'uAssetOn');
+  U3.uAssetBase=gl.getUniformLocation(prog3D,'uAssetBase');
+  U3.uAssetNre=gl.getUniformLocation(prog3D,'uAssetNre');
+  U3.uAssetMask=gl.getUniformLocation(prog3D,'uAssetMask');
+  gl.uniform1i(U3.uAssetBase,4); gl.uniform1i(U3.uAssetNre,5); gl.uniform1i(U3.uAssetMask,6);
+  /* Same discipline as uBoneN above: the program is shared, so an asset with no
+     baked maps must actively switch this OFF or it inherits the previous draw's
+     triplet and samples another model's skin through its own UVs. */
+  if(U3.uAssetOn) gl.uniform1f(U3.uAssetOn,0.0);
   UG.uVP=gl.getUniformLocation(progG,'uVP');
   progT=mkProg(VST.replace(/MAPSIZE_CONST/g,MAP.toFixed(1)).replace(/BFOG_CONST/g,'430.0'),FST,'terrain');
   /* THE GROUND MUST DRAW. If the terrain's own program will not build on this

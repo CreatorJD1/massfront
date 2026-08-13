@@ -1,100 +1,102 @@
-# Unit per-asset UVs — the blocker is not real
+# Unit per-asset maps — how the plumbing works
 
-**Status:** designed, not implemented. Everything below is verified in source.
+**Status:** plumbing implemented and inert. The unwrap (step 2) is not written.
 
-## The claim this replaces
+## What was thought to block this
 
-> "V2 textures on units are not reachable. Units have no per-asset UV;
-> `_planarUV` projects by world distance, there is no second UV slot and no free
-> vertex lane. A baked per-asset map cannot be applied without re-unwrapping
-> every mesh and widening the vertex format, which sheared every model last time
-> it moved."
+> "Units have no per-asset UV; `_planarUV` projects by world distance, there is
+> no second UV slot and no free vertex lane. A baked per-asset map cannot be
+> applied without re-unwrapping every mesh and widening the vertex format."
 
-Every clause is true **except the conclusion**. Widening the vertex is not
-required, because the engine already computes model-space triplanar UVs for two
-other maps and has been doing it all along.
+The facts are right. The conclusion was wrong twice over, and the first
+correction to it — recorded here previously — was also wrong. Both are written
+down because each cost real time.
 
-## The unlock
+### Wrong answer #1: widen the vertex
 
-`vObj` is the **model-space** vertex position, already declared and already
-interpolated:
+Unnecessary. See below.
 
-- `src/engine/mesh.js:723` — `out vec3 vObj;`
-- `src/engine/mesh.js:819` — `vObj=ap;` (`ap` is pre-instance model space)
-- `src/engine/mesh.js:835` — `in vec3 vObj;`
+### Wrong answer #2: derive the tiling UV from `vObj`
 
-And the fragment shader already samples triplanar off it, with dominant-axis
-weights `dw` computed from the normal:
+The previous version of this document proposed freeing lanes 9-10 by computing
+the atlas UV in the shader from `vObj` (model-space position) plus the
+dominant-axis weights the damage and detail maps already use, with the
+acceptance test "the screenshot must not change".
 
-```glsl
-// mesh.js:934-935  (damage)
-float damageData=texture(uDamageTex,vObj.zy*.070).r*dw.x+
-  texture(uDamageTex,vObj.xz*.070).r*dw.y+texture(uDamageTex,vObj.xy*.070).r*dw.z;
-// mesh.js:939-940  (detail)
-float detailData=texture(uDetail,vObj.zy*.115).r*dw.x+ ... ;
-```
+**That test could never pass.** `_planarUV` (`mesh.js:143-154`) origins each face
+at *its own first vertex* and orients it along that face's first edge. The UVs
+are therefore not a function of position at all — two coplanar faces get
+different origins. Any position-derived projection shifts texture placement on
+every face in the game. It might look fine, or better, but it is not a refactor,
+and shipping it as one would have been a silent visual change across every model.
 
-`_planarUV` (`mesh.js:143-154`) is itself a **model-space, distance-scaled**
-projection — `(p-a)·tangent * UVS`, with `UVS=0.055` (`mesh.js:80`). It picks one
-dominant plane per face. That is the same thing the `dw` triplanar blend already
-does, computed per fragment instead of baked per vertex.
+## The actual answer
 
-**So the atlas tiling UV does not need to come from a vertex attribute at all.**
-Derive it from `vObj` + `dw`, and lanes 9-10 (`aUV`) become free for a genuine
-per-asset 0..1 unwrap — no `VFLOATS` change, no new attribute, no stride edits,
-and therefore none of the failure documented at `mesh.js:81-89`.
+**An asset cannot want both surfacing schemes at once.** One that carries baked
+maps has no use for the shared atlas; one that uses the atlas has no baked maps.
+They are mutually exclusive *per asset*, so lanes 9-10 can carry whichever
+meaning the draw call declares — the atlas planar UV as today, or that asset's
+own 0..1 unwrap. Nothing needs freeing, because nothing needs to coexist.
 
-## Implementation order (each step independently verifiable)
+The declaration rides a **per-draw uniform**, which is free here for a reason
+already proven in this file: **one `InstMesh` is one geometry**. `flush()`
+(`mesh.js:654`) already uploads per-model uniforms on exactly this basis — the
+bone skeleton, whose comment notes it "costs two small uniform arrays per draw
+call and nothing per unit". Per-asset surfacing is the same shape.
 
-### Step 1 — free the lanes, change nothing on screen
+## What is implemented
 
-In the fragment shader, replace the `vUV`-derived `muv` with a triplanar
-model-space UV built from `vObj` and `dw`, scaled by `UVS`. Keep `vUV` declared
-and still fed, so nothing else moves yet.
+- `InstMesh.assetMaps` — null by default; `{base, nre, mask}` when an asset has a
+  baked triplet.
+- `flush()` binds them to texture units 4-6 and sets `uAssetOn=1`, or clears it.
+  The clear is gated behind a module flag `MF_ASSET_ON` so the uniform is never
+  written until something actually uses the feature — `flush()` is reached with
+  programs other than `prog3D` bound, and writing a `prog3D` location then is an
+  `INVALID_OPERATION`. (The shared `uBoneN` upload above it already emits that
+  warning on every such draw; this deliberately does not add a second source.)
+- `FS3D` branches on `uAssetOn`. The branch is uniform across a draw, so it does
+  not diverge and does not disturb the derivatives taken above it.
+- Channel decode is copied from `materials-v2.js:84-115`, the shader that already
+  reads artv2 output, so both paths read identical files:
+  `ba.rgb` albedo, `ba.a` AO, `nr.rg` normal xy, `nr.b` roughness, `nr.a`
+  emissive, `mk.r` metal. FS3D carries **gloss**, so it takes `1.0 - rough`.
 
-Two known differences to handle, both real:
+## The trap that cost an hour — read this before touching sampler units
 
-1. **Instance width scaling.** `mesh.js:820` is `vUV=aUV*max(aInst.w,0.001)`, so
-   width-scaled instances currently stretch their tiling. `vObj` is pre-scale, so
-   the derived UV will not. Pass `aInst.w` through as a varying and multiply, or
-   accept the change deliberately — but decide it, do not discover it.
-2. **`cotangent(gN,vWorld,vUV)`** at `mesh.js:916` builds the tangent frame from
-   `vUV`. It must use whichever UV actually addresses the normal map, or the
-   normal map's tangent basis and its lookup disagree and lighting goes subtly
-   wrong in a way that is easy to miss on flat faces and obvious on curved ones.
+Pointing `uAssetBase/Nre/Mask` at units 4-6 without binding anything there
+**made every model in the game disappear.** Terrain, hardstands, effects and HUD
+still drew; every mesh vanished.
 
-**Acceptance:** an A/B capture at `SPAN_MIN` over the same seed must be visually
-indistinguishable. This step is a refactor; if it changes the picture, it is
-wrong. `tools/audit-material-variety.mjs` and the tile metrics in
-`.tmp/tilestats` should be unchanged.
+WebGL2 validates **every sampler the program references** at draw time, not only
+the ones the taken branch reads. An unbound unit is incomplete, so the entire
+draw call is dropped — silently, with the program still reporting as linked.
 
-### Step 2 — write a real unwrap into the freed lanes
+That is why `prog3D === true` is a **worthless** health check for a shader edit,
+and why the harness now reads the uniform's live value with `gl.getUniform` and
+looks at the frame instead. `begin3D()` (`render3d.js`) binds the atlas to units
+4-6 as a completeness stand-in; `uAssetOn` keeps it from ever being sampled.
 
-`MeshBuilder` starts emitting an asset-local 0..1 UV into lanes 9-10 instead of
-the planar one. The unwrap does not have to be good; it has to be **injective**,
-which the current one is not (measured mean overlap factor 8.59, worst texel
-500-1500 faces). A per-primitive box unwrap packed into a grid is sufficient and
-is a few dozen lines in the builder — every primitive already knows its own
-extent.
+## Also learned: the pixel diff cannot judge this
 
-### Step 3 — bind the per-asset map
+"The screenshot must not change" is unusable as an acceptance test here. Two runs
+of the **same build** differ by **72% of pixels** (mean delta 27) because the
+scene animates and reseeds; the two builds under test differed by 16%. The
+comparison is pure noise. Inertness is asserted where it is decidable instead:
+`gl.getUniform(prog3D, U3.uAssetOn) === 0` means every draw took the pre-existing
+atlas branch, whatever the pixels are doing.
 
-`materials-world-v2.js:177` already demonstrates the pattern with `uRect`: one
-extra uniform selecting a sub-rectangle of a shared page, so per-asset maps cost
-one uniform, not one texture bind per unit. Copy that rather than inventing a
-second scheme, and keep it in FS3D rather than adding a third lighting shader to
-hold in sync.
+## Step 2 — the unwrap (not done)
 
-## Why this order
+`MeshBuilder` emits an asset-local 0..1 UV into lanes 9-10 for assets that
+declare baked maps. It does not have to be a good unwrap; it has to be
+**injective**, which the current one is not (measured mean overlap factor 8.59,
+worst texel 500-1500 faces). A per-primitive box unwrap packed into a grid is
+sufficient — every primitive already knows its own extent.
 
-Step 1 is the only risky part and it is a pure refactor with an exact acceptance
-test — a screenshot that must not change. Steps 2 and 3 are additive and cannot
-regress anything that does not opt in. Doing them in the other order means
-debugging a new unwrap and a new binding against a UV path that is still moving.
+Until then `assetMaps` is never set, so the path stays inert.
 
 ## What this does not fix
 
-Nothing here touches the Brood's 33 unit types sharing 14 meshes
+The Brood's 33 unit types share 14 meshes
 (`tools/audit-material-variety.mjs`). Six chassis that are the same model remain
-the same model with better texels on them. That is separate, larger, and worth
-doing first if the goal is "units look like themselves".
+the same model with better texels on them.
