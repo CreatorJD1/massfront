@@ -94,6 +94,9 @@ let MF_ASSET_ON=false;
 class MeshBuilder{
   constructor(){
     this.v=[]; this.i=[]; this.n=0; this.m=0; this.tm=0;
+    /* Face spans, flat [firstVertex,count,...]. Only unwrapAssetUV() reads them;
+       they cost two array pushes per face and nothing at draw time. */
+    this.faces=[];
     /* ---- SKELETON -------------------------------------------------------
        Bones are RIGID BODIES, not skinning weights. Chitin is armour: a limb
        segment does not deform, it rotates about the joint that carries it, and
@@ -160,7 +163,7 @@ class MeshBuilder{
     const P=[a,b,c];
     const U=uvs||this._planarUV(P,nx,ny,nz);
     for(let k=0;k<3;k++) this.v.push(P[k][0],P[k][1],P[k][2],nx,ny,nz,col[0],col[1],col[2],U[k][0],U[k][1],M);
-    this.i.push(o,o+1,o+2); this.n+=3;
+    this.i.push(o,o+1,o+2); this.n+=3; this.faces.push(o,3);
   }
   /* Face normal and winding both derive from the corner order a->b->c->d.
      The outward normal is (d-a) x (b-a) and the front face is the REVERSED
@@ -178,7 +181,7 @@ class MeshBuilder{
     const P=[a,b,c,d], U=uvs||this._planarUV(P,nx,ny,nz);
     const o=this.n, M=this._mid;
     for(let k=0;k<4;k++) this.v.push(P[k][0],P[k][1],P[k][2],nx,ny,nz,col[0],col[1],col[2],U[k][0],U[k][1],M);
-    this.i.push(o,o+2,o+1, o,o+3,o+2); this.n+=4;
+    this.i.push(o,o+2,o+1, o,o+3,o+2); this.n+=4; this.faces.push(o,4);
   }
   /* Axis-aligned box, centred on (x,z), sitting from y to y+h.
      The workhorse: hulls, slabs, crates, wall segments, city blocks. */
@@ -534,14 +537,104 @@ class MeshBuilder{
     for(let i=0;i<g.count;i++) this.i.push(base+g.i[i]);
     return this;
   }
+  /* ---- ASSET UNWRAP ------------------------------------------------------
+     Rewrites lanes 9-10 from the shared-atlas planar UV into an asset-local
+     0..1 chart, for meshes that carry their own baked maps. OPT-IN: a mesh that
+     does not call this keeps the atlas UV byte for byte, so nothing that exists
+     today changes.
+
+     INJECTIVE BY CONSTRUCTION, which is the whole requirement. The atlas UV is
+     not — it is a tiling coordinate, so it repeats deliberately, and measured
+     across the roster it lands 8.59 faces on the average texel and 500-1500 on
+     the worst. You cannot bake into that: every face would overwrite its
+     neighbours. Here each face owns one cell of a sqrt(n) grid and no two faces
+     can ever address the same texel.
+
+     Each face is normalised by ITS OWN bounding box rather than the mesh's,
+     because _planarUV already origins every face at its own first vertex and
+     orients it along its own first edge — the coordinates are face-local
+     already, so per-face normalisation is the only one that is meaningful.
+
+     Equal cells, not area-proportional. A real packer would spend texels where
+     the surface is large; this spends them evenly. That is a texel-density
+     compromise, not a correctness one, and it is the difference between a
+     hundred lines and a thousand. Trading it for a proper packer later needs no
+     change anywhere else, because only this function knows the layout.        */
+  unwrapAssetUV(){
+    const F=this.faces, nF=F.length>>1;
+    if(!nF) return this;
+    const g=Math.ceil(Math.sqrt(nF));
+    /* Half a texel of a 1024 map, doubled: bilinear reads one neighbour, and
+       mip level 1 reaches two. Without it faces bleed into each other at
+       distance, which looks exactly like a broken unwrap. */
+    const gut=2.0/1024;
+    const cell=1/g;
+    for(let f=0;f<nF;f++){
+      const first=F[f*2], cnt=F[f*2+1];
+      let u0=Infinity,v0=Infinity,u1=-Infinity,v1=-Infinity;
+      for(let k=0;k<cnt;k++){
+        const b=(first+k)*VFLOATS;
+        const u=this.v[b+9], vv=this.v[b+10];
+        if(u<u0)u0=u; if(u>u1)u1=u; if(vv<v0)v0=vv; if(vv>v1)v1=vv;
+      }
+      const du=(u1-u0)||1, dv=(v1-v0)||1;
+      const cx=(f%g)*cell+gut, cy=((f/g)|0)*cell+gut, sz=cell-gut*2;
+      for(let k=0;k<cnt;k++){
+        const b=(first+k)*VFLOATS;
+        this.v[b+9] =cx+((this.v[b+9] -u0)/du)*sz;
+        this.v[b+10]=cy+((this.v[b+10]-v0)/dv)*sz;
+      }
+    }
+    this.assetUV={faces:nF,grid:g};
+    return this;
+  }
   build(){
     const J=this.joints, sk=new Float32Array(Math.max(1,J.length)*10);
     for(let k=0;k<J.length;k++) sk.set(J[k],k*10);
     return {v:new Float32Array(this.v), i:new Uint16Array(this.i), count:this.i.length,
-            skel:sk, bones:J.length};
+            skel:sk, bones:J.length, assetUV:this.assetUV||null};
   }
 }
 const MB=()=>new MeshBuilder();
+
+/* The same grid unwrap applied to an ALREADY BUILT geometry, treating each
+   index triple as a face. The builder method works on face spans, so it keeps
+   quads whole and wastes fewer cells; this one exists so the injectivity
+   property can be measured on any shipped mesh without rebuilding it through
+   its model file (tools/verify-asset-unwrap.mjs). Same cell arithmetic, so a
+   pass here is evidence about the real thing. */
+function mfUnwrapGeoUV(geo){
+  if(!geo||!geo.v||!geo.i) return geo;
+  /* Group triangles into FACES first. A quad emits o,o+2,o+1 then o,o+3,o+2 --
+     the two triangles SHARE two vertices. Unwrapping per triangle therefore
+     writes a shared vertex into two different cells, the second write wins, and
+     both triangles end up straddling cells: measured worst 2-3 faces per texel
+     instead of 1. Vertices are the unit of UV storage, so faces that share a
+     vertex must share a cell. */
+  const tris=Math.floor(geo.count/3), v=geo.v, ix=geo.i;
+  const faces=[]; let cur=null;
+  for(let t=0;t<tris;t++){
+    const a=ix[t*3],b=ix[t*3+1],c=ix[t*3+2];
+    if(cur && (cur.has(a)?1:0)+(cur.has(b)?1:0)+(cur.has(c)?1:0)>=2){
+      cur.add(a); cur.add(b); cur.add(c);
+    } else { cur=new Set([a,b,c]); faces.push(cur); }
+  }
+  const nF=faces.length, g=Math.ceil(Math.sqrt(nF));
+  const gut=2.0/1024, cell=1/g;
+  for(let f=0;f<nF;f++){
+    const verts=[...faces[f]];
+    let u0=Infinity,v0=Infinity,u1=-Infinity,v1=-Infinity;
+    for(const q of verts){ const bq=q*VFLOATS, u=v[bq+9], w=v[bq+10];
+      if(u<u0)u0=u; if(u>u1)u1=u; if(w<v0)v0=w; if(w>v1)v1=w; }
+    const du=(u1-u0)||1, dv=(v1-v0)||1;
+    const cx=(f%g)*cell+gut, cy=((f/g)|0)*cell+gut, sz=cell-gut*2;
+    for(const q of verts){ const bq=q*VFLOATS;
+      v[bq+9] =cx+((v[bq+9] -u0)/du)*sz;
+      v[bq+10]=cy+((v[bq+10]-v0)/dv)*sz; }
+  }
+  geo.assetUV={faces:nF,grid:g};
+  return geo;
+}
 
 /* ============================================================================
    INSTANCED MESH — one geometry, many placements, one draw call.
