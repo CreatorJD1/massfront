@@ -167,6 +167,7 @@ if (command === 'status' || command === 'next') {
 /* ------------------------------------------------------- stage dispatch */
 const DELEGATE = {
   verify: 'tools/artv2-verify.mjs',
+  publish: 'tools/artv2-publish.mjs',
   import: 'tools/artv2-import.mjs',
   preview: 'tools/artv2-preview.mjs',
 };
@@ -191,7 +192,7 @@ if (BLENDER_STAGE[command]) {
 
 if (command === 'run') {
   if (!selector) fail('run needs an asset: node tools/artv2.mjs run <asset>');
-  for (const stage of ['build', 'bake', 'import', 'verify']) {
+  for (const stage of ['build', 'bake', 'import', 'publish', 'verify']) {
     const r = spawnSync(process.execPath, [join(ROOT, 'tools', 'artv2.mjs'), stage, selector, ...(asJson ? ['--json'] : []), ...(force ? ['--force'] : [])], { stdio: 'inherit' });
     if (r.status !== EXIT.OK) process.exit(r.status ?? EXIT.ENV);
   }

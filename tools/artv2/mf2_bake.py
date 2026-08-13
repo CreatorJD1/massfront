@@ -27,7 +27,12 @@ WHAT IS NEW
 BLENDER 5.2 ONLY. 4.x and 5.x differ in bpy API and bake defaults; a silent
 fallback would change output between machines/agents. artv2 doctor enforces it.
 """
-import bpy, os, json, math, sys
+import bpy, os, json, math, sys, re
+
+# Sockets the manifest's filter excluded. Collected rather than printed so they
+# reach the result envelope — a dropped socket is invisible until something
+# downstream reads a key that is not there.
+SOCKET_WARNINGS = []
 
 try:
     import numpy as np
@@ -196,10 +201,31 @@ def duplicate_sockets(src_collection, into_collection, names=None):
             continue
         if names and not any(o.name.startswith(n) for n in names):
             continue
-        s = bpy.data.objects.new(o.name, None)
+        # Object names are unique across bpy.data, so while the source empty
+        # still holds this name Blender silently auto-suffixes any copy of it —
+        # the exported GLB carried socket_rally.001 and friends, and
+        # tools/glb-v2-import.mjs keys sockets by EXACT node name, so the next
+        # stage would have imported every socket under a wrong key. The source
+        # therefore has to give the name up first. It is not restored: the
+        # sources are not exported, and the only .blend written from here is the
+        # -baked.blend artifact, never the authored source file.
+        want = o.name
+        o.name = want + '__mf2_src'
+        s = bpy.data.objects.new(want, None)
         into_collection.objects.link(s)
         s.matrix_world = o.matrix_world.copy()
         out.append(s)
+    # A silently renamed socket is worse than a failed bake, because it ships.
+    bad = [s.name for s in out if re.search(r'\.\d{3}$', s.name)]
+    if bad:
+        raise RuntimeError('socket names were auto-suffixed by Blender: %s' % ', '.join(bad))
+    if names:
+        present = set(o.name.replace('__mf2_src', '')
+                      for o in src.objects if o.name.startswith('socket_'))
+        kept = set(s.name for s in out)
+        dropped = sorted(present - kept)
+        if dropped:
+            SOCKET_WARNINGS.extend(dropped)
     return out
 
 
@@ -364,10 +390,22 @@ def bake_asset(manifest, key, force=False):
     for tier in asset.get('lods', []):
         name, target = tier['name'], int(tier['target_tris'])
         if name == 'showcase':
+            # The showcase tier used to export the joined mesh untouched at
+            # ratio 1.0. That made bake -> verify non-terminating: verify errors
+            # when the mesh is over the authoring ceiling and prescribes `bake`
+            # as the remedy, but bake never reduced it, so the same error came
+            # back forever (tank 32018, factory 11564, ceiling 10000). Decimate
+            # it like every other tier. Maps are already baked by this point, so
+            # UVs are unaffected by the reduction.
+            auth = manifest.get('authoring', {})
+            got, ratio = decimate_to_target(obj, target,
+                                            ceiling=auth.get('max_tris'),
+                                            floor=auth.get('min_tris'))
             path = os.path.join(out_dir, slug + '-baked.glb')
             export_glb([obj] + sockets, path)
             bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out_dir, slug + '-baked.blend'))
-            lods.append({'name': name, 'tris': showcase_tris, 'target': target, 'path': path, 'ratio': 1.0})
+            lods.append({'name': name, 'tris': got, 'target': target, 'path': path,
+                         'sourceTris': showcase_tris, 'ratio': round(ratio, 4)})
             continue
         lod = obj.copy()
         lod.data = obj.data.copy()
