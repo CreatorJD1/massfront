@@ -1449,12 +1449,12 @@ let curTheme='verdant';
    compatibility, but no War Room region advertises them. */
 const MAPDEFS=(()=>{
   const out={
-    vanguard:{nm:'Vanguard Valley',ds:'Legacy highway country',seed:20260729,hBias:0,relief:1,crater:0,city:1,indus:1,roads:1,size:'standard',hazard:'dust'},
-    highland:{nm:'Highland Scar',ds:'Legacy cliff arcology',seed:77113,hBias:.055,relief:1.4,crater:0,city:2,indus:1,roads:1,size:'standard',hazard:'collapse'},
+    vanguard:{nm:'Vanguard Valley',ds:'Legacy highway country',seed:20260729,hBias:0,relief:1,crater:0,outpost:2,relic:1,city:1,indus:1,roads:1,size:'standard',hazard:'dust'},
+    highland:{nm:'Highland Scar',ds:'Legacy cliff arcology',seed:77113,hBias:.055,relief:1.4,crater:0,outpost:1,relic:2,city:2,indus:1,roads:1,size:'standard',hazard:'collapse'},
     isles:{nm:'Shattered Isles',ds:'Legacy drowned archipelago',seed:41522,hBias:-.062,relief:.95,crater:0,city:1,indus:0,roads:0,seabed:1,bridge:1,size:'standard',hazard:'squall'},
-    crater:{nm:'Relic Basin',ds:'Legacy impact metropolis',seed:90210,hBias:.02,relief:1.15,crater:1,city:3,indus:2,roads:1,size:'standard',hazard:'pulse'},
-    oasis:{nm:'Spire Oasis',ds:'Legacy solar-well valley',seed:50291,hBias:-.01,relief:1.05,crater:0,city:1,indus:1,roads:1,size:'standard',hazard:'heat'},
-    ruins_reach:{nm:'Ruins Reach',ds:'Legacy foundry grid',seed:88301,hBias:.03,relief:1.2,crater:0,city:2,indus:3,roads:1,size:'standard',hazard:'pulse'},
+    crater:{nm:'Relic Basin',ds:'Legacy impact metropolis',seed:90210,hBias:.02,relief:1.15,crater:1,outpost:2,relic:2,towns:1,city:3,indus:2,roads:1,size:'standard',hazard:'pulse'},
+    oasis:{nm:'Spire Oasis',ds:'Legacy solar-well valley',seed:50291,hBias:-.01,relief:1.05,crater:0,outpost:1,relic:1,towns:1,city:1,indus:1,roads:1,size:'standard',hazard:'heat'},
+    ruins_reach:{nm:'Ruins Reach',ds:'Legacy foundry grid',seed:88301,hBias:.03,relief:1.2,crater:0,outpost:3,relic:1,city:2,indus:3,roads:1,size:'standard',hazard:'pulse'},
     frost_reach:{nm:'Frost Reach',ds:'Legacy frozen canyon',seed:61094,hBias:.04,relief:1.3,crater:0,city:1,indus:1,roads:1,size:'standard',hazard:'whiteout'},
     ash_ridge:{nm:'Ash Ridge',ds:'Legacy slag caldera',seed:39102,hBias:.06,relief:1.35,crater:1,city:2,indus:2,roads:1,size:'standard',hazard:'eruption'}
   };
@@ -2631,6 +2631,13 @@ function buildTerrain(themeKey){
     const hx=clamp(Math.round((x+0.5)/PGS*TS),0,TS-1), hy=clamp(Math.round((y+0.5)/PGS*TS),0,TS-1);
     PASS[y*PGS+x]=heightF[hy*TS+hx]>=WATER_H-0.004?1:0;
   }
+  /* The authored world kit ships seven meshes, is registered in both manifests
+     and already has an unconditional flush in render3d, but its only initialiser
+     lives below the WORLDSITES_ENABLED early-out in worldsites.js -- so the
+     geometry was decoded-able and never decoded. Site templates draw from it, so
+     build it here. WORLDSITES_ENABLED itself stays off: that flag gates the
+     procedural site scatter that was reverted, which this does not revive. */
+  if(typeof initWorldKit==='function') initWorldKit();
   planDistricts();
   if(typeof gradeDistrictTerrain==='function')gradeDistrictTerrain();
   // ---- pass 2: shared region shader (also used for volumetric crater re-lighting) ----

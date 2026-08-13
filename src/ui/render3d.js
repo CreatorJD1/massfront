@@ -831,7 +831,14 @@ function render(dtDraw){
     /* Each ruin mesh is authored at a reference footprint; the instance scale
        maps the planned plot size onto it. Tower blocks are the tall ones, so
        they get the tightest divisor or they overwhelm the skyline. */
-    const sc=Math.max(R.w,R.h)/ (R.kind===2?104 : R.kind===0?46 : R.kind===3?52 : R.kind===4?46 : R.kind===5?44 : 44);
+    /* Divisors map a plot footprint onto each mesh's own authored reference
+       size. The derelict meshes are authored at tens of units; the WORLD_KIT
+       meshes are authored NORMALISED (height 0.63-1.49), so their divisor is 1
+       and the plot footprint IS the scale. Dividing them by 34 like a ruin
+       rendered 1-unit-tall buildings -- present in every count, invisible on
+       screen. */
+    const sc=Math.max(R.w,R.h)/ (R.kind===2?104 : R.kind===0?46 : R.kind===3?52 : R.kind===4?46 : R.kind===5?44
+             : (R.kind===6||R.kind===7)?1 : 44);
     /* Kind 4 is the intact civic block. Falling back to the low block if its
        mesh is missing is not paranoia: models-civic.js has to be registered in
        BOTH boot.js and assets/data/manifest.json, and a file that is listed in
@@ -841,10 +848,18 @@ function render(dtDraw){
        foreign worlds, otherwise the two skyscrapers alternated by position
        hash so twin districts don't clone. */
     const alien5=curTheme==='vespera'||curTheme==='ashland';
-    const mesh=R.kind===2?FX.cityH : R.kind===3?FX.cityK : R.kind===0?FX.cityT
+    /* Kinds 6/7 are authored template plots and draw from WORLD_KIT, keyed by
+       the role the template named. Same null-guard discipline as kind 4 above:
+       worldkit.js is registered in both manifests, but a kit whose initialiser
+       never ran leaves WORLD_KIT empty, and an unguarded lookup here is a null
+       dereference in the hot render loop. Falling back to the derelict block
+       shows a building rather than nothing. */
+    const kitM=(R.kind===6||R.kind===7)&&typeof WORLD_KIT!=='undefined'&&R.role
+      ? (WORLD_KIT[R.role]&&WORLD_KIT[R.role].mesh) : null;
+    const mesh=kitM || (R.kind===2?FX.cityH : R.kind===3?FX.cityK : R.kind===0?FX.cityT
              : R.kind===4?(FX.cityC||FX.cityD)
              : R.kind===5?((alien5?FX.skyA:(((R.x*7+R.y*13)|0)%2?FX.sky2:FX.sky1))||FX.cityT)
-             : FX.cityD;
+             : FX.cityD);
     /* V2 and legacy are deliberately separate instance streams. Until all
        three maps have decoded (or on LOW quality), the old mesh draws instead
        of leaving an empty lot. Skyline anchors have no V2 stream — they are

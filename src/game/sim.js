@@ -2138,6 +2138,14 @@ function applyCrate(k,x,y){
 const cityZones=[];      // {x,y,r,ind,name,total,razed}
 const cityPlan=[];       // block layout, seeded — survives across resets
 const cityStreets=[];    // [x0,y0,x1,y1,w,zone] — authored first so plots can face a real street
+/* Props an authored template asked for. planDistricts runs before the height
+   field exists and before tanks/crates are built, so the stamp records intent
+   and setupRelics() spawns it once the land search is safe to call. */
+const sitePropQueue=[];  // {kind:'tank'|'crate', x, y, s}
+/* Why authored sites failed to place. A silent 0-of-2 is indistinguishable
+   from the feature being off, and this placement has six independent ways to
+   reject a candidate. */
+const SITE_REJ={arena:0,spawn:0,water:0,res:0,near:0,plots:0,ok:0};
 /* City occupancy is shared by terrain dressing, prop placement and render
    LOD.  Previously each subsystem rediscovered a city from a loose radius (or
    did not know about it at all), which is how rocks appeared through floors
@@ -2216,6 +2224,11 @@ function obbOverlap(b1, b2, margin){
 
 function planDistricts(){
   cityPlan.length=0; cityStreets.length=0; cityZones.length=0;
+  sitePropQueue.length=0;
+  /* Per-generation, not cumulative: planDistricts runs more than once per
+     session (menu backdrop, then the match), and totals that span both describe
+     no world in particular. */
+  for(const k in SITE_REJ) SITE_REJ[k]=0;
   const def=MAPDEFS[curMap]||MAPDEFS.vanguard;
   srand((def.seed^0x7ACE1)|1);
   const spawnA=[MAP*SP_LO,MAP*SP_HI], spawnB=[MAP*SP_HI,MAP*SP_LO];
@@ -2305,6 +2318,49 @@ function planDistricts(){
       cityPlan.push(candidate);cityZones[zone].total++;return true;
     }
     return false;
+  };
+  /* Stamp an authored layout (assets/data/sitetemplates.js) at a world point.
+     Deliberately a sibling of makeDistrict rather than a global: it writes
+     through the same plot() closure, so a template gets the identical street
+     frontage search, dry-footprint test and battlefield clamp that procedural
+     plots get. A template that cannot legally place its required plots is
+     rolled back whole — a half-built outpost reads as a bug, not as ruins. */
+  const stampSite=(T,cx2,cy2)=>{
+    if(!T) return false;
+    const zi=cityZones.length;
+    const s0=cityStreets.length, p0=cityPlan.length;
+    const ga=T.rotation==='random'?rr(0,TAU):(+T.rotation||0);
+    const ca=Math.cos(ga), sa=Math.sin(ga);
+    const L2W=(lx,ly)=>[cx2+lx*ca-ly*sa, cy2+lx*sa+ly*ca];
+    cityZones.push({x:cx2,y:cy2,r:T.radius||200,ind:T.ind?1:0,total:0,razed:0,claimed:0,
+                    name:T.name||'SITE',tpl:1,grade:T.grade||'plane'});
+    for(const S of (T.streets||[])){
+      const a2=L2W(S[0],S[1]), b2=L2W(S[2],S[3]);
+      cityStreets.push([a2[0],a2[1],b2[0],b2[1],S[4],zi]);
+    }
+    let ok=true;
+    for(const P of (T.plots||[])){
+      if(P.optional!==undefined && rnd()>P.optional) continue;
+      const W=L2W(P.x,P.y);
+      const placed=plot(W[0],W[1],P.w,P.h,(P.a||0)+ga,P.kind,zi);
+      /* plot() appends on success, so the role rides on the entry it just made.
+         The sim treats 6/7 generically; only the render pass reads role. */
+      if(placed&&P.role&&cityPlan.length) cityPlan[cityPlan.length-1].role=P.role;
+      if(!placed&&P.required){ ok=false; break; }
+    }
+    if(!ok){
+      cityStreets.length=s0; cityPlan.length=p0; cityZones.length=zi;
+      return false;
+    }
+    /* Props are recorded, not spawned. This runs inside planDistricts, which is
+       well before setupRelics() builds tanks and crates and before the height
+       field the land search needs exists — spawning here would either throw or
+       drop props into water. setupRelics drains the queue once it is safe. */
+    for(const R of (T.props||[])){
+      const W=L2W(R.x,R.y);
+      sitePropQueue.push({kind:R.kind,x:W[0],y:W[1],s:R.s||0});
+    }
+    return true;
   };
   const makeDistrict=(cx2,cy2,ind)=>{
     const zi=cityZones.length;
@@ -2412,8 +2468,34 @@ function planDistricts(){
     }
     return false;
   };
+  /* Authored sites use the same relaxing spacing search, but carry their own
+     clearance from the template — an outpost is a quarter the size of a
+     district and would never place at the district's 310-unit radius. */
+  const tryStamp=(cls,minD)=>{
+    if(typeof siteTemplateFor!=='function') return false;
+    for(let a=0;a<70;a++){
+      const T=siteTemplateFor(cls,rnd);
+      if(!T) return false;
+      const x=rr(MAP*0.18,MAP*0.82), y=rr(MAP*0.18,MAP*0.82);
+      const clear=T.minClearRadius||220;
+      if(typeof battlefieldContains==='function'&&!battlefieldContains(x,y,clear)){SITE_REJ.arena++;continue;}
+      if(!farFromSpawns(x,y,T.minSpawnDist||800)){SITE_REJ.spawn++;continue;}
+      if(!isWalkable(x,y)){SITE_REJ.water++;continue;}
+      if(!clearOfResourceSites(x,y,clear)){SITE_REJ.res++;continue;}
+      let clash=false;
+      for(const p of placed) if(dist2(x,y,p[0],p[1])<minD*minD){ clash=true; break; }
+      if(clash){SITE_REJ.near++;continue;}
+      if(!stampSite(T,x,y)){SITE_REJ.plots++;continue;}   // required plot rejected
+      placed.push([x,y]); SITE_REJ.ok++; return true;
+    }
+    return false;
+  };
   for(let c2=0;c2<(def.city||0);c2++) tryPlace(0,660)||tryPlace(0,470)||tryPlace(0,360);
   for(let c2=0;c2<(def.indus||0);c2++) tryPlace(1,660)||tryPlace(1,470)||tryPlace(1,360);
+  /* Absent keys mean zero, so every existing MAPDEFS entry is unchanged. */
+  for(let c2=0;c2<(def.outpost||0);c2++) tryStamp('outpost',520)||tryStamp('outpost',380);
+  for(let c2=0;c2<(def.relic||0);c2++)   tryStamp('relic',560)||tryStamp('relic',400);
+  for(let c2=0;c2<(def.towns||0);c2++)   tryStamp('city',700)||tryStamp('city',520);
   rebuildCityGroundMask();
   if(placed.length) window.__cityAt=placed[0];
 }
@@ -2496,10 +2578,12 @@ function setupRelics(){
     /* A 330-unit skyscraper cannot share a low block's health bar. It is the
        toughest thing on the map and it comes down in two stages, so half of
        this pool buys the shear and half buys the ground. */
-    const hp=k===5?4200 : k===2?1500 : k===0?1150 : k===3?520 : 780;
-    relics.push({x:P.x,y:P.y,w:P.w,h:P.h,s,a:P.a,kind:k,zone:P.zone,
+    /* Kit structures are built, not derelict: tougher than a tank farm, well
+   short of a tower block. Towers are small and come down fast. */
+    const hp=k===5?4200 : k===2?1500 : k===0?1150 : k===6?640 : k===3?520 : k===7?380 : 780;
+    relics.push({x:P.x,y:P.y,w:P.w,h:P.h,s,a:P.a,kind:k,zone:P.zone,role:P.role,
       hp,hpm:hp,alive:true,
-      salv:Math.round(s*(k===5?4.2 : k===2?2.4 : k===0?1.7 : k===3?1.2 : 1.25)),
+      salv:Math.round(s*(k===5?4.2 : k===2?2.4 : k===0?1.7 : k===6?1.5 : k===3?1.2 : k===7?0.9 : 1.25)),
       salvE:Math.round(s*(k===5?3.0 : k===2?2.0 : k===3?2.6 : 0.5)),
       lean:0, burn:0, seed:(P.x*7+P.y*13)|0});
   }
@@ -2518,6 +2602,16 @@ function setupRelics(){
     if(typeof battlefieldClampPoint==='function')L=battlefieldClampPoint(L[0],L[1],70);
     tanks.push({x:L[0],y:L[1],s:rr(30,42),hp:260,alive:true,fuse:0});
   }
+  /* Authored template props, now that findLand and the prop arrays are live.
+     Same shapes as the procedural spawns above -- a tank missing hp/alive/fuse
+     is not a tank, it is a null dereference the first time one is shot. */
+  for(const R of sitePropQueue){
+    let L=findLand(clamp(R.x,80,MAP-80), clamp(R.y,80,MAP-80));
+    if(typeof battlefieldClampPoint==='function')L=battlefieldClampPoint(L[0],L[1],70);
+    if(R.kind==='tank') tanks.push({x:L[0],y:L[1],s:R.s||rr(30,42),hp:260,alive:true,fuse:0});
+    else if(R.kind==='crate'){ spawnCrate(L[0],L[1]); if(crates.length) crates[crates.length-1].alt=0; }
+  }
+  sitePropQueue.length=0;
   const spawnA=[MAP*SP_LO,MAP*SP_HI], spawnB=[MAP*SP_HI,MAP*SP_LO];
   const tn=10+(rnd()*8|0);
   for(let k=0;k<tn;k++){

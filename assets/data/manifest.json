@@ -16,6 +16,7 @@
     "src/engine/models-world-loader.js",
     "src/engine/models.js",
     "assets/data/worldkit.js",
+    "assets/data/sitetemplates.js",
     "src/engine/worldsites.js",
     "assets/data/meshes.js",
     "src/engine/models-legion.js",
