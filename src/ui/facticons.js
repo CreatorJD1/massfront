@@ -59,10 +59,11 @@ const MF_FAC_ROLES={
     scout:'scout',       caster:'support',    hero:'hero',
     elite:'elite',       aoe:'missile',       naval:'vehicle',
     transport:'drone',   stealth:'stealth',
-    economy:'economy',   factory:'supply_depot', tower:'defense_tower',
-    wall:'wall',         techlab:'tech_lab',  relay:'radar',
-    super:'orbital',     hq:'command',        shield:'defense_tower',
-    repair:'repair',     airbase:'air_unit',  supply:'supply_depot'
+    economy:'economy',   power:'radar',       factory:'supply_depot',
+    tower:'defense_tower', wall:'wall',       techlab:'tech_lab',
+    relay:'command',     super:'orbital',     hq:'command',
+    shield:'defense_tower', repair:'repair',  airbase:'air_unit',
+    supply:'supply_depot'
   },
   legion:{
     infantry:'infantry', vehicle:'main_battle_tank', antitank:'heavy',
@@ -71,7 +72,8 @@ const MF_FAC_ROLES={
     scout:'recon_vehicle', caster:'',         hero:'commander',
     elite:'mech',        aoe:'assault',       naval:'heavy',
     transport:'transport', stealth:'sniper',
-    economy:'power_plant', factory:'factory', tower:'watchtower',
+    economy:'power_plant', power:'power_plant', factory:'factory',
+    tower:'watchtower',
     wall:'',             techlab:'tech_lab',  relay:'ion_cannon',
     super:'orbital_strike', hq:'headquarters', shield:'watchtower',
     repair:'engineer',   airbase:'gunship',   supply:'barracks'
@@ -83,7 +85,8 @@ const MF_FAC_ROLES={
     scout:'scout',       caster:'hacker',     hero:'boss',
     elite:'elite',       aoe:'emp',           naval:'light_vehicle',
     transport:'striker', stealth:'stealth',
-    economy:'economy',   factory:'market',    tower:'shield',
+    economy:'economy',   power:'economy',     factory:'market',
+    tower:'shield',
     wall:'wall',         techlab:'tech_lab',  relay:'data_relay',
     super:'satellite',   hq:'black_market',   shield:'shield',
     repair:'repair_drone', airbase:'air_unit', supply:'supply_cache'
@@ -95,7 +98,8 @@ const MF_FAC_ROLES={
     scout:'burrower',    caster:'psionic',    hero:'brood_lord',
     elite:'behemoth',    aoe:'acid_spore',    naval:'brute',
     transport:'biomass', stealth:'burrower',
-    economy:'biomass',   factory:'spawn_pit', tower:'tentacle',
+    economy:'biomass',   power:'creep_tumor', factory:'spawn_pit',
+    tower:'tentacle',
     wall:'spike_wall',   techlab:'evolution_chamber', relay:'creep_tumor',
     super:'spore_cloud', hq:'overmind',       shield:'spore_cloud',
     repair:'heal_nest',  airbase:'nest',      supply:'nest'
@@ -106,9 +110,13 @@ const MF_FAC_ROLES={
    not capture. Keyed by TYPES index — the same keying the existing curated-art
    map in unitIconEl() uses. */
 const MF_FAC_UROLE={
-  4:'hero', 12:'infantry', 13:'elite', 19:'engineer', 24:'medic',
+  4:'hero', 9:'aoe', 12:'infantry', 13:'elite', 19:'engineer', 24:'medic',
   25:'scout', 30:'hero', 31:'caster', 32:'economy'
 };
+/* 9 is Pyro. It is cat 'inf', so by category it drew the same glyph as Striker
+   — and those two sit side by side on the first tab of the production menu,
+   which is the most-looked-at grid in the game. A flame trooper is an area
+   weapon, so it takes the area role and reads as a different unit. */
 const MF_FAC_UCAT={
   inf:'infantry', veh:'vehicle', at:'antitank', aa:'antiair', air:'air',
   art:'artillery', sup:'support', hero:'hero', exp:'elite', aoe:'aoe',
@@ -125,7 +133,10 @@ const MF_FAC_UCAT={
    things which fight differently look different, not that every key is unique.
    Two artillery emplacements sharing an artillery glyph is correct. */
 const MF_FAC_BROLE={
-  mex:'economy', pgen:'economy', geo:'economy', fab:'economy', silo:'supply',
+  /* Mass, power and conversion are three different jobs and Nova has a
+     distinct glyph for each; drawing one 'economy' icon four times made the
+     ECONOMY tab unreadable at a glance. */
+  mex:'economy', fab:'repair', pgen:'power', geo:'power', silo:'supply',
   fac:'factory', tgate:'factory', airfield:'airbase', hq:'hq',
   harbor:'naval', seafort:'naval',
   techlab:'techlab', uplink:'relay', sgen:'shield', nova:'super',
