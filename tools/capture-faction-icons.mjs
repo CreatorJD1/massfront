@@ -57,10 +57,10 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(22000);
 
-/* Did the sheets actually decode? Reported rather than assumed — an empty
-   MF_FAC_URL means every icon below silently came from the old paths. */
+/* Did the baked sheets actually decode? Reported rather than assumed — an empty
+   MF_BM_URL means every icon below silently came from the pre-existing paths. */
 const sheets = await page.evaluate(() => Object.keys(
-  (typeof MF_FAC_URL !== 'undefined' && MF_FAC_URL) || {}));
+  (typeof MF_BM_URL !== 'undefined' && MF_BM_URL) || {}));
 console.log('sheets decoded:', sheets.join(', ') || '(NONE — icons below are the old art)');
 
 const stats = [];

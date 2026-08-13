@@ -166,13 +166,13 @@ for(const G of GROUPS){
 fs.writeFileSync(path.join(OUT,'icon-index.json'),JSON.stringify(index,null,1)+'\n');
 console.log('\nwrote '+path.join(OUT,'icon-index.json'));
 
-/* The runtime maps a role to a CELL NUMBER, and it gets that number by looking
-   the label up in its own copy of this order (src/ui/facticons.js). Two copies
-   of one ordering is a silent-wrong-glyph bug waiting to happen — reorder the
-   pack and every icon shifts by one with nothing failing. So the copies are
-   compared here, and a mismatch stops the build. */
+/* These sheets are no longer read by the build menu — that is now baked from
+   the models by tools/bake-buildmenu-icons.mjs. They remain the source for the
+   command sheet and for the strategic-tier art, and if a runtime module ever
+   indexes them by cell again this guard catches the two orderings drifting
+   apart, which would silently shift every icon by one. */
 const RT=path.join(__dirname,'..','src','ui','facticons.js');
-if(fs.existsSync(RT)){
+if(fs.existsSync(RT)&&/MF_FAC_LABELS/.test(fs.readFileSync(RT,'utf8'))){
   const KIT={nova_federation:'nova',red_ascendancy:'legion',
              syndicate_coalition:'syndicate',horde:'horde'};
   const src=fs.readFileSync(RT,'utf8');

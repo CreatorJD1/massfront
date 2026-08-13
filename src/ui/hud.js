@@ -2761,7 +2761,13 @@ function unitIconEl(tIdx,size,kit){
   }else{
     const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';w.appendChild(wait);
   }
-  w.appendChild(live);mfIntelThumbRequest(live,w,'unit',tIdx,kit);
+  /* A baked icon IS a render of this model, so asking the live thumbnail path
+     for one would spend a GPU pass reproducing the image already on screen and
+     then crossfade it onto itself. Skip it; the request still runs for anything
+     falling back to a role glyph, where the live render is a real upgrade. */
+  const baked=facIc&&facIc.classList.contains('bmIcon');
+  w.appendChild(live);
+  if(!baked) mfIntelThumbRequest(live,w,'unit',tIdx,kit);
   return w;
 }
 function bldIconEl(key,size,kit){
@@ -2795,7 +2801,9 @@ function bldIconEl(key,size,kit){
   }else{
     const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';d.appendChild(wait);
   }
-  d.appendChild(live);mfIntelThumbRequest(live,d,'building',key,kit);
+  d.appendChild(live);
+  if(!(facIc&&facIc.classList.contains('bmIcon')))   // see unitIconEl
+    mfIntelThumbRequest(live,d,'building',key,kit);
   return d;
 }
 /* The open tab persists across openings — a player who is in the middle of

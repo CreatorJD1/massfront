@@ -1,7 +1,9 @@
 /* Minimal PNG decode/encode (RGBA8, no filters on write). Node zlib only. */
 const fs=require('fs'),zlib=require('zlib');
 function decode(file){
-  const buf=fs.readFileSync(file);
+  /* Accepts a path or an already-loaded PNG. Callers that decode a canvas
+     toDataURL have the bytes in hand and no file to point at. */
+  const buf=Buffer.isBuffer(file)?file:fs.readFileSync(file);
   let p=8,w=0,h=0,ct=0,idat=[],plte=null,trns=null;
   while(p<buf.length){
     const len=buf.readUInt32BE(p),type=buf.toString('ascii',p+4,p+8);
