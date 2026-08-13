@@ -597,6 +597,59 @@ class MeshBuilder{
 }
 const MB=()=>new MeshBuilder();
 
+/* ---- ASSET SKIN --------------------------------------------------------
+   The last link: give one InstMesh its own baked triplet. Loads the three maps
+   artv2 publishes, and only once ALL THREE decode does it unwrap a copy of the
+   geometry, re-upload it and attach the maps. Order matters -- unwrapping first
+   would leave the mesh reading a 0..1 corner of the shared atlas for however
+   long the network takes, and a partial set would sample an incomplete texture
+   unit, which drops the whole draw call silently (see docs/UNIT_PER_ASSET_UV_UNLOCK.md).
+
+   Nothing calls this by default. mfAssetSkinEnabled() gates the wiring. */
+const MF_ASSET_TEX={};
+function mfAssetSkinEnabled(){
+  try{ return /[?&]assetskin=1/.test(location.search); }catch(e){ return false; }
+}
+function mfAssetTex(gl,url){
+  if(MF_ASSET_TEX[url]) return MF_ASSET_TEX[url];
+  const t=gl.createTexture();
+  const rec={tex:t,ready:false};
+  const img=new Image();
+  img.onload=()=>{
+    gl.bindTexture(gl.TEXTURE_2D,t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    rec.ready=true; if(rec.onready) rec.onready();
+  };
+  img.onerror=()=>{ rec.failed=true; if(rec.onready) rec.onready(); };
+  img.src=url;
+  MF_ASSET_TEX[url]=rec;
+  return rec;
+}
+function mfAssetSkin(gl,mesh,name){
+  if(!gl||!mesh||!name) return false;
+  const base='assets/textures/materials/'+name;
+  const urls=[base+'-baseao.png',base+'-nre.png',base+'-masks.png'].map(u=>
+    (typeof mf2AssetURL==='function')?mf2AssetURL(u):('./'+u));
+  const recs=urls.map(u=>mfAssetTex(gl,u));
+  const tryFinish=()=>{
+    if(recs.some(r=>!r.ready&&!r.failed)) return;         // still loading
+    if(recs.some(r=>r.failed)) return;                     // incomplete: stay on the atlas
+    const g=mesh.geo;
+    const copy={v:new Float32Array(g.v),i:g.i,count:g.count,skel:g.skel,bones:g.bones};
+    mfUnwrapGeoUV(copy);
+    mesh.reuploadGeo(copy);
+    mesh.assetMaps={base:recs[0].tex,nre:recs[1].tex,mask:recs[2].tex};
+  };
+  for(const r of recs){ if(r.ready||r.failed) continue; r.onready=tryFinish; }
+  tryFinish();
+  return true;
+}
+
 /* The same grid unwrap applied to an ALREADY BUILT geometry, treating each
    index triple as a face. The builder method works on face spans, so it keeps
    quads whole and wastes fewer cells; this one exists so the injectivity
@@ -655,6 +708,11 @@ class InstMesh{
     this.vao=gl.createVertexArray();
     gl.bindVertexArray(this.vao);
     const vb=gl.createBuffer();
+    /* Kept, with the source geometry, so a mesh can be re-skinned after its
+       baked maps arrive. The unwrap must NOT be applied before then: 0..1 chart
+       coordinates read as a tiny corner of the shared atlas, so an unwrapped
+       mesh drawn on the atlas path is visibly wrong. Load first, then swap. */
+    this.vb=vb; this.geo=geo;
     gl.bindBuffer(gl.ARRAY_BUFFER,vb);
     gl.bufferData(gl.ARRAY_BUFFER,geo.v,gl.STATIC_DRAW);
     gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0,3,gl.FLOAT,false,VSTRIDE,0);   // pos
@@ -750,6 +808,16 @@ class InstMesh{
        map packs without splitting the main battle streams. */
     d[o+11]=clamp(state||0,0,5.999);
     this.n++;
+  }
+  /* Replace the vertex block in place. Layout, index buffer and instance
+     attributes are untouched -- only lanes 9-10 differ. */
+  reuploadGeo(geo){
+    const gl=this.gl;
+    gl.bindVertexArray(this.vao);
+    gl.bindBuffer(gl.ARRAY_BUFFER,this.vb);
+    gl.bufferData(gl.ARRAY_BUFFER,geo.v,gl.STATIC_DRAW);
+    gl.bindVertexArray(null);
+    this.geo=geo;
   }
   flush(gl){
     if(!this.n) return;

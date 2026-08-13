@@ -2169,6 +2169,19 @@ function mergeFactionUnitKits(){
   ];
   return n;
 }
+/* The four kits keep their bespoke packs in their own tables; this is the only
+   place that needs to read across all four, so it asks rather than importing a
+   registry that does not exist. Returns the published map basename or null. */
+function mfPackMaps(kit,slot){
+  try{
+    const T=kit==='nova'?(typeof TFC_NOVA_BESPOKE_PACKS!=='undefined'&&TFC_NOVA_BESPOKE_PACKS)
+      :kit==='legion'?(typeof DOM_LEGION_BESPOKE_PACKS!=='undefined'&&DOM_LEGION_BESPOKE_PACKS)
+      :kit==='horde'?(typeof BRD_BESPOKE_PACKS!=='undefined'&&BRD_BESPOKE_PACKS)
+      :(typeof COA_SYN_BESPOKE_PACKS!=='undefined'&&COA_SYN_BESPOKE_PACKS);
+    const p=T&&T[slot];
+    return (p&&p.maps)||null;
+  }catch(e){ return null; }
+}
 function initFactionKits(){
   mergeFactionUnitKits();
   for(const k in FAC_KIT){
@@ -2180,6 +2193,14 @@ function initFactionKits(){
         const g=fn();
         cache[fn.name]={hull:new InstMesh(gl,g.hull,900), tur:g.tur?new InstMesh(gl,g.tur,900):null,
                         s:g.s||1, turH:g.turH||0};
+        /* Per-asset baked maps, when this slot declares a triplet AND the flag
+           is on. Async and self-cancelling: if any of the three fails to decode
+           the mesh simply stays on the shared atlas, which is why this can be
+           attempted for any pack without checking what exists on disk. */
+        if(typeof mfAssetSkinEnabled==='function'&&mfAssetSkinEnabled()){
+          const maps=(typeof mfPackMaps==='function')?mfPackMaps(k,ty):null;
+          if(maps&&typeof mfAssetSkin==='function') mfAssetSkin(gl,cache[fn.name].hull,maps);
+        }
       }
       FAC_MESH[k][ty]=cache[fn.name];
     }
