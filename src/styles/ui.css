@@ -440,6 +440,53 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
   position:relative;overflow:hidden;text-transform:uppercase}
 .cbtn::before{content:'';position:absolute;inset:0;background:var(--gloss);pointer-events:none}
 .cbtn .em{font-size:20px;line-height:1}
+/* ---- command icon sheet -------------------------------------------------
+   Buttons carry both an emoji and a data-icon. The emoji is the shipped
+   fallback and stays visible until assets/textures/ui/cmdicons.png actually
+   decodes, at which point cmdIconsBind() puts .cmdIcons on <html> and these
+   rules take over. A missing or broken sheet therefore costs nothing — no
+   blank buttons, no 404-driven layout change — which is the same contract the
+   tactical icon atlas uses.
+   The sheet is an 8x8 grid of 128px cells; background-size 800% and a
+   position of (col*100/7)% (row*100/7)% selects one cell. */
+.em[data-icon]{display:inline-block;width:24px;height:24px;background-repeat:no-repeat}
+.camBtn .em[data-icon]{width:20px;height:20px}
+html.cmdIcons .em[data-icon]{
+  color:transparent;font-size:0;
+  background-image:var(--cmdSheet);background-size:800% 800%;
+}
+html.cmdIcons .em[data-icon="move"]      {background-position:0% 0%}
+html.cmdIcons .em[data-icon="attack"]    {background-position:14.2857% 0%}
+html.cmdIcons .em[data-icon="hold"]      {background-position:28.5714% 0%}
+html.cmdIcons .em[data-icon="stop"]      {background-position:42.8571% 0%}
+html.cmdIcons .em[data-icon="patrol"]    {background-position:57.1428% 0%}
+html.cmdIcons .em[data-icon="guard"]     {background-position:71.4285% 0%}
+html.cmdIcons .em[data-icon="rally"]     {background-position:85.7142% 0%}
+html.cmdIcons .em[data-icon="group"]     {background-position:100% 0%}
+html.cmdIcons .em[data-icon="selectall"] {background-position:0% 14.2857%}
+html.cmdIcons .em[data-icon="unload"]    {background-position:14.2857% 14.2857%}
+html.cmdIcons .em[data-icon="load"]      {background-position:28.5714% 14.2857%}
+html.cmdIcons .em[data-icon="land"]      {background-position:42.8571% 14.2857%}
+html.cmdIcons .em[data-icon="repair"]    {background-position:57.1428% 14.2857%}
+html.cmdIcons .em[data-icon="resupply"]  {background-position:71.4285% 14.2857%}
+html.cmdIcons .em[data-icon="retreat"]   {background-position:85.7142% 14.2857%}
+html.cmdIcons .em[data-icon="delete"]    {background-position:100% 14.2857%}
+html.cmdIcons .em[data-icon="zoomin"]    {background-position:0% 28.5714%}
+html.cmdIcons .em[data-icon="zoomout"]   {background-position:14.2857% 28.5714%}
+html.cmdIcons .em[data-icon="minimap"]   {background-position:28.5714% 28.5714%}
+html.cmdIcons .em[data-icon="ping"]      {background-position:42.8571% 28.5714%}
+html.cmdIcons .em[data-icon="waypoint"]  {background-position:57.1428% 28.5714%}
+html.cmdIcons .em[data-icon="resource"]  {background-position:71.4285% 28.5714%}
+html.cmdIcons .em[data-icon="energy"]    {background-position:85.7142% 28.5714%}
+html.cmdIcons .em[data-icon="crystals"]  {background-position:100% 28.5714%}
+html.cmdIcons .em[data-icon="gas"]       {background-position:0% 42.8571%}
+html.cmdIcons .em[data-icon="population"]{background-position:14.2857% 42.8571%}
+html.cmdIcons .em[data-icon="time"]      {background-position:28.5714% 42.8571%}
+html.cmdIcons .em[data-icon="score"]     {background-position:42.8571% 42.8571%}
+html.cmdIcons .em[data-icon="victory"]   {background-position:57.1428% 42.8571%}
+html.cmdIcons .em[data-icon="defeat"]    {background-position:71.4285% 42.8571%}
+html.cmdIcons .em[data-icon="pause"]     {background-position:85.7142% 42.8571%}
+html.cmdIcons .em[data-icon="options"]   {background-position:100% 42.8571%}
 .cbtn.on{background:linear-gradient(180deg,rgba(46,110,152,.96),rgba(20,52,80,.97)) padding-box,var(--goldB) border-box;
   box-shadow:0 0 12px rgba(255,210,87,.45),inset 0 1px 0 rgba(255,255,255,.2)}
 .cbtn:active{transform:scale(.94)}

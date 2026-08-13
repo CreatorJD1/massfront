@@ -91,18 +91,18 @@ body:not(.mfIntroDone) .overlay{display:none!important}
   </div>
   <div class="btnrow" id="camRow">
     <button class="cbtn camBtn" id="rotL"><span class="em">⟲</span><span>Rot</span></button>
-    <button class="cbtn camBtn" id="zoomIn" aria-label="Zoom camera in"><span class="em">＋</span><span>Near</span></button>
+    <button class="cbtn camBtn" id="zoomIn" aria-label="Zoom camera in"><span class="em" data-icon="zoomin">＋</span><span>Near</span></button>
     <button class="cbtn camBtn" id="tiltBtn"><span class="em">⛰</span><span>Tilt</span></button>
-    <button class="cbtn camBtn" id="zoomOut" aria-label="Zoom camera out"><span class="em">−</span><span>Far</span></button>
+    <button class="cbtn camBtn" id="zoomOut" aria-label="Zoom camera out"><span class="em" data-icon="zoomout">−</span><span>Far</span></button>
     <button class="cbtn camBtn" id="rotR"><span class="em">⟳</span><span>Rot</span></button>
     <button class="cbtn camBtn" id="noticeLogBtn" aria-label="Open notification history"><span class="em">☷</span><span>LOG</span><i id="noticeLogCount"></i></button>
   </div>
   <div class="btnrow" id="tacRow" style="display:none">
-    <button class="cbtn" id="patrolBtn"><span class="em">⟳</span><span>Patrol</span></button>
-    <button class="cbtn" id="holdBtn"><span class="em">⛊</span><span>Hold</span></button>
-    <button class="cbtn" id="formBtn"><span class="em">⋯</span><span>Spread</span></button>
-    <button class="cbtn" id="moveBtn"><span class="em">⚔</span><span class="lbl">A-MOVE</span></button>
-    <button class="cbtn" id="clearBtn"><span class="em">✕</span><span>Clear</span></button>
+    <button class="cbtn" id="patrolBtn"><span class="em" data-icon="patrol">⟳</span><span>Patrol</span></button>
+    <button class="cbtn" id="holdBtn"><span class="em" data-icon="hold">⛊</span><span>Hold</span></button>
+    <button class="cbtn" id="formBtn"><span class="em" data-icon="group">⋯</span><span>Spread</span></button>
+    <button class="cbtn" id="moveBtn"><span class="em" data-icon="attack">⚔</span><span class="lbl">A-MOVE</span></button>
+    <button class="cbtn" id="clearBtn"><span class="em" data-icon="stop">✕</span><span>Clear</span></button>
   </div>
   <button id="deployBtn">⚓ &nbsp;DEPLOY BASE HERE</button>
   <div class="btnrow" id="grpRow" style="display:none">
@@ -118,7 +118,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
        commander.js and the existing unit-class systems. -->
   <div class="btnrow" id="heroRow" style="display:flex;visibility:hidden;position:absolute;left:-9999px;top:-9999px;pointer-events:none">
     <button class="cbtn abtn" id="abOver"><span class="em">💥</span><span>Blast</span><div class="cdring"></div></button>
-    <button class="cbtn abtn" id="abHeal"><span class="em">🛠</span><span>Repair</span><div class="cdring"></div></button>
+    <button class="cbtn abtn" id="abHeal"><span class="em" data-icon="repair">🛠</span><span>Repair</span><div class="cdring"></div></button>
     <button class="cbtn abtn" id="abRage"><span class="em">⚡</span><span>Surge</span><div class="cdring"></div></button>
     <button class="cbtn abtn" id="abLance"><span class="em">🛰</span><span>Lance</span><div class="cdring"></div></button>
     <button class="cbtn abtn" id="abEmp"><span class="em">⚡</span><span>EMP</span><div class="cdring"></div></button>

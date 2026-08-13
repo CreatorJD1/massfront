@@ -495,3 +495,32 @@ addEventListener('resize',mfFlowQueueLayout);
 addEventListener('orientationchange',mfFlowQueueLayout);
 mfFlowQueueLayout();
 
+
+/* ============================================================================
+   COMMAND ICON SHEET
+   ----------------------------------------------------------------------------
+   HUD buttons ship an emoji AND a data-icon. The emoji is what renders until
+   assets/textures/ui/cmdicons.png actually decodes; only then does .cmdIcons
+   go on <html> and the CSS swap the glyph for a sprite cell. A missing sheet is
+   therefore not an error state and not a blank button — the same contract the
+   tactical icon atlas uses, and the reason this can ship before the art does.
+
+   Sheet contract: 8x8 grid of 128px cells on a 1024 square, white glyph on
+   transparency, cell order per docs/CMD_ICON_ART_SPEC.md.
+   ============================================================================ */
+const CMD_ICON_SHEET='assets/textures/ui/cmdicons.png';
+function cmdIconsBind(){
+  try{
+    const url=(typeof mf2AssetURL==='function')?mf2AssetURL(CMD_ICON_SHEET):('./'+CMD_ICON_SHEET);
+    const img=new Image();
+    img.onload=()=>{
+      /* Hand the resolved URL to CSS rather than repeating it there, so the OTA
+         asset resolver stays the single source of truth for asset paths. */
+      document.documentElement.style.setProperty('--cmdSheet','url("'+url+'")');
+      document.documentElement.classList.add('cmdIcons');
+    };
+    img.onerror=()=>{};          // emoji stand; nothing to report
+    img.src=url;
+  }catch(e){}
+}
+cmdIconsBind();

@@ -26,7 +26,18 @@ const browser = await chromium.launch({ executablePath: CHROME, headless: false,
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, hasTouch: true });
 const errors = [];
 page.on('pageerror', e => errors.push('PAGEERR ' + e.message));
-page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE ' + m.text().slice(0, 200)); });
+/* cmdicons.png is deliberately optional: the HUD ships emoji and only swaps in
+   sprites once the sheet exists, so probing for an absent sheet is expected
+   behaviour, not a fault. Everything else still fails the run. */
+const OPTIONAL = /cmdicons.png/;
+page.on('console', m => {
+  if (m.type() !== 'error') return;
+  /* A failed resource reports its URL in location(), not in text(). */
+  const where = (m.location() && m.location().url) || '';
+  if (OPTIONAL.test(where) || OPTIONAL.test(m.text())) return;
+  errors.push('CONSOLE ' + m.text().slice(0, 200) + (where ? '  <- ' + where.slice(-60) : ''));
+});
+page.on('requestfailed', r => { if (!OPTIONAL.test(r.url())) errors.push('REQFAIL ' + r.url().slice(-60)); });
 
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(13000);
