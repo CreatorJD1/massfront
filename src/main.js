@@ -934,16 +934,32 @@ function frame(ts){
   if(fpsT>=0.6){
     fpsShow=Math.round(fpsN/fpsT); fpsN=0; fpsT=0;
     const total=teamCount[0]+teamCount[1]+teamCount[2];
-    /* HYSTERESIS + EASE. Dozens of effects gate or scale on this value; a bare
+    /* HYSTERESIS. Dozens of effects gate or scale on this value; a bare
        threshold on a noisy fps signal flipped it 0.55<->1.0 twice a second at
        36-44 fps and strobed all of them at once — glows, beams, dust, water
-       sparkle. Drop instantly to protect the frame, rise only with headroom,
-       and ease the visible value so changes arrive as fades, not steps. */
+       sparkle. Drop instantly to protect the frame, rise only with headroom.
+       (This block also used to EASE the visible value "so changes arrive as
+       fades, not steps". That reintroduced the very strobe it sits above — see
+       the note on the assignment below — and has been removed.) */
     const band=fpsShow<28?0.25:fpsShow<42?0.55:1;
     if(band<perfBand) perfBand=band;
     else if(band>perfBand&&fpsShow>(perfBand<0.5?34:48)) perfBand=band;
-    perfScale+=(perfBand-perfScale)*0.45;
-    if(Math.abs(perfBand-perfScale)<0.02) perfScale=perfBand;
+    /* QUANTISED, NOT EASED — this is the fix for the half-second FX strobe.
+
+       About seventy effects gate on perfScale, and their thresholds sit in one
+       tight cluster between 0.30 and 0.56: water sparkle, shadow decals, tread
+       dust, debris, rubble, repair beams, muzzle flashes, and ambient occlusion
+       at 0.50. Easing the value dragged it through EVERY threshold in that
+       cluster on a single band change, so all of those effects switched off and
+       came back over about half a second. Measured on a real GPU: one 1.00 ->
+       0.25 ramp crossed all six sampled gates (tools/verify-perfscale-gates.mjs).
+
+       perfBand above is ALREADY the anti-strobe mechanism — drop instantly,
+       rise only with headroom. Reading it directly gives one deliberate step
+       per genuine performance change. The ease this replaces existed so
+       particle COUNTS would fade rather than step, but a count going from 5 to
+       3 is invisible while a shadow pass vanishing is not. */
+    perfScale=perfBand;
     if(total>7000) perfScale=Math.min(perfScale,0.55);
     if(total>18000) perfScale=Math.min(perfScale,0.3);
     if(META.settings.perf==='low') perfScale=Math.min(perfScale,0.45);
@@ -951,6 +967,14 @@ function frame(ts){
        cannot quietly strip the frame back to the low preset — which is the
        whole reason someone picks it. */
     if(typeof perfFloor!=='undefined'&&perfFloor>0) perfScale=Math.max(perfScale,perfFloor);
+    /* Density is a SETTING, not an observation, so it is applied on the way out
+       of a value recomputed from perfBand each sample — never folded back into
+       an accumulator. It used to compound: `perfScale *= GFX.particles` ran
+       after the ease, so its own output was re-eased and re-multiplied every
+       sample. Measured on a real GPU it settled at 3.63-3.86 on CINEMATIC
+       (x1.5) against an intended ceiling of 1.0 — roughly 4x the particles it
+       was asked for — and at 0.31 on LOW (x0.5) at a locked 60fps, which
+       silently disabled every effect gated above 0.32. */
     if(typeof GFX!=='undefined'&&GFX.particles) perfScale*=GFX.particles;
   }
   if(running&&!paused){
