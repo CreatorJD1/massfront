@@ -1004,7 +1004,11 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     id:'syndicate-rhino-v2', source:'authored', maps:'syndicate-rhino-v2',
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.SYN_HOLO,
-      [MAT.TWR_BORE]:MAT.TWR_BORE
+      /* The Syndicate buys its hulls rather than forging them, so the plating is
+         the one place that reads as bolted-on aftermarket rather than issued.
+         (This slot previously mapped TWR_BORE to itself — a no-op that looked
+         like an authored decision, which is why the contract gate flags them.) */
+      [MAT.PLATE]:MAT.ARMR_RIB
     })
   }),
   2:Object.freeze({
@@ -1023,7 +1027,12 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
   }),
   5:Object.freeze({
     id:'syndicate-drone-v2', source:'authored', maps:'syndicate-drone-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The optic and the two cheek-pod muzzles are the only hardware on a
+         30-mass airframe, and the faction default lit them with the same
+         conduit as the lift rings hanging under the plate. */
+      [MAT.TWR_GLOW]:MAT.WEAPON_GLOW
+    })
   }),
   6:Object.freeze({
     id:'syndicate-lance-v2', source:'authored', maps:'syndicate-lance-v2',
@@ -1049,71 +1058,178 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
   }),
   9:Object.freeze({
     id:'syndicate-incinerator-v2', source:'authored', maps:'syndicate-incinerator-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* HOT lands on MAT.LAMP, which the faction remap never touches, so the
+         plasma core and the projector tip were wearing a cabin light. */
+      [MAT.LAMP]:MAT.PLASMA_JET,
+      [MAT.TRIM]:MAT.SYN_GOLD                                  // containment ring, bells
+    })
   }),
   10:Object.freeze({
     id:'syndicate-beam-v2', source:'authored', maps:'syndicate-beam-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The Vulture is open charge racks with a lance on top, so its live
+         accelerator ring and core read as stored charge rather than as one
+         more lift conduit -- which is what the faction default made them. */
+      [MAT.TWR_GLOW]:MAT.CHARGE_STRIP,
+      [MAT.TRIM]:MAT.SYN_HOLO
+    })
   }),
   11:Object.freeze({
     id:'syndicate-shield-v2', source:'authored', maps:'syndicate-shield-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Dmg 0. TWR_GLOW on this hull is exactly one thing -- the suspended
+         projector core -- and it must not read as a muzzle. */
+      [MAT.TWR_GLOW]:MAT.CHARGE_STRIP,
+      [MAT.TRIM]:MAT.SYN_NANO
+    })
   }),
   14:Object.freeze({
     id:'syndicate-skimmer-v2', source:'authored', maps:'syndicate-skimmer-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Sensor-island cap, deck badge and turret cap. On a hull this low they
+         are the whole of what a near-overhead camera sees, and they were the
+         one lane the faction remap left as generic grey trim. */
+      [MAT.TRIM]:MAT.SYN_GOLD
+    })
   }),
   15:Object.freeze({
     id:'syndicate-capital-v2', source:'authored', maps:'syndicate-capital-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The live station on the spinal rail and the amidships core carry most
+         of this, and the four coil-gun muzzle rings ride along with them --
+         TWR_GLOW is one lane, so a capital hull cannot light its rail without
+         lighting its guns. That is the right trade here: this hull exists FOR
+         the accelerator, so the thing that charges sets the tone. */
+      [MAT.TWR_GLOW]:MAT.CHARGE_STRIP,
+      [MAT.TRIM]:MAT.SYN_NANO
+    })
   }),
   16:Object.freeze({
     id:'syndicate-siege-v2', source:'authored', maps:'syndicate-siege-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Deployed outrigger feet and the turret race. These are the only
+         ground-bearing surfaces on a hover carriage, and painting them the
+         same holo as the skirt is what made the Bombard look like it was
+         still floating on the one frame where it plants itself. */
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      [MAT.TRIM]:MAT.SYN_NANO
+    })
   }),
   17:Object.freeze({
     id:'syndicate-gunship-v2', source:'authored', maps:'syndicate-gunship-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* At 52 range the chin bank IS the unit. TWR_COAT on this airframe is
+         only the vanes, cheeks, flank belts and blast shroud -- no skirt --
+         so ribbing it armours the Raptor without touching anything else. */
+      [MAT.TWR_GLOW]:MAT.WEAPON_GLOW,
+      [MAT.TWR_COAT]:MAT.ARMR_RIB
+    })
   }),
   18:Object.freeze({
     id:'syndicate-flamer-v2', source:'authored', maps:'syndicate-flamer-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The wide projector mouth. HOT resolves to MAT.LAMP and the faction
+         remap has no entry for it, so the Scorcher's one hot surface was a
+         warm cabin light sitting inside a plasma throat. */
+      [MAT.LAMP]:MAT.PLASMA_JET,
+      [MAT.TRIM]:MAT.SYN_NANO
+    })
   }),
   19:Object.freeze({
     id:'syndicate-builder-v2', source:'authored', maps:'syndicate-builder-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Unarmed, and already the highest conduit share in the kit from the
+         nozzle heads and feedstock cells. One override: the badge takes the
+         faction's field-hardware gold so the rig reads as plant, not gun. */
+      [MAT.TRIM]:MAT.SYN_GOLD
+    })
   }),
   20:Object.freeze({
     id:'syndicate-caster-v2', source:'authored', maps:'syndicate-caster-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Five splayed mouths on one cradle -- the Reaper's entire read. */
+      [MAT.TWR_GLOW]:MAT.WEAPON_GLOW,
+      [MAT.TRIM]:MAT.SYN_HOLO
+    })
   }),
   21:Object.freeze({
     id:'syndicate-conduit-v2', source:'authored', maps:'syndicate-conduit-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Shares mdlCoaCaster with slot 20 and deliberately not its contract:
+         the Cinder burns ground at 96 range, so the same five mouths run hot
+         instead of pulsing. A shared builder is exactly what this per-type
+         remap is for. */
+      [MAT.TWR_GLOW]:MAT.PLASMA_JET,
+      [MAT.TRIM]:MAT.SYN_NANO
+    })
   }),
   22:Object.freeze({
     id:'syndicate-heavybeam-v2', source:'authored', maps:'syndicate-heavybeam-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Same skiff as slot 10. The Vulture reads as stored charge; the Lancer
+         reaches 230 and tracks aircraft, so its lance mouth reads as the
+         emitter doing the work. */
+      [MAT.TWR_GLOW]:MAT.WEAPON_GLOW,
+      [MAT.TRIM]:MAT.SYN_GOLD
+    })
   }),
   23:Object.freeze({
     id:'syndicate-sonic-v2', source:'authored', maps:'syndicate-sonic-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Lower rim, recessed deck, horn bases and plenum. The Resonator is the
+         only round hull in the kit and its eight radial ribs only read as ribs
+         against a slatted housing; flat holo swallowed them. */
+      [MAT.TWR_COAT]:MAT.METAL_LOUVRE,
+      [MAT.TRIM]:MAT.SYN_HOLO
+    })
   }),
   24:Object.freeze({
     id:'syndicate-service-v2', source:'authored', maps:'syndicate-service-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* TWR_ARM and TWR_ARM_D share MAT.TWR_ARMOR, so this is the whole
+         armoured body -- plenum top plate, hull, upper deck, nose and boom
+         link -- not just the deck. That is the point: the Warden is the one
+         chassis here meant to be worked FROM rather than shot from, and a
+         hull that is tread plate all over says so without adding a triangle.
+         It is also the one chassis that trades away its nano-ceramic to do
+         it, which is what keeps DECK_PLATE from becoming a kit-wide default. */
+      [MAT.TWR_ARMOR]:MAT.DECK_PLATE,
+      [MAT.TRIM]:MAT.SYN_GOLD
+    })
   }),
   25:Object.freeze({
     id:'syndicate-scout-v2', source:'authored', maps:'syndicate-scout-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The Kestrel carries one hair-thin emitter and a sensor sphere twice
+         its size; lighting both as weapon energy made it read as a smaller
+         Wasp instead of as the thing that finds the enemy. */
+      [MAT.TWR_GLOW]:MAT.RADAR_MESH,
+      [MAT.TRIM]:MAT.SYN_HOLO                                  // dorsal spine stripe
+    })
   }),
   26:Object.freeze({
     id:'syndicate-exp-v2', source:'authored', maps:'syndicate-exp-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Tier 3 at four times a Rhino's price, so this is the one contract that
+         spends. Ribbed appliqué on hull and turret is the same fix the Nova
+         Rhino needed: every Syndicate chassis pointed TWR_ARMOR at SYN_NANO,
+         so the per-type remap existed but had nothing to say. */
+      [MAT.TWR_ARMOR]:MAT.ARMR_RIB,
+      [MAT.TWR_GLOW]:MAT.WEAPON_GLOW,
+      [MAT.TRIM]:MAT.SYN_GOLD
+    })
   }),
   27:Object.freeze({
     id:'syndicate-battery-v2', source:'authored', maps:'syndicate-battery-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Outrigger stabiliser feet, and on this hull TWR_PAD is nothing else --
+         the Harbinger has no turret race. Same ground-bearing material as the
+         Bombard, because both plant themselves and nothing else in the kit
+         does. */
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      [MAT.TRIM]:MAT.SYN_NANO
+    })
   }),
   29:Object.freeze({
     id:'syndicate-archon-v2', source:'authored', maps:'syndicate-archon-v2',
@@ -1126,7 +1242,13 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
   }),
   32:Object.freeze({
     id:'syndicate-miner-v2', source:'authored', maps:'syndicate-miner-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* TWR_GLOW on this hull is the mining head's emitter and nothing else --
+         the pylons and the ore-cell rim are already ENERGY. A cutting beam is
+         not a weapon and must not glow like one. */
+      [MAT.TWR_GLOW]:MAT.PLASMA_JET,
+      [MAT.TRIM]:MAT.SYN_GOLD
+    })
   })
 });
 function coaSyndicateSurfacePass(geo,pack){

@@ -1225,39 +1225,92 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
   }),
   20:Object.freeze({
     id:'nova-reaper-v2', source:'authored', maps:'nova-reaper-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Hornet, Reaper, Cinder and Harbinger are one mesh in four slots, so the
+         SIX TUBES are the only surface that can separate them from above. The
+         Reaper is the saturation launcher; sustained fire blackens the tube it
+         leaves through, and nothing else on the vehicle needs to say so. */
+      [MAT.TWR_MACH]:MAT.SCORCH_METAL
+    })
   }),
   21:Object.freeze({
     id:'nova-cinder-v2', source:'authored', maps:'nova-cinder-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Close support at 96 range: the rack is reloaded under fire and the
+         bores are still lit when you see them — the exact opposite read to the
+         Reaper's cold blackened tubes on the identical mesh. */
+      [MAT.TWR_BORE]:MAT.EMBER_CORE
+    })
   }),
   22:Object.freeze({
     id:'nova-lancer-v2', source:'authored', maps:'nova-lancer-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Shares mdlTfcLance with the Longbow. The Longbow is a beam and its
+         optic stays cold; a gauss lance banks its charge in the capacitor
+         collars and leaves the muzzle hot.
+         Raw ids: this mesh paints its capacitor rings with the ENERGY palette
+         entry, which resolves through matResolve('emissive.energy') and arrives
+         here as SYN_CONDUIT — it never emits TWR_GLOW at all. */
+      [MAT.SYN_CONDUIT]:MAT.CHARGE_STRIP,
+      [MAT.TWR_BORE]:MAT.WEAPON_GLOW
+    })
   }),
   23:Object.freeze({
     id:'nova-resonator-v2', source:'authored', maps:'nova-resonator-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The builder's own word for the widening collars is "acoustic horn".
+         Brass says pressure wave; machined servo steel says gun barrel, which
+         is the one thing this weapon is not. */
+      [MAT.TWR_MACH]:MAT.BRASS
+    })
   }),
   24:Object.freeze({
     id:'nova-warden-v2', source:'authored', maps:'nova-warden-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* UNARMED, so the only TWR_BORE on the hull is tfcExhaust()'s outlet.
+         Left generic it reads as a weapon throat on a repair vehicle. */
+      [MAT.TWR_BORE]:MAT.ENGINE_VENT,
+      [MAT.LAMP]:MAT.UNIT_BEACON
+    })
   }),
   25:Object.freeze({
     id:'nova-kestrel-v2', source:'authored', maps:'nova-kestrel-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Raw id, not the obvious one: the GLASS palette entry resolves through
+         matResolve('glass.canopy') to CURTAIN_GLASS, so a canopy contract has
+         to key on CURTAIN_GLASS to reach this mesh at all. */
+      [MAT.CURTAIN_GLASS]:MAT.HUD_CANOPY,
+      [MAT.LAMP]:MAT.UNIT_BEACON
+    })
   }),
   26:Object.freeze({
     id:'nova-basilisk-v2', source:'authored', maps:'nova-basilisk-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The largest tracked hull the Command fields and the only one whose deck
+         is wide enough to carry real walkways — so its bright trim becomes deck
+         plating rather than the thin highlight every lighter chassis wears. */
+      [MAT.TRIM]:MAT.DECK_PLATE,
+      [MAT.TWR_BORE]:MAT.WEAPON_GLOW
+    })
   }),
   27:Object.freeze({
     id:'nova-harbinger-v2', source:'authored', maps:'nova-harbinger-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* Siege battery at size 24 — half again the Hornet from the same mesh.
+         Ribbed appliqué is what still reads at that scale, and putting it on
+         the hull leaves the tubes free for the two shorter-ranged siblings. */
+      [MAT.PLATE]:MAT.ARMR_RIB
+    })
   }),
   32:Object.freeze({
     id:'nova-prospector-v2', source:'authored', maps:'nova-prospector-v2',
-    surfaces:Object.freeze({})
+    surfaces:Object.freeze({
+      /* The drill housing is the largest single feature on the model and it
+         turns. Hazard banding is what a works vehicle puts on that, and it is
+         also the fastest way to stop reading this as the Constructor. */
+      [MAT.TWR_MACH]:MAT.WARN,
+      [MAT.LAMP]:MAT.UNIT_BEACON
+    })
   })
 });
 function tfcNovaSurfacePass(geo,pack){
@@ -1273,7 +1326,12 @@ function tfcNovaSurfacePass(geo,pack){
 }
 const TFC_NOVA_FACTORY_CACHE=new Map();
 function tfcNovaFactory(fn,slot){
-  if(TFC_NOVA_FACTORY_CACHE.has(fn))return TFC_NOVA_FACTORY_CACHE.get(fn);
+  /* A single builder can intentionally service several role slots. Cache by
+     slot too: keying on `fn` alone handed slot 7's wrapper to Reaper, Cinder
+     and Harbinger and slot 6's to the Lancer, so four bespoke packs were built
+     and never reached a vertex. Same fix, same reason, as domLegionFactory. */
+  const key=slot+':'+fn.name;
+  if(TFC_NOVA_FACTORY_CACHE.has(key))return TFC_NOVA_FACTORY_CACHE.get(key);
   const wrapped=function(){
     const g=fn();
     const pack=TFC_NOVA_BESPOKE_PACKS[slot]||null;
@@ -1284,7 +1342,7 @@ function tfcNovaFactory(fn,slot){
      needs a stable unique name or the first Blue chassis would replace all of
      the others despite a completely clean JavaScript console. */
   Object.defineProperty(wrapped,'name',{value:'tfcBlue'+slot+'_'+fn.name});
-  TFC_NOVA_FACTORY_CACHE.set(fn,wrapped);
+  TFC_NOVA_FACTORY_CACHE.set(key,wrapped);
   return wrapped;
 }
 const UNIT_MDL_NOVA={
@@ -1317,34 +1375,260 @@ const UNIT_MDL_NOVA={
   32:tfcNovaFactory(mdlTfcMiner,32),     // Prospector   — ore miner, UNARMED
 };
 
+/* Stage N3 bespoke structure contracts.
+   A vehicle is mostly silhouette; a building is mostly one enormous flat plane
+   pointed straight at this camera, which is precisely where the ten-entry
+   faction remap reads worst — it hands the factory shed, the runway and the
+   radar dish the same NOVA_COMPOSITE panel at the same repeat frequency.
+
+   Two structural facts drive most of what is below, and both come from reading
+   the builders rather than the names:
+     - novaServicePad() paints its slab TWR_PAD, which the faction remap turns
+       into NOVA_CARBON. Nine Nova structures stand on that pad, so nine
+       buildings were standing on VEHICLE carbon. FOUNDATION_PAD is one key per
+       asset and it is the single largest legibility win in this table.
+     - the architectural colours resolve through matResolve() before they ever
+       reach here: NOVA_*_ROOF arrives as MAT.ROOF, NOVA_*_GLASS as
+       CURTAIN_GLASS, NOVA_*_TRIM as MAT.TRIM and NOVA_*_GLOW as SYN_CONDUIT.
+       Those are the raw ids to key on; MAT.NOVA_COMPOSITE is raw too, because
+       NOVA_*_ARM emits it directly instead of going through PLATE. */
 const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
-  'mex':Object.freeze({id:'nova-mex-v2', source:'authored', maps:'nova-mex-v2', surfaces:Object.freeze({})}),
-  'pgen':Object.freeze({id:'nova-pgen-v2', source:'authored', maps:'nova-pgen-v2', surfaces:Object.freeze({})}),
-  'fac':Object.freeze({id:'nova-fac-v2', source:'authored', maps:'nova-fac-v2', surfaces:Object.freeze({})}),
-  'turret':Object.freeze({id:'nova-turret-v2', source:'authored', maps:'nova-turret-v2', surfaces:Object.freeze({})}),
-  'bunker':Object.freeze({id:'nova-bunker-v2', source:'authored', maps:'nova-bunker-v2', surfaces:Object.freeze({})}),
-  'sgen':Object.freeze({id:'nova-sgen-v2', source:'authored', maps:'nova-sgen-v2', surfaces:Object.freeze({})}),
-  'tgate':Object.freeze({id:'nova-tgate-v2', source:'authored', maps:'nova-tgate-v2', surfaces:Object.freeze({})}),
-  'harbor':Object.freeze({id:'nova-harbor-v2', source:'authored', maps:'nova-harbor-v2', surfaces:Object.freeze({})}),
-  'seafort':Object.freeze({id:'nova-seafort-v2', source:'authored', maps:'nova-seafort-v2', surfaces:Object.freeze({})}),
-  'bastion':Object.freeze({id:'nova-bastion-v2', source:'authored', maps:'nova-bastion-v2', surfaces:Object.freeze({})}),
-  'techlab':Object.freeze({id:'nova-techlab-v2', source:'authored', maps:'nova-techlab-v2', surfaces:Object.freeze({})}),
-  'aatower':Object.freeze({id:'nova-aatower-v2', source:'authored', maps:'nova-aatower-v2', surfaces:Object.freeze({})}),
-  'airfield':Object.freeze({id:'nova-airfield-v2', source:'authored', maps:'nova-airfield-v2', surfaces:Object.freeze({})}),
-  'uplink':Object.freeze({id:'nova-uplink-v2', source:'authored', maps:'nova-uplink-v2', surfaces:Object.freeze({})}),
-  'hq':Object.freeze({id:'nova-hq-v2', source:'authored', maps:'nova-hq-v2', surfaces:Object.freeze({})}),
-  'hellstorm':Object.freeze({id:'nova-hellstorm-v2', source:'authored', maps:'nova-hellstorm-v2', surfaces:Object.freeze({})}),
-  'arc':Object.freeze({id:'nova-arc-v2', source:'authored', maps:'nova-arc-v2', surfaces:Object.freeze({})}),
-  'rail':Object.freeze({id:'nova-rail-v2', source:'authored', maps:'nova-rail-v2', surfaces:Object.freeze({})}),
-  'nova':Object.freeze({id:'nova-nova-v2', source:'authored', maps:'nova-nova-v2', surfaces:Object.freeze({})}),
-  'minelaser':Object.freeze({id:'nova-minelaser-v2', source:'authored', maps:'nova-minelaser-v2', surfaces:Object.freeze({})}),
-  'missilebastion':Object.freeze({id:'nova-missilebastion-v2', source:'authored', maps:'nova-missilebastion-v2', surfaces:Object.freeze({})}),
-  'plasma':Object.freeze({id:'nova-plasma-v2', source:'authored', maps:'nova-plasma-v2', surfaces:Object.freeze({})}),
-  'wall':Object.freeze({id:'nova-wall-v2', source:'authored', maps:'nova-wall-v2', surfaces:Object.freeze({})}),
-  'gate':Object.freeze({id:'nova-gate-v2', source:'authored', maps:'nova-gate-v2', surfaces:Object.freeze({})}),
-  'geo':Object.freeze({id:'world-geo-v2', source:'authored', maps:'world-geo-v2', surfaces:Object.freeze({})}),
-  'silo':Object.freeze({id:'world-silo-v2', source:'authored', maps:'world-silo-v2', surfaces:Object.freeze({})}),
-  'fab':Object.freeze({id:'world-fab-v2', source:'authored', maps:'world-fab-v2', surfaces:Object.freeze({})})
+  'mex':Object.freeze({
+    id:'nova-mex-v2', source:'authored', maps:'nova-mex-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* The four intake collars and the throat ring are the moving parts of an
+         ore extractor, and banding is what a mine puts on those. */
+      [MAT.TRIM]:MAT.WARN
+    })
+  }),
+  'pgen':Object.freeze({
+    id:'nova-pgen-v2', source:'authored', maps:'nova-pgen-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* TWR_MACH here is only ventBank()'s fins on the two outboard radiator
+         slabs — the whole reason the reactor has a broad silhouette. */
+      [MAT.TWR_MACH]:MAT.METAL_LOUVRE
+    })
+  }),
+  'fac':Object.freeze({
+    id:'nova-fac-v2', source:'authored', maps:'nova-fac-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* A 43x42 production shed is a building, not a chassis: precast bays on
+         the walls and rooftop plant on the 40x39 roof plane give it the two
+         surfaces the camera actually spends its time on. */
+      [MAT.NOVA_COMPOSITE]:MAT.PRECAST_BAY,
+      [MAT.ROOF]:MAT.HVAC_ROOF
+    })
+  }),
+  'turret':Object.freeze({
+    id:'nova-turret-v2', source:'authored', maps:'nova-turret-v2',
+    surfaces:Object.freeze({
+      /* TWR_COAT on the Sentinel is exactly the cooling cheeks and the Mk3
+         reactor crown. A laser emplacement is a heat problem with a gun on it. */
+      [MAT.TWR_COAT]:MAT.METAL_LOUVRE
+    })
+  }),
+  'bunker':Object.freeze({
+    id:'nova-bunker-v2', source:'authored', maps:'nova-bunker-v2',
+    surfaces:Object.freeze({
+      /* Ribbed appliqué is the Command's hardened-emplacement language (it is
+         also what the Rhino wears). Keyed on NOVA_COMPOSITE it lands on the
+         casemate shell alone and leaves the plinth as machined armour. */
+      [MAT.NOVA_COMPOSITE]:MAT.ARMR_RIB
+    })
+  }),
+  'sgen':Object.freeze({
+    id:'nova-sgen-v2', source:'authored', maps:'nova-sgen-v2',
+    surfaces:Object.freeze({
+      /* The barrier's drum is the part an attacker shoots at, so it joins the
+         hardened family. The projector dome stays NOVA_CIRCUIT to match the
+         Bulwark's field masts — same doctrine, vehicle and structure. */
+      [MAT.TWR_ARMOR]:MAT.ARMR_RIB
+    })
+  }),
+  'tgate':Object.freeze({
+    id:'nova-tgate-v2', source:'authored', maps:'nova-tgate-v2',
+    surfaces:Object.freeze({
+      /* This one is a gantry over a slab, and both were reading as tank hull:
+         MET arrives as PLATE (arches and the 66x58 overhead crane deck), CONC_D
+         as CONC (the 72x60 floor). Deck plate and poured ground say assembly
+         hall; composite armour says nothing at all. */
+      [MAT.PLATE]:MAT.DECK_PLATE,
+      [MAT.CONC]:MAT.FOUNDATION_PAD
+    })
+  }),
+  'harbor':Object.freeze({
+    id:'nova-harbor-v2', source:'authored', maps:'nova-harbor-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* NOVA_HARBOR_DECK is named a deck and behaves like one, but resolves to
+         MAT.ROOF like every other roof in the kit. A quayside is walked on. */
+      [MAT.ROOF]:MAT.DECK_PLATE
+    })
+  }),
+  'seafort':Object.freeze({
+    id:'nova-seafort-v2', source:'authored', maps:'nova-seafort-v2',
+    surfaces:Object.freeze({
+      /* Inert until seafort gets a builder of its own: BLD_MDL has no 'seafort'
+         key, and bldMeshFor() draws it with the Bastion pair (models.js:4154),
+         so the Bastion's contract is what reaches the screen today. Recorded
+         for when it does: a FLOATING battery stands on a pontoon deck, which is
+         the one thing that should never read as poured ground. */
+      [MAT.TWR_PAD]:MAT.DECK_PLATE
+    })
+  }),
+  'bastion':Object.freeze({
+    id:'nova-bastion-v2', source:'authored', maps:'nova-bastion-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.ARMR_RIB
+    })
+  }),
+  'techlab':Object.freeze({
+    id:'nova-techlab-v2', source:'authored', maps:'nova-techlab-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* One 31x26 roof deck, and research is where the faction's clean-tech
+         claim has to be visible from the only angle the player ever has. */
+      [MAT.ROOF]:MAT.SOLAR_ROOF
+    })
+  }),
+  'aatower':Object.freeze({
+    id:'nova-aatower-v2', source:'authored', maps:'nova-aatower-v2',
+    surfaces:Object.freeze({
+      /* The Skyguard's tracking dome is built from the GLASS palette entry,
+         which lands here as CURTAIN_GLASS. It is a radome, not a window. */
+      [MAT.CURTAIN_GLASS]:MAT.RADAR_MESH
+    })
+  }),
+  'airfield':Object.freeze({
+    id:'nova-airfield-v2', source:'authored', maps:'nova-airfield-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* NOVA_AIR_DECK resolves to MAT.ROOF, so the 74x25 RUNWAY has been
+         wearing roofing this whole time. Clean asphalt, not worn: a Frontline
+         airfield is swept. The hangar roof takes the same id and reads as flat
+         membrane roofing, which is what a hangar roof is. */
+      [MAT.ROOF]:MAT.ROAD_ASPHALT_CLEAN
+    })
+  }),
+  'uplink':Object.freeze({
+    id:'nova-uplink-v2', source:'authored', maps:'nova-uplink-v2',
+    surfaces:Object.freeze({
+      /* NOVA_UPLINK_ARM is the dish ring and the electronics-bunker cap and
+         nothing else. The dish is the entire asset; solid composite on it was
+         the difference between a Targeting Array and a grey lollipop. */
+      [MAT.NOVA_COMPOSITE]:MAT.RADAR_MESH
+    })
+  }),
+  'hq':Object.freeze({
+    id:'nova-hq-v2', source:'authored', maps:'nova-hq-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* The HQ is the only Nova structure with a real glazing band, and it is
+         the player's visual anchor. Mirrored curtain wall is the cheapest thing
+         that makes it read as a headquarters rather than a large shed. */
+      [MAT.CURTAIN_GLASS]:MAT.MIRROR_TINT
+    })
+  }),
+  'hellstorm':Object.freeze({
+    id:'nova-hellstorm-v2', source:'authored', maps:'nova-hellstorm-v2',
+    surfaces:Object.freeze({
+      /* TWR_MACH is the rotary cluster's four-to-eight barrels and its race.
+         Gun metal is what tells a rotary apart from the beam towers beside it. */
+      [MAT.TWR_MACH]:MAT.BRASS
+    })
+  }),
+  'arc':Object.freeze({
+    id:'nova-arc-v2', source:'authored', maps:'nova-arc-v2',
+    surfaces:Object.freeze({
+      /* A Tesla coil is wound, and TWR_COAT here is precisely the stacked
+         toroid steps and the three outer risers. Copper, then, before it is
+         armour. */
+      [MAT.TWR_COAT]:MAT.COPPER_ROOF
+    })
+  }),
+  'rail':Object.freeze({
+    id:'nova-rail-v2', source:'authored', maps:'nova-rail-v2',
+    surfaces:Object.freeze({
+      /* NOVA_RAIL_GLOW resolves to SYN_CONDUIT, and it is used for one thing:
+         the energized coil faces along the twin accelerator rails. A rail
+         battery banks a charge; it does not run a circuit board. */
+      [MAT.SYN_CONDUIT]:MAT.CHARGE_STRIP
+    })
+  }),
+  'nova':Object.freeze({
+    id:'nova-nova-v2', source:'authored', maps:'nova-nova-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.ARMR_RIB
+    })
+  }),
+  'minelaser':Object.freeze({
+    id:'nova-minelaser-v2', source:'authored', maps:'nova-minelaser-v2',
+    surfaces:Object.freeze({
+      /* Sustained beam, not a data link: its status strips and recoil guides
+         should read as heat coming off a weapon. */
+      [MAT.TWR_GLOW]:MAT.WEAPON_GLOW
+    })
+  }),
+  'missilebastion':Object.freeze({
+    id:'nova-missilebastion-v2', source:'authored', maps:'nova-missilebastion-v2',
+    surfaces:Object.freeze({
+      /* The rotating feed and fire-control block is an equipment house bolted
+         to a launcher, and it is the mass that separates this from the NOVA
+         silo at the same distance. */
+      [MAT.TWR_COAT]:MAT.METAL_LOUVRE
+    })
+  }),
+  'plasma':Object.freeze({
+    id:'nova-plasma-v2', source:'authored', maps:'nova-plasma-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_GLOW]:MAT.PLASMA_JET
+    })
+  }),
+  'wall':Object.freeze({
+    id:'nova-wall-v2', source:'authored', maps:'nova-wall-v2',
+    surfaces:Object.freeze({
+      /* The rampart is already CONC and stays that way. Only the two buttress
+         posts are MET_D, and armour on them is what makes a wall line read as
+         fortification instead of a concrete kerb with dark blocks in it. */
+      [MAT.GREEBLE]:MAT.ARMR_RIB
+    })
+  }),
+  'gate':Object.freeze({
+    id:'nova-gate-v2', source:'authored', maps:'nova-gate-v2',
+    surfaces:Object.freeze({
+      /* The curtain is a held field across the opening. A circuit pattern on a
+         16x15 slab reads as a printed panel; a charge strip reads as energy. */
+      [MAT.SYN_CONDUIT]:MAT.CHARGE_STRIP
+    })
+  }),
+  'geo':Object.freeze({
+    id:'world-geo-v2', source:'authored', maps:'world-geo-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      /* NOVA_GEO_TRIM carries both condenser vent banks. Louvres are what make
+         the geothermal plant a heat exchanger rather than a second reactor. */
+      [MAT.TRIM]:MAT.METAL_LOUVRE
+    })
+  }),
+  'silo':Object.freeze({
+    id:'world-silo-v2', source:'authored', maps:'world-silo-v2',
+    surfaces:Object.freeze({
+      /* Three 20-high storage cylinders. Precast concrete is both what bulk
+         storage is actually made of and what ties the silo to the factory shed
+         as one civil-works family. */
+      [MAT.NOVA_COMPOSITE]:MAT.PRECAST_BAY
+    })
+  }),
+  'fab':Object.freeze({
+    id:'world-fab-v2', source:'authored', maps:'world-fab-v2',
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      [MAT.ROOF]:MAT.HVAC_ROOF
+    })
+  })
 });
 
 function tfcNovaBldFactory(fn, k) {

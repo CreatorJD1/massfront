@@ -55,9 +55,14 @@ function brdLimb(m){ return m.mat(MAT.LEAF).team(0); }
    cannot tell whose army just walked over the ridge. */
 function brdLivery(m){ return m.mat(MAT.CHITIN).team(1); }
 
-/* Local palette. None of these are registered in COL_MAT, which is exactly
-   what we want: the primitive patch leaves the material we just declared
-   alone instead of overriding it from the colour. */
+/* Local palette. Being absent from COL_MAT does NOT keep the primitive patch
+   off the material we just declared: matDetect() consults COL_MAT first and
+   then falls through to a luminance heuristic that always returns something.
+   Anything here handed to a PATCHED primitive is silently reclassified — SOFT
+   lands on hull, GULLET on hull.dark — which is what the slot 32 contract at
+   the foot of this file has to undo on the feeding rasp. Only the two that are
+   read inside a sculpt paint callback (SEAM, LUMEN) never reach a primitive
+   and are genuinely inert. */
 const BRD_GULLET=C(38,32,26);        // wet dark inside the feeding mouth
 const BRD_SEAM  =C(22,24,18);        // near-black crease between shell plates
 const BRD_SOFT  =C(216,198,152);     // pale soft grub tissue — no armour value
@@ -537,13 +542,67 @@ function mdlBrdGrub(){
   return {hull:m.build(),tur:null,s:0.92};
 }
 
-/* The exports. Wire into FAC_KIT.horde; nothing here takes over a global. */
+/* The exports. Wire into FAC_KIT.horde; nothing here takes over a global.
+
+   SURFACE CONTRACTS. Keys are RAW pre-remap ids — the id the builder actually
+   emitted — and for the Brood that set is small and mostly untouchable.
+
+   MAT.CHITIN and MAT.LEAF are the organic equivalent of MAT.SERVO. mesh.js
+   substitutes them into the shader as CHITIN_CONST and BIOLEG_CONST, where the
+   vertex stage reads them for the breathing pulse and the spring bend and the
+   fragment stage reads them AGAIN for `surfaceOrganic`, the subsurface term.
+   Remap either and the animation is stranded on the geometry that carries it:
+   a Sovereign is CHITIN from jaw to tail, so one line would stop it breathing
+   and turn its shell mechanical in the same pass. Body, crest, limbs and every
+   blade are therefore off the table, which leaves the emissive id — and, on
+   the Prospector, the two hull ids its mouth leaked. */
 const BRD_BESPOKE_PACKS=Object.freeze({
-  12:Object.freeze({id:'brood-ravager-v2', source:'authored', maps:'brood-ravager-v2', surfaces:Object.freeze({})}),
-  13:Object.freeze({id:'brood-alpha-ravager-v2', source:'authored', maps:'brood-alpha-ravager-v2', surfaces:Object.freeze({})}),
-  30:Object.freeze({id:'brood-sovereign-v2', source:'authored', maps:'brood-sovereign-v2', surfaces:Object.freeze({})}),
-  31:Object.freeze({id:'brood-tidecaster-v2', source:'authored', maps:'brood-tidecaster-v2', surfaces:Object.freeze({})}),
-  32:Object.freeze({id:'brood-grub-v2', source:'authored', maps:'brood-grub-v2', surfaces:Object.freeze({})})
+  12:Object.freeze({id:'brood-ravager-v2', source:'authored', maps:'brood-ravager-v2',
+    surfaces:Object.freeze({
+      /* Chaff, and MAT.LAMP is not only the eyes here: models.js builds the
+         first leg while the lamp material eyeCluster() left current is still
+         set, so seven segments of it render at full emissive. Filament glow on
+         dull tissue is the right answer for an eye AND for a leg. */
+      [MAT.LAMP]:MAT.BROOD_VEIN
+    })
+  }),
+  13:Object.freeze({id:'brood-alpha-ravager-v2', source:'authored', maps:'brood-alpha-ravager-v2',
+    surfaces:Object.freeze({
+      /* The Alpha's exposed brood core shares the eyes' id, and SLIME is the
+         one tile whose emissive is wet blobs rather than thin strokes. Against
+         the drone's BROOD_VEIN that is the only separation this contract can
+         draw — every other id the two builders emit is a shader marker. */
+      [MAT.LAMP]:MAT.BROOD_SLIME
+    })
+  }),
+  30:Object.freeze({id:'brood-sovereign-v2', source:'authored', maps:'brood-sovereign-v2',
+    surfaces:Object.freeze({
+      /* Eyes at r 1.30 over three rows: the largest light organ in the kit,
+         and the hero should look wet rather than switched on. */
+      [MAT.LAMP]:MAT.BROOD_SLIME
+    })
+  }),
+  31:Object.freeze({id:'brood-tidecaster-v2', source:'authored', maps:'brood-tidecaster-v2',
+    surfaces:Object.freeze({
+      /* The synaptic node capping the stalk. VEIN, not SLIME: its emissive is
+         linear filaments, which carries on the vein pattern brdBulb() already
+         paints into the organ underneath instead of arguing with it. */
+      [MAT.LAMP]:MAT.BROOD_VEIN
+    })
+  }),
+  32:Object.freeze({id:'brood-grub-v2', source:'authored', maps:'brood-grub-v2',
+    surfaces:Object.freeze({
+      /* The rasp is the only part of the kit painted from the local palette,
+         and those colours are deliberately absent from COL_MAT — so matDetect
+         fell through to its luminance heuristic and handed the one unarmed
+         animal in the game a hull-plate lip and a hull-dark machined bore.
+         BRD_SOFT's pale skin is BROOD_MEMBRANE. The gullet takes BROOD_VEIN
+         because that tile is a flat fill: the normal map is derived from tile
+         luminance, so a flat tile keeps the bore smooth and the hole a hole. */
+      [MAT.PLATE]:MAT.BROOD_MEMBRANE,
+      [MAT.GREEBLE]:MAT.BROOD_VEIN
+    })
+  })
 });
 
 function brdOrganicSurfacePass(geo,pack){
