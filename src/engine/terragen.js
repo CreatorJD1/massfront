@@ -1,5 +1,3 @@
-;
-;
 /* ============================================================================
    TERRAGEN — landform structure: ridges, drainage, coastlines
    ----------------------------------------------------------------------------
@@ -48,7 +46,11 @@
        battlefieldNavalEnabled all key off WATER_H. A carve that drops dry
        land below sea level would silently punch holes in pathing and flood
        maps authored dry. Any cell that started at or above WATER_H is
-       clamped so it can never finish below it.
+       clamped so it can never finish below it. Combat craters follow the
+       same rule via WATER_AUTH — punching a bowl below the water table
+       must not spawn a pond; oceans/rivers/lakes stay authored. A
+       shoreline crater may visually wet its lip (WATER_LIP in terrain.js)
+       without rewriting this mask, PASS, or the naval grid.
    ============================================================================ */
 
 const TERRA={

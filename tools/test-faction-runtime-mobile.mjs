@@ -1,12 +1,12 @@
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 
 const url=process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8911/';
 const out=resolve('releases','faction-doctrine-stage1-mobile.png');
 await mkdir(resolve('releases'),{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const context=await browser.newContext({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   await context.addInitScript(()=>{localStorage.clear();localStorage.setItem('mf_prealpha_cinematic_v2','test-seen');localStorage.setItem('mf_auth_gate_v1','1');});

@@ -24,7 +24,11 @@
   padding-top:2px;background:linear-gradient(180deg,rgba(3,8,14,.99),rgba(3,8,14,.92) 82%,transparent)}
 /* The shared .tabRow is sticky itself. Here the wrapper owns stickiness so it
    keeps a real flex height even when a long inventory list needs to scroll. */
-#armTabs{position:static;width:100%;box-sizing:border-box}
+#armTabs{position:static;width:100%;box-sizing:border-box;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;overflow:visible}
+#armTabs .tabBtn{flex:none;min-width:0;width:100%;justify-content:center;padding:8px 2px;font-size:8px;letter-spacing:.06em}
+#armTabs .tabBtn .tEm{font-size:11px}
+.armTabHint{display:none}
+#storeList{padding-bottom:calc(var(--sab) + 28px)}
 .armTabHint{text-align:right;margin:-3px 3px 2px;font-family:var(--fT);font-size:9px;
   letter-spacing:.12em;color:#5f88a6;font-weight:800;pointer-events:none}
 #armTabs.fits+.armTabHint{display:none}

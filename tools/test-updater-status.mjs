@@ -1,6 +1,6 @@
 /* Focused regression for the two update-channel version directions.
    Usage: node tools/test-updater-status.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -13,8 +13,8 @@ const shot=join(outDir,'updater-local-ahead-mobile.png');
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 await mkdir(outDir,{recursive:true});
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));

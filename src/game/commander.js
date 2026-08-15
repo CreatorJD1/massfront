@@ -24,6 +24,74 @@ let aiming=-1;                         // ability awaiting a target tap
 let pendingLevels=0;
 let commanderActiveCool=0;
 let commanderWeaponCool=[0,0];
+/* Voss −14% is a live multiplier at ASSIGN time, not a rewrite of AB_CD.
+   applyMetaPerks rebuilds AB_CD from AB_BASE (capacitor / Chrono Rig), and
+   Rapid Systems mutates that table mid-match. Folding Voss into AB_CD missed
+   signature, jump and commander weapons, and would double-apply if the table
+   was rebuilt. Class doctrine and barrage stay army unlocks, not commander CD. */
+let commanderCdMult=1;
+function commanderCool(t){return (t||0)*commanderCdMult;}
+/* Seat identity. main.js stores AI.bases[].commanderId (and the same field
+   on AI.allies) so Large 1v3 is not three copies of the faction default.
+   Mesh and weapon overlays key off that id — never TYPES, never playerCommanderId
+   for an enemy. applyCommanderChoice stays the player perk stack. */
+function commanderIdForUnit(i){
+  if(i==null||i<0) return null;
+  if(typeof heroIdx!=='undefined'&&i===heroIdx)
+    return (typeof playerCommanderId!=='undefined'&&playerCommanderId)||null;
+  if(typeof AI==='undefined'||!AI) return null;
+  const hit=S=>{
+    if(!S||S.commander!==i) return null;
+    if(S.commanderGen!=null&&typeof ugen!=='undefined'&&ugen[i]!==S.commanderGen) return null;
+    return S.commanderId||null;
+  };
+  for(const S of AI.bases||[]){ const id=hit(S); if(id) return id; }
+  for(const S of AI.allies||[]){ const id=hit(S); if(id) return id; }
+  return null;
+}
+function commanderWeaponProfileFor(id){
+  if(typeof COMMANDER_WEAPON_PROFILES==='undefined'||!id) return null;
+  return COMMANDER_WEAPON_PROFILES[id]||null;
+}
+function commanderStampAiSeats(){
+  if(typeof AI==='undefined'||!AI) return;
+  const stamp=seats=>{
+    if(!seats) return;
+    for(const S of seats){
+      if(!S||!S.commanderId) continue;
+      const P=commanderWeaponProfileFor(S.commanderId)||
+        (S.fac&&typeof COMMANDER_WEAPON_PROFILES!=='undefined'&&COMMANDER_WEAPON_PROFILES[S.fac])||null;
+      if(!P) continue;
+      S.primary=P.primary; S.secondary=P.secondary;
+      if(S.activeCool==null) S.activeCool=8+Math.random()*6;
+      if(!S.weaponCool) S.weaponCool=[0,4+Math.random()*6];
+    }
+  };
+  stamp(AI.bases); stamp(AI.allies);
+}
+function commanderDefForUnit(i){
+  const id=commanderIdForUnit(i);
+  if(id&&typeof commanderById==='function'){
+    const C=commanderById(id);
+    if(C) return C;
+  }
+  if(typeof heroIdx!=='undefined'&&i===heroIdx&&typeof playerCommanderDef==='function')
+    return playerCommanderDef();
+  return null;
+}
+function commanderSeatForUnit(i){
+  if(typeof heroIdx!=='undefined'&&i===heroIdx) return {team:0,slot:-1,seat:null};
+  if(typeof AI!=='undefined'&&AI){
+    const hit=S=>{
+      if(!S||S.commander!==i) return null;
+      if(S.commanderGen!=null&&ugen[i]!==S.commanderGen) return null;
+      return S;
+    };
+    for(const S of AI.bases||[]){ const s=hit(S); if(s) return {team:uteam[i],slot:s.slot,seat:s}; }
+    for(const S of AI.allies||[]){ const s=hit(S); if(s) return {team:uteam[i],slot:s.slot,seat:s}; }
+  }
+  return {team:uteam[i],slot:typeof uCmd!=='undefined'?uCmd[i]:-1,seat:null};
+}
 
 /* ---------- PRIMARY / SECONDARY FIRE -------------------------------------
    Auto-attack keeps the Commander useful when the player is managing an army.
@@ -48,7 +116,7 @@ function commanderWeaponRefresh(reset){
   for(let slot=0;slot<2;slot++){
     const W=commanderWeaponDef(slot),b=commanderWeaponButton(slot);if(!b)continue;
     b.style.display=W?'flex':'none';if(!W)continue;
-    b.querySelector('.em').textContent=W.em||'•';b.querySelector('.wnm').textContent=slot?'SECONDARY':'PRIMARY';
+    b.querySelector('.em').textContent=W.em||'•';b.querySelector('.wnm').textContent=(W.nm||(slot?'SECONDARY':'PRIMARY')).toUpperCase();
   }
   commanderWeaponButtonState();
 }
@@ -80,15 +148,16 @@ function fireCommanderWeapon(slot,wx,wy){
     else if(!slot&&!W.aoe){toast('NO HOSTILE UNDER RETICLE');return false;}
   }
   if(W.energy)pay(0,0,W.energy);
-  commanderWeaponCool[slot]=W.cool;aiming=-1;
-  const pk=fireProj(W.ptype,0,hx,hy,tx,ty,W.speed,W.damage*heroDmgMult,W.aoe||0,tgt);
+  commanderWeaponCool[slot]=commanderCool(W.cool);aiming=-1;
+  const mz=typeof mfUnitMuzzle==='function'?mfUnitMuzzle(heroIdx):[hx,hy];
+  const pk=fireProj(W.ptype,0,mz[0],mz[1],tx,ty,W.speed,W.damage*heroDmgMult,W.aoe||0,tgt);
   if(pk>=0){
     pwk[pk]=W.wk||'p';
     if(slot){pCannon[pk]=1;if(W.ptype===2){pBarrage[pk]=1;pArc[pk]=90;}}
-    projectileFireFX(pk,hx,hy,tx-hx,ty-hy);
+    projectileFireFX(pk,mz[0],mz[1],tx-mz[0],ty-mz[1]);
   }
   const C=playerCommanderDef(),col=C&&C.active&&C.active.col||[110,215,255];
-  addParticle(0,hx,hy,0,0,.22,slot?22:13,col[0],col[1],col[2]);
+  addParticle(0,mz[0],mz[1],0,0,.22,slot?22:13,col[0],col[1],col[2]);
   sfx(W.sfx||'shot',hx,hy,slot?1.45:1.05);shake=Math.max(shake,slot?2.4:.65);
   if(typeof radioAck==='function')radioAck('ability',1,tx,ty);
   return true;
@@ -99,7 +168,7 @@ function commanderWeaponButtonState(){
     const cover=commanderWeaponCool[slot]>0?Math.ceil(commanderWeaponCool[slot]):((W.energy||0)>resE[0]?'E':'');
     const cd=b.querySelector('.cdring');b.classList.toggle('cd',!!cover);b.classList.toggle('on',aiming===7+slot);
     cd.style.display=cover?'flex':'none';cd.textContent=cover;
-    const tip=(slot?'Secondary':'Primary')+' fire — '+W.nm+(W.energy?' · '+W.energy+' energy':'')+' · '+W.cool+'s. '+W.ds;
+    const tip=(slot?'Secondary':'Primary')+' fire — '+W.nm+(W.energy?' · '+W.energy+' energy':'')+' · '+Math.round(commanderCool(W.cool))+'s. '+W.ds;
     b.title=tip;b.setAttribute('aria-label',tip);
   }
 }
@@ -140,16 +209,33 @@ function commanderActiveFx(A,x,y,size){
   addParticle(3,x,y,0,0,.72,s,c[0],c[1],c[2]);
   addParticle(0,x,y,0,-10,.5,Math.max(9,s*.08),c[0],c[1],c[2]);
 }
-function commanderActivePay(A){
-  const m=A.mass||0,e=A.energy||0;
-  if(!canAfford(0,m,e)){toast(A.nm+' NEEDS '+(m?m+' MASS'+(e?' + ':''):'')+(e?e+' ENERGY':''));return false;}
-  pay(0,m,e);commanderActiveCool=A.cool||30;return true;
+function commanderActivePayAt(i,A,quiet){
+  const m=A.mass||0,e=A.energy||0,seat=commanderSeatForUnit(i);
+  if(!canAfford(seat.team,m,e,seat.slot)){
+    if(!quiet) toast(A.nm+' NEEDS '+(m?m+' MASS'+(e?' + ':''):'')+(e?e+' ENERGY':''));
+    return false;
+  }
+  pay(seat.team,m,e,seat.slot);
+  const cd=commanderCool(A.cool||30);
+  if(typeof heroIdx!=='undefined'&&i===heroIdx) commanderActiveCool=cd;
+  else if(seat.seat) seat.seat.activeCool=cd;
+  return true;
 }
-function commanderActiveRefund(A){
-  commanderActiveCool=0;
-  resM[0]=Math.min(RES_MCAP[0],resM[0]+(A.mass||0));
-  resE[0]=Math.min(RES_ECAP[0],resE[0]+(A.energy||0));
+function commanderActivePay(A){ return commanderActivePayAt(heroIdx,A,false); }
+function commanderActiveRefundAt(i,A){
+  const seat=commanderSeatForUnit(i);
+  if(typeof heroIdx!=='undefined'&&i===heroIdx) commanderActiveCool=0;
+  else if(seat.seat) seat.seat.activeCool=0;
+  if(seat.team===1&&seat.seat){
+    seat.seat.mass=(seat.seat.mass||0)+(A.mass||0);
+    seat.seat.energy=(seat.seat.energy||0)+(A.energy||0);
+    return;
+  }
+  const t=seat.team||0;
+  resM[t]=Math.min(RES_MCAP[t],resM[t]+(A.mass||0));
+  resE[t]=Math.min(RES_ECAP[t],resE[t]+(A.energy||0));
 }
+function commanderActiveRefund(A){ commanderActiveRefundAt(heroIdx,A); }
 function tryCommanderActive(){
   const A=commanderActiveDef();
   if(!A){toast('Commander signature unavailable — baseline powers remain operational');sfx('ui');return;}
@@ -164,69 +250,94 @@ function tryCommanderActive(){
   }
   fireCommanderActive(ux[heroIdx],uy[heroIdx]);
 }
-function commanderActiveDamageCircle(x,y,r,unitDmg,bldDmg){
+function commanderActiveDamageCircle(x,y,r,unitDmg,bldDmg,team){
+  if(team==null) team=0;
   let n=0;
-  forUnitsIn(x,y,r,j=>{if(uteam[j]===0)return;dealDamage(j,unitDmg,0,-1);n++;});
-  for(let i=0;i<blds.length;i++){const B=blds[i];if(B.alive&&B.team!==0&&dist2(x,y,B.x,B.y)<=r*r){damageBld(i,bldDmg,0);n++;}}
+  forUnitsIn(x,y,r,j=>{if(uteam[j]===team)return;dealDamage(j,unitDmg,team,-1);n++;});
+  for(let bi=0;bi<blds.length;bi++){const B=blds[bi];if(B.alive&&B.team!==team&&dist2(x,y,B.x,B.y)<=r*r){damageBld(bi,bldDmg,team);n++;}}
   return n;
 }
-function fireCommanderActive(wx,wy){
-  const A=commanderActiveDef();if(!A||heroIdx<0||!ualive[heroIdx]){aiming=-1;return false;}
-  const hx=ux[heroIdx],hy=uy[heroIdx];
-  if(A.target&&Math.hypot(wx-hx,wy-hy)>(A.range||0)){toast(A.nm.toUpperCase()+' TARGET OUT OF RANGE');return false;}
-  if(A.id==='phasebreach'&&!jumpLandingClear(wx,wy)){toast('PHASE BREACH NEEDS CLEAR GROUND');return false;}
-  if(!commanderActivePay(A))return false;
-  aiming=-1;let affected=0;
+function fireCommanderActive(wx,wy){ return fireCommanderActiveAt(heroIdx,wx,wy,false); }
+function fireCommanderActiveAt(idx,wx,wy,quiet){
+  const C=commanderDefForUnit(idx),A=C&&C.active;
+  if(!A||idx<0||!ualive[idx]){if(!quiet)aiming=-1;return false;}
+  const hx=ux[idx],hy=uy[idx],team=uteam[idx],player=typeof heroIdx!=='undefined'&&idx===heroIdx;
+  const dmgM=player?heroDmgMult:1;
+  if(A.target&&Math.hypot(wx-hx,wy-hy)>(A.range||0)){
+    if(!quiet)toast(A.nm.toUpperCase()+' TARGET OUT OF RANGE');return false;
+  }
+  if(A.id==='phasebreach'&&!jumpLandingClear(wx,wy,idx)){
+    if(!quiet)toast('PHASE BREACH NEEDS CLEAR GROUND');return false;
+  }
+  if(!commanderActivePayAt(idx,A,quiet))return false;
+  if(player)aiming=-1;let affected=0;
   if(A.id==='skybreaker'){
     const pts=[[0,0],[36,-24],[-31,28]];
     for(let q=0;q<pts.length;q++){
       const x=wx+pts[q][0],y=wy+pts[q][1];
-      affected+=commanderActiveDamageCircle(x,y,72,190*heroDmgMult,130*heroDmgMult);
+      affected+=commanderActiveDamageCircle(x,y,72,190*dmgM,130*dmgM,team);
       addBeam(x,y-680,x,y,10,A.col[0],A.col[1],A.col[2],.25,'orbital');
       spawnExplosion(x,y,34,1);addCrater(x,y,28);
     }
-    shake=Math.max(shake,7);
+    if(player){
+      if(typeof requestShake==='function') requestShake(wx,wy,7,'blast');
+      else shake=Math.max(shake,7);
+    }
   }else if(A.id==='fieldworkshop'){
-    forUnitsIn(hx,hy,A.range,j=>{if(uteam[j]!==0)return;affected++;uhp[j]=Math.min(uhpm[j],uhp[j]+uhpm[j]*.34+55);uclassBuff[j]=3;uclassBuffT[j]=Math.max(uclassBuffT[j],8);});
-    for(const B of blds)if(B.alive&&B.team===0&&dist2(hx,hy,B.x,B.y)<=A.range*A.range){B.hp=Math.min(B.hpm,B.hp+B.hpm*.24+90);B.shieldT=Math.max(B.shieldT||0,8);affected++;}
+    forUnitsIn(hx,hy,A.range,j=>{if(uteam[j]!==team)return;affected++;uhp[j]=Math.min(uhpm[j],uhp[j]+uhpm[j]*.34+55);uclassBuff[j]=3;uclassBuffT[j]=Math.max(uclassBuffT[j],8);});
+    for(const B of blds)if(B.alive&&B.team===team&&dist2(hx,hy,B.x,B.y)<=A.range*A.range){B.hp=Math.min(B.hpm,B.hp+B.hpm*.24+90);B.shieldT=Math.max(B.shieldT||0,8);affected++;}
   }else if(A.id==='ghostnet'){
     if(typeof fogStartScan==='function')fogStartScan(wx,wy,22,18);
-    forUnitsIn(wx,wy,225,j=>{affected++;if(uteam[j]===0){uclassBuff[j]=2;uclassBuffT[j]=Math.max(uclassBuffT[j],9);}else{ustun[j]=Math.max(ustun[j],1.6);ucool[j]=Math.max(ucool[j],2.2);}});
+    forUnitsIn(wx,wy,225,j=>{affected++;if(uteam[j]===team){uclassBuff[j]=2;uclassBuffT[j]=Math.max(uclassBuffT[j],9);}else{ustun[j]=Math.max(ustun[j],1.6);ucool[j]=Math.max(ucool[j],2.2);}});
   }else if(A.id==='seismicdecree'){
-    affected=commanderActiveDamageCircle(wx,wy,125,420*heroDmgMult,920*heroDmgMult);
-    damageScenery(wx,wy,145,1300);spawnExplosion(wx,wy,62,1);addCrater(wx,wy,105);deformTerrain(wx,wy,125,.09);shake=Math.max(shake,11);
+    affected=commanderActiveDamageCircle(wx,wy,125,420*dmgM,920*dmgM,team);
+    damageScenery(wx,wy,145,1300);spawnExplosion(wx,wy,36,team);addCrater(wx,wy,105);deformTerrain(wx,wy,125,.09);
+    if(player){
+      if(typeof requestShake==='function') requestShake(wx,wy,11,'blast');
+      else shake=Math.max(shake,11);
+    }
   }else if(A.id==='crimsonadvance'){
-    forUnitsIn(hx,hy,A.range,j=>{if(uteam[j]!==0||j===heroIdx)return;affected++;uhp[j]=Math.min(uhpm[j],uhp[j]+uhpm[j]*.15);uclassBuff[j]=1;uclassBuffT[j]=Math.max(uclassBuffT[j],11);});
-    commanderActiveDamageCircle(hx,hy,95,120*heroDmgMult,70*heroDmgMult);
+    forUnitsIn(hx,hy,A.range,j=>{if(uteam[j]!==team||j===idx)return;affected++;uhp[j]=Math.min(uhpm[j],uhp[j]+uhpm[j]*.15);uclassBuff[j]=1;uclassBuffT[j]=Math.max(uclassBuffT[j],11);});
+    affected+=commanderActiveDamageCircle(hx,hy,95,120*dmgM,70*dmgM,team);
   }else if(A.id==='ironredoubt'){
-    for(const B of blds)if(B.alive&&B.team===0&&dist2(hx,hy,B.x,B.y)<=A.range*A.range){affected++;B.hp=Math.min(B.hpm,B.hp+B.hpm*.17+100);B.shieldT=Math.max(B.shieldT||0,12);commanderActiveFx(A,B.x,B.y,B.r*2.1);}
-    if(!affected){commanderActiveRefund(A);toast('IRON REDOUBT NEEDS A FRIENDLY STRUCTURE IN RANGE — RESOURCES REFUNDED');return false;}
+    for(const B of blds)if(B.alive&&B.team===team&&dist2(hx,hy,B.x,B.y)<=A.range*A.range){affected++;B.hp=Math.min(B.hpm,B.hp+B.hpm*.17+100);B.shieldT=Math.max(B.shieldT||0,12);commanderActiveFx(A,B.x,B.y,B.r*2.1);}
+    if(!affected){commanderActiveRefundAt(idx,A);if(!quiet)toast('IRON REDOUBT NEEDS A FRIENDLY STRUCTURE IN RANGE — RESOURCES REFUNDED');return false;}
   }else if(A.id==='liquidation'){
     let claimed=0;
     for(let w=wrecks.length-1;w>=0&&claimed<4;w--){const W=wrecks[w];if(dist2(hx,hy,W.x,W.y)>A.range*A.range)continue;
-      resM[0]=Math.min(RES_MCAP[0],resM[0]+W.mass);resE[0]=Math.min(RES_ECAP[0],resE[0]+W.en);commanderActiveFx(A,W.x,W.y,38);wrecks.splice(w,1);claimed++;}
-    for(const B of blds)if(B.alive&&B.team===0&&['fac','tgate','harbor','airfield'].includes(B.type)&&dist2(hx,hy,B.x,B.y)<=A.range*A.range){B.boost=Math.max(B.boost,16);affected++;}
+      if(team===1){const seat=commanderSeatForUnit(idx);if(seat.seat){seat.seat.mass=(seat.seat.mass||0)+W.mass;seat.seat.energy=(seat.seat.energy||0)+W.en;}}
+      else{resM[team]=Math.min(RES_MCAP[team],resM[team]+W.mass);resE[team]=Math.min(RES_ECAP[team],resE[team]+W.en);}
+      commanderActiveFx(A,W.x,W.y,38);wrecks.splice(w,1);claimed++;}
+    for(const B of blds)if(B.alive&&B.team===team&&['fac','tgate','harbor','airfield'].includes(B.type)&&dist2(hx,hy,B.x,B.y)<=A.range*A.range){B.boost=Math.max(B.boost,16);affected++;}
     affected+=claimed;
-    if(!affected){commanderActiveRefund(A);toast('COMBAT LIQUIDATION NEEDS A WRECK OR FACTORY — RESOURCES REFUNDED');return false;}
+    if(!affected){commanderActiveRefundAt(idx,A);if(!quiet)toast('COMBAT LIQUIDATION NEEDS A WRECK OR FACTORY — RESOURCES REFUNDED');return false;}
   }else if(A.id==='phasebreach'){
-    commanderActiveFx(A,hx,hy,65);ux[heroIdx]=wx;uy[heroIdx]=wy;utx[heroIdx]=wx;uty[heroIdx]=wy;utgt[heroIdx]=-1;ustate[heroIdx]=0;
-    forUnitsIn(wx,wy,165,j=>{if(uteam[j]===0)return;ustun[j]=Math.max(ustun[j],3.5);ucool[j]=Math.max(ucool[j],4);affected++;});
-    for(const B of blds)if(B.alive&&B.team!==0&&dist2(wx,wy,B.x,B.y)<=165*165){B.cool=Math.max(B.cool||0,4);affected++;}
-    commanderCrushScenery(heroIdx,true);
+    commanderActiveFx(A,hx,hy,65);ux[idx]=wx;uy[idx]=wy;utx[idx]=wx;uty[idx]=wy;utgt[idx]=-1;ustate[idx]=0;
+    forUnitsIn(wx,wy,165,j=>{if(uteam[j]===team)return;ustun[j]=Math.max(ustun[j],3.5);ucool[j]=Math.max(ucool[j],4);affected++;});
+    for(const B of blds)if(B.alive&&B.team!==team&&dist2(wx,wy,B.x,B.y)<=165*165){B.cool=Math.max(B.cool||0,4);affected++;}
+    commanderCrushScenery(idx,true);
   }else if(A.id==='naniterecall'){
-    const chosen=[];for(let i=0;i<unitHigh&&chosen.length<8;i++)if(ualive[i]&&uteam[i]===0&&usel[i]&&i!==heroIdx)chosen.push(i);
-    for(let n=0;n<chosen.length;n++){const i=chosen[n],ang=n/Math.max(1,chosen.length)*TAU,rad=52+22*(n>>2);let x=hx+Math.cos(ang)*rad,y=hy+Math.sin(ang)*rad;
-      if(typeof battlefieldClampPoint==='function'){const p=battlefieldClampPoint(x,y,TYPES[utype[i]].r+5);x=p[0];y=p[1];}
-      if(!TYPES[utype[i]].air&&typeof isWalkable==='function'&&!isWalkable(x,y))continue;
-      commanderActiveFx(A,ux[i],uy[i],30);ux[i]=x;uy[i]=y;utx[i]=x;uty[i]=y;utgt[i]=-1;ustate[i]=0;uhp[i]=Math.min(uhpm[i],uhp[i]+uhpm[i]*.18);uclassBuff[i]=3;uclassBuffT[i]=7;affected++;commanderActiveFx(A,x,y,34);}
-    if(!affected){commanderActiveRefund(A);toast('NANITE RECALL NEEDS SELECTED ALLIED UNITS — RESOURCES REFUNDED');return false;}
+    const chosen=[];
+    if(player){for(let n=0;n<unitHigh&&chosen.length<8;n++)if(ualive[n]&&uteam[n]===team&&usel[n]&&n!==idx)chosen.push(n);}
+    else{
+      const near=[];
+      for(let n=0;n<unitHigh;n++)if(ualive[n]&&uteam[n]===team&&n!==idx&&dist2(ux[n],uy[n],hx,hy)<720*720)near.push(n);
+      near.sort((a,b)=>dist2(ux[a],uy[a],hx,hy)-dist2(ux[b],uy[b],hx,hy));
+      for(let n=0;n<near.length&&chosen.length<8;n++)chosen.push(near[n]);
+    }
+    for(let n=0;n<chosen.length;n++){const u=chosen[n],ang=n/Math.max(1,chosen.length)*TAU,rad=52+22*(n>>2);let x=hx+Math.cos(ang)*rad,y=hy+Math.sin(ang)*rad;
+      if(typeof battlefieldClampPoint==='function'){const p=battlefieldClampPoint(x,y,TYPES[utype[u]].r+5);x=p[0];y=p[1];}
+      if(!TYPES[utype[u]].air&&typeof isWalkable==='function'&&!isWalkable(x,y))continue;
+      commanderActiveFx(A,ux[u],uy[u],30);ux[u]=x;uy[u]=y;utx[u]=x;uty[u]=y;utgt[u]=-1;ustate[u]=0;uhp[u]=Math.min(uhpm[u],uhp[u]+uhpm[u]*.18);uclassBuff[u]=3;uclassBuffT[u]=7;affected++;commanderActiveFx(A,x,y,34);}
+    if(!affected){commanderActiveRefundAt(idx,A);if(!quiet)toast('NANITE RECALL NEEDS SELECTED ALLIED UNITS — RESOURCES REFUNDED');return false;}
   }else{
-    commanderActiveRefund(A);
-    toast('Signature command unavailable — resources refunded');return false;
+    commanderActiveRefundAt(idx,A);
+    if(!quiet)toast('Signature command unavailable — resources refunded');return false;
   }
   commanderActiveFx(A,wx,wy,Math.max(70,Math.min(260,A.range||150)));
-  sfx(A.sfx||'surge',wx,wy,1.2);if(typeof radioAck==='function')radioAck('ability',Math.max(1,affected),wx,wy);
-  toast((A.em||'✦')+' '+A.nm.toUpperCase()+' — '+affected+' '+(affected===1?'ASSET':'ASSETS')+' AFFECTED');
+  sfx(A.sfx||'surge',wx,wy,1.2);
+  if(typeof radioAck==='function'&&player)radioAck('ability',Math.max(1,affected),wx,wy);
+  if(!quiet)toast((A.em||'✦')+' '+A.nm.toUpperCase()+' — '+affected+' '+(affected===1?'ASSET':'ASSETS')+' AFFECTED');
   return true;
 }
 function commanderActiveButtonState(){
@@ -236,7 +347,7 @@ function commanderActiveButtonState(){
   let cover=commanderActiveCool>0?Math.ceil(commanderActiveCool):(!canAfford(0,m,e)?(m&&resM[0]<m?'M':'E'):'');
   b.classList.toggle('cd',!!cover);b.classList.toggle('on',aiming===6);cd.style.display=cover?'flex':'none';cd.textContent=cover;
   const cost=(m?m+' mass'+(e?' + ':''):'')+(e?e+' energy':'');
-  const tip=(A.em||'✦')+' '+A.nm+' — '+cost+', '+A.cool+'s cooldown. '+A.ds;
+  const tip=(A.em||'✦')+' '+A.nm+' — '+cost+', '+Math.round(commanderCool(A.cool))+'s cooldown. '+A.ds;
   b.title=tip;b.setAttribute('aria-label',tip);
 }
 
@@ -335,7 +446,8 @@ function artBarrageLaunch(m,P){
   const i=m.i;if(!ualive[i]||ugen[i]!==m.g||uteam[i]!==0||TYPES[utype[i]].cat!=='art')return false;
   const T=TYPES[utype[i]],a=Math.atan2(P.y-uy[i],P.x-ux[i]);
   uturr[i]=a+Math.PI/2;
-  const sx=ux[i]+Math.cos(a)*T.size*.72,sy=uy[i]+Math.sin(a)*T.size*.72;
+  const mz=typeof mfUnitMuzzle==='function'?mfUnitMuzzle(i):[ux[i]+Math.cos(a)*T.size*.72,uy[i]+Math.sin(a)*T.size*.72];
+  const sx=mz[0],sy=mz[1];
   const k=fireProj(2,0,sx,sy,P.x,P.y,ART_BARRAGE.speed,ART_BARRAGE.damage,ART_BARRAGE.aoe,-1);
   if(k<0)return false;
   pwk[k]='e';pmu0[k]=1;pBarrage[k]=1;
@@ -480,7 +592,13 @@ function tryClassAbility(){
   sfx(C.key==='service'?'heal':'surge',cx,cy,1.05);
   if(typeof radioAck==='function')radioAck('ability',touched.size,cx,cy);
 }
-function classAbilityReset(){for(const k in classAbCool)classAbCool[k]=0;}
+function classAbilityReset(){
+  for(const k in classAbCool)classAbCool[k]=0;
+  /* resetWorld already calls this after wiping the pop ledger. airlift.js
+     loads before main.js so it cannot wrap resetWorld; this is the world-reset
+     hook we own. mfAirliftResetHolds is idempotent with the ledger wrap. */
+  if(typeof mfAirliftResetHolds==='function') mfAirliftResetHolds();
+}
 function classAbilityTick(dt){for(const k in classAbCool)if(classAbCool[k]>0)classAbCool[k]=Math.max(0,classAbCool[k]-dt);}
 function classAbilityButtonState(){
   const b=document.getElementById('abClass');if(!b)return;
@@ -589,12 +707,17 @@ function tryAbility(k){
     return;
   }
   if(abCool[k]>0) return;
-  if(k===0){ aiming=0; toast('💥 Tap a location to fire ORBITAL BLAST');
+  if(k===0){
+    aiming=0;
+    const fac=typeof mfCombatFactionTeam==='function'?mfCombatFactionTeam(0):'nova';
+    toast(fac==='legion'||fac==='syndicate'
+      ? '◐ Tap a location to open a GRAVITY WELL'
+      : '✹ Tap a location to fire CLUSTER BOMB');
     if(typeof radioAck==='function')radioAck('ability',1,ux[heroIdx],uy[heroIdx]); return; }
   if(k===3){ aiming=3; toast('🛰 Tap a location to call the ORBITAL LANCE');
     if(typeof radioAck==='function')radioAck('ability',1,ux[heroIdx],uy[heroIdx]); return; }
   if(k===1){ // repair pulse
-    abCool[1]=AB_CD[1];
+    abCool[1]=commanderCool(AB_CD[1]);
     const hx=ux[heroIdx], hy=uy[heroIdx];
     forUnitsIn(hx,hy,190,j=>{
       if(uteam[j]===0){ uhp[j]=Math.min(uhpm[j],uhp[j]+uhpm[j]*0.45+40);
@@ -612,7 +735,7 @@ function tryAbility(k){
        Centred on the Commander rather than aimed: it is a panic button for when
        the Commander is caught, and a self-centred blast needs no aiming mode —
        one less state machine to get wrong. Friendlies are untouched. */
-    abCool[4]=AB_CD[4];
+    abCool[4]=commanderCool(AB_CD[4]);
     const hx=ux[heroIdx], hy=uy[heroIdx], R=260;
     let n=0;
     forUnitsIn(hx,hy,R,j=>{
@@ -629,13 +752,15 @@ function tryAbility(k){
       B.cool=Math.max(B.cool||0,4); b++;
     }
     addParticle(3,hx,hy,0,0,.8,R,150,220,255);
+    if(typeof gpfxEnergyBlast==='function')
+      gpfxEnergyBlast(hx,hy,16,52,[150,220,255],{speed:180,up:0.12,life:0.85,size:3.4,min:8,jit:10});
     toast('⚡ EMP — '+n+' unit'+(n===1?'':'s')+(b?' and '+b+' structure'+(b===1?'':'s'):'')+' disabled for 4s');
     sfx('surge',hx,hy,1.2);
     if(typeof radioAck==='function')radioAck('ability',n,hx,hy);
     return;
   }
   if(k===2){ // combat surge
-    abCool[2]=AB_CD[2];
+    abCool[2]=commanderCool(AB_CD[2]);
     const hx=ux[heroIdx], hy=uy[heroIdx];
     let n=0;
     forUnitsIn(hx,hy,230,j=>{ if(uteam[j]===0){ ubuff[j]=8; n++; } });
@@ -647,11 +772,13 @@ function tryAbility(k){
 /* Emergency mobility is deliberately short-range and terrain-aware. It gets
    the heavy commander out of a blocked street or a surround, without turning
    it into a free cross-map teleport. */
-function jumpLandingClear(x,y){
+function jumpLandingClear(x,y,i){
+  if(i==null) i=heroIdx;
   if(typeof isWalkable==='function'&&!isWalkable(x,y)) return false;
+  const rad=(TYPES[utype[i]]&&TYPES[utype[i]].r)||12;
   for(let b=0;b<blds.length;b++){
     const B=blds[b]; if(!B.alive) continue;
-    if(dist2(x,y,B.x,B.y)<(B.r+TYPES[utype[heroIdx]].r+12)*(B.r+TYPES[utype[heroIdx]].r+12)) return false;
+    if(dist2(x,y,B.x,B.y)<(B.r+rad+12)*(B.r+rad+12)) return false;
   }
   return true;
 }
@@ -703,7 +830,7 @@ function tryCommanderJump(){
   if(typeof radioAck==='function') radioAck('ability',1,ux[heroIdx],uy[heroIdx]);
 }
 function commanderCrushScenery(i,impact){
-  if(i!==heroIdx||!ualive[i]) return;
+  if(i<0||!ualive[i]||!TYPES[utype[i]]||TYPES[utype[i]].cat!=='hero') return;
   const T=TYPES[utype[i]],rad=T.r+(impact?36:16),r2=rad*rad;
   for(const R of relics){
     /* Cities and large derelicts remain terrain decisions. Cottages, houses,
@@ -719,12 +846,14 @@ function fireCommanderJump(wx,wy){
   const hx=ux[heroIdx],hy=uy[heroIdx],d=Math.hypot(wx-hx,wy-hy);
   if(d>HERO_JUMP.range){ toast('JUMP TARGET OUT OF RANGE'); return; }
   if(!jumpLandingClear(wx,wy)){ toast('JUMP NEEDS CLEAR LANDING GROUND'); return; }
-  pay(0,0,HERO_JUMP.energy); heroJumpCool=HERO_JUMP.cool; aiming=-1;
+  pay(0,0,HERO_JUMP.energy); heroJumpCool=commanderCool(HERO_JUMP.cool); aiming=-1;
   addParticle(3,hx,hy,0,0,.42,58,110,215,255); addParticle(1,hx,hy,0,-16,.72,18,85,80,72);
   ux[heroIdx]=wx; uy[heroIdx]=wy; utx[heroIdx]=wx; uty[heroIdx]=wy; utgt[heroIdx]=-1; ustate[heroIdx]=0;
   commanderCrushScenery(heroIdx,true);
   addParticle(3,wx,wy,0,0,.66,72,130,225,255); addParticle(1,wx,wy,0,-18,.86,24,95,88,76);
-  shake=Math.max(shake,3.2); sfx('surge',wx,wy,1.25);
+  if(typeof requestShake==='function') requestShake(wx,wy,3.2,'step');
+  else shake=Math.max(shake,3.2);
+  sfx('surge',wx,wy,1.25);
   toast('↗ COMMANDER JUMP — landing zone secured');
 }
 function commanderJumpTick(dt){ if(heroJumpCool>0) heroJumpCool=Math.max(0,heroJumpCool-dt); }
@@ -733,32 +862,111 @@ function commanderJumpButtonState(){
   const cd=b.querySelector('.cdring'),cover=heroJumpCool>0?Math.ceil(heroJumpCool):(resE[0]<HERO_JUMP.energy?'E':'');
   b.classList.toggle('cd',!!cover); b.classList.toggle('on',aiming===4);
   cd.style.display=cover?'flex':'none'; cd.textContent=cover;
-  b.title='Jump Jets — '+HERO_JUMP.energy+' energy, '+HERO_JUMP.cool+'s cooldown. Emergency move through blocked terrain.';
+  b.title='Jump Jets — '+HERO_JUMP.energy+' energy, '+Math.round(commanderCool(HERO_JUMP.cool))+'s cooldown. Emergency move through blocked terrain.';
 }
 function fireBlast(wx,wy){
   buzz(30);
-  abCool[0]=AB_CD[0];
+  abCool[0]=commanderCool(AB_CD[0]);
   aiming=-1;
-  const R=blastRadius, DMG=420*heroDmgMult;
-  // charge-up visual then boom
-  addParticle(0,wx,wy,0,0,.5,40, 160,220,255);
-  setTimeout(()=>{},0);
-  forUnitsIn(wx,wy,R,j=>{
-    if(uteam[j]!==0){
-      const fall=1-0.6*Math.sqrt(dist2(wx,wy,ux[j],uy[j]))/R;
-      dealDamage(j,DMG*fall,0,-1);
-    }
-  });
-  const nb=findEnemyBld(wx,wy,0,R*0.8);
-  if(nb>=0) damageBld(nb,DMG*0.8,0);
+  const fac=typeof mfCombatFactionTeam==='function'?mfCombatFactionTeam(0):'nova';
+  /* Ability 0 used spawnExplosion(46, victimTeam) — size>=40 is the
+     superweapon handoff, and victim-team made Nova's blast inherit the
+     enemy's singularity. Legion/Syndicate own the well; Nova is bomblets. */
+  if(fac==='legion'||fac==='syndicate'){
+    spawnSingularity(wx,wy,1.05,0);
+    if(typeof radioAck==='function')radioAck('ability',1,wx,wy);
+    if(typeof requestShake==='function') requestShake(wx,wy,6,'blast');
+    else shake=Math.max(shake,6);
+    return;
+  }
+  const R=blastRadius, dmgM=heroDmgMult, spread=R*(72/110);
+  const pts=[[0,0]];
+  for(let k=0;k<7;k++){
+    const a=k/7*TAU+0.18, d=spread*(0.42+((k*3)&1)*0.28);
+    pts.push([Math.cos(a)*d,Math.sin(a)*d]);
+  }
+  let n=0;
+  for(let q=0;q<pts.length;q++){
+    const x=wx+pts[q][0], y=wy+pts[q][1];
+    const r=q?40:48, ud=(q?115:170)*dmgM, bd=(q?85:120)*dmgM;
+    n+=commanderActiveDamageCircle(x,y,r,ud,bd,0);
+    spawnExplosion(x,y,q?22:28,0);
+    if(typeof gpfxEnergyBlast==='function')
+      gpfxEnergyBlast(x,y,14,q?18:28,[255,210,120],{speed:140,up:0.5,life:0.62,size:3.1,min:5});
+    addCrater(x,y,q?16:22);
+  }
   damageScenery(wx,wy,R,700);
-  spawnExplosion(wx,wy,46,1);
-  addParticle(3,wx,wy,0,0,.9,R*2.1, 130,210,255);
-  addCrater(wx,wy,70);
-  deformTerrain(wx,wy,85, 0.05);
-  sfx('boom',wx,wy,2.4);
+  deformTerrain(wx,wy,70,0.035);
+  sfx('boom',wx,wy,2.2);
   if(typeof radioAck==='function')radioAck('ability',1,wx,wy);
-  shake=9;
+  if(typeof requestShake==='function') requestShake(wx,wy,8,'blast');
+  else shake=8;
+  toast('✹ CLUSTER BOMB — '+n+' '+(n===1?'ASSET':'ASSETS')+' HIT');
+}
+function commanderAiAimPoint(i,A){
+  const hx=ux[i],hy=uy[i],team=uteam[i],R=A.range||180;
+  if(!A.target) return {x:hx,y:hy,n:1};
+  let cx=0,cy=0,n=0;
+  forUnitsIn(hx,hy,R,j=>{if(uteam[j]===team)return;cx+=ux[j];cy+=uy[j];n++;});
+  if(n>=2) return {x:cx/n,y:cy/n,n};
+  const e=findEnemy(hx,hy,team,R);
+  if(e>=0) return {x:ux[e],y:uy[e],n:1};
+  const b=findEnemyBld(hx,hy,team,Math.min(R,420));
+  if(b>=0) return {x:blds[b].x,y:blds[b].y,n:1};
+  return null;
+}
+function commanderAiShouldCast(i,A,aim){
+  const hx=ux[i],hy=uy[i],team=uteam[i];
+  if(A.id==='ironredoubt'){
+    for(const B of blds)if(B.alive&&B.team===team&&dist2(hx,hy,B.x,B.y)<=A.range*A.range) return true;
+    return false;
+  }
+  if(A.id==='liquidation'){
+    for(let w=0;w<wrecks.length;w++) if(dist2(hx,hy,wrecks[w].x,wrecks[w].y)<=A.range*A.range) return true;
+    for(const B of blds)if(B.alive&&B.team===team&&['fac','tgate','harbor','airfield'].includes(B.type)&&dist2(hx,hy,B.x,B.y)<=A.range*A.range) return true;
+    return false;
+  }
+  if(A.id==='naniterecall'){
+    for(let n=0;n<unitHigh;n++) if(ualive[n]&&uteam[n]===team&&n!==i&&dist2(ux[n],uy[n],hx,hy)<720*720) return true;
+    return false;
+  }
+  if(A.id==='fieldworkshop'||A.id==='crimsonadvance') return true;
+  return !!(aim&&aim.n);
+}
+function commanderAiFireSecondary(i,S){
+  const C=commanderDefForUnit(i),W=C&&C.secondary;
+  if(!W||!S.weaponCool) return;
+  if(S.weaponCool[1]>0) return;
+  const e=findEnemy(ux[i],uy[i],uteam[i],W.range||280);
+  if(e<0) return;
+  const seat=commanderSeatForUnit(i);
+  if((W.energy||0)&&!canAfford(seat.team,0,W.energy,seat.slot)) return;
+  if(W.energy) pay(seat.team,0,W.energy,seat.slot);
+  S.weaponCool[1]=W.cool||16;
+  const mz=typeof mfUnitMuzzle==='function'?mfUnitMuzzle(i):[ux[i],uy[i]];
+  const pk=fireProj(W.ptype,uteam[i],mz[0],mz[1],ux[e],uy[e],W.speed,W.damage,W.aoe||0,e);
+  if(pk>=0){pwk[pk]=W.wk||'p';pCannon[pk]=1;if(W.ptype===2){pBarrage[pk]=1;pArc[pk]=90;}projectileFireFX(pk,mz[0],mz[1],ux[e]-mz[0],uy[e]-mz[1]);}
+  sfx(W.sfx||'cannon',ux[i],uy[i],1.2);
+}
+function commanderAiTick(dt){
+  if(typeof AI==='undefined'||!AI) return;
+  const seats=[].concat(AI.bases||[],AI.allies||[]);
+  for(const S of seats){
+    if(!S||S.commander==null||S.commander<0) continue;
+    const i=S.commander;
+    if(!ualive[i]||(S.commanderGen!=null&&ugen[i]!==S.commanderGen)) continue;
+    if(typeof heroIdx!=='undefined'&&i===heroIdx) continue;
+    S.activeCool=Math.max(0,(S.activeCool||0)-dt);
+    if(!S.weaponCool) S.weaponCool=[0,0];
+    S.weaponCool[0]=Math.max(0,S.weaponCool[0]-dt);
+    S.weaponCool[1]=Math.max(0,S.weaponCool[1]-dt);
+    commanderAiFireSecondary(i,S);
+    if(S.activeCool>0) continue;
+    const C=commanderDefForUnit(i),A=C&&C.active; if(!A) continue;
+    const aim=commanderAiAimPoint(i,A);
+    if(!commanderAiShouldCast(i,A,aim)||!aim) continue;
+    fireCommanderActiveAt(i,aim.x,aim.y,true);
+  }
 }
 function abilTick(dt){
   for(let i=0;i<abCool.length;i++) if(abCool[i]>0) abCool[i]-=dt;
@@ -768,10 +976,11 @@ function abilTick(dt){
   commanderJumpTick(dt);
   classAbilityTick(dt);
   artBarrageTick(dt);
+  commanderAiTick(dt);
 }
 /* ---------- ORBITAL LANCE — a sweeping beam bought in the Armory ---------- */
 function fireLance(wx,wy){
-  abCool[3]=AB_CD[3];
+  abCool[3]=commanderCool(AB_CD[3]);
   aiming=-1;
   const ang=Math.random()*TAU, LEN=560, W=64;
   const dxl=Math.cos(ang), dyl=Math.sin(ang);
@@ -787,7 +996,8 @@ function fireLance(wx,wy){
       addParticle(3,px2,py2,0,0,.6,W*2.2, 190,225,255);
       addBeam(px2,py2-700,px2,py2,16,200,235,255,0.28,'orbital');
       deformTerrain(px2,py2,W*0.8,0.03);
-      shake=Math.max(shake,7);
+      if(typeof requestShake==='function') requestShake(px2,py2,7,'blast');
+      else shake=Math.max(shake,7);
       sfx('boom',px2,py2,1.7);
     },k*85);
   }

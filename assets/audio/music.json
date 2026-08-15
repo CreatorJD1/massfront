@@ -11,41 +11,10 @@
     "crossfadeMs": 4500
   },
   "playlists": {
-    "nova": [
-      {"file":"music/nova_explore_black_iron_pulse_seed","title":"Black Iron Pulse — Recon","state":"explore","dur":18,"bundled":true},
-      {"file":"music/nova_black_iron_pulse_1","title":"Black Iron Pulse","state":"explore","dur":92,"bundled":false},
-      {"file":"music/nova_tension_black_iron_pulse_seed","title":"Black Iron Pulse — Contact","state":"tension","dur":18,"bundled":true},
-      {"file":"music/nova_black_iron_pulse_1","title":"Black Iron Pulse","state":"tension","dur":92,"bundled":false},
-      {"file":"music/nova_combat_blackout_crown_seed","title":"Blackout Crown — Overcharge","state":"combat","dur":18,"bundled":true},
-      {"file":"music/nova_blackout_crown","title":"Blackout Crown","state":"combat","dur":92,"bundled":false}
-    ],
-    "ascendancy": [
-      {"file":"music/ascendancy_explore_ashes_to_crown_seed","title":"Ashes to Crown — March","state":"explore","dur":18,"bundled":true},
-      {"file":"music/ascendancy_ashes_to_crown","title":"Ashes to Crown","state":"explore","dur":92,"bundled":false},
-      {"file":"music/ascendancy_tension_ashes_to_crown_seed","title":"Ashes to Crown — Muster","state":"tension","dur":18,"bundled":true},
-      {"file":"music/ascendancy_ashes_to_crown","title":"Ashes to Crown","state":"tension","dur":92,"bundled":false},
-      {"file":"music/ascendancy_combat_iron_crown_seed","title":"Iron Crown — Conquest","state":"combat","dur":18,"bundled":true},
-      {"file":"music/ascendancy_iron_crown_1","title":"Iron Crown","state":"combat","dur":92,"bundled":false}
-    ],
-    "syndicate": [
-      {"file":"music/syndicate_explore_bassquake_seed","title":"Bassquake Chronicles — Probe","state":"explore","dur":18,"bundled":true},
-      {"file":"music/syndicate_bassquake_chronicles_remastered_1","title":"Bassquake Chronicles Remastered","state":"explore","dur":92,"bundled":false},
-      {"file":"music/syndicate_tension_bassquake_seed","title":"Bassquake Chronicles — Trace","state":"tension","dur":18,"bundled":true},
-      {"file":"music/syndicate_bassquake_chronicles_remastered_1","title":"Bassquake Chronicles Remastered","state":"tension","dur":92,"bundled":false},
-      {"file":"music/syndicate_combat_black_flag_vulture_seed","title":"Black Flag Vulture — Breach","state":"combat","dur":18,"bundled":true},
-      {"file":"music/syndicate_black_flag_vulture","title":"Black Flag Vulture","state":"combat","dur":92,"bundled":false}
-    ],
-    "horde": [
-      {"file":"music/horde_explore_black_helmets_seed","title":"Black Helmets — Stirring","state":"explore","dur":18,"bundled":true},
-      {"file":"music/horde_black_helmets","title":"Black Helmets","state":"explore","dur":92,"bundled":false},
-      {"file":"music/horde_tension_black_helmets_seed","title":"Black Helmets — Hunger","state":"tension","dur":18,"bundled":true},
-      {"file":"music/horde_black_helmets","title":"Black Helmets","state":"tension","dur":92,"bundled":false},
-      {"file":"music/horde_combat_black_iron_pulse_seed","title":"Black Iron Pulse — Devour","state":"combat","dur":18,"bundled":true},
-      {"file":"music/horde_black_iron_pulse","title":"Black Iron Pulse","state":"combat","dur":92,"bundled":false}
-    ],
-    "menu": [
-      {"file":"music/menu_cold_crown_seed","title":"Cold Crown — Command","state":"explore","dur":18,"bundled":true},
-      {"file":"music/menu_cold_crown","title":"Cold Crown","state":"explore","dur":92,"bundled":false}
-    ]
+    "nova": [],
+    "ascendancy": [],
+    "syndicate": [],
+    "horde": [],
+    "menu": []
   }
 }

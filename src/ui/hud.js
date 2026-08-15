@@ -92,7 +92,7 @@ const fogScans=[];
    through the 2D raster pipeline twice per update. The canvas survives only
    as the minimap's composited fog layer, refreshed at half cadence. */
 const fogCanvas=document.createElement('canvas'); fogCanvas.width=FN; fogCanvas.height=FN;
-const fogCtx=fogCanvas.getContext('2d');
+const fogCtx=fogCanvas.getContext('2d',{willReadFrequently:true});
 const fogImg=fogCtx.createImageData(FN,FN);
 const fogBuf=new Uint8Array(FN*FN*4);
 let fogMiniTick=0;
@@ -165,7 +165,7 @@ function updateFog(){
   prevFogCov.set(fogCov);
   fogCov.fill(0);
   fogSources.fill(0);
-  const vis=r=>WC.fogb?Math.max(4,Math.round(r*0.6)):r;   // wildcard: Fog Bank
+  const vis=r=>(typeof intelVisionScale==='function')?intelVisionScale(r):(WC.fogb?Math.max(4,Math.round(r*0.6)):r);
   /* Stamp each occupied sensor cell once. Sampling every Nth unit was cheap,
      but at high population it could skip a lone scout and black out the ground
      under the player's own army. This remains bounded by the 64x64 fog grid. */
@@ -176,9 +176,11 @@ function updateFog(){
        it stands on. Applied to the whole radius, storm front + Fog Bank
        stacked your own column into darkness and erosion ate the remaining
        bubbles: fog read as PERMANENT while driving through it. Six cells of
-       self-illumination always; haze scales only the reach beyond. */
-    const base=vis(TYPES[utype[i]].air?14:10);
-    const r=Math.max(6,Math.round(6+(base-6)*hm));
+       self-illumination always; haze scales only the reach beyond.
+       Scout/GHOST radii live in src/intel.js — hardcoded air/ground here was
+       why a Kestrel saw the same disc as a Wasp. */
+    const r=(typeof intelUnitVision==='function')?intelUnitVision(i,vis,hm)
+      :Math.max(6,Math.round(6+(vis(TYPES[utype[i]].air?14:10)-6)*hm));
     const cx=clamp(ux[i]/MAP*FN|0,0,FN-1),cy=clamp(uy[i]/MAP*FN|0,0,FN-1),q=cy*FN+cx;
     if(fogSources[q]<r){ fogSources[q]=r; markCov(ux[i],uy[i],r); }
   }
@@ -186,7 +188,9 @@ function updateFog(){
     if(!B.alive) continue;
     if(B.team===0){
       const hm=typeof hazVisionMult==='function'?hazVisionMult(B.x,B.y,-1):1;
-      markCov(B.x,B.y,Math.max(4,Math.round(vis(B.type==='hq'?22:B.type==='turret'?12:10)*hm)));
+      const br=(typeof intelBldVision==='function')?intelBldVision(B,vis,hm)
+        :Math.max(4,Math.round(vis(B.type==='hq'?22:B.type==='turret'?12:10)*hm));
+      markCov(B.x,B.y,br);
     }
   }
   if(carrier.active) markCov(carrier.x,carrier.y, vis(24));   // the carrier lights its own way down
@@ -209,27 +213,30 @@ function updateFog(){
   }
   blurFogCov();
   const d=fogBuf;
-  const pulse=Math.sin(stats.t*0.8*TAU)*0.03;
   for(let i=0;i<FN*FN;i++){
-    const o=i*4;
-    if(fogCov[i]){
-      d[o]=0; d[o+1]=0; d[o+2]=0; d[o+3]=0;
-    } else if(fogSeen[i]){
-      /* Explored-but-not-visible: lighter tint to differentiate, but still
-         dark enough that the player cannot read live enemy activity. */
-      d[o]=0; d[o+1]=5; d[o+2]=15; d[o+3]=200;
-    } else {
-      /* Unexplored: solid dark. The pulse is purely cosmetic and must never
-         drop alpha low enough to reveal the map. */
-      d[o]=4; d[o+1]=8; d[o+2]=20;
-      d[o+3]=255;
+    const o=i*4, x=i%FN, y=i/FN|0;
+    let cov=0, seen=0, n=0;
+    for(let dy=-1;dy<=1;dy++) for(let dx=-1;dx<=1;dx++){
+      const nx=x+dx, ny=y+dy;
+      if(nx<0||nx>=FN||ny<0||ny>=FN) continue;
+      const j=ny*FN+nx;
+      cov+=fogCov[j]; seen+=fogSeen[j]; n++;
     }
+    /* GPU alpha only — gameplay still uses the binary fogCov stamps.
+       Vision 0, explored shroud 168 (scouted terrain stays command-readable),
+       unexplored 255. 3x3 vis feathers the sensor bubble before the LINEAR
+       filter, so the circle reads as weather rather than a hard disc.
+       RGB stays black: 3D shaders sample .a, and a navy fill was the old
+       blue cutout on any planet whose atmosphere is not blue. */
+    const shroud=1-cov/n;
+    d[o]=0; d[o+1]=0; d[o+2]=0;
+    d[o+3]=(shroud*(seen/n>0.12?168:255))|0;
   }
   if((fogMiniTick=(fogMiniTick+1)&1)===0){ fogImg.data.set(fogBuf); fogCtx.putImageData(fogImg,0,0); }
   if(!fogTex){
     fogTex=gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D,fogTex);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,FN,FN,0,gl.RGBA,gl.UNSIGNED_BYTE,fogBuf);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,FN,FN,0,gl.RGBA,gl.UNSIGNED_BYTE,fogBuf);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
@@ -315,7 +322,16 @@ function renderLegacySprites(dtDraw){
         sTree=sprites.tree, sCry=sprites.crystal, sPx=sprites.px, sCloud=sprites.cloud;
   const selRing=sprites.ring, glow=sprites.glow;
   for(const c of craters){ if(c.x<x0||c.x>x1||c.y<y0||c.y>y1) continue;
-    batN.add(sCrater,c.x,c.y,c.s,c.s,c.a,255,255,255,200); }
+    const civic=typeof cityGroundAt==='function' && cityGroundAt(c.x,c.y)>=1;
+    if(civic){
+      /* 3D civic scars live in the terrain paint (noisy burnt concrete).
+         The atlas crater is a square cell with a circular dirt gradient —
+         drawing it here cut a grass-tinted box into CITYG pavement. */
+      if(use3D) continue;
+      const hot=clamp(1-Math.max(0,(stats&&stats.t||0)-(c.ts||0))/42,0,1);
+      batN.add(sCrater,c.x,c.y,c.s,c.s,c.a,(32+hot*70)|0,(32+hot*22)|0,(34-hot*8)|0,220);
+      if(hot>0.14) batA.add(glow,c.x,c.y,c.s*0.72,c.s*0.72,0,255,110,36,(hot*78)|0);
+    } else batN.add(sCrater,c.x,c.y,c.s,c.s,c.a,255,255,255,200); }
   for(const w of wrecks){ if(w.x<x0||w.x>x1||w.y<y0||w.y>y1) continue;
     /* A destroyed machine stains the ground beneath it before the salvage
        disappears. This is tactical history, not another particle pile: the
@@ -354,7 +370,9 @@ function renderLegacySprites(dtDraw){
     batN.add(sCrater,d.x+8,d.y-5,fieldR*1.35,fieldR*.95,-(d.pulse||0)-.7,col[0]*.86|0,col[1]*.78|0,col[2]*.92|0,tier?46:28);
     batN.add(glow,d.x,d.y,fieldR*2.05,fieldR*2.05,0,col[0],col[1],col[2],tier?(42+24*frac)|0:8);
     batN.add(selRing,d.x,d.y,fieldR*1.45,fieldR*1.45,t*.10+(d.pulse||0),col[0],col[1],col[2],tier?76:20);
-    if(tier>0&&!d.taken){
+    /* 3D owns the outcrop. The 2D dep stamp is a circular pad — it is what
+       made live nodes look like a grey plate under the shards. */
+    if(tier>0&&!d.taken&&!use3D){
       if(tier===3) batN.add(sprites.depR,d.x,d.y,51,51,0,col[0],col[1],col[2],255);
       else batN.add(sDep,d.x,d.y,42+tier*4,42+tier*4,0,col[0],col[1],col[2],255);
     }
@@ -366,7 +384,9 @@ function renderLegacySprites(dtDraw){
     const gc=gz.taken?[95,118,125]:[105,235,255];
     batN.add(glow,gz.x,gz.y,88,88,0,gc[0],gc[1],gc[2],gz.taken?28:86);
     batN.add(selRing,gz.x,gz.y,82,82,t*.26,gc[0],gc[1],gc[2],gz.taken?35:140);
-    batN.add(sprites.geyser,gz.x,gz.y,52,52,0,gc[0],gc[1],gc[2],255);
+    /* sprites.geyser is the metal iris (dark ellipses + 5 rim arcs + cyan
+       hole). That stamp is the phone-shot hatch. 3D draws the vent. */
+    if(!use3D) batN.add(sprites.geyser,gz.x,gz.y,52,52,0,gc[0],gc[1],gc[2],255);
     if(perfScale>0.4&&Math.random()<0.06)
       addParticle(1,gz.x+rr(-5,5),gz.y+rr(-4,4),rr(-2,2),rr(-17,-10),1.3,9, 165,225,250);
   }
@@ -458,7 +478,7 @@ function renderLegacySprites(dtDraw){
       40+(C.kind&&C.kind.rarity||0)*3,40+(C.kind&&C.kind.rarity||0)*3,
       al>0?t*2.4:0,cc[0],cc[1],cc[2],255);
   }
-  const tt=THEMES[curTheme].treeTint;
+  const tt=(typeof biomeKit==='function'&&biomeKit().treeTint)||THEMES[curTheme].treeTint;
   for(const tr of trees){ if(tr.x<x0||tr.x>x1||tr.y<y0||tr.y>y1) continue;
     batN.add(sTree,tr.x,tr.y,tr.s,tr.s,tr.a,tt[0],tt[1],tt[2],255); }
 
@@ -490,6 +510,10 @@ function renderLegacySprites(dtDraw){
   const RSPR=['relicT','relicD','relicI','relicK','relicD'];
   for(let ri=0;ri<relics.length;ri++){
     const R=relics[ri];
+    /* 3D owns civic hulls and wreck fire. The 2D relicT sprite is a flat
+       red card, and the dead path used sprites.fireball at plot scale —
+       that was the clean-pop / vehicle mushroom on a tower. */
+    if(use3D) continue;
     if(!R.alive) continue;
     if(R.x<x0-110||R.x>x1+110||R.y<y0-110||R.y>y1+110) continue;
     const dmgT=R.hp/R.hpm;
@@ -508,6 +532,20 @@ function renderLegacySprites(dtDraw){
       if(perfScale>0.5 && (tick+ri)%26===0)
         addParticle(1, R.x+rr(-R.w*0.3,R.w*0.3), R.y-R.s*0.2, rr(-4,4), rr(-16,-8), 1.6, R.s*0.22, 54,50,46);
     }
+  }
+  /* Dead civic blocks still burn on the 2D path — same reason as 3D. */
+  for(let ri=0;ri<relics.length;ri++){
+    const R=relics[ri];
+    if(use3D) continue;
+    if(R.alive) continue;
+    const age=stats.t-(R.fallT||0);
+    if(age>52||!(R.burn>0.18)) continue;
+    if(R.x<x0-110||R.x>x1+110||R.y<y0-110||R.y>y1+110) continue;
+    const heat=clamp(1-age/52,0,1)*R.burn;
+    const fa=heat*(0.55+Math.sin(t*4.2+ri)*0.45);
+    batA.add(sprites.flame||sprites.fireball||sprites.glow, R.x, R.y-R.s*0.12, R.s*0.7, R.s*0.9, -t*.5,
+      255, 190, 90, 200*fa);
+    batA.add(sprites.glow, R.x, R.y, R.s*1.1, R.s*1.1, 0, 255, 110, 40, 70*heat);
   }
   // ---- buildings ----
   const drawBld=(spr,x,y,sz,r,g,b,a)=>{
@@ -663,7 +701,9 @@ function renderLegacySprites(dtDraw){
         const fl=(t*3+b)%1>0.9?0.4:1;                                            // occasional flicker
         batA.add(sprites.glow,Bd.x+sz*0.3,Bd.y-sz*0.18,9,9,0,255,220,150,200*nAmt*fl);
         batA.add(sprites.glow,Bd.x-sz*0.26,Bd.y+sz*0.2,7,7,0,170,215,255,170*nAmt);
-        batA.add(sprites.glow,Bd.x,Bd.y,sz*2.1,sz*2.1,0,255,215,160,26*nAmt);    // area work light
+        /* Area work-light (sz*2.1 warm pool) retired with the 3D night
+           billboard — it read as an orange orb on HQ/factory. Window and
+           pad-lamp points above stay. */
       }
       if((Bd.type==='fac'||Bd.type==='tgate')&&Bd.queue.length){
         batN.add(sPx,Bd.x,Bd.y+sz*0.62,sz*0.9,3,0,10,14,18,220);
@@ -939,10 +979,19 @@ function renderLegacySprites(dtDraw){
   const formationDisplay=orderPreview||(confirmLive?orderConfirm:null);
   if(formationDisplay&&!(META&&META.settings&&META.settings.formationPreview===false)){
     const fade=orderPreview?1:clamp((formationDisplay.until-performance.now())/950,0,1);
-    const members=formationDisplay.members.filter(i=>ualive[i]&&usel[i]),F=FORMS[formationDisplay.form]||FORMS[0];
-    const slots=formationTargets(members,formationDisplay.x,formationDisplay.y,F.id);
-    let cx2=0,cy2=0;for(const i of members){cx2+=ux[i];cy2+=uy[i];}
-    if(members.length){cx2/=members.length;cy2/=members.length;}
+    const members=formationDisplay.members,F=FORMS[formationDisplay.form]||FORMS[0];
+    /* Same 36-ghost cap as patrol. Do not call formationTargets on the full
+       selection here — that rebuilt 1000 stands every sprite frame. */
+    const slots=typeof formationPreviewSlots==='function'
+      ?formationPreviewSlots(formationDisplay,members,F.id)
+      :[];
+    const n=members.length, stride=Math.max(1,Math.ceil(n/36));
+    let cx2=0,cy2=0,cn=0;
+    for(let k=0;k<n;k+=stride){
+      const i=members[k]; if(!(ualive[i]&&usel[i])) continue;
+      cx2+=ux[i]; cy2+=uy[i]; cn++;
+    }
+    if(cn){cx2/=cn;cy2/=cn;}
     const fa=Math.atan2(formationDisplay.y-cy2,formationDisplay.x-cx2);
     /* noLine: tap-move confirms route through orderfx's traced path; a straight
        beam here would disagree with it whenever the field bends. */
@@ -951,7 +1000,7 @@ function renderLegacySprites(dtDraw){
         Math.hypot(formationDisplay.x-cx2,formationDisplay.y-cy2),fa+Math.PI/2,90,225,255,46*fade);
     batA.add(selRing,formationDisplay.x,formationDisplay.y,34,34,t*.8,100,235,255,190*fade);
     for(let k=0;k<slots.length;k++){
-      const P=slots[k],i=members[k],T=TYPES[utype[i]],sz=Math.max(12,T.size*.82);
+      const P=slots[k],i=members[Math.min(k*stride,n-1)],T=TYPES[utype[i]]||TYPES[0],sz=Math.max(12,T.size*.82);
       batA.add(selRing,P.x,P.y,sz*1.35,sz*1.35,t*.45+k*.1,95,240,255,185*fade);
       batA.add(sprites.glow,P.x,P.y,sz,sz,0,65,215,255,72*fade);
       const uv=UNIT_UV[T.spr];
@@ -1149,15 +1198,14 @@ function renderLegacySprites(dtDraw){
                  wid*f, len, ang+Math.PI/2, r,g,b, al);
       }
     };
-    // structures throw work-light cones onto their own hardstand
+    /* Specialist night shafts only. Generic work-light cones used to stamp
+       a warm source bloom on every large building — the HUD leftover of
+       the 3D billboard this pass retired. Searchlights and runway lamps stay. */
     for(const Bv of blds){
       if(!Bv.alive||Bv.prog<1||Bv.team===2) continue;
       if(Bv.x<x0-140||Bv.x>x1+140||Bv.y<y0-140||Bv.y>y1+140) continue;
       if(!fogEntityVisible(Bv.team,Bv.x,Bv.y)) continue;
       const szv=BT[Bv.type].size;
-      if(szv<28) continue;
-      const base=Math.atan2(1,0)+drift+Math.sin(Bv.anim)*0.25;
-      shaft(Bv.x, Bv.y-szv*0.46, szv*2.5, szv*0.5, 255,224,168, 96, base);
       if(Bv.type==='techlab'||Bv.type==='uplink'||Bv.type==='nova'){   // sweeping searchlight
         const sw=t*0.55+Bv.anim;
         shaft(Bv.x, Bv.y-szv*0.5, szv*4.4, szv*0.42, 150,210,255, 84, sw);
@@ -1429,8 +1477,23 @@ function renderLegacySprites(dtDraw){
 }
 
 // ---------- minimap ----------
-const mm=document.getElementById('minimap').getContext('2d');
-let mmBg=null, mmFrame=0;
+const mm=document.getElementById('minimap').getContext('2d',{willReadFrequently:true});
+let mmBg=null, mmFrame=0, mmBgGen=0;
+function mmBgIsLive(cv){
+  if(!cv||cv.width<8) return false;
+  try{
+    const c=cv.getContext('2d',{willReadFrequently:true});
+    if(!c) return false;
+    /* Interior only — the terrain vignette paints the corners near-black. */
+    const S=cv.width, pts=[[S>>2,S>>2],[S>>1,S>>1],[(S*3)>>2,(S*3)>>2],[S>>2,(S*3)>>2],[(S*3)>>2,S>>2]];
+    let lit=0;
+    for(const p of pts){
+      const d=c.getImageData(p[0],p[1],1,1).data;
+      if(d[0]+d[1]+d[2]>10) lit++;
+    }
+    return lit>=1;
+  }catch(e){ return false; }
+}
 function mmFactionCrest(fac,x,y,size,stroke){
   const I=typeof facIconCanvas==='function'?facIconCanvas(fac,()=>{mmFrame=0;}):null,s=size||12,h=s*.5;
   mm.save();mm.beginPath();mm.arc(x,y,h+1.5,0,TAU);mm.fillStyle='rgba(3,10,18,.92)';mm.fill();
@@ -1441,86 +1504,132 @@ function mmFactionCrest(fac,x,y,size,stroke){
 }
 function renderMinimap(){
   if((mmFrame++)%5) return;
-  const S=132, k=S/MAP;
-  if(!mmBg){
+  /* 256 backing store: a 5x5 civic cell is ~10 px, so lots/streets survive
+     the command-map read. CSS still paints 72-84 px; the canvas is the map. */
+  const S=256, k=S/MAP;
+  const mmEl=mm.canvas;
+  if(mmEl.width!==S){ mmEl.width=S; mmEl.height=S; }
+  if(!mmBg||mmBg.width!==S){
     mmBg=document.createElement('canvas'); mmBg.width=S; mmBg.height=S;
-    mmBg.getContext('2d').drawImage(terrainCanvas,0,0,S,S);
+    const c=mmBg.getContext('2d',{willReadFrequently:true});
+    /* Same civic albedo+mask as the 3D ground — not a bilinear grass stamp. */
+    if(typeof composeMinimapTerrain==='function') composeMinimapTerrain(c,S);
+    else if(terrainCanvas) c.drawImage(terrainCanvas,0,0,S,S);
+    /* Empty bake must not stick. MEDIUM's 1100 ms hold would restore this
+       black square after applyTheme nulls mmBg. */
+    if(!mmBgIsLive(mmBg)) mmBg=null;
   }
+  if(!mmBg) return;
   mm.drawImage(mmBg,0,0);
   mm.fillStyle='#3dd68a';
   for(const d of deposits){
     const tier=depositTier(d);
     if(tier<=0||(fogOn&&!demoMode&&!fogExploredAt(d.x,d.y))) continue;
     mm.fillStyle=tier===3?'#d06bff':tier===2?'#55eea3':'#4edcff';
-    const rs=tier+2;mm.fillRect(d.x*k-rs/2,d.y*k-rs/2,rs,rs);
+    const rs=(tier+2)*2;mm.fillRect(d.x*k-rs/2,d.y*k-rs/2,rs,rs);
   }
   for(const B of blds){
     if(!B.alive) continue;
-    if(!fogEntityVisible(B.team,B.x,B.y)) continue;
-    mm.fillStyle=B.team===0?mmPCol:(B.team===1?mmECol:'#ffb13a');
-    const s=Math.max(2.5,B.r*k*1.6);
+    const visB=fogEntityVisible(B.team,B.x,B.y);
+    const radarB=!visB&&B.team!==0&&typeof intelRadarContact==='function'&&intelRadarContact(B.x,B.y);
+    if(!visB&&!radarB) continue;
+    mm.fillStyle=radarB?'rgba(255,109,94,.42)':(B.team===0?mmPCol:(B.team===1?mmECol:'#ffb13a'));
+    const s=Math.max(radarB?3:5,B.r*k*(radarB?1.05:1.6));
     mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);
   }
   const total=teamCount[0]+teamCount[1]+teamCount[2];
   const step=total>3000? Math.ceil(total/1800):1;
   for(let i=0;i<unitHigh;i+=step){
     if(!ualive[i]) continue;
-    if(!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
-    mm.fillStyle=uteam[i]===0?mmPColA:(uteam[i]===1?mmEColA:'rgba(255,177,58,.9)');
-    mm.fillRect(ux[i]*k-1,uy[i]*k-1,2,2);
+    const visU=fogEntityVisible(uteam[i],ux[i],uy[i]);
+    /* Radar paints a contact without lighting the 3D model. GHOST stays off
+       this layer until a detector pierces it — radar is not omni. */
+    const radarU=!visU&&uteam[i]!==0&&umode[i]!==4&&typeof intelRadarContact==='function'&&intelRadarContact(ux[i],uy[i]);
+    if(!visU&&!radarU) continue;
+    mm.fillStyle=radarU?'rgba(255,109,94,.55)':(uteam[i]===0?mmPColA:(uteam[i]===1?mmEColA:'rgba(255,177,58,.9)'));
+    const d=radarU?3:4;
+    mm.fillRect(ux[i]*k-d/2,uy[i]*k-d/2,d,d);
   }
   for(const C of crates){
     if(!C.seen&&!fogPointVisible(C.x,C.y)) continue;
     const cc=C.kind&&C.kind.col||[255,225,140];
     mm.fillStyle='rgb('+cc[0]+','+cc[1]+','+cc[2]+')';
-    const x=C.x*k,y=C.y*k; mm.beginPath();mm.moveTo(x,y-3);mm.lineTo(x+3,y);mm.lineTo(x,y+3);mm.lineTo(x-3,y);mm.closePath();mm.fill();
+    const x=C.x*k,y=C.y*k; mm.beginPath();mm.moveTo(x,y-6);mm.lineTo(x+6,y);mm.lineTo(x,y+6);mm.lineTo(x-6,y);mm.closePath();mm.fill();
   }
-  if(fogOn&&!demoMode){
-    mm.globalAlpha=0.82;
-    mm.drawImage(fogCanvas,0,0,S,S);
-    mm.globalAlpha=1;
-    /* Explored-but-not-visible tint on minimap to match terrain shader. */
-    const md=mm.getImageData(0,0,S,S);
-    const mk=S/S;
+  if(typeof fogGameplayActive==='function'?fogGameplayActive()&&!demoMode:fogOn&&!demoMode){
+    /* Same fogBuf alpha the 3D shaders sample (live 0, shroud 168, unexplored
+       255). Drawing fogCanvas source-over painted unexplored as a black disc
+       and hid the theatre; dim in place so the command map still reads. */
+    const md=mm.getImageData(0,0,S,S), d=md.data;
     for(let y=0;y<S;y++) for(let x=0;x<S;x++){
-      const fi=(y/S*FN|0)*FN+(x/S*FN|0);
-      const mo=(y*S+x)*4;
-      if(!fogCov[fi]&&fogSeen[fi]){
-        md.data[mo]=0; md.data[mo+1]=5; md.data[mo+2]=15;
-      }
+      const a=fogBuf[((y/S*FN|0)*FN+(x/S*FN|0))*4+3];
+      if(a<8) continue;
+      /* 0.93 left 7% of night albedo — a black square on 84 px phones.
+         Unexplored stays muted so the theatre still reads; live vision
+         stays full; shroud sits between. */
+      const dim=a>=220?0.50:a>=80?0.72:1, lift=1-dim, mo=(y*S+x)*4;
+      d[mo]=d[mo]*dim+10*lift; d[mo+1]=d[mo+1]*dim+12*lift; d[mo+2]=d[mo+2]*dim+8*lift;
     }
     mm.putImageData(md,0,0);
   }
   if(typeof HAZ!=='undefined') for(const F of HAZ.faults||[]){
     if(F.state===2||!fogExploredAt(F.x,F.y)) continue;
     mm.strokeStyle=F.state===1?'rgba(255,174,80,.95)':'rgba(202,167,105,.48)';
-    mm.lineWidth=F.state===1?1.8:1;
-    mm.beginPath();mm.arc(F.x*k,F.y*k,Math.max(3,F.r*k),0,TAU);mm.stroke();
+    mm.lineWidth=F.state===1?3.6:2;
+    mm.beginPath();mm.arc(F.x*k,F.y*k,Math.max(6,F.r*k),0,TAU);mm.stroke();
   }
   for(let p2=mmPings.length-1;p2>=0;p2--){
     const P=mmPings[p2];
     if(stats.t>P.until){ mmPings.splice(p2,1); continue; }
     const ph=(P.until-stats.t)%1;
-    mm.strokeStyle='rgba('+P.cr+','+P.cg+','+P.cb+','+(0.35+0.6*(1-ph))+')'; mm.lineWidth=1.6;
-    mm.beginPath(); mm.arc(P.x*k,P.y*k,3+ph*9,0,6.283); mm.stroke();
+    mm.strokeStyle='rgba('+P.cr+','+P.cg+','+P.cb+','+(0.35+0.6*(1-ph))+')'; mm.lineWidth=3;
+    mm.beginPath(); mm.arc(P.x*k,P.y*k,6+ph*18,0,6.283); mm.stroke();
   }
   /* Strategic identity markers are deliberately painted after fog. Enemy
      crests still require current vision; friendly HQ/ally starts remain useful
      navigation anchors even when the unit dots merge into a large army. */
   const ownFac=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
   const ownHq=bldLive.find(B=>B.alive&&B.team===0&&B.type==='hq'&&B.allyAI==null);
-  if(ownHq)mmFactionCrest(ownFac,ownHq.x*k,ownHq.y*k,10,'#5de1ff');
+  if(ownHq)mmFactionCrest(ownFac,ownHq.x*k,ownHq.y*k,20,'#5de1ff');
   if(typeof AI!=='undefined'){
-    for(const A of AI.allies||[])mmFactionCrest(A.fac||ownFac,A.x*k,A.y*k,10,'#66e5a2');
+    for(const A of AI.allies||[])mmFactionCrest(A.fac||ownFac,A.x*k,A.y*k,20,'#66e5a2');
     for(const A of AI.bases||[]){
       const h=A.commander,visible=h>=0&&ualive[h]&&fogEntityVisible(uteam[h],ux[h],uy[h]);
-      if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,12,'#ff6d5e');
+      if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,24,'#ff6d5e');
     }
   }
-  if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(ownFac,ux[heroIdx]*k,uy[heroIdx]*k,13,'#ffd257');
-  const b=camBounds();
-  mm.strokeStyle='rgba(255,255,255,.8)'; mm.lineWidth=1;
-  mm.strokeRect(b.x0*k,b.y0*k,(b.x1-b.x0)*k,(b.y1-b.y0)*k);
+  if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(ownFac,ux[heroIdx]*k,uy[heroIdx]*k,26,'#ffd257');
+  /* Ground quad the ortho camera actually sees — not camBounds(). That AABB
+     is a cull pad (+60) and at yaw=0 assigns the pitched along-view span to
+     world Y while the eye looks along +X, so a portrait view drew a tall
+     white box over fog south of the look-at. Same unproject as s2w, onto the
+     look-at height plane so relief does not jitter the chrome. */
+  const q=mmViewCorners();
+  mm.strokeStyle='rgba(255,255,255,.85)'; mm.lineWidth=2.5;
+  mm.beginPath();
+  mm.moveTo(q[0][0]*k,q[0][1]*k);
+  mm.lineTo(q[1][0]*k,q[1][1]*k);
+  mm.lineTo(q[2][0]*k,q[2][1]*k);
+  mm.lineTo(q[3][0]*k,q[3][1]*k);
+  mm.closePath();
+  mm.stroke();
+}
+function mmViewCorners(){
+  const m=matV;
+  const rx=m[0], ry=m[4], rz=m[8];
+  const ux=m[1], uy=m[5], uz=m[9];
+  const dx=-m[2], dy=-m[6], dz=-m[10];
+  const asp=VW/Math.max(1,VH);
+  const hh=orthoSpan*0.5, hw=hh*asp;
+  const planeY=typeof terrainH==='function'?terrainH(cam.x,cam.y):0;
+  function at(sx,sy){
+    const ndx=((sx/VW)*2-1)*hw, ndy=(1-(sy/VH)*2)*hh;
+    const ox=eyeX+rx*ndx+ux*ndy, oy=eyeY+ry*ndx+uy*ndy, oz=eyeZ+rz*ndx+uz*ndy;
+    if(Math.abs(dy)<1e-5) return [cam.x,cam.y];
+    const t=(planeY-oy)/dy;
+    return [ox+dx*t, oz+dz*t];
+  }
+  return [at(0,0), at(VW,0), at(VW,VH), at(0,VH)];
 }
 
 // ---------- HUD ----------
@@ -1619,9 +1728,10 @@ function updateWaveWarning(){
   const left=Math.max(0,Math.ceil(waveThreat.until-stats.t));
   const atk=document.getElementById('atkAlert');
   el.classList.toggle('withAttack',!!(atk&&atk.style.display==='block'));
-  el.style.display='block';
-  el.innerHTML='<b>⚠ WAVE '+waveThreat.wave+'</b><span>'+waveThreat.lane+' · '
+  if(el.style.display!=='block') el.style.display='block';
+  const h='<b>⚠ WAVE '+waveThreat.wave+'</b><span>'+waveThreat.lane+' · '
     +(left?left+'s':waveThreat.count?waveThreat.count+' HOSTILES':'CONTACT')+'</span>';
+  if(el._mfH!==h){ el._mfH=h; el.innerHTML=h; }
 }
 function jumpToWaveWarning(){
   if(!waveThreat) return;
@@ -1659,11 +1769,20 @@ function updateSelInfo(){
   const el=$('selInfo'), tac=$('tacRow');
   const deck=typeof hudDeck==='string'?hudDeck:'orders';
   const counts={};
-  let n=0,first=-1,modeable=0,curMode=-1,mixed=false,patrolling=0,holding=0,moving=0;
+  let n=0,first=-1,modeable=0,curMode=-1,mixed=false,patrolling=0,holding=0,stopped=0,moving=0,reposition=0,guarding=0;
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]){
     n++; if(first<0) first=i;
     counts[TYPES[utype[i]].name]=(counts[TYPES[utype[i]].name]||0)+1;
-    if(ustate[i]===5)patrolling++;else if(uhold[i])holding++;else if(ustate[i]===1||ustate[i]===2)moving++;
+    if(ustate[i]===5)patrolling++;
+    else if(ustate[i]===7)guarding++;
+    else if(uhold[i]){
+      /* Stop writes the same uhold stance as Hold so idle acquire cannot chase.
+         ustopDisp is set in input.js (stopSelected / orderHold), not sim. */
+      if(typeof ustopDisp!=='undefined'&&ustopDisp&&ustopDisp[i]) stopped++;
+      else holding++;
+    }
+    else if(ustate[i]===1){moving++;reposition++;}
+    else if(ustate[i]===2)moving++;
     if(unitModes(utype[i]).length>1){
       modeable++;
       if(curMode<0) curMode=umode[i]; else if(curMode!==umode[i]) mixed=true;
@@ -1685,19 +1804,27 @@ function updateSelInfo(){
   }
   if(!n){ el.style.display='none'; intelPrimaryUnit=-1; return; }
   el.style.display='flex';
-  const order=patrolling===n?'PATROL':holding===n?'HOLD':moving===n?(moveMode?'MOVE':'A-MOVE'):'READY';
+  const order=patrolling===n?'PATROL':guarding===n?'GUARD':stopped===n?'STOP':holding===n?'HOLD'
+    :(stopped+holding)===n?'HOLD/STOP':moving===n?(reposition===n?'MOVE':'A-MOVE'):'READY';
   const platoon=activePlatoon>=0?'P'+(activePlatoon+1)+' · ':'';
   const primary=TYPES[utype[first]], role=UCAT[primary.cat]||UCAT.veh;
   intelPrimaryUnit=first;
-  el.innerHTML='<span class="selIntelCopy"><b>'+role.em+' '+platoon+n+' '+(n===1?'UNIT':'UNITS')+'</b>'
+  const typeBits=Object.entries(counts);
+  const typeLine=typeBits.slice(0,3).map(([k,v])=>v+'× '+k).join(' · ')
+    +(typeBits.length>3?' · +'+(typeBits.length-3):'');
+  const vet=n===1&&uvet[first]?' · '+'★'.repeat(uvet[first]):'';
+  const h='<span class="selIntelCopy"><b>'+role.em+' '+platoon+n+' '+(n===1?'UNIT':'UNITS')+vet+'</b>'
     +'<span>'+FORMS[selFormation].nm.toUpperCase()+' · '+order+' — '
-    +Object.entries(counts).slice(0,3).map(([k,v])=>v+'× '+k).join(' · ')+'</span></span>'
+    +typeLine+'</span></span>'
     +'<button type="button" class="selIntelBtn" aria-label="Explain selected unit">ⓘ</button>';
-  const ib=el.querySelector('.selIntelBtn');
-  if(ib) ib.addEventListener('pointerdown',ev=>{
-    ev.stopPropagation();
-    if(intelPrimaryUnit>=0&&ualive[intelPrimaryUnit]){ showUnitCard(intelPrimaryUnit,-1,true); sfx('ui'); }
-  });
+  if(el._mfH!==h){
+    el._mfH=h; el.innerHTML=h;
+    const ib=el.querySelector('.selIntelBtn');
+    if(ib) ib.addEventListener('pointerdown',ev=>{
+      ev.stopPropagation();
+      if(intelPrimaryUnit>=0&&ualive[intelPrimaryUnit]){ showUnitCard(intelPrimaryUnit,-1,true); sfx('ui'); }
+    });
+  }
   /* Teach the affordance once per chassis: selection immediately explains the
      first Rhino, Constructor, aircraft, etc.; later selections stay compact and
      the always-visible info target reopens the card on demand. */
@@ -1729,55 +1856,85 @@ function cycleSelectedModes(){
   } else toast('Selected units have no alternate stance');
   updateSelInfo();
 }
+function hudPlayerPop(){
+  /* Player-slot wallet. Theatre size adds slots (2/3/4); each is still 1000.
+     Large's 4000 is the theatre total, not this chip. */
+  if(typeof populationLedgerPlayer==='function') return populationLedgerPlayer();
+  const cap=typeof populationCapForCommander==='function'?populationCapForCommander(-1)
+    :(typeof FACTION_POP_CAP==='number'?FACTION_POP_CAP:1000);
+  const used=typeof populationUsedForCommander==='function'?populationUsedForCommander(-1)
+    :(teamCount[0]|0);
+  return {used, cap};
+}
+function hudPopK(n){
+  n=n|0;
+  return n>=1000?(n/1000).toFixed(n%1000?1:0)+'K':String(n);
+}
 let hudFrame=0;
+function hudTxt(el,t){ if(el&&el._mfT!==t){ el._mfT=t; el.textContent=t; } }
+function hudCol(el,c){ if(el&&el._mfC!==c){ el._mfC=c; el.style.color=c; } }
+function hudDisp(el,d){ if(el&&el.style.display!==d) el.style.display=d; }
 function updateHUD(fps){
-  if((hudFrame++)%10) return;
+  if((hudFrame++)%10){ if(typeof showHazChip==='function') showHazChip(); return; }
   updateWaveWarning();
-  $('massV').textContent=Math.floor(resM[0]);
-  $('enV').textContent=Math.floor(resE[0]);
-  $('massV').style.color=stallM>0?'#ff8d7a':(resM[0]>=RES_MCAP[0]-1?'#ffd257':'');
-  $('enV').style.color=stallE>0?'#ff8d7a':'';
+  const massV=$('massV'), enV=$('enV'), massR=$('massR'), enR=$('enR');
+  hudTxt(massV, String(Math.floor(resM[0])));
+  hudTxt(enV, String(Math.floor(resE[0])));
+  hudCol(massV, stallM>0?'#ff8d7a':(resM[0]>=RES_MCAP[0]-1?'#ffd257':''));
+  hudCol(enV, stallE>0?'#ff8d7a':'');
   // net rate = income − measured spending, so the economy reads honestly
   const mNet=mRate-mSpend, eNet=eRate-eSpend;
-  if(resM[0]>=RES_MCAP[0]-1){ $('massR').textContent='FULL'; $('massR').style.color='#ffd257'; }
+  if(resM[0]>=RES_MCAP[0]-1){ hudTxt(massR,'FULL'); hudCol(massR,'#ffd257'); }
   else {
-    $('massR').textContent=(mNet>=0?'+':'')+mNet.toFixed(1);
-    $('massR').style.color=mNet<0?'#ff8d7a':'';
+    hudTxt(massR,(mNet>=0?'+':'')+mNet.toFixed(1));
+    hudCol(massR,mNet<0?'#ff8d7a':'');
   }
-  $('enR').textContent=(eNet>=0?'+':'')+eNet.toFixed(0);
-  $('enR').style.color=eNet<0?'#ff8d7a':'';
+  hudTxt(enR,(eNet>=0?'+':'')+eNet.toFixed(0));
+  hudCol(enR,eNet<0?'#ff8d7a':'');
   coachTick();
-  const popCap=populationCapFor(0),popEl=$('unitV'),popBox=$('unitRes');
-  /* Four-digit values overflow the top resource chip on narrow phones. The
-     title retains the exact count; only a full thousand is abbreviated. */
-  const popNow=teamCount[0],popNowTxt=popNow>=1000?(popNow/1000).toFixed(popNow%1000?1:0)+'K':String(popNow);
-  const popCapTxt=popCap>=1000?(popCap/1000).toFixed(popCap%1000?1:0)+'K':String(popCap);
-  popEl.textContent=popNowTxt+' / '+popCapTxt;
-  popBox.classList.toggle('popWarn',teamCount[0]>=popCap*.9);
-  popBox.classList.toggle('popFull',teamCount[0]>=popCap);
-  popBox.title='Army population: '+teamCount[0]+' of '+popCap;
-  $('fps').textContent=fps+' fps';
+  if(typeof updateSelInfo==='function') updateSelInfo();
+  const popL=hudPlayerPop(),popEl=$('unitV'),popBox=$('unitRes');
+  /* Chip is this commander's 1000. 1000 → 1K on the cap side always — never
+     print 4K here. Theatre total on Large is 4×1000; the player wallet is 1K. */
+  const popNowTxt=hudPopK(popL.used);
+  const popCapTxt=popL.cap===1000?'1K':hudPopK(popL.cap);
+  hudTxt(popEl, popNowTxt+' / '+popCapTxt);
+  popBox.classList.toggle('popWarn',popL.used>=popL.cap*.9);
+  popBox.classList.toggle('popFull',popL.used>=popL.cap);
+  const popTitle='Your population: '+popL.used+' of '+popL.cap+' — theatre size adds slots, not cap';
+  if(popBox.title!==popTitle) popBox.title=popTitle;
+  hudTxt($('fps'), fps+' fps');
   if(heroIdx>=0){
-    $('heroBar').style.display='block';
+    hudDisp($('heroBar'),'block');
     /* Rank symbol, not a sliced profile name. #heroHpFill no longer exists —
        the commander's health reads off the unit in the 3D view like every
        other unit's does. */
     const _hb=$('heroRankEm');
     if(_hb&&typeof metaRankIdx==='function'&&typeof RANKS!=='undefined'){
-      const _r=RANKS[metaRankIdx()]; if(_r&&_hb.textContent!==_r.em) _hb.textContent=_r.em;
+      const _r=RANKS[metaRankIdx()]; if(_r) hudTxt(_hb,_r.em);
     }
-    $('heroLvlTxt').textContent='LV '+heroLvl;
-    $('xpFill').style.width=(heroXp/heroXpNext*100)+'%';
-    $('heroLvlBadge').textContent=heroLvl;
-  } else $('heroBar').style.display='none';
+    hudTxt($('heroLvlTxt'),'LV '+heroLvl);
+    const xpW=(heroXp/heroXpNext*100)+'%';
+    const xpEl=$('xpFill'); if(xpEl&&xpEl._mfW!==xpW){ xpEl._mfW=xpW; xpEl.style.width=xpW; }
+    hudTxt($('heroLvlBadge'), String(heroLvl));
+  } else hudDisp($('heroBar'),'none');
   /* Length-driven, not a hardcoded 4. The EMP module added a fifth ability and
      the old literal silently left it out of the cooldown/lock rendering. */
   const btns=[$('abOver'),$('abHeal'),$('abRage'),$('abLance'),$('abEmp')].filter(Boolean);
   for(let k=0;k<btns.length;k++){
     const cd=btns[k].querySelector('.cdring');
-    if(!abUnlock[k]){ btns[k].classList.add('cd'); cd.style.display='flex'; cd.textContent='🔒'; }
-    else if(abCool[k]>0){ btns[k].classList.add('cd'); cd.style.display='flex'; cd.textContent=Math.ceil(abCool[k]); }
-    else { btns[k].classList.remove('cd'); cd.style.display='none'; }
+    if(!abUnlock[k]){
+      btns[k].classList.add('cd');
+      if(cd.style.display!=='flex') cd.style.display='flex';
+      hudTxt(cd,'🔒');
+    } else if(abCool[k]>0){
+      btns[k].classList.add('cd');
+      if(cd.style.display!=='flex') cd.style.display='flex';
+      hudTxt(cd, String(Math.ceil(abCool[k])));
+    } else {
+      btns[k].classList.remove('cd');
+      if(cd.style.display!=='none') cd.style.display='none';
+    }
   }
   if(aiming===0) $('abOver').classList.add('on'); else $('abOver').classList.remove('on');
   if(typeof commanderActiveButtonState==='function') commanderActiveButtonState();
@@ -1801,6 +1958,18 @@ function updateHUD(fps){
     if(running&&!demoMode&&matchLive){
       gb.style.display='flex';
       let h=goalStatus();
+      /* Annihilate keys off livingEnemyCommanders(). Those units spawn in
+         newSkirmish, but a first HUD paint (or a failed slot) can still read
+         0 while the clock is 10:00 — QA read that as "already won". If AI
+         seats are on and the match is still in the opening seconds, say
+         inbound instead of a fake zero. */
+      if(typeof goalDef==='function'&&goalDef().id==='annihilate'){
+        const live=typeof livingEnemyCommanders==='function'?livingEnemyCommanders().length:0;
+        let seats=0;
+        if(typeof aiSlots!=='undefined') for(let i=0;i<aiSlots.length;i++) if(aiSlots[i]&&aiSlots[i].on&&!aiSlots[i].ally) seats++;
+        if(live===0&&seats>0&&(typeof stats==='undefined'||(stats.t|0)<12))
+          h='\u2620 enemy commanders inbound: '+seats;
+      }
       const contact=typeof openingContactRemaining==='function'?openingContactRemaining():0;
       if(contact>0){
         const cs=Math.ceil(contact),cm=(cs/60)|0,cr=cs%60;
@@ -1816,7 +1985,7 @@ function updateHUD(fps){
          was also a fresh closure every pass. */
       if(gb._mfH!==h){ gb._mfH=h; gb.innerHTML=h; }
       if(!gb.onclick) gb.onclick=()=>toast(goalDef().em+' '+goalDef().nm+' — '+goalDef().ds);
-    } else gb.style.display='none';
+    } else hudDisp(gb,'none');
   }
   // hive threat meter
   const im=$('infMeter');
@@ -1825,14 +1994,14 @@ function updateHUD(fps){
       if(typeof infestationOn==='boolean'&&!infestationOn){
         /* The disabled swarm is a setup rule, not a live threat. Keeping its
            confirmation chip on-screen consumed scarce phone HUD space. */
-        im.style.display='none';
-        im.innerHTML='🐛 INFESTATION OFF';
-        im.style.color='#8fffc0';
+        hudDisp(im,'none');
+        if(im._mfH!=='OFF'){ im._mfH='OFF'; im.innerHTML='🐛 INFESTATION OFF'; }
+        hudCol(im,'#8fffc0');
         im.classList.remove('t4');
-        im.onclick=()=>toast('Neutral map infestation disabled — no nests, guards, spread, eruptions, or tides.');
+        if(!im._mfOffClick){ im._mfOffClick=1; im.onclick=()=>toast('Neutral map infestation disabled — no nests, guards, spread, eruptions, or tides.'); }
       } else {
       const tier=infTier(), bugs=teamCount[2];
-      im.style.display='flex';
+      hudDisp(im,'flex');
       /* Name it for what it is. "HIVE III" is the same label whether the swarm
          is this match's enemy army or the local wildlife, and those are very
          different things for a player deciding whether to go clear it. */
@@ -1855,6 +2024,7 @@ function updateHUD(fps){
     } else im.style.display='none';
   }
   showWcBanner();
+  showHazChip();
   showConsHud();
 }
 
@@ -1874,6 +2044,37 @@ function showWcBanner(){
   if(_mfWcBannerEl._h!==h){ _mfWcBannerEl._h=h; _mfWcBannerEl.innerHTML=h; }
   _mfWcBannerEl.style.display='flex';
   _mfWcBannerEl.onclick=()=>toast(wcActive.map(w=>w.em+' '+w.nm+': '+w.ds).join('  ·  '));
+}
+
+/* Map-exclusive weather. Wildcards are optional modifiers (#wcBanner); this
+   chip is the theatre's own hazard so the player can read the sky without
+   opening setup. Injected like the wildcard banner. */
+let _mfHazChipEl=null,_mfHazChipWatch=false;
+function showHazChip(){
+  if(!_mfHazChipEl){
+    _mfHazChipEl=document.createElement('div');
+    _mfHazChipEl.id='hazChip';
+    _mfHazChipEl.setAttribute('role','button');
+    _mfHazChipEl.setAttribute('aria-label','Map weather');
+    document.body.appendChild(_mfHazChipEl);
+    if(!_mfHazChipWatch&&typeof mfFlowWatch!=='undefined'&&mfFlowWatch){
+      mfFlowWatch.observe(_mfHazChipEl,{attributes:true,attributeFilter:['style','class']});
+      _mfHazChipWatch=true;
+    }
+  }
+  const live=!demoMode&&matchLive;
+  const D=live&&typeof mapHazardDef==='function'?mapHazardDef(typeof curMap!=='undefined'?curMap:''):null;
+  const show=!!(D&&D.nm);
+  const h=show?'<span class="hazEm">'+(D.em||'⚠')+'</span><span class="hazNm">'+D.nm+'</span>':'';
+  const disp=show?'flex':'none';
+  const changed=_mfHazChipEl._mfH!==h||_mfHazChipEl.style.display!==disp;
+  if(_mfHazChipEl._mfH!==h){ _mfHazChipEl._mfH=h; _mfHazChipEl.innerHTML=h; }
+  _mfHazChipEl.style.display=disp;
+  if(show&&!_mfHazChipEl.onclick) _mfHazChipEl.onclick=()=>{
+    const d=typeof mapHazardDef==='function'?mapHazardDef(curMap):null;
+    if(d) toast((d.em||'⚠')+' '+d.nm+(d.ds?' — '+d.ds:''));
+  };
+  if(changed&&typeof mfFlowQueueLayout==='function') mfFlowQueueLayout();
 }
 
 /* ---------- CONSUMABLE HUD (bottom-left during match) ---------- */
@@ -2140,10 +2341,11 @@ function intelChip(icon,label,tone){
 /* ---------- live mesh intelligence previews --------------------------------
    Purpose cards used to stop at icon + prose even though the exact production
    meshes are already resident in UNIT_GEO / BLD_MDL. A tiny isolated WebGL2
-   renderer consumes those factories directly. It deliberately owns its own
-   context: borrowing the battlefield context would have to move the command
-   camera and risks leaving the post stack on texture units 4/5/6 in the wrong
-   state after a UI draw. */
+   renderer consumes those factories directly. It deliberately keeps its own
+   context rather than borrowing the battlefield one: that would have to move
+   the command camera and risks leaving the post stack on texture units 4/5/6 in
+   the wrong state after a UI draw. ONE context, though — see mfIntel3DShared.
+   Per-card contexts are what force-lost the battlefield. */
 const MF_INTEL3D_VS=`#version 300 es
 layout(location=0) in vec3 aPos;
 layout(location=1) in vec3 aNrm;
@@ -2223,19 +2425,73 @@ function mfIntel3DSource(kind,id,kit){
     return out;
   }catch(e){return null;}
 }
+/* ---------- ONE context for every preview, live cards included --------------
+   Chrome allows 16 active WebGL contexts per page and force-loses the OLDEST
+   when a 17th is created. The battlefield context (src/engine/gl.js) is created
+   first, so it is ALWAYS the oldest: giving each intel card its own context —
+   and never releasing it, because dispose() only deleted the program — meant
+   that opening and closing about fifteen cards took the ground out from under a
+   live match. glrecover.js caught the loss honestly and put GRAPHICS PAUSED on
+   top of a black battlefield, which is the bug as the player experiences it.
+
+   So the cards no longer own contexts. A card canvas is an ordinary 2D surface
+   that receives a finished frame. All the geometry still belongs to the view
+   that built it — VAOs and buffers are per-CONTEXT, not per-canvas, so any
+   number of views can keep their own resources resident in this one context and
+   nothing is rebuilt per frame. Total cost: one context for the whole UI, for
+   any number of cards, forever. This is the same reasoning mfIntelThumbPump's
+   comment below already recorded; the live cards simply never followed it. */
+let mfIntel3DGL=null,mfIntel3DSurf=null,mfIntel3DProg=null;
+const MF_INTEL3D_MAXPX=2048;
+function mfIntel3DShared(){
+  if(mfIntel3DGL) return mfIntel3DGL;
+  if(mfIntel3DSurf) return null;                 // asked once, refused: do not keep asking
+  const c=document.createElement('canvas');c.width=c.height=8;mfIntel3DSurf=c;
+  const g=mfCreateWebGL2(c,{alpha:true,antialias:true,depth:true,premultipliedAlpha:true});
+  if(!g) return null;
+  /* preventDefault() or the browser never offers this context back. Every view
+     remembers its subject, so a restore rebuilds its buffers from the model
+     factories rather than leaving a grid of dead cards. */
+  c.addEventListener('webglcontextlost',e=>{
+    e.preventDefault();mfIntel3DProg=null;
+    for(const V of mfIntel3DViews) V.parts=[];
+    if(mfIntelThumbView) mfIntelThumbView.parts=[];
+  },false);
+  c.addEventListener('webglcontextrestored',()=>{
+    mfIntel3DProg=mfIntel3DProgram(mfIntel3DGL);
+    for(const V of mfIntel3DViews) V.revive();
+    if(mfIntelThumbView) mfIntelThumbView.revive();
+  },false);
+  mfIntel3DGL=g;mfIntel3DProg=mfIntel3DProgram(g);
+  return g;
+}
 class MFIntelPreview3D{
   constructor(canvas,kind,id,kit){
-    this.canvas=canvas;this.gl=canvas.getContext('webgl2',{alpha:true,antialias:true,depth:true,premultipliedAlpha:true});
-    this.program=this.gl&&mfIntel3DProgram(this.gl);this.parts=[];this.last=0;this.reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
+    this.canvas=canvas;this.gl=mfIntel3DShared();
+    this.ctx=this.gl?canvas.getContext('2d'):null;
+    this.program=(this.gl&&this.ctx)?mfIntel3DProg:null;
+    this.parts=[];this.last=0;this.reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
     if(!this.program) return;
+    this.locate();
+    this.setSubject(kind,id,kit);
+  }
+  locate(){
     const g=this.gl,p=this.program;
     this.U={vp:g.getUniformLocation(p,'uVP'),center:g.getUniformLocation(p,'uCenter'),offset:g.getUniformLocation(p,'uOffset'),
       tint:g.getUniformLocation(p,'uTint'),scale:g.getUniformLocation(p,'uScale'),partScale:g.getUniformLocation(p,'uPartScale'),yaw:g.getUniformLocation(p,'uYaw')};
-    this.setSubject(kind,id,kit);
+  }
+  /* After a restore the program is new and every buffer is gone; rebuild from
+     the remembered subject. */
+  revive(){
+    this.program=(this.gl&&this.ctx)?mfIntel3DProg:null;this.parts=[];
+    if(!this.program||this.kind===undefined) return;
+    this.locate();this.setSubject(this.kind,this.id,this.kit);
   }
   release(){
-    if(!this.gl) return;
-    for(const P of this.parts){this.gl.deleteVertexArray(P.vao);this.gl.deleteBuffer(P.vb);this.gl.deleteBuffer(P.ib);} this.parts=[];
+    const g=this.gl;
+    if(g&&!g.isContextLost())
+      for(const P of this.parts){g.deleteVertexArray(P.vao);g.deleteBuffer(P.vb);g.deleteBuffer(P.ib);}
+    this.parts=[];
   }
   setSubject(kind,id,kit){
     if(!this.program) return false;
@@ -2269,19 +2525,36 @@ class MFIntelPreview3D{
     this.tint=mfIntelTint(kit);this.dirty=true;return true;
   }
   draw(ts){
-    if(!this.program||(!this.dirty&&ts-this.last<34)) return;this.last=ts;this.dirty=false;
+    if(!this.program||!this.parts.length||(!this.dirty&&ts-this.last<34)) return;this.last=ts;this.dirty=false;
     const r=this.canvas.getBoundingClientRect();if(r.width<8||r.height<8) return;
-    const d=Math.min(1.6,window.devicePixelRatio||1),w=Math.max(64,Math.round(r.width*d)),h=Math.max(56,Math.round(r.height*d));
+    const d=Math.min(1.6,window.devicePixelRatio||1),
+      w=Math.min(MF_INTEL3D_MAXPX,Math.max(64,Math.round(r.width*d))),
+      h=Math.min(MF_INTEL3D_MAXPX,Math.max(56,Math.round(r.height*d)));
     if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}
-    const g=this.gl,P=m4(),V=m4(),VP=m4();m4persp(P,.58,w/h,.1,20);m4look(V,3.1,2.05,4.0,0,0,0,0,1,0);m4mul(VP,P,V);
-    g.viewport(0,0,w,h);g.clearColor(0,0,0,0);g.clear(g.COLOR_BUFFER_BIT|g.DEPTH_BUFFER_BIT);
+    const g=this.gl,S=mfIntel3DSurf;
+    if(g.isContextLost()) return;
+    /* The shared drawing buffer only ever grows, so cards of different sizes do
+       not force a reallocation every frame. */
+    if(S.width<w||S.height<h){S.width=Math.max(S.width,w);S.height=Math.max(S.height,h);}
+    const P=m4(),V=m4(),VP=m4();m4persp(P,.58,w/h,.1,20);m4look(V,3.1,2.05,4.0,0,0,0,0,1,0);m4mul(VP,P,V);
+    /* Row 0 of a drawing buffer is the BOTTOM of the presented image, so render
+       into the top band and the blit below reads a plain (0,0,w,h). Scissor as
+       well as viewport, or the clear would wipe a neighbour's band. */
+    const y0=S.height-h;
+    g.viewport(0,y0,w,h);g.enable(g.SCISSOR_TEST);g.scissor(0,y0,w,h);
+    g.clearColor(0,0,0,0);g.clear(g.COLOR_BUFFER_BIT|g.DEPTH_BUFFER_BIT);
     g.enable(g.DEPTH_TEST);g.disable(g.CULL_FACE);g.useProgram(this.program);
     g.uniformMatrix4fv(this.U.vp,false,VP);g.uniform3fv(this.U.center,this.center);g.uniform3fv(this.U.tint,this.tint);
     g.uniform1f(this.U.scale,this.scale);g.uniform1f(this.U.yaw,this.reduced ? .72 : (ts*.00034)%TAU);
     for(const Q of this.parts){g.uniform3f(this.U.offset,0,Q.off,0);g.uniform1f(this.U.partScale,Q.sc);g.bindVertexArray(Q.vao);g.drawElements(g.TRIANGLES,Q.count,g.UNSIGNED_SHORT,0);}
-    g.bindVertexArray(null);
+    g.bindVertexArray(null);g.disable(g.SCISSOR_TEST);
+    /* Copy out in the SAME task: the drawing buffer is cleared at the next
+       composite, and it is shared, so the next card overwrites it regardless. */
+    this.ctx.clearRect(0,0,w,h);this.ctx.drawImage(S,0,0,w,h,0,0,w,h);
   }
-  dispose(){this.release();if(this.gl&&this.program)this.gl.deleteProgram(this.program);this.program=null;}
+  /* The program belongs to the shared context and outlives every view, so this
+     only drops what this view allocated. Nothing here can strand a context. */
+  dispose(){this.release();this.program=null;}
 }
 const mfIntel3DViews=[];
 let mfIntel3DRaf=0;
@@ -2292,8 +2565,10 @@ function mfIntel3DPump(ts){
   }
   mfIntel3DRaf=mfIntel3DViews.length?requestAnimationFrame(mfIntel3DPump):0;
 }
-/* One shared WebGL context renders still thumbnails for every build/production
-   card. Giving every card its own context exhausts Android's context budget;
+/* Still thumbnails for every build/production card, rendered through the same
+   single context as the live previews above (one view, reused, snapshotted to
+   PNG). Giving every card its own context exhausts Android's context budget —
+   and Chrome's, which is what killed the battlefield;
    using the legacy unit sheet gives every faction a Nova silhouette. The PNG
    cache is keyed by the exact runtime faction kit and model ID, so a tab can
    rebuild freely without rebuilding geometry or lying about the subject. */
@@ -2429,7 +2704,12 @@ function intelUnitName(ty,kit){
 }
 function intelUnitLine(ty,kit){
   const d=(typeof factionUnitDesc==='function')?factionUnitDesc(ty,kit):'';
-  return d||intelUnitPurpose(TYPES[ty]);
+  let s=d||intelUnitPurpose(TYPES[ty]);
+  /* Nova Wasp's authored line in factext.js stops at "fast enough not to".
+     Completing the idiom here keeps the home-screen feed and inspect card
+     from advertising a sentence that just ends. */
+  if(typeof s==='string'&&/not to\s*$/i.test(s)) s=s.replace(/\s*$/,' die.');
+  return s;
 }
 function intelBldName(id,kit){
   return (typeof factionBldName==='function')?factionBldName(id,kit)
@@ -2446,7 +2726,10 @@ function showUnitTypeCard(tIdx,pinned,kit){
     +'<small>'+intelUnitLine(tIdx,kit)+'</small></div><button type="button" class="ucClose" aria-label="Close unit information">×</button></div>'
     +'<div class="ucChips">'+intelChip(C.em,C.nm)+intelChip(tg[0],tg[1])
     +intelChip('◈',WK_NM[T.wk])+intelChip('↔',intelRangeBand(T.rng))
-    +intelChip('⬢',ARM_NM[ai2]+' ARMOR')+'</div>'
+    +intelChip('⬢',ARM_NM[ai2]+' ARMOR')
+    +(T.scout?intelChip('⌾','RECON'):'')
+    +((typeof unitModes==='function'&&unitModes(tIdx).indexOf(4)>=0)?intelChip('◌','GHOST'):'')
+    +'</div>'
     +'<div class="ucStats"><span>DMG <b>'+T.dmg+'</b></span><span>RANGE <b>'+T.rng+'</b></span><span>SPEED <b>'+T.spd+'</b></span>'
     +(T.aoe?'<span>SPLASH <b>'+T.aoe+'</b></span>':'')+'</div>'
     +(T.wk==='n'?'<div class="ucCounter caution">⚠ UNARMED · ESCORT THIS UNIT</div>'
@@ -2484,7 +2767,10 @@ function showBuildingTypeCard(key,bIdx,pinned,kit){
     +'<small>'+intelBldLine(key,bkit)+'</small></div><button type="button" class="ucClose" aria-label="Close structure information">×</button></div>'
     +'<div class="ucChips">'+intelChip(C.em,C.nm)
     +(P?intelChip(tg[0],tg[1])+intelChip('◈',WK_NM[P.wk])+intelChip('↔',intelRangeBand(shownRange)):'')
-    +intelChip('⬢',(B?Math.ceil(B.hp)+' / '+Math.ceil(B.hpm):T.hp)+' HP')+'</div>'
+    +intelChip('⬢',(B?Math.ceil(B.hp)+' / '+Math.ceil(B.hpm):T.hp)+' HP')
+    +(key==='uplink'?intelChip('📡','RADAR'):'')
+    +(key==='techlab'?intelChip('🔭','DETECT'):'')
+    +'</div>'
     +(P?'<div class="ucStats"><span>DAMAGE TYPE <b>'+WK_NM[P.wk]+'</b></span>'
       +(W?'<span>DAMAGE <b>'+bldNum(W.damage)+'</b></span><span>RATE <b>'+bldNum(W.rate)+'/s</b></span>':'')
       +'<span>RANGE <b>'+shownRange+'</b></span>'
@@ -2612,8 +2898,9 @@ function renderBldPanel(){
   bi.setAttribute('role','button'); bi.setAttribute('tabindex','0');
   bi.setAttribute('aria-label','Explain '+T.name);
   bi.onpointerdown=ev=>{ ev.stopPropagation(); showBuildingTypeCard(B.type,openBld,true); sfx('ui'); };
+  const bLv=typeof bldDisplayLevel==='function'?bldDisplayLevel(B):(B.type==='fac'?(B.tier===2?2:1):(B.lvl||1));
   $('bp_title').textContent=intelBldName(B.type,(typeof factionTextKit==='function')?factionTextKit(B.team):undefined)
-    +(BUP[B.type]&&B.lvl>1?' Mk'+B.lvl:'');
+    +'  ·  LV'+bLv+(bLv>1?' '+'★'.repeat(Math.min(3,bLv)):'');
   $('bp_desc').textContent=intelBldLine(B.type,(typeof factionTextKit==='function')?factionTextKit(B.team):undefined)
     +' · '+Math.ceil(B.hp)+'/'+Math.ceil(B.hpm)+' hp'
     +(B.shieldMax?' · '+Math.ceil(B.shield)+'/'+Math.ceil(B.shieldMax)+' shield':'');
@@ -2707,13 +2994,18 @@ const UNIT_EM={0:'🤖',1:'🚜',2:'🦣',3:'🎯',5:'🚁',6:'🏹',7:'🚀',8:
 /* ---------- baked-sprite UI icons (real 3D renders instead of emoji) ---------- */
 let sheetCssDone=false;
 function ensureSheetCss(){
-  if(sheetCssDone) return; sheetCssDone=true;
+  if(sheetCssDone) return;
+  if(typeof UNIT_SHEET_B64!=='string') return;
+  sheetCssDone=true;
   const st=document.createElement('style');
   st.textContent='.sic{background-image:url("'+UNIT_SHEET_B64+'")}';
   document.head.appendChild(st);
 }
 function makeIcon(spr,size,frame){
-  const R=UNIT_ROWS[spr]; if(!R) return null;
+  /* boot.js continues after a script onerror. UNIT_ROWS lives in unitrows.js
+     so a 404 on the 1.6 MB unitsheet.js cannot unbind it; still guard here. */
+  const rows=typeof UNIT_ROWS==='object'&&UNIT_ROWS;
+  const R=rows?rows[spr]:null; if(!R) return null;
   ensureSheetCss();
   const f=Math.min(frame||0,R.n-1), sc=size/R.fw;
   const d=document.createElement('div');
@@ -2754,12 +3046,15 @@ function unitIconEl(tIdx,size,kit){
   }else if(kit==='nova'&&special&&typeof itemArt==='function'){
     w.innerHTML=itemArt(special,T.name,size);
     const img=w.firstElementChild; if(img) img.classList.add('rosterArt');
-  }else if(kit==='nova'){
+  }else{
+    /* Sheet sprites for every kit. Codex PNGs are not in the tree, so the
+       old nova-only branch left Brood/Legion/Syndicate on a ◇ diamond. */
     const h=makeIcon(T.spr,size,F); if(h) w.appendChild(h);
     if(T.tur){ const t=makeIcon(T.tur,size,F);
       if(t){ t.style.position='absolute'; t.style.left='0'; t.style.top='0'; w.appendChild(t); } }
-  }else{
-    const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';w.appendChild(wait);
+    if(!h){
+      const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';w.appendChild(wait);
+    }
   }
   /* A baked icon IS a render of this model, so asking the live thumbnail path
      for one would spend a GPU pass reproducing the image already on screen and
@@ -2785,21 +3080,21 @@ function bldIconEl(key,size,kit){
   }else if(kit==='nova'&&special&&typeof itemArt==='function'){
     d.innerHTML=itemArt(special,BT[key].em,size);
     const img=d.firstElementChild; if(img) img.classList.add('rosterArt');
-  }else if(kit==='nova'){
-    const el=makeIcon(BT[key].spr,size,0);
+  }else{
+    const el=makeIcon(BT[key]&&BT[key].spr,size,0);
     if(el){d.appendChild(el);
       if(key==='geo') el.style.filter='hue-rotate(150deg) saturate(1.6) drop-shadow(0 3px 3px rgba(0,0,0,.55))';}
     if(!el){
-      const uv=sprites[BT[key].spr];              // 2D-atlas fallback while exact render is queued
-      if(uv){
+      const uv=sprites[BT[key]&&BT[key].spr];
+      if(uv&&typeof atlasCanvas!=='undefined'&&atlasCanvas){
         const cv3=document.createElement('canvas'); cv3.width=cv3.height=64;
         cv3.getContext('2d').drawImage(atlasCanvas,
           uv[0]*ATLAS,uv[1]*ATLAS,(uv[2]-uv[0])*ATLAS,(uv[3]-uv[1])*ATLAS, 0,0,64,64);
         d.style.background='url('+cv3.toDataURL()+') center/contain no-repeat';
+      }else{
+        const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';d.appendChild(wait);
       }
     }
-  }else{
-    const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';d.appendChild(wait);
   }
   d.appendChild(live);
   if(!(facIc&&facIc.classList.contains('bmIcon')))   // see unitIconEl
@@ -2900,8 +3195,13 @@ function renderProdMenu(){
       ev.stopPropagation();
       if(openBld<0) return;
       const Bb=blds[openBld];
-      if(!populationCanSpawn(tIdx,0)){
-        toast('⚠ UNIT CAP '+teamCount[0]+' / '+populationCapFor(0)+' — recycle units or expand on a larger theatre');
+      const popSlot=typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(Bb):-1;
+      if(!populationCanSpawn(tIdx,0,popSlot)){
+        /* Each slot is 1000. Theatre size only adds slots — recycle, do not
+           tell the player expanding the theatre would raise this wallet. */
+        const used=typeof populationUsedForCommander==='function'?populationUsedForCommander(popSlot):(teamCount[0]|0);
+        const cap=typeof populationCapForCommander==='function'?populationCapForCommander(popSlot):1000;
+        toast('⚠ UNIT CAP '+used+' / '+cap+' — recycle units to free population');
         sfx('deny');return;
       }
       if(tIdx===8 && titanCount[0]+Bb.queue.filter(q=>q===8).length>=3){ toast('Max 3 TITANs'); return; }
@@ -2912,7 +3212,7 @@ function renderProdMenu(){
       if(tIdx!==8){                              // hold to queue a batch of 5
         const hold=setTimeout(()=>{
           const B5=blds[openBld];
-          if(B5&&B5.alive&&B5.queue.length<26&&populationCanSpawn(tIdx,0)){
+          if(B5&&B5.alive&&B5.queue.length<26&&populationCanSpawn(tIdx,0,popSlot)){
             for(let q=0;q<4;q++) B5.queue.push(tIdx);
             renderQueue(); toast('▶ ×5 '+T.name+' queued (hold to batch)'); sfx('ui');
           }
@@ -2940,18 +3240,100 @@ function renderProdMenu(){
   const ry=$('rallyBtn');
   if(ry){ ry.style.display='block'; ry.textContent=B.rally?'⚑ RALLY SET — TAP TO MOVE':'⚑ SET RALLY POINT'; }
 }
+function queueStacks(q){
+  const out=[];
+  if(!q||!q.length) return out;
+  /* Consecutive groups, not a global count-by-type. Rhino×3 then Eng then
+     Rhino is three plates — SupCom / C&C factory language. A type-merge
+     would hide the later Rhino behind the first stack. */
+  for(let i=0;i<q.length;){
+    const t=q[i]; let n=1;
+    while(i+n<q.length&&q[i+n]===t) n++;
+    out.push({t,n,i});
+    i+=n;
+  }
+  return out;
+}
+function cancelQueuedUnit(B,start){
+  if(!B||!B.queue||start<0||start>=B.queue.length) return false;
+  const type=B.queue[start];
+  let end=start;
+  while(end<B.queue.length&&B.queue[end]===type) end++;
+  const last=end-1;
+  if(last===0){
+    const T=TYPES[type];
+    if(T&&B.prodT>0&&B.team===0){
+      const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,0):{m:T.cm,e:T.ce};
+      const frac=Math.min(1,B.prodT/Math.max(0.01,T.bt));
+      resM[0]=Math.min(RES_MCAP[0],resM[0]+facCost.m*frac);
+      resE[0]=Math.min(RES_ECAP[0],resE[0]+facCost.e*frac);
+    }
+    B.queue.shift();
+    B.prodT=0;
+  } else B.queue.splice(last,1);
+  return true;
+}
 function renderQueue(){
   if(openBld<0) return;
   const B=blds[openBld];
+  const el=$('prodQueue'); if(!el) return;
   if(B.type==='techlab'){
+    el._mfQ='';
+    el.classList.add('empty');
     const shield='SHIELD '+Math.ceil(B.shield)+'/'+Math.ceil(B.shieldMax);
     const pending=resDone*3+' ◆ DATA PENDING';
-    $('prodQueue').textContent=(B.res>=0?('Researching '+RESEARCH[B.res].nm+' — '+Math.ceil(RESEARCH[B.res].t-B.resT)+'s'):'Pick a field study')
+    el.textContent=(B.res>=0?('Researching '+RESEARCH[B.res].nm+' — '+Math.ceil(RESEARCH[B.res].t-B.resT)+'s'):'Pick a field study')
       +' · '+shield+' · '+pending;
     return;
   }
-  $('prodQueue').textContent=(B.queue.length?('Queue: '+B.queue.map(t=>TYPES[t].name).join(', ').slice(0,80)):'Queue empty — tap a unit to build')
-    +(B.adj?'  ·  ⚡ adjacency +'+(12*Math.min(2,B.adj))+'% speed':'');
+  const q=B.queue||[];
+  const stacks=queueStacks(q);
+  const sig=stacks.map(s=>s.t+':'+s.n+':'+s.i).join(',')+'|'+(B.adj||0);
+  if(el._mfQ!==sig){
+    el._mfQ=sig;
+    el.innerHTML='';
+    el.classList.toggle('empty',!stacks.length);
+    if(!stacks.length){
+      el.textContent='Queue empty — tap a unit to stack'
+        +(B.adj?'  ·  ⚡ adjacency +'+(12*Math.min(2,B.adj))+'% speed':'');
+    } else {
+      const row=document.createElement('div');
+      row.className='qRow';
+      stacks.forEach((S,si)=>{
+        const plate=document.createElement('button');
+        plate.type='button';
+        plate.className='qPlate'+(si===0?' active':'');
+        plate.setAttribute('aria-label','Cancel one '+intelUnitName(S.t)+', '+S.n+' queued');
+        const ic=document.createElement('div'); ic.className='qIc';
+        ic.appendChild(unitIconEl(S.t,36));
+        const nm=document.createElement('span'); nm.className='qNm';
+        nm.textContent=intelUnitName(S.t);
+        const ct=document.createElement('b'); ct.className='qN';
+        ct.textContent='×'+S.n;
+        const bar=document.createElement('i'); bar.className='qBar';
+        plate.appendChild(ic); plate.appendChild(nm); plate.appendChild(ct); plate.appendChild(bar);
+        plate.addEventListener('pointerdown',ev=>{
+          ev.stopPropagation();
+          const Bb=openBld>=0?blds[openBld]:null;
+          if(!Bb||!Bb.alive) return;
+          if(cancelQueuedUnit(Bb,S.i)){ if(typeof sfx==='function') sfx('ui'); renderQueue(); }
+        });
+        row.appendChild(plate);
+      });
+      el.appendChild(row);
+      if(B.adj){
+        const adj=document.createElement('div');
+        adj.className='qAdj';
+        adj.textContent='⚡ +'+(12*Math.min(2,B.adj))+'% speed';
+        el.appendChild(adj);
+      }
+    }
+  }
+  const bar=el.querySelector('.qPlate.active .qBar');
+  if(bar&&q.length){
+    const T=TYPES[q[0]];
+    bar.style.width=T?((clamp(B.prodT/T.bt,0,1)*100)+'%'):'0';
+  }
 }
 function renderBuildMenu(){
   const g=$('buildGrid'); g.innerHTML='';
@@ -3094,8 +3476,12 @@ function audioWake(){
 }
 document.addEventListener('visibilitychange',()=>{ document.hidden?audioSleep():audioWake(); });
 window.addEventListener('pagehide',audioSleep);
-window.addEventListener('blur',audioSleep);
-window.addEventListener('focus',audioWake);
+window.addEventListener('pageshow',audioWake);
+/* Do not sleep on window.blur. Desktop Chrome fires blur whenever the
+   window loses focus (second monitor, DevTools, clicking the IDE) while
+   the tab is still visible — that muted the 8901 browser build. Android
+   WebView rarely delivers blur, which is why the APK still had sound.
+   Page Visibility + Capacitor appStateChange cover real backgrounding. */
 function env(g,t0,a,peak,d){
   g.gain.setValueAtTime(0.0001,t0);
   g.gain.linearRampToValueAtTime(peak,t0+a);

@@ -16,7 +16,91 @@ let aiIncomeMult=1, aiBuildMult=1, aiDmgMult=1, aiHpMult=1, playerBuildMult=1;
 const stats={kills:[0,0,0], built:[0,0], t:0};
 let stallM=0, stallE=0;                 // production starving for mass / energy (HUD warning)
 
-function payStream(team,m,e){
+/* Per-seat AI wallets. Allies already own virtual mass/energy on the seat
+   object; enemy commanders copy that pattern so Standard/Large 1v2 and 1v3
+   do not dump three mex belts into resM[1]. sim.js bldTick still calls
+   payStream(team,m,e) with no slot (Track 3 owns that file), so team-1
+   streams infer the paying building this frame. Compact 1v1 is one seat. */
+let _econBldDt=0, _econPayUsed=null;
+function econAiSeat(slot){
+  if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return null;
+  if(slot==null) return AI.base||AI.bases[0];
+  for(let i=0;i<AI.bases.length;i++) if(AI.bases[i].slot===slot) return AI.bases[i];
+  return AI.base||AI.bases[0];
+}
+function econAiBuildingSlot(B){
+  if(!B) return 0;
+  if(B.aiBaseSlot!=null) return B.aiBaseSlot;
+  if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return 0;
+  let best=AI.bases[0],bd=1e18;
+  for(const S of AI.bases){ const d=dist2(B.x,B.y,S.x,S.y); if(d<bd){bd=d;best=S;} }
+  return best.slot;
+}
+function econMirrorAiBanks(){
+  if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return;
+  let m=0,e=0,mc=0,ec=0;
+  for(const S of AI.bases){ m+=S.mass||0; e+=S.energy||0; mc+=S.mcap||MCAP0; ec+=S.ecap||ECAP0; }
+  resM[1]=m; resE[1]=e; RES_MCAP[1]=mc; RES_ECAP[1]=ec;
+}
+function econPayAiSeat(slot,m,e){
+  const S=econAiSeat(slot);
+  if(!S) return false;
+  if((S.mass||0)<m||(S.energy||0)<e) return false;
+  S.mass=(S.mass||0)-m; S.energy=(S.energy||0)-e;
+  econMirrorAiBanks();
+  return true;
+}
+function econNearPay(a,b){
+  const s=Math.abs(a)+Math.abs(b);
+  return Math.abs(a-b)<=(s>1?s*1e-4:1e-6);
+}
+function econExpectedAiPay(B,dt){
+  if(!B||B.team!==1) return null;
+  if(B.prog<1){
+    const T=BT[B.type]; if(!T) return null;
+    const tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1;
+    const bs=(typeof aiBuildMult!=='undefined'?aiBuildMult:1)*tractor;
+    const nextProg=Math.min(1,B.prog+dt*bs/T.bt);
+    const paidM=B.buildPaidM==null?T.cm:B.buildPaidM, paidE=B.buildPaidE==null?T.ce:B.buildPaidE;
+    return {m:Math.max(0,T.cm*nextProg-paidM),e:Math.max(0,T.ce*nextProg-paidE)};
+  }
+  if(B.type==='techlab'&&B.res>=0&&typeof RESEARCH!=='undefined'){
+    const R=RESEARCH[B.res]; if(!R) return null;
+    const frac=dt/R.t; return {m:R.cm*frac,e:R.ce*frac};
+  }
+  if(B.queue&&B.queue.length&&typeof TYPES!=='undefined'){
+    const t=B.queue[0],T=TYPES[t]; if(!T||!T.bt) return null;
+    const tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1;
+    const facSpeed=(typeof factionDoctrineBuildSpeedMul==='function')?factionDoctrineBuildSpeedMul(1):1;
+    const fort=(typeof fortOf==='function')?fortOf(1).prod:1;
+    const speed=(typeof aiBuildMult!=='undefined'?aiBuildMult:1)*facSpeed*(1+0.12*Math.min(2,B.adj||0))*fort*tractor;
+    const frac=dt*speed/T.bt;
+    const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,1):{m:T.cm,e:T.ce};
+    return {m:facCost.m*frac,e:facCost.e*frac};
+  }
+  return null;
+}
+function econInferAiPaySlot(m,e){
+  if(typeof AI!=='undefined'&&AI.econPaySlot!=null) return AI.econPaySlot;
+  const fallback=(typeof AI!=='undefined'&&AI.base&&AI.base.slot!=null)?AI.base.slot:0;
+  if(typeof blds==='undefined'||!(_econBldDt>0)) return fallback;
+  /* Walk blds in the same order bldTick pays, so two factories streaming the
+     same chassis debit their own seats rather than the first match in bldLive. */
+  for(let b=0;b<blds.length;b++){
+    const B=blds[b];
+    if(!B.alive||B.team!==1||(_econPayUsed&&_econPayUsed.has(B))) continue;
+    const exp=econExpectedAiPay(B,_econBldDt);
+    if(!exp||!econNearPay(exp.m,m)||!econNearPay(exp.e,e)) continue;
+    if(_econPayUsed) _econPayUsed.add(B);
+    return econAiBuildingSlot(B);
+  }
+  return fallback;
+}
+function payStream(team,m,e,slot){
+  if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
+    if(slot==null) slot=econInferAiPaySlot(m,e);
+    return econPayAiSeat(slot,m,e);
+  }
   if(resM[team]>=m && resE[team]>=e){
     resM[team]-=m; resE[team]-=e;
     if(team===0){ mSpendAcc+=m; eSpendAcc+=e; }
@@ -24,8 +108,19 @@ function payStream(team,m,e){
   }
   return false;
 }
-function canAfford(team,m,e){ return resM[team]>=m && resE[team]>=e; }
-function pay(team,m,e){ resM[team]-=m; resE[team]-=e; if(team===0){ mSpendAcc+=m; eSpendAcc+=e; } }
+function canAfford(team,m,e,slot){
+  if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
+    const S=econAiSeat(slot);
+    return !!S&&(S.mass||0)>=m&&(S.energy||0)>=e;
+  }
+  return resM[team]>=m && resE[team]>=e;
+}
+function pay(team,m,e,slot){
+  if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
+    econPayAiSeat(slot,m,e); return;
+  }
+  resM[team]-=m; resE[team]-=e; if(team===0){ mSpendAcc+=m; eSpendAcc+=e; }
+}
 /* Construction is an economy stream, not a shop purchase. A small site escrow
    prevents unlimited foundation spam, then bldTick pays the remaining cost in
    exact proportion to progress. Keeping this in one helper also means player
@@ -34,15 +129,17 @@ const MF_BUILD_ESCROW_FRAC=0.02;
 function buildStartCost(T){
   return {m:T.cm*MF_BUILD_ESCROW_FRAC,e:T.ce*MF_BUILD_ESCROW_FRAC};
 }
-function canStartBuild(team,T){
-  const c=buildStartCost(T); return canAfford(team,c.m,c.e);
+function canStartBuild(team,T,slot){
+  const c=buildStartCost(T); return canAfford(team,c.m,c.e,slot);
 }
-function beginBuild(team,type,x,y,rot){
+function beginBuild(team,type,x,y,rot,slot){
   const T=BT[type]; if(!T) return null;
+  if(team===1&&slot==null&&typeof AI!=='undefined'&&AI.base) slot=AI.base.slot;
   const c=buildStartCost(T);
-  if(!payStream(team,c.m,c.e)) return null;
+  if(!payStream(team,c.m,c.e,slot)) return null;
   const B=addBld(type,team,x,y,false,rot||0);
   B.buildPaidM=c.m; B.buildPaidE=c.e; B.buildStalled=false;
+  if(team===1&&slot!=null) B.aiBaseSlot=slot;
   return B;
 }
 function drawEnergy(team,e){            // power weapons sip the grid; returns 0..1 satisfaction
@@ -52,8 +149,96 @@ function drawEnergy(team,e){            // power weapons sip the grid; returns 0
   return e>0?got/e:1;
 }
 
+/* addBld only stamps dep/geo when dist2<9 (~3wu). Placement allows 34wu, and
+   session restore rounds structure coords, so a finished Extractor can sit on
+   a live node with dep=-1 and pay nothing. Repair here — not in sim.js —
+   because income is this file's contract. Do not steal a node another live
+   mex/geo already owns; depleted bound nodes stay bound (relocate, don't hop). */
+function econNodeClaimed(kind,idx,except){
+  if(idx<0) return false;
+  for(const O of bldLive){
+    if(O===except||!O.alive||O.type!==kind) continue;
+    if(kind==='mex'?O.dep===idx:O.geo===idx) return true;
+  }
+  return false;
+}
+function econBindResourceNode(B){
+  if(!B||!B.alive) return null;
+  if(B.type==='mex'){
+    if(B.dep>=0&&B.dep<deposits.length) return deposits[B.dep];
+    let best=-1,bd=34*34;
+    for(let d=0;d<deposits.length;d++){
+      if(depositTier(deposits[d])<=0||econNodeClaimed('mex',d,B)) continue;
+      const dd=dist2(B.x,B.y,deposits[d].x,deposits[d].y); if(dd<bd){bd=dd;best=d;}
+    }
+    if(best>=0){ B.dep=best; deposits[best].taken=true; B.rich=(deposits[best].initialTier||1)>=3; }
+    return B.dep>=0&&B.dep<deposits.length?deposits[B.dep]:null;
+  }
+  if(B.type==='geo'){
+    if(B.geo>=0&&B.geo<geysers.length) return geysers[B.geo];
+    let best=-1,bd=34*34;
+    for(let g=0;g<geysers.length;g++){
+      if(geyserTier(geysers[g])<=0||econNodeClaimed('geo',g,B)) continue;
+      const dd=dist2(B.x,B.y,geysers[g].x,geysers[g].y); if(dd<bd){bd=dd;best=g;}
+    }
+    if(best>=0){ B.geo=best; geysers[best].taken=true; }
+    return B.geo>=0&&B.geo<geysers.length?geysers[B.geo]:null;
+  }
+  return null;
+}
+function econTickAiSeats(dt){
+  /* One wallet per enemy commander. Mex/pgen/geo/fab/silo follow B.aiBaseSlot
+     the same way ally buildings skip the player bank via B.allyAI. Compact
+     1v1 is a single seat, so this is the old team-1 ledger with a name. */
+  if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return false;
+  for(const S of AI.bases){
+    if(S.mass==null) S.mass=220;
+    if(S.energy==null) S.energy=900;
+    let mi=0.6, ei=2, silos=0, fabs=0;
+    for(const B of bldLive){
+      if(!B.alive||B.team!==1||B.prog<1) continue;
+      if(econAiBuildingSlot(B)!==S.slot) continue;
+      if(B.type==='hq'){ mi+=5.0; ei+=26; }
+      if(B.type==='mex'){
+        const D=econBindResourceNode(B), before=depositTier(D);
+        if(before>0){
+          const base=(B.lvl===3?11 : B.lvl===2?7 : 4)*(DEPOSIT_YIELD[before]||1);
+          const raw=drainDeposit(D,base*dt);
+          const got=raw*(typeof factionDoctrineNodeYieldMul==='function'?factionDoctrineNodeYieldMul(1):1);
+          mi+=got/Math.max(dt,.0001);
+          B.nodeTier=depositTier(D); B.nodeRemaining=D.remaining;
+        } else { B.nodeTier=0; B.nodeRemaining=0; }
+      }
+      else if(B.type==='pgen') ei+= B.lvl===3?38 : B.lvl===2?24 : 14;
+      else if(B.type==='geo'){
+        const G=econBindResourceNode(B), before=geyserTier(G);
+        if(before>0){
+          const raw=drainGeyser(G,30*dt);
+          const got=raw*(typeof factionDoctrineNodeYieldMul==='function'?factionDoctrineNodeYieldMul(1):1);
+          ei+=got/Math.max(dt,.0001);
+          B.nodeTier=geyserTier(G);B.nodeRemaining=G.remaining;
+        }else{B.nodeTier=0;B.nodeRemaining=0;}
+      }
+      else if(B.type==='silo') silos++;
+      else if(B.type==='fab') fabs++;
+    }
+    mi*=resPace; ei*=resPace;
+    mi*=aiIncomeMult; ei*=aiIncomeMult;
+    if(fabs){
+      const thr=clamp((S.energy||0)/900,0,1);
+      ei-=FAB_E*fabs*thr;
+      mi+=FAB_M*fabs*thr;
+    }
+    S.mcap=MCAP0+600*silos; S.ecap=ECAP0+2000*silos;
+    S.mass=Math.max(0,Math.min(S.mcap,S.mass+mi*dt));
+    S.energy=Math.max(0,Math.min(S.ecap,S.energy+ei*dt));
+  }
+  econMirrorAiBanks();
+  return true;
+}
 function econTick(dt){
   for(let team=0;team<2;team++){
+    if(team===1&&econTickAiSeats(dt)) continue;
     /* The HQ is a working installation, not just a spawn point: it runs its own
        reactor and a small ore processor. That is what makes landing with NO
        other buildings a viable opening — you can fund your first Extractor
@@ -68,7 +253,7 @@ function econTick(dt){
       if(team===0&&B.allyAI!=null)continue;
       if(B.type==='hq'){ mi+=5.0; ei+=26; hq++; }
       if(B.type==='mex'){
-        const D=B.dep>=0?deposits[B.dep]:null, before=depositTier(D);
+        const D=econBindResourceNode(B), before=depositTier(D);
         if(before>0){
           const base=(B.lvl===3?11 : B.lvl===2?7 : 4)*(DEPOSIT_YIELD[before]||1)*(team===0&&WC.veins?0.7:1);
           const raw=drainDeposit(D,base*dt);
@@ -84,13 +269,7 @@ function econTick(dt){
       }
       else if(B.type==='pgen') ei+= B.lvl===3?38 : B.lvl===2?24 : 14;
       else if(B.type==='geo'){
-        /* Old structures may not carry a geo index, so coordinate lookup is a
-           backward-compatible repair rather than a reason to lose income. */
-        let G=B.geo>=0?geysers[B.geo]:null;
-        if(!G){
-          for(let gi=0;gi<geysers.length;gi++) if(dist2(B.x,B.y,geysers[gi].x,geysers[gi].y)<9){B.geo=gi;G=geysers[gi];break;}
-        }
-        const before=geyserTier(G);
+        const G=econBindResourceNode(B), before=geyserTier(G);
         if(before>0){
           const raw=drainGeyser(G,30*dt);
           const got=raw*(typeof factionDoctrineNodeYieldMul==='function'?factionDoctrineNodeYieldMul(team):1);
@@ -343,5 +522,16 @@ function cancelPlace(){
   placing=null;
   document.getElementById('placeUI').style.display='none';
   document.body.classList.remove('uiPlacing');
+}
+/* sim.js bldTick pays with payStream(team,m,e) and no seat. Wrap it so this
+   frame's dt is visible to econInferAiPaySlot. Do not copy the tick body. */
+if(typeof bldTick==='function'&&!bldTick._econSeatWrap){
+  const _econBldTick=bldTick;
+  bldTick=function(dt){
+    _econBldDt=dt; _econPayUsed=new Set();
+    _econBldTick(dt);
+    _econPayUsed=null;
+  };
+  bldTick._econSeatWrap=true;
 }
 

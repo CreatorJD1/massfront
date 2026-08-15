@@ -23,7 +23,7 @@
    BAND, not the eased value the gates read.
 
    This counts the crossings directly rather than arguing about them.          */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, extname, resolve } from 'node:path';
@@ -43,7 +43,7 @@ const server = createServer((req, res) => {
 });
 await new Promise(r => server.listen(PORT, '127.0.0.1', r));
 
-const browser = await chromium.launch({
+const browser = await launchPwBrowser({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: false,
   args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu', '--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2 });

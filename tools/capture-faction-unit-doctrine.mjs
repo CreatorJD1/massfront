@@ -1,6 +1,7 @@
 /* Live WebGL comparison for the faction unit doctrine path.
    Usage: node tools/capture-faction-unit-doctrine.mjs [base URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir,rm} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -11,13 +12,14 @@ const tmp=join(root,'.tmp','faction-doctrine'), out=join(root,'releases','factio
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 await rm(tmp,{recursive:true,force:true}); await mkdir(tmp,{recursive:true});
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const context=await browser.newContext({viewport:{width:1000,height:1000},deviceScaleFactor:2,colorScheme:'dark'});
   const page=await context.newPage(), errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base+'/?factionDoctrineCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof UNIT_MESH!=='undefined'&&typeof FAC_DOCTRINE_MESH!=='undefined'&&
     typeof render==='function'&&Object.keys(FAC_DOCTRINE_MESH).length===3,{timeout:30000});
   await page.waitForTimeout(900);

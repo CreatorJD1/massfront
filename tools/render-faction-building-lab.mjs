@@ -9,7 +9,8 @@
      node tools/render-faction-building-lab.mjs http://127.0.0.1:8100
      node tools/render-faction-building-lab.mjs http://127.0.0.1:8100 --export-only
 */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {access, mkdir, readFile, readdir, writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -123,12 +124,13 @@ if(reuseRender){
   payload.version=releaseVersion;
   process.stdout.write('reusing existing exact-runtime geometry payload\n');
 }else{
-  const browser=await chromium.launch({headless:true,executablePath:chrome,
-    args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+  const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+    args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
   try{
   const page=await browser.newPage({viewport:{width:900,height:900}});
   const pageErrors=[]; page.on('pageerror',error=>pageErrors.push(error.message));
   await page.goto(base+'/?factionBuildingLab=1&materialCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof BLD_MDL!=='undefined'&&typeof BLD_TIER_MDL!=='undefined'&&
     typeof BT!=='undefined'&&typeof __MF_MATERIAL_ATLASES!=='undefined',{timeout:30000});
 
@@ -318,7 +320,7 @@ for(const renderItem of renderBySlug.values()){
   const png=await readFile(join(outDir,renderItem.file)); imageData.set(renderItem.slug,`data:image/png;base64,${png.toString('base64')}`);
 }
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const sheetBrowser=await chromium.launch({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
+const sheetBrowser=await launchPwBrowser({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
 const sheetIndex={format:'massfront-faction-building-contact-sheets-v1',sheets:[]};
 try{
   const context=await sheetBrowser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1});

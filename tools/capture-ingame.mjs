@@ -1,7 +1,7 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawnProjectChrome } from './pw-browser.mjs';
 
 const wwwDir = path.resolve('www');
 const artifactDir = 'C:\\Users\\Jason\\.gemini\\antigravity\\brain\\c902b81e-2bc5-48ac-9392-b0068d1f28de';
@@ -27,36 +27,25 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = 8909;
+await new Promise(r => server.listen(PORT, r));
+console.log(`Serving www on http://127.0.0.1:${PORT}/`);
 
-server.listen(PORT, () => {
-  console.log(`Serving www on http://127.0.0.1:${PORT}/`);
+const outPath = path.join(artifactDir, 'ingame_gameplay_live.png');
+console.log('Spawning Chrome for WebGL capture...');
+const { kill } = await spawnProjectChrome([
+  '--headless=new',
+  '--window-size=1280,720',
+  `--screenshot=${outPath}`,
+  `http://127.0.0.1:${PORT}/`
+]);
 
-  const chromePath = 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-  const edgePath = 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe';
-  const browserBin = fs.existsSync(chromePath) ? chromePath : edgePath;
-
-  const outPath = path.join(artifactDir, 'ingame_gameplay_live.png');
-
-  const chromeArgs = [
-    '--headless=new',
-    '--use-gl=angle',
-    '--use-angle=d3d11',
-    '--enable-unsafe-swiftshader',
-    '--window-size=1280,720',
-    `--screenshot=${outPath}`,
-    `http://127.0.0.1:${PORT}/`
-  ];
-
-  console.log('Spawning Chrome for WebGL capture...');
-  const child = spawn(browserBin, chromeArgs, { stdio: 'ignore' });
-
-  setTimeout(() => {
-    try { child.kill(); } catch (e) {}
-    console.log('Chrome process finished.');
-    if (fs.existsSync(outPath)) {
-      console.log('SUCCESS: Real screenshot saved to:', outPath, 'size:', fs.statSync(outPath).size, 'bytes');
-    }
-    server.close();
-    process.exit(0);
-  }, 10000);
-});
+try {
+  await new Promise(r => setTimeout(r, 10000));
+  console.log('Chrome process finished.');
+  if (fs.existsSync(outPath)) {
+    console.log('SUCCESS: Real screenshot saved to:', outPath, 'size:', fs.statSync(outPath).size, 'bytes');
+  }
+} finally {
+  await kill();
+  server.close();
+}

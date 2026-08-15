@@ -660,6 +660,58 @@ function mdlMacSingularityTur(tier){
   for(const s of [-1,1]) m.extrude(-5,6,s*8.5,macTri(3.4),8+tier,MAC_COAT,s*.2);
   return m.build();
 }
+function mdlMacSeafortBase(tier){
+  const m=MB();tier=tier||1;
+  m.extrude(0,0.6,0,macHex(20),3.2,MAC_PAD);                  // hex pontoon, air gap
+  m.extrude(0,3.8,0,macHex(17.5),1.4,MAC_PANEL);
+  for(let i=0;i<6;i++){
+    const a=i*TAU/6,x=Math.cos(a)*16.2,z=Math.sin(a)*16.2;
+    m.cyl(x,0.2,z,.85,.7,.7,10,MAC_MECH);
+    m.ring(x,1.0,z,.62,1.05,12,MAC_GLOW);
+  }
+  m.extrude(0,5.2,0,macTri(12.5),8.5,MAC_ARM_D);
+  for(const s of [-1,1]) macPylon(m,s*Math.PI/2,14,5.2,12+tier,3.2,true);
+  macAimBearing(m,14.2,6.8,tier);
+  return m.build();
+}
+function mdlMacSeafortTur(tier){
+  const m=MB();tier=tier||1;
+  m.cyl(0,0,0,6.8,6.3,1.8,16,MAC_MECH);
+  m.bevelBox(-3.2,1.8,0,15,6.6,13.5,1.0,MAC_ARM);
+  tubeX(m,3.0,5.8,0,13+tier*1.4,1.85,.82,12,MAC_BORE);
+  ringX(m,14+tier*1.4,5.8,0,1.95,2.45,14,MAC_GLOW);
+  for(const s of [-1,1]){
+    tubeX(m,2.4,8.4,s*2.9,11+tier,.95,.42,10,MAC_BORE);
+    ringX(m,12+tier,8.4,s*2.9,1.05,1.45,10,s>0?MAC_STATUS:MAC_GLOW);
+  }
+  macCore(m,-6.4,7.6,0,2.4,false);
+  return m.build();
+}
+function mdlMacStormBase(tier){
+  const m=MB();tier=tier||1;macPad(m,19,tier,true);
+  for(const s of [-1,1]){
+    m.extrude(-1,9.8,s*12.4,macTri(4.2),8+tier,MAC_COAT,s*.18);
+    for(const x of [-6,1,8]){
+      m.cyl(x,9.8,s*12.4,1.15,.9,5.5+tier*.5,8,MAC_MECH);
+      m.sphere(x,15.5+tier*.5,s*12.4,.72,7,MAC_GLOW,1,false);
+    }
+  }
+  macCore(m,0,18.2,0,3.4+tier*.2,true);
+  macAimBearing(m,20.4,7.0,tier);
+  return m.build();
+}
+function mdlMacStormTur(tier){
+  const m=MB();tier=tier||1;
+  m.cyl(0,0,0,7.2,6.6,1.8,16,MAC_MECH);
+  m.bevelBox(-2.6,1.8,0,16,6.8,15,.95,MAC_ARM_D);
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    const y=4.0+(r-1.5)*1.95,z=(c-1.5)*2.95;
+    tubeX(m,4.8,y,z,2.1,1.05,.62,8,MAC_BORE);
+    m.bevelBox(3.4,y-1.0,z,3.0,2.0,2.2,.24,MAC_MECH);
+  }
+  macCore(m,-7.2,7.4,0,2.6,false);
+  return m.build();
+}
 
 /* The runtime may select this map by faction without teaching the model module
    about simulation objects. Directed defenses pair a foundation here with a
@@ -677,6 +729,7 @@ var BLD_MDL_MACHINE={
   minelaser:mdlMacMiningBase, missilebastion:mdlMacSwarmBase,
   plasma:mdlMacPlasmaBase, gate:mdlMacGate,
   geo:mdlMacGeo, silo:mdlMacSilo, fab:mdlMacFab,
+  seafort:mdlMacSeafortBase, stormcaller:mdlMacStormBase,
 
   gravitywell:mdlMacGravityBase, spinbeam:mdlMacSpinBeamBase,
   phasedisruptor:mdlMacPhaseBase, voidlance:mdlMacVoidBase,
@@ -691,7 +744,7 @@ var BLD_MDL_MACHINE={
    texture set is being claimed yet. */
 const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
   hq:Object.freeze({
-    id:'syndicate-hq-v2',source:'authored',maps:'syndicate-hq-v2',
+    id:'syndicate-hq-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -699,7 +752,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   fac:Object.freeze({
-    id:'syndicate-fac-v2',source:'authored',maps:'syndicate-fac-v2',
+    id:'syndicate-fac-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -707,7 +760,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   techlab:Object.freeze({
-    id:'syndicate-techlab-v2',source:'authored',maps:'syndicate-techlab-v2',
+    id:'syndicate-techlab-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -715,7 +768,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   pgen:Object.freeze({
-    id:'syndicate-pgen-v2',source:'authored',maps:'syndicate-pgen-v2',
+    id:'syndicate-pgen-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -723,7 +776,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   mex:Object.freeze({
-    id:'syndicate-mex-v2',source:'authored',maps:'syndicate-mex-v2',
+    id:'syndicate-mex-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -731,7 +784,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   geo:Object.freeze({
-    id:'syndicate-geo-v2',source:'authored',maps:'syndicate-geo-v2',
+    id:'syndicate-geo-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -739,7 +792,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   airfield:Object.freeze({
-    id:'syndicate-airfield-v2',source:'authored',maps:'syndicate-airfield-v2',
+    id:'syndicate-airfield-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -747,7 +800,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   rail:Object.freeze({
-    id:'syndicate-rail-v2',source:'authored',maps:'syndicate-rail-v2',
+    id:'syndicate-rail-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -755,7 +808,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   uplink:Object.freeze({
-    id:'syndicate-uplink-v2',source:'authored',maps:'syndicate-uplink-v2',
+    id:'syndicate-uplink-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -763,7 +816,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   turret:Object.freeze({
-    id:'syndicate-turret-v2',source:'authored',maps:'syndicate-turret-v2',
+    id:'syndicate-turret-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -771,7 +824,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   bunker:Object.freeze({
-    id:'syndicate-bunker-v2',source:'authored',maps:'syndicate-bunker-v2',
+    id:'syndicate-bunker-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -779,7 +832,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   bastion:Object.freeze({
-    id:'syndicate-bastion-v2',source:'authored',maps:'syndicate-bastion-v2',
+    id:'syndicate-bastion-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -787,7 +840,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   aatower:Object.freeze({
-    id:'syndicate-aatower-v2',source:'authored',maps:'syndicate-aatower-v2',
+    id:'syndicate-aatower-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -795,7 +848,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   minelaser:Object.freeze({
-    id:'syndicate-minelaser-v2',source:'authored',maps:'syndicate-minelaser-v2',
+    id:'syndicate-minelaser-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -803,7 +856,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   missilebastion:Object.freeze({
-    id:'syndicate-missilebastion-v2',source:'authored',maps:'syndicate-missilebastion-v2',
+    id:'syndicate-missilebastion-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -811,7 +864,23 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   hellstorm:Object.freeze({
-    id:'syndicate-hellstorm-v2',source:'authored',maps:'syndicate-hellstorm-v2',
+    id:'syndicate-hellstorm-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
+    })
+  }),
+  seafort:Object.freeze({
+    id:'syndicate-seafort-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
+    })
+  }),
+  stormcaller:Object.freeze({
+    id:'syndicate-stormcaller-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -819,7 +888,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   arc:Object.freeze({
-    id:'syndicate-arc-v2',source:'authored',maps:'syndicate-arc-v2',
+    id:'syndicate-arc-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -827,7 +896,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   sgen:Object.freeze({
-    id:'syndicate-sgen-v2',source:'authored',maps:'syndicate-sgen-v2',
+    id:'syndicate-sgen-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -835,7 +904,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   plasma:Object.freeze({
-    id:'syndicate-plasma-v2',source:'authored',maps:'syndicate-plasma-v2',
+    id:'syndicate-plasma-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -843,7 +912,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   wall:Object.freeze({
-    id:'syndicate-wall-v2',source:'authored',maps:'syndicate-wall-v2',
+    id:'syndicate-wall-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -851,7 +920,55 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   gate:Object.freeze({
-    id:'syndicate-gate-v2',source:'authored',maps:'syndicate-gate-v2',
+    id:'syndicate-gate-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
+    })
+  }),
+  nest:Object.freeze({
+    id:'syndicate-nest-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_GOLD
+    })
+  }),
+  harbor:Object.freeze({
+    id:'syndicate-harbor-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
+    })
+  }),
+  tgate:Object.freeze({
+    id:'syndicate-tgate-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
+    })
+  }),
+  silo:Object.freeze({
+    id:'syndicate-silo-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
+    })
+  }),
+  fab:Object.freeze({
+    id:'syndicate-fab-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
+    })
+  }),
+  nova:Object.freeze({
+    id:'syndicate-nova-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
       [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
@@ -874,7 +991,7 @@ function synMachineStructureFactory(fn,key){
   if(!fn)return fn;
   return function(...args){return synMachineStructureSurfacePass(fn(...args),SYN_MACHINE_STRUCTURE_PACKS[key]);};
 }
-for(const k of ['hq','fac','techlab','pgen','mex','geo','airfield','rail','uplink','turret','bunker','bastion','aatower','minelaser','missilebastion','hellstorm','arc','sgen','plasma','wall','gate'])
+for(const k of ['hq','fac','techlab','pgen','mex','geo','airfield','rail','uplink','turret','bunker','bastion','aatower','minelaser','missilebastion','hellstorm','arc','sgen','plasma','wall','gate','seafort','stormcaller','nest','harbor','tgate','silo','fab','nova'])
   if(BLD_MDL_MACHINE[k]) BLD_MDL_MACHINE[k]=synMachineStructureFactory(BLD_MDL_MACHINE[k],k);
 var BLD_TUR_MDL_MACHINE={
   turret:mdlMacPhaseTur, bunker:mdlMacPulseTur, aatower:mdlMacAATur,
@@ -883,9 +1000,9 @@ var BLD_TUR_MDL_MACHINE={
   bastion:mdlMacGravityTur, gravitywell:mdlMacGravityTur,
   spinbeam:mdlMacSpinBeamTur, phasedisruptor:mdlMacPhaseTur,
   voidlance:mdlMacVoidTur, swarmfabricator:mdlMacSwarmTur,
-  pulsearray:mdlMacPulseTur, singularitycore:mdlMacSingularityTur,
+  pulsearray:mdlMacPulseTur, singularitycore:mdlMacSingularityTur, seafort:mdlMacSeafortTur, stormcaller:mdlMacStormTur,
 };
-for(const k of ['turret','bunker','bastion','aatower','minelaser','rail','hellstorm','nova','missilebastion','plasma'])
+for(const k of ['turret','bunker','bastion','aatower','minelaser','rail','hellstorm','nova','missilebastion','plasma','seafort','stormcaller'])
   if(BLD_TUR_MDL_MACHINE[k]) BLD_TUR_MDL_MACHINE[k]=synMachineStructureFactory(BLD_TUR_MDL_MACHINE[k],k==='nova'?'hellstorm':k);
 var BLD_TUR_H_MACHINE={
   turret:19.1,bunker:18.6,aatower:18.8,hellstorm:18.8,rail:20.0,nova:18.8,
@@ -893,6 +1010,7 @@ var BLD_TUR_H_MACHINE={
   bastion:19.5,gravitywell:19.5,
   spinbeam:18.8,phasedisruptor:19.1,voidlance:20.0,
   swarmfabricator:19.6,pulsearray:18.6,singularitycore:18.8,
+  seafort:17.0,stormcaller:23.2,
 };
 var BLD_TUR_S_MACHINE={
   turret:1.08,bunker:1.04,aatower:1.04,hellstorm:1.06,rail:1.08,nova:1.06,
@@ -902,6 +1020,7 @@ var BLD_TUR_S_MACHINE={
   bastion:.86,gravitywell:.86,
   spinbeam:1.06,phasedisruptor:1.08,voidlance:1.08,
   swarmfabricator:1.04,pulsearray:1.04,singularitycore:1.06,
+  seafort:1.06,stormcaller:1.04,
 };
 var BLD_TIER_MDL_MACHINE={
   gravitywell:[1,2,3].map(t=>({base:()=>mdlMacGravityBase(t),tur:()=>mdlMacGravityTur(t)})),
@@ -915,6 +1034,8 @@ var BLD_TIER_MDL_MACHINE={
   aatower:[1,2,3].map(t=>({base:()=>mdlMacAABase(t),tur:()=>mdlMacAATur(t)})),
   minelaser:[1,2,3].map(t=>({base:()=>mdlMacMiningBase(t),tur:()=>mdlMacMiningTur(t)})),
   plasma:[1,2,3].map(t=>({base:()=>mdlMacPlasmaBase(t),tur:()=>mdlMacPlasmaTur(t)})),
+  seafort:[1,2,3].map(t=>({base:()=>mdlMacSeafortBase(t),tur:()=>mdlMacSeafortTur(t)})),
+  stormcaller:[1,2,3].map(t=>({base:()=>mdlMacStormBase(t),tur:()=>mdlMacStormTur(t)})),
 };
 /* Runtime type aliases keep the simulation/save vocabulary stable while the
    visible Mk1/Mk2/Mk3 geometry follows the Machine contact-sheet archetype. */

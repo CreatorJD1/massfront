@@ -10,6 +10,9 @@ const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const version=process.argv[2];
 if(!/^\d+\.\d+\.\d+$/.test(version||'')) throw new Error('usage: node tools/bundle-update.mjs <x.y.z>');
 const order=JSON.parse(readFileSync(join(root,'assets/data/manifest.json'),'utf8')).order;
+for(const need of ['assets/data/unitrows.js','src/engine/organicfx.js','src/rumble.js']){
+  if(!order.includes(need)) throw new Error('OTA order missing '+need+' — hotfix 1.33.34 requires it');
+}
 
 /* OTA patches replace the shell/CSS/classic scripts, but an older native
    package cannot resolve binary art added after it shipped. Keep the normal
@@ -62,19 +65,32 @@ const otaBinaryAssets=[
    legacy one-atlas path draws instead. Publishing them as a runtime lookup the
    loaders consult first is what actually delivers them.
 
-   Only the SHARED maps are carried. The per-unit V2 packs are ~250 files and
-   would roughly double the payload; those belong on the asset-pack channel. */
+   Shared world maps plus the authored live/lab triplets that pack-www already
+   ships. The ~250 generated 256px stubs and nova-hq-v2 templates stay on the
+   APK/Space — mfAssetSkin / World V2 fall back to the inlined atlas on a miss.
+   civic-road is abandoned (InstMesh roads; pack-www excludes it). */
 const OTA_RUNTIME_PATHS=[
   'assets/textures/materials/mf-world-structures-v2-baseao.png',
   'assets/textures/materials/mf-world-structures-v2-nre.png',
   'assets/textures/materials/mf-world-structures-v2-masks.png',
   'assets/textures/materials/mf2-carbon-cracks-v1.png',
   'assets/textures/materials/mf_mechanical_microdetail_v2.webp',
-  /* preloadMatAtlases() fetches this by path for the civic road atlas tile.
-     Without it the composite falls back to generic grey and every street in
-     every city loses its authored surface — the flat roads reported from a
-     phone that had only ever been updated over the air. */
-  'assets/textures/materials/mf-civic-road-base-v1.png',
+  'assets/textures/ui/tacticons-faction.png',
+  'assets/textures/materials/nova-rhino-v2-baseao.png',
+  'assets/textures/materials/nova-rhino-v2-nre.png',
+  'assets/textures/materials/nova-rhino-v2-masks.png',
+  'assets/textures/materials/nova-rhino-v2-turret-baseao.png',
+  'assets/textures/materials/nova-rhino-v2-turret-nre.png',
+  'assets/textures/materials/nova-rhino-v2-turret-masks.png',
+  'assets/textures/materials/brood-gorger-v2-baseao.png',
+  'assets/textures/materials/brood-gorger-v2-nre.png',
+  'assets/textures/materials/brood-gorger-v2-masks.png',
+  'assets/textures/materials/nova-factory-v2-baseao.png',
+  'assets/textures/materials/nova-factory-v2-nre.png',
+  'assets/textures/materials/nova-factory-v2-masks.png',
+  'assets/textures/materials/nova-heavy-tank-v2-baseao.png',
+  'assets/textures/materials/nova-heavy-tank-v2-nre.png',
+  'assets/textures/materials/nova-heavy-tank-v2-masks.png',
 ];
 const otaRuntimeAssets={};
 for(const path of OTA_RUNTIME_PATHS){
@@ -104,6 +120,14 @@ const prelude=`(function(){
      resolves. Absent in the APK/dev build, where the real files are on disk and
      the loaders fall back to their normal path. */
   window.__MF_OTA_ASSETS=${JSON.stringify(otaRuntimeAssets)};
+  window.mf2AssetURL=function(path){
+    var p=String(path||'');
+    if(p.indexOf('data:')===0) return p;
+    if(p.slice(0,2)==='./') p=p.slice(2);
+    var o=window.__MF_OTA_ASSETS;
+    if(o&&o[p]) return o[p];
+    return './'+p;
+  };
   /* A prior patch that faulted before its first frame must not leave its
      document-level capture listeners behind for the next launch/update. */
   try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')window.__MASSFRONT_CLEAR_INPUT_GUARD();}catch(e){}

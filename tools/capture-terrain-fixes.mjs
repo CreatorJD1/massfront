@@ -1,5 +1,6 @@
 /* Quick terrain/road fix verification capture */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -10,12 +11,13 @@ const out=join(root,'.tmp');
 await mkdir(out,{recursive:true});
 const shot=join(out,'terrain-road-fixes.png');
 
-const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const page=await browser.newPage({viewport:{width:412,height:915},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   const errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof newSkirmish==='function'&&typeof setupRelics==='function'&&typeof cityGroundAt==='function'&&typeof TGRID!=='undefined'&&typeof MFWorldStructuresV2==='object',null,{timeout:60000});
   await page.waitForFunction(()=>typeof gl!=='undefined'&&gl&&heightF&&terrainTex,null,{timeout:60000});
   await page.evaluate(()=>{META.settings.quality='cinematic';applyQualityPreset();activeWarMode='standard';curMap='vespera_refinery_large';curTheme='vespera';builtMap='';hideFrontScreens();newSkirmish();});

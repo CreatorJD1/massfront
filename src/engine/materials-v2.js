@@ -1,5 +1,3 @@
-;
-;
 /* ============================================================================
    MATERIAL SYSTEM V2 — OPT-IN BENCHMARK LAB
    ----------------------------------------------------------------------------
@@ -57,7 +55,9 @@ void main(){
   vNrm=vec3(aNrm.x*c-aNrm.z*s,aNrm.y,aNrm.x*s+aNrm.z*c);vObjNrm=aNrm;
   vCol=aCol;vTint=aTint.rgb;vWorld=p;vObj=aPos;vUV=aUV;
   vSurface=floor(abs(aMat))-1.0;
-  float d=length(p-uEye);vFog=clamp((d-2600.0)/4200.0,0.0,0.55);
+  float d=length(p-uEye);
+  float planar=length(vec2(p.x-uEye.x, p.z-uEye.z));
+  vFog=clamp((planar-1380.0)/1900.0,0.0,0.40);
   gl_Position=uVP*vec4(p,1.0);
 }`;
 const MF2_FS=`#version 300 es
@@ -72,16 +72,33 @@ uniform vec3 uEye,uSun,uSunC,uAmbSky,uAmbGnd,uFogC,uSecondary,uEmissive;
 uniform int uDebug;uniform float uShowcase,uDamage,uAssetKind;
 out vec4 o;
 vec3 srgbToLinear(vec3 c){return pow(max(c,vec3(0.0)),vec3(2.2));}
-vec3 linearToSrgb(vec3 c){return pow(max(c,vec3(0.0)),vec3(1.0/2.2));}
+vec2 mfUvGradClamp(vec2 g){
+  float l=length(g);
+  return (l>0.25)?g*(0.25/l):g;
+}
 mat3 cotangent(vec3 N,vec3 p,vec2 uv){
-  vec3 dp1=dFdx(p),dp2=dFdy(p);vec2 du1=dFdx(uv),du2=dFdy(uv);
+  vec3 dp1=dFdx(p),dp2=dFdy(p);
+  vec2 du1=mfUvGradClamp(dFdx(uv)),du2=mfUvGradClamp(dFdy(uv));
   vec3 p2=cross(dp2,N),p1=cross(N,dp1);
   vec3 T=p2*du1.x+p1*du2.x,B=p2*du1.y+p1*du2.y;
-  float inv=inversesqrt(max(max(dot(T,T),dot(B,B)),1e-8));
-  return mat3(T*inv,B*inv,N);
+  float t2=dot(T,T),b2=dot(B,B);
+  if(max(t2,b2)<1e-10){
+    vec3 Tf=normalize(abs(N.y)<0.999?cross(N,vec3(0.0,1.0,0.0)):cross(N,vec3(1.0,0.0,0.0)));
+    return mat3(Tf,cross(N,Tf),N);
+  }
+  vec3 To=T-N*dot(N,T);
+  if(dot(To,To)<1e-10){
+    vec3 Tf=normalize(abs(N.y)<0.999?cross(N,vec3(0.0,1.0,0.0)):cross(N,vec3(1.0,0.0,0.0)));
+    return mat3(Tf,cross(N,Tf),N);
+  }
+  T=normalize(To);
+  vec3 Bn=cross(N,T);
+  B=normalize(dot(Bn,B)<0.0?-Bn:Bn);
+  return mat3(T,B,N);
 }
 void main(){
-  vec4 ba=texture(uBaseAO,vUV);vec4 nr=texture(uNRE,vUV);vec4 mk=texture(uMasks,vUV);
+  vec2 dxa=mfUvGradClamp(dFdx(vUV)),dya=mfUvGradClamp(dFdy(vUV));
+  vec4 ba=textureGrad(uBaseAO,vUV,dxa,dya);vec4 nr=textureGrad(uNRE,vUV,dxa,dya);vec4 mk=textureGrad(uMasks,vUV,dxa,dya);
   /* A separate authored burn tile is triplanar-mapped in object space. That
      keeps the fracture scale stable while a unit moves and avoids stretching
      the same crack across unrelated UV islands. Only damage states consume
@@ -247,7 +264,10 @@ void main(){
   else if(uDebug==8)lit=vec3(wear);
   else if(uDebug==9)lit=vec3(damageData);
   lit=vec3(1.0)-exp(-max(lit,vec3(0.0))*mix(1.34,1.58,uShowcase));
-  o=vec4(clamp(linearToSrgb(lit),0.0,1.0),1.0);
+  /* Production (FS3D / civic V2) writes the filmic curve as display values.
+     A further linearToSrgb after 1-exp lifted charcoal into mid-grey — the
+     extra-gamma lab wash. Debug views still show raw channels. */
+  o=vec4(clamp(lit,vec3(0.0),vec3(1.0)),1.0);
 }`;
 
 class MF2InstMesh extends InstMesh{
@@ -774,14 +794,16 @@ function mf2LoadDamageTexture(){
     gl.pixelStorei(gl.UNPACK_ALIGNMENT,align);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,flip);gl.bindTexture(gl.TEXTURE_2D,bound);
     const stats=document.getElementById('mf2Stats');if(stats)stats.textContent=stats.textContent.replace('damage tile loading','cracked burn tile ready');
   };img.onerror=()=>console.warn('[MaterialV2] Cracked burn tile unavailable');
-  img.src='assets/textures/materials/mf2-carbon-cracks-v1.png';
+  img.src=(typeof mf2AssetURL==='function')?mf2AssetURL('assets/textures/materials/mf2-carbon-cracks-v1.png')
+                                          :'assets/textures/materials/mf2-carbon-cracks-v1.png';
 }
 function mf2LoadAuthoredMaps(){
   const epoch=glEpoch;
   const files=[MF2_MAP_FILE+'-baseao.png',MF2_MAP_FILE+'-nre.png',MF2_MAP_FILE+'-masks.png'];
   Promise.all(files.map(file=>new Promise((resolve,reject)=>{
     const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(new Error(file));
-    img.src='assets/textures/materials/'+file;
+    img.src=(typeof mf2AssetURL==='function')?mf2AssetURL('assets/textures/materials/'+file)
+                                            :('assets/textures/materials/'+file);
   }))).then(imgs=>{
     if(epoch!==glEpoch||!mf2BaseAO||!mf2NRE||!mf2Masks)return;
     mf2UploadImage(mf2BaseAO,imgs[0],true);mf2UploadImage(mf2NRE,imgs[1],false);mf2UploadImage(mf2Masks,imgs[2],false);
@@ -818,7 +840,8 @@ function mf2LoadDetailSource(){
     }catch(err){console.warn('[MaterialV2] Detail bake skipped',err);}
   };
   img.onerror=()=>console.warn('[MaterialV2] Authored microdetail source unavailable');
-  img.src='assets/textures/materials/mf_mechanical_microdetail_v2.webp';
+  img.src=(typeof mf2AssetURL==='function')?mf2AssetURL('assets/textures/materials/mf_mechanical_microdetail_v2.webp')
+                                          :'assets/textures/materials/mf_mechanical_microdetail_v2.webp';
 }
 function mf2ResetContextResources(){
   if(mf2Epoch===glEpoch)return;

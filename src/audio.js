@@ -65,25 +65,27 @@ let AUD_MAP = {
   gauss:  ['gauss0', 'gauss1', 'gauss2'],
   hit:    ['hit0', 'hit1', 'hit2'],
   boom:   ['boom0', 'boom1', 'boom2'],
-  boombig:['boombig'], boomsmall:['boomsmall'],
+  boombig:['boombig'], boomsmall:['boomsmall0','boomsmall'],
   cannon: ['cannon0','cannon1'], carrier_deploy:['carrier_deploy0'],
-  flame:  ['flame'], missile:['missile'], sonic:['sonic'],
-  ui:     ['ui0','ui1','ui2'], confirm:['confirm0'], alarm:['alarm'], deploy:['deploy'],
+  flame:  ['flame'], missile:['missile0','missile1','missile2','missile'], sonic:['sonic'],
+  ui:     ['ui0','ui1','ui2'], confirm:['confirm0'], alarm:['alarm0','alarm'], deploy:['deploy'],
   level:  ['level0','level1'], pickup:['pickup0','pickup1'], thrust:['thrust'],
-  heal:   ['heal'], surge:['surge'], move:['move_vehicle0','move_vehicle1'],
-  /* SLOTS THE GAME ALREADY CALLS THAT SHIPPED WITH NO FILE BEHIND THEM.
-     AUD_CAP below has entries for all of these, so they look configured — but
-     audPick() returns null on a name that is missing HERE, and sfxSample()
-     then bails silently. The result was that "structure online", "research
-     complete", every radio acknowledgement and every creature sound made no
-     noise at all, on every build, because assets/audio/sfx.json does not exist
-     in this repo and never has. Aliased onto takes that are already decoded
-     rather than shipping more audio; audLoadSlots() still overrides any of
-     these the moment a real sfx.json lands, so this is a floor, not a lock. */
-  notify: ['confirm'], build:['deploy'], radio:['confirm'], flyby:['thrust'],
-  reject: ['ui0'],
-  cre_attack:['sonic'], cre_pain:['hit0','hit1','hit2'],
-  cre_death:['boomsmall'], cre_idle:['sonic'],
+  heal:   ['heal0','heal'], surge:['surge'], move:['move_vehicle0','move_vehicle1'],
+  /* Floor matches the files that actually ship (ogg+m4a). audLoadSlots() still
+     overlays assets/audio/sfx.json when it is present; this list is what plays
+     if that manifest is late or missing. Brood creature slots stay on cre_*
+     velociraptor takes — never sonic/hit, and never the human horde_* bank. */
+  notify: ['notify0'], build:['build0'], radio:['radio0'], flyby:['flyby0'],
+  reject: ['ui0'], deny:['ui0'],
+  cre_attack:['cre_attack0','cre_attack1','cre_attack2','cre_attack3'],
+  cre_pain:['cre_pain0','cre_pain1','cre_pain2','cre_pain3'],
+  cre_death:['cre_death0','cre_death1','cre_death2','cre_death3'],
+  cre_idle:['cre_idle0','cre_idle1','cre_idle2','cre_idle3'],
+  amb_low:['amb_low0'], amb_high:['amb_high0'],
+  alarm_loop:['alarm_loop0'], factory_hum:['factory_hum0'],
+  move_air:['move_air0'], move_brood:['move_brood0','move_brood1'],
+  move_vehicle:['move_vehicle0','move_vehicle1'],
+  structure_hum:['structure_hum0','structure_hum1'],
 };
 const AUD_MUSIC = ['mus_ambient', 'mus_tension', 'mus_combat'];
 
@@ -110,6 +112,9 @@ let AUD_MIX = {
   notify:{g:0.8,gap:220,p:4}, build:{g:0.85,gap:300,p:4}, radio:{g:0.9,gap:120,p:4},
   flyby:{g:0.55,gap:260,p:2}, cre_attack:{g:0.6,gap:40,p:1}, cre_pain:{g:0.5,gap:36,p:1},
   cre_death:{g:0.75,gap:60,p:2}, cre_idle:{g:0.35,gap:900,p:1},
+  /* Brood command cues share the radio channel, not the battlefield creature
+     slots — otherwise a select chirp would be culled as just another cre_idle. */
+  vo_brood_call:{g:0.9,gap:420,p:5},
   /* REJECT is the UI blip pitched down. 154 of this codebase's sfx() calls are
      sfx('ui'), and refusals — no transport available, cargo empty, modifier
      locked, nothing selected — used the same blip as confirmations. The player
@@ -117,18 +122,24 @@ let AUD_MIX = {
      worse than silence because it actively reports success. `rate` costs one
      new asset of zero. */
   reject:{g:0.8,gap:60,p:4,rate:0.74},
+  deny:{g:0.8,gap:60,p:4,rate:0.74},
+  amb_low:{g:0.3,gap:0,p:1}, amb_high:{g:0.26,gap:0,p:1},
+  alarm_loop:{g:0.28,gap:0,p:4}, factory_hum:{g:0.2,gap:0,p:1},
+  move_air:{g:0.2,gap:0,p:1}, move_brood:{g:0.22,gap:0,p:1},
+  move_vehicle:{g:0.24,gap:0,p:1}, structure_hum:{g:0.18,gap:0,p:1},
 };
 const AUD_MAXVOICES = 22;
 const AUD_CAP = {
   shot:5, attack:3, laser:4, gauss:4, hit:4, boom:4, boomsmall:3, boombig:2, cannon:2,
   missile:3, flame:2, sonic:2, cre_attack:2, cre_pain:2, cre_death:2,
-  cre_idle:1, radio:1, alarm:1, notify:1, deploy:2, build:2, ui:2
+  cre_idle:1, radio:1, alarm:1, notify:1, deploy:2, build:2, ui:2,
+  reject:2, deny:2, vo_brood_call:1
 };
-const AUD_DUCK = new Set(['alarm','boombig','carrier_deploy','deploy','level','notify','radio']);
+const AUD_DUCK = new Set(['alarm','boombig','carrier_deploy','deploy','level','notify','radio','vo_brood_call']);
 /* These cues are interface information, even when their caller supplies the
    location that caused them. They stay crisp and centred while battlefield
    voices pass through distance/zoom muffling. */
-const AUD_CLEAR = new Set(['ui','confirm','radio','notify','level']);
+const AUD_CLEAR = new Set(['ui','confirm','radio','notify','level','reject','deny','vo_brood_call']);
 
 let audMaster = null, audSfxBus = null, audMusBus = null, audComp = null;
 
@@ -151,30 +162,33 @@ function audUnique(){
 }
 
 /* Decode one file into an AudioBuffer. Failures are counted, never thrown —
-   a missing asset must degrade to the synth, not break the game. */
+   a missing asset must degrade to the synth, not break the game.
+   Preferred container first, then the other: SFX ships ogg+m4a so a browser
+   whose canPlayType lied, or a pack that only landed one sidecar, still plays. */
+function audSidecarExts(){
+  return AUD.ext === 'ogg' ? ['ogg','m4a'] : ['m4a','ogg'];
+}
 async function audLoad(name){
-  try{
-    let url = AUD.base + name + '.' + AUD.ext;
-    /* The voice bank also ships on the optional pack channel. If the pack is
-       stored, play it from IndexedDB; otherwise fall through to the packaged
-       path under assets/audio/voice/, which is where the bank now lives in the
-       repo — so a build that never fetched a pack still speaks. Both formats are
-       reachable either way: AUD.ext is chosen by asking the browser what it can
-       decode, never by hard-coding one container. */
-    if(name.lastIndexOf('voice/',0)===0 && typeof packURL==='function'){
-      try{ const u = await packURL('voice', name.slice(6) + '.' + AUD.ext); if(u) url = u; }catch(e){}
-    }
-    const r = await fetch(url, {cache:'force-cache'});
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    const ab = await r.arrayBuffer();
-    const buf = await new Promise((res, rej) => {
-      /* decodeAudioData has both a promise and a callback form depending on the
-         browser's age; the callback form is the one Safari has always had. */
-      const p = AC.decodeAudioData(ab, res, rej);
-      if(p && p.then) p.then(res, rej);
-    });
-    AUD.buf[name] = buf;
-  }catch(e){ AUD.failed++; }
+  if(typeof name==='string' && name.lastIndexOf('voice/horde_',0)===0) return;
+  const exts = audSidecarExts();
+  for(const ext of exts){
+    try{
+      let url = AUD.base + name + '.' + ext;
+      if(name.lastIndexOf('voice/',0)===0 && typeof packURL==='function'){
+        try{ const u = await packURL('voice', name.slice(6) + '.' + ext); if(u) url = u; }catch(e){}
+      }
+      const r = await fetch(url, {cache:'force-cache'});
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const ab = await r.arrayBuffer();
+      const buf = await new Promise((res, rej) => {
+        const p = AC.decodeAudioData(ab, res, rej);
+        if(p && p.then) p.then(res, rej);
+      });
+      AUD.buf[name] = buf;
+      return;
+    }catch(e){}
+  }
+  AUD.failed++;
 }
 
 function audBuild(){
@@ -210,6 +224,8 @@ async function audLoadSlots(){
       AUD_MIX[slot] = { g: (typeof s.gain === 'number' ? s.gain : 0.6),
                         gap: (typeof s.gap === 'number' ? s.gap : 40),
                         p: (typeof s.priority === 'number' ? s.priority : (prior&&prior.p)||2) };
+      if(prior && prior.rate) AUD_MIX[slot].rate = prior.rate;
+      if(typeof s.rate === 'number') AUD_MIX[slot].rate = s.rate;
     }
   }catch(e){}
 }
@@ -238,6 +254,9 @@ async function audLoadVoiceBank(){
     if(!j || !j.lines) return;
     VOICE_BANK = j;
     for(const fac in j.lines){
+      /* horde_* takes are Kokoro bm_fable — a person. Brood command audio is
+         layered creature SFX (audBroodCue), so these must never become slots. */
+      if(fac==='horde') continue;
       for(const action in j.lines[fac]){
         const slot = 'vo_' + fac + '_' + action;
         AUD_MAP[slot] = j.lines[fac][action].map(stem => 'voice/' + stem);
@@ -252,21 +271,66 @@ async function audLoadVoiceBank(){
     }
   }catch(e){ VOICE_BANK = null; }
 }
+/* Voice-bank speaker keys are nova / ascendancy / syndicate / horde / keen.
+   Runtime and UI ids are nova / legion / dominion / brood. Mapping here means
+   every caller can pass whatever the rest of the game uses. */
+const VO_BANK_ALIAS={
+  nova:'nova',terran:'nova',frontline:'nova',federation:'nova',
+  ascendancy:'ascendancy',legion:'ascendancy',dominion:'ascendancy',
+  syndicate:'syndicate',coalition:'syndicate',
+  horde:'horde',brood:'horde',swarm:'horde',infestation:'horde',
+  keen:'keen'
+};
+/* Pack has no dedicated retreat/underfire/victory/defeat takes. Alias onto the
+   closest existing radio category rather than inventing a second VO library. */
+const VO_ACTION_ALIAS={retreat:'stop',underfire:'attack',victory:'ability',defeat:'hold',guard:'hold'};
+function voBankFac(fac){
+  const raw=String(fac||'').toLowerCase();
+  if(VO_BANK_ALIAS[raw]) return VO_BANK_ALIAS[raw];
+  if(typeof facArtKey==='function'){
+    const a=facArtKey(fac);
+    if(a&&VO_BANK_ALIAS[a]) return VO_BANK_ALIAS[a];
+  }
+  if(typeof facArt==='function'){
+    const A=facArt(fac);
+    if(A&&A.id&&VO_BANK_ALIAS[A.id]) return VO_BANK_ALIAS[A.id];
+    if(A&&A.id) return A.id;
+  }
+  return raw||'nova';
+}
+function voIsBrood(fac){ return voBankFac(fac)==='horde'; }
+function voActionKey(action){ return VO_ACTION_ALIAS[action]||action; }
+const BROOD_SFX_SLOTS=['cre_idle','cre_attack','cre_pain','cre_death','move_brood'];
+function voBroodWarm(){
+  if(typeof AC==='undefined'||!AC) return;
+  for(const s of BROOD_SFX_SLOTS)
+    audMapList(s).forEach(f=>{ if(!AUD.buf[f]) audLoad(f); });
+}
 /* True if the MANIFEST carries a take for this line, decoded or not. Separate
    from voReady on purpose: "is there a recording of this" and "can it start on
    this exact millisecond" are different questions, and answering the first with
    the second is what made every caller conclude there was no voice at all
-   during the whole of a cold start. */
+   during the whole of a cold start.
+
+   Brood reports a synthetic slot so speakVoice never falls through to a human
+   TTS voice. The horde_* pack takes ARE a person (Kokoro bm_fable); we do not
+   treat them as present. */
 function voHas(fac, action){
   if(!fac || !action) return null;
-  const slot = 'vo_' + fac + '_' + action;
+  if(voIsBrood(fac)) return 'vo_brood_call';
+  const slot = 'vo_' + voBankFac(fac) + '_' + voActionKey(action);
   const list = audMapList(slot);
   return list.length ? slot : null;
 }
 /* True if the slot is playable right now. Kicks off the decode when it is not,
    so the very next order in that category speaks. */
 function voReady(fac, action){
-  const slot = 'vo_' + fac + '_' + action;
+  if(voIsBrood(fac)){
+    voBroodWarm();
+    return audMapList('cre_idle').some(f=>AUD.buf[f])||audMapList('cre_attack').some(f=>AUD.buf[f])
+      ? 'vo_brood_call' : null;
+  }
+  const slot = 'vo_' + voBankFac(fac) + '_' + voActionKey(action);
   const list = audMapList(slot);
   if(!list.length) return null;
   if(list.some(f => AUD.buf[f])) return slot;
@@ -321,6 +385,119 @@ function voTouch(files){
     delete AUD.buf[old];
   }
 }
+/* Last cue fired — capture scripts read this; it is not a mixer. */
+let VO_LAST=null;
+
+/* BROOD COMMAND CUES — never speech.
+   The pack's horde_* takes are Kokoro bm_fable (a person, lowered and radio-
+   filtered). Pitch-shifting that still sounds like a person. These cues layer
+   existing creature SFX plus oscillator chirps/clicks, with a different tune
+   per order so attack ≠ move ≠ select. Oscillators are the floor: if the
+   creature buffers have not decoded yet, the chirp still identifies the order. */
+const BROOD_TUNE={
+  select:   {life:.38,wave:'square',  f0:1720,f1:2460,mod:38,mg:.12,bp:1900,q:7,  clicks:3,clickGap:.045,clickHp:2800,
+             layers:[['cre_idle',1.92,.20,0,.18],['cre_idle',2.45,.10,.03,.14]]},
+  move:     {life:.52,wave:'triangle',f0:340, f1:780, mod:11,mg:.18,bp:720, q:2.4,clicks:0,clickGap:.05, clickHp:1800,
+             layers:[['cre_idle',1.18,.24,0,.28],['move_brood',1.55,.16,.04,.22]]},
+  retreat:  {life:.62,wave:'sawtooth',f0:980, f1:140, mod:7, mg:.22,bp:480, q:1.6,clicks:0,clickGap:.05, clickHp:1200,
+             layers:[['cre_pain',.72,.28,0,.4],['cre_idle',.55,.12,.05,.3]]},
+  attack:   {life:.58,wave:'sawtooth',f0:620, f1:1680,mod:55,mg:.28,bp:1100,q:4.2,clicks:5,clickGap:.038,clickHp:2200,
+             layers:[['cre_attack',.88,.32,0,.36],['cre_pain',1.35,.14,.06,.22]]},
+  build:    {life:.48,wave:'square',  f0:880, f1:440, mod:90,mg:.16,bp:1400,q:8,  clicks:4,clickGap:.07, clickHp:2400,
+             layers:[['cre_idle',1.48,.22,0,.2],['cre_idle',1.05,.14,.07,.18]]},
+  patrol:   {life:.50,wave:'triangle',f0:520, f1:520, mod:22,mg:.20,bp:860, q:3,  clicks:2,clickGap:.11, clickHp:1600,
+             layers:[['cre_idle',1.32,.20,0,.24],['move_brood',1.7,.12,.08,.2]]},
+  hold:     {life:.44,wave:'sine',    f0:90,  f1:70,  mod:3, mg:.30,bp:180, q:.8, clicks:0,clickGap:.05, clickHp:400,
+             layers:[['cre_idle',.48,.26,0,.36]]},
+  stop:     {life:.40,wave:'triangle',f0:210, f1:90,  mod:4, mg:.20,bp:240, q:1.1,clicks:0,clickGap:.05, clickHp:500,
+             layers:[['cre_idle',.62,.22,0,.28]]},
+  ability:  {life:.70,wave:'sawtooth',f0:400, f1:1600,mod:70,mg:.24,bp:980, q:3.5,clicks:3,clickGap:.09, clickHp:1500,
+             layers:[['cre_attack',1.12,.26,0,.3],['cre_attack',.78,.18,.12,.32]]},
+  deploy:   {life:.78,wave:'sawtooth',f0:180, f1:920, mod:18,mg:.22,bp:640, q:2,  clicks:2,clickGap:.14, clickHp:900,
+             layers:[['cre_attack',.58,.28,0,.45],['cre_idle',1.22,.16,.08,.3]]},
+  underfire:{life:.64,wave:'sawtooth',f0:1480,f1:220, mod:80,mg:.30,bp:760, q:5,  clicks:4,clickGap:.04, clickHp:2000,
+             layers:[['cre_pain',.95,.30,0,.36],['cre_attack',1.55,.16,.04,.2]]},
+  victory:  {life:.85,wave:'triangle',f0:280, f1:1480,mod:14,mg:.18,bp:1020,q:2.2,clicks:3,clickGap:.12, clickHp:1700,
+             layers:[['cre_idle',1.70,.22,0,.4],['cre_attack',1.05,.14,.15,.28]]},
+  defeat:   {life:1.05,wave:'sawtooth',f0:420, f1:55,  mod:5, mg:.28,bp:220, q:.9, clicks:0,clickGap:.05, clickHp:300,
+             layers:[['cre_death',.70,.34,0,.8],['cre_pain',.5,.16,.1,.5]]}
+};
+function audBroodCue(action,wx,wy,idx){
+  voBroodWarm();
+  const now=performance.now();
+  VO_LAST={fac:'brood',action:action,kind:'screech',at:now,human:false};
+  if(!AC||!audSfxBus||muted||(typeof sfxOn!=='undefined'&&!sfxOn)) return true;
+  const mix=AUD_MIX.vo_brood_call||{g:0.9,gap:420,p:5};
+  if(now-(AUD.lastAt.vo_brood_call||-1e9)<mix.gap) return true;
+  if(!audSlotHasRoom('vo_brood_call')) return true;
+  if(!audMakeRoom(mix.p||5)) return true;
+  const tune=BROOD_TUNE[action]||BROOD_TUNE[voActionKey(action)]||BROOD_TUNE.select;
+  AUD.lastAt.vo_brood_call=now;
+  const t0=AC.currentTime, life=tune.life;
+  const master=AC.createGain();
+  master.gain.setValueAtTime(0.0001,t0);
+  master.gain.exponentialRampToValueAtTime(Math.max(0.0002,mix.g*0.9),t0+0.016);
+  master.gain.exponentialRampToValueAtTime(0.0001,t0+life);
+  const bp=AC.createBiquadFilter();
+  bp.type='bandpass'; bp.frequency.value=tune.bp; bp.Q.value=tune.q;
+  master.connect(bp); bp.connect(audSfxBus);
+
+  /* FM chirp: carrier sweep + square modulator. This is the "tune" — attack
+     rises, retreat falls, select is a high square, hold is a low drone.
+     Never a formant filter; those reconstruct a mouth. */
+  const car=AC.createOscillator(); car.type=tune.wave;
+  car.frequency.setValueAtTime(Math.max(40,tune.f0),t0);
+  car.frequency.exponentialRampToValueAtTime(Math.max(40,tune.f1),t0+life*0.92);
+  const mod=AC.createOscillator(); mod.type='square';
+  mod.frequency.value=Math.max(1,tune.mod);
+  const mg=AC.createGain(); mg.gain.value=Math.max(40,tune.f0)*tune.mg;
+  mod.connect(mg); mg.connect(car.frequency);
+  const cg=AC.createGain(); cg.gain.value=0.20;
+  car.connect(cg); cg.connect(master);
+  car.start(t0); car.stop(t0+life);
+  mod.start(t0); mod.stop(t0+life);
+
+  if(tune.clicks>0){
+    const nbuf=artWorldNoise();
+    if(nbuf){
+      for(let k=0;k<tune.clicks;k++){
+        const src=AC.createBufferSource(); src.buffer=nbuf;
+        const ng=AC.createGain();
+        const st=t0+0.018+k*tune.clickGap;
+        ng.gain.setValueAtTime(0.0001,st);
+        ng.gain.exponentialRampToValueAtTime(0.18,st+0.003);
+        ng.gain.exponentialRampToValueAtTime(0.0001,st+0.026);
+        const hp=AC.createBiquadFilter(); hp.type='highpass';
+        hp.frequency.value=tune.clickHp+k*380;
+        src.connect(hp); hp.connect(ng); ng.connect(master);
+        try{ src.start(st); src.stop(st+0.04); }catch(e){}
+      }
+    }
+  }
+
+  for(const L of tune.layers){
+    const buf=audPick(L[0], typeof idx==='number'?idx:-1);
+    if(!buf) continue;
+    const src=AC.createBufferSource(); src.buffer=buf;
+    src.playbackRate.value=L[1];
+    const g=AC.createGain();
+    const st=t0+(L[3]||0);
+    const dur=Math.min(L[4]||life, Math.max(0.08, buf.duration/Math.max(0.25,L[1])));
+    g.gain.setValueAtTime(0.0001,st);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002,L[2]),st+0.018);
+    g.gain.exponentialRampToValueAtTime(0.0001,st+dur);
+    src.connect(g); g.connect(master);
+    const off=Math.random()*Math.min(0.12,Math.max(0,buf.duration-0.25));
+    try{ src.start(st, off); src.stop(st+dur+0.02); }catch(e){}
+  }
+
+  const voice={src:car,name:'vo_brood_call',priority:mix.p||5,started:now,done:false};
+  AUD.active.push(voice); AUD.voices++;
+  car.onended=()=>{ audRetireVoice(voice); };
+  AUD.duckUntil=Math.max(AUD.duckUntil,now+life*1000+200);
+  return true;
+}
+
 /* Play a rendered line.
 
    Returns TRUE when this call has taken responsibility for the line — either it
@@ -329,14 +506,22 @@ function voTouch(files){
    to synthesis IMMEDIATELY. `onMiss` fires when a take existed but could not be
    produced (fetch 404, decode reject), which is the deferred version of the same
    cue. Reporting false the instant a slot was merely undecoded is what pushed
-   every first airing — and for KEEN, every airing — onto speechSynthesis. */
+   every first airing — and for KEEN, every airing — onto speechSynthesis.
+
+   Brood always returns TRUE so speakVoiceFallback / speechSynthesis can never
+   put a human mouth on the hive. */
 function voPlay(fac, action, wx, wy, idx, onMiss){
+  if(voIsBrood(fac)){
+    audBroodCue(action, wx, wy, idx);
+    return true;
+  }
   const slot = voHas(fac, action);
   if(!slot) return false;
   const list = audMapList(slot);
   const want = (typeof idx === 'number' && idx >= 0) ? list[(idx | 0) % list.length] : null;
   if(want ? !!AUD.buf[want] : list.some(f => AUD.buf[f])){
     voTouch(list.filter(f => AUD.buf[f]));
+    VO_LAST={fac:voBankFac(fac),action:action,kind:'speech',slot:slot,at:performance.now(),human:true};
     try{ if(sfx(slot, wx, wy, 1, idx) !== false) return true; }catch(e){}
     return false;
   }
@@ -352,20 +537,26 @@ function voPlay(fac, action, wx, wy, idx, onMiss){
       return;
     }
     voTouch(got);
+    VO_LAST={fac:voBankFac(fac),action:action,kind:'speech',slot:slot,at:performance.now(),human:true};
     try{ if(sfx(slot, wx, wy, 1, idx) === false && typeof onMiss === 'function') onMiss(); }
     catch(e){ if(typeof onMiss === 'function') onMiss(); }
   });
   return true;
 }
 /* Called when a match starts: pull the one faction the player will actually
-   hear, rather than paying for all four. */
+   hear, rather than paying for all four. Brood prewarms creature SFX, never
+   the human horde_* bank. */
 function voPrewarm(fac){
+  fac=voBankFac(fac);
+  if(fac==='horde'){ voBroodWarm(); return; }
   if(!VOICE_BANK || !VOICE_BANK.lines || !VOICE_BANK.lines[fac]) return;
   for(const action in VOICE_BANK.lines[fac]) voReady(fac, action);
 }
 
 async function initAudioSamples(){
   if(typeof AC === 'undefined' || !AC) return;
+  if(AUD._samplesBusy) return;
+  AUD._samplesBusy = true;
   audBuild();
   AUD.ext = audExt();
   await audLoadSlots();
@@ -392,10 +583,11 @@ async function initAudioSamples(){
      intensity to start the first track. Once a user gesture created the audio
      context, start the selected menu bed immediately. */
   if(PLAY.lists&&musicOn&&!muted) audPlaylistTick();
-  /* A manifest can exist while every full track lives in the optional music
-     pack. In that normal fresh-install state there is still nothing playable,
-     so start decoding the bundled adaptive beds immediately. */
-  if(!audPlaylistFor()) music.forEach(audLoad);
+  /* Always decode the three dual-codec adaptive beds. They are ~45 s loops,
+     which this file already treats as buffer-sized, and they are the AAC
+     playlist's fallback after three decode failures — waiting until then to
+     start the fetch left a silent gap. */
+  music.forEach(n => { if(!AUD.buf[n]) audLoad(n); });
 }
 
 /* `pickIdx` selects a SPECIFIC take instead of a random one. radioAck prints one
@@ -628,14 +820,19 @@ let audMusSrc = null, audMusName = '', audMusSwap = 0;
 
 function audMusicTick(dt){
   if(!AC || !audMusBus) return;
-  const menuFallback=PLAY.phase==='fallback'&&
-    (typeof running==='undefined'||!running);
-  const want = (!musicOn || muted || paused || (!running&&!menuFallback)) ? null
-             : menuFallback?'mus_ambient'
-             : AUD_MUSIC_FOR(typeof musicInt === 'number' ? musicInt : 0);
+  /* Bundled mus_* beds are MATCH stems while the AAC playlist is alive, so a
+     rest gap cannot leak the combat stem under the title. After abandon
+     (Chromium with no AAC decoder, empty pool) they are the only score left
+     and must also cover menu / War Table. */
+  const scene=PLAY.scene||'menu';
+  const inMatch=scene==='ambient'||scene==='action';
+  const playlistDead=!PLAY.lists||PLAY.phase==='fallback';
+  const want = (!musicOn || muted || paused) ? null
+             : inMatch ? (scene==='action'?'mus_combat':'mus_ambient')
+             : (playlistDead ? 'mus_ambient' : null);
 
   if(!want){
-    if(audMusSrc) audMusBus.gain.setTargetAtTime(0.0001, AC.currentTime, 0.5);
+    if(audMusSrc) audStopMusicBeds();
     return;
   }
   if(!AUD.buf[want]) return;
@@ -691,6 +888,10 @@ function initSampleAudio(){
       baseInitAudio();
       if(!AC) return;
       audBuild();
+      /* Start the decode on the same tap that created AC. The 250 ms poll
+         used to leave the first second of UI clicks silent and delayed the
+         playlist retry until after Chrome's gesture window had closed. */
+      if(!AUD._samplesStarted){ AUD._samplesStarted=true; initAudioSamples(); }
       if(PLAY.lists) audPlaylistTick();
     };
   }
@@ -739,7 +940,7 @@ function initSampleAudio(){
       /* The synth music still owns the intensity envelope — it is the thing
          that reads combat damage — so run it, but with its own bus muted when
          the sampled beds are available. */
-      if(AUD.ready && (PLAY.lists || AUD.buf.mus_ambient)){
+      if(PLAY.lists || AUD.ready){
         if(typeof mixMus !== 'undefined' && mixMus)
           mixMus.gain.setTargetAtTime(0.0001, AC.currentTime, 0.4);
         synthMusic(dt);
@@ -749,6 +950,59 @@ function initSampleAudio(){
     };
   }
 
+  /* Tiny hooks — other agents own sim.js / input.js / main.js. Guard so a
+     second initSampleAudio cannot stack wrappers. */
+  if(typeof dealDamage==='function' && !dealDamage.__mfVoice){
+    const baseDeal=dealDamage;
+    dealDamage=function(j,dmg,attTeam,attacker,mu,wk){
+      const r=baseDeal(j,dmg,attTeam,attacker,mu,wk);
+      try{
+        if(typeof heroIdx==='number'&&j===heroIdx&&attTeam!==0&&dmg>=10&&typeof radioAck==='function')
+          radioAck('underfire',1,ux[j],uy[j]);
+      }catch(e){}
+      return r;
+    };
+    dealDamage.__mfVoice=true;
+  }
+  if(typeof endGame==='function' && !endGame.__mfVoice){
+    const baseEnd=endGame;
+    endGame=function(win,reason){
+      try{ if(typeof radioAck==='function') radioAck(win?'victory':'defeat',1); }catch(e){}
+      try{ audMusicLeaveMatch(); }catch(e){}
+      return baseEnd.apply(this,arguments);
+    };
+    endGame.__mfVoice=true;
+  }
+  if(typeof deployCarrier==='function' && !deployCarrier.__mfVoice){
+    const baseDep=deployCarrier;
+    deployCarrier=function(){
+      const r=baseDep.apply(this,arguments);
+      try{
+        if(typeof carrier!=='undefined'&&carrier&&carrier.phase===2&&typeof radioAck==='function')
+          radioAck('deploy',1,carrier.x,carrier.y);
+      }catch(e){}
+      return r;
+    };
+    deployCarrier.__mfVoice=true;
+  }
+  if(typeof speakVoice==='function' && !speakVoice.__mfVoice){
+    const baseSpeak=speakVoice;
+    speakVoice=function(text,faction,action,idx,wx,wy){
+      /* Brood must never reach speechSynthesis, even if a caller skipped voPlay. */
+      if(voIsBrood(faction)){ audBroodCue(action||'select',wx,wy,idx); return; }
+      return baseSpeak(text,faction,action,idx,wx,wy);
+    };
+    speakVoice.__mfVoice=true;
+  }
+  if(typeof speakVoiceFallback==='function' && !speakVoiceFallback.__mfVoice){
+    const baseFB=speakVoiceFallback;
+    speakVoiceFallback=function(text,faction){
+      if(voIsBrood(faction)){ audBroodCue('select'); return; }
+      return baseFB(text,faction);
+    };
+    speakVoiceFallback.__mfVoice=true;
+  }
+
   /* Decoding needs a live AudioContext, which only exists after the first user
      gesture on mobile. initAudio() is called from every entry point, so poll
      briefly for it rather than racing. */
@@ -756,7 +1010,7 @@ function initSampleAudio(){
   const arm = setInterval(() => {
     if(typeof AC !== 'undefined' && AC){
       clearInterval(arm);
-      initAudioSamples();
+      if(!AUD._samplesStarted){ AUD._samplesStarted=true; initAudioSamples(); }
     } else if(++tries > 600) clearInterval(arm);
   }, 250);
 }
@@ -778,6 +1032,8 @@ function initSampleAudio(){
    soundtrack feel like a folder of files.
    ============================================================================ */
 const PLAY = { lists:null, ext:'m4a', formats:['m4a'], haveExtra:false, cur:null,
+               scene:'menu', lockedScene:false, forceNext:false,
+               expectMatch:false, wasLive:false,
                state:'explore', phase:'locked', reason:'awaiting gesture', idx:-1,
                els:[], gains:[], slot:0, fading:false, switchAt:0, nowTitle:'',
                restT:0, hidden:false, fails:0, generation:0, lastTrack:'',
@@ -793,6 +1049,18 @@ function audPlayState(phase,reason){
   PLAY.phase=phase;
   PLAY.reason=reason||'';
   PLAY.changedAt=Date.now();
+}
+/* Three consecutive HTMLAudio decode failures mean this browser cannot play the
+   AAC playlist (open-source Chromium, a lying canPlayType, or a broken pack).
+   Bump generation so an in-flight audPlaylistNext after fail #2 cannot start
+   another silent track, then hand the bus to the dual-codec mus_* beds. */
+function audAbandonPlaylist(reason){
+  PLAY.generation = (PLAY.generation||0)+1;
+  PLAY.lists = null; PLAY.cur = null;
+  try{ PLAY.els.forEach(e => { try{ e.pause(); }catch(x){} }); }catch(e){}
+  AUD_MUSIC.forEach(n => { if(!AUD.buf[n]) audLoad(n); });
+  audPlayState('fallback', reason||'streamed soundtrack could not decode');
+  try{ audMusicTick(0); }catch(e){}
 }
 
 function audCodecPlayable(ext){
@@ -814,20 +1082,22 @@ function audTrackExt(track){
 async function audLoadPlaylists(){
   if(typeof netAllowed==='function' && !netAllowed()) { /* still read the
      bundled manifest — it is a local file, not a network call */ }
-  /* Prefer the manifest on the UPDATE CHANNEL, fall back to the packaged one.
+  /* Packaged manifest first. An empty packaged playlist is a curation decision
+     (vocal/lyric songs were deleted from source) and must win over a stale
+     channel music.json — remote-first is how sung seeds kept playing after
+     the downloadable pack had already dropped them.
 
-     The packaged copy lives inside the APK, so with a local-only fetch any
-     curation change — pulling a track, re-pointing a faction — could not reach
-     an installed phone without shipping a whole new APK. That is how two tracks
-     with sung lyrics stayed reachable on device after they had already been
-     removed from the downloadable pack: the 18-second seeds cut from them are
-     bundled, and the bundled manifest still named them.
-
-     Remote first, local second, and a failure at either step is silent — the
-     bundled beds still play. */
-  let j = null;
+     A channel overlay is only consulted when the packaged list still names
+     tracks. Failure at either step is silent — the dual-codec mus_* beds play. */
+  let packaged = null, j = null;
   try{
-    if(!(typeof netAllowed==='function' && !netAllowed())){
+    const r = await fetch('./assets/audio/music.json', {cache:'no-store'});
+    if(r.ok) packaged = await r.json();
+  }catch(e){}
+  const packagedHasTracks = !!(packaged && packaged.playlists &&
+    Object.values(packaged.playlists).some(a => Array.isArray(a) && a.length));
+  try{
+    if(packagedHasTracks && !(typeof netAllowed==='function' && !netAllowed())){
       const base = (typeof packEndpoint==='function' && packEndpoint()) || '';
       if(base){
         const rr = await fetch(base.replace(/\/+$/,'') + '/music.json?t=' + Date.now(), {cache:'no-store'});
@@ -835,11 +1105,8 @@ async function audLoadPlaylists(){
       }
     }
   }catch(e){}
+  if(!j) j = packaged;
   try{
-    if(!j){
-      const r = await fetch('./assets/audio/music.json', {cache:'no-store'});
-      if(r.ok) j = await r.json();
-    }
     if(j && j.playlists){
       PLAY.lists = j.playlists;
       /* Music ships AAC-only — the dual-format insurance the effects carry was
@@ -850,7 +1117,18 @@ async function audLoadPlaylists(){
       PLAY.formats = Array.isArray(j.formats)&&j.formats.length
         ? j.formats.slice() : [PLAY.ext];
       if(j.playback) PLAY.policy=Object.assign({},PLAY.policy,j.playback);
-      audPlayState('locked','soundtrack ready');
+      /* Open-source Chromium reports canPlayType('mp4a.40.2') as '' (or a
+         lie that then fails every seed). An empty curated playlist is the same
+         outcome — hand the bus to the dual-codec mus_* beds now. */
+      let any=false;
+      if(PLAY.formats.some(audCodecPlayable)){
+        for(const name of Object.keys(PLAY.lists)){
+          if(audPlayableTracks(name).length){ any=true; break; }
+        }
+      }
+      if(!any) audAbandonPlaylist(PLAY.formats.some(audCodecPlayable)
+        ? 'no playable soundtrack' : 'no compatible soundtrack codec');
+      else audPlayState('locked','soundtrack ready');
     } else audPlayState('fallback','soundtrack manifest unavailable');
   }catch(e){ audPlayState('fallback','soundtrack manifest unavailable'); }
 }
@@ -858,7 +1136,16 @@ async function audLoadPlaylists(){
 function audMediaSlot(i){
   if(PLAY.els[i]) return i;
   const el = new Audio();
-  el.preload = 'none'; el.crossOrigin = 'anonymous';
+  /* Bundled seeds are ~220 KB. preload=none plus an element that was never
+     inserted meant Chrome could sit in HAVE_NOTHING after play() and never
+     fire `playing` — Android WebView still started. Keep the node in the
+     tree (hidden, not display:none — some engines skip those) and let the
+     browser buffer the seed before the gesture's play() returns. */
+  el.preload = 'auto'; el.crossOrigin = 'anonymous';
+  el.setAttribute('playsinline','');
+  el.setAttribute('webkit-playsinline','');
+  el.style.cssText='position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0';
+  try{ if(document.body) document.body.appendChild(el); }catch(e){}
   /* Not `loop`: a playlist advances. `ended` is the cue. */
   el.addEventListener('ended', () => {
     if(i!==PLAY.slot) return;                    // retired crossfade element
@@ -880,12 +1167,10 @@ function audMediaSlot(i){
      reason they were kept. */
   el.addEventListener('error', () => {
     if(i!==PLAY.slot) return;
+    if(!el.getAttribute('src')) return;
     PLAY.fails = (PLAY.fails || 0) + 1;
     if(PLAY.fails >= 3){
-      PLAY.lists = null; PLAY.cur = null;
-      try{ PLAY.els.forEach(e => e.pause()); }catch(e){}
-      ['mus_ambient','mus_tension','mus_combat'].forEach(n => { if(!AUD.buf[n]) audLoad(n); });
-      audPlayState('fallback','streamed soundtrack could not decode');
+      audAbandonPlaylist('streamed soundtrack could not decode');
       return;
     }
     audPlayState('failed','track could not decode');
@@ -898,12 +1183,100 @@ function audMediaSlot(i){
   return i;
 }
 
+/* Four-state score: menu | wartable | ambient | action.
+   `running` alone cannot own this — orbital drop sets running before deploy,
+   War Table is !running with playerFaction already filled, and a leftover
+   PLAY.cur='nova' plus `pick('menu')||pick('nova')` kept the battle bed on
+   the title. Scene is explicit; playlist name follows it. */
+function audFrontScreenId(){
+  try{
+    if(document.body&&document.body.dataset&&document.body.dataset.frontScreen)
+      return document.body.dataset.frontScreen;
+  }catch(e){}
+  return '';
+}
+function audFrontScene(){
+  const id=audFrontScreenId();
+  return (id==='warScr'||id==='setupScr')?'wartable':'menu';
+}
+function audSceneFilter(){
+  return PLAY.scene==='action'?'combat':'explore';
+}
+function audMusicResetCombat(){
+  try{
+    if(typeof musicInt!=='undefined') musicInt=0;
+    if(typeof musicFirstBlood!=='undefined') musicFirstBlood=false;
+    if(typeof lastDmgTotal!=='undefined') lastDmgTotal=0;
+    if(typeof lastKillsTotal!=='undefined') lastKillsTotal=0;
+  }catch(e){}
+  PLAY.state='explore';
+  PLAY.switchAt=0;
+}
+function audStopMusicBeds(){
+  if(!audMusSrc) return;
+  const old=audMusSrc;
+  if(old._g&&AC) try{ old._g.gain.setTargetAtTime(0.0001,AC.currentTime,0.4); }catch(e){}
+  setTimeout(()=>{ try{ old.stop(); }catch(e){} },1600);
+  audMusSrc=null; audMusName='';
+}
+function audHaltPlaylist(){
+  /* Bump generation so an in-flight audPlaylistNext (await packURL) cannot
+     start a battle cue after we have already left the match. */
+  PLAY.generation=(PLAY.generation||0)+1;
+  clearTimeout(PLAY.restT); PLAY.restT=0;
+  PLAY.cur=null; PLAY.idx=-1; PLAY.lastTrack=''; PLAY.nowTitle='';
+  PLAY.forceNext=true;
+  try{ PLAY.els.forEach(e=>{ try{ e.pause(); e.removeAttribute('src'); e.load(); }catch(x){} }); }catch(e){}
+}
+function audMusicLeaveMatch(){
+  PLAY.lockedScene=true;
+  PLAY.expectMatch=false;
+  PLAY.wasLive=false;
+  PLAY.scene='menu';
+  audMusicResetCombat();
+  audStopMusicBeds();
+  try{ ambStop(); }catch(e){}
+  try{ audWorldClear(); }catch(e){}
+  audHaltPlaylist();
+  if(AC&&PLAY.lists&&musicOn&&!muted) audPlaylistTick();
+}
+function audMusicEnterMatch(){
+  PLAY.lockedScene=false;
+  PLAY.expectMatch=true;
+  PLAY.wasLive=false;
+  PLAY.scene='ambient';
+  audMusicResetCombat();
+  audStopMusicBeds();
+  audHaltPlaylist();
+  if(AC&&PLAY.lists&&musicOn&&!muted) audPlaylistTick();
+}
+function audMusicEnterScreen(id){
+  if(typeof running!=='undefined'&&running&&!PLAY.lockedScene) return;
+  PLAY.expectMatch=false;
+  const scene=(id==='warScr'||id==='setupScr')?'wartable':'menu';
+  if(PLAY.scene==='ambient'||PLAY.scene==='action'){
+    audMusicResetCombat();
+    audStopMusicBeds();
+    try{ ambStop(); }catch(e){}
+    try{ audWorldClear(); }catch(e){}
+    audHaltPlaylist();
+  }
+  PLAY.scene=scene;
+  if(AC&&PLAY.lists&&musicOn&&!muted) audPlaylistTick();
+}
+function audMusicDebug(){
+  return {scene:PLAY.scene,cur:PLAY.cur,state:PLAY.state,phase:PLAY.phase,
+          title:PLAY.nowTitle,bed:audMusName,amb:!!(typeof AMB!=='undefined'&&AMB.on),
+          locked:!!PLAY.lockedScene,running:!!(typeof running!=='undefined'&&running)};
+}
+
 /* Which playlist the current context calls for. In a match it is the ENEMY's
    theme rather than the player's — you are listening to who you are fighting,
    which is the choice that makes the four factions feel distinct. */
 function audPlaylistFor(){
   if(!PLAY.lists) return null;
-  const pick = n => audPlayableTracks(n).length ? n : null;
+  const pick = n => audPlayableTracks(n, audSceneFilter()).length ? n : null;
+  const scene=PLAY.scene||'menu';
   /* The launch reveal gets its own piece, so the first thing anyone hears is
      not the same loop as the menu they are about to land on. */
   try{
@@ -911,7 +1284,10 @@ function audPlaylistFor(){
       const sp = pick('splash'); if(sp) return sp;
     }
   }catch(e){}
-  if(typeof running === 'undefined' || !running) return pick('menu') || pick('nova');
+  /* Menu and War Table must NEVER fall through to a faction list — that
+     fallback is what left a battle cue on the title after a match. An empty
+     menu list falls through to mus_ambient. */
+  if(scene==='menu'||scene==='wartable') return pick('menu');
   let fac = null, enemy = null;
   try{
     if(typeof playerFaction!=='undefined'&&playerFaction) fac=playerFaction;
@@ -921,9 +1297,18 @@ function audPlaylistFor(){
       if(A) enemy = A.id;
     }
   }catch(e){}
-  /* The army the player chose owns the score. The opponent is a fallback for
-     old saves that predate playerFaction, not the primary identity. */
-  return pick(fac) || pick(enemy) || pick('nova') || pick('menu') || pick('ascendancy');
+  /* Playlists are keyed nova / ascendancy / syndicate / horde. playerFaction
+     is legion for Dominion, so the raw string never hits `ascendancy` and the
+     player army lost the score to the enemy fallback. Resolve through facArt
+     the same way the opponent path already does. */
+  let playerList=null;
+  try{
+    if(typeof facArt==='function'&&fac){
+      const A=facArt(fac);
+      if(A&&A.id) playerList=A.id;
+    }
+  }catch(e){}
+  return pick(playerList) || pick(fac) || pick(enemy) || pick('nova');
 }
 /* Combat intensity is noisy by design: one hit raises it and the envelope then
    decays. Hysteresis plus a nine-second hold keeps that useful signal from
@@ -934,23 +1319,29 @@ function audPlaylistState(i, prior){
   if(p==='tension') return i>0.62?'combat':(i<0.15?'explore':'tension');
   return i>0.62?'combat':(i>0.27?'tension':'explore');
 }
+function audTrackBed(t){
+  if(t&&t.state) return t.state==='combat'?'combat':(t.state==='tension'?'tension':'explore');
+  const f=String((t&&(t.file||t.title))||'').toLowerCase();
+  if(/_combat|combat_|blackout_crown|black_flag|iron_crown/.test(f)) return 'combat';
+  if(/_tension|tension_/.test(f)) return 'tension';
+  return 'explore';
+}
 function audPlayableTracks(name,state){
   const all=((PLAY.lists&&PLAY.lists[name])||[])
     .filter(t=>(t.bundled!==false||PLAY.haveExtra)&&!!audTrackExt(t));
-  /* The soundtrack manifest no longer tags tracks by combat state — a context
-     is a set of full pieces that rotate. Only the legacy bundled seeds still
-     carry `state`, so a list with none is simply "all of these". */
-  if(!state || !all.some(t=>t.state)) return all;
-  const exact=all.filter(t=>t.state===state);
-  if(exact.length){
-    /* Once the full pack exists it should replace, not merely compete with,
-       the short offline seed. Otherwise half of all track picks still chose
-       the 18-second fallback after the player downloaded ten megabytes. */
-    const full=PLAY.haveExtra?exact.filter(t=>t.bundled===false):[];
-    return full.length?full:exact;
-  }
-  const neutral=all.filter(t=>!t.state);
-  return neutral.length?neutral:all;
+  /* Ambient must not draw a combat stem, even when a remote music.json dropped
+     the state tags (those lists used to return the whole faction pool). */
+  if(!state) return all;
+  const want=state==='combat'?'combat':'explore';
+  let exact=all.filter(t=>audTrackBed(t)===want);
+  if(!exact.length&&want==='explore') exact=all.filter(t=>audTrackBed(t)!=='combat');
+  if(!exact.length&&want==='combat') exact=all.filter(t=>audTrackBed(t)!=='explore');
+  /* An explore pool that is only a combat offline-bed must not play. The
+     dual-codec mus_ambient stem carries the match until a real explore cue
+     exists. Combat may still use that seed. */
+  if(!exact.length) return want==='explore'?[]:all;
+  const full=PLAY.haveExtra?exact.filter(t=>t.bundled===false):[];
+  return full.length?full:exact;
 }
 
 /* A playlist whose pool is one track restarts it the instant it ends, which
@@ -959,11 +1350,11 @@ function audPlayableTracks(name,state){
    notices. Rest between plays, longer the smaller the pool. In a match the
    soundtrack is doing real work following combat intensity, so it never rests. */
 function audPlaylistRest(){
-  const inMatch = !(typeof running === 'undefined' || !running);
-  const pool = audPlayableTracks(PLAY.cur, PLAY.state).length;
+  const inMatch = PLAY.scene==='ambient'||PLAY.scene==='action';
+  const pool = audPlayableTracks(PLAY.cur, audSceneFilter()).length;
   /* A 2-3 minute piece has already earned its silence; only the short bundled
      seeds need a rest inserted so they do not read as a loop. */
-  const cur = audPlayableTracks(PLAY.cur, PLAY.state);
+  const cur = audPlayableTracks(PLAY.cur, audSceneFilter());
   const longForm = cur.length && cur.every(t => (t.dur||0) >= 60);
   const track=cur[PLAY.idx]||null;
   /* A seed is an excerpt, never a loop. Even in combat it yields to the adaptive
@@ -998,6 +1389,7 @@ function audPlaylistPlay(el,slot){
 
 async function audPlaylistNext(){
   clearTimeout(PLAY.restT); PLAY.restT = 0;
+  const gen = PLAY.generation;
   const name = PLAY.cur;
   if(!name || !PLAY.lists || !PLAY.lists[name] || !PLAY.lists[name].length) return;
   /* Only tracks that can actually play. A track is playable if it shipped in
@@ -1006,8 +1398,13 @@ async function audPlaylistNext(){
      cannot distinguish "this one file is absent" from "this browser has no
      decoder" — and the second has to abandon the playlist while the first must
      not. */
-  const list = audPlayableTracks(name,PLAY.state);
-  if(!list.length) return;
+  const list = audPlayableTracks(name,audSceneFilter());
+  if(!list.length){
+    AUD_MUSIC.forEach(n => { if(!AUD.buf[n]) audLoad(n); });
+    audPlayState('fallback','no playable soundtrack');
+    try{ audMusicTick(0); }catch(e){}
+    return;
+  }
   let n = (Math.random() * list.length) | 0;
   if(list.length > 1 && list[n].file===PLAY.lastTrack) n=(n+1)%list.length;
   PLAY.idx = n;
@@ -1015,8 +1412,8 @@ async function audPlaylistNext(){
   PLAY.lastTrack=track.file;
   PLAY.nowTitle=track.title||'';
 
-  const next = PLAY.slot ^ 1;
-  audMediaSlot(next); audMediaSlot(PLAY.slot);
+  const prev = PLAY.slot, next = prev ^ 1;
+  audMediaSlot(next); audMediaSlot(prev);
   const el = PLAY.els[next], g = PLAY.gains[next];
   /* A short seed rest is carried by the adaptive bed. Retire that bed before
      the streamed cue fades in or both scores remain layered indefinitely. */
@@ -1027,7 +1424,7 @@ async function audPlaylistNext(){
     audMusSrc=null; audMusName='';
   }
   const ext=audTrackExt(track);
-  if(!ext){ audPlayState('fallback','no compatible soundtrack codec'); return; }
+  if(!ext){ audAbandonPlaylist('no compatible soundtrack codec'); return; }
   const fileName = track.file.split('/').pop() + '.' + ext;
   /* Pack first, bundled path second. A build that ships the music inside the
      installer and one that downloads it behave identically from here. */
@@ -1039,53 +1436,89 @@ async function audPlaylistNext(){
   if(track.bundled===false&&typeof packURL === 'function'){
     try{ url = (await packURL('music', fileName)) || url; }catch(e){}
   }
+  if(gen !== PLAY.generation || !PLAY.lists) return;
   el.src = url;
   el.currentTime = 0;
+  /* audPlaylistPlay refuses slot!==PLAY.slot so a stale crossfade cannot
+     restart a retired element. The old order called play(next) BEFORE
+     flipping PLAY.slot, so the gesture's play() was a no-op and the real
+     start happened on a later tick — Chrome autoplay then rejected it,
+     Android WebView often still allowed it. Flip first, then play. */
+  PLAY.slot = next;
   audPlaylistPlay(el,next);
 
   const t = AC.currentTime;
   g.gain.cancelScheduledValues(t);
   g.gain.setValueAtTime(0.0001, t);
   g.gain.setTargetAtTime(1, t, 1.4);
-  const old = PLAY.gains[PLAY.slot];
+  const old = PLAY.gains[prev];
   if(old){
     old.gain.cancelScheduledValues(t);
     old.gain.setTargetAtTime(0.0001, t, 1.2);
-    const oe = PLAY.els[PLAY.slot];
+    const oe = PLAY.els[prev];
     setTimeout(() => { try{ oe.pause(); }catch(e){} }, PLAY.policy.crossfadeMs);
   }
-  PLAY.slot = next;
 }
 
 function audPlaylistTick(){
   if(!AC || !audMusBus || !PLAY.lists) return false;
   const disabled=!musicOn||muted;
+  const live=typeof running!=='undefined'&&running;
+  const i = (typeof musicInt === 'number') ? musicInt : 0;
+  if(PLAY.lockedScene){
+    if(!live) PLAY.lockedScene=false;
+  } else if(live){
+    PLAY.expectMatch=false;
+    PLAY.wasLive=true;
+    const now=performance.now();
+    if(now>=(PLAY.switchAt||0)){
+      const nextState=audPlaylistState(i,PLAY.state);
+      if(nextState!==PLAY.state){ PLAY.state=nextState; PLAY.switchAt=now+9000; }
+    }
+    /* Action only after combat hysteresis trips; otherwise the match bed is
+       ambient. Tension rides inside ambient so a skirmish cannot machine-gun
+       short combat seeds the way the old per-state restart did. */
+    const matchScene=PLAY.state==='combat'?'action':'ambient';
+    if(PLAY.scene!==matchScene){
+      PLAY.scene=matchScene;
+      PLAY.forceNext=true;
+    }
+  } else if(PLAY.expectMatch){
+    /* hideFrontScreens arms ambient before newSkirmish sets running. */
+    PLAY.scene='ambient';
+  } else if(PLAY.wasLive && (PLAY.scene==='ambient'||PLAY.scene==='action')){
+    /* running flipped false without a hook — do not keep the battle bed. */
+    PLAY.wasLive=false;
+    PLAY.scene=audFrontScene();
+    PLAY.forceNext=true;
+    audMusicResetCombat();
+    audStopMusicBeds();
+    try{ ambStop(); }catch(e){}
+    try{ audWorldClear(); }catch(e){}
+  } else if(!PLAY.scene){
+    PLAY.scene=audFrontScene();
+  } else if(!PLAY.lockedScene){
+    const front=audFrontScene();
+    if((PLAY.scene==='menu'||PLAY.scene==='wartable') && PLAY.scene!==front)
+      PLAY.scene=front;
+  }
   const want = disabled ? null : audPlaylistFor();
   if(!want){
     if(PLAY.cur){ PLAY.cur = null; audMusBus.gain.setTargetAtTime(0.0001, AC.currentTime, 0.6);
-      PLAY.els.forEach(e => { try{ e.pause(); }catch(x){} });
-      audPlayState(disabled?'locked':'fallback',disabled?'music disabled':'no playable soundtrack'); }
-    /* A playlist manifest with no locally playable files must fall through to
-       the bundled adaptive beds. Treating an empty playlist as success caused
-       three 404s followed by permanent silence on a fresh APK. */
+      PLAY.els.forEach(e => { try{ e.pause(); }catch(x){} }); }
+    if(!disabled && PLAY.phase!=='fallback')
+      audPlayState('fallback','no playable soundtrack');
+    else if(disabled) audPlayState('locked','music disabled');
+    /* Empty or unplayable playlist — return false so audMusicTick can run
+       the dual-codec mus_* beds on menu / War Table / match. */
     return disabled;
   }
-  const i = (typeof musicInt === 'number') ? musicInt : 0;
-  const now=performance.now();
-  if(now>=(PLAY.switchAt||0)){
-    const nextState=audPlaylistState(i,PLAY.state);
-    if(nextState!==PLAY.state){ PLAY.state=nextState; PLAY.switchAt=now+9000; }
-  }
-  /* A track is only ever replaced when the CONTEXT changes — splash, menu, or
-     which faction you are fighting. It is never cut off because combat intensity
-     crossed a threshold.
-
-     The old behaviour restarted the playlist on every explore→tension→combat
-     transition, which with the short seed clips meant the soundtrack audibly
-     re-started every few seconds during a fight. These are 2-3 minute pieces
-     now; they are meant to be heard. Intensity still rides the bus GAIN below,
-     so a firefight lifts the music without chopping it. */
-  if(want !== PLAY.cur){
+  /* A track is replaced when the SCENE changes (menu / wartable / ambient /
+     action) or the playlist name changes. Intensity no longer chops a
+     long-form piece except at the ambient↔action boundary, which is the
+     authored combat stem swap. */
+  if(want !== PLAY.cur || PLAY.forceNext){
+    PLAY.forceNext=false;
     clearTimeout(PLAY.restT); PLAY.restT=0;
     PLAY.cur = want; PLAY.idx = -1; PLAY.lastTrack='';
     audPlaylistNext();
@@ -1095,6 +1528,13 @@ function audPlaylistTick(){
        PLAY.cur set and therefore never attempted this element again. */
     audPlaylistPlay(PLAY.els[PLAY.slot],PLAY.slot);
   }
+  /* MediaElementSource on desktop Chrome sometimes advances currentTime
+     without firing `playing`. Believe the element so the state machine
+     matches what is actually coming out of the speakers. */
+  const liveEl=PLAY.els[PLAY.slot];
+  if(liveEl&&!liveEl.paused&&liveEl.currentTime>0&&
+     (PLAY.phase==='loading'||PLAY.phase==='stalled'))
+    audPlayState('playing',PLAY.nowTitle);
   /* Intensity still rides the level, so a firefight lifts the music without
      needing separate stems for licensed tracks. */
   /* ONE TIME CONSTANT CANNOT DUCK. AUD_DUCK arms the duck for 650 ms and
@@ -1104,7 +1544,8 @@ function audPlaylistTick(){
      bottoms out, so no alarm, explosion or radio line ever actually cut
      through the music. A duck needs a fast attack and a slow release. */
   const ducked = performance.now() < AUD.duckUntil;
-  audMusBus.gain.setTargetAtTime(audMusicGain(0.34 + i * 0.16), AC.currentTime, ducked ? 0.06 : 0.9);
+  const mixI=(PLAY.scene==='ambient'||PLAY.scene==='action')?i:0;
+  audMusBus.gain.setTargetAtTime(audMusicGain(0.34 + mixI * 0.16), AC.currentTime, ducked ? 0.06 : 0.9);
   /* During an authored rest, or after streamed playback has failed, allow the
      dual-codec adaptive beds to carry the mix rather than returning silence. */
   return PLAY.phase!=='resting'&&PLAY.phase!=='fallback'&&PLAY.phase!=='failed';
@@ -1144,15 +1585,37 @@ const RADIO_ACK={last:0,by:{},timer:0,seq:0,voiceAt:0};
 const RADIO_COPY={
   select:['Command link established','Unit telemetry linked','Formation on channel'],
   move:['Vector confirmed','Advancing to marker','Route locked'],
+  retreat:['Breaking contact','Falling back to marker','Disengaging'],
   attack:['Weapons free','Target solution confirmed','Engaging marked contact'],
   build:['Fabricator order received','Construction marker accepted','Build crew dispatched'],
   patrol:['Patrol circuit locked','Route uploaded','Watch pattern confirmed'],
   hold:['Holding this ground','Defensive posture set','Position anchored'],
+  guard:['Escort pattern set','Guard detail assigned','Protecting marked asset'],
   stop:['Formation standing by','Order cancelled','Units holding'],
   ability:['Commander system armed','Tactical system responding','Ability order confirmed'],
-  deploy:['Landing vector confirmed','Deployment site accepted','Base package descending']
+  deploy:['Landing vector confirmed','Deployment site accepted','Base package descending'],
+  underfire:['Taking fire','Commander under attack','Contact on the command unit'],
+  victory:['Objective complete','Field is ours','Mission accomplished'],
+  defeat:['Command net lost','We are overrun','Mission failed']
 };
-const RADIO_ICON={select:'◇',move:'➤',attack:'⚔',build:'⬡',patrol:'↻',hold:'⛊',stop:'■',ability:'✦',deploy:'⌄'};
+/* HUD flavour only. Brood audio is audBroodCue — never these strings, never TTS. */
+const RADIO_COPY_BROOD={
+  select:['Hive-link locked','Brood-mind attuned','Swarm on channel'],
+  move:['Swarm advancing','Mass in motion','Hunt-path set'],
+  retreat:['Swarm withdrawing','Mass peeling back','Hive pulling in'],
+  attack:['Swarm striking','Prey marked','Hive hunting'],
+  build:['Growth-site marked','Spawning order set','Hive expanding'],
+  patrol:['Hunt circuit set','Swarm circling','Watch-mass moving'],
+  hold:['Swarm anchoring','Mass holding ground','Hive rooted'],
+  guard:['Swarm escorting','Mass shielding the marked','Hive-guard set'],
+  stop:['Swarm still','Order dissolved','Mass waiting'],
+  ability:['Hive-gift loosed','Brood-mind surge','Gift of the nest'],
+  deploy:['Hive-fall locked','Nest-site chosen','Brood descending'],
+  underfire:['Hive-mind struck','Queen under bite','Command-mass bleeding'],
+  victory:['Prey consumed','Field belongs to the hive','Swarm triumphant'],
+  defeat:['Hive-mind silent','Swarm broken','Nest fallen']
+};
+const RADIO_ICON={select:'◇',move:'➤',retreat:'➤',attack:'⚔',build:'⬡',patrol:'↻',hold:'⛊',guard:'⛨',stop:'■',ability:'✦',deploy:'⌄',underfire:'⚠',victory:'★',defeat:'✕'};
 function radioFaction(){
   let key='nova';
   try{
@@ -1172,14 +1635,32 @@ function radioPanel(){
   return el;
 }
 function radioAck(action,count,wx,wy){
-  action=RADIO_COPY[action]?action:'select';
-  const now=performance.now(),same=RADIO_ACK.by[action]||-1e9;
-  if(now-RADIO_ACK.last<260||now-same<620) return false;
+  if(!RADIO_COPY[action]) action=RADIO_COPY[voActionKey(action)]?voActionKey(action):'select';
+  const now=performance.now();
+  const A=radioFaction();
+  const brood=voIsBrood(A.id);
+  /* underfire is a volley, not an order — 6.5s between screams, but a recent
+     move ack must not swallow the first hit. victory/defeat fire once. Orders
+     keep the old 260/620 UI cadence so a formation drag still feels responsive
+     without stacking VO. */
+  if(action==='victory'||action==='defeat'){
+    if(RADIO_ACK.by[action]) return false;
+  }else if(action==='underfire'){
+    if(now-(RADIO_ACK.by.underfire||-1e9)<6500) return false;
+  }else if(action==='retreat'){
+    /* Double-tap empty ground fires move then retreat inside 500 ms. The 260 ms
+       global gate would swallow the retreat cue every time. Same-action 620 ms
+       still stops a drag from stacking retreats. */
+    if(now-(RADIO_ACK.by.retreat||-1e9)<620) return false;
+  }else{
+    const same=RADIO_ACK.by[action]||-1e9;
+    if(now-RADIO_ACK.last<260||now-same<620) return false;
+  }
   RADIO_ACK.last=now; RADIO_ACK.by[action]=now;
-  const A=radioFaction(),lines=RADIO_COPY[action];
+  const lines=(brood&&RADIO_COPY_BROOD[action])||RADIO_COPY[action];
   const line=lines[RADIO_ACK.seq++%lines.length];
   let speaker=A.nm||'FIELD UNIT';
-  if(action==='ability'||action==='deploy'){
+  if(action==='ability'||action==='deploy'||action==='underfire'||action==='victory'||action==='defeat'){
     try{
       const C=typeof playerCommanderDef==='function'?playerCommanderDef():null;
       speaker=C&&C.nm?C.nm:(A.cdr||speaker);
@@ -1191,13 +1672,12 @@ function radioAck(action,count,wx,wy){
      order landed during a warning. */
   if(typeof radioNotice==='function') radioNotice(speaker+' // '+action.toUpperCase(),line+(count>1?' · '+count+' UNITS':''));
   else if(typeof toast==='function') toast(line);
-  if(typeof sfx==='function') sfx('radio',wx,wy,0.9);
-  /* Voice is opt-in through the KEEL setting and deliberately much slower
-     than UI acknowledgement. This makes faction character audible without a
-     formation drag creating a wall of browser speech. */
-  if(now-RADIO_ACK.voiceAt>5200&&typeof speakVoice==='function'){
-    RADIO_ACK.voiceAt=now; speakVoice(line,A.id,action,lines.indexOf(line),wx,wy);
-  }
+  /* Human factions: walkie squelch then pack VO. Brood: no radio hiss — that
+     click is a person on a handset. voPlay is the voice, not speakVoice:
+     tutorialVoice / 5200ms throttle used to swallow almost every ack. */
+  if(!brood && typeof sfx==='function') sfx('radio',wx,wy,0.9);
+  RADIO_ACK.voiceAt=now;
+  voPlay(A.id, action, wx, wy, lines.indexOf(line));
   return true;
 }
 

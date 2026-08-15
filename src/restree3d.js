@@ -28,7 +28,16 @@
   var RT_FACTIONS=['nova','dominion','syndicate','brood'];
   var RT_QUEUE_SLOTS=5;
   var RT_NODE_W=126,RT_NODE_H=76,RT_COL=154,RT_GAP_Y=94;
-  var RT={sel:null,scrollX:0,scrollY:0,branch:'FABRICATION',faction:'nova',inspect:false,focus:null,renderCount:0};
+  var RT={sel:null,scrollX:0,scrollY:0,branch:'FABRICATION',faction:'nova',factionPicked:false,inspect:false,focus:null,renderCount:0};
+  function rtPlayerFaction(){
+    var pf=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
+    var id=(typeof facCanonicalId==='function'&&facCanonicalId(pf))||pf;
+    return RT_FACTIONS.indexOf(id)>=0?id:'nova';
+  }
+  function rtSyncFaction(){
+    if(RT.factionPicked) return;
+    RT.faction=rtPlayerFaction();
+  }
 
   function rtEsc(s){
     return String(s==null?'':s).replace(/[&<>"']/g,function(c){
@@ -327,7 +336,7 @@
     }
     document.querySelectorAll('[data-rtfaction]').forEach(function(el){
       var choose=function(){
-        RT.faction=el.dataset.rtfaction; RT.branch='FABRICATION';
+        RT.faction=el.dataset.rtfaction; RT.factionPicked=true; RT.branch='FABRICATION';
         RT.sel=null; RT.inspect=false; RT.focus=null; RT.scrollX=0; RT.scrollY=0;
         buildTree(); if(typeof sfx==='function') sfx('ui');
       };
@@ -373,6 +382,7 @@
 
   function buildTree(){
     var body=document.getElementById('devBody'); if(!body) return;
+    rtSyncFaction();
     var layout=rtLayout();
     if(RT.sel&&!rtNode(RT.sel)) RT.sel=null;
     body.innerHTML='<div class="rt3d-wrap" data-test="research-tree">'+rtGraphHtml(layout)+'</div>';
@@ -404,6 +414,7 @@
       version:'2.0',build:buildTree,snapshot:rtSnapshot,select:rtSelect,
       queueAdd:function(id){ rtQueueAdd(id,false); },queuePath:function(id){ rtQueueAdd(id,true); },
       queueRemove:rtQueueRemove,clearQueue:function(){ META.resQueue=[]; if(typeof metaSave==='function') metaSave(); buildTree(); },
+      flushQueue:function(){ return typeof devFlushQueue==='function'?devFlushQueue():[]; },
       layout:function(){ return rtLayout(); }
     };
   }

@@ -14,17 +14,17 @@
                       ],
     "base":  "",
     "severity":  "recommended",
-    "notes":  "Complete per-model Material V2 upgrade across all factions.",
+    "notes":  "Stacked factory queues, per-unit veterancy + building LV stars, victory Return/Continue + faction departure, map double-tap confirm, browser page-zoom lock, Chrome play() + no blur-mute.",
     "files":  [
                   {
-                      "path":  "MASSFRONT-v1.33.7-update.js",
-                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.7-update.js?download=true",
-                      "size":  50525221,
-                      "sha256":  "c4447d896705b5cb2eb7bff4650cf1b49dcc2564e228c0b3749185ae31c2e796"
+                      "path":  "MASSFRONT-v1.33.37-update.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.37-update.js?download=true",
+                      "size":  57256557,
+                      "sha256":  "4f214fe255c9dabd91ba28f063688116885a9b4322b9a96c42cf88853388b3f2"
                   }
               ],
     "packsIndex":  "packs.json",
     "minBaseVersion":  "1.22.0",
     "channel":  "stable",
-    "version":  "1.33.7"
+    "version":  "1.33.37"
 }

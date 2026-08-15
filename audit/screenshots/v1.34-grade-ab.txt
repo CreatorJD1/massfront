@@ -1,0 +1,6 @@
+shipped default: screenGrade=neutral cine=true
+computed canvas filter: none
+
+after-neutral  pureBlack   0.00%  lum<16   0.06%  meanLum 104.0  toeMean 13.68  toeLevels   9   AFTER  NEUTRAL (shipped default, no filter)
+before-cine    pureBlack   0.00%  lum<16   1.56%  meanLum 104.2  toeMean  9.22  toeLevels  17   BEFORE applySettings() cine filter
+before-css     pureBlack   0.00%  lum<16   1.91%  meanLum  94.9  toeMean  6.11  toeLevels  17   BEFORE ui.css canvas#gl filter

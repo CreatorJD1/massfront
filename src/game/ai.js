@@ -36,6 +36,41 @@ function aiBehaviorUnitPool(key,tier,facility){
   return null;
 }
 
+/* FACTION BIAS IS A READER, NOT FLAVOUR.
+   FACTIONS[k].bias used to be dead data: design/design.json exported the
+   weights, the comment claimed they made Legion feel different from Syndicate,
+   and production at the factory loop below ignored them in favour of three
+   hardcoded pools that disagreed (Legion's table weights Harbinger 1.8; the
+   pool was [1,2,2,16,3] and could never roll it). Tuning a table nobody reads
+   is how identity silently dies. Weighted pick from the LEGAL roster is the
+   cheap wire — arsenal filter still owns "can this faction build it", bias
+   only reweights what already passed. */
+function aiFactionBias(){
+  const F=typeof FACTIONS!=='undefined'&&FACTIONS[AI.fac];
+  return F&&F.bias||null;
+}
+function aiWeightedPick(pool,bias){
+  if(!pool||!pool.length) return -1;
+  if(!bias) return pool[Math.random()*pool.length|0];
+  let tot=0;
+  const w=new Array(pool.length);
+  for(let i=0;i<pool.length;i++){
+    const b=bias[pool[i]];
+    w[i]=b>0?b:1;
+    tot+=w[i];
+  }
+  let r=Math.random()*tot;
+  for(let i=0;i<pool.length;i++){ r-=w[i]; if(r<=0) return pool[i]; }
+  return pool[pool.length-1];
+}
+function aiFactionBiasOverride(legal){
+  const b=aiFactionBias();
+  if(!b||!legal||!legal.length) return -1;
+  const themed=legal.filter(t=>b[t]>0&&TYPES[t]&&TYPES[t].bt>0);
+  if(!themed.length) return -1;
+  return aiWeightedPick(themed,b);
+}
+
 const FACTIONS={
   legion:   {nm:'Red Ascendancy',  em:'🔺', art:'ascendancy',
              col:[255,120,90],  colB:[255,93,67],
@@ -51,8 +86,12 @@ const FACTIONS={
                 theme that biases what it builds. This is what makes fighting
                 the Legion feel different from fighting the Syndicate beyond the
                 colour of the tracers. */
+             /* Keys are TYPES indices. aiFactionBiasOverride reads this on
+                every empty factory / airfield roll. T1 factories only see
+                Rhino (1) from this map — 2/3/16/27 are T2 — which is why 1 is
+                listed: without it the table is unread until the first T2 plant. */
              hero:28, heroNm:'Lord Darion Vex',
-             theme:'siege', bias:{3:1.9, 16:2.2, 27:1.8, 2:1.4}},
+             theme:'siege', bias:{1:1.6, 3:1.9, 16:2.2, 27:1.8, 2:1.4}},
   /* Recoloured to match the supplied art: the Coalition is green and the brood
      is violet. The two had those palettes the other way round, which would have
      made every crest disagree with the army wearing it. */
@@ -92,9 +131,15 @@ let aiFactionSel='random';
    aiSetup re-rolling a choice that has already been made and acted on. */
 let aiFacPicked=false;
 function aiPickFaction(){
-  AI.fac = aiFactionSel==='random'
-    ? ['legion','syndicate','horde'][Math.random()*3|0]
-    : aiFactionSel;
+  /* enemyFactions() is the opponent picker (Nova legal, Brood AI-only as a
+     player). Fall back to the three original rows if factions.js has not
+     loaded — this function can run from a save restore during boot. */
+  const pool=(typeof enemyFactions==='function'?enemyFactions():['nova','legion','syndicate','horde'])
+    .filter(k=>typeof FACTIONS!=='undefined'&&FACTIONS[k]);
+  const keys=pool.length?pool:['legion','syndicate','horde'];
+  let fac=aiFactionSel==='random'?keys[Math.random()*keys.length|0]:aiFactionSel;
+  if(!FACTIONS[fac]) fac=keys[0]||'legion';
+  AI.fac=fac;
   aiFacPicked=true;
   return AI.fac;
 }
@@ -123,12 +168,25 @@ function aiSetup(diff,bases,allies){
   AI.waveTimer=AI.openingGrace;
   AI.harassTimer=AI.openingGrace+60; AI.techTimer=240;
   AI.waveUnits=[]; AI.waveSize0=0; AI.retreated=false; AI.warned=false; AI.warnBase=null; AI.warnTarget=null;
+  aiWaveDirty();
+  AI.ambushQ=[]; AI.ambushCool=0; AI.peelSnap=[];
+  AI.defend=null; AI.recallSnap=[]; AI.recallCool=0; AI.defendSent=false;
   AI.thr=1;
   /* AI is a module-level singleton that outlives a match. stall accumulates
      while a wave is under strength; carrying a saturated value into the next
      match makes the wave-release check pass immediately, so from match two
      onward the AI threw its first wave in undersized and lost it. */
   AI.stall=0;
+  /* Per-base wallets copy the ally pattern (virtual mass/energy on the seat).
+     Spawn already seeds 220/900; keep that opening bank if present so a
+     Compact 1v1 does not start poorer than it did on the shared team ledger. */
+  for(const S of AI.bases){
+    if(S.mass==null) S.mass=220;
+    if(S.energy==null) S.energy=900;
+    if(S.mcap==null) S.mcap=MCAP0;
+    if(S.ecap==null) S.ecap=ECAP0;
+  }
+  if(typeof econMirrorAiBanks==='function') econMirrorAiBanks();
   /* These four are recomputed from the threat clock on the first aiTick, one
      frame from now. They were previously seeded here from a SECOND copy of the
      difficulty table that had already drifted out of step with the real one
@@ -168,11 +226,13 @@ function aiAllyTick(dt){
     A.mass=Math.min(1400,(A.mass||0)+dt*(4.4+A.diff*1.6));
     A.energy=Math.min(6200,(A.energy||0)+dt*(22+A.diff*9));
     A.spawnT=(A.spawnT||0)-dt;A.orderT=(A.orderT||0)-dt;
-    let live=0;
-    for(let i=0;i<unitHigh;i++)if(ualive[i]&&uteam[i]===0&&uAllyBase[i]===A.slot)live++;
+    let live=typeof populationUsedForCommander==='function'?populationUsedForCommander(A.slot):0;
+    if(!live){
+      for(let i=0;i<unitHigh;i++)if(ualive[i]&&uteam[i]===0&&uAllyBase[i]===A.slot)live++;
+    }
     const behavior=aiBehaviorKey(A.behavior),targetMul=behavior==='rush'?1.18:behavior==='land'?1.10:behavior==='turtle'?.78:behavior==='air'?.92:1;
     const target=Math.round([18,30,44][A.diff]*targetMul);
-    if(A.spawnT<=0&&live<target&&populationUsedFor(0)<populationCapFor(0)){
+    if(A.spawnT<=0&&live<target&&populationCanSpawn(0,0,A.slot)){
       const F=bldLive.find(B=>B.alive&&B.team===0&&B.allyAI===A.slot&&B.type==='fac');
       if(F){
         const facility=behavior==='air'?'airfield':behavior==='naval'?'harbor':'fac';
@@ -185,7 +245,7 @@ function aiAllyTick(dt){
         if(!pool.length)pool=[0];
         const t=pool[Math.random()*pool.length|0]||0,T=TYPES[t];
         if(A.mass>=T.cm&&A.energy>=T.ce){
-          const i=spawnUnit(t,0,F.x+rr(-18,18),F.y+F.r+20);
+          const i=spawnUnit(t,0,F.x+rr(-18,18),F.y+F.r+20,A.slot);
           if(i>=0){A.mass-=T.cm;A.energy-=T.ce;uAllyBase[i]=A.slot;ustate[i]=2;utx[i]=A.x+rr(-90,90);uty[i]=A.y+rr(-90,90);}
         }
       }
@@ -209,6 +269,56 @@ function aiUseBase(kind){
   const key=kind==='wave'?'waveCursor':'buildCursor';
   const B=AI.bases[AI[key]++%AI.bases.length];
   AI.base=B||AI.base; return AI.base;
+}
+function aiSeat(slot){
+  if(slot==null) return AI.base;
+  if(!AI.bases) return AI.base;
+  for(let i=0;i<AI.bases.length;i++) if(AI.bases[i].slot===slot) return AI.bases[i];
+  return AI.base;
+}
+function aiCanAfford(cm,ce,seat){
+  const S=seat||AI.base;
+  return typeof canAfford==='function'?canAfford(1,cm,ce,S&&S.slot):((S.mass||0)>=cm&&(S.energy||0)>=ce);
+}
+let aiArmyMemoT=-1, aiArmyMemo=[];
+let aiAirMemoT=-1, aiAirMemo=-1;
+function aiSeatArmy(slot){
+  /* Same aiTick can ask this per factory. 1000-pop scans were ~16ms of aiTick. */
+  const k=(slot==null?0:slot+1)|0;
+  if(aiArmyMemoT===AI.t && aiArmyMemo[k]!=null) return aiArmyMemo[k];
+  let n=0;
+  const useCmd=typeof uCmd!=='undefined';
+  const base=aiSeat(slot);
+  for(let i=0;i<unitHigh;i++){
+    if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)||utype[i]===UT_ENGINEER) continue;
+    if(useCmd&&uCmd[i]===slot) n++;
+    else if(!useCmd||uCmd[i]<0){ if(aiUnitBelongsToBase(i,base)) n++; }
+  }
+  aiArmyMemoT=AI.t; aiArmyMemo[k]=n;
+  return n;
+}
+function aiSeatArmyCap(slot){
+  /* Clock, not a step to 1000. Easy/Normal/Hard keep the old opening drip
+     (18/28/36 + 5/9/13 per minute, plateau 46/86/132). After that plateau the
+     lid keeps climbing toward this seat's 1000 so a long match can actually
+     get there — 46/86/132 never would. Compact 1v1 is still one seat; theatre
+     size does not multiply the cap. Do not raise FACTION_POP_CAP. */
+  const D=AI.diff;
+  const popCap=typeof populationCapForCommander==='function'?populationCapForCommander(slot):1000;
+  const seatMax=Math.max(1,popCap-2);
+  const tMin=(typeof stats!=='undefined'?stats.t:0)/60;
+  const floor=[18,28,36][D], early=[5,9,13][D], oldCeil=[46,86,132][D];
+  const tHi=(oldCeil-floor)/early;
+  /* Late slope: Easy ~50 min to the seat cap, Normal ~40, Hard ~30 (a long Large). */
+  const late=[20,28,38][D];
+  const clock=tMin<=tHi ? floor+early*tMin : oldCeil+late*(tMin-tHi);
+  return Math.min(seatMax, Math.round(clock));
+}
+function aiSeatAtCap(B){
+  const slot=(B&&B.aiBaseSlot!=null)?B.aiBaseSlot:(AI.base&&AI.base.slot);
+  const popCap=typeof populationCapForCommander==='function'?populationCapForCommander(slot):1000;
+  const popUsed=typeof populationUsedForCommander==='function'?populationUsedForCommander(slot):0;
+  return aiSeatArmy(slot)>=aiSeatArmyCap(slot)||popUsed>=popCap;
 }
 function aiUnitBelongsToBase(i,B){
   if(!AI.bases||AI.bases.length<2) return true;
@@ -259,8 +369,10 @@ function aiWaveMuster(B,WD){
   return {army,need:Math.min([14,18,22][WD],[7,9,11][WD]+Math.ceil(AI.wave/AI.bases.length))};
 }
 function playerAirCount(){
+  if(aiAirMemoT===AI.t && aiAirMemo>=0) return aiAirMemo;
   let n=0;
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===0&&TYPES[utype[i]].air) n++;
+  aiAirMemoT=AI.t; aiAirMemo=n;
   return n;
 }
 function aiFreeSpot(type){
@@ -306,8 +418,11 @@ function aiCounts(base){
   return c;
 }
 function aiBuildAt(type,x,y){
-  const B=beginBuild(1,type,x,y);
-  if(B){B.aiBaseSlot=AI.base&&AI.base.slot;B.aiBehavior=aiBehaviorKey(AI.base&&AI.base.behavior);}
+  const slot=AI.base&&AI.base.slot;
+  AI.econPaySlot=slot;
+  const B=beginBuild(1,type,x,y,0,slot);
+  AI.econPaySlot=null;
+  if(B){B.aiBaseSlot=slot;B.aiBehavior=aiBehaviorKey(AI.base&&AI.base.behavior);}
   return B;
 }
 function aiBuildingBehavior(B){
@@ -375,6 +490,7 @@ function aiTick(dt){
     aiUseBase('build');                 // expand each configured foothold in turn
     AI.buildTimer=Math.max(0.7,2.2-0.45*(thr-1));      // richer AI builds faster
     const c=aiCounts(AI.base),behavior=aiBehaviorKey(AI.base&&AI.base.behavior);
+    const bank=AI.base||{};
     /* Shared simulation types, faction-specific arsenals. This keeps saves and
        balance tables stable while making each opponent actually construct a
        different defensive roster instead of painting the same turret green. */
@@ -383,7 +499,7 @@ function aiTick(dt){
     const facBias=behavior==='rush'?2:behavior==='land'?1:behavior==='turtle'?-1:0;
     const wantFac=Math.max(1,Math.min(2+Math.floor(AI.t/60)+facBias, [4,8,13][AI.diff]+facBias));
     const wantMex=Math.min(deposits.length, 5+Math.floor(AI.t/70)+AI.diff*2);
-    const eStarved=resE[1]<760, mFlush=resM[1]>RES_MCAP[1]*0.8;
+    const eStarved=(bank.energy||0)<760, mFlush=(bank.mass||0)>(bank.mcap||MCAP0)*0.8;
     let done=false;
     // extractor on nearest free deposit within reach (range widens over the match)
     let bestD=-1,bd=1e12;
@@ -403,97 +519,97 @@ function aiTick(dt){
       if(dd<bgd&&dd<reach){ bgd=dd; bg=g; }
     }
     // ---- ENERGY FIRST: a starved grid was what stalled the whole AI economy ----
-    if(eStarved && bg>=0 && canAfford(1,BT.geo.cm,BT.geo.ce)){
+    if(eStarved && bg>=0 && aiCanAfford(BT.geo.cm,BT.geo.ce)){
       geysers[bg].taken=true;
       aiBuildAt('geo',geysers[bg].x,geysers[bg].y); done=true;
     }
-    else if(eStarved && canAfford(1,BT.pgen.cm,BT.pgen.ce)){
+    else if(eStarved && aiCanAfford(BT.pgen.cm,BT.pgen.ce)){
       const s=aiFreeSpot('pgen'); if(s){ aiBuildAt('pgen',s[0],s[1]); done=true; }
     }
-    else if(c.pgen<2){ const s=aiFreeSpot('pgen'); if(s&&canAfford(1,BT.pgen.cm,BT.pgen.ce)){ aiBuildAt('pgen',s[0],s[1]); done=true; } }
-    else if(bestD>=0 && c.mex<wantMex && canAfford(1,BT.mex.cm,BT.mex.ce)){
+    else if(c.pgen<2){ const s=aiFreeSpot('pgen'); if(s&&aiCanAfford(BT.pgen.cm,BT.pgen.ce)){ aiBuildAt('pgen',s[0],s[1]); done=true; } }
+    else if(bestD>=0 && c.mex<wantMex && aiCanAfford(BT.mex.cm,BT.mex.ce)){
       deposits[bestD].taken=true;
       aiBuildAt('mex',deposits[bestD].x,deposits[bestD].y); done=true;
     }
     // keep the grid ahead of production: T2 factories are energy hogs
-    else if(c.pgen<2+c.fac*2 && canAfford(1,BT.pgen.cm,BT.pgen.ce)){
+    else if(c.pgen<2+c.fac*2 && aiCanAfford(BT.pgen.cm,BT.pgen.ce)){
       const s=aiFreeSpot('pgen'); if(s){ aiBuildAt('pgen',s[0],s[1]); done=true; }
     }
-    else if(behavior==='air'&&(c.airfield||0)<[2,3,4][AI.diff]&&AI.t>[115,85,60][AI.diff]&&canAfford(1,BT.airfield.cm,BT.airfield.ce)){
+    else if(behavior==='air'&&(c.airfield||0)<[2,3,4][AI.diff]&&AI.t>[115,85,60][AI.diff]&&aiCanAfford(BT.airfield.cm,BT.airfield.ce)){
       const s=aiFreeSpot('airfield');if(s){aiBuildAt('airfield',s[0],s[1]);done=true;}
     }
-    else if(behavior==='naval'&&aiBehaviorAvailable('naval')&&(c.harbor||0)<[1,2,3][AI.diff]&&AI.t>[105,75,55][AI.diff]&&canAfford(1,BT.harbor.cm,BT.harbor.ce)){
+    else if(behavior==='naval'&&aiBehaviorAvailable('naval')&&(c.harbor||0)<[1,2,3][AI.diff]&&AI.t>[105,75,55][AI.diff]&&aiCanAfford(BT.harbor.cm,BT.harbor.ce)){
       const s=aiFreeWaterSpot('harbor');if(s){aiBuildAt('harbor',s[0],s[1]);done=true;}
     }
-    else if(behavior==='turtle'&&(c[basicDef]||0)<[4,7,11][AI.diff]&&resM[1]>240&&canAfford(1,BT[basicDef].cm,BT[basicDef].ce)){
+    else if(behavior==='turtle'&&(c[basicDef]||0)<[4,7,11][AI.diff]&&(bank.mass||0)>240&&aiCanAfford(BT[basicDef].cm,BT[basicDef].ce)){
       const s=aiFreeSpot(basicDef);if(s){aiBuildAt(basicDef,s[0],s[1]);done=true;}
     }
-    else if(c.fac<wantFac && canAfford(1,BT.fac.cm,BT.fac.ce)){
+    else if(c.fac<wantFac && aiCanAfford(BT.fac.cm,BT.fac.ce)){
       const s=aiFreeSpot('fac'); if(s){ aiBuildAt('fac',s[0],s[1]); done=true; }
     }
-    else if(bg>=0 && (c.geo||0)<3 && canAfford(1,BT.geo.cm,BT.geo.ce)){
+    else if(bg>=0 && (c.geo||0)<3 && aiCanAfford(BT.geo.cm,BT.geo.ce)){
       geysers[bg].taken=true;
       aiBuildAt('geo',geysers[bg].x,geysers[bg].y); done=true;
     }
     // mass piling up? bank it, then burn surplus energy into more mass
-    else if(mFlush && (c.silo||0)<[1,2,4][AI.diff] && canAfford(1,BT.silo.cm,BT.silo.ce)){
+    else if(mFlush && (c.silo||0)<[1,2,4][AI.diff] && aiCanAfford(BT.silo.cm,BT.silo.ce)){
       const s=aiFreeSpot('silo'); if(s){ aiBuildAt('silo',s[0],s[1]); done=true; }
     }
-    else if(AI.diff>=1 && resE[1]>2600 && (c.fab||0)<[0,2,4][AI.diff] && canAfford(1,BT.fab.cm,BT.fab.ce)){
+    else if(AI.diff>=1 && (bank.energy||0)>2600 && (c.fab||0)<[0,2,4][AI.diff] && aiCanAfford(BT.fab.cm,BT.fab.ce)){
       const s=aiFreeSpot('fab'); if(s){ aiBuildAt('fab',s[0],s[1]); done=true; }
     }
-    else if((c[basicDef]||0)<([2,5,8][AI.diff]+(behavior==='turtle'?3:behavior==='rush'?-1:0)) && resM[1]>300 && canAfford(1,BT[basicDef].cm,BT[basicDef].ce)){
+    else if((c[basicDef]||0)<([2,5,8][AI.diff]+(behavior==='turtle'?3:behavior==='rush'?-1:0)) && (bank.mass||0)>300 && aiCanAfford(BT[basicDef].cm,BT[basicDef].ce)){
       const s=aiFreeSpot(basicDef); if(s){ aiBuildAt(basicDef,s[0],s[1]); done=true; }
     }
-    else if(c.sgen<(behavior==='turtle'?2:1) && AI.t>(behavior==='turtle'?105:240) && canAfford(1,BT.sgen.cm,BT.sgen.ce)){
+    else if(c.sgen<(behavior==='turtle'?2:1) && AI.t>(behavior==='turtle'?105:240) && aiCanAfford(BT.sgen.cm,BT.sgen.ce)){
       const s=aiFreeSpot('sgen'); if(s){ aiBuildAt('sgen',s[0],s[1]); }
     }
-    else if(c.tgate<1 && (AI.t>[520,420,330][AI.diff]||heroLvl>=8||(WC.titan&&AI.t>90)) && canAfford(1,BT.tgate.cm,BT.tgate.ce)){
+    else if(c.tgate<1 && (AI.t>[520,420,330][AI.diff]||heroLvl>=8||(WC.titan&&AI.t>90)) && aiCanAfford(BT.tgate.cm,BT.tgate.ce)){
       const s=aiFreeSpot('tgate'); if(s){ aiBuildAt('tgate',s[0],s[1]); }
     }
-    else if((c[siegeDef]||0)<[1,1,2][AI.diff] && (AI.t>[560,440,340][AI.diff]||heroLvl>=6) && canAfford(1,BT[siegeDef].cm,BT[siegeDef].ce)){
+    else if((c[siegeDef]||0)<[1,1,2][AI.diff] && (AI.t>[560,440,340][AI.diff]||heroLvl>=6) && aiCanAfford(BT[siegeDef].cm,BT[siegeDef].ce)){
       const s=aiFreeSpot(siegeDef); if(s){ aiBuildAt(siegeDef,s[0],s[1]); }
     }
-    else if((c.techlab||0)<1 && AI.t>150 && canAfford(1,BT.techlab.cm,BT.techlab.ce)){
+    else if((c.techlab||0)<1 && AI.t>150 && aiCanAfford(BT.techlab.cm,BT.techlab.ce)){
       const s=aiFreeSpot('techlab'); if(s){ aiBuildAt('techlab',s[0],s[1]); }
     }
     else if((c.airfield||0)<(AI.fac==='syndicate'?[2,2,3]:[1,1,2])[AI.diff]
          && (AI.t>(AI.fac==='syndicate'?[220,160,120]:[420,320,250])[AI.diff]||heroLvl>=5)
-         && canAfford(1,BT.airfield.cm,BT.airfield.ce)){
+         && aiCanAfford(BT.airfield.cm,BT.airfield.ce)){
       const s=aiFreeSpot('airfield'); if(s){ aiBuildAt('airfield',s[0],s[1]); }
     }
     else if(typeof battlefieldNavalEnabled==='function'&&battlefieldNavalEnabled()&&c.harbor<1&&
-            AI.t>[260,190,145][AI.diff]&&canAfford(1,BT.harbor.cm,BT.harbor.ce)){
+            AI.t>[260,190,145][AI.diff]&&aiCanAfford(BT.harbor.cm,BT.harbor.ce)){
       const s=aiFreeWaterSpot('harbor');if(s)aiBuildAt('harbor',s[0],s[1]);
     }
-    else if(c.harbor>0&&c.seafort<Math.max(1,AI.diff)&&AI.t>260&&canAfford(1,BT.seafort.cm,BT.seafort.ce)){
+    else if(c.harbor>0&&c.seafort<Math.max(1,AI.diff)&&AI.t>260&&aiCanAfford(BT.seafort.cm,BT.seafort.ce)){
       const s=aiFreeWaterSpot('seafort');if(s)aiBuildAt('seafort',s[0],s[1]);
     }
     // reactive anti-air: player is flying? build Skyguards
-    if(playerAirCount()>2 && (c.aatower||0)<[2,3,4][AI.diff] && canAfford(1,BT.aatower.cm,BT.aatower.ce)){
+    if(playerAirCount()>2 && (c.aatower||0)<[2,3,4][AI.diff] && aiCanAfford(BT.aatower.cm,BT.aatower.ce)){
       const s=aiFreeSpot('aatower'); if(s){ aiBuildAt('aatower',s[0],s[1]); }
     }
     // reactive anti-swarm: the hiveworld is boiling? build Hellstorms (and Arcs on Hard)
-    if(infTier()>=2 && hasBld(1,'techlab') && (c.hellstorm||0)<[1,3,5][AI.diff] && canAfford(1,BT.hellstorm.cm,BT.hellstorm.ce)){
+    if(infTier()>=2 && hasBld(1,'techlab') && (c.hellstorm||0)<[1,3,5][AI.diff] && aiCanAfford(BT.hellstorm.cm,BT.hellstorm.ce)){
       const s=aiFreeSpot('hellstorm'); if(s){ aiBuildAt('hellstorm',s[0],s[1]); }
     }
-    if(AI.diff>=2 && infTier()>=3 && hasBld(1,'techlab') && (c.arc||0)<2 && canAfford(1,BT.arc.cm,BT.arc.ce)){
+    if(AI.diff>=2 && infTier()>=3 && hasBld(1,'techlab') && (c.arc||0)<2 && aiCanAfford(BT.arc.cm,BT.arc.ce)){
       const s=aiFreeSpot('arc'); if(s){ aiBuildAt('arc',s[0],s[1]); }
     }
-    // upgrade a factory to T2 over time
+    // upgrade a factory to T2 over time — pay the factory's own seat
     if(AI.t>[220,170,130][AI.diff] || heroLvl>=4){
       for(const B of bldLive){
-        if(B.alive&&B.team===1&&B.type==='fac'&&B.prog>=1&&B.tier===1&&B.upT<=0&&canAfford(1,FAC_UP.cm,FAC_UP.ce)){
-          pay(1,FAC_UP.cm,FAC_UP.ce); B.upT=FAC_UP.t; B.upMax=FAC_UP.t; break;
+        if(B.alive&&B.team===1&&B.type==='fac'&&B.prog>=1&&B.tier===1&&B.upT<=0&&canAfford(1,FAC_UP.cm,FAC_UP.ce,B.aiBaseSlot)){
+          pay(1,FAC_UP.cm,FAC_UP.ce,B.aiBaseSlot); B.upT=FAC_UP.t; B.upMax=FAC_UP.t; break;
         }
       }
     }
-    // upgrade turrets when rich
-    if(resM[1]>450){
+    // upgrade turrets when that seat is rich
+    if((bank.mass||0)>450){
       for(const B of bldLive){
         if(B.alive&&B.team===1&&B.type===basicDef&&B.prog>=1&&(B.lvl||1)<3&&B.upT<=0&&BUP[B.type]){
           const U=BUP[B.type][B.lvl-1];
-          if(canAfford(1,U.cm,U.ce)){ pay(1,U.cm,U.ce); B.upT=U.t; B.upMax=U.t; }
+          if(canAfford(1,U.cm,U.ce,B.aiBaseSlot)){ pay(1,U.cm,U.ce,B.aiBaseSlot); B.upT=U.t; B.upMax=U.t; }
           break;
         }
       }
@@ -524,11 +640,11 @@ function aiTick(dt){
       const rb=AI.waveBase||AI.base, fld=requestField(rb.x,rb.y);
       for(const [i,g] of AI.waveUnits){
         if(!ualive[i]||ugen[i]!==g||uteam[i]!==1) continue;
-        ustate[i]=2; utgt[i]=-1; ufield[i]=fld; umarch[i]=0;
+        ustate[i]=2; utgt[i]=-1; ufield[i]=fld; umarch[i]=1;
         utx[i]=rb.x+rr(-120,120); uty[i]=rb.y+rr(-120,120);
       }
-      AI.waveUnits=[];
-    } else if(alive===0) AI.waveUnits=[];
+      AI.waveUnits=[]; aiWaveDirty();
+    } else if(alive===0){ AI.waveUnits=[]; aiWaveDirty(); }
   }
   // ---------- economic harassment squads ----------
   AI.harassTimer-=dt;
@@ -546,12 +662,12 @@ function aiTick(dt){
       for(let i=0;i<unitHigh&&squad.length<8;i++){
         if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)) continue;
         const tp=utype[i];
-        if((tp===0||tp===9||tp===1)&&!AI.waveUnits.some(e=>e[0]===i)) squad.push(i);
+        if((tp===0||tp===9||tp===1)&&!aiWaveHas(i)&&!aiIsRetasked(i)) squad.push(i);
       }
       if(squad.length>=5){
         const fld=requestField(tgt.x,tgt.y);
         for(const i of squad){
-          ustate[i]=2; utgt[i]=-1; ufield[i]=fld;
+          ustate[i]=2; utgt[i]=-1; ufield[i]=fld; umarch[i]=1;
           utx[i]=tgt.x+rr(-40,40); uty[i]=tgt.y+rr(-40,40);
         }
         if(fogOn?covAt(AI.base.x,AI.base.y):true){} // silent unless scouted
@@ -559,28 +675,14 @@ function aiTick(dt){
     }
   }
   /* ---------- ARMY CEILING --------------------------------------------------
-     Neither side has a supply cap in this game, so army size is purely an
-     economy race — and the ONLY thing that had been limiting the AI was the bug
-     infestation eating its units. Scaling the infestation down to fix Easy
-     removed that limiter, and the AI promptly ran to 125 units by two minutes
-     on Normal, which is far past anything a player fields by then. A bug fix in
-     one system uncapping another is exactly the kind of thing that ships.
-
-     So the ceiling is explicit now, and it is a CLOCK rather than a mirror of
-     the player's army — same reasoning as the threat curve above. Matching the
-     player would mean punishing them for playing well, and it would be
-     invisible while doing it. This grows on its own schedule, which a player
-     can learn and outpace. */
-  const armyCap=Math.min([46,86,132][AI.diff],populationCapFor(1)-2,
-                         [18,28,36][AI.diff]+[5,9,13][AI.diff]*(stats.t/60));
-  let aiArmy=0;
-  for(let i=0;i<unitHigh;i++)
-    if(ualive[i]&&uteam[i]===1&&!isEnemyCommander(i)&&utype[i]!==UT_ENGINEER) aiArmy++;
-  const atCap=aiArmy>=armyCap||populationUsedFor(1)>=populationCapFor(1);
+     Per seat, clock-ramped toward that seat's 1000. Opening minutes still
+     follow 46/86/132; the lid is no longer a plateau. Compact 1v1 is one seat. */
 
   // ---------- production ----------
   for(const B of bldLive){
     if(!B.alive||B.team!==1||B.prog<1) continue;
+    const atCap=aiSeatAtCap(B);
+    const seat=aiSeat(B.aiBaseSlot);
     if(B.type==='tgate'){
       if(!B.queue.length && titanCount[1]<(WC.titan?3:2)) B.queue.push(8);
       continue;
@@ -588,21 +690,29 @@ function aiTick(dt){
     if(B.type==='airfield'){
       B.repeat=false;                                   // re-roll each aircraft
       const pool=aiBehaviorUnitPool(aiBuildingBehavior(B),B.tier,'airfield');
-      if(!B.queue.length && !atCap) B.queue.push(pool[Math.random()*pool.length|0]);
+      if(!B.queue.length && !atCap){
+        const t=aiWeightedPick(pool,aiFactionBias());
+        B.queue.push(t>=0?t:pool[Math.random()*pool.length|0]);
+      }
       continue;
     }
     if(B.type==='harbor'){
       B.repeat=false;
       const pool=aiBehaviorUnitPool(aiBuildingBehavior(B),B.tier,'harbor');
-      if(!B.queue.length&&!atCap)B.queue.push(pool[Math.random()*pool.length|0]);
+      if(!B.queue.length&&!atCap){
+        const t=aiWeightedPick(pool,aiFactionBias());
+        B.queue.push(t>=0?t:pool[Math.random()*pool.length|0]);
+      }
       continue;
     }
     if(B.type!=='fac') continue;
     B.repeat=false;                                     // re-roll composition every unit
-    if(atCap) continue;                                 // ceiling reached — bank it instead
+    if(atCap) continue;                                 // this seat's ceiling — other lanes still produce
     // surplus dump: banked mass must become army, or income scaling means nothing
-    if(resM[1]>RES_MCAP[1]*0.72 && B.queue.length<4){
-      B.queue.push(B.tier===2? [1,2,3,9,16][Math.random()*5|0] : [0,1,9][Math.random()*3|0]);
+    if((seat.mass||0)>(seat.mcap||MCAP0)*0.72 && B.queue.length<4){
+      const dump=B.tier===2?[1,2,3,9,16]:[0,1,9];
+      const biased=aiFactionBiasOverride(dump);
+      B.queue.push(biased>=0?biased:dump[Math.random()*dump.length|0]);
     }
     if(!B.queue.length){
       let t=0;
@@ -621,28 +731,6 @@ function aiTick(dt){
         if(phase<420) t = r<0.2?0 : r<0.42?1 : r<0.58?2 : r<0.72?3 : r<0.84?7 : (r<0.94?6:11);
         else t = r<0.14?1 : r<0.32?2 : r<0.48?3 : r<0.6?16 : r<0.72?6 : r<0.84?7 : (r<0.93?11:5);
       }
-      // faction doctrine reshapes the mix
-      const fr=Math.random();
-      if(AI.fac==='horde'){
-        /* Ravager and Alpha Ravager are nest/hero spawns with zero build time.
-           Putting either in a factory evaluates 0*Infinity while streaming its
-           zero cost, producing NaN and freezing that factory forever. Costed
-           incendiary/area units carry the same swarm doctrine through normal
-           production; the biological spawns remain exclusive to hives. */
-        if(fr<0.55){
-          const pool=B.tier===2?[0,9,21,0,9,20,21]:[0,9,0,9];
-          t=pool[Math.random()*pool.length|0];
-        }
-      }
-      else if(AI.fac==='legion'){ if(fr<0.45) t=B.tier===2? [1,2,2,16,3][Math.random()*5|0] : 1; }
-      else if(AI.fac==='syndicate'&&fr<0.3){
-        /* Vultures are pure anti-air. The old fixed 60% roll made Coalition
-           factories waste almost one fifth of all output against ground-only
-           armies. Preserve the faction's AA identity only when it has a real
-           target; otherwise field its legal Tier-2 energy support chassis. */
-        const airThreat=playerAirCount()>0;
-        t=airThreat&&Math.random()<0.6?10:(B.tier===2?23:0);
-      }
       /* Personality shapes the faction's LEGAL roster, never replaces it.
          This pass happens before the arsenal filter below so a Dominion Air
          AI still fields Dominion escorts and a Syndicate Turtle cannot roll a
@@ -656,11 +744,22 @@ function aiTick(dt){
          alone still lets a Dominion line randomly field Coalition shields or
          a Coalition plant roll Dominion siege; filter the final choice, then
          replace it from that faction's legal counter-complete pool. */
+      let legal=null;
       if(typeof factionDoctrineRoster==='function'){
         const basePool=B.tier===2?[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]:[0,1,9,10,19,24,32];
-        const legal=factionDoctrineRoster(basePool,B.type||'fac',1).filter(q=>TYPES[q]&&TYPES[q].bt>0);
+        legal=factionDoctrineRoster(basePool,B.type||'fac',1).filter(q=>TYPES[q]&&TYPES[q].bt>0);
         if(legal.length&&legal.indexOf(t)<0) t=legal[Math.random()*legal.length|0];
       }
+      /* Faction identity used to be three hardcoded pools that disagreed with
+         FACTIONS[k].bias (Legion never rolled Harbinger). 0.45 matches the old
+         Legion chance: keep the phase mix most of the time, overlay the table
+         often enough that the design-DB weights are a real production lever. */
+      if(legal&&legal.length){
+        const themed=aiFactionBiasOverride(legal);
+        if(themed>=0&&Math.random()<0.45) t=themed;
+      }
+      /* Vultures remain pure AA even if bias or the phase roll named one. */
+      if(t===10&&playerAirCount()<=0) t=legal&&legal.indexOf(23)>=0?23:(B.tier===2&&legal&&legal.indexOf(2)>=0?2:1);
       B.queue.push(t);
     }
   }
@@ -712,12 +811,15 @@ function aiTick(dt){
       const behavior=aiBehaviorKey(waveBase.behavior),pace=behavior==='rush'?.66:behavior==='turtle'?1.38:behavior==='air'?.88:behavior==='naval'?1.08:1;
       AI.waveTimer=AI.openingLanes>0?30:Math.max([62,42,30][WD],[104,80,58][WD])*pace;
     }else{
+      /* Wallets now pay per seat, so the √N cadence discount is retired.
+         Compact 1v1 is one lane (divisor was 1 anyway). Each commander keeps
+         its own clock with muster-or-stall; we do not ×N the old shared timer. */
       const lanePace=(typeof defenseFocus!=='undefined'&&defenseFocus)?0.82:1;
       const behavior=aiBehaviorKey(waveBase.behavior),doctrinePace=behavior==='rush'?.66:behavior==='turtle'?1.38:behavior==='air'?.88:behavior==='naval'?1.08:1;
       AI.waveTimer=Math.max([62,42,30][WD],
-                            [104,80,58][WD]-Math.ceil(AI.wave/AI.bases.length)*[2,2.5,3][WD]
+                            [104,80,58][WD]-Math.ceil(AI.wave)*[2,2.5,3][WD]
                             -Math.max(0,heroLvl-2)*[1,1.5,2][WD])
-                   *(WC.blitz?0.6:1)*lanePace*doctrinePace/Math.sqrt(AI.bases.length);
+                   *(WC.blitz?0.6:1)*lanePace*doctrinePace;
     }
     let n=0;
     let [tx,ty]=AI.warnTarget||aiPickTarget(waveBase); // use the lane that was telegraphed
@@ -746,9 +848,10 @@ function aiTick(dt){
     const sendFrac = ((AI.fac==='horde'?0.82:0.7)+commit+0.05*Math.min(4,Math.ceil(AI.wave/AI.bases.length)))
                      *[0.62,0.85,1][WD];
     const fld=requestField(tx,ty);
-    AI.waveUnits=[]; AI.retreated=false;
+    AI.waveUnits=[]; AI.retreated=false; aiWaveDirty();
     for(let i=0;i<unitHigh;i++){
       if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)||!aiUnitBelongsToBase(i,waveBase)) continue;
+      if(aiIsRetasked(i)) continue;
       if(Math.random()<sendFrac){
         const T=TYPES[utype[i]],nav=T.naval&&typeof findWater==='function'?findWater(tx,ty):null;
         const qx=nav?nav[0]:clamp(tx+rr(-90,90),20,MAP-20),qy=nav?nav[1]:clamp(ty+rr(-90,90),20,MAP-20);
@@ -768,6 +871,7 @@ function aiTick(dt){
     AI.wave++;
     }
   }
+  aiTacticsTick(dt);
   /* ---- BASE DEFENSE SCRAMBLE -------------------------------------------
      A raiding enemy commander used to be ignored: waves marched to their own
      target, garrison units idled, and a kiting hero farmed the base picket by
@@ -784,7 +888,8 @@ function aiTick(dt){
         for(let i=0;i<unitHigh&&sent<12;i++){
           if(!ualive[i]||uteam[i]!==1||isEnemyCommander(i)||utype[i]===UT_ENGINEER) continue;
           if(dist2(ux[i],uy[i],B.x,B.y)>900*900) continue;
-          if(AI.waveUnits.some(e=>e[0]===i)) continue;
+          if(aiWaveHas(i)) continue;
+          if(aiIsRetasked(i)) continue;
           ustate[i]=2; utgt[i]=-1; umarch[i]=0;
           utx[i]=ux[heroIdx]+rr(-45,45); uty[i]=uy[heroIdx]+rr(-45,45); sent++;
         }
@@ -806,5 +911,217 @@ function aiTick(dt){
     if(e>=0){ ustate[h]=2; utx[h]=ux[e]; uty[h]=uy[e]; }
     else { ustate[h]=2; utx[h]=B.x; uty[h]=B.y; }
   }
+}
+
+/* ---------- AMBUSH SPLIT + BASE RECALL (C&C3 / SupCom2) --------------------
+   A marching column that 100% turns on the first flank shot rubber-bands the
+   whole wave off its objective. A column that 100% ignores the flank dies to
+   a raid it never answered. The split below peels a minority (nearby / idle /
+   rear) onto the new shooter and leaves a core on the original order.
+
+   Base damage is the same idea at strategic scale: request a portion home,
+   leave far raiders raiding, restore field orders when the yard is quiet. */
+function aiSnapOrder(i){
+  return {i,g:ugen[i],st:ustate[i],tx:utx[i],ty:uty[i],tgt:utgt[i],tgtg:utgtg[i],
+          field:ufield[i],march:umarch[i],hold:uhold[i]};
+}
+function aiRestoreOrder(s){
+  if(!s||!ualive[s.i]||ugen[s.i]!==s.g||uteam[s.i]!==1) return false;
+  const i=s.i;
+  ustate[i]=s.st; utx[i]=s.tx; uty[i]=s.ty; ufield[i]=s.field;
+  umarch[i]=s.march; uhold[i]=s.hold;
+  let tg=s.tgt;
+  if(tg>=0&&(!ualive[tg]||ugen[tg]!==s.tgtg||uteam[tg]===1)) tg=-1;
+  else if(tg<=-2){ const B=blds[-2-tg]; if(!B||!B.alive) tg=-1; }
+  utgt[i]=tg; utgtg[i]=tg>=0?s.tgtg:-1;
+  return true;
+}
+function aiSnapHas(list,i){
+  if(!list) return false;
+  const g=ugen[i];
+  for(let k=0;k<list.length;k++) if(list[k].i===i&&list[k].g===g) return true;
+  return false;
+}
+function aiIsRetasked(i){
+  return aiSnapHas(AI.peelSnap,i)||aiSnapHas(AI.recallSnap,i);
+}
+function aiDropSnap(list,i){
+  if(!list) return;
+  for(let k=list.length-1;k>=0;k--) if(list[k].i===i) list.splice(k,1);
+}
+function aiPruneSnaps(list){
+  if(!list) return;
+  for(let k=list.length-1;k>=0;k--){
+    const s=list[k];
+    if(!ualive[s.i]||ugen[s.i]!==s.g||uteam[s.i]!==1) list.splice(k,1);
+  }
+}
+function aiWaveDirty(){ AI._waveMap=null; }
+function aiWaveHas(i){
+  let M=AI._waveMap;
+  if(!M){
+    M=AI._waveMap=new Map();
+    const W=AI.waveUnits;
+    if(W) for(let k=0;k<W.length;k++) M.set(W[k][0], W[k][1]);
+  }
+  return M.has(i);
+}
+function aiInWave(i){
+  const M=AI._waveMap||(aiWaveHas(i),AI._waveMap);
+  return !!(M&&M.get(i)===ugen[i]);
+}
+function aiCombatAI(i){
+  return ualive[i]&&uteam[i]===1&&!isEnemyCommander(i)&&utype[i]!==UT_ENGINEER&&TYPES[utype[i]].wk!=='n';
+}
+
+function aiOnUnitHit(j,dmg,attTeam,attacker){
+  if(attTeam!==0||uteam[j]!==1||attacker<0||dmg<6) return;
+  if(!ualive[attacker]||uteam[attacker]!==0) return;
+  if(isEnemyCommander(j)||utype[j]===UT_ENGINEER) return;
+  if(utgt[j]===attacker) return;
+  if(aiSnapHas(AI.recallSnap,j)) return;
+  const tasked=ustate[j]===2||ustate[j]===5||umarch[j]===1;
+  const engaged=utgt[j]>=0&&utgt[j]!==attacker;
+  if(!tasked&&!engaged) return;
+  const Q=AI.ambushQ||(AI.ambushQ=[]);
+  for(let k=0;k<Q.length;k++) if(Q[k].a===attacker){
+    Q[k].x=ux[j]; Q[k].y=uy[j]; Q[k].n=(Q[k].n||1)+1; return;
+  }
+  if(Q.length>=8) Q.shift();
+  Q.push({a:attacker,g:ugen[attacker],x:ux[j],y:uy[j],n:1});
+}
+
+function aiOnBldHit(B){
+  if(!B||B.team!==1) return;
+  const t=B.type;
+  if(t!=='hq'&&t!=='fac'&&t!=='airfield'&&t!=='tgate'&&t!=='harbor'&&t!=='uplink'
+     &&t!=='mex'&&t!=='pgen'&&t!=='geo'&&t!=='sgen'&&t!=='nest') return;
+  let seat=null,bd=780*780;
+  for(const S of AI.bases||[]){
+    const d=dist2(B.x,B.y,S.x,S.y);
+    if(d<bd){ bd=d; seat=S; }
+  }
+  if(!seat) return;
+  AI.defend={seat,x:B.x,y:B.y,t:AI.t};
+}
+
+function aiIssueFocus(i,tx,ty,tgt){
+  ustate[i]=2; umarch[i]=0; uhold[i]=0; uPatrolRoute[i]=-1; uMoveCohort[i]=-1;
+  if(tgt>=0&&ualive[tgt]&&uteam[tgt]!==1){
+    utgt[i]=tgt; utgtg[i]=ugen[tgt]; utx[i]=ux[tgt]; uty[i]=uy[tgt];
+  } else {
+    utgt[i]=-1; utgtg[i]=-1; utx[i]=tx; uty[i]=ty;
+    ufield[i]=requestField(tx,ty,!!TYPES[utype[i]].naval);
+  }
+}
+
+function aiAmbushTick(dt){
+  const P=AI.peelSnap||(AI.peelSnap=[]);
+  aiPruneSnaps(P);
+  const now=AI.t;
+  for(let k=P.length-1;k>=0;k--){
+    const s=P[k];
+    if(s.until!=null&&now>s.until){ aiRestoreOrder(s); P.splice(k,1); continue; }
+    if(s.focus>=0&&(!ualive[s.focus]||ugen[s.focus]!==s.focusg)){ aiRestoreOrder(s); P.splice(k,1); }
+  }
+  AI.ambushCool=(AI.ambushCool||0)-dt;
+  const Q=AI.ambushQ;
+  if(AI.ambushCool>0||!Q||!Q.length) return;
+  AI.ambushCool=0.55;
+  const ev=Q.pop(); Q.length=0;
+  if(!ev||!ualive[ev.a]||ugen[ev.a]!==ev.g||uteam[ev.a]!==0) return;
+  const cands=[];
+  for(let i=0;i<unitHigh;i++){
+    if(!aiCombatAI(i)) continue;
+    if(aiSnapHas(AI.recallSnap,i)||aiSnapHas(P,i)) continue;
+    if(utgt[i]===ev.a) continue;
+    const d2=dist2(ux[i],uy[i],ev.x,ev.y);
+    if(d2>480*480) continue;
+    const wave=aiInWave(i), idle=ustate[i]===0&&utgt[i]<0;
+    const toGoal=Math.sqrt(dist2(ux[i],uy[i],utx[i],uty[i]));
+    let score=Math.sqrt(d2);
+    if(idle) score-=180;
+    if(!wave) score-=80;
+    if(wave&&umarch[i]===1) score+=90;
+    if(wave) score-=Math.min(120,toGoal*0.25);
+    cands.push({i,score,wave});
+  }
+  if(!cands.length) return;
+  cands.sort((a,b)=>a.score-b.score);
+  const local=cands.length;
+  if(local===1){
+    const i=cands[0].i;
+    P.push(Object.assign(aiSnapOrder(i),{until:now+7,focus:ev.a,focusg:ev.g}));
+    aiIssueFocus(i,ux[ev.a],uy[ev.a],ev.a);
+    return;
+  }
+  const peelN=Math.max(1,Math.min(8,Math.round(local*0.35)));
+  let waveLocal=0; for(const c of cands) if(c.wave) waveLocal++;
+  const wavePeelMax=Math.max(waveLocal>=2?1:0,Math.floor(waveLocal*0.4));
+  let n=0,wavePeel=0;
+  for(const c of cands){
+    if(n>=peelN) break;
+    if(c.wave){ if(wavePeel>=wavePeelMax) continue; wavePeel++; }
+    P.push(Object.assign(aiSnapOrder(c.i),{until:now+7,focus:ev.a,focusg:ev.g}));
+    aiIssueFocus(c.i,ux[ev.a],uy[ev.a],ev.a);
+    n++;
+  }
+}
+
+function aiDefendTick(dt){
+  const R=AI.recallSnap||(AI.recallSnap=[]);
+  aiPruneSnaps(R);
+  const D=AI.defend;
+  AI.recallCool=(AI.recallCool||0)-dt;
+  let threat=false, seat=null, hx=0, hy=0;
+  if(D){
+    seat=D.seat; hx=D.x; hy=D.y;
+    if(AI.t-D.t<8) threat=true;
+  }
+  if(seat){
+    const e=findEnemy(seat.x,seat.y,1,480);
+    if(e>=0){ threat=true; hx=ux[e]; hy=uy[e]; }
+  }
+  if(!threat){
+    if(R.length){ for(const s of R) aiRestoreOrder(s); AI.recallSnap=[]; }
+    AI.defendSent=false;
+    return;
+  }
+  if(AI.recallCool>0) return;
+  AI.recallCool=1.15;
+  const behavior=aiBehaviorKey(seat&&seat.behavior);
+  const frac=behavior==='turtle'?0.42:behavior==='rush'?0.18:0.28;
+  const garrison=[], field=[];
+  for(let i=0;i<unitHigh;i++){
+    if(!aiCombatAI(i)||!aiUnitBelongsToBase(i,seat)) continue;
+    if(aiSnapHas(R,i)) continue;
+    const d=Math.sqrt(dist2(ux[i],uy[i],seat.x,seat.y));
+    if(d<=820) garrison.push({i,d});
+    else if(d<=1500) field.push({i,d});
+  }
+  garrison.sort((a,b)=>a.d-b.d);
+  field.sort((a,b)=>a.d-b.d);
+  const wantG=Math.min(10,garrison.length);
+  const wantF=Math.min(8,Math.round(field.length*frac));
+  const want=wantG+wantF;
+  /* One commitment per raid. Top up only if casualties dropped the screen
+     below a thin picket — otherwise 28% of the remainder every tick would
+     eventually recall the whole 1500-range field. Far raiders stay out. */
+  if(AI.defendSent&&R.length>=Math.max(4,want*0.45)) return;
+  AI.defendSent=true;
+  const pick=[];
+  for(let k=0;k<wantG;k++) pick.push(garrison[k].i);
+  for(let k=0;k<wantF;k++) pick.push(field[k].i);
+  const e=findEnemy(hx,hy,1,320);
+  for(const i of pick){
+    aiDropSnap(AI.peelSnap,i);
+    R.push(aiSnapOrder(i));
+    aiIssueFocus(i,hx+rr(-40,40),hy+rr(-40,40),e);
+  }
+}
+
+function aiTacticsTick(dt){
+  aiAmbushTick(dt);
+  aiDefendTick(dt);
 }
 

@@ -5,7 +5,9 @@
   "android": { "allowMixedContent": false },
   "plugins": {
     "SystemBars": {
-      "insetsHandling": "css"
+      "insetsHandling": "css",
+      "style": "DARK",
+      "hidden": true
     },
     "CapacitorHttp": {
       "enabled": true

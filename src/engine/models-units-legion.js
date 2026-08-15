@@ -199,7 +199,7 @@ function mdlDomWalker(){
   tubeX(t,5.95,0.85,-2.05,0.42,0.36,0.17,8,TWR_BORE);
   t.bevelBox(-3.60,1.30,0,2.20,2.30,4.40,0.38,DARKER);                 // ammunition bustle
   t.box(-3.60,3.62,0,1.60,0.24,3.10,TEAM_T);
-  return {hull:m.build(),tur:t.build(),s:0.88,turH:16.55};
+  return {hull:m.build(),tur:t.build(),s:0.88,turH:16.55,muzzle:11.2};
 }
 
 /* ---------------------------------------------------------------------------
@@ -297,15 +297,48 @@ function mdlDomArty(){
   for(const x of [6.20,10.40]) ringX(t,x,2.10,0,0.62,0.86,10,TWR_TRIM);
   t.bevelBox(-2.55,1.05,0,1.70,1.70,3.60,0.32,DARKER);                 // counterweight
   t.box(-2.55,2.78,0,1.20,0.22,2.60,TEAM_T);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.70};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.70,muzzle:15.0};
 }
 
 /* ---------------------------------------------------------------------------
-   6 — LONGBOW (hp 110 / dmg 95 / rng 205)   and   7 — HORNET (hp 210 / rng 175)
-   The same role: a light chassis carrying an ELEVATING OPEN RACK of missile
-   cells. Both are thin-skinned launchers — the armour budget went into the
-   cells, and the rack is deliberately exposed so the silhouette is a box of
-   tubes rather than another turret.
+   6 — LONGBOW. TYPES.tur:null, wk:'b', 205-range coherent beam, 110 hp.
+   Shared mdlDomMissile with the Hornet — a six-cell rocket rack — so a
+   sniper beam and a splash launcher were one silhouette. Hornet keeps the
+   rack. This is a hull-yaw lance: thinner casemate, one long tube, capacitor
+   banks, no independent turret. The hunter (Vulture/Lancer) stays a turreted
+   dish gun; this deck is the beam.
+   --------------------------------------------------------------------------- */
+function mdlDomLongbow(){
+  const m=MB();
+  domTracks(m,12.4,2.70,2.40,3.15,5,0);
+  const deck=domHullSlab(m,-0.35,2.00,12.2,6.20,1.25,0.72);
+  domProw(m,4.55,2.05,0,2.70,1.95,4.90);
+  for(const sd of [-1,1]){
+    m.box(0.10,deck+0.02,sd*2.70,6.40,0.28,0.52,sd>0?TEAM_A:TEAM_B);
+    m.cyl(-4.10,deck,sd*1.95,0.62,0.56,1.95,8,TWR_MACH);
+    m.ring(-4.10,deck+1.95,sd*1.95,0.58,0.82,8,HOT);
+    m.box(-4.10,deck+0.85,sd*1.95,0.28,0.26,1.35,TEAM_T);
+    m.box(-5.55,1.05,sd*3.15,1.15,1.10,0.85,TWR_ARM_D);
+    m.cyl(-5.55,0.28,sd*3.15,0.55,0.48,0.80,7,TWR_MACH);
+  }
+  domStack(m,-4.55,deck,1.45,2.20,0.52);
+  ventBank(m,-4.55,deck+0.02,-1.45,2.00,2.00,3,TWR_MACH,0);
+  domRivets(m,1.10,deck+0.06,0,5.20,4,TWR_TRIM,0);
+  deckCrown(m,-0.20,deck+0.02,0,10.8,5.8,TWR_ARM_D,TEAM_T);
+  sensorMast(m,-4.80,deck+0.05,1.70,1.85,TWR_TRIM);
+  m.bevelBox(1.35,deck+0.15,0,3.40,1.05,1.55,0.24,TWR_COAT);
+  cylX(m,2.20,deck+0.85,0,12.20,0.42,0.32,8,TWR_MACH,false);
+  for(let k=0;k<4;k++) ringX(m,4.10+k*2.55,deck+0.85,0,0.46,0.74-k*0.05,9,k===3?HOT:TWR_TRIM);
+  tubeX(m,14.30,deck+0.85,0,0.50,0.38,0.18,8,TWR_BORE);
+  for(const sd of [-1,1]) cylX(m,2.50,deck+0.35,sd*0.85,8.40,0.18,0.15,6,TWR_ARM_D,false);
+  m.box(2.85,deck+1.22,0,2.05,0.18,0.72,TEAM_T);
+  return {hull:m.build(),tur:null,s:1.0};
+}
+
+/* ---------------------------------------------------------------------------
+   7 — HORNET (hp 210 / rng 175). Light chassis, elevating OPEN RACK of
+   missile cells. The armour budget went into the cells; the rack is exposed
+   so the silhouette is a box of tubes rather than another turret.
    --------------------------------------------------------------------------- */
 function mdlDomMissile(){
   const m=MB();
@@ -1046,18 +1079,18 @@ const DOM_LEGION_MAT=Object.freeze({
    marker, not an ordinary material, and rebinding it strands walker legs. */
 const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
   0:Object.freeze({
-    id:'legion-striker-v2', source:'authored', maps:'legion-striker-v2',
+    id:'legion-striker-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({[MAT.TRIM]:MAT.LEGION_RIVET})
   }),
   1:Object.freeze({
-    id:'legion-rhino-v2', source:'authored', maps:'legion-rhino-v2',
+    id:'legion-rhino-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.LEGION_SIEGE,
       [MAT.TWR_COAT]:MAT.LEGION_RIVET
     })
   }),
   2:Object.freeze({
-    id:'legion-goliath-v2', source:'authored', maps:'legion-goliath-v2',
+    id:'legion-goliath-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Armoured landmark plates, never SERVO gait geometry. */
       [MAT.TRIM]:MAT.LEGION_RIVET,
@@ -1065,7 +1098,7 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   3:Object.freeze({
-    id:'legion-thumper-v2', source:'authored', maps:'legion-thumper-v2',
+    id:'legion-thumper-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The carriage stays soot-dark while the gun's heat collars remain a
          localized thermite signature, so it reads as artillery at RTS range. */
@@ -1074,28 +1107,28 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   5:Object.freeze({
-    id:'legion-wasp-v2', source:'authored', maps:'legion-wasp-v2',
+    id:'legion-wasp-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.WEAPON_GLOW
     })
   }),
   6:Object.freeze({
-    id:'legion-longbow-v2', source:'authored', maps:'legion-longbow-v2',
+    id:'legion-longbow-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.CHARGE_STRIP
     })
   }),
   7:Object.freeze({
-    id:'legion-hornet-v2', source:'authored', maps:'legion-hornet-v2',
+    id:'legion-hornet-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.LEGION_THERMITE
     })
   }),
   8:Object.freeze({
-    id:'legion-titan-v2', source:'authored', maps:'legion-titan-v2',
+    id:'legion-titan-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Do not replace the TITAN's SERVO gait channel. */
       [MAT.TRIM]:MAT.LEGION_RIVET,
@@ -1104,14 +1137,14 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   9:Object.freeze({
-    id:'legion-pyro-v2', source:'authored', maps:'legion-pyro-v2',
+    id:'legion-pyro-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.LEGION_THERMITE
     })
   }),
   10:Object.freeze({
-    id:'legion-vulture-v2', source:'authored', maps:'legion-vulture-v2',
+    id:'legion-vulture-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_COAT]:MAT.LEGION_CAST,
@@ -1119,14 +1152,14 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   11:Object.freeze({
-    id:'legion-bulwark-v2', source:'authored', maps:'legion-bulwark-v2',
+    id:'legion-bulwark-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.SYN_CONDUIT]:MAT.CHARGE_STRIP
     })
   }),
   14:Object.freeze({
-    id:'legion-corvette-v2', source:'authored', maps:'legion-corvette-v2',
+    id:'legion-corvette-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_COAT]:MAT.LEGION_CAST,
@@ -1134,7 +1167,7 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   15:Object.freeze({
-    id:'legion-dreadnought-v2', source:'authored', maps:'legion-dreadnought-v2',
+    id:'legion-dreadnought-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_COAT]:MAT.LEGION_CAST,
@@ -1142,28 +1175,28 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   16:Object.freeze({
-    id:'legion-bombard-v2', source:'authored', maps:'legion-bombard-v2',
+    id:'legion-bombard-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.LEGION_THERMITE
     })
   }),
   17:Object.freeze({
-    id:'legion-raptor-v2', source:'authored', maps:'legion-raptor-v2',
+    id:'legion-raptor-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.WEAPON_GLOW
     })
   }),
   18:Object.freeze({
-    id:'legion-scorcher-v2', source:'authored', maps:'legion-scorcher-v2',
+    id:'legion-scorcher-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.LEGION_THERMITE
     })
   }),
   19:Object.freeze({
-    id:'legion-constructor-v2', source:'authored', maps:'legion-constructor-v2',
+    id:'legion-constructor-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Its servo channels remain untouched; only utility landmarks change. */
       [MAT.TRIM]:MAT.LEGION_RIVET,
@@ -1171,21 +1204,21 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   20:Object.freeze({
-    id:'legion-reaper-v2', source:'authored', maps:'legion-reaper-v2',
+    id:'legion-reaper-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.LEGION_THERMITE
     })
   }),
   21:Object.freeze({
-    id:'legion-cinder-v2', source:'authored', maps:'legion-cinder-v2',
+    id:'legion-cinder-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.LEGION_THERMITE
     })
   }),
   22:Object.freeze({
-    id:'legion-lancer-v2', source:'authored', maps:'legion-lancer-v2',
+    id:'legion-lancer-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_COAT]:MAT.LEGION_CAST,
@@ -1193,28 +1226,28 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   23:Object.freeze({
-    id:'legion-resonator-v2', source:'authored', maps:'legion-resonator-v2',
+    id:'legion-resonator-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.CHARGE_STRIP
     })
   }),
   24:Object.freeze({
-    id:'legion-warden-v2', source:'authored', maps:'legion-warden-v2',
+    id:'legion-warden-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.SYN_CONDUIT]:MAT.CHARGE_STRIP
     })
   }),
   25:Object.freeze({
-    id:'legion-kestrel-v2', source:'authored', maps:'legion-kestrel-v2',
+    id:'legion-kestrel-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_GLOW]:MAT.WEAPON_GLOW
     })
   }),
   26:Object.freeze({
-    id:'legion-basilisk-v2', source:'authored', maps:'legion-basilisk-v2',
+    id:'legion-basilisk-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_COAT]:MAT.LEGION_CAST,
@@ -1223,7 +1256,7 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   27:Object.freeze({
-    id:'legion-harbinger-v2', source:'authored', maps:'legion-harbinger-v2',
+    id:'legion-harbinger-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_RIVET,
       [MAT.TWR_COAT]:MAT.LEGION_CAST,
@@ -1231,14 +1264,14 @@ const DOM_LEGION_BESPOKE_PACKS=Object.freeze({
     })
   }),
   28:Object.freeze({
-    id:'legion-praetor-v2', source:'authored', maps:'legion-praetor-v2',
+    id:'legion-praetor-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.LEGION_CAST,
       [MAT.TWR_GLOW]:MAT.LEGION_THERMITE
     })
   }),
   32:Object.freeze({
-    id:'legion-prospector-v2', source:'authored', maps:'legion-prospector-v2',
+    id:'legion-prospector-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* SERVO remains the animation channel on this walking utility chassis. */
       [MAT.TRIM]:MAT.LEGION_RIVET,
@@ -1286,7 +1319,7 @@ const UNIT_MDL_LEGION={
   2:domLegionFactory(mdlDomWalker,2),      // Goliath      — assault walker (SERVO legs)
   3:domLegionFactory(mdlDomArty,3),        // Thumper      — field artillery
   5:domLegionFactory(mdlDomFlyer,5),       // Wasp         — light interceptor
-  6:domLegionFactory(mdlDomMissile,6),     // Longbow      — long-range missile carrier
+  6:domLegionFactory(mdlDomLongbow,6),     // Longbow      — hull-yaw coherent beam
   7:domLegionFactory(mdlDomMissile,7),     // Hornet       — rocket vehicle
   8:domLegionFactory(mdlDomTitan,8),       // TITAN        — walking fortress (SERVO legs)
   9:domLegionFactory(mdlLegionPyro,9),     // Pyro         — furnace trooper
@@ -1309,4 +1342,76 @@ const UNIT_MDL_LEGION={
   28:domLegionFactory(mdlPraetor,28),      // Lord Vex     — Dominion-exclusive commander
   32:domLegionFactory(mdlDomMiner,32),     // Prospector   — ore miner, UNARMED
 };
+
+function mfCdrDecorateKorr(m){
+  /* Crimson standards. Vertical banners break the Praetor roofline; a second
+     cadence barrel sits beside the siege cannon. Vex stays the stock hull. */
+  for(const sd of [-1,1]){
+    m.cyl(0.2,23.6,sd*7.4,0.30,0.22,13.0,8,MET_D);
+    m.box(-0.7,33.0,sd*7.4,2.6,7.6,0.32,TEAM_A);
+    m.box(-0.7,33.0,sd*7.4,2.1,7.0,0.18,HOT);
+    m.cyl(0.2,37.0,sd*7.4,0.46,0.18,0.7,8,HOT);
+  }
+  cylX(m,4.8,18.8,2.6,10.8,0.58,0.42,8,MET_D,false);
+  tubeX(m,15.2,18.8,2.6,1.0,0.72,0.38,8,HOT);
+}
+function mfCdrDecorateDravik(m){
+  /* Bastion slabs outside the stock pauldrons, plus an Iron Redoubt ring. */
+  for(const sd of [-1,1]){
+    m.bevelBox(0.2,19.0,sd*10.4,6.4,5.4,3.4,0.72,TEAM_A);
+    armorPlate(m,0.2,24.2,sd*10.4,5.8,1.7,0.52,0,MET_D,0);
+  }
+  m.ring(0,22.6,0,7.4,9.0,18,ENERGY);
+  m.ring(0,21.6,0,6.8,8.4,16,MET_L);
+  tubeX(m,15.4,16.4,0,2.6,2.05,1.12,10,DARKER);
+  m.bevelBox(-5.4,20.8,0,5.4,4.6,8.4,0.72,DARK);
+}
+function mdlDomAirlift(){
+  const m=MB();
+  const hull=[[-10.4,-3.2],[-7.2,-4.4],[4.6,-4.0],[9.2,-2.2],[10.4,0],
+              [9.2,2.2],[4.6,4.0],[-7.2,4.4],[-10.4,3.2]];
+  m.extrude(0,2.4,0,hull,3.4,TWR_ARM_D);
+  m.extrude(-0.8,5.8,0,hull.map(p=>[p[0]*.74,p[1]*.72]),1.4,TWR_ARM);
+  m.wedge(6.6,4.8,0,4.8,2.2,5.2,TWR_ARM,Math.PI/2,false);
+  m.box(8.4,5.15,0,.36,.48,3.4,TWR_BORE);
+  m.box(-1.4,7.22,0,7.6,.28,2.4,TEAM_T);
+  domRivets(m,0.6,7.28,0,6.4,5,TWR_TRIM,0);
+  m.bevelBox(-8.6,3.2,0,4.2,2.8,6.4,.5,TWR_COAT);
+  m.box(-10.5,3.6,0,.34,2.2,4.6,TWR_BORE);
+  m.wedge(-10.9,2.6,0,1.1,.5,4.8,TWR_ARM,0,true);
+  for(const P of [[-5.2,-7.2],[-5.2,7.2],[4.6,-7.2],[4.6,7.2]]){
+    const x=P[0],z=P[1],sd=Math.sign(z);
+    m.bevelBox(x,3.5,sd*5.1,3.0,.7,3.8,.22,TWR_COAT);
+    m.bevelBox(x,2.0,z,4.4,2.8,3.8,.45,TWR_ARM_D);
+    domStack(m,x,4.8,z,4.2,0.78);
+    m.cyl(x,.3,z,1.45,1.22,1.4,10,DARKER);
+    m.tube(x,1.7,z,1.28,.7,.36,10,TWR_BORE);
+    m.box(x,5.2,z+sd*1.5,2.2,.22,.22,TEAM_A);
+  }
+  ventBank(m,-2.2,7.52,0,4.4,3.4,5,TWR_MACH,0);
+  for(const sd of [-1,1]) m.bevelBox(-3.4,1.9,sd*3.3,4.4,.7,.78,.16,DARKER);
+  return {hull:m.build(),tur:null,s:1.16,air:1};
+}
+if(typeof initFactionKits==='function'){
+  const _domInitKits=initFactionKits;
+  initFactionKits=function(){
+    if(typeof MF_UT_AIRLIFT==='number') UNIT_MDL_LEGION[MF_UT_AIRLIFT]=domLegionFactory(mdlDomAirlift,MF_UT_AIRLIFT);
+    _domInitKits.apply(this,arguments);
+    /* airlift-factions.js stamps Atlas onto FAC_KIT.legion at parse time.
+       Merge copies UNIT_MDL_LEGION first, then this rebuilds the uploaded
+       mesh so a later wrap cannot leave the Nova skycrane in Dominion kit. */
+    if(typeof MF_UT_AIRLIFT==='number'){
+      const fn=UNIT_MDL_LEGION[MF_UT_AIRLIFT];
+      if(FAC_KIT.legion) FAC_KIT.legion[MF_UT_AIRLIFT]=fn;
+      if(FAC_MESH.legion&&typeof InstMesh==='function'&&typeof gl!=='undefined'&&gl){
+        const g=fn();
+        FAC_MESH.legion[MF_UT_AIRLIFT]={hull:new InstMesh(gl,g.hull,900),tur:g.tur?new InstMesh(gl,g.tur,900):null,s:g.s||1,turH:g.turH||0,muzzle:g.muzzle||0,muzzleZ:g.muzzleZ||0};
+      }
+    }
+    if(typeof mfCdrKitInst!=='function'||typeof COMMANDER_KIT_MESH==='undefined') return;
+    const pack=DOM_LEGION_BESPOKE_PACKS[28];
+    COMMANDER_KIT_MESH.legion_korr=mfCdrKitInst(mdlPraetor,mfCdrDecorateKorr,domLegionSurfacePass,pack);
+    COMMANDER_KIT_MESH.legion_dravik=mfCdrKitInst(mdlPraetor,mfCdrDecorateDravik,domLegionSurfacePass,pack);
+  };
+}
 

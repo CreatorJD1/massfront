@@ -39,14 +39,18 @@ const MAPHAZ={
 const MF_HAZARD_PROFILES={
   dust:{em:'🌪',nm:'ASH FRONT',ds:'Abrasive fronts cut sight and movement across exposed ground',mode:'vanguard'},
   storm:{em:'🌩',nm:'TEMPEST CELLS',ds:'Charged weather blinds advancing formations',mode:'vanguard'},
+  calm:{em:'◎',nm:'CLEAR SKIES',ds:'Working civic weather — no battlefield tax on the opening build',mode:'calm'},
   spores:{em:'◌',nm:'SPORE BLOOM',ds:'Dense alien spores conceal units and slow movement',mode:'vanguard'},
-  heat:{em:'♨',nm:'THERMAL SURGE',ds:'Heat distortion sweeps exposed routes and drains combat tempo',mode:'vanguard'},
+  heat:{em:'♨',nm:'THERMAL SURGE',ds:'Heat distortion sweeps exposed routes and drains combat tempo',mode:'heat'},
   collapse:{em:'⛰',nm:'TERRAIN COLLAPSE',ds:'Telegraphed shelves fracture into impassable scars',mode:'highland'},
   eruption:{em:'🌋',nm:'MAGMA ERUPTION',ds:'Unstable vents rupture, then leave dangerous molten ground',mode:'eruption'},
-  meteor:{em:'☄',nm:'ORBITAL DEBRIS',ds:'Map-specific debris storms telegraph destructive impact zones',mode:'meteor'},
+  meteor:{em:'☄',nm:'ORBITAL DEBRIS',ds:'Non-organic space weather telegraphs destructive impact zones',mode:'meteor'},
   squall:{em:'⚡',nm:'SQUALL LINES',ds:'Electrical storms earth through concentrated forces',mode:'isles'},
-  whiteout:{em:'❄',nm:'WHITEOUT',ds:'Frozen fronts erase vision before discharging through massed units',mode:'isles'},
-  flood:{em:'≋',nm:'FLOOD SURGE',ds:'Rising channels isolate formations before a violent surge',mode:'isles'},
+  whiteout:{em:'❄',nm:'WHITEOUT',ds:'Frozen fronts erase vision before slamming massed units',mode:'whiteout'},
+  flood:{em:'≋',nm:'FLOOD SURGE',ds:'Rising channels isolate formations before a violent surge',mode:'flood'},
+  /* Dead MAPDEFS string. Live sites use `heat`; keep the alias so a leftover
+     key still runs the thermal tick instead of falling through to dust. */
+  solray_corridor:{em:'🌅',nm:'SOLAR FOCUS',ds:'Heat distortion sweeps exposed routes and drains combat tempo',mode:'heat'},
   pulse:{em:'◈',nm:'RELIC PULSES',ds:'Buried systems black out units and drain local grids',mode:'crater'}
 };
 function mapHazardKey(map){
@@ -54,7 +58,13 @@ function mapHazardKey(map){
   return (D&&D.hazard)||({vanguard:'dust',highland:'collapse',isles:'squall',crater:'pulse'}[map])||'storm';
 }
 function mapHazardDef(map){
-  return MAPHAZ[map]||MF_HAZARD_PROFILES[mapHazardKey(map)]||MF_HAZARD_PROFILES.storm;
+  const key=mapHazardKey(map);
+  const P=MF_HAZARD_PROFILES[key]||MF_HAZARD_PROFILES.storm;
+  const legacy=MAPHAZ[map];
+  /* Legacy MAPHAZ rows have copy and no mode. Homeworld sites have a
+     profile key and no MAPHAZ row. Merge so UI and hazTick always agree. */
+  if(legacy) return {em:legacy.em,nm:legacy.nm,ds:legacy.ds,mode:P.mode||map};
+  return P;
 }
 function mapHazardMode(map){ return (mapHazardDef(map).mode)||map; }
 
@@ -62,7 +72,11 @@ function hazDiff(){ return (typeof diffLvl==='function')?diffLvl():1; }
 /* Long gaps on Easy, and a much smaller bite. */
 function hazEvery(base){
   const p=typeof battlefieldPresetDef==='function'?battlefieldPresetDef():{haz:1};
-  return base*[1.85,1.3,1][hazDiff()]*(p.haz||1);
+  const fac=typeof mapHomeFac==='function'?mapHomeFac():'';
+  /* Nova homeworlds are beginner theatres: weather exists, it does not bully
+     the opening. Brood worlds bite sooner. */
+  const world=fac==='nova'?1.85:fac==='horde'?0.82:1;
+  return base*[1.85,1.3,1][hazDiff()]*(p.haz||1)*world;
 }
 function hazDmg(base){ return base*[0.45,0.75,1][hazDiff()]; }
 
@@ -74,6 +88,7 @@ function hazReset(){
   /* Nothing happens for the first stretch of any match. A hazard during the
      opening build is just a tax on not knowing the map yet. */
   HAZ.t=hazEvery([150,120,95][hazDiff()]);
+  if(HAZ.mode==='calm') HAZ.t=1e9;
   if(typeof uhaz!=='undefined') uhaz.fill(0);
   if(HAZ.mode==='highland') hazSeedFaults();
 }
@@ -131,6 +146,9 @@ function hazFrontTick(dt){
     const sx=cx+px*k*(MAP/13), sy=cy+py*k*(MAP/13);
     if(sx<-200||sy<-200||sx>MAP+200||sy>MAP+200) continue;
     hazBlind(sx,sy,F.w*0.62,1.1);
+    /* Whiteout copy promises a slam after the blind. Dust fronts stay
+       sight/speed only — damage here is the ice, not the ash. */
+    if(HAZ.mode==='whiteout'&&(tick+k)%6===0) hazHurt(sx,sy,F.w*0.42,hazDmg(18));
     if(typeof addParticle==='function' && (tick+k)%2===0 && perfScale>0.35){
       for(let n=0;n<2;n++)
         addParticle(1, sx+rr(-F.w*0.5,F.w*0.5), sy+rr(-F.w*0.45,F.w*0.45),
@@ -192,6 +210,23 @@ function hazVisionMult(x,y,unitIdx){
   return m;
 }
 
+/* Low ground just above the water table — floodplains and channels — without
+   calling deformTerrain / stampWaterRipple. Those belong to the crater-water
+   sibling; this strike is a combat tax, not a mesh rewrite. */
+function hazPickChannel(){
+  const wh=typeof WATER_H==='number'?WATER_H:0.335;
+  let best=null, bs=1e9;
+  if(typeof hAt!=='function') return null;
+  for(let t=0;t<50;t++){
+    const x=rr(200,MAP-200), y=rr(200,MAP-200);
+    const h=hAt(x,y);
+    if(h<wh-0.008||h>wh+0.048) continue;
+    const score=Math.abs(h-wh);
+    if(score<bs){ bs=score; best=[x,y]; }
+  }
+  return best;
+}
+
 /* ---- SHATTERED ISLES — squall lightning -----------------------------------
    Earths through the largest mass under the cell. Massing an army in one place
    on an ocean map is exactly what you want to do and exactly what gets hit. */
@@ -251,13 +286,30 @@ function hazTick(dt){
   HAZ.t-=dt;
   if(HAZ.t>0) return;
 
-  if(HAZ.mode==='vanguard'){
+  if(HAZ.mode==='vanguard'||HAZ.mode==='whiteout'||HAZ.mode==='spore_bloom'||HAZ.mode==='spores'){
     HAZ.t=hazEvery(115+Math.random()*50);
     const a=Math.random()*TAU;
     HAZ.front={dx:Math.cos(a),dy:Math.sin(a),p:0,
                sp:118+Math.random()*40, w:[300,400,480][D]};
     HAZ.count++;
-    toast('🌪 Dust front rolling in — sight and speed cut inside it');
+    const Dfn=mapHazardDef(HAZ.map);
+    toast((Dfn&&Dfn.em||'🌪')+' '+(Dfn&&Dfn.nm||'FRONT')+' rolling in — sight and speed cut inside it');
+    sfx('alarm');
+  }
+  else if(HAZ.mode==='calm'){
+    HAZ.t=1e9;
+  }
+  else if(HAZ.mode==='heat'){
+    HAZ.t=hazEvery(90+Math.random()*35);
+    HAZ.cells.length=0;
+    const n=[2,3,4][D];
+    for(let k=0;k<n;k++){
+      const p=[rr(200,MAP-200),rr(200,MAP-200)];
+      HAZ.cells.push([p[0],p[1],90+Math.random()*30,[255,180,60]]);
+    }
+    HAZ.warn=3.5; HAZ.phase=5;
+    for(const c of HAZ.cells) mmPing(c[0],c[1]);
+    toast('🌅 SOLAR FOCUS BEAM DISPATCHED — clear the illuminated corridor');
     sfx('alarm');
   }
   else if(HAZ.mode==='highland'){
@@ -291,6 +343,19 @@ function hazTick(dt){
     toast('🌋 MAGMA PRESSURE RISING — evacuate the marked vents');
     sfx('alarm');
   }
+  else if(HAZ.mode==='flood'){
+    HAZ.t=hazEvery(85+Math.random()*35);
+    HAZ.cells.length=0;
+    const n=[2,3,4][D];
+    for(let k=0;k<n;k++){
+      const p=hazPickChannel()||[rr(220,MAP-220),rr(220,MAP-220)];
+      HAZ.cells.push([p[0],p[1],88+Math.random()*24,[70,190,220]]);
+    }
+    HAZ.warn=3.8; HAZ.phase=7;
+    for(const c of HAZ.cells) mmPing(c[0],c[1]);
+    toast('≋ FLOOD SURGE — channels are rising, clear the marked low ground');
+    sfx('alarm');
+  }
   else if(HAZ.mode==='isles'){
     HAZ.t=hazEvery(80+Math.random()*35);
     HAZ.cells.length=0;
@@ -306,6 +371,19 @@ function hazTick(dt){
     toast('⚡ Squall line overhead — lightning earthing through massed armour');
     sfx('alarm');
   }
+  else if(HAZ.mode==='meteor'){
+    HAZ.t=hazEvery(88+Math.random()*40);
+    HAZ.cells.length=0;
+    const n=[2,3,4][D];
+    for(let k=0;k<n;k++){
+      const p=[rr(220,MAP-220),rr(220,MAP-220)];
+      HAZ.cells.push([p[0],p[1],80+Math.random()*28,[210,230,255]]);
+    }
+    HAZ.warn=3.8; HAZ.phase=6;
+    for(const c of HAZ.cells) mmPing(c[0],c[1]);
+    toast('☄ ORBITAL DEBRIS INBOUND — clear the marked impact lanes');
+    sfx('alarm');
+  }
   else if(HAZ.mode==='crater'){
     HAZ.t=hazEvery(125+Math.random()*45);
     HAZ.cells=[[MAP/2,MAP/2,[300,380,460][D],[200,160,255]]];
@@ -314,7 +392,11 @@ function hazTick(dt){
     toast('◈ The relic is waking — pulse building at the basin floor');
     sfx('alarm');
   }
-  else HAZ.t=60;
+  else {
+    /* Unknown mode used to wait 60s forever and never strike. Treat it as a
+       front so an authored MAPDEFS.hazard the profiles missed still plays. */
+    HAZ.mode='vanguard'; HAZ.t=0;
+  }
 }
 
 function hazStrike(){
@@ -388,6 +470,45 @@ function hazStrike(){
     if(typeof flashScreen==='function') flashScreen();
     toast('🌋 MAGMA ERUPTION — molten ground remains lethal');
     if(typeof sfx==='function'&&HAZ.cells.length) sfx('boom',HAZ.cells[0][0],HAZ.cells[0][1],2.2);
+  }
+  else if(HAZ.phase===5){                               // thermal / solray
+    for(const c of HAZ.cells){
+      spawnExplosion(c[0],c[1],c[2]*0.55,2);
+      hazHurt(c[0],c[1],c[2],hazDmg(180));
+      hazBlind(c[0],c[1],c[2]*1.15,2.8);
+      HAZ.vision.push({x:c[0],y:c[1],r:c[2]*1.2,until:stats.t+3.4,m:0.4});
+    }
+    shake=Math.max(shake,4);
+    toast('♨ THERMAL SURGE — exposed ground is blinding');
+  }
+  else if(HAZ.phase===6){                               // orbital debris
+    for(const c of HAZ.cells){
+      spawnExplosion(c[0],c[1],c[2]*0.7,2);
+      hazHurt(c[0],c[1],c[2],hazDmg(240));
+      hazBlind(c[0],c[1],c[2]*1.25,1.8);
+      HAZ.vision.push({x:c[0],y:c[1],r:c[2]*1.3,until:stats.t+2.6,m:0.38});
+      if(typeof addParticle==='function')
+        for(let k=0;k<12;k++)
+          addParticle(0,c[0]+rr(-c[2]*0.5,c[2]*0.5),c[1]+rr(-c[2]*0.5,c[2]*0.5),
+                      0,rr(-50,-12),.5,12, 200,230,255);
+    }
+    shake=Math.max(shake,6);
+    if(typeof flashScreen==='function') flashScreen();
+    toast('☄ DEBRIS STRIKE — non-organic weather from orbit');
+  }
+  else if(HAZ.phase===7){                               // flood surge
+    for(const c of HAZ.cells){
+      spawnExplosion(c[0],c[1],c[2]*0.55,2);
+      hazHurt(c[0],c[1],c[2],hazDmg(190));
+      hazBlind(c[0],c[1],c[2]*1.35,3.6);
+      HAZ.vision.push({x:c[0],y:c[1],r:c[2]*1.4,until:stats.t+4.2,m:0.40});
+      if(typeof addParticle==='function')
+        for(let k=0;k<14;k++)
+          addParticle(1,c[0]+rr(-c[2]*0.55,c[2]*0.55),c[1]+rr(-c[2]*0.55,c[2]*0.55),
+                      rr(-10,10),rr(-28,-4),1.2,28+Math.random()*22, 70,190,220);
+    }
+    shake=Math.max(shake,5);
+    toast('≋ SURGE HIT — low ground is isolated');
   }
   HAZ.phase=0;
 }

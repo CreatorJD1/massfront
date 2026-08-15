@@ -1,5 +1,3 @@
-;
-;
 /* ============================================================
    MASSFRONT v2 — engine: WebGL2 instanced renderer + AAA-ish assets
    ============================================================ */
@@ -11,6 +9,19 @@ function rr(a,b){ return a + rnd()*(b-a); }
 const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
 const dist2=(x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy;};
 const TAU = Math.PI*2;
+
+/* OTA payload publishes window.__MF_OTA_ASSETS (data URIs) in the prelude.
+   Loaders that build URLs by concatenation never match a string-replace, so
+   they ask here first. A packaged APK has no map — the real files are on disk.
+   data: URIs pass through so an already-inlined atlas path cannot be prefixed. */
+function mf2AssetURL(path){
+  const p=String(path||'');
+  if(p.indexOf('data:')===0) return p;
+  const rel=p.replace(/^\.\//,'');
+  const o=typeof window!=='undefined'&&window.__MF_OTA_ASSETS;
+  if(o&&o[rel]) return o[rel];
+  return './'+rel;
+}
 
 // ---------- world constants ----------
 /* Large is now a real 3.2 km theatre, not the old 2.6 km allocation with the
@@ -31,7 +42,56 @@ const MAXPART = 9000;
 
 // ---------- canvas / GL ----------
 const cv = document.getElementById('gl');
-const gl = cv.getContext('webgl2', {antialias:false, alpha:false, powerPreference:'high-performance'});
+/* Production is WebGL2 only. WebGL1 (getContext('webgl'), #version 100,
+   OES_standard_derivatives / ANGLE_instanced_arrays / OES_vertex_array_object /
+   WEBGL_draw_buffers) is not a fallback — those are core in ES 3.00.
+   failIfMajorPerformanceCaveat prefers the discrete GPU and refuses SwiftShader;
+   if that returns null we retry WebGL2 without the caveat (integrated hardware)
+   and still reject software renderer strings. Same canvas cannot then be given
+   a WebGL1 context. */
+function mfGL2IsSoftware(g){
+  try{
+    const d=g.getExtension('WEBGL_debug_renderer_info');
+    const r=(d?String(g.getParameter(d.UNMASKED_RENDERER_WEBGL)):'')+' '+String(g.getParameter(g.RENDERER));
+    return /swiftshader|llvmpipe|lavapipe|software|microsoft basic render/i.test(r);
+  }catch(e){ return false; }
+}
+function mfCreateWebGL2(canvas, extra){
+  if(!canvas||!canvas.getContext) return null;
+  const strict=Object.assign({powerPreference:'high-performance',failIfMajorPerformanceCaveat:true}, extra||{});
+  let g=null;
+  try{ g=canvas.getContext('webgl2', strict); }catch(e){ g=null; }
+  if(!g){
+    const hw=Object.assign({}, strict, {failIfMajorPerformanceCaveat:false});
+    try{ g=canvas.getContext('webgl2', hw); }catch(e){ g=null; }
+  }
+  if(!g) return null;
+  if(typeof WebGL2RenderingContext!=='undefined' && !(g instanceof WebGL2RenderingContext)) return null;
+  if(mfGL2IsSoftware(g)) return null;
+  return g;
+}
+function mfWebGL2Required(){
+  if(!document.getElementById('glLostOverlay')){
+    const o=document.createElement('div'); o.id='glLostOverlay';
+    o.style.cssText='position:fixed;inset:0;z-index:2147483000;display:flex;flex-direction:column;'
+      +'align-items:center;justify-content:center;gap:15px;background:#02060c;color:#cfe6ff;text-align:center;padding:26px;'
+      +'font-family:var(--fT,system-ui,sans-serif)';
+    o.innerHTML='<div style="font:900 14px/1.4 var(--fT,sans-serif);letter-spacing:.1em;color:#8fd0ff">WEBGL2 REQUIRED</div>'
+      +'<div style="font-size:12px;max-width:320px;line-height:1.5;color:#9fb8cc">MASSFRONT needs a hardware WebGL2 GPU. WebGL1 and software renderers are not used.</div>';
+    (document.body||document.documentElement).appendChild(o);
+  }
+  throw new Error('MASSFRONT requires WebGL2 on a hardware GPU (no WebGL1 / SwiftShader fallback)');
+}
+const gl = mfCreateWebGL2(cv, {antialias:false, alpha:false}) || mfWebGL2Required();
+try{
+  const d=gl.getExtension('WEBGL_debug_renderer_info');
+  window.__MF_GL_INFO={
+    webgl2: gl instanceof WebGL2RenderingContext,
+    version: String(gl.getParameter(gl.VERSION)),
+    shading: String(gl.getParameter(gl.SHADING_LANGUAGE_VERSION)),
+    renderer: d?String(gl.getParameter(d.UNMASKED_RENDERER_WEBGL)):String(gl.getParameter(gl.RENDERER))
+  };
+}catch(_){}
 /* ---------- WebGL context-loss recovery ---------------------------------------
    Android WebView drops the GL context under memory pressure and on backgrounding.
    Every program, buffer and texture in this renderer is const-bound at load and
@@ -100,15 +160,110 @@ const IOS = /iPad|iPhone|iPod/.test(navigator.platform||'') ||
    context mid-match even while the scene was reporting 100+ FPS. Resolution
    is capped by presentation preset; geometry and texture detail stay intact. */
 const MF_MOBILE_GPU = IOS || /Android|Mobile/i.test(navigator.userAgent||'');
+function mf2d(cv){
+  /* Chrome warns on getImageData unless this hint is on the FIRST getContext.
+     A later call cannot add it. Throughput trade-off is correct here: the
+     height/mask canvases exist to be read back. */
+  try{ return cv.getContext('2d',{willReadFrequently:true})||cv.getContext('2d'); }
+  catch(e){ return cv.getContext('2d'); }
+}
 function resize(){
   const raw = window.devicePixelRatio||1;
   const q=(typeof qualityKey==='function')?qualityKey():'high';
+  const G=typeof GFX!=='undefined'?GFX:{};
   const tall=Math.max(window.innerWidth,window.innerHeight)>860;
-  const mobileCap=q==='low'?1.30:q==='cinematic'?(tall?1.70:1.80):(tall?1.52:1.65);
-  DPR = Math.min(raw, MF_MOBILE_GPU ? mobileCap : 2);
+  /* Fillrate split (412×915 phone @ native 3):
+       MEDIUM dprCap 1.25 → ~0.59 Mpx
+       HIGH phone 1.52–1.65 → ~0.87–1.03 Mpx  (never native 2/3 — that is the
+         context-loss spike: AO duplicates colour and adds depth)
+       HIGH desktop min(raw,2)
+     MEDIUM must stay cheaper on the SAME GPU. Do not let HIGH phone climb
+     to 2; do not let MEDIUM share HIGH's cap. */
+  let cap=G.dprCap>0?G.dprCap
+    :(q==='low'?1.15:q==='medium'?(tall?1.18:1.25):q==='cinematic'?(tall?1.70:1.80):(tall?1.52:1.65));
+  if(!MF_MOBILE_GPU && (q==='high'||q==='cinematic')) cap=2;
+  else if(!MF_MOBILE_GPU && q==='medium') cap=Math.min(cap,1.35);
+  DPR = Math.min(raw, cap);
   VW = cv.clientWidth || window.innerWidth; VH = cv.clientHeight || window.innerHeight;
   cv.width = Math.round(VW*DPR); cv.height = Math.round(VH*DPR);
   gl.viewport(0,0,cv.width,cv.height);
+}
+/* Sun-depth CSM atlas binds on TEXTURE4 during csmApply only. Terrain
+   already owns 0/1/2/3/7–15; ads stay on 7; post 4/5/6 never move to 0.
+   MEDIUM/LOW never allocate or sample this unit. */
+const MF_CSM_UNIT=4;
+function mfGfxKey(){
+  /* One name for every quality gate that cannot write meta.js. Prefer the
+     live merge (qualityKey) so Advanced overrides still change the title. */
+  if(typeof qualityKey==='function') return qualityKey();
+  const q=typeof META!=='undefined'&&META.settings&&META.settings.quality;
+  return q==='low'||q==='medium'||q==='cinematic'?q:'high';
+}
+function mfHazeQ(){
+  /* Distance-haze scale. Border haze stays full strength in the shaders —
+     that term hides the map edge and is not a quality extra. */
+  const q=mfGfxKey();
+  return q==='low'?0.70:q==='medium'?1.0:q==='cinematic'?1.36:1.16;
+}
+function mfGfxScissor(on){
+  /* MEDIUM/LOW skip fragment work in the HUD chrome and off-map void.
+     HIGH/CINEMATIC keep the full target so overhang haze and tall rims
+     are not clipped. Disable before any pass that changes viewport size
+     (bloom is quarter-res). */
+  if(!on){ gl.disable(gl.SCISSOR_TEST); return; }
+  const q=mfGfxKey();
+  if(q==='high'||q==='cinematic'){ gl.disable(gl.SCISSOR_TEST); return; }
+  if(typeof camBounds!=='function'||typeof w2s!=='function'){ gl.disable(gl.SCISSOR_TEST); return; }
+  const B=camBounds();
+  const pad=q==='low'?36:72;
+  const c=[w2s(B.x0-pad,B.y0-pad),w2s(B.x1+pad,B.y0-pad),w2s(B.x0-pad,B.y1+pad),w2s(B.x1+pad,B.y1+pad)];
+  let sx0=1e9,sy0=1e9,sx1=-1e9,sy1=-1e9;
+  for(let i=0;i<4;i++){ const p=c[i]; sx0=Math.min(sx0,p[0]); sy0=Math.min(sy0,p[1]); sx1=Math.max(sx1,p[0]); sy1=Math.max(sy1,p[1]); }
+  const s=DPR||1, W=cv.width, H=cv.height;
+  let x=Math.floor(sx0*s), y=Math.floor((VH-sy1)*s);
+  let w=Math.ceil((sx1-sx0)*s), h=Math.ceil((sy1-sy0)*s);
+  x=Math.max(0,x); y=Math.max(0,y);
+  w=Math.min(W-x,Math.max(1,w)); h=Math.min(H-y,Math.max(1,h));
+  if(w*h<(W*H)*0.28){ gl.disable(gl.SCISSOR_TEST); return; }
+  gl.enable(gl.SCISSOR_TEST);
+  gl.scissor(x,y,w,h);
+}
+function mfApplyAnisoBudget(){
+  /* Live Advanced Aniso row. Upload-time mfAniso(8) is the HIGH default;
+     this walks already-resident atlases so a MEDIUM/OFF tap is not a
+     relaunch. Same pname as mfAniso — MAX_ANISOTROPY_EXT is not valid and
+     leaves INVALID_ENUM (1280) in the error flag. Height is a data texture
+     and is left alone. */
+  if(typeof gl==='undefined'||!gl||(gl.isContextLost&&gl.isContextLost())) return;
+  const ani=gl.getExtension('EXT_texture_filter_anisotropic')
+         ||gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
+  if(!ani) return;
+  const max=gl.getParameter(ani.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+  const want=(typeof mfAnisoCap==='function')?mfAnisoCap():8;
+  const n=Math.max(1, Math.min(want, max>0?max:1));
+  const wasUnit=gl.getParameter(gl.ACTIVE_TEXTURE);
+  gl.activeTexture(gl.TEXTURE7);
+  const was=gl.getParameter(gl.TEXTURE_BINDING_2D);
+  const list=[];
+  if(typeof matTex!=='undefined'&&matTex) list.push(matTex);
+  if(typeof matNrmTex!=='undefined'&&matNrmTex) list.push(matNrmTex);
+  if(typeof matOrmTex!=='undefined'&&matOrmTex) list.push(matOrmTex);
+  if(typeof matDamageTex!=='undefined'&&matDamageTex) list.push(matDamageTex);
+  if(typeof matDetailTex!=='undefined'&&matDetailTex) list.push(matDetailTex);
+  if(typeof terrainTex!=='undefined'&&terrainTex) list.push(terrainTex);
+  if(typeof mfWorld2BaseAO!=='undefined'&&mfWorld2BaseAO) list.push(mfWorld2BaseAO);
+  if(typeof mfWorld2NRE!=='undefined'&&mfWorld2NRE) list.push(mfWorld2NRE);
+  if(typeof mfWorld2Masks!=='undefined'&&mfWorld2Masks) list.push(mfWorld2Masks);
+  if(typeof mfWorld2DamageTex!=='undefined'&&mfWorld2DamageTex) list.push(mfWorld2DamageTex);
+  if(typeof mfWorld2Detail!=='undefined'&&mfWorld2Detail) list.push(mfWorld2Detail);
+  for(let i=0;i<list.length;i++){
+    gl.bindTexture(gl.TEXTURE_2D, list[i]);
+    gl.texParameterf(gl.TEXTURE_2D, ani.TEXTURE_MAX_ANISOTROPY_EXT, n);
+  }
+  if(was) gl.bindTexture(gl.TEXTURE_2D, was);
+  else if(typeof matDetailTex!=='undefined'&&matDetailTex) gl.bindTexture(gl.TEXTURE_2D, matDetailTex);
+  else if(typeof matTex!=='undefined'&&matTex) gl.bindTexture(gl.TEXTURE_2D, matTex);
+  gl.activeTexture(wasUnit);
 }
 window.addEventListener('resize', ()=>setTimeout(resize,50));
 /* Safari fires orientationchange BEFORE the layout settles, and WKWebView
@@ -140,7 +295,7 @@ void main(){
   vCol=aCol;
 }`;
 const FS = `#version 300 es
-precision mediump float;
+precision highp float;
 in vec2 vUV; in vec4 vCol; uniform sampler2D uT; out vec4 o;
 void main(){ vec4 t=texture(uT,vUV); o=t*vCol; if(o.a<0.004) discard; }`;
 
@@ -159,7 +314,13 @@ gl.uniform1i(uT,0);
 
 const quadB=gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER,quadB);
-gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-.5,-.5, .5,-.5, -.5,.5, .5,.5]),gl.STATIC_DRAW);
+/* Two triangles, not an instanced TRIANGLE_STRIP. ANGLE/D3D11 and several
+   mobile drivers carry strip connectivity across instances, joining distant
+   quads with full-screen cyan scanlines. Same layout as BBBatch. */
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([
+  -.5,-.5,  .5,-.5,  .5,.5,
+  -.5,-.5,  .5,.5,  -.5,.5
+]),gl.STATIC_DRAW);
 
 // ---------- instanced batch (LEGACY sprite path — retained only so the
 // atlas/minimap helpers keep compiling; nothing draws through it any more)
@@ -203,7 +364,7 @@ class Batch{
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER,this.glb);
     gl.bufferSubData(gl.ARRAY_BUFFER,0,this.b.subarray(0,this.n*STRIDE));
-    gl.drawArraysInstanced(gl.TRIANGLE_STRIP,0,4,this.n);
+    gl.drawArraysInstanced(gl.TRIANGLES,0,6,this.n);
     gl.bindVertexArray(null);
     this.n=0;
   }
@@ -850,18 +1011,27 @@ function buildAtlas(){
     c.fillStyle='rgba(255,236,170,.6)';
     for(const p of [[-50,-14],[48,-8],[14,-58],[-16,32]]){ c.beginPath(); c.arc(p[0],p[1],4.6,0,TAU); c.fill(); }
   });
-  // --- ENERGY GEYSER (cyan vent) ---
+  // --- ENERGY GEYSER (rock collar + steam). The old concentric ellipses +
+  //     5 rim arcs WAS the metal iris on the phone APK. ---
   defSprite('geyser', c=>{
-    c.fillStyle='rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(0,6,82,62,0,0,TAU); c.fill();
-    c.fillStyle=rg(c,0,0,90,[[0,'rgba(65,200,255,.5)'],[1,'rgba(65,200,255,0)']]);
-    c.beginPath(); c.arc(0,0,90,0,TAU); c.fill();
-    c.fillStyle='#2a3640'; c.beginPath(); c.ellipse(0,0,64,52,0,0,TAU); c.fill();
-    c.strokeStyle='#16202a'; c.lineWidth=7; c.stroke();
-    c.fillStyle='#101820'; c.beginPath(); c.ellipse(0,0,42,33,0,0,TAU); c.fill();
-    c.fillStyle=rg(c,0,0,36,[[0,'#c8f2ff'],[0.4,'#41c8ff'],[1,'rgba(20,90,130,.9)']]);
-    c.beginPath(); c.ellipse(0,0,30,23,0,0,TAU); c.fill();
-    c.strokeStyle='rgba(200,242,255,.8)'; c.lineWidth=3;
-    for(let a=0;a<TAU;a+=TAU/5){ c.beginPath(); c.arc(Math.cos(a)*52,Math.sin(a)*42,6,0,TAU); c.stroke(); }
+    c.fillStyle='rgba(0,0,0,.32)'; c.beginPath(); c.ellipse(0,10,80,58,0,0,TAU); c.fill();
+    c.fillStyle=rg(c,0,-8,70,[[0,'rgba(165,225,250,.40)'],[1,'rgba(165,225,250,0)']]);
+    c.beginPath(); c.arc(0,-6,78,0,TAU); c.fill();
+    c.fillStyle='#4a453c';
+    c.beginPath();
+    for(let a=0;a<9;a++){ const th=a*TAU/9, r=54+((a*41)%11)*2.0;
+      c[a?'lineTo':'moveTo'](Math.cos(th)*r,Math.sin(th)*r*0.76+12); }
+    c.closePath(); c.fill();
+    c.strokeStyle='#2c2822'; c.lineWidth=6; c.stroke();
+    c.fillStyle='#6a6356';
+    c.beginPath();
+    for(let a=0;a<7;a++){ const th=a*TAU/7+0.3, r=28+((a*23)%9);
+      c[a?'lineTo':'moveTo'](Math.cos(th)*r,Math.sin(th)*r*0.72+6); }
+    c.closePath(); c.fill();
+    c.fillStyle=rg(c,0,-18,28,[[0,'#e8f7ff'],[0.45,'#9ad8e8'],[1,'rgba(80,140,150,.15)']]);
+    c.beginPath(); c.ellipse(0,-22,18,28,0,0,TAU); c.fill();
+    c.fillStyle='rgba(200,236,246,.55)';
+    for(const p of [[-10,-48],[12,-56],[2,-68]]){ c.beginPath(); c.arc(p[0],p[1],7+p[1]*-0.04,0,TAU); c.fill(); }
   });
   // --- WALL segment (drawn near-white → team tint) ---
   defSprite('wall', c=>{
@@ -1374,7 +1544,7 @@ function buildAtlas(){
 
   const tex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,tex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,atlasCanvas);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,atlasCanvas);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -1458,85 +1628,96 @@ const MAPDEFS=(()=>{
     frost_reach:{nm:'Frost Reach',ds:'Legacy frozen canyon',seed:61094,hBias:.04,relief:1.3,crater:0,city:1,indus:1,roads:1,size:'standard',hazard:'whiteout'},
     ash_ridge:{nm:'Ash Ridge',ds:'Legacy slag caldera',seed:39102,hBias:.06,relief:1.35,crater:1,city:2,indus:2,roads:1,size:'standard',hazard:'eruption'}
   };
+  /* Trailing object is optional site extras. Map IDs stay stable for saves;
+     theme/poi/civic counts are the faction-homeworld contract. */
   const add=(region,theme,base,sites)=>{
     for(let i=0;i<sites.length;i++){
-      const S=sites[i],id=region+'_'+S[0];
+      const row=sites[i],X=(row[row.length-1]&&typeof row[row.length-1]==='object')?row[row.length-1]:null;
+      const S=X?row.slice(0,-1):row,id=region+'_'+S[0];
       out[id]={nm:S[1],ds:S[2],seed:base+i*7919,size:['compact','standard','large'][i],
         hBias:S[3],relief:S[4],crater:S[5],city:S[6],indus:S[7],roads:S[8],
-        seabed:S[9]||0,bridge:S[10]||0,hazard:S[11],region,theme};
+        seabed:S[9]||0,bridge:S[10]||0,hazard:S[11]||'storm',poi:S[12]||(X&&X.poi)||'',
+        region,theme:(X&&X.theme)||theme,
+        outpost:(X&&X.outpost)|0,relic:(X&&X.relic)|0,towns:(X&&X.towns)|0,
+        spaceport:(X&&X.spaceport)|0,domes:(X&&X.domes)|0,
+        infest:X&&X.infest};
     }
   };
+  /* Planet 1 — Nova / Terran Frontline Command. Civilized, not dying. */
   add('aelos_north','verdant',110101,[
-    ['small','Mosswatch Verge','Root-choked listening posts guard a narrow military causeway.',.01,.94,0,1,0,1,0,0,'storm'],
-    ['medium','Tempest Pass','Storm-cut ridges divide two ruined hydro-fortresses.',.045,1.18,0,2,1,1,0,0,'storm'],
-    ['large','Emerald Front','A wide jungle warfront surrounds an abandoned orbital elevator.',0,1.08,0,3,2,1,0,0,'storm']]);
+    ['small','Parade Circumference','Intact brutalist avenues ring a living command capital.',.008,.88,0,3,1,1,0,0,'calm','Command Circumference',{towns:1,outpost:1}],
+    ['medium','Civic Grid','Prefecture blocks and parade yards, still occupied and supplied.',.012,.96,0,4,1,1,0,0,'calm','Prefecture Plaza',{towns:1,outpost:1}],
+    ['large','Frontline Capital','A dense TFC metro with highways, pads and stacked civic cores.',0,1.02,0,4,2,1,0,0,'storm','Titan Civic Spire',{towns:2,outpost:1}]]);
   add('aelos_basin','verdant',120201,[
-    ['small','Canopy Well','Dense growth encloses a crystal-fed basin and one contested crossing.',-.018,.90,0,1,0,0,0,0,'spores'],
-    ['medium','Viridian Floodplain','Seasonal water channels split fertile resource terraces.',-.045,.96,0,2,0,1,1,1,'flood'],
-    ['large','Biodome Heart','Collapsed climate towers ring a sprawling living valley.',-.006,1.02,0,3,1,1,0,0,'storm']]);
+    ['small','Greenbelt Works','Factory terraces sit inside maintained parkland, not ruins.',-.012,.90,0,2,2,1,0,0,'calm','Arsenal Gardens',{towns:1}],
+    ['medium','Canal Prefecture','River industry with brutalist quays and working civic halls.',-.038,.94,0,3,2,1,1,1,'storm','Quay Assembly',{towns:1,outpost:1}],
+    ['large','Heartland Yards','A wide industrial garden city feeding the Nova war machine.',-.004,1.00,0,4,3,1,0,0,'calm','Heartland Foundry',{towns:1,outpost:1}]]);
   add('aelos_coast','verdant',130301,[
-    ['small','Delta Redoubt','A half-drowned coastal battery controls the only dry approach.',-.032,.90,0,1,1,1,1,1,'squall'],
-    ['medium','Sunken Causeway','Broken military causeways join marsh islands and port ruins.',-.058,.94,0,2,1,1,1,1,'squall'],
-    ['large','Pelagic Crown','An island command ring surrounds deep-water salvage fields.',-.072,1.02,0,2,2,0,1,1,'squall']]);
-  add('aelos_ridge','verdant',140401,[
-    ['small','Thornback Rise','A steep forest shelf rewards short-range defensive control.',.055,1.24,0,1,0,1,0,0,'collapse'],
-    ['medium','Silvan Rampart','Ancient retaining walls climb through a shattered arboretum.',.075,1.38,0,2,1,1,0,0,'collapse'],
-    ['large','Titanwood Divide','Mountain forest and fortress ruins create three long fronts.',.045,1.32,0,3,2,1,0,0,'collapse']]);
+    ['small','Harbor Battery','A working coastal fortress, not a drowned wreck.',-.028,.90,0,2,1,1,1,1,'storm','Seawall Command',{outpost:1}],
+    ['medium','Admiralty Causeway','Naval yards and brutalist port blocks control the only dry approach.',-.052,.94,0,3,2,1,1,1,'storm','Port Admiralty',{towns:1,outpost:1,spaceport:1}],
+    ['large','Pelagic Ring','An island command ring with intact harbors and civic pads.',-.066,1.00,0,3,2,1,1,1,'storm','Deepwater Anchor',{towns:1,spaceport:1}]]);
+  add('aelos_ridge','arctic',140401,[
+    ['small','High Shelf Fort','Mountain infrastructure, still garrisoned — a sibling arctic read on Nova stone.',.05,1.22,0,2,1,1,0,0,'calm','Overlook Bastion',{theme:'arctic',outpost:1}],
+    ['medium','Stone Rampart','Brutalist retaining walls climb a cold ridge without looking abandoned.',.068,1.32,0,3,1,1,0,0,'collapse','Rampart Tier',{theme:'arctic',towns:1}],
+    ['large','Divide Gate','Three elevated civic districts command a highland highway.',.04,1.28,0,3,2,1,0,0,'storm','Great Divide Gate',{theme:'arctic',towns:1,outpost:1}]]);
 
-  add('pyraeth_crater','ashland',210101,[
-    ['small','Emberfall Pit','A fresh impact bowl compresses armies beneath a decaying orbital debris field.',.025,1.12,1,1,1,1,0,0,'meteor'],
-    ['medium','Anvil Basin','Ruined blast walls divide a crater refinery into siege lanes.',.04,1.24,1,2,2,1,0,0,'pulse'],
-    ['large','Worldscar Caldera','Nested impacts and slag cities surround a superheated centre.',.055,1.38,1,3,3,1,0,0,'eruption']]);
-  add('pyraeth_belt','ashland',220201,[
-    ['small','Smelter Gate','One brutalist foundry choke holds concentrated mass seams.',.035,1.06,0,0,2,1,0,0,'heat'],
-    ['medium','Iron Pyre','Parallel furnace trenches connect opposing industrial terraces.',.045,1.18,0,1,3,1,0,0,'heat'],
-    ['large','Promethean Works','A continent-scale refinery grid supports prolonged armor war.',.035,1.22,0,2,4,1,0,0,'eruption']]);
-  add('pyraeth_caldera','ashland',230301,[
-    ['small','Cinder Crown','A narrow volcanic rim surrounds exposed energy vents.',.07,1.28,1,0,1,1,0,0,'eruption'],
-    ['medium','Magma Crucible','Lava shelves and broken heat bridges form shifting approaches.',.08,1.42,1,1,2,1,0,0,'eruption'],
-    ['large','Ignis Expanse','Multiple calderas divide a broad siege theatre.',.065,1.46,1,2,3,1,0,0,'eruption']]);
-  add('pyraeth_flats','ashland',240401,[
-    ['small','Ashglass Mile','A fused plain exposes every advance to long-range fire.',.005,.88,0,0,1,1,0,0,'dust'],
-    ['medium','Blackwind Flats','Ash fronts sweep across buried logistics causeways.',.012,.98,0,1,2,1,0,0,'dust'],
-    ['large','Cinder March','Open slag country surrounds isolated fortress-islands.',.018,1.04,0,2,3,1,0,0,'dust']]);
+  /* Planet 2 — Crimson Dominion. Domes, storms, factories, spaceports. */
+  add('pyraeth_crater','vespera',210101,[
+    ['small','Crown Pit','A crater bowl of buried dome stacks and storm-lit approaches.',.02,1.10,1,1,2,1,0,0,'storm','Sub-Crater Vault',{domes:1,outpost:1}],
+    ['medium','Underforge','Siege lanes cut through subterranean foundries under a dusk sky.',.035,1.20,1,1,3,1,0,0,'pulse','Vault Foundry',{domes:1,outpost:1}],
+    ['large','Buried Court','Nested impact bowls hide a Dominion arcology beneath the storm.',.05,1.32,1,2,3,1,0,0,'storm','Court of Iron',{theme:'ashland',domes:2,indus:0}]]);
+  add('pyraeth_belt','vespera',220201,[
+    ['small','Mech Gate','One foundry choke packed with assembly halls.',.03,1.04,0,0,3,1,0,0,'storm','Choke Array',{outpost:1}],
+    ['medium','Iron Pyre Yards','Parallel factory trenches feed opposing armor terraces.',.04,1.14,0,1,4,1,0,0,'heat','Furnace Trench',{outpost:1}],
+    ['large','Dominion Works','A continent-scale mech grid under perpetual storm cover.',.03,1.18,0,1,4,1,0,0,'storm','Promethean Mega-Grid',{spaceport:1,outpost:1}]]);
+  add('pyraeth_caldera','vespera',230301,[
+    ['small','Dome Crown','Pressure-dome stacks ring a storm-cut rim.',.055,1.20,0,1,1,1,0,0,'storm','Cinder Dome Spire',{domes:2}],
+    ['medium','Arcology Crucible','Linked dome cities and heat bridges form shifting approaches.',.06,1.30,0,2,2,1,0,0,'heat','Crucible Domes',{domes:2,outpost:1}],
+    ['large','Red Expanse','A broad dusk theatre of dome clusters and factory islands.',.05,1.34,0,2,3,1,0,0,'storm','Ignis Dome Court',{domes:2,spaceport:1}]]);
+  add('pyraeth_flats','vespera',240401,[
+    ['small','Apron Mile','An exposed orbital apron — every advance is under storm and guns.',.002,.86,0,0,2,1,0,0,'storm','Vitrus Pad',{spaceport:1}],
+    ['medium','Blackwind Ports','Storm fronts sweep buried logistics and landing causeways.',.01,.96,0,1,3,1,0,0,'dust','Hub Delta Pads',{spaceport:2,outpost:1}],
+    ['large','Cinder March','Open dusk country around fortress-islands and spaceport keeps.',.016,1.02,0,1,3,1,0,0,'storm','Slag Fortress Keep',{spaceport:2,domes:1}]]);
 
+  /* Planet 3 — Syndicate Coalition. Automation, frontline scars, space weather. */
   add('nordhall_isles','arctic',310101,[
-    ['small','Frostwake Atoll','Ice bridges connect two frozen naval stations.',-.045,.92,0,1,0,0,1,1,'squall'],
-    ['medium','Rimewater Chain','Fractured islands make transport and air cover decisive.',-.066,.98,0,1,1,0,1,1,'whiteout'],
-    ['large','Boreal Archipelago','A wide frozen sea surrounds resource-rich glacial vaults.',-.082,1.06,0,2,1,0,1,1,'squall']]);
+    ['small','Frostwake Docks','Automated naval yards on ice bridges — machines, not garrisons.',-.045,.92,0,0,2,0,1,1,'whiteout','Sub-Zero Dock Grid',{outpost:1}],
+    ['medium','Rimewater Chain','Fractured islands make air cover and drone rails decisive.',-.066,.98,0,1,2,0,1,1,'whiteout','Boreal Relay Net',{outpost:1}],
+    ['large','Boreal Grid','A frozen sea of automated vaults and ice-road factories.',-.082,1.06,0,1,3,0,1,1,'squall','Archipelago Core Vault',{outpost:2}]]);
   add('nordhall_cliff','arctic',320201,[
-    ['small','Vault Approach','A fortified ice shelf overlooks a single climbing route.',.062,1.30,0,1,1,1,0,0,'collapse'],
-    ['medium','Arcology Steps','Terraced ruins climb between frozen ravines.',.078,1.44,0,2,1,1,0,0,'collapse'],
-    ['large','Citadel Shelf','Three elevated districts command a deep central canyon.',.07,1.50,0,3,2,1,0,0,'whiteout']]);
+    ['small','Scar Approach','A frontline ice shelf — artillery scars, not civic parks.',.06,1.28,1,0,2,1,0,0,'collapse','Cryo Rampart',{outpost:1}],
+    ['medium','Arcology Steps','Terraced machine ruins climb between frozen ravines.',.075,1.40,1,1,3,1,0,0,'collapse','Terrace Vault Steps',{outpost:1}],
+    ['large','Citadel Shelf','Three automated districts command a scarred central canyon.',.068,1.46,1,1,3,1,0,0,'whiteout','Citadel Command Pinnacle',{outpost:2}]]);
   add('nordhall_frost','arctic',330301,[
-    ['small','Cryo Rift','Unstable ice narrows the fight around a buried reactor.',.035,1.18,0,0,1,1,0,0,'whiteout'],
-    ['medium','Glacier Fault','Cracking shelves open and close routes across the valley.',.045,1.32,0,1,1,1,0,0,'collapse'],
-    ['large','Pale Chasm','A massive glacial fracture supports several separated fronts.',.052,1.40,0,2,2,1,0,0,'whiteout']]);
+    ['small','Cryo Rift','Unstable ice around a buried reactor farm.',.032,1.16,0,0,3,1,0,0,'whiteout','Reactor Thermal Well',{outpost:1}],
+    ['medium','Glacier Fault','Cracking shelves open and close routes across the valley.',.042,1.28,0,1,3,1,0,0,'collapse','Faultline Bridge',{outpost:1}],
+    ['large','Pale Chasm','A glacial fracture supporting several separated factory fronts.',.05,1.36,1,1,3,1,0,0,'whiteout','Pale Trench Reactor',{outpost:2}]]);
+  /* Peaks stay arctic ice. The old vespera override painted magenta dusk
+     plants on a polar automation shelf — the copy-paste sibling read. */
   add('nordhall_peaks','arctic',340401,[
-    ['small','Valkyrie Spur','A windswept summit favors artillery and jump-capable units.',.085,1.42,0,0,1,1,0,0,'whiteout'],
-    ['medium','Skyshield Range','Radar ruins and narrow saddles divide high-altitude ground.',.092,1.52,0,1,2,1,0,0,'whiteout'],
-    ['large','Crown of Winter','Linked mountain plateaus create a long-range command war.',.08,1.58,0,2,2,1,0,0,'collapse']]);
+    ['small','Valkyrie Spur','Orbital debris weather slams a windswept automation spur.',.08,1.38,0,0,2,1,0,0,'meteor','Valkyrie Listening Post',{theme:'arctic',outpost:1}],
+    ['medium','Skyshield Range','Radar ruins and saddles under non-organic space weather.',.088,1.48,0,1,3,1,0,0,'meteor','Skyshield Array',{theme:'arctic',outpost:1}],
+    ['large','Crown of Winter','Linked plateaus: long-range command war under meteor storms.',.076,1.54,0,1,3,1,0,0,'whiteout','Winter Pinnacle Throne',{theme:'arctic',outpost:2}]]);
 
-  add('vespera_spire','vespera',410101,[
-    ['small','Heliostat Yard','A compact solar array surrounds one luminous energy well.',-.005,.92,0,1,1,1,0,0,'heat'],
-    ['medium','Spire Shadow','A colossal solar tower divides illuminated and dark approaches.',.008,1.06,0,2,2,1,0,0,'heat'],
-    ['large','Sol Crown','Mirror fields and ruined arcologies form a broad desert warzone.',0,1.12,0,3,3,1,0,0,'storm']]);
-  add('vespera_dunes','vespera',420201,[
-    ['small','Dusk Narrows','Wind-carved canyon walls compress a dangerous advance.',.035,1.18,0,0,1,0,0,0,'dust'],
-    ['medium','Sable Canyon','Buried causeways wind between deep desert escarpments.',.052,1.34,0,1,1,1,0,0,'dust'],
-    ['large','Eventide Maze','Branching canyons conceal flanking routes and rich deposits.',.045,1.40,0,2,2,1,0,0,'storm']]);
-  add('vespera_refinery','vespera',430301,[
-    ['small','Relay Grave','A dead machine relay surrounds a pulsing relic chamber.',.015,1.02,0,1,2,1,0,0,'pulse'],
-    ['medium','Derelict Matrix','Autonomous foundries occupy a fractured logistics lattice.',.022,1.14,0,2,3,1,0,0,'pulse'],
-    ['large','Silent Megaforge','A dormant industrial city spans the full tactical theatre.',.03,1.20,0,3,4,1,0,0,'pulse']]);
-  add('vespera_plateau','vespera',440401,[
-    ['small','Twilight Mesa','A raised command shelf overlooks a buried military route.',.06,1.24,0,1,0,1,0,0,'storm'],
-    ['medium','Gloam Ramparts','Eroded fortifications divide a chain of high desert mesas.',.072,1.38,0,2,1,1,0,0,'storm'],
-      ['large','Terminator Front','Day and night sides meet across a vast fortified plateau.',.058,1.44,0,3,2,1,0,0,'heat']]);
-  /* Naval play is authored, never inferred from one random low cell. Aelos and
-     Nordhall each expose at least one wet theatre per region; Pyraeth lava and
-     Vespera mirage pools remain explicitly non-navigable. Lowering only the
-     selected site's bias keeps the rest of each planet's land catalogue intact. */
+  /* Planet 4 — Brood hiveworld. Volcanic, infestation fields, waves. */
+  add('vespera_spire','ashland',410101,[
+    ['small','Hatch Pit','A compact caldera of spore vents and hive stacks.',.02,1.08,1,0,1,0,0,0,'spores','Spore Vent Node',{infest:1.8}],
+    ['medium','Spire Brood','A colossal hive spire divides magma approaches.',.03,1.18,1,1,1,1,0,0,'eruption','Great Hive Spire',{infest:1.9}],
+    ['large','Sol Nest Crown','Caldera cities swallowed by infestation around a superheated core.',.04,1.26,1,1,2,1,0,0,'eruption','Caldera Nest Crown',{infest:2.1}]]);
+  add('vespera_dunes','ashland',420201,[
+    ['small','Ichor Narrows','Infestation fields compress every advance into a killing lane.',.03,1.14,0,0,0,0,0,0,'spores','Ichor Passage',{infest:2.0}],
+    ['medium','Sable Bloom','Buried causeways wind through spreading hive carpets.',.048,1.28,0,0,1,1,0,0,'spores','Bloom Escarpment',{infest:2.1}],
+    ['large','Eventide Tide','Branching canyons conceal flanking routes and massive nest fields.',.04,1.34,1,1,1,1,0,0,'eruption','Tide Relay Net',{infest:2.2}]]);
+  add('vespera_refinery','ashland',430301,[
+    ['small','Magma Crypt','A dead foundry around a pulsing hatchery chamber.',.02,1.06,1,0,2,1,0,0,'eruption','Hatchery Crypt',{infest:1.8}],
+    ['medium','Derelict Brood','Swallowed factories occupy a fractured logistics lattice.',.028,1.16,1,1,2,1,0,0,'pulse','Brood Matrix Core',{infest:1.9}],
+    ['large','Silent Megaforge','A volcanic industrial city now a continent-scale nest.',.035,1.22,1,1,3,1,0,0,'eruption','Megaforge Spine',{infest:2.2}]]);
+  add('vespera_plateau','verdant',440401,[
+    ['small','Twilight Mesa','Overgrown highland — sibling verdant read on Brood stone.',.055,1.20,0,1,0,1,0,0,'spores','Twilight Nest 4',{theme:'verdant',infest:1.6}],
+    ['medium','Gloam Ramparts','Eroded fortifications drowning in biomass between mesas.',.068,1.32,0,1,1,1,0,0,'spores','Gloam Keep Gate',{theme:'verdant',infest:1.7}],
+    ['large','Terminator Front','Day-side jungle meets night-side magma across a fortified plateau.',.052,1.38,1,2,1,1,0,0,'eruption','Terminator Hive Spire',{theme:'ashland',infest:2.0}]]);
+  /* Naval play is authored. Nova keeps working harbors; Syndicate keeps ice
+     theatres. Dominion dusk pads and Brood magma stay explicitly dry. */
   const wet={
     aelos_north_medium:'river',aelos_basin_medium:'river',
     aelos_coast_small:'ocean',aelos_coast_medium:'ocean',aelos_coast_large:'ocean',
@@ -1555,52 +1736,207 @@ const MAPDEFS=(()=>{
   }
   return out;
 })();
-let curMap='vanguard';
+/* Default must be a four-homeworld site. `vanguard` remains in MAPDEFS for
+   training/save compatibility, but it is not a drop world and must not be the
+   career starting selection. */
+let curMap='aelos_north_medium';
+function theatreMapId(maps, size){
+  /* Standard mode contract is the medium / 12-site theatre. Compact (_small)
+     and Large stay on the region row; do not treat maps[0] as the drop. */
+  const want=(typeof battlefieldPresetKey==='function'?battlefieldPresetKey(size||'standard'):(size||'standard'));
+  if(!maps||!maps.length) return '';
+  for(let i=0;i<maps.length;i++){
+    const d=MAPDEFS[maps[i]];
+    if(d&&d.size===want) return maps[i];
+  }
+  return maps[0]||'';
+}
 
-/* ---------- PLANETS: 4 reverse biodome worlds ---------- */
-/* ---------- PLANETS: 4 reverse biodome worlds with Meteora orbital telemetry ---------- */
+/* ---------- PLANETS: four faction homeworlds (keys stay for saves) ----------
+   fac is the RUNTIME kit: nova / legion (Crimson Dominion) / syndicate / horde.
+   theme is the planet's default biome; individual MAPDEFS may mix a sibling
+   theme at lower weight. Passive strings are lore, not sim bonuses. */
 const PLANETS={
   aelos:{
-    nm:'AELOS', em:'🌿', theme:'verdant', ds:'Lush temperate biodome world',
-    biodome:'Hydro-Dome Alpha', sector:'Sombrero-I', diameter:'56,780 km', dayLen:'12 Earth hrs', temp:'15°C to 32°C', climate:'Tropical',
+    nm:'AELOS', em:'◆', theme:'verdant', fac:'nova', system:'sombrero',
+    ds:'Terran Frontline Command homeworld — dense brutalist cities, working infrastructure, not a dying world',
+    biodome:'Frontline Capital Grid', sector:'Sombrero-I', diameter:'56,780 km', dayLen:'12 Earth hrs', temp:'12°C to 28°C', climate:'Temperate Civic',
+    lore:'Nova beginner theatre. Cities, highways and pads stay intact.',
+    atmosphereColor:'rgba(80,180,220,0.45)', ringColor:'rgba(100,210,255,0.3)',
     regions:[
-      {id:'aelos_north', nm:'NORTHERN REACH', lat:0.45, lon:0.20, rad:0.38, color:'#38ef7d', maps:['aelos_north_small','aelos_north_medium','aelos_north_large']},
-      {id:'aelos_basin', nm:'VERDANT BASIN', lat:-0.20, lon:0.80, rad:0.42, color:'#00f2fe', maps:['aelos_basin_small','aelos_basin_medium','aelos_basin_large']},
-      {id:'aelos_coast', nm:'VALLEY DELTA', lat:0.10, lon:-0.70, rad:0.36, color:'#ffb302', maps:['aelos_coast_small','aelos_coast_medium','aelos_coast_large']},
-      {id:'aelos_ridge', nm:'SILVAN RIDGE', lat:-0.50, lon:-0.30, rad:0.35, color:'#a855f7', maps:['aelos_ridge_small','aelos_ridge_medium','aelos_ridge_large']}
+      {id:'aelos_north', nm:'CAPITAL CIRCUMFERENCE', poi:'Command Circumference', hook:'Intact brutalist avenues around a living TFC capital.', lat:0.45, lon:0.20, rad:0.38, color:'#5ad4ff', maps:['aelos_north_small','aelos_north_medium','aelos_north_large']},
+      {id:'aelos_basin', nm:'HEARTLAND YARDS', poi:'Heartland Foundry', hook:'Factory terraces inside maintained parkland and river quays.', lat:-0.20, lon:0.80, rad:0.42, color:'#7dffb0', maps:['aelos_basin_small','aelos_basin_medium','aelos_basin_large']},
+      {id:'aelos_coast', nm:'HARBOR COMMAND', poi:'Port Admiralty', hook:'Working naval yards and brutalist port blocks.', lat:0.10, lon:-0.70, rad:0.36, color:'#ffd36a', maps:['aelos_coast_small','aelos_coast_medium','aelos_coast_large']},
+      {id:'aelos_ridge', nm:'HIGH SHELF', poi:'Great Divide Gate', hook:'Sibling arctic read: garrisoned mountain infrastructure.', lat:-0.50, lon:-0.30, rad:0.35, color:'#a8c4ff', maps:['aelos_ridge_small','aelos_ridge_medium','aelos_ridge_large']}
     ]
   },
   pyraeth:{
-    nm:'PYRAETH', em:'🌋', theme:'ashland', ds:'Fire-scarred ash world with volcanic refinery biodomes',
-    biodome:'Ignis Containment Grid', sector:'Andromeda-IV', diameter:'48,200 km', dayLen:'16 Earth hrs', temp:'60°C to 120°C', climate:'Magmatic Ashland',
+    nm:'PYRAETH', em:'🔺', theme:'vespera', fac:'legion', system:'andromeda',
+    ds:'Crimson Dominion homeworld — pressure-dome cities, subterranean foundries, storm-lashed spaceports',
+    biodome:'Dominion Dome Grid', sector:'Andromeda-IV', diameter:'48,200 km', dayLen:'16 Earth hrs', temp:'18°C to 54°C', climate:'Dusk Storm Belt',
+    lore:'Red-faction theatre. Domes, mech factories and orbital aprons under dangerous storms.',
+    atmosphereColor:'rgba(255,90,70,0.5)', ringColor:'rgba(255,140,80,0.35)',
     regions:[
-      {id:'pyraeth_crater', nm:'IMPACT BASIN', lat:0.30, lon:-0.50, rad:0.40, color:'#ff4e50', maps:['pyraeth_crater_small','pyraeth_crater_medium','pyraeth_crater_large']},
-      {id:'pyraeth_belt', nm:'MAGMA FOUNDRY', lat:-0.40, lon:0.40, rad:0.38, color:'#f9d423', maps:['pyraeth_belt_small','pyraeth_belt_medium','pyraeth_belt_large']},
-      {id:'pyraeth_caldera', nm:'ASH CALDERA', lat:0.60, lon:0.70, rad:0.36, color:'#ff8008', maps:['pyraeth_caldera_small','pyraeth_caldera_medium','pyraeth_caldera_large']},
-      {id:'pyraeth_flats', nm:'CINDER FLATS', lat:-0.10, lon:-0.90, rad:0.37, color:'#e65c00', maps:['pyraeth_flats_small','pyraeth_flats_medium','pyraeth_flats_large']}
+      {id:'pyraeth_crater', nm:'BURIED COURT', poi:'Court of Iron', hook:'Subterranean dome stacks in crater bowls.', lat:0.30, lon:-0.50, rad:0.40, color:'#ff4e50', maps:['pyraeth_crater_small','pyraeth_crater_medium','pyraeth_crater_large']},
+      {id:'pyraeth_belt', nm:'MECH FOUNDRY', poi:'Promethean Mega-Grid', hook:'Sprawling assembly trenches feeding Dominion armor.', lat:-0.40, lon:0.40, rad:0.38, color:'#ff8a3a', maps:['pyraeth_belt_small','pyraeth_belt_medium','pyraeth_belt_large']},
+      {id:'pyraeth_caldera', nm:'DOME ARCOLOGY', poi:'Ignis Dome Court', hook:'Pressure-dome cities under perpetual storm cover.', lat:0.60, lon:0.70, rad:0.36, color:'#ff6b8a', maps:['pyraeth_caldera_small','pyraeth_caldera_medium','pyraeth_caldera_large']},
+      {id:'pyraeth_flats', nm:'ORBITAL APRONS', poi:'Hub Delta Pads', hook:'Spaceport flats where every advance is exposed.', lat:-0.10, lon:-0.90, rad:0.37, color:'#e65c00', maps:['pyraeth_flats_small','pyraeth_flats_medium','pyraeth_flats_large']}
     ]
   },
   nordhall:{
-    nm:'NORDHALL', em:'❄', theme:'arctic', ds:'Frozen tundra featuring deep sub-zero glacial vault biodomes',
-    biodome:'Cryo-Shield Vault 9', sector:'Orion Arc', diameter:'62,100 km', dayLen:'24 Earth hrs', temp:'-80°C to -10°C', climate:'Glacial Polar',
+    nm:'NORDHALL', em:'🜁', theme:'arctic', fac:'syndicate', system:'orion',
+    ds:'Syndicate Coalition homeworld — automation yards, frontline scars, snow and non-organic space weather',
+    biodome:'Cryo-Grid Vault 9', sector:'Orion Arc', diameter:'62,100 km', dayLen:'24 Earth hrs', temp:'-80°C to -10°C', climate:'Glacial Machine',
+    lore:'Robotic theatre. Factories fight the weather; the weather is orbital, not organic.',
+    atmosphereColor:'rgba(120,220,140,0.4)', ringColor:'rgba(180,255,140,0.28)',
     regions:[
-      {id:'nordhall_isles', nm:'ICEBOUND ARCHIPELAGO', lat:0.50, lon:-0.30, rad:0.38, color:'#7f7fd5', maps:['nordhall_isles_small','nordhall_isles_medium','nordhall_isles_large']},
-      {id:'nordhall_cliff', nm:'CLIFF ARCOLOGY', lat:-0.30, lon:0.60, rad:0.40, color:'#86a8e7', maps:['nordhall_cliff_small','nordhall_cliff_medium','nordhall_cliff_large']},
-      {id:'nordhall_frost', nm:'GLACIAL RIFT', lat:0.10, lon:0.90, rad:0.36, color:'#91eae4', maps:['nordhall_frost_small','nordhall_frost_medium','nordhall_frost_large']},
-      {id:'nordhall_peaks', nm:'VALKYRIE PEAKS', lat:-0.60, lon:-0.40, rad:0.35, color:'#56ccf2', maps:['nordhall_peaks_small','nordhall_peaks_medium','nordhall_peaks_large']}
+      {id:'nordhall_isles', nm:'FROSTWAKE GRID', poi:'Archipelago Core Vault', hook:'Automated naval yards on ice bridges.', lat:0.50, lon:-0.30, rad:0.38, color:'#7dff9a', maps:['nordhall_isles_small','nordhall_isles_medium','nordhall_isles_large']},
+      {id:'nordhall_cliff', nm:'FRONTLINE SHELF', poi:'Citadel Command Pinnacle', hook:'Artillery-scarred machine districts on ice cliffs.', lat:-0.30, lon:0.60, rad:0.40, color:'#86e7a8', maps:['nordhall_cliff_small','nordhall_cliff_medium','nordhall_cliff_large']},
+      {id:'nordhall_frost', nm:'REACTOR RIFT', poi:'Pale Trench Reactor', hook:'Unstable ice around buried automation farms.', lat:0.10, lon:0.90, rad:0.36, color:'#91eae4', maps:['nordhall_frost_small','nordhall_frost_medium','nordhall_frost_large']},
+      {id:'nordhall_peaks', nm:'ORBITAL WEATHER', poi:'Skyshield Array', hook:'Sibling dusk read: meteor storms over polar automation.', lat:-0.60, lon:-0.40, rad:0.35, color:'#c8ff6a', maps:['nordhall_peaks_small','nordhall_peaks_medium','nordhall_peaks_large']}
     ]
   },
   vespera:{
-    nm:'VESPERA', em:'🌅', theme:'vespera', ds:'Dusk & desert world encased in high-orbit solar reverse biodomes',
-    biodome:'Sol-Dome Network', sector:'Helios Core', diameter:'42,900 km', dayLen:'14 Earth hrs', temp:'10°C to 75°C', climate:'Dusk Desert',
+    nm:'VESPERA', em:'🐛', theme:'ashland', fac:'horde', system:'helios',
+    ds:'Brood hiveworld — volcanic wasteland, sprawling infestation fields, the hardest theatre',
+    biodome:'Caldera Nest Lattice', sector:'Helios Core', diameter:'42,900 km', dayLen:'14 Earth hrs', temp:'40°C to 110°C', climate:'Volcanic Infestation',
+    lore:'Brood theatre. Magma plus hive tides. Infestation is the map, not a modifier.',
+    atmosphereColor:'rgba(180,80,255,0.5)', ringColor:'rgba(255,90,40,0.35)',
     regions:[
-      {id:'vespera_spire', nm:'SOLAR SPIRE', lat:0.25, lon:0.50, rad:0.38, color:'#ff9966', maps:['vespera_spire_small','vespera_spire_medium','vespera_spire_large']},
-      {id:'vespera_dunes', nm:'DUSK CANYON', lat:-0.35, lon:-0.60, rad:0.40, color:'#ff5e62', maps:['vespera_dunes_small','vespera_dunes_medium','vespera_dunes_large']},
-      {id:'vespera_refinery', nm:'DERELICT MATRIX', lat:0.55, lon:-0.80, rad:0.36, color:'#f8b500', maps:['vespera_refinery_small','vespera_refinery_medium','vespera_refinery_large']},
-      {id:'vespera_plateau', nm:'TWILIGHT RIDGE', lat:-0.15, lon:0.85, rad:0.37, color:'#fceabb', maps:['vespera_plateau_small','vespera_plateau_medium','vespera_plateau_large']}
+      {id:'vespera_spire', nm:'CALDERA NESTS', poi:'Great Hive Spire', hook:'Hive stacks in a superheated caldera.', lat:0.25, lon:0.50, rad:0.38, color:'#c46bff', maps:['vespera_spire_small','vespera_spire_medium','vespera_spire_large']},
+      {id:'vespera_dunes', nm:'INFESTATION FIELDS', poi:'Tide Relay Net', hook:'Open hive carpets and ichor lanes.', lat:-0.35, lon:-0.60, rad:0.40, color:'#ff5e62', maps:['vespera_dunes_small','vespera_dunes_medium','vespera_dunes_large']},
+      {id:'vespera_refinery', nm:'MAGMA HATCHERIES', poi:'Megaforge Spine', hook:'Swallowed factories now continent-scale nests.', lat:0.55, lon:-0.80, rad:0.36, color:'#ff8008', maps:['vespera_refinery_small','vespera_refinery_medium','vespera_refinery_large']},
+      {id:'vespera_plateau', nm:'OVERGROWN FRONT', poi:'Terminator Hive Spire', hook:'Sibling verdant read: jungle drowning in biomass.', lat:-0.15, lon:0.85, rad:0.37, color:'#9dff6a', maps:['vespera_plateau_small','vespera_plateau_medium','vespera_plateau_large']}
     ]
   }
 };
+
+/* Per-region biodome kits. THEMES stay the four climate shaders (water kind,
+   lava/ice, road materials). Kits own the thing the eye actually reads at
+   tactical zoom: ground palette, flora silhouette, rock lithology, and
+   resource-node habit. Without this, three Aelos regions were one park, three
+   Nordhall regions were one snowfield, and mass nodes were the same cyan
+   crystal orbs on every world. */
+const BIOME_KITS={
+  aelos_north:{climate:'civic', flora:'broad', trees:240, cover:110, rocks:70,
+    treeTint:[255,255,255], coverTint:[86,118,58], rockKind:'stone', rockTint:[168,162,148],
+    mass:'ore', energy:'vent',
+    g0:[72,112,50], g1:[54,88,42], b0:[168,152,110], b1:[138,118,68],
+    h0:[70,84,48], h1:[96,92,66], cliff:[96,90,84], plat:[74,104,52], mossAmt:[14,18,5]},
+  aelos_basin:{climate:'civic', flora:'mixed_basin', trees:300, cover:160, rocks:55,
+    treeTint:[236,248,220], coverTint:[62,102,48], rockKind:'stone', rockTint:[132,118,96],
+    mass:'ore', energy:'vent',
+    g0:[52,96,40], g1:[38,72,32], b0:[142,124,78], b1:[118,98,58],
+    h0:[58,76,40], h1:[82,86,54], cliff:[88,78,64], plat:[62,96,46], mossAmt:[10,22,4]},
+  aelos_coast:{climate:'civic', flora:'mixed_coast', trees:140, cover:90, rocks:80,
+    treeTint:[210,230,170], coverTint:[110,124,64], rockKind:'stone', rockTint:[176,164,140],
+    mass:'ore', energy:'vent',
+    g0:[88,108,62], g1:[68,86,48], b0:[186,168,118], b1:[158,140,92],
+    h0:[96,100,70], h1:[120,112,82], cliff:[110,104,92], plat:[128,124,88], mossAmt:[8,14,2]},
+  aelos_ridge:{climate:'alpine', flora:'pine', trees:190, cover:70, rocks:95,
+    treeTint:[70,96,78], coverTint:[92,108,88], rockKind:'stone', rockTint:[142,146,150],
+    mass:'ice', energy:'frost',
+    g0:[186,198,204], g1:[118,136,148], b0:[168,176,186], b1:[128,140,154],
+    h0:[140,154,168], h1:[214,222,230], cliff:[88,90,96], plat:[226,232,238], mossAmt:[-18,-8,10],
+    peakCol:[210,218,226]},
+  pyraeth_crater:{climate:'dusk', flora:'mixed_crater', trees:70, cover:50, rocks:85,
+    treeTint:[186,112,128], coverTint:[148,88,104], rockKind:'slag', rockTint:[92,64,72],
+    mass:'slag', energy:'heat',
+    g0:[132,88,108], g1:[96,64,86], b0:[128,92,100], b1:[88,60,78],
+    h0:[110,76,98], h1:[164,118,132], cliff:[70,48,68], plat:[176,128,132], mossAmt:[12,-6,22]},
+  pyraeth_belt:{climate:'dusk', flora:'dead', trees:28, cover:24, rocks:100,
+    treeTint:[150,96,88], coverTint:[120,78,70], rockKind:'slag', rockTint:[78,54,48],
+    mass:'slag', energy:'heat',
+    g0:[118,78,72], g1:[86,58,54], b0:[110,82,70], b1:[80,56,50],
+    h0:[96,68,60], h1:[140,96,82], cliff:[68,48,46], plat:[140,96,88], mossAmt:[18,2,0]},
+  pyraeth_caldera:{climate:'dusk', flora:'dead', trees:55, cover:40, rocks:90,
+    treeTint:[176,120,86], coverTint:[150,108,70], rockKind:'slag', rockTint:[104,78,58],
+    mass:'slag', energy:'heat',
+    g0:[148,108,86], g1:[110,78,70], b0:[150,112,88], b1:[112,80,64],
+    h0:[128,90,74], h1:[178,128,96], cliff:[80,58,52], plat:[196,148,118], mossAmt:[16,4,2]},
+  pyraeth_flats:{climate:'dusk', flora:'dead', trees:12, cover:18, rocks:60,
+    treeTint:[160,120,118], coverTint:[128,96,98], rockKind:'slag', rockTint:[108,92,96],
+    mass:'slag', energy:'heat',
+    g0:[112,92,98], g1:[86,72,78], b0:[128,108,112], b1:[96,80,86],
+    h0:[104,84,90], h1:[148,118,120], cliff:[74,62,68], plat:[160,132,128], mossAmt:[8,-2,10]},
+  nordhall_isles:{climate:'ice', flora:'mixed_isles', trees:90, cover:40, rocks:75,
+    treeTint:[64,88,78], coverTint:[140,168,176], rockKind:'ice', rockTint:[198,214,226],
+    mass:'ice', energy:'frost',
+    g0:[236,244,250], g1:[148,172,200], b0:[158,170,186], b1:[122,138,158],
+    h0:[128,152,188], h1:[236,243,250], cliff:[62,66,76], plat:[250,252,255], mossAmt:[-26,-12,16]},
+  nordhall_cliff:{climate:'ice', flora:'dead', trees:36, cover:22, rocks:110,
+    treeTint:[72,80,78], coverTint:[150,160,168], rockKind:'ice', rockTint:[164,176,188],
+    mass:'ice', energy:'frost',
+    g0:[196,206,216], g1:[124,142,160], b0:[140,150,164], b1:[108,120,136],
+    h0:[112,130,152], h1:[200,210,220], cliff:[72,76,86], plat:[220,226,232], mossAmt:[-20,-10,12],
+    peakCol:[200,208,216]},
+  nordhall_frost:{climate:'ice', flora:'pine', trees:50, cover:80, rocks:70,
+    treeTint:[58,86,80], coverTint:[220,232,240], rockKind:'ice', rockTint:[230,240,248],
+    mass:'ice', energy:'frost',
+    g0:[248,252,255], g1:[176,198,218], b0:[180,196,214], b1:[140,160,184],
+    h0:[160,180,208], h1:[246,250,255], cliff:[70,78,92], plat:[255,255,255], mossAmt:[-30,-14,18]},
+  nordhall_peaks:{climate:'ice', flora:'dead', trees:22, cover:16, rocks:120,
+    treeTint:[70,72,68], coverTint:[120,124,128], rockKind:'slag', rockTint:[96,100,108],
+    mass:'ice', energy:'frost',
+    g0:[156,164,176], g1:[100,112,128], b0:[130,138,150], b1:[96,104,118],
+    h0:[110,118,132], h1:[176,184,196], cliff:[58,56,64], plat:[190,196,206], mossAmt:[-12,-6,8],
+    peakCol:[168,174,184]},
+  vespera_spire:{climate:'hive', flora:'spore', trees:80, cover:70, rocks:85,
+    treeTint:[186,86,150], coverTint:[120,52,64], rockKind:'slag', rockTint:[62,48,44],
+    mass:'ichor', energy:'spore',
+    g0:[64,58,55], g1:[44,40,38], b0:[70,58,50], b1:[52,44,40],
+    h0:[74,62,55], h1:[88,72,60], cliff:[58,50,46], plat:[82,72,64], mossAmt:[22,6,2]},
+  vespera_dunes:{climate:'hive', flora:'spore', trees:130, cover:120, rocks:45,
+    treeTint:[210,70,120], coverTint:[96,40,58], rockKind:'slag', rockTint:[72,44,52],
+    mass:'ichor', energy:'spore',
+    g0:[72,48,58], g1:[50,36,44], b0:[80,52,56], b1:[58,38,44],
+    h0:[82,54,60], h1:[110,70,78], cliff:[64,42,50], plat:[96,62,68], mossAmt:[18,0,8]},
+  vespera_refinery:{climate:'hive', flora:'mixed_crater', trees:60, cover:48, rocks:95,
+    treeTint:[168,88,70], coverTint:[110,64,52], rockKind:'slag', rockTint:[56,46,40],
+    mass:'ichor', energy:'heat',
+    g0:[70,54,48], g1:[48,40,36], b0:[74,56,46], b1:[54,42,36],
+    h0:[78,60,50], h1:[100,74,58], cliff:[54,44,40], plat:[88,68,56], mossAmt:[20,4,0]},
+  vespera_plateau:{climate:'hive', flora:'mixed_plateau', trees:200, cover:140, rocks:65,
+    treeTint:[168,186,90], coverTint:[96,110,48], rockKind:'stone', rockTint:[110,96,72],
+    mass:'ichor', energy:'spore',
+    g0:[86,96,48], g1:[64,72,38], b0:[150,132,86], b1:[118,100,64],
+    h0:[78,86,46], h1:[112,108,62], cliff:[88,78,62], plat:[120,118,64], mossAmt:[8,22,4]}
+};
+function biomeKit(map){
+  const id=map||(typeof curMap!=='undefined'?curMap:'');
+  const D=typeof MAPDEFS!=='undefined'?MAPDEFS[id]:null;
+  const rid=(D&&D.region)||'aelos_north';
+  return BIOME_KITS[rid]||BIOME_KITS.aelos_north;
+}
+function biomeKitForDef(def){
+  const rid=(def&&def.region)||((typeof curMap!=='undefined'&&MAPDEFS[curMap]&&MAPDEFS[curMap].region))||'aelos_north';
+  return BIOME_KITS[rid]||BIOME_KITS.aelos_north;
+}
+/* Land palette only. Water kind / foam stay on THEMES so crater-fluid and
+   wake math keep their climate contract. */
+function themePaint(TH, defOrMap){
+  TH=TH||THEMES[curTheme]||THEMES.verdant;
+  const K=typeof defOrMap==='string'?biomeKit(defOrMap):
+    (defOrMap&&defOrMap.region&&BIOME_KITS[defOrMap.region])||biomeKit();
+  if(!K||!K.g0) return TH;
+  return {
+    name:TH.name, wDeep:TH.wDeep, wShal:TH.wShal, foam:TH.foam, water:TH.water,
+    b0:K.b0||TH.b0, b1:K.b1||TH.b1, g0:K.g0||TH.g0, g1:K.g1||TH.g1,
+    mossAmt:K.mossAmt||TH.mossAmt, h0:K.h0||TH.h0, h1:K.h1||TH.h1,
+    cliff:K.cliff||TH.cliff, plat:K.plat||TH.plat,
+    trees:K.trees!=null?K.trees:TH.trees, treeTint:K.treeTint||TH.treeTint,
+    peakCol:K.peakCol
+  };
+}
+function floraKind(K, rndFn){
+  const f=(K&&K.flora)||'broad', r=rndFn||rnd;
+  if(f==='mixed_basin') return r()<0.72?'broad':'pine';
+  if(f==='mixed_coast') return r()<0.62?'palm':'broad';
+  if(f==='mixed_isles') return r()<0.70?'dead':'pine';
+  if(f==='mixed_plateau') return r()<0.55?'spore':'broad';
+  if(f==='mixed_crater') return r()<0.65?'dead':'spore';
+  return f;
+}
 
 /* Helper getters for region and map lookups */
 function getPlanetMaps(P){
@@ -1623,6 +1959,62 @@ function planetForMap(m){
   }
   return planetForTheme(curTheme);
 }
+/* The 48 authored homeworld sites. Legacy MAPDEFS (vanguard, highland, …)
+   stay loadable for training/saves but are never drop worlds. */
+function homeworldMapIds(){
+  const ids=[];
+  for(const k in PLANETS) for(const m of getPlanetMaps(PLANETS[k])) ids.push(m);
+  return ids;
+}
+function isHomeworldMap(m){
+  if(!m) return false;
+  for(const k in PLANETS) if(getPlanetMaps(PLANETS[k]).indexOf(m)>=0) return true;
+  return false;
+}
+/* Runtime kit for the selected site's homeworld. nova is the player kit and
+   is not a FACTIONS{} key; legion/syndicate/horde are. */
+function mapHomeFac(map){
+  const m=map||(typeof curMap!=='undefined'?curMap:'');
+  const k=planetForMap(m),P=PLANETS[k];
+  return (P&&P.fac)||'nova';
+}
+
+/* Four solar systems. Galaxy picks a SYSTEM; the system view shows that
+   system's planets. There are no moons — a planet has four regions, and each
+   region has three maps. Other faction homeworlds must NEVER share this orbit. */
+const SYSTEMS={
+  sombrero:{id:'sombrero', nm:'SOMBRERO-I', star:'FRONTLINE PRIME', fac:'nova', home:'aelos', color:'#5ad4ff',
+    ds:'Nova beginner system. One homeworld, four regions, three battlefields each.',
+    x:-.72,y:-.20,z:.18},
+  andromeda:{id:'andromeda', nm:'ANDROMEDA-IV', star:'DOMINION FURNACE', fac:'legion', home:'pyraeth', color:'#ff714c',
+    ds:'Crimson Dominion system. One homeworld, four regions, three battlefields each.',
+    x:.66,y:-.46,z:-.08},
+  orion:{id:'orion', nm:'ORION ARC', star:'GRID SUN', fac:'syndicate', home:'nordhall', color:'#7dff9a',
+    ds:'Syndicate system. One homeworld, four regions, three battlefields each.',
+    x:.48,y:.55,z:.30},
+  helios:{id:'helios', nm:'HELIOS CORE', star:'HIVE STAR', fac:'horde', home:'vespera', color:'#c46bff',
+    ds:'Brood system. One homeworld, four regions, three battlefields each.',
+    x:-.35,y:.62,z:-.30}
+};
+function systemForPlanet(k){
+  const P=PLANETS[k];if(P&&P.system&&SYSTEMS[P.system])return P.system;
+  for(const id in SYSTEMS) if(SYSTEMS[id].home===k) return id;
+  return 'sombrero';
+}
+function systemPlanets(sys){
+  const id=typeof sys==='string'?sys:(sys&&sys.id)||'sombrero';
+  const keys=[];
+  for(const k in PLANETS) if(PLANETS[k].system===id) keys.push(k);
+  if(!keys.length){const h=SYSTEMS[id]&&SYSTEMS[id].home;if(h)keys.push(h);}
+  return keys;
+}
+function systemBodies(sys){
+  /* Catalog helper only. The War Table never draws extra moons or sibling
+     drop worlds from this list — each system still has one homeworld. */
+  return systemPlanets(sys).map(id=>{const P=PLANETS[id];return {id,kind:'planet',playable:true,nm:P?P.nm:id,theme:P&&P.theme};});
+}
+var lastPlanetPreviewTargets=[];
+var lastPlanetGlobe={cx:0,cy:0,R:0,W:0,H:0};
 
 /* ===========================================================
    METEORA-QUALITY 3D PLANET RENDERER
@@ -1699,12 +2091,15 @@ function _getStars(W,H,key){
 }
 
 /* METEORA-STYLE ORBITAL CAROUSEL & 3D PLANET SPHERE RENDERER */
-function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId){
+function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId, bare){
   if(!cv) return;
   const ctx=cv.getContext('2d');
   const W=cv.width, H=cv.height;
-  const R=Math.min(W,H)*0.32;
-  const cx=Math.floor(W*0.5), cy=Math.floor(H*0.52);
+  /* Bare fill uses more of the offscreen so the system blit is not a 102px
+     disc stretched out of a 320 canvas — that read as a dark tiled ball. */
+  const R=Math.min(W,H)*(bare?0.46:0.32);
+  const cx=Math.floor(W*0.5), cy=Math.floor(H*(bare?0.5:0.52));
+  lastPlanetGlobe={cx,cy,R,W,H};
 
   ctx.clearRect(0,0,W,H);
 
@@ -1713,91 +2108,42 @@ function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId){
 
   lastPlanetPreviewTargets = [];
 
-  /* -------------------------------------------------------
-     1. Deep space background + starfield
-  ------------------------------------------------------- */
-  const bgGrad=ctx.createLinearGradient(0,0,0,H);
-  bgGrad.addColorStop(0,'rgb(4,8,20)');
-  bgGrad.addColorStop(1,'rgb(2,6,16)');
-  ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
+  /* bare: globe+atmosphere only, for compositing onto the system orbit.
+     The War Table must not open a second WebGL context; this 2D ray-sphere
+     is the same PLANET-stage painter, minus the stage chrome that would
+     stamp a black rectangle over the starfield. */
+  if(!bare){
+    /* -------------------------------------------------------
+       1. Deep space background + starfield
+    ------------------------------------------------------- */
+    const bgGrad=ctx.createLinearGradient(0,0,0,H);
+    bgGrad.addColorStop(0,'rgb(4,8,20)');
+    bgGrad.addColorStop(1,'rgb(2,6,16)');
+    ctx.fillStyle=bgGrad; ctx.fillRect(0,0,W,H);
 
-  const stars=_getStars(W,H,planetKey);
-  for(const s of stars){
-    ctx.globalAlpha=s.a;
-    ctx.fillStyle='#ffffff';
-    ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    const stars=_getStars(W,H,planetKey);
+    for(const s of stars){
+      ctx.globalAlpha=s.a;
+      ctx.fillStyle='#ffffff';
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+
+    /* -------------------------------------------------------
+       2. Concentric Meteora orbital ring tracks (ellipses)
+    ------------------------------------------------------- */
+    for(let ring=0;ring<4;ring++){
+      const rRx=R*(1.6+ring*0.5);
+      const rRy=rRx*0.28;
+      ctx.strokeStyle=`rgba(120,210,255,${0.12-ring*0.02})`; ctx.lineWidth=1;
+      ctx.setLineDash(ring%2===0?[]:[3,8]);
+      ctx.beginPath(); ctx.ellipse(cx,cy+R*0.15,rRx,rRy,-0.04,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.setLineDash([]);
   }
-  ctx.globalAlpha=1;
 
-  /* -------------------------------------------------------
-     2. Concentric Meteora orbital ring tracks (ellipses)
-  ------------------------------------------------------- */
-  for(let ring=0;ring<4;ring++){
-    const rRx=R*(1.6+ring*0.5);
-    const rRy=rRx*0.28;
-    ctx.strokeStyle=`rgba(120,210,255,${0.12-ring*0.02})`; ctx.lineWidth=1;
-    ctx.setLineDash(ring%2===0?[]:[3,8]);
-    ctx.beginPath(); ctx.ellipse(cx,cy+R*0.15,rRx,rRy,-0.04,0,Math.PI*2); ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  /* -------------------------------------------------------
-     3. Side orbit planet preview globes (Meteora carousel)
-  ------------------------------------------------------- */
-  const pKeys=Object.keys(PLANETS);
-  const activeIdx=pKeys.indexOf(planetKey);
-  const sideLayout=[
-    {slot:-1, xFrac:-0.48, yFrac:0.10, szFrac:0.30},
-    {slot: 1, xFrac: 0.48, yFrac:0.10, szFrac:0.30},
-    {slot:-2, xFrac:-0.82, yFrac:-0.08, szFrac:0.18},
-    {slot: 2, xFrac: 0.82, yFrac:-0.08, szFrac:0.18},
-  ];
-  let slotIdx=0;
-  for(let i=0;i<pKeys.length;i++){
-    if(i===activeIdx) continue;
-    const k=pKeys[i];
-    const sl=sideLayout[slotIdx++]; if(!sl) break;
-    const pX=cx+sl.xFrac*W*0.55;
-    const pY=cy+sl.yFrac*H+R*0.05;
-    const prevR=R*sl.szFrac;
-    const prevTH=THEMES[PLANETS[k].theme]||THEMES.verdant;
-
-    /* Glow halo */
-    const glowG=ctx.createRadialGradient(pX,pY,prevR*0.6,pX,pY,prevR*1.5);
-    glowG.addColorStop(0,`rgba(${prevTH.wShal.join(',')},0.25)`);
-    glowG.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=glowG; ctx.beginPath(); ctx.arc(pX,pY,prevR*1.5,0,Math.PI*2); ctx.fill();
-
-    /* Planet sphere */
-    ctx.save();
-    ctx.beginPath(); ctx.arc(pX,pY,prevR,0,Math.PI*2); ctx.clip();
-
-    const pG=ctx.createRadialGradient(pX-prevR*0.3,pY-prevR*0.35,0,pX+prevR*0.1,pY+prevR*0.1,prevR*1.2);
-    pG.addColorStop(0.0,`rgb(${prevTH.wShal[0]+20},${prevTH.wShal[1]+20},${prevTH.wShal[2]+10})`);
-    pG.addColorStop(0.45,`rgb(${prevTH.g0.join(',')})`);
-    pG.addColorStop(0.75,`rgb(${prevTH.wShal.join(',')})`);
-    pG.addColorStop(1.0,`rgb(${prevTH.wDeep.join(',')})`);
-    ctx.fillStyle=pG; ctx.fillRect(pX-prevR,pY-prevR,prevR*2,prevR*2);
-
-    /* Night side shadow */
-    const shadG=ctx.createRadialGradient(pX+prevR*0.3,pY+prevR*0.35,0,pX,pY,prevR);
-    shadG.addColorStop(0,'rgba(0,0,0,0)');
-    shadG.addColorStop(0.7,'rgba(2,5,15,0.35)');
-    shadG.addColorStop(1,'rgba(0,2,8,0.88)');
-    ctx.fillStyle=shadG; ctx.fillRect(pX-prevR,pY-prevR,prevR*2,prevR*2);
-    ctx.restore();
-
-    /* Rim glow */
-    ctx.strokeStyle=`rgba(${prevTH.wShal.join(',')},0.7)`; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(pX,pY,prevR,0,Math.PI*2); ctx.stroke();
-
-    /* Label */
-    ctx.font='700 10px var(--fT,monospace)'; ctx.textAlign='center';
-    ctx.fillStyle='rgba(180,230,255,0.9)';
-    ctx.fillText(PLANETS[k].nm,pX,pY+prevR+13);
-
-    lastPlanetPreviewTargets.push({key:k,x:pX,y:pY,r:prevR+14});
-  }
+  /* Planet globe is regions only. Sibling homeworlds and invented moons stay
+     out of this orbit — they made each world look like its own solar system. */
 
   /* -------------------------------------------------------
      4. Main planet: Rayleigh atmospheric corona
@@ -1816,8 +2162,8 @@ function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId){
   ------------------------------------------------------- */
   /* Start from the already-painted orbital scene. createImageData() is fully
      transparent and putImageData() replaces pixels instead of alpha-blending;
-     using it here erased the three preview worlds and every orbit track after
-     they had been drawn. The terrain sphere only rewrites its own opaque disc. */
+     using it here erased the orbit tracks after they had been drawn. The
+     terrain sphere only rewrites its own opaque disc. */
   const imgData=ctx.getImageData(0,0,W,H);
   const data=imgData.data;
 
@@ -1931,7 +2277,7 @@ function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId){
   ctx.fillStyle=specG; ctx.fillRect(cx-R,cy-R,R*2,R*2);
   ctx.restore();
 
-  ctx.strokeStyle=`rgba(${TH.wShal.join(',')},0.75)`; ctx.lineWidth=2;
+  ctx.strokeStyle=`rgba(${TH.wShal.join(',')},0.75)`; ctx.lineWidth=bare?1.5:2;
   ctx.beginPath(); ctx.arc(cx,cy,R,0,Math.PI*2); ctx.stroke();
 
   /* -------------------------------------------------------
@@ -1978,7 +2324,7 @@ function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId){
         ctx.lineWidth=isSel?3:2;
         ctx.stroke();
 
-        if(isSel){
+        if(isSel&&!bare){
           ctx.save(); ctx.clip();
           ctx.strokeStyle=regColor+'45'; ctx.lineWidth=1.2;
           for(let yL=py-R*0.5;yL<=py+R*0.5;yL+=6){
@@ -1989,6 +2335,8 @@ function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId){
       }
     }
   }
+
+  if(bare) return;
 
   /* -------------------------------------------------------
      8. HUD labels: glassmorphism region banners
@@ -2105,12 +2453,67 @@ function mapMod(def,wx,wy,h){
 /* ---------- ROAD NETWORK — old highways that survived the war ----------
    Roads are drawn crisply onto the terrain canvas and rasterised into a
    coarse grid; ground units move measurably faster along them.          */
-let ROADG=null, ROAD_PATHS=[];
+let ROADG=null, ROAD_PATHS=[], ROAD_JOINS=[];
 /* Roads should organise columns, not turn infantry into racing vehicles. The
    old +28%, stacked with assault-move +35%, made a Striker cross a 1.9 km map
    in about 21 seconds. A restrained +12% preserves the route decision while
    keeping silhouettes and movement effects readable on a phone. */
 const ROAD_SPD=1.12;
+/* One authored description owns highway grading, painting, navigation and the
+   material mask. The previous build independently described a 260-300 unit
+   "dry corridor" and a 17-24 unit visible road. That hidden corridor became a
+   broad raised berm under the narrow texture. */
+function mfRoadNetworkSpec(){
+  const A=[MAP*SP_LO,MAP*SP_HI],B=[MAP*SP_HI,MAP*SP_LO];
+  const D=[MAP*SP_LO,MAP*SP_LO],E=[MAP*SP_HI,MAP*SP_HI],C=[MAP*.5,MAP*.5];
+  const P=(t,o)=>[D[0]+(E[0]-D[0])*t+o,D[1]+(E[1]-D[1])*t-o];
+  return [{path:[D,P(.40,70),E],w:17,kind:'freight'},
+          {path:[A,C,B],w:24,kind:'artery'}];
+}
+/* Cut-and-fill grading. Every control point samples its surrounding terrain;
+   each segment then blends toward that engineering grade. The road is flat
+   across its width with a long natural shoulder, never a raised ribbon. */
+function mfGradeRoadNetwork(paths){
+  if(!heightF||!paths||!paths.length)return null;
+  const k=TS/MAP,stats={segments:0,cells:0,maxCut:0,maxFill:0};
+  const sampleNode=(p,rad)=>{
+    const cx=p[0]*k,cy=p[1]*k,rr=Math.max(5,rad*k),step=Math.max(2,(rr*.35)|0);
+    let sum=0,n=0;
+    for(let oy=-rr;oy<=rr;oy+=step)for(let ox=-rr;ox<=rr;ox+=step){
+      if(ox*ox+oy*oy>rr*rr)continue;
+      const x=clamp(Math.round(cx+ox),0,TS-1),y=clamp(Math.round(cy+oy),0,TS-1),h=heightF[y*TS+x];
+      if(h<WATER_H+.002)continue;sum+=h;n++;
+    }
+    return Math.max(WATER_H+.014,n?sum/n:heightF[clamp(Math.round(cy),0,TS-1)*TS+clamp(Math.round(cx),0,TS-1)]);
+  };
+  for(const R of paths){
+    const P=R.path,nodeH=P.map(p=>sampleNode(p,R.w*.5+32));
+    for(let i=1;i<nodeH.length;i++){
+      const L=Math.hypot(P[i][0]-P[i-1][0],P[i][1]-P[i-1][1]),dh=Math.max(.006,L/HSCALE*.010);
+      nodeH[i]=clamp(nodeH[i],nodeH[i-1]-dh,nodeH[i-1]+dh);
+    }
+    for(let s=1;s<P.length;s++){
+      const A=P[s-1],B=P[s],ax=A[0]*k,ay=A[1]*k,bx=B[0]*k,by=B[1]*k,dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1;
+      const core=R.w*.56*k,feather=(R.w*.5+30)*k;
+      const x0=clamp(Math.floor(Math.min(ax,bx)-feather),0,TS-1),x1=clamp(Math.ceil(Math.max(ax,bx)+feather),0,TS-1);
+      const y0=clamp(Math.floor(Math.min(ay,by)-feather),0,TS-1),y1=clamp(Math.ceil(Math.max(ay,by)+feather),0,TS-1);
+      stats.segments++;
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const t=clamp(((x-ax)*dx+(y-ay)*dy)/L2,0,1),px2=ax+dx*t,py2=ay+dy*t,d=Math.hypot(x-px2,y-py2);
+        if(d>feather)continue;
+        const q=d<=core?1:1-(d-core)/Math.max(1,feather-core),w=q*q*(3-2*q);
+        const target=nodeH[s-1]+(nodeH[s]-nodeH[s-1])*t,i=y*TS+x,before=heightF[i];
+        heightF[i]=before+(target-before)*w;
+        const delta=(heightF[i]-before)*HSCALE;
+        if(delta<stats.maxCut)stats.maxCut=delta;if(delta>stats.maxFill)stats.maxFill=delta;
+        stats.cells++;
+      }
+    }
+  }
+  stats.maxCut=+stats.maxCut.toFixed(2);stats.maxFill=+stats.maxFill.toFixed(2);
+  if(typeof window!=='undefined')window.__mfRoadGradeStats=stats;
+  return stats;
+}
 function roadAt(wx,wy){
   if(!ROADG) return 0;
   return ROADG[clamp(wy/MAP*PGS|0,0,PGS-1)*PGS+clamp(wx/MAP*PGS|0,0,PGS-1)];
@@ -2133,7 +2536,7 @@ function markRoad(x0,y0,x1,y1,w){
    around them: fractured load-bearing slabs, buried service channels and
    eroded shoulders, never present-day asphalt with lane paint. All damage is
    derived from the segment coordinates so two clients build the same ground. */
-function paintRoad(c,x0,y0,x1,y1,W){
+function paintRoad(c,x0,y0,x1,y1,W,city){
   const k=TS/MAP,ax=x0*k,ay=y0*k,bx=x1*k,by=y1*k,w=W*k;
   let rs=((x0*73856093)^(y0*19349663)^(x1*83492791)^(y1*2654435761))|0;
   const rn=()=>{rs=(Math.imul(rs,1664525)+1013904223)|0;return (rs>>>8)/16777216;};
@@ -2145,31 +2548,55 @@ function paintRoad(c,x0,y0,x1,y1,W){
     :curTheme==='vespera'
     ?{cut:'rgba(31,21,25,.58)',edge:'#685548',slab:'#504740',seam:'rgba(30,20,22,.75)',bury:'rgba(188,126,79,.28)',glow:'rgba(166,86,190,.13)'}
     :{cut:'rgba(22,23,20,.58)',edge:'#5b5a50',slab:'#484a43',seam:'rgba(24,26,22,.72)',bury:'rgba(67,93,47,.26)',glow:'rgba(76,126,54,.12)'};
-  c.save();c.lineCap='square';c.lineJoin='bevel';
-  c.strokeStyle=pal.cut;c.lineWidth=w*1.36;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
-  c.strokeStyle=pal.edge;c.lineWidth=w*1.18;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
-  c.strokeStyle=pal.slab;c.lineWidth=w*.88;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+  /* City bury must not be biome green. The verdant highway palette plants
+     moss in the shoulders; that reads as lawn the moment streets reuse it. */
+  if(city){
+    pal.bury=curTheme==='ashland'?'rgba(92,70,48,.30)':curTheme==='arctic'?'rgba(180,188,194,.22)':curTheme==='vespera'?'rgba(78,62,54,.32)':'rgba(42,42,40,.36)';
+    pal.slab=curTheme==='ashland'?'#2c2826':curTheme==='arctic'?'#3a4248':curTheme==='vespera'?'#322c28':'#2f302c';
+    pal.edge=curTheme==='ashland'?'#4a4038':curTheme==='arctic'?'#5a646c':curTheme==='vespera'?'#4a4038':'#4a4c44';
+  }
+  c.save();c.lineCap=city?'butt':'square';c.lineJoin='bevel';
+  /* City sidewalks sit OUTSIDE the lane. A modest edge is the old highway
+     shoulder language; the w*1.36 cut is what ate the walk and stacked
+     black squares at civic crossings. */
+  if(!city){
+    c.strokeStyle=pal.cut;c.lineWidth=w*1.36;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+    c.strokeStyle=pal.edge;c.lineWidth=w*1.18;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+  }else{
+    c.strokeStyle=pal.edge;c.lineWidth=w*1.08;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+  }
+  c.strokeStyle=pal.slab;c.lineWidth=city?w*.94:w*.88;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
   /* No continuous longitudinal marks. Even dark twin grooves read as traffic
      lanes at phone zoom. Load is expressed by transverse slab joints, inset
-     repair plates and edge spalling instead. */
-  const slabs=Math.max(2,Math.floor(len/Math.max(24,w*1.22)));
+     repair plates and edge spalling instead. City lanes are ~13 wide, so the
+     highway 0.8px seam is a sub-texel and mips back into a flat grey stroke. */
+  const slabs=Math.max(2,Math.floor(len/Math.max(city?18:24,w*(city?0.9:1.22))));
+  const seamW=Math.max(city?1.8:0.8,w*(city?0.09:0.035));
   for(let i=1;i<slabs;i++){
     const t=(i+(rn()-.5)*.18)/slabs,px2=ax+dx*t,py2=ay+dy*t;
-    c.strokeStyle=pal.seam;c.lineWidth=Math.max(.8,w*.035);
+    c.strokeStyle=city?'rgba(14,14,13,.78)':pal.seam;c.lineWidth=seamW;
     c.beginPath();c.moveTo(px2-nx*w*.43,py2-ny*w*.43);c.lineTo(px2+nx*w*.43,py2+ny*w*.43);c.stroke();
     if((i%3)===1){
-      c.strokeStyle='rgba(190,183,164,.12)';c.lineWidth=Math.max(.6,w*.018);
+      c.strokeStyle=city?'rgba(168,158,138,.28)':'rgba(190,183,164,.12)';c.lineWidth=Math.max(city?1.2:0.6,w*(city?0.05:0.018));
       c.beginPath();c.moveTo(px2+tx-nx*w*.39,py2+ty-ny*w*.39);c.lineTo(px2+tx+nx*w*.39,py2+ty+ny*w*.39);c.stroke();
+      if(city){
+        /* Transverse repair plate, not a dash down the lane — a long-axis
+           rect was reading as the placeholder centre line. */
+        const along=w*.12, across=w*.38;
+        c.fillStyle='rgba(22,22,21,.48)';
+        c.save();c.translate(px2,py2);c.rotate(Math.atan2(dy,dx));
+        c.fillRect(-along,-across,along*2,across*2);c.restore();
+      }
     }
   }
   /* Missing plates, blast spalls and biome burial break the ruler-straight
      silhouette. They stay sparse so the causeway remains readable at command
      zoom and cost nothing after the terrain texture is uploaded. */
-  const wounds=Math.max(2,(len/46)|0);
+  const wounds=Math.max(city?4:2,(len/(city?28:46))|0);
   for(let i=0;i<wounds;i++){
-    const t=.04+rn()*.92,px2=ax+dx*t,py2=ay+dy*t,o=(rn()-.5)*w*.76;
+    const t=.04+rn()*.92,px2=ax+dx*t,py2=ay+dy*t,o=(rn()-.5)*w*(city?.55:.76);
     c.fillStyle=rn()>.38?pal.seam:pal.bury;c.beginPath();
-    c.ellipse(px2+nx*o,py2+ny*o,1.8+rn()*w*.12,1+rn()*w*.08,rn()*TAU,0,TAU);c.fill();
+    c.ellipse(px2+nx*o,py2+ny*o,(city?2.6:1.8)+rn()*w*(city?0.22:0.12),(city?1.6:1)+rn()*w*(city?0.14:0.08),rn()*TAU,0,TAU);c.fill();
   }
   /* Broken shoulder burial uses isolated drifts. A dashed edge stroke looked
      exactly like pale road paint once the terrain mip chain reduced it. */
@@ -2182,14 +2609,37 @@ function paintRoad(c,x0,y0,x1,y1,W){
     c.strokeStyle=pal.glow;c.lineWidth=Math.max(.8,w*.026);
     for(let i=2;i<slabs;i+=4){const t=i/slabs,px2=ax+dx*t,py2=ay+dy*t;c.beginPath();c.moveTo(px2-nx*w*.22,py2-ny*w*.22);c.lineTo(px2+nx*w*.10,py2+ny*w*.10);c.stroke();}
   }
+  if(city){
+    /* High-frequency grit the solid slab stroke erased. Seeded from the
+       segment so both clients draw the same oil, cracks and spall. */
+    const grit=Math.max(12,(len/5)|0);
+    for(let i=0;i<grit;i++){
+      const t=.03+rn()*.94,px2=ax+dx*t,py2=ay+dy*t,o=(rn()-.5)*w*.46;
+      c.fillStyle=rn()>.55?'rgba(18,18,17,'+(0.22+rn()*0.32)+')':'rgba(92,84,72,'+(0.16+rn()*0.26)+')';
+      c.beginPath();c.ellipse(px2+nx*o,py2+ny*o,1.8+rn()*3.8,1.0+rn()*2.2,rn()*TAU,0,TAU);c.fill();
+    }
+    const cracks=Math.max(3,(len/22)|0);
+    for(let i=0;i<cracks;i++){
+      const t=.08+rn()*.84,px2=ax+dx*t+nx*(rn()-.5)*w*.32,py2=ay+dy*t+ny*(rn()-.5)*w*.32;
+      c.strokeStyle='rgba(12,12,11,'+(0.32+rn()*0.34)+')';c.lineWidth=Math.max(1.1,1.2+rn()*1.6);
+      c.beginPath();c.moveTo(px2,py2);
+      c.lineTo(px2+tx*(10+rn()*22)+nx*(rn()-.5)*7,py2+ty*(10+rn()*22)+ny*(rn()-.5)*7);c.stroke();
+    }
+    const oils=Math.max(2,(len/55)|0);
+    for(let i=0;i<oils;i++){
+      const t=.12+rn()*.76,px2=ax+dx*t,py2=ay+dy*t;
+      c.fillStyle='rgba(10,10,9,'+(0.22+rn()*0.28)+')';
+      c.beginPath();c.ellipse(px2,py2,w*(.16+rn()*.22),w*(.06+rn()*.10),Math.atan2(dy,dx),0,TAU);c.fill();
+    }
+  }
   c.restore();
 }
 /* A road texture painted continuously across a water channel remains visible
    through the translucent water even when ROADG correctly rejects it. Split
    the visual stroke at the actual shoreline; raised authored bridges remain
    dry and therefore retain their causeway. */
-function paintRoadLand(c,x0,y0,x1,y1,W){
-  if(!heightF||battlefieldWaterMode()==='none'){paintRoad(c,x0,y0,x1,y1,W);return;}
+function paintRoadLand(c,x0,y0,x1,y1,W,city){
+  if(!heightF||battlefieldWaterMode()==='none'){paintRoad(c,x0,y0,x1,y1,W,city);return;}
   const n=Math.max(2,Math.ceil(Math.hypot(x1-x0,y1-y0)/18));let start=-1;
   const dry=t=>hAt(x0+(x1-x0)*t,y0+(y1-y0)*t)>=WATER_H+.002;
   for(let i=0;i<=n;i++){
@@ -2198,8 +2648,75 @@ function paintRoadLand(c,x0,y0,x1,y1,W){
     if((!ok||i===n)&&start>=0){
       const end=ok?1:Math.min(1,(i+.15)/n);
       const ax=x0+(x1-x0)*start,ay=y0+(y1-y0)*start,bx=x0+(x1-x0)*end,by=y0+(y1-y0)*end;
-      if(Math.hypot(bx-ax,by-ay)>W*.5)paintRoad(c,ax,ay,bx,by,W);
+      if(Math.hypot(bx-ax,by-ay)>W*.5)paintRoad(c,ax,ay,bx,by,W,city);
       start=-1;
+    }
+  }
+}
+/* Grid-shaped pad, not a disc. Span-circle fill was the cookie-cutter in
+   the 001652 shot: a tiled round stamp on lumpy biome. The authored streets
+   and lots already define the city; this is their AABB in grid space. */
+function cityPadFrame(Z){
+  if(!Z) return {ang:0,hx:40,hy:40};
+  if(Z._pad) return Z._pad;
+  let ang=0, zi=-1;
+  if(typeof cityZones!=='undefined') for(let i=0;i<cityZones.length;i++) if(cityZones[i]===Z){zi=i;break;}
+  if(typeof cityStreets!=='undefined') for(const S of cityStreets){
+    if(S[5]!==zi)continue;
+    ang=Math.atan2(S[3]-S[1],S[2]-S[0]); break;
+  }
+  const ca=Math.cos(-ang), sa=Math.sin(-ang);
+  let hx=36, hy=36;
+  const acc=(x,y,pad)=>{
+    const lx=(x-Z.x)*ca-(y-Z.y)*sa, ly=(x-Z.x)*sa+(y-Z.y)*ca;
+    hx=Math.max(hx,Math.abs(lx)+pad); hy=Math.max(hy,Math.abs(ly)+pad);
+  };
+  if(typeof cityStreets!=='undefined') for(const S of cityStreets){
+    if(S[5]!==zi)continue;
+    const pad=S[4]*.5+18;
+    acc(S[0],S[1],pad); acc(S[2],S[3],pad);
+  }
+  if(typeof cityPlan!=='undefined') for(const P of cityPlan){
+    if(P.zone!==zi)continue;
+    acc(P.x,P.y,Math.hypot(P.w,P.h)*.55+14);
+  }
+  return Z._pad={ang,hx,hy};
+}
+/* Spoil dirt on the graded rim. Blobs follow the grid rectangle so they
+   sit on scraped berms, not on a circular mask. Streets (CITYG>=2) stay clear. */
+function paintSiteBermSpoil(c,mask){
+  if(typeof cityZones==='undefined'||!cityZones.length) return;
+  const k=TS/MAP;
+  const dirt=curTheme==='ashland'?[58,50,44]:curTheme==='arctic'?[82,80,76]:
+             curTheme==='vespera'?[74,58,44]:[64,72,42];
+  for(const Z of cityZones){
+    const F=cityPadFrame(Z);
+    const bermW=typeof siteBermWidth==='function'?siteBermWidth(Z):56;
+    const n=12+((Math.max(F.hx,F.hy)/40)|0);
+    const cA=Math.cos(F.ang), sA=Math.sin(F.ang);
+    let s=((Z.x|0)*92821^(Z.y|0)*68917^0x51EF)|0;
+    const rn=()=>{s=(Math.imul(s,1103515245)+12345)|0;return(s>>>8)/16777216;};
+    for(let i=0;i<n;i++){
+      const side=(rn()*4)|0, u=rn();
+      const extra=bermW*(0.08+0.95*rn());
+      let lx,ly;
+      if(side===0){ lx=(u-.5)*2*F.hx; ly=-(F.hy+extra); }
+      else if(side===1){ lx=(u-.5)*2*F.hx; ly=F.hy+extra; }
+      else if(side===2){ lx=-(F.hx+extra); ly=(u-.5)*2*F.hy; }
+      else { lx=F.hx+extra; ly=(u-.5)*2*F.hy; }
+      const wx=Z.x+lx*cA-ly*sA, wy=Z.y+lx*sA+ly*cA;
+      if(typeof cityGroundAt==='function'&&cityGroundAt(wx,wy)>=2) continue;
+      const tan=side<2?F.ang:F.ang+Math.PI*.5, clods=2+(rn()*2)|0;
+      for(let j=0;j<clods;j++){
+        const len=(14+rn()*bermW*0.55)*k, fat=(3.2+rn()*7)*k;
+        const ox=(rn()-.5)*len*0.4, oy=(rn()-.5)*fat;
+        if(mask) c.fillStyle=rn()>.5?'#2c2418':'#3a3a32';
+        else{
+          const al=0.28+rn()*0.40;
+          c.fillStyle='rgba('+dirt[0]+','+dirt[1]+','+dirt[2]+','+al+')';
+        }
+        c.beginPath();c.ellipse(wx*k+ox,wy*k+oy,len,fat,tan+(rn()-.5)*0.4,0,TAU);c.fill();
+      }
     }
   }
 }
@@ -2211,37 +2728,101 @@ function paintCityGround(c){
   if(!cityZones.length) return;
   const k=TS/MAP;
   c.save();
-  /* A city is a connected piece of civil engineering, not one circular tint
-     plus unrelated rectangles. Lay a compacted subgrade under every street
-     first, wide enough to meet the plots. The actual causeway pass is painted
-     afterwards, so shoulders, gutters and aprons form one hierarchy. */
-  const sub=curTheme==='ashland'?['#463a35','#342d2b','rgba(111,69,43,.42)']:
-            curTheme==='arctic'?['#59646b','#434e55','rgba(211,226,233,.32)']:
-            curTheme==='vespera'?['#574b42','#413a36','rgba(151,104,68,.33)']:
-                                  ['#55564d','#40433d','rgba(72,92,57,.34)'];
+  /* A city is a connected piece of civil engineering: grey yards, pale
+     sidewalks, dark carriageways. Wide mossy shoulders buried that hierarchy. */
+  const walk=curTheme==='ashland'?'rgba(118,108,100,.96)':
+             curTheme==='arctic'?'rgba(148,156,162,.95)':
+             curTheme==='vespera'?'rgba(128,118,108,.95)':
+                                  'rgba(138,138,132,.96)';
+  const kerbC=curTheme==='ashland'?'rgba(28,24,22,.92)':
+              curTheme==='arctic'?'rgba(36,42,48,.90)':
+              curTheme==='vespera'?'rgba(32,28,26,.90)':
+                                   'rgba(24,25,24,.92)';
   for(const Z of cityZones){
-    const zx=Z.x*k, zy=Z.y*k, zr=Z.r*k;
-    const g=c.createRadialGradient(zx,zy,zr*0.25,zx,zy,zr);
-    g.addColorStop(0,Z.ind?'rgba(47,45,43,.42)':'rgba(72,72,67,.30)');
-    g.addColorStop(0.62,Z.ind?'rgba(43,40,38,.25)':'rgba(62,62,57,.18)');
-    g.addColorStop(1,'rgba(39,38,35,0)');
-    c.fillStyle=g; c.beginPath(); c.arc(zx,zy,zr,0,TAU); c.fill();
+    const F=cityPadFrame(Z), zx=Z.x*k, zy=Z.y*k;
+    /* Compacted yard is the GRID rectangle. A 12-gon/arc to Z.span was the
+       sharp tiled disc in the 001652 shot. Feathered dirt strokes then
+       dissolve that hardscape into biome — blend at the rim, not on lots. */
+    c.save(); c.translate(zx,zy); c.rotate(F.ang);
+    const hx=F.hx*k, hy=F.hy*k;
+    /* Opaque yards. Semi-transparent grey over biome grass survived at 2048
+       and vanished when the minimap downsampled to 132 px — that is the
+       verdant-minimap / paved-3D mismatch. The 3D pave splat already reads
+       hardscape; canvas consumers (minimap, thumbs) only see this albedo. */
+    c.fillStyle=Z.ind?'rgb(44,43,41)':'rgb(68,68,64)';
+    c.fillRect(-hx,-hy,hx*2,hy*2);
+    const dirt=curTheme==='ashland'?[62,52,44]:curTheme==='arctic'?[92,90,86]:
+               curTheme==='vespera'?[78,62,48]:[72,82,48];
+    c.lineJoin='round';
+    for(let i=0;i<12;i++){
+      const o=(8+i*11)*k, al=0.40*(1-i/12)*(1-i/12);
+      c.strokeStyle='rgba('+dirt[0]+','+dirt[1]+','+dirt[2]+','+al+')';
+      c.lineWidth=(14+i*4)*k;
+      c.strokeRect(-hx-o,-hy-o,hx*2+o*2,hy*2+o*2);
+    }
+    /* Industrial pad suggestion on the lots themselves. The radial wash left
+       empty charcoal rectangles between warehouses. */
+    let zs=((Z.x*92821)^(Z.y*68917))|0;
+    const zrn=()=>{zs=(Math.imul(zs,1103515245)+12345)|0;return(zs>>>8)/16777216;};
+    c.beginPath(); c.rect(-hx,-hy,hx*2,hy*2); c.clip();
+    /* Cement grain, not a 1-texel hatch. Square fillRects and a 16px grid
+       were the chunky pavement at close zoom. */
+    const zr=Math.max(hx,hy);
+    const grit=90+((Z.r/12)|0);
+    for(let i=0;i<grit;i++){
+      const px=(zrn()-.5)*zr*1.85, py=(zrn()-.5)*zr*1.85;
+      const rx=(2.4+zrn()*7.5)*k, ry=rx*(0.45+zrn()*0.7);
+      c.fillStyle=zrn()>0.5
+        ?'rgba(22,22,21,'+(0.10+zrn()*0.18)+')'
+        :'rgba(92,88,80,'+(0.08+zrn()*0.16)+')';
+      c.beginPath(); c.ellipse(px,py,rx,ry,zrn()*TAU,0,TAU); c.fill();
+    }
+    c.restore();
   }
-  c.lineCap='round';c.lineJoin='round';
+  paintSiteBermSpoil(c,0);
+  /* Butt caps are intentional. Round caps turned every dead-end into a giant
+     racetrack bulb extending beyond the authored district boundary. */
+  c.lineCap='butt';c.lineJoin='bevel';
   for(const S of cityStreets){
     const ax=S[0]*k,ay=S[1]*k,bx=S[2]*k,by=S[3]*k,w=S[4]*k;
-    c.strokeStyle='rgba(20,21,20,.28)';c.lineWidth=w+58*k;
-    c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
-    c.strokeStyle=sub[0];c.lineWidth=w+42*k;
-    c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
-    c.strokeStyle=sub[1];c.lineWidth=w+24*k;
-    c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
-    /* Buried drainage/service channels visually tie the shoulder to the plot
-       instead of leaving a clean modern asphalt edge. */
     const dx=bx-ax,dy=by-ay,L=Math.hypot(dx,dy)||1,nx=-dy/L,ny=dx/L;
-    c.strokeStyle=sub[2];c.lineWidth=Math.max(.8,1.2*k);
+    /* Sidewalks are OFFSET BANDS, not one fat pale stroke through the lane.
+       w+28 painted the whole corridor light-grey; the later asphalt then
+       read as the thin dark centre line in the 12:44 shot. */
+    const walkW=14*k, kerbGap=2.2*k, walkOff=w*.5+kerbGap+walkW*.5;
+    c.strokeStyle=walk;c.lineWidth=walkW;
     for(const side of [-1,1]){
-      const off=(w*.52+7*k)*side;c.beginPath();c.moveTo(ax+nx*off,ay+ny*off);c.lineTo(bx+nx*off,by+ny*off);c.stroke();
+      c.beginPath();c.moveTo(ax+nx*walkOff*side,ay+ny*walkOff*side);
+      c.lineTo(bx+nx*walkOff*side,by+ny*walkOff*side);c.stroke();
+    }
+    /* Pour joints only across the walk, so they do not stripe the asphalt. */
+    c.strokeStyle='rgba(22,22,20,.58)';c.lineWidth=Math.max(1.2,w*.08);
+    const nWalk=Math.max(2,Math.floor((L/k)/14));
+    const inner=w*.5+kerbGap, outer=inner+walkW;
+    for(let j=1;j<nWalk;j++){
+      const t=j/nWalk,px2=ax+dx*t,py2=ay+dy*t;
+      for(const side of [-1,1]){
+        c.beginPath();
+        c.moveTo(px2+nx*inner*side,py2+ny*inner*side);
+        c.lineTo(px2+nx*outer*side,py2+ny*outer*side);c.stroke();
+      }
+    }
+    let ws=((S[0]*73856093)^(S[1]*19349663)^(S[2]*83492791))|0;
+    const wrn=()=>{ws=(Math.imul(ws,1664525)+1013904223)|0;return(ws>>>8)/16777216;};
+    const walkGrit=Math.max(10,(L/k/7)|0);
+    for(let i=0;i<walkGrit;i++){
+      const t=.04+wrn()*.92, side=wrn()>.5?1:-1;
+      const o=walkOff+(wrn()-.5)*walkW*.42;
+      const px2=ax+dx*t+nx*o*side,py2=ay+dy*t+ny*o*side;
+      c.fillStyle='rgba('+(70+wrn()*70|0)+','+(70+wrn()*64|0)+','+(66+wrn()*56|0)+','+(0.22+wrn()*0.28)+')';
+      c.beginPath();c.ellipse(px2,py2,2.0+wrn()*4.2,1.2+wrn()*2.4,wrn()*TAU,0,TAU);c.fill();
+    }
+    /* Kerb lives at the walk/asphalt join — a thin formed rim, not a second
+       full-width dark stroke that collapses into a centre line. */
+    c.strokeStyle=kerbC;c.lineWidth=Math.max(1.8,2.6*k);
+    for(const side of [-1,1]){
+      const off=(w*.5+1.1*k)*side;
+      c.beginPath();c.moveTo(ax+nx*off,ay+ny*off);c.lineTo(bx+nx*off,by+ny*off);c.stroke();
     }
   }
   /* Every lot now owns one short, explicit curb-to-entrance apron. This is the
@@ -2264,7 +2845,7 @@ function paintCityGround(c){
       c.beginPath();c.moveTo(ax+nx*off,ay+ny*off);c.lineTo(bx+nx*off,by+ny*off);c.stroke();
     }
   }
-  c.lineCap='round';
+  c.lineCap='butt';
   for(const P of cityPlan){
     const px2=P.x*k, py2=P.y*k;
     const Z=cityZones[P.zone]||{ind:0};
@@ -2305,8 +2886,8 @@ function paintCityGround(c){
     /* World-scale pour joints and inset gutters supply close-zoom resolution
        without enlarging the already 2048 map texture. Broad quiet panels stay
        readable while the building edge receives dense service detail. */
-    c.strokeStyle=Z.ind?'rgba(185,137,73,.23)':'rgba(184,191,174,.18)';c.lineWidth=Math.max(.7,1.05*k);
-    const joint=Math.max(13,26*k);
+    c.strokeStyle=Z.ind?'rgba(185,137,73,.20)':'rgba(184,191,174,.16)';c.lineWidth=Math.max(1.8,2.4*k);
+    const joint=Math.max(22,34*k);
     c.beginPath();
     for(let xx=-w*.5+joint;xx<w*.5;xx+=joint){c.moveTo(xx,-h*.5);c.lineTo(xx,h*.5);}
     for(let yy=-h*.5+joint;yy<h*.5;yy+=joint){c.moveTo(-w*.5,yy);c.lineTo(w*.5,yy);}
@@ -2363,25 +2944,36 @@ function paintResourceGround(c){
 }
 function paintResourceGroundNode(c,N,kind,tier,collapsed){
   if(!N)return;
+  const K=typeof biomeKit==='function'?biomeKit():null;
+  const habit=kind==='mass'?(K&&K.mass)||'ore':(K&&K.energy)||'vent';
   const k=TS/MAP,cx=N.x*k,cy=N.y*k,initial=N.initialTier||3;
-  const maxR=(kind==='mass'?54+initial*17:72)*k,liveR=maxR*(tier>0?.48+tier*.17:.42);
+  /* Scar frames the mound/vent. The old 70–105 wu near-black disc WAS the
+     hole in the user shots — mesh sat in the middle and vanished. Civic
+     pavement must not get that disc: CITYG already has identity. */
+  const civic=typeof cityGroundAt==='function'&&cityGroundAt(N.x,N.y)>=1;
+  const maxR=(kind==='mass'?(civic?16:24)+initial*4:(civic?20:28))*k;
+  const liveR=maxR*(tier>0?.58+tier*.12:.40);
   let rs=((N.x*92821)^(N.y*68917)^(kind==='mass'?0x51a7:0xe912))|0;
   const rn=()=>{rs=(Math.imul(rs,1103515245)+12345)|0;return (rs>>>8)/16777216;};
+  /* Habit is lithology, not a HUD colour. Cyan/pink orbs were the same
+     sticker on every planet; ore/ice/slag/ichor scars are the ground wound. */
+  const scar=habit==='ice'?['rgba(92,118,138,.48)','rgba(120,148,168,.36)','rgba(78,104,128,.32)','rgba(186,220,236,.34)']
+    :habit==='slag'?['rgba(88,58,46,.50)','rgba(118,72,50,.36)','rgba(132,78,48,.32)','rgba(214,132,78,.30)']
+    :habit==='ichor'?['rgba(78,42,58,.50)','rgba(108,52,72,.36)','rgba(124,48,74,.32)','rgba(200,88,122,.32)']
+    :habit==='frost'?['rgba(70,92,108,.46)','rgba(96,124,140,.34)','rgba(80,118,136,.30)','rgba(176,226,236,.30)']
+    :habit==='heat'?['rgba(92,54,36,.48)','rgba(128,72,40,.36)','rgba(148,78,36,.32)','rgba(232,140,64,.30)']
+    :habit==='spore'?['rgba(74,44,62,.48)','rgba(104,56,80,.36)','rgba(118,50,86,.32)','rgba(190,92,148,.30)']
+    :habit==='vent'?['rgba(52,96,104,.40)','rgba(78,148,156,.32)','rgba(64,128,136,.28)','rgba(130,216,224,.36)']
+    :['rgba(96,82,62,.46)','rgba(128,108,78,.34)','rgba(118,108,72,.30)','rgba(186,164,104,.28)'];
   c.save();
   if(collapsed){
     const dead=c.createRadialGradient(cx,cy,maxR*.08,cx,cy,maxR*1.15);
-    dead.addColorStop(0,kind==='mass'?'rgba(30,34,43,.76)':'rgba(30,35,37,.72)');
-    dead.addColorStop(.58,kind==='mass'?'rgba(45,39,53,.52)':'rgba(49,54,53,.48)');
-    dead.addColorStop(1,'rgba(22,22,22,0)');
+    dead.addColorStop(0,scar[0]);dead.addColorStop(.58,scar[1]);dead.addColorStop(1,'rgba(22,22,22,0)');
     c.fillStyle=dead;c.beginPath();c.arc(cx,cy,maxR*1.15,0,TAU);c.fill();
   }
   const active=tier>0;
-  const core=kind==='mass'
-    ?(tier===3?'rgba(116,55,137,.48)':tier===2?'rgba(42,105,83,.44)':tier===1?'rgba(40,92,116,.40)':'rgba(42,42,48,.38)')
-    :(tier===3?'rgba(35,104,122,.46)':tier===2?'rgba(54,88,94,.40)':tier===1?'rgba(74,73,66,.38)':'rgba(40,41,40,.38)');
-  const edge=kind==='mass'?(active?'rgba(30,42,57,0)':'rgba(39,38,42,0)'):(active?'rgba(46,57,56,0)':'rgba(37,36,34,0)');
   const g=c.createRadialGradient(cx,cy,liveR*.05,cx,cy,liveR);
-  g.addColorStop(0,core);g.addColorStop(.55,core);g.addColorStop(1,edge);
+  g.addColorStop(0,active?scar[2]:scar[0]);g.addColorStop(.55,active?scar[1]:scar[0]);g.addColorStop(1,'rgba(20,20,20,0)');
   c.fillStyle=g;c.beginPath();
   const pts=18;
   for(let p=0;p<=pts;p++){
@@ -2393,15 +2985,13 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
   c.lineCap='round';
   for(let n=0;n<veins;n++){
     const a=n/veins*TAU+(rn()-.5)*.30,r0=liveR*(.12+rn()*.10),r1=liveR*(.62+rn()*.32);
-    c.strokeStyle=kind==='mass'
-      ?(active?(tier===3?'rgba(221,123,255,.36)':tier===2?'rgba(103,237,175,.31)':'rgba(105,218,255,.28)'):'rgba(109,107,119,.16)')
-      :(active?'rgba(111,226,242,.30)':'rgba(110,106,94,.14)');
+    c.strokeStyle=active?scar[3]:'rgba(90,86,80,.14)';
     c.lineWidth=Math.max(.65,(1.1+rn()*1.8)*k);
     c.beginPath();c.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
     c.quadraticCurveTo(cx+Math.cos(a+(rn()-.5)*.65)*r1*.54,cy+Math.sin(a+(rn()-.5)*.65)*r1*.54,cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);c.stroke();
   }
   if(kind==='energy'){
-    c.strokeStyle=active?'rgba(148,224,225,.22)':'rgba(96,91,82,.16)';c.lineWidth=Math.max(1,2.2*k);
+    c.strokeStyle=active?scar[3]:'rgba(96,91,82,.16)';c.lineWidth=Math.max(1,2.2*k);
     c.beginPath();c.arc(cx,cy,liveR*.34,0,TAU);c.stroke();
     for(let n=0;n<9;n++){
       const a=n/9*TAU+rn()*.18,d=liveR*(.38+rn()*.25),sz=(2+rn()*5)*k;
@@ -2410,7 +3000,7 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
   }else{
     for(let n=0;n<6+initial*2;n++){
       const a=rn()*TAU,d=liveR*(.28+rn()*.55),s=(1.4+rn()*3.2)*k;
-      c.fillStyle=active?'rgba(190,214,224,.18)':'rgba(90,88,94,.13)';
+      c.fillStyle=active?'rgba(120,108,88,.20)':'rgba(70,66,60,.12)';
       c.beginPath();c.moveTo(cx+Math.cos(a)*d,cy+Math.sin(a)*d-s*1.8);c.lineTo(cx+Math.cos(a)*d+s,cy+Math.sin(a)*d+s);c.lineTo(cx+Math.cos(a)*d-s,cy+Math.sin(a)*d+s);c.closePath();c.fill();
     }
   }
@@ -2428,73 +3018,171 @@ function refreshResourceTerrainNode(N,kind,before,after){
    final stretch in alpha-stepped slices. The macro tint fades with the
    material mask instead of running grey to a hard cap — the missing half of
    "road ends must blend". Slice steps vanish under the texture noise. */
-function paintFadingRoad(c,x0,y0,x1,y1,W,fadeA,fadeB){
+function paintFadingRoad(c,x0,y0,x1,y1,W,fadeA,fadeB,city){
   const dx=x1-x0,dy=y1-y0,L=Math.hypot(dx,dy)||1,ux=dx/L,uy=dy/L;
   const F=Math.min(L*0.42, W*2.6+18);
   const a0=fadeA?F:0, b0=fadeB?F:0;
   const bx0=x0+ux*a0, by0=y0+uy*a0, bx1=x1-ux*b0, by1=y1-uy*b0;
-  if(Math.hypot(bx1-bx0,by1-by0)>2) paintRoadLand(c,bx0,by0,bx1,by1,W);
+  if(Math.hypot(bx1-bx0,by1-by0)>2) paintRoadLand(c,bx0,by0,bx1,by1,W,city);
   const slice=(sx,sy,dirx,diry,len)=>{
     const N=6;
     for(let k2=0;k2<N;k2++){
       const t0=k2/N,t1=(k2+1)/N;
       c.globalAlpha=1-(k2+0.5)/N;
-      paintRoadLand(c,sx+dirx*len*t0,sy+diry*len*t0,sx+dirx*len*t1,sy+diry*len*t1,W*(1-0.25*t1));
+      paintRoadLand(c,sx+dirx*len*t0,sy+diry*len*t0,sx+dirx*len*t1,sy+diry*len*t1,W*(1-0.25*t1),city);
     }
     c.globalAlpha=1;
   };
   if(fadeA) slice(bx0,by0,-ux,-uy,a0);
   if(fadeB) slice(bx1,by1,ux,uy,b0);
 }
-function buildRoads(c,def){
-  ROADG=new Uint8Array(PGS*PGS);
-  if(!def.roads) return;
-  const A=[MAP*SP_LO,MAP*SP_HI], B=[MAP*SP_HI,MAP*SP_LO];
-  const D=[MAP*SP_LO,MAP*SP_LO], E=[MAP*SP_HI,MAP*SP_HI], C=[MAP*0.5,MAP*0.5];
-  const drawPath=(path,width)=>{
-    for(let i=1;i<path.length;i++){
-      const p=path[i-1],q=path[i];
-      const first=i===1, last=i===path.length-1;
-      paintFadingRoad(c,p[0],p[1],q[0],q[1],width,first,last);
-      markRoad(p[0],p[1],q[0],q[1],width);
-    }
+/* City streets are a single paved network. Slab cores first so a later
+   street cannot lay a dark shoulder over an earlier one and manufacture a
+   black square at the crossing — then the same wear paintRoad uses on
+   highways, or civic lanes stay a three-line vector placeholder. */
+function mfPaintCityRoadNetwork(c){
+  if(typeof cityStreets==='undefined'||!cityStreets.length)return;
+  const k=TS/MAP,slab=curTheme==='ashland'?'#2c2826':curTheme==='arctic'?'#3a4248':curTheme==='vespera'?'#322c28':'#2f302c';
+  c.save();c.lineCap='butt';c.lineJoin='bevel';c.strokeStyle=slab;
+  for(const S of cityStreets){
+    c.lineWidth=Math.max(2,S[4]*k*.90);c.beginPath();c.moveTo(S[0]*k,S[1]*k);c.lineTo(S[2]*k,S[3]*k);c.stroke();
+  }
+  c.restore();
+  for(const S of cityStreets) paintRoadLand(c,S[0],S[1],S[2],S[3],S[4],1);
+}
+function mfBoxInside(wx,wy,Z,pad){
+  const F=cityPadFrame(Z), p=pad==null?8:pad;
+  const ca=Math.cos(-F.ang), sa=Math.sin(-F.ang);
+  const lx=(wx-Z.x)*ca-(wy-Z.y)*sa, ly=(wx-Z.x)*sa+(wy-Z.y)*ca;
+  return Math.abs(lx)<=F.hx+p && Math.abs(ly)<=F.hy+p;
+}
+function mfSnapStreet(wx,wy,Z){
+  let best=null,dBest=1e9;
+  if(typeof cityStreets==='undefined') return null;
+  for(const S of cityStreets){
+    if(cityZones[S[5]]!==Z) continue;
+    const ax=S[0],ay=S[1],bx=S[2],by=S[3],dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1;
+    const t=clamp(((wx-ax)*dx+(wy-ay)*dy)/L2,0,1);
+    const px=ax+dx*t, py=ay+dy*t, d=Math.hypot(wx-px,wy-py);
+    if(d<dBest){ dBest=d; best={x:px,y:py,w:S[4],d}; }
+  }
+  return best;
+}
+function mfCrossTs(ax,ay,bx,by,Z){
+  const n=28, ts=[];
+  let prev=mfBoxInside(ax,ay,Z,8);
+  for(let i=1;i<=n;i++){
+    const t=i/n, now=mfBoxInside(ax+(bx-ax)*t, ay+(by-ay)*t, Z, 8);
+    if(now!==prev) ts.push(Math.max(0.012, Math.min(0.988, t-0.5/n)));
+    prev=now;
+  }
+  return ts;
+}
+function mfEmitJoin(c,wx,wy,Z,hw){
+  const snap=mfSnapStreet(wx,wy,Z);
+  if(!snap||snap.d<12) return;
+  const w=(hw+snap.w)*.52;
+  /* City=1: same dark slab family as the grid. Pale highway paint was the
+     smooth ribbon that refused to meet the chunky streets in 001652. */
+  paintRoadLand(c,wx,wy,snap.x,snap.y,w,1);
+  markRoad(wx,wy,snap.x,snap.y,w);
+  ROAD_JOINS.push([wx,wy,snap.x,snap.y,w]);
+}
+function mfWildernessRuns(ax,ay,bx,by){
+  const zones=(typeof cityZones!=='undefined'&&cityZones)||[];
+  const at=t=>[ax+(bx-ax)*t, ay+(by-ay)*t];
+  const inZ=(x,y)=>{
+    for(const Z of zones){ if(mfBoxInside(x,y,Z,8)) return Z; }
+    return null;
   };
-  /* One bold base-to-base artery through the contested centre. A straight line
-     reads as deliberate engineering — and a single road through the middle is
-     clean, where two roads crossing at C stacked five semi-opaque strokes each
-     into a doubled-up dark knot. The flanking route shares the same
-     guaranteed-dry anti-diagonal corridor but bends off it so its junction with
-     the highway lands at ONE off-axis crossing instead of a symmetric X. It is
-     drawn first so the bolder highway overpaints the junction like an overpass
-     the branch feeds into. */
-  const P=(t,o)=>[D[0]+(E[0]-D[0])*t+o, D[1]+(E[1]-D[1])*t-o];  // point on the diagonal, pulled perpendicular
-  /* Width discipline: the old 46-unit artery was six tank-lanes of grey —
-     what read as "too large". Two lanes plus shoulders is 24; the causeway is
-     a lane and a half. Roads are supposed to be narrower than the armour
-     column that fights over them. */
-  drawPath([D,P(0.40,70),E],17);          // flanking logistics causeway
-  drawPath([A,C,B],24);                   // armoured artery, painted last
-  /* The mask builder redraws these as vector strokes with faded endpoints,
-     so highway ENDS dissolve into the terrain instead of stopping on a
-     rasterised cell boundary. */
-  ROAD_PATHS=[{path:[D,P(0.40,70),E],w:17},{path:[A,C,B],w:24}];
-
+  const cuts=[0,1];
+  for(const Z of zones) for(const t of mfCrossTs(ax,ay,bx,by,Z)) cuts.push(t);
+  cuts.sort((a,b)=>a-b);
+  const runs=[];
+  for(let i=0;i<cuts.length-1;i++){
+    const t0=cuts[i], t1=cuts[i+1];
+    if(t1-t0<0.02) continue;
+    const mid=at((t0+t1)*.5);
+    if(inZ(mid[0],mid[1])) continue;
+    runs.push({a:at(t0),b:at(t1),t0,t1});
+  }
+  return runs;
+}
+function mfPaintHighwaySeg(c,ax,ay,bx,by,W,fadeA,fadeB){
+  const zones=(typeof cityZones!=='undefined'&&cityZones)||[];
+  const at=t=>[ax+(bx-ax)*t, ay+(by-ay)*t];
+  for(const run of mfWildernessRuns(ax,ay,bx,by)){
+    paintFadingRoad(c,run.a[0],run.a[1],run.b[0],run.b[1],W, fadeA&&run.t0<0.02, fadeB&&run.t1>0.98, 1);
+    markRoad(run.a[0],run.a[1],run.b[0],run.b[1],W);
+  }
+  for(const Z of zones){
+    for(const t of mfCrossTs(ax,ay,bx,by,Z)){
+      const p=at(t); mfEmitJoin(c,p[0],p[1],Z,W);
+    }
+  }
+}
+function buildRoads(c,def,paths){
+  ROADG=new Uint8Array(PGS*PGS);
+  ROAD_JOINS=[];
+  ROAD_PATHS=def.roads?(paths||mfRoadNetworkSpec()):[];
+  if(!def.roads) return;
+  /* Clip at the city grid and T-join. Painting the diagonal through the pad
+     left a pale ribbon that the yard fill then cut off — two road systems. */
+  for(const R of ROAD_PATHS){
+    const P=R.path;
+    for(let i=1;i<P.length;i++)
+      mfPaintHighwaySeg(c,P[i-1][0],P[i-1][1],P[i][0],P[i][1],R.w,i===1,i===P.length-1);
+  }
 }
 let heightF=null;                      // Float32Array TS*TS
 const PGS=384;                         // ~8.3 m cells on 3.2 km; old grid was ~8.1 m on 2.6 km
 let PASS=null;                         // Uint8Array PGS*PGS  1=walkable
 let NAVW=null,NAVCOMP=null,NAV_MAIN=0,NAV_SIZE=[]; // connected navigable-water components
 const WATER_H=0.335, BEACH_H=0.375;
+/* Authored hydrology snapshot (oceans / rivers / lakes from gen). Combat
+   craters that punch below WATER_H used to spawn fake ponds because every
+   downstream system keyed off live height. Frozen at gen; deform never sets
+   new bits. */
+let WATER_AUTH=null;
+function snapshotAuthoredWater(){
+  WATER_AUTH=new Uint8Array(TS*TS);
+  for(let i=0;i<TS*TS;i++) WATER_AUTH[i]=heightF[i]<WATER_H?1:0;
+  if(typeof waterLipReset==='function') waterLipReset();
+}
+function authoredWaterAt(wx,wy){
+  if(!WATER_AUTH||!heightF) return typeof hAt==='function'&&hAt(wx,wy)<WATER_H;
+  const x=clamp(wx/MAP*TS|0,0,TS-1), y=clamp(wy/MAP*TS|0,0,TS-1);
+  return !!WATER_AUTH[y*TS+x];
+}
+function authoredWaterTexel(tx,ty){
+  if(!WATER_AUTH) return false;
+  return !!WATER_AUTH[clamp(ty,0,TS-1)*TS+clamp(tx,0,TS-1)];
+}
 
 function hAt(wx,wy){                    // height sample by world coords
+  /* resetWorld → setupDoodads can run before applyTheme builds heightF
+     (hard-refresh then newSkirmish). Indexing null threw and aborted the match. */
+  if(!heightF) return 0.5;
   const x=clamp(wx/MAP*TS|0,0,TS-1), y=clamp(wy/MAP*TS|0,0,TS-1);
   return heightF[y*TS+x];
 }
 function isWalkable(wx,wy){
+  /* PASS is built with heightF. newSkirmish → spawnUnit → findLand on a
+     cold boot (PASS still null) threw reading PASS[cell] after hAt was fixed. */
+  if(!PASS) return true;
   const x=clamp(wx/MAP*PGS|0,0,PGS-1), y=clamp(wy/MAP*PGS|0,0,PGS-1);
   return PASS[y*PGS+x];
 }
 function battlefieldWaterMode(){const D=MAPDEFS[curMap]||MAPDEFS.vanguard;return D.waterMode||'none';}
+function battlefieldWaterFlow(){
+  /* Same axis mapWaterCarve uses for the authored channel. GPU river flow
+     must scroll along this vector or the surface reads as a blue stripe
+     moving the wrong way. World XZ; unit length. */
+  const D=MAPDEFS[curMap]||MAPDEFS.vanguard;
+  const mode=D.waterMode||'none';
+  const ang=((D.seed%13)-6)*.055+(mode==='river'?.36:.08);
+  return [Math.cos(ang), Math.sin(ang)];
+}
 function battlefieldNavalEnabled(){
   const D=MAPDEFS[curMap]||MAPDEFS.vanguard;
   /* 360 cells is roughly 24,000 square world units at the fixed 320 grid:
@@ -2540,7 +3228,7 @@ function buildTerrain(themeKey){
   const TH=THEMES[themeKey||curTheme]||THEMES.verdant;
   const LP=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
   terrainCanvas=document.createElement('canvas'); terrainCanvas.width=TS; terrainCanvas.height=TS;
-  const c=terrainCanvas.getContext('2d');
+  const c=mf2d(terrainCanvas);
   const MD=MAPDEFS[curMap]||MAPDEFS.vanguard;
   srand(MD.seed);
   const GN=64, grid=new Float32Array((GN+1)*(GN+1));
@@ -2591,10 +3279,12 @@ function buildTerrain(themeKey){
         if(d<B[2]) h=Math.max(h, 0.42+B[3]*(1-d/B[2]));
       }
       const cd=corridor(wx,wy);
-      if(cd<300) h=Math.max(h, 0.46+0.08*(1-cd/300));
+      /* Broad corridor is a water guard only. Its old 0.08 crown was a 9.4 m
+         artificial ridge under a 24 m road; exact grading happens later. */
+      if(cd<300) h=Math.max(h,0.452+0.010*(1-cd/300));
       if(MD.roads){
         const xd=crossCorridor(wx,wy);
-        if(xd<260) h=Math.max(h,0.46+0.065*(1-xd/260));
+        if(xd<260) h=Math.max(h,0.452+0.009*(1-xd/260));
       }
       heightF[y*TS+x]=h;
     }
@@ -2620,6 +3310,8 @@ function buildTerrain(themeKey){
     if(typeof terraShape==='function')
       terraLastStats=terraShape(heightF,TS,MD,bumps,[corridor,crossCorridor],window.__depPts);
   }catch(e){ console.warn('terragen: skipped —',e&&e.message); }
+  const mfRoadSpec=MD.roads?mfRoadNetworkSpec():[];
+  if(mfRoadSpec.length)mfGradeRoadNetwork(mfRoadSpec);
   /* Build coarse passability first because district planning needs a truthful
      land/water test. The old order shaded the original hills, flattened city
      plots afterwards, then uploaded that stale lighting beneath the new mesh.
@@ -2640,29 +3332,29 @@ function buildTerrain(themeKey){
   if(typeof initWorldKit==='function') initWorldKit();
   planDistricts();
   if(typeof gradeDistrictTerrain==='function')gradeDistrictTerrain();
+  snapshotAuthoredWater();
   // ---- pass 2: shared region shader (also used for volumetric crater re-lighting) ----
   SCORCH=new Uint8Array(TS*TS);
-  TSHADE={ grid, grid2, vnoise, TH };
+  TSHADE={ grid, grid2, vnoise, TH:typeof themePaint==='function'?themePaint(TH,MD):TH };
   shadeRegion(0,0,TS,TS,c);
   // water depth blobs + edge vignette
   const eg=c.createRadialGradient(TS/2,TS/2,TS*0.44,TS/2,TS/2,TS*0.74);
   eg.addColorStop(0,'rgba(0,0,0,0)'); eg.addColorStop(1,'rgba(4,10,18,.6)');
   c.fillStyle=eg; c.fillRect(0,0,TS,TS);
-  buildRoads(c,MD);                    // highways painted after the final ground shader
   buildNavalMask();
-  paintCityGround(c);                  // connected subgrade + authored plots under the streets
-  for(const S of cityStreets){
-    paintFadingRoad(c,S[0],S[1],S[2],S[3],S[4],true,true);
-    markRoad(S[0],S[1],S[2],S[3],S[4]);
-  }
+  paintCityGround(c);                  // grid yard + berm fade, then sidewalks
+  buildRoads(c,MD,mfRoadSpec);         // clipped highways T-join the grid (city asphalt)
+  mfPaintCityRoadNetwork(c);
+  for(const S of cityStreets)markRoad(S[0],S[1],S[2],S[3],S[4]);
   paintResourceGround(c);              // mass corruption and geothermal scars live in the terrain
   initPaving();                        // snapshot pristine ground + reset the paving mask
   buildGroundMask();                   // hardscape mask for the splat terrain shader
+  stampHardscapeAlbedo();              // canvas albedo matches the 3D pave splat
   buildTerrainMesh(themeKey);          // the heightfield becomes REAL displaced geometry
   uploadHeightTex(null);               // full per-pixel-normal sheet for the new field
   const tex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,tex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,terrainCanvas);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,terrainCanvas);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -2674,13 +3366,193 @@ function buildTerrain(themeKey){
      erases the painted roads and kerbs the whole terrain design rests on. */
   const ani=gl.getExtension('EXT_texture_filter_anisotropic');
   if(ani) gl.texParameterf(gl.TEXTURE_2D,ani.TEXTURE_MAX_ANISOTROPY_EXT,
-                           Math.min(8,gl.getParameter(ani.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+                           Math.min(16,gl.getParameter(ani.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
   return tex;
+}
+
+/* Burn the hardscape mask into the painted map so canvas consumers — tactical
+   minimap and any downsample of terrainCanvas — show civic pavement instead of
+   leftover biome grass. The 3D view already splats pave from this same mask;
+   without this bake the two surfaces disagreed on every city map. Once per
+   gen, not per frame. */
+function stampHardscapeAlbedo(sx,sy,w,h){
+  if(!terrainCanvas||!groundMaskCanvas) return;
+  const S=TS;
+  const region=sx!=null;
+  if(!region){ sx=0; sy=0; w=S; h=S; }
+  sx=clamp(sx|0,0,S-1); sy=clamp(sy|0,0,S-1);
+  w=Math.min(S-sx,w|0); h=Math.min(S-sy,h|0);
+  if(w<=0||h<=0) return;
+  const mask=mf2d(groundMaskCanvas).getImageData(sx,sy,w,h).data;
+  const c=mf2d(terrainCanvas);
+  const img=c.getImageData(sx,sy,w,h), d=img.data;
+  /* Android WebView can hand back a zero buffer on a 2048 read. Writing
+     that back paints the command-map albedo black while 3D materials
+     still look fine. */
+  let lit=0;
+  for(let i=0;i<d.length;i+=64){ if(d[i]|d[i+1]|d[i+2]){ lit++; if(lit>6) break; } }
+  if(lit<6) return;
+  for(let i=0;i<d.length;i+=4){
+    const m=mask[i];
+    if(m<22) continue;
+    /* Kill leftover biome lawn only. A full grey snap erased oil, grit and
+       pour joints — the 2048 civic paint collapsed to two flat colours that
+       read as chunky pixels under the terrain unsharp. */
+    const leftover=d[i+1]-Math.max(d[i],d[i+2]);
+    if(leftover<=6) continue;
+    const street=m>200;
+    d[i]=street?38:78; d[i+1]=street?38:78; d[i+2]=street?36:74;
+  }
+  c.putImageData(img,sx,sy);
+  if(terrainBase){
+    if(region) mf2d(terrainBase).drawImage(terrainCanvas,sx,sy,w,h,sx,sy,w,h);
+    else mf2d(terrainBase).drawImage(terrainCanvas,0,0);
+  }
+  if(typeof mmBg!=='undefined') mmBg=null;
+}
+
+/* Minimap command map. A bilinear 2048→132 of terrainCanvas averaged each
+   5×5 civic cell into biome grass; a dilated mask then a cityPadFrame fill
+   replaced that grass with two grey postage stamps (stage0 09 crop). Pick
+   the painted hardscape texel from the same albedo+mask the 3D splat uses,
+   mute leftover lawn, then stroke lots/streets in WORLD space so the grid
+   still reads at 84 px CSS. No district-sized fillRect — that was the pad. */
+function composeMinimapTerrain(ctx,S){
+  if(!ctx||!terrainCanvas||!terrainCanvas.width) return;
+  const k=S/MAP;
+  /* drawImage first. A 2048 getImageData on Android WebView has returned a
+     zero buffer (black command map) while the 3D splat still looked fine.
+     256 bilinear keeps biome/water; lots/streets are stroked in world space
+     so a 5×5 cell still reads at 84 px CSS. No cityPadFrame fill — that
+     was the stacked beige pancake. */
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(terrainCanvas,0,0,S,S);
+  let img=null, d=null, lit=0;
+  try{
+    img=ctx.getImageData(0,0,S,S); d=img.data;
+    for(let i=0;i<d.length;i+=64){ if(d[i]+d[i+1]+d[i+2]>24){ lit++; if(lit>12) break; } }
+  }catch(e){ return; }
+  if(lit<=12) return;
+  /* Neon grass beat cement at 72 px CSS. Mute leftover lawn on the 256
+     buffer — not a 2048 readback. Water (blue lead) stays. */
+  for(let i=0;i<d.length;i+=4){
+    const r=d[i], g=d[i+1], b=d[i+2];
+    if(b>r+10 && b>g+4) continue;
+    if(g>r && g>=b){
+      const over=g-r;
+      d[i]=(r*0.82+20)|0;
+      d[i+1]=(g-over*0.90)|0;
+      d[i+2]=(b*0.72+16)|0;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  ctx.imageSmoothingEnabled=false;
+  if(typeof ROAD_PATHS!=='undefined'){
+    ctx.strokeStyle='rgb(54,54,50)';
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    for(const R of ROAD_PATHS){
+      const P=R.path; if(!P||P.length<2) continue;
+      ctx.lineWidth=Math.max(1.6,(R.w||20)*k);
+      ctx.beginPath();
+      ctx.moveTo(P[0][0]*k,P[0][1]*k);
+      for(let i=1;i<P.length;i++) ctx.lineTo(P[i][0]*k,P[i][1]*k);
+      ctx.stroke();
+    }
+  }
+  if(typeof ROAD_JOINS!=='undefined'){
+    ctx.strokeStyle='rgb(48,48,46)'; ctx.lineCap='butt';
+    for(const J of ROAD_JOINS){
+      ctx.lineWidth=Math.max(1.6,(J[4]||16)*k);
+      ctx.beginPath(); ctx.moveTo(J[0]*k,J[1]*k); ctx.lineTo(J[2]*k,J[3]*k); ctx.stroke();
+    }
+  }
+  /* No cityPadFrame disc. Terrain already has the yard; a second pad blit
+     was the stacked beige pancake when two sites sat close. Lots/streets
+     only — one mark per plot, not a district-sized fill. */
+  /* Individual plots — filled cement slabs. An inner foundation rect
+     collapsed to a grid of light rims on a dark pad at 84 px CSS. */
+  if(typeof cityPlan!=='undefined'){
+    for(const P of cityPlan){
+      const Z=(typeof cityZones!=='undefined'&&cityZones[P.zone])||{ind:0};
+      const w=Math.max(3.2,P.w*k*1.22), h=Math.max(3.2,P.h*k*1.22);
+      ctx.save();
+      ctx.translate(P.x*k, P.y*k);
+      ctx.rotate(P.a||0);
+      ctx.fillStyle=Z.ind?'rgb(96,90,82)':'rgb(142,140,132)';
+      ctx.fillRect(-w*.5,-h*.5,w,h);
+      ctx.strokeStyle=Z.ind?'rgb(36,34,32)':'rgb(44,44,40)';
+      ctx.lineWidth=1;
+      ctx.strokeRect(-w*.5,-h*.5,w,h);
+      ctx.restore();
+    }
+  }
+  /* Sidewalk then carriageway, same hierarchy as paintCityGround / paintRoad. */
+  if(typeof cityStreets!=='undefined'){
+    ctx.lineCap='butt'; ctx.lineJoin='bevel';
+    for(const St of cityStreets){
+      const w=St[4]||13;
+      ctx.strokeStyle='rgb(148,146,138)';
+      ctx.lineWidth=Math.max(3.4,(w+22)*k);
+      ctx.beginPath(); ctx.moveTo(St[0]*k,St[1]*k); ctx.lineTo(St[2]*k,St[3]*k); ctx.stroke();
+      ctx.strokeStyle='rgb(32,32,30)';
+      ctx.lineWidth=Math.max(1.8,(w+5)*k);
+      ctx.beginPath(); ctx.moveTo(St[0]*k,St[1]*k); ctx.lineTo(St[2]*k,St[3]*k); ctx.stroke();
+    }
+  }
+}
+
+/* War Table thumbs never run planDistricts, so a dense TFC metro used to
+   preview as empty grassland. Stamp civic pads from the same MAPDEFS counts
+   the live planner uses — approximate footprints, not InstMesh roads. */
+function paintPreviewCivic(ctx,def,W,H){
+  const nCity=(def.city||0)+(def.towns||0);
+  const nInd=def.indus||0;
+  const nPad=(def.outpost||0)+(def.spaceport||0)+(def.domes||0);
+  if(!nCity&&!nInd&&!nPad&&!def.roads) return;
+  let s=(def.seed^0x7ACE1)|1;
+  const rn=()=>{ s=(Math.imul(s,1664525)+1013904223)|0; return ((s>>>9)&0x7fffff)/0x800000; };
+  ctx.save();
+  if(def.roads){
+    ctx.strokeStyle='rgb(42,42,40)';
+    ctx.lineWidth=Math.max(2.4, W*0.018);
+    ctx.lineCap='butt';
+    ctx.beginPath();
+    ctx.moveTo(SP_LO*W, SP_HI*H);
+    ctx.lineTo(SP_HI*W, SP_LO*H);
+    ctx.stroke();
+  }
+  const placed=[];
+  const stamp=(ind,scale)=>{
+    for(let a=0;a<48;a++){
+      const x=0.18+rn()*0.64, y=0.18+rn()*0.64;
+      if(Math.hypot(x-SP_LO,y-SP_HI)<0.22||Math.hypot(x-SP_HI,y-SP_LO)<0.22) continue;
+      let clash=false;
+      for(const p of placed) if(Math.hypot(x-p[0],y-p[1])<0.14){ clash=true; break; }
+      if(clash) continue;
+      placed.push([x,y]);
+      const px=x*W, py=y*H, hx=W*scale*1.35, hy=H*scale*1.2;
+      ctx.fillStyle=ind?'rgb(52,50,46)':'rgb(78,78,74)';
+      ctx.fillRect(px-hx,py-hy,hx*2,hy*2);
+      ctx.strokeStyle='rgb(32,32,30)';
+      ctx.lineWidth=Math.max(1.3, W*0.008);
+      ctx.beginPath();
+      ctx.moveTo(px-hx,py); ctx.lineTo(px+hx,py);
+      ctx.moveTo(px,py-hy); ctx.lineTo(px,py+hy);
+      ctx.stroke();
+      return true;
+    }
+    return false;
+  };
+  for(let i=0;i<nCity;i++) stamp(0,0.055)||stamp(0,0.042);
+  for(let i=0;i<nInd;i++) stamp(1,0.060)||stamp(1,0.044);
+  for(let i=0;i<nPad;i++) stamp(0,0.032)||stamp(0,0.024);
+  ctx.restore();
 }
 
 /* ---------- faithful map preview thumbnails (same seed + formula) ---------- */
 function drawMapPreview(cv3,def,themeKey,showBases=true){
-  const TH=THEMES[themeKey||curTheme]||THEMES.verdant;
+  const TH=typeof themePaint==='function'?themePaint(THEMES[themeKey||curTheme]||THEMES.verdant,def):
+    (THEMES[themeKey||curTheme]||THEMES.verdant);
   const W=cv3.width, H=cv3.height;
   const ctx3=cv3.getContext('2d');
   const img=ctx3.createImageData(W,H);
@@ -2724,6 +3596,7 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
     img.data[o]=r2*sh; img.data[o+1]=g3*sh; img.data[o+2]=b2*sh; img.data[o+3]=255;
   }
   ctx3.putImageData(img,0,0);
+  paintPreviewCivic(ctx3,def,W,H);
   // legacy two-player card markers; the deployment planner draws its own set.
   if(showBases){
     ctx3.fillStyle='#41c8ff'; ctx3.beginPath(); ctx3.arc(0.16*W,0.84*H,2.6,0,TAU); ctx3.fill();
@@ -2744,7 +3617,7 @@ let waterBaseTex=null, waterCaustTex=[], waterPhase=0;
 function mkTex(canvas,wrap){
   const tex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,tex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,canvas);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -2896,7 +3769,7 @@ function loadTerrainTextures(){
     im.onload=()=>{ if(!gl) return;
       const t=gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D,t);
-      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,im);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,im);
       gl.generateMipmap(gl.TEXTURE_2D);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -2904,7 +3777,7 @@ function loadTerrainTextures(){
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
       const an=gl.getExtension('EXT_texture_filter_anisotropic');
       if(an) gl.texParameterf(gl.TEXTURE_2D,an.TEXTURE_MAX_ANISOTROPY_EXT,
-                              Math.min(8,gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+                              Math.min(16,gl.getParameter(an.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
       gl.bindTexture(gl.TEXTURE_2D,atlasTex);
       set(t);
     };
@@ -2938,34 +3811,69 @@ function buildGroundMask(){
   const S=TS;
   if(!groundMaskCanvas){ groundMaskCanvas=document.createElement('canvas');
     groundMaskCanvas.width=groundMaskCanvas.height=S; }
-  const c=groundMaskCanvas.getContext('2d');
+  const c=mf2d(groundMaskCanvas);
   c.setTransform(1,0,0,1,0,0);
   c.fillStyle='#000'; c.fillRect(0,0,S,S);
   const k=S/MAP;
+  /* Compacted city yards are hardscape, not wilderness. Mid-grey so plazas
+     take the pave sheet while street/sidewalk whites keep a formed kerb
+     against the lot. White-filling the district erased kerbs; leaving it
+     black let the grass atlas win inside every block. */
+  if(typeof cityZones!=='undefined') for(const Z of cityZones){
+    const F=cityPadFrame(Z);
+    c.save(); c.translate(Z.x*k,Z.y*k); c.rotate(F.ang);
+    const hx=F.hx*k, hy=F.hy*k;
+    c.fillStyle='#767676';
+    c.fillRect(-hx,-hy,hx*2,hy*2);
+    /* Rim falls toward black so the grass/soil sheets win. A solid 12-gon
+       kept a die-cut pave disc around every site. */
+    c.lineJoin='round';
+    for(let i=0;i<12;i++){
+      const o=(8+i*11)*k, g=Math.max(8,(90-i*7)|0);
+      c.strokeStyle='rgb('+g+','+g+','+g+')';
+      c.lineWidth=(14+i*4)*k;
+      c.strokeRect(-hx-o,-hy-o,hx*2+o*2,hy*2+o*2);
+    }
+    c.restore();
+  }
+  paintSiteBermSpoil(c,1);
+  c.fillStyle='#fff';
+  if(typeof cityStreets!=='undefined'){
+    c.strokeStyle='#fff'; c.lineCap='butt'; c.lineJoin='bevel';
+    for(const St of cityStreets){
+      c.lineWidth=Math.max(2,(St[4]+28)*k);
+      c.beginPath(); c.moveTo(St[0]*k,St[1]*k); c.lineTo(St[2]*k,St[3]*k); c.stroke();
+    }
+  }
   c.fillStyle='#fff';
   /* A road's SIDES are formed and stay crisp; its ENDS dissolve. Each stroke
      carries a gradient that fades over its final stretch, so terminations
      bleed into the soil by construction — no isotropic blur, no smeared
      kerbs. Overlaps stay solid because a transparent fade cannot darken an
      already-white intersection under source-over. */
-  const fadeStroke=(x0,y0,x1,y1,wpx,fadeA,fadeB,fadeLen)=>{
+  const fadeStroke=(x0,y0,x1,y1,wpx,fadeA,fadeB,fadeLen,cap)=>{
     const L=Math.hypot(x1-x0,y1-y0)||1, f=Math.min(0.45,fadeLen/L);
     const gr=c.createLinearGradient(x0,y0,x1,y1);
     gr.addColorStop(0, fadeA?'rgba(255,255,255,0)':'#fff');
     if(fadeA) gr.addColorStop(f,'#fff');
     if(fadeB) gr.addColorStop(1-f,'#fff');
     gr.addColorStop(1, fadeB?'rgba(255,255,255,0)':'#fff');
-    c.strokeStyle=gr; c.lineWidth=wpx; c.lineCap='round';
+    c.strokeStyle=gr; c.lineWidth=wpx; c.lineCap=cap||'round';
     c.beginPath(); c.moveTo(x0,y0); c.lineTo(x1,y1); c.stroke();
   };
   if(typeof ROAD_PATHS!=='undefined') for(const R of ROAD_PATHS){
     const P2=R.path, wpx=Math.max(2,R.w*k*1.08);
-    for(let i=1;i<P2.length;i++)
-      fadeStroke(P2[i-1][0]*k,P2[i-1][1]*k,P2[i][0]*k,P2[i][1]*k,wpx,
-                 i===1, i===P2.length-1, 46*k);
+    for(let i=1;i<P2.length;i++){
+      const fadeA=i===1, fadeB=i===P2.length-1;
+      for(const run of mfWildernessRuns(P2[i-1][0],P2[i-1][1],P2[i][0],P2[i][1]))
+        fadeStroke(run.a[0]*k,run.a[1]*k,run.b[0]*k,run.b[1]*k,wpx,
+                   fadeA&&run.t0<0.02, fadeB&&run.t1>0.98,46*k,'round');
+    }
   }
   if(typeof cityStreets!=='undefined') for(const St of cityStreets)
-    fadeStroke(St[0]*k,St[1]*k,St[2]*k,St[3]*k,Math.max(2,St[4]*k*1.12),true,true,26*k);
+    fadeStroke(St[0]*k,St[1]*k,St[2]*k,St[3]*k,Math.max(2,St[4]*k*1.12),false,false,0,'butt');
+  if(typeof ROAD_JOINS!=='undefined') for(const J of ROAD_JOINS)
+    fadeStroke(J[0]*k,J[1]*k,J[2]*k,J[3]*k,Math.max(2,J[4]*k*1.12),false,false,0,'butt');
   if(typeof cityPlan!=='undefined') for(const P of cityPlan){
     c.save(); c.translate(P.x*k,P.y*k); c.rotate(P.a);
     c.fillRect(-P.w*0.62*k,-P.h*0.62*k,P.w*1.24*k,P.h*1.24*k);
@@ -2981,12 +3889,17 @@ function buildGroundMask(){
   if(groundMaskTex){ try{ gl.deleteTexture(groundMaskTex); }catch(e){} }
   groundMaskTex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.LUMINANCE,gl.LUMINANCE,gl.UNSIGNED_BYTE,groundMaskCanvas);
+  /* R8 is the WebGL2 replacement for LUMINANCE (removed in ES 3.00). Shader
+     samples .r; the 2D mask is grayscale so red equals the old luminance. */
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,gl.RED,gl.UNSIGNED_BYTE,groundMaskCanvas);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  const gAni=gl.getExtension('EXT_texture_filter_anisotropic');
+  if(gAni) gl.texParameterf(gl.TEXTURE_2D,gAni.TEXTURE_MAX_ANISOTROPY_EXT,
+                            Math.min(16,gl.getParameter(gAni.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
   gl.bindTexture(gl.TEXTURE_2D,atlasTex);
 }
 function buildDetailTex(){
@@ -3057,7 +3970,7 @@ function buildDetailTex(){
   c.putImageData(img,0,0);
   detailTex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,detailTex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv2);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,cv2);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -3065,17 +3978,17 @@ function buildDetailTex(){
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.REPEAT);
   const dAni=gl.getExtension('EXT_texture_filter_anisotropic');
   if(dAni) gl.texParameterf(gl.TEXTURE_2D,dAni.TEXTURE_MAX_ANISOTROPY_EXT,
-                            Math.min(8,gl.getParameter(dAni.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+                            Math.min(16,gl.getParameter(dAni.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
 }
 
 // re-light a terrain rect from the heightfield (relief shading + palette + scorch)
-function shadeRegion(rx0,ry0,rw,rh,ctx){
+function shadeRegion(rx0,ry0,rw,rh,ctx,keepCivic){
   rx0=clamp(rx0,0,TS-1); ry0=clamp(ry0,0,TS-1);
   rw=Math.min(rw,TS-rx0); rh=Math.min(rh,TS-ry0);
   if(rw<=0||rh<=0||!TSHADE) return;
   const {grid,grid2,vnoise,TH}=TSHADE;
   const GN=64;
-  const c=ctx||terrainCanvas.getContext('2d');
+  const c=ctx||mf2d(terrainCanvas);
   const img=c.createImageData(rw,rh), px=img.data;
   const H=(x,y)=>heightF[clamp(y,0,TS-1)*TS+clamp(x,0,TS-1)];
   const [wd0,wd1,wd2]=TH.wDeep, [ws0,ws1,ws2]=TH.wShal, [fm0,fm1,fm2]=TH.foam;
@@ -3085,6 +3998,14 @@ function shadeRegion(rx0,ry0,rw,rh,ctx){
   const [cl0,cl1,cl2]=TH.cliff, [pl0,pl1,pl2]=TH.plat;
   const isLava=TH.water==='lava';
   const TS3=TS*3;
+  /* Deform re-shade used to fill its AABB with biome grass. That rectangle
+     is the perfect green square in city pavement. keepCivic reads the
+     hardscape mask so civic texels relight as cement. */
+  let civicMask=null, prevCivic=null;
+  if(keepCivic&&groundMaskCanvas){
+    try{ civicMask=mf2d(groundMaskCanvas).getImageData(rx0,ry0,rw,rh).data; }catch(e){}
+    try{ prevCivic=c.getImageData(rx0,ry0,rw,rh).data; }catch(e){}
+  }
   for(let yy=0;yy<rh;yy++){
     const y=ry0+yy;
     const rowInterior=(y>=3&&y<TS-3);
@@ -3096,12 +4017,20 @@ function shadeRegion(rx0,ry0,rw,rh,ctx){
       const det=vnoise(grid2,u*6.5,v*6.5)-0.5;
       const moss=vnoise(grid,u*1.3+31,v*1.3+7);
       let r,g,b;
-      if(h<WATER_H){
+      const mCivic=civicMask?civicMask[(yy*rw+xx)*4]:0;
+      if(keepCivic&&mCivic>=22&&prevCivic){
+        const po=(yy*rw+xx)*4;
+        r=prevCivic[po]; g=prevCivic[po+1]; b=prevCivic[po+2];
+      } else if(h<WATER_H && authoredWaterTexel(x,y)){
         let t=clamp(h/WATER_H,0,1);
         let cr=wd0+(ws0-wd0)*t, cg=wd1+(ws1-wd1)*t, cb=wd2+(ws2-wd2)*t;
         if(h>WATER_H-0.012){ cr=fm0; cg=fm1; cb=fm2; }
         const dk=isLava?26:8;
         r=cr+det*dk; g=cg+det*dk; b=cb+det*8;
+      } else if(h<WATER_H){
+        /* Dry crater bowl. Live height below WATER_H used to paint a pond
+           here; water exists only as authored oceans / rivers / lakes. */
+        r=g00*0.55+det*10; g=g01*0.48+det*8; b=g02*0.40+det*6;
       } else if(h<BEACH_H){
         const t=(h-WATER_H)/(BEACH_H-WATER_H);
         r=b00+(b10-b00)*t+det*16; g=b01+(b11-b01)*t+det*16; b=b02+(b12-b02)*t+det*12;
@@ -3128,7 +4057,7 @@ function shadeRegion(rx0,ry0,rw,rh,ctx){
          well made the battlefield read as static and hid unit silhouettes. */
       r+=fine*5; g+=fine*5; b+=fine*4;
       // relief shading (sun from top-left) — craters get real lit/shadowed walls
-      const land=h>=WATER_H;
+      const land=h>=WATER_H||!authoredWaterTexel(x,y);
       let d3,d1;
       if(interior){                       // fast path: no clamping in the map interior
         const o3=y*TS+x;
@@ -3153,8 +4082,9 @@ function shadeRegion(rx0,ry0,rw,rh,ctx){
 
 /* ---------- VOLUMETRIC TERRAIN DESTRUCTION ----------
    Explosions carve the real heightfield: cosine bowl + raised ejecta rim,
-   re-lit through the relief shader. Deep pits flood below the waterline
-   and become impassable pools. */
+   re-lit through the relief shader. Bowls stay dry dirt/ash/rock even when
+   they punch below WATER_H — crater-below-water-table used to spawn fake
+   lakes and rewrite PASS to flood/swim. Water is authored hydrology only. */
 const deformQ=[];
 let mipDirty=false, mmDirty=false, mipTimer=0, mipUrgent=false;
 function deformTerrain(x,y,r,depth){
@@ -3172,77 +4102,259 @@ function addRelief(x,y,r,depth,kind){
   /* Now that the terrain itself deforms, the crater already HAS walls — this
      is only the loose rubble thrown out on top of them. Keep it small and
      sparse; the earlier sizing predated real geometry and turned every shell
-     hole into a ring of boulders. */
+     hole into a ring of boulders. Street/plot decks stay clear of berms so
+     a crater in a plaza does not dump spoil onto poured pavement. */
+  const civicAt=typeof cityGroundAt==='function'?cityGroundAt:function(){return 0;};
+  /* CITYG>=1 is non-soil. Berms on the district envelope read as wilderness
+     spoil dumped onto the grey yard. */
+  if(civicAt(x,y)>=1) return;
   const n=Math.max(3,Math.min(7,Math.round(r*0.07)));
   const tone=kind===1?0.78:1;
   for(let k=0;k<n;k++){
     const a=(k/n)*TAU+Math.random()*0.7;
     const d=r*(0.80+Math.random()*0.32);
-    relief.push({x:x+Math.cos(a)*d, y:y+Math.sin(a)*d,
+    const px=x+Math.cos(a)*d, py=y+Math.sin(a)*d;
+    if(civicAt(px,py)>=1) continue;
+    relief.push({x:px, y:py,
                  w:r*(0.07+Math.random()*0.07), h:0, lift:0,
                  a:a+Math.PI/2, tone, life:0});
   }
   for(let k=0;k<2;k++){
     const a=Math.random()*TAU, d=r*Math.random()*0.5;
-    relief.push({x:x+Math.cos(a)*d, y:y+Math.sin(a)*d,
+    const px=x+Math.cos(a)*d, py=y+Math.sin(a)*d;
+    if(civicAt(px,py)>=1) continue;
+    relief.push({x:px, y:py,
                  w:r*(0.05+Math.random()*0.06), h:0, lift:0,
                  a:Math.random()*TAU, tone:tone*0.92, life:0});
   }
   while(relief.length>RELIEF_CAP) relief.shift();
 }
+/* CITYG>=1 is non-soil for addCrater / applyDeform / void-kind alike.
+   shadeRegion writes an opaque RECTANGLE of biome grass. paintPave only
+   restores the player-pad mask, not civic yards, so a plaza blast used to
+   leave a perfect grass box with a circular ash disc in the middle. Relight
+   from terrainBase (the painted city) then stamp a noisy burnt scar. */
+function civicTexelAt(tx,ty){
+  /* Hardscape mask is 2048 — CITYG is a 384 occupancy grid. Sampling CITYG
+     here reintroduced the 90° grass tiles: restore/scar followed PGS cells. */
+  if(groundMaskCanvas){
+    try{
+      const m=mf2d(groundMaskCanvas).getImageData(clamp(tx|0,0,TS-1),clamp(ty|0,0,TS-1),1,1).data[0];
+      if(m>=22) return m>200?2:1;
+    }catch(e){}
+  }
+  if(typeof CITYG==='undefined'||!CITYG) return 0;
+  const gx=clamp(tx/TS*PGS|0,0,PGS-1), gy=clamp(ty/TS*PGS|0,0,PGS-1);
+  return CITYG[gy*PGS+gx]||0;
+}
+function scarHash(x,y,seed){
+  let h=((x*374761393)+(y*668265263)+seed)|0;
+  h=(h^(h>>>13))*1274126177|0;
+  return h;
+}
+function relightCivicAlbedo(sx,sy,w,h){
+  /* Keep designed city paint (lots, joints, asphalt). Re-apply bowl lighting
+     from the new heightfield so the scar is volumetric cement, not a grass
+     underpaint showing through a mask hole. */
+  if(!terrainBase||!terrainCanvas||!heightF||w<=0||h<=0) return;
+  const c=mf2d(terrainCanvas);
+  const cur=c.getImageData(sx,sy,w,h), cd=cur.data;
+  const base=mf2d(terrainBase).getImageData(sx,sy,w,h), bd=base.data;
+  let mask=null;
+  if(groundMaskCanvas){
+    try{ mask=mf2d(groundMaskCanvas).getImageData(sx,sy,w,h).data; }catch(e){}
+  }
+  const H=(x,y)=>heightF[clamp(y,0,TS-1)*TS+clamp(x,0,TS-1)];
+  let any=0;
+  for(let yy=0;yy<h;yy++){
+    const y=sy+yy, row=yy*w;
+    for(let xx=0;xx<w;xx++){
+      const o=(row+xx)*4;
+      const covered=mask?mask[o]>=22:civicTexelAt(sx+xx,y)>=1;
+      if(!covered) continue;
+      any=1;
+      let r=bd[o], g=bd[o+1], b=bd[o+2];
+      /* terrainBase can be poisoned by an earlier grass AABB copy. If the
+         restored paint is still lawn, snap to cement of the mask class. */
+      if(g>Math.max(r,b)+6){
+        const street=mask?mask[o]>200:false;
+        r=street?38:78; g=street?38:78; b=street?36:74;
+      }
+      const x=sx+xx;
+      const sh=(H(x-3,y-3)-H(x+3,y+3))*140+(H(x-1,y-1)-H(x+1,y+1))*100;
+      r+=sh; g+=sh; b+=sh;
+      const sc=SCORCH?SCORCH[y*TS+x]/255:0;
+      if(sc>0){ const k2=1-sc*0.28; r*=k2; g*=k2; b*=k2; }
+      if(g>r+1) g=r;
+      if(g>b+1) g=b;
+      cd[o]=clamp(r,0,255); cd[o+1]=clamp(g,0,255); cd[o+2]=clamp(b,0,255);
+    }
+  }
+  if(any) c.putImageData(cur,sx,sy);
+}
+function stampGroundScarOn(cv,wx,wy,r,civic){
+  if(!cv||r<4) return null;
+  const k=TS/MAP;
+  const cx=wx*k, cy=wy*k, cr=Math.max(4,r*k);
+  const reach=cr*(civic?1.55:1.18);
+  const x0=clamp(Math.floor(cx-reach-1),0,TS-1), y0=clamp(Math.floor(cy-reach-1),0,TS-1);
+  const x1=clamp(Math.ceil(cx+reach+1),0,TS), y1=clamp(Math.ceil(cy+reach+1),0,TS);
+  const w=x1-x0, h=y1-y0; if(w<=0||h<=0) return null;
+  const ctx=mf2d(cv);
+  const img=ctx.getImageData(x0,y0,w,h), d=img.data;
+  let mask=null;
+  if(groundMaskCanvas){
+    try{ mask=mf2d(groundMaskCanvas).getImageData(x0,y0,w,h).data; }catch(e){}
+  }
+  const seed=((wx*73856093)^(wy*19349663)^(r*83492791))|0;
+  const nLobe=civic?4:1;
+  const lobes=[];
+  for(let i=0;i<nLobe;i++){
+    const a=((seed>>>i*5)&255)/255*TAU+(i*2.3);
+    const off=i?cr*(0.18+((seed>>>i*3)&15)/15*0.28):0;
+    lobes.push([cx+Math.cos(a)*off, cy+Math.sin(a)*off, cr*(i?0.46+((seed>>>i*7)&15)/15*0.28:1)]);
+  }
+  for(let yy=0;yy<h;yy++){
+    const y=y0+yy;
+    for(let xx=0;xx<w;xx++){
+      const x=x0+xx, dx=x-cx, dy=y-cy;
+      const hard=mask?mask[(yy*w+xx)*4]>=22:civicTexelAt(x,y)>=1;
+      if(civic && !hard) continue;
+      if(!civic && hard) continue;
+      let fall=0;
+      for(let li=0;li<lobes.length;li++){
+        const L=lobes[li], lx=x-L[0], ly=y-L[1];
+        const dist=Math.sqrt(lx*lx+ly*ly), ang=Math.atan2(ly,lx);
+        const hs=scarHash(x,y,seed+li*97);
+        const n=((hs>>>20)/2048)-0.5;
+        const jag=1+(civic?0.30:0.11)*(Math.sin(ang*3.7+n*7)+0.55*Math.sin(ang*8.4-n*5)+n);
+        const rad=L[2]*Math.max(0.58,jag);
+        if(dist>rad) continue;
+        const t=dist/rad;
+        if(t>0.46){
+          const edge=((hs>>>8)&255)/255;
+          if(edge>0.28+0.90*(1-t)) continue;
+        }
+        const f=(1-t)*(1-t);
+        if(f>fall) fall=f;
+      }
+      if(fall<=0.02) continue;
+      const o=(yy*w+xx)*4;
+      let r0=d[o], g0=d[o+1], b0=d[o+2];
+      const hs2=scarHash(x+3,y-2,seed);
+      const n2=((hs2>>>20)/2048)-0.5;
+      if(civic){
+        /* Burnt pavement: same grey family as the yard, never verdant.
+           Mix stays mid-charcoal so it reads as damaged concrete, not a
+           punched black hole. Crack veins + rim chew break circle/box. */
+        const char=0.14+0.40*fall;
+        const cr_=36+n2*10, cg_=34+n2*8, cb_=32+n2*7;
+        r0=r0+(cr_-r0)*char; g0=g0+(cg_-g0)*char; b0=b0+(cb_-b0)*char;
+        const crack=Math.abs(Math.sin(dx*0.27+dy*0.19)+Math.sin(dx*0.11-dy*0.31+n2));
+        if(crack<0.14){ r0*=0.72; g0*=0.72; b0*=0.70; }
+        const tEdge=1-Math.sqrt(Math.min(1,fall));
+        if(tEdge>0.55 && tEdge<0.92){
+          const rim=(tEdge-0.55)/0.37;
+          r0=r0+(58+n2*8-r0)*0.22*rim;
+          g0=g0+(55+n2*6-g0)*0.22*rim;
+          b0=b0+(52+n2*5-b0)*0.22*rim;
+        }
+        if(g0>r0+1) g0=r0;
+      } else {
+        const char=0.26+0.64*fall;
+        r0=r0+(46+n2*6-r0)*char; g0=g0+(34+n2*4-g0)*char; b0=b0+(24+n2*3-b0)*char;
+      }
+      d[o]=clamp(r0,0,255); d[o+1]=clamp(g0,0,255); d[o+2]=clamp(b0,0,255);
+    }
+  }
+  ctx.putImageData(img,x0,y0);
+  return [x0,y0,w,h];
+}
+function stampGroundScar(wx,wy,r,civic){
+  const box=stampGroundScarOn(terrainCanvas,wx,wy,r,civic);
+  if(box&&terrainBase) stampGroundScarOn(terrainBase,wx,wy,r,civic);
+  return box;
+}
+/* Identity soil-bowl scale. A sibling applyDeform multiplied 1.55 by
+   cutMul then a later overwrite dropped the binding — live 8901 threw
+   `cutMul is not defined` at boot (menu diorama / first processDeforms).
+   var so it is hoisted in this file's one global scope. Not a META.settings
+   key and not a radius retune: 1 keeps the landed 1.55 / 0.95 factors. */
+var cutMul=1;
 function applyDeform(D){
-  addRelief(D.x,D.y,D.r,D.d,D.k);
+  /* Cities still crater and burn. Civic bowls stay above WATER_H so they
+     read as impact craters without becoming lakes (JET ASSIST trap). Soil
+     bowls may punch below the water table, but they stay dry dirt — crater-
+     below-water-table used to spawn fake lakes and rewrite PASS to flood.
+     Water exists only as authored oceans, rivers and lakes. */
+  const civicCenter=typeof cityGroundAt==='function' ? cityGroundAt(D.x,D.y) : 0;
+  /* Wilderness deform stops at CITYG>=1 so a river-crater or soil bowl
+     cannot punch the grey grid. Civic-centred hits still crater the pad. */
+  if(civicCenter<1) addRelief(D.x,D.y,D.r,D.d,D.k);
   const k=TS/MAP;
   const cx=D.x*k, cy=D.y*k, cr=Math.max(5,D.r*k);
   const x0=clamp(Math.floor(cx-cr*1.4),0,TS-1), x1=clamp(Math.ceil(cx+cr*1.4),0,TS-1);
   const y0=clamp(Math.floor(cy-cr*1.4),0,TS-1), y1=clamp(Math.ceil(cy+cr*1.4),0,TS-1);
+  const civicFloor=WATER_H+0.012;
+  const jagSeed=((D.x*92821)^(D.y*68917))|0;
   for(let y=y0;y<=y1;y++){
     for(let x=x0;x<=x1;x++){
       const dx=x-cx, dy=y-cy;
-      const dn=Math.sqrt(dx*dx+dy*dy)/cr;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      const wx=x/k, wy=y/k;
+      const civic=typeof cityGroundAt==='function' && cityGroundAt(wx,wy)>=1;
+      if(civic&&civicCenter<1) continue;
+      const ang=Math.atan2(dy,dx);
+      const hs=scarHash(x,y,jagSeed);
+      const n=((hs>>>20)/2048)-0.5;
+      const jag=1+(civic?0.22:0.08)*(Math.sin(ang*4.8+n*6)+0.5*Math.sin(ang*9.3-n*4)+n);
+      const dn=dist/(cr*Math.max(0.64,jag));
       if(dn>1.35) continue;
       const i=y*TS+x;
-      if(dn<1){                                     // excavated bowl — dug deep
-        heightF[i]=Math.max(0.20, heightF[i] - D.d*1.55*(Math.cos(dn*Math.PI)+1)*0.5);
-      } else {                                      // displaced-earth rim, piled high
-        heightF[i]=Math.min(0.84, heightF[i] + D.d*0.95*(1-(dn-1)/0.35));
+      if(dn<1){
+        const cut=D.d*(civic?0.55:1.55*cutMul)*(Math.cos(dn*Math.PI)+1)*0.5;
+        heightF[i]=Math.max(civic?civicFloor:0.20, heightF[i] - cut);
+      } else {
+        heightF[i]=Math.min(0.84, heightF[i] + D.d*(civic?0.35:0.95*cutMul)*(1-(dn-1)/0.35));
       }
       if(dn<1.15&&SCORCH){
-        const add=140*(1-dn/1.15);
+        const add=(civic?90:140)*(1-dn/1.15);
         SCORCH[i]=Math.min(255,SCORCH[i]+add);
       }
     }
   }
-  // re-light with kernel margin
-  shadeRegion(x0-3,y0-3,(x1-x0)+7,(y1-y0)+7);
-  // upload the region
-  const sx=clamp(x0-3,0,TS-1), sy=clamp(y0-3,0,TS-1);
-  const w=Math.min(TS-sx,(x1-x0)+7), h=Math.min(TS-sy,(y1-y0)+7);
-  if(w>0&&h>0){
-    /* The re-shade painted raw ground over whatever was there, so the crater
-       becomes the new pristine baseline and the concrete goes back on top.
-       Without this a landing blast — or any shell near a base — wipes the
-       apron it explodes beside. */
-    if(terrainBase) terrainBase.getContext('2d').drawImage(terrainCanvas,sx,sy,w,h,sx,sy,w,h);
-    paintPave(sx,sy,w,h);
-    const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
-    tmp.getContext('2d').drawImage(terrainCanvas,sx,sy,w,h,0,0,w,h);
-    gl.bindTexture(gl.TEXTURE_2D,terrainTex);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RGBA,gl.UNSIGNED_BYTE,tmp);
-    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
+  /* deferShade: height + SCORCH + mesh now; shade+texSubImage later
+     (MEDIUM/LOW volley coalesce in terrain.js). Civic never defers. */
+  if(!D.deferShade){
+    shadeRegion(x0-3,y0-3,(x1-x0)+7,(y1-y0)+7,null,true);
+    const sx=clamp(x0-3,0,TS-1), sy=clamp(y0-3,0,TS-1);
+    const w=Math.min(TS-sx,(x1-x0)+7), h=Math.min(TS-sy,(y1-y0)+7);
+    if(w>0&&h>0){
+      relightCivicAlbedo(sx,sy,w,h);
+      stampHardscapeAlbedo(sx,sy,w,h);
+      paintPave(sx,sy,w,h);
+      /* MEDIUM/LOW r<80 skip lobe stamp. HIGH always stamps. Civic never cheap. */
+      if(!D.cheap) stampGroundScar(D.x,D.y,D.r, civicCenter>=1);
+      const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+      tmp.getContext('2d').drawImage(terrainCanvas,sx,sy,w,h,0,0,w,h);
+      const was=gl.getParameter(gl.ACTIVE_TEXTURE);
+      gl.activeTexture(gl.TEXTURE10);
+      const prev=gl.getParameter(gl.TEXTURE_BINDING_2D);
+      gl.bindTexture(gl.TEXTURE_2D,terrainTex);
+      gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RGBA,gl.UNSIGNED_BYTE,tmp);
+      gl.bindTexture(gl.TEXTURE_2D,prev);
+      gl.activeTexture(was);
+    }
   }
-  // passability: deep craters flood
-  const px0=clamp(Math.floor(x0/TS*PGS)-1,0,PGS-1), px1=clamp(Math.ceil(x1/TS*PGS)+1,0,PGS-1);
-  const py0=clamp(Math.floor(y0/TS*PGS)-1,0,PGS-1), py1=clamp(Math.ceil(y1/TS*PGS)+1,0,PGS-1);
-  for(let y=py0;y<=py1;y++) for(let x=px0;x<=px1;x++){
-    const hx=clamp(Math.round((x+0.5)/PGS*TS),0,TS-1), hy=clamp(Math.round((y+0.5)/PGS*TS),0,TS-1);
-    PASS[y*PGS+x]=heightF[hy*TS+hx]>=WATER_H-0.004?1:0;
-  }
+  /* Passability is authored hydrology, not crater depth. Punching a bowl
+     below WATER_H used to rewrite PASS to flood/swim and trap the Commander
+     at civic kerbs (JET ASSIST). Civic and soil keep their existing bit. */
   /* The heightfield just changed, so the MESH must change with it — this is
      what turns a crater from a dark circle into an actual hole you can see
      into when the camera tilts. */
-  terrainDirty(D.x,D.y,D.r*1.6);
-  mipDirty=true; mmDirty=true;
+  terrainDirty(D.x,D.y,D.r*1.6,D.d);
+  mipDirty=true; mipUrgent=true; mmDirty=true;
+  if(typeof mmBg!=='undefined') mmBg=null;
 }
 /* ============================================================================
    BUILDING FOUNDATIONS — cut into the ground, not laid on top of it
@@ -3327,7 +4439,7 @@ let paveCanvas=null, paveCtx=null, terrainBase=null, concretePat=null;
    shape or size shares identical surface detail with no visible joins. */
 function makeConcreteTile(){
   const S=128, t=document.createElement('canvas'); t.width=t.height=S;
-  const c=t.getContext('2d');
+  const c=mf2d(t);
   c.fillStyle='#858780'; c.fillRect(0,0,S,S);
   // wrapped value noise: mottling that tiles
   const cells=8, g=[];
@@ -3385,16 +4497,17 @@ function uploadTerrainTexRegion(sx,sy,w,h,urgent){
   gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RGBA,gl.UNSIGNED_BYTE,tmp);
   gl.bindTexture(gl.TEXTURE_2D,atlasTex);
   mipDirty=true; if(urgent) mipUrgent=true; mmDirty=true;
+  if(typeof mmBg!=='undefined') mmBg=null;
 }
 function initPaving(){
   paveCanvas=document.createElement('canvas');
   paveCanvas.width=paveCanvas.height=PAVE_RES;
-  paveCtx=paveCanvas.getContext('2d');
+  paveCtx=mf2d(paveCanvas);
   paveCtx.clearRect(0,0,PAVE_RES,PAVE_RES);
   // pristine copy of the untouched ground, so a repave can start from clean
   terrainBase=document.createElement('canvas');
   terrainBase.width=terrainBase.height=TS;
-  terrainBase.getContext('2d').drawImage(terrainCanvas,0,0);
+  mf2d(terrainBase).drawImage(terrainCanvas,0,0);
   if(!concretePat){
     const tile=makeConcreteTile();
     concretePat=terrainCanvas.getContext('2d').createPattern(tile,'repeat');
@@ -3506,7 +4619,7 @@ function paintPave(sx,sy,w,h){
   //    are world-aligned they run straight through pad and road alike.
   const gk=TS/MAP, step=SNAP_GRID*gk;
   tc.globalCompositeOperation='source-atop';
-  tc.strokeStyle='rgba(66,64,59,0.30)'; tc.lineWidth=Math.max(1,gk*1.1);
+  tc.strokeStyle='rgba(66,64,59,0.22)'; tc.lineWidth=Math.max(1.8,gk*2.2);
   tc.beginPath();
   for(let gx=Math.ceil(sx/step)*step; gx<sx+w; gx+=step){ tc.moveTo(gx-sx,0); tc.lineTo(gx-sx,h); }
   for(let gy=Math.ceil(sy/step)*step; gy<sy+h; gy+=step){ tc.moveTo(0,gy-sy); tc.lineTo(w,gy-sy); }
@@ -3598,16 +4711,18 @@ function stampMaskWindow(x0,y0,x1,y1){
   const g=groundMaskCanvas.getContext('2d');
   g.globalCompositeOperation='lighten'; g.drawImage(tmp,sx,sy);
   g.globalCompositeOperation='source-over';
+  if(typeof mmBg!=='undefined') mmBg=null;
   if(groundMaskTex){
     const t2=document.createElement('canvas'); t2.width=w; t2.height=h;
     t2.getContext('2d').drawImage(groundMaskCanvas,sx,sy,w,h,0,0,w,h);
     gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.LUMINANCE,gl.UNSIGNED_BYTE,t2);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RED,gl.UNSIGNED_BYTE,t2);
     gl.generateMipmap(gl.TEXTURE_2D);
     gl.bindTexture(gl.TEXTURE_2D,atlasTex);
   }
 }
 function makeFoundation(B){
+  if(!heightF) return;
   const fr=foundationRect(B);
   flattenGroundRect(B.x,B.y,fr[0]*0.5,fr[1]*0.5,Math.max(fr[0],fr[1])*0.42);
   const acc=[1e9,1e9,-1e9,-1e9];
@@ -3623,51 +4738,97 @@ function makeFoundation(B){
    organism and becomes part of the terrain texture, while a gentle flattening
    prevents roots from hovering over steep terrain. Painting both the live
    canvas and terrainBase matters because future craters rebuild from that base.
-*/
+
+   Production used to share one 9-vein ellipse. At tactical zoom that skirt
+   WAS the silhouette — birth-maw, U-slip and runway all read as mounds.
+   Per-type beds keep the soil colonised without unifying the plan. */
 function makeOrganicFoundation(B){
-  const fr=foundationRect(B),rad=Math.max(fr[0],fr[1])*.58;
-  flattenGroundRect(B.x,B.y,fr[0]*.36,fr[1]*.36,rad*.30);
+  const fr=foundationRect(B),kind=B.type;
+  const rad=kind==='airfield'?Math.max(fr[0],fr[1])*.22
+           :kind==='harbor'?Math.max(fr[0],fr[1])*.40
+           :kind==='fac'?Math.max(fr[0],fr[1])*.34
+           :Math.max(fr[0],fr[1])*.48;
+  const hw=kind==='airfield'?fr[0]*.18:kind==='harbor'?fr[0]*.28:kind==='fac'?fr[0]*.24:fr[0]*.32;
+  const hh=kind==='airfield'?fr[1]*.12:kind==='harbor'?fr[1]*.30:kind==='fac'?fr[1]*.24:fr[1]*.32;
+  flattenGroundRect(B.x,B.y,hw,hh,rad*.30);
   if(!terrainCanvas) return;
   const k=TS/MAP,cx=B.x*k,cy=B.y*k,rr=Math.max(8,rad*k);
-  const seed=((B.x*19+B.y*31+B.type.length*97)|0)>>>0;
+  const seed=((B.x*19+B.y*31+B.type.length*97)|0)>>>0,rot=B.rot||0;
   const paint=ctx=>{
     ctx.save();
     let bs=seed|0;const brn=()=>{bs=(Math.imul(bs,1664525)+1013904223)|0;return(bs>>>8)/16777216;};
-    /* A living colony cannot end in the same perfect ellipse as a poured
-       human foundation. A dark, lobed contact bed joins every visible root to
-       the soil before the translucent tissue and vein passes go on top. */
-    ctx.fillStyle='rgba(38,36,28,.48)';ctx.beginPath();
-    for(let n=0;n<=22;n++){
-      const a=n/22*TAU,r=rr*(.92+brn()*.34),x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r*.78;
-      if(!n)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    }
-    ctx.closePath();ctx.fill();
-    const g=ctx.createRadialGradient(cx,cy,rr*.12,cx,cy,rr*1.28);
-    g.addColorStop(0,'rgba(108,48,70,.82)');
-    g.addColorStop(.46,'rgba(74,54,42,.68)');
-    g.addColorStop(.78,'rgba(64,86,42,.38)');
-    g.addColorStop(1,'rgba(54,72,38,0)');
-    ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(cx,cy,rr*1.22,rr*.94,0,0,TAU);ctx.fill();
-    ctx.globalCompositeOperation='screen';ctx.strokeStyle='rgba(170,226,80,.34)';ctx.lineWidth=Math.max(1,rr*.026);
-    for(let n=0;n<9;n++){
-      const a=n/9*TAU+((seed>>((n%4)*7))&31)*.018, bend=a+Math.sin(seed+n*17)*.28;
-      ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*rr*.12,cy+Math.sin(a)*rr*.12);
-      ctx.quadraticCurveTo(cx+Math.cos(bend)*rr*.55,cy+Math.sin(bend)*rr*.55,cx+Math.cos(a)*rr*(.9+(n&1)*.18),cy+Math.sin(a)*rr*(.9+(n&1)*.18));ctx.stroke();
-    }
-    ctx.globalCompositeOperation='source-over';
-    for(let n=0;n<11;n++){
-      const a=brn()*TAU,d=rr*(.28+brn()*.68),sz=rr*(.018+brn()*.035);
-      const px2=cx+Math.cos(a)*d,py2=cy+Math.sin(a)*d*.82;
-      ctx.fillStyle='rgba(123,69,91,'+(.28+brn()*.22)+')';ctx.beginPath();ctx.arc(px2,py2,sz,0,TAU);ctx.fill();
-      ctx.strokeStyle='rgba(183,221,91,.22)';ctx.lineWidth=Math.max(.7,sz*.18);ctx.beginPath();ctx.arc(px2,py2,sz*.62,0,TAU);ctx.stroke();
+    ctx.translate(cx,cy);ctx.rotate(rot);
+    const bed=(ox,oy,rx,ry,a0)=>{
+      ctx.fillStyle='rgba(38,36,28,.42)';ctx.beginPath();
+      for(let n=0;n<=16;n++){
+        const a=n/16*TAU,r=1.0+brn()*.16,x=ox+Math.cos(a)*rx*r,y=oy+Math.sin(a)*ry*r;
+        if(!n)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      }
+      ctx.closePath();ctx.fill();
+      const g=ctx.createRadialGradient(ox,oy,Math.min(rx,ry)*.14,ox,oy,Math.max(rx,ry)*1.12);
+      g.addColorStop(0,'rgba(108,48,70,'+(a0||.72)+')');
+      g.addColorStop(.55,'rgba(74,54,42,.52)');
+      g.addColorStop(1,'rgba(54,72,38,0)');
+      ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(ox,oy,rx,ry,0,0,TAU);ctx.fill();
+    };
+    const spots=(n,ox,oy,spread)=>{
+      for(let i=0;i<n;i++){
+        const a=brn()*TAU,d=spread*(.18+brn()*.72),sz=rr*(.014+brn()*.028);
+        const px=ox+Math.cos(a)*d,py=oy+Math.sin(a)*d*.82;
+        ctx.fillStyle='rgba(123,69,91,'+(.24+brn()*.2)+')';ctx.beginPath();ctx.arc(px,py,sz,0,TAU);ctx.fill();
+        ctx.strokeStyle='rgba(183,221,91,.18)';ctx.lineWidth=Math.max(.6,sz*.16);ctx.beginPath();ctx.arc(px,py,sz*.6,0,TAU);ctx.stroke();
+      }
+    };
+    if(kind==='airfield'){
+      /* Hangar mound only. A disc under the bone deck turned the runway back
+         into another veined circle at forty pixels. */
+      bed(-rr*.12,0,rr*.82,rr*.64,.58);
+      spots(5,-rr*.12,0,rr*.55);
+    }else if(kind==='harbor'){
+      /* U-slip: two quay lobes + stern, berth on +X left as water. */
+      bed(-rr*.38,0,rr*.48,rr*.52,.70);
+      bed(rr*.02,-rr*.64,rr*.70,rr*.26,.60);
+      bed(rr*.02, rr*.64,rr*.70,rr*.26,.60);
+      ctx.globalCompositeOperation='screen';ctx.strokeStyle='rgba(170,226,80,.26)';ctx.lineWidth=Math.max(1,rr*.018);
+      for(const s of [-1,1]){
+        for(let n=0;n<2;n++){
+          const y=s*rr*(.50+n*.16);
+          ctx.beginPath();ctx.moveTo(-rr*.28,y);
+          ctx.quadraticCurveTo(rr*.12,y+s*rr*.06,rr*.58,y);ctx.stroke();
+        }
+      }
+      ctx.globalCompositeOperation='source-over';
+      spots(4,-rr*.38,0,rr*.36);spots(3,rr*.02,-rr*.64,rr*.28);spots(3,rr*.02,rr*.64,rr*.28);
+    }else if(kind==='fac'){
+      /* Birth-maw: compact body bed, mouth sector on +X kept thin. */
+      bed(-rr*.16,0,rr*.78,rr*.70,.68);
+      ctx.globalCompositeOperation='screen';ctx.strokeStyle='rgba(170,226,80,.28)';ctx.lineWidth=Math.max(1,rr*.02);
+      for(let n=0;n<4;n++){
+        const a=n/4*TAU+0.95+((seed>>((n%4)*7))&31)*.016,bend=a+Math.sin(seed+n*17)*.22,reach=rr*(.50+(n&1)*.10);
+        ctx.beginPath();ctx.moveTo(Math.cos(a)*rr*.10,Math.sin(a)*rr*.10);
+        ctx.quadraticCurveTo(Math.cos(bend)*rr*.32,Math.sin(bend)*rr*.32,Math.cos(a)*reach,Math.sin(a)*reach);ctx.stroke();
+      }
+      ctx.globalCompositeOperation='source-over';
+      spots(6,-rr*.16,0,rr*.58);
+    }else{
+      bed(0,0,rr*.92,rr*.72,.70);
+      ctx.globalCompositeOperation='screen';ctx.strokeStyle='rgba(170,226,80,.30)';ctx.lineWidth=Math.max(1,rr*.022);
+      for(let n=0;n<6;n++){
+        const a=n/6*TAU+((seed>>((n%4)*7))&31)*.018,bend=a+Math.sin(seed+n*17)*.26,reach=rr*(.72+(n&1)*.12);
+        ctx.beginPath();ctx.moveTo(Math.cos(a)*rr*.10,Math.sin(a)*rr*.10);
+        ctx.quadraticCurveTo(Math.cos(bend)*rr*.42,Math.sin(bend)*rr*.42,Math.cos(a)*reach,Math.sin(a)*reach);ctx.stroke();
+      }
+      ctx.globalCompositeOperation='source-over';
+      spots(8,0,0,rr*.70);
     }
     ctx.restore();
   };
   if(terrainBase) paint(terrainBase.getContext('2d'));
   paint(terrainCanvas.getContext('2d'));
-  const sx=clamp(Math.floor(cx-rr*1.35),0,TS-1),sy=clamp(Math.floor(cy-rr*1.35),0,TS-1);
-  uploadTerrainTexRegion(sx,sy,Math.min(TS-sx,rr*2.7),Math.min(TS-sy,rr*2.7),true);
-  terrainDirty(B.x,B.y,rad*1.45);
+  const ext=kind==='harbor'?1.55:kind==='airfield'?1.15:1.25;
+  const sx=clamp(Math.floor(cx-rr*ext),0,TS-1),sy=clamp(Math.floor(cy-rr*ext),0,TS-1);
+  uploadTerrainTexRegion(sx,sy,Math.min(TS-sx,rr*ext*2),Math.min(TS-sy,rr*ext*2),true);
+  terrainDirty(B.x,B.y,rad*1.35);
 }
 /* Rectangular levelling to match the rectangular apron: dead flat across the
    pad, feathered outside it so the platform meets the surrounding slope
@@ -3720,10 +4881,13 @@ function deformMaintain(dt){
      player just paid for it and is looking straight at it. */
   if(mipDirty&&(mipUrgent||mipTimer>2.5)){
     mipTimer=0; mipDirty=false; mipUrgent=false;
-    gl.activeTexture(gl.TEXTURE0);
+    const was=gl.getParameter(gl.ACTIVE_TEXTURE);
+    gl.activeTexture(gl.TEXTURE10);
+    const prev=gl.getParameter(gl.TEXTURE_BINDING_2D);
     gl.bindTexture(gl.TEXTURE_2D,terrainTex);
     gl.generateMipmap(gl.TEXTURE_2D);
-    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
+    gl.bindTexture(gl.TEXTURE_2D,prev);
+    gl.activeTexture(was);
   }
 }
 
@@ -3743,16 +4907,20 @@ function loadUnitSheet(){
     }
     const img=new Image();
     img.onload=()=>{
+      const was=gl.getParameter(gl.ACTIVE_TEXTURE);
+      gl.activeTexture(gl.TEXTURE7);
+      const prev=gl.getParameter(gl.TEXTURE_BINDING_2D);
       unitTex=gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D,unitTex);
-      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,img);
       gl.generateMipmap(gl.TEXTURE_2D);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      gl.bindTexture(gl.TEXTURE_2D,prev);
+      gl.activeTexture(was);
       unitTexReady=true;
-      gl.bindTexture(gl.TEXTURE_2D,atlasTex||null);
     };
     img.src=UNIT_SHEET_B64;
   }catch(e){ /* fall back to canvas sprites */ }

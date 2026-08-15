@@ -1,11 +1,11 @@
 /* Dump exactly what the build and production menus surface, with each entity's
    name in all four factions, so the icon brief is generated from the shipping
    tables rather than hand-typed. */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { writeFileSync } from 'node:fs';
 
 const PORT = process.argv[2] || '8992';
-const browser = await chromium.launch({
+const browser = await launchPwBrowser({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true,
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 412, height: 915 } });

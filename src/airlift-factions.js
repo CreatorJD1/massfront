@@ -117,9 +117,11 @@ function mfAflPhaseArkModel(){
 }
 
 /* Safe because main.js calls initModels only after every manifest script has
-   loaded. The default mesh serves Terran/Nova; only the Coalition receives the
-   Phase Ark through the existing faction registry. */
+   loaded. Nova keeps the Atlas default; Legion reuses that geometry so
+   factionUnitModelAllowed is true (without it airfields refuse production).
+   Horde is intentionally omitted — Brood transports with Massflesh. */
 UNIT_MDL[MF_UT_AIRLIFT]=mfAflAtlasModel;
 FAC_KIT.nova[MF_UT_AIRLIFT]=mfAflAtlasModel;
+FAC_KIT.legion[MF_UT_AIRLIFT]=mfAflAtlasModel;
 FAC_KIT.syndicate[MF_UT_AIRLIFT]=mfAflPhaseArkModel;
 

@@ -1,6 +1,6 @@
 /* Verify the launch title screen is safe on a narrow phone and returns on
    every fresh app launch. Usage: node tools/test-intro-launch.mjs [URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -11,10 +11,10 @@ const out=join(root,'releases','title-fit-360-mobile.png');
 const titleAsset='assets/brand/massfront-title-command-conquer-overwhelm-v1.png';
 await mkdir(join(root,'releases'),{recursive:true});
 
-const browser=await chromium.launch({
+const browser=await launchPwBrowser({
   headless:true,
   executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']
 });
 
 try{

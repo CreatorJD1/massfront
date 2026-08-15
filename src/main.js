@@ -10,7 +10,36 @@ let defenseFocus=0;             // 0 combined arms, 1 fortress / tower-defence c
 let infestationOn=true;         // neutral map nests, guards, spread, eruptions and tides
 let deploymentPackage='prepared'; // supported opening for newcomers; classic start remains selectable
 let hudDeck='orders';           // one secondary command row at a time on phones
+/* Phone command dock is platoon-first (4 groups, deck tabs). Army/box/rings
+   still treat the army as one blob. Stage A HUD (after Stage 0 screenshots,
+   not this slice): ring LOD, hologram sampling, box-select via spatial hash.
+   Army select does not auto-split into P1–P4. selInfo lists 3 unit types. */
 let activeWarMode='standard';   // Standard, Co-op and MMO share one planetary catalogue
+
+/* First Contact is deliberately NOT the Tutorial. Training owns KEEL,
+   objectives, highlights and its own mode; Standard gets only a short series
+   of ordinary notice-rail prompts during a new career's first three prepared
+   landings. Keeping this at the battle boundary stops Training state ever
+   leaking into a normal session again. */
+let firstContactTimers=[];
+function clearFirstContactGuide(){
+  for(const t of firstContactTimers) clearTimeout(t);
+  firstContactTimers.length=0;
+}
+function startFirstContactGuide(){
+  clearFirstContactGuide();
+  if(activeWarMode!=='standard'||!assistedOpeningActive()||deploymentPackage!=='prepared') return;
+  if(typeof TUT!=='undefined'&&TUT.trainingMode) return;
+  const battle=(META.standardMatches|0)+1;
+  const say=(delay,msg)=>firstContactTimers.push(setTimeout(()=>{
+    if(running&&matchLive&&activeWarMode==='standard'&&!(typeof TUT!=='undefined'&&TUT.trainingMode)) toast(msg);
+  },delay));
+  if(battle===1) say(900,'◇ FIRST CONTACT 1 / 3 — Standard medium theatre (*_medium). Locked stars stay on the galaxy. HQ is down. HUD pop reads n/1K.');
+  else say(900,'◇ FIRST CONTACT '+battle+' / 3 — HQ, Reactor and Factory are deployed. Income next. HUD pop reads n/1K — 1K is this commander\'s cap.');
+  say(11000,'◆ CLAIM MASS — place an Extractor on a nearby deposit, then protect the route back to base.');
+  say(28500,'⚔ FORM A SCREEN — queue a small force. SINGLE-TAP ground is attack-move (fight on the way). DOUBLE-TAP open ground is retreat (break contact, no fighting).');
+  say(56000,'⌖ HOLD TERRITORY — construction stays inside HQ range until a Targeting Array extends your network.');
+}
 
 function setHudDeck(deck,quiet){
   const valid=['orders','platoons','abilities','view'];
@@ -120,19 +149,127 @@ function battlefieldBoundaryPoint(angle,pad){
   const B=battlefieldPlayBounds(0),c=(B.lo+B.hi)*.5,r=battlefieldShapeRadius(angle,pad);
   return [c+Math.cos(angle)*r,c+Math.sin(angle)*r];
 }
+/* Max orthographic span for THIS theatre.
+   SPAN_MAX=3400 is the engine ceiling, sized for the 3.2 km Large mesh. Compact
+   and Standard are smaller playable discs inside that same mesh, so a single
+   ceiling lets the view run into exclusion haze, the heightfield rim, and the
+   skirt void. Pan stays inside the playable square (red rungs). FAR zoom is
+   allowed to spend Compact/Standard's unused MAP inset so infantry can finish
+   converting to icons (~2196 span at VH=915) without Large seeing the mesh
+   skirt (MAP-88 still wins there). Pitch and aspect both change the ground
+   footprint — a tilted portrait view is tall, a landscape view is wide — so
+   this is not a per-preset constant. */
+function battlefieldViewInner(){
+  const B=typeof battlefieldPlayBounds==='function'?battlefieldPlayBounds(0):{lo:0,hi:MAP,span:MAP};
+  const play=Math.max(80,B.span||(B.hi-B.lo));
+  /* play-24 keeps a hair inside the theatre square so the red rungs sit on
+     the visible edge. MAP-88 keeps Large's heightfield rim off-screen without
+     cropping the rungs (they sit ~60wu inside MAP). Compact/Standard are
+     already inset from MAP, so the theatre wins there. Pan/look-at uses this
+     tight square; FAR zoom uses battlefieldZoomInner() so icons can engage. */
+  return Math.min(play-24,MAP-88);
+}
+function battlefieldZoomInner(){
+  const inner=battlefieldViewInner();
+  const B=typeof battlefieldPlayBounds==='function'?battlefieldPlayBounds(0):{lo:0,hi:MAP,span:MAP};
+  const play=Math.max(80,B.span||(B.hi-B.lo));
+  /* Compact FAR used to sit at ~2020 span — below the infantry icon-out
+     crossing (~2196 at VH=915), so the strategic tier never fully took over.
+     Spend some of Compact/Standard's unused MAP inset as border haze (already
+     fog-coloured) so FAR zoom reaches that band. 560 wu is past infantry
+     full-convert with margin; MAP-88 still blocks Large's heightfield rim.
+     Pan stays on the tight inner. */
+  const haze=Math.min(560,Math.max(0,(MAP-play)*0.56));
+  return Math.min(inner+haze,MAP-88);
+}
+function spanMaxNow(){
+  const inner=battlefieldZoomInner();
+  const pitch=clamp(typeof camPitch==='number'?camPitch:1.19,
+    typeof PITCH_MIN==='number'?PITCH_MIN:1.05,
+    typeof PITCH_MAX==='number'?PITCH_MAX:1.50);
+  const sinP=Math.max(0.30,Math.sin(pitch));
+  /* Fit the pitched ground HEIGHT inside `inner`. The previous formula used
+     max(width,height) of the ground AABB, so a landscape window was capped
+     at inner/aspect (~1748 at 1080p) — below the infantry icon crossing.
+     Screen-right may hang into border haze; shaders already fade that to
+     fog colour. Portrait phones were already height-limited, so their cap
+     only moves by battlefieldZoomInner(). Yaw is left out on purpose:
+     turning used to shrink span and fight the icon band. */
+  const k=1/sinP;
+  const hi=typeof SPAN_MAX==='number'?SPAN_MAX:3400;
+  const lo=spanMinNow();
+  return clamp(inner/Math.max(0.35,k),lo,hi);
+}
+/* mesh.js SPAN_MIN=420 is a company view. On a 412×900 phone that floor never
+   reaches commander/unit tactical mesh (~200–270). Icon fade is footprint-
+   based and still off at 200; the old floor just hid the mesh band. */
+function spanMinNow(){ return 200; }
+/* mesh.js owns clampCam / zoomBy / camTick. Do not edit that file for this —
+   FS3D/AO work lives there. Takeover keeps the pitch clamp and rewrites span
+   + look-at against the current theatre. distTarget must be clamped too:
+   camTick lerps orthoSpan toward it, so leaving it at SPAN_MAX would fight
+   the cap every frame. */
+const _mfClampCamMesh=clampCam;
+clampCam=function(){
+  const lo=spanMinNow(), mx=spanMaxNow();
+  if(orthoSpan>mx) orthoSpan=mx;
+  if(distTarget>mx) distTarget=mx;
+  const want=orthoSpan;
+  _mfClampCamMesh();
+  /* mesh clampCam raises anything under 420. Restore the tactical floor. */
+  if(want<SPAN_MIN) orthoSpan=clamp(want,lo,mx);
+  if(orthoSpan>mx) orthoSpan=mx;
+  if(orthoSpan<lo) orthoSpan=lo;
+  distTarget=clamp(distTarget,lo,mx);
+  camDist=orthoSpan;
+  cam.z=1400/orthoSpan;
+  /* LOOK-AT, not view-hull. Subtracting max(hw,depth) on a tall phone ate
+     the slack box (~±515 at span 1500) and left SW HQ (576,2624) outside
+     it — pan stuck and HQ follow yanked back to centre every frame. Haze
+     already hides overhang. */
+  const B=battlefieldPlayBounds(0);
+  const over=80+160*(1-clamp(orthoSpan/Math.max(1,mx),0,1));
+  cam.x=clamp(cam.x,B.lo-over,B.hi+over);
+  cam.y=clamp(cam.y,B.lo-over,B.hi+over);
+};
+zoomBy=function(f){ distTarget=clamp(distTarget/f,spanMinNow(),spanMaxNow()); };
+const _mfCamTickMesh=camTick;
+camTick=function(dt){
+  /* mesh camTick follows even after camUser(). Pinch/pan must win. */
+  if(camFollow>=0&&typeof camAutoAllowed==='function'&&!camAutoAllowed()) camFollow=-1;
+  _mfCamTickMesh(dt);
+};
+/* MEDIUM/LOW scissor projects the ground AABB. A pitched portrait view
+   leaves fog-clear strips (the grey border). Full frame on tall phones. */
+if(typeof mfGfxScissor==='function'){
+  const _mfGfxScissorMesh=mfGfxScissor;
+  mfGfxScissor=function(on){
+    if(!on){ _mfGfxScissorMesh(false); return; }
+    if(typeof VH==='number'&&typeof VW==='number'&&VH>VW){
+      if(typeof gl!=='undefined'&&gl) gl.disable(gl.SCISSOR_TEST);
+      return;
+    }
+    _mfGfxScissorMesh(true);
+  };
+}
 let playerStartZone='sw', spawnPick='player';
 let aiSlots=[
   {on:true, diff:1,zone:'ne',ally:false,behavior:'balanced'},
   {on:false,diff:1,zone:'nw',ally:false,behavior:'balanced'},
   {on:false,diff:1,zone:'se',ally:false,behavior:'balanced'}
 ];
-/* Theatre size owns participant density. One slot always belongs to the
-   player, leaving 1/2/3 enemy starts on Compact/Standard/Large. Keeping the
-   rows present but visibly locked teaches that a larger war table expands the
-   match instead of making controls appear and disappear. */
+/* Theatre size owns participant density and the 1000-pop-per-slot lock:
+   Compact 2 / Standard 3 / Large 4 seats → 2000 / 3000 / 4000 total. Rows stay
+   visible but MAP-locked so a larger war table expands the match. This does
+   not raise FACTION_POP_CAP (still 1000 per seat). Authored seats: Compact
+   duel SW–NE; second enemy SE never NW; ally NW; Large 1v3 four corners.
+   Adjacent cardinals (~1028 m) are crush — never a default. */
 const BATTLEFIELD_FACTION_CAP={compact:2,standard:3,large:4};
+const SPAWN_CORNERS=['nw','ne','se','sw'];
+const SPAWN_FAIR_MIN_M=1400;
 function battlefieldFactionCap(){return BATTLEFIELD_FACTION_CAP[populationTheatre()]||3;}
 function battlefieldAiCap(){return Math.max(1,battlefieldFactionCap()-1);}
+function spawnZoneIsCorner(id){ return SPAWN_CORNERS.indexOf(id)>=0; }
 function normalizeAiSlotsForBattlefield(){
   const max=battlefieldAiCap();
   for(const A of aiSlots)A.behavior=typeof aiBehaviorKey==='function'?aiBehaviorKey(A.behavior):'balanced';
@@ -146,6 +283,57 @@ function normalizeAiSlotsForBattlefield(){
   if(spawnPick!=='player'){
     const i=+spawnPick.slice(2);if(i>=max||!aiSlots[i]||!aiSlots[i].on)spawnPick='player';
   }
+  reseatSpawnPlanner(max);
+}
+function reseatSpawnPlanner(max){
+  /* Stage 0 MAP contract. Compact is a SW–NE duel; extras are already off.
+     On Standard/Large, allies claim NW, the second enemy is SE (never NW —
+     that is the ally chair / west-edge crush vs player SW), and a third enemy
+     takes the leftover corner so Large 1v3 is four corners. Cardinals snap
+     off because SW–W is ~1028 m. */
+  if(max==null) max=battlefieldAiCap();
+  if((typeof populationTheatre==='function'?populationTheatre():'standard')==='compact'){
+    playerStartZone='sw';
+    aiSlots[0].on=true; aiSlots[0].ally=false; aiSlots[0].zone='ne';
+    return;
+  }
+  if(!spawnZoneIsCorner(playerStartZone)) playerStartZone='sw';
+  let allyN=0;
+  for(let i=0;i<aiSlots.length;i++){
+    if(i>=max||!aiSlots[i].on||!aiSlots[i].ally) continue;
+    if(allyN===0){
+      if(playerStartZone==='nw') playerStartZone='sw';
+      aiSlots[i].zone='nw';
+    }
+    allyN++;
+  }
+  const taken=new Set([playerStartZone]);
+  for(let i=0;i<aiSlots.length;i++) if(i<max&&aiSlots[i].on&&aiSlots[i].ally) taken.add(aiSlots[i].zone);
+  const enemyIdx=[];
+  for(let i=0;i<aiSlots.length;i++) if(i<max&&aiSlots[i].on&&!aiSlots[i].ally) enemyIdx.push(i);
+  const nE=enemyIdx.length;
+  /* 1v1/1v2 omit NW so the second enemy cannot sit on the ally chair. 1v3
+     puts NW last so AI 2 (index 1) still prefers SE. */
+  const prefer=nE>=3?['ne','se','nw','sw']:['ne','se','sw'];
+  for(const i of enemyIdx){
+    const A=aiSlots[i];
+    const nwBanned=A.zone==='nw'&&(i===1||nE<3);
+    const ok=spawnZoneIsCorner(A.zone)&&!taken.has(A.zone)&&!nwBanned;
+    if(!ok){
+      const pick=prefer.find(z=>!taken.has(z)&&!(i===1&&z==='nw'))||SPAWN_CORNERS.find(z=>!taken.has(z));
+      if(pick) A.zone=pick;
+    }
+    taken.add(A.zone);
+  }
+  allyN=0;
+  for(let i=0;i<aiSlots.length;i++){
+    if(i>=max||!aiSlots[i].on||!aiSlots[i].ally) continue;
+    allyN++;
+    if(allyN===1){ taken.add(aiSlots[i].zone); continue; }
+    if(spawnZoneIsCorner(aiSlots[i].zone)&&!taken.has(aiSlots[i].zone)){ taken.add(aiSlots[i].zone); continue; }
+    const pick=SPAWN_CORNERS.find(z=>!taken.has(z));
+    if(pick){ aiSlots[i].zone=pick; taken.add(pick); }
+  }
 }
 function startZone(id){
   const Z=START_ZONES.find(z=>z.id===id)||START_ZONES[0],s=battlefieldPresetDef().start;
@@ -154,6 +342,18 @@ function startZone(id){
 function activeAiSlots(){ return aiSlots.map((s,i)=>({...s,slot:i})).filter(s=>s.on); }
 function activeEnemySlots(){return activeAiSlots().filter(S=>!S.ally);}
 function activeAllySlots(){return activeAiSlots().filter(S=>S.ally);}
+function spawnAiRosterPick(fac, used){
+  /* Identity only. Chassis stays FACTIONS[fac].hero (4 / 28 / 29 / 30).
+     applyCommanderChoice is the player's doctrine stack — never run it here
+     or three AI seats would multiply player perks. */
+  const key=typeof commanderFactionKey==='function'?commanderFactionKey(fac):fac;
+  const roster=(typeof COMMANDER_ROSTERS!=='undefined'&&COMMANDER_ROSTERS[key])||[];
+  let pick=null;
+  for(let i=0;i<roster.length;i++) if(used.indexOf(roster[i].id)<0){ pick=roster[i]; break; }
+  if(!pick&&roster.length) pick=roster[used.length%roster.length];
+  if(pick) used.push(pick.id);
+  return pick;
+}
 function skirmishSpawnPoints(){
   const P=startZone(playerStartZone), out=[{kind:'player',slot:-1,x:P.x*MAP,y:P.y*MAP,diff:0,zone:P.id}];
   for(const A of activeAiSlots()){
@@ -169,7 +369,31 @@ function spawnTargetZone(key){
   if(key==='player') return playerStartZone;
   const i=+String(key).replace('ai',''); return aiSlots[i]?aiSlots[i].zone:playerStartZone;
 }
+function spawnEnemyNwBanned(key,zone){
+  /* AI 2 (index 1) is never an enemy on NW — that chair is the ally / 1v3
+     leftover. A two-front also must not park its second enemy there. */
+  if(zone!=='nw'||key==='player') return false;
+  const i=+String(key).replace('ai','');
+  if(aiSlots[i]==null||aiSlots[i].ally) return false;
+  if(i===1) return true;
+  let n=0;
+  for(let k=0;k<aiSlots.length;k++) if(aiSlots[k].on&&!aiSlots[k].ally) n++;
+  if(!aiSlots[i].on) n++;
+  return n<3;
+}
 function setSpawnTargetZone(key,zone){
+  if(!spawnZoneIsCorner(zone)){
+    toast('CARDINAL STARTS ARE CRUSH — use a corner');
+    return false;
+  }
+  if((typeof populationTheatre==='function'?populationTheatre():'standard')==='compact'&&zone!=='sw'&&zone!=='ne'){
+    toast('COMPACT DUEL IS SW–NE');
+    return false;
+  }
+  if(spawnEnemyNwBanned(key,zone)){
+    toast('SECOND ENEMY IS SE — NW IS THE ALLY CHAIR');
+    return false;
+  }
   const old=spawnTargetZone(key);
   let occupied='';
   if(playerStartZone===zone) occupied='player';
@@ -180,6 +404,7 @@ function setSpawnTargetZone(key,zone){
   }
   if(key==='player') playerStartZone=zone;
   else { const i=+key.slice(2); if(aiSlots[i]) aiSlots[i].zone=zone; }
+  return true;
 }
 function drawSpawnPlanner(){
   const cv3=$('spawnMap'); if(!cv3||typeof drawMapPreview!=='function') return;
@@ -214,6 +439,22 @@ function renderSpawnPlanner(){
   const aiMax=battlefieldAiCap();
   const live=activeAiSlots(),same=live.every(A=>A.diff===live[0].diff);
   const conquestFloor=typeof mfConquestDifficultyFloor==='function'?mfConquestDifficultyFloor(curMap):0;
+  let gdiff=$('globalDiffRow');
+  if(!gdiff){
+    gdiff=document.createElement('div'); gdiff.id='globalDiffRow'; gdiff.className='optRow';
+    list.parentNode.insertBefore(gdiff,list);
+  }
+  gdiff.innerHTML=['EASY','NORMAL','HARD'].map((n,d)=>'<button type="button" class="globalDiff dbtn'+(same&&d===live[0].diff?' on':'')+(d<conquestFloor?' mapFloor':'')+'" data-d="'+d+'">'+n+'</button>').join('');
+  gdiff.querySelectorAll('.globalDiff').forEach(b=>b.addEventListener('pointerdown',e=>{
+    e.stopPropagation();
+    if(+b.dataset.d<conquestFloor){toast('CONQUEST THREAT FLOOR — this battlefield begins at '+['EASY','NORMAL','HARD'][conquestFloor]);sfx('deny');return;}
+    difficulty=+b.dataset.d;
+    for(const A of aiSlots) if(A.on) A.diff=difficulty;
+    if(typeof META!=='undefined'&&META&&!(typeof storyCampaignPlanBorrowed==='function'&&storyCampaignPlanBorrowed())){
+      META.setup=META.setup||{}; META.setup.d=difficulty; if(typeof metaSave==='function') metaSave();
+    }
+    renderSpawnPlanner(); initAudio(); sfx('ui');
+  }));
   document.querySelectorAll('.globalDiff').forEach(b=>{b.classList.toggle('on',same&&+b.dataset.d===live[0].diff);b.classList.toggle('mapFloor',+b.dataset.d<conquestFloor);});
   const targets=[{key:'player',nm:'YOU',on:true}].concat(aiSlots.map((s,i)=>({key:'ai'+i,nm:'AI '+(i+1),on:s.on})));
   pick.innerHTML=targets.map(T=>{
@@ -273,7 +514,12 @@ function renderSpawnPlanner(){
   if(fair){
     const S=skirmishSpawnPoints(); let md=1e9;
     for(let a=0;a<S.length;a++) for(let b=a+1;b<S.length;b++) md=Math.min(md,Math.sqrt(dist2(S[a].x,S[a].y,S[b].x,S[b].y)));
-    fair.innerHTML='<b>\u2713 1 PLAYER · '+activeAllySlots().length+' AI ALLY · '+activeEnemySlots().length+' ENEMY</b><span>3 mass + 1 energy site each · nearest commanders '+Math.round(md)+'m apart</span>';
+    const crush=md<SPAWN_FAIR_MIN_M;
+    fair.style.background=crush?'rgba(90,18,22,.55)':'';
+    fair.style.borderColor=crush?'rgba(255,93,67,.45)':'';
+    fair.innerHTML=crush
+      ?'<b style="color:#ff6d55">\u26A0 CRUSH '+Math.round(md)+'m</b><span style="color:#ffb3a6">Nearest commanders under '+SPAWN_FAIR_MIN_M+'m — corners only (SW–NE duel, SE second enemy, NW ally)</span>'
+      :'<b>\u2713 1 PLAYER · '+activeAllySlots().length+' AI ALLY · '+activeEnemySlots().length+' ENEMY</b><span>3 mass + 1 energy site each · nearest commanders '+Math.round(md)+'m apart</span>';
   }
   drawSpawnPlanner();
 }
@@ -284,14 +530,18 @@ function initSpawnPlanner(){
     e.stopPropagation(); const r=cv3.getBoundingClientRect(),u=(e.clientX-r.left)/r.width,v=(e.clientY-r.top)/r.height;
     let best=START_ZONES[0],bd=1e9;
     for(const Z0 of START_ZONES){ const Z=startZone(Z0.id),d=(u-Z.x)*(u-Z.x)+(v-Z.y)*(v-Z.y);if(d<bd){bd=d;best=Z;} }
-    setSpawnTargetZone(spawnPick,best.id); renderSpawnPlanner(); sfx('confirm');
+    if(setSpawnTargetZone(spawnPick,best.id)===false){ sfx('deny'); return; }
+    renderSpawnPlanner(); sfx('confirm');
   });
   renderSpawnPlanner();
 }
 
 function resetWorld(){
+  clearFirstContactGuide();
   ualive.fill(0); usel.fill(0);
   freeList=[]; unitHigh=0; teamCount[0]=0; teamCount[1]=0;
+  if(typeof populationResetLedgers==='function') populationResetLedgers();
+  if(typeof uAllyBase!=='undefined') uAllyBase.fill(-1);
   rebuildGrid();                                   // spatial grid must never hold stale chains
   heroIdx=-1; enemyHeroIdx=-1; enemyHeroIdxs.length=0;
   blds.length=0; rebuildBGrid();
@@ -313,6 +563,7 @@ function resetWorld(){
   meteors.length=0; stormTimer=200;
   fields.length=0; ffNext=0; ufield.fill(-1); ushielded.fill(0); umarch.fill(0);
   ufireT.fill(0); uheal.fill(0);
+  if(typeof uCrash!=='undefined'){ uCrash.fill(0); ualt.fill(0); uCtime.fill(0); }
   ubroodLed.fill(0);uMineT.fill(0);uMineNode.fill(-1);broodMassT=0;
   researched={}; resDone=0; researchCarry={}; resHpMult=1; resRngMult=1; resEnergyMult=1;
   if(typeof resetTypeBoosts==='function') resetTypeBoosts();
@@ -354,7 +605,76 @@ function resetWorld(){
   $('levelUp').style.display='none';
 }
 
+function setupOnBtn(sel){ return document.querySelector(sel); }
+function commitSetupFromDom(){
+  /* Deploy can highlight a pick whose live global was overwritten (training
+     snapshot restore, shared .fbtn paint). Launch copies the buttons. Scoped
+     per row so the player's Nova chip cannot be read as the enemy. */
+  const mc=document.querySelector('#mapRow .mapCard.sel');
+  if(mc&&mc.dataset.map&&typeof MAPDEFS!=='undefined'&&MAPDEFS[mc.dataset.map]
+     &&typeof syncBattlefieldFromMap==='function'){
+    const key=mc.dataset.map;
+    const keepMedium=typeof activeWarMode!=='undefined'&&activeWarMode==='standard'
+      &&MAPDEFS[key].size==='compact'&&MAPDEFS[curMap]&&MAPDEFS[curMap].size==='standard';
+    if(!keepMedium) syncBattlefieldFromMap(key);
+  }
+  if(typeof activeWarMode!=='undefined'&&activeWarMode==='standard'
+     &&typeof theatreMapId==='function'&&MAPDEFS[curMap]&&MAPDEFS[curMap].size!=='standard'
+     &&window._mfTheatrePick!=='compact'&&window._mfTheatrePick!=='large'){
+    const pk=typeof planetForMap==='function'?planetForMap(curMap):null;
+    const P=pk&&typeof PLANETS!=='undefined'&&PLANETS[pk];
+    const R=P&&P.regions.find(r=>r.maps&&r.maps.indexOf(curMap)>=0);
+    const med=R&&theatreMapId(R.maps,'standard');
+    if(med) syncBattlefieldFromMap(med);
+  }
+  const ons=[...document.querySelectorAll('#facRow .fbtn.on')];
+  const specific=ons.find(b=>b.dataset.f&&b.dataset.f!=='random');
+  if(specific&&(typeof FACTIONS!=='undefined'&&FACTIONS[specific.dataset.f])) aiFactionSel=specific.dataset.f;
+  else if(!(aiFactionSel&&(aiFactionSel==='random'||(typeof FACTIONS!=='undefined'&&FACTIONS[aiFactionSel])))){
+    const fac=ons[0];
+    if(fac&&fac.dataset.f&&(fac.dataset.f==='random'||(typeof FACTIONS!=='undefined'&&FACTIONS[fac.dataset.f]))) aiFactionSel=fac.dataset.f;
+    else if(typeof META!=='undefined'&&META&&META.setup&&META.setup.f
+            &&(META.setup.f==='random'||(typeof FACTIONS!=='undefined'&&FACTIONS[META.setup.f])))
+      aiFactionSel=META.setup.f;
+  }
+  if(typeof persistEnemyFacPick==='function') persistEnemyFacPick();
+  const pf=setupOnBtn('#pfacRow .fbtn.on');
+  if(pf&&pf.dataset.f&&typeof playableFactions==='function'&&playableFactions().includes(pf.dataset.f))
+    playerFaction=pf.dataset.f;
+  const cmd=setupOnBtn('#commanderRow .commanderCard.on')||setupOnBtn('#mfQuickCommanders .mfQuickCommander.on');
+  if(cmd) playerCommanderId=cmd.dataset.commander||cmd.dataset.mfCommander||playerCommanderId;
+  const gl=setupOnBtn('#goalRow .glbtn.on'); if(gl&&gl.dataset.g) goalSel=gl.dataset.g;
+  const tm=setupOnBtn('#timeRow .tmbtn.on'); if(tm) timeLimit=+tm.dataset.t||0;
+  const pc=setupOnBtn('#paceRow .pcbtn.on'); if(pc) resPace=+pc.dataset.p;
+  const cr=setupOnBtn('#crRow .crbtn.on'); if(cr) crateRate=crateRateBase=+cr.dataset.c;
+  const inf=setupOnBtn('#infestRow .ifbtn.on'); if(inf) infestationOn=!!+inf.dataset.i;
+  const df=setupOnBtn('#defFocusRow .dfbtn.on'); if(df) defenseFocus=+df.dataset.df;
+  const pkg=setupOnBtn('#deployPkgRow .pkgbtn.on');
+  if(pkg&&DEPLOYMENT_PACKAGES[pkg.dataset.pkg]) deploymentPackage=pkg.dataset.pkg;
+  const gd=setupOnBtn('#globalDiffRow .globalDiff.on')||setupOnBtn('.globalDiff.on');
+  if(gd){
+    difficulty=+gd.dataset.d;
+    for(const A of aiSlots) if(A.on&&!A.ally) A.diff=difficulty;
+  } else if(typeof activeEnemySlots==='function'&&activeEnemySlots().length)
+    difficulty=Math.max(...activeEnemySlots().map(A=>A.diff));
+  const wc=setupOnBtn('#wcRowSel .wbtn.on'); if(wc) wcChoice=+wc.dataset.w;
+  const th=setupOnBtn('#threatRow .thBtn.on');
+  if(th&&typeof META!=='undefined'&&META) META.threatSel=+th.dataset.t||META.threatSel;
+}
+let matchSetupArmed=false;
+function armMatchSetup(){ commitSetupFromDom(); matchSetupArmed=true; }
+function consumeMatchSetup(){ if(!matchSetupArmed) return; matchSetupArmed=false; commitSetupFromDom(); }
+function mfRescueHiddenSetupCards(){
+  /* Galaxy flow hides leftover .setupScroll > .setupCard. Landing package was
+     never moved into Advanced, so Prepared/Expedition never reached the match.
+     Rescue without touching the GALAXY→SYSTEM→PLANET stage machine. */
+  const body=$('mfAdvancedBody'); if(!body) return;
+  const el=$('deployPkgRow'), card=el&&el.closest('.setupCard');
+  if(card&&!body.contains(card)){ card.removeAttribute('data-setup-tab'); body.appendChild(card); }
+}
+
 function newSkirmish(){
+  consumeMatchSetup();
   /* Pull the player faction's radio bank now, while the loading screen is up,
      so the first order of the match speaks instead of falling back to whatever
      the OS narrator happens to be. */
@@ -424,10 +744,16 @@ function newSkirmish(){
   const FH=FACTIONS[AI.fac]||FACTIONS.legion;
   const ownFH=(typeof FACTIONS!=='undefined'&&FACTIONS[playerFaction])||null;
   const aiBases=[],allyBases=[];
+  const enemyRosterUsed=[], allyRosterUsed=playerCommanderId?[playerCommanderId]:[];
   for(const S of starts.slice(1)){
     const exs=S.x,eys=S.y,egx=Math.round(exs/SNAP_GRID)*SNAP_GRID,egy=Math.round(eys/SNAP_GRID)*SNAP_GRID;
-    const ally=!!S.ally,team=ally?0:1,fac=ally?carrierFacOwn:AI.fac,heroType=ally?(ownFH&&ownFH.hero!=null?ownFH.hero:4):(FH.hero!=null?FH.hero:4);
-    const h=spawnUnit(heroType,team,exs,eys);
+    const ally=!!S.ally,team=ally?0:1,fac=ally?carrierFacOwn:AI.fac;
+    /* Chassis is the faction hero type. Identity is a distinct roster id so
+       Large 1v3 is not three Vexes / Renns / Sovereigns. */
+    const heroType=ally?(ownFH&&ownFH.hero!=null?ownFH.hero:4):(FH.hero!=null?FH.hero:4);
+    const rosterFac=ally?(typeof commanderFactionKey==='function'?commanderFactionKey(playerFaction):playerFaction)||'nova':AI.fac;
+    const cmd=spawnAiRosterPick(rosterFac, ally?allyRosterUsed:enemyRosterUsed);
+    const h=spawnUnit(heroType,team,exs,eys,S.slot);
     if(h>=0){if(ally)uAllyBase[h]=S.slot;else enemyHeroIdxs.push(h);}
     const a=Math.atan2(MAP*.5-eys,MAP*.5-exs),fx=Math.cos(a),fy=Math.sin(a),rx=-fy,ry=fx;
     const baseB=(type,x,y)=>{const B=addBld(type,team,x,y,true);B.fac=fac;B.aiBaseSlot=S.slot;B.aiBehavior=aiBehaviorKey(S.behavior);if(ally)B.allyAI=S.slot;return B;};
@@ -441,7 +767,7 @@ function newSkirmish(){
     const guard=[1,3,5][S.diff];
     for(let k=0;k<guard;k++){
       const ty=S.diff>=2&&k>2?1:0;
-      const u=spawnUnit(ty,team,egx+fx*(210+rr(-30,45))+rx*rr(-100,100),egy+fy*(210+rr(-30,45))+ry*rr(-100,100));
+      const u=spawnUnit(ty,team,egx+fx*(210+rr(-30,45))+rx*rr(-100,100),egy+fy*(210+rr(-30,45))+ry*rr(-100,100),S.slot);
       if(u>=0){ustate[u]=1;utx[u]=egx;uty[u]=egy;if(ally)uAllyBase[u]=S.slot;}
     }
     let bd=1e12,bi=-1;
@@ -451,6 +777,7 @@ function newSkirmish(){
     /* Store the generation alongside the slot so ai.js can tell "still the same
        Commander" from "that slot was recycled into somebody else's unit". */
     const base={x:egx,y:egy,diff:S.diff,slot:S.slot,behavior:aiBehaviorKey(S.behavior),commander:h,fac,
+                commanderId:cmd&&cmd.id,commanderNm:cmd&&cmd.nm,
                 commanderGen:(h>=0&&typeof ugen!=='undefined')?ugen[h]:null,spawnT:18,orderT:4,mass:220,energy:900};
     (ally?allyBases:aiBases).push(base);
     aiDeployArrivals.push({x:egx,y:egy,fac,ang:a+Math.PI,depart:0});
@@ -570,9 +897,19 @@ function deployCarrier(){
     const a=Math.random()*TAU, sp=110+Math.random()*220;
     addParticle(1,cx2,cy2,Math.cos(a)*sp,Math.sin(a)*sp,1.7,30, 150,142,124);
   }
-  deformTerrain(cx2,cy2,120,0.03);
+  /* Landing destroys the surroundings, not the ground the new HQ already
+     occupies. The old single crater ran AFTER addBld() flattened and paved the
+     foundation, excavating a lake directly beneath the base. Four shallow
+     exhaust scars sit outside the HQ footprint and leave its engineered pad
+     intact while preserving the violent deployment event. */
+  for(let q=0;q<4;q++){
+    const a=q*TAU/4+Math.PI*.25,rx=cx2+Math.cos(a)*118,ry=cy2+Math.sin(a)*118;
+    deformTerrain(rx,ry,42,0.012);
+    if(typeof addGroundBurn==='function')addGroundBurn(rx,ry,58,0);
+  }
   sfx('carrier_deploy',cx2,cy2,1.18); buzz(45);
   showHudDock(true,'orders');
+  startFirstContactGuide();
   $('deployBtn').style.display='none';
   updateFog();
   if(wcActive.length) toast('⚠ '+wcActive.length+' modifiers active · +'+Math.round((wcRewardMult()-1)*100)+'% payout — tap MOD for details');
@@ -979,7 +1316,7 @@ function frame(ts){
   }
   if(running&&!paused){
     const totAll=teamCount[0]+teamCount[1]+teamCount[2];
-    const simDt= totAll>22000?1/12 : totAll>13000?1/16 : totAll>6500?1/22 : 1/30;
+    const simDt= totAll>22000?1/12 : totAll>13000?1/16 : totAll>6500?1/22 : totAll>900?1/26 : 1/30;
     acc+=dt*gameSpeed;
     let steps=0;
     while(acc>=simDt&&steps<3){
@@ -1047,8 +1384,165 @@ function frame(ts){
   musicTickFrame(dt);
 }
 
+/* Mid-tier CPU at 1000 pop. GPU fillrate is the quality preset; this is
+   sim/HUD/pathfinding. Takeover, not edits to the renderer files. */
+function mfCpuBind(){
+  mfCpuBindPath();
+  mfCpuBindSep();
+  mfCpuBindMinimap();
+  mfCpuBindIcons();
+  mfCpuBindFx();
+}
+function mfGfxKey(){
+  if(typeof qualityKey==='function') return qualityKey();
+  const q=typeof META!=='undefined'&&META.settings&&META.settings.quality;
+  return q==='low'||q==='medium'||q==='cinematic'?q:'high';
+}
+function mfCpuBindPath(){
+  if(typeof computeField!=='function'||typeof PGS!=='number'||typeof requestField!=='function') return;
+  const pool=[];
+  let mark=null, epoch=0;
+  computeField=function(tx,ty,naval){
+    const N=PGS*PGS;
+    if(!ffDistA){ ffDistA=new Uint16Array(N); ffQueue=new Int32Array(N); }
+    if(!mark||mark.length!==N){ mark=new Uint16Array(N); epoch=0; }
+    let dirs=pool.pop();
+    if(!dirs||dirs.length!==N) dirs=new Uint8Array(N);
+    dirs.fill(8);
+    epoch++;
+    if(epoch===65535){ mark.fill(0); epoch=1; }
+    const dist=ffDistA;
+    const pass=i=>naval?!!(NAVW&&NAVW[i]&&NAVCOMP[i]===NAV_MAIN):!!PASS[i];
+    let goal=ffCell(tx,ty);
+    if(!pass(goal)){
+      const gx=goal%PGS, gy=goal/PGS|0;
+      outer: for(let r=1;r<24;r++)
+        for(let a=0;a<TAU;a+=0.5){
+          const nx=clamp(gx+Math.round(Math.cos(a)*r),0,PGS-1), ny=clamp(gy+Math.round(Math.sin(a)*r),0,PGS-1);
+          if(pass(ny*PGS+nx)){ goal=ny*PGS+nx; break outer; }
+        }
+    }
+    if(!pass(goal)) return dirs;
+    let qh=0, qt=0;
+    dist[goal]=0; mark[goal]=epoch; ffQueue[qt++]=goal;
+    while(qh<qt){
+      const c=ffQueue[qh++];
+      const cx=c%PGS, cy=c/PGS|0, cd=dist[c];
+      for(let k=0;k<8;k++){
+        const nx2=cx+DIRX[k], ny2=cy+DIRY[k];
+        if(nx2<0||ny2<0||nx2>=PGS||ny2>=PGS) continue;
+        const n=ny2*PGS+nx2;
+        if(!pass(n)||mark[n]===epoch) continue;
+        if(k&1){
+          if(!pass(cy*PGS+nx2)||!pass(ny2*PGS+cx)) continue;
+        }
+        mark[n]=epoch;
+        dist[n]=cd+((k&1)?3:2);
+        ffQueue[qt++]=n;
+      }
+    }
+    for(let qi=0;qi<qt;qi++){
+      const c=ffQueue[qi];
+      if(c===goal) continue;
+      const cx=c%PGS, cy=c/PGS|0;
+      let bk=8, bd2=dist[c];
+      for(let k=0;k<8;k++){
+        const nx2=cx+DIRX[k], ny2=cy+DIRY[k];
+        if(nx2<0||ny2<0||nx2>=PGS||ny2>=PGS) continue;
+        const n=ny2*PGS+nx2;
+        if(mark[n]!==epoch) continue;
+        const dn=dist[n];
+        if(dn<bd2){ bd2=dn; bk=k; }
+      }
+      dirs[c]=bk;
+    }
+    return dirs;
+  };
+  requestField=function(tx,ty,naval){
+    naval=!!naval;
+    for(let f=0;f<fields.length;f++){
+      if(fields[f]&&!!fields[f].naval===naval&&dist2(fields[f].tx,fields[f].ty,tx,ty)<70*70) return f;
+    }
+    const f=ffNext; ffNext=(ffNext+1)%FF_MAX;
+    for(let i=0;i<unitHigh;i++) if(ufield[i]===f) ufield[i]=-1;
+    const old=fields[f];
+    if(old&&old.dirs) pool.push(old.dirs);
+    fields[f]={tx,ty,naval,dirs:computeField(tx,ty,naval)};
+    return f;
+  };
+}
+function mfCpuBindSep(){
+  if(typeof unitSeparation!=='function') return;
+  const orig=unitSeparation;
+  unitSeparation=function(i,T,isBug,swarmLOD,total){
+    /* HIGH keeps the original 800/every-other skip. MEDIUM starts earlier and
+       strides harder so 400–800 pop does not pay HIGH-class pair tests. */
+    const q=mfGfxKey();
+    const gate=q==='low'?280:q==='medium'?420:800;
+    const stride=q==='low'?3:q==='medium'?(total>900?3:2):2;
+    if(total>gate && ((i+tick)%stride) && !usel[i] && T.cat!=='hero'){
+      sepVX=0; sepVY=0; sepHits=0; sepVisited=0;
+      return;
+    }
+    return orig(i,T,isBug,swarmLOD,total);
+  };
+}
+function mfCpuBindMinimap(){
+  if(typeof renderMinimap!=='function') return;
+  const orig=renderMinimap;
+  let keep=null, keepT=0, skip=0, keepGen=-1;
+  renderMinimap=function(){
+    const tot=(teamCount[0]+teamCount[1]+teamCount[2])|0;
+    const now=performance.now();
+    const q=mfGfxKey();
+    /* Deform stamps null mmBg on every crater. The 2048→256 civic downsample
+       (drawImage of terrainCanvas) is the #2 CPU hotspot at 1000 pop.
+       HIGH/CINEMATIC refresh scars sooner; MEDIUM holds the last bake longer. */
+    const hold=q==='low'?1600:q==='medium'?1100:q==='cinematic'?320:520;
+    /* Hold only a bake from this map gen. Restoring a black/stale keep
+       after applyTheme nulls mmBg is why MEDIUM phones kept a black square. */
+    if(keep && keepGen===mmBgGen && now-keepT<hold) mmBg=keep;
+    const skipN=q==='low'?3:q==='medium'?(tot>280?2:1):(tot>700?2:1);
+    if(keep && keepGen===mmBgGen && skipN>1 && (++skip%skipN)) return;
+    orig();
+    if(typeof mmBg!=='undefined'&&mmBg){ keep=mmBg; keepT=now; keepGen=mmBgGen; }
+    else { keep=null; keepGen=-1; }
+  };
+}
+function mfCpuBindIcons(){
+  /* Screen-footprint handover already lives in tacticons.js (24→15 px).
+     MEDIUM/LOW convert a few pixels earlier so infantry drop meshes sooner.
+     HIGH/CINEMATIC keep the authored ramp — do not make the flagship cheaper. */
+  if(typeof mfIconQ!=='function') return;
+  const orig=mfIconQ;
+  mfIconQ=function(worldSpan){
+    const q=mfGfxKey();
+    if(q==='high'||q==='cinematic') return orig(worldSpan);
+    const px=worldSpan/(typeof mfWorldPx==='function'?mfWorldPx():Math.max(.24,orthoSpan/Math.max(1,VH)));
+    if(q==='medium') return clamp((28-px)/(28-17),0,1);
+    return clamp((34-px)/(34-20),0,1);
+  };
+}
+function mfCpuBindFx(){
+  /* GPUFX already scales burst counts via GFX.particles. This only thins the
+     CPU sprite ring (MAXPART=9000) for atmosphere/dust — combat flashes stay. */
+  if(typeof addParticle!=='function') return;
+  const orig=addParticle;
+  let dustN=0;
+  addParticle=function(type,x,y,vx,vy,life,size,r,g,b){
+    const q=mfGfxKey();
+    if(q==='medium'||q==='low'){
+      /* Thin atmosphere, do not delete it — LOW keeps a quarter, MEDIUM half. */
+      if(type===9 && ((++dustN)&(q==='low'?3:1))) return;
+      if(type===10 && (dustN&(q==='low'?3:1))) return;
+      if(type===1 && q==='medium' && size<9 && (dustN&1)) return;
+    }
+    return orig(type,x,y,vx,vy,life,size,r,g,b);
+  };
+}
+
 // ---------- UI wiring ----------
-let builtTheme='verdant', builtMap='vanguard';
+let builtTheme='verdant', builtMap='aelos_north_medium';
 function applyTheme(){
   window.__reclaimTip=0;
   /* Swap the ground albedo variant set the moment the destination planet is
@@ -1071,6 +1565,7 @@ function applyTheme(){
   }
   builtTheme=curTheme; builtMap=curMap;
   mmBg=null; mmDirty=false; mipDirty=false; mipUrgent=false;
+  if(typeof mmBgGen==='number') mmBgGen++;
 }
 let pitchIdx=1;
 let gameSpeed=1;
@@ -1157,8 +1652,13 @@ let isDraggingPlanet = false, lastDragX = 0, lastDragY = 0, planetDragDx = 0, pl
 
 function selectPlanetKey(key){
   const P=typeof PLANETS!=='undefined'&&PLANETS[key];if(!P)return false;
+  if(typeof mfConquestPlanetOpen==='function'&&!mfConquestPlanetOpen(key)){
+    if(typeof toast==='function') toast('🔒 CONQUER THE PREVIOUS PLANET TO OPEN '+P.nm);
+    if(typeof sfx==='function') sfx('deny');
+    return false;
+  }
   curTheme=P.theme;curRegionId=P.regions[0].id;
-  const maps=P.regions[0].maps||[];if(maps.length)syncBattlefieldFromMap(maps[0]);
+  const maps=P.regions[0].maps||[];if(maps.length)syncBattlefieldFromMap(theatreMapId(maps,'standard'));
   if(typeof sfx==='function')sfx('ui');
   renderPlanetRow();renderMapRow();renderSpawnPlanner();
   return true;
@@ -1167,7 +1667,7 @@ function selectPlanetKey(key){
 function renderPlanetRow(){
   const row=ensurePlanetRow();
   if(!row||typeof PLANETS==='undefined') return;
-  const activeKey=planetForTheme(curTheme);
+  const activeKey=typeof planetForMap==='function'?planetForMap(curMap):planetForTheme(curTheme);
   const P=PLANETS[activeKey]||PLANETS.aelos;
 
   const planetRail=Object.keys(PLANETS).map(k=>{
@@ -1190,7 +1690,7 @@ function renderPlanetRow(){
     + '<canvas id="planetSphereCanvas" width="440" height="230" style="width:100%;height:100%;cursor:grab;touch-action:none"></canvas>'
     + '<div style="position:absolute;bottom:6px;left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none;font-size:10px;color:#a0d4f5;font-weight:700">'
     + '<span>⬡ REVERSE BIODOME: '+ (P.biodome||'ACTIVE') +'</span>'
-    + '<span>TAP ORBITING WORLD · TAP REGION ↺</span>'
+    + '<span>TAP REGION ↺</span>'
     + '</div></div>';
 
   const cv = document.getElementById('planetSphereCanvas');
@@ -1235,17 +1735,7 @@ function renderPlanetRow(){
        and without a threshold every tap ends up nudging the planet. */
     if(typeof planetDragDx==='number' && (Math.abs(planetDragDx)>4 || Math.abs(planetDragDy)>4)) return;
 
-    /* 1. Check Side Orbit Preview Planet Click Targets */
-    if(typeof lastPlanetPreviewTargets !== 'undefined' && lastPlanetPreviewTargets.length > 0){
-      for(const target of lastPlanetPreviewTargets){
-        if(Math.hypot(mx - target.x, my - target.y) < target.r){
-          selectPlanetKey(target.key);
-          return;
-        }
-      }
-    }
-
-    /* 2. Check 3D Surface Region Sector Polygon Area */
+    /* Globe taps select one of the four surface regions, never another world. */
     const W = cv.width, H = cv.height, R = Math.min(W,H)*0.32, cx = W*0.5, cy = H*0.53;
     for(const reg of P.regions){
       const rLat=reg.lat, rLon=reg.lon+planetYaw;
@@ -1257,8 +1747,13 @@ function renderPlanetRow(){
 
       const sectorHitRadius = Math.max(38, (reg.rad || 0.38) * R * 1.1);
       if(pz > -0.15 && Math.hypot(mx - px, my - py) < sectorHitRadius){
+        if(typeof mfConquestRegionOpen==='function'&&!mfConquestRegionOpen(activeKey,reg.id)){
+          if(typeof toast==='function') toast('🔒 LIBERATE THE PREVIOUS REGION FIRST');
+          if(typeof sfx==='function') sfx('deny');
+          break;
+        }
         curRegionId = reg.id;
-        if(reg.maps && reg.maps.length > 0) syncBattlefieldFromMap(reg.maps[0]);
+        if(reg.maps && reg.maps.length > 0) syncBattlefieldFromMap(theatreMapId(reg.maps,'standard'));
         if(typeof sfx==='function') sfx('ui');
         renderPlanetRow(); renderMapRow(); renderSpawnPlanner();
         break;
@@ -1272,18 +1767,15 @@ function syncBattlefieldFromMap(key){
   const def=MAPDEFS[key]; if(!def) return false;
   if(typeof mfConquestMapOpen==='function'&&!mfConquestMapOpen(key))return false;
   curMap=key;
+  if(def.theme&&typeof THEMES!=='undefined'&&THEMES[def.theme]) curTheme=def.theme;
   if(def.size) battlefieldPreset=battlefieldPresetKey(def.size);
-  const floor=typeof mfConquestDifficultyFloor==='function'?mfConquestDifficultyFloor(key):0;
-  if(!(typeof storyCampaignActiveId!=='undefined'&&storyCampaignActiveId)){
-    difficulty=Math.max(difficulty,floor);for(const A of aiSlots)if(A.on&&!A.ally)A.diff=Math.max(A.diff,floor);
-  }
   document.querySelectorAll('.bsbtn').forEach(b=>b.classList.toggle('on',b.dataset.bs===battlefieldPreset));
   const h=$('battleScaleHint'); if(h) h.textContent=battlefieldPresetHint();
   return true;
 }
 function renderMapRow(){
   const row=$('mapRow'); if(!row) return;
-  const planet=planetForKey(planetForTheme(curTheme));
+  const planet=typeof planetForMap==='function'?planetForKey(planetForMap(curMap)):planetForKey(planetForTheme(curTheme));
   const reg=(planet.regions && planet.regions.find(r => r.id === curRegionId)) || (planet.regions && planet.regions[0]);
   const regionKeys=(reg && reg.maps) || getPlanetMaps(planet);
   const rn=$('regionMissionName'); if(rn) rn.textContent=(reg&&reg.nm)||'REGION';
@@ -1295,7 +1787,8 @@ function renderMapRow(){
     const card=document.createElement('div');
     const conquestOpen=typeof mfConquestMapOpen!=='function'||mfConquestMapOpen(key),conquestWon=typeof mfConquestWon==='function'&&mfConquestWon(key);
     card.className='mapCard'+(curMap===key?' sel':'')+(conquestOpen?'':' locked')+(conquestWon?' conquered':'');
-    const ck=key+'_'+curTheme;
+    card.dataset.map=key;
+    const ck=key+'_'+(def.theme||curTheme);
     let cv3=mapPrevCache[ck];
     if(!cv3){
       /* 96×72 was acceptable while these were icon-sized thumbnails. The War
@@ -1304,7 +1797,7 @@ function renderMapRow(){
          the 48 sites is browsed and cached, but keeps rivers, roads and city
          footprints legible during map choice. */
       cv3=document.createElement('canvas'); cv3.width=192; cv3.height=120;
-      drawMapPreview(cv3,def,curTheme);
+      drawMapPreview(cv3,def,def.theme||curTheme);
       mapPrevCache[ck]=cv3;
     }
     card.appendChild(cv3);
@@ -1319,7 +1812,7 @@ function renderMapRow(){
       +(CQ?'<div class="mConquest"><span>FRONT '+CQ.tier+' / 48</span><b>'+(conquestWon?'SECURED':conquestOpen?['EASY','NORMAL','HARD'][CQ.mi]+' THREAT':'LOCKED')+'</b></div>':'')
       +(firstClear?'<div class="mReward"><span>FIRST CLEAR · +'+rewardXp+' XP · +'+firstClear.cores+' CORES</span><b>'+(rewardItem?rewardItem.em+' '+rewardItem.nm:'')+'</b></div>':'')
       +(hz?'<div class="mHz"><b>'+hz.em+' '+hz.nm+'</b>'+hz.ds+'</div>':''));
-    card.addEventListener('pointerdown',()=>{if(!conquestOpen){toast('🔒 SECURE THE PREVIOUS BATTLEFIELD FIRST');sfx('deny');return;}syncBattlefieldFromMap(key); if(typeof sfx==='function') sfx('ui'); renderMapRow(); renderSpawnPlanner(); });
+    card.addEventListener('pointerdown',()=>{if(!conquestOpen){toast('🔒 SECURE THE PREVIOUS BATTLEFIELD FIRST');sfx('deny');return;}window._mfTheatrePick=def.size;syncBattlefieldFromMap(key); if(typeof sfx==='function') sfx('ui'); renderMapRow(); renderSpawnPlanner(); });
     row.appendChild(card);
   }
   if(typeof drawSpawnPlanner==='function') drawSpawnPlanner();
@@ -1344,7 +1837,10 @@ function hideFrontScreens(except){
   if(typeof apClose==='function') try{ apClose(); }catch(e){}
   const ap=$('apOverlay'); if(ap) ap.style.display='none';
   const apc=$('apConfirmOverlay'); if(apc) apc.style.display='none';
-  if(except===undefined) attractVisible=false;   // bare call = dropping into a match
+  if(except===undefined){
+    attractVisible=false;   // bare call = dropping into a match
+    if(typeof audMusicEnterMatch==='function') audMusicEnterMatch();
+  }
 }
 function showFrontScreen(id){
   hideFrontScreens(id);
@@ -1355,6 +1851,7 @@ function showFrontScreen(id){
      session can be dropped mid-play, and the offer has to be there when the
      player lands back here — which is the moment they are looking for it. */
   if(id==='startScreen'&&typeof sessRenderResume==='function') sessRenderResume();
+  if(typeof audMusicEnterScreen==='function') audMusicEnterScreen(id);
 }
 function openSettings(from){
   settingsFrom=from;
@@ -1438,6 +1935,7 @@ function returnToMainMenu(){
   /* Same contract for an authored campaign mission's modifier set. */
   if(typeof storyCampaignRestoreMods==='function') storyCampaignRestoreMods();
   paused=false; running=false; matchLive=false;
+  if(typeof audMusicLeaveMatch==='function') audMusicLeaveMatch();
   if(typeof resetInputState==='function') resetInputState();
   /* Do not leave an old front-end screen in the DOM hit-test stack. All menu
      overlays share a z-index, so one stale `display:flex` layer can sit above
@@ -1456,6 +1954,42 @@ function returnToMainMenu(){
   renderMetaHead(); setupAttract();
   if(typeof storyCheck==='function') setTimeout(storyCheck,420);
 }
+function continueToNextMap(){
+  /* Rewards already landed in endGame/metaGrant. This only launches the next
+     unlocked War Table site — do not call returnToMainMenu first or the
+     attract diorama eats the loadout. */
+  if(typeof mfDepart!=='undefined') mfDepart.fromVictory=false;
+  if(typeof mfConquestHasNextMap!=='function'||!mfConquestHasNextMap()){
+    if(typeof returnToMainMenu==='function') returnToMainMenu();
+    return;
+  }
+  const map=mfConquestNextMap();
+  const L=typeof mfConquestLocate==='function'?mfConquestLocate(map):null;
+  if(!L||typeof syncBattlefieldFromMap!=='function'||!syncBattlefieldFromMap(map)){
+    if(typeof toast==='function') toast('NO NEXT BATTLEFIELD');
+    if(typeof returnToMainMenu==='function') returnToMainMenu();
+    return;
+  }
+  curTheme=L.P.theme; curRegionId=L.R.id;
+  if(!(typeof storyCampaignPlanBorrowed==='function'&&storyCampaignPlanBorrowed())){
+    META.setup=META.setup||{};
+    META.setup.m=curMap; META.setup.t=curTheme;
+    if(typeof metaSave==='function') metaSave();
+  }
+  paused=false; running=false; matchLive=false;
+  if(typeof audMusicLeaveMatch==='function') audMusicLeaveMatch();
+  const go=$('gameOver'); if(go) go.style.display='none';
+  if(typeof adClearPostMatchAd==='function') adClearPostMatchAd();
+  closeMenus(); cancelPlace();
+  hideFrontScreens();
+  $('loadScr').style.display='flex';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    applyTheme(); newSkirmish();
+    $('loadScr').style.display='none';
+    stopAttract();
+    if(typeof mfFlowLayout==='function') mfFlowLayout();
+  }));
+}
 function wire(){
   document.querySelectorAll('.hudDeckBtn').forEach(b=>mfBindTap(b,e=>{
     e.preventDefault(); setHudDeck(b.dataset.deck);
@@ -1471,7 +2005,8 @@ function wire(){
     });
   });
   const pick=(sel,fn)=>document.querySelectorAll(sel).forEach(b=>{
-    b.addEventListener('pointerdown',()=>{
+    b.addEventListener('pointerdown',ev=>{
+      ev.stopPropagation();
       document.querySelectorAll(sel).forEach(x=>x.classList.remove('on'));
       b.classList.add('on'); fn(b); initAudio(); sfx('ui');
     });
@@ -1566,24 +2101,36 @@ function wire(){
   /* Skirmish setup is no longer what the primary button does — it is what the
      STANDARD card in the War Room does. Kept as a named function so the War
      Room, the back stack and any future deep link all enter it the same way. */
-  window.openPlanetarySetup=(mode)=>{ initAudio(); sfx('ui');
+  window.openPlanetarySetup=(mode)=>{
+    /* Campaign / MMO / Co-op are advertised on the War Room but unimplemented.
+       Opening the planetary catalogue for them was a trap: a locked card still
+       walked into a stub war table that played like a mode. */
+    if(mode==='coop'||mode==='mmo'||mode==='campaign'){
+      initAudio(); sfx('deny');
+      toast((mode==='mmo'?'MMO':mode==='coop'?'CO-OP':'CAMPAIGN')+' is not available yet.');
+      return;
+    }
+    initAudio(); sfx('ui');
     /* Training owns a borrowed ruleset and must never leak into the Standard
        war table. tutorial.js is IIFE-scoped, so this calls its explicit export
        rather than relying on a local declaration magically becoming global. */
     if(mode==='standard'&&typeof trainingMissionActive==='function'&&trainingMissionActive()
        &&typeof cancelTrainingMission==='function') cancelTrainingMission();
-    activeWarMode=(mode==='coop'||mode==='mmo'||mode==='campaign')?mode:'standard';
-    /* A saved plan can carry a region the planet no longer offers (a weekly
-       run borrowed the map without touching the theme). Snap it to the world's
-       first region so the picker never shows a selection that is not on the
-       planet the biome actually renders. */
-    const P=planetForKey(planetForTheme(curTheme));
-    let R=P&&P.regions.find(r=>r.id===curRegionId&&r.maps.indexOf(curMap)>=0);
-    if(P&&!R){R=P.regions[0];curRegionId=R.id;if(R.maps.length)syncBattlefieldFromMap(R.maps[0]);}
+    activeWarMode='standard';
+    /* A saved plan can name a legacy map (vanguard) or a locked later world.
+       Key off the map catalogue, not the biome — sibling themes would snap
+       Aelos High Shelf (arctic) onto Nordhall. Conquest then clamps the drop. */
+    if(typeof mfConquestNormalizeSelection==='function') mfConquestNormalizeSelection();
+    else {
+      const key=typeof planetForMap==='function'?planetForMap(curMap):planetForTheme(curTheme);
+      const P=planetForKey(key);
+      let R=P&&P.regions.find(r=>r.id===curRegionId&&r.maps.indexOf(curMap)>=0);
+      if(P&&!R){R=P.regions[0];curRegionId=R.id;if(R.maps.length)syncBattlefieldFromMap(theatreMapId(R.maps,'standard'));}
+    }
     const h=document.querySelector('#setupScr .setupHead h2');
-    if(h)h.textContent=activeWarMode==='coop'?'◇ CO-OP WAR TABLE':activeWarMode==='mmo'?'☷ MMO WAR TABLE':activeWarMode==='campaign'?'◇ CAMPAIGN BRIEF':'⚔ STANDARD WAR TABLE';
+    if(h)h.textContent='⚔ STANDARD WAR TABLE';
     const launch=$('setupStart');
-    if(launch){const playable=activeWarMode==='standard'||activeWarMode==='campaign';launch.textContent=activeWarMode==='campaign'?'▶ START MISSION':playable?'▶ START BATTLE':'◉ SERVICE IN DEVELOPMENT';launch.classList.toggle('disabled',!playable);}
+    if(launch){launch.textContent='▶ START BATTLE';launch.classList.remove('disabled');}
     renderPlanetRow(); renderMapRow(); renderSpawnPlanner();
     if(typeof renderOps==='function') renderOps();
     showFrontScreen('setupScr'); };
@@ -1611,9 +2158,9 @@ function wire(){
     showFrontScreen('warScr'); });
   mfBindTap($('setupStart'),()=>{
     initAudio();
-    if(activeWarMode==='coop'||activeWarMode==='mmo'){
+    if(activeWarMode==='coop'||activeWarMode==='mmo'||activeWarMode==='campaign'){
       sfx('deny');
-      toast((activeWarMode==='coop'?'CO-OP':'MMO')+' uses this planetary catalogue; its online service is still in development.');
+      toast((activeWarMode==='mmo'?'MMO':activeWarMode==='coop'?'CO-OP':'CAMPAIGN')+' is not available yet.');
       return;
     }
     /* Standard must be a clean session boundary. The normal setup entry clears
@@ -1622,6 +2169,22 @@ function wire(){
        so KEEL objectives and Training's borrowed rules can never ride into a
        Standard battle. */
     if(activeWarMode==='standard'&&typeof cancelTrainingMission==='function') cancelTrainingMission();
+    /* Training restore rewinds live globals. The buttons still show the plan
+       the player just set — copy them back before META.setup is written. */
+    armMatchSetup();
+    const loan=typeof weeklyMode!=='undefined'&&weeklyMode;
+    const training=typeof trainingMissionActive==='function'&&trainingMissionActive();
+    if(!loan&&!training){
+      if(typeof isHomeworldMap==='function'&&!isHomeworldMap(curMap)){
+        sfx('deny'); toast('DROP WORLDS ARE THE FOUR HOMEWORLDS');
+        if(typeof mfConquestNormalizeSelection==='function') mfConquestNormalizeSelection();
+        return;
+      }
+      if(typeof mfConquestMapOpen==='function'&&!mfConquestMapOpen(curMap)){
+        sfx('deny'); toast('🔒 SECURE THE PREVIOUS BATTLEFIELD FIRST');
+        return;
+      }
+    }
     /* "Remember loadout" means the PLAYER'S loadout. An authored campaign
        mission borrows every field below for the length of its run, so saving
        here while a preset was on loan wrote the mission's plan over the
@@ -1664,6 +2227,14 @@ function wire(){
   });
   mfBindTap($('demoBtn'),()=>{ initAudio(); hideFrontScreens(); applyTheme(); newDemo(); sfx('ui'); });
   mfBindTap($('restartBtn'),returnToMainMenu);
+  const goCont=$('goContinueBtn');
+  if(goCont&&goCont.dataset.bound!=='1'){
+    goCont.dataset.bound='1';
+    mfBindTap(goCont,()=>{
+      if(typeof mfVictoryContinue==='function') mfVictoryContinue();
+      else if(typeof continueToNextMap==='function') continueToNextMap();
+    });
+  }
   mfBindTap($('menuBtn'),()=>{ if(!running) return; paused=true; $('pauseOverlay').style.display='flex'; });
   mfBindTap($('resumeBtn'),()=>{ paused=false; $('pauseOverlay').style.display='none'; });
   mfBindTap($('quitBtn'),()=>{
@@ -1858,7 +2429,7 @@ function wire(){
   $('holdBtn').addEventListener('pointerdown',()=>{ orderHold(); });
   // control groups: tap = recall, hold = save
   for(let n=0;n<4;n++){
-    const btn=$('grpBtn'+(n+1));
+    const btn=$('grpBtn'+(n+1)); if(!btn) continue;
     let saveT=0,saved=false,lastTap=0;
     btn.addEventListener('pointerdown',()=>{
       saved=false;
@@ -1949,16 +2520,29 @@ async function boot(){
   // restore the last battle loadout
   const su=META.setup||{};
   if(su.d!=null&&su.d>=0&&su.d<=2) difficulty=su.d;
-  if(THEMES[su.t]) curTheme=su.t;
-  if(MAPDEFS[su.m]) curMap=su.m;
+  /* Last loadout may name a legacy map. Keep the eight for training, but the
+     career picker starts on a homeworld site. */
+  if(su.m&&MAPDEFS[su.m]&&(typeof isHomeworldMap!=='function'||isHomeworldMap(su.m))) curMap=su.m;
+  else if(typeof isHomeworldMap==='function'&&!isHomeworldMap(curMap)) curMap='aelos_north_medium';
+  const mapDef=MAPDEFS[curMap];
+  if(mapDef&&mapDef.theme&&THEMES[mapDef.theme]) curTheme=mapDef.theme;
+  else if(THEMES[su.t]) curTheme=su.t;
   /* `grand` was the pre-1.32 name for Large. Keep old setup saves valid while
      storing only the player-facing Compact / Standard / Large vocabulary. */
   if(BATTLEFIELD_PRESETS[su.bs]||su.bs==='grand') battlefieldPreset=battlefieldPresetKey(su.bs);
+  /* Old Standard loadouts stored aelos_north_small while preset stayed
+     standard. Compact stays compact only when the saved theatre is compact. */
+  if(typeof theatreMapId==='function'&&MAPDEFS[curMap]&&MAPDEFS[curMap].size!==battlefieldPresetKey(battlefieldPreset)){
+    const pk=typeof planetForMap==='function'?planetForMap(curMap):null;
+    const P=pk&&typeof PLANETS!=='undefined'&&PLANETS[pk];
+    const R=P&&P.regions.find(r=>r.maps&&r.maps.indexOf(curMap)>=0);
+    const hit=R&&theatreMapId(R.maps,battlefieldPreset);
+    if(hit&&MAPDEFS[hit]) curMap=hit;
+  }
   deploymentPackage=DEPLOYMENT_PACKAGES[su.pkg]?su.pkg:'expedition';
-  /* The first three completed Standard battles always OPEN on the supported
-     package and full theatre. Players may still change either control before
-     launch; after match three their last explicit choice becomes the default. */
-  if(assistedOpeningActive()){battlefieldPreset='large';deploymentPackage='prepared';}
+  /* First-three Standard battles keep the supported landing. Theatre size
+     follows the selected site — Standard is medium, not Compact or Large. */
+  if(assistedOpeningActive()) deploymentPackage='prepared';
   if(su.f&&(su.f==='random'||FACTIONS[su.f])) aiFactionSel=su.f;
   if(su.g&&GOALS.some(g=>g.id===su.g)) goalSel=su.g;
   if(su.tl!=null) timeLimit=+su.tl||0;
@@ -1975,14 +2559,10 @@ async function boot(){
     if(START_ZONES.some(z=>z.id===S.zone)) aiSlots[i].zone=S.zone;
   }
   if(!aiSlots.some(A=>A.on)) aiSlots[0].on=true;
+  /* Old saves can stack two commanders or park an enemy on NW / a cardinal.
+     Reseat lives in normalize (corners, SE second enemy, NW ally) so this
+     must not pick n/e/s/w from START_ZONES — that is the 1028 m crush. */
   normalizeAiSlotsForBattlefield();
-  /* Old saves and hand-edited data can name the same zone twice. Repair the
-     collision once at load so a match never opens with commanders stacked. */
-  const used=new Set([playerStartZone]);
-  for(const A of aiSlots) if(A.on){
-    if(used.has(A.zone)) A.zone=START_ZONES.find(z=>!used.has(z.id)).id;
-    used.add(A.zone);
-  }
   /* Validate against the PICKER's own list, not against FACTIONS. FACTIONS has
      no 'nova' entry — it is the enemy roster — so validating a saved player
      faction against it silently rejects the one everybody starts on. It happens
@@ -1992,8 +2572,10 @@ async function boot(){
   if(su.pf&&typeof playableFactions==='function'&&playableFactions().includes(su.pf)) playerFaction=su.pf;
   else playerFaction='nova';
   if(su.pc&&typeof commanderById==='function'){
-    const C=commanderById(su.pc),R=typeof COMMANDER_ROSTERS!=='undefined'?COMMANDER_ROSTERS[playerFaction]||[]:[];
-    if(C&&!C.aiOnly&&R.indexOf(C)>=0)playerCommanderId=su.pc;
+    const facKey=typeof commanderFactionKey==='function'?commanderFactionKey(playerFaction):playerFaction;
+    const C=commanderById(su.pc),R=typeof COMMANDER_ROSTERS!=='undefined'?COMMANDER_ROSTERS[facKey]||[]:[];
+    if(C&&!C.aiOnly&&R.indexOf(C)>=0) playerCommanderId=su.pc;
+    else playerCommanderId=((R.find(c=>!c.aiOnly)||(COMMANDER_ROSTERS.nova&&COMMANDER_ROSTERS.nova[0]))||{id:'nova_kai'}).id;
   }
   if(su.df!=null) defenseFocus=su.df?1:0;
   difficulty=Math.max(...activeEnemySlots().map(A=>A.diff));
@@ -2014,7 +2596,8 @@ async function boot(){
   const allSame=activeAiSlots().every(A=>A.diff===activeAiSlots()[0].diff);
   document.querySelectorAll('.globalDiff').forEach(b=>b.classList.toggle('on',allSame&&+b.dataset.d===difficulty));
   if(typeof renderPlanetRow==='function') renderPlanetRow();
-  document.querySelectorAll('.fbtn').forEach(b=>b.classList.toggle('on',b.dataset.f===aiFactionSel));
+  document.querySelectorAll('#facRow .fbtn').forEach(b=>b.classList.toggle('on',b.dataset.f===aiFactionSel));
+  document.querySelectorAll('#pfacRow .fbtn').forEach(b=>b.classList.toggle('on',b.dataset.f===playerFaction));
   document.querySelectorAll('.dfbtn').forEach(b=>b.classList.toggle('on',+b.dataset.df===defenseFocus));
   const dfh=$('defFocusHint'); if(dfh) dfh.textContent=defenseFocus
     ?'Tower defence: +20% defence HP, +15% damage, +10% range, 25% faster construction — enemy waves arrive 18% faster.'
@@ -2063,7 +2646,11 @@ async function boot(){
      WEEKLY tab starts the weekly, and neither needs its own buried control. */
   $('weeklyGo').addEventListener('pointerdown',e=>{
     const mode=e.currentTarget&&e.currentTarget.dataset.opsMode;
-    if(mode==='campaign'&&typeof storyCampaignStartNext==='function'){ storyCampaignStartNext(); return; }
+    if(mode==='campaign'){
+      sfx('deny');
+      toast('CAMPAIGN is not available yet.');
+      return;
+    }
     startWeekly();
   });
   /* Weekly no longer has its own menu tile — Operations owns the weekly card.
@@ -2086,16 +2673,17 @@ async function boot(){
     sfx('ui'); });
   /* New subsystems. Each lives in its own module and registers its own UI, so
      none of them need to touch index.html or this file beyond this line. */
-  for(const fn of ['initOffline','initSampleAudio','initAssetPacks','initAuthPortal','initTutorial','initAdBoards','initStoreUI','initResTree3D','initEconomyNet','initIntro','initGalaxyUI'])
+  for(const fn of ['initOffline','initSampleAudio','initAssetPacks','initAuthPortal','initTutorial','initAdBoards','initStoreUI','initResTree3D','initEconomyNet','initIntro','initGalaxyUI','initWarPrimer'])
     if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){ console.error(fn,e); } }
+  mfRescueHiddenSetupCards();
   /* The auth portal loads its cached AP_SESSION synchronously. Initialise the
      Profile account/save panel afterwards so it renders that real session,
      rather than briefly and incorrectly labelling the player signed out. */
   if(typeof initAccounts==='function') initAccounts();
   initNativeNavigation();
   if(typeof initUpdater==='function') initUpdater();   // start-menu patcher
+  mfCpuBind();
   setupAttract();                                      // live 3D behind the menu
   requestAnimationFrame(frame);
 }
 boot();
-

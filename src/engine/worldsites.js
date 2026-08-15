@@ -46,15 +46,26 @@ function worldKitDecode(rec){
     v[i*12+4]=(raw.charCodeAt(o+7)<<24>>24)/127;
     v[i*12+5]=(raw.charCodeAt(o+8)<<24>>24)/127;
     v[i*12+6]=raw.charCodeAt(o+9)/255; v[i*12+7]=raw.charCodeAt(o+10)/255; v[i*12+8]=raw.charCodeAt(o+11)/255;
-    /* PLANAR UV from the dominant normal axis. A constant (0,0) UV made the
-       shader's screen-space derivatives zero, which degenerated the cotangent
-       tangent frame into a garbage normal — the models rendered pure black.
-       A real per-vertex UV gives nonzero derivatives and a valid frame; the
-       exact projection barely matters since vertex colour carries the look. */
-    const px=v[i*12],py=v[i*12+1],pz=v[i*12+2],nx=v[i*12+3],ny=v[i*12+4],nz=v[i*12+5];
+    /* Placeholder UV — overwritten per-triangle below. A constant (0,0) UV
+       made the cotangent frame NaN (pure black). Vertex colour used to carry
+       the look; office-glass now samples a window tile, so the projection
+       must be face-stable. */
+    v[i*12+9]=0; v[i*12+10]=0; v[i*12+11]=raw.charCodeAt(o+12);
+  }
+  /* FACE-STABLE planar UV. Kit normals are smoothed, so a per-vert dominant
+     axis assigned XZ to one corner of a wall and ZY to the other — the
+     office-glass tile stair-stepped. One geometric face axis, all three verts. */
+  for(let t=0;t+2<count;t+=3){
+    const o0=t*12,o1=o0+12,o2=o0+24;
+    const ex=v[o1]-v[o0],ey=v[o1+1]-v[o0+1],ez=v[o1+2]-v[o0+2];
+    const fx=v[o2]-v[o0],fy=v[o2+1]-v[o0+1],fz=v[o2+2]-v[o0+2];
+    const nx=ey*fz-ez*fy,ny=ez*fx-ex*fz,nz=ex*fy-ey*fx;
     const ax=Math.abs(nx),ay=Math.abs(ny),az=Math.abs(nz);
-    let u,w2; if(ay>=ax&&ay>=az){u=px;w2=pz;} else if(ax>=az){u=pz;w2=py;} else {u=px;w2=py;}
-    v[i*12+9]=u*2.0; v[i*12+10]=w2*2.0; v[i*12+11]=raw.charCodeAt(o+12);
+    const uA=ay>=ax&&ay>=az?0:ax>=az?2:0, wA=ay>=ax&&ay>=az?2:1;
+    for(let k=0;k<3;k++){
+      const o=o0+k*12;
+      v[o+9]=v[o+uA]*2.0; v[o+10]=v[o+wA]*2.0;
+    }
   }
   /* InstMesh draws indexed; the converter emits expanded soup, so the index is
      the identity. Counts top out near 3,800 — inside Uint16. */
@@ -75,14 +86,42 @@ function worldKitMats(){
     ruinFactory:rust, ruinSpire:stone, fuelFarm:rust, fuelTank:rust, ruinTower:conc };
   return WORLD_KIT_MAT;
 }
+function worldKitAssignMats(geo, hullMat){
+  /* MeshBuilder stores MAT+1 (shader does floor(abs)-1). The converter wrote
+     material 0 and baked window light into vertex RGB; writing raw MAT.CONC
+     made every kit vert read as LAMP — the orange orb tile civic already
+     rejected. Hull stays CONC/STONE; only the bright facade tail gets office
+     glass so cyan/amber panes match the catalog without lighting the slab. */
+  const M=(typeof MAT!=='undefined')?MAT:{};
+  const hull=((hullMat!=null?hullMat:(M.CONC!=null?M.CONC:6))+1);
+  const cool=(M.BUILD_OFFICE_COOL!=null?M.BUILD_OFFICE_COOL:6)+1;
+  const warm=(M.BUILD_OFFICE_LIT!=null?M.BUILD_OFFICE_LIT:6)+1;
+  const n=geo.count, lumas=new Float32Array(n);
+  for(let i=0;i<n;i++){
+    const o=i*12;
+    lumas[i]=0.3*geo.v[o+6]+0.59*geo.v[o+7]+0.11*geo.v[o+8];
+  }
+  const sorted=Array.from(lumas).sort((a,b)=>a-b);
+  const cut=sorted[Math.min(n-1,(n*0.74)|0)];
+  for(let i=0;i<n;i++){
+    const o=i*12, r=geo.v[o+6], g=geo.v[o+7], b=geo.v[o+8], ny=geo.v[o+4];
+    const facade=Math.abs(ny)<0.35;
+    const cyan=b>r+0.04&&g>r-0.03;
+    const amber=r>b+0.07&&r>g-0.03;
+    if(facade&&lumas[i]>=cut&&(cyan||amber||lumas[i]>0.78))
+      geo.v[o+11]=amber&&!cyan?warm:cool;
+    else geo.v[o+11]=hull;
+  }
+}
 function initWorldKit(){
   if(typeof WORLD_KIT_DATA==='undefined'||typeof gl==='undefined'||!gl) return 0;
   let n=0;
+  const mats=worldKitMats();
   for(const k in WORLD_KIT_DATA){
     if(WORLD_KIT[k]) continue;
     try{
-      const geo=worldKitDecode(WORLD_KIT_DATA[k]), mid=worldKitMats()[k]||6;
-      for(let i=0;i<geo.count;i++) geo.v[i*12+11]=mid;
+      const geo=worldKitDecode(WORLD_KIT_DATA[k]);
+      worldKitAssignMats(geo, mats[k]);
       WORLD_KIT[k]={mesh:new InstMesh(gl,geo,320),height:WORLD_KIT_DATA[k].height,tris:WORLD_KIT_DATA[k].tris};
       n++;
     }catch(e){ console.warn('worldkit '+k+':',e&&e.message); }
@@ -179,6 +218,11 @@ function worldBuildFill(S,A,rnd){
 
 /* ---------- placement ----------------------------------------------------- */
 function worldSitesGenerate(){
+  /* Kit decode is independent of this flag. WORLDSITES_ENABLED only gates the
+     crude box-fill towns that regressed vs FX.cityT/H/D/K. Site templates and
+     Nova districts already stamp kinds 6/7; without initWorldKit those plots
+     fall back to the derelict dome and the authored GLB kit never appears. */
+  initWorldKit();
   if(!WORLDSITES_ENABLED) return 0;
   const key=(typeof curMap!=='undefined'?curMap:'?')+'|'+(typeof curTheme!=='undefined'?curTheme:'?');
   if(worldSitesBuilt===key&&worldSites.length) return worldSites.length;
@@ -220,4 +264,13 @@ function worldSitesGenerate(){
   worldSitesBuilt=key;
   return worldSites.length;
 }
+
+/* Decode the kit on every model rebuild (boot + glrecover). worldSitesGenerate
+   used to be the only caller, and that function now returns before placement
+   — so a context-loss rebuild would leave WORLD_KIT empty again. */
+const worldKitBaseInitModels=initModels;
+initModels=function(){
+  worldKitBaseInitModels();
+  initWorldKit();
+};
 

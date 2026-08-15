@@ -6,7 +6,8 @@
      node tools/render-building-lab.mjs http://127.0.0.1:8100
      node tools/render-building-lab.mjs http://127.0.0.1:8100 --export-only
 */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {access, mkdir, readFile, writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -71,11 +72,12 @@ function geometryQuality(part,stride){
 }
 
 await mkdir(outDir,{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const page=await browser.newPage({viewport:{width:800,height:800}});
   await page.goto(base+'/?buildingLab=1&materialCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof BLD_MDL!=='undefined'&&typeof BLD_TUR_MDL!=='undefined'&&
     typeof BLD_TUR_H!=='undefined'&&typeof BLD_TUR_S!=='undefined'&&typeof BT!=='undefined'&&typeof bldFoot==='function',{timeout:30000});
   await page.waitForFunction(()=>typeof __MF_MATERIAL_ATLASES!=='undefined',{timeout:30000});
@@ -159,7 +161,7 @@ process.stdout.write(`AO parity passed for ${Object.keys(ao.models).length} buil
 const report=JSON.parse(await readFile(join(outDir,'report.json'),'utf8'));
 const bySlug=new Map(geometry.buildings.map(building=>[building.slug,building]));
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
-const sheetBrowser=await chromium.launch({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
+const sheetBrowser=await launchPwBrowser({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
 try{
   const context=await sheetBrowser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1});
   for(const mode of ['blender','pbr']){

@@ -13,14 +13,14 @@
         the derelict fallback and look like a template that "worked"
      5. no kit InstMesh exceeds its 320-instance capacity
      6. no console errors                                                     */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const PORT = process.argv[2] || '8992';
 const OUT = 'releases/site-templates';
 mkdirSync(OUT, { recursive: true });
 
-const browser = await chromium.launch({
+const browser = await launchPwBrowser({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: false,
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, hasTouch: true, deviceScaleFactor: 2 });

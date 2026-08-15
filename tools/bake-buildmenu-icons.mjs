@@ -19,7 +19,7 @@
        than borrowing Nova's, and the runtime falls back to its role glyph.
 
    REAL GPU ONLY — these are the shipping icons, not a preview.               */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 const { decode, encode } = createRequire(import.meta.url)('./artv2/pnglib.cjs');
@@ -30,7 +30,7 @@ const KITS = ['nova', 'legion', 'syndicate', 'horde'];
 const SRC = 256, CELL = 128, GRID = 8, ATLAS = CELL * GRID, INNER = 118;
 
 mkdirSync(OUT, { recursive: true });
-const browser = await chromium.launch({
+const browser = await launchPwBrowser({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: false,
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 /* deviceScaleFactor 1 so draw()'s internal `min(1.6, dpr)` is 1 and the canvas

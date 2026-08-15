@@ -79,15 +79,15 @@ function dayRand(seed){
    just a reminder that the war in src/story.js keeps moving on days you don't
    rank up. Deterministic per day like everything else here. */
 const SITREPS=[
- 'Hive density rising across all three sectors.',
+ 'Hive density rising across all four systems.',
  'Ascendancy patrols report contact on every front.',
- 'Coalition trade routes rerouted around Relic Basin.',
+ 'Coalition trade routes rerouted around Vespera Caldera.',
  'Brood hive count unconfirmed — and climbing.',
  'Joint operations still unauthorised past squad level.',
  "Vex's broadcasts are back on the open band.",
  "Renn's invoices outpace Command's replies.",
- 'Halcyon Reach: three banners, one infestation.',
- 'Highland Scar reports overlapping claims. Again.',
+ 'Four homeworlds: three banners, one infestation.',
+ 'Nordhall Frontline Shelf reports overlapping claims. Again.',
  'Doctrine reminder: hold what you take, take it clean.',
 ];
 function dailySitrep(){ return SITREPS[dayKey()%SITREPS.length]; }
@@ -108,14 +108,16 @@ const ORDERS=[
  {id:'vsLegion',    nm:'Ascendancy front', ds:'Beat the Red Ascendancy',             goal:1, stat:'winLegion',    rw:{cores:190, boost:['xp','30m']}},
  {id:'vsSyndicate', nm:'Coalition front',  ds:'Beat the Syndicate Coalition',        goal:1, stat:'winSyndicate', rw:{cores:190, boost:['res','30m']}},
  {id:'vsHorde',     nm:'Hive front',       ds:'Beat the Umbral Brood',               goal:1, stat:'winHorde',     rw:{cores:190, boost:['build','30m']}},
- /* ---- held ground — tied to a specific map */
- {id:'mapVanguard', nm:'Hold Vanguard Valley', ds:'Win on Vanguard Valley',          goal:1, stat:'map_vanguard', rw:{cores:150, boost:['xp','30m']}},
- {id:'mapHighland', nm:'Hold Highland Scar',   ds:'Win on Highland Scar',            goal:1, stat:'map_highland', rw:{cores:150, boost:['res','30m']}},
- {id:'mapIsles',    nm:'Hold Shattered Isles', ds:'Win on Shattered Isles',          goal:1, stat:'map_isles',    rw:{cores:150, boost:['build','30m']}},
- {id:'mapCrater',   nm:'Hold Relic Basin',     ds:'Win on Relic Basin',              goal:1, stat:'map_crater',   rw:{cores:150, boost:['cores','30m']}},
+ {id:'vsNova',      nm:'Frontline front',  ds:'Beat Terran Frontline Command',       goal:1, stat:'winNova',      rw:{cores:190, boost:['xp','30m']}},
+ /* ---- held ground — first site of each homeworld, so a contract is completable
+    the day that planet opens rather than asking for a locked later region. ---- */
+ {id:'mapVanguard', nm:'Hold Parade Circumference', ds:'Win on Aelos Parade Circumference', goal:1, stat:'map_aelos_north_small', rw:{cores:150, boost:['xp','30m']}},
+ {id:'mapHighland', nm:'Hold Frostwake Grid',      ds:'Win on Nordhall Frostwake Docks',   goal:1, stat:'map_nordhall_isles_small', rw:{cores:150, boost:['res','30m']}},
+ {id:'mapIsles',    nm:'Hold Buried Court',        ds:'Win on Pyraeth Crown Pit',          goal:1, stat:'map_pyraeth_crater_small', rw:{cores:150, boost:['build','30m']}},
+ {id:'mapCrater',   nm:'Hold Caldera Nests',       ds:'Win on Vespera Hatch Pit',          goal:1, stat:'map_vespera_spire_small', rw:{cores:150, boost:['cores','30m']}},
  /* ---- mission type — tied to the victory condition chosen at setup */
  {id:'goalDom',   nm:'Domination order',  ds:'Win a Domination match',              goal:1, stat:'goal_domination', rw:{cores:230, boost:['xp','1h']}},
- {id:'goalPurge', nm:'Full purge',        ds:'Win a Hive Purge mission',            goal:1, stat:'goal_purge',      rw:{cores:230, boost:['res','1h']}},
+ {id:'goalPurge', nm:'Full Purge',        ds:'Win a Hive Purge mission',            goal:1, stat:'goal_purge',      rw:{cores:230, boost:['res','1h']}},
  {id:'goalSurv',  nm:'Last Stand order',  ds:'Win a Last Stand match',              goal:1, stat:'goal_survival',   rw:{cores:230, boost:['build','1h']}},
  /* ---- named hazards — the harder, opt-in modifiers from Operations */
  {id:'wcMoon',  nm:'Blood Moon detail',      ds:'Win a match during a Blood Moon',           goal:1, stat:'wc_moon',  rw:{cores:280, boost:['xp','1h']}},
@@ -163,21 +165,46 @@ function dailyRecord(res){
     if(fac==='legion') add('winLegion',1);
     else if(fac==='syndicate') add('winSyndicate',1);
     else if(fac==='horde') add('winHorde',1);
+    else if(fac==='nova') add('winNova',1);
     const map=(typeof curMap!=='undefined'&&curMap)||'';
     if(map) add('map_'+map,1);
     const goal=(typeof goalSel!=='undefined'&&goalSel)||'';
     if(goal) add('goal_'+goal,1);
     const wc=(typeof WC!=='undefined'&&WC)||{};
-    for(const id in wc) if(wc[id]) add('wc_'+id,1);
+    /* OPMODS renamed Blood Moon to `dark` and Hiveworld to `swarm`; the
+       orders still ask for the live wildcard tokens (`moon`, `wild`) that
+       random picks and the sim actually set. Count both names or those
+       three flavour orders can never complete. */
+    const alias={dark:'moon',moon:'moon',swarm:'wild',wild:'wild',titan:'titan'};
+    for(const id in wc) if(wc[id]){
+      add('wc_'+id,1);
+      if(alias[id]&&alias[id]!==id) add('wc_'+alias[id],1);
+    }
     st.lastDay=st.day;
     if(!st.countedToday){ st.countedToday=1; st.streak=(st.streak||0)+1; }
   }
+  /* The match earned these. Leaving them sitting on CLAIM meant a player
+     who never opened Daily Orders was paid nothing for finishing them. */
+  const granted=dailyGrantReady(true);
   metaSave();
   renderDaily();
+  DAILY_LAST={granted,ready:todaysOrders().filter(o=>orderDone(o)&&!orderClaimed(o))};
+}
+let DAILY_LAST={granted:[],ready:[]};
+function dailyLast(){ return DAILY_LAST; }
+function dailyGrantReady(quiet){
+  const granted=[];
+  for(const o of todaysOrders()){
+    if(orderDone(o)&&!orderClaimed(o)){
+      claimOrder(o,quiet);
+      granted.push(o);
+    }
+  }
+  return granted;
 }
 function orderDone(o){ return (dailyState().prog[o.stat]||0)>=o.goal; }
 function orderClaimed(o){ return !!dailyState().claimed[o.id]; }
-function claimOrder(o){
+function claimOrder(o,quiet){
   if(!orderDone(o)||orderClaimed(o)) return;
   const st=dailyState();
   st.claimed[o.id]=1;
@@ -190,9 +217,10 @@ function claimOrder(o){
     const [k,dk]=o.rw.boost;
     const dur=BOOST_DUR.find(d=>d.k===dk);
     grantBoost(k,dur?dur.s:1800);
-    toast('✓ '+cores+' cores  ·  '+BOOSTS[k].em+' '+BOOSTS[k].nm+' for '+(dur?dur.nm.toLowerCase():'30 min'));
-  } else toast('✓ '+cores+' cores');
-  metaSave(); renderMetaHead(); renderDaily(); sfx('level'); buzz(25);
+    if(!quiet) toast('✓ '+cores+' cores  ·  '+BOOSTS[k].em+' '+BOOSTS[k].nm+' for '+(dur?dur.nm.toLowerCase():'30 min'));
+  } else if(!quiet) toast('✓ '+cores+' cores');
+  metaSave(); renderMetaHead(); renderDaily();
+  if(!quiet){ sfx('level'); buzz(25); }
 }
 /* The menu badge: a dot only when something is actually claimable, so it is a
    signal rather than decoration. */

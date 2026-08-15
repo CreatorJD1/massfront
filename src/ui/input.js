@@ -18,6 +18,8 @@ let shake=0;
    suspends automatic movement for a few seconds afterwards. */
 let camUserT=0;
 function camUser(){ camUserT=4.0; }
+function zoomSpanMax(){ return typeof spanMaxNow==='function'?spanMaxNow():SPAN_MAX; }
+function zoomSpanMin(){ return typeof spanMinNow==='function'?spanMinNow():200; }
 function camAutoAllowed(){ return camUserT<=0; }
 function camAuthTick(dt){ if(camUserT>0) camUserT-=dt; }
 /* Tapping the ground while the dropship is still airborne orders it there and
@@ -37,7 +39,12 @@ function uiCommandAck(action,count,wx,wy){
 }
 function clearSel(){
   usel.fill(0);activePlatoon=-1;armFormation=false;orderPreview=null;orderConfirm=null;
+  /* STOP vs HOLD is HUD-only (both write uhold=1). Leaving the bits set meant
+     a later select of a recycled slot, or a unit that had since been given a
+     new order off-selection, still read STOP. */
+  if(ustopDisp) ustopDisp.fill(0);
   if(armPatrol)cancelPatrolDraft(true);
+  if(armQueue)cancelQueueDraft(true);
   const fb=document.getElementById('formBtn');if(fb)fb.classList.remove('on');
   updateGroupBadges();updateSelInfo();
 }
@@ -65,14 +72,35 @@ function selectHero(){
   cam.x=ux[heroIdx]; cam.y=uy[heroIdx]; clampCam();
   updateSelInfo(); uiCommandAck('select',1,ux[heroIdx],uy[heroIdx]);
 }
+/* HUD-only: Stop and Hold both write uhold=1 (idle must not chase). The
+   selection line still has to say STOP vs HOLD. Lives here — next to the
+   orders — because a `let` bit in hudflow.js is declared AFTER hud.js, so
+   updateSelInfo's lookup never saw it on packed boot (separate classic
+   scripts). */
+var ustopDisp=null;
+function markStopDisp(on){
+  if(!ustopDisp&&typeof MAXU==='number') ustopDisp=new Uint8Array(MAXU);
+  if(!ustopDisp) return;
+  for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]) ustopDisp[i]=on?1:0;
+}
 function stopSelected(){
   let n=0;
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]){
-    ustate[i]=0;utgt[i]=-1;uhold[i]=0;utx[i]=ux[i];uty[i]=uy[i];uPatrolRoute[i]=-1;uMoveCohort[i]=-1;
+    /* Stop is a freeze, not idle. Idle acquisition uses aggro range and then
+       walks (the chase that made Stop feel like a delayed Attack). Hold already
+       acquires at weapon range and refuses wantMove — Stop writes that stance
+       so a new lock can still be shot if it is already in range. */
+    ustate[i]=0;utgt[i]=-1;utgtg[i]=-1;uhold[i]=1;umarch[i]=0;
+    utx[i]=ux[i];uty[i]=uy[i];uPatrolRoute[i]=-1;uMoveCohort[i]=-1;
+    /* Stop means stop. A surviving waypoint chain or escort anchor would walk
+       the unit off again on the next tick, which is exactly the "Stop did
+       nothing" complaint this function already exists to answer. */
+    queueClear(i);uGuard[i]=-1;
     n++;
   }
-  /* Nothing was selected, so nothing happened. `ui` said otherwise. */
-  if(n)uiCommandAck('stop',n);else sfx('reject');
+  markStopDisp(true);
+  if(n){ uiCommandAck('stop',n); updateSelInfo(); }
+  else sfx('reject');
 }
 /* ---------- formations ---------- */
 const FORMS=[
@@ -176,10 +204,22 @@ function formationOffsets(n,form,spacing){
    the expensive call at all. */
 function formationPreviewSlots(o,members,form){
   if(!o||!members||!members.length) return [];
-  const key=Math.round(o.x)+','+Math.round(o.y)+','+form+','+members.length
-    +','+(members[0]|0)+','+(members[members.length-1]|0);
-  if(o._slotKey!==key){ o._slotKey=key; o._slots=formationTargets(members,o.x,o.y,form); }
-  return o._slots||[];
+  /* Ghosts only. orderMove still solves the full selection. Patrol already
+     keeps 36 route stands; 1000 hologram rings is the same fillrate trap as
+     per-unit selection rings. Sample members so this never walks the army. */
+  const n=members.length, stride=Math.max(1,Math.ceil(n/36));
+  const key=Math.round(o.x)+','+Math.round(o.y)+','+form+','+n+','+stride
+    +','+(members[0]|0)+','+(members[n-1]|0);
+  if(o._slotKey===key) return o._slots||[];
+  o._slotKey=key;
+  let sampled=members;
+  if(stride>1){
+    sampled=[];
+    for(let k=0;k<n;k+=stride) sampled.push(members[k]);
+    if(sampled[sampled.length-1]!==members[n-1]) sampled.push(members[n-1]);
+  }
+  o._slots=formationTargets(sampled,o.x,o.y,form);
+  return o._slots;
 }
 function formationTargets(sel,wx,wy,form,angle){
   if(!sel.length) return [];
@@ -213,7 +253,8 @@ function armFormationOrder(){
    simply never written by anything. Without it there is no retreat, no
    repositioning under fire and no walking past a fight, which is the highest
    frequency tactical decision in the genre. `moveMode` is the player's toggle;
-   `orderMove` now honours it. */
+   double-tap/click on empty ground forces a one-shot retreat without flipping
+   it. `orderMove` honours both. */
 let moveMode=0;                                  // 0 = attack-move, 1 = move only
 function toggleMoveMode(){
   moveMode=moveMode?0:1;
@@ -224,7 +265,7 @@ function toggleMoveMode(){
                 :'⚔ ATTACK-MOVE — units engage what they meet');
   sfx('ui');
 }
-function orderMove(wx,wy,patrol){
+function orderMove(wx,wy,patrol,retreat){
   const sel=formationMembers();
   if(!sel.length) return false;
   if(typeof battlefieldClampPoint==='function'){const p=battlefieldClampPoint(wx,wy,24);wx=p[0];wy=p[1];}
@@ -234,12 +275,24 @@ function orderMove(wx,wy,patrol){
   const form=FORMS[selFormation].id;
   const targets=formationTargets(sel,wx,wy,form);
   const cohort=patrol?-1:allocMoveCohort(sel,targets,selFormation);
+  /* Retreat/move-only is ustate 1: sim skips acquisition and will not chase a
+     leftover lock. Attack-move stays ustate 2. Double-tap ground passes
+     `retreat` so the A-MOVE toggle is not required to break contact. */
+  const moveOnly=!patrol&&(retreat||moveMode);
   for(let k=0;k<sel.length;k++){
     const i=sel[k],T=TYPES[utype[i]],rawx=targets[k].x,rawy=targets[k].y;
     const legal=T.naval?(findWater(rawx,rawy)||[ux[i],uy[i]]):T.air?[rawx,rawy]:findLand(rawx,rawy);
     const tx=legal[0],ty=legal[1];
-    ustate[i]=patrol?5:(moveMode?1:2); utgt[i]=-1; ufield[i]=T.air?-1:(T.naval?navalFld:fld); uhold[i]=0;
+    ustate[i]=patrol?5:(moveOnly?1:2);
+    utgt[i]=-1; utgtg[i]=-1;
+    /* A-MOVE/patrol keep the click as hull goal while shooting. Retreat/MOVE
+       must not: umarch is fire-on-the-move, the opposite of breaking contact. */
+    umarch[i]=moveOnly?0:1;
+    ufield[i]=T.air?-1:(T.naval?navalFld:fld); uhold[i]=0;
     uPatrolRoute[i]=-1;uPatrolStep[i]=0;
+    /* A direct order replaces the plan, it does not append to it. Appending is
+       the queue planner's job and it has its own commit. */
+    queueClear(i);uGuard[i]=-1;
     uMoveCohort[i]=cohort;
     if(patrol){ upx1[i]=ux[i]; upy1[i]=uy[i]; upx2[i]=clamp(tx,15,MAP-15); upy2[i]=clamp(ty,15,MAP-15); }
     utx[i]=clamp(tx,15,MAP-15);
@@ -249,7 +302,7 @@ function orderMove(wx,wy,patrol){
   if(!patrol){
     /* The route the field will actually walk, drawn at the moment of the
        order (src/ui/orderfx.js) - amber for attack-move, cyan for move. */
-    if(typeof moveFxOrder==='function') moveFxOrder(sel,wx,wy,fld,moveMode?1:0);
+    if(typeof moveFxOrder==='function') moveFxOrder(sel,wx,wy,fld,moveOnly?1:0);
     /* And the formation footprint. This reuses the confirm hologram that
        formation drags always had, so a plain tap now shows where each unit
        will STAND, not just where the tap landed. `noLine` suppresses the
@@ -259,7 +312,10 @@ function orderMove(wx,wy,patrol){
     orderConfirm={x:wx,y:wy,members:sel.slice(),form:selFormation,
                   until:performance.now()+950,noLine:1};
   }
-  uiCommandAck(patrol?'patrol':'move',sel.length,wx,wy);
+  markStopDisp(false);
+  if(retreat) toast('➤ RETREAT — dropping combat');
+  uiCommandAck(patrol?'patrol':(retreat?'retreat':'move'),sel.length,wx,wy);
+  updateSelInfo();
   return true;
 }
 function patrolButtonState(){
@@ -328,6 +384,9 @@ function refreshPatrolRoute(ri,force){
    hull remained on the old leg. A shared step waits for the formation, with a
    bounded quorum escape for a genuinely blocked straggler. */
 function tickPatrolRoutes(dt){
+  /* sim.js already calls this once per simulation tick; the queue planner and
+     guard read-out ride it rather than adding a second clock. */
+  tickOrderPlanning(dt);
   for(let ri=0;ri<patrolRoutes.length;ri++){
     const R=patrolRoutes[ri];if(!R)continue;
     R.gcT=(R.gcT||0)-dt;
@@ -375,7 +434,8 @@ function commitPatrolDraft(){
   for(let k=0;k<sel.length;k++){
     const i=sel[k],P=domainOrderPoint(i,targets[1][k]);
     uPatrolRoute[i]=ri;uPatrolStep[i]=1;uPatrolSlot[i]=k;uMoveCohort[i]=-1;
-    ustate[i]=5;utgt[i]=-1;uhold[i]=0;ufield[i]=P.field;utx[i]=P.x;uty[i]=P.y;
+    queueClear(i);uGuard[i]=-1;
+    ustate[i]=5;utgt[i]=-1;utgtg[i]=-1;uhold[i]=0;umarch[i]=1;ufield[i]=P.field;utx[i]=P.x;uty[i]=P.y;
     upx1[i]=targets[0][k].x;upy1[i]=targets[0][k].y;upx2[i]=P.x;upy2[i]=P.y;
   }
   const count=sel.length,nodes=pts.length-1;
@@ -397,7 +457,7 @@ const groupLive=g=>g.filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0)
 function saveGroup(n){
   const g=[];
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]) g.push([i,ugen[i]]);
-  if(!g.length){ toast('Select units first, then hold P'+(n+1)+' to assign'); return; }
+    if(!g.length){toast('Select units first, then tap P'+(n+1)+' to assign'); return;}
   ctrlGroups[n]=g;groupForms[n]=selFormation;activePlatoon=n;
   updateGroupBadges();
   toast('PLATOON P'+(n+1)+' saved — '+g.length+' units · '+FORMS[selFormation].nm);sfx('level');
@@ -406,7 +466,11 @@ function recallGroup(n,focus){
   const g=groupLive(ctrlGroups[n]);
   ctrlGroups[n]=g;
   updateGroupBadges();
-  if(!g.length){toast('P'+(n+1)+' is empty — select units and HOLD to assign');return;}
+  if(!g.length){
+    if(selCount()){ saveGroup(n); return; }
+    toast('P'+(n+1)+' is empty — select units, then tap P'+(n+1)+' to assign');
+    return;
+  }
   clearSel();
   let cx2=0,cy2=0;
   for(const [i] of g){ usel[i]=1; cx2+=ux[i]; cy2+=uy[i]; }
@@ -420,7 +484,6 @@ function updateGroupBadges(){
     const live=groupLive(ctrlGroups[n]);ctrlGroups[n]=live;
     const b=document.getElementById('grp'+(n+1)+'N');
     if(b)b.textContent=live.length||'—';
-    const f=document.getElementById('grp'+(n+1)+'F');if(f)f.textContent=FORMS[groupForms[n]||0].em;
     const btn=document.getElementById('grpBtn'+(n+1));
     if(btn){btn.classList.toggle('saved',!!live.length);btn.classList.toggle('active',activePlatoon===n&&!!live.length);}
   }
@@ -428,9 +491,12 @@ function updateGroupBadges(){
 function orderHold(){
   let n=0;
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]){
-    uhold[i]=1;ustate[i]=0;utgt[i]=-1;utx[i]=ux[i];uty[i]=uy[i];uPatrolRoute[i]=-1;uMoveCohort[i]=-1;n++;
+    uhold[i]=1;ustate[i]=0;utgt[i]=-1;utgtg[i]=-1;umarch[i]=0;
+    utx[i]=ux[i];uty[i]=uy[i];uPatrolRoute[i]=-1;uMoveCohort[i]=-1;
+    queueClear(i);uGuard[i]=-1;n++;
   }
-  if(n){ toast('⛊ '+n+' units holding position — they fire but never chase'); uiCommandAck('hold',n); }
+  markStopDisp(false);
+  if(n){ toast('⛊ '+n+' units holding position — they fire but never chase'); uiCommandAck('hold',n); updateSelInfo(); }
   return n;
 }
 function orderAttack(target){   // target: unit idx or -2-b
@@ -440,19 +506,261 @@ function orderAttack(target){   // target: unit idx or -2-b
   else { const B=blds[-2-target]; ex=B.x; ey=B.y; }
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]){
     ustate[i]=2; utgt[i]=target; utgtg[i]=target>=0?ugen[target]:-1;
-    utx[i]=ex;uty[i]=ey;uhold[i]=0;uPatrolRoute[i]=-1;uMoveCohort[i]=-1;any=true;
+    /* Explicit attack is chase, not attack-move. A leftover march flag would
+       keep walking the old ground click while the order said "that unit". */
+    utx[i]=ex;uty[i]=ey;uhold[i]=0;umarch[i]=0;uPatrolRoute[i]=-1;uMoveCohort[i]=-1;
+    queueClear(i);uGuard[i]=-1;any=true;
   }
-  if(any){ addParticle(3,ex,ey,0,0,.5,30, 255,90,70); uiCommandAck('attack',selCount(),ex,ey); }
+  if(any){
+    markStopDisp(false);
+    addParticle(3,ex,ey,0,0,.5,30, 255,90,70); uiCommandAck('attack',selCount(),ex,ey);
+    updateSelInfo();
+  }
   return any;
 }
+/* ============================================================================
+   GUARD (escort) + QUEUED WAYPOINTS — both touch-first.
+   ----------------------------------------------------------------------------
+   Neither order gets a desktop-only affordance. Shift-click exists here only as
+   an accelerator on top of the touch path, never as the way in.
+
+   WHY THE ORDERS DECK ONLY GAINS ONE BUTTON. #tacRow is five controls wide and
+   #primaryRow already proves six is the ceiling inside the phone dock's
+   minimap-bay padding at 412px (6*46 + 5*3 = 291px of 292px available). A
+   seventh control would push PATROL under the minimap. So the queue planner —
+   which genuinely needs a persistent, stateful control, because it is a mode
+   with a commit — takes the one remaining slot, and GUARD rides the long press,
+   the only touch gesture that can name a FRIENDLY target without also
+   re-selecting it.
+
+   WHY THE BUTTON IS BUILT HERE AND NOT IN index.html / ui.css. The in-match HUD
+   markup and stylesheet have another owner mid-pass. Creating the control at
+   load and appending it to #tacRow is the same trick main.js's ensureCamControl
+   already uses for OTA shells that predate a button: it inherits the row's
+   deck visibility, safe-area padding and .cbtn styling for free, and the HUD
+   owner can move or restyle it later without touching orders code.
+   ============================================================================ */
+function guardLabel(h){
+  if(h>=0) return TYPES[utype[h]].name;
+  const B=blds[-2-h];
+  return (B&&BT[B.type]&&BT[B.type].name)||'structure';
+}
+function orderGuard(h,quiet){
+  if(!guardEntityLive(h,h>=0?ugen[h]:-1)) return false;
+  let n=0;
+  for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]&&i!==h){
+    queueClear(i);
+    ustate[i]=7; uGuard[i]=h; uGuardG[i]=h>=0?ugen[h]:-1;
+    utgt[i]=-1; utgtg[i]=-1; uhold[i]=0; umarch[i]=0;
+    uPatrolRoute[i]=-1; uMoveCohort[i]=-1; ufield[i]=-1;
+    n++;
+  }
+  if(!n) return false;
+  const P=guardEntityPos(h);
+  addParticle(3,P[0],P[1],0,0,.6,Math.max(34,P[2]*2.4), 120,255,190);
+  if(!quiet) toast('⛨ GUARD — '+n+' unit'+(n===1?'':'s')+' escorting '+guardLabel(h));
+  markStopDisp(false);
+  uiCommandAck('guard',n,P[0],P[1]);
+  updateSelInfo();
+  return true;
+}
+
+let armQueue=false, queueDraft=null, guardFxT=0;
+function queueButtonState(){
+  const b=ensureQueueBtn(); if(!b) return;
+  const n=queueDraft?queueDraft.steps.length:0;
+  b.classList.toggle('on',!!armQueue);
+  const l=b.querySelector('.lbl');
+  if(l) l.textContent=armQueue?(n?'GO '+n:'TAP…'):'QUEUE';
+}
+function ensureQueueBtn(){
+  let b=document.getElementById('queueBtn');
+  if(b) return b;
+  const row=document.getElementById('tacRow');
+  if(!row) return null;
+  b=document.createElement('button');
+  b.type='button'; b.id='queueBtn'; b.className='cbtn';
+  b.setAttribute('aria-label','Chain waypoints for the selected units');
+  b.innerHTML='<span class="em">⇢</span><span class="lbl">QUEUE</span>';
+  /* Before CLEAR so cancelling the selection stays the last thing in the row. */
+  row.insertBefore(b,document.getElementById('clearBtn')||null);
+  b.addEventListener('pointerdown',ev=>{ ev.preventDefault(); toggleQueuePlanner(); });
+  return b;
+}
+function beginQueueDraft(){
+  const sel=formationMembers();
+  if(!sel.length){ toast('Select units first'); sfx('reject'); return false; }
+  if(armPatrol) cancelPatrolDraft(true);
+  armFormation=false; orderPreview=null; orderConfirm=null;
+  const fb=document.getElementById('formBtn'); if(fb) fb.classList.remove('on');
+  queueDraft={members:sel.map(i=>[i,ugen[i]]),steps:[],form:selFormation,fx:null,fxT:0};
+  armQueue=true; queueButtonState();
+  toast('⇢ ORDER QUEUE — tap ground, an enemy, or one of your own, or drag a path, up to '
+        +QUEUE_MAX+' orders, then tap GO');
+  sfx('ui'); return true;
+}
+function cancelQueueDraft(quiet){
+  if(queueDraft) queueFxDrop(queueDraft);
+  armQueue=false; queueDraft=null; queueButtonState();
+  if(!quiet){ toast('Order queue cancelled'); sfx('reject'); }
+}
+/* A queued chain has to stay on the ground BETWEEN taps, and both route
+   renderers only know how to draw `patrolDraft`. Rather than reach into files
+   the HUD and graphics owners hold, the chain is published as an order-FX
+   polyline — src/ui/orderfx.js already draws those as marching chevrons — with
+   a lifetime the planner keeps refreshing. Straight legs are honest here: the
+   player placed the nodes, and each leg's real flow route is only solved when
+   that node becomes the live order. */
+function queueFxPush(sx,sy,steps,until){
+  if(typeof moveFxList==='undefined'||!steps.length) return null;
+  const pts=[{x:sx,y:sy}];
+  for(const s of steps) pts.push({x:s.x,y:s.y});
+  let len=0; const arc=[0];
+  for(let k=1;k<pts.length;k++){
+    len+=Math.hypot(pts[k].x-pts[k-1].x,pts[k].y-pts[k-1].y); arc.push(len);
+  }
+  if(len<24) return null;
+  const fx={pts,arc,len,kind:0,born:performance.now(),until};
+  moveFxList.push(fx);
+  while(moveFxList.length>MOVE_FX_MAX) moveFxList.shift();
+  return fx;
+}
+function queueFxDrop(D){
+  if(!D||!D.fx||typeof moveFxList==='undefined') return;
+  const k=moveFxList.indexOf(D.fx); if(k>=0) moveFxList.splice(k,1);
+  D.fx=null;
+}
+function queueAddStep(wx,wy,pk,quiet){
+  const D=queueDraft; if(!D) return;
+  const last=D.steps[D.steps.length-1];
+  if(last&&last.t===2){ if(!quiet){ toast('GUARD ends the chain — tap GO'); sfx('reject'); } return; }
+  if(D.steps.length>=QUEUE_MAX){ if(!quiet){ toast('Queue is full — tap GO to execute'); sfx('reject'); } return; }
+  let px=clamp(wx,20,MAP-20),py=clamp(wy,20,MAP-20);
+  if(typeof battlefieldClampPoint==='function'){ const q=battlefieldClampPoint(px,py,24); px=q[0]; py=q[1]; }
+  let step,what;
+  const inDraft=h=>{ for(const e of D.members) if(e[0]===h) return true; return false; };
+  const b=pickBld(wx,wy);
+  if(pk&&pk.enemy>=0){
+    step={t:1,x:ux[pk.enemy],y:uy[pk.enemy],h:pk.enemy,g:ugen[pk.enemy],mv:0};
+    what='ATTACK '+TYPES[utype[pk.enemy]].name;
+  } else if(pk&&pk.own>=0&&!inDraft(pk.own)){
+    step={t:2,x:ux[pk.own],y:uy[pk.own],h:pk.own,g:ugen[pk.own],mv:0};
+    what='GUARD '+TYPES[utype[pk.own]].name;
+  } else if(b>=0&&blds[b].team!==0){
+    const B=blds[b]; step={t:1,x:B.x,y:B.y,h:-2-b,g:-1,mv:0};
+    what='ATTACK '+guardLabel(-2-b);
+  } else if(b>=0&&!quiet){
+    /* Drag-path samples skip friendly structures: a stroke across your own
+       yard must not turn into a GUARD of the HQ. A deliberate TAP still can. */
+    const B=blds[b]; step={t:2,x:B.x,y:B.y,h:-2-b,g:-1,mv:0};
+    what='GUARD '+guardLabel(-2-b);
+  } else {
+    step={t:0,x:px,y:py,h:-1,g:-1,mv:moveMode?1:0};
+    what=moveMode?'MOVE':'ATTACK-MOVE';
+  }
+  D.steps.push(step);
+  queueFxDrop(D); D.fxT=0;                        // polyline changed: rebuild next tick
+  addParticle(3,step.x,step.y,0,0,.55,30, 150,220,255);
+  queueButtonState();
+  if(quiet) return;
+  toast('⇢ '+D.steps.length+'. '+what+(step.t===2?' — final step':'')+' · add more or tap GO');
+  sfx('confirm');
+}
+function commitQueueDraft(){
+  const D=queueDraft;
+  if(!D||!D.steps.length){ cancelQueueDraft(false); return false; }
+  const sel=[];
+  for(const e of D.members) if(ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0) sel.push(e[0]);
+  if(!sel.length){ cancelQueueDraft(false); return false; }
+  let cx=0,cy=0;
+  for(const i of sel){ cx+=ux[i]; cy+=uy[i]; }
+  cx/=sel.length; cy/=sel.length;
+  /* One formation row per ground node, headed along the leg — the same solve
+     patrol legs use — so a queued route arrives in formation at every waypoint
+     instead of piling the whole force onto the pixel that was tapped. */
+  const form=FORMS[D.form].id, rows=[];
+  let px=cx,py=cy;
+  for(const s of D.steps){
+    rows.push(s.t===0?formationTargets(sel,s.x,s.y,form,Math.atan2(s.y-py,s.x-px)):null);
+    px=s.x; py=s.y;
+  }
+  for(let k=0;k<sel.length;k++){
+    const i=sel[k];
+    uQueue[i]=D.steps.map((s,q)=>rows[q]
+      ?{t:0,x:rows[q][k].x,y:rows[q][k].y,h:-1,g:-1,mv:s.mv}
+      :{t:s.t,x:s.x,y:s.y,h:s.h,g:s.g,mv:s.mv});
+    uhold[i]=0; uPatrolRoute[i]=-1; uMoveCohort[i]=-1; utgt[i]=-1; utgtg[i]=-1;
+    /* Start node one immediately. queueTick would otherwise wait for the unit
+       to "arrive" at whatever its previous order was still pointing at. */
+    queueNext(i);
+  }
+  const n=sel.length, nodes=D.steps.length, fx0=D.steps[0];
+  queueFxDrop(D);
+  queueFxPush(cx,cy,D.steps,performance.now()+MOVE_FX_LIFE*1.8);
+  armQueue=false; queueDraft=null; queueButtonState();
+  toast('⇢ '+n+' unit'+(n===1?'':'s')+' executing a '+nodes+'-step order queue');
+  uiCommandAck('patrol',n,fx0.x,fx0.y);           // "Route uploaded"
+  return true;
+}
+function toggleQueuePlanner(){
+  if(!armQueue){ beginQueueDraft(); return; }
+  if(queueDraft&&queueDraft.steps.length) commitQueueDraft(); else cancelQueueDraft(false);
+}
+/* Draft upkeep and the guard read-out. Rides tickPatrolRoutes (below) because
+   sim.js already calls that once per simulation tick and neither of these
+   deserves a second timer. */
+function tickOrderPlanning(dt){
+  if(armQueue&&queueDraft){
+    const D=queueDraft;
+    let cx=0,cy=0,n=0;
+    for(const e of D.members) if(ualive[e[0]]&&ugen[e[0]]===e[1]){ cx+=ux[e[0]]; cy+=uy[e[0]]; n++; }
+    /* Every drafted unit is gone — including the resetWorld case, where the
+       whole army dies at once. Cancelling here is why the planner needs no
+       hook in main.js's reset. */
+    if(!n) cancelQueueDraft(true);
+    else {
+      D.fxT-=dt;
+      if(D.fxT<=0){
+        D.fxT=.5;
+        if(D.fx&&moveFxList.indexOf(D.fx)<0) D.fx=null;   // newer orders shifted it out
+        if(!D.fx) D.fx=queueFxPush(cx/n,cy/n,D.steps,performance.now()+6e5);
+        else D.fx.until=performance.now()+6e5;
+        for(const s of D.steps) addParticle(3,s.x,s.y,0,0,.5,26, 150,220,255);
+      }
+    }
+  }
+  guardFxT-=dt;
+  if(guardFxT>0) return;
+  guardFxT=1.4;
+  /* One soft ring per guarded thing, so an escort order stays legible on the
+     ground after its confirmation particle has gone. Deliberately slow and
+     capped: this is a read-out, not a per-unit effect. */
+  const seen=[];
+  for(let i=0;i<unitHigh&&seen.length<6;i++){
+    if(!ualive[i]||uteam[i]!==0||ustate[i]!==7) continue;
+    const h=uGuard[i];
+    if(h===-1||seen.indexOf(h)>=0||!guardEntityLive(h,uGuardG[i])) continue;
+    seen.push(h);
+    const P=guardEntityPos(h);
+    addParticle(3,P[0],P[1],0,0,.75,Math.max(30,P[2]*2.2), 110,235,190);
+  }
+}
 function pickUnit(wx,wy){
-  const pickR=Math.max(16,orthoSpan*0.012);
+  const pickR=Math.max(16,orthoSpan*0.012,
+    (typeof mfIconStackOn==='function'&&mfIconStackOn()&&typeof mfIconStackCell==='function')
+      ?mfIconStackCell()*0.55:0);
   let best=-1,bd=pickR*pickR, bestEnemy=-1,bde=pickR*pickR;
   forUnitsIn(wx,wy,pickR,j=>{
     const d=dist2(wx,wy,ux[j],uy[j]);
     if(uteam[j]===0){ if(d<bd){bd=d;best=j;} }
     else if(fogEntityVisible(uteam[j],ux[j],uy[j])){ if(d<bde){bde=d;bestEnemy=j;} }
   });
+  if(typeof mfIconStackPick==='function'){
+    const ownSt=mfIconStackPick(wx,wy,0);
+    if(ownSt>=0) best=ownSt;
+    const enSt=mfIconStackPick(wx,wy,1);
+    if(enSt>=0&&bestEnemy<0) bestEnemy=enSt;
+  }
   return {own:best, enemy:bestEnemy};
 }
 function pickBld(wx,wy){
@@ -463,7 +771,21 @@ function pickBld(wx,wy){
   return -1;
 }
 
-let armRally=-1, armPatrol=false, lastSelT=0, lastSelType=-1;
+let armRally=-1, armPatrol=false, lastSelT=0, lastSelType=-1, lastTapShift=false;
+let lastGroundT=0, lastGroundX=0, lastGroundY=0;
+/* 500ms / 80px is the C&C3 / SupCom2 double-tap window, in SCREEN pixels so
+   a command-camera pan between contacts does not break it. lastGroundT>0
+   rejects the page-load false positive (tnow-0<500 during the first half
+   second of a reload). */
+const GROUND_DBL_MS=500, GROUND_DBL_PX=80;
+function groundDoubleTap(sx,sy){
+  return lastGroundT>0 && performance.now()-lastGroundT<GROUND_DBL_MS
+    && Math.hypot(sx-lastGroundX,sy-lastGroundY)<GROUND_DBL_PX;
+}
+function stampGroundTap(sx,sy,consumed){
+  lastGroundT=consumed?0:performance.now();
+  lastGroundX=sx; lastGroundY=sy;
+}
 let novaSrc=-1;
 function onTap(sx,sy){
   const [wx,wy]=s2w(sx,sy);
@@ -474,6 +796,11 @@ function onTap(sx,sy){
   if(aiming===4){ fireCommanderJump(wx,wy); return; }
   if(aiming===0){ fireBlast(wx,wy); return; }
   if(aiming===3){ fireLance(wx,wy); return; }
+  /* WHY: Skycrane UNLOAD and Massflesh BIRTH are map-aim modes. Dispatch them
+     here (not only via airlift.js's onTap wrap) so a later input rewrite cannot
+     leave those orders as toasts with no confirm. */
+  if(aiming===9&&typeof mfAirliftConfirmAim==='function'){ mfAirliftConfirmAim(wx,wy); return; }
+  if(aiming===10&&typeof mfMassConfirmAim==='function'){ mfMassConfirmAim(wx,wy); return; }
   if(aiming===2){                               // NOVA strike targeting
     aiming=-1;
     const b3=novaSrc; novaSrc=-1;
@@ -505,6 +832,20 @@ function onTap(sx,sy){
   if(carrier.active) return;                    // still falling — ignore taps
   const pk=pickUnit(wx,wy);
   const haveSel=selCount()>0;
+  /* Queue planning owns every map tap while it is armed — including taps on
+     units and structures, which is what makes "chain an attack then an escort"
+     reachable with one thumb. It is checked before selection so a tap on a
+     friendly appends a GUARD step instead of throwing the draft's roster away. */
+  if(armQueue && queueDraft){ queueAddStep(wx,wy,pk); return; }
+  /* DESKTOP ACCELERATOR, NOT THE WAY IN. Shift-click arms the same planner and
+     appends to it, and releasing Shift commits (see the keyup below). It is a
+     shortcut onto the touch machinery — there is deliberately no order here
+     that a phone cannot reach. */
+  if(lastTapShift && haveSel && !armPatrol && !placing && beginQueueDraft()){
+    queueDraft.viaShift=true;
+    queueAddStep(wx,wy,pk);
+    return;
+  }
   // patrol order (armed from the tactics bar)
   if(armPatrol && haveSel){
     addPatrolWaypoint(wx,wy);
@@ -512,9 +853,21 @@ function onTap(sx,sy){
   }
   if(armPatrol)cancelPatrolDraft(true);
   // enemy tapped → attack order
-  if(pk.enemy>=0 && haveSel){ orderAttack(pk.enemy); return; }
+  if(pk.enemy>=0 && haveSel){ lastGroundT=0; orderAttack(pk.enemy); return; }
+  /* WHY: pickUnit's radius at command camera is often larger than the empty
+     ground between selected hulls. A double-tap meant as retreat hit an own
+     unit, reset lastGroundT, and became select-all. If the first tap was a
+     ground order, the second contact at the same screen point is retreat —
+     even when a friendly silhouette is inside the pick disc. Enemy / building
+     taps still win so this cannot steal attack or a factory menu. */
+  if(haveSel && groundDoubleTap(sx,sy) && pk.enemy<0 && pickBld(wx,wy)<0){
+    stampGroundTap(sx,sy,true);
+    orderMove(wx,wy,false,true);
+    return;
+  }
   // own unit tapped → select (double-tap = select all of that type on screen)
   if(pk.own>=0){
+    lastGroundT=0;
     const tnow=performance.now();
     if(tnow-lastSelT<430 && utype[pk.own]===lastSelType){
       const b2=camBounds(); let n2=0;
@@ -525,32 +878,79 @@ function onTap(sx,sy){
       toast('⚔ '+n2+'× '+TYPES[lastSelType].name+' selected — camera locked on');
       lastSelT=0;
       camFollow=pk.own; camFollowT=2.4;            // glide in and track it
-      distTarget=clamp(Math.max(orthoSpan*0.5,SPAN_MIN),SPAN_MIN,SPAN_MAX);   // close on the unit, but not past the command view
+      distTarget=clamp(Math.max(orthoSpan*0.5,zoomSpanMin()),zoomSpanMin(),zoomSpanMax());   // close on the unit, into tactical mesh
       updateSelInfo(); uiCommandAck('select',n2,ux[pk.own],uy[pk.own]); closeMenus(); return;
     }
     lastSelT=tnow; lastSelType=utype[pk.own];
+    if(typeof mfIconStackSkip==='function'&&mfIconStackSkip(pk.own)
+       &&typeof mfIconStackSelect==='function'&&mfIconStackSelect(pk.own)){
+      uiCommandAck('select',selCount(),ux[pk.own],uy[pk.own]); closeMenus(); return;
+    }
     clearSel(); usel[pk.own]=1; updateSelInfo(); uiCommandAck('select',1,ux[pk.own],uy[pk.own]);
     closeMenus(); return;
   }
   // building tapped
   const b=pickBld(wx,wy);
   if(b>=0){
+    lastGroundT=0;
     const B=blds[b];
     if(B.team===0){ clearSel(); openBldMenu(b); return; }
     else if(haveSel){ orderAttack(-2-b); return; }
   }
-  // ground → move/attack-move
-  if(haveSel){ orderMove(wx,wy); return; }
+  // ground → move/attack-move; double-tap empty ground = retreat (C&C3 / SupCom2)
+  if(haveSel){
+    const retreat=groundDoubleTap(sx,sy);
+    stampGroundTap(sx,sy,retreat);
+    orderMove(wx,wy,false,retreat);
+    return;
+  }
   closeMenus();
 }
 
 let dragGhost=false, holdTimer=0;
+/* One threshold for tap vs intel-card hold. A press that lasted 400–520 ms
+   used to do nothing: onTap required <400 while the card armed at 520, so a
+   careful aim in a crowd produced no order and no card. Shorter than this
+   is a tap; reaching it is the hold. Keep 520 so expert long-press feel is
+   unchanged — only the dead zone closes. */
+const HOLD_MS=520;
+/* Thumb contact jitter. 9px `moved` is below a real finger; 220ms is a tap. */
+const TAP_JITTER_MS=220, TAP_JITTER_PX=28;
 cv.addEventListener('pointerdown',e=>{
   try{ cv.setPointerCapture(e.pointerId); }catch(_){}
-  ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false,t:performance.now()});
+  const rec={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false,held:false,
+             shift:!!e.shiftKey,t:performance.now()};
+  ptrs.set(e.pointerId,rec);
   if(aiming===5&&ptrs.size===1){
     const [bwx,bwy]=s2w(e.clientX,e.clientY);setArtBarragePreview(bwx,bwy);
     clearTimeout(holdTimer);return;
+  }
+  /* Double-tap retreat is decided on pointerdown, not pointerup.
+     WHY the previous path never fired on packed 8901:
+     1. Formation preview stole the second contact and called orderMove
+        without `retreat`, and never wrote lastGroundT.
+     2. pickUnit at command camera treated "empty" ground next to the army
+        as a unit tap and reset lastGroundT (select-all, not retreat).
+     3. A 9px jitter marked the first contact `moved`, so onTap never ran
+        and lastGroundT was never written — the second tap was a single
+        attack-move.
+     The 260ms radio gate is audio-only (audio.js already exempts retreat)
+     and was not the order failure. War Table leftovers are display:none
+     during a match and do not receive canvas pointers.
+     Queue / patrol keep the tap: those modes own the map. */
+  if(ptrs.size===1 && !placing && !boxMode && running && selCount()
+     && !armQueue && !armPatrol && aiming<0 && groundDoubleTap(e.clientX,e.clientY)){
+    const [wx,wy]=s2w(e.clientX,e.clientY);
+    const pk=pickUnit(wx,wy);
+    if(pk.enemy<0 && pickBld(wx,wy)<0){
+      rec.held=true; rec.retreat=1;
+      armFormation=false; orderPreview=null;
+      const fb=document.getElementById('formBtn'); if(fb) fb.classList.remove('on');
+      stampGroundTap(e.clientX,e.clientY,true);
+      orderMove(wx,wy,false,true);
+      clearTimeout(holdTimer);
+      return;
+    }
   }
   if(ptrs.size===1&&armFormation&&!placing&&!boxMode&&running&&selCount()){
     const [wx,wy]=s2w(e.clientX,e.clientY);
@@ -566,12 +966,23 @@ cv.addEventListener('pointerdown',e=>{
     const [hwx,hwy]=s2w(e.clientX,e.clientY);
     holdTimer=setTimeout(()=>{
       const p=ptrs.get(e.pointerId);
-      if(!p||p.moved||ptrs.size!==1) return;
+      if(!p||p.moved||p.held||ptrs.size!==1) return;
       const pk2=pickUnit(hwx,hwy);
       const ui2=pk2.own>=0?pk2.own:pk2.enemy;
       const bi2=ui2<0?pickBld(hwx,hwy):-1;
-      if(ui2>=0||bi2>=0){ showUnitCard(ui2,bi2); sfx('ui'); }
-    },520);
+      /* GUARD rides the long press (see the orders block above for why it gets
+         no dock button). It only fires on a FRIENDLY that is not already part
+         of the selection, so the intel card keeps every other long press:
+         nothing selected, an enemy, neutral ground, or a unit you already hold.
+         "Press something of mine while holding a force" has no other meaning. */
+      const ownBld=bi2>=0&&blds[bi2]&&blds[bi2].team===0;
+      const ownUnit=pk2.own>=0&&!usel[pk2.own];
+      if(selCount()&&(ownUnit||ownBld)&&!armQueue&&!armPatrol&&!placing){
+        p.held=true;
+        if(orderGuard(ownUnit?pk2.own:-2-bi2)){ if(typeof buzz==='function') buzz(12); return; }
+      }
+      if(ui2>=0||bi2>=0){ p.held=true; showUnitCard(ui2,bi2); sfx('ui'); }
+    },HOLD_MS);
   }
   if(placing&&ptrs.size===1){
     // drag near the ghost moves it; anywhere else pans the camera
@@ -590,6 +1001,7 @@ cv.addEventListener('pointerdown',e=>{
 });
 cv.addEventListener('pointermove',e=>{
   const p=ptrs.get(e.pointerId); if(!p) return;
+  if(p.retreat) return;
   const dx=e.clientX-p.x, dy=e.clientY-p.y;
   p.x=e.clientX; p.y=e.clientY;
   if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>9) p.moved=true;
@@ -600,6 +1012,20 @@ cv.addEventListener('pointermove',e=>{
     const [wx,wy]=s2w(e.clientX,e.clientY);
     const pp=typeof battlefieldClampPoint==='function'?battlefieldClampPoint(wx,wy,24):[clamp(wx,15,MAP-15),clamp(wy,15,MAP-15)];
     orderPreview.x=pp[0];orderPreview.y=pp[1];return;
+  }
+  if(armQueue&&queueDraft&&ptrs.size===1&&!placing&&!boxStart){
+    /* Drag-path while QUEUE is armed. Camera pan is the default one-finger
+       stroke; stealing it here is the point — a queued route that still
+       panned the map could not be drawn with a thumb. Sub-28px motion is
+       still a tap (onTap needs !moved), so a careful waypoint does not
+       become a pan. Samples are ground waypoints only. */
+    if(Math.hypot(e.clientX-p.sx,e.clientY-p.sy)>28) p.qDrag=true;
+    if(!p.qDrag){ p.moved=false; return; }
+    p.moved=true;
+    const [wx,wy]=s2w(e.clientX,e.clientY);
+    const last=queueDraft.steps[queueDraft.steps.length-1];
+    if(!last||dist2(wx,wy,last.x,last.y)>=110*110) queueAddStep(wx,wy,null,true);
+    return;
   }
   if(ptrs.size===1){
     if(placing&&dragGhost){
@@ -633,13 +1059,13 @@ cv.addEventListener('pointermove',e=>{
       const mx=(a[0].x+a[1].x)/2, my=(a[0].y+a[1].y)/2;
       const [wx0,wy0]=s2w(mx,my);
       // pinch = dolly the eye in and out along its own view ray
-      orthoSpan=clamp(pinchZ*pinchD/Math.max(1,d),SPAN_MIN,SPAN_MAX); distTarget=orthoSpan;
-      camUser();
-      // twist the same two fingers to orbit
+      camFollow=-1; camUser();
+      orthoSpan=clamp(pinchZ*pinchD/Math.max(1,d),zoomSpanMin(),zoomSpanMax()); distTarget=orthoSpan;
+      // twist the same two fingers to orbit — 0.12 rad so a zoom pinch does not spin
       const ang=Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x);
       let da=ang-pinchA;
       while(da>Math.PI)da-=TAU; while(da<-Math.PI)da+=TAU;
-      if(Math.abs(da)>0.05){ yawTarget=pinchYaw-da; camYaw=yawTarget; }
+      if(Math.abs(da)>0.12){ yawTarget=pinchYaw-da; camYaw=yawTarget; }
       // slide both fingers up/down together to raise or drop the eye
       const dyc=my-pinchMY;
       if(Math.abs(dyc)>14){ pitchTarget=clamp(pinchPitch+dyc*0.0022,PITCH_MIN,PITCH_MAX); camPitch=pitchTarget; }
@@ -663,6 +1089,10 @@ function endPtr(e){
     const fb=document.getElementById('formBtn');if(fb)fb.classList.remove('on');
     if(e.type!=='pointercancel'){
       orderMove(P.x,P.y,false);
+      /* Stamp the release as a ground tap so a quick second tap still
+         retreats. Formation preview never went through onTap, which is
+         how an armed FORM button swallowed double-tap retreat. */
+      stampGroundTap(p.x,p.y,false);
       /* Keep the exact count-based placement visible briefly after release.
          On touch screens the finger otherwise covered the only preview frame,
          making a valid formation order appear to have no visual response. */
@@ -679,6 +1109,9 @@ function endPtr(e){
     const sy0=Math.min(boxStartY,p.y), sy1=Math.max(boxStartY,p.y);
     if(sx1-sx0>10||sy1-sy0>10){
       clearSel(); let n=0;
+      /* Stage 0: walk every live slot and project to screen. At cap this is
+         the army-select cost. Stage 1 should query a spatial hash for the
+         world AABB of the box instead of testing unitHigh. */
       for(let i=0;i<unitHigh;i++){
         if(!ualive[i]||uteam[i]!==0) continue;
         const sp=w2s(ux[i],uy[i],terrainH(ux[i],uy[i])+TYPES[utype[i]].size*0.5);
@@ -689,25 +1122,58 @@ function endPtr(e){
       return;
     }
   }
-  if(!p.moved && performance.now()-p.t<400 && ptrs.size===0){
+  /* WHY: 9px `moved` is below thumb jitter. The first contact of a double-tap
+     was classified as a pan, lastGroundT was never written, and the second
+     tap could only ever be a single attack-move. A short press that drifted
+     less than a fingertip is still a tap. Real pans are longer strokes.
+     `performance.now()-p.t<HOLD_MS` stays the tap/hold gate (tools/test-input-hold-ms.mjs). */
+  const dt=performance.now()-p.t;
+  const withinHold=performance.now()-p.t<HOLD_MS;
+  const slop=Math.hypot(p.x-p.sx,p.y-p.sy);
+  if(!p.held && withinHold && ptrs.size===0 && (!p.moved || (dt<TAP_JITTER_MS && slop<TAP_JITTER_PX))){
     if(placing){
       // tap anywhere to move the ghost there (then confirm with ✓)
       const [wx,wy]=s2w(p.x,p.y);
       placing.rx=clamp(wx,40,MAP-40); placing.ry=clamp(wy,40,MAP-40);
       snapPlace();
-    } else onTap(p.x,p.y);
+    } else { lastTapShift=!!p.shift; onTap(p.x,p.y); lastTapShift=false; }
   }
 }
 cv.addEventListener('pointerup',endPtr);
 cv.addEventListener('pointercancel',endPtr);
+/* Desktop accelerator. Touch already retreated on the second pointerdown.
+   dblclick only fires if lastGroundT is still live — i.e. the second
+   pointerup never reached onTap (swallowed as a pan). */
+cv.addEventListener('dblclick',e=>{
+  if(!running||placing||boxMode||!selCount()||armQueue||armPatrol||aiming>=0) return;
+  e.preventDefault();
+  if(!groundDoubleTap(e.clientX,e.clientY)) return;
+  const [wx,wy]=s2w(e.clientX,e.clientY);
+  if(pickUnit(wx,wy).enemy>=0||pickBld(wx,wy)>=0) return;
+  stampGroundTap(e.clientX,e.clientY,true);
+  orderMove(wx,wy,false,true);
+});
 cv.addEventListener('wheel',e=>{
   e.preventDefault();
   const [wx0,wy0]=s2w(e.clientX,e.clientY);
-  orthoSpan=clamp(orthoSpan*(e.deltaY<0?0.87:1.15),SPAN_MIN,SPAN_MAX); distTarget=orthoSpan;
+  camFollow=-1; camUser();
+  orthoSpan=clamp(orthoSpan*(e.deltaY<0?0.87:1.15),zoomSpanMin(),zoomSpanMax()); distTarget=orthoSpan;
   clampCam(); camUpdateMatrices();
   const [wx1,wy1]=s2w(e.clientX,e.clientY);
   cam.x+=wx0-wx1; cam.y+=wy0-wy1; clampCam(); camUpdateMatrices();
 },{passive:false});
+
+/* Browser page-zoom (Ctrl+wheel, pinch on HUD, Ctrl+/-) scales the DOM
+   instead of the ortho camera. The canvas handler above only covers #gl;
+   overlays used to let pinch through. Kill page-zoom; game zoom stays on #gl. */
+addEventListener('wheel',e=>{ if(e.ctrlKey||e.metaKey) e.preventDefault(); },{passive:false,capture:true});
+addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
+addEventListener('keydown',e=>{
+  if(!(e.ctrlKey||e.metaKey)) return;
+  const k=e.key, c=e.code;
+  if(k==='+'||k==='-'||k==='='||k==='0'||c==='NumpadAdd'||c==='NumpadSubtract') e.preventDefault();
+},true);
 
 /* A match can end while a finger is still captured by the battlefield canvas.
    Android then keeps that pointer sequence alive across the menu transition;
@@ -727,10 +1193,38 @@ function resetInputState(){
     else aiming=-1;
   }
   if(armPatrol) cancelPatrolDraft(true);
+  if(armQueue) cancelQueueDraft(true);
+  lastGroundT=0;
   const sb=document.getElementById('selbox'); if(sb) sb.style.display='none';
   const bb=document.getElementById('boxBtn'); if(bb) bb.classList.remove('on');
   const fb=document.getElementById('formBtn'); if(fb) fb.classList.remove('on');
 }
+
+addEventListener('keydown',e=>{
+  if(e.key!=='Tab'||!running||typeof recallGroup!=='function') return;
+  const t=e.target, tag=t&&t.tagName;
+  if(tag==='INPUT'||tag==='TEXTAREA'||(t&&t.isContentEditable)) return;
+  e.preventDefault();
+  let start=activePlatoon<0?0:activePlatoon+1;
+  for(let k=0;k<4;k++){
+    const n=(start+k)%4;
+    if(groupLive(ctrlGroups[n]).length){ recallGroup(n,!!e.shiftKey); return; }
+  }
+});
+
+/* Releasing Shift executes a chain that Shift started, which is the behaviour a
+   desktop RTS player already has in their hands. A chain armed from the QUEUE
+   button is untouched: it waits for GO, because a touch player has no Shift to
+   release. */
+addEventListener('keyup',e=>{
+  if(e.key!=='Shift'||!armQueue||!queueDraft||!queueDraft.viaShift) return;
+  if(queueDraft.steps.length) commitQueueDraft(); else cancelQueueDraft(true);
+});
+
+/* Build the control now rather than on first use: the orders row is hidden until
+   something is selected, and a button that only appears after its first press
+   cannot be discovered. */
+ensureQueueBtn(); queueButtonState();
 
 // ---------- minimap ----------
 const mmc=document.getElementById('minimap');

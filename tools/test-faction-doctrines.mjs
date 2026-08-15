@@ -22,6 +22,8 @@ ok(ctx.factionDoctrineRoster([3,6,11,16,23,24],'fac',0).length===6,'Nova must re
 ctx.playerFaction='legion';ctx.factionDoctrineReset();
 let roster=ctx.factionDoctrineRoster([3,6,11,16,23,24],'fac',0);
 ok(roster.join(',')==='3,16','Dominion arsenal must keep siege and reject beam/shield/sonic support');
+ok(ctx.factionDoctrineRoster([8,26],'tgate',0).join(',')==='8,26',
+  'Dominion Titan Gate must queue TITAN and Tyrant like Nova');
 ok(ctx.factionDoctrineAttackMul(0,0)===1,'Dominion first shot must not start pre-ramped');
 for(const t of [3,6,9,12]){ctx.stats.t=t;ctx.factionDoctrineAttackMul(0,0);}
 ok(Math.abs(ctx.factionDoctrineAttackMul(0,0)-1.18)<1e-6,'Dominion 12-second momentum must reach +18%');

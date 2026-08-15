@@ -1,4 +1,5 @@
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir} from 'node:fs/promises';
 import {dirname,join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -8,12 +9,13 @@ const out=join(root,'releases','audio-radio','command-radio-mobile.png');
 const base=(process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8100').replace(/\/$/,'');
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 await mkdir(dirname(out),{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:1,hasTouch:true,isMobile:true});
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base+'/?audioRadioCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof radioAck==='function'&&typeof resetWorld==='function'&&typeof spawnUnit==='function',{timeout:30000});
   await page.evaluate(()=>{
     try{localStorage.setItem('massfront_tutorial_complete','1');}catch(e){}

@@ -1,6 +1,6 @@
 /* Focused live QA for the tower-defense tranche.
    Usage: node tools/test-tower-defense.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir,readFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -18,8 +18,8 @@ await mkdir(out,{recursive:true});
 const aiSource=await readFile(join(root,'src','game','ai.js'),'utf8');
 assert(!/mmPing\(warnBase\.x|mmPing\(AI\.base\.x/.test(aiSource),'wave warning leaks the hidden spawn through a minimap ping');
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));

@@ -1,5 +1,5 @@
 /* Focused <=2-minute mobile regression for Account Armory -> Session Loadout. */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {join,resolve} from 'node:path';
@@ -17,8 +17,8 @@ if(!supplied){
   server=spawn('python',['-m','http.server','8146','--directory',root],{stdio:'ignore',windowsHide:true});
   for(let i=0;i<40;i++){try{const r=await fetch(url);if(r.ok)break;}catch{}await new Promise(r=>setTimeout(r,150));}
 }
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const context=await browser.newContext({viewport:{width:393,height:852},deviceScaleFactor:2,
     hasTouch:true,isMobile:true,colorScheme:'dark'});

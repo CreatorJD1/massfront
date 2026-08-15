@@ -56,7 +56,9 @@
 function civPane(m,cx,cz,yaw,y0,y1,wid,col){
   const c=Math.cos(yaw), s=Math.sin(yaw), hw=wid*0.5;
   const tx=-s*hw, tz=c*hw;                        // along the wall face
-  m.mat(MAT.LAMP);
+  /* Cool office glass, not MAT.LAMP. LAMP's tile was a radial orange
+     blob; a louvre quad wearing it read as a fat billboard, not a slat. */
+  m.mat(MAT.BUILD_OFFICE_COOL);
   m.quad([cx+tx,y0,cz+tz],[cx+tx,y1,cz+tz],[cx-tx,y1,cz-tz],[cx-tx,y0,cz-tz],col);
   return m;
 }

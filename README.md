@@ -58,7 +58,7 @@ regenerable, none are code.
 | Missing | Why | Restore with |
 |---|---|---|
 | `android/`, `ios/` (except config) | generated Capacitor scaffolding, ~150 MB of it | `npx cap add android && npx cap add ios` — the customised `AndroidManifest.xml`, `build.gradle`, `Info.plist` and `project.pbxproj` **are** included, so copy them back over |
-| `assets/audio/music/` | 15 licensed tracks, ~16 MB | supply the source audio and run `python3 tools/ingest-music.py <dir> --apply`; `music-assign.json` preserves every assignment |
+| `assets/audio/music/` | vocal/lyric playlist songs removed; instrumental `mus_*` beds stay in `assets/audio/` | supply instrumental-only source and run `python3 tools/ingest-music.py <dir> --apply` |
 | `node_modules/`, `www/`, `dist/`, `*.apk` | build output | `npm install`, then the build commands above |
 
 The 33 synthesised sound effects **are** included, and are also reproducible

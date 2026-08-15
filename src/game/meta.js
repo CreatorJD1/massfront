@@ -81,9 +81,45 @@ function activeProf(){ return PROFILES.list.find(p=>p.id===PROFILES.active)||PRO
 /* menubg: 'live' | 'dim' | 'off'. Defaults to 'dim' — a moving battlefield at
    full strength behind a menu is scenery competing with the thing you came here
    to read. */
+/* SCREEN GRADE — a CSS filter on canvas#gl, and the reason it now defaults to
+   none. The frame is already graded four times before this stage: the lit pass
+   warms the key and cools the shadow side, the present pass composites bloom,
+   #grade lays a warm/cool gradient in soft-light (which is itself a contrast
+   curve), and #vignette darkens the edges. A CSS contrast() is the fifth, and
+   the only one that cannot do the job well: it runs on the composited 8-bit
+   sRGB image, pivoting linearly around mid-grey, so there is no headroom left
+   to roll off with and it just clips. contrast(1.17) — the old stylesheet
+   value — sends everything below 7.3% sRGB to pure black; contrast(1.12) — the
+   old cinematic value — takes 5.4%. That is most of the night, interior and
+   shadow-side ramp, deleted after the renderer went to the trouble of
+   producing it. saturate(1.16) compounds it on faction colours that are
+   already near-primary: a channel clips and the hue shifts.
+   PUNCHY keeps the old look for anyone whose panel really is that flat. */
+const SCREEN_GRADES={
+  neutral:{label:'NEUTRAL',css:'none',
+           ds:'No screen filter. Shows the render as the lighting, bloom, and vignette authored it.'},
+  soft:   {label:'SOFT',css:'contrast(1.05) saturate(1.06)',
+           ds:'Gentle lift for washed-out panels. Clips only below 2% instead of eating the shadow ramp.'},
+  punchy: {label:'PUNCHY',css:'contrast(1.12) saturate(1.16) brightness(1.03)',
+           ds:'Heavy contrast for dim or flat displays. Crushes dark detail to black — this was the old default.'}
+};
+function screenGradeKey(){ return SCREEN_GRADES[META.settings.screenGrade]?META.settings.screenGrade:'neutral'; }
+function mfGuessMobile(){
+  /* CINEMATIC/HIGH must not be the silent phone default. A 412×900 flagship
+     at DPR 3 plus the FBO chain is the context-loss spike; mid-tier is the
+     honest "this is a phone" preset. Desktop keeps HIGH. */
+  try{
+    if(typeof navigator==='undefined') return false;
+    const ua=navigator.userAgent||'';
+    if(/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return true;
+    if(/Mac/i.test(navigator.platform||'') && typeof document!=='undefined' && 'ontouchend' in document) return true;
+  }catch(e){}
+  return false;
+}
 const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:true,dayNight:true,
-                     haptics:true,formationPreview:true,orderPaths:true,
-                     godMode:false,tutorialVoice:true,sfxVol:3,musicVol:2,perf:'auto',menubg:'dim',healthBars:'select',quality:'high'};
+                     haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
+                     godMode:false,tutorialVoice:true,sfxVol:3,musicVol:2,perf:'auto',menubg:'dim',healthBars:'select',
+                     quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false};
 /* CAREER RECORD. The old set was four numbers, which is enough to compute a
    rank and nothing else — no history, no identity, nothing a player would want
    to look at. These are the ones a commander would actually care about. */
@@ -96,12 +132,58 @@ const META_DEF={xp:0,cores:0,researchData:0,owned:{},color:'azure',wins:0,matche
   losses:0, streak:0, bestStreak:0, playSec:0, built:0, lost:0, structs:0,
   bestKills:0, fastestWin:0, favFac:'', facWins:{}, mapWins:{}, firstPlayed:0, lastPlayed:0,
   campaign:{missions:{}},
+  /* Account research/crafting lived only on first UI open, so a match started
+     before Development, or a cloud merge that omitted the keys, dropped the
+     tree, queue and bag. Defaults here make every load a complete career. */
+  res:{}, resQueue:[], mats:{alloy:0,circuit:0,isotope:0,relic:0}, mods:{}, equip:[],
   inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
   settings:{...DEF_SETTINGS}};
 let META={...META_DEF};
 function metaKey(){ return 'massfront_meta_'+PROFILES.active; }
+function metaHarden(){
+  if(!META.owned||typeof META.owned!=='object') META.owned={};
+  if(!META.facWins||typeof META.facWins!=='object') META.facWins={};
+  if(!META.mapWins||typeof META.mapWins!=='object') META.mapWins={};
+  if(!META.campaign||typeof META.campaign!=='object') META.campaign={missions:{}};
+  if(!META.campaign.missions||typeof META.campaign.missions!=='object') META.campaign.missions={};
+  if(!META.res||typeof META.res!=='object') META.res={};
+  if(!Array.isArray(META.resQueue)) META.resQueue=[];
+  if(!META.mats||typeof META.mats!=='object') META.mats={alloy:0,circuit:0,isotope:0,relic:0};
+  else {
+    for(const k of ['alloy','circuit','isotope','relic']) if(!(META.mats[k]>=0)) META.mats[k]=0;
+  }
+  if(!META.mods||typeof META.mods!=='object') META.mods={};
+  if(!Array.isArray(META.equip)) META.equip=[];
+  META.researchData=Math.max(0,META.researchData|0);
+  META.settings={...DEF_SETTINGS,...(META.settings||{})};
+  /* gfxOver is a sparse bag. Sharing DEF_SETTINGS' empty object would make
+     the first profile's taps leak into every later career. */
+  if(!META.settings.gfxOver||typeof META.settings.gfxOver!=='object'||Array.isArray(META.settings.gfxOver))
+    META.settings.gfxOver={};
+  else META.settings.gfxOver=Object.assign({},META.settings.gfxOver);
+  if(META.settings.gfxAdvOpen==null) META.settings.gfxAdvOpen=false;
+  /* One-time phone default. Careers saved before MEDIUM became the phone
+     preset still have quality:'high' and an empty gfxOver — that was the
+     silent default, not a choice. Leave HIGH alone when Advanced overrides
+     exist, and stamp gfxPhoneMed so a later HIGH tap is not undone. */
+  if(!META.settings.gfxPhoneMed){
+    const over=META.settings.gfxOver;
+    const stock=!over||typeof over!=='object'||!Object.keys(over).length;
+    if(mfGuessMobile()&&META.settings.quality==='high'&&stock)
+      META.settings.quality='medium';
+    META.settings.gfxPhoneMed=1;
+  }
+  if(typeof invBag==='function') invBag();
+  if(typeof COLORS!=='undefined'&&!COLORS[META.color]) META.color='azure';
+}
 function metaLoad(){
-  META={...META_DEF, owned:{}, facWins:{}, mapWins:{}, campaign:{missions:{}},settings:{...DEF_SETTINGS}};
+  /* Nested bags are cloned, not shared with META_DEF. A shallow spread left
+     res/mats/mods pointing at the defaults, so researching on one profile
+     silently wrote into the next empty career. */
+  META={...META_DEF, owned:{}, facWins:{}, mapWins:{}, campaign:{missions:{}},
+    res:{}, resQueue:[], mats:{alloy:0,circuit:0,isotope:0,relic:0}, mods:{}, equip:[],
+    inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
+    settings:{...DEF_SETTINGS}};
   let loadedCareer=false,loadedStandardCount=false;
   try{
     const s=localStorage.getItem(metaKey());
@@ -113,12 +195,9 @@ function metaLoad(){
      brand-new players. Migrating from completed matches prevents an update
      from forcing their next three battles back through onboarding defaults. */
   if(loadedCareer&&!loadedStandardCount)META.standardMatches=META.matches||0;
-  if(!META.owned||typeof META.owned!=='object') META.owned={};
-  if(!META.campaign||typeof META.campaign!=='object')META.campaign={missions:{}};
-  if(!META.campaign.missions||typeof META.campaign.missions!=='object')META.campaign.missions={};
-  META.settings={...DEF_SETTINGS,...(META.settings||{})};
-  invBag();
-  if(!COLORS[META.color]) META.color='azure';
+  const needGfxMed=!(META.settings&&META.settings.gfxPhoneMed);
+  metaHarden();
+  if(needGfxMed) metaSave();
 }
 /* Local save is the source of truth for progress on THIS device. Harden it so a
    transient write failure (quota pressure, a WebView hiccup) does not silently
@@ -138,61 +217,161 @@ function metaSave(){
 }
 /* The live graphics budget. Every quality gate in the renderer reads this
    rather than testing META.settings itself, so there is exactly one place that
-   decides what a preset means. */
-let GFX={ao:true, bloom:true, grade:true, fxFloor:0, organicSpan:2700, particles:1};
+   decides what a preset means. Advanced rows write sparse gfxOver keys; this
+   object is always the merge of preset + overrides. */
+let GFX={ao:true, bloom:true, grade:true, fxFloor:0.55, organicSpan:2700, particles:1,
+         lights:8, aoSamples:12, bloomBlur:2, bloomAmt:0.14, aoAmt:0.18, glowDiv:2, shadowQ:2,
+         waterAmp:1, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1};
 const GFX_PRESETS={
-  low:      {ao:false, bloom:false, grade:false, fxFloor:0,    organicSpan:0,    particles:0.5},
-  high:     {ao:true,  bloom:true,  grade:true,  fxFloor:0,    organicSpan:2700, particles:1},
-  cinematic:{ao:true,  bloom:true,  grade:true,  fxFloor:0.75, organicSpan:4600, particles:1.5},
+  /* Knobs the GL path actually reads. ao/bloom/grade are the old on/off
+     gates; lights/aoSamples/bloomBlur/glowDiv are the mid-tier cheapeners.
+     Mid must still run the full FBO chain (clear + restore) — skipping a
+     buffer write is the flicker class, not a budget win.
+     waterAmp scales GPU swell/flow. 0 would look like a skipped pass; LOW
+     keeps a quiet draw so the water target is always written.
+     worldV2 is HIGH/CINEMATIC only. Mid kept the full PBR civic path and
+     paid HIGH-class material cost on a mid-tier budget.
+     dprCap>0 is an explicit fillrate ceiling. Desktop HIGH stays uncapped
+     (min(raw,2)); MEDIUM must be cheaper on the same GPU.
+     contact is the unit/scenery blob pass inside drawShadows — distinct from
+     SSAO creases. aniso 1 is "off" (EXT treats 1× as no anisotropy).
+     lodBias scales strategic mesh/icon cutovers; organicSpan is the zoom
+     where secondary animation dies. */
+  low:      {ao:false, bloom:false, grade:false, fxFloor:0,    organicSpan:0,    particles:0.5,
+             lights:0, aoSamples:0,  bloomBlur:0, bloomAmt:0,    aoAmt:0,    glowDiv:3, shadowQ:0,
+             waterAmp:0.40, worldV2:false, dprCap:1.15, contact:false, aniso:1, lodBias:0.75},
+  medium:   {ao:true,  bloom:true,  grade:true,  fxFloor:0.35, organicSpan:1800, particles:0.75,
+             lights:4, aoSamples:4,  bloomBlur:0, bloomAmt:0.10, aoAmt:0.12, glowDiv:3, shadowQ:1,
+             waterAmp:0.80, worldV2:false, dprCap:1.25, contact:true, aniso:4, lodBias:0.90},
+  high:     {ao:true,  bloom:true,  grade:true,  fxFloor:0.55, organicSpan:2700, particles:1,
+             lights:8, aoSamples:12, bloomBlur:2, bloomAmt:0.14, aoAmt:0.18, glowDiv:2, shadowQ:2,
+             waterAmp:1, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1},
+  cinematic:{ao:true,  bloom:true,  grade:true,  fxFloor:0.75, organicSpan:4600, particles:1.5,
+             lights:8, aoSamples:12, bloomBlur:2, bloomAmt:0.16, aoAmt:0.20, glowDiv:2, shadowQ:2,
+             waterAmp:1.15, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1.15},
 };
+const GFX_OVER_KEYS=['ao','bloom','grade','fxFloor','organicSpan','particles','lights','aoSamples',
+  'bloomBlur','bloomAmt','aoAmt','glowDiv','shadowQ','waterAmp','worldV2','dprCap','contact','aniso','lodBias'];
 function qualityKey(){
   const q=(META.settings&&META.settings.quality)||'high';
   return GFX_PRESETS[q]?q:'high';
 }
+function gfxOverBag(){
+  const o=META.settings&&META.settings.gfxOver;
+  return (o&&typeof o==='object'&&!Array.isArray(o))?o:{};
+}
+function gfxOverSet(key,val){
+  if(!META.settings.gfxOver||typeof META.settings.gfxOver!=='object'||Array.isArray(META.settings.gfxOver))
+    META.settings.gfxOver={};
+  META.settings.gfxOver[key]=val;
+}
+function gfxOverNearest(cur,opts){
+  let best=0, bd=1e9;
+  for(let i=0;i<opts.length;i++){
+    const d=Math.abs((+opts[i]||0)-(+cur||0));
+    if(d<bd){bd=d;best=i;}
+  }
+  return (best+1)%opts.length;
+}
+function gfxOverCycle(key,opts){
+  const cur=(typeof GFX!=='undefined'&&GFX[key]!=null)?GFX[key]:opts[0];
+  gfxOverSet(key, opts[gfxOverNearest(cur,opts)]);
+}
+function gfxOverToggle(key){
+  gfxOverSet(key, !(typeof GFX!=='undefined'&&GFX[key]));
+}
+function mfAnisoCap(){
+  const a=(typeof GFX!=='undefined'&&GFX.aniso!=null)?+GFX.aniso:8;
+  return a<1?1:a;
+}
+/* Takeover, not an edit of materials.js: upload-time mfAniso(8) would ignore
+   the Advanced row until the next settings tap. */
+if(typeof mfAniso==='function'&&!mfAniso._gfxCap){
+  const _mfAniso=mfAniso;
+  mfAniso=function(cap){ return _mfAniso(mfAnisoCap()); };
+  mfAniso._gfxCap=true;
+}
+function mfAnisoSupported(){
+  try{
+    if(typeof gl==='undefined'||!gl||(gl.isContextLost&&gl.isContextLost())) return false;
+    return !!(gl.getExtension('EXT_texture_filter_anisotropic')||gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic'));
+  }catch(e){ return false; }
+}
+function mfLodSpan(base){
+  const b=(typeof GFX!=='undefined'&&GFX.lodBias>0)?+GFX.lodBias:1;
+  return (base||0)*b;
+}
+function mfGfxLive(){
+  return {
+    quality:qualityKey(),
+    over:Object.assign({},gfxOverBag()),
+    gfx:Object.assign({},GFX),
+    dpr:typeof DPR!=='undefined'?DPR:null,
+    cine:!!(META.settings&&META.settings.cine),
+    grade:screenGradeKey(),
+    perf:META.settings&&META.settings.perf
+  };
+}
 function applyQualityPreset(){
-  const q=qualityKey(), P=GFX_PRESETS[q], s=META.settings;
+  const q=qualityKey(), P=GFX_PRESETS[q];
   GFX=Object.assign({},P);
-  /* The preset writes the individual toggles so the rows below it stay honest —
-     a player who opens Display after choosing LOW sees Cinematic Lighting OFF,
-     not a stale ON that no longer does anything. Flipping a row afterwards is
-     still allowed; it just means the preset no longer describes the state. */
-  s.perf = (q==='low') ? 'low' : 'auto';
-  s.cine = !!P.bloom;
+  const O=gfxOverBag();
+  for(let i=0;i<GFX_OVER_KEYS.length;i++){
+    const k=GFX_OVER_KEYS[i];
+    if(O[k]!==undefined) GFX[k]=O[k];
+  }
+  /* Enabling SSAO/bloom on LOW (preset samples/amount are 0) must actually
+     run a cheap kernel — a toggle that writes ao:true and then samples 0
+     taps is the "does nothing" class the Advanced rows are here to avoid. */
+  if(GFX.ao && !(GFX.aoSamples>0)){ GFX.aoSamples=4; if(!(GFX.aoAmt>0)) GFX.aoAmt=0.12; }
+  if(!GFX.ao){ GFX.aoSamples=0; GFX.aoAmt=0; }
+  if(GFX.bloom && !(GFX.bloomAmt>0)) GFX.bloomAmt=0.10;
+  if(!GFX.bloom){ GFX.bloomAmt=0; GFX.bloomBlur=0; }
+  /* Do NOT write cine/perf back onto META.settings here. applySettings() runs
+     after every Settings row tap, so rewriting those two from the quality
+     preset made Cinematic Lighting and Effects Budget save, then snap back
+     on the same tap and again on the next launch. Quality itself still
+     drives GFX; the click handler below copies cine/perf only when the
+     player actually cycles the quality row. */
   /* CINEMATIC must not be silently undone by the frame-rate scaler. The floor
      is what makes it a promise rather than a suggestion. */
-  if(typeof perfFloor!=='undefined') perfFloor=P.fxFloor;
+  if(typeof perfFloor!=='undefined') perfFloor=GFX.fxFloor;
   /* Quality changes also change the mobile render-resolution ceiling. Apply it
      immediately instead of making the player relaunch before the lower-memory
      preset can prevent another context loss. */
   if(typeof resize==='function') resize();
+  if(typeof mfApplyAnisoBudget==='function') mfApplyAnisoBudget();
 }
 function applySettings(){
   const s=META.settings;
-  /* GRAPHICS QUALITY — one dial, not five scattered toggles.
-     The Display tab had Cinematic Lighting, Effects Budget, Menu Backdrop and
-     an invisible AO gate all deciding quality independently, which meant no
-     single control answered "make this look better" or "make this run", and
-     the two settings that mattered most on a weak phone were the two a player
-     was least likely to find. A preset sets all of them coherently; the
-     individual toggles stay underneath as overrides for anyone who wants them.
+  /* GRAPHICS QUALITY — one dial, plus Advanced overrides underneath.
+     A preset sets every renderer knob coherently; gfxOver then wins per key
+     so a mid-tier phone can keep MEDIUM's DPR cap and still turn bloom off.
 
-     LOW        no post-processing at all, capped effect budget, no secondary
-                animation. For phones that were dropping frames.
-     HIGH       the previous default: bloom, colour grade, ambient occlusion,
-                and an effect budget that backs off automatically under load.
-     CINEMATIC  refuses to back off. AO stays on, the effect scaler has a floor
-                so a busy fight does not strip the frame, and organic secondary
-                motion keeps running out to strategic zoom instead of cutting
-                at 2700 — which is where the swarm's articulation actually
-                becomes visible en masse. Costs frames on purpose. */
+     LOW        no post, no directional shadows, no local lights. Quiet water,
+                half particles, 1.15× cap. Still clears the default framebuffer.
+     MEDIUM     honest mid-tier phone: 4-tap SSAO, bright-pass glow (no extra
+                blur), low shadows + contact blobs, 4 lights, 1.25× cap.
+                World V2 stays OFF — that path is HIGH-class fillrate.
+     HIGH       flagship: 12-tap SSAO, two-pass quarter bloom, full shadows,
+                8 lights, World V2. Phone DPR 1.52–1.65, desktop min(raw,2).
+     CINEMATIC  desktop / high-end only. HIGH plus a higher FX floor, organic
+                motion out to strategic zoom, stronger bloom/water, 1.5×
+                particles. Not a second post stack — film grain and god rays
+                are not in this renderer. */
   applyQualityPreset();
   muted=false; sfxOn=!!s.sound; musicOn=!!s.music;
   if(typeof audApplyLevels==='function') audApplyLevels();
   shakeMult=s.shake?1:0;
-  bloomOn=s.cine!==false && s.perf!=='low';
+  /* Sprite bloom follows the GL bloom flag, not Cinematic Lighting. cine used
+     to kill both the 2D wash AND imply the CSS grade; Screen Grade is its
+     own row and GL bloom is the Advanced / preset knob. */
+  bloomOn=GFX.bloom!==false;
   gradeOn=s.cine!==false;
   const cv4=document.getElementById('gl');
-  if(cv4) cv4.style.filter=(s.cine!==false)?'contrast(1.12) saturate(1.16) brightness(1.03)':'none';
+  /* Deliberately NOT tied to cine. Cinematic Lighting is the in-engine sun
+     wash and the #grade overlay. The CSS filter is Screen Grade only. */
+  if(cv4) cv4.style.filter=SCREEN_GRADES[screenGradeKey()].css;
   const gr=document.getElementById('grade');
   if(gr) gr.style.opacity=(s.cine!==false)?'1':'0';
   /* A body class, not an inline style: the inline one lost to an !important
@@ -811,8 +990,14 @@ function metaGrant(win){
            if(f){ META.facWins=META.facWins||{}; META.facWins[f]=(META.facWins[f]||0)+1;
                   let best='',bn=0; for(const k in META.facWins) if(META.facWins[k]>bn){bn=META.facWins[k];best=k;}
                   META.favFac=best; }
-           if(typeof curMap!=='undefined'&&curMap){ META.mapWins=META.mapWins||{};
-                  META.mapWins[curMap]=(META.mapWins[curMap]||0)+1; }
+           if(typeof curMap!=='undefined'&&curMap){
+             const gated=typeof mfConquestGateActive==='function'&&mfConquestGateActive();
+             const open=typeof mfConquestMapOpen!=='function'||mfConquestMapOpen(curMap);
+             /* Weekly can loan a later homeworld. Recording that win as mapWins
+                would skip the three locked systems on a fresh save (HasWin). */
+             if(!gated||open){ META.mapWins=META.mapWins||{};
+               META.mapWins[curMap]=(META.mapWins[curMap]||0)+1; }
+           }
   } else { META.losses=(META.losses||0)+1; META.streak=0; }
   META.bestKills=Math.max(META.bestKills||0, stats.kills[0]|0);
   META.playSec=(META.playSec||0)+(stats.t|0);
@@ -883,8 +1068,10 @@ function renderMetaHead(){
    ones stay VISIBLE rather than hidden — a locked card that explains itself is
    a roadmap; a hidden one is just a menu that looks small. */
 /* Ordered by development priority, which is also the order a player should meet
-   them: learn, then skirmish, then play other people. The two long-term modes
-   stay visible and honest about being unbuilt. */
+   them: learn, then skirmish, then play other people. Campaign / MMO / Co-op
+   stay visible as a roadmap, but they are not rooms — development has not
+   started, and `browse` used to walk the player into a stub that played like
+   a mode. Locked cards toast and stay put. */
 const WAR_MODES=[
   {id:'training', em:'\u25b6', nm:'TRAINING',  ds:'Field orientation under KEEL guidance',
    foot:''},
@@ -894,11 +1081,11 @@ const WAR_MODES=[
   {id:'standard', em:'\u2694', nm:'STANDARD',  ds:'Single-player against AI, with optional AI allies',
    foot:'4 planets \u00b7 16 regions \u00b7 48 conquest battlefields'},
   {id:'campaign', em:'\u2b21', nm:'CAMPAIGN',  ds:'Guided story missions with authored objectives',
-   foot:'Playable Prologue \u00b7 persistent mission records'},
+   foot:'Authored story missions \u00b7 not yet in play', locked:'IN DEVELOPMENT'},
   {id:'mmo',      em:'\u2637', nm:'MMO',       ds:'Persistent planets \u00b7 build a commander HQ, take ground',
-   foot:'Browse regions and future warfront operations', locked:'LONG TERM', browse:true},
+   foot:'Persistent warfront \u00b7 not yet in play', locked:'LONG TERM'},
   {id:'coop',   em:'\u25c8', nm:'CO-OP', ds:'Two commanders against adaptive AI',
-   foot:'Separate online service \u00b7 no Standard progression', locked:'NETWORK IN DEVELOPMENT', browse:true}
+   foot:'Separate online service \u00b7 not yet in play', locked:'NETWORK IN DEVELOPMENT'}
 ];
 function renderWarRoom(){
   const g=document.getElementById('warGrid'); if(!g) return;
@@ -927,20 +1114,13 @@ function renderWarRoom(){
     const go=()=>{
       const m=el.dataset.mode;
       if(el.classList.contains('locked')){
-        if((m==='coop'||m==='mmo')&&typeof openPlanetarySetup==='function'){
-          openPlanetarySetup(m); return;
-        }
-        if(typeof sfx==='function'){ try{ sfx('ui'); }catch(e){} }
-        if(typeof toast==='function') toast(el.querySelector('.warNm').textContent+' is still in development.');
+        /* Advertised, unimplemented. Opening setup / Operations from here was
+           a trap: the card looked locked but still entered a stub room. */
+        if(typeof sfx==='function'){ try{ sfx('deny'); }catch(e){} }
+        if(typeof toast==='function') toast(el.querySelector('.warNm').textContent+' is not available yet.');
         return;
       }
       if(m==='standard'&&typeof openSkirmishSetup==='function') openSkirmishSetup();
-      else if(m==='campaign'&&typeof renderOps==='function'){
-        if(typeof storyCampaignEnsureOps==='function')storyCampaignEnsureOps();
-        MF_TAB_STATE.opsScr='campaign';renderOps();
-        const ops=document.getElementById('opsScr');if(typeof mfSetTabs==='function')mfSetTabs(ops,'campaign',false);
-        if(typeof showFrontScreen==='function')showFrontScreen('opsScr');
-      }
       else if(m==='training'&&typeof resumeTrainingMission==='function') resumeTrainingMission();
     };
     if(typeof mfBindTap==='function') mfBindTap(el,go); else el.addEventListener('click',go);
@@ -1314,27 +1494,70 @@ function renderSettings(){
   const BGD={live:'Full-strength battlefield behind the menu',
              dim:'Battlefield kept dark and slow so the menu reads first',
              off:'Flat plate — no 3D scene, lightest on battery'};
-  const QL={low:'LOW',high:'HIGH',cinematic:'CINEMATIC'};
-  const QD={low:'Fastest. No post-processing, capped effects, no secondary animation.',
-            high:'Balanced. Bloom, ambient occlusion, and an effect budget that eases off under load.',
-            cinematic:'Best looking. Holds ambient occlusion and full effects even in a heavy fight, and keeps the swarm animating out to strategic zoom. Costs frames.'};
-  const qk=qualityKey();
+  const QL={low:'LOW',medium:'MEDIUM',high:'HIGH',cinematic:'CINEMATIC'};
+  const QD={low:'Fastest. No SSAO, bloom, shadows, or local lights. Quiet water, half particles, 1.15x cap.',
+            medium:'Mid-tier phones. 4-tap SSAO, cheap glow, low shadows, 4 lights, 1.25x cap. World PBR off.',
+            high:'Flagship. 12-tap SSAO, two-pass bloom, full shadows, 8 lights, World PBR. Phone DPR stays under native.',
+            cinematic:'Desktop / high-end only. HIGH plus a higher FX floor, far organic motion, stronger bloom and water. Costs frames.'};
+  const qk=qualityKey(), sgk=screenGradeKey(), sgDef=SCREEN_GRADES[sgk];
   /* RENDERER STATUS. Three "the map isn't drawing" reports in a row were
      diagnosed by guesswork because the only evidence — a shader log — goes to
      a console no phone shows. This line states, in the game, exactly which
      stage is missing, so one screenshot answers it. */
   const diag=(typeof mfGraphicsDiag==='function')?mfGraphicsDiag():'unavailable';
   const diagBad=/MISSING|LOST|ERR/.test(diag);
+  const shL=GFX.shadowQ<=0?'OFF':GFX.shadowQ===1?'LOW':'HIGH';
+  const wL=GFX.waterAmp>=1.1?'ULTRA':GFX.waterAmp>=0.95?'HIGH':GFX.waterAmp>=0.55?'MED':'LOW';
+  const pL=GFX.particles>=1.25?'ULTRA':GFX.particles>=0.95?'HIGH':GFX.particles>=0.65?'MED':'LOW';
+  const aL=GFX.aniso>=8?'8x':GFX.aniso>=4?'4x':'OFF';
+  const dL=!(GFX.dprCap>0)?'AUTO':(Math.round(GFX.dprCap*100)/100===1?'1':String(Math.round(GFX.dprCap*100)/100))+'x';
+  const lodL=(GFX.organicSpan||0)>=4000?'FAR':(GFX.organicSpan||0)>=2400?'STANDARD':(GFX.organicSpan||0)>=800?'NEAR':'OFF';
+  const liL=GFX.lights<=0?'OFF':String(GFX.lights|0);
+  const live='AO '+(GFX.ao?'on':'off')+' · BLM '+(GFX.bloom?'on':'off')+' · sh '+shL
+    +(GFX.contact===false?' · no contact':'')+' · dpr '+(typeof DPR==='number'?DPR.toFixed(2):dL)
+    +' · ani '+aL;
+  const gfxRow=(id,nm,ds,val,on,lock)=>'<div class="sItem setRow" data-set="'+id+'"'
+      +(lock?' data-gfx-lock="'+lock.replace(/"/g,'')+'" style="opacity:.55"':'')
+      +'><div class="sTx"><b>'+nm+'</b><div class="sDs">'+(lock||ds)+'</div></div>'
+      +'<div class="sBuy togB'+(on&&!lock?' onT':'')+'">'+(lock?'N/A':val)+'</div></div>';
+  const aniOk=typeof mfAnisoSupported==='function'&&mfAnisoSupported();
+  const worldLock=qk==='low'?'PBR civic materials are compiled off on LOW — raise Graphics Quality first.':'';
+  const contactLock=GFX.shadowQ<=0?'Needs Shadows — these are the unit and scenery blobs on the directional pass.':'';
+  const aniLock=aniOk?'':'This GPU does not expose EXT_texture_filter_anisotropic.';
+  const advOpen=!!META.settings.gfxAdvOpen;
+  let adv=cyc('gfxAdvOpen','Advanced Graphics',
+    'Independent overrides. Changing Graphics Quality resets these to that preset. Screen Grade stays the row above — it is not tied to Cinematic Lighting. No film-grain or god-ray pass exists in this renderer, so those are not listed.',
+    advOpen?'HIDE':'SHOW', advOpen);
+  if(advOpen){
+    adv+='<div style="display:flex;flex-direction:column;gap:7px;padding:2px 0 4px;padding-bottom:max(4px,env(safe-area-inset-bottom,0px))">'
+      +gfxRow('gfxShadows','Shadows','Directional ground blobs. OFF skips the pass. LOW strides units. HIGH is full.',shL,GFX.shadowQ>0)
+      +gfxRow('gfxSSAO','SSAO','Screen-space contact creases after the opaque pass.',GFX.ao?'ON':'OFF',!!GFX.ao)
+      +gfxRow('gfxBloom','Bloom','Bright-pass glow. MEDIUM skips the extra blur; HIGH/CINEMATIC run two passes.',GFX.bloom?'ON':'OFF',!!GFX.bloom)
+      +gfxRow('gfxContact','Contact Shadows','Unit, rock, and tree blobs under the directional shadow pass.',GFX.contact!==false?'ON':'OFF',GFX.contact!==false,contactLock)
+      +gfxRow('gfxWater','Water Quality','GPU swell and splash budget. Splashes need MED or higher.',wL,GFX.waterAmp>=0.55)
+      +gfxRow('gfxParticles','Particles / VFX','Scales GPUFX and the combat particle budget.',pL,GFX.particles>=0.95)
+      +gfxRow('gfxAniso','Anisotropic Filtering','Sharpens ground and hull mips at a glancing camera. 1x is off.',aL,GFX.aniso>=4,aniLock)
+      +gfxRow('gfxDpr','Resolution Scale','Fillrate cap. AUTO uses the preset. Native 2x/3x is never offered on phones — that is the context-loss spike.',dL,!(GFX.dprCap>0)||GFX.dprCap>=1.25)
+      +gfxRow('gfxLod','Mesh LOD / Motion','How far secondary animation and full meshes survive toward strategic zoom.',lodL,(GFX.organicSpan||0)>=800)
+      +gfxRow('gfxLights','Local Lights','Forward lights promoted into the material shader. Everything else stays emissive.',liL,GFX.lights>0)
+      +gfxRow('gfxWorldV2','World PBR Materials','HIGH-class civic materials. Off on MEDIUM by default.',GFX.worldV2?'ON':'OFF',!!GFX.worldV2,worldLock)
+      +'</div>';
+  }
   h+=group('display','DISPLAY & PERFORMANCE','Scale the presentation without hiding tactical information.',
       '<div class="sItem setRow" id="gfxDiagRow"><div class="sTx"><b>Renderer status</b>'
       +'<div class="sDs" id="gfxDiagTx" style="word-break:break-word">'+diag+'</div></div>'
       +'<div class="sBuy togB'+(diagBad?'':' onT')+'">'+(diagBad?'FAULT':'OK')+'</div></div>'
+     +'<div class="sItem setRow" data-set="gfxLive"><div class="sTx"><b>Live quality</b>'
+      +'<div class="sDs" style="word-break:break-word">'+live+'</div></div>'
+      +'<div class="sBuy togB onT">GFX</div></div>'
      +cyc('quality','Graphics Quality',QD[qk],QL[qk],qk!=='low')
-     +tog('cine','Cinematic Lighting','Bloom, color grade, smoke glow, and damage treatment')
+     +tog('cine','Cinematic Lighting','In-engine sun wash and the #grade overlay. Not bloom — that is Advanced. Not the Screen Grade filter.')
+     +cyc('screenGrade','Screen Grade',sgDef.ds,sgDef.label,sgk!=='neutral')
      +tog('dayNight','Day / Night Cycle','Animated time of day. OFF locks battles to clear daylight and overrides night-only modifiers')
-     +cyc('perf','Effects Budget','AUTO adapts; LOW caps particles on older phones',perf==='auto'?'AUTO':'LOW',perf==='auto')
+     +cyc('perf','Effects Budget','AUTO adapts; LOW caps the live particle scaler on older phones',perf==='auto'?'AUTO':'LOW',perf==='auto')
      +tog('fps','FPS Counter','Show the live frame-rate diagnostic')
-     +cyc('menubg','Menu Backdrop',BGD[bg],BGL[bg],bg!=='off'));
+     +cyc('menubg','Menu Backdrop',BGD[bg],BGL[bg],bg!=='off')
+     +adv);
 
   h+=group('command','COMMAND INTERFACE','Planning aids for formations, platoons, and patrol routes.',
       tog('formationPreview','Formation Preview','Outline where the platoon will end up, on every move order, before it commits')
@@ -1346,10 +1569,26 @@ function renderSettings(){
   list.querySelectorAll('.setRow').forEach(el=>{
     mfBindTap(el,()=>{
       const k=el.dataset.set;
+      if(!k) return;
+      if(el.dataset.gfxLock){
+        if(typeof toast==='function') toast(el.dataset.gfxLock);
+        return;
+      }
       if(k==='sfxVol'||k==='musicVol') META.settings[k]=((META.settings[k]|0)+1)%4;
       else if(k==='quality'){
-        const o=['low','high','cinematic'];
-        META.settings.quality=o[(o.indexOf(qualityKey())+1)%3];
+        const o=['low','medium','high','cinematic'];
+        META.settings.quality=o[(o.indexOf(qualityKey())+1)%4];
+        /* A new preset is a new bundle. Clear overrides so the Advanced rows
+           match the title the player just picked. cine follows grade (the
+           overlay), not bloom — Screen Grade stays whatever they set. */
+        META.settings.gfxOver={};
+        const nq=qualityKey(), P=GFX_PRESETS[nq];
+        META.settings.perf=(nq==='low')?'low':'auto';
+        META.settings.cine=!!P.grade;
+      }
+      else if(k==='screenGrade'){
+        const o=['neutral','soft','punchy'];
+        META.settings.screenGrade=o[(o.indexOf(screenGradeKey())+1)%o.length];
       }
       else if(k==='perf') META.settings.perf=META.settings.perf==='auto'?'low':'auto';
       else if(k==='menubg'){
@@ -1360,6 +1599,28 @@ function renderSettings(){
         const o=['always','select','off'];
         META.settings.healthBars=o[(o.indexOf(META.settings.healthBars||'select')+1)%3];
       }
+      else if(k==='gfxShadows') gfxOverCycle('shadowQ',[0,1,2]);
+      else if(k==='gfxSSAO') gfxOverToggle('ao');
+      else if(k==='gfxBloom') gfxOverToggle('bloom');
+      else if(k==='gfxContact') gfxOverToggle('contact');
+      else if(k==='gfxWater') gfxOverCycle('waterAmp',[0.40,0.70,1,1.15]);
+      else if(k==='gfxParticles') gfxOverCycle('particles',[0.5,0.75,1,1.5]);
+      else if(k==='gfxAniso') gfxOverCycle('aniso',[1,4,8]);
+      else if(k==='gfxDpr') gfxOverCycle('dprCap',[1,1.15,1.25,1.5,0]);
+      else if(k==='gfxLod'){
+        const steps=[{organicSpan:0,lodBias:0.75},{organicSpan:1800,lodBias:0.90},{organicSpan:2700,lodBias:1},{organicSpan:4600,lodBias:1.15}];
+        const i=gfxOverNearest(GFX.organicSpan||0, steps.map(s=>s.organicSpan));
+        gfxOverSet('organicSpan',steps[i].organicSpan);
+        gfxOverSet('lodBias',steps[i].lodBias);
+      }
+      else if(k==='gfxLights') gfxOverCycle('lights',[0,4,8]);
+      else if(k==='gfxWorldV2') gfxOverToggle('worldV2');
+      else if(k==='gfxLive'){
+        const snap=mfGfxLive();
+        try{ console.log('[mfGfx]', snap); }catch(e){}
+        if(typeof toast==='function') toast('Live GFX: AO '+(snap.gfx.ao?'on':'off')+' bloom '+(snap.gfx.bloom?'on':'off')+' sh'+snap.gfx.shadowQ);
+      }
+      else if(k==='gfxDiagRow'){ /* status only */ }
       else META.settings[k]=!META.settings[k];
       if(k==='fog'&&running&&!demoMode){ fogOn=META.settings.fog; if(fogOn) updateFog(); }
       metaSave(); applySettings(); sfx('ui'); renderSettings();

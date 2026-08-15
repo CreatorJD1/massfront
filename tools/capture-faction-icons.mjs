@@ -17,7 +17,7 @@
    The faction sheet is the instant, always-correct layer; the 3D render still
    wins when there is one. Comparing the pair shows which entities have neither
    and would have been a bare diamond before this.                            */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const PORT = process.argv[2] || '8992';
@@ -26,7 +26,7 @@ const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const KITS = ['nova', 'legion', 'syndicate', 'horde'];
 
 mkdirSync(OUT, { recursive: true });
-const browser = await chromium.launch({ executablePath: CHROME, headless: false,
+const browser = await launchPwBrowser({ executablePath: CHROME, headless: false,
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 980, height: 1200 } });
 const errors = [];

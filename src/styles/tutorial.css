@@ -224,3 +224,71 @@ body.trainingOperation #keelModeBadge,body.trainingOperation #toast{display:none
   color:#ffcf9a; letter-spacing:.10em;
 }
 #keelSkip.keelSkipEnd:active{ background:rgba(255,150,60,.30); color:#fff; }
+
+/* ============================================================================
+   WAR TABLE PRIMER — src/warprimer.js
+   ----------------------------------------------------------------------------
+   The card lives INSIDE the active .mfStagePanel rather than floating over it,
+   so there is deliberately no position/z-index/pointer-events here: it is a
+   block in the stage's own flow and inherits that panel's scrolling. It reuses
+   --panelG2 and the HUD type ramp for the same reason KEEL does, but takes the
+   war table's own amber-gold accent instead of KEEL's cyan — this is table
+   chrome, not the ship talking.
+   ============================================================================ */
+.wtpCard{
+  display:block; margin:0 0 12px; padding:11px 13px 10px;
+  background:var(--panelG2,linear-gradient(160deg,rgba(14,22,30,.94),rgba(8,13,19,.96)));
+  border:1px solid rgba(255,196,110,.34); border-radius:10px;
+  box-shadow:inset 0 1px 0 rgba(255,220,160,.14),0 6px 18px rgba(0,0,0,.42);
+}
+.wtpCard>header{
+  display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+  margin-bottom:6px;
+}
+.wtpCard>header>span{
+  font:600 10px/1 var(--fU,system-ui); letter-spacing:.14em; color:#ffc86e;
+}
+.wtpCard>header>b{
+  font:700 10px/1 var(--fU,system-ui); letter-spacing:.1em; color:rgba(232,240,248,.78);
+  white-space:nowrap;
+}
+.wtpCard>p{
+  margin:0 0 9px; font:400 12px/1.48 var(--fT,system-ui); color:rgba(232,240,248,.90);
+}
+.wtpFoot{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+/* The route echoes the stage stepper at the top of the screen so the card and
+   the nav agree on where the player is, without the card scrolling that nav
+   out of view being a problem. */
+.wtpFoot>i{
+  display:flex; align-items:center; gap:4px; flex-wrap:wrap; font-style:normal;
+  font:600 9.5px/1.2 var(--fU,system-ui); letter-spacing:.08em; color:rgba(232,240,248,.62);
+}
+.wtpFoot>i>u{ text-decoration:none; color:rgba(232,240,248,.42); }
+.wtpFoot>i>em{ font-style:normal; }
+.wtpFoot>i>em.past{ color:rgba(255,200,110,.78); }
+.wtpFoot>i>em.on{ color:#ffc86e; }
+.wtpDone{
+  flex:0 0 auto; min-height:44px; min-width:44px; padding:0 14px;
+  background:rgba(255,196,110,.13); border:1px solid rgba(255,196,110,.44);
+  border-radius:7px; color:#ffd79a;
+  font:700 11px/1 var(--fU,system-ui); letter-spacing:.12em;
+}
+.wtpDone:active{ background:rgba(255,196,110,.30); color:#fff; }
+.wtpSkip{
+  flex:0 0 auto; min-height:44px; padding:0 10px;
+  background:transparent; border:0; color:rgba(232,240,248,.78);
+  font:700 10px/1 var(--fU,system-ui); letter-spacing:.12em;
+}
+.wtpSkip:active{ color:#fff; }
+.wtpCard.wtpLast{ border-color:rgba(150,255,190,.36); }
+.wtpCard.wtpLast>header>span,.wtpCard.wtpLast .wtpFoot>i>em.on{ color:#9fffc4; }
+.wtpCard.wtpLast .wtpDone{
+  background:rgba(120,255,180,.13); border-color:rgba(150,255,190,.46); color:#bfffd9;
+}
+@media (max-width:430px){
+  .wtpCard{ padding:9px 10px 9px; }
+  .wtpCard>p{ font-size:11.5px; }
+  .wtpFoot{ flex-wrap:wrap; }
+  .wtpFoot>i{ order:2; flex:1 1 100%; }
+  .wtpDone,.wtpSkip{ order:1; width:100%; }
+}

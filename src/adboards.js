@@ -35,10 +35,10 @@
 
    CRITICAL GL HYGIENE: the post-processing chain (SSAO/bloom/FXAA, in
    engine/mesh.js) owns texture units 4/5/6 and the model/terrain shaders own
-   0/1/2/3. This file's own draws live on unit 7, chosen specifically because
-   nothing else in the engine touches it, and every custom draw below restores
-   BLEND / CULL_FACE / DEPTH_TEST / DEPTH_WRITEMASK / the active program /
-   the active texture unit before returning control — see adDrawScreens().
+   0/1/2/3. Unit 7 is ALSO the model detail atlas and unit 8 the fog map —
+   ads borrow them for the screen draw, then put detail/fog/matTex back.
+   Never bindTexture(null) on the active unit (that was unit 0 / the atlas).
+   Restore BLEND / CULL_FACE / DEPTH_TEST / DEPTH_WRITEMASK / prog3D.
    ============================================================================ */
 
 /* ============================================================================
@@ -387,6 +387,9 @@ let adFallbackTex = null;
 
 function adMakeTex(seedRGBA) {
   const t = gl.createTexture();
+  const was = gl.getParameter(gl.ACTIVE_TEXTURE);
+  gl.activeTexture(gl.TEXTURE7);
+  const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
   gl.bindTexture(gl.TEXTURE_2D, t);
   // no mipmaps: the video texture is rewritten every throttle tick, and
   // regenerating mips on that cadence would be the "stalled GPU upload"
@@ -401,8 +404,9 @@ function adMakeTex(seedRGBA) {
   // seeded immediately with a solid plate colour: a texture object that has
   // never been written samples as opaque black, i.e. exactly the "black
   // rectangle" failure mode this system must never show.
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, seedRGBA || new Uint8Array([16, 20, 26, 255]));
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, seedRGBA || new Uint8Array([16, 20, 26, 255]));
+  gl.bindTexture(gl.TEXTURE_2D, prev);
+  gl.activeTexture(was);
   return t;
 }
 
@@ -427,9 +431,13 @@ function adLoadPoster(c) {
   const img = new Image();
   img.onload = () => {
     try {
+      const was = gl.getParameter(gl.ACTIVE_TEXTURE);
+      gl.activeTexture(gl.TEXTURE7);
+      const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
       gl.bindTexture(gl.TEXTURE_2D, c.posterTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-      gl.bindTexture(gl.TEXTURE_2D, null);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.bindTexture(gl.TEXTURE_2D, prev);
+      gl.activeTexture(was);
       c.posterLoaded = true;
     } catch (e) { console.warn('adboards: poster upload failed', c.id, e); }
   };
@@ -496,12 +504,22 @@ function adUpdateCreatives(now, needed) {
     if (now - c.lastUpload < AD_UPLOAD_MS) continue;
     c.lastUpload = now;
     try {
+      /* MUST NOT use the active unit. begin3D leaves TEXTURE0 = matTex, then
+         re-enters 2-3 times per frame. Uploading here used to bind the video
+         onto unit 0 and then bindTexture(null) — every ~15Hz that landed on
+         the begin3D AFTER shadows, every model sampled an empty atlas and
+         the whole army strobed. Unit 7 is the ad scratch unit; restore
+         whatever was there (detail / fog / video) before returning. */
+      const was = gl.getParameter(gl.ACTIVE_TEXTURE);
+      gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
+      const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
       gl.bindTexture(gl.TEXTURE_2D, c.videoTex);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, c.videoEl);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, c.videoEl);
+      gl.bindTexture(gl.TEXTURE_2D, prev);
+      gl.activeTexture(was);
       c.videoTexPrimed = true;
     } catch (e) { /* a mid-decode frame can throw on some mobile browsers — skip this tick, try again next */ }
   }
-  gl.bindTexture(gl.TEXTURE_2D, null);
 }
 
 /* ============================================================================
@@ -657,8 +675,12 @@ function adDrawScreens(list) {
   }
 
   gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT2);
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  if (typeof fogTex !== 'undefined' && fogTex) gl.bindTexture(gl.TEXTURE_2D, fogTex);
+  else if (typeof matTex !== 'undefined' && matTex) gl.bindTexture(gl.TEXTURE_2D, matTex);
+  gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
+  if (typeof matDetailTex !== 'undefined' && matDetailTex) gl.bindTexture(gl.TEXTURE_2D, matDetailTex);
   gl.activeTexture(gl.TEXTURE0);
+  if (typeof matTex !== 'undefined' && matTex) gl.bindTexture(gl.TEXTURE_2D, matTex);
   if (wasCull) gl.enable(gl.CULL_FACE); else gl.disable(gl.CULL_FACE);
   if (wasBlend) gl.enable(gl.BLEND); else gl.disable(gl.BLEND);
   if (wasDepth) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
@@ -887,9 +909,13 @@ function adMakeContextualTex(board) {
   if (!cached) {
     cached = AD_CTX_TEX_CACHE[board.id] = { tex: adMakeTex(), lastType: '', lastText: '' };
   }
+  const was = gl.getParameter(gl.ACTIVE_TEXTURE);
+  gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
+  const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
   gl.bindTexture(gl.TEXTURE_2D, cached.tex);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, _adCtxCanvas);
-  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, _adCtxCanvas);
+  gl.bindTexture(gl.TEXTURE_2D, prev);
+  gl.activeTexture(was);
   cached.lastType = c.type;
   cached.lastText = c.text;
   return cached.tex;
@@ -1014,14 +1040,19 @@ function adFrameHook() {
   }
 
   const now = (typeof performance !== 'undefined') ? performance.now() : Date.now();
-  if (now - _adLastTick >= AD_UPLOAD_MS) {
-    const dt = Math.min(0.5, (now - _adLastTick) / 1000);
-    _adLastTick = now;
-    adUpdateCreatives(now, needed);
-    adUpdateImpressions(dt);
-    adUpdateRotation(dt);
-  }
+  /* Video upload used to run on EVERY begin3D once the 15Hz timer fired.
+     render() re-enters begin3D after shadows, immediately before models.
+     That path unbound the material atlas on unit 0 and every hull strobed.
+     Uploads and screen draws are once per rAF, on the first begin3D, which
+     is before terrain rebinds unit 0. */
   if (freshFrame) {
+    if (now - _adLastTick >= AD_UPLOAD_MS) {
+      const dt = Math.min(0.5, (now - _adLastTick) / 1000);
+      _adLastTick = now;
+      adUpdateCreatives(now, needed);
+      adUpdateImpressions(dt);
+      adUpdateRotation(dt);
+    }
     if (visible.length) adDrawScreens(visible);
     _adDrawnFrame = _adFrameId;
   }

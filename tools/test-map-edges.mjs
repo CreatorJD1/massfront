@@ -1,7 +1,7 @@
 /* Mobile battlefield-edge regression: camera invariants, atmospheric skirt,
    FOW-safe haze and the red tactical boundary for all three theatre sizes.
    Usage: node tools/test-map-edges.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -15,8 +15,8 @@ const sheetShot=join(out,'map-edge-presets-mobile.png');
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 await mkdir(out,{recursive:true});
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,
     hasTouch:true,isMobile:true,colorScheme:'dark'});

@@ -4,7 +4,7 @@
    The scene is staged through the real simulation and renderGame path rather
    than a second showcase renderer, so this catches atlas, authored-UV, depth,
    fog and HUD integration regressions that a model laboratory cannot. */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {resolve} from 'node:path';
 
@@ -12,8 +12,8 @@ const url=process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8982/'
 const expectV2=!/[?&]worldv2=0(?:&|$)/.test(url);
 const out=resolve('releases','art-v2');
 await mkdir(out,{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const context=await browser.newContext({viewport:{width:412,height:915},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   await context.addInitScript(()=>{try{

@@ -1,6 +1,7 @@
 # MASSFRONT — Bespoke Material V2 Next-Pass Audit
 
-Updated: 2026-08-11  
+Updated: 2026-08-14 (Brood Gorger hull in-engine bake recorded under Batch B1;
+Nova Rhino hull+turret remains the Batch N2 proof)
 Scope: inventory/audit only. This document does not promote semantic V2 routes
 or generated texture files to completed authored packs.
 
@@ -102,7 +103,7 @@ matching source/UV evidence required to safely render the production commander.
 
 | Asset | Why | Deliverable |
 | --- | --- | --- |
-| Rhino | Existing heavy-tank reference makes it the fastest direct topology comparison. | Either prove imported heavy tank == live Rhino and bind it, or export/rebake the live Rhino. Never force the reference UV maps onto an unmatched mesh. |
+| Rhino | Existing heavy-tank reference makes it the fastest direct topology comparison. | **2026-08-13:** live `mdlNovaRhino` hull+turret rebaked in-engine (`nova-rhino-v2`, `nova-rhino-v2-turret`), sibling-occluder AO, opt-in `?assetskin=rhino`. Do not bind the Blender heavy-tank UV maps onto this mesh. |
 | Factory | Existing source lets this prove an actual structure migration path. | Match/bake the live factory geometry, validate selected/damaged/burning and a busy production scene. |
 
 ### Batch N3 — Nova readable combat families
@@ -139,14 +140,15 @@ matching source/UV evidence required to safely render the production commander.
 
 ### Batch B1 — Brood organic benchmark (after the mechanical proof)
 
-1. One recognisable combat caste (Ravager) and one hive structure.
-2. Bake organic-compatible channels: chitin/tissue/bone/membrane/wetness/
+1. **Gorger** (Rhino slot, the line brawler): **2026-08-14:** live `mdlBrdGorger` hull rebaked in-engine (`brood-gorger-v2`), opt-in `?assetskin=gorger` / `?assetskin=1`. Hull-only — the animal has no turret. Do not bind a generated template onto this mesh.
+2. One hive structure remains later; it is civic and out of the unit-chassis lane.
+3. Bake organic-compatible channels: chitin/tissue/bone/membrane/wetness/
    wounds/secretions/bioluminescence.
-3. Validate that no mechanical metal, paint wear or shared faction map enters
+4. Validate that no mechanical metal, paint wear or shared faction map enters
    Brood rendering.
 
 Brood remains AI-only; this is visual quality work, not a faction-playability
-change.
+change. Remaining split models stay `maps:null` until each has its own triplet.
 
 ## Terrain/civic linkage for bespoke landmarks
 
@@ -158,7 +160,9 @@ contract. When an HQ/factory/neutral landmark is converted, validate its:
   planning data;
 - no road raster showing beneath the physical road module or building;
 - window/door/sign material IDs preserved through World V2 (`vSurface`);
-- common destruction contract via `applyGroundDestruction()`;
+- common destruction contract via the recovered `CITYG >= 1` skip
+  (`addGroundBurn` / `addCrater` / `applyDeform`); do not call the
+  non-existent `applyGroundDestruction()`;
 - damage/burning material response after ground deformation and debris.
 
 ## Promotion gates for every real pack

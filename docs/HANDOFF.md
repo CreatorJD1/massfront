@@ -425,14 +425,11 @@ into a 4K multi-copy canvas allocation.
 
 ### Civic ground + material stability checkpoint - 2026-08-11
 
-`models-civic.js` now authors roads, intersections, driveways and hardstands
-in the scale convention used by `InstMesh`: X/Y scale together, while length
-is the separate `wide` axis. Do not reintroduce centimetre-looking local Y
-values such as `.024` on a 30 m road—the uniform instance scale turns those
-into visibly floating slabs. The current roads have shallow 3D carriageway,
-curb, sidewalk and terrain-facing slope geometry; terrain owns only the
-compacted subgrade. `cityRoadJunctions` uses a carriageway plus sidewalk-corner
-form rather than a contrasting square plate.
+`models-civic.js` still contains InstMesh road/junction builders from an
+earlier branch, but the recovered v1.33.31 tree does **not** draw a live
+civic road mesh. Roads and city ground are terrain/canvas paint plus masks
+(`sim.js` / `gl.js`). Do not revive the InstMesh road pass from this
+checkpoint; see `docs/HANDOFF-2026-08-13.md` section 3.1.
 
 The broad shader flicker pass is in `mesh.js` and `materials-world-v2.js`:
 legacy atlas materials now fade high-frequency normal/detail response by actual
@@ -443,12 +440,11 @@ large animated window pulses. Fog terrain is also atmospheric rather than pure
 black; entity visibility remains enforced separately, so this preserves fog of
 war without black theatre wedges.
 
-`applyGroundDestruction()` in `sim.js` is the shared terrain-impact contract
-for combat units, heroes, structures, city relics, volatile tanks and strikes.
-Class-specific material burning, particles and salvage remain local, but crater,
-rubble and deformation must use that helper so 3D objects retain a coherent
-world reaction. Small units retain a size threshold to avoid pathing damage
-during a large Brood tide.
+There is no `applyGroundDestruction()` helper in the recovered tree. City
+combat uses one `CITYG >= 1` non-soil contract in `addGroundBurn`,
+`addCrater`, `applyDeform` and `addRelief` (`docs/HANDOFF-2026-08-13.md`,
+City-combat surface recovery). Class-specific burning, particles and salvage
+stay local. Do not invent the missing helper as part of a scarring fix.
 
 ### Faction aftermath + reclaim checkpoint - 2026-08-11
 

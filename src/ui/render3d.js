@@ -1,5 +1,3 @@
-;
-;
 /* ============================================================================
    3D RENDER PASS
    ----------------------------------------------------------------------------
@@ -45,7 +43,11 @@ function sunFor(nA){
        retains form and lets tactical lights add useful contrast. */
     sky:[ 0.34+day*0.11, 0.39+day*0.12, 0.51+day*0.16 ],
     gnd:[ 0.20+day*0.08, 0.21+day*0.08, 0.24+day*0.07 ],
-    fog:[ 0.27+day*0.24+low*0.13, 0.32+day*0.25, 0.43+day*0.25 ],
+    /* Horizon weather, not a second key light. Noon used to sit brighter
+       than sky ambient, so even a thin veil bleached grass toward milk.
+       Stay under the sky so distance haze recedes without crushing
+       daytime midtones. */
+    fog:[ 0.24+day*0.20+low*0.12, 0.29+day*0.21, 0.39+day*0.22 ],
   };
 }
 
@@ -57,37 +59,64 @@ function sunFor(nA){
    contact point, so the eye reads a building as a decal lying on the grass
    rather than a mass standing on it.
 
-   These are decals, not a shadow map. At a locked overhead orthographic camera
-   the receiver is almost always flat ground, so projecting each object's
-   footprint down the sun vector gets the same read for a fraction of the cost
-   — no second scene pass, no depth texture, no filtering. The decal is
-   stretched along the light and offset by the object's height, so shadows
-   lengthen and swing round as the sun moves across the day cycle.
+   These are decals, not a shadow map. MEDIUM/LOW stay on this cheap path.
+   HIGH/CINEMATIC add a sun-depth atlas beside it (mesh.js csmBegin) and
+   skip the stretched CAST so the two do not double-darken. SSAO stays
+   contact creasing; this pass is the weld-to-grass near blob.
+
+   The decal is stretched along the light and offset by the object's height, so
+   shadows lengthen and swing round as the sun moves across the day cycle.
 
    Blend is MULTIPLY: the mesh is white at its rim and dark at its core, so the
    rim leaves the ground exactly as it was and only the core darkens. That is
    what lets overlapping shadows merge into one soft pool instead of stacking
    into hard black rectangles.
+
+   HIGH/CINEMATIC with shadowQ>=2 replace the stretched CAST blob with a
+   real sun-depth atlas (csmBegin / csmApply). Contact near-blobs stay —
+   they weld a footprint to grass; CSM owns the directional mass. MEDIUM
+   (shadowQ 1) and LOW (0) never enter that pass.
    ============================================================================ */
 function drawShadows(S){
   if(!FX.shadow) return;
+  const sq=(typeof GFX!=='undefined'&&GFX.shadowQ!=null)?GFX.shadowQ:2;
+  /* shadowQ 0 is a real off — not a hidden stride. The Advanced Shadows
+     row would otherwise look like it worked while every building still
+     painted a blob. */
+  if(sq<=0) return;
+  const csmOn=typeof csmActive==='function'&&csmActive();
+  const contact=!(typeof GFX!=='undefined'&&GFX.contact===false);
   const cb=camBounds();
   const vis=(x,y,pad)=>x>=cb.x0-(pad||0)&&x<=cb.x1+(pad||0)&&y>=cb.y0-(pad||0)&&y<=cb.y1+(pad||0);
   const gh=(x,y)=>terrainH(x,y);
   const sd=S.dir;
   const el=Math.max(0.22,sd[1]);
   const kx=-sd[0]/el, kz=-sd[2]/el;          // ground offset per unit of height
-  const stretch=Math.min(2.4,Math.hypot(kx,kz));
+  const q=typeof mfGfxKey==='function'?mfGfxKey():'high';
+  const cine=q==='cinematic'&&sq>=2;
+  const stretch=Math.min(2.4,Math.hypot(kx,kz))*(sq===1?0.78:cine?1.12:1);
   const yaw=Math.atan2(kz,kx);
   /* Instance alpha stays at full: the MULTIPLY blend takes the fragment colour
      directly, so any alpha below 1 would darken the white rim as well and put
      a visible disc edge around every object. Shadow strength lives in the mesh
      vertex colours instead. */
   const A=255;
-  const put=(x,y,rad,hgt,wide)=>{
+  const putCast=(x,y,rad,hgt,wide)=>{
     const cx=x+kx*hgt*0.55, cy=y+kz*hgt*0.55;
     if(!vis(cx,cy,rad+hgt)) return;
-    FX.shadow.add(cx,cy,gh(cx,cy)+0.9, rad+hgt*stretch*0.55, yaw, 255,255,255,A, (wide||rad));
+    FX.shadow.add(cx,cy,gh(cx,cy)+2.4, rad*0.55+hgt*stretch*0.12, yaw, 255,255,255,A, (wide||rad)*0.58);
+  };
+  /* Near cascade: tight footprint under the object. HIGH uses this on
+     buildings; CINEMATIC on nearby everything. When the sun-depth atlas is
+     live the stretched CAST is skipped so the two do not double-darken. */
+  const putNear=(x,y,rad,hgt,wide)=>{
+    const cx=x+kx*hgt*0.18, cy=y+kz*hgt*0.18;
+    if(!vis(cx,cy,rad)) return;
+    FX.shadow.add(cx,cy,gh(cx,cy)+1.8, rad*0.42, yaw, 255,255,255,A, (wide||rad)*0.46);
+  };
+  const put=(x,y,rad,hgt,wide,near)=>{
+    if(near) putNear(x,y,rad,hgt,wide);
+    if(!csmOn) putCast(x,y,rad,hgt,wide);
   };
   for(const B of blds){
     if(!B.alive||!vis(B.x,B.y,B.r*2)) continue;
@@ -95,7 +124,7 @@ function drawShadows(S){
     const f=(typeof bldFoot==='function')?bldFoot(B):[B.r*1.6,B.r*1.6];
     const sw=(Math.round((B.rot||0)/(Math.PI/2))&1)===1;
     const fw=(sw?f[1]:f[0])*0.56, fh=(sw?f[0]:f[1])*0.56;
-    put(B.x,B.y,Math.max(fw,fh),B.r*1.8,Math.min(fw,fh)*1.05);
+    put(B.x,B.y,Math.max(fw,fh),B.r*1.8,Math.min(fw,fh)*1.05,sq>=2);
   }
   /* Generated civilian/military structures are relics, not `blds`, so the
      original shadow pass skipped the entire city. V2 materials could be
@@ -106,32 +135,41 @@ function drawShadows(S){
   for(const R of relics){
     if(!R.alive||!vis(R.x,R.y,Math.max(R.w,R.h)+110)||!fogPointVisible(R.x,R.y))continue;
     const hgt=R.kind===0?118:R.kind===2?58:R.kind===3?42:R.kind===4?66:R.kind===5?290:52;
-    put(R.x,R.y,Math.max(R.w,R.h)*.57,hgt,Math.min(R.w,R.h)*.55);
+    put(R.x,R.y,Math.max(R.w,R.h)*.57,hgt,Math.min(R.w,R.h)*.55,sq>=2);
   }
   /* At strategic range a regiment's individual contact shadows occupy fewer
      than two pixels and merge into one tone. Sample ordinary units there but
      retain selected units and commanders; off-camera units were already fully
      culled above, so this is the second (distance/material) LOD band. */
-  const shadowStride=orthoSpan>2550?4:orthoSpan>2050?2:1;
-  for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]) continue;
-    if(!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
-    const T=TYPES[utype[i]];
-    const important=usel[i]||i===heroIdx||T.cat==='hero'||(typeof isEnemyCommander==='function'&&isEnemyCommander(i));
-    if(shadowStride>1&&!important&&(i%shadowStride))continue;
-    put(ux[i],uy[i],T.size*0.70,T.air?T.size*2.6:T.size*0.8);
+  /* MEDIUM (shadowQ=1) used stride 2–4, near HIGH at tactical zoom. 3/6
+     still paints commanders and selected units every frame.
+     contact=false keeps building/relic blobs (the mass-on-grass read) and
+     drops unit/scenery — that is the Advanced Contact Shadows row. */
+  const shadowStride=cine?1:(sq===1?Math.max(3,orthoSpan>1800?6:3):(orthoSpan>2550?4:orthoSpan>2050?2:1));
+  if(contact){
+    for(let i=0;i<unitHigh;i++){
+      if(!ualive[i]) continue;
+      if(!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
+      const T=TYPES[utype[i]];
+      const important=usel[i]||i===heroIdx||T.cat==='hero'||(typeof isEnemyCommander==='function'&&isEnemyCommander(i));
+      if(shadowStride>1&&!important&&(i%shadowStride))continue;
+      const near=cine&&dist2(ux[i],uy[i],cam.x,cam.y)<520*520;
+      put(ux[i],uy[i],T.size*0.70,T.air?T.size*2.6:T.size*0.8,undefined,near);
+    }
+    /* Scenery casts too. A boulder with no shadow beside a tank with one reads
+       as a decal painted on the grass. MEDIUM skips crystals (tiny, many). */
+    for(const o of rocks)    if(vis(o.x,o.y,60)&&fogPointVisible(o.x,o.y)) put(o.x,o.y,o.s*0.62,o.s*0.75);
+    for(const o of trees)    if(vis(o.x,o.y,60)&&fogPointVisible(o.x,o.y)) put(o.x,o.y,o.s*0.52,o.s*1.15);
+    if(typeof cover!=='undefined') for(const o of cover)
+      if(vis(o.x,o.y,40)&&fogPointVisible(o.x,o.y)) put(o.x,o.y,o.s*0.46,o.s*0.55);
+    if(sq>=2) for(const o of crystals){
+      const D=deposits[o.dep],tier=depositTier(D);if(!D||o.band>tier||!vis(o.x,o.y,60))continue;
+      if(!fogPointVisible(o.x,o.y))continue;
+      put(o.x,o.y,o.s*(o.core?.15:.11),o.s*(o.core?.34:.24));
+    }
+    if(typeof carrier!=='undefined'&&carrier.active&&carrierEffectiveAlt()<80)
+      put(carrier.x,carrier.y,22,Math.max(2,carrierEffectiveAlt()*0.22));
   }
-  /* Scenery casts too. A boulder with no shadow beside a tank with one reads
-     as a decal painted on the grass. */
-  for(const o of rocks)    if(vis(o.x,o.y,60)&&fogPointVisible(o.x,o.y)) put(o.x,o.y,o.s*0.62,o.s*0.75);
-  for(const o of trees)    if(vis(o.x,o.y,60)&&fogPointVisible(o.x,o.y)) put(o.x,o.y,o.s*0.52,o.s*1.15);
-  for(const o of crystals){
-    const D=deposits[o.dep],tier=depositTier(D);if(!D||o.band>tier||!vis(o.x,o.y,60))continue;
-    if(!fogPointVisible(o.x,o.y))continue;
-    put(o.x,o.y,o.s*(o.core?.15:.11),o.s*(o.core?.34:.24));
-  }
-  if(typeof carrier!=='undefined'&&carrier.active&&carrierEffectiveAlt()<260)
-    put(carrier.x,carrier.y,54,Math.max(2,carrierEffectiveAlt()*0.6));
   if(!FX.shadow.n) return;
   gl.useProgram(progG);
   gl.uniformMatrix4fv(UG.uVP,false,matVP);
@@ -139,11 +177,65 @@ function drawShadows(S){
   gl.blendFunc(gl.ZERO,gl.SRC_COLOR);        // multiply: white is a no-op
   gl.depthMask(false);
   gl.disable(gl.CULL_FACE);
+  /* Keep DEPTH_TEST. Turning it off laid the whole stepped shadow disc on
+     the pavement as concentric dark rings (live recapture). Offset + a 2.2
+     raise keeps contact without z-fighting the kerb into grain. */
+  gl.enable(gl.POLYGON_OFFSET_FILL);
+  gl.polygonOffset(-12,-48);
   FX.shadow.flush(gl);
+  gl.disable(gl.POLYGON_OFFSET_FILL);
   gl.enable(gl.CULL_FACE);
   gl.depthMask(true);
   gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
   gl.disable(gl.BLEND);
+}
+function csmDrawBuildingCasters(){
+  if(typeof BLD_MESH==='undefined') return;
+  const sets=[BLD_MESH,...Object.values(BLD_FACTION_MESH||{})];
+  for(const set of sets){
+    if(!set) continue;
+    for(const k in set){
+      const M=set[k];
+      if(M.variants) for(const V of M.variants){ csmDrawMesh(V.base); if(V.tur) csmDrawMesh(V.tur); }
+      else { csmDrawMesh(M.base); if(M.tur) csmDrawMesh(M.tur); }
+    }
+  }
+}
+function csmDrawSceneryCasters(){
+  if(typeof FX==='undefined') return;
+  for(const k of ['rock','tree','crystal','cityT','cityD','cityH','cityK','cityC','sky1','sky2','skyA','skyS','wreck'])
+    if(FX[k]) csmDrawMesh(FX[k]);
+  if(typeof worldSites!=='undefined'){
+    for(const S of worldSites) if(S.fill) csmDrawMesh(S.fill);
+    if(typeof WORLD_KIT!=='undefined') for(const k in WORLD_KIT) if(WORLD_KIT[k].mesh) csmDrawMesh(WORLD_KIT[k].mesh);
+  }
+}
+function csmDrawUnitCasters(){
+  if(typeof UNIT_MESH!=='undefined') for(const M of UNIT_MESH){ if(!M) continue; csmDrawMesh(M.hull); if(M.tur) csmDrawMesh(M.tur); }
+  if(typeof FAC_MESH!=='undefined') for(const k in FAC_MESH) for(const ty in FAC_MESH[k]){
+    const M=FAC_MESH[k][ty]; csmDrawMesh(M.hull); if(M.tur) csmDrawMesh(M.tur);
+  }
+  if(typeof COMMANDER_KIT_MESH!=='undefined') for(const k in COMMANDER_KIT_MESH){
+    const M=COMMANDER_KIT_MESH[k]; if(!M) continue; csmDrawMesh(M.hull); if(M.tur) csmDrawMesh(M.tur);
+  }
+  if(typeof FAC_DOCTRINE_MESH!=='undefined') for(const k in FAC_DOCTRINE_MESH){
+    csmDrawMesh(FAC_DOCTRINE_MESH[k].ground); csmDrawMesh(FAC_DOCTRINE_MESH[k].air);
+  }
+}
+function csmDrawModuleCasters(){
+  if(typeof MOD_ATTACH_MESH==='undefined') return;
+  for(const id in MOD_ATTACH_MESH) for(const M of MOD_ATTACH_MESH[id]) csmDrawMesh(M);
+}
+/* HIGH skins commanders, size>=21, and anything inside 720 of the look-at.
+   CINEMATIC skins every boned mesh in csmBindSkin — the flag is redundant. */
+function csmMarkUnitSkin(M,T,heroUnit,X,Y){
+  if(!M||!M.hull||!M.hull.bones) return;
+  const q=typeof mfGfxKey==='function'?mfGfxKey():'high';
+  if(q!=='high'&&q!=='cinematic') return;
+  if(q==='cinematic'||heroUnit||T.cat==='hero'||T.size>=21||dist2(X,Y,cam.x,cam.y)<720*720){
+    M.hull.csmSkin=1;
+    if(M.tur&&M.tur.bones) M.tur.csmSkin=1;
+  }
 }
 /* Light values in sunFor() are display-space colours picked by eye. The shading
    maths is linear, so they are converted once here rather than in the shader. */
@@ -159,12 +251,18 @@ const _lin=c=>[Math.pow(c[0],2.2),Math.pow(c[1],2.2),Math.pow(c[2],2.2)];
    -------------------------------------------------------------------------- */
 const _sceneLightPR=new Float32Array(8*4),_sceneLightCI=new Float32Array(8*4);
 let _sceneLightN=0;
+function sceneLightCap(){
+  const n=(typeof GFX!=='undefined'&&GFX.lights!=null)?(GFX.lights|0):8;
+  return Math.max(0,Math.min(8,n));
+}
 function sceneLightPush(x,y,z,range,cr,cg,cb,intensity,score){
+  const cap=sceneLightCap();
+  if(cap<=0) return;
   let at=_sceneLightN;
-  if(at<8) _sceneLightN++;
+  if(at<cap) _sceneLightN++;
   else {
     let worst=0,ws=_sceneLightCI[3];
-    for(let i=1;i<8;i++) if(_sceneLightCI[i*4+3]<ws){ws=_sceneLightCI[i*4+3];worst=i;}
+    for(let i=1;i<cap;i++) if(_sceneLightCI[i*4+3]<ws){ws=_sceneLightCI[i*4+3];worst=i;}
     /* The alpha lane temporarily stores ranking until the list is complete. */
     if(score<=ws) return;
     at=worst;
@@ -204,7 +302,7 @@ function selectCinematicLights(nA){
        to be within the current strategic view. */
     const score=boost*range*range/(d2+range*range);
     sceneLightPush(L.x,L.y,terrainH(L.x,L.y)+(isHQ?34:22),range,c[0],c[1],c[2],
-                   Math.min(0.9,(0.24+night*.42)*boost),score);
+                   Math.min(0.88,(0.46+night*.38)*boost),score);
   }
   /* Powered civic windows and industrial warning lamps use the same eight
      camera-relevant-light budget as bases and vehicles. The emissive facade is
@@ -255,7 +353,7 @@ function selectCinematicLights(nA){
     const c=_lin(sceneLightColor(dropFactionKey(carrier.fac)));
     const alt=Math.max(18,carrierEffectiveAlt()*.65);
     const dx=carrier.x-cam.x,dy=carrier.y-cam.y,d2=dx*dx+dy*dy;
-    sceneLightPush(carrier.x,carrier.y,terrainH(carrier.x,carrier.y)+alt,128,c[0],c[1],c[2],1.25,128*128/(d2+128*128)+2);
+    sceneLightPush(carrier.x,carrier.y,terrainH(carrier.x,carrier.y)+alt,28,c[0],c[1],c[2],0.08,28*28/(d2+28*28)+1);
   }
   /* The shader expects intensity in the fourth colour lane. Selection used it
      as a ranking key, so restore the small sidecar just before upload. */
@@ -265,9 +363,21 @@ function visualDebugMode(){
   const v=typeof window!=='undefined' ? Number(window.MFVisualDebug||0) : 0;
   return Math.max(0,Math.min(7,v|0));
 }
+let MF_BONES_ON=false;
 function begin3D(nA){
   const S=sunFor(nA);
   gl.useProgram(prog3D);
+  /* FX and custom passes share InstMesh but do not own prog3D's uniforms.
+     Re-entering the model pass is the one reliable boundary where a previous
+     rig or per-asset skin must be cleared. This keeps an unlit flush from
+     touching a foreign uniform location and prevents stale V2 maps/bones from
+     bleeding into the next ordinary unit or structure. */
+  if(typeof U3!=='undefined'){
+    if(MF_ASSET_ON&&U3.uAssetOn) gl.uniform1f(U3.uAssetOn,0.0);
+    if(MF_BONES_ON&&U3.uBoneN!==undefined&&U3.uBoneN!==null) gl.uniform1i(U3.uBoneN,0);
+  }
+  MF_ASSET_ON=false;
+  MF_BONES_ON=false;
   /* If the procedural material atlases were not generated (context recovery
      race, mobile memory pressure, or a startup ordering change), rebuild now
      instead of drawing every building with missing/muted PBR detail. */
@@ -307,7 +417,10 @@ function begin3D(nA){
   { const c=_lin(S.sky); gl.uniform3f(U3.uAmbSky,c[0],c[1],c[2]); }
   { const c=_lin(S.gnd); gl.uniform3f(U3.uAmbGnd,c[0],c[1],c[2]); }
   { const c=_lin(S.fog); gl.uniform3f(U3.uFogC,c[0],c[1],c[2]); }
+  if(U3.uHazeQ) gl.uniform1f(U3.uHazeQ, typeof mfHazeQ==='function'?mfHazeQ():1);
   gl.uniform1f(U3.uEmis,0);
+  if(U3.uNight) gl.uniform1f(U3.uNight,nA);
+  if(U3.uTime) gl.uniform1f(U3.uTime,(typeof performance!=='undefined'?performance.now():0)*0.001);
   gl.uniform1i(U3.uDebugMode,visualDebugMode());
   if(U3.uFowMap!=null){ gl.uniform1i(U3.uFowMap,8);
     gl.uniform1f(U3.uFowOn,(typeof fogGameplayActive==='function'&&fogGameplayActive()&&!demoMode&&typeof fogTex!=='undefined'&&fogTex)?1:0); }
@@ -409,25 +522,47 @@ function addBeamRibbon(uv,x0,h0,y0,x1,h1,y1,width,r,g,b,a,maxPx){
     ax=ex; ay=ey; ah=eh;
   }
 }
-function addBeam3D(mesh,x0,h0,y0,x1,h1,y1,rad,r,g,b,a){
-  const width=Math.max(1.15,rad*2.35);
-  /* LASER GRADE, three layers: a wide soft haze, the coloured sheath, and a
-     white-hot CORE — the core is what separates "a coloured line" from "a
-     weapon that cuts". The haze stays off sub-pixel tracers and low-perf
-     frames; sheath and core render every shot. */
-  if(rad>1.05&&perfScale>.34) addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,
-    width*2.45,r,g,b,a*.34,170);
-  addBeamRibbon(sprites.beam||sprites.glow,x0,h0,y0,x1,h1,y1,width,r,g,b,a,150);
-  addBeamRibbon(sprites.beam||sprites.glow,x0,h0,y0,x1,h1,y1,
-    Math.max(0.5,width*0.34),255,250,240,a*.85,150);
-  /* Impact: molten spray at the far end, sized to the weapon. Powerful beams
-     scorch a kinetic scar into the ground they hold on. */
-  if(typeof gpfxBurst==='function'&&rad>0.9&&perfScale>.3&&Math.random()<0.55){
-    gpfxBurst(x1,y1,h1,(rad>2.2?10:4),{speed:60+rad*26,up:0.8,life:0.55,
-      col:[Math.min(255,r+70),Math.min(255,g+50),b],size:2.4,drag:0.94,jit:1.5});
+function addBeamPathFx(x0,h0,y0,x1,h1,y1,width,r,g,b,a){
+  /* Pearl-necklace of circular energy + smoke. sprites.beam is a thin atlas
+     line — the shaft has to be GLOW KNOTS or it reads as a cheap streak.
+     Position-seeded, no velocity. */
+  const q=typeof mfVfxQ==='function'?mfVfxQ():1;
+  if(q<0.35||a<14) return;
+  if(typeof orthoSpan==='number'&&orthoSpan>1800) return;
+  const dx=x1-x0, dy=y1-y0, dh=h1-h0;
+  const len=Math.hypot(dx,dy)||1;
+  if(len<10) return;
+  const n=Math.max(3,Math.min(q>=0.95?16:13, Math.round(len/(q>=0.95?14:17))));
+  const seed=x0*0.073+y0*0.051+x1*0.019;
+  const smoke=sprites.smoke||sprites.glow;
+  for(let i=0;i<=n;i++){
+    const u=i/n;
+    const jx=Math.sin(seed+i*12.9898)*width*0.16;
+    const jy=Math.cos(seed+i*78.233)*width*0.16;
+    const x=x0+dx*u+jx, y=y0+dy*u+jy, h=h0+dh*u;
+    const sz=width*(1.55+(Math.sin(seed*3.1+i*2.4)*0.5+0.5)*0.85);
+    bbAdd.add(sprites.glow,x,y,h,sz*3.4,0,r,g,b,a*0.58);
+    bbAdd.add(sprites.glow,x,y,h,sz*1.55,0,r,g,b,a*0.78);
+    bbAdd.add(sprites.glow,x,y,h,sz*0.58,0,255,253,248,a*0.92);
+    if(q>=0.55&&(i&1))
+      bbAlpha.add(smoke,x,y,h+1.6,sz*3.8,seed+i, 52+r*0.14,48+g*0.11,44+b*0.09, Math.min(95,a*0.28));
   }
-  if(rad>2.2&&typeof addGroundBurn==='function'&&Math.random()<0.045)
-    addGroundBurn(x1,y1,rad*5.5,0);
+}
+function addBeam3D(mesh,x0,h0,y0,x1,h1,y1,rad,r,g,b,a){
+  const q=typeof mfVfxQ==='function'?mfVfxQ():1;
+  const width=Math.max(4.80,rad*(q>=1.25?6.40:q>=0.95?5.85:q>=0.65?5.40:4.20));
+  /* Glow-tube + knots. The beam atlas cell is a 1px streak — do not use it
+     as the body. Do not stretch GPU points into ellipses. */
+  addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,
+    width*(q>=0.95?5.10:4.20),r,g,b,a*(q>=0.95?.70:.58),210);
+  addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,
+    width*1.85,r,g,b,Math.min(255,a*1.22),150);
+  addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,
+    Math.max(2.40,width*0.88),255,253,248,Math.min(255,a*1.40),150);
+  addBeamPathFx(x0,h0,y0,x1,h1,y1,width,r,g,b,a);
+  /* Muzzle starburst at the barrel, not a hull-center flash. */
+  bbAdd.add(sprites.glow,x0,y0,h0,width*2.8,0,r,g,b,a*0.85);
+  bbAdd.add(sprites.glow,x0,y0,h0,width*1.15,0,255,253,246,a);
 }
 /* Double-helix filaments give the largest weapons an authored silhouette. The
    radius closes at both ends so the strands grow out of the emitter and merge
@@ -444,22 +579,120 @@ function addBeamHelix(bm,h0,h1,radius,turns,r,g,b,a,t,oneStrand){
       const off=Math.sin(ph)*radius*taper;
       const ex=bm.x0+dx*q+ox*off, ey=bm.y0+dy*q+oy*off;
       const eh=h0+(h1-h0)*q+Math.cos(ph)*radius*.48*taper;
-      addBeamRibbon(sprites.beam||sprites.glow,ax,ah,ay,ex,eh,ey,
-        Math.max(1.15,bm.w*.66),r,g,b,a,220);
-      addBeamRibbon(sprites.beam||sprites.glow,ax,ah,ay,ex,eh,ey,
-        Math.max(.52,bm.w*.17),245,252,255,a*.72,220);
+      addBeamRibbon(sprites.glow,ax,ah,ay,ex,eh,ey,
+        Math.max(1.55,bm.w*.92),r,g,b,a,220);
+      addBeamRibbon(sprites.glow,ax,ah,ay,ex,eh,ey,
+        Math.max(.72,bm.w*.28),245,252,255,a*.78,220);
       ax=ex; ay=ey; ah=eh;
     }
   }
 }
-function addBeamBurst(x,y,h,size,r,g,b,a,seed){
-  bbAdd.add(sprites.glow,x,y,h,size*1.65,0,r,g,b,a*.72);
-  bbAdd.add(sprites.glow,x,y,h,size*.58,0,255,252,235,a);
-  bbAdd.add(sprites.ring||sprites.glow,x,y,h,size*1.15,seed,r,g,b,a*.78);
-  if(perfScale>.42) for(let k=0;k<3;k++){
-    bbAdd.addOrientedRect(sprites.beam||sprites.glow,x,y,h,
-      Math.max(.8,size*.07),size*2.2,seed+k*TAU/3,r,g,b,a*.46);
+function addBeamBurst(x,y,h,size,r,g,b,a){
+  /* Terminus punch: dense core + soft bloom + a few circular puffs.
+     Radial streaks stay short authored flashes, not velocity ellipses. */
+  bbAdd.add(sprites.glow,x,y,h,size*2.35,0,r,g,b,a*.95);
+  bbAdd.add(sprites.glow,x,y,h,size*1.15,0,r,g,b,a);
+  bbAdd.add(sprites.glow,x,y,h,size*0.52,0,255,253,244,a);
+  const q=typeof mfVfxQ==='function'?mfVfxQ():1;
+  if(q>=0.40&&size>1.4){
+    const n=q>=1.2?8:q>=0.65?6:4;
+    const seed=x*0.073+y*0.051;
+    for(let k=0;k<n;k++){
+      const ang=seed+k*(6.283185/n);
+      const rad=size*(0.85+(k&1)*0.35);
+      const px=x+Math.cos(ang)*rad, py=y+Math.sin(ang)*rad;
+      bbAdd.add(sprites.glow,px,py,h,size*0.42,0,r,g,b,a*.70);
+    }
   }
+  if(typeof gpfxEnergyBlast==='function'&&q>=0.4&&size>2.2
+     &&(typeof gpfxLive==='undefined'||gpfxLive<GPFX_CAP-80))
+    gpfxEnergyBlast(x,y,h,size>6?22:12,[r,g,b],{speed:72,up:0.32,life:0.64,size:6.6,min:4});
+}
+function addMuzzleFlash(x,y,h,dx,dy,size,r,g,b,a){
+  /* Brief barrel bloom plus a cone along the shot. Both stay on the
+     weapon; nothing here is given velocity that would orbit the chassis. */
+  if(a<8||size<0.4) return;
+  const l=Math.hypot(dx,dy)||1, nx=dx/l, ny=dy/l;
+  const q=typeof mfVfxQ==='function'?mfVfxQ():1;
+  const cone=Math.max(8.2,size*(q>=0.95?2.65:2.05));
+  bbAdd.add(sprites.glow,x,y,h,size*1.48,0,r,g,b,a);
+  bbAdd.add(sprites.glow,x,y,h,size*.58,0,255,252,242,a);
+  addBeamRibbon(sprites.glow,x,h,y,x+nx*cone,h,y+ny*cone,
+    Math.max(2.05,size*.92),255,248,228,a,80);
+  /* MEDIUM+ GPU spray at the already-lifted muzzle. n stays under the
+     water-ripple stamp (n>=20). LOW keeps the cone so the shot is not mute. */
+  if(typeof gpfxBurst==='function'&&q>=0.45&&perfScale>.28
+     &&(typeof camDist==='undefined'||camDist<2400)&&gpfxLive<GPFX_CAP-64)
+    gpfxBurst(x,y,h,typeof gpfxN==='function'?gpfxN(10,4):6,
+      {speed:48,up:0.20,life:0.42,col:[r,g,b],size:4.8,drag:0.92,jit:1.0,dir:[nx,ny],skipWater:1});
+}
+function addWreckEmbers(x,y,h,size,heat,seed){
+  /* Static coal bed + local flicker. Upright flame quads were the licking
+     tongues the civic ground-burn pass already retired. */
+  if(heat<0.08||size<0.8) return;
+  const tt=typeof t==='number'?t:0;
+  const flick=0.88+0.12*Math.abs(Math.sin(tt*5.8+seed));
+  const a=heat*flick;
+  const s=Math.max(2.2,size*0.78);
+  bbAdd.add(sprites.glow,x,y,h+1.02,s*1.28,0,255,78,22,Math.min(64,36*a));
+  bbAdd.add(sprites.glow,x,y,h+1.18,s*0.46,0,255,132,42,Math.min(130,82*a));
+  if(FX.pool) FX.pool.add(x,y,h+0.80,s*1.15,0,255,92,28,Math.min(52,30*a));
+}
+function addWreckCoalBed(x,y,h,span,heat,seed,n){
+  addWreckEmbers(x,y,h,span*0.55,heat,seed);
+  const nn=n||3;
+  for(let k=0;k<nn;k++){
+    const a=seed+k*2.094;
+    addWreckEmbers(x+Math.cos(a)*span*0.28,y+Math.sin(a)*span*0.24,h,
+      span*0.32,heat*(0.72+((k*13)%7)*0.04),seed+k*3.1);
+  }
+  /* C&C wreck language: compact coals + a thin dark column, not licking tongues. */
+  if(heat>0.22&&sprites.smoke)
+    bbAlpha.add(sprites.smoke,x,y,h+span*0.55,span*0.85,seed, 38,36,34, Math.min(90,48*heat));
+}
+
+/* Combat VFX is authored in 2D (fx/fy, beam x0/y0). The draw path used a
+   flat gh()+13 deck, so muzzle/impact sat on the dirt while turrets sit at
+   M.turH*ss. Spatial-hash only — no sim writes. */
+function fxWeaponH(x,y,muzzle){
+  const base=(typeof terrainH==='function'?terrainH(x,y):0);
+  const rad=muzzle?36:14;
+  if(typeof nearestUnitAny==='function'){
+    const u=nearestUnitAny(x,y,rad);
+    if(u>=0){
+      const T=TYPES[utype[u]];
+      const M=typeof UNIT_MESH!=='undefined'?UNIT_MESH[utype[u]]:null;
+      const ss=(T.size/15)*(M&&M.s||1)*1.5*(T.vscale||1);
+      const th=(M&&M.turH>0?M.turH:(T.air?6:4.6))*ss;
+      const hy=unitGroundY(T,ux[u],uy[u],u);
+      return muzzle?hy+th:hy+th*0.55;
+    }
+  }
+  if(typeof blds!=='undefined'&&typeof BCS!=='undefined'&&typeof BGW!=='undefined'&&bGrid){
+    const cr=1, r2=rad*rad;
+    const cx=clamp(x/BCS|0,0,BGW-1), cy=clamp(y/BCS|0,0,BGW-1);
+    let best=-1, bd=r2;
+    for(let gy=Math.max(0,cy-cr);gy<=Math.min(BGW-1,cy+cr);gy++)
+     for(let gx=Math.max(0,cx-cr);gx<=Math.min(BGW-1,cx+cr);gx++){
+      const cell=bGrid[gy*BGW+gx]; if(!cell) continue;
+      for(const bi of cell){
+        const B=blds[bi]; if(!B||!B.alive||B.prog<1) continue;
+        const th0=typeof BLD_TUR_H!=='undefined'?BLD_TUR_H[B.type]:0;
+        if(!th0) continue;
+        const d=dist2(x,y,B.x,B.y); if(d>=bd) continue;
+        bd=d; best=bi;
+      }
+    }
+    if(best>=0){
+      const B=blds[best];
+      const M=typeof bldMeshFor==='function'?bldMeshFor(B):null;
+      const grow=B.prog||1;
+      const th=(M&&M.turH)||(typeof BLD_TUR_H!=='undefined'&&BLD_TUR_H[B.type])||14;
+      const hy=(BT[B.type]&&BT[B.type].placement==='water')?0:base;
+      return hy+th*grow*(muzzle?1:0.62);
+    }
+  }
+  return base+(muzzle?13:2.4);
 }
 
 /* Rail batteries and strategic silos are base landmarks. Their geometry is
@@ -520,11 +753,8 @@ function drawDropCraft(fac,x,y,alt,ang,t,alpha,gear,thrust,vtolPose){
   if(!D||!D.body) return;
   const tc=P.team||TEAMC[0], anim=P.bio?t*2.7:0;
   D.body.add(x,y,alt,P.scale||1,ang,tc[0],tc[1],tc[2],alpha,undefined,anim);
-  D.body.flush(gl);
-  if(gear&&D.gear){
+  if(gear&&D.gear)
     D.gear.add(x,y,alt,P.scale||1,ang,tc[0],tc[1],tc[2],alpha,undefined,anim);
-    D.gear.flush(gl);
-  }
   const ca=Math.cos(ang),sa=Math.sin(ang),g=P.glow;
   const xf=(lx,lz)=>[x+lx*ca-lz*sa,y+lx*sa+lz*ca];
   /* Nova's four lift ducts are real articulated geometry, not exhaust sprites.
@@ -540,44 +770,88 @@ function drawDropCraft(fac,x,y,alt,ang,t,alpha,gear,thrust,vtolPose){
         D.rotor.add(q[0],q[1],alt+12.2*(P.scale||1),P.scale||1,
           ang+t*(k&1?-11.5:11.5),tc[0],tc[1],tc[2],alpha*fanA);
     }
-    D.vtol.flush(gl);if(D.rotor)D.rotor.flush(gl);
   }
-  /* Navigation lights make the hull's facing readable at command zoom. The
-     old all-over engine glow made it look equally valid in either direction. */
-  for(const L of P.lights||[]){
-    const q=xf(L[0],L[1]),pulse=.76+.24*Math.sin(t*4.4+L[0]*.21+L[1]*.13);
-    bbAdd.add(sprites.glow,q[0],q[1],alt+4,4.3*pulse,0,g[0],g[1],g[2],185*pulse*alpha/255);
+  /* Stamp before flush — dropship streams empty on flush, so a later unit
+     pass cannot see them. Same InstMesh path, no new format. */
+  if(typeof csmActive==='function'&&csmActive()&&typeof csmBegin==='function'&&csmBegin(false)){
+    csmDrawMesh(D.body);
+    if(D.gear) csmDrawMesh(D.gear);
+    if(D.vtol) csmDrawMesh(D.vtol);
+    if(D.rotor) csmDrawMesh(D.rotor);
+    csmEnd(_csmFrameNA);
   }
-  for(const [ex,ez] of P.eng){
-    const px=x+ex*ca-ez*sa,py=y+ex*sa+ez*ca;
-    if(P.bio){
-      /* Bioluminescent vent sacs pulse; there is deliberately no conical
-         rocket plume on the living drop-organism. */
-      bbAdd.add(sprites.glow,px,py,alt,(15+Math.sin(t*5+ez)*4)*thrust,0,g[0],g[1],g[2],220*thrust*alpha/255);
-      bbAdd.add(sprites.glow,px,py,alt-5,25*thrust,0,126,232,86,92*thrust*alpha/255);
-    }else{
-      bbAdd.add(sprites.glow,px,py,alt+2,(17+Math.sin(t*24+ex)*3)*thrust,0,g[0],g[1],g[2],235*thrust*alpha/255);
-      bbAdd.add(sprites.glow,px,py,alt-6,(P.hover?24:32)*thrust,0,g[0]*.62,g[1]*.78,g[2],110*thrust*alpha/255);
-    }
-  }
-  if(gear){
-    /* A landing ship should visibly claim the ground. This compact pad cue is
-       intentionally below the hull, leaving unit selection rings unobscured. */
-    FX.ring.add(x,y,Math.max(terrainH(x,y)+1,alt-34),42+Math.sin(t*2.2)*2,t*.32,
-      P.ring[0],P.ring[1],P.ring[2],76*alpha/255);
-    const bay=xf(11,0);
-    bbAdd.add(sprites.glow,bay[0],bay[1],Math.max(terrainH(x,y)+2,alt-31),18,ang,
-      g[0],g[1],g[2],82*alpha/255);
-  }
+  D.body.flush(gl);
+  if(gear&&D.gear) D.gear.flush(gl);
+  if(D.vtol&&P.vtol){ D.vtol.flush(gl); if(D.rotor) D.rotor.flush(gl); }
+  /* Engine bells are ENERGY on the mesh. Additive glow sprites at P.eng
+     bloomed into the orange/yellow sparks on the two rear ports. Dust is
+     type-10 alpha, not these. */
 }
 /* Per-frame render scratch, allocated once. Everything here used to be created
    fresh inside render() and thrown away 60 times a second. */
 let _hbI=new Int32Array(4096), _hbF=new Float32Array(4096);
 const _hbCells=new Map(), _wallStreams=new Set();
+let _csmFrameNA=0;
+
+function unitGroundY(T,x,y,i){
+  if(T.air){
+    const alt=(i!=null&&typeof unitAirAlt==='function')?unitAirAlt(i):58;
+    return terrainH(x,y)+alt;
+  }
+  if(T.naval){
+    /* Visual bob only. Sim pathing stays on the flat naval mask — a
+       bouncing flowfield is a bug, and sim.js is contended. */
+    return (typeof waterSurfaceY==='function'?waterSurfaceY(x,y):0)+0.95;
+  }
+  return terrainH(x,y);
+}
+
+function queueWaterFx(){
+  if(typeof waterFxBegin!=='function'||!waterIdxCount) return;
+  waterFxBegin();
+  const wet=typeof authoredWaterAt==='function'?authoredWaterAt:()=>false;
+  const cb=camBounds();
+  const vis=(x,y,p)=>x>=cb.x0-(p||0)&&x<=cb.x1+(p||0)&&y>=cb.y0-(p||0)&&y<=cb.y1+(p||0);
+  const push=(i)=>{
+    if(!ualive[i]||!umov[i]) return;
+    const T=TYPES[utype[i]];
+    if(!T||!T.naval) return;
+    if(!vis(ux[i],uy[i],90)) return;
+    if(!fogEntityVisible(uteam[i],ux[i],uy[i])) return;
+    /* Hulls face +X at mesh yaw 0, which is uang-π/2. mdlWake is authored
+       aft along -X; the water-sheet V uses the same angle so foam trails
+       the hull instead of sitting 90° off the bow. */
+    const len=T.size*(T.vscale||1)*3.6;
+    waterFxWake(ux[i],uy[i],uang[i]-Math.PI/2,len,T.size*1.2);
+  };
+  for(let i=0;i<unitHigh;i++) if(usel[i]||i===heroIdx) push(i);
+  for(let i=0;i<unitHigh;i++){ if(usel[i]||i===heroIdx) continue; push(i); }
+  if(typeof waterFxEmitCraterWakes==='function') waterFxEmitCraterWakes();
+  /* Shock rings / explosions only, and only the newest 256 of the 9000-slot
+     ring — a full scan was a tax for stamps that fire once while young. */
+  if(typeof fHead==='undefined'||typeof MAXPART==='undefined') return;
+  const look=Math.min(MAXPART,256);
+  for(let k=0;k<look;k++){
+    const i=(fHead-1-k+MAXPART)%MAXPART;
+    if(flife[i]<=0) continue;
+    const ty=ftype[i];
+    if(ty!==0&&ty!==3&&ty!==6) continue;
+    if(ty===0&&fsize[i]<12) continue;
+    if(flife[i]/fmax[i]<0.72) continue;
+    if(!vis(fx[i],fy[i],70)) continue;
+    if(wet(fx[i],fy[i])){
+      waterFxImpact(fx[i],fy[i], ty===6?14:ty===3?Math.max(8,fsize[i]*0.9):10, ty===3?1.35:0.95);
+      continue;
+    }
+    const near=typeof waterNearAuthored==='function'&&waterNearAuthored(fx[i],fy[i],28);
+    if(near) waterFxImpact(near[0],near[1], ty===6?12:9, ty===3?1.2:0.85);
+  }
+}
 
 function render(dtDraw){
   const labNight=typeof materialV2LabNightAmount==='function'?materialV2LabNightAmount():null;
   const S_nA=labNight==null?nightAmt():labNight;
+  _csmFrameNA=S_nA;
   /* One biome ground colour per frame, shared by every structure skirt: the
      terrain palette's hill tone pulled toward its cliff rock — what freshly
      turned ground beside a foundation actually looks like. */
@@ -612,6 +886,7 @@ function render(dtDraw){
      If the target can't be created the call returns false and everything below
      draws straight to the canvas exactly as before. */
   const aoActive=aoBeginScene();
+  if(aoActive&&typeof aoW==='number'&&aoW>0) gl.viewport(0,0,aoW,aoH);
   /* Clear to EXACTLY the fog colour. The border haze fades the last stretch of
      ground into uFogC, so anything the camera sees past the edge has to be the
      same value or the illusion ends in a visible seam. */
@@ -622,6 +897,8 @@ function render(dtDraw){
   gl.disable(gl.BLEND);
   gl.enable(gl.CULL_FACE);
   gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  /* Portrait takeover in main.js disables this — AABB scissor left fog strips. */
+  if(typeof mfGfxScissor==='function') mfGfxScissor(true);
 
   begin3D(S_nA);
 
@@ -637,10 +914,22 @@ function render(dtDraw){
   const renderBand=(x,y,pad,important)=>{
     if(!vis(x,y,pad))return 0;
     if(important)return 2;
-    const far=orthoSpan>2250||dist2(x,y,cam.x,cam.y)>Math.pow(orthoSpan*.58+pad,2);
+    const far=orthoSpan>(typeof mfLodSpan==='function'?mfLodSpan(2250):2250)||dist2(x,y,cam.x,cam.y)>Math.pow(orthoSpan*.58+pad,2);
     return far?1:2;
   };
   const gh=(x,y)=>terrainH(x,y);
+  /* Stage 1 ring LOD. vis() drops off-screen; usel drops unselected mass.
+     Army-select at 1000 still paints a carpet at tactical zoom — cap at 48
+     and cell-collapse. Command altitude (orthoSpan>1400) keeps the commander
+     only: 48 rings at that height is still a smear. Draw budget, not a fake
+     4000 pop cap. Count once so icon plates and ground rings share it. */
+  let selOnCam=0;
+  for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]&&vis(ux[i],uy[i],40)) selOnCam++;
+  const SEL_RING_LOD=48;
+  const RING_STRATEGIC=orthoSpan>(typeof mfLodSpan==='function'?mfLodSpan(1400):1400);
+  const ringKeepCmd=i=>i===heroIdx||(TYPES[utype[i]]&&TYPES[utype[i]].cat==='hero')
+    ||(typeof isEnemyCommander==='function'&&isEnemyCommander(i));
+  if(typeof mfIconStackRebuild==='function') mfIconStackRebuild(vis, ringKeepCmd);
 
   /* ---------------- terrain ----------------
      Drawn with its own program so it can sample the painted map canvas plus a
@@ -668,6 +957,7 @@ function render(dtDraw){
   { const c=_lin(Sun.sky); gl.uniform3f(UT.uAmbSky,c[0],c[1],c[2]); }
   { const c=_lin(Sun.gnd); gl.uniform3f(UT.uAmbGnd,c[0],c[1],c[2]); }
   { const c=_lin(Sun.fog); gl.uniform3f(UT.uFogC,c[0],c[1],c[2]); }
+  if(UT.uHazeQ) gl.uniform1f(UT.uHazeQ, typeof mfHazeQ==='function'?mfHazeQ():1);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,terrainTex);
   gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,detailTex);
   /* Units 4/5/6 belong to the post chain. Fog uses 7 and immediately restores
@@ -697,19 +987,21 @@ function render(dtDraw){
     gl.uniform2f(UT.uPlayBounds,E.lo,E.hi);
     gl.uniform1f(UT.uEdgeStyle,style);gl.uniform1f(UT.uEdgeTime,t);
     /* Impact burns: newest first, culled to view, cooled by age. Explosive
-       glow dies in ~11 s, its char fades by ~70 s; kinetic churn settles in
-       ~22 s. Cheap: at most 16 vec4s a frame, zero when the field is calm. */
+       glow dies in ~11 s, its char fades by ~70 s; civic ember fields hold
+       heat longer (~90 s) so a burning city stays readable. Kinetic churn
+       settles in ~22 s. Cheap: at most 16 vec4s a frame. */
     if(typeof groundBurns!=='undefined'){
       const now=stats.t;
+      const burnLife=G=>!G.kind?22:(G.civic?90:70);
       for(let i=groundBurns.length-1;i>=0;i--){
-        const G=groundBurns[i], life=G.kind?70:22;
-        if(now-G.t0>life) groundBurns.splice(i,1);
+        const G=groundBurns[i];
+        if(now-G.t0>burnLife(G)) groundBurns.splice(i,1);
       }
       const bv=_burnVec, bk=_burnKind; let bn=0;
       for(let i=groundBurns.length-1;i>=0&&bn<16;i--){
         const G=groundBurns[i];
         if(!vis(G.x,G.y,G.r+60)) continue;
-        const life=G.kind?70:22;
+        const life=burnLife(G);
         bv[bn*4]=G.x; bv[bn*4+1]=G.y; bv[bn*4+2]=G.r;
         bv[bn*4+3]=clamp((now-G.t0)/life,0,1);
         bk[bn]=G.kind; bn++;
@@ -723,6 +1015,7 @@ function render(dtDraw){
   drawTerrainEdge();
   drawTerrain();
   }
+  if(typeof csmPrepare==='function') csmPrepare(Sun);
   if(typeof materialV2QueueShadows==='function')materialV2QueueShadows(Sun);
   drawShadows(Sun);                 // ground shadows go on before anything stands on them
   begin3D(S_nA);                    // back to the lit model program
@@ -733,7 +1026,22 @@ function render(dtDraw){
   if(typeof renderMaterialV2Lab==='function')renderMaterialV2Lab(S_nA,t);
 
   // ---------------- scenery ----------------
-  for(const r of rocks){ if(!vis(r.x,r.y,40)||!fogPointVisible(r.x,r.y)) continue; FX.rock.add(r.x,r.y,gh(r.x,r.y),r.s*0.035,r.a,190,186,178,255); }
+  const qDraw=typeof qualityKey==='function'?qualityKey():'high';
+  /* MEDIUM/LOW: every other rock/tree at command zoom. HIGH still submits
+     the full stand — one instanced draw either way; this is instance fill
+     at a height where a trunk is ~2 px. */
+  const sceneryStep=(qDraw==='medium'||qDraw==='low')&&orthoSpan>(typeof mfLodSpan==='function'?mfLodSpan(2000):2000)?2:1;
+  const BK=typeof biomeKit==='function'?biomeKit():null;
+  const rockTint=(BK&&BK.rockTint)||[190,186,178];
+  const floraMesh=k=>k==='pine'?(FX.treePine||FX.tree):k==='palm'?(FX.treePalm||FX.tree):
+    k==='dead'?(FX.treeDead||FX.tree):k==='spore'?(FX.treeSpore||FX.tree):FX.tree;
+  const rockMesh=k=>k==='ice'?(FX.rockIce||FX.rock):k==='slag'?(FX.rockSlag||FX.rock):FX.rock;
+  for(let ri=0;ri<rocks.length;ri++){
+    if(sceneryStep>1&&(ri%sceneryStep)) continue;
+    const r=rocks[ri];
+    if(!vis(r.x,r.y,40)||!fogPointVisible(r.x,r.y)) continue;
+    rockMesh(r.k).add(r.x,r.y,gh(r.x,r.y),r.s*0.035,r.a,rockTint[0],rockTint[1],rockTint[2],255);
+  }
   /* Settlements: one instanced draw per kit piece + one per site fill mesh.
      Fog rule matches buildings — an unscouted town stays dark. */
   if(typeof worldSites!=='undefined') for(const S of worldSites){
@@ -744,14 +1052,26 @@ function render(dtDraw){
       const K=WORLD_KIT[p.k]; if(K) K.mesh.add(p.x,p.y,gh(p.x,p.y),p.s,p.a,255,255,255,255);
     }
   }
-  const tt=THEMES[curTheme].treeTint;
-  for(const tr of trees){ if(!vis(tr.x,tr.y,50)||!fogPointVisible(tr.x,tr.y)) continue; FX.tree.add(tr.x,tr.y,gh(tr.x,tr.y),tr.s*0.030,tr.a,tt[0],tt[1],tt[2],255); }
+  const tt=(BK&&BK.treeTint)||THEMES[curTheme].treeTint;
+  const ct=(BK&&BK.coverTint)||[86,118,58];
+  for(let ti=0;ti<trees.length;ti++){
+    if(sceneryStep>1&&(ti%sceneryStep)) continue;
+    const tr=trees[ti];
+    if(!vis(tr.x,tr.y,50)||!fogPointVisible(tr.x,tr.y)) continue;
+    floraMesh(tr.k).add(tr.x,tr.y,gh(tr.x,tr.y),tr.s*0.030,tr.a,tt[0],tt[1],tt[2],255);
+  }
+  if(typeof cover!=='undefined'&&FX.bush) for(let ci=0;ci<cover.length;ci++){
+    if(sceneryStep>1&&(ci%sceneryStep)) continue;
+    const b=cover[ci];
+    if(!vis(b.x,b.y,36)||!fogPointVisible(b.x,b.y)) continue;
+    FX.bush.add(b.x,b.y,gh(b.x,b.y),b.s*0.042,b.a,ct[0],ct[1],ct[2],255);
+  }
   for(const cs of crystals){
-    const D=deposits[cs.dep],tier=depositTier(D);if(!D||cs.band>tier||!vis(cs.x,cs.y,52))continue;
+    const D=deposits[cs.dep],tier=depositTier(D);if(!D||cs.band>tier||!vis(cs.x,cs.y,140))continue;
     if(!fogPointVisible(cs.x,cs.y))continue;
     const fill=clamp((D.remaining-(tier-1)*DEPOSIT_BAND)/DEPOSIT_BAND,0,1),edge=cs.band===tier?(.46+.54*fill):1;
     const col=cs.band===3?[255,120,255]:cs.band===2?[105,255,176]:[105,226,255];
-    const sc=cs.s*(cs.core?.073:.058)*edge;
+    const sc=cs.s*(cs.core?.090:.074)*edge;
     const H=gh(cs.x,cs.y);
     FX.crystal.add(cs.x,cs.y,H,sc,cs.a,col[0],col[1],col[2],255);
     /* Facet glints. A crystal that never flashes is a rock. Each cluster
@@ -759,58 +1079,69 @@ function render(dtDraw){
        a time - plus a standing cool glow pooled at the base, the light the
        translucent shader path implies it is leaking into the ground. */
     /* FADE, do not gate: a hard cutoff pops glows on and off when a machine
-       legitimately crosses the threshold; scaled alpha arrives as dimming. */
-    const glowQ=clamp((perfScale-0.45)/0.35,0,1);
+       legitimately crosses the threshold; scaled alpha arrives as dimming.
+       Floor stays up during deploy — matchLive is false there, and the 0.45
+       perfScale cutoff left crystals looking like unlit rocks. */
+    const deployGlow=(!matchLive&&typeof carrier!=='undefined'&&carrier.active)?0.9:0;
+    const glowQ=Math.max(0.65, deployGlow, clamp((perfScale-0.28)/0.45,0,1));
     if(glowQ>0.02){
       const tw=Math.sin(t*2.1+cs.x*0.37+cs.y*0.113);
-      if(tw>0.90){
-        const f=(tw-0.90)*10, ga=cs.a+cs.x;
+      if(tw>0.97){
+        const f=(tw-0.97)*33, ga=cs.a+cs.x;
         bbAdd.add(sprites.spark||sprites.glow,
           cs.x+Math.cos(ga)*sc*46, cs.y+Math.sin(ga)*sc*46, H+sc*175*(0.55+0.4*Math.sin(cs.y)),
-          2.2+f*3.2, t*2+cs.x, 235,250,255, 200*f*glowQ);
+          1.8+f*2.2, t*2+cs.x, 235,250,255, 140*f*glowQ);
       }
-      bbAdd.add(sprites.glow,cs.x,cs.y,H+2.5,sc*180,0,col[0],col[1],col[2],26*glowQ);
+      if(cs.core){
+        bbAdd.add(sprites.glow,cs.x,cs.y,H+1.5,sc*14,0,col[0],col[1],col[2],32*glowQ);
+      } else {
+        bbAdd.add(sprites.glow,cs.x,cs.y,H+1.3,sc*8,0,col[0],col[1],col[2],20*glowQ);
+      }
     }
   }
-  /* Resource nodes are strategic landmarks, not tiny scenery. The enlarged
-     crystal crown / vent, colour-coded ring and short vertical beacon remain
-     legible through a busy fight without revealing nodes through fog. */
-  for(const D of deposits){ if(!vis(D.x,D.y,96)||!fogPointVisible(D.x,D.y)) continue;
-    const tier=depositTier(D),col=tier===3?[255,122,255]:tier===2?[110,255,180]:tier===1?[112,228,255]:[88,92,100];
-    const pulse=.82+.18*Math.sin(t*2.1+D.pulse),H=gh(D.x,D.y),fieldR=tier?45+tier*12:34;
-    /* A node is a terrain wound before it is a prop. The terrain canvas owns
-       the persistent mineral scar; these low ground layers communicate the
-       live depletion band and shrink with it instead of leaving one generic
-       selection circle under every field. */
-    FX.disc.add(D.x,D.y,H+.18,fieldR,0,col[0],col[1],col[2],tier?18:10);
-    FX.ring.add(D.x,D.y,H+.26,fieldR, t*.045+D.pulse,col[0],col[1],col[2],tier?58:22);
-    FX.ring.add(D.x,D.y,H+.30,fieldR*.63,-t*.065-D.pulse,col[0],col[1],col[2],tier?46:16);
-    if(perfScale>.42) for(let q=0;q<5;q++){
-      const a=D.pulse+q*TAU/5,rr2=fieldR*(.58+(q&1)*.13),mx=D.x+Math.cos(a)*rr2*.52,my=D.y+Math.sin(a)*rr2*.52;
-      FX.line.add(mx,my,H+.34,rr2*.64,a,col[0],col[1],col[2],tier?32:11,2.2);
+  /* Mass nodes are the glowing shard cluster, tinted by depletion band.
+     Brown habit tints turned the bed into dirt plates and fought the CRYST
+     spikes. Kit energy habit still owns geysers. */
+  const enHabit=(BK&&BK.energy)||'vent';
+  const enCol=enHabit==='frost'?[176,216,226]:enHabit==='heat'?[226,128,58]:
+    enHabit==='spore'?[186,78,140]:[92,196,206];
+  for(const D of deposits){ if(!vis(D.x,D.y,180)||!fogPointVisible(D.x,D.y)) continue;
+    const tier=depositTier(D);
+    const col=tier===3?[255,122,255]:tier===2?[110,255,180]:tier===1?[112,228,255]:[88,92,100];
+    const pulse=.82+.18*Math.sin(t*2.1+(D.pulse||0)),H=gh(D.x,D.y);
+    if(FX.dep) FX.dep.add(D.x,D.y,H,1.18+tier*.17,0,col[0],col[1],col[2],tier?255:145);
+    /* 2D hud.js stamped crater + glow + ring; 3D never called that path, so
+       shards sat on bare grass with no halo. These are the same stamps —
+       dark rocky stain under the cluster, then a large faint cyan aura.
+       Ring alpha stays well below a selection disc (those sit at 170+). */
+    const depGlow=(!matchLive&&typeof carrier!=='undefined'&&carrier.active)?0.9:0;
+    const depQ=Math.max(0.55, depGlow, clamp((perfScale-0.28)/0.45,0,1));
+    const fieldR=46+(D.initialTier||1)*8;
+    if(bbAlpha&&sprites.crater){
+      /* Outcrop stain hugs the cluster. The 90+ wu disc was the hole that
+         hid the mesh; this stays a rocky bed, not a terrain punch. */
+      bbAlpha.add(sprites.crater,D.x,D.y,H+0.26,fieldR*1.38,(D.pulse||0)+.35,40,38,36,tier?140:84);
+      bbAlpha.add(sprites.crater,D.x+5,D.y-4,H+0.30,fieldR*1.02,-(D.pulse||0)-.7,34,40,44,tier?88:52);
     }
-    FX.dep.add(D.x,D.y,H,1.18+tier*.17,0,col[0],col[1],col[2],tier?255:145);
-    if(tier){
-      bbAdd.add(sprites.glow,D.x,D.y,H+10,(24+tier*5)*pulse,0,col[0],col[1],col[2],150);
-      bbAdd.add(sprites.glow,D.x,D.y,H+12,10+tier*2,0,255,252,240,60*pulse);
-      FX.line.add(D.x,D.y,H+18,42+tier*7,0,col[0],col[1],col[2],52+48*pulse,2.6);
-    }
+    const halo=fieldR*pulse;
+    /* One ground aura + one faint ring — the old 2D hud.js language.
+       Five stacked additive sprites (halo*2.55 + pool + H+10/H+12 punches
+       at alpha 140) blew the node into a white disc and bypassed bloom. */
+    const occ=D.taken?0.42:1;
+    bbAdd.add(sprites.glow,D.x,D.y,H+0.48,halo*1.4,0,col[0],col[1],col[2],(tier?24:8)*depQ*occ);
+    if(tier&&sprites.ring) bbAdd.add(sprites.ring,D.x,D.y,H+0.62,halo*1.15,t*.10+(D.pulse||0),col[0],col[1],col[2],18*depQ*occ);
   }
-  for(const G of geysers){ if(!vis(G.x,G.y,96)||!fogPointVisible(G.x,G.y)) continue;
+  for(const G of geysers){ if(!vis(G.x,G.y,180)||!fogPointVisible(G.x,G.y)) continue;
     const tier=typeof geyserTier==='function'?geyserTier(G):(G.taken?2:3);
-    const pc=tier===3?[92,235,255]:tier===2?[96,194,210]:tier===1?[174,162,118]:[83,82,78];
-    const pulse=.72+.28*Math.sin(t*2.6+(G.pulse||G.x*.01)),H=gh(G.x,G.y),fieldR=tier?43+tier*10:31;
-    FX.disc.add(G.x,G.y,H+.16,fieldR,0,pc[0],pc[1],pc[2],tier?17:9);
-    FX.ring.add(G.x,G.y,H+.26,fieldR,t*.09+(G.pulse||0),pc[0],pc[1],pc[2],tier?54:20);
-    if(perfScale>.42) for(let q=0;q<6;q++){
-      const a=q*TAU/6+(G.pulse||0),rr2=fieldR*(.48+(q%3)*.09),mx=G.x+Math.cos(a)*rr2*.55,my=G.y+Math.sin(a)*rr2*.55;
-      FX.line.add(mx,my,H+.32,rr2*.58,a,pc[0],pc[1],pc[2],tier?26:9,2);
-    }
-    FX.geyser.add(G.x,G.y,H,1.12+tier*.1,0,pc[0],pc[1],pc[2],tier?(G.taken?205:255):125);
-    if(tier){
-      bbAdd.add(sprites.glow,G.x,G.y,H+12,(22+tier*4)*pulse,0,pc[0],pc[1],pc[2],G.taken?92:160);
-      bbAdd.add(sprites.glow,G.x,G.y,H+14,9+tier,0,235,252,255,G.taken?38:70*pulse);
-      if(!G.taken)FX.line.add(G.x,G.y,H+22,56+tier*5,0,pc[0],pc[1],pc[2],62+54*pulse,3.2);
+    const pc=tier?enCol:[83,82,78];
+    /* Mesh stays rock. Cyan habit on the whole instance made the cairn a
+       painted metal hatch. Steam billboard carries the energy colour. */
+    const rock=enHabit==='frost'?[168,176,184]:enHabit==='heat'?[118,88,72]:
+      enHabit==='spore'?[96,78,82]:[112,104,92];
+    const pulse=.72+.28*Math.sin(t*2.6+(G.pulse||G.x*.01)),H=gh(G.x,G.y);
+    if(FX.geyser) FX.geyser.add(G.x,G.y,H,1.48+tier*.10,0,rock[0],rock[1],rock[2],tier?(G.taken?205:255):145);
+    if(tier&&qDraw!=='low'){
+      bbAdd.add(sprites.glow,G.x,G.y,H+28,(16+tier*3)*pulse,0,pc[0],pc[1],pc[2],G.taken?22:36);
     }
   }
   // crater berms — real mounds standing on the deformed ground
@@ -834,9 +1165,11 @@ function render(dtDraw){
   // ---------------- derelict districts ----------------
   const worldV2=typeof mfWorldV2Enabled==='function'&&mfWorldV2Enabled();
   for(const R of relics){
-    const rLod=R.alive?renderBand(R.x,R.y,120,false):0;
+    const deadAge=R.alive?0:Math.max(0,(typeof stats!=='undefined'?stats.t:t)-(R.fallT||0));
+    if(!R.alive && deadAge>20) continue;
+    const rLod=renderBand(R.x,R.y,120,false);
     if(!rLod||!fogPointVisible(R.x,R.y)) continue;
-    const dmg=R.hp/R.hpm, tint=180+70*dmg;
+    const dmg=R.alive?(R.hp/R.hpm):0, tint=R.alive?(180+70*dmg):96;
     /* Each ruin mesh is authored at a reference footprint; the instance scale
        maps the planned plot size onto it. Tower blocks are the tall ones, so
        they get the tightest divisor or they overwhelm the skyline. */
@@ -847,7 +1180,8 @@ function render(dtDraw){
        rendered 1-unit-tall buildings -- present in every count, invisible on
        screen. */
     const sc=Math.max(R.w,R.h)/ (R.kind===2?104 : R.kind===0?46 : R.kind===3?52 : R.kind===4?46 : R.kind===5?44
-             : (R.kind===6||R.kind===7)?1 : 44);
+             : (R.kind===6||R.kind===7)?1 : 44)*(R.alive?1:clamp(0.16+0.12*(1-deadAge/20),0.16,0.28));
+    const wreckYaw=(R.a||0)+(R.lean||0)+(R.alive?0:0.42);
     /* Kind 4 is the intact civic block. Falling back to the low block if its
        mesh is missing is not paranoia: models-civic.js has to be registered in
        BOTH boot.js and assets/data/manifest.json, and a file that is listed in
@@ -879,20 +1213,21 @@ function render(dtDraw){
          has no stump form — a crystal growth shatters rather than shearing,
          so it keeps its silhouette and loses it all at zero. */
       const m5=(R.part&&mesh!==FX.skyA&&FX.skyS)?FX.skyS:mesh;
-      m5.add(R.x,R.y,gh(R.x,R.y),sc,R.a+(R.lean||0),
+      m5.add(R.x,R.y,gh(R.x,R.y),sc,wreckYaw,
                vt?226:(curTheme==='ashland'?255:tint),
                vt?205:(curTheme==='ashland'?214:tint-6),
                vt?244:(curTheme==='ashland'?196:tint-16),255);
     } else if(!worldV2||!mfWorldV2Queue(R,sc,gh(R.x,R.y),rLod))
-      mesh.add(R.x,R.y,gh(R.x,R.y),sc*(R.kind===0?0.9:1),R.a+(R.lean||0),tint,tint-6,tint-16,255);
+      mesh.add(R.x,R.y,gh(R.x,R.y),sc*(R.kind===0?0.9:1),wreckYaw,tint,tint-6,tint-16,255);
     if(FX.decal) FX.decal.add(R.x,R.y,gh(R.x,R.y)+0.2,sc*1.05,R.a,12,18,28,130);
     /* The berm that ties the block to the ground. Footprint-shaped (the
        cross-axis lane carries depth), tinted with the BIOME so the transition
        belongs to this world rather than to the model's own grey. */
     if(FX.skirt&&rLod<2)
-      FX.skirt.add(R.x,R.y,gh(R.x,R.y)+0.05,R.w*1.34,R.a,_skC[0],_skC[1],_skC[2],255,R.h*1.34);
+      FX.skirt.add(R.x,R.y,gh(R.x,R.y)+0.14,R.w*1.34,R.a,_skC[0],_skC[1],_skC[2],255,R.h*1.34);
   }
-  if(worldV2)mfWorldV2Flush(Sun,S_nA,t);
+  const worldV2CsmDefer=worldV2&&typeof csmActive==='function'&&csmActive();
+  if(worldV2&&!worldV2CsmDefer)mfWorldV2Flush(Sun,S_nA,t);
 
   /* Structure hardstands are no longer drawn as geometry at all. They are
      levelled into the heightfield and painted into the terrain texture the
@@ -904,12 +1239,60 @@ function render(dtDraw){
      completely different model registry. Iterating buildings once preserves
      instancing without multiplying the hot loop by every faction and type. */
   for(const Bd of blds){
+    const wreckAge=(!Bd.alive&&Bd.fallT)?Math.max(0,(typeof stats!=='undefined'?stats.t:t)-Bd.fallT):-1;
+    const wreck=wreckAge>=0&&wreckAge<14;
+    if(!Bd.alive&&!wreck) continue;
     const bImportant=Bd.alive&&Bd.team===0&&(Bd.type==='hq'||Bd===blds[openBld]);
-    const bLod=Bd.alive?renderBand(Bd.x,Bd.y,140,bImportant):0;
+    const bLod=renderBand(Bd.x,Bd.y,140,bImportant);
     if(!bLod) continue;
     if(!fogEntityVisible(Bd.team,Bd.x,Bd.y)) continue;
-    const M=bldMeshFor(Bd); if(!M) continue;
     const fac=bldFactionKey(Bd);
+    /* STRATEGIC TIER — STRUCTURES. The mirror of the unit branch at :1175, and
+       until now the missing half of the feature: mfIconCellForBld, mfBldSpan
+       and the eight building glyphs existed, were rasterised into the atlas
+       every session, and had no caller. A field of unit symbols floating over
+       unreadable building meshes is not a strategic view.
+
+       SITED AFTER THE FOG GATE ABOVE, never in place of it. Disclosure is fog's
+       decision at every tier; an icon is only a different way of drawing
+       something the player is already allowed to see. (The literal
+       fogEntityVisible(Bd.team,Bd.x,Bd.y) line above is pinned by
+       tools/test-faction-strategic-defense.mjs.)
+
+       Sited before bldMeshFor() so a fully iconised structure also skips the
+       mesh registry lookup, the berm, the turret and the strategic VFX — the
+       same CPU saving the unit branch takes.
+
+       WHAT ACTUALLY CONVERTS, measured at VH=915: mfBldSpan is footprint-based
+       (size*2.2), so a wall crosses to a pure icon at span 2952 and a Sentinel
+       reaches q=0.82 at SPAN_MAX=3400, while a Factory sits at q=0 and a
+       Carrier HQ would need span 10199. The crossings scale with VH, so this is
+       the 915 px phone case and a shorter viewport converts MORE, not less: at
+       VH=800 the Sentinel is a pure icon and the Extractor reaches q=0.83.
+       Small emplacements become symbols; landmarks keep their silhouettes for
+       the whole zoom range. That is the
+       Supreme-Commander read this file's header argues for, and it is why the
+       icon LAYERS over the mesh rather than fading it — fading a building by
+       screen footprint is exactly the regression in
+       docs/POSTMORTEM-1.33.31-REGRESSION.md. */
+    const BTd=BT[Bd.type];
+    const bIcon=wreck?0:((typeof mfIconQ==='function'&&BTd)?mfIconQ(mfBldSpan(BTd)):0);
+    if(bIcon>0&&mfIconEnsure()){
+      const bH=(BTd.placement==='water'?0:gh(Bd.x,Bd.y))+2,
+            bBody=mfIconBody(Bd.team), bInk=mfIconInk(Bd.team),
+            bDpx=mfIconDpxBld(BTd), bIa=255*bIcon;
+      /* Domain 'str' — the flat anchored base variant of this faction's plate.
+         A structure is not a vehicle and should not wear the ground plate. */
+      bbIcon.add(mfIconPlateFor(fac,null,'str'),Bd.x,Bd.y,bH,bDpx,0,bBody[0],bBody[1],bBody[2],bIa);
+      bbIcon.add(mfIconCellForBld(BTd,fac),Bd.x,Bd.y,bH,bDpx*0.60,0,bInk[0],bInk[1],bInk[2],bIa);
+      if(bImportant){ const bBr=(typeof TEAMB!=='undefined'&&TEAMB[Bd.team])||bBody;
+        bbIcon.add(MF_ICO.pl_ring,Bd.x,Bd.y,bH,bDpx*1.26,0,bBr[0],bBr[1],bBr[2],bIa); }
+      /* Only a FINISHED structure may drop its mesh. A construction site still
+         has to show `grow` — replacing a half-built factory with a completed
+         symbol would report a building the player does not yet own. */
+      if(bIcon>=1&&Bd.prog>=1) continue;
+    }
+    const M=bldMeshFor(Bd); if(!M) continue;
     /* Buildings need a lighter faction-grade tint than tiny units: at phone
        zoom the regular team-blue multiplication crushed PBR panels into one
        navy silhouette. The livery remains coloured, but steel and glass read. */
@@ -920,7 +1303,7 @@ function render(dtDraw){
     /* The functional HQ is created on touchdown, but its art unfolds over two
        seconds. This avoids the old visual lie where a dropship disappeared
        and a completed base teleported into the exact same footprint. */
-    const grow=(Bd.prog<1 ? 0.30+0.70*Bd.prog : 1)*(deployAge<2.1?.62+.38*deployQ:1);
+    const grow=(Bd.prog<1 ? 0.30+0.70*Bd.prog : 1)*(deployAge<2.1?.62+.38*deployQ:1)*(wreck?clamp(0.22+0.16*(1-wreckAge/14),0.22,0.38):1);
     const an=t*1.6+(Bd.anim||0);
     let bob=0, sq=1, em=0;
     switch(Bd.type){
@@ -958,16 +1341,19 @@ function render(dtDraw){
     }
     const vi=Math.min((M.variants&&M.variants.length||1)-1,Math.max(0,(Bd.lvl||1)-1));
     const V=M.variants?M.variants[vi]:M;
-    const damageState=Bd.prog<1?0:Math.min(.999,1-clamp(Bd.hp/Math.max(1,Bd.hpm),0,1));
+    const damageState=wreck?0.999:(Bd.prog<1?0:Math.min(.999,1-clamp(Bd.hp/Math.max(1,Bd.hpm),0,1)));
     /* HQs are landmarks, so they receive the dedicated V2 landmark profile
        instead of merely being another building using a faction tint. This is
        the live production route for future authored HQ map packs. */
-    const surfaceState=(Bd.type==='hq'?4:0)+damageState;
+    /* HQ=landmark (profile 2). Other structures use profile 3 so FS3D
+       scorches them under fire; units stay on band 0 / commander 1. */
+    const surfaceState=(Bd.type==='hq'?4:6)+damageState;
     /* Encode pulse above opaque alpha; the solid shader separates it into a
        per-instance emission value. A shared mesh can now batch every building
        of this faction/type without one animated reactor flushing (and tinting)
        unrelated instances that were already queued. */
-    V.base.add(Bd.x,Bd.y,H+bob,grow*sq,Bd.rot||0,tc[0],tc[1],tc[2],255*(1+em),undefined,undefined,surfaceState);
+    if(wreck){ em=0; bob=0; }
+    V.base.add(Bd.x,Bd.y,H+bob,grow*sq,(Bd.rot||0)+(wreck?0.20:0),tc[0],tc[1],tc[2],255*(1+em),undefined,undefined,surfaceState);
     /* THE SAME BERM THE DERELICTS GET. A faction structure dropped onto a
        graded pad meets it at a perfect edge and reads as a game piece sitting
        on a board; this is the turned ground, spoil and broken slab that makes
@@ -983,25 +1369,40 @@ function render(dtDraw){
       const fr=(typeof foundationRect==='function')?foundationRect(Bd):null;
       const fw=(fr?fr[0]:(BT[Bd.type]&&BT[Bd.type].size||18)*2.2)*grow;
       const fh=(fr?fr[1]:(BT[Bd.type]&&BT[Bd.type].size||18)*2.2)*grow;
-      FX.skirt.add(Bd.x,Bd.y,H+0.05,fw*1.05,Bd.rot||0,_skC[0],_skC[1],_skC[2],255,fh*1.05);
+      FX.skirt.add(Bd.x,Bd.y,H+0.14,fw*1.05,Bd.rot||0,_skC[0],_skC[1],_skC[2],255,fh*1.05);
     }
     if(V.tur){
       V.tur.add(Bd.x,Bd.y,H+(M.turH||BLD_TUR_H[Bd.type]||14)*grow+bob,
         grow*(M.turS||BLD_TUR_S[Bd.type]||1),(Bd.tang||0)-Math.PI/2,tc[0],tc[1],tc[2],255,undefined,undefined,surfaceState);
     }
-    if(bLod===2||Bd.type==='hq')addFactionStrategicBuildingVfx(Bd,fac,H,bob,grow,t,M);
+    if(!wreck&&(bLod===2||Bd.type==='hq'))addFactionStrategicBuildingVfx(Bd,fac,H,bob,grow,t,M);
     /* The command structure is the player's visual anchor. A restrained
        world-space beacon remains readable at strategic zoom, while the BASE
        button centers the same live object in one tap. */
-    if(Bd.team===0&&Bd.type==='hq'&&Bd.prog>=1){
+    if(!wreck&&Bd.team===0&&Bd.type==='hq'&&Bd.prog>=1){
       const pulse=.76+.24*Math.sin(t*2.2);
       const bc=fac==='legion'?[255,112,76]:fac==='syndicate'?[72,214,255]:[92,210,255];
       FX.ring.add(Bd.x,Bd.y,H+2,58+pulse*7,t*.28,bc[0],bc[1],bc[2],74);
-      bbAdd.add(sprites.glow,Bd.x,Bd.y,H+42,18+pulse*5,0,bc[0],bc[1],bc[2],115);
+      /* Close-up: the old 18-unit glow sprite bloomed into a white halo on
+         the roof. Keep a small beacon only at command zoom. */
+      if(orthoSpan>560)
+        bbAdd.add(sprites.glow,Bd.x,Bd.y,H+42,7+pulse*2,0,bc[0],bc[1],bc[2],62);
       if(orthoSpan>720)
         addBeamRibbon(sprites.glow,Bd.x,H+34,Bd.y,Bd.x,H+210,Bd.y,9,bc[0],bc[1],bc[2],42,120);
     }
   }
+  if(typeof csmBegin==='function'&&typeof csmActive==='function'&&csmActive()&&csmBegin(true)){
+    if(typeof csmDrawTerrain==='function') csmDrawTerrain();
+    if(typeof mfWorld2Meshes!=='undefined') for(const k in mfWorld2Meshes) csmDrawMesh(mfWorld2Meshes[k]);
+    csmDrawBuildingCasters();
+    csmDrawSceneryCasters();
+    csmEnd(S_nA);
+  }
+  if(worldV2CsmDefer)mfWorldV2Flush(Sun,S_nA,t);
+  /* MEDIUM has no CSM restore. Icon-ensure / doodad uploads can steal
+     unit 0 mid-loop; structures sample uMat there. Always re-bind the
+     model atlas before the world flush. */
+  begin3D(S_nA);
   const bldMeshSets=[BLD_MESH,...Object.values(BLD_FACTION_MESH)];
   for(const set of bldMeshSets) for(const k in set){
     const M=set[k];
@@ -1011,7 +1412,10 @@ function render(dtDraw){
   /* Flush every world-object stream. Each of these is one draw call for an
      entire class of object — all the rocks on screen, all the tower blocks,
      every wreck — which is the whole point of instancing. */
-  FX.rock.flush(gl); FX.tree.flush(gl); FX.crystal.flush(gl);
+  FX.rock.flush(gl); if(FX.rockIce) FX.rockIce.flush(gl); if(FX.rockSlag) FX.rockSlag.flush(gl);
+  FX.tree.flush(gl); if(FX.treePine) FX.treePine.flush(gl); if(FX.treePalm) FX.treePalm.flush(gl);
+  if(FX.treeDead) FX.treeDead.flush(gl); if(FX.treeSpore) FX.treeSpore.flush(gl);
+  if(FX.bush) FX.bush.flush(gl); FX.crystal.flush(gl);
   if(typeof worldSites!=='undefined'){
     for(const S of worldSites) if(S.fill&&S.fill.n) S.fill.flush(gl);
     if(typeof WORLD_KIT!=='undefined') for(const k in WORLD_KIT){ const M=WORLD_KIT[k]; if(M.mesh.n) M.mesh.flush(gl); }
@@ -1020,7 +1424,14 @@ function render(dtDraw){
   FX.wreck.flush(gl); FX.crate.flush(gl);
   FX.cityT.flush(gl); FX.cityD.flush(gl); FX.cityH.flush(gl); FX.cityK.flush(gl);
   if(FX.cityC) FX.cityC.flush(gl);
-  if(FX.skirt) FX.skirt.flush(gl);      // opaque: belongs with the world streams
+  if(FX.skirt){
+    /* +0.14 raise is not enough at HIGH DPR: 24-bit depth still stitches
+       the berm into the pad as a shimmering seam. Offset, then restore. */
+    gl.enable(gl.POLYGON_OFFSET_FILL);
+    gl.polygonOffset(-6,-20);
+    FX.skirt.flush(gl);
+    gl.disable(gl.POLYGON_OFFSET_FILL);
+  }
   FX.plate.flush(gl); FX.line.flush(gl);
 
   /* ---- curtain wall spans ------------------------------------------
@@ -1045,6 +1456,10 @@ function render(dtDraw){
       WV.base.add(mx2,my2,gh(mx2,my2),0.62,la,tc[0],tc[1],tc[2],255,undefined,undefined,wallState);
       wallStreams.add(WV.base);
     }
+  }
+  if(typeof csmBegin==='function'&&typeof csmActive==='function'&&csmActive()&&csmBegin(false)){
+    for(const stream of wallStreams) csmDrawMesh(stream);
+    csmEnd(S_nA);
   }
   for(const stream of wallStreams) stream.flush(gl);
 
@@ -1083,7 +1498,7 @@ function render(dtDraw){
       0.9+0.5*Math.sin((typeof stats!=='undefined'?stats.t:0)*9),150*150/(dxs*dxs+dys*dys+150*150)+3);
   }
   if(carrier.active&&carrier.phase<2){
-    const H=gh(carrier.x,carrier.y),key=dropFactionKey(carrier.fac),P=DROP_PROFILE[key];
+    const H=gh(carrier.x,carrier.y),key=dropFactionKey(carrier.fac);
     const hover=carrier.phase===1? 26+Math.sin(t*1.5)*2.4 : 0;
     const flightAlt=carrierEffectiveAlt();
     const alt=H+flightAlt*0.85+hover;
@@ -1093,13 +1508,6 @@ function render(dtDraw){
     const vtolPose=clamp(flightAlt/Math.max(1,CARRIER_CRUISE_ALT),0,1);
     drawDropCraft(key,carrier.x,carrier.y,alt,carrier.ang,t,255,
                   carrier.phase===1&&flightAlt<8,thrust,vtolPose);
-    if(flightAlt<140){
-      const dr=1-flightAlt/140;
-      FX.ring.add(carrier.x,carrier.y,H+2,74+Math.sin(t*3)*8,t*0.6,P.ring[0],P.ring[1],P.ring[2],95*dr);
-      if(flightAlt<46&&perfScale>0.4&&(tick&1)===0)
-        addParticle(P.bio?0:1,carrier.x+rr(-46,46),carrier.y+rr(-46,46),rr(-30,30),rr(-14,-4),1.1,16,
-                    P.bio?126:150,P.bio?190:142,P.bio?82:124);
-    }
   }
 
   /* Enemy headquarters retain their own landed craft during the player's
@@ -1118,7 +1526,7 @@ function render(dtDraw){
                   clamp(rise/Math.max(1,CARRIER_CRUISE_ALT),0,1));
     if(!A.depart||elapsed<1.3){
       const P=DROP_PROFILE[dropFactionKey(A.fac)];
-      FX.ring.add(A.x,A.y,gh(A.x,A.y)+2,82+Math.sin(t*2.4)*7,t*.45,P.ring[0],P.ring[1],P.ring[2],80*fade);
+      bbAdd.add(sprites.glow,A.x,A.y,gh(A.x,A.y)+1.1,12,0,P.glow[0],P.glow[1],P.glow[2],24*fade);
     }
   }
 
@@ -1172,26 +1580,46 @@ function render(dtDraw){
        never replaces or fades one (docs/POSTMORTEM-1.33.31-REGRESSION.md). */
     const uCmdQ=(typeof mfCmdIconQ==='function')?mfCmdIconQ(T):0;
     const uMark=uIcon>uCmdQ?uIcon:uCmdQ;
-    if(uMark>0&&mfIconEnsure()){
-      const ih=(T.naval?1.5:gh(X,Y)+(T.air?58:0))+2,
+    const stackSkip=typeof mfIconStackSkip==='function'&&mfIconStackSkip(i);
+    if(uMark>0&&!stackSkip&&mfIconEnsure()){
+      const ih=unitGroundY(T,X,Y,i)+2,
             body=mfIconBody(uteam[i]), ink=mfIconInk(uteam[i]),
             dpx=(typeof mfIconDpx==='function')?mfIconDpx(T)
                 :clamp(18+mfUnitSpan(T)*0.12,22,40)*mfWorldPx(),
             ia=255*uMark,
             iKit=unitKit||(uteam[i]===2?'horde':null);
       bbIcon.add(mfIconPlateFor(iKit,T),X,Y,ih,dpx,0,body[0],body[1],body[2],ia);
-      bbIcon.add(mfIconCellForUnit(T),X,Y,ih,dpx*0.60,0,ink[0],ink[1],ink[2],ia);
-      if(uImportant){ const br=(typeof TEAMB!=='undefined'&&TEAMB[uteam[i]])||body;
-        bbIcon.add(MF_ICO.pl_ring,X,Y,ih,dpx*1.26,0,br[0],br[1],br[2],ia); }
+      /* iKit again, not a second guess: the glyph is the owner's delivered
+         faction art and must claim the same allegiance the plate does. A kit
+         with no art for this role falls back to the procedural glyph inside
+         mfIconCellForUnit, so this stays one lookup and one instance. */
+      bbIcon.add(mfIconCellForUnit(T,iKit),X,Y,ih,dpx*0.60,0,ink[0],ink[1],ink[2],ia);
+      /* Selected mass at cap: the plate already shows allegiance. A ring on
+         every selected icon is the same fillrate trap as FX.ring. Keep
+         commanders. Skip unselected (uImportant), skip command-zoom mass,
+         keep the ring for small on-camera squads. */
+      if(uImportant&&(ringKeepCmd(i)||(!RING_STRATEGIC&&selOnCam<=SEL_RING_LOD&&usel[i]))){
+        const br=(typeof TEAMB!=='undefined'&&TEAMB[uteam[i]])||body;
+        bbIcon.add(MF_ICO.pl_ring,X,Y,ih,dpx*1.26,0,br[0],br[1],br[2],ia);
+      }
       if(uIcon>=1) continue;          // fully iconised: no mesh work at all
     }
+    if(stackSkip) continue;
     /* Never begin from UNIT_MESH and then hope an override exists. That made
        the mixed global registry an accidental cross-faction fallback: Blue
        slot 12 became a Ravager and a missing Brood slot became a tank. */
     let M=unitKit&&typeof factionUnitMeshFor==='function'?factionUnitMeshFor(utype[i],unitKit):null;
+    /* Per-instance kit, keyed by that hero's commanderId. Player uses
+       playerCommanderId; enemy/ally seats use AI.bases/allies.commanderId.
+       Replacing FAC_MESH[type] would retint every chassis of that type. */
+    if((T.cat==='hero'||T.hero||utype[i]===4||utype[i]===28||utype[i]===29)&&typeof commanderKitMeshFor==='function'){
+      const cid=typeof commanderIdForUnit==='function'?commanderIdForUnit(i):
+        (i===heroIdx&&typeof playerCommanderId!=='undefined'?playerCommanderId:null);
+      if(cid){ const KM=commanderKitMeshFor(cid); if(KM) M=KM; }
+    }
     if(!M) continue;
     const tc=TEAMC[uteam[i]];
-    const H=T.naval?1.5:gh(X,Y)+(T.air?58:0);
+    const H=unitGroundY(T,X,Y,i);
     /* Drawn deliberately LARGER than their collision size. At command-view
        zoom a literally-scaled tank is about twenty pixels across, which is
        not enough to read a silhouette; every RTS oversizes units for
@@ -1223,7 +1651,9 @@ function render(dtDraw){
       if(!heroUnit&&!bespoke&&utype[i]<28&&FAC_DOCTRINE_MESH[F.kit])
         doctrine=FAC_DOCTRINE_MESH[F.kit][T.air?'air':'ground'];
     }else wide=ss;
-    const bank=T.air?Math.sin(t*1.7+i)*0.10:0;
+    const crashing=T.air&&typeof uCrash!=='undefined'&&uCrash[i];
+    const bank=T.air?(crashing?(typeof uCroll!=='undefined'?uCroll[i]:0):Math.sin(t*1.7+i)*0.10):0;
+    const crashYaw=crashing&&typeof uCpitch!=='undefined'?uCpitch[i]*0.38:0;
     /* Walk phase. Driven by DISTANCE covered rather than by the clock, so a
        damaged or slowed machine takes shorter strides instead of moon-walking,
        and a stationary one plants its feet. Legged units only — anything on
@@ -1237,15 +1667,16 @@ function render(dtDraw){
     const organicPhase=organic&&perfScale>.36&&orthoSpan<organicSpan
       ? t*(umov[i]?6.8:2.15)+i*1.618+(uwalk[i]||0)*.45 : 0;
     const anim=organicPhase||((T.legs&&umov[i])?(uwalk[i]||1e-4):0);
-    const bob=T.air?Math.sin(t*2.1+i)*2.4:0;
+    const bob=T.air&&!crashing?Math.sin(t*2.1+i)*2.4:0;
     const damageState=Math.min(.999,1-clamp(uhp[i]/Math.max(1,uhpm[i]),0,1));
     /* Commanders are the first live custom V2 profile. This covers Nova,
        Dominion and Syndicate commanders without forcing their unrelated meshes
        into one material or splitting each army into additional draw calls. */
     const surfaceState=(heroUnit?2:0)+damageState;
-    M.hull.add(X,Y,H+bob,ss,uang[i]-Math.PI/2+bank,tc[0],tc[1],tc[2],a,wide,anim,surfaceState);
+    M.hull.add(X,Y,H+bob,ss,uang[i]-Math.PI/2+bank+crashYaw,tc[0],tc[1],tc[2],a,wide,anim,surfaceState);
     if(M.tur) M.tur.add(X,Y,H+M.turH*ss,ss,uturr[i]-Math.PI/2,tc[0],tc[1],tc[2],a,wide,organicPhase,surfaceState);
-    if(doctrine) doctrine.add(X,Y,H+bob,ss,uang[i]-Math.PI/2+bank,tc[0],tc[1],tc[2],a,wide,undefined,surfaceState);
+    csmMarkUnitSkin(M,T,heroUnit,X,Y);
+    if(doctrine) doctrine.add(X,Y,H+bob,ss,uang[i]-Math.PI/2+bank+crashYaw,tc[0],tc[1],tc[2],a,wide,undefined,surfaceState);
     /* Crafted modules are hardware, so the army wears it. Player machines only:
        the enemy is not fitted with your loadout, and a mounting bracket on a
        brood organism is not a thing. Empty when nothing is equipped, which is
@@ -1275,11 +1706,19 @@ function render(dtDraw){
       }
     }
   }
+  if(typeof mfIconStackDraw==='function') mfIconStackDraw(gh);
+  if(typeof csmBegin==='function'&&typeof csmActive==='function'&&csmActive()&&csmBegin(false)){
+    csmDrawUnitCasters();
+    csmDrawModuleCasters();
+    csmEnd(S_nA);
+  }
+  begin3D(S_nA);
   if(modKit.length&&typeof modAttachFlush==='function') modAttachFlush();
   for(const M of UNIT_MESH){ if(!M) continue; M.hull.flush(gl); if(M.tur) M.tur.flush(gl); }
   for(const k in FAC_MESH) for(const ty in FAC_MESH[k]){
     const M=FAC_MESH[k][ty]; M.hull.flush(gl); if(M.tur) M.tur.flush(gl);
   }
+  if(typeof commanderKitMeshFlush==='function') commanderKitMeshFlush();
   for(const k in FAC_DOCTRINE_MESH){
     FAC_DOCTRINE_MESH[k].ground.flush(gl); FAC_DOCTRINE_MESH[k].air.flush(gl);
   }
@@ -1298,8 +1737,15 @@ function render(dtDraw){
      Resolved here: after every opaque surface is down, before any decal, water
      or glow. Overlays and effects then draw on top with the same depth buffer,
      so a selection ring or an explosion never picks up a contact shadow. */
+  if(typeof csmApply==='function'&&csmApply()) begin3D(S_nA);
   if(aoActive){
-    aoResolve([Sun.sky[0]*0.9+0.06, Sun.sky[1]*0.9+0.07, Sun.sky[2]*0.9+0.10]);
+    /* Tint toward a lifted sky, not 0.45*albedo. The old mix(c*sky, c, ao)
+       with 80% occlusion crushed noon buildings into silhouettes. */
+    aoResolve([
+      Math.min(1, Sun.sky[0]*0.22+0.78),
+      Math.min(1, Sun.sky[1]*0.22+0.80),
+      Math.min(1, Sun.sky[2]*0.22+0.84)
+    ]);
     /* aoResolve leaves the fullscreen AO program current. Everything below —
        selection rings, the build territory, the placement ghost — is real
        geometry drawn with the MODEL program, and was silently being issued
@@ -1309,11 +1755,54 @@ function render(dtDraw){
   }
 
   // ---------------- selection + orders (flat geometry on the ground) --------
-  for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]||!usel[i]) continue;
-    if(!vis(ux[i],uy[i],40)) continue;
-    const T=TYPES[utype[i]];
-    FX.ring.add(ux[i],uy[i],gh(ux[i],uy[i])+1.4,T.size*(T.vscale||1)*1.05,0,90,255,150,210);
+  /* Stage 1: skip unselected (usel) and off-screen (vis). Command zoom keeps
+     commanders only. Tactical mass above SEL_RING_LOD collapses to one ring
+     per view-sized cell — same pattern as health bars. */
+  {
+    const putSelRing=i=>{
+      const T=TYPES[utype[i]];
+      FX.ring.add(ux[i],uy[i],gh(ux[i],uy[i])+1.4,T.size*(T.vscale||1)*1.05,0,90,255,150,210);
+    };
+    if(RING_STRATEGIC){
+      for(let i=0;i<unitHigh;i++){
+        if(!ualive[i]||!usel[i]||!vis(ux[i],uy[i],40)) continue;
+        if(ringKeepCmd(i)) putSelRing(i);
+      }
+    } else if(typeof mfIconStackOn==='function'&&mfIconStackOn()&&typeof mfIconStackRingLeads==='function'){
+      /* Stacked rings: one per proximity cell, plus commanders. Reuses the
+         stack rebuild; does not revert SEL_RING_LOD for the unstacked band. */
+      const leads=mfIconStackRingLeads(vis, ringKeepCmd)||[];
+      for(let h=0;h<leads.length;h++){
+        const lead=leads[h], C=typeof mfIconStackCentroid==='function'?mfIconStackCentroid(lead):[ux[lead],uy[lead],1];
+        const T=TYPES[utype[lead]], r=T.size*(T.vscale||1)*1.05*(1+Math.min(0.8,Math.log(C[2]||1)*0.35));
+        FX.ring.add(C[0],C[1],gh(C[0],C[1])+1.4,r,0,90,255,150,210);
+      }
+      for(let i=0;i<unitHigh;i++){
+        if(!ualive[i]||!usel[i]||!vis(ux[i],uy[i],40)) continue;
+        if(ringKeepCmd(i)) putSelRing(i);
+        else if(typeof mfIconStackSkip!=='function'||!mfIconStackSkip(i)) putSelRing(i);
+      }
+    } else if(selOnCam>SEL_RING_LOD){
+      if(_hbI.length<unitHigh) _hbI=new Int32Array(unitHigh);
+      let n=0;
+      for(let i=0;i<unitHigh;i++){
+        if(!ualive[i]||!usel[i]||!vis(ux[i],uy[i],40)) continue;
+        if(ringKeepCmd(i)){ putSelRing(i); continue; }
+        _hbI[n++]=i;
+      }
+      const cell=Math.max(48,orthoSpan/17);
+      _hbCells.clear();
+      for(let k=0;k<n;k++){
+        const i=_hbI[k], key=((uy[i]/cell)|0)*8192+((ux[i]/cell)|0);
+        if(!_hbCells.has(key)) _hbCells.set(key,i);
+      }
+      for(const i of _hbCells.values()) putSelRing(i);
+    } else if(selOnCam){
+      for(let i=0;i<unitHigh;i++){
+        if(!ualive[i]||!usel[i]||!vis(ux[i],uy[i],40)) continue;
+        putSelRing(i);
+      }
+    }
   }
   /* ---- FORMATION + PATROL ORDERS ---------------------------------------
      The sprite fallback already drew these cues, but the active mesh renderer
@@ -1544,22 +2033,44 @@ function render(dtDraw){
     const M=(typeof bldMeshFor==='function'?bldMeshFor({type:placing.type,team:0}):null)||BLD_MESH[placing.type];
     if(M){ M.base.add(placing.x,placing.y,H,1,rt,col[0],col[1],col[2],200); M.base.flush(gl); }
   }
+  /* Pull flat decals toward the camera so 24-bit depth does not stitch them
+     into the terrain as cyan scanlines / broken C-rings. Depth TEST off as
+     well: a ring of radius 50 sits at one world Y and still loses to kerbs
+     and scar lips a few units taller than the node centre. */
+  gl.disable(gl.DEPTH_TEST);
+  gl.enable(gl.POLYGON_OFFSET_FILL);
+  gl.polygonOffset(-8,-32);
   FX.ring.flush(gl); FX.plate.flush(gl); FX.line.flush(gl);
+  gl.disable(gl.POLYGON_OFFSET_FILL);
+  gl.enable(gl.DEPTH_TEST);
   gl.enable(gl.CULL_FACE);
   gl.depthMask(true);
   gl.disable(gl.BLEND);
 
 
   // ---------------- water ----------------
+  /* Bloom is extracted first so the ocean is not a bright-pass source.
+     Depth stays the opaque scene, so hulls still occlude the sheet. */
+  if(typeof mfGfxScissor==='function') mfGfxScissor(false);
+  if(aoActive&&typeof aoExtractBloom==='function') aoExtractBloom();
   if(waterIdxCount){
     if((tick&3)===0) animateWater(t);
+    queueWaterFx();
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(false);
     gl.disable(gl.CULL_FACE);
-    setEmis(0.05);
     drawWater();
-    setEmis(0);
+    if(FX.wake||FX.ripple){
+      gl.useProgram(progG);
+      gl.uniformMatrix4fv(UG.uVP,false,matVP);
+      gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+      gl.enable(gl.POLYGON_OFFSET_FILL);
+      gl.polygonOffset(-8,-32);
+      if(FX.wake) FX.wake.flush(gl);
+      if(FX.ripple) FX.ripple.flush(gl);
+      gl.disable(gl.POLYGON_OFFSET_FILL);
+    }
     gl.enable(gl.CULL_FACE);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
@@ -1598,7 +2109,7 @@ function render(dtDraw){
      on regimented formation rows merge into solid stripes. Sample the effects
      there; the full billboard stack returns automatically as the player zooms
      to tactical range. */
-  const overviewVfx=orthoSpan>2400;
+  const overviewVfx=orthoSpan>(typeof mfLodSpan==='function'?mfLodSpan(2400):2400);
 
   /* Pickup identity is carried above the physical pod, so a Mass Cache, scan
      beacon and NOVA code cylinder do not become the same gold box at command
@@ -1643,9 +2154,9 @@ function render(dtDraw){
     }
   }
 
-  // Projectiles are real bolts with short velocity-aligned trails. Each family
-  // has a silhouette players can recognise before it lands: hard gauss line,
-  // soft plasma corona, exhaust-driven missile, or a smoking cluster shell.
+  // Projectiles are directed shots: a velocity-aligned tracer from behind the
+  // round to its head, plus a small spark at the tip. Rings, faction orbs and
+  // GPU ember sprays around the body made volleys read as orbiting sparks.
   let projectileDrawn=0;
   const projectileLimit=overviewVfx?520:1800;
   for(let i=0;i<pHigh;i++){
@@ -1661,131 +2172,91 @@ function render(dtDraw){
     if(!vis(X,Y,60)) continue;
     if(!fogFxVisible(X,Y,pteam[i])) continue;
     const fac=typeof mfCombatFactionTeam==='function'?mfCombatFactionTeam(pteam[i]):(pteam[i]===2?'horde':pteam[i]===0?'nova':'legion');
-    const sig=typeof mfFactionFxPalette==='function'?mfFactionFxPalette(pteam[i]):{a:TEAMB[pteam[i]],b:TEAMB[pteam[i]]};
     const c=TEAMB[pteam[i]], wk=pwk[i]||'p', bio=!!pBio[i], nova=fac==='nova'&&!pCannon[i]&&!pBarrage[i];
+    const fp=typeof mfFactionFxPalette==='function'?mfFactionFxPalette(pteam[i]):{a:c,b:[255,250,240]};
     const ty=ptype[i], power=clamp(Math.sqrt(Math.max(1,pdmg[i]))/6,.7,2.45);
     const H=gh(X,Y)+ (ty===2? 16+Math.sin(pt[i]*Math.PI)*(pArc[i]||70) : ty===7? 20 : 12);
     const yaw=Math.atan2(pvy[i],pvx[i]);
     const vl=Math.hypot(pvx[i],pvy[i])||1, nx=pvx[i]/vl, ny=pvy[i]/vl;
-    const trail=wk==='g'?30:ty===7?22:ty===9?18:ty===2?15:ty===1?13:ty===3?17:8;
-    const bx=X-nx*trail, by=Y-ny*trail;
+    const age=Math.max(0,(pmax[i]||plife[i])-plife[i]);
+    const vq=typeof mfVfxQ==='function'?mfVfxQ():1;
+    const streakMul=vq>=1.2?1.78:vq>=0.95?1.48:vq>=0.65?1.16:0.86;
+    const streak=clamp(vl*(wk==='g'?0.28:ty===1?0.23:0.18)*streakMul, 48*streakMul, (wk==='g'?198:ty===1?162:136)*streakMul);
+    const bx=X-nx*streak, by=Y-ny*streak;
+    const ballistic=ty===2||!!pBarrage[i];
+    const young=ballistic?pt[i]<0.05:age<0.12;
+    if(young){
+      const ox=ballistic?psx[i]:X-pvx[i]*age, oy=ballistic?psy[i]:Y-pvy[i]*age;
+      const mh=fxWeaponH(ox,oy,true);
+      addMuzzleFlash(ox,oy,mh,nx,ny,(pCannon[i]||pBarrage[i]||ty===2||ty===9)?8.2:5.0*power,
+        nova?110:255, nova?230:185, nova?255:80, 230*(ballistic?1-pt[i]/0.05:1-age/0.12));
+    }
     if(pBarrage[i]){
-      /* A slow, dark shell remains readable against its own hot fuse and
-         smoke wake. Its authored arc may leave the camera before it descends. */
+      /* A slow, dark shell remains readable against its own hot fuse. The
+         streak follows the TANGENT of the ballistic arc so the shot does not
+         flatten into a map-space spark while the body is hundreds of metres up. */
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,10.5*power,yaw+Math.PI/2,72,68,64,255);
-      bbAdd.add(sprites.glow,X,Y,H,11*power,0,255,155,54,235);
-      bbAdd.add(sprites.glow,X,Y,H,24*power,0,255,92,28,78);
-      /* A short core streak follows the TANGENT of the ballistic arc. The old
-         same-height segment visually flattened the shot into a map-space
-         tracer even while the shell billboard was hundreds of metres high. */
+      bbAdd.add(sprites.glow,X,Y,H,7.5*power,0,255,155,54,200);
       const q0=Math.max(0,pt[i]-.022),tx0=psx[i]+(pex[i]-psx[i])*q0,ty0=psy[i]+(pey[i]-psy[i])*q0;
       const h0=gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
-      addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.7*power,255,132,42,175);
+      addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.55*power,255,132,42,210);
     } else if(bio){
-      /* Fully grown payload: no metal casing, rocket body or exhaust plume.
-         A bright bile nucleus swims inside a violet spore sheath, with a soft
-         irregular trail that remains readable against both snow and cities. */
       const pulse=.84+Math.sin(t*15+i*1.7)*.16;
-      bbAdd.add(sprites.glow,X,Y,H,8.5*power*pulse,0,205,255,118,245);
-      bbAdd.add(sprites.glow,X,Y,H,19*power,0,164,76,232,125);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,.72*power,145,220,80,145);
-      if(perfScale>.42){
-        FX.ring.add(X,Y,H,6.5*power*pulse,yaw,180,255,105,125);
-        if((i&3)===0) FX.ring.add(X,Y,H,10*power*(2-pulse),-yaw,178,82,235,72);
-      }
+      bbAdd.add(sprites.glow,X,Y,H,8.4*power*pulse,0,205,255,118,250);
+      bbAdd.add(sprites.glow,X,Y,H,16*power,0,164,76,232,110);
+      addBeam3D(FX.beam,bx,H,by,X,H,Y,.92*power,145,220,80,210);
     } else if(wk==='g'){
-      /* Gauss is a hard white/cyan needle with almost no corona. It is the
-         visual opposite of plasma: fast, straight, and visibly penetrative. */
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,.75*power,125,220,255,245);
-      addBeam3D(FX.beam,X-nx*trail*.55,H+1.2,Y-ny*trail*.55,X,H+1.2,Y,.22*power,255,255,255,255);
-      bbAdd.add(sprites.glow,X,Y,H,5.5*power,0,190,240,255,205);
-      if(power>1.25) FX.ring.add(X,Y,H,4.5*power,yaw,120,220,255,120);
+      /* Gauss is a hard white/cyan needle: origin behind the round, destination
+         at the tip. No corona ring — that read as a spark circling the shot. */
+      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.18*power,fp.a[0],fp.a[1],fp.a[2],255);
+      bbAdd.add(sprites.glow,X,Y,H,5.8*power,0,245,252,255,250);
     } else if(wk==='s'){
-      /* Sonic rounds carry two phase colours and expanding wavefronts. */
       const pulse=.86+Math.sin(t*18+i)*.14;
-      bbAdd.add(sprites.glow,X,Y,H,9*power*pulse,0,225,245,255,245);
-      bbAdd.add(sprites.glow,X,Y,H,22*power,0,175,105,255,150);
-      FX.ring.add(X,Y,H,7*power*pulse,yaw,135,220,255,150);
-      FX.ring.add(X,Y,H,11*power*(2-pulse),-yaw,205,120,255,95);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,.55*power,185,125,255,115);
+      bbAdd.add(sprites.glow,X,Y,H,8.4*power*pulse,0,225,245,255,240);
+      addBeam3D(FX.beam,bx,H,by,X,H,Y,.92*power,fp.a[0],fp.a[1],fp.a[2],220);
     } else if(wk==='f'){
-      /* Incendiary canisters look like moving fire, not orange bullets. */
-      bbAdd.add(sprites.flame||sprites.fireball||sprites.glow,X,Y,H,10*power,yaw+Math.PI/2,255,235,175,245);
-      bbAdd.add(sprites.glow,X,Y,H,22*power,0,255,105,28,105);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.1*power,255,105,24,150);
+      bbAdd.add(sprites.flame||sprites.fireball||sprites.glow,X,Y,H,8*power,yaw+Math.PI/2,255,235,175,245);
+      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.22*power,255,105,24,210);
     } else if(wk==='i'||ty===6){
-      /* Plasma orb: a slow glowing ball with a corona, not a tracer. Its size
-         and softness are the visual promise that it's slow and it hurts. */
-      bbAdd.add(sprites.glow,X,Y,H,(8+Math.sin(t*13+i)*1.2)*power,0,225,250,255,250);
-      bbAdd.add(sprites.glow,X,Y,H,(22+Math.sin(t*9+i)*3)*power,0,80,205,255,195);
-      bbAdd.add(sprites.glow,X,Y,H,40*power,0,35,145,255,62);
-      if(perfScale>0.42) addBeam3D(FX.beam,bx,H,by,X,H,Y,1.3*power,75,205,255,125);
+      /* Plasma orb: a slow glowing ball. A directed trail names the axis
+         without turning the orb into a laser. */
+      bbAdd.add(sprites.glow,X,Y,H,(9+Math.sin(t*13+i)*1.2)*power,0,235,252,255,255);
+      bbAdd.add(sprites.glow,X,Y,H,(20+Math.sin(t*9+i)*2)*power,0,80,205,255,165);
+      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.22*power,fp.a[0],fp.a[1],fp.a[2],205);
     } else if(ty===4){
-      // Unguided rocket: chunky smoking body with an unstable ember tail.
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,7.5*power,yaw+Math.PI/2,nova?155:205,nova?225:210,nova?255:215,245);
-      bbAdd.add(sprites.glow,bx,by,H,12*power,0,nova?100:255,nova?225:130,nova?255:45,210);
-      addBeam3D(FX.beam,bx-nx*8,H,by-ny*8,X,H,Y,1.15*power,nova?80:255,nova?205:105,nova?255:35,120);
+      bbAdd.add(sprites.glow,bx,by,H,9*power,0,nova?100:255,nova?225:130,nova?255:45,180);
+      addBeam3D(FX.beam,bx-nx*6,H,by-ny*6,X,H,Y,1.32*power,fp.a[0],fp.a[1],fp.a[2],200);
     } else if(ty===7){
-      // missile: a compact solid shard with a hot exhaust flare behind it
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,7.4*power,yaw+Math.PI/2,nova?160:220,nova?230:225,255,245);
-      const bx=X-Math.cos(yaw)*7, by=Y-Math.sin(yaw)*7;
-      bbAdd.add(sprites.glow,bx,by,H,(13+Math.sin(t*22+i)*3)*power,0,nova?105:255,nova?225:180,nova?255:90,225);
-      bbAdd.add(sprites.glow,bx,by,H,24*power,0,nova?55:255,nova?170:120,nova?255:50,75);
-      addBeam3D(FX.beam,bx-nx*10,H,by-ny*10,X,H,Y,1.3*power,nova?80:255,nova?205:145,nova?255:60,175);
+      const ex=X-nx*7, ey=Y-ny*7;
+      bbAdd.add(sprites.glow,ex,ey,H,(10+Math.sin(t*22+i)*2)*power,0,nova?105:255,nova?225:180,nova?255:90,200);
+      addBeam3D(FX.beam,ex-nx*8,H,ey-ny*8,X,H,Y,1.38*power,fp.a[0],fp.a[1],fp.a[2],220);
     } else if(ty===8){
-      // flak: a small hard tracer with a bright arming spark
-      bbAdd.add(sprites.glow,X,Y,H+14,5.6*power,0,255,235,190,250);
-      bbAdd.add(sprites.glow,X,Y,H+14,9*power,0,255,205,120,205);
-      if(perfScale>0.48) FX.ring.add(X,Y,H+14,(5.5+Math.sin(t*18+i)*1.5)*power,0,255,205,125,105);
+      addBeam3D(FX.beam,bx,H+14,by,X,H+14,Y,.88*power,255,220,140,250);
+      bbAdd.add(sprites.glow,X,Y,H+14,5.2*power,0,255,235,190,245);
     } else if(ty===9){
-      // cluster shell: heavy body, lofted, trailing smoke
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H+26,8.2*power,yaw+Math.PI/2,nova?145:205,nova?218:198,nova?255:188,245);
-      bbAdd.add(sprites.glow,X,Y,H+26,10*power,0,nova?105:255,nova?225:180,nova?255:110,155);
-      addBeam3D(FX.beam,bx,H+24,by,X,H+26,Y,1.45*power,nova?75:255,nova?190:135,nova?255:55,125);
+      addBeam3D(FX.beam,bx,H+24,by,X,H+26,Y,1.42*power,fp.a[0],fp.a[1],fp.a[2],200);
     } else if(ty===2){
-      // Ballistic HE: a dark physical shell with a hot fuse and smoke in sim.
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,6.5*power,yaw+Math.PI/2,nova?110:95,nova?145:90,nova?175:86,255);
-      bbAdd.add(sprites.glow,X,Y,H,6.8*power,0,nova?100:255,nova?220:170,nova?255:75,190);
+      bbAdd.add(sprites.glow,X,Y,H,5.2*power,0,nova?100:255,nova?220:170,nova?255:75,190);
+      const q0=Math.max(0,pt[i]-.03),tx0=psx[i]+(pex[i]-psx[i])*q0,ty0=psy[i]+(pey[i]-psy[i])*q0;
+      const h0=gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
+      addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.28*power,255,150,60,205);
     } else if(ty===3||pCannon[i]){
-      // Commander HE is large enough to read as ordnance, not a team-colour bolt.
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,9.5*power,yaw+Math.PI/2,86,82,78,255);
-      bbAdd.add(sprites.glow,X,Y,H,13*power,0,255,165,62,230);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.5*power,255,135,45,160);
+      bbAdd.add(sprites.glow,X,Y,H,8*power,0,255,165,62,210);
+      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.55*power,255,135,45,225);
     } else {
-      const sc=(ty===1?5.2:3.2)*power;
-      const cr=nova?115:ty===1?255:c[0], cg=nova?225:ty===1?188:c[1], cb=nova?255:ty===1?100:c[2];
-      bbAdd.add(sprites.glow,X,Y,H,Math.max(4.2,sc*1.15),0,cr,cg,cb,245);
-      if(nova){
-        addBeam3D(FX.beam,bx,H,by,X,H,Y,.38*power,105,225,255,155);
-        if(power>1.05) FX.ring.add(X,Y,H,4.4*power,yaw,120,230,255,105);
-      }
-      bbAdd.add(sprites.glow,X,Y,H,sc*2.2,0,cr,cg,cb,135);
-      if(perfScale>0.38) addBeam3D(FX.beam,bx,H,by,X,H,Y,(ty===1?1.25:.72)*power,cr,cg,cb,ty===1?180:125);
-      if(ty===1&&perfScale>0.48){
-        const side=2.2;
-        addBeam3D(FX.beam,bx-ny*side,H+1.5,by+nx*side,X-ny*side,H+1.5,Y+nx*side,
-          .42*power,135,215,255,145);
-      }
-    }
-    /* Ordnance carries a restrained faction emission around the authored
-       weapon body. Heavy and specialist shots always get it; common rifle
-       rounds are sampled so a 1,000-unit battle does not become a glow wall. */
-    const facSig=essential||bio||wk==='g'||wk==='s'||wk==='i'||((i&3)===0);
-    if(facSig&&!bio&&perfScale>.32){
-      if(fac==='legion'){
-        bbAdd.add(sprites.glow,X,Y,H,8.5*power,0,sig.a[0],sig.a[1],sig.a[2],155);
-        if(essential)FX.ring.add(X,Y,H,6.2*power,yaw,sig.b[0],sig.b[1],sig.b[2],105);
-      }else if(fac==='syndicate'){
-        bbAdd.add(sprites.glow,X,Y,H,10.5*power,0,sig.a[0],sig.a[1],sig.a[2],165);
-        FX.ring.add(X,Y,H,(7+Math.sin(t*16+i)*1.4)*power,-yaw,sig.b[0],sig.b[1],sig.b[2],115);
-      }else{
-        bbAdd.add(sprites.glow,X,Y,H,7.2*power,0,sig.a[0],sig.a[1],sig.a[2],125);
-      }
+      const cr=fp.a[0], cg=fp.a[1], cb=fp.a[2];
+      addBeam3D(FX.beam,bx,H,by,X,H,Y,(ty===1?1.72:1.32)*power,cr,cg,cb,ty===1?255:245);
+      bbAdd.add(sprites.glow,X,Y,H,(ty===1?8.4:6.8)*power,0,255,252,240,255);
+      bbAdd.add(sprites.glow,X,Y,H,(ty===1?3.6:2.8)*power,0,255,255,248,255);
     }
   }
-  // Every beam has four readable layers: broad coloured bloom, saturated body,
-  // white-hot core, then emitter/impact optics. Hero and support weapons add a
-  // bounded helix pass; common lasers stay cheap and clean.
+  // Beams connect shooter to target. addBeam3D already supplies sheath + core,
+  // so a second white pass (and helix on every style) turned the link into fog.
   let beamDrawn=0, fancyBeams=0;
   const beamLimit=overviewVfx?52:180;
   /* Hidden renderer lab for development captures and device QA. It never runs
@@ -1812,65 +2283,57 @@ function render(dtDraw){
     if(sty==='orbital'||sty==='orbital_up'){
       const gx=sty==='orbital'?bm.x1:bm.x0, gy=sty==='orbital'?bm.y1:bm.y0;
       const h=gh(gx,gy)+8, sway=Math.sin(t*17+bm.seed)*5;
-      addBeam3D(FX.beam,gx+sway,h+720,gy-sway*0.4,gx,h,gy,bm.w*2.8,bm.r,bm.g,bm.b,lf*68);
-      addBeam3D(FX.beam,gx+sway*.3,h+720,gy,gx,h,gy,bm.w*.78,255,252,226,lf*250);
-      if(!overviewVfx&&perfScale>.44){
-        const ob={x0:gx+sway,y0:gy-sway*.4,x1:gx,y1:gy,w:bm.w,seed:bm.seed};
-        addBeamHelix(ob,h+720,h,bm.w*1.15,4.2,255,184,70,lf*150,t,false);
-      }
-      addBeamBurst(gx,gy,h+8,bm.w*7.2,bm.r,bm.g,bm.b,lf*230,bm.seed+t*.4);
-      FX.ring.add(gx,gy,h+2,bm.w*(3.5+(1-lf)*2.2),0,bm.r,bm.g,bm.b,lf*220);
+      addBeam3D(FX.beam,gx+sway,h+720,gy-sway*0.4,gx,h,gy,bm.w*2.4,bm.r,bm.g,bm.b,lf*90);
+      addBeam3D(FX.beam,gx+sway*.3,h+720,gy,gx,h,gy,bm.w*.7,255,252,226,lf*245);
+      addBeamBurst(gx,gy,h+8,bm.w*4.2,bm.r,bm.g,bm.b,lf*210);
       continue;
     }
-    const h0=gh(bm.x0,bm.y0)+13, h1=gh(bm.x1,bm.y1)+13;
+    const h0=fxWeaponH(bm.x0,bm.y0,true), h1=fxWeaponH(bm.x1,bm.y1,false);
+    const fpB=typeof mfFactionFxPalette==='function'?mfFactionFxPalette(bm.team):null;
+    let br=bm.r, bgc=bm.g, bbc=bm.b;
+    if(fpB&&(sty==='laser'||sty==='tracer'||sty==='sniper'||sty==='lance')){
+      br=(br*0.42+fpB.a[0]*0.58)|0; bgc=(bgc*0.42+fpB.a[1]*0.58)|0; bbc=(bbc*0.42+fpB.a[2]*0.58)|0;
+    }
     if(sty==='arc'){
       const dx=bm.x1-bm.x0, dy=bm.y1-bm.y0, dl=Math.hypot(dx,dy)||1;
-      const ox=-dy/dl, oy=dx/dl, seg=6;
+      const ox=-dy/dl, oy=dx/dl, seg=5;
       let ax=bm.x0, ay=bm.y0, ah=h0;
       for(let k=1;k<=seg;k++){
         const q=k/seg, edge=(k===seg?0:Math.sin(q*Math.PI));
-        const jitter=Math.sin(bm.seed*7+k*12.71+t*31)*bm.w*2.8*edge;
+        const jitter=Math.sin(bm.seed*7+k*12.71+t*31)*bm.w*2.2*edge;
         const ex=bm.x0+dx*q+ox*jitter, ey=bm.y0+dy*q+oy*jitter;
         const eh=h0+(h1-h0)*q+Math.sin(q*Math.PI)*4;
-        addBeam3D(FX.beam,ax,ah,ay,ex,eh,ey,bm.w*1.7,bm.r,bm.g,bm.b,lf*95);
-        addBeam3D(FX.beam,ax,ah,ay,ex,eh,ey,bm.w*0.52,235,250,255,lf*245);
+        addBeam3D(FX.beam,ax,ah,ay,ex,eh,ey,bm.w*1.35,br,bgc,bbc,lf*220);
         ax=ex; ay=ey; ah=eh;
       }
-      addBeamBurst(bm.x1,bm.y1,h1,bm.w*5.6,155,225,255,lf*220,bm.seed+t*2);
+      if(bm.t<0.11) addMuzzleFlash(bm.x0,bm.y0,h0,dx,dy,bm.w*2.4,br,bgc,bbc,(1-bm.t/0.11)*210);
+      addBeamBurst(bm.x1,bm.y1,h1,bm.w*3.2,155,225,255,lf*220);
       continue;
     }
     const pulse=sty==='thermal'?(0.78+Math.sin(t*24+bm.seed)*0.22):1;
-    const outer=sty==='lance'?3.5:sty==='thermal'?2.6:sty==='repair'?1.9:sty==='sniper'?1.45:1.75;
-    addBeam3D(FX.beam,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*outer*pulse,bm.r,bm.g,bm.b,lf*(sty==='tracer'?75:105));
-    addBeam3D(FX.beam,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*(sty==='lance'?0.68:0.48),
-      sty==='thermal'?255:238,sty==='thermal'?225:250,sty==='thermal'?150:255,lf*245);
-    const fancy=!overviewVfx&&perfScale>.44&&fancyBeams<12;
-    if(fancy&&(sty==='lance'||sty==='repair'||sty==='thermal')){
+    const outer=sty==='lance'?2.85:sty==='thermal'?2.35:sty==='repair'?1.55:sty==='sniper'?1.48:sty==='tracer'?1.42:1.58;
+    addBeam3D(FX.beam,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*outer*pulse,br,bgc,bbc,lf*(sty==='tracer'?250:245));
+    if(!overviewVfx&&perfScale>.44&&fancyBeams<8&&sty==='lance'){
       fancyBeams++;
-      const hr=sty==='lance'?bm.w*2.2:sty==='thermal'?bm.w*1.45:bm.w*1.7;
-      const hc=sty==='thermal'?[255,160,60]:sty==='repair'?[140,255,190]:[150,225,255];
-      addBeamHelix(bm,h0,h1,hr,sty==='lance'?2.8:2.1,hc[0],hc[1],hc[2],lf*(sty==='lance'?185:145),t,sty==='thermal');
+      addBeamHelix(bm,h0,h1,bm.w*0.9,2.4,150,225,255,lf*130,t,false);
     }
-    if(sty==='thermal'){
-      for(let k=1;k<4;k++){
-        const q=(k/4+t*1.8+bm.seed)%1;
-        bbAdd.add(sprites.fireball||sprites.glow,bm.x0+(bm.x1-bm.x0)*q,bm.y0+(bm.y1-bm.y0)*q,
-          h0+(h1-h0)*q,bm.w*4.2,0,255,125,40,lf*120);
-      }
-    } else if(sty==='repair'){
-      for(let k=0;k<3;k++){
-        const q=(k/3+t*2.2+bm.seed)%1;
+    if(sty==='thermal'&&perfScale>.4){
+      for(let k=1;k<3;k++){
+        const q=(k/3+t*1.8+bm.seed)%1;
         bbAdd.add(sprites.glow,bm.x0+(bm.x1-bm.x0)*q,bm.y0+(bm.y1-bm.y0)*q,
-          h0+(h1-h0)*q,bm.w*3.1,0,145,255,185,lf*190);
+          h0+(h1-h0)*q,bm.w*2.0,0,255,140,50,lf*85);
+      }
+    } else if(sty==='repair'&&perfScale>.4){
+      for(let k=0;k<2;k++){
+        const q=(k/2+t*2.2+bm.seed)%1;
+        bbAdd.add(sprites.glow,bm.x0+(bm.x1-bm.x0)*q,bm.y0+(bm.y1-bm.y0)*q,
+          h0+(h1-h0)*q,bm.w*1.7,0,145,255,185,lf*140);
       }
     }
-    const hitSize=bm.w*(sty==='lance'?7.5:sty==='thermal'?6.2:sty==='sniper'?4.6:sty==='repair'?3.5:2.7);
-    if(sty!=='tracer') addBeamBurst(bm.x1,bm.y1,h1,hitSize,bm.r,bm.g,bm.b,lf*215,bm.seed+t*.8);
-    else bbAdd.add(sprites.glow,bm.x1,bm.y1,h1,hitSize,0,bm.r,bm.g,bm.b,lf*180);
-    bbAdd.add(sprites.glow,bm.x0,bm.y0,h0,bm.w*(sty==='lance'?4.8:2.8),0,bm.r,bm.g,bm.b,lf*155);
-    if(sty==='lance'||sty==='sniper'){
-      FX.ring.add(bm.x1,bm.y1,h1-10,bm.w*(sty==='lance'?3.6:2.2),0,bm.r,bm.g,bm.b,lf*185);
-    }
+    if(bm.t<0.11) addMuzzleFlash(bm.x0,bm.y0,h0,bm.x1-bm.x0,bm.y1-bm.y0,
+      bm.w*(sty==='lance'?3.6:2.2),br,bgc,bbc,(1-bm.t/0.11)*225);
+    const hitSize=bm.w*(sty==='lance'?4.2:sty==='thermal'?3.2:sty==='sniper'?2.8:sty==='repair'?2.2:2.0);
+    addBeamBurst(bm.x1,bm.y1,h1,hitSize*(sty==='tracer'?0.82:1),br,bgc,bbc,lf*(sty==='tracer'?200:220));
   }
   /* ---- particles as sprite billboards --------------------------------
      These use the original procedural sprite art — soft smoke, layered
@@ -1886,12 +2349,24 @@ function render(dtDraw){
     const S=artShellSmoke[s];
     if(overviewVfx&&(s&1))continue;
     if(!vis(S.x,S.y,100)||!fogFxVisible(S.x,S.y,S.team))continue;
-    const lf=S.life/S.max,age=1-lf,sz=S.size*(1+age*1.85),H=gh(S.x,S.y)+S.lift;
-    bbAlpha.add(sSmokeB,S.x,S.y,H,sz,S.rot+t*.16,74+age*16,70+age*14,67+age*12,145*lf);
+    const lf=S.life/S.max,age=1-lf,sz=S.size*(1.15+age*2.25),H=gh(S.x,S.y)+S.lift;
+    const aSmoke=Math.min(205,175*lf);
+    bbAlpha.add(sSmokeB,S.x,S.y,H,sz,S.rot+t*.16,74+age*16,70+age*14,67+age*12,aSmoke);
+    if((typeof mfVfxQ==='function'?mfVfxQ():1)>=0.55)
+      bbAlpha.add(sSmokeB,S.x+Math.sin(S.rot)*sz*.22,S.y+Math.cos(S.rot)*sz*.18,
+        H+sz*.16,sz*.78,S.rot-t*.12,82+age*12,76+age*10,70+age*8,aSmoke*.7);
     if(S.hot&&age<.42)bbAdd.add(sGlowB,S.x,S.y,H,sz*.58,0,255,118,34,105*(1-age/.42));
   }
   let combatParticleDrawn=0;
-  for(let i=0;i<MAXPART;i++){
+  /* HIGH walks the whole ring. MEDIUM/LOW walk recent slots from fHead —
+     dead-slot scan of 9000 was the leftover tax. Combat flashes are young
+     and sit near the head; magnitudes are unchanged. */
+  const gfxQ=typeof mfGfxKey==='function'?mfGfxKey():'high';
+  const liveN=(typeof fCount==='number')?fCount:MAXPART;
+  const midWalk=liveN>0&&(gfxQ==='medium'||gfxQ==='low');
+  const partLook=liveN<=0?0:midWalk?Math.min(MAXPART,Math.max(liveN*(gfxQ==='low'?3:2),gfxQ==='low'?360:720)):MAXPART;
+  for(let k=0;k<partLook;k++){
+    const i=midWalk?((fHead-1-k+MAXPART)%MAXPART):k;
     if(flife[i]<=0) continue;
     /* Preserve combat punctuation at every zoom. Only long-lived atmosphere
        and smoke are sampled; flashes, rings, flames, fireballs and fragments
@@ -1905,45 +2380,74 @@ function render(dtDraw){
     if(!vis(X,Y,90)) continue;
     if(!fogPointVisible(X,Y)) continue;
     const lf=flife[i]/fmax[i], ty=ftype[i], H=gh(X,Y);
-    if(ty===1){                               // drifting smoke
-      const gsz=fsize[i]*(1.1+(1-lf)*1.5);
-      bbAlpha.add(sSmokeB,X,Y,H+8+(1-lf)*26,gsz,i*0.4+t*0.3, fcr[i],fcg[i],fcb[i], 150*lf);
+    /* Type 0 flashes are 2D (no height). Small ones are muzzle/hit sparks —
+       lift to turret/hull. Large ones are crater detonations and stay on dirt. */
+    const Hfx=ty===0&&fsize[i]<22?fxWeaponH(X,Y,fsize[i]<11):H;
+    /* Skip additive flashes/flames on the hull. Dust (type 1/10) still draws. */
+    if(!matchLive&&typeof carrier!=='undefined'&&carrier.active&&carrier.phase<2
+       &&(ty===0||ty===2||ty===4)){
+      const cdx=X-carrier.x,cdy=Y-carrier.y;
+      if(cdx*cdx+cdy*cdy<100*100) continue;
+    }
+    if(ty===1){                               // drifting smoke — stacked lobes, not a flat disc
+      const gsz=fsize[i]*(1.28+(1-lf)*1.85);
+      const nearDrop=!matchLive&&typeof carrier!=='undefined'&&carrier.active&&carrier.phase<2
+        &&(X-carrier.x)*(X-carrier.x)+(Y-carrier.y)*(Y-carrier.y)<100*100;
+      const vq=typeof mfVfxQ==='function'?mfVfxQ():1;
+      const airH=typeof fzh!=='undefined'&&fzh[i]>0.5?fzh[i]:0;
+      const lift=airH?2+(1-lf)*10:(nearDrop?1.6:11+(1-lf)*34);
+      const baseH=airH||H;
+      const a0=nearDrop?120*lf:Math.min(215, (vq>=0.65?185:150)*lf);
+      bbAlpha.add(sSmokeB,X,Y,baseH+lift,gsz,i*0.4+t*0.22, fcr[i],fcg[i],fcb[i], a0);
+      if(!nearDrop&&vq>=0.45){
+        bbAlpha.add(sSmokeB,X+Math.sin(i*2.1)*gsz*.30,Y+Math.cos(i*1.7)*gsz*.26,
+          baseH+lift+gsz*.20,gsz*.84,-i*.28-t*.16,fcr[i]+10,fcg[i]+8,fcb[i]+6, a0*.74);
+      }
+      if(!nearDrop&&vq>=0.95){
+        bbAlpha.add(sSmokeB,X+Math.cos(i*1.4)*gsz*.24,Y+Math.sin(i*2.3)*gsz*.22,
+          baseH+lift+gsz*.42,gsz*.64,i*.51+t*.12,fcr[i]+6,fcg[i]+5,fcb[i]+4, a0*.5);
+      }
     } else if(ty===10){                       // movement dust, kept near the tracks / boots
-      const age=1-lf,gsz=fsize[i]*(.85+age*1.35);
-      bbAlpha.add(sSmokeB,X,Y,H+2+age*8,gsz,i*.53+t*.18,fcr[i],fcg[i],fcb[i],125*lf);
+      const age=1-lf,gsz=fsize[i]*(.95+age*1.45);
+      bbAlpha.add(sSmokeB,X,Y,H+1.4+age*4,gsz,i*.53+t*.18,fcr[i],fcg[i],fcb[i],140*lf);
     } else if(ty===8){                        // multi-lobed rising smoke plume
-      const age=1-lf, gsz=fsize[i]*(1.05+age*1.8);
-      bbAlpha.add(sSmokeB,X,Y,H+8+age*34,gsz,i*0.4+t*0.25,fcr[i],fcg[i],fcb[i],145*lf);
-      if(perfScale>0.48) bbAlpha.add(sSmokeB,X+Math.sin(i*2.7)*gsz*.22,Y+Math.cos(i*1.9)*gsz*.18,
-        H+18+age*48,gsz*.72,-i*.3-t*.18,fcr[i]+8,fcg[i]+7,fcb[i]+6,105*lf);
-    } else if(ty===3){                        // shock ring
-      bbAdd.add(sRingB,X,Y,H+3,fsize[i]*((1-lf)*1.6+0.3),t*0.6, fcr[i],fcg[i],fcb[i], 220*lf);
+      const age=1-lf, gsz=fsize[i]*(1.18+age*2.05);
+      const vq=typeof mfVfxQ==='function'?mfVfxQ():1;
+      bbAlpha.add(sSmokeB,X,Y,H+10+age*38,gsz,i*0.4+t*0.25,fcr[i],fcg[i],fcb[i],Math.min(210,165*lf));
+      if(vq>0.45) bbAlpha.add(sSmokeB,X+Math.sin(i*2.7)*gsz*.26,Y+Math.cos(i*1.9)*gsz*.22,
+        H+20+age*52,gsz*.78,-i*.3-t*.18,fcr[i]+8,fcg[i]+7,fcb[i]+6,125*lf);
+      if(vq>=0.95) bbAlpha.add(sSmokeB,X+Math.cos(i*1.8)*gsz*.20,Y+Math.sin(i*2.4)*gsz*.18,
+        H+28+age*62,gsz*.58,i*.22+t*.14,fcr[i]+4,fcg[i]+3,fcb[i]+3,95*lf);
+    } else if(ty===3){                        // shock ring — on the crater, not a spinning halo
+      bbAdd.add(sRingB,X,Y,H+1.15,Math.min(18,fsize[i]*(0.55+(1-lf)*0.5)),0, fcr[i],fcg[i],fcb[i], 200*lf);
     } else if(ty===2||ty===5){                // hot sparks and fragments
       /* The debris atlas cell is a camera-facing quad. At phone size its soft
          alpha collapses into a bright white square—the exact blocks reported
          around explosions. A tiny lit shard has a real silhouette at every
-         angle; the radial core supplies heat without exposing its rectangle. */
-      const age=1-lf,hop=(4+fsize[i]*.7)*4*lf*age,sz=Math.max(1.0,fsize[i]*(ty===5?.42:.26));
-      FX.shard.add(X,Y,H+3+hop,sz,age*10+i*.83,fcr[i],fcg[i],fcb[i],lf<.18?lf*1300:235);
-      if(ty===2) bbAdd.add(sGlowB,X,Y,H+3+hop,Math.max(1.2,sz*1.65),0,fcr[i],fcg[i],fcb[i],155*lf);
-    } else if(ty===4){                        // licking flame
-      const age=1-lf;
-      bbAdd.add(sFireB,X,Y,H+5+age*12,fsize[i]*(1.15+age*.45),i*.7-t*.8,255,205,125,235*lf);
-      bbAdd.add(sGlowB,X,Y,H+3,fsize[i]*1.7,0,fcr[i],fcg[i],fcb[i],80*lf);
+         angle; the radial core supplies heat without exposing its rectangle.
+         Hop used to launch sparks 20+ units off the crater; keep them in the
+         bowl so a volley does not read as an orbiting swarm. */
+      const age=1-lf,hop=(1.2+fsize[i]*.22)*lf*age,sz=Math.max(0.85,fsize[i]*(ty===5?.36:.22));
+      FX.shard.add(X,Y,H+1.4+hop,sz,i*.83,fcr[i],fcg[i],fcb[i],lf<.18?lf*1300:235);
+      if(ty===2) bbAdd.add(sGlowB,X,Y,H+1.4+hop,Math.max(1.0,sz*1.45),0,fcr[i],fcg[i],fcb[i],155*lf);
+    } else if(ty===4){                        // ember coal — not an upright licking flame
+      const sz=Math.min(10,fsize[i]*0.72);
+      const flick=0.86+0.14*lf;
+      bbAdd.add(sGlowB,X,Y,H+1.15,sz*1.55,0,fcr[i],Math.max(32,(fcg[i]*0.55)|0),Math.max(20,(fcb[i]*0.35)|0),Math.min(80,52*lf*flick));
+      bbAdd.add(sGlowB,X,Y,H+1.35,sz*0.62,0,Math.min(255,fcr[i]+20),Math.min(255,fcg[i]+30),Math.min(255,fcb[i]+20),Math.min(170,120*lf*flick));
     } else if(ty===6){                        // volumetric explosion fireball
-      const age=1-lf, S=fsize[i];
-      bbAdd.add(sprites.fireball||sFireB,X,Y,H+S*.28+age*S*.25,S*(1.0+age*.35),i*.7+t*.4,255,255,255,245*lf);
-      if(S>18&&perfScale>0.42) bbAdd.add(sprites.fireball||sFireB,X+S*.12,Y-S*.08,H+S*.72+age*S*.4,S*.66,-i*.4-t*.5,255,210,145,185*lf);
-      bbAdd.add(sGlowB,X,Y,H+3,S*2.6,0,255,135,55,70*lf);
+      const age=1-lf, S=Math.min(16,fsize[i]);
+      bbAdd.add(sprites.fireball||sFireB,X,Y,H+S*.12,S*(0.88+age*.10),0,255,255,255,245*lf);
+      bbAdd.add(sGlowB,X,Y,H+1.4,S*0.95,0,255,135,55,52*lf);
     } else if(ty===7){                        // ballistic solid debris
-      const age=1-lf, hop=fsize[i]*1.7*4*lf*age;
-      FX.shard.add(X,Y,H+3+hop,Math.max(1.5,fsize[i]*.52),age*8+i*.7,fcr[i],fcg[i],fcb[i],lf<.22?lf*1100:240);
+      const age=1-lf, hop=fsize[i]*0.55*lf*age;
+      FX.shard.add(X,Y,H+1.6+hop,Math.max(1.2,fsize[i]*.42),i*.7,fcr[i],fcg[i],fcb[i],lf<.22?lf*1100:240);
     } else if(ty===9){                        // ambience: snow, ash, drifting sand
       const age=1-lf;
       bbAlpha.add(sSmokeB,X,Y,H+3+age*2,fsize[i]*(0.85+Math.sin(t*2.5+i)*0.18),
         t*0.12+i, fcr[i],fcg[i],fcb[i], 150*lf);
     } else if(ty!==9){                        // flash
-      bbAdd.add(sGlowB,X,Y,H+fsize[i]*0.30,fsize[i]*1.5,i*0.3, fcr[i],fcg[i],fcb[i], 235*lf);
+      bbAdd.add(sGlowB,X,Y,Hfx+1.4,Math.min(12,fsize[i]),0, fcr[i],fcg[i],fcb[i], 220*lf);
     }
   }
   // muzzle / engine / stance glows as small shells
@@ -1954,11 +2458,17 @@ function render(dtDraw){
     const X=ux[i], Y=uy[i];
     if(!vis(X,Y,40)) continue;
     if(!fogEntityVisible(uteam[i],X,Y)) continue;
-    const T=TYPES[utype[i]], H=T.naval?1.5:gh(X,Y);
+    const T=TYPES[utype[i]], H=unitGroundY(T,X,Y,i);
     if(mo===3)      bbAdd.add(sprites.glow,X,Y,H+T.size*0.5,T.size*1.6,0,255,120,50,120+Math.sin(t*11+i)*50);
     else if(mo===2) bbAdd.add(sprites.glow,X,Y,H+T.size*0.5,T.size*2.0,0,130,190,255,80);
-    else if(mo===1) FX.ring.add(X,Y,H+1.6,T.size*1.5,0,255,200,110,120);
-    else if(mo===5) FX.ring.add(X,Y,H+1.6,T.size*1.3,0,255,190,110,100);
+    else if(mo===1||mo===5){
+      /* Siege/suppress rings on unselected mass at cap are the same fillrate
+         trap as selection rings. Off-screen already skipped via vis(). */
+      if(usel[i]||i===heroIdx){
+        if(!(RING_STRATEGIC&&i!==heroIdx))
+          FX.ring.add(X,Y,H+1.6,T.size*(mo===1?1.5:1.3),0,255,mo===1?200:190,110,mo===1?120:100);
+      }
+    }
   }
   /* Critical units advertise mechanical failure on the model itself. The sim
      emits persistent smoke and sparks; these attached flames keep the source
@@ -1978,14 +2488,7 @@ function render(dtDraw){
       bbAdd.add(sprites.glow,X,Y,H+T.size*.55,T.size*(.7+sev*.7),0,105,255,110,55+sev*100);
       if(frac<.28) bbAlpha.add(sSmokeB,X,Y,H+T.size*.85,T.size*(.45+sev*.5),t*.2+i,80,150,75,70+sev*55);
     } else if(frac<.38){
-      const sources=frac<.18?2:1;
-      for(let k=0;k<sources;k++){
-        const a=i*2.17+k*2.8+t*.45, ox=Math.cos(a)*T.size*.18, oy=Math.sin(a)*T.size*.15;
-        const flick=.8+Math.sin(t*13+i+k*4)*.2;
-        bbAdd.add(sFireB,X+ox,Y+oy,H+T.size*(.38+k*.2),T.size*(.38+sev*.32)*flick,
-          -t*.7+i,255,205,135,(120+sev*110)*flick);
-      }
-      bbAdd.add(sGlowB,X,Y,H+T.size*.28,T.size*(.8+sev*.7),0,255,105,35,35+sev*55);
+      addWreckCoalBed(X,Y,H,T.size*(.55+sev*.35),0.40+sev*0.55,i*1.7,frac<.18?3:2);
     }
   }
   // building emissives and night work lights
@@ -2024,26 +2527,10 @@ function render(dtDraw){
       for(const [ex,ey,rot2] of [[0,-ur,0],[0,ur,0],[-ur,0,Math.PI/2],[ur,0,Math.PI/2]])
         FX.line.add(Bd.x+ex,Bd.y+ey,gh(Bd.x+ex,Bd.y+ey)+2,ur*2,rot2, 90,200,255,120, 3.0);
     }
-    /* ---- VOLUMETRIC LIGHT ----
-       At night a work light becomes a visible cone of lit air. This is real
-       cone geometry drawn additively — it has volume, it intersects the
-       ground, and it sweeps. */
-    if(S_nA>0.18){
-      const v=clamp((S_nA-0.18)/0.82,0,1);
-      /* This is the actual light pool on the terrain, not merely a bright
-         window floating above it. An additive ground-facing billboard is much
-         cheaper than a deferred point-light pass and remains legible at RTS
-         zoom. The warm general pool identifies a powered base; specialist
-         structures retain their colder faction/energy glow above it. */
-      bbAdd.add(sprites.glow,Bd.x,Bd.y,H+1.7,sz*1.72,0,255,222,160,78*v);
-      bbAdd.add(sprites.glow,Bd.x,Bd.y,H+2.0,sz*0.88,0,255,246,212,66*v);
-      /* Volumetric work light: a lit cone of air (real geometry) plus a soft
-         sprite halo at the source, which is what sells the glow. */
-      FX.cone.add(Bd.x,Bd.y,H+sz*0.55, sz*0.34, t*0.5+Bd.anim, 255,224,168, 46*v);
-      bbAdd.add(sprites.glow,Bd.x,Bd.y,H+sz*0.5, sz*0.8, 0, 255,226,170, 110*v);
-      if(Bd.type==='techlab'||Bd.type==='uplink')
-        FX.cone.add(Bd.x,Bd.y,H+sz*0.85, sz*0.62, t*0.9, 150,210,255, 38*v);
-    }
+    /* Night work-light pools used to stamp a warm orange billboard on
+       every finished building after dusk — the orb this pass retired.
+       Mesh windows, HQ_LAMP discs and towerCrumble fire already mark a
+       powered or burning structure. Specialist type glows above stay. */
   }
   /* Mobile lights are intentionally budgeted. At command zoom, lighting every
      single tank in a 2,000-unit battle would become a white carpet. The
@@ -2125,10 +2612,8 @@ function render(dtDraw){
     }
   }
   /* ---- structures burning down --------------------------------------
-     A building below a third health is visibly failing: fire licking out of
-     the hull, a smoke column climbing off it, and sparks. This is the single
-     clearest "your base is in trouble" signal there is, and it reads from
-     right across the map without looking at a health bar. */
+     A building below half health is visibly failing: coal beds on the hull,
+     a smoke column, sparks. Upright flame quads were licking tongues. */
   for(const Bf of blds){
     if(!Bf.alive||Bf.prog<1||!vis(Bf.x,Bf.y,140)) continue;
     if(!fogEntityVisible(Bf.team,Bf.x,Bf.y)) continue;
@@ -2136,39 +2621,50 @@ function render(dtDraw){
     if(frac>0.55) continue;
     const sz=BT[Bf.type].size, H=gh(Bf.x,Bf.y);
     const sev=clamp((0.55-frac)/0.55,0,1);       // 0 at 55% hp, 1 at destruction
-    const fl=0.65+Math.abs(Math.sin(t*7.3+Bf.anim))*0.35;
-    const fireCount=sev>.72?4:sev>.38?3:2;
-    // separate flame tongues create an uneven, severity-driven burn pattern
-    for(let k=0;k<fireCount;k++){
-      const a=t*1.7+Bf.anim+k*2.1;
-      const ox=Math.cos(a)*sz*0.22, oy=Math.sin(a*0.8)*sz*0.20;
-      bbAdd.add(sFireB, Bf.x+ox, Bf.y+oy, H+sz*(0.28+(k%3)*0.18),
-        sz*(0.35+sev*0.38)*fl, -t*.65+k, 255, 205-k*18, 120-k*16, (105+sev*135)*fl);
-    }
-    if(sev>0.45)
-      bbAdd.add(sprites.glow, Bf.x, Bf.y, H+sz*0.8, sz*1.5*fl, 0, 255,110,50, 60*sev);
+    const fBase=Math.min(sz,26);
+    addWreckCoalBed(Bf.x,Bf.y,H,fBase*(0.55+sev*0.22),0.42+sev*0.55,Bf.anim,sev>.72?4:3);
     // smoke column: emitted, so it drifts and persists rather than pulsing
     if(perfScale>0.35 && (tick+(Bf.anim*97|0))%Math.max(3,10-(sev*7|0))===0){
       addParticle(1, Bf.x+rr(-sz*0.3,sz*0.3), Bf.y+rr(-sz*0.3,sz*0.3),
-        rr(-5,5), rr(-26,-14), 2.4+sev*1.6, sz*(0.22+sev*0.30),
+        rr(-6,6), rr(-28,-16), 3.2+sev*2.0, sz*(0.30+sev*0.36),
         40+sev*22, 38+sev*18, 36+sev*16);
     }
     if(sev>0.6 && (tick+(Bf.anim*31|0))%7===0)
-      addParticle(2, Bf.x+rr(-sz*0.3,sz*0.3), Bf.y+rr(-sz*0.3,sz*0.3),
-        rr(-24,24), rr(-40,-16), 0.7, 2.6, 255,190,90);
+      addParticle(2, Bf.x+rr(-sz*0.18,sz*0.18), Bf.y+rr(-sz*0.18,sz*0.18),
+        rr(-8,8), rr(-10,-2), 0.35, 2.0, 255,190,90);
     if(sev>0.82 && perfScale>0.48 && (tick+(Bf.anim*43|0))%31===0){
       addParticle(6,Bf.x+rr(-sz*.28,sz*.28),Bf.y+rr(-sz*.28,sz*.28),0,0,.5,sz*.34,255,145,60);
       addParticle(3,Bf.x,Bf.y,0,0,.28,sz*.8,255,135,55);
     }
   }
 
-  // burning ruins
+  // burning ruins (still standing) — coals, not licking flame quads
   for(const R of relics){
-    if(!R.alive||!(R.burn>0.25)||!vis(R.x,R.y,120)) continue;
+    if(!R.alive||!(R.burn>0.12)||!vis(R.x,R.y,120)) continue;
     const H=gh(R.x,R.y);
-    bbAdd.add(sFireB,R.x,R.y,H+R.s*0.7,R.s*.85*(0.8+Math.sin(t*4+R.seed)*0.2),-t*.5,255,210,140,210*R.burn);
-    bbAdd.add(sprites.glow,R.x,R.y,H+R.s*.35,R.s*1.35,0,255,115,50,70*R.burn);
+    addWreckCoalBed(R.x,R.y,H,Math.min(22,R.s*.42),R.burn,R.seed,3);
     if(S_nA>0.34) FX.cone.add(R.x,R.y,H+R.s*0.55,R.s*0.30,t*0.3,255,150,70,54*R.burn*S_nA);
+  }
+  /* Collapsed civic wreckage keeps coals until the ember field cools.
+     The loop above skips dead blocks, which is why city destroy used to
+     look like a quiet grey crater with no fire. */
+  for(const R of relics){
+    if(R.alive) continue;
+    const age=stats.t-(R.fallT||0);
+    if(age>52||!(R.burn>0.18)||!vis(R.x,R.y,140)) continue;
+    const heat=clamp(1-age/52,0,1)*R.burn;
+    const H=gh(R.x,R.y);
+    addWreckCoalBed(R.x,R.y,H,Math.min(20,Math.max(8,R.s*0.16)),heat,R.seed,heat>0.55?4:3);
+  }
+  /* Civic groundBurns and wreckage share the same language: terrain coals
+     plus a low glow. No upright flame stamps. */
+  for(const W of wrecks){
+    if(W.kind!==2||!vis(W.x,W.y,50)) continue;
+    const age=stats.t-(W.ts||0);
+    if(age>38) continue;
+    const heat=clamp(1-age/38,0,1);
+    if(heat<0.12) continue;
+    addWreckEmbers(W.x,W.y,gh(W.x,W.y),Math.min(12,W.s*(0.26+heat*0.14)),heat,W.x*0.07);
   }
   // salvage pickup shimmer
   for(const W of wrecks){
@@ -2225,9 +2721,15 @@ function render(dtDraw){
       }
     }
   }
-  FX.bolt.flush(gl); FX.shard.flush(gl); FX.beam.flush(gl); FX.line.flush(gl);
-  FX.cone.flush(gl); FX.shell.flush(gl); FX.ring.flush(gl); FX.disc.flush(gl);
+  gl.enable(gl.POLYGON_OFFSET_FILL);
+  gl.polygonOffset(-8,-32);
+  FX.bolt.flush(gl); FX.shard.flush(gl); FX.beam.flush(gl);
+  FX.cone.flush(gl); FX.shell.flush(gl);
+  gl.disable(gl.DEPTH_TEST);
+  FX.line.flush(gl); FX.ring.flush(gl); FX.disc.flush(gl);
   if(FX.wedge){ FX.wedge.flush(gl); FX.pool.flush(gl); }
+  gl.enable(gl.DEPTH_TEST);
+  gl.disable(gl.POLYGON_OFFSET_FILL);
   MF_COMBAT_VFX_TELEMETRY.projectiles=projectileDrawn;
   MF_COMBAT_VFX_TELEMETRY.beams=beamDrawn;
   MF_COMBAT_VFX_TELEMETRY.particles=combatParticleDrawn;
@@ -2313,10 +2815,11 @@ function render(dtDraw){
       if((hbMode==='select'||overviewVfx)&&!usel[i]) continue;
       if(!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
       if(uteam[i]===2&&step>1&&(i&1)) continue;
+      if(i!==heroIdx&&typeof mfIconStackSkip==='function'&&mfIconStackSkip(i)) continue;
       _hbI[hbN]=i; _hbF[hbN]=uhp[i]/uhpm[i]; hbN++;
     }
     const putUnitBar=k=>{
-      const i=_hbI[k], T=TYPES[utype[i]], H=gh(ux[i],uy[i])+(T.air?58:0);
+      const i=_hbI[k], T=TYPES[utype[i]], H=unitGroundY(T,ux[i],uy[i],i);
       const vs=T.size*(T.vscale||1),bh=H+vs*(T.air?1.22:1.58)+3*hbPx;
       const bw=clamp((T.cat==='hero'?48:T.size>=24?43:36)*hbPx,20,T.cat==='hero'?60:48);
       const barH=clamp(4.2*hbPx,2.5,4.4);
@@ -2345,18 +2848,69 @@ function render(dtDraw){
     } else for(let k=0;k<hbN;k++) putUnitBar(k);
   }
 
+  /* Per-unit veterancy and per-structure Mk/tech pips. Not an army rank —
+     ukills/uvet and B.lvl stay on the entity. Screen-space sizing matches
+     the health bars so a chevron stays readable at tactical zoom. */
+  const rkPx=Math.max(.24,orthoSpan/Math.max(1,VH));
+  const putRankMark=(x,y,h,n)=>{
+    n=n|0; if(n<=0) return;
+    /* Chevrons, not 4px diamonds: at tactical zoom a diamond mip-filtered
+       into a speck. Two bars read as a rank mark from command altitude. */
+    const s=clamp(12*rkPx,8.2,18);
+    const lift=h+16*rkPx;
+    for(let k=0;k<n;k++){
+      const yo=k*s*0.78;
+      bbAlpha.addOrientedRect(sprites.px,x,y,lift+yo,s*2.05,s*0.46,-0.64,255,214,90,250);
+      bbAlpha.addOrientedRect(sprites.px,x,y,lift+yo,s*2.05,s*0.46,0.64,255,214,90,250);
+    }
+    bbAdd.add(sprites.glow,x,y,lift+(n-1)*s*0.4,18+n*5,0,255,210,87,78);
+  };
+  if(orthoSpan<1700){
+    for(let bi=0;bi<blds.length;bi++){
+      const Bd=blds[bi];
+      if(!Bd.alive||Bd.prog<1||!vis(Bd.x,Bd.y,150)) continue;
+      if(!fogEntityVisible(Bd.team,Bd.x,Bd.y)) continue;
+      const T=BT[Bd.type], H=gh(Bd.x,Bd.y);
+      const lv=typeof bldDisplayLevel==='function'?bldDisplayLevel(Bd):(Bd.type==='fac'?(Bd.tier===2?2:1):(Bd.lvl||1));
+      putRankMark(Bd.x,Bd.y,H+T.size*1.34+10*rkPx,lv);
+    }
+    for(let i=0;i<unitHigh;i++){
+      if(!ualive[i]||!uvet[i]||!vis(ux[i],uy[i],90)) continue;
+      if(!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
+      if(typeof mfIconStackSkip==='function'&&mfIconStackSkip(i)) continue;
+      const T=TYPES[utype[i]], H=unitGroundY(T,ux[i],uy[i],i);
+      const vs=T.size*(T.vscale||1);
+      putRankMark(ux[i],uy[i],H+vs*(T.air?1.22:1.58)+10*rkPx,uvet[i]);
+    }
+  }
+
   /* ---- billboard pass -------------------------------------------------
      Sprites last: alpha-blended smoke first so it reads as volume against the
      world, then additive light on top of everything. */
   beginBB();
   gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
   bbAlpha.flush(gl);
+  /* Additive glows are screen-aligned quads at a single depth. Depth-testing
+     them against pavement kerbs punched C-shaped holes and 1px cyan edges
+     through the stain — the other half of the daytime-fx flicker. Light is
+     allowed to sit on the ground; smoke above still occludes. */
+  gl.disable(gl.DEPTH_TEST);
   gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
   bbAdd.flush(gl);
+  gl.enable(gl.DEPTH_TEST);
   /* GPU particle pass: same additive state, one update + one draw. */
   if(typeof gpfxFrame==='function'){
     gl.depthMask(false);
-    gpfxFrame((typeof dtDraw==='number'?dtDraw:0.016)||0.016,matVP,(typeof innerHeight!=='undefined')?innerHeight:900);
+    gpfxFrame((typeof dtDraw==='number'?dtDraw:0.016)||0.016,matVP,
+      (gl&&gl.drawingBufferHeight)||((typeof VH==='number'&&typeof DPR==='number')?VH*DPR:900));
+    gl.disable(gl.RASTERIZER_DISCARD);
+    gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK,null);
+    gl.bindBuffer(gl.TRANSFORM_FEEDBACK_BUFFER,null);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
+    gl.disable(gl.CULL_FACE);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(false);
   }
   /* Tactical icons last, and deliberately without a depth test. The camera
      pitch band allows a ridge to stand in front of a unit, and a strategic
@@ -2375,11 +2929,18 @@ function render(dtDraw){
     bbIcon.flush(gl);
     gl.enable(gl.DEPTH_TEST);
   } else if(typeof mfIconLast!=='undefined') mfIconLast=0;
+  /* Icon sheet is still on unit 0. Present samples 5/6 — do not begin3D
+     (that rebinds 4/5/6 to matTex). Restore 0 only. */
+  if(typeof endBB==='function') endBB();
+  else { gl.activeTexture(gl.TEXTURE0); if(typeof matTex!=='undefined'&&matTex) gl.bindTexture(gl.TEXTURE_2D,matTex); }
 
   gl.depthMask(true);
   gl.disable(gl.BLEND);
   gl.enable(gl.CULL_FACE);
   if(aoActive) aoPresent();
+  /* Present samples 5/6. Restore the model atlas so the next frame cannot
+     start with a post texture on a material sampler. */
+  begin3D(S_nA);
   gl.bindVertexArray(null);
 }
 

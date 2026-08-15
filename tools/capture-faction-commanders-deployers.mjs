@@ -1,6 +1,7 @@
 /* Live WebGL contact sheet for the four canonical commanders and their first-
    contact deployment silhouettes. Usage: node tools/capture-faction-commanders-deployers.mjs [base URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir,rm} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -11,12 +12,13 @@ const tmp=join(root,'.tmp','faction-command'),out=join(root,'releases','faction-
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 await rm(tmp,{recursive:true,force:true});await mkdir(tmp,{recursive:true});
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const context=await browser.newContext({viewport:{width:1000,height:1000},deviceScaleFactor:2,colorScheme:'dark'});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base+'/?factionCommandCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof DROP_MESH!=='undefined'&&Object.keys(DROP_MESH).length===4&&
     typeof UNIT_MESH!=='undefined'&&UNIT_MESH[30],{timeout:30000});
   await page.waitForTimeout(900);

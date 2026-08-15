@@ -35,7 +35,9 @@ function threatHp()  { return 1+(threatSel()-1)*0.07; }
 function threatDmg() { return 1+(threatSel()-1)*0.06; }
 function threatTech(){ return 1+(threatSel()-1)*0.13; }   // how fast the AI tiers up
 function threatReward(){ const t=threatSel(); return 1+(t-1)*0.22+Math.max(0,t-6)*0.10; }
-const THREAT_NM=['','SKIRMISH','PROBE','RAID','OFFENSIVE','CAMPAIGN','WAR',
+/* T5 used to be named CAMPAIGN. That is also the locked War Room mode, so a
+   rung on the threat ladder read as if authored story missions were live. */
+const THREAT_NM=['','SKIRMISH','PROBE','RAID','OFFENSIVE','THEATRE','WAR',
                  'ATTRITION','SIEGE','ANNIHILATION','EXTINCTION','APEX','ABSOLUTE'];
 
 /* ---- OPERATION MODIFIERS ---------------------------------------------------
@@ -128,20 +130,27 @@ function isoWeek(d){
   const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));
   return t.getUTCFullYear()*100+Math.ceil(((t-y0)/86400000+1)/7);
 }
+/* Opponent banners for weekly + mastery. Same pool as the battle-setup
+   picker: The Four, Nova included as a legal enemy. Brood stays AI-only as
+   a player seat. Campaign/MMO/Co-op are locked modes, not missing banners. */
+function endgameEnemyFactions(){
+  const facs=(typeof enemyFactions==='function'?enemyFactions():['nova','legion','syndicate','horde']);
+  return facs.length?facs:['nova','legion','syndicate','horde'];
+}
 function weeklyDef(){
   const w=isoWeek();
   let s=w>>>0;
   const r=()=>{ s=(s*1664525+1013904223)>>>0; return s/4294967296; };
-  const maps=Object.keys(MAPDEFS||{});
-  const facs=['legion','syndicate','horde'];
+  const maps=(typeof homeworldMapIds==='function'?homeworldMapIds():Object.keys(MAPDEFS||{})).filter(k=>MAPDEFS[k]);
+  const facs=endgameEnemyFactions();
   const goals=['annihilate','domination','purge','survival'];
   const mods=[];
   const pool=OPMODS.slice();
   const n=2+((r()*2)|0);
   for(let i=0;i<n&&pool.length;i++) mods.push(pool.splice((r()*pool.length)|0,1)[0].id);
   return {week:w,
-          map:maps[(r()*maps.length)|0]||'valley',
-          fac:facs[(r()*3)|0],
+          map:maps[(r()*maps.length)|0]||'aelos_north_small',
+          fac:facs[(r()*facs.length)|0]||'legion',
           goal:goals[(r()*4)|0],
           threat:3+((r()*5)|0),
           mods};
@@ -186,12 +195,15 @@ let weeklyMode=false;
 let weeklyPrev=null;
 function saveWeeklyConfig(){
   weeklyPrev={ threatSel:META.threatSel, opmods:Object.assign({},META.opmods||{}),
-               curMap:curMap, aiFactionSel:aiFactionSel, goalSel:goalSel };
+               curMap:curMap, curTheme:curTheme, battlefieldPreset:battlefieldPreset,
+               aiFactionSel:aiFactionSel, goalSel:goalSel };
 }
 function restoreWeeklyConfig(){
   if(!weeklyPrev) return false;
   META.threatSel=weeklyPrev.threatSel; META.opmods=weeklyPrev.opmods;
   curMap=weeklyPrev.curMap; aiFactionSel=weeklyPrev.aiFactionSel; goalSel=weeklyPrev.goalSel;
+  if(weeklyPrev.curTheme) curTheme=weeklyPrev.curTheme;
+  if(weeklyPrev.battlefieldPreset) battlefieldPreset=weeklyPrev.battlefieldPreset;
   weeklyPrev=null;
   if(typeof metaSave==='function') metaSave();
   return true;
@@ -201,6 +213,9 @@ function startWeekly(){
   saveWeeklyConfig();          // borrow the plan; hand it back when the run ends
   weeklyMode=true;
   curMap=d.map; aiFactionSel=d.fac; goalSel=d.goal;
+  const def=MAPDEFS[d.map];
+  if(def&&def.theme&&typeof THEMES!=='undefined'&&THEMES[def.theme]) curTheme=def.theme;
+  if(def&&def.size&&typeof battlefieldPresetKey==='function') battlefieldPreset=battlefieldPresetKey(def.size);
   META.threatSel=Math.min(d.threat,threatUnlocked());
   const o={}; for(const id of d.mods) o[id]=1;
   META.opmods=o; metaSave();
@@ -211,9 +226,10 @@ function startWeekly(){
 
 /* ---- MASTERY ---------------------------------------------------------------
    The long tail, and the only part of the endgame that is a checklist rather
-   than a ladder. Three factions across four maps is twelve boxes; each box
-   remembers the highest threat level you beat it at, so it keeps meaning
-   something after it is first ticked. */
+   than a ladder. Four enemy banners — The Four, Nova included as a legal
+   opponent — across 48 homeworld sites is 192 boxes; each box remembers the
+   highest threat level you beat it at, so it keeps meaning something after
+   it is first ticked. */
 function masteryKey(map,fac){ return map+':'+fac; }
 function masteryGet(map,fac){ META.mastery=META.mastery||{}; return META.mastery[masteryKey(map,fac)]||0; }
 function masterySet(map,fac,t){
@@ -224,7 +240,9 @@ function masterySet(map,fac,t){
 }
 function masteryTotal(){
   let n=0,sum=0;
-  for(const m in (MAPDEFS||{})) for(const f of ['legion','syndicate','horde']){
+  const maps=(typeof homeworldMapIds==='function'?homeworldMapIds():Object.keys(MAPDEFS||{}));
+  const facs=endgameEnemyFactions();
+  for(const m of maps) for(const f of facs){
     n++; sum+=masteryGet(m,f)>0?1:0;
   }
   return {done:sum,total:n};
@@ -232,6 +250,22 @@ function masteryTotal(){
 
 /* ---- MATCH RESULT ----------------------------------------------------------
    Everything the endgame needs to know, applied once. */
+function endgameCareerNote(){
+  const lines=[];
+  const t=threatSel();
+  lines.push('T'+t+' '+THREAT_NM[t]+' · ×'+payoutMult().toFixed(2)+' payout');
+  const daily=typeof dailyLast==='function'?dailyLast():null;
+  if(daily&&daily.granted&&daily.granted.length){
+    for(const o of daily.granted) lines.push('📋 '+o.nm+' — order paid');
+  }
+  const story=typeof storyMatchNote==='function'?storyMatchNote():null;
+  if(story) lines.push('📡 NEW DISPATCH — '+story.ttl);
+  const hz=typeof mapHazardDef==='function'?mapHazardDef(typeof curMap!=='undefined'?curMap:''):null;
+  const n=(typeof HAZ!=='undefined'&&HAZ.count)|0;
+  if(hz&&hz.nm&&hz.mode!=='calm')
+    lines.push((hz.em||'⚠')+' '+hz.nm+(n?' — '+n+' event'+(n===1?'':'s'):' — theatre weather'));
+  return lines;
+}
 function endgameRecord(res){
   const score=matchScore(res);
   let msgs=[];
@@ -245,9 +279,12 @@ function endgameRecord(res){
     }
     if(masterySet(curMap,(AI&&AI.fac)||'legion',threatSel()))
       msgs.push('★ Mastery raised: '+((MAPDEFS[curMap]&&MAPDEFS[curMap].nm)||curMap));
-    if(weeklyMode&&weeklyRecord(score))
+  }
+  /* A finished Weekly is an attempt even on a loss — otherwise the dispatch
+     keyed to "run a Weekly" and the personal-best card both stayed blank. */
+  if(weeklyMode){
+    if(weeklyRecord(score)&&res.win)
       msgs.push('📅 New weekly best: '+score.toLocaleString());
-    else if(weeklyMode) weeklyRecord(score);
   }
   META.bestScore=Math.max(META.bestScore||0,score);
   metaSave();
@@ -255,6 +292,7 @@ function endgameRecord(res){
      to Battle Setup shows what THEY chose rather than this week's brief. */
   if(weeklyMode&&restoreWeeklyConfig()) msgs.push('↩ Your own battle plan restored');
   weeklyMode=false;
+  msgs=msgs.concat(endgameCareerNote());
   return {score,msgs};
 }
 
@@ -285,6 +323,8 @@ function renderOpsBrief(mode){
    fall back to something that still exists, or the screen opens on nothing. */
 function opsTab(){
   const t=(typeof MF_TAB_STATE!=='undefined'&&MF_TAB_STATE&&MF_TAB_STATE.opsScr)||'';
+  /* Campaign is advertised, not shipped. A stale tab name must not hide Weekly. */
+  if(t==='campaign'&&!document.getElementById('opsTab-campaign')) return 'weekly';
   return (t==='campaign'||t==='weekly')?t:
     (document.getElementById('opsTab-campaign')?'campaign':'weekly');
 }
@@ -313,7 +353,8 @@ function renderOps(){
         +'<b>T'+i+'</b><span>'+(open?THREAT_NM[i]:'🔒')+'</span></button>';
     }
     tl.innerHTML=h;
-    tl.querySelectorAll('.thBtn').forEach(b=>b.addEventListener('pointerdown',()=>{
+    tl.querySelectorAll('.thBtn').forEach(b=>b.addEventListener('pointerdown',ev=>{
+      ev.stopPropagation();
       const t=+b.dataset.t;
       if(t>threatUnlocked()){ toast('🔒 Win at Threat '+threatUnlocked()+' to unlock this'); return; }
       setThreat(t); sfx('ui');
@@ -358,7 +399,7 @@ function renderOps(){
   if(wk){
     const map=MAPDEFS[wd.map]||{nm:wd.map,ds:''}, fac=FACTIONS[wd.fac]||{nm:wd.fac,em:'◆',heroNm:'Unknown Commander'},
           art=typeof facArt==='function'?facArt(wd.fac):null,
-          haz=(typeof MAPHAZ!=='undefined'&&MAPHAZ[wd.map])||{em:'◇',nm:'NO HAZARD',ds:''},
+          haz=(typeof mapHazardDef==='function'?mapHazardDef(wd.map):null)||{em:'◇',nm:'NO HAZARD',ds:''},
           goal=GOALS.find(g=>g.id===wd.goal)||GOALS[0], playThreat=Math.min(wd.threat,threatUnlocked()),
           forecast=weeklyRewardForecast(wd,playThreat), mins=timeLimit>0?Math.max(1,Math.round(timeLimit/60)):0,
           commander=(art&&art.cdr)||fac.heroNm||'Unknown Commander', artId=(art&&art.id)||fac.art||wd.fac,
@@ -392,10 +433,11 @@ function renderOps(){
   /* Mastery */
   const mg=document.getElementById('masteryGrid');
   if(mg){
-    const facs=['legion','syndicate','horde'];
-    let h='<div class="mRow mHdr"><div></div>'+facs.map(f=>'<div>'+FACTIONS[f].em+'</div>').join('')+'</div>';
-    for(const m in (MAPDEFS||{})){
-      h+='<div class="mRow"><div class="mNm">'+(MAPDEFS[m].nm||m)+'</div>';
+    const facs=endgameEnemyFactions();
+    let h='<div class="mRow mHdr"><div></div>'+facs.map(f=>'<div>'+((FACTIONS[f]&&FACTIONS[f].em)||'◆')+'</div>').join('')+'</div>';
+    const maps=(typeof homeworldMapIds==='function'?homeworldMapIds():Object.keys(MAPDEFS||{}));
+    for(const m of maps){
+      h+='<div class="mRow"><div class="mNm">'+((MAPDEFS[m]&&MAPDEFS[m].nm)||m)+'</div>';
       for(const f of facs){
         const t=masteryGet(m,f);
         h+='<div class="mCell'+(t?' got':'')+'">'+(t?'T'+t:'—')+'</div>';
@@ -403,7 +445,7 @@ function renderOps(){
       h+='</div>';
     }
     const tot=masteryTotal();
-    mg.innerHTML=h+'<div class="mFoot">'+tot.done+' / '+tot.total+' contracts cleared</div>';
+    mg.innerHTML=h+'<div class="mFoot">'+tot.done+' / '+tot.total+' · 48 homeworld sites · '+facs.length+' enemy banners</div>';
   }
   if(typeof mfBindTabs==='function') mfBindTabs(el,'threat');
 }
@@ -414,6 +456,9 @@ function initOps(){
     el.dataset.opsBriefBound='1';
     el.addEventListener('mftabchange',e=>renderOpsBrief(e.detail&&e.detail.key));
   }
+  /* endGame lives in main.js and loads after this file. Bind once at boot
+     so victory/defeat both carry the career lines that already sit in
+     endgameRecord().msgs — main.js already prints those into #goRewards. */
   renderOps();
 }
 

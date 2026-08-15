@@ -116,7 +116,10 @@ function hotSelectionSig(){
   const powers=hero&&typeof abUnlock!=='undefined'?abUnlock.map(v=>v?'1':'0').join(''):'';
   const contextual=(hotSrcUsable('abClass')?'C':'-')+
     (typeof artBarrageSelected==='function'&&artBarrageSelected().length?'B':'-');
-  return (hero?'H':'-')+':'+Object.keys(types).sort((a,b)=>a-b).join(',')+':'+powers+':'+contextual;
+  let lift='';
+  if(typeof mfAirliftSelected==='function'){const s=mfAirliftSelected();if(s>=0){const H=mfAirliftHold(s,false);lift='A'+(H?H.used:0);}}
+  if(typeof mfMassSelected==='function'){const s=mfMassSelected();if(s>=0){const H=mfMassHold(s,false);lift+='M'+(H?H.used:0)+(utype[s]===MF_UT_MASSFLESH_AIR?'F':'');}}
+  return (hero?'H':'-')+':'+Object.keys(types).sort((a,b)=>a-b).join(',')+':'+powers+':'+contextual+':'+lift;
 }
 
 function hotTabState(available){
@@ -180,21 +183,27 @@ function hotBuilderMove(i,x,y){
 }
 function hotBuilderRepair(){
   const E=hotSelectedBuilders();if(!E.length)return;
-  let ordered=0;
+  let ordered=0,raising=0;
   for(const i of E){
-    let best=null,bd=Infinity;
-    for(const B of bldLive){
-      if(!B.alive||B.team!==uteam[i]||B.prog<1||B.hp>=B.hpm*.995)continue;
-      const d=dist2(ux[i],uy[i],B.x,B.y);if(d<bd){bd=d;best=B;}
+    let best=null,bd=Infinity,raise=false;
+    /* Walk `blds`, not `bldLive`. The live cache lags a second behind a
+       newly poured foundation, which is exactly when REPAIR should send
+       the Constructor to raise it. */
+    for(const B of blds){
+      if(!B.alive||B.team!==uteam[i])continue;
+      const unfinished=B.prog<1, hurt=B.prog>=1&&B.hp<B.hpm*.995;
+      if(!unfinished&&!hurt)continue;
+      const d=dist2(ux[i],uy[i],B.x,B.y);if(d<bd){bd=d;best=B;raise=unfinished;}
     }
     if(!best)continue;
     const a=Math.atan2(uy[i]-best.y,ux[i]-best.x),stand=(best.r||20)+26;
     hotBuilderMove(i,best.x+Math.cos(a)*stand,best.y+Math.sin(a)*stand);ordered++;
+    if(raise)raising++;
   }
   if(ordered){
-    toast('🔧 '+ordered+' Constructor'+(ordered===1?'':'s')+' → nearest damaged structure');
+    toast('🔧 '+ordered+' Constructor'+(ordered===1?'':'s')+' → '+(raising===ordered?'construction site':'nearest damaged structure'));
     if(typeof uiCommandAck==='function')uiCommandAck('move',ordered);
-  }else{toast('No damaged friendly structures need field repair');sfx('reject');}
+  }else{toast('No damaged structures or unfinished sites need a Constructor');sfx('reject');}
 }
 function hotBuilderSalvage(){
   const E=hotSelectedBuilders();if(!E.length)return;
@@ -248,8 +257,30 @@ function hotBuild(){
      field repair, and routing to its faster salvage pass. */
   if(hotSelectedBuilders().length){
     want.push({kind:'ab',src:'buildBtn',em:'🏗',nm:'BUILD',ds:'Open the structure catalogue'});
-    want.push({kind:'local',fn:hotBuilderRepair,em:'🔧',nm:'REPAIR',ds:'Move to the nearest damaged friendly structure'});
+    want.push({kind:'local',fn:hotBuilderRepair,em:'🔧',nm:'REPAIR',ds:'Move to the nearest damaged or unfinished friendly structure'});
     want.push({kind:'local',fn:hotBuilderSalvage,em:'♻',nm:'SALVAGE',ds:'Move to the nearest wreck and reclaim it at 2× rate'});
+  }
+  /* Repair-bay MEND is owned by src/repairbay.js. A one-line hook keeps this
+     file from duplicating apron rules, and the function is absent until that
+     module loads — hotBuild only runs after boot, so the check is live. */
+  if(typeof mfBayCollectHot==='function') mfBayCollectHot(want);
+  if(typeof mfAirliftSelected==='function'){
+    const sky=mfAirliftSelected();
+    if(sky>=0){
+      const H=typeof mfAirliftHold==='function'?mfAirliftHold(sky,false):null;
+      want.push({kind:'local',fn:()=>{if(typeof mfAirliftArmUnload==='function')mfAirliftArmUnload(sky);},
+        em:'⇩',nm:H&&H.cargo.length?'UNLOAD '+H.cargo.length:'UNLOAD',
+        ds:'Set a formation drop zone for Skycrane cargo'});
+    }
+  }
+  if(typeof mfMassSelected==='function'){
+    const mass=mfMassSelected();
+    if(mass>=0){
+      const air=utype[mass]===MF_UT_MASSFLESH_AIR;
+      want.push({kind:'local',fn:()=>{if(typeof mfMassArmSelected==='function')mfMassArmSelected();},
+        em:'♒',nm:air?'BIRTH':'TAKE FLIGHT',
+        ds:air?'Mark a birth site behind the defensive line':'Ascend for a timed breakthrough flight'});
+    }
   }
   /* Doctrine and barrage hide themselves when the selection cannot use them,
      so "is it displayed" already answers "does this selection have it". */

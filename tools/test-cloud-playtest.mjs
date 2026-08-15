@@ -1,6 +1,6 @@
 /* Smoke-test the public cloud build at an iPhone-sized touch viewport.
    Usage: node tools/test-cloud-playtest.mjs [URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -13,10 +13,10 @@ const out=join(root,'releases',local?'v1.32.0-local-web-mobile.png':'cloud-playt
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 await mkdir(join(root,'releases'),{recursive:true});
 
-const browser=await chromium.launch({
+const browser=await launchPwBrowser({
   headless:true,
   executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']
 });
 
 try{

@@ -42,7 +42,7 @@ let glrLost = false, glrDeadline = 0, glrTick = 0, glrWasRunning = false;
 
 function glrQualityDown(){
   try{
-    const order=['cinematic','high','low'];
+    const order=['cinematic','high','medium','low'];
     const cur=(typeof qualityKey==='function')?qualityKey():'high';
     const i=order.indexOf(cur);
     if(i<0||i>=order.length-1) return null;          // already at the floor

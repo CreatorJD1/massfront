@@ -1,5 +1,4 @@
-;
-;
+/* Concatenator leftover `;;` lived here; do not restore it. */
 /* ============================================================================
    INFESTATION SWARM - PROCEDURAL STRUCTURE LIBRARY
    ----------------------------------------------------------------------------
@@ -15,6 +14,12 @@
    ============================================================================ */
 var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     BLD_TIER_MDL_INFESTATION, BLD_TUR_H_INFESTATION, BLD_TUR_S_INFESTATION;
+/* Ichor RGB — same wet green as INF_MUCUS / INF_SAC / INF_GLOW inside the
+   IIFE. organicfx.js prefers this for caste-0 infestation so a nest and a
+   Ravager bleed the same substance the sac tiles are painted with. */
+var INF_ICHOR=Object.freeze({
+  wet:[115,177,77], dark:[62,88,30], hi:[185,255,72]
+});
 
 (function(){
   /* Existing atlas cells are deliberately zoned by biological function. Using
@@ -30,7 +35,10 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
   COL_MAT.set(INF_CHITIN,MAT.CHITIN); COL_MAT.set(INF_CHITIN_H,MAT.CHITIN);
   COL_MAT.set(INF_FLESH,MAT.RUST);    COL_MAT.set(INF_FLESH_H,MAT.LEAF);
   COL_MAT.set(INF_SAC,MAT.GLASS);     COL_MAT.set(INF_MUCUS,MAT.CRYST);
-  COL_MAT.set(INF_GLOW,MAT.TWR_GLOW);COL_MAT.set(INF_GLOW_H,MAT.LAMP);
+  /* TWR_GLOW's atlas tile is Nova cyan (#78b6c4). Brood lumen painted through
+     that id read as Frontline energy on every hive, nest and glow node. Slime
+     keeps the wet-green emissive the ichor VFX already uses. */
+  COL_MAT.set(INF_GLOW,MAT.BROOD_SLIME);COL_MAT.set(INF_GLOW_H,MAT.BROOD_SLIME);
   COL_MAT.set(INF_ROOT,MAT.EARTH);    COL_MAT.set(INF_BONE,MAT.STONE);
   COL_MAT.set(INF_SILK,MAT.TRIM);     COL_MAT.set(INF_BORE,MAT.TWR_BORE);
 
@@ -300,13 +308,25 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     return m.build();
   }
   function mdlInfFactory(){
-    const m=MB();infRoots(m,34,11,941,2);infMound(m,-8,4.6,0,20,947,2);
-    infMound(m,9,4.6,-8,13,953,1);infOpenLimb(m,[-5,11,0],[24,16,0],7.0,4.4,11);
+    /* Compact BIRTH-MAW. Factory / harbor / airfield used to be the same
+       recipe — roots, two mounds, one open limb on +X — so at tactical zoom
+       they were three cousins. Production has to read as a fat hive with a
+       dark mouth, not a dock and not a runway. The slit is a real tube; a
+       painted recess disappears under baked lighting. */
+    const m=MB();
+    m.cyl(0,0,0,18,16,3.2,10,INF_ROOT);
+    m.sphere(-4,11,0,16,8,INF_FLESH,.72,false);
+    m.sphere(-6,16,0,11,7,INF_CHITIN,.78,false);
+    m.cyl(2,7,0,10,8.2,12,10,INF_CHITIN_H,false);
+    m.tube(10,12,0,6.4,3.1,8.5,11,INF_BORE);
+    m.ring(18.2,12,0,3.2,5.4,14,INF_GLOW);
     for(const s of [-1,1]){
-      infLimb(m,[-10,8,s*10],[-3,23,s*17],3.0,1.2,INF_CHITIN,8,true);
-      infBulb(m,-15,10,s*12,4.4,s>0?INF_SAC:INF_FLESH_H,.92);
+      infBulb(m,-12,8,s*14,5.2,s>0?INF_SAC:INF_FLESH_H,.95);
+      infBulb(m,-2,10,s*16,4.0,INF_MUCUS,.82);
+      infLimb(m,[-8,14,s*10],[-2,22,s*15],2.4,.7,INF_CHITIN,7,true);
     }
-    infGlowNode(m,-7,15,0,3.0);return m.build();
+    infGlowNode(m,-6,20,0,2.4);
+    return m.build();
   }
   function mdlInfShield(){
     const m=MB();infRoots(m,22,9,961,2);infMound(m,0,4.6,0,12,967,1);
@@ -325,13 +345,27 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     for(const s of [-1,1])infGlowNode(m,s*16,12,0,2.5);return m.build();
   }
   function mdlInfHarbor(){
-    const m=MB();infRoots(m,38,12,1001,2);infMound(m,-12,4.6,0,19,1007,2);infMound(m,14,4.6,0,14,1013,1);
+    /* Living U-SLIP. Nova's drydock taught the same lesson: the empty dark
+       berth is the silhouette, not another mound with a limb glued on. Two
+       chitin quays flank a recessed bore opening +X so a shipyard never
+       reads as a factory maw or an airfield strip. */
+    const m=MB();
+    m.cyl(-8,0,0,16,14,2.6,10,INF_ROOT);
+    m.box(6,0.6,0,40,1.4,16,INF_BORE);
+    m.box(8,1.4,0,36,.55,10,INF_ROOT);
+    infMound(m,-16,3.2,0,12,1007,1);
+    infBulb(m,-18,8,0,5.0,INF_FLESH_H,.88);
     for(const s of [-1,1]){
-      infOpenLimb(m,[-8,10,s*8],[27,12,s*18],5.0,2.7,9);
-      infLimb(m,[-18,7,s*13],[6,19,s*25],2.2,.35,INF_CHITIN_H,7,true);
+      m.box(8,4.2,s*14,38,7.2,7.5,INF_CHITIN);
+      m.box(8,8.0,s*14,34,1.1,5.2,INF_CHITIN_H);
+      for(const x of [-6,6,18]){
+        infLimb(m,[x,7.5,s*17],[x+2,13,s*20],1.6,.45,INF_BONE,6,true);
+        infGlowNode(m,x,8.6,s*14,1.15);
+      }
+      infBulb(m,-10,6,s*16,3.4,INF_SAC,.74);
     }
-    for(let i=0;i<4;i++)infBulb(m,-18+i*10,7,-9+(i%2)*18,3.2,INF_SAC,.78);
-    infGlowNode(m,-9,13,0,2.8);return m.build();
+    infGlowNode(m,-16,12,0,2.2);
+    return m.build();
   }
   function mdlInfTech(){
     const m=MB();infRoots(m,23,9,1031,2);infMound(m,0,4.6,0,13,1037,2);infTrunk(m,0,6,0,7.5,19,1043,2);
@@ -342,13 +376,24 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     infGlowNode(m,0,28,0,3.0);return m.build();
   }
   function mdlInfAirfield(){
-    const m=MB();infRoots(m,43,12,1061,2);infMound(m,-16,4.6,0,16,1067,2);
+    /* LONG RUNWAY. The cousin pass hid a +X open limb under wing-limbs, so
+       this still read as a factory at forty pixels. The strip itself is the
+       tell: a flat bone deck on +X, hangar mound only at the stern, two
+       spore masts instead of another mouth. */
+    const m=MB();
+    m.cyl(-16,0,0,14,12,2.4,10,INF_ROOT);
+    infMound(m,-18,3.8,0,13,1067,2);
+    infTrunk(m,-18,6,0,6.2,11,1073,1);
+    m.box(8,2.4,0,52,3.6,12,INF_BONE);
+    m.box(8,4.4,0,50,.55,3.4,INF_SILK);
     for(const s of [-1,1]){
-      const p0=[-10,6,s*8],p1=[7,10,s*29],p2=[35,5,s*34];
-      infLimb(m,p0,p1,4.0,2.1,INF_CHITIN,8,true);infLimb(m,p1,p2,2.2,.35,INF_BONE,7,true);
-      for(let i=0;i<3;i++)infBulb(m,-8+i*12,6,s*(12+i*6),3.2-i*.25,INF_SAC,.65);
+      m.box(8,4.5,s*8.4,48,.7,1.6,INF_GLOW);
+      infLimb(m,[-16,8,s*6],[-14,18,s*8],1.8,.55,INF_CHITIN,7,true);
+      infGlowNode(m,-14,19,s*8,1.6);
+      for(let i=0;i<3;i++) infBulb(m,-6+i*12,3.4,s*12,2.6-i*.2,INF_SAC,.62);
     }
-    infOpenLimb(m,[-13,11,0],[13,15,0],5.0,2.8,9);infGlowNode(m,-14,13,0,2.7);return m.build();
+    infGlowNode(m,-18,16,0,2.1);
+    return m.build();
   }
   function mdlInfArc(){
     const m=MB();infRoots(m,20,8,1081,2);infMound(m,0,4.6,0,11,1087,1);
@@ -642,6 +687,39 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     for(const s of [-1,1]) infSpike(m,[-2,3,s*3.6],[9+t,8+t,s*(6+t*.5)],1.0+t*.08,false);
     infGlowNode(m,-3,4,0,2.7+t*.2);return m.build();
   }
+  function mdlInfSeafortBase(tier){
+    const t=tier||1,m=MB(),r=18+t;
+    infMound(m,0,2.2,0,r*.72,1601+t,t);
+    infTrunk(m,-4,4,0,6.2+t*.3,8+t,1607+t,t);infAimSocket(m,14.8,4.6+t*.2,t);
+    for(const s of [-1,1]){
+      infOpenLimb(m,[-8,6,s*6],[16,8,s*(14+t)],4.2+t*.2,2.2,8);
+      infBulb(m,-10,7,s*(8+t*.3),3.2+t*.2,s>0?INF_SAC:INF_MUCUS,.88);
+    }
+    infGlowNode(m,-6,11,0,2.1+t*.12);return m.build();
+  }
+  function mdlInfSeafortTur(tier){
+    const t=tier||1,m=MB();infTurJoint(m,4.6+t*.2,t);
+    infOpenLimb(m,[-1,2,0],[12+t*2,8+t,0],4.6+t*.28,2.4+t*.16,9);
+    for(const s of [-1,1]) infOpenLimb(m,[0,4,s*2],[10+t,10+t,s*(4+t*.3)],2.6+t*.14,1.3,7);
+    infGlowNode(m,-3,4,0,1.9+t*.14);return m.build();
+  }
+  function mdlInfStormBase(tier){
+    const t=tier||1,m=MB(),r=17+t*1.2;
+    infRoots(m,r,8+t,1621+t,t);infMound(m,-2,4.6,0,r*.62,1627+t,t);
+    infTrunk(m,-5,5,0,6.0+t*.4,8+t,1633+t,t);infAimSocket(m,15.4,4.7+t*.2,t);
+    for(let i=0;i<6;i++){
+      const a=i/6*TAU;infBulb(m,Math.cos(a)*9,9+(i%2)*2,Math.sin(a)*9,2.8+t*.16,i%2?INF_SAC:INF_MUCUS,.9);
+    }
+    infGlowNode(m,0,16,0,2.6+t*.16);return m.build();
+  }
+  function mdlInfStormTur(tier){
+    const t=tier||1,m=MB();infTurJoint(m,4.7+t*.2,t);
+    for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+      const y=3.6+(r-1.5)*1.7,z=(c-1.5)*2.6;
+      infOpenLimb(m,[-1,2,z*.4],[10+t,y,z],2.2+t*.1,1.15,6);
+    }
+    infGlowNode(m,-3,3.6,0,2.0+t*.12);return m.build();
+  }
 
   /* Every simulation key receives its own wrapper even when it shares an art
      family. That keeps old saves stable and gives balance/art tuning an escape
@@ -657,6 +735,7 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     nova:()=>mdlInfAcidBase(3), wall:()=>mdlInfWall(), minelaser:()=>mdlInfProboscisBase(1),
     missilebastion:()=>mdlInfMissileBase(1), plasma:()=>mdlInfPlasmaBase(1), gate:()=>mdlInfGate(),
     geo:()=>mdlInfGeo(), silo:()=>mdlInfSilo(), fab:()=>mdlInfFab(),
+    seafort:()=>mdlInfSeafortBase(1), stormcaller:()=>mdlInfStormBase(1),
 
     spinespiker:mdlInfSpineBase, gorespiker:mdlInfSpineBase, spineburrow:mdlInfSpineBase,
     toxicgusher:mdlInfToxicBase, acidgusher:mdlInfToxicBase, toxicspewer:mdlInfToxicBase,
@@ -673,6 +752,7 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     aatower:mdlInfSporeTur,hellstorm:mdlInfToxicTur,rail:mdlInfBoneTur,
     nova:mdlInfAcidTur,minelaser:mdlInfProboscisTur,
     missilebastion:mdlInfMissileTur,plasma:mdlInfPlasmaTur,
+    seafort:mdlInfSeafortTur,stormcaller:mdlInfStormTur,
     spinespiker:mdlInfSpineTur,gorespiker:mdlInfSpineTur,spineburrow:mdlInfSpineTur,
     toxicgusher:mdlInfToxicTur,acidgusher:mdlInfToxicTur,toxicspewer:mdlInfToxicTur,
     sporelauncher:mdlInfSporeTur,sporetower:mdlInfSporeTur,
@@ -682,6 +762,7 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
   BLD_TUR_H_INFESTATION={
     turret:17.25,bunker:14.25,bastion:17.25,aatower:17.75,hellstorm:18.75,
     rail:18.25,nova:12.45,minelaser:14.25,missilebastion:16.45,plasma:13.75,
+    seafort:16.05,stormcaller:16.65,
     spinespiker:17.25,gorespiker:17.25,spineburrow:17.25,
     toxicgusher:18.75,acidgusher:18.75,toxicspewer:18.75,
     sporelauncher:17.75,sporetower:17.75,acidgeyser:12.45,creeppustule:12.45,
@@ -690,6 +771,7 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
   BLD_TUR_S_INFESTATION={
     turret:1.08,bunker:1.05,bastion:1.04,aatower:1.05,hellstorm:1.06,
     rail:1.08,nova:1.08,minelaser:1.07,missilebastion:1.04,plasma:1.07,
+    seafort:1.06,stormcaller:1.05,
     spinespiker:1.08,gorespiker:1.08,spineburrow:1.08,
     toxicgusher:1.06,acidgusher:1.06,toxicspewer:1.06,
     sporelauncher:1.05,sporetower:1.05,acidgeyser:1.08,creeppustule:1.08,
@@ -712,54 +794,62 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
     rail:[mdlInfBoneBase,mdlInfBoneTur],nova:[mdlInfAcidBase,mdlInfAcidTur],
     minelaser:[mdlInfProboscisBase,mdlInfProboscisTur],
     missilebastion:[mdlInfMissileBase,mdlInfMissileTur],plasma:[mdlInfPlasmaBase,mdlInfPlasmaTur],
+    seafort:[mdlInfSeafortBase,mdlInfSeafortTur],stormcaller:[mdlInfStormBase,mdlInfStormTur],
   };
+  BLD_TIER_MDL_INFESTATION={};
+  for(const k in tiered){
+    const pair=tiered[k],base=pair[0],tur=pair[1];
+    BLD_TIER_MDL_INFESTATION[k]=[1,2,3].map(t=>({base:()=>base(t),tur:tur?()=>tur(t):null}));
+  }
   const INF_BLD_BESPOKE_PACKS=Object.freeze({
-    nest: Object.freeze({id:'brood-nest-v2', source:'authored', maps:'brood-nest-v2', surfaces:Object.freeze({})}),
-    hq: Object.freeze({id:'brood-hive-v2', source:'authored', maps:'brood-hive-v2', surfaces:Object.freeze({})}),
-    fac: Object.freeze({id:'brood-hive-v2', source:'authored', maps:'brood-hive-v2', surfaces:Object.freeze({})}),
-    harbor: Object.freeze({id:'brood-hive-v2', source:'authored', maps:'brood-hive-v2', surfaces:Object.freeze({})}),
-    airfield: Object.freeze({id:'brood-hive-v2', source:'authored', maps:'brood-hive-v2', surfaces:Object.freeze({})}),
-    tgate: Object.freeze({id:'brood-hive-v2', source:'authored', maps:'brood-hive-v2', surfaces:Object.freeze({})}),
-    spire: Object.freeze({id:'brood-spire-v2', source:'authored', maps:'brood-spire-v2', surfaces:Object.freeze({})}),
-    broodspire: Object.freeze({id:'brood-spire-v2', source:'authored', maps:'brood-spire-v2', surfaces:Object.freeze({})}),
-    broodchamber: Object.freeze({id:'brood-spire-v2', source:'authored', maps:'brood-spire-v2', surfaces:Object.freeze({})}),
-    techlab: Object.freeze({id:'brood-spire-v2', source:'authored', maps:'brood-spire-v2', surfaces:Object.freeze({})}),
-    aatower: Object.freeze({id:'brood-spore-v2', source:'authored', maps:'brood-spore-v2', surfaces:Object.freeze({})}),
-    sporelauncher: Object.freeze({id:'brood-spore-v2', source:'authored', maps:'brood-spore-v2', surfaces:Object.freeze({})}),
-    sporetower: Object.freeze({id:'brood-spore-v2', source:'authored', maps:'brood-spore-v2', surfaces:Object.freeze({})}),
-    missilebastion: Object.freeze({id:'brood-spore-v2', source:'authored', maps:'brood-spore-v2', surfaces:Object.freeze({})}),
-    wall: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    gate: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    bunker: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    bastion: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    rail: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    arc: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    nova: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    plasma: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    minelaser: Object.freeze({id:'brood-carapace-v2', source:'authored', maps:'brood-carapace-v2', surfaces:Object.freeze({})}),
-    mex: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    pgen: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    geo: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    silo: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    fab: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    acidgeyser: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    creeppustule: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    toxicgusher: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    acidgusher: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    toxicspewer: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    hellstorm: Object.freeze({id:'brood-sac-v2', source:'authored', maps:'brood-sac-v2', surfaces:Object.freeze({})}),
-    turret: Object.freeze({id:'brood-mound-v2', source:'authored', maps:'brood-mound-v2', surfaces:Object.freeze({})}),
-    spinespiker: Object.freeze({id:'brood-mound-v2', source:'authored', maps:'brood-mound-v2', surfaces:Object.freeze({})}),
-    gorespiker: Object.freeze({id:'brood-mound-v2', source:'authored', maps:'brood-mound-v2', surfaces:Object.freeze({})}),
-    spineburrow: Object.freeze({id:'brood-mound-v2', source:'authored', maps:'brood-mound-v2', surfaces:Object.freeze({})}),
-    silktrap: Object.freeze({id:'brood-tendril-v2', source:'authored', maps:'brood-tendril-v2', surfaces:Object.freeze({})}),
-    tendriltrap: Object.freeze({id:'brood-tendril-v2', source:'authored', maps:'brood-tendril-v2', surfaces:Object.freeze({})}),
-    tendrilmaw: Object.freeze({id:'brood-tendril-v2', source:'authored', maps:'brood-tendril-v2', surfaces:Object.freeze({})}),
-    uplink: Object.freeze({id:'brood-tendril-v2', source:'authored', maps:'brood-tendril-v2', surfaces:Object.freeze({})}),
-    sonicshrieker: Object.freeze({id:'brood-tendril-v2', source:'authored', maps:'brood-tendril-v2', surfaces:Object.freeze({})}),
-    sgen: Object.freeze({id:'brood-tendril-v2', source:'authored', maps:'brood-tendril-v2', surfaces:Object.freeze({})}),
-    thornnest: Object.freeze({id:'brood-nest-v2', source:'authored', maps:'brood-nest-v2', surfaces:Object.freeze({})}),
-    raptornest: Object.freeze({id:'brood-nest-v2', source:'authored', maps:'brood-nest-v2', surfaces:Object.freeze({})})
+    nest: Object.freeze({id:'brood-nest-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    hq: Object.freeze({id:'brood-hive-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    fac: Object.freeze({id:'brood-hive-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    harbor: Object.freeze({id:'brood-hive-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    seafort: Object.freeze({id:'brood-hive-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    stormcaller: Object.freeze({id:'brood-spore-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    airfield: Object.freeze({id:'brood-hive-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    tgate: Object.freeze({id:'brood-hive-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    spire: Object.freeze({id:'brood-spire-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    broodspire: Object.freeze({id:'brood-spire-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    broodchamber: Object.freeze({id:'brood-spire-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    techlab: Object.freeze({id:'brood-spire-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    aatower: Object.freeze({id:'brood-spore-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    sporelauncher: Object.freeze({id:'brood-spore-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    sporetower: Object.freeze({id:'brood-spore-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    missilebastion: Object.freeze({id:'brood-spore-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    wall: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    gate: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    bunker: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    bastion: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    rail: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    arc: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    nova: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    plasma: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    minelaser: Object.freeze({id:'brood-carapace-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    mex: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    pgen: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    geo: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    silo: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    fab: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    acidgeyser: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    creeppustule: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    toxicgusher: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    acidgusher: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    toxicspewer: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    hellstorm: Object.freeze({id:'brood-sac-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    turret: Object.freeze({id:'brood-mound-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    spinespiker: Object.freeze({id:'brood-mound-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    gorespiker: Object.freeze({id:'brood-mound-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    spineburrow: Object.freeze({id:'brood-mound-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    silktrap: Object.freeze({id:'brood-tendril-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    tendriltrap: Object.freeze({id:'brood-tendril-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    tendrilmaw: Object.freeze({id:'brood-tendril-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    uplink: Object.freeze({id:'brood-tendril-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    sonicshrieker: Object.freeze({id:'brood-tendril-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    sgen: Object.freeze({id:'brood-tendril-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    thornnest: Object.freeze({id:'brood-nest-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})}),
+    raptornest: Object.freeze({id:'brood-nest-v2', source:'semantic-bake', maps:null, surfaces:Object.freeze({})})
   });
 
   function infOrganicSurfacePass(geo,pack){
@@ -769,7 +859,8 @@ var BLD_MDL_INFESTATION, BLD_TUR_MDL_INFESTATION,
       for(let o=11;o<v.length;o+=VFLOATS){
         const raw=v[o],sgn=raw<0?-1:1,packed=Math.abs(raw);
         const whole=Math.floor(packed),src=whole-1;
-        const dst=pack&&pack.surfaces&&pack.surfaces[src]!==undefined?pack.surfaces[src]:src;
+        const dst=pack&&pack.surfaces&&pack.surfaces[src]!==undefined?pack.surfaces[src]
+          :(src===MAT.TWR_GLOW?MAT.BROOD_SLIME:src);
         if(dst!==undefined)v[o]=sgn*((dst+1)+(packed-whole));
       }
     }

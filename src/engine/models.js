@@ -50,6 +50,9 @@ const TWR_ARM=C(190,198,208), TWR_ARM_D=C(118,128,140);
 const TWR_MACH=C(145,154,166), TWR_TRIM=C(220,226,234);
 const TWR_COAT=C(68,76,88), TWR_TEAM=C(218,226,236);
 const TWR_GLOW=C(92,214,255), TWR_PAD=C(116,120,128), TWR_BORE=C(13,15,18);
+/* Landmark glowOk only passes MAT.TWR_GLOW. This brighter vertex is the
+   same tile, so HQ points read at command distance without a rail. */
+const HQ_LAMP=C(236,250,255);
 const LIT_WIN=C(255,230,170), COOL_WIN=C(170,230,255), FLICK_WIN=C(255,200,140);
 const SHOP_WIN=C(255,245,220), NEON_CYAN=C(0,240,255), SOLAR_PANEL=C(35,50,80);
 const COPPER_PAT=C(82,132,114), BRICK_RED=C(140,76,64);
@@ -58,7 +61,7 @@ const NOVA_MET=C(132,142,156), NOVA_CARB=C(44,48,56);
    selectors, rather than a renderer switch: HQ and Techlab can establish their
    own material hierarchy now while the renderer still falls back to the live
    V2 atlas. They are semantic-bake prototypes, NOT UV-authored map packs. */
-const NOVA_HQ_ARM=C(142,158,180), NOVA_HQ_STRUCT=C(42,52,68);
+const NOVA_HQ_ARM=C(152,158,166), NOVA_HQ_STRUCT=C(46,50,56);
 const NOVA_HQ_ROOF=C(116,132,152), NOVA_HQ_GLASS=C(44,130,196);
 const NOVA_RESEARCH_ARM=C(136,154,178), NOVA_RESEARCH_CORE=C(40,60,82);
 const NOVA_RESEARCH_ROOF=C(104,122,144), NOVA_RESEARCH_GLASS=C(50,148,212);
@@ -79,7 +82,7 @@ const NOVA_FAB_ROOF=C(102,124,148), NOVA_FAB_GLASS=C(50,138,204);
    and support structures. These are still palette selectors for the live V2
    material atlas, not a claim that bespoke UV-authored maps are complete. */
 const NOVA_MEX_ARM=C(126,148,174), NOVA_MEX_CORE=C(34,50,68);
-const NOVA_MEX_TRIM=C(160,180,202), NOVA_MEX_GLOW=C(72,204,255);
+const NOVA_MEX_TRIM=C(160,180,202), NOVA_MEX_GLOW=C(48,148,186);
 /* Service-deck plating. Its own palette entry so retiring it from a pad
    cannot disturb TWR_COAT, which many other surfaces still use. */
 const NOVA_DECK=C(111,119,131);
@@ -129,7 +132,7 @@ function bindMat(){
   COL_MAT.set(TWR_ARM,MAT.TWR_ARMOR); COL_MAT.set(TWR_ARM_D,MAT.TWR_ARMOR);
   COL_MAT.set(TWR_MACH,MAT.TWR_MACH); COL_MAT.set(TWR_TRIM,MAT.TWR_MACH);
   COL_MAT.set(TWR_COAT,MAT.TWR_COAT); COL_MAT.set(TWR_TEAM,MAT.TWR_ARMOR);
-  COL_MAT.set(TWR_GLOW,MAT.TWR_GLOW); COL_MAT.set(TWR_PAD,MAT.TWR_PAD);
+  COL_MAT.set(TWR_GLOW,MAT.TWR_GLOW); COL_MAT.set(HQ_LAMP,MAT.TWR_GLOW); COL_MAT.set(TWR_PAD,MAT.TWR_PAD);
   COL_MAT.set(TWR_BORE,MAT.TWR_BORE);
 
   COL_MAT.set(LIT_WIN,matResolve('window.warm'));   COL_MAT.set(COOL_WIN,matResolve('window.cool'));
@@ -140,7 +143,7 @@ function bindMat(){
   /* HQ/Techlab own semantic surface sets until authored UV packs arrive.
      Keeping the mappings local prevents a generic Nova-material edit from
      accidentally changing every production building in the faction. */
-  COL_MAT.set(NOVA_HQ_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_HQ_STRUCT,MAT.NOVA_CARBON);
+  COL_MAT.set(NOVA_HQ_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_HQ_STRUCT,MAT.TWR_COAT);
   COL_MAT.set(NOVA_HQ_ROOF,matResolve('structure.roof')); COL_MAT.set(NOVA_HQ_GLASS,matResolve('glass.canopy'));
   COL_MAT.set(NOVA_RESEARCH_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_RESEARCH_CORE,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_RESEARCH_ROOF,matResolve('structure.roof')); COL_MAT.set(NOVA_RESEARCH_GLASS,matResolve('glass.canopy'));
@@ -352,7 +355,10 @@ function sensorMast(m,x,y,z,h,col){
   m.cyl(x,y,z,0.20,0.14,h,6,DARKER);
   m.cyl(x,y+h,z,0.9,0.22,0.18,9,col);              // small dish
   m.box(x,y+h*0.55,z,0.10,h*0.42,0.5,MET_L);       // blade antenna
-  m.box(x,y+h+0.2,z,0.24,0.30,0.24,LAMP);          // status lamp
+  /* HQ_LAMP is TWR_GLOW, so landmark glowOk keeps the point. LAMP here
+     was a leftover orange cube that failed the gate on HQ and bloomed
+     on every factory/defense mast. */
+  m.cyl(x,y+h+0.22,z,.16,.16,.18,8,HQ_LAMP);
   return m;
 }
 /* Exhaust bank: stacks with hollow bores and a heat shroud. */
@@ -718,7 +724,7 @@ function mdlRhino(){                         // 1 — medium battle tank
   kitBox(t,-3.3,1.0,0,1.5,1.9,3.2,MET_D,0);               // bustle rack
   stowage(t,-3.3,2.9,0,2.6,2.6,RUST,0,9);
   sensorMast(t,-1.2,3.2,1.9,1.9,MET_L);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.2};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.2,muzzle:10.2};
 }
 function mdlGoliath(){                       // 2 — heavy assault tank
   const m=MB();
@@ -756,7 +762,7 @@ function mdlGoliath(){                       // 2 — heavy assault tank
   kitBox(t,-4.4,1.2,0,1.9,2.4,4.4,MET_D,0);
   stowage(t,-4.4,3.6,0,3.4,3.6,RUST,0,21);
   sensorMast(t,-1.8,4.3,2.6,2.3,MET_L);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:6.3};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:6.3,muzzle:14.4};
 }
 function mdlThumper(){                       // 3 — self-propelled artillery
   const m=MB();
@@ -785,7 +791,7 @@ function mdlThumper(){                       // 3 — self-propelled artillery
     t.box(-0.6,2.7,sd*2.7,4.2,0.5,0.5,TEAM_A);
   }
   kitBox(t,-2.8,1.2,0,1.7,1.6,3.6,MET_D,0);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.4};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.4,muzzle:16.1};
 }
 function mdlCommander(){                     // 4 — hero mech
   const m=MB();
@@ -1707,7 +1713,7 @@ function mdlNovaRhino(){
   }
   t.ring(-1.7,4.25,0,1.35,2.05,16,TWR_GLOW);
   t.sphere(-1.7,4.25,0,.82,8,ENERGY,1,false);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.45};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.45,muzzle:9.8};
 }
 
 /* Ascendancy doctrine makes the same battlefield role a broad assault block:
@@ -1743,7 +1749,7 @@ function mdlLegionRhino(){
   t.box(10.5,1.35,0,1.4,2.2,3.6,TWR_MACH);
   tubeX(t,11.8,2.3,0,.92,.84,.42,12,TWR_BORE);
   t.bevelBox(-4.1,1.4,0,2.5,2.6,5.0,.42,DARKER);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:6.0};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:6.0,muzzle:12.2};
 }
 
 /* A role-specific Syndicate skimmer. Three exposed lift banks and a forked
@@ -1783,7 +1789,7 @@ function mdlSyndicateRhino(){
   }
   t.sphere(-2.3,3.8,0,1.5,9,TWR_GLOW,1,false);
   ringX(t,-2.3,3.8,0,1.75,2.35,16,TWR_TRIM);
-  return {hull:m.build(),tur:t.build(),s:.98,turH:5.05};
+  return {hull:m.build(),tur:t.build(),s:.98,turH:5.05,muzzle:7.8,muzzleZ:1.35};
 }
 
 function mdlSynTank(){
@@ -1813,7 +1819,7 @@ function mdlSynTank(){
     for(let k=0;k<3;k++) t.cyl(2.6+k*1.2,1.1,sd*1.1,0.78,0.78,0.30,8,ENERGY);
   }
   t.cyl(-2.4,2.9,0,1.0,0.5,1.4,9,ENERGY);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.0};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.0,muzzle:7.1,muzzleZ:1.1};
 }
 function bioLegBank(m,n,span,reach,y){
   for(let k=0;k<n;k++) for(const sd of [-1,1]){
@@ -2051,7 +2057,23 @@ const FAC_KIT={
   syndicate:{0:mdlSynStrider,9:mdlSynIncinerator,1:mdlSyndicateRhino,2:mdlSynTank,6:mdlSynTank},
   /* Every type an old save, factory, airfield, harbor or transit gate can place
      for the Brood resolves to grown tissue. There is deliberately no shared
-     mechanical fallback hidden under an organic decoration layer. */
+     mechanical fallback hidden under an organic decoration layer.
+
+     THIS TABLE IS NOW A FALLBACK, NOT THE ROSTER.
+     It mapped 28 slots onto nine builders called with NO arguments, so twelve
+     of them were not merely similar — mdlHordeSpitter served slots 1, 2, 7,
+     10, 20 and 21 and mdlHordeBombardier served 3, 6, 16, 22, 26 and 27, each
+     rendering ONE shared vertex buffer. A tier-1 line brawler and a tier-3
+     siege caster were the same animal.
+     Those twelve are now split into twelve builders in models-units-brood.js
+     and registered in UNIT_MDL_BROOD, which mergeFactionUnitKits() copies over
+     this table at init — so for slots 1,2,3,6,7,10,12,13,16,20,21,22,26,27 and
+     30..32 the entry below never runs. They stay here on purpose: they are the
+     only thing standing between a failed load of that file and the Brood
+     fielding somebody else's tanks. Edit the split units THERE, not here; a
+     forward reference to them from this literal would be a ReferenceError,
+     because in dev the manifest loads each src file as its own script and this
+     one executes first. */
   horde:{
     0:mdlHordeBeast,1:mdlHordeSpitter,2:mdlHordeSpitter,3:mdlHordeBombardier,
     4:mdlHordeLeviathan,5:mdlHordeFlyer,6:mdlHordeBombardier,7:mdlHordeSpitter,
@@ -2171,7 +2193,10 @@ function mergeFactionUnitKits(){
 }
 /* The four kits keep their bespoke packs in their own tables; this is the only
    place that needs to read across all four, so it asks rather than importing a
-   registry that does not exist. Returns the published map basename or null. */
+   registry that does not exist. Asset maps are a bounded visual pilot, not a
+   switch that turns every generated template into live battle art. A pack must
+   opt in with a named token before the query may unwrap and reupload its mesh.
+   That keeps an unfinished map set from silently changing a whole faction. */
 function mfPackMaps(kit,slot){
   try{
     const T=kit==='nova'?(typeof TFC_NOVA_BESPOKE_PACKS!=='undefined'&&TFC_NOVA_BESPOKE_PACKS)
@@ -2179,7 +2204,9 @@ function mfPackMaps(kit,slot){
       :kit==='horde'?(typeof BRD_BESPOKE_PACKS!=='undefined'&&BRD_BESPOKE_PACKS)
       :(typeof COA_SYN_BESPOKE_PACKS!=='undefined'&&COA_SYN_BESPOKE_PACKS);
     const p=T&&T[slot];
-    return (p&&p.maps)||null;
+    if(!p||!p.maps||!p.assetSkin) return null;
+    const q=new URLSearchParams(location.search).get('assetskin');
+    return (q==='1'||q===p.assetSkin)?p.maps:null;
   }catch(e){ return null; }
 }
 function initFactionKits(){
@@ -2192,7 +2219,7 @@ function initFactionKits(){
       if(!cache[fn.name]){
         const g=fn();
         cache[fn.name]={hull:new InstMesh(gl,g.hull,900), tur:g.tur?new InstMesh(gl,g.tur,900):null,
-                        s:g.s||1, turH:g.turH||0};
+                        s:g.s||1, turH:g.turH||0, muzzle:g.muzzle||0, muzzleZ:g.muzzleZ||0};
         /* Per-asset baked maps, when this slot declares a triplet AND the flag
            is on. Async and self-cancelling: if any of the three fails to decode
            the mesh simply stays on the shared atlas, which is why this can be
@@ -2342,12 +2369,16 @@ function towerPad(m,r,tier,bearing){
    feel planted and give baked AO somewhere useful to collect.  Keeping this
    shared layer restrained is important: function-specific machinery above it
    should identify a building before colour or surface noise does. */
-function novaServicePad(m,w,d,h){
+function novaServicePad(m,w,d,h,quiet){
   h=h||2.4;
   m.bevelBox(0,0,0,w,h,d,Math.min(1.35,w*.04,d*.04),TWR_PAD);
   m.bevelBox(0,h,0,w-2.2,1.0,d-2.2,.45,NOVA_DECK);
-  m.box(0,h+.98,-d*.43,w*.30,.20,.34,TWR_TEAM);
-  m.box(0,h+.98, d*.43,w*.30,.20,.34,TWR_GLOW);
+  /* Status rails must stay short. w*.30 on the Command HQ (87) wrote a
+     26-unit TWR_GLOW bar — the glowing artifact, not a lamp. HQ passes
+     quiet so restoring TWR_GLOW points cannot revive that rail. */
+  const mark=quiet?TWR_TRIM:TWR_TEAM;
+  m.box(0,h+.98,-d*.43,Math.min(w*.30,8.0),.20,.34,mark);
+  m.box(0,h+.98, d*.43,Math.min(w*.18,6.2),.20,.34,quiet?TWR_TRIM:TWR_GLOW);
   return h+1.0;
 }
 function mdlMex(){
@@ -2435,7 +2466,7 @@ function mdlTurretBase(tier){
   m.extrude(0,9,0,oct(9.7),3,NOVA_SENTINEL_ARM);             // recessed upper tier
   for(const sx of [-1,1]) for(const sz of [-1,1]){
     m.bevelBox(sx*9.3,3,sz*9.3,4.2,4.6,4.2,.65,NOVA_SENTINEL_CORE); // anchor housings
-    m.box(sx*9.3,7.6,sz*9.3,1.4,.22,1.4,LAMP);
+    m.cyl(sx*9.3,7.72,sz*9.3,.28,.28,.22,8,HQ_LAMP);
   }
   for(const s of [-1,1]){
     m.box(0,11.75,s*8.5,7.4,.25,.42,TWR_TEAM);              // sparse faction livery
@@ -2447,7 +2478,7 @@ function mdlTurretBase(tier){
   }
   if(tier>=3) for(const s of [-1,1]){
     m.cyl(0,8.8,s*9.7,1.75,1.45,3.1,10,NOVA_SENTINEL_TRIM); // Mk3 reserve capacitors
-    m.box(0,11.75,s*9.7,2.3,.24,.8,HOT);
+    m.box(0,11.75,s*9.7,2.3,.24,.8,TWR_GLOW);
   }
   m.cyl(0,12,0,8.25,8.25,1.15,16,NOVA_SENTINEL_CORE);       // azimuth shadow gap
   m.cyl(0,13.15,0,7.15,6.65,.85,16,NOVA_SENTINEL_TRIM);     // y=14 bearing surface
@@ -2474,7 +2505,7 @@ function mdlTurretGun(tier){
   for(const x of [6.2,9.2,12.2]) cylX(m,x,8.0,0,.75,1.68,1.68,12,NOVA_SENTINEL_TRIM);
   m.bevelBox(15.2,6.0,0,3.15,4.0,4.8,.52,NOVA_SENTINEL_CORE); // muzzle shroud
   tubeX(m,15.9,8.0,0,1.15,1.58,.80,12,TWR_BORE);            // bore ends at x=17.05
-  m.box(-5.7,7.0,4.7,.7,1.1,1.4,LAMP);                      // service indicator
+  m.cyl(-5.7,7.55,4.7,.22,.22,.28,8,HQ_LAMP);               // service indicator
   if(tier>=2) for(const s of [-1,1]){
     m.bevelBox(-7.4,7.2,s*5.0,4.2,3.8,1.25,.34,TWR_ARM);    // Mk2 capacitor cassettes
     m.box(-7.4,10.8,s*5.05,2.5,.25,1.35,TWR_GLOW);
@@ -2536,8 +2567,8 @@ function mdlBunkerGun(tier){
   }
   return m.build();
 }
-function mdlRailBase(){
-  const m=MB();
+function mdlRailBase(tier){
+  const m=MB(); tier=tier||1;
   const oct=r=>[[-r*.55,-r],[r*.55,-r],[r,-r*.55],[r,r*.55],
                  [r*.55,r],[-r*.55,r],[-r,r*.55],[-r,-r*.55]];
   m.extrude(0,0,0,oct(21),4,NOVA_RAIL_CORE);                  // compact quiet foundation
@@ -2555,10 +2586,12 @@ function mdlRailBase(){
   }
   m.cyl(0,17,0,12.5,12.5,2.0,18,NOVA_RAIL_CORE);             // recessed rotation race
   m.cyl(0,19,0,11.0,9.7,2.0,18,NOVA_RAIL_TRIM);
+  if(tier>=2) for(const s of [-1,1]) m.cyl(s*16.4,4,0,2.15,1.75,8.0,10,NOVA_RAIL_TRIM);
+  if(tier>=3) m.box(0,16.9,0,14,.22,.5,TWR_TEAM);
   m.cyl(0,21,0,9.8,9.0,1.0,18,NOVA_RAIL_TRIM);                // y=22 bearing surface
   return m.build();
 }
-function mdlRailGun(){
+function mdlRailGun(tier){
   const m=MB();
   m.cyl(0,0,0,8.7,8.0,3.2,18,NOVA_RAIL_TRIM);                // azimuth drum
   m.cyl(0,3.2,0,7.7,7.1,1.2,18,NOVA_RAIL_TRIM);
@@ -2581,7 +2614,9 @@ function mdlRailGun(){
   for(const s of [-1,1]) m.box(13.2,10.85,s*1.45,17.4,.30,.38,NOVA_RAIL_GLOW);
   m.bevelBox(23.15,6.35,0,3.0,5.3,8.1,.55,NOVA_RAIL_CORE);   // rectangular muzzle casing
   tubeX(m,23.1,9.0,0,1.72,2.38,1.02,14,TWR_BORE);           // bore ends at x=24.82
-  m.box(-10.8,11.7,4.8,.9,1.2,1.5,LAMP);
+  m.cyl(-10.8,12.3,4.8,.22,.22,.28,8,HQ_LAMP);
+  if((tier||1)>=2) for(const s of [-1,1]) m.box(-8.2,12.0,s*7.2,2.2,.24,1.6,TWR_GLOW);
+  if((tier||1)>=3) cylX(m,4.0,6.4,0,17.0,.7,.5,10,NOVA_RAIL_GLOW,false);
   return m.build();
 }
 function mdlSgen(tier){
@@ -2616,21 +2651,31 @@ function mdlTgate(){
   m.box(0,41,0,66,7,58,MET);                                   // overhead crane deck
   m.box(0,5,0,44,3,34,DARKER);                                 // build pad
   m.cyl(0,8,0,16,15,4,14,ENERGY);
-  for(const s of [-1,1]) m.box(s*30,48,0,5,10,5,LAMP);
+  for(const s of [-1,1]) m.cyl(s*30,53.15,0,.36,.36,.28,8,HQ_LAMP);
   /* A single identification rail on each crane face is enough for ownership
      at command zoom; colouring the whole gantry would bury its steel finish. */
   for(const s of [-1,1]) m.box(0,46.8,s*28.8,34,.28,.36,TWR_TEAM);
   return m.build();
 }
 function mdlNest(){
+  /* Nest is Brood-owned at runtime (bldFactionKey forces horde). This Nova
+     fallback used to be a chitin mound — the exact cross-faction leak the
+     kit resolver exists to prevent if a preview or old save ever asks the
+     Frontline catalogue for `nest`. A containment bunker keeps the slot
+     readable as Nova without growing tissue. */
   const m=MB();
-  m.sphere(0,0,0,24,12,CHIT_D,0.72,true);                      // mound
-  m.sphere(0,10,0,14,10,CHITIN,0.9,true);
-  m.cyl(0,16,0,7,10,10,10,CHIT_D);                             // spire maw
-  m.cyl(0,26,0,10,3,4,10,HOT);
-  for(let k=0;k<7;k++){                                        // spines
-    const a=k/7*TAU, r=17;
-    m.cyl(Math.cos(a)*r,4,Math.sin(a)*r,2.4,0.3,13+ (k%3)*4,6,CLAW);
+  const y=novaServicePad(m,41,35,2.4);
+  m.bevelBox(0,y,0,28.0,8.5,24.0,1.4,NOVA_BUNKER_ARM);
+  m.bevelBox(0,y+8.5,0,24.0,1.6,20.0,.55,NOVA_BUNKER_TRIM);
+  roofEdge(m,0,y+10.1,0,24.0,20.0,.7,NOVA_BUNKER_CORE,TWR_TRIM);
+  m.cyl(0,y+10.1,0,7.2,6.0,6.5,12,NOVA_BUNKER_CORE);
+  m.cyl(0,y+16.6,0,5.4,3.2,2.2,12,NOVA_BUNKER_TRIM);
+  m.tube(0,y+18.8,0,3.4,1.6,1.4,10,TWR_BORE);
+  m.ring(0,y+20.1,0,2.2,3.6,14,NOVA_BUNKER_GLOW);
+  for(const s of [-1,1]){
+    m.bevelBox(s*11.5,y+1.0,0,6.0,7.2,8.5,.7,NOVA_BUNKER_ARM);
+    m.box(s*11.5,y+8.15,0,3.4,.22,2.2,s>0?TWR_TEAM:TWR_GLOW);
+    sensorMast(m,s*11.5,y+8.4,s*6.2,5.2,NOVA_BUNKER_ARM);
   }
   return m.build();
 }
@@ -2736,8 +2781,8 @@ function mdlTechlab(){
   ringX(m,-8.45,y+25.1,0,.9,1.5,12,TWR_GLOW);
   return m.build();
 }
-function mdlAA(){
-  const m=MB();
+function mdlAA(tier){
+  const m=MB(); tier=tier||1;
   const oct=r=>[[-r*.55,-r],[r*.55,-r],[r,-r*.55],[r,r*.55],
                  [r*.55,r],[-r*.55,r],[-r,r*.55],[-r,-r*.55]];
   m.extrude(0,0,0,oct(15),3,TWR_PAD);                         // compact stabilised pad
@@ -2747,11 +2792,19 @@ function mdlAA(){
     m.bevelBox(s*10.6,3,0,4.2,4.0,8.2,.55,TWR_COAT);         // power housings
     m.box(s*10.6,7.0,0,1.3,.24,4.4,s>0?TWR_GLOW:TWR_TEAM);
   }
+  if(tier>=2) for(const s of [-1,1]){
+    m.cyl(s*11.4,8.2,0,1.55,1.25,2.6,10,TWR_MACH);
+    m.box(s*11.4,10.9,0,1.0,.20,3.0,TWR_GLOW);
+  }
+  if(tier>=3){
+    m.box(0,10.35,0,1.05,.18,7.2,TWR_TEAM);
+    m.sphere(0,12.2,8.4,1.3,8,GLASS,.72,true);
+  }
   m.cyl(0,9.55,0,7.6,7.0,.6,14,TWR_COAT);                    // azimuth shadow gap
   m.cyl(0,10.15,0,6.8,6.25,.85,14,TWR_TRIM);                 // y=11 bearing surface
   return m.build();
 }
-function mdlAAGun(){
+function mdlAAGun(tier){
   const m=MB();
   m.cyl(0,0,0,6.5,6.0,2.2,14,TWR_MACH);                      // rotating race
   m.cyl(0,2.2,0,5.9,5.35,.9,14,TWR_TRIM);
@@ -2767,7 +2820,9 @@ function mdlAAGun(){
   m.bevelBox(2.0,4.8,0,3.6,4.2,7.0,.55,TWR_ARM);            // armoured mantlet
   m.cyl(-4.5,9.7,0,1.15,.82,2.8,10,TWR_MACH);                // radar pedestal
   m.sphere(-4.5,12.5,0,1.65,10,GLASS,.72,true);              // tracking radar dome
-  m.box(-4.5,9.1,3.8,.65,.9,1.1,LAMP);                       // acquisition lamp
+  m.cyl(-4.5,9.55,3.8,.20,.20,.24,8,HQ_LAMP);                // acquisition lamp
+  if((tier||1)>=2) m.box(0,9.2,0,8.4,.18,1.0,TWR_GLOW);
+  if((tier||1)>=3) for(const s of [-1,1]) gunX(m,1.8,5.2,11.2,.36,TWR_MACH,s*4.4);
   return m.build();
 }
 function mdlAirfield(){
@@ -2780,7 +2835,7 @@ function mdlAirfield(){
   m.box(4.0,y+1.2,0,68.0,.20,1.2,TWR_TEAM);
   for(const s of [-1,1]){
     m.box(5.0,y+1.22,s*10.5,70.0,.20,.42,TWR_GLOW);
-    for(const x of [-24,0,24,38]) m.box(x,y+1.25,s*10.5,1.2,.28,1.2,LAMP);
+    for(const x of [-24,0,24,38]) m.cyl(x,y+1.32,s*10.5,.22,.22,.20,8,HQ_LAMP);
   }
   /* One deep hangar and a distinct glazed flight-control tower form an
      asymmetrical silhouette while preserving most of the deck as negative
@@ -2836,7 +2891,7 @@ function mdlUplink(tier){
    ============================================================================ */
 function mdlHQ(){
   const m=MB();
-  const y=novaServicePad(m,87,73,3.2);
+  const y=novaServicePad(m,87,73,3.2,true);
   /* Three large masses replace the former collection of corner towers,
      greebles and transformer boxes.  The HQ remains the broadest Nova
      silhouette while now fitting its real 88x74 collision plot. */
@@ -2850,7 +2905,10 @@ function mdlHQ(){
     m.bevelBox(-33.5,y,s*25.5,14.0,23.0,17.0,1.5,NOVA_HQ_STRUCT);
     m.bevelBox(-33.5,y+23.0,s*25.5,15.5,1.8,18.5,.65,NOVA_HQ_ROOF);
     m.box(-33.5,y+15.0,s*34.2,8.0,4.5,.45,NOVA_HQ_GLASS);
-    m.box(-33.5,y+24.75,s*25.5,5.0,.22,5.0,s>0?TWR_GLOW:TWR_TEAM);
+    m.box(-33.5,y+24.65,s*25.5,2.4,.16,2.4,TWR_COAT);
+    /* Both wings get a point lamp. TWR_TEAM here was a dark socket after
+       glowOk, and a cyan team bevel before it. */
+    m.cyl(-33.5,y+24.85,s*25.5,.44,.44,.30,8,HQ_LAMP);
   }
   /* Raised command block and glazing band anchor the rear half. */
   m.bevelBox(-23.0,y+21.0,0,25.0,17.0,31.0,2.0,NOVA_HQ_ARM);
@@ -2860,21 +2918,32 @@ function mdlHQ(){
   m.box(-10.2,y+31.0,0,.50,5.0,23.0,NOVA_HQ_GLASS);
   ventBank(m,-23.0,y+42.1,0,10.0,10.0,4,TWR_MACH,0);
   sensorMast(m,-31.0,y+42.0,-8.0,9.0,TWR_MACH);
+  for(const s of [-1,1]) m.cyl(-23.0+s*11.2,y+40.85,s*14.6,.38,.38,.26,8,HQ_LAMP);
+  for(const s of [-1,1]) m.cyl(-5.0+s*28.0,y+22.15,s*22.6,.34,.34,.22,8,HQ_LAMP);
   /* The front deck stays intentionally open.  Two rings and cross hairs are
-     enough to read as a landing pad without a field of lamps. */
+     enough to read as a landing pad without a field of lamps. TWR_TEAM on
+     the inner ring was Nova livery — the cyan crush at HIGH. */
   m.cyl(17.0,y+21.0,0,15.0,15.0,1.0,20,NOVA_HQ_ROOF);
   m.ring(17.0,y+22.0,0,12.7,14.6,22,NOVA_HQ_STRUCT);
-  m.ring(17.0,y+22.1,0,9.2,10.4,22,TWR_TEAM);
-  m.box(17.0,y+22.2,0,17.0,.28,1.7,TWR_GLOW);
-  m.box(17.0,y+22.2,0,1.7,.28,17.0,TWR_GLOW);
+  m.ring(17.0,y+22.1,0,9.2,10.4,22,TWR_TRIM);
+  m.box(17.0,y+22.18,0,16.4,.16,1.15,TWR_TRIM);
+  m.box(17.0,y+22.18,0,1.15,.16,16.4,TWR_TRIM);
+  m.cyl(17.0,y+22.32,0,.62,.62,.28,10,HQ_LAMP);
+  for(const s of [-1,1]){
+    m.cyl(17.0+s*7.4,y+22.30,0,.38,.38,.22,8,HQ_LAMP);
+    m.cyl(17.0,y+22.30,s*7.4,.38,.38,.22,8,HQ_LAMP);
+  }
   /* Recessed deployment bay and ramp make +X the readable front. */
   m.box(29.3,y+2.0,0,.65,13.0,27.0,TWR_BORE);
   for(const s of [-1,1]){
     m.bevelBox(30.3,y+1.0,s*14.5,3.0,16.0,3.2,.45,TWR_ARM_D);
-    m.box(30.8,y+7.0,s*12.7,.30,8.0,.38,TWR_GLOW);
+    /* Door lamps, not 8-unit glow slabs. The old strip bloomed into a
+       cyan column at the bay cheek. */
+    m.cyl(30.8,y+10.2,s*12.7,.22,.22,.28,8,HQ_LAMP);
+    m.cyl(30.8,y+4.4,s*12.7,.22,.22,.28,8,TWR_TRIM);
   }
   m.bevelBox(30.3,y+14.0,0,3.0,4.0,32.0,.55,TWR_ARM);
-  m.box(30.8,y+17.8,0,.30,.24,22.0,TWR_TEAM);
+  m.box(30.8,y+17.8,0,.30,.24,22.0,TWR_TRIM);
   m.bevelBox(36.5,y-.3,0,13.0,1.4,27.0,.4,TWR_PAD);
   return m.build();
 }
@@ -3131,7 +3200,7 @@ const DROP_PROFILE={
   /* The command camera views the lander through terrain shadow and UI bloom.
      A deeper blue multiplication looked nearly black there, so this is a
      light steel-blue hull tint; dedicated team panels still carry the banner. */
-  nova:{scale:1.08,team:[188,226,255],glow:[142,228,255],ring:[170,224,255],eng:[[-49,-10],[-49,10]],vtol:[[-15,-15],[-15,15],[16,-15],[16,15]],lights:[[42,0],[15,-15],[15,15],[-30,0]]},
+  nova:{scale:1.08,team:[112,124,136],glow:[142,228,255],ring:[170,224,255],eng:[[-49,-10],[-49,10]],vtol:[[-15,-15],[-15,15],[16,-15],[16,15]],lights:[[42,0],[15,-15],[15,15],[-30,0]]},
   legion:{scale:1.12,team:[255,120,90],glow:[255,116,62],ring:[255,142,82],eng:[[-51,-25],[-51,-17],[-51,17],[-51,25]],lights:[[39,0],[15,-25],[15,25],[-35,0]]},
   syndicate:{scale:1.02,team:[150,235,95],glow:[138,255,112],ring:[152,255,126],eng:[[-38,-7],[-38,7],[-22,-18],[-22,18]],lights:[[45,0],[12,-24],[12,24],[-27,0]],hover:true},
   horde:{scale:1.04,team:[186,120,255],glow:[188,92,255],ring:[140,238,92],eng:[[-27,-10],[-27,10],[-16,-15],[-16,15]],lights:[[23,0],[-5,-20],[-5,20],[-25,0]],bio:true}
@@ -3338,6 +3407,81 @@ function mdlPlasmaCharger(tier){
   m.box(0,21.2,9.6,5.0,.24,.9,TWR_TEAM);
   return m.build();
 }
+/* SEAFORT used to draw the land Concussion Mortar. A floating dual-purpose
+   battery has a hull, a pontoon deck and a surface+AA mount — none of which
+   a poured oct pad can fake. 48x48 plot. Bearing at y=16. */
+function mdlSeafortBase(tier){
+  const m=MB(); tier=tier||1;
+  const hull=[[-20,-16],[-12,-21],[12,-21],[20,-16],[20,16],[12,21],[-12,21],[-20,16]];
+  m.extrude(0,0,0,hull,3.2,NOVA_HARBOR_CORE);
+  m.extrude(0,3.2,0,hull.map(p=>[p[0]*.92,p[1]*.90]),1.4,NOVA_HARBOR_DECK);
+  for(const s of [-1,1]){
+    m.bevelBox(-6.0,0,s*18.2,26,2.6,4.0,.5,NOVA_HARBOR_ARM);
+    m.box(-6.0,2.62,s*18.3,16,.20,1.5,s>0?TWR_TEAM:TWR_GLOW);
+    m.cyl(-15.0,0,s*14.2,1.55,1.35,3.2,8,TWR_MACH);
+  }
+  m.bevelBox(-7.0,4.6,0,16,8.2,18,.9,TWR_ARM_D);
+  m.extrude(0,12.8,0,towerOct(11.2),2.2,TWR_ARM);
+  m.cyl(0,14.6,0,9.4,9.4,.8,16,TWR_COAT);
+  m.cyl(0,15.4,0,8.2,7.4,.6,16,TWR_TRIM);                    // y=16 bearing
+  m.bevelBox(14.5,4.6,-8.0,10,6.8,10,.7,TWR_COAT);           // AA director
+  m.sphere(14.5,13.0,-8.0,2.35,10,GLASS,.72,true);
+  if(tier>=2) sensorMast(m,-15.5,4.6,10.0,6.4,TWR_MACH);
+  if(tier>=3) m.box(0,13.0,0,1.2,.20,8.0,TWR_TEAM);
+  return m.build();
+}
+function mdlSeafortGun(tier){
+  const m=MB(); tier=tier||1;
+  m.cyl(0,0,0,7.2,6.6,2.2,16,TWR_MACH);
+  m.bevelBox(-2.2,2.2,0,15.5,6.6,13.5,1.0,TWR_ARM_D);
+  cylX(m,3.2,6.2,0,11.5,2.25,1.75,12,TWR_MACH,false);        // surface battery
+  for(const x of [6.4,10.8]) cylX(m,x,6.2,0,.7,2.75,2.75,12,TWR_TRIM);
+  m.bevelBox(13.6,4.4,0,2.8,5.6,7.2,.45,TWR_ARM);
+  tubeX(m,14.2,6.2,0,1.7,2.55,1.25,12,TWR_BORE);
+  for(const s of [-1,1]){                                    // twin AA
+    m.box(5.2,9.2,s*3.15,8.4,.72,.55,TWR_MACH);
+    gunX(m,2.4,9.2,10.5,.36,TWR_MACH,s*3.15);
+  }
+  m.box(-2.6,8.7,0,1.15,.20,5.8,TWR_TEAM);
+  if(tier>=2) for(const s of [-1,1]) m.bevelBox(-6.4,4.0,s*5.0,4.0,3.1,2.0,.35,TWR_ARM);
+  if(tier>=3) sensorMast(m,-7.0,8.6,0,4.0,TWR_MACH);
+  return m.build();
+}
+/* STORMCALLER used the NOVA silo mesh. A banked-charge volley battery is a
+   capacitor farm with a 16-cell rack, not an orbital superweapon. 46x46. */
+function mdlStormcallerBase(tier){
+  const m=MB(); tier=tier||1;
+  towerPad(m,20,tier,false);
+  m.extrude(0,11,0,towerOct(15.2),4.0,TWR_ARM_D);
+  for(const s of [-1,1]){
+    m.bevelBox(-1.5,11,s*13.4,18,6.8,3.8,.5,TWR_COAT);
+    for(const x of [-6,0,6]){
+      m.cyl(x,17.8,s*13.4,1.28,1.05,3.0+(tier-1)*.7,8,TWR_MACH);
+      m.tube(x,20.7+(tier-1)*.7,s*13.4,1.08,.52,.5,8,TWR_BORE);
+      m.ring(x,21.3+(tier-1)*.7,s*13.4,.58,1.0,10,TWR_GLOW);
+    }
+    m.box(-1.5,17.7,s*13.5,10,.20,2.1,s>0?TWR_TEAM:TWR_GLOW);
+  }
+  m.cyl(0,15.0,0,8.4,7.6,2.0,16,TWR_MACH);
+  m.sphere(0,18.2,0,3.4+(tier-1)*.35,12,TWR_GLOW,1,false);   // banked charge
+  m.cyl(0,20.4,0,9.0,9.0,.8,16,TWR_COAT);
+  m.cyl(0,21.2,0,7.8,7.0,.8,16,TWR_TRIM);                    // y=22 bearing
+  return m.build();
+}
+function mdlStormcallerGun(tier){
+  const m=MB(); tier=tier||1;
+  m.cyl(0,0,0,7.4,6.8,2.0,16,TWR_MACH);
+  m.bevelBox(-2.4,2.0,0,17,7.2,15.5,.95,TWR_ARM_D);
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    const y=4.15+(r-1.5)*2.0,z=(c-1.5)*3.05;
+    m.bevelBox(4.0,y-1.05,z,3.2,2.1,2.3,.26,TWR_MACH);
+    tubeX(m,5.4,y,z,2.15,1.08,.68,8,TWR_BORE);               // 16-cell volley rack
+  }
+  m.bevelBox(-8.0,3.0,0,4.8,6.0,11.5,.55,TWR_COAT);
+  if(tier>=2) sensorMast(m,-8.8,9.0,0,4.4,TWR_MACH);
+  if(tier>=3) m.box(-3.0,9.4,0,1.15,.20,7.6,TWR_TEAM);
+  return m.build();
+}
 function mdlWall(){
   const m=MB();
   m.box(0,0,0,28,3,20,CONC_D);
@@ -3354,7 +3498,7 @@ function mdlGate(){
   for(const f of [-1,1]) m.box(f*11,3,0,6,20,18,CONC);         // gate towers
   m.box(0,19,0,26,4,17,CONC_D);
   m.box(0,3,0,16,15,4,ENERGY);                                 // energy curtain
-  for(const f of [-1,1]) m.box(f*11,23,0,4,3,4,LAMP);
+  for(const f of [-1,1]) m.cyl(f*11,24.62,0,.32,.32,.24,8,HQ_LAMP);
   m.box(0,22.8,0,9,.24,1.0,TWR_TEAM);                          // gatehouse livery, not curtain tint
   return m.build();
 }
@@ -3422,11 +3566,13 @@ const BLD_MDL={
   hq:mdlHQ, hellstorm:mdlHellstormBase, arc:mdlArc, rail:mdlRailBase, nova:mdlNovaBase, wall:mdlWall,
   minelaser:mdlMiningLaserBase, missilebastion:mdlMissileBastionBase, plasma:mdlPlasmaCharger,
   gate:mdlGate, geo:mdlGeo, silo:mdlSilo, fab:mdlFab,
+  seafort:mdlSeafortBase, stormcaller:mdlStormcallerBase,
 };
 const BLD_TUR_MDL={
   turret:mdlTurretGun, bunker:mdlBunkerGun, bastion:mdlBastionGun,
   aatower:mdlAAGun, hellstorm:mdlHellstormGun, rail:mdlRailGun,
-  nova:mdlNovaGun, minelaser:mdlMiningLaserGun, missilebastion:mdlMissileBastionGun
+  nova:mdlNovaGun, minelaser:mdlMiningLaserGun, missilebastion:mdlMissileBastionGun,
+  seafort:mdlSeafortGun, stormcaller:mdlStormcallerGun
 };
 /* Sentinel is the production template for visual Mk1/Mk2/Mk3 geometry. Other
    faction/weapon families are catalogued in design/tower-factions and can join
@@ -3442,17 +3588,21 @@ const BLD_TIER_MDL={
   nova:[1,2,3].map(tier=>({base:()=>mdlNovaBase(tier),tur:()=>mdlNovaGun(tier)})),
   minelaser:[1,2,3].map(tier=>({base:()=>mdlMiningLaserBase(tier),tur:()=>mdlMiningLaserGun(tier)})),
   missilebastion:[1,2,3].map(tier=>({base:()=>mdlMissileBastionBase(tier),tur:()=>mdlMissileBastionGun(tier)})),
-  plasma:[1,2,3].map(tier=>({base:()=>mdlPlasmaCharger(tier)}))
+  plasma:[1,2,3].map(tier=>({base:()=>mdlPlasmaCharger(tier)})),
+  aatower:[1,2,3].map(tier=>({base:()=>mdlAA(tier),tur:()=>mdlAAGun(tier)})),
+  rail:[1,2,3].map(tier=>({base:()=>mdlRailBase(tier),tur:()=>mdlRailGun(tier)})),
+  seafort:[1,2,3].map(tier=>({base:()=>mdlSeafortBase(tier),tur:()=>mdlSeafortGun(tier)})),
+  stormcaller:[1,2,3].map(tier=>({base:()=>mdlStormcallerBase(tier),tur:()=>mdlStormcallerGun(tier)}))
 };
 /* Height at which each turret meets its mount, in the model's own units. */
 const BLD_TUR_H={ turret:14, bunker:18, bastion:23, aatower:11, hellstorm:18,
-  rail:22, nova:22, minelaser:16, missilebastion:18 };
+  rail:22, nova:22, minelaser:16, missilebastion:18, seafort:16, stormcaller:22 };
 /* Weapon assemblies are deliberately oversized for command-view readability;
    their bases retain the real collision footprint while the moving mass reads
    clearly at phone scale. Keep projectile/beam muzzle offsets in sim.js in
    step with these values. */
 const BLD_TUR_S={ turret:1.20, bunker:1.12, bastion:1.14, aatower:1.18, hellstorm:1,
-  rail:1.15, nova:1, minelaser:1.14, missilebastion:1 };
+  rail:1.15, nova:1, minelaser:1.14, missilebastion:1, seafort:1.10, stormcaller:1.06 };
 
 /* ---------------------------------------------------------------------------
    WORLD OBJECTS — ruins, scenery, resources, effects.
@@ -3463,6 +3613,72 @@ function mdlCityHall(){ return loadWorldModel('mdlCityHall'); }
 function mdlCityTank(){ return loadWorldModel('mdlCityTank'); }
 function mdlRock(){ return loadWorldModel('mdlRock'); }
 function mdlTree(){ return loadWorldModel('mdlTree'); }
+/* Region flora. One imported broadleaf was the "one tree everywhere" tell.
+   These stay procedural and cheap so MEDIUM can instance fewer of the same
+   silhouette instead of a second atlas. Authored near-neutral; instance tint
+   carries the kit colour. */
+function mdlTreePine(){
+  const m=MB();
+  m.mat(MAT.EARTH);
+  m.cyl(0,0,0,1.15,0.72,8.2,6,C(72,56,40));
+  m.mat(MAT.DENSE_LEAF);
+  m.cyl(0,6.2,0,6.4,0.18,8.0,7,C(46,72,48),false);
+  m.cyl(0,10.4,0,4.7,0.14,7.0,7,C(40,68,44),false);
+  m.cyl(0,15.0,0,2.9,0.04,5.8,7,C(36,64,40),false);
+  return m.build();
+}
+function mdlTreePalm(){
+  const m=MB();
+  m.mat(MAT.EARTH);
+  m.cyl(0,0,0,0.92,0.52,14.2,6,C(118,92,58));
+  m.mat(MAT.LEAF);
+  for(let k=0;k<6;k++){
+    const a=k/6*TAU;
+    m.box(Math.cos(a)*4.3,15.4,Math.sin(a)*4.3,7.6,0.34,1.35,C(70,110,48),a);
+  }
+  return m.build();
+}
+function mdlTreeDead(){
+  const m=MB();
+  m.mat(MAT.EARTH);
+  m.cyl(0,0,0,1.02,0.44,12.4,6,C(58,48,40));
+  m.box(2.3,9.2,0,5.6,0.68,0.68,C(64,52,42),0.42);
+  m.box(-1.7,11.1,1.2,4.3,0.52,0.52,C(60,50,40),-0.72);
+  return m.build();
+}
+function mdlTreeSpore(){
+  const m=MB();
+  m.mat(MAT.BROOD_CHITIN);
+  m.cyl(0,0,0,1.45,0.88,10.2,7,C(88,48,72));
+  m.sphere(0,12.1,0,4.3,8,C(160,70,140),0.72);
+  m.mat(MAT.BROOD_SLIME);
+  m.sphere(0,13.3,0,2.35,7,C(210,90,170),0.80);
+  return m.build();
+}
+function mdlBush(){
+  const m=MB();
+  m.mat(MAT.LEAF);
+  m.sphere(0,1.55,0,2.75,7,C(62,96,44),0.72);
+  m.sphere(1.55,1.15,0.55,1.75,6,C(70,104,48),0.70);
+  m.sphere(-1.25,1.05,-0.75,1.55,6,C(54,88,40),0.70);
+  return m.build();
+}
+function mdlRockIce(){
+  const m=MB();
+  m.mat(MAT.ICE_PACK);
+  m.sphere(0,2.15,0,4.15,7,C(200,220,236),0.55);
+  m.box(-1.15,0,1.35,3.4,2.75,2.15,C(170,190,210),0.38);
+  return m.build();
+}
+function mdlRockSlag(){
+  const m=MB();
+  m.mat(MAT.BASALT_CRUST);
+  m.sphere(0,2.0,0,4.0,7,C(52,44,42),0.50);
+  m.box(1.35,0,-0.75,3.15,2.35,2.55,C(40,36,34),0.48);
+  m.mat(MAT.BLAST_SLAG);
+  m.box(0,2.35,0,1.55,0.48,1.55,C(80,48,36),0.18);
+  return m.build();
+}
 /* A crystal is not four cones. Real mineral habit is a CLUSTER: hexagonal
    prisms sharing a root, leaning apart, each ending in a pointed
    termination - and the faces are FLAT, because flat facets are what catch
@@ -3505,8 +3721,16 @@ function mdlCrystal(){
   return m.build();
 }
 function mdlDeposit(){
+  /* Original mass outcrop: dark circular rocky bed + upright CRYST shards.
+     The boulder pile read as brown plates from look-down; a 20-shard doodad
+     field was the glow-orb carpet. This mesh is the cluster — empty rings
+     still instance it, so a site is never a bare grey disc. */
   const m=MB();
-  m.cyl(0,0,0,17,15,2.5,14,C(96,92,84));
+  m.mat(MAT.STONE);
+  /* Wide low apron under the satellite shards. The inner bed alone left
+     extras sitting on grass; a boulder pile read as brown plates. */
+  m.cyl(0,-0.18,0,32,28,1.4,16,C(54,50,46));
+  m.cyl(0,0,0,17,15,2.8,14,C(72,68,62));
   m.mat(MAT.CRYST);
   const BASE=C(150,178,198), MID=C(214,236,248), TIP=C(255,255,255);
   for(let k=0;k<6;k++){
@@ -3515,10 +3739,35 @@ function mdlDeposit(){
                  Math.cos(a)*2.0, Math.sin(a)*2.0, k*1.13, BASE,MID,TIP);
   }
   crystalSpike(m, 0,0,3.8,14.5,0.5,-0.4,0.55,BASE,MID,TIP);
-  m.mat(0);
   return m.build();
 }
-function mdlGeyser(){ return loadWorldModel('mdlGeyser'); }
+function mdlGeyser(){
+  /* Natural vent. Two swaps made the phone-shot hatch:
+     1) mdlGeyser() → loadWorldModel('mdlGeyser') (12-gon CONC frustum);
+        today's civic ROOF/TRIM remap painted its +Y as a metal iris.
+     2) hud.js still stamped sprites.geyser (dark ellipses + 5 rim arcs)
+        on top in 3D. A sphere pile from look-down is the same cone.
+     Rock spires + offset steam — STONE, not CRYST, so it is not a mass node. */
+  const m=MB();
+  const ROCK=C(118,108,92), ASH=C(86,80,70), RIM=C(148,138,118), GLOW=C(210,236,248);
+  m.mat(MAT.STONE);
+  /* Irregular boulders only. crystalSpike facets read as iris plates from
+     look-down — that is the hatch again. */
+  m.sphere(0,2.8,0,6.2,7,ROCK,0.48);
+  m.sphere(-5.6,2.2,3.8,4.4,6,ASH,0.55);
+  m.sphere(5.2,2.0,-4.2,4.1,6,RIM,0.52);
+  m.sphere(-3.4,1.8,-5.0,3.6,6,ASH,0.60);
+  m.sphere(4.8,1.6,4.6,3.4,6,ROCK,0.58);
+  m.sphere(1.2,2.4,5.8,3.0,6,RIM,0.62);
+  m.sphere(-0.4,11.5,0.6,3.2,7,ROCK,0.78);
+  m.sphere(0.8,16.8,-0.4,2.6,7,ASH,0.82);
+  m.sphere(-0.5,21.4,0.8,2.0,7,RIM,0.80);
+  m.mat(MAT.CRYST);
+  m.sphere(0.2,24.6,0.3,3.2,7,GLOW,0.88);
+  m.sphere(-0.8,27.8,0.7,2.4,6,GLOW,1.02);
+  m.sphere(0.9,30.2,-0.3,1.7,6,GLOW,0.72);
+  return m.build();
+}
 function mdlCrate(){ return loadWorldModel('mdlCrate'); }
 function mdlWreck(){ return loadWorldModel('mdlWreck'); }
 function mdlBerm(){ return loadWorldModel('mdlBerm'); }
@@ -3598,7 +3847,7 @@ function mdlModMark(){
 }
 function mdlShadow(){
   const m=MB();
-  const steps=[[0,0.40,0.63],[0.40,0.58,0.69],[0.58,0.74,0.78],[0.74,0.88,0.88],[0.88,1.0,0.96]];
+  const steps=[[0,0.40,0.42],[0.40,0.58,0.55],[0.58,0.74,0.68],[0.74,0.88,0.82],[0.88,1.0,0.94]];
   for(const [r0,r1,v] of steps) m.ring(0,0,0,r0,r1,26,[v,v,v]);
   return m.build();
 }
@@ -4169,10 +4418,7 @@ function ensureBldFactionMeshes(fac){
 }
 function bldMeshFor(B){
   const fac=bldFactionKey(B),set=ensureBldFactionMeshes(fac);
-  /* Stormcaller shares the silo family silhouette: a banked-charge battery
-     reads as "missile battery with a storm inside" in every faction kit
-     without demanding a new authored mesh per faction. */
-  const type=B.type==='seafort'?'bastion':B.type==='stormcaller'?'nova':B.type;
+  const type=B.type;
   /* A missing non-Nova mesh is a visible content error, not permission to put
      a blue building in another faction. Complete-kit audits gate releases;
      returning null here keeps a regression honest in the live game too. */
@@ -4192,7 +4438,7 @@ function initModels(){
     UNIT_MESH[t]={
       hull:new InstMesh(gl,g.hull, t===12||t===13?4200:1400),
       tur: g.tur? new InstMesh(gl,g.tur, 1400):null,
-      s:g.s||1, turH:g.turH||0, air:g.air||0
+      s:g.s||1, turH:g.turH||0, air:g.air||0, muzzle:g.muzzle||0, muzzleZ:g.muzzleZ||0
     };
   }
   Object.assign(BLD_MESH,initBldMeshSet(BLD_MDL,BLD_TUR_MDL,BLD_TIER_MDL,BLD_TUR_H,BLD_TUR_S,260));
@@ -4202,7 +4448,14 @@ function initModels(){
   FX.cityK =new InstMesh(gl,mdlCityTank(),160);
   FX.rock  =new InstMesh(gl,mdlRock(),900);
   FX.tree  =new InstMesh(gl,mdlTree(),900);
-  FX.crystal=new InstMesh(gl,mdlCrystal(),400);
+  FX.treePine=new InstMesh(gl,mdlTreePine(),700);
+  FX.treePalm=new InstMesh(gl,mdlTreePalm(),500);
+  FX.treeDead=new InstMesh(gl,mdlTreeDead(),500);
+  FX.treeSpore=new InstMesh(gl,mdlTreeSpore(),600);
+  FX.bush  =new InstMesh(gl,mdlBush(),800);
+  FX.rockIce=new InstMesh(gl,mdlRockIce(),700);
+  FX.rockSlag=new InstMesh(gl,mdlRockSlag(),700);
+  FX.crystal=new InstMesh(gl,mdlCrystal(),220);
   FX.dep   =new InstMesh(gl,mdlDeposit(),120);
   FX.geyser=new InstMesh(gl,mdlGeyser(),80);
   FX.crate =new InstMesh(gl,mdlCrate(),60);
@@ -4235,4 +4488,3 @@ function initModels(){
   FX.wedge =new InstMesh(gl,mdlLightWedge(),200);   // flashlight cones on the ground
   FX.pool  =new InstMesh(gl,mdlLightPool(),480);    // beam splashes + machine underglow
 }
-

@@ -1,7 +1,7 @@
 /* Build a compact, mobile-readable review sheet from the latest unit-lab PBR
    renders. Run tools/render-unit-lab.mjs first so every card represents the
    exact current runtime mesh and material atlas. */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {readFile,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {dirname,join,resolve} from 'node:path';
@@ -34,7 +34,7 @@ const cardsHtml=cards.map(card=>`<article>
     <div><span>${esc(card.allegiance)}</span><strong>${card.triangles.toLocaleString()} TRI</strong></div></div>
 </article>`).join('');
 
-const browser=await chromium.launch({
+const browser=await launchPwBrowser({
   headless:true,executablePath:chrome,
   args:['--disable-gpu-sandbox']
 });

@@ -10,7 +10,8 @@
    All generated files live under releases/unit-lab. Nothing here is copied by
    tools/pack-www.mjs, so validation art can never inflate the APK or IPA.
 */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {access, mkdir, readFile, writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -84,13 +85,14 @@ function geometryQuality(part,stride){
 }
 
 await mkdir(outDir,{recursive:true});
-const browser=await chromium.launch({
+const browser=await launchPwBrowser({
   headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']
 });
 try{
   const page=await browser.newPage({viewport:{width:800,height:800}});
   await page.goto(base+'/?unitLab=1&materialCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof UNIT_MDL!=='undefined'&&typeof TYPES!=='undefined'&&
     typeof UCAT!=='undefined'&&UNIT_MDL.length===TYPES.length,{timeout:30000});
   await page.waitForFunction(()=>typeof __MF_MATERIAL_ATLASES!=='undefined',{timeout:30000});
@@ -204,7 +206,7 @@ const bySlug=new Map(geometry.units.map(unit=>[unit.slug,unit]));
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[char]));
-const sheetBrowser=await chromium.launch({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
+const sheetBrowser=await launchPwBrowser({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
 try{
   const context=await sheetBrowser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1});
   for(const mode of ['blender','pbr']){

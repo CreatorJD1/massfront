@@ -1,6 +1,7 @@
 /* Live in-engine comparison of the two strategic defense landmarks across all
    canonical factions. Usage: node tools/capture-faction-strategic-defense.mjs [base URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir,rm} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -12,12 +13,13 @@ const out=join(root,'releases','faction-strategic-defense-live3d.png');
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 await rm(tmp,{recursive:true,force:true});await mkdir(tmp,{recursive:true});
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const context=await browser.newContext({viewport:{width:1000,height:1000},deviceScaleFactor:2,colorScheme:'dark'});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base+'/?factionStrategicDefenseCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof BLD_MDL_LEGION!=='undefined'&&typeof BLD_MDL_MACHINE!=='undefined'&&
     typeof BLD_MDL_INFESTATION!=='undefined'&&typeof addFactionStrategicBuildingVfx==='function'&&
     typeof stopAttract==='function'&&typeof resetWorld==='function'&&typeof render==='function',{timeout:30000});

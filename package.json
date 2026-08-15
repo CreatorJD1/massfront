@@ -1,13 +1,14 @@
 {
   "name": "massfront",
-  "version": "1.33.31",
+  "version": "1.33.37",
   "description": "MASSFRONT — a large-scale mobile RTS",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "python3 -m http.server 8100",
+    "dev": "node serve.mjs www 8100",
     "bundle": "node tools/bundle.mjs",
     "pack": "node tools/pack-www.mjs",
+    "preview:experimental": "vite --config experimental/preview/vite.config.js",
     "towers:blender": "node tools/render-tower-lab.mjs",
     "android:sync": "npm run pack && npx cap sync android",
     "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
@@ -15,15 +16,17 @@
     "ios:open": "npx cap open ios"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.4.2",
-    "playwright": "^1.62.1"
+    "@babylonjs/core": "^7.54.3",
+    "@capacitor/cli": "^8.5.0",
+    "playwright": "^1.62.1",
+    "vite": "^6.1.0"
   },
   "dependencies": {
-    "@capacitor/android": "^8.4.2",
+    "@capacitor/android": "^8.5.0",
     "@capacitor/app": "^8.1.1",
-    "@capacitor/core": "^8.4.2",
+    "@capacitor/core": "^8.5.0",
     "@capacitor/filesystem": "^8.1.2",
-    "@capacitor/ios": "^8.4.2",
+    "@capacitor/ios": "^8.5.0",
     "@capacitor/share": "^8.0.1"
   }
 }

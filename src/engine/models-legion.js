@@ -160,15 +160,20 @@ function mdlLegRailTur(tier){
   m.box(-8,2.4,0,3.2,5.4,7.2,LEG_MACH);
   return m.build();
 }
-function mdlLegAA(){
-  const m=MB(); legPad(m,15,3); m.cyl(0,5,0,8,7,7,12,LEG_ARM);
-  m.cyl(0,12,0,5.4,5.4,2,12,LEG_MACH); legCore(m,0,14,0,2.1); return m.build();
+function mdlLegAA(tier){
+  const m=MB(),t=tier||1; legPad(m,15+t,3);
+  m.cyl(0,5,0,8+t*.35,7+t*.25,7+t,12,LEG_ARM);
+  m.cyl(0,12+t,0,5.4,5.4,2,12,LEG_MACH); legCore(m,0,14+t,0,2.1);
+  if(t>=3) m.box(0,13+t,0,1.0,.18,6.4,LEG_RED);
+  return m.build();
 }
-function mdlLegAAGun(){
-  const m=MB(); m.bevelBox(-2,0,0,10,4.5,11,.8,LEG_ARM);
+function mdlLegAAGun(tier){
+  const m=MB(),t=tier||1; m.bevelBox(-2,0,0,10+t*.4,4.5+t*.25,11+t*.35,.8,LEG_ARM);
   for(const s of [-1,1]) m.bevelBox(-2,1.1,s*5.55,6.2,2.2,.55,.18,LEG_PANEL);
-  for(const s of [-1,1]) for(const q of [-1,1]) tubeX(m,1.5,2+q*1.1,s*2.6,11,.62,.30,10,LEG_BORE);
-  m.box(-4,3.8,0,3,2,7,LEG_RED); return m.build();
+  for(const s of [-1,1]) for(const q of [-1,1]) tubeX(m,1.5,2+q*1.1,s*2.6,11+t,.62,.30,10,LEG_BORE);
+  m.box(-4,3.8,0,3,2,7,LEG_RED);
+  if(t>=3) m.box(-4,5.4,0,2.2,.18,5.2,LEG_HOT);
+  return m.build();
 }
 function mdlLegMiningBase(tier){ return mdlLegTurretBase((tier||1)+1); }
 function mdlLegMiningGun(tier){
@@ -346,31 +351,106 @@ function mdlLegGate(){
   }
   m.bevelBox(0,5,0,22,13,5,.35,LEG_ARM_D);m.box(0,17.8,0,11,.22,5.2,LEG_EDGE);return m.build();
 }
+function mdlLegSeafortBase(tier){
+  const m=MB(),t=tier||1;
+  m.bevelBox(0,0,0,42,4.2,36,1.6,LEG_PAD);
+  m.bevelBox(0,4.2,0,38,2.0,32,.55,LEG_PANEL);
+  for(const s of [-1,1]){
+    m.bevelBox(-4,0,s*16.8,30,3.4,5.2,.7,LEG_ARM);
+    m.box(-4,3.42,s*16.95,16,.22,1.6,s>0?LEG_RED:LEG_HOT);
+    legHeatStack(m,-14,4.2,s*12.5,9+t,1.7);
+  }
+  m.cyl(0,6.2,0,11+t*.3,9.5+t*.25,8.5,12,LEG_ARM_D);
+  m.cyl(0,14.5,0,8.4+t*.25,7.6+t*.2,2.0,14,LEG_MACH);
+  m.ring(0,16.52,0,5.8+t*.2,7.4+t*.22,16,LEG_EDGE);
+  return m.build();
+}
+function mdlLegSeafortGun(tier){
+  const m=MB(),t=tier||1;
+  m.bevelBox(-2,0,0,13+t,5.6+t*.4,13+t,.9,LEG_ARM);
+  tubeX(m,2,2.6,0,14+t*1.6,1.85+t*.12,.92+t*.08,12,LEG_BORE);
+  for(let k=0;k<3;k++) ringX(m,5+k*3.2,2.6,0,2.2+t*.1,2.55+t*.1,12,k===2?LEG_HOT:LEG_MACH);
+  for(const s of [-1,1]){
+    m.bevelBox(-3,1.4,s*(6.4+t*.3),7,2.4,.55,.2,LEG_PANEL);
+    tubeX(m,1.2,4.8,s*3.0,11+t,0.62,0.30,9,LEG_BORE);
+    m.box(-3,3.72,s*(6.7+t*.3),3.6,.2,.62,s>0?LEG_RED:LEG_HOT);
+  }
+  m.box(-5.4,4.6,0,2.8,.22,6.4,LEG_RED);
+  return m.build();
+}
+function mdlLegStormBase(tier){
+  const m=MB(),t=tier||1; legPad(m,20+t*.4,3.8);
+  m.bevelBox(0,6.4,0,34+t,7.2,28+t,1.4,LEG_ARM_D);
+  for(const s of [-1,1]){
+    m.bevelBox(-2,10,s*(12.6+t*.3),16,5.2,4.0,.55,LEG_PANEL);
+    for(const x of [-6,2,10]){
+      m.cyl(x,14.8,s*(12.6+t*.3),1.35,1.1,4.2+t*.6,8,LEG_MACH);
+      m.tube(x,18.9+t*.6,s*(12.6+t*.3),1.15,.55,.45,8,LEG_BORE);
+      m.ring(x,19.5+t*.6,s*(12.6+t*.3),.7,1.1,10,x===2?LEG_HOT:LEG_RED);
+    }
+  }
+  m.cyl(0,13.4,0,8.8+t*.25,8.0+t*.2,2.2,14,LEG_MACH);
+  m.ring(0,15.62,0,6.2+t*.2,8.0+t*.22,16,LEG_EDGE);
+  return m.build();
+}
+function mdlLegStormTur(tier){
+  const m=MB(),t=tier||1;
+  m.cyl(0,0,0,8.2+t*.2,7.6+t*.18,2.0,14,LEG_MACH);
+  m.bevelBox(-2,2,0,16+t,7.2+t*.4,16+t,.95,LEG_ARM);
+  for(let r=0;r<4;r++) for(let c=0;c<4;c++){
+    const y=4.2+(r-1.5)*2.05,z=(c-1.5)*3.15;
+    m.bevelBox(3.6,y-1.05,z,3.4,2.15,2.4,.28,LEG_PANEL);
+    tubeX(m,5.2,y,z,2.2,1.12,.62,8,LEG_BORE);
+  }
+  m.box(-7.2,5.4,0,3.2,5.6,10.5,LEG_ARM_D);
+  m.box(-7.2,10.9,0,1.4,.22,6.4,LEG_RED);
+  return m.build();
+}
+function mdlLegNest(){
+  /* Nest is Brood-owned at runtime (bldFactionKey forces horde). This Legion
+     fallback used to alias HQ — a 72-wide keep for a hatchery slot. A sealed
+     quarantine redoubt keeps the catalogue readable as Dominion iron without
+     growing tissue or cloning the command keep. */
+  const m=MB();
+  legPad(m,20,3.4);
+  m.bevelBox(0,5.4,0,26,9,22,1.8,LEG_ARM);
+  m.bevelBox(0,14.4,0,20,1.8,16,.45,LEG_PANEL);
+  m.box(0,16.25,0,10,.22,4.2,LEG_RED);
+  m.cyl(0,16.2,0,6.4,5.2,5.5,12,LEG_MACH);
+  m.cyl(0,21.7,0,4.6,3.0,2.0,12,LEG_PANEL);
+  m.tube(0,23.7,0,3.0,1.4,1.2,10,LEG_BORE);
+  m.ring(0,24.9,0,1.8,3.2,14,LEG_HOT);
+  for(const s of [-1,1]){
+    m.bevelBox(s*11.2,6.2,0,5.6,7.0,8.0,.6,LEG_PANEL);
+    m.box(s*11.2,13.15,0,3.2,.22,2.0,s>0?LEG_RED:LEG_HOT);
+    legHeatStack(m,s*11.2,13.4,s*6.0,8,1.5);
+  }
+  return m.build();
+}
 
 const BLD_MDL_LEGION={
   mex:()=>mdlLegEconomy('mex'),pgen:()=>mdlLegEconomy('pgen'),geo:()=>mdlLegEconomy('geo'),silo:()=>mdlLegEconomy('silo'),fab:()=>mdlLegEconomy('fab'),
   fac:()=>mdlLegFactory('fac'),tgate:()=>mdlLegFactory('tgate'),harbor:()=>mdlLegFactory('harbor'),airfield:()=>mdlLegFactory('airfield'),
-  techlab:()=>mdlLegFactory('techlab'),hq:()=>mdlLegFactory('hq'),nest:()=>mdlLegFactory('hq'),
+  techlab:()=>mdlLegFactory('techlab'),hq:()=>mdlLegFactory('hq'),nest:()=>mdlLegNest(),
   turret:mdlLegTurretBase,bunker:mdlLegBunkerBase,bastion:mdlLegBastionBase,aatower:mdlLegAA,
   minelaser:mdlLegMiningBase,missilebastion:mdlLegMissileBase,hellstorm:mdlLegHellfireBase,arc:mdlLegArc,
   sgen:mdlLegBarrier,uplink:mdlLegUplink,nova:mdlLegNovaBase,plasma:mdlLegPlasma,
   rail:mdlLegRailBase,wall:mdlLegWall,gate:mdlLegGate,
+  seafort:mdlLegSeafortBase,stormcaller:mdlLegStormBase,
 };
 const BLD_TUR_MDL_LEGION={
   turret:mdlLegTurretGun,bunker:mdlLegBunkerGun,bastion:mdlLegBastionGun,
   aatower:mdlLegAAGun,minelaser:mdlLegMiningGun,rail:mdlLegRailTur,
   hellstorm:mdlLegHellfireTur,nova:mdlLegNovaTur,missilebastion:mdlLegMissileTur,
+  seafort:mdlLegSeafortGun,stormcaller:mdlLegStormTur,
 };
 const BLD_TUR_H_LEGION={
   turret:14,bunker:17,bastion:22,aatower:12,minelaser:15,rail:17,
-  hellstorm:17.8,nova:17.7,missilebastion:17,
+  hellstorm:17.8,nova:17.7,missilebastion:17,seafort:16.5,stormcaller:15.6,
 };
-/* The weapon sweep is collision-relevant even though the turret is a separate
-   instance. These two scales keep the Mk3 receiver/bores inside the plot that
-   was reserved before construction instead of silently enlarging placement. */
 const BLD_TUR_S_LEGION={
   turret:1.13,bunker:1.10,bastion:1.11,aatower:1.12,minelaser:1.10,rail:1.0,
-  hellstorm:1.0,nova:1.0,missilebastion:1.0,
+  hellstorm:1.0,nova:1.0,missilebastion:1.0,seafort:1.08,stormcaller:1.05,
 };
 /* Stage D1 — isolated Legion landmark packs. These are per-building semantic
    bakes, not a faction-wide colour wash: the shared battle material still owns
@@ -381,7 +461,7 @@ const BLD_TUR_S_LEGION={
    and avoids changing the generic building renderer. */
 const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
   hq:Object.freeze({
-    id:'legion-hq-v2',source:'authored',maps:'legion-hq-v2',
+    id:'legion-hq-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -389,7 +469,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   fac:Object.freeze({
-    id:'legion-fac-v2',source:'authored',maps:'legion-fac-v2',
+    id:'legion-fac-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -397,7 +477,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   techlab:Object.freeze({
-    id:'legion-techlab-v2',source:'authored',maps:'legion-techlab-v2',
+    id:'legion-techlab-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -405,7 +485,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   pgen:Object.freeze({
-    id:'legion-pgen-v2',source:'authored',maps:'legion-pgen-v2',
+    id:'legion-pgen-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_SIEGE,
       [MAT.TWR_MACH]:MAT.LEGION_RIVET,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -413,7 +493,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   mex:Object.freeze({
-    id:'legion-mex-v2',source:'authored',maps:'legion-mex-v2',
+    id:'legion-mex-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -421,7 +501,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   geo:Object.freeze({
-    id:'legion-geo-v2',source:'authored',maps:'legion-geo-v2',
+    id:'legion-geo-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -429,7 +509,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   airfield:Object.freeze({
-    id:'legion-airfield-v2',source:'authored',maps:'legion-airfield-v2',
+    id:'legion-airfield-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -437,7 +517,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   rail:Object.freeze({
-    id:'legion-rail-v2',source:'authored',maps:'legion-rail-v2',
+    id:'legion-rail-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -445,7 +525,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   uplink:Object.freeze({
-    id:'legion-uplink-v2',source:'authored',maps:'legion-uplink-v2',
+    id:'legion-uplink-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -453,7 +533,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   turret:Object.freeze({
-    id:'legion-turret-v2',source:'authored',maps:'legion-turret-v2',
+    id:'legion-turret-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -461,7 +541,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   bunker:Object.freeze({
-    id:'legion-bunker-v2',source:'authored',maps:'legion-bunker-v2',
+    id:'legion-bunker-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -469,7 +549,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   bastion:Object.freeze({
-    id:'legion-bastion-v2',source:'authored',maps:'legion-bastion-v2',
+    id:'legion-bastion-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -477,7 +557,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   aatower:Object.freeze({
-    id:'legion-aatower-v2',source:'authored',maps:'legion-aatower-v2',
+    id:'legion-aatower-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -485,7 +565,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   minelaser:Object.freeze({
-    id:'legion-minelaser-v2',source:'authored',maps:'legion-minelaser-v2',
+    id:'legion-minelaser-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -493,7 +573,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   missilebastion:Object.freeze({
-    id:'legion-missilebastion-v2',source:'authored',maps:'legion-missilebastion-v2',
+    id:'legion-missilebastion-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -501,7 +581,23 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   hellstorm:Object.freeze({
-    id:'legion-hellstorm-v2',source:'authored',maps:'legion-hellstorm-v2',
+    id:'legion-hellstorm-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  seafort:Object.freeze({
+    id:'legion-seafort-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  stormcaller:Object.freeze({
+    id:'legion-stormcaller-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -509,7 +605,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   arc:Object.freeze({
-    id:'legion-arc-v2',source:'authored',maps:'legion-arc-v2',
+    id:'legion-arc-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -517,7 +613,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   sgen:Object.freeze({
-    id:'legion-sgen-v2',source:'authored',maps:'legion-sgen-v2',
+    id:'legion-sgen-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -525,7 +621,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   plasma:Object.freeze({
-    id:'legion-plasma-v2',source:'authored',maps:'legion-plasma-v2',
+    id:'legion-plasma-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -533,7 +629,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   wall:Object.freeze({
-    id:'legion-wall-v2',source:'authored',maps:'legion-wall-v2',
+    id:'legion-wall-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
@@ -541,9 +637,57 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     })
   }),
   gate:Object.freeze({
-    id:'legion-gate-v2',source:'authored',maps:'legion-gate-v2',
+    id:'legion-gate-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  nest:Object.freeze({
+    id:'legion-nest-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  harbor:Object.freeze({
+    id:'legion-harbor-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  tgate:Object.freeze({
+    id:'legion-tgate-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  silo:Object.freeze({
+    id:'legion-silo-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  fab:Object.freeze({
+    id:'legion-fab-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
+    })
+  }),
+  nova:Object.freeze({
+    id:'legion-nova-v2',source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_ARMOR]:MAT.LEGION_CAST,[MAT.TWR_COAT]:MAT.LEGION_RIVET,
       [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
       [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
     })
@@ -563,13 +707,13 @@ function domLegionStructureSurfacePass(geo,pack){
 function domLegionStructureFactory(fn,key){
   return function(...args){return domLegionStructureSurfacePass(fn(...args),DOM_LEGION_STRUCTURE_PACKS[key]);};
 }
-for(const k of ['hq','fac','techlab','pgen','mex','geo','airfield','rail','uplink','turret','bunker','bastion','aatower','minelaser','missilebastion','hellstorm','arc','sgen','plasma','wall','gate'])
+for(const k of ['hq','fac','techlab','pgen','mex','geo','airfield','rail','uplink','turret','bunker','bastion','aatower','minelaser','missilebastion','hellstorm','arc','sgen','plasma','wall','gate','seafort','stormcaller','nest','harbor','tgate','silo','fab','nova'])
   if(BLD_MDL_LEGION[k]) BLD_MDL_LEGION[k]=domLegionStructureFactory(BLD_MDL_LEGION[k],k);
-for(const k of ['turret','bunker','bastion','aatower','minelaser','rail','hellstorm','nova','missilebastion'])
+for(const k of ['turret','bunker','bastion','aatower','minelaser','rail','hellstorm','nova','missilebastion','seafort','stormcaller'])
   if(BLD_TUR_MDL_LEGION[k]) BLD_TUR_MDL_LEGION[k]=domLegionStructureFactory(BLD_TUR_MDL_LEGION[k],k==='nova'?'hellstorm':k);
 const BLD_TIER_MDL_LEGION={};
-for(const k of ['turret','bunker','bastion','minelaser','rail']) BLD_TIER_MDL_LEGION[k]=[1,2,3].map(t=>({base:()=>BLD_MDL_LEGION[k](t),tur:()=>BLD_TUR_MDL_LEGION[k](t)}));
-for(const k of ['hellstorm','nova','missilebastion'])
+for(const k of ['turret','bunker','bastion','aatower','minelaser','rail']) BLD_TIER_MDL_LEGION[k]=[1,2,3].map(t=>({base:()=>BLD_MDL_LEGION[k](t),tur:()=>BLD_TUR_MDL_LEGION[k](t)}));
+for(const k of ['hellstorm','nova','missilebastion','seafort','stormcaller'])
   BLD_TIER_MDL_LEGION[k]=[1,2,3].map(t=>({base:()=>BLD_MDL_LEGION[k](t),tur:()=>BLD_TUR_MDL_LEGION[k](t)}));
 for(const k of ['arc','sgen','uplink','plasma']) BLD_TIER_MDL_LEGION[k]=[1,2,3].map(t=>({base:()=>BLD_MDL_LEGION[k](t)}));
 

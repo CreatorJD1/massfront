@@ -8,23 +8,43 @@
    deploys. This takeover keeps every underlying rule/save variable intact but
    presents them as one command journey:
 
-       GALAXY -> PLANET -> REGION -> DEPLOYMENT
+       GALAXY -> SYSTEM -> PLANET -> REGION -> DEPLOYMENT
 
    The galaxy is a lightweight 3D projection on a 2D canvas. A second WebGL
    context was deliberately avoided: Android already carries the battlefield's
    PBR atlases and post buffers, and a decorative GL context made backgrounding
    materially more likely to reclaim both contexts. */
 let mfGalaxyReady=false,mfGalaxyStage='galaxy',mfGalaxyFrame=0,mfGalaxyLastDraw=0;
-let mfGalaxyYaw=.18,mfGalaxyPitch=-.08,mfGalaxyDragging=false,mfGalaxyDragX=0,mfGalaxyDragY=0,mfGalaxyDragTravel=0;
-let mfGalaxyTargets=[],mfGalaxyOriginalPlanetRow=null,mfGalaxyOpenOriginal=null,mfGalaxyTransit=0;
+let mfGalaxyYaw=.18,mfGalaxyPitch=-.22,mfGalaxyDragging=false,mfGalaxyDragX=0,mfGalaxyDragY=0,mfGalaxyDragTravel=0;
+let mfGalaxyTargets=[],mfSystemTargets=[],mfGalaxySystemKey='sombrero',mfGalaxyOriginalPlanetRow=null,mfGalaxyOpenOriginal=null,mfGalaxyTransit=0;
 let mfQuickPlan='custom',mfQuickAssisted=false;
+let mfSystemLoreOpen=false,mfSystemGlobeOff=null,mfSystemGlobeCache={key:'',yaw:0,pitch:0};
+/* First tap highlights. Second tap on the same target within the window
+   commits. A single tap was warping galaxy → system, planet → region, and
+   site card → deploy while the finger was still aiming. */
+let mfPickArm={k:'',id:'',t:0};
 
-const MF_GALAXY_STAGES=['galaxy','planet','region','deploy'];
+const MF_GALAXY_STAGES=['galaxy','system','planet','region','deploy'];
+const MF_GALAXY_SYSTEM_ORDER=['sombrero','andromeda','orion','helios'];
+/* Fallback keeps the cluster at four hittable stars even if SYSTEMS is late. */
+const MF_GALAXY_SYSTEM_FALLBACK={
+  sombrero:{id:'sombrero',nm:'SOMBRERO-I',star:'FRONTLINE PRIME',fac:'nova',home:'aelos',color:'#5ad4ff',ds:'Nova beginner system.',x:-.72,y:-.18,z:.16},
+  andromeda:{id:'andromeda',nm:'ANDROMEDA-IV',star:'DOMINION FURNACE',fac:'legion',home:'pyraeth',color:'#ff714c',ds:'Dominion system.',x:.68,y:-.42,z:-.10},
+  orion:{id:'orion',nm:'ORION ARC',star:'GRID SUN',fac:'syndicate',home:'nordhall',color:'#7dff9a',ds:'Syndicate system.',x:.46,y:.52,z:.28},
+  helios:{id:'helios',nm:'HELIOS CORE',star:'HIVE STAR',fac:'horde',home:'vespera',color:'#c46bff',ds:'Brood system.',x:-.38,y:.58,z:-.28}
+};
+/* Extra ring bodies are scenery. Never keys in PLANETS, never mfSystemTargets. */
+const MF_SYSTEM_FILLERS={
+  sombrero:[{ring:.46,ang:2.55,r:9,kind:'rock',tint:[96,108,118]},{ring:1.22,ang:4.18,r:17,kind:'gas',tint:[168,148,118]}],
+  andromeda:[{ring:.44,ang:1.15,r:8,kind:'rock',tint:[118,74,62]},{ring:1.24,ang:3.72,r:16,kind:'gas',tint:[186,96,72]}],
+  orion:[{ring:.48,ang:5.05,r:8,kind:'rock',tint:[148,168,176]},{ring:1.20,ang:2.18,r:16,kind:'gas',tint:[122,164,152]}],
+  helios:[{ring:.45,ang:.42,r:9,kind:'rock',tint:[86,52,72]},{ring:1.26,ang:3.28,r:18,kind:'gas',tint:[168,82,54]}]
+};
 const MF_GALAXY_META={
-  aelos:{x:-.72,y:-.20,z:.18,status:'COALITION HOLD',control:72,front:'VERDANT FRONT',color:'#4df19a'},
-  pyraeth:{x:.66,y:-.46,z:-.08,status:'DOMINION PRESSURE',control:46,front:'ASH FRONT',color:'#ff714c'},
-  nordhall:{x:.48,y:.55,z:.30,status:'CONTESTED',control:39,front:'CRYO FRONT',color:'#8fd8ff'},
-  vespera:{x:-.35,y:.62,z:-.30,status:'ASCENDANCY SIGNAL',control:63,front:'DUSK FRONT',color:'#b58cff'}
+  aelos:{x:-.72,y:-.20,z:.18,status:'TFC HOMEWORLD',control:72,front:'CIVIC FRONT',color:'#5ad4ff'},
+  pyraeth:{x:.66,y:-.46,z:-.08,status:'DOMINION HOMEWORLD',control:46,front:'STORM FRONT',color:'#ff714c'},
+  nordhall:{x:.48,y:.55,z:.30,status:'SYNDICATE GRID',control:39,front:'MACHINE FRONT',color:'#7dff9a'},
+  vespera:{x:-.35,y:.62,z:-.30,status:'BROOD HIVEWORLD',control:63,front:'INFESTATION FRONT',color:'#c46bff'}
 };
 
 function mfGalaxyCss(){
@@ -48,10 +68,14 @@ function mfGalaxyCss(){
   #setupScr.galaxyFlow.galaxyStage-deploy .opsBriefGrid>div{min-height:45px;padding:5px}
   #setupScr.galaxyFlow.galaxyStage-deploy .opsBriefGrid b{font-size:14px}
   .mfGalaxyHost{width:min(100%,680px);margin:0 auto;padding:0 calc(var(--sar) + 12px) 18px calc(var(--sal) + 12px);box-sizing:border-box}
-  .mfGalaxyStepper{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;
+  .mfGalaxyStepper{position:sticky;top:0;z-index:5;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;
     margin:0 -2px;padding:7px 2px 8px;background:linear-gradient(180deg,#050c18 76%,rgba(5,12,24,.82))}
-  .mfGalaxyStep{position:relative;min-width:0;min-height:31px;padding:17px 2px 2px;border:0;color:#55788f;background:none;
-    font:800 7px/1 var(--fT);letter-spacing:.07em;overflow:visible}
+  /* 44px, not the 31px this shipped with. Five steps across a 412px phone is a
+     74px-wide target already; at 31px tall it was the smallest control in the
+     game and it navigates the entire flow. The extra height is bottom padding,
+     so the dot and rail keep their original positions. */
+  .mfGalaxyStep{position:relative;min-width:0;min-height:44px;padding:17px 2px 6px;border:0;color:#55788f;background:none;
+    font:800 9.5px/1.1 var(--fT);letter-spacing:.04em;overflow:visible}
   .mfGalaxyStep:before{content:'';position:absolute;left:0;right:0;top:6px;height:1px;background:#1b3549}
   .mfGalaxyStep:first-child:before{left:50%}.mfGalaxyStep:last-child:before{right:50%}
   .mfGalaxyStep i{position:absolute;left:50%;top:2px;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:#294357;box-shadow:0 0 0 3px #081523}
@@ -67,17 +91,77 @@ function mfGalaxyCss(){
     width:6px;height:6px;margin-right:5px;border-radius:50%;background:#61eaa0;box-shadow:0 0 8px #61eaa0;vertical-align:1px}
   .mfGalaxyViewport,.mfPlanetViewport{position:relative;overflow:hidden;border:1px solid rgba(99,193,234,.32);border-radius:16px;
     background:#020711;box-shadow:inset 0 0 42px rgba(0,0,0,.75),0 12px 30px rgba(0,0,0,.35)}
-  .mfGalaxyViewport{height:clamp(330px,48dvh,440px)}.mfPlanetViewport{height:clamp(290px,42dvh,370px)}
+  .mfGalaxyViewport{height:clamp(370px,54dvh,500px);background:#010208}.mfPlanetViewport{height:clamp(290px,42dvh,370px)}
   .mfGalaxyViewport:after,.mfPlanetViewport:after{content:'';position:absolute;inset:0;pointer-events:none;background:
     linear-gradient(rgba(108,216,255,.025) 50%,transparent 50%) 0 0/100% 4px,
     radial-gradient(circle at center,transparent 52%,rgba(1,5,12,.64));mix-blend-mode:screen}
-  #mfGalaxyCanvas,#mfPlanetCanvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
-  .mfGalaxyHelp{position:absolute;left:10px;right:10px;bottom:8px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;
+  .mfSystemTheatre{position:relative;margin:0}
+  .mfSystemViewport{position:relative;overflow:hidden;height:clamp(380px,56dvh,540px);border:1px solid rgba(90,220,255,.34);
+    border-radius:16px;background:#010308;box-shadow:inset 0 0 80px rgba(40,10,60,.18),inset 0 0 70px rgba(0,0,0,.82),0 12px 30px rgba(0,0,0,.35)}
+  .mfSystemViewport:after{content:'';position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(circle at 62% 46%,transparent 38%,rgba(1,4,12,.62))}
+  .mfSystemDossier{position:absolute;left:10px;top:12px;z-index:2;width:min(46%,214px);padding:10px 10px 11px;pointer-events:none;
+    border:1px solid rgba(120,220,255,.34);border-radius:11px;
+    background:linear-gradient(180deg,rgba(5,14,26,.92),rgba(3,8,16,.8));box-shadow:0 12px 28px rgba(0,0,0,.45)}
+  .mfSystemDossier b,.mfSystemDossier small,.mfSystemDossier p,.mfSystemDossier .mfSysStat{display:block}
+  .mfSystemDossier small{color:#6edcff;font:800 7px/1 var(--fT);letter-spacing:.16em}
+  .mfSystemDossier b{margin-top:5px;color:#f3fbff;font:900 16px/1 var(--fT);letter-spacing:.12em}
+  .mfSysSchematic{display:flex;align-items:center;gap:6px;margin:8px 0 2px}
+  .mfSysSchematic .star{flex:0 0 auto;width:9px;height:9px;border-radius:50%;background:#fff6d0;box-shadow:0 0 8px #ffe08a}
+  .mfSysSchematic em{flex:1;height:1px;background:linear-gradient(90deg,#6a8496,#7dff9a)}
+  .mfSysSchematic .world{flex:0 0 auto;width:8px;height:8px;border-radius:50%;background:#7dff9a;box-shadow:0 0 8px #7dff9a}
+  .mfSysSchematic span{color:#7dff9a;font:800 7px/1 var(--fT);letter-spacing:.1em}
+  .mfSystemDossier.locked .world{background:#6b7680;box-shadow:none}
+  .mfSystemDossier.locked .mfSysSchematic span{color:#8aa}
+  .mfSystemDossier.locked .mfSysSchematic em{background:#445}
+  .mfSysBadge{display:inline-block;margin:6px 0 0;padding:2px 6px;border-radius:3px;background:#1d6a3c;color:#b8ffd0;
+    font:900 8px/1 var(--fT);letter-spacing:.08em}
+  .mfSystemDossier.locked .mfSysBadge{background:#3a4450;color:#c5d0d8}
+  .mfSysSurvey{margin:8px 0 2px}.mfSysSurvey>span{display:block;color:#567c94;font:800 6.5px/1 var(--fT);letter-spacing:.1em}
+  .mfSysSurvey i{display:block;margin-top:4px;height:4px;border-radius:2px;background:#123042;overflow:hidden}
+  .mfSysSurvey i b{display:block;height:100%;margin:0;padding:0;font-size:0;line-height:0;background:linear-gradient(90deg,#5ae08a,#b6ffd0);border-radius:2px}
+  .mfSystemDossier.locked{border-style:dashed;border-color:rgba(160,176,188,.38);filter:saturate(.72)}
+  .mfSystemDossier .mfBriefGate{margin-top:8px;color:#ffd676;font:800 7.5px/1.3 var(--fT);letter-spacing:.06em}
+  .mfSystemDossier .mfSysStat{margin-top:6px;color:#c5e6f4;font:750 8px/1.3 var(--fT);letter-spacing:.03em}
+  .mfSystemDossier .mfSysStat span{display:block;color:#567c94;font:800 6.5px/1 var(--fT);letter-spacing:.1em}
+  .mfSystemDossier p{margin-top:7px;color:#8fb3c6;font:650 9px/1.35 var(--fU)}
+  .mfSysLoreExtra{display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(120,220,255,.22)}
+  .mfSysLoreExtra .mfSysBrief{margin:0 0 7px;color:#c5e6f4;font:650 9px/1.35 var(--fU)}
+  .mfSystemDossier.loreOpen{width:min(72%,248px);max-height:min(68%,440px);overflow:auto;pointer-events:auto;
+    box-shadow:0 12px 28px rgba(0,0,0,.55),0 0 18px rgba(80,210,255,.16)}
+  .mfSystemDossier.loreOpen .mfSysLoreExtra{display:block}
+  .mfHexGo.loreOn i{color:#dff8ff;box-shadow:0 0 14px rgba(80,210,255,.45)}
+  /* Footer is the dock. On-canvas ENTER/BACK hexes doubled the tabs. */
+  .mfSystemHexNav{display:none!important}
+  .mfHexGo{display:none}
+  /* One dock for every War Table stage (galaxy/system/planet/region/deploy).
+     Global .setupFoot pins .mbtn.alt to 32%, so gold Enter dwarfs War Room
+     and the 13px clip shears labels on a 412-wide phone. Equal 1fr columns,
+     48px tap row — width 192 on 412 is correct; do not stretch height to 192. */
+  #setupScr.galaxyFlow .setupFoot{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:48px;gap:8px;align-items:stretch;
+    flex:0 0 auto;height:auto;padding:10px calc(var(--sar) + 10px) max(calc(var(--sab) + 12px),24px) calc(var(--sal) + 10px)}
+  #setupScr.galaxyFlow .setupFoot .mbtn,#setupScr.galaxyFlow .setupFoot .mbtn.alt{
+    flex:none;width:100%;height:48px;min-height:48px;max-height:48px;min-width:0;max-width:none;box-sizing:border-box;text-align:center;
+    padding:0 11px!important;font-size:11.5px!important;letter-spacing:.03em!important;line-height:48px;
+    white-space:nowrap;overflow:hidden;text-overflow:clip;
+    clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
+  /* System keeps the galaxy dock: War Room left, Enter right. Do not hide .setupFoot. */
+  .mfSystemSub{max-width:540px;margin:0 auto 8px}
+  #mfGalaxyCanvas,#mfPlanetCanvas,#mfSystemCanvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+  /* Help sits UNDER the hologram, not on the canvas. Overlaying it on
+     LOCAL CLUSTER / 4 SYSTEMS (and the system sun caption) was the QA
+     sweep P1: two instruction layers in the same phone lane. */
+  .mfGalaxyHelp{position:relative;left:auto;right:auto;bottom:auto;display:flex;justify-content:space-between;gap:8px;margin:6px 4px 0;pointer-events:none;
     color:#8ab8cc;font:800 7px/1.2 var(--fT);letter-spacing:.08em;text-shadow:0 1px 3px #000}.mfGalaxyHelp b{color:#dff8ff}
   .mfWorldStrip,.mfRegionStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
   .mfWorldChip,.mfRegionChip{min-width:0;min-height:48px;padding:7px 4px;border-radius:9px;border:1px solid rgba(96,155,191,.22);
     color:#789caf;background:rgba(7,17,30,.9);font:800 8px/1.1 var(--fT);letter-spacing:.04em}
-  .mfWorldChip b,.mfWorldChip small,.mfRegionChip b,.mfRegionChip small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mfWorldChip b,.mfWorldChip small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .mfRegionChip{padding:6px 3px;min-height:58px}
+  .mfRegionChip b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    white-space:normal;word-break:break-word;font:800 7px/1.15 var(--fT);letter-spacing:.02em}
+  .mfRegionChip small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    white-space:normal;word-break:break-word;font:750 6px/1.15 var(--fT);letter-spacing:.02em}
   .mfWorldChip small,.mfRegionChip small{margin-top:4px;color:#55778e;font-size:6.5px}.mfWorldChip.on,.mfRegionChip.on{color:#f2fcff;
     border-color:var(--pc,#77dcff);box-shadow:0 0 10px color-mix(in srgb,var(--pc,#77dcff) 24%,transparent)}
   .mfWorldChip.locked,.mfRegionChip.locked{opacity:.42;border-style:dashed;filter:saturate(.3)}
@@ -89,7 +173,7 @@ function mfGalaxyCss(){
   .mfStageTitle{margin:13px 2px 3px;color:#effaff;font:900 clamp(17px,5vw,24px)/1.08 var(--fT);letter-spacing:.16em;text-align:center}
   .mfStageSub{max-width:520px;margin:0 auto 10px;color:#82a9be;font:650 10px/1.4 var(--fU);text-align:center}
   .mfConquestContinue{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:3px 8px;width:100%;min-height:55px;margin:0 0 9px;padding:9px 11px;text-align:left;border-radius:11px;border:1px solid rgba(87,226,155,.4);background:linear-gradient(100deg,rgba(17,73,48,.84),rgba(7,24,31,.95));color:#dffff0}
-  .mfConquestContinue span,.mfConquestContinue b,.mfConquestContinue small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfConquestContinue span{color:#70efaa;font:800 7px/1 var(--fT);letter-spacing:.13em}.mfConquestContinue b{margin-top:3px;font:900 10px/1.15 var(--fT);letter-spacing:.06em}.mfConquestContinue small{grid-column:2;grid-row:1/3;align-self:center;color:#ffe28a;font:900 9px/1 var(--fT)}
+  .mfConquestContinue span,.mfConquestContinue small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfConquestContinue span{color:#70efaa;font:800 7px/1 var(--fT);letter-spacing:.13em}.mfConquestContinue b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;font:900 10px/1.15 var(--fT);letter-spacing:.04em;white-space:normal;word-break:break-word}.mfConquestContinue small{grid-column:2;grid-row:1/3;align-self:center;color:#ffe28a;font:900 9px/1 var(--fT)}
   .mfPlanetStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:9px 0}.mfPlanetStats>div{min-width:0;padding:8px 5px;
     border-radius:9px;border:1px solid rgba(91,156,193,.18);background:rgba(5,14,25,.8);text-align:center}.mfPlanetStats span,.mfPlanetStats b{display:block;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfPlanetStats span{color:#567c94;font:800 7px/1 var(--fT);letter-spacing:.09em}.mfPlanetStats b{margin-top:4px;color:#d9f2ff;font:800 9px/1 var(--fT)}
@@ -100,6 +184,9 @@ function mfGalaxyCss(){
   #setupScr.galaxyFlow #mapRow{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px!important;padding:0!important}
   #setupScr.galaxyFlow #mapRow .mapCard{position:relative;border-radius:13px;overflow:hidden;transition:transform .18s ease,border-color .18s ease;min-height:0}
   #setupScr.galaxyFlow #mapRow .mapCard:active{transform:scale(.975)}#setupScr.galaxyFlow #mapRow .mapCard.sel{border-color:#74ddff;box-shadow:0 0 16px rgba(76,204,255,.24)}
+  #setupScr.galaxyFlow #mapRow .mapCard.sel.confirm:after{content:'TAP AGAIN';position:absolute;left:8px;right:8px;bottom:8px;z-index:2;padding:6px 8px;
+    border-radius:8px;background:rgba(6,16,28,.82);color:#ffe08a;font:900 9px/1 var(--fT);letter-spacing:.1em;text-align:center;pointer-events:none}
+  .mfWorldChip.confirm,.mfRegionChip.confirm{box-shadow:0 0 0 2px #ffe08a,0 0 14px rgba(255,208,96,.28)}
   #setupScr.galaxyFlow #mapRow .mapCard.locked{opacity:.46;filter:saturate(.35);border-style:dashed}
   #setupScr.galaxyFlow #mapRow .mapCard.locked:after{content:'SECURE PREVIOUS SITE';position:absolute;inset:0;display:grid;place-items:center;padding:12px;
     color:#d7e9f2;background:rgba(3,9,16,.68);font:900 9px/1.25 var(--fT);letter-spacing:.08em;text-align:center}
@@ -128,17 +215,133 @@ function mfGalaxyCss(){
   #setupScr.galaxyWarp .mfStagePanel.on{animation:mfGalaxyWarp .62s cubic-bezier(.15,.75,.2,1)}
   @keyframes mfGalaxyWarp{0%{opacity:1;filter:blur(0);transform:scale(1)}55%{opacity:.1;filter:blur(5px);transform:scale(1.18)}100%{opacity:1;filter:blur(0);transform:scale(1)}}
   @media(max-width:480px){#setupScr.galaxyFlow .setupContext{display:none}.mfGalaxyHost{padding-left:calc(var(--sal) + 8px);padding-right:calc(var(--sar) + 8px)}
-    .mfGalaxyViewport{height:clamp(315px,45dvh,390px)}.mfPlanetViewport{height:clamp(270px,39dvh,335px)}
+    .mfGalaxyViewport{height:clamp(340px,50dvh,430px)}.mfPlanetViewport{height:clamp(270px,39dvh,335px)}
+    .mfSystemViewport{height:clamp(340px,52dvh,480px)}.mfSystemDossier{width:min(52%,188px);padding:7px}
     #setupScr.galaxyFlow #mapRow{display:flex!important;gap:8px!important;overflow-x:auto;padding-bottom:7px!important;scroll-snap-type:x mandatory;scrollbar-width:none}
     #setupScr.galaxyFlow #mapRow::-webkit-scrollbar{display:none}#setupScr.galaxyFlow #mapRow .mapCard{flex:0 0 86%;scroll-snap-align:center}
-    .mfWorldChip,.mfRegionChip{font-size:7px}.mfStageTitle{letter-spacing:.12em}.mfQuickPlan{min-height:98px;padding-left:6px;padding-right:6px}.mfQuickPlan span{font-size:7.5px}.mfQuickSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
-  @media(max-width:355px){.mfGalaxyStep{font-size:7px;letter-spacing:.03em}.mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(2,1fr)}.mfPlanetStats{grid-template-columns:1fr 1fr}}
+    .mfWorldChip{font-size:7px}.mfRegionChip{font-size:6.5px}.mfStageTitle{letter-spacing:.12em}.mfQuickPlan{min-height:98px;padding-left:6px;padding-right:6px}.mfQuickPlan span{font-size:7.5px}.mfQuickSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:355px){.mfGalaxyStep{font-size:8.5px;letter-spacing:.03em}.mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(2,1fr)}.mfPlanetStats{grid-template-columns:1fr 1fr}}
+
+  /* ── LEGIBILITY FLOOR ─────────────────────────────────────────────────────
+     The War Table was authored against a desktop preview and drifted down to
+     6–8px for anything that was not a heading. Measured on a 412px phone that
+     is roughly 4pt: the Orbitron caps lose their crossbars to the subpixel
+     grid and the letter-spacing these labels carry (.07–.16em) pulls what is
+     left further apart. Every rule below only raises a size that was under
+     9px, or the container height needed to absorb it — no colour, no layout,
+     no new selectors. Kept as one block at the end rather than edited in
+     place so the authored composition above still reads as written, and so
+     the floor is auditable in one glance.
+
+     Where a chip has a fixed min-height its floor moves with the type;
+     .mfRegionChip in particular clamps two lines of b plus two of small, so
+     58px could not hold 9.5/8.5px text. */
+  .mfGalaxyEyebrow{font-size:9.5px}
+  .mfGalaxyHelp{font-size:9px;line-height:1.25}
+  .mfModeContract span{font-size:9px}.mfModeContract b{font-size:11px}.mfModeContract small{font-size:9.5px}
+  .mfSystemDossier small{font-size:9px}
+  .mfSysSchematic span{font-size:9px}
+  .mfSysBadge{font-size:9.5px}
+  .mfSysSurvey>span{font-size:9px}
+  .mfSystemDossier .mfBriefGate{font-size:9.5px}
+  .mfSystemDossier .mfSysStat{font-size:9.5px}
+  .mfSystemDossier .mfSysStat span{font-size:9px}
+  .mfSystemDossier p{font-size:10px}
+  .mfSysLoreExtra .mfSysBrief{font-size:10px}
+  .mfWorldChip,.mfRegionChip{font-size:10px}
+  .mfWorldChip{min-height:52px}
+  .mfRegionChip{min-height:68px}
+  .mfRegionChip b{font-size:9.5px}
+  .mfRegionChip small{font-size:8.5px}
+  .mfWorldChip small,.mfRegionChip small{font-size:9px}
+  .mfWorldChip.locked:before,.mfRegionChip.locked:before{font-size:9px}
+  .mfConquestBar{font-size:9.5px}
+  .mfStageSub{font-size:11px}
+  .mfConquestContinue{min-height:58px}
+  .mfConquestContinue span{font-size:9px}.mfConquestContinue b{font-size:11px}.mfConquestContinue small{font-size:10.5px}
+  .mfPlanetStats span{font-size:9px}.mfPlanetStats b{font-size:11px}
+  .mfRegionHero small{font-size:9.5px}.mfRegionHero span{font-size:11px}
+  #setupScr.galaxyFlow #mapRow .mapCard.locked:after{font-size:10px}
+  .mConquest,.mReward{font-size:9px}
+  .mfMissionKicker{font-size:9.5px}.mfMissionHero p{font-size:11px}
+  .mfMissionTags span{font-size:9px}
+  .mfConfigIntro b{font-size:11px}.mfConfigIntro span{font-size:9.5px}
+  .mfDrawerTx b{font-size:11px}.mfDrawerTx small{font-size:9.5px}
+  .mfConfigBody .secLbl{font-size:10.5px}
+  .mfQuickLabel{font-size:10.5px}.mfQuickLabel small{font-size:9px}
+  .mfQuickPlan{min-height:122px}
+  .mfQuickPlan b{font-size:10px}.mfQuickPlan span{font-size:9.5px}.mfQuickPlan em{font-size:9px}
+  .mfTeamBtn{min-height:68px}.mfTeamBtn b{font-size:10.5px}.mfTeamBtn span{font-size:9.5px}
+  .mfQuickCommander b{font-size:9.5px}.mfQuickCommander span{font-size:9px}
+  .mfQuickSummary span{font-size:9px}.mfQuickSummary b{font-size:10px}
+  .mfAdvanced .mfAdvancedSection{font-size:9.5px}
+  .mfSystemDossier .mfBriefGate{font-size:9.5px}
+  .mfMissionTags span{font-size:9px}
+  .mfQuickCommander b{font-size:9.5px}.mfQuickCommander span{font-size:9px}
+  @media(max-width:480px){
+    .mfWorldChip{font-size:9.5px}.mfRegionChip{font-size:9px}
+    .mfQuickPlan{min-height:116px}.mfQuickPlan span{font-size:9px}}
+
+  /* ── SHORT VIEWPORT (phone landscape) ────────────────────────────────────
+     Every viewport above is clamp(<tall floor>,Ndvh,<cap>). At 915x412 the
+     floor wins — 370px of hologram inside a 255px scroll window — and because
+     these canvases carry touch-action:none for their own drag-to-orbit, a
+     finger landing on them cannot scroll the page back. Measured in landscape
+     before this rule: the galaxy was entirely below the fold and unreachable.
+
+     This has to live here, not in ui.css. mfGalaxyCss() appends its <style>
+     to document.head at runtime, so it always sorts after the linked
+     stylesheet; an equal-specificity override written over there loses the
+     cascade no matter what media query guards it. */
+  @media(orientation:landscape) and (max-height:560px){
+    .mfGalaxyViewport{height:clamp(150px,44dvh,240px)}
+    .mfPlanetViewport{height:clamp(140px,40dvh,220px)}
+    .mfSystemViewport{height:clamp(150px,44dvh,250px)}
+    .mfSystemDossier{width:min(34%,190px);padding:6px 8px 7px;max-height:88%;overflow:hidden}
+    .mfSystemDossier b{font-size:13px}.mfSystemDossier p{display:none}
+    .mfStageTitle{margin:7px 2px 2px;font-size:clamp(15px,3.2vw,20px)}
+    .mfStageSub{margin-bottom:6px}
+    .mfGalaxyHost{padding-bottom:8px}
+    .mfModeContract{margin:0 0 6px;padding:7px 10px}
+    #setupScr.galaxyFlow .setupHead{padding-bottom:5px}
+    .mfGalaxyStep{min-height:44px;padding-top:15px}
+  }
   `;
   (document.head||document.documentElement).appendChild(st);
 }
 
-function mfGalaxyPlanetKey(){return typeof planetForTheme==='function'?planetForTheme(curTheme):'aelos';}
+function mfGalaxyPlanetKey(){
+  /* Mixed-theme regions would lie if we keyed off curTheme (vespera biome is
+     now Dominion's home, not the Brood planet). The map catalogue is truth. */
+  if(typeof planetForMap==='function'&&typeof curMap!=='undefined'){
+    const k=planetForMap(curMap);if(k&&PLANETS[k])return k;
+  }
+  return typeof planetForTheme==='function'?planetForTheme(curTheme):'aelos';
+}
 function mfGalaxyPlanet(){const k=mfGalaxyPlanetKey();return PLANETS[k]||PLANETS.aelos;}
+function mfGalaxySystemId(){
+  const C=mfGalaxyCatalog();
+  if(C[mfGalaxySystemKey])return mfGalaxySystemKey;
+  return typeof systemForPlanet==='function'?systemForPlanet(mfGalaxyPlanetKey()):'sombrero';
+}
+function mfGalaxyCatalog(){
+  const src=(typeof SYSTEMS!=='undefined'&&SYSTEMS)?SYSTEMS:{};
+  const out={};
+  for(const id of MF_GALAXY_SYSTEM_ORDER){
+    const S=src[id]||MF_GALAXY_SYSTEM_FALLBACK[id],F=MF_GALAXY_SYSTEM_FALLBACK[id];
+    out[id]={id,nm:S.nm||F.nm,star:S.star||F.star,fac:S.fac||F.fac,home:S.home||F.home,color:S.color||F.color,ds:S.ds||F.ds,
+      x:Number.isFinite(S.x)?S.x:F.x,y:Number.isFinite(S.y)?S.y:F.y,z:Number.isFinite(S.z)?S.z:F.z};
+  }
+  return out;
+}
+function mfGalaxySystem(){
+  const id=mfGalaxySystemId(),C=mfGalaxyCatalog();
+  return C[id]||C.sombrero;
+}
+function mfConquestSystemOpen(id){
+  const S=mfGalaxyCatalog()[id];
+  return !!(S&&mfConquestPlanetOpen(S.home));
+}
 function mfGalaxyRegion(){const P=mfGalaxyPlanet();return P.regions.find(r=>r.id===curRegionId)||P.regions[0];}
 function mfGalaxyLiveMeta(key){return (window.MFGalaxyState&&window.MFGalaxyState[key])||MF_GALAXY_META[key]||MF_GALAXY_META.aelos;}
 function mfGalaxyEsc(v){return String(v==null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
@@ -171,16 +374,27 @@ function mfConquestRegionOpen(key,id){
 function mfConquestMapOpen(map){
   if(!mfConquestGateActive())return true;
   const L=mfConquestLocate(map);if(!L||!mfConquestRegionOpen(L.planetKey,L.R.id))return false;
-  return L.mi===0||mfConquestWon(map)||mfConquestWon(L.R.maps[L.mi-1]);
+  if(L.mi===0) return true;
+  /* Standard theatres (medium / 12-site) are the mode-contract drop. Compact
+     stays the region's first site; Large still waits on the previous win. */
+  const sz=MAPDEFS[map]&&MAPDEFS[map].size;
+  if(sz==='standard') return true;
+  return mfConquestWon(map)||mfConquestWon(L.R.maps[L.mi-1]);
 }
-function mfConquestDifficultyFloor(map){const L=mfConquestLocate(map||curMap);return L?clamp(L.mi,0,2):0;}
+function mfConquestDifficultyFloor(map){
+  /* Card labels still use Compact/Standard/Large threat. The floor used to
+     lock Easy on medium sites, so Standard deploy difficulty was display-only. */
+  return 0;
+}
 function mfConquestRegionWins(R){let n=0;for(const m of R.maps)if(mfConquestWon(m))n++;return n;}
 function mfConquestPlanetWins(key){const P=PLANETS[key];let n=0;if(P)for(const R of P.regions)n+=mfConquestRegionWins(R);return n;}
 function mfConquestTotalWins(){let n=0;for(const key of Object.keys(PLANETS))n+=mfConquestPlanetWins(key);return n;}
 function mfConquestTotalMaps(){let n=0;for(const key of Object.keys(PLANETS))for(const R of PLANETS[key].regions)n+=R.maps.length;return n;}
 function mfConquestNextMap(){
-  for(const key of Object.keys(PLANETS))for(const R of PLANETS[key].regions)for(const map of R.maps)if(mfConquestMapOpen(map)&&!mfConquestWon(map))return map;
-  const worlds=Object.keys(PLANETS),P=PLANETS[worlds[worlds.length-1]],R=P.regions[P.regions.length-1];return R.maps[R.maps.length-1];
+  const open=[];
+  for(const key of Object.keys(PLANETS))for(const R of PLANETS[key].regions)for(const map of R.maps)if(mfConquestMapOpen(map)&&!mfConquestWon(map))open.push(map);
+  if(!open.length){const worlds=Object.keys(PLANETS),P=PLANETS[worlds[worlds.length-1]],R=P.regions[P.regions.length-1];return R.maps[R.maps.length-1];}
+  return open.find(m=>MAPDEFS[m]&&MAPDEFS[m].size==='standard')||open[0];
 }
 function mfGalaxyResumeConquest(){
   if(activeWarMode!=='standard'){toast(activeWarMode==='mmo'?'MMO WARFRONT SERVICE IS STILL IN DEVELOPMENT':'THIS THEATRE IS FOR BROWSING');sfx('deny');return;}
@@ -195,73 +409,405 @@ function mfGalaxyRenderModeContract(){
   const go=$('mfConquestContinue');if(!go)return;
   if(activeWarMode==='standard'){
     const map=mfConquestNextMap(),L=mfConquestLocate(map),D=MAPDEFS[map]||{};go.disabled=false;
-    go.innerHTML='<div><span>CONTINUE CONQUEST - '+mfConquestTotalWins()+' / '+mfConquestTotalMaps()+' SECURED</span><b>'+mfGalaxyEsc(L.P.nm+' / '+L.R.nm+' / '+(D.nm||map))+'</b></div><small>FRONT '+L.tier+' &gt;</small>';
+    /* Planet + site only. Region names (Capital Circumference) plus the
+       site title overflowed a 412-wide banner into Parade Cir… */
+    go.innerHTML='<div><span>CONTINUE CONQUEST · '+mfConquestTotalWins()+' / '+mfConquestTotalMaps()+' SECURED</span><b>'+mfGalaxyEsc(L.P.nm+' · '+(D.nm||map))+'</b></div><small>FRONT '+L.tier+' ›</small>';
   }else{
     go.disabled=true;go.innerHTML='<div><span>'+mfGalaxyEsc(String(activeWarMode||'standard').toUpperCase())+' THEATRE PREVIEW</span><b>'+(activeWarMode==='mmo'?'PERSISTENT WARFRONT SERVICE IN DEVELOPMENT':'SELECT AN AUTHORED OPERATION')+'</b></div><small>PREVIEW</small>';
   }
 }
 function mfConquestReward(map){
   if(!mfConquestGateActive()||(typeof storyCampaignActiveId!=='undefined'&&storyCampaignActiveId))return null;
-  const L=mfConquestLocate(map);if(!L||mfConquestWon(map))return null;
+  const L=mfConquestLocate(map);if(!L||mfConquestWon(map)||!mfConquestMapOpen(map))return null;
   const afterWon=m=>m===map||mfConquestWon(m),regionClear=L.R.maps.every(afterWon),planetClear=L.P.regions.every(R=>R.maps.every(afterWon));
   let cores=20+L.tier*3,xp=45+L.tier*5,title='BATTLEFIELD SECURED',unlock='Next battlefield unlocked';
   if(regionClear){cores+=45;xp+=90;title='REGION LIBERATED';unlock=L.ri<L.P.regions.length-1?L.P.regions[L.ri+1].nm+' unlocked':'Planet conquest ready';}
-  if(planetClear){cores+=160;xp+=320;title='PLANET CONQUERED';const next=L.worlds[L.pi+1];unlock=next?PLANETS[next].nm+' unlocked':'Andromeda-IV campaign completed';}
+  if(planetClear){cores+=160;xp+=320;title='PLANET CONQUERED';const next=L.worlds[L.pi+1];const nextSys=next&&typeof SYSTEMS!=='undefined'&&SYSTEMS[PLANETS[next].system];unlock=nextSys?nextSys.nm+' unlocked':(next?PLANETS[next].nm+' unlocked':'Four-system theatre completed');}
   return {map,tier:L.tier,cores,xp,title,unlock,regionClear,planetClear};
 }
 function mfConquestNormalizeSelection(){
   if(!mfConquestGateActive())return;
-  let key=mfGalaxyPlanetKey();if(!mfConquestPlanetOpen(key))key=Object.keys(PLANETS).find(mfConquestPlanetOpen)||'aelos';
-  const P=PLANETS[key];if(P.theme!==curTheme)curTheme=P.theme;
-  let R=P.regions.find(q=>q.id===curRegionId&&mfConquestRegionOpen(key,q.id))||P.regions.find(q=>mfConquestRegionOpen(key,q.id))||P.regions[0];curRegionId=R.id;
-  if(!R.maps.includes(curMap)||!mfConquestMapOpen(curMap)){const m=R.maps.find(mfConquestMapOpen)||R.maps[0];if(m)syncBattlefieldFromMap(m);}
+  let key=(typeof planetForMap==='function'?planetForMap(curMap):null);
+  if(!key||!PLANETS[key]||!mfConquestPlanetOpen(key)||(typeof isHomeworldMap==='function'&&!isHomeworldMap(curMap)))
+    key=Object.keys(PLANETS).find(mfConquestPlanetOpen)||'aelos';
+  const P=PLANETS[key];
+  if(typeof systemForPlanet==='function')mfGalaxySystemKey=systemForPlanet(key);
+  let R=P.regions.find(q=>q.id===curRegionId&&mfConquestRegionOpen(key,q.id))||P.regions.find(q=>mfConquestRegionOpen(key,q.id))||P.regions[0];
+  curRegionId=R.id;
+  /* Do not force the planet's default biome over a sibling-theme site. */
+  if(!R.maps.includes(curMap)||!mfConquestMapOpen(curMap)||(typeof isHomeworldMap==='function'&&!isHomeworldMap(curMap))){
+    const m=(typeof theatreMapId==='function'?theatreMapId(R.maps,'standard'):null);
+    const pick=(m&&mfConquestMapOpen(m)?m:null)||R.maps.find(mfConquestMapOpen)||R.maps[0];
+    if(pick)syncBattlefieldFromMap(pick);
+  }else if(typeof syncBattlefieldFromMap==='function'){
+    syncBattlefieldFromMap(curMap);
+  }
 }
 
+function mfGalaxyOrbitPoint(cx,cy,rx,ry,rot,ang){
+  const ex=Math.cos(ang)*rx,ey=Math.sin(ang)*ry,cr=Math.cos(rot),sr=Math.sin(rot);
+  return {x:cx+ex*cr-ey*sr,y:cy+ex*sr+ey*cr,z:Math.sin(ang)};
+}
+function mfGalaxyStrokeOrbit(ctx,cx,cy,rx,ry,rot,a0,a1,alpha){
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.strokeStyle='rgba(70,220,255,.18)';ctx.lineWidth=6;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,rot,a0,a1);ctx.stroke();
+  ctx.strokeStyle='rgba(140,250,255,.95)';ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,rot,a0,a1);ctx.stroke();
+  ctx.strokeStyle='rgba(230,255,255,.55)';ctx.lineWidth=.8;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,rot,a0,a1);ctx.stroke();
+  ctx.restore();
+}
+function mfGalaxyStrokeThinOrbit(ctx,cx,cy,rx,ry,rot,alpha){
+  ctx.save();ctx.globalAlpha=alpha;
+  ctx.strokeStyle='rgba(210,230,245,.7)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,rot,0,TAU);ctx.stroke();
+  ctx.restore();
+}
+function mfGalaxyProject(bx,by,bz,cx,cy,W,H,cosY,sinY,cosP,sinP){
+  const rx=bx*cosY-bz*sinY,rz=bx*sinY+bz*cosY,ry=by*cosP-rz*sinP,rz2=by*sinP+rz*cosP;
+  const depth=1.55+rz2,scale=1/Math.max(.55,depth);
+  return {x:cx+rx*W*.50*scale,y:cy+ry*H*.46*scale,z:rz2,scale};
+}
+function mfGalaxyDrawWells(ctx,cx,cy,rx,ry,rot,t){
+  /* Starfield-style gravitational flow along the orbital plane. Lore rocks
+     live on other rings; these dashes are never targets. */
+  ctx.save();ctx.strokeStyle='rgba(150,205,230,.16)';ctx.lineWidth=1;ctx.setLineDash([2,12]);
+  const ph=(t||0)*.00016;
+  for(let i=0;i<5;i++){
+    ctx.beginPath();ctx.ellipse(cx,cy,rx*(.55+i*.14),ry*(.55+i*.14),rot+Math.sin(ph+i)*.012,ph+i*.7,ph+i*.7+2.15);ctx.stroke();
+  }
+  ctx.setLineDash([]);ctx.restore();
+}
+function mfGalaxyCaptionUnder(ctx,x,y,r,title,sub,hi){
+  const ty=y+r+15;
+  ctx.textAlign='center';ctx.fillStyle=hi?'#f4fcff':'#d5eef8';
+  ctx.font='900 10px var(--fT,monospace)';
+  ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=5;ctx.fillText(title,x,ty);ctx.shadowBlur=0;
+  ctx.strokeStyle='rgba(220,250,255,.5)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x-24,ty+7);ctx.lineTo(x-5,ty+7);ctx.moveTo(x+5,ty+7);ctx.lineTo(x+24,ty+7);ctx.stroke();
+  ctx.fillStyle=hi?'#7dff9a':'#9ec8dc';
+  ctx.beginPath();ctx.moveTo(x,ty+4);ctx.lineTo(x+3.4,ty+7.5);ctx.lineTo(x,ty+11);ctx.lineTo(x-3.4,ty+7.5);ctx.closePath();ctx.fill();
+  if(sub){ctx.fillStyle='#7ec8e0';ctx.font='800 7px var(--fT,monospace)';ctx.fillText(sub,x,ty+21);}
+}
+function mfGalaxyDrawLockHex(ctx,x,y,r){
+  /* Hex + lock only on a conquest-gated world. Unlocked homeworlds stay clean
+     globes — the reference put a hex on every body, which read as extra UI. */
+  ctx.fillStyle='rgba(2,6,12,.62)';ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();
+  ctx.beginPath();
+  for(let i=0;i<6;i++){const a=-Math.PI/2+i*Math.PI/3,px=x+Math.cos(a)*r*.74,py=y+Math.sin(a)*r*.74;i?ctx.lineTo(px,py):ctx.moveTo(px,py);}
+  ctx.closePath();ctx.fillStyle='rgba(8,16,24,.58)';ctx.strokeStyle='#e8f6ff';ctx.lineWidth=Math.max(1.4,r*.07);ctx.fill();ctx.stroke();
+  const lw=r*.18,lh=r*.16;
+  ctx.strokeStyle='#f2fbff';ctx.lineWidth=Math.max(1.2,r*.06);ctx.beginPath();ctx.arc(x,y-lh*.55,lw*.72,Math.PI,TAU);ctx.stroke();
+  ctx.fillStyle='#eef7ff';ctx.fillRect(x-lw,y-lh*.12,lw*2,lh*1.32);
+}
 function mfGalaxyDrawWorld(ctx,x,y,r,key,front,selected){
   const P=PLANETS[key],TH=THEMES[P.theme]||THEMES.verdant,M=mfGalaxyLiveMeta(key);
-  const open=mfConquestPlanetOpen(key),wins=mfConquestPlanetWins(key),control=Math.round(wins/12*100);
+  const open=mfConquestPlanetOpen(key);
   const glow=ctx.createRadialGradient(x,y,r*.3,x,y,r*1.8);glow.addColorStop(0,M.color+'55');glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*1.8,0,TAU);ctx.fill();
   ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.clip();
   const g=ctx.createRadialGradient(x-r*.38,y-r*.42,r*.05,x+r*.18,y+r*.12,r*1.25);g.addColorStop(0,'rgb('+TH.wShal.join(',')+')');g.addColorStop(.48,'rgb('+TH.g0.join(',')+')');g.addColorStop(.78,'rgb('+TH.h0.join(',')+')');g.addColorStop(1,'rgb('+TH.wDeep.join(',')+')');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);
+  /* Facets stay 2D-canvas cheap. A second WebGL globe on this screen is what
+     Android already refused for the galaxy hologram. */
+  for(let i=0;i<7;i++){const a=-.7+i*.5;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r*.88);ctx.lineTo(x+Math.cos(a+.48)*r,y+Math.sin(a+.48)*r*.88);ctx.closePath();ctx.fillStyle=i%2?'rgba(255,255,255,.14)':'rgba(0,0,12,.16)';ctx.fill();}
   ctx.globalAlpha=.27;ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1,r*.055);for(let i=-2;i<=2;i++){ctx.beginPath();ctx.arc(x-r*.32+i*r*.17,y+i*r*.13,r*(.42+Math.abs(i)*.06),-.8,1.9);ctx.stroke();}ctx.globalAlpha=1;
   const sh=ctx.createLinearGradient(x-r,y-r,x+r,y+r);sh.addColorStop(0,'rgba(255,255,255,.20)');sh.addColorStop(.46,'rgba(0,0,0,0)');sh.addColorStop(1,'rgba(0,2,8,.84)');ctx.fillStyle=sh;ctx.fillRect(x-r,y-r,r*2,r*2);ctx.restore();
   ctx.strokeStyle=selected?'#eaffff':M.color;ctx.lineWidth=selected?2.5:1.4;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();
   if(front){ctx.strokeStyle=M.color+'66';ctx.lineWidth=1;ctx.setLineDash([4,5]);ctx.beginPath();ctx.ellipse(x,y,r*1.55,r*.43,-.28,0,TAU);ctx.stroke();ctx.setLineDash([]);}
-  ctx.textAlign='center';ctx.font='900 '+Math.max(8,r*.27)+'px var(--fT,monospace)';ctx.fillStyle=selected?'#fff':'#b9d7e6';ctx.fillText(P.nm,x,y+r+14);
-  ctx.font='800 '+Math.max(6,r*.19)+'px var(--fT,monospace)';ctx.fillStyle=open?M.color:'#6b7680';ctx.fillText(open?(control+'% SECURED'):'LOCKED',x,y+r+25);
-  if(!open){ctx.fillStyle='rgba(1,4,9,.56)';ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();ctx.fillStyle='#b4c0c8';ctx.font='900 '+Math.max(11,r*.35)+'px sans-serif';ctx.fillText('\ud83d\udd12',x,y+5);}
+  if(!open)mfGalaxyDrawLockHex(ctx,x,y,r);
+  ctx.textAlign='center';ctx.font='900 '+Math.max(9,r*.28)+'px var(--fT,monospace)';ctx.fillStyle=selected?'#fff':'#d5eef8';
+  ctx.shadowColor='rgba(0,0,0,.7)';ctx.shadowBlur=4;ctx.fillText(P.nm,x,y-r-9);ctx.shadowBlur=0;
+}
+
+function mfGalaxyDrawSystemMark(ctx,x,y,S,selected,W,H){
+  /* Cluster nodes, not mini globes. Callout boxes are extra hit targets so a
+     thumb on the name still enters the system. */
+  const open=mfConquestPlanetOpen(S.home),done=mfConquestPlanetComplete(S.home);
+  const wins=mfConquestPlanetWins(S.home),col=S.color||'#5ad4ff',core=selected?10:7;
+  const glow=ctx.createRadialGradient(x,y,1,x,y,core*4.6);glow.addColorStop(0,col+(selected?'cc':'77'));glow.addColorStop(.32,col+'40');glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,core*4.6,0,TAU);ctx.fill();
+  if(selected){
+    ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.2;
+    ctx.beginPath();ctx.arc(x,y,core+10,0,TAU);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x-core-16,y);ctx.lineTo(x-core-7,y);ctx.moveTo(x+core+7,y);ctx.lineTo(x+core+16,y);
+    ctx.moveTo(x,y-core-16);ctx.lineTo(x,y-core-7);ctx.moveTo(x,y+core+7);ctx.lineTo(x,y+core+16);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x,y-core-22);ctx.lineTo(x-4,y-core-16);ctx.lineTo(x+4,y-core-16);ctx.closePath();
+    ctx.fillStyle='#f4fcff';ctx.fill();
+  }
+  ctx.strokeStyle=col+(selected?'99':'44');ctx.lineWidth=selected?1.3:.7;
+  ctx.beginPath();ctx.ellipse(x,y,core*2.5,core*.7,-.3,0,TAU);ctx.stroke();
+  const sg=ctx.createRadialGradient(x-2,y-2,0,x,y,core);sg.addColorStop(0,'#fff8e8');sg.addColorStop(.42,col);sg.addColorStop(1,col+'00');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.arc(x,y,core,0,TAU);ctx.fill();
+  if(!open){ctx.fillStyle='rgba(1,4,9,.55)';ctx.beginPath();ctx.arc(x,y,core*.85,0,TAU);ctx.fill();}
+  const left=x<W*.5,bw=114,bh=32;
+  let bx=left?x-18-bw:x+18,by=y-36;
+  if(bx<8)bx=8;if(bx+bw>W-8)bx=W-8-bw;if(by<26)by=y+14;if(by+bh>H-28)by=H-28-bh;
+  ctx.strokeStyle=col+'66';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(left?bx+bw:bx,by+bh*.5);ctx.stroke();
+  ctx.fillStyle=selected?'rgba(6,16,28,.9)':'rgba(4,10,18,.78)';
+  ctx.strokeStyle=selected?'rgba(230,255,255,.72)':col+'55';
+  ctx.fillRect(bx,by,bw,bh);ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
+  ctx.textAlign=left?'right':'left';ctx.fillStyle=selected?'#f4fcff':'#d7ecf6';
+  ctx.font='800 8px var(--fT,monospace)';ctx.fillText(S.nm,left?bx+bw-7:bx+7,by+13);
+  ctx.fillStyle=open?(done?'#7dff9a':col):'#7a8490';ctx.font='800 6.5px var(--fT,monospace)';
+  ctx.fillText(open?(done?'SECURED':'OPEN · '+Math.round(wins/12*100)+'%'):'LOCKED',left?bx+bw-7:bx+7,by+24);
+  return {x:bx+bw*.5,y:by+bh*.5,r:Math.max(28,Math.hypot(bw,bh)*.55)};
 }
 
 function mfGalaxyDraw(t){
   const cv=$('mfGalaxyCanvas');if(!cv)return;const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
-  ctx.clearRect(0,0,W,H);const bg=ctx.createRadialGradient(W*.46,H*.43,10,W*.46,H*.43,W*.7);bg.addColorStop(0,'#102a45');bg.addColorStop(.34,'#071426');bg.addColorStop(1,'#01050d');ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#010208';ctx.fillRect(0,0,W,H);
+  const warm=ctx.createRadialGradient(W*.16,H*.58,8,W*.16,H*.58,W*.66);
+  warm.addColorStop(0,'rgba(210,88,28,.38)');warm.addColorStop(.42,'rgba(140,42,16,.14)');warm.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=warm;ctx.fillRect(0,0,W,H);
+  const cool=ctx.createRadialGradient(W*.84,H*.30,6,W*.84,H*.30,W*.62);
+  cool.addColorStop(0,'rgba(28,120,210,.38)');cool.addColorStop(.48,'rgba(10,48,110,.14)');cool.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=cool;ctx.fillRect(0,0,W,H);
+  const mid=ctx.createRadialGradient(W*.48,H*.50,4,W*.48,H*.50,W*.36);
+  mid.addColorStop(0,'rgba(0,0,0,.9)');mid.addColorStop(.55,'rgba(6,10,22,.3)');mid.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=mid;ctx.fillRect(0,0,W,H);
   let seed=7331;const rn=()=>{seed=(Math.imul(seed,1664525)+1013904223)|0;return(seed>>>8)/16777216;};
-  for(let i=0;i<150;i++){const x=rn()*W,y=rn()*H,z=rn(),tw=.35+.65*Math.sin(t*.0014+i*2.7);ctx.fillStyle='rgba(205,235,255,'+(z*.55*tw)+')';ctx.beginPath();ctx.arc(x,y,.35+z*1.2,0,TAU);ctx.fill();}
-  ctx.save();ctx.translate(W*.5,H*.48);ctx.rotate(-.20);for(let a=0;a<TAU*2.3;a+=.055){const rr=10+a*17.5,x=Math.cos(a+mfGalaxyYaw*.22)*rr,y=Math.sin(a+mfGalaxyYaw*.22)*rr*.34,fade=Math.max(0,1-rr/(W*.62));ctx.fillStyle='rgba(87,174,220,'+(fade*.11)+')';ctx.fillRect(x,y,1.4,1.4);}ctx.restore();
-  const cy=H*.48,cx=W*.5,cosY=Math.cos(mfGalaxyYaw),sinY=Math.sin(mfGalaxyYaw),cosP=Math.cos(mfGalaxyPitch),sinP=Math.sin(mfGalaxyPitch),items=[];
-  for(const key of Object.keys(PLANETS)){
-    const M=mfGalaxyLiveMeta(key),bx=M.x,by=M.y,bz=M.z;
-    const rx=bx*cosY-bz*sinY,rz=bx*sinY+bz*cosY,ry=by*cosP-rz*sinP,rz2=by*sinP+rz*cosP;
-    const depth=1.7+rz2,scale=1/depth,x=cx+rx*W*.55*scale,y=cy+ry*H*.56*scale,r=Math.max(23,43*scale*1.5);
-    items.push({key,x,y,r,z:rz2});
+  for(let i=0;i<260;i++){const x=rn()*W,y=rn()*H,z=rn(),tw=.3+.7*Math.sin((t||0)*.0014+i*2.7);ctx.fillStyle='rgba(210,235,255,'+(z*.58*tw)+')';ctx.beginPath();ctx.arc(x,y,.25+z*1.1,0,TAU);ctx.fill();}
+  const cx=W*.5,cy=H*.52,cosY=Math.cos(mfGalaxyYaw),sinY=Math.sin(mfGalaxyYaw),cosP=Math.cos(mfGalaxyPitch),sinP=Math.sin(mfGalaxyPitch);
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(-.22+mfGalaxyYaw*.06);
+  ctx.fillStyle='rgba(40,90,140,.07)';ctx.beginPath();ctx.ellipse(0,0,W*.44,H*.155,0,0,TAU);ctx.fill();
+  ctx.strokeStyle='rgba(150,210,255,.16)';ctx.lineWidth=1;ctx.stroke();
+  for(let i=1;i<=5;i++){ctx.strokeStyle='rgba(140,200,255,'+(0.03+i*0.012)+')';ctx.beginPath();ctx.ellipse(0,0,i*38,i*13.5,0,0,TAU);ctx.stroke();}
+  ctx.restore();
+  /* Unlabeled dust motes sit on the same tilted plane. They are never targets. */
+  for(let i=0;i<36;i++){
+    const rad=Math.sqrt(rn())*.92,a=rn()*TAU,dust=mfGalaxyProject(Math.cos(a)*rad,0,Math.sin(a)*rad,cx,cy,W,H,cosY,sinY,cosP,sinP);
+    ctx.fillStyle='rgba(180,220,255,'+(.12+rn()*.22)+')';ctx.beginPath();ctx.arc(dust.x,dust.y,.7+rn()*1.6,0,TAU);ctx.fill();
+  }
+  const catalog=mfGalaxyCatalog(),items=[];
+  for(const id of MF_GALAXY_SYSTEM_ORDER){
+    const S=catalog[id],q=mfGalaxyProject(S.x,S.y,S.z,cx,cy,W,H,cosY,sinY,cosP,sinP);
+    items.push({key:id,S,x:q.x,y:q.y,z:q.z,col:S.color});
   }
   items.sort((a,b)=>a.z-b.z);mfGalaxyTargets=[];
-  ctx.strokeStyle='rgba(97,200,238,.15)';ctx.lineWidth=1;ctx.beginPath();for(let i=0;i<items.length;i++){const q=items[i];i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);}ctx.closePath();ctx.stroke();
-  const active=mfGalaxyPlanetKey();for(const q of items){mfGalaxyDrawWorld(ctx,q.x,q.y,q.r,q.key,true,q.key===active);mfGalaxyTargets.push({key:q.key,x:q.x,y:q.y,r:Math.max(34,q.r+12)});}
-  ctx.textAlign='left';ctx.font='800 8px var(--fT,monospace)';ctx.fillStyle='rgba(127,209,237,.62)';ctx.fillText('ANDROMEDA-IV // LOCAL WAR PROJECTION',12,18);
-  ctx.textAlign='right';ctx.fillStyle='rgba(104,234,168,.74)';ctx.fillText(window.MFGalaxyState?'LIVE NETWORK':'LOCAL THEATRE',W-12,18);
+  for(const q of items){
+    const bloom=ctx.createRadialGradient(q.x,q.y,2,q.x,q.y,70);
+    bloom.addColorStop(0,q.col+'30');bloom.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=bloom;ctx.beginPath();ctx.arc(q.x,q.y,70,0,TAU);ctx.fill();
+  }
+  ctx.strokeStyle='rgba(97,200,238,.12)';ctx.lineWidth=1;ctx.beginPath();
+  for(let i=0;i<items.length;i++){const q=items[i];i?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y);}ctx.closePath();ctx.stroke();
+  const active=mfGalaxySystemId();
+  for(const q of items){
+    const lab=mfGalaxyDrawSystemMark(ctx,q.x,q.y,q.S,q.key===active,W,H);
+    mfGalaxyTargets.push({key:q.key,x:q.x,y:q.y,r:52});
+    if(lab)mfGalaxyTargets.push({key:q.key,x:lab.x,y:lab.y,r:lab.r});
+  }
+  /* No on-canvas LOCAL CLUSTER / 4 SYSTEMS chrome. The stage eyebrow already
+     says FOUR-SYSTEM THEATRE; painting the same facts on the hologram sat
+     under the HTML help and read as overlapping copy. */
+}
+
+function mfGalaxyEnsureSystemGlobe(key,yaw,pitch){
+  /* Same 2D ray-sphere as PLANET stage, cached so the 42ms orbit tick does
+     not re-walk every biome pixel. Detached canvas — not a second GL context. */
+  const SZ=512;
+  if(!mfSystemGlobeOff){
+    mfSystemGlobeOff=document.createElement('canvas');
+    mfSystemGlobeOff.width=SZ;mfSystemGlobeOff.height=SZ;
+    mfSystemGlobeOff.getContext('2d',{willReadFrequently:true});
+  }
+  const qY=((yaw*24)|0)/24,qP=((pitch*24)|0)/24;
+  const sel=typeof curRegionId==='string'?curRegionId:null;
+  if(mfSystemGlobeCache.key===key&&mfSystemGlobeCache.yaw===qY&&mfSystemGlobeCache.pitch===qP&&mfSystemGlobeCache.sel===sel)return mfSystemGlobeOff;
+  draw3DPlanetSphere(mfSystemGlobeOff,key,yaw,pitch,sel,true);
+  mfSystemGlobeCache={key,yaw:qY,pitch:qP,sel};
+  return mfSystemGlobeOff;
+}
+function mfGalaxyBlitPlanetGlobe(ctx,x,y,r,key,selected){
+  const yaw=typeof planetYaw==='number'?planetYaw:.42;
+  const pitch=typeof planetPitch==='number'?planetPitch:-.08;
+  const col=(mfGalaxyLiveMeta(key).color||'#5ad4ff');
+  const open=mfConquestPlanetOpen(key);
+  const glowCol=selected&&open?'#7dff9a':col;
+  const glow=ctx.createRadialGradient(x,y,r*.2,x,y,r*1.35);glow.addColorStop(0,glowCol+'44');glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*1.35,0,TAU);ctx.fill();
+  if(typeof draw3DPlanetSphere==='function'){
+    const off=mfGalaxyEnsureSystemGlobe(key,yaw,pitch);
+    const G=(typeof lastPlanetGlobe==='object'&&lastPlanetGlobe.R)?lastPlanetGlobe:{cx:off.width*.5,cy:off.height*.5,R:Math.min(off.width,off.height)*.46};
+    const halo=1.18,src=G.R*halo,dst=r*halo;
+    ctx.save();ctx.beginPath();ctx.arc(x,y,dst,0,TAU);ctx.clip();
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.drawImage(off,G.cx-src,G.cy-src,src*2,src*2,x-dst,y-dst,dst*2,dst*2);
+    ctx.restore();
+  }else mfGalaxyDrawFacetGlobe(ctx,x,y,r,key,selected,0,-.72,-.18);
+  ctx.strokeStyle=selected&&open?'#7dff9a':(selected?'#eaffff':col);
+  ctx.lineWidth=selected?1.6:1;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();
+  if(selected&&open){ctx.strokeStyle='rgba(125,255,154,.28)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y,r+2,0,TAU);ctx.stroke();}
+  if(!open)mfGalaxyDrawLockHex(ctx,x,y,r);
+}
+function mfGalaxyDrawFacetGlobe(ctx,x,y,r,key,selected,t,lx,ly){
+  const P=PLANETS[key],TH=THEMES[P.theme]||THEMES.verdant,col=(mfGalaxyLiveMeta(key).color||'#5ad4ff');
+  const g0=TH.g0||[70,130,90],h0=TH.h0||[40,80,50],w=TH.wShal||[70,150,190];
+  const Lx=lx||-.72,Ly=ly||-.18,open=mfConquestPlanetOpen(key);
+  const glowCol=selected&&open?'#7dff9a':col;
+  const glow=ctx.createRadialGradient(x,y,r*.15,x,y,r*1.9);glow.addColorStop(0,glowCol+'55');glow.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*1.9,0,TAU);ctx.fill();
+  const yaw=((t||0)*.00022)%TAU,rings=5,segs=10;
+  ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.clip();
+  for(let i=0;i<rings;i++){
+    const y0=-1+i*(2/rings),y1=-1+(i+1)*(2/rings);
+    for(let j=0;j<segs;j++){
+      const a0=yaw+j*(TAU/segs),a1=yaw+(j+1)*(TAU/segs);
+      const pts=[[a0,y0],[a1,y0],[a1,y1],[a0,y1]].map(([a,yy])=>{
+        const rr=Math.sqrt(Math.max(0,1-yy*yy));return {px:Math.cos(a)*rr,py:yy,pz:Math.sin(a)*rr};
+      });
+      if(pts.every(q=>q.pz<-.12))continue;
+      const nx=(pts[0].px+pts[2].px)*.5,ny=(pts[0].py+pts[2].py)*.5,nz=(pts[0].pz+pts[2].pz)*.5;
+      /* Light from the star: facing-star facets stay bright, far side falls
+         into a cinematic crescent instead of a flat Lambert wash. */
+      const lit=Math.max(0,nx*Lx+ny*Ly+nz*.08);
+      const shade=.07+Math.pow(lit,1.35)*.95;
+      const c=(i===0||i===rings-1)?w:((i+j)&1?g0:h0);
+      ctx.fillStyle='rgb('+(c[0]*shade|0)+','+(c[1]*shade|0)+','+(c[2]*shade|0)+')';
+      ctx.beginPath();ctx.moveTo(x+pts[0].px*r,y+pts[0].py*r);
+      for(let k=1;k<4;k++)ctx.lineTo(x+pts[k].px*r,y+pts[k].py*r);
+      ctx.closePath();ctx.fill();
+    }
+  }
+  const hx=x+Lx*r*.42,hy=y+Ly*r*.42;
+  const rim=ctx.createRadialGradient(hx,hy,r*.04,x,y,r);
+  rim.addColorStop(0,'rgba(255,255,255,.48)');rim.addColorStop(.2,'rgba(190,230,255,.1)');rim.addColorStop(.52,'rgba(0,0,0,0)');rim.addColorStop(1,'rgba(0,0,8,.82)');
+  ctx.fillStyle=rim;ctx.fillRect(x-r,y-r,r*2,r*2);ctx.restore();
+  ctx.strokeStyle=selected&&open?'#7dff9a':(selected?'#eaffff':col);
+  ctx.lineWidth=selected?2.4:1.2;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();
+  if(selected&&open){ctx.strokeStyle='rgba(125,255,154,.35)';ctx.lineWidth=6;ctx.beginPath();ctx.arc(x,y,r+3,0,TAU);ctx.stroke();}
+  if(!open)mfGalaxyDrawLockHex(ctx,x,y,r);
+}
+
+function mfGalaxyDrawLoreBody(ctx,x,y,r,kind,tint,lx,ly){
+  /* Side-lit scenery only. No caption, no lock, not a drop world. */
+  ctx.save();ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.clip();
+  ctx.fillStyle='rgb('+tint[0]+','+tint[1]+','+tint[2]+')';ctx.fillRect(x-r,y-r,r*2,r*2);
+  if(kind==='gas'){
+    for(let i=-3;i<=3;i++){ctx.fillStyle=i%2?'rgba(255,255,255,.16)':'rgba(0,0,0,.22)';ctx.fillRect(x-r,y+i*r*.22-r*.07,r*2,r*.14);}
+  }else{
+    ctx.fillStyle='rgba(0,0,0,.28)';ctx.beginPath();ctx.arc(x-r*.18,y+r*.12,r*.32,0,TAU);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.12)';ctx.beginPath();ctx.arc(x+r*.22,y-r*.2,r*.18,0,TAU);ctx.fill();
+  }
+  const g=ctx.createRadialGradient(x+lx*r*.48,y+ly*r*.48,r*.04,x,y,r);
+  g.addColorStop(0,'rgba(255,255,255,.32)');g.addColorStop(.4,'rgba(0,0,0,0)');g.addColorStop(1,'rgba(0,0,6,.88)');
+  ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);ctx.restore();
+  ctx.strokeStyle='rgba(180,200,220,.22)';ctx.lineWidth=1;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.stroke();
+}
+
+function mfGalaxyDrawSystemView(t){
+  const cv=$('mfSystemCanvas');if(!cv)return;const ctx=cv.getContext('2d'),W=cv.width,H=cv.height,S=mfGalaxySystem();
+  const key=S.home,P=PLANETS[key];if(!P)return;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#010208';ctx.fillRect(0,0,W,H);
+  const neb=ctx.createRadialGradient(W*.18,H*.22,0,W*.18,H*.22,W*.5);neb.addColorStop(0,(S.color||'#5ad4ff')+'16');neb.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=neb;ctx.fillRect(0,0,W,H);
+  let seed=9101;const rn=()=>{seed=(Math.imul(seed,1664525)+1013904223)|0;return(seed>>>8)/16777216;};
+  for(let i=0;i<220;i++){const x=rn()*W,y=rn()*H,z=rn(),tw=.35+.65*Math.sin((t||0)*.0011+i);ctx.fillStyle='rgba(210,235,255,'+(z*.5*tw)+')';ctx.beginPath();ctx.arc(x,y,.25+z*1.05,0,TAU);ctx.fill();}
+  /* Sun is the screen anchor. The homeworld travels the cyan ellipse
+     (ang 0 = 3 o'clock, PI = 9 o'clock). Do not highlight only the bottom
+     arc or the planet reads glued to periapsis. Pitch tilts the oval a
+     little; it must not re-parent the camera to the planet. */
+  const cx=W*.50,cy=H*.46,rot=-.18,rx=W*.36,ry=H*.15,sunR=Math.max(26,W*.048);
+  const tSec=(t||0)*.001,ang=tSec*.15;
+  const pt=mfGalaxyOrbitPoint(cx,cy,rx,ry,rot,ang),pr=Math.max(12,14+pt.z*2);
+  mfGalaxyDrawWells(ctx,cx,cy,rx,ry,rot,t);
+  mfGalaxyStrokeThinOrbit(ctx,cx,cy,rx*.46,ry*.46,rot,.22);
+  mfGalaxyStrokeThinOrbit(ctx,cx,cy,rx*1.22,ry*1.22,rot,.16);
+  mfGalaxyStrokeOrbit(ctx,cx,cy,rx,ry,rot,0,TAU,1);
+  const bodies=[];
+  for(const F of (MF_SYSTEM_FILLERS[S.id]||[])){
+    const p=mfGalaxyOrbitPoint(cx,cy,rx*F.ring,ry*F.ring,rot,F.ang+tSec*.04);
+    bodies.push({lore:true,z:p.z,x:p.x,y:p.y,r:F.r,kind:F.kind,tint:F.tint});
+  }
+  bodies.push({lore:false,z:pt.z,x:pt.x,y:pt.y,r:pr,key});
+  bodies.sort((a,b)=>a.z-b.z);
+  const lightFor=(x,y)=>{const dx=cx-x,dy=cy-y,len=Math.hypot(dx,dy)||1;return {lx:dx/len,ly:dy/len};};
+  const paintBody=B=>{
+    const L=lightFor(B.x,B.y);
+    ctx.save();
+    /* Far-side bodies stay visible (top of the ring). Hiding them behind the
+       sun glow is what glued Aelos to the bottom arc. */
+    if(B.z<0)ctx.globalAlpha=.78;
+    if(B.lore)mfGalaxyDrawLoreBody(ctx,B.x,B.y,B.r,B.kind,B.tint,L.lx,L.ly);
+    else{
+      mfGalaxyBlitPlanetGlobe(ctx,B.x,B.y,B.r,B.key,true);
+      mfGalaxyCaptionUnder(ctx,B.x,B.y,B.r,P.nm,mfConquestPlanetOpen(B.key)?'HOMEWORLD':'LOCKED',mfConquestPlanetOpen(B.key));
+    }
+    ctx.restore();
+  };
+  mfSystemTargets=[];
+  for(const B of bodies)if(B.z<0)paintBody(B);
+  const sg=ctx.createRadialGradient(cx,cy,0,cx,cy,sunR*2.1);sg.addColorStop(0,'#fffef8');sg.addColorStop(.12,'#fff0b8');sg.addColorStop(.38,'rgba(255,210,90,.45)');sg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.arc(cx,cy,sunR*2.1,0,TAU);ctx.fill();
+  ctx.fillStyle='#fff8d6';ctx.beginPath();ctx.arc(cx,cy,sunR*.55,0,TAU);ctx.fill();
+  for(const B of bodies)if(B.z>=0)paintBody(B);
+  const home=bodies.find(B=>!B.lore);
+  /* Do not stamp S.star on the sun. The eyebrow already prints it
+     (DOMINION FURNACE / …); a second copy through the disc was the QA P3. */
+  if(home)mfSystemTargets=[{key:home.key,x:home.x,y:home.y,r:Math.max(28,home.r+16)}];
 }
 
 function mfGalaxyAnimate(ts){
-  if(!mfGalaxyReady||mfGalaxyStage!=='galaxy'||!$('setupScr')||$('setupScr').style.display==='none'){mfGalaxyFrame=0;return;}
-  if(ts-mfGalaxyLastDraw>42){mfGalaxyLastDraw=ts;mfGalaxyDraw(ts);}
+  if(!mfGalaxyReady||(mfGalaxyStage!=='galaxy'&&mfGalaxyStage!=='system')||!$('setupScr')||$('setupScr').style.display==='none'){mfGalaxyFrame=0;return;}
+  if(ts-mfGalaxyLastDraw>42){mfGalaxyLastDraw=ts;if(mfGalaxyStage==='system')mfGalaxyDrawSystemView(ts);else mfGalaxyDraw(ts);}
   mfGalaxyFrame=requestAnimationFrame(mfGalaxyAnimate);
 }
 function mfGalaxyStartAnim(){if(mfGalaxyFrame)cancelAnimationFrame(mfGalaxyFrame);mfGalaxyFrame=requestAnimationFrame(mfGalaxyAnimate);}
 function mfGalaxyStopAnim(){if(mfGalaxyFrame)cancelAnimationFrame(mfGalaxyFrame);mfGalaxyFrame=0;}
 
+function mfPickConfirm(kind,id,onArm,onGo){
+  const now=performance.now();
+  if(mfPickArm.k===kind&&mfPickArm.id===id&&now-mfPickArm.t<1800){
+    mfPickArm={k:'',id:'',t:0};
+    document.querySelectorAll('.confirm').forEach(n=>n.classList.remove('confirm'));
+    if(onGo)onGo();
+    return true;
+  }
+  mfPickArm={k:kind,id:String(id),t:now};
+  if(onArm)onArm();
+  if(typeof toast==='function')toast('TAP AGAIN TO CONFIRM');
+  if(typeof sfx==='function')sfx('ui');
+  return false;
+}
+function mfPickMark(sel){
+  document.querySelectorAll('.mapCard.confirm,.mfWorldChip.confirm,.mfRegionChip.confirm').forEach(n=>n.classList.remove('confirm'));
+  if(!sel)return;
+  if(!sel.isConnected){
+    const d=sel.dataset||{};
+    sel=d.mfSystem?document.querySelector('[data-mf-system="'+d.mfSystem+'"]')
+      :d.mfWorld?document.querySelector('[data-mf-world="'+d.mfWorld+'"]')
+      :d.mfRegion?document.querySelector('[data-mf-region="'+d.mfRegion+'"]')
+      :d.map?document.querySelector('#mapRow .mapCard[data-map="'+d.map+'"]')
+      :null;
+  }
+  if(sel)sel.classList.add('confirm');
+}
+
+function mfGalaxySelectSystem(id,advance){
+  const S=mfGalaxyCatalog()[id];if(!S)return;
+  if(!mfConquestPlanetOpen(S.home)){
+    /* Stay on galaxy. Warping a locked star used to paint a gold LOCKED
+       system with no Planet/Region/Deploy path, so a fresh career could
+       never reach Aelos after tapping Andromeda. */
+    toast('\ud83d\udd12 CONQUER THE PREVIOUS SYSTEM TO OPEN '+S.nm);if(typeof sfx==='function')sfx('deny');
+    return;
+  }
+  mfGalaxySystemKey=id;
+  mfGalaxySelectWorld(S.home,false);
+  if(advance)mfGalaxyWarpTo('system');
+}
+function mfGalaxyPickSystemBody(body){
+  if(!body||body.lore||!PLANETS[body.key])return;
+  if(!mfConquestPlanetOpen(body.key)){
+    const S=mfGalaxySystem();
+    toast('\ud83d\udd12 CONQUER THE PREVIOUS SYSTEM TO OPEN '+(S.nm||PLANETS[body.key].nm));
+    if(typeof sfx==='function')sfx('deny');return;
+  }
+  /* One homeworld — tap highlights, CONTINUE on the hex descends. Skipping
+     straight to planet would hide the orbit theatre. */
+  if(typeof sfx==='function')sfx('ui');
+}
 function mfGalaxySelectWorld(key,advance){
   const P=PLANETS[key];if(!P)return;if(!mfConquestPlanetOpen(key)){toast('\ud83d\udd12 CONQUER THE PREVIOUS PLANET TO OPEN '+P.nm);sfx('deny');return;}curTheme=P.theme;
+  if(typeof systemForPlanet==='function')mfGalaxySystemKey=systemForPlanet(key);
   const first=P.regions.find(R=>mfConquestRegionOpen(key,R.id))||P.regions[0];curRegionId=first.id;const site=mfGalaxyDefaultSite(first);if(site)syncBattlefieldFromMap(site);
   renderMapRow();renderSpawnPlanner();if(typeof sfx==='function')sfx('ui');mfGalaxyRenderWorldChips();
   if(advance)mfGalaxyWarpTo('planet');else mfGalaxyRenderStage();
@@ -273,47 +819,108 @@ function mfGalaxySelectRegion(id,advance){
 }
 function mfGalaxyDefaultSite(R){
   if(!R||!R.maps||!R.maps.length)return '';
-  const want=(typeof assistedOpeningActive==='function'&&assistedOpeningActive())?'large':battlefieldPresetKey(battlefieldPreset);
-  return R.maps.find(k=>mfConquestMapOpen(k)&&MAPDEFS[k]&&MAPDEFS[k].size===want)||R.maps.find(mfConquestMapOpen)||R.maps[0];
+  /* Standard mode contract drops on medium. Compact (_small) and Large stay
+     pickable on the region row; first-three matches no longer steal Large. */
+  const want=(typeof activeWarMode==='undefined'||activeWarMode==='standard')?'standard':(typeof battlefieldPresetKey==='function'?battlefieldPresetKey(battlefieldPreset):'standard');
+  return R.maps.find(k=>mfConquestMapOpen(k)&&MAPDEFS[k]&&MAPDEFS[k].size===want)
+    ||(typeof theatreMapId==='function'?theatreMapId(R.maps,want):'')
+    ||R.maps.find(mfConquestMapOpen)
+    ||R.maps[0];
 }
 
 function mfGalaxyWarpTo(stage){
   const setup=$('setupScr');clearTimeout(mfGalaxyTransit);setup.classList.add('galaxyWarp');
   mfGalaxyTransit=setTimeout(()=>{setup.classList.remove('galaxyWarp');mfGalaxySetStage(stage);},360);
 }
+function mfGalaxyStampSystemPicker(){
+  /* Footer is the dock. Do not restamp on-canvas ENTER / BACK TO GALAXY hexes. */
+}
+function mfGalaxyToggleSystemLore(){
+  /* Secondary orbital action: expand dossier copy in place. Never advances,
+     never toasts a drop, never opens Campaign. */
+  mfSystemLoreOpen=!mfSystemLoreOpen;
+  if(typeof sfx==='function')sfx('ui');
+  const dos=$('mfSystemDossier');if(dos)dos.classList.toggle('loreOpen',mfSystemLoreOpen);
+  const btn=document.querySelector('[data-mf-sys-lore]');if(btn)btn.classList.toggle('loreOn',mfSystemLoreOpen);
+}
 function mfGalaxySetStage(stage){
-  if(MF_GALAXY_STAGES.indexOf(stage)<0)stage='galaxy';mfGalaxyStage=stage;mfGalaxyRenderStage();
+  if(MF_GALAXY_STAGES.indexOf(stage)<0)stage='galaxy';
+  if(stage!=='system')mfSystemLoreOpen=false;
+  mfGalaxyStage=stage;mfGalaxyRenderStage();
   const sc=$('setupScr')&&$('setupScr').querySelector('.setupScroll');if(sc)sc.scrollTop=0;
+  /* Tiny seam for warprimer.js — does not change stage order or locks. */
+  if(typeof window.wtpOnStage==='function') try{ window.wtpOnStage(stage); }catch(e){}
+  if(typeof audMusicEnterScreen==='function') audMusicEnterScreen('setupScr');
 }
 
 function mfGalaxyRenderWorldChips(){
-  const strip=$('mfWorldStrip');if(!strip)return;const active=mfGalaxyPlanetKey();strip.innerHTML=Object.keys(PLANETS).map(key=>{const P=PLANETS[key],M=mfGalaxyLiveMeta(key),open=mfConquestPlanetOpen(key),done=mfConquestPlanetComplete(key),wins=mfConquestPlanetWins(key);return '<button type="button" class="mfWorldChip '+(key===active?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-world="'+key+'" style="--pc:'+M.color+'"><b>'+mfGalaxyEsc(P.nm)+'</b><small>'+(open?(done?'CONQUERED':wins+'/12 SECURED'):'CONQUEST LOCKED')+'</small></button>';}).join('');
+  const strip=$('mfWorldStrip');if(!strip)return;const catalog=mfGalaxyCatalog(),active=mfGalaxySystemId();
+  const openIds=MF_GALAXY_SYSTEM_ORDER.filter(id=>mfConquestPlanetOpen(catalog[id].home));
+  strip.innerHTML=MF_GALAXY_SYSTEM_ORDER.map(id=>{const S=catalog[id],open=mfConquestPlanetOpen(S.home),done=mfConquestPlanetComplete(S.home),wins=mfConquestPlanetWins(S.home);return '<button type="button" class="mfWorldChip '+(id===active?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-system="'+id+'" style="--pc:'+(S.color||'#5ad4ff')+'"><b>'+mfGalaxyEsc(S.nm)+'</b><small>'+(open?(done?'SECURED':wins+'/12 SECURED'):'SYSTEM LOCKED')+'</small></button>';}).join('');
+  const help=document.querySelector('#mfStageGalaxy .mfGalaxyHelp b');
+  if(help)help.textContent=openIds.length===1?'TAP '+catalog[openIds[0]].nm+' AGAIN TO ENTER':'TAP A STAR, TAP AGAIN TO ENTER';
+}
+function mfGalaxyRenderSystem(){
+  const S=mfGalaxySystem(),key=S.home,P=PLANETS[key]||mfGalaxyPlanet(),box=$('mfStageSystem');if(!box)return;
+  const facNm=typeof facDisplayName==='function'?facDisplayName(S.fac||(P&&P.fac)||'nova'):(S.fac||'NOVA');
+  const open=mfConquestPlanetOpen(key),done=mfConquestPlanetComplete(key),wins=mfConquestPlanetWins(key);
+  const pct=Math.round(wins/12*100);
+  box.innerHTML='<div class="mfGalaxyEyebrow"><span>'+mfGalaxyEsc(S.nm)+'</span><span class="mfGalaxyLive">'+mfGalaxyEsc(S.star)+'</span></div>'
+    +'<p class="mfStageSub mfSystemSub">One playable homeworld. Other bodies on the rings are lore only.</p>'
+    +'<div class="mfSystemTheatre"><div class="mfSystemViewport">'
+    +'<canvas id="mfSystemCanvas" width="640" height="420" aria-label="'+mfGalaxyEsc(S.nm)+' orbital map"></canvas>'
+    +'<aside class="mfSystemDossier'+(open?'':' locked')+(mfSystemLoreOpen?' loreOpen':'')+'" id="mfSystemDossier"><small>SYSTEM</small><b>'+mfGalaxyEsc(S.nm)+'</b>'
+    +'<span class="mfSysBadge">'+(open?(done?'SECURED':wins+'/12'):'LOCKED')+'</span>'
+    +'<div class="mfSysSchematic" aria-hidden="true"><i class="star"></i><em></em><i class="world"></i><span>'+mfGalaxyEsc(P.nm)+'</span></div>'
+    +'<div class="mfSysSurvey"><span>SURVEY</span><i><b style="width:'+pct+'%"></b></i></div>'
+    +'<div class="mfSysStat"><span>HOMEWORLD</span>'+mfGalaxyEsc(P.nm)+(done?' · SECURED':'')+'</div>'
+    +'<div class="mfSysStat"><span>FACTION</span>'+mfGalaxyEsc(facNm)+'</div>'
+    +'<div class="mfSysStat"><span>THEATRE</span>4 REGIONS · 12 SITES</div>'
+    +(P.climate?'<div class="mfSysStat"><span>CLIMATE</span>'+mfGalaxyEsc(P.climate)+'</div>':'')
+    +'<p>'+mfGalaxyEsc(P.lore||P.ds||S.ds||'')+'</p>'
+    +'<div class="mfSysLoreExtra"><p class="mfSysBrief">'+mfGalaxyEsc(P.ds||P.lore||'')+'</p>'
+    +(P.sector?'<div class="mfSysStat"><span>SECTOR</span>'+mfGalaxyEsc(P.sector)+'</div>':'')
+    +(P.biodome?'<div class="mfSysStat"><span>BIODOME</span>'+mfGalaxyEsc(P.biodome)+'</div>':'')
+    +(P.climate?'<div class="mfSysStat"><span>CLIMATE</span>'+mfGalaxyEsc(P.climate)+(P.temp?' · '+mfGalaxyEsc(P.temp):'')+'</div>':'')
+    +(P.diameter?'<div class="mfSysStat"><span>DIAMETER</span>'+mfGalaxyEsc(P.diameter)+(P.dayLen?' · '+mfGalaxyEsc(P.dayLen):'')+'</div>':'')
+    +'<div class="mfSysStat"><span>FACTION</span>'+mfGalaxyEsc(facNm)+'</div></div>'
+    +(open?'':'<div class="mfBriefGate">Conquer the previous system to open this orbit.</div>')
+    +'</aside></div>'
+    +'<div class="mfGalaxyHelp"><span>DRAG TO ORBIT</span><b>'+(open?'TAP HOMEWORLD, TAP AGAIN TO ENTER':'LOCKED')+'</b></div></div>';
+  mfGalaxyDrawSystemView(performance.now());
+  mfGalaxyStampSystemPicker();
+  const cv=$('mfSystemCanvas');if(!cv)return;let drag=0,lx=0,ly=0;
+  cv.onpointerdown=e=>{drag=0;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);};
+  cv.onpointermove=e=>{if(!cv.hasPointerCapture(e.pointerId))return;const dx=e.clientX-lx,dy=e.clientY-ly;drag+=Math.abs(dx)+Math.abs(dy);lx=e.clientX;ly=e.clientY;mfGalaxyYaw+=dx*.009;mfGalaxyPitch=clamp(mfGalaxyPitch+dy*.006,-.42,.42);mfGalaxyDrawSystemView(performance.now());};
+  cv.onpointerup=e=>{if(drag>9)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;let hit=null,best=1e9;for(const T of mfSystemTargets){const d=Math.hypot(x-T.x,y-T.y);if(d<T.r&&d<best){best=d;hit=T;}}if(hit)mfGalaxyPickSystemBody(hit);};
 }
 function mfGalaxyRenderPlanet(){
   const P=mfGalaxyPlanet(),key=mfGalaxyPlanetKey(),M=mfGalaxyLiveMeta(key),box=$('mfStagePlanet');if(!box)return;
   const wins=mfConquestPlanetWins(key);
+  const facNm=typeof facDisplayName==='function'?facDisplayName(P.fac||'nova'):(P.fac||'NOVA');
   box.innerHTML='<div class="mfGalaxyEyebrow"><span>ORBITAL CARTOGRAPHY</span><span class="mfGalaxyLive">'+mfGalaxyEsc(M.status)+'</span></div>'
-    +'<h3 class="mfStageTitle">'+mfGalaxyEsc(P.nm)+'</h3><p class="mfStageSub">Rotate the world, then select one of its four operational regions.</p>'
-    +'<div class="mfPlanetStats"><div><span>SECTOR</span><b>'+mfGalaxyEsc(P.sector||'UNKNOWN')+'</b></div><div><span>CLIMATE</span><b>'+mfGalaxyEsc(P.climate||'VARIED')+'</b></div><div><span>CONQUEST</span><b>'+wins+' / 12</b></div></div>'
-    +'<div class="mfPlanetViewport"><canvas id="mfPlanetCanvas" width="560" height="360" aria-label="Rotatable '+mfGalaxyEsc(P.nm)+' region map"></canvas><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP REGION TO DESCEND</b></div></div><div class="mfRegionStrip" id="mfRegionStrip"></div>';
-  const strip=$('mfRegionStrip');strip.innerHTML=P.regions.map(R=>{const open=mfConquestRegionOpen(key,R.id),done=mfConquestRegionComplete(R),n=mfConquestRegionWins(R);return '<button type="button" class="mfRegionChip '+(R.id===curRegionId?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-region="'+R.id+'" style="--pc:'+R.color+'"><b>'+mfGalaxyEsc(R.nm)+'</b><small>'+(open?(done?'LIBERATED':n+' / 3 SECURED'):'REGION LOCKED')+'</small></button>';}).join('');
+    +'<h3 class="mfStageTitle">'+mfGalaxyEsc(P.nm)+'</h3><p class="mfStageSub">'+mfGalaxyEsc(P.ds||'Rotate the world, then select one of its four operational regions.')+'</p>'
+    +'<div class="mfPlanetStats"><div><span>HOMEWORLD</span><b>'+mfGalaxyEsc(facNm)+'</b></div><div><span>CLIMATE</span><b>'+mfGalaxyEsc(P.climate||'VARIED')+'</b></div><div><span>CONQUEST</span><b>'+wins+' / 12</b></div></div>'
+    +'<div class="mfPlanetViewport"><canvas id="mfPlanetCanvas" width="560" height="360" aria-label="Rotatable '+mfGalaxyEsc(P.nm)+' region map"></canvas></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP REGION, TAP AGAIN TO DESCEND</b></div><div class="mfRegionStrip" id="mfRegionStrip"></div>';
+  const strip=$('mfRegionStrip');strip.innerHTML=P.regions.map(R=>{const open=mfConquestRegionOpen(key,R.id),done=mfConquestRegionComplete(R),n=mfConquestRegionWins(R);return '<button type="button" class="mfRegionChip '+(R.id===curRegionId?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-region="'+R.id+'" style="--pc:'+R.color+'"><b>'+mfGalaxyEsc(R.nm)+'</b><small>'+(open?(done?'LIBERATED':(R.poi?mfGalaxyEsc(R.poi):n+' / 3 SECURED')):'REGION LOCKED')+'</small></button>';}).join('');
   const cv=$('mfPlanetCanvas');draw3DPlanetSphere(cv,key,planetYaw,planetPitch,curRegionId);let drag=0,lx=0,ly=0;
   cv.onpointerdown=e=>{drag=0;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);};
   cv.onpointermove=e=>{if(!cv.hasPointerCapture(e.pointerId))return;const dx=e.clientX-lx,dy=e.clientY-ly;drag+=Math.abs(dx)+Math.abs(dy);lx=e.clientX;ly=e.clientY;planetYaw+=dx*.01;planetPitch=clamp(planetPitch-dy*.01,-.8,.8);draw3DPlanetSphere(cv,key,planetYaw,planetPitch,curRegionId);};
-  cv.onpointerup=e=>{if(drag>8)return;const rect=cv.getBoundingClientRect(),mx=(e.clientX-rect.left)*cv.width/rect.width,my=(e.clientY-rect.top)*cv.height/rect.height,R0=Math.min(cv.width,cv.height)*.32,cx=cv.width*.5,cy=cv.height*.53,cosP=Math.cos(planetPitch),sinP=Math.sin(planetPitch);
-    for(const Rg of P.regions){const lat=Rg.lat,lon=Rg.lon+planetYaw,cLat=Math.cos(lat),sLat=Math.sin(lat),cLon=Math.cos(lon),sLon=Math.sin(lon),px=cx+R0*cLat*sLon,py=cy-R0*(sLat*cosP-cLat*cLon*sinP),pz=cLat*cLon*cosP+sLat*sinP;if(pz>-.15&&Math.hypot(mx-px,my-py)<Math.max(42,(Rg.rad||.38)*R0*1.2)){mfGalaxySelectRegion(Rg.id,true);return;}}
+  cv.onpointerup=e=>{if(drag>8)return;const rect=cv.getBoundingClientRect(),mx=(e.clientX-rect.left)*cv.width/rect.width,my=(e.clientY-rect.top)*cv.height/rect.height;
+    const R0=Math.min(cv.width,cv.height)*.32,cx=cv.width*.5,cy=cv.height*.53,cosP=Math.cos(planetPitch),sinP=Math.sin(planetPitch);
+    for(const Rg of P.regions){const lat=Rg.lat,lon=Rg.lon+planetYaw,cLat=Math.cos(lat),sLat=Math.sin(lat),cLon=Math.cos(lon),sLon=Math.sin(lon),px=cx+R0*cLat*sLon,py=cy-R0*(sLat*cosP-cLat*cLon*sinP),pz=cLat*cLon*cosP+sLat*sinP;if(pz>-.15&&Math.hypot(mx-px,my-py)<Math.max(42,(Rg.rad||.38)*R0*1.2)){mfPickConfirm('region',Rg.id,()=>{mfGalaxySelectRegion(Rg.id,false);const chip=document.querySelector('[data-mf-region="'+Rg.id+'"]');mfPickMark(chip);},()=>mfGalaxySelectRegion(Rg.id,true));return;}}
   };
 }
 
 function mfGalaxyRenderRegion(){
-  const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),M=mfGalaxyLiveMeta(mfGalaxyPlanetKey()),hero=$('mfRegionHero'),wins=mfConquestRegionWins(R);if(hero)hero.innerHTML='<small>'+mfGalaxyEsc(P.nm)+' // '+mfGalaxyEsc(M.front)+'</small><b>'+mfGalaxyEsc(R.nm)+'</b><span>Secure Compact, Standard and Large sites in order. Each step raises the minimum AI threat and first-clear payout.</span><div class="mfConquestBar"><b>'+wins+' / 3 SECURED</b><span>'+(wins===3?'REGION LIBERATED':['COMPACT · EASY','STANDARD · NORMAL','LARGE · HARD'][wins]+' NEXT')+'</span></div>';
+  const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),M=mfGalaxyLiveMeta(mfGalaxyPlanetKey()),hero=$('mfRegionHero'),wins=mfConquestRegionWins(R);if(hero)hero.innerHTML='<small>'+mfGalaxyEsc(P.nm)+' // '+mfGalaxyEsc(M.front)+'</small><b>'+mfGalaxyEsc(R.nm)+'</b><span>'+mfGalaxyEsc(R.hook||'Secure Compact, Standard and Large sites in order.')+(R.poi?' Landmark: '+mfGalaxyEsc(R.poi)+'.':'')+'</span><div class="mfConquestBar"><b>'+wins+' / 3 SECURED</b><span>'+(wins===3?'REGION LIBERATED':['COMPACT · EASY','STANDARD · NORMAL','LARGE · HARD'][wins]+' NEXT')+'</span></div>';
   const panel=$('mfStageRegion');if(panel)panel.style.setProperty('--rc',R.color||M.color);renderMapRow();
 }
 function mfGalaxySummary(){
   const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),D=MAPDEFS[curMap]||{},C=typeof commanderById==='function'?commanderById(playerCommanderId):null;
   const payout=$('opsBriefPayout')?$('opsBriefPayout').textContent:'LIVE',mods=$('opsBriefMods')?$('opsBriefMods').textContent:'0',threat=$('opsBriefThreat')?$('opsBriefThreat').textContent:('T'+(difficulty+1));
   const scale=BATTLEFIELD_PRESETS[battlefieldPresetKey(D.size||battlefieldPreset)]||{},domain=D.navalEnabled?(D.waterMode==='river'?'RIVER + NAVAL':'OCEAN + NAVAL'):'LAND DOMAIN';
-  const CQ=mfConquestLocate(curMap),hero=$('mfMissionHero');if(hero)hero.innerHTML='<div class="mfMissionKicker">'+mfGalaxyEsc(P.nm)+' / '+mfGalaxyEsc(R.nm)+'</div><h3>'+mfGalaxyEsc(D.nm||'BATTLEFIELD')+'</h3><p>'+mfGalaxyEsc(D.ds||'Operational theatre ready for deployment.')+'</p><div class="mfMissionTags">'+(CQ?'<span>CONQUEST FRONT '+CQ.tier+'</span>':'')+'<span>'+mfGalaxyEsc(threat)+' THREAT</span><span>'+mfGalaxyEsc(scale.km||String(D.size||battlefieldPreset).toUpperCase())+'</span><span>'+mfGalaxyEsc(scale.dur||'LIVE')+'</span><span>'+mfGalaxyEsc(domain)+'</span><span>'+mfGalaxyEsc(String(D.hazard||'CLEAR').toUpperCase())+'</span><span>'+mfGalaxyEsc(mods)+' MODIFIERS</span><span>'+mfGalaxyEsc(payout)+' PAYOUT</span><span>'+mfGalaxyEsc(C?C.name||C.nm:'COMMANDER')+'</span></div>';
+  const CQ=mfConquestLocate(curMap),hero=$('mfMissionHero');if(hero)hero.innerHTML='<div class="mfMissionKicker">'+mfGalaxyEsc(P.nm)+' / '+mfGalaxyEsc(R.nm)+(D.poi?' / '+mfGalaxyEsc(D.poi):'')+'</div><h3>'+mfGalaxyEsc(D.nm||'BATTLEFIELD')+'</h3><p>'+mfGalaxyEsc(D.ds||'Operational theatre ready for deployment.')+'</p><div class="mfMissionTags">'+(CQ?'<span>CONQUEST FRONT '+CQ.tier+'</span>':'')+'<span>'+mfGalaxyEsc(threat)+' THREAT</span><span>'+mfGalaxyEsc(scale.km||String(D.size||battlefieldPreset).toUpperCase())+'</span><span>'+mfGalaxyEsc(scale.dur||'LIVE')+'</span><span>'+mfGalaxyEsc(domain)+'</span><span>'+mfGalaxyEsc(String(D.hazard||'CLEAR').toUpperCase())+'</span><span>'+mfGalaxyEsc(mods)+' MODIFIERS</span><span>'+mfGalaxyEsc(payout)+' PAYOUT</span><span>'+mfGalaxyEsc(C?C.name||C.nm:'COMMANDER')+'</span></div>';
   for(const d of document.querySelectorAll('.mfConfigDrawer')){const out=d.querySelector('.mfDrawerTx small');if(!out)continue;const k=d.dataset.drawer;if(k==='command')out.textContent=(C?(C.name||C.nm):'Commander')+' · '+activeAiSlots().length+' AI';else if(k==='mission')out.textContent=(goalDef().nm||goalSel)+' · '+(timeLimit?Math.round(timeLimit/60)+' MIN':'NO LIMIT');else if(k==='logistics')out.textContent=(resPace===1.6?'RICH':resPace<1?'LEAN':'NORMAL')+' RESOURCES';else out.textContent=mods+' ACTIVE · '+payout;}
 }
 
@@ -381,24 +988,65 @@ function mfGalaxyRenderStage(){
   mfGalaxyRenderModeContract();
   document.querySelectorAll('.mfStagePanel').forEach(p=>p.classList.toggle('on',p.dataset.stage===mfGalaxyStage));
   document.querySelectorAll('.mfGalaxyStep').forEach((b,i)=>{b.classList.toggle('on',i===idx);b.classList.toggle('done',i<idx);b.setAttribute('aria-current',i===idx?'step':'false');});
-  const labels={galaxy:'GALACTIC OVERVIEW',planet:'PLANETARY ORBIT',region:'BATTLEFIELD SITES',deploy:'DEPLOYMENT BRIEF'};const h=$('setupContext');if(h)h.textContent=labels[mfGalaxyStage];
+  const labels={galaxy:'GALACTIC OVERVIEW',system:'SOLAR SYSTEM',planet:'PLANETARY ORBIT',region:'BATTLEFIELD SITES',deploy:'DEPLOYMENT BRIEF'};const h=$('setupContext');if(h)h.textContent=labels[mfGalaxyStage];
   const title=setup.querySelector('.setupHead h2');if(title)title.textContent=(String(activeWarMode||'standard').toUpperCase()+' WAR TABLE');
-  const launch=$('setupStart'),back=$('setupBack');if(back)back.textContent=idx?'← PREVIOUS':'← WAR ROOM';
-  if(launch){const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),playable=activeWarMode==='standard'||activeWarMode==='campaign';launch.classList.remove('disabled');if(mfGalaxyStage==='galaxy')launch.textContent='▶ ENTER '+P.nm;else if(mfGalaxyStage==='planet')launch.textContent='▶ OPEN '+R.nm;else if(mfGalaxyStage==='region')launch.textContent='▶ CONFIGURE FORCE';else{launch.textContent=activeWarMode==='campaign'?'▶ START MISSION':playable?'▶ START BATTLE':'◉ SERVICE IN DEVELOPMENT';launch.classList.toggle('disabled',!playable);}}
+  const launch=$('setupStart'),back=$('setupBack');
+  /* Galaxy and system share the War Room dock. Later stages step backward. */
+  if(back)back.textContent=(mfGalaxyStage==='galaxy'||mfGalaxyStage==='system')?'← WAR ROOM':'← PREVIOUS';
+  if(launch){
+    const Sys=mfGalaxySystem(),P=mfGalaxyPlanet(),R=mfGalaxyRegion(),playable=activeWarMode==='standard';
+    const home=PLANETS[Sys.home]||P;
+    launch.classList.remove('disabled');
+    if(mfGalaxyStage==='galaxy')launch.textContent='▶ ENTER '+Sys.nm;
+    else if(mfGalaxyStage==='system'){
+      if(!mfConquestPlanetOpen(Sys.home)){launch.textContent='LOCKED';launch.classList.add('disabled');}
+      else launch.textContent='▶ ENTER '+home.nm;
+    }else if(mfGalaxyStage==='planet')launch.textContent='▶ OPEN REGION';
+    else if(mfGalaxyStage==='region')launch.textContent='▶ CONFIGURE FORCE';
+    else{launch.textContent=playable?'▶ START BATTLE':'◉ SERVICE IN DEVELOPMENT';launch.classList.toggle('disabled',!playable);}
+  }
   /* Android WebViews may throttle the first rAF while the setup screen changes
      from hidden to visible. Paint once synchronously so the War Table can
      never present a blank galaxy; animation is enhancement, not a dependency. */
-  if(mfGalaxyStage==='galaxy'){mfGalaxyRenderWorldChips();mfGalaxyDraw(performance.now());mfGalaxyStartAnim();}else mfGalaxyStopAnim();
+  if(mfGalaxyStage==='galaxy'){mfGalaxyRenderWorldChips();mfGalaxyDraw(performance.now());mfGalaxyStartAnim();}
+  else if(mfGalaxyStage==='system'){mfGalaxyRenderSystem();mfGalaxyStartAnim();}
+  else mfGalaxyStopAnim();
   if(mfGalaxyStage==='planet')mfGalaxyRenderPlanet();if(mfGalaxyStage==='region'){
     mfGalaxyRenderRegion();
-    /* Assisted openings choose Large; put that selected site in front of the
-       player instead of requiring two blind horizontal swipes to discover the
-       choice the game already made. */
+    /* Standard openings land on the medium site; keep that card in view. */
     requestAnimationFrame(()=>{const m=$('mapRow'),sel=m&&m.querySelector('.mapCard.sel');if(sel)sel.scrollIntoView({block:'nearest',inline:'center'});});
   }if(mfGalaxyStage==='deploy'){if(typeof renderOps==='function')renderOps();mfQuickRender();mfGalaxySummary();}
 }
 
-function mfGalaxyAdvance(){if(mfGalaxyStage==='galaxy')mfGalaxyWarpTo('planet');else if(mfGalaxyStage==='planet')mfGalaxyWarpTo('region');else if(mfGalaxyStage==='region')mfGalaxyWarpTo('deploy');}
+function mfGalaxyAdvance(){
+  if(mfGalaxyStage==='galaxy'){
+    const S=mfGalaxySystem();
+    if(!mfConquestPlanetOpen(S.home)){toast('\ud83d\udd12 CONQUER THE PREVIOUS SYSTEM TO OPEN '+S.nm);if(typeof sfx==='function')sfx('deny');return;}
+    mfGalaxyWarpTo('system');
+  }
+  else if(mfGalaxyStage==='system'){
+    const S=mfGalaxySystem();
+    if(!mfConquestPlanetOpen(S.home)){toast('\ud83d\udd12 CONQUER THE PREVIOUS SYSTEM TO OPEN '+S.nm);if(typeof sfx==='function')sfx('deny');return;}
+    mfGalaxyWarpTo('planet');
+  }else if(mfGalaxyStage==='planet'){
+    const key=mfGalaxyPlanetKey(),P=mfGalaxyPlanet();
+    let R=P.regions.find(r=>r.id===curRegionId);
+    if(!R||!mfConquestRegionOpen(key,R.id)){
+      R=P.regions.find(r=>mfConquestRegionOpen(key,r.id))||P.regions[0];
+      if(!mfConquestRegionOpen(key,R.id)){toast('\ud83d\udd12 LIBERATE THE PREVIOUS REGION FIRST');if(typeof sfx==='function')sfx('deny');return;}
+      curRegionId=R.id;const site=mfGalaxyDefaultSite(R);if(site)syncBattlefieldFromMap(site);
+    }
+    mfGalaxyWarpTo('region');
+  }else if(mfGalaxyStage==='region'){
+    if((typeof isHomeworldMap==='function'&&!isHomeworldMap(curMap))||!mfConquestMapOpen(curMap)){
+      const site=mfGalaxyDefaultSite(mfGalaxyRegion());if(site)syncBattlefieldFromMap(site);
+    }
+    if(!mfConquestMapOpen(curMap)||(typeof isHomeworldMap==='function'&&!isHomeworldMap(curMap))){
+      toast('\ud83d\udd12 SECURE THE PREVIOUS BATTLEFIELD FIRST');if(typeof sfx==='function')sfx('deny');return;
+    }
+    mfGalaxyWarpTo('deploy');
+  }
+}
 function mfGalaxyBack(){const i=MF_GALAXY_STAGES.indexOf(mfGalaxyStage);if(i>0)mfGalaxySetStage(MF_GALAXY_STAGES[i-1]);}
 
 function mfRenameFrontNav(){
@@ -411,7 +1059,7 @@ function mfRenameFrontNav(){
 }
 
 function mfGalaxyMoveCards(){
-  const groups=[['COMMAND & FORCES',['threatRow','spawnMap','pfacRow']],['MISSION RULES',['infestRow','goalRow','timeRow','defFocusRow']],['ECONOMY & RISK',['paceRow','opModRow','wcRowSel']]],body=$('mfAdvancedBody'),seen=new Set();
+  const groups=[['COMMAND & FORCES',['threatRow','spawnMap','pfacRow','deployPkgRow']],['MISSION RULES',['infestRow','goalRow','timeRow','defFocusRow']],['ECONOMY & RISK',['paceRow','opModRow','wcRowSel']]],body=$('mfAdvancedBody'),seen=new Set();
   for(const group of groups){const label=document.createElement('div');label.className='mfAdvancedSection';label.textContent=group[0];body.appendChild(label);for(const id of group[1]){const el=$(id),card=el&&el.closest('.setupCard');if(card&&!seen.has(card)){seen.add(card);card.removeAttribute('data-setup-tab');body.appendChild(card);}}}
   const map=$('mapRow'),mapHost=$('mfRegionMapHost');if(map&&mapHost)mapHost.appendChild(map);
 }
@@ -419,10 +1067,11 @@ function mfGalaxyBuild(){
   const setup=$('setupScr'),scroll=setup&&setup.querySelector('.setupScroll');if(!setup||!scroll)return false;setup.classList.add('galaxyFlow');
   const host=document.createElement('div');host.className='mfGalaxyHost';host.id='mfGalaxyHost';host.innerHTML=`
     <nav class="mfGalaxyStepper" aria-label="Deployment route">
-      <button type="button" class="mfGalaxyStep on" data-mf-stage="galaxy"><i></i>GALAXY</button><button type="button" class="mfGalaxyStep" data-mf-stage="planet"><i></i>PLANET</button><button type="button" class="mfGalaxyStep" data-mf-stage="region"><i></i>REGION</button><button type="button" class="mfGalaxyStep" data-mf-stage="deploy"><i></i>DEPLOY</button>
+      <button type="button" class="mfGalaxyStep on" data-mf-stage="galaxy"><i></i>GALAXY</button><button type="button" class="mfGalaxyStep" data-mf-stage="system"><i></i>SYSTEM</button><button type="button" class="mfGalaxyStep" data-mf-stage="planet"><i></i>PLANET</button><button type="button" class="mfGalaxyStep" data-mf-stage="region"><i></i>REGION</button><button type="button" class="mfGalaxyStep" data-mf-stage="deploy"><i></i>DEPLOY</button>
     </nav>
     <div class="mfModeContract" id="mfModeContract"></div>
-    <section class="mfStagePanel on" data-stage="galaxy" id="mfStageGalaxy"><div class="mfGalaxyEyebrow"><span>ANDROMEDA-IV THEATRE</span><span class="mfGalaxyLive">WAR TABLE ONLINE</span></div><h3 class="mfStageTitle">CHOOSE A WORLD</h3><p class="mfStageSub">Drag the hologram to rotate the theatre. Select a planet to begin the orbital approach.</p><button type="button" class="mfConquestContinue" id="mfConquestContinue"></button><div class="mfGalaxyViewport"><canvas id="mfGalaxyCanvas" width="600" height="520" aria-label="Interactive three-dimensional galaxy map"></canvas><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP A PLANET TO JUMP</b></div></div><div class="mfWorldStrip" id="mfWorldStrip"></div></section>
+    <section class="mfStagePanel on" data-stage="galaxy" id="mfStageGalaxy"><div class="mfGalaxyEyebrow"><span>FOUR-SYSTEM THEATRE</span><span class="mfGalaxyLive">WAR TABLE ONLINE</span></div><h3 class="mfStageTitle">CHOOSE A SYSTEM</h3><p class="mfStageSub">Sombrero, Andromeda, Orion and Helios are all on this cluster. Drag the hologram, then tap an unlocked star to enter its orbit.</p><button type="button" class="mfConquestContinue" id="mfConquestContinue"></button><div class="mfGalaxyViewport"><canvas id="mfGalaxyCanvas" width="600" height="520" aria-label="Interactive four-system galaxy map"></canvas></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP AN UNLOCKED STAR</b></div><div class="mfWorldStrip" id="mfWorldStrip"></div></section>
+    <section class="mfStagePanel" data-stage="system" id="mfStageSystem"></section>
     <section class="mfStagePanel" data-stage="planet" id="mfStagePlanet"></section>
     <section class="mfStagePanel" data-stage="region" id="mfStageRegion"><div class="mfGalaxyEyebrow"><span>REGIONAL COMMAND</span><span>3 BATTLEFIELD SITES</span></div><div class="mfRegionHero" id="mfRegionHero"></div><div id="mfRegionMapHost"></div></section>
     <section class="mfStagePanel" data-stage="deploy" id="mfStageDeploy"><div class="mfGalaxyEyebrow"><span>FINAL DEPLOYMENT PLAN</span><span class="mfGalaxyLive">DROP CORRIDOR READY</span></div><div class="mfMissionHero" id="mfMissionHero"></div>
@@ -447,28 +1096,38 @@ function mfGalaxyWire(){
   setup.addEventListener('pointerdown',e=>{
     const plan=e.target.closest('[data-mf-plan]');if(plan){e.preventDefault();mfQuickApplyPlan(plan.dataset.mfPlan);return;}
     const team=e.target.closest('[data-mf-team]');if(team){e.preventDefault();mfQuickApplyTeam(team.dataset.mfTeam);return;}
-    const commander=e.target.closest('[data-mf-commander]');if(commander){e.preventDefault();playerCommanderId=commander.dataset.mfCommander;if(typeof renderCommanderRow==='function')renderCommanderRow();mfQuickRender();mfGalaxySummary();sfx('confirm');return;}
+    const commander=e.target.closest('[data-mf-commander]');if(commander){e.preventDefault();playerCommanderId=commander.dataset.mfCommander;if(typeof persistCommanderPick==='function')persistCommanderPick();if(typeof renderCommanderRow==='function')renderCommanderRow();mfQuickRender();mfGalaxySummary();sfx('confirm');return;}
     const cont=e.target.closest('#mfConquestContinue');if(cont&&!cont.disabled){e.preventDefault();mfGalaxyResumeConquest();return;}
-    const world=e.target.closest('[data-mf-world]');if(world){e.preventDefault();mfGalaxySelectWorld(world.dataset.mfWorld,true);return;}
-    const region=e.target.closest('[data-mf-region]');if(region){e.preventDefault();mfGalaxySelectRegion(region.dataset.mfRegion,true);return;}
+    const sys=e.target.closest('[data-mf-system]');if(sys){e.preventDefault();mfPickConfirm('sys',sys.dataset.mfSystem,()=>{mfGalaxySelectSystem(sys.dataset.mfSystem,false);mfPickMark(sys);},()=>mfGalaxySelectSystem(sys.dataset.mfSystem,true));return;}
+    const enter=e.target.closest('[data-mf-sys-enter]');if(enter){e.preventDefault();if(!enter.disabled)mfGalaxyAdvance();return;}
+    const sysBack=e.target.closest('[data-mf-sys-back]');if(sysBack){e.preventDefault();mfGalaxyBack();return;}
+    const lore=e.target.closest('[data-mf-sys-lore]');if(lore){e.preventDefault();mfGalaxyToggleSystemLore();return;}
+    const world=e.target.closest('[data-mf-world]');if(world){e.preventDefault();mfPickConfirm('world',world.dataset.mfWorld,()=>{mfGalaxySelectWorld(world.dataset.mfWorld,false);mfPickMark(world);},()=>mfGalaxySelectWorld(world.dataset.mfWorld,true));return;}
+    const region=e.target.closest('[data-mf-region]');if(region){e.preventDefault();mfPickConfirm('region',region.dataset.mfRegion,()=>{mfGalaxySelectRegion(region.dataset.mfRegion,false);mfPickMark(region);},()=>mfGalaxySelectRegion(region.dataset.mfRegion,true));return;}
     const step=e.target.closest('[data-mf-stage]');if(step){e.preventDefault();const to=step.dataset.mfStage,ti=MF_GALAXY_STAGES.indexOf(to),ci=MF_GALAXY_STAGES.indexOf(mfGalaxyStage);if(ti<=ci)mfGalaxySetStage(to);return;}
   });
   cv.onpointerdown=e=>{mfGalaxyDragging=true;mfGalaxyDragX=e.clientX;mfGalaxyDragY=e.clientY;mfGalaxyDragTravel=0;cv.setPointerCapture(e.pointerId);};
   cv.onpointermove=e=>{if(!mfGalaxyDragging)return;const dx=e.clientX-mfGalaxyDragX,dy=e.clientY-mfGalaxyDragY;mfGalaxyDragX=e.clientX;mfGalaxyDragY=e.clientY;mfGalaxyDragTravel+=Math.abs(dx)+Math.abs(dy);mfGalaxyYaw+=dx*.009;mfGalaxyPitch=clamp(mfGalaxyPitch+dy*.006,-.42,.42);mfGalaxyDraw(performance.now());};
-  cv.onpointerup=e=>{mfGalaxyDragging=false;if(mfGalaxyDragTravel>9)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;let hit=null,best=1e9;for(const T of mfGalaxyTargets){const d=Math.hypot(x-T.x,y-T.y);if(d<T.r&&d<best){best=d;hit=T;}}if(hit)mfGalaxySelectWorld(hit.key,true);};cv.onpointercancel=()=>{mfGalaxyDragging=false;};
-  const map=$('mapRow');if(map)map.addEventListener('pointerup',e=>{if(e.target.closest('.mapCard'))setTimeout(()=>mfGalaxyWarpTo('deploy'),80);});
+  cv.onpointerup=e=>{mfGalaxyDragging=false;if(mfGalaxyDragTravel>9)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;let hit=null,best=1e9;for(const T of mfGalaxyTargets){const d=Math.hypot(x-T.x,y-T.y);if(d<T.r&&d<best){best=d;hit=T;}}if(hit)mfPickConfirm('sys',hit.key,()=>{mfGalaxySelectSystem(hit.key,false);mfPickMark(document.querySelector('[data-mf-system="'+hit.key+'"]'));},()=>mfGalaxySelectSystem(hit.key,true));};cv.onpointercancel=()=>{mfGalaxyDragging=false;};
+  const map=$('mapRow');if(map)map.addEventListener('pointerup',e=>{
+    const card=e.target.closest('.mapCard');if(!card||card.classList.contains('locked'))return;
+    const key=card.dataset.map;if(!key)return;
+    mfPickConfirm('map',key,()=>mfPickMark(document.querySelector('#mapRow .mapCard[data-map="'+key+'"]')),()=>mfGalaxyWarpTo('deploy'));
+  });
   const start=$('setupStart'),back=$('setupBack');let navCommit=-1e9,backCommit=-1e9;
   /* mfBindTap commits on pointer-UP. Intercepting pointer-down looked right in
      desktop tests but merely changed the stage before the old pointer-up
      listener launched the match underneath it. Own pointer-up in capture, and
      swallow the synthetic click that follows the same physical tap. */
   if(start){
-    start.addEventListener('pointerup',e=>{const playable=activeWarMode==='standard'||activeWarMode==='campaign';if(mfGalaxyStage!=='deploy'||!playable){e.preventDefault();e.stopImmediatePropagation();navCommit=performance.now();if(mfGalaxyStage!=='deploy')mfGalaxyAdvance();else if(typeof toast==='function')toast('NETWORK SERVICE IN DEVELOPMENT');}},true);
-    start.addEventListener('click',e=>{const playable=activeWarMode==='standard'||activeWarMode==='campaign';if(performance.now()-navCommit<700){e.preventDefault();e.stopImmediatePropagation();return;}if(mfGalaxyStage!=='deploy'||!playable){e.preventDefault();e.stopImmediatePropagation();if(mfGalaxyStage!=='deploy')mfGalaxyAdvance();else if(typeof toast==='function')toast('NETWORK SERVICE IN DEVELOPMENT');}},true);
+    start.addEventListener('pointerup',e=>{const playable=activeWarMode==='standard';if(mfGalaxyStage!=='deploy'||!playable){e.preventDefault();e.stopImmediatePropagation();navCommit=performance.now();if(mfGalaxyStage!=='deploy')mfGalaxyAdvance();else if(typeof toast==='function')toast('NETWORK SERVICE IN DEVELOPMENT');}},true);
+    start.addEventListener('click',e=>{const playable=activeWarMode==='standard';if(performance.now()-navCommit<700){e.preventDefault();e.stopImmediatePropagation();return;}if(mfGalaxyStage!=='deploy'||!playable){e.preventDefault();e.stopImmediatePropagation();if(mfGalaxyStage!=='deploy')mfGalaxyAdvance();else if(typeof toast==='function')toast('NETWORK SERVICE IN DEVELOPMENT');}},true);
   }
   if(back){
-    back.addEventListener('pointerup',e=>{if(mfGalaxyStage!=='galaxy'){e.preventDefault();e.stopImmediatePropagation();backCommit=performance.now();mfGalaxyBack();}},true);
-    back.addEventListener('click',e=>{if(performance.now()-backCommit<700){e.preventDefault();e.stopImmediatePropagation();return;}if(mfGalaxyStage!=='galaxy'){e.preventDefault();e.stopImmediatePropagation();mfGalaxyBack();}},true);
+    /* System uses the same War Room exit as galaxy (setupBack → warScr).
+       Intercepting it here was what turned the left CTA into PREVIOUS / galaxy. */
+    back.addEventListener('pointerup',e=>{if(mfGalaxyStage!=='galaxy'&&mfGalaxyStage!=='system'){e.preventDefault();e.stopImmediatePropagation();backCommit=performance.now();mfGalaxyBack();}},true);
+    back.addEventListener('click',e=>{if(performance.now()-backCommit<700){e.preventDefault();e.stopImmediatePropagation();return;}if(mfGalaxyStage!=='galaxy'&&mfGalaxyStage!=='system'){e.preventDefault();e.stopImmediatePropagation();mfGalaxyBack();}},true);
   }
   setup.addEventListener('toggle',e=>{if(e.target.classList&&e.target.classList.contains('mfConfigDrawer')){
     if(e.target.open)setup.querySelectorAll('.mfConfigDrawer').forEach(d=>{if(d!==e.target)d.open=false;});
@@ -478,10 +1137,16 @@ function mfGalaxyWire(){
 function initGalaxyUI(){
   if(mfGalaxyReady||!$('setupScr')||typeof PLANETS==='undefined')return;mfRenameFrontNav();mfGalaxyCss();if(!mfGalaxyBuild())return;mfGalaxyReady=true;mfGalaxyOriginalPlanetRow=renderPlanetRow;mfConquestNormalizeSelection();
   renderPlanetRow=function(){if(mfGalaxyReady)mfGalaxyRenderStage();else mfGalaxyOriginalPlanetRow();};
-  mfGalaxyOpenOriginal=window.openPlanetarySetup;window.openPlanetarySetup=(mode)=>{mfGalaxyStage='galaxy';mfGalaxyOpenOriginal(mode);
-    if(mode==='standard'&&typeof assistedOpeningActive==='function'&&assistedOpeningActive()){
+  mfGalaxyOpenOriginal=window.openPlanetarySetup;window.openPlanetarySetup=(mode)=>{
+    /* Unbuilt modes must not enter the galaxy war table. The original already
+       toasts and returns; skip the stage paint so a locked card cannot load a
+       stub room that looks like Standard. */
+    if(mode==='coop'||mode==='mmo'||mode==='campaign'){mfGalaxyOpenOriginal(mode);return;}
+    mfGalaxyStage='galaxy';if(typeof systemForPlanet==='function')mfGalaxySystemKey=systemForPlanet(mfGalaxyPlanetKey());mfGalaxyOpenOriginal(mode);
+    if(typeof mfConquestNormalizeSelection==='function')mfConquestNormalizeSelection();
+    if(mode==='standard'){
       const R=mfGalaxyRegion(),site=mfGalaxyDefaultSite(R);if(site)syncBattlefieldFromMap(site);
-      if(!mfQuickAssisted){mfQuickAssisted=true;mfQuickApplyPlan('first');}
+      if(typeof assistedOpeningActive==='function'&&assistedOpeningActive()&&!mfQuickAssisted){mfQuickAssisted=true;mfQuickApplyPlan('first');}
     }
     mfGalaxyRenderStage();};window.openSkirmishSetup=()=>window.openPlanetarySetup('standard');
   mfGalaxyWire();mfGalaxyRenderStage();

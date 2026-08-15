@@ -1,6 +1,6 @@
 /* Focused phone-HUD geometry and icon regression. Runs without booting a match
    so layout regressions stay measurable in seconds rather than terrain time. */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir,readFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -37,7 +37,7 @@ body::before{content:'';position:absolute;inset:0;background:
 <div id="unitCard" style="display:block"><div class="ucHead"><div class="ucRoleIcon">&#x25c8;</div><div><b>UNIT INTEL</b><small>Selected formation</small></div></div></div>
 </body></html>`;
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,args:['--disable-gpu-sandbox']});
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   await page.setContent(html,{waitUntil:'load',timeout:30000});

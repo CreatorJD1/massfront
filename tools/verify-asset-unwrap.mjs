@@ -16,12 +16,12 @@
    waste texels on small faces by design. It is here so the cost of that choice
    is visible if someone later wants an area-proportional packer.
    ============================================================================ */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 
 const PORT = process.argv[2] || '8901';
 const MAP = 1024;
 
-const browser = await chromium.launch({
+const browser = await launchPwBrowser({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: true,
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 800, height: 800 } });

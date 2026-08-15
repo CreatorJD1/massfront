@@ -47,17 +47,30 @@
 /* Battle "heat", 0..1. Rises instantly, falls over ~6s, so the UI stays quiet
    through a lull inside a fight instead of flickering back to chatty. */
 let mfFlowHeatV=0, mfFlowCalmT=0, mfFlowTickT=0, mfFlowLast=0, mfFlowRaf=0;
+let mfFlowMute=0, mfHeatCursor=0;
+const mfFlowEls={};
 
 function mfFlowHeat(){ return mfFlowHeatV; }
 
 function mfFlowVis(el){
   if(!el) return false;
-  const cs=getComputedStyle(el);
-  if(cs.display==='none'||cs.visibility==='hidden') return false;
-  if(parseFloat(cs.opacity||'1')<0.04) return false;
-  return el.getBoundingClientRect().height>2;
+  const st=el.style;
+  if(st.display==='none'||st.visibility==='hidden') return false;
+  if(st.opacity==='0') return false;
+  /* Cached height: offsetHeight forced layout on every banner during a
+     queued pass. Re-measure only after the observer saw a mutation. */
+  if(el._mfVisH!=null) return el._mfVisH>2;
+  const h=el.offsetHeight;
+  el._mfVisH=h;
+  return h>2;
 }
-function mfFlowEl(id){ return document.getElementById(id); }
+function mfFlowEl(id){
+  let el=mfFlowEls[id];
+  if(el&&el.isConnected) return el;
+  el=document.getElementById(id);
+  if(el) mfFlowEls[id]=el;
+  return el;
+}
 
 /* NO SESSION UI IN THE MENU, EVER.
    `body.menuMode` was the only thing suppressing battlefield chrome, and it is
@@ -75,7 +88,7 @@ function mfFlowFrontOpen(){
     ? FRONT_SCREEN_IDS.concat('loadScr') : MF_FRONT_FALLBACK;
   for(const id of ids){
     const el=mfFlowEl(id);
-    if(el&&getComputedStyle(el).display!=='none') return true;
+    if(el&&el.style.display&&el.style.display!=='none') return true;
   }
   return false;
 }
@@ -101,15 +114,19 @@ const MF_LANE_DROP={coach:1,toast:2};
 /* The corner columns collide too: portrait moves #wcRow to the LEFT at
    sat+92 and leaves #heroBar at sat+92 on the same side. Same treatment. */
 const MF_LANE_L=['wcRow','heroBar'];
-const MF_LANE_R=['infMeter','godBadge'];
+const MF_LANE_R=['infMeter','hazChip','godBadge'];
 
 /* Place a box so its top edge lands at viewport Y, whatever its position mode
    or offset parent is. Measured, so it survives media queries and safe areas. */
 function mfFlowPlace(el,y){
-  const cs=getComputedStyle(el);
-  const cur=parseFloat(cs.top);
-  if(!isFinite(cur)){ el.style.position='fixed'; el.style.top=y+'px'; return; }
-  const delta=el.getBoundingClientRect().top-cur;   /* offset-parent origin */
+  let delta=el._mfDelta;
+  if(delta==null){
+    const cs=getComputedStyle(el);
+    const cur=parseFloat(cs.top);
+    if(!isFinite(cur)){ el.style.position='fixed'; el.style.top=y+'px'; return; }
+    delta=el.getBoundingClientRect().top-cur;
+    el._mfDelta=delta;
+  }
   const want=Math.round(y-delta);
   if(el._mfTop!==want){ el._mfTop=want; el.style.top=want+'px'; }
 }
@@ -128,7 +145,7 @@ function mfFlowLaneSide(ids,startY,gap){
        "opacity goes to 1" and the next layout pass — a visible jump. */
     if(!mfFlowVis(el)) continue;
     mfFlowPlace(el,y);
-    y+=el.getBoundingClientRect().height+gap;
+    y+=el.offsetHeight+gap;
   }
   return y;
 }
@@ -137,6 +154,12 @@ function mfFlowLaneSide(ids,startY,gap){
    it thinks it should be. */
 function mfFlowLayout(){
   mfFlowRaf=0;
+  mfFlowMute++;
+  try{ mfFlowLayoutGo(); }
+  finally{ mfFlowMute--; }
+}
+function mfFlowLayoutGo(){
+  for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el) el._mfVisH=undefined; }
   const body=document.body;
   /* One authoritative "the player is in the menu" state, whatever put them
      there. The class does the hiding (see ui.css); the early return hands every
@@ -149,6 +172,7 @@ function mfFlowLayout(){
     for(const s of MF_LANE) mfFlowRelease(mfFlowEl(s.id));
     for(const id of MF_LANE_L) mfFlowRelease(mfFlowEl(id));
     for(const id of MF_LANE_R) mfFlowRelease(mfFlowEl(id));
+    mfFlowDockSelInfo(true);
     return;
   }
   const vh=window.innerHeight||800;
@@ -184,7 +208,7 @@ function mfFlowLayout(){
   let dropped=0;
   for(const v of live){
     if(v.s.id==='unitCard') continue;                 /* placed last, below */
-    const h=v.el.getBoundingClientRect().height;
+    const h=v.el.offsetHeight;
     if(y+h>autoFloor&&MF_LANE_DROP[v.s.id]){
       /* Out of room. Hide it the way its own owner would, so it genuinely is
          not on screen — a class that only zeroes opacity would still measure
@@ -207,6 +231,38 @@ function mfFlowLayout(){
     y+=card.el.getBoundingClientRect().height+6;
   }
   mfFlowOverflow(dropped,Math.min(y,bottom));
+  /* Selection readout, build/prod/structure sheets, place UI, constructor
+     HUD and the notice log all used hardcoded portrait bottoms (70–200px)
+     that sat inside the modern command dock once a second row appeared.
+     Measure the dock instead of guessing. */
+  mfFlowDockSelInfo(false);
+}
+/* Anything that must clear the live command dock. Same owner as the
+   top lane — one measurement, many panels — so a new sheet cannot land
+   on a guessed 160px that is already occupied. */
+const MF_DOCK_LIFT=['selInfo','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory'];
+function mfFlowDockRelease(el){
+  if(!el||!el._mfDocked) return;
+  el.style.removeProperty('bottom');
+  el.style.removeProperty('top');
+  el._mfDocked=false; el._mfDockBottom=undefined;
+}
+function mfFlowDockSelInfo(release){
+  const dock=mfFlowEl('cmdbar');
+  const vh=window.innerHeight||800;
+  const can=!release&&dock&&mfFlowVis(dock);
+  const want=can?Math.max(8,Math.round(vh-dock.getBoundingClientRect().top+6)):0;
+  for(const id of MF_DOCK_LIFT){
+    const el=mfFlowEl(id);
+    if(!el) continue;
+    if(!can||!mfFlowVis(el)){ mfFlowDockRelease(el); continue; }
+    if(el._mfDockBottom!==want){
+      el._mfDockBottom=want;
+      el.style.top='auto';
+      el.style.bottom=want+'px';
+    }
+    el._mfDocked=true;
+  }
 }
 function mfFlowQueueLayout(){
   if(!mfFlowRaf) mfFlowRaf=requestAnimationFrame(mfFlowLayout);
@@ -334,7 +390,11 @@ function mfNoticeSubmit(pri,key,dur,render,label,channel){
   if(key===mfNKey&&now<mfNUntil){          /* same line again — count it        */
     mfNCount++; mfNoticeBadge(); mfNUntil=now+dur; mfNoticeArm(); return;
   }
-  if(!mfNHold&&(now>=mfNUntil||pri<mfNPri)){ mfNoticeShow(pri,key,dur,render,1); return; }
+  /* Live orders replace scripted First Contact lines. CLAIM MASS is also
+     MF_N_ORDER, so retreat queued 2.6s and 8901 never saw the toast. */
+  if(!mfNHold&&(now>=mfNUntil||pri<mfNPri||(pri===MF_N_ORDER&&mfNPri===MF_N_ORDER))){
+    mfNoticeShow(pri,key,dur,render,1); return;
+  }
   const dup=mfNQ.find(q=>q.key===key);
   if(dup){ dup.n=(dup.n||1)+1; return; }
   mfNQ.push({pri,key,dur,render,t:now,n:1});
@@ -393,10 +453,15 @@ function mfFlowTick(){
   let target=0;
   if(mfFlowVis(mfFlowEl('atkAlert'))) target=Math.max(target,0.75);
   if(mfFlowVis(mfFlowEl('waveAlert'))) target=Math.max(target,0.5);
-  if(typeof unitHigh!=='undefined'&&typeof utgt!=='undefined'&&typeof running!=='undefined'&&running){
-    let eng=0;
-    for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===0&&utgt[i]>=0) eng++;
-    target=Math.max(target,Math.min(1,eng/9));
+  if(typeof unitHigh!=='undefined'&&typeof utgt!=='undefined'&&typeof running!=='undefined'&&running&&unitHigh){
+    let eng=0, seen=0, i=mfHeatCursor, guard=0;
+    while(seen<32&&guard++<unitHigh){
+      if(i>=unitHigh) i=0;
+      if(ualive[i]&&uteam[i]===0){ seen++; if(utgt[i]>=0) eng++; }
+      i++;
+    }
+    mfHeatCursor=i;
+    if(seen) target=Math.max(target,Math.min(1,eng/9));
   }
   /* Snap up, bleed down: a two-second gap in the shooting is not peace. */
   mfFlowHeatV = target>mfFlowHeatV ? target : Math.max(target,mfFlowHeatV-dt/6);
@@ -412,8 +477,8 @@ function mfFlowTick(){
     mfFlowCalmT = mfFlowModalBusy() ? 0 : mfFlowCalmT+dt;
     if(mfFlowCalmT>1.4){ const c=mfFlowChips.levelUp; mfFlowCalmT=0; c.fn(); }
   } else mfFlowCalmT=0;
-
-  mfFlowLayout();
+  /* Layout is queued by banner mutations. Forcing it every 220ms was HUD thrash
+     at 1000 pop (CDP 33 layouts / 3.5s) and fought the observer. */
 }
 
 /* ---------------------------------------------------------------------------
@@ -467,9 +532,11 @@ showAlert=function(x,y,type){mfNoticeHistoryAdd(MF_N_CRIT,'base:'+Math.round(x/8
 if(typeof updateWaveWarning==='function'){
   const mfFlowBaseWave=updateWaveWarning;
   updateWaveWarning=function(){
+    const el=mfFlowEl('waveAlert');
+    const before=el&&el.style.display;
     mfFlowBaseWave();
-    const el=mfFlowEl('waveAlert'); if(el) el.classList.remove('withAttack');
-    mfFlowQueueLayout();
+    if(el) el.classList.remove('withAttack');
+    if(el&&el.style.display!==before) mfFlowQueueLayout();
   };
 }
 
@@ -484,16 +551,52 @@ if(typeof hideFrontScreens==='function'){
   hideFrontScreens=function(except){ mfFlowBaseHideFront(except); mfFlowLayout(); };
 }
 
+/* Stop / Hold readout lives in input.js (ustopDisp next to the orders).
+   hud.js reads it. A `let` bit declared here loaded AFTER hud.js on packed
+   boot, so updateSelInfo never saw STOP. Keep the wrap only to refresh the
+   line if an older input.js skipped updateSelInfo. */
+if(typeof stopSelected==='function'){
+  const mfFlowBaseStop=stopSelected;
+  stopSelected=function(){
+    mfFlowBaseStop();
+    if(typeof updateSelInfo==='function') updateSelInfo();
+  };
+}
+if(typeof orderHold==='function'){
+  const mfFlowBaseHold=orderHold;
+  orderHold=function(){
+    const n=mfFlowBaseHold();
+    if(typeof updateSelInfo==='function') updateSelInfo();
+    return n;
+  };
+}
+
 mfFlowTickT=setInterval(mfFlowTick,220);
 const mfNoticeLogBtn=mfFlowEl('noticeLogBtn');if(mfNoticeLogBtn)mfNoticeLogBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();const n=mfFlowEl('mfNoticeHistory');if(n&&n.style.display!=='none')mfNoticeHistoryClose();else mfNoticeHistoryOpen();});
-const mfFlowWatch=new MutationObserver(mfFlowQueueLayout);
-for(const id of ['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','heroBar','topbar'] ){
+const mfFlowWatch=new MutationObserver(()=>{
+  for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el) el._mfVisH=undefined; }
+  if(!mfFlowMute) mfFlowQueueLayout();
+});
+for(const id of ['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','hazChip','heroBar','topbar','selInfo','cmdbar','tacRow','grpRow','hotSlots','primaryRow','hudDeckTabs','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory'] ){
   const el=mfFlowEl(id); if(el) mfFlowWatch.observe(el,{attributes:true,attributeFilter:['style','class']});
 }
 document.body&&mfFlowWatch.observe(document.body,{attributes:true,attributeFilter:['class']});
-addEventListener('resize',mfFlowQueueLayout);
-addEventListener('orientationchange',mfFlowQueueLayout);
+addEventListener('resize',()=>{
+  for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el){ el._mfDelta=undefined; el._mfVisH=undefined; } }
+  mfFlowQueueLayout();
+});
+addEventListener('orientationchange',()=>{
+  for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el){ el._mfDelta=undefined; el._mfVisH=undefined; } }
+  mfFlowQueueLayout();
+});
 mfFlowQueueLayout();
+if(typeof updateHUD==='function'){
+  const mfFlowBaseHUD=updateHUD;
+  updateHUD=function(fps){
+    if(typeof hudFrame==='number'&&hudFrame%10){ hudFrame++; return; }
+    mfFlowBaseHUD(fps);
+  };
+}
 
 
 /* ============================================================================
@@ -530,3 +633,138 @@ function cmdIconsBind(){
   }catch(e){}
 }
 cmdIconsBind();
+
+/* ============================================================================
+   PROFILE MASTERY + OPS TAB TAKEOVER
+   ----------------------------------------------------------------------------
+   #masteryGrid lives on Profile (career record). renderOps() is the only
+   writer, so opening Career before Operations left 192 empty boxes. Filling
+   from a renderProfile wrap avoids editing meta.js (settings sibling).
+
+   renderOps still calls mfBindTabs(opsScr,'threat') for a tab that moved to
+   Battle Setup. mfSetTabs already falls back, but a stale MF_TAB_STATE.threat
+   should use opsTab()'s weekly remap. Wrap here — endgame.js is not ours.
+   ============================================================================ */
+function mfFillMasteryGrid(){
+  const mg=document.getElementById('masteryGrid');
+  if(!mg||typeof masteryGet!=='function') return;
+  const facs=(typeof endgameEnemyFactions==='function')
+    ?endgameEnemyFactions()
+    :(typeof enemyFactions==='function'?enemyFactions():['nova','legion','syndicate','horde']);
+  let h='<div class="mRow mHdr"><div></div>'+facs.map(f=>'<div>'+((FACTIONS[f]&&FACTIONS[f].em)||'◆')+'</div>').join('')+'</div>';
+  const maps=(typeof homeworldMapIds==='function'?homeworldMapIds():Object.keys(MAPDEFS||{}));
+  for(const m of maps){
+    h+='<div class="mRow"><div class="mNm">'+((MAPDEFS[m]&&MAPDEFS[m].nm)||m)+'</div>';
+    for(const f of facs){
+      const t=masteryGet(m,f);
+      h+='<div class="mCell'+(t?' got':'')+'">'+(t?'T'+t:'—')+'</div>';
+    }
+    h+='</div>';
+  }
+  const tot=(typeof masteryTotal==='function')?masteryTotal():{done:0,total:maps.length*facs.length};
+  mg.innerHTML=h+'<div class="mFoot">'+tot.done+' / '+tot.total+' · 48 homeworld sites · '+facs.length+' enemy banners</div>';
+}
+if(typeof renderProfile==='function'&&!renderProfile.__mfMasteryFill){
+  const _mfProf=renderProfile;
+  renderProfile=function(){
+    _mfProf.apply(this,arguments);
+    mfFillMasteryGrid();
+  };
+  renderProfile.__mfMasteryFill=1;
+}
+if(typeof renderOps==='function'&&!renderOps.__mfThreatTabFix){
+  const _mfOps=renderOps;
+  renderOps=function(){
+    _mfOps.apply(this,arguments);
+    const el=document.getElementById('opsScr');
+    if(el&&typeof mfBindTabs==='function'){
+      const key=(typeof opsTab==='function')?opsTab():'weekly';
+      if(typeof MF_TAB_STATE!=='undefined'&&(MF_TAB_STATE.opsScr==='threat'||MF_TAB_STATE.opsScr==='mastery'))
+        MF_TAB_STATE.opsScr=key;
+      mfBindTabs(el,key);
+    }
+  };
+  renderOps.__mfThreatTabFix=1;
+}
+
+/* ============================================================================
+   MENU / SETTINGS CHROME
+   ----------------------------------------------------------------------------
+   galaxyui.js#mfRenameFrontNav relabels #startBtn to DEPLOY and claims it
+   opens the war table. The tap still opens the War Room. trainingUiState()
+   lives inside tutorial.js's IIFE, so meta.js's War Room card never receives
+   SKIPS WAR TABLE. Settings copy in meta.js names engine internals (#grade,
+   film-grain) and advertises four audio buses when two exist.
+   ============================================================================ */
+function mfPatchHomeChrome(){
+  const start=document.getElementById('startBtn');
+  if(start){
+    start.innerHTML='▶&nbsp;WAR ROOM';
+    start.setAttribute('aria-label','Open the War Room');
+  }
+  const sub=document.querySelector('#settingsScr .subMenuHead span');
+  if(sub) sub.textContent='Audio · Battle · Display · Command · System';
+}
+function mfPolishSettingsCopy(){
+  const setDs=(sel,tx)=>{ const el=document.querySelector(sel); if(el) el.textContent=tx; };
+  setDs('#setGroup-audio .setGroupDs','Effects and music are separate. Tap a volume row to cycle 25–100%.');
+  setDs('[data-set="sfxVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="musicVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="cine"] .sDs','Warm sun wash and the color overlay. Not bloom — that is Advanced. Not the Screen Grade filter.');
+  setDs('[data-set="screenGrade"] .sDs','No screen filter. Shows lighting, bloom, and vignette as authored.');
+  setDs('[data-set="gfxAdvOpen"] .sDs','Independent overrides. Changing Graphics Quality resets these to that preset. Screen Grade stays on the row above.');
+  setDs('[data-set="gfxBloom"] .sDs','Bright-pass glow. On uses this preset\'s bloom; off skips the pass.');
+  const diag=document.getElementById('gfxDiagRow');
+  if(diag){
+    diag.classList.add('setRowStatic');
+    diag.removeAttribute('data-set');
+  }
+}
+function mfPolishWarRoomCopy(){
+  const train=document.querySelector('.warCard[data-mode="training"]');
+  if(train){
+    const body=train.querySelector('.warBody');
+    let foot=train.querySelector('.warFootTx');
+    if(body&&(!foot||!foot.textContent.trim())){
+      if(!foot){ foot=document.createElement('span'); foot.className='warFootTx'; body.appendChild(foot); }
+      foot.textContent='RECOMMENDED · SKIPS WAR TABLE';
+    }
+  }
+  document.querySelectorAll('.warReward').forEach(el=>{
+    const b=el.querySelector('b');
+    if(b&&/^\+0%\s*XP$/i.test(b.textContent.trim())&&!el.querySelector('small'))
+      el.classList.add('zeroXp');
+  });
+}
+if(typeof mfRenameFrontNav==='function'&&!mfRenameFrontNav.__mfWarRoomLabel){
+  const _rn=mfRenameFrontNav;
+  mfRenameFrontNav=function(){ _rn.apply(this,arguments); mfPatchHomeChrome(); };
+  mfRenameFrontNav.__mfWarRoomLabel=1;
+}
+if(typeof showFrontScreen==='function'&&!showFrontScreen.__mfHomeChrome){
+  const _show=showFrontScreen;
+  showFrontScreen=function(id){
+    _show.apply(this,arguments);
+    mfPatchHomeChrome();
+    if(typeof audMusicEnterScreen==='function') audMusicEnterScreen(id);
+  };
+  showFrontScreen.__mfHomeChrome=1;
+}
+if(typeof renderWarRoom==='function'&&!renderWarRoom.__mfTrainCopy){
+  const _wr=renderWarRoom;
+  renderWarRoom=function(){ _wr.apply(this,arguments); mfPolishWarRoomCopy(); };
+  renderWarRoom.__mfTrainCopy=1;
+}
+if(typeof renderSettings==='function'&&!renderSettings.__mfChrome){
+  const _rs=renderSettings;
+  renderSettings=function(){
+    _rs.apply(this,arguments);
+    mfPatchHomeChrome();
+    mfPolishSettingsCopy();
+    Promise.resolve().then(mfPolishSettingsCopy);
+  };
+  renderSettings.__mfChrome=1;
+}
+mfPatchHomeChrome();
+if(document.getElementById('warGrid')&&document.getElementById('warGrid').children.length)
+  mfPolishWarRoomCopy();

@@ -43,14 +43,15 @@
    --------------------------------------------------------------------------- */
 var KEEL_NAME='KEEL';
 var KEEL_TAG='SHIP LIAISON · LANCE OF MORNING';
-var GUIDE_VERSION=3;
+var GUIDE_VERSION=4;
 
 var GREETING='KEEL online — ship liaison, Lance of Morning. Follow the gold signal: it marks the exact control for your next action. '+
              'Tap SKIP any time; replay this guide from Settings.';
 
 var SKIP_LINE='Understood. Find me again under Settings → Tutorial if you change your mind.';
 
-var GRADUATION='Field orientation complete. Camera, economy, logistics, formations, scouting, technology and extraction are certified. '+
+var GRADUATION='Field orientation complete. Camera, economy, orders, logistics, formations, scouting, technology and extraction are certified. '+
+               'Real operations are chosen at the WAR TABLE: system, planet, region, then a site. '+
                "I'll go quiet now — unless something's on fire.";
 
 /* Each step tests REAL state. `say` is shown the moment a step becomes
@@ -103,14 +104,26 @@ var STEPS=[
    test:function(){ return hasPlayerBld('fac'); } },
 
  { id:'queue', icon:'▤',
-   say:'Tap the Factory on the map, then tap the Striker unit card. The queue line shows what is being built.',
-   done:'Striker queued. Production consumes mass and energy over build time.',
+   say:'Tap the Factory on the map, then tap the Striker unit card. The queue line shows what is being built. Each unit also costs population — the HUD counter reads pop n/1K, and 1K is this commander\'s cap.',
+   done:'Striker queued. Production burns mass and energy over the build time. Pop n/1K is live headcount against the 1K seat cap — theatre size adds more seats, it does not raise yours.',
    test:function(){ return MATCH.sawQueue; } },
 
  { id:'train', icon:'⚔',
    say:'Keep the Factory supplied until the Striker rolls out. Tap ARMY when it appears to select every field unit.',
    done:'Combat unit trained and selected. Unit cards show role, range, armor and ammunition.',
    test:function(){ return MATCH.sawCombatSel&&combatCount()>MATCH.startCombat; } },
+
+ /* ORDERS ARE A GESTURE LANGUAGE AND NOTHING ON THE HUD SAYS SO.
+    Ground tap, enemy tap and double-tap ground write three different unit
+    states in orderMove()/orderAttack() (src/ui/input.js). Two of them a
+    player discovers by accident within a minute; the double-tap retreat is
+    the one nobody finds, and it is the one that saves an army — which is
+    why this step gates on the retreat specifically rather than on any
+    order at all. */
+ { id:'orders', icon:'➤',
+   say:'Orders are gestures. SINGLE-TAP GROUND is attack-move: units advance and fight what they meet. TAP AN ENEMY and they chase it. DOUBLE-TAP OPEN GROUND to RETREAT: they drop the target and reposition without stopping to fight. Break contact once now.',
+   done:'Retreat confirmed — double-tap is how an army leaves a fight it is losing. Single-tap remains attack-move. Stop in the command row and Hold under ORDERS both plant units where they stand: they fire at whatever enters weapon range and never chase it out. Stop is the panic button, Hold is the same order given on purpose.',
+   test:function(){ return MATCH.sawRetreat; } },
 
  /* THE ONE STEP THAT TEACHES THE GAME RATHER THAN THE BUTTONS.
     Every other objective here is "tap X to make Y happen", and the training
@@ -146,8 +159,8 @@ var STEPS=[
    test:function(){ return MATCH.sawScout; } },
 
  { id:'attack', icon:'➜',
-   say:'Leave A-MOVE active and tap unexplored ground. Units advance and engage contacts. Watch what actually does the killing: a unit with SPLASH on its card hits everything inside the radius, which beats raw damage against anything bunched up.',
-   done:'Attack-move confirmed. Long-press a unit or structure for its full counter card.',
+   say:'Leave A-MOVE active and SINGLE-TAP unexplored ground. That is attack-move: units advance and engage contacts. DOUBLE-TAP is still retreat. Watch what actually does the killing: a unit with SPLASH on its card hits everything inside the radius, which beats raw damage against anything bunched up.',
+   done:'Attack-move confirmed — single-tap ground fights on the way; double-tap ground breaks contact. Long-press a unit or structure for its full counter card.',
    test:function(){ return MATCH.sawAttackMove; } },
 
  { id:'tech', icon:'⌬',
@@ -203,6 +216,7 @@ var tutSkipConfirmed=false;
    demonstrably knows how to do instead of waiting for them to happen again. */
 var MATCH={ sawSel:false, sawCombatSel:false, sawMove:false, sawQueue:false, sawCamera:false,
             sawPickup:false, sawPlatoon:false, sawFormation:false, sawAttackMove:false,sawScout:false,
+            sawRetreat:false,
             territoryAck:false,objectiveAck:false,cloudAck:false,usedAbility:false,
             startCombat:0,cameraBase:null,pickup:null,scoutIdx:-1,scoutStart:null,lastAbCool:[0,0,0,0] };
 /* Reactive one-per-match latches. */
@@ -459,12 +473,21 @@ function syncFocus(){
     var H=playerBld('hq');
     if(H) cueWorld(H.x,H.y,'BLUE BUILD GRID');
   } else if(S.id==='queue'){
+    focusEl(document.getElementById('unitRes'));
     var pm=document.getElementById('prodMenu');
     if(shown(pm)) focusEl(byText('prodGrid','.bcard','Striker')||pm.querySelector('.bcard'));
     else { var F=playerBld('fac'); if(F) cueWorld(F.x,F.y,'TAP FACTORY'); }
   } else if(S.id==='train'){
     if(hasCombatUnit()) focusEl(document.getElementById('armyBtn'));
     else { var F2=playerBld('fac'); if(F2) cueWorld(F2.x,F2.y,'UNIT BUILDING'); }
+  } else if(S.id==='orders'){
+    /* No button teaches this one — the cue has to sit on the ground the
+       player is being asked to double-tap, offset clear of the units so the
+       marker is not sitting under the very gesture it is asking for. */
+    var ox=0,oy=0,on=0;
+    if(typeof unitHigh==='number') for(var q=0;q<unitHigh;q++) if(isCombatUnit(q)&&usel[q]){ox+=ux[q];oy+=uy[q];on++;}
+    if(on) cueWorld(ox/on-170,oy/on+130,'DOUBLE-TAP = RETREAT');
+    else focusEl(document.getElementById('armyBtn'));
   } else if(S.id==='turret') buildFocus('DEFENCE','Sentinel','turret');
   else if(S.id==='platoon'){
     if(shown(document.getElementById('grpRow')))focusEl(document.getElementById('grpBtn1'));
@@ -479,7 +502,7 @@ function syncFocus(){
     else focusEl(document.querySelector('.hudDeckBtn[data-deck="orders"]'));
     var sx=0,sy=0,n=0;
     if(typeof unitHigh==='number') for(var j=0;j<unitHigh;j++) if(isCombatUnit(j)&&usel[j]){sx+=ux[j];sy+=uy[j];n++;}
-    if(n) cueWorld(sx/n+150,sy/n-110,'ATTACK-MOVE');
+    if(n) cueWorld(sx/n+150,sy/n-110,'SINGLE-TAP = A-MOVE');
     else focusEl(document.getElementById('armyBtn'));
   } else if(S.id==='fog'){
     focusEl(document.getElementById('minimapWrap'));
@@ -680,7 +703,7 @@ function beginRun(){
   TUT.shownStepIdx=-1;
   TUT.doneFlags=STEPS.map(function(){ return false; });
   MATCH.sawSel=false;MATCH.sawCombatSel=false;MATCH.sawMove=false;MATCH.sawQueue=false;MATCH.sawCamera=false;
-  MATCH.sawPickup=false;MATCH.sawPlatoon=false;MATCH.sawFormation=false;MATCH.sawAttackMove=false;MATCH.sawScout=false;
+  MATCH.sawPickup=false;MATCH.sawPlatoon=false;MATCH.sawFormation=false;MATCH.sawAttackMove=false;MATCH.sawScout=false;MATCH.sawRetreat=false;
   MATCH.territoryAck=false;MATCH.objectiveAck=false;MATCH.cloudAck=false;MATCH.usedAbility=false;
   MATCH.startCombat=combatCount();MATCH.pickup=null;MATCH.scoutIdx=-1;MATCH.scoutStart=null;
   MATCH.cameraBase={yaw:yawTarget,pitch:pitchTarget,span:orthoSpan};
@@ -826,7 +849,7 @@ function onNewMatchBegin(){
   REACT.lastAlarmT=(typeof alarmT!=='undefined')?alarmT:0;
   REACT.lastStallE=false; REACT.lastHazWarn=false; REACT.lastWarned=false;
   MATCH.sawSel=false;MATCH.sawCombatSel=false;MATCH.sawMove=false;MATCH.sawQueue=false;MATCH.sawCamera=false;
-  MATCH.sawPickup=false;MATCH.sawPlatoon=false;MATCH.sawFormation=false;MATCH.sawAttackMove=false;MATCH.sawScout=false;
+  MATCH.sawPickup=false;MATCH.sawPlatoon=false;MATCH.sawFormation=false;MATCH.sawAttackMove=false;MATCH.sawScout=false;MATCH.sawRetreat=false;
   MATCH.territoryAck=false;MATCH.objectiveAck=false;MATCH.cloudAck=false;MATCH.usedAbility=false;
   MATCH.startCombat=combatCount();MATCH.pickup=null;MATCH.scoutIdx=-1;MATCH.scoutStart=null;
   MATCH.cameraBase={yaw:yawTarget,pitch:pitchTarget,span:orthoSpan};
@@ -977,7 +1000,7 @@ function startTrainingMission(){
        now so the dedicated Tutorial exposes KEEL and its deployment HUD. */
     if(typeof stopAttract==='function') stopAttract();
     if(typeof mfFlowLayout==='function') mfFlowLayout();
-    toast('TRAINING OPERATION — threat paused while KEEL guides you');
+    toast('TRAINING OPERATION — war table skipped; threat paused while KEEL guides you');
   });});
 }
 function finishTrainingMission(){
@@ -1021,7 +1044,7 @@ function trainingUiState(){
       progress=done?STEPS.length:(active?TUT.stepIdx:Math.min(STEPS.length-1,M.progress|0)),
       interrupted=!done&&!active&&(progress>0||!!M.skipped),rewarded=(M.rewardedVersion|0)>=GUIDE_VERSION;
   return {done:done,active:active,interrupted:interrupted,progress:progress,rewarded:rewarded,
-    state:done?'COMPLETED · REPLAYABLE':active?'TRAINING PAUSED · RESUMABLE':interrupted?'INCOMPLETE · RESTARTABLE':'RECOMMENDED · NEW COMMANDERS',
+    state:done?'COMPLETED · REPLAYABLE':active?'TRAINING PAUSED · RESUMABLE':interrupted?'INCOMPLETE · RESTARTABLE':'RECOMMENDED · SKIPS WAR TABLE',
     action:done?'↻ REPLAY TRAINING':active?'▶ RESUME TRAINING':interrupted?'↻ RESTART TRAINING':'▶ START TRAINING'};
 }
 function updateTrainingEntry(){
@@ -1080,9 +1103,9 @@ function appendTrainingOperation(){
       +'<span>'+(typeof facIcon==='function'?facIcon('nova',38,'ktoCrestImg'):'✦')+'</span></div>'
       +'<div class="ktoIdentity"><small>TRAINING OPERATION 01</small><b>FIELD ORIENTATION</b>'
       +'<i>'+commander+' · KEEL tactical guidance</i>'
-      +'<p>A protected live-fire drop covering the complete command loop without an early enemy rush.</p></div></div>'
+      +'<p>A protected live-fire drop. Skips the galaxy war table and lands on a fixed training map with no early enemy rush.</p></div></div>'
     +'<div class="ktoTeach" aria-label="Training topics"><span>◇ CAMERA</span><span>⬡ ECONOMY</span><span>▣ PRODUCTION</span>'
-      +'<span>⛨ DEFENCE</span><span>Ⅳ PLATOONS</span><span>⌾ SCOUTING</span>'
+      +'<span>➤ ORDERS</span><span>n/1K POP</span><span>⛨ DEFENCE</span><span>Ⅳ PLATOONS</span><span>⌾ SCOUTING</span>'
       +'<span>⌬ TECH</span><span>✦ POWERS</span><span>☁ SAVES</span></div>'
     +'<div class="ktoProgress"><div><span>OBJECTIVE PROGRESS</span><b>'+S.progress+' / '+STEPS.length+'</b></div>'
       +'<div class="ktoProgressTrack"><i style="width:'+progressPct+'%"></i></div>'
@@ -1134,7 +1157,7 @@ function appendTutorialSettingsRow(){
   row.id='keelSetRow';
   row.setAttribute('role','button');
   row.setAttribute('tabindex','0');
-  row.innerHTML='<div class="sTx"><b>🎓 Training Operation</b><div class="sDs">'+status+' — protected mission with guided controls</div></div>'
+  row.innerHTML='<div class="sTx"><b>🎓 Training Operation</b><div class="sDs">'+status+' — skips the war table; protected mission with guided controls</div></div>'
     +'<div class="sBuy">'+label+'</div>';
   var act=function(ev){ if(ev){ ev.preventDefault(); } tutSettingsAction(); };
   row.addEventListener('pointerdown',act);
@@ -1185,15 +1208,19 @@ function initTutorial(){
   if(typeof orderMove==='function'&&!window.__keelMoveWrapped){
     window.__keelMoveWrapped=true;
     var _keelOrderMove=orderMove;
-    orderMove=function(wx,wy,patrol){
+    orderMove=function(wx,wy,patrol,retreat){
       var combat=hasSelectedCombatUnit(),formationDone=MATCH.sawFormation,attackMode=typeof moveMode==='undefined'||!moveMode,
-          ok=_keelOrderMove(wx,wy,patrol);
+          ok=_keelOrderMove(wx,wy,patrol,retreat);
+      /* Retreat is the one order the player cannot reach from a button, so
+         it is credited from any live selection rather than a combat-only
+         one — the Commander breaking off counts as having learned it. */
+      if(ok&&retreat&&!patrol) MATCH.sawRetreat=true;
       if(ok&&combat&&!patrol){
         MATCH.sawMove=true;
         /* The formation release itself also calls orderMove. Requiring a
            formation observed on an earlier poll ensures the next deliberate
            map tap teaches attack-move instead of silently auto-completing. */
-        if(formationDone&&attackMode)MATCH.sawAttackMove=true;
+        if(formationDone&&attackMode&&!retreat)MATCH.sawAttackMove=true;
       }
       return ok;
     };

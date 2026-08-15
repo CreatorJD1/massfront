@@ -2,14 +2,14 @@
 
 ;
 /* ============================================================================
-   THE DISPATCHES — the war on Halcyon Reach, told through rank and through
+   THE DISPATCHES — the war across four homeworlds, told through rank and through
    what actually happened in your last match
    ----------------------------------------------------------------------------
-   Three human banners — Nova Federation (yours), Red Ascendancy, Syndicate
-   Coalition — landed on the same world the Umbral Brood already owns. This
-   file is the whole arc: the landing, the slow realisation that the "wildlife"
-   is an army, and the late-game problem that the humans might lose the Reach
-   to each other before the Brood ever has to finish the job.
+   Four worlds, four banners: Aelos (Terran Frontline Command), Pyraeth
+   (Crimson Dominion), Nordhall (Syndicate Coalition), Vespera (Brood Swarm).
+   This file is the whole arc: the landing on Aelos, the slow realisation that
+   the "wildlife" is an army, and the late-game problem that the humans might
+   lose the cluster to each other before the Brood ever has to finish the job.
 
    Delivery is sequential and never blocks play: one unseen dispatch at a time,
    on rank-up or on returning to the menu, chained through the dismiss button
@@ -37,9 +37,9 @@ function trigStreak(n){ return (META.bestStreak||0)>=n; }
 
 const STORY=[
  {r:0, ttl:'EXPEDITIONARY ORDER', from:'NOVA COMMAND · STANDING ORDERS',
-  txt:`Halcyon Reach is not empty and it is not yours.
+  txt:`Aelos is not empty and it is not yours.
 
-Two rival banners already hold ground here — the Red Ascendancy and the Syndicate Coalition — and something older than both is dug into the low country.
+Sombrero-I is the open theatre. Pyraeth, Nordhall and Vespera sit behind it. Two rival banners already hold ground in this cluster — the Crimson Dominion and the Syndicate Coalition — and something older than both is dug into Vespera's calderas.
 
 Federation doctrine is simple: order, science, unity. Land, build, and do not fire first.
 
@@ -57,7 +57,7 @@ Filed under wildlife for now — six-limbed, chitinous, more numerous than the s
 
 Recommend clearing perimeter nests before construction. Recommend nothing else yet. There is nothing else to recommend.`},
  {r:1, ttl:'INVOICE #0119', from:'SYNDICATE COALITION · ACCOUNTS RECEIVABLE',
-  txt:`Terrain Telemetry, Halcyon Reach northern sector: 40 map tiles, ridge elevations, water tables. Amount due: 4,000 credits or equivalent salvage.
+  txt:`Terrain Telemetry, Aelos Capital Circumference: 48 battlefield sites across four homeworlds, ridge elevations, water tables. Amount due: 4,000 credits or equivalent salvage.
 
 Note from Broker Lys Renn, handwritten in the margin: the Ascendancy bought the same package Tuesday. Adapt, profit, survive — she never said to whom.
 
@@ -68,8 +68,8 @@ Payment terms: immediate. Complaints: not accepted.`},
 Strength is not cruelty. Strength is honesty about what happens to the weak."
 
 He never once names an enemy. He does not think he has to.`},
- {r:1, ttl:'AFTER-ACTION: VANGUARD RIDGE', from:'3RD STRIKER COMPANY · REPORT',
-  txt:`Border contact, Vanguard Valley ridge line. Ascendancy Wardens, dug in, no warning shots.
+ {r:1, ttl:'AFTER-ACTION: AELOS CIRCUMFERENCE', from:'3RD STRIKER COMPANY · REPORT',
+  txt:`Border contact, Aelos Capital Circumference. Dominion Wardens, dug in, no warning shots.
 
 KIA: 2. WIA: 5. Equipment lost: 1 Guardian hull, salvage unrecoverable.
 
@@ -106,8 +106,8 @@ Recommend the question stop being how many hives, and start being how much longe
   txt:`First confirmed win over Coalition irregulars. Their Phantom tanks held cloak until point-blank — we lost two Guardians to shots we never saw fired.
 
 Decryptor unit captured, wiped clean before capture, exactly the way Renn's people plan for. Adapt, profit, survive is not a slogan with them. It is the maintenance schedule.`},
- {r:5, ttl:'JOINT SIGHTING, HIGHLAND SCAR', from:'FIELD REPORT · UNVERIFIED',
-  txt:`Ascendancy and Federation forces broke off from each other mid-battle at Highland Scar — not a ceasefire. A Brood tide came up through the arcology floor and neither side wanted it more than they wanted each other dead.
+ {r:5, ttl:'JOINT SIGHTING, NORDHALL SHELF', from:'FIELD REPORT · UNVERIFIED',
+  txt:`Dominion and Frontline forces broke off from each other mid-battle on Nordhall's Frontline Shelf — not a ceasefire. A Brood tide came up through the ice-shelf works and neither side wanted it more than they wanted each other dead.
 
 Both withdrew separately. Neither radioed the other. A coordinated retreat would have cost fewer lives than two uncoordinated ones did.`},
  {r:5, ttl:'PARTIAL DECODE', from:'SIGNALS · SOURCE UNKNOWN',
@@ -125,7 +125,7 @@ It broke against our line and stopped, all at once, like a puppet with the strin
 
 Federation SIGINT notes the Ascendancy's hive-adjacent casualty rate has tripled. The broadcast does not mention that part.`},
  {r:6, ttl:'INVOICE #0204', from:'SYNDICATE COALITION · ACCOUNTS RECEIVABLE',
-  txt:`Brood Salvage Rights, Relic Basin sector: exclusive harvest of chitin plating and spore sacs from confirmed kills. Rate: negotiable per ton.
+  txt:`Brood Salvage Rights, Vespera Caldera sector: exclusive harvest of chitin plating and spore sacs from confirmed kills. Rate: negotiable per ton.
 
 Renn's note: "Everybody needs armor. Nobody asks where the armor was standing when it died."
 
@@ -133,7 +133,7 @@ Federation Command has not signed. Federation Command has not said no.`},
  {r:7, trig:trigWeekly, hint:'or: run a Weekly Operation', ttl:'MULTI-FRONT DIRECTIVE', from:'JOINT SIGNALS BOARD',
   txt:`Hive density has crossed the threshold where single-front containment stops working. Command is authorising rotating special operations — high-value, high-difficulty strikes, refreshed weekly, open to any commander willing to take the harder target for the better yield.
 
-Check Operations. The Reach is not going to wait for a convenient week.`},
+Check Operations. The four worlds are not going to wait for a convenient week.`},
  {r:7, ttl:'CLASS REVISION: MAW', from:'BIO-SURVEY · THREAT ASSESSMENT',
   txt:`Designation MAW, filed under Brood Titan. It was not assembled — growth rings in the carapace like a tree, decades of feeding compressed into months.
 
@@ -147,7 +147,7 @@ Recommend revising "nuisance" out of every prior report that still uses the word
 
 First transmission with a consistent structure. Command's linguists are calling it a sentence. Command's linguists are not sleeping well.`},
  {r:7, ttl:'URGENT BROADCAST', from:'SIGNALS · ASCENDANCY PUBLIC CHANNEL',
-  txt:`Vex, to every open channel on the Reach: "The swarm did not exist in these numbers until the Federation landed. Draw your own conclusion. We have drawn ours."
+  txt:`Vex, to every open channel in this cluster: "The swarm did not exist in these numbers until Frontline Command landed on Aelos. Draw your own conclusion. We have drawn ours."
 
 No evidence offered. None needed — Ascendancy morale requires an enemy shaped like a person, and the Brood does not have a face to hate.
 
@@ -155,18 +155,18 @@ Federation Command declines to respond. Federation Command should probably respo
  {r:8, ttl:'TO VEX, TO RENN', from:'CAPT. ELARA KAI · COMMAND CHANNEL, UNENCRYPTED',
   txt:`"To Vex, to Renn, to whoever is listening on the Brood's side of the spectrum, if anyone is: I am not asking for peace. I am asking for math.
 
-One front against the hives is losing ground on all three of our maps at once. Three fronts against each other is losing faster.
+One front against the hives is losing ground on all four homeworlds at once. Three fronts against each other is losing faster.
 
-Halcyon Reach is large. It is not large enough for that arithmetic."`},
+Four worlds is a lot of ground. It is not enough for that arithmetic."`},
  {r:8, ttl:'REPLY TO NOVA COMMAND', from:'SYNDICATE COALITION · TRANSMISSION',
-  txt:`Renn's answer to Kai, prompt and itemised: exclusive salvage rights across all three sectors, Federation trade tariffs waived, and a formal Coalition seat at any postwar territorial council — "in exchange for cooperation" is how she phrases three separate demands as one.
+  txt:`Renn's answer to Kai, prompt and itemised: exclusive salvage rights across all four systems, Federation trade tariffs waived, and a formal Coalition seat at any postwar territorial council — "in exchange for cooperation" is how she phrases three separate demands as one.
 
 She is not declining. She is negotiating the price of surviving alongside you.`},
  {r:8, trig:()=>trigStreak(5), hint:'or: a 5-win streak', ttl:'NAMED TARGET', from:'ASCENDANCY THREAT BOARD · INTERCEPT',
   txt:`A Federation commander's kill record has made it onto an Ascendancy briefing board — not as a statistic, as a name. Vex's staff have started using the word "ascended" about an enemy officer, the highest insult their doctrine has, or the closest thing it has to respect.
 
 Renn's people are asking a lower price for information on you now. Notoriety has a market rate.`},
- {r:8, ttl:'AFTER-ACTION: RELIC BASIN', from:'JOINT STRIKE ELEMENT · REPORT',
+ {r:8, ttl:'AFTER-ACTION: VESPERA CALDERA', from:'JOINT STRIKE ELEMENT · REPORT',
   txt:`Combined operation against a Class-3 hive cluster. Ascendancy armor and Coalition salvage teams shared the field for the first time under Kai's brokered terms.
 
 Forty minutes in, an Ascendancy battery fired on a Coalition pack "encroaching on a claimed kill." Two friendly units lost. The hive cluster, unwatched for the six minutes that mattered, tripled its brood count and got away.
@@ -181,9 +181,9 @@ Hive count is now even across all three human territories, first time the number
  {r:9, ttl:'FINAL ENTRY, THIS ROTATION', from:'CAPT. ELARA KAI · COMMAND LOG',
   txt:`Vex will not kneel to a truce and Renn will not sign one for free, and the hive count does not care which of us is right.
 
-So: Nova holds Halcyon Reach on Nova's terms. Order, science, unity — not because the others are wrong to want strength or profit, but because someone here has to want something the Brood cannot use against us.
+So: Nova holds Aelos — and the corridor to Pyraeth, Nordhall and Vespera — on Nova's terms. Order, science, unity — not because the others are wrong to want strength or profit, but because someone here has to want something the Brood cannot use against us.
 
-Warmaster, the Reach is still yours to lose. Don't.`},
+Warmaster, the theatre is still yours to lose. Don't.`},
 ];
 
 function storySeen(){ META.story=META.story||{}; return META.story; }
@@ -569,6 +569,15 @@ function storyCheck(){
   if(d&&typeof toast==='function') toast('📡 NEW DISPATCH — check your MAILBOX ✉');
   return d;
 }
+/* Match-end note for the debrief. META.facWins / losses / weekly.runs are
+   already written by the time endgameRecord runs, so a trigger that just
+   became true surfaces here instead of waiting for the mailbox toast. */
+function storyMatchNote(){
+  storyRefreshBadge();
+  const d=storyPending();
+  if(!d) return null;
+  return {ttl:d.ttl, from:d.from};
+}
 /* renderDossier() lived here. The Dossier is the faction codex now and nothing
    else; the whole dispatch archive, sealed entries included, is renderInbox()
    above. Its lock-hint string survives as storyLockHint(). */
@@ -597,11 +606,11 @@ const STORY_CAMPAIGN_PROLOGUE=[
    reward:'MATCH XP · CORES · CRIMSON SERVICE RECORD',unlock:'mosswatch-breach',complete:'legion',legacyComplete:true},
   {id:'coalition-intercept',code:'P-03',ttl:'COALITION INTERCEPT',fac:'syndicate',map:'highland',theme:'arctic',
    threat:'SYNDICATE COALITION',goal:'domination',diff:1,time:600,inf:false,defense:0,scale:'standard',
-   objective:'Take and hold the Highland Scar resource lanes while Coalition energy cadres probe the flanks and contest the ruined arcology.',
+   objective:'Take and hold Nordhall Frontline Shelf resource lanes while Coalition energy cadres probe the flanks and contest the ice-shelf works.',
    reward:'MATCH XP · CORES · SYNDICATE SERVICE RECORD',unlock:'first-breach',complete:'syndicate',legacyComplete:true},
   {id:'ground-remembers',code:'P-04',ttl:'THE GROUND REMEMBERS',fac:'horde',map:'crater',theme:'ashland',
    threat:'BROOD SWARM',goal:'purge',diff:1,time:900,inf:true,defense:1,scale:'large',
-   objective:'Establish overlapping fields of fire in Relic Basin, burn out every living nest, and survive the Brood organisms defending the infestation.',
+   objective:'Establish overlapping fields of fire in Vespera Caldera Nests, burn out every living nest, and survive the Brood organisms defending the infestation.',
    reward:'MATCH XP · CORES · BROOD SERVICE RECORD',unlock:'coalition-intercept',complete:'horde',legacyComplete:true},
 ];
 
@@ -627,6 +636,10 @@ function storyCampaignProgress(){
   return {states,current,done:states.filter(s=>s.done).length};
 }
 function storyCampaignEnsureOps(){
+  /* Campaign is advertised on the War Room but unimplemented. Injecting a
+     playable tab into Operations was a trap: Weekly is real, Campaign is not
+     a room players should enter. Leave the pane unbuilt. */
+  return;
   const root=document.getElementById('opsScr'),tabs=document.getElementById('opsTabs');
   if(!root||!tabs) return;
   if(!document.getElementById('opsTab-campaign')){
@@ -758,7 +771,8 @@ function storyCampaignSyncSetup(){
   storyCampaignToggle('.ifbtn',b=>!!+b.dataset.i===infestationOn);
   storyCampaignToggle('.globalDiff',b=>+b.dataset.d===difficulty);
   if(typeof renderPlanetRow==='function') renderPlanetRow();
-  storyCampaignToggle('.fbtn',b=>b.dataset.f===aiFactionSel);
+  storyCampaignToggle('#facRow .fbtn',b=>b.dataset.f===aiFactionSel);
+  storyCampaignToggle('#pfacRow .fbtn',b=>b.dataset.f===playerFaction);
   storyCampaignToggle('.dfbtn',b=>+b.dataset.df===defenseFocus);
   storyCampaignToggle('.wbtn',b=>+b.dataset.w===wcChoice);
   const goal=document.getElementById('goalHint'); if(goal) goal.textContent=goalDef().ds;
@@ -775,6 +789,11 @@ function storyCampaignSyncSetup(){
 }
 let storyCampaignActiveId='',storyCampaignResultRecorded=false,storyCampaignRuntime=null;
 function storyCampaignOpenMission(missionId){
+  /* Modes are advertised but unimplemented; starting a prologue from here
+     walked the player into a stub that played like a campaign. */
+  if(typeof sfx==='function'){ try{ sfx('deny'); }catch(e){} }
+  if(typeof toast==='function') toast('CAMPAIGN is not available yet.');
+  return;
   const i=STORY_CAMPAIGN_PROLOGUE.findIndex(m=>m.id===missionId),m=STORY_CAMPAIGN_PROLOGUE[i];
   if(!m||!storyCampaignUnlocked(m,i)) return;
   if(m.goal==='training'){

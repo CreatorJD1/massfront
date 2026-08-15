@@ -40,12 +40,30 @@ function factionDoctrineBuildSpeedMul(team){
    Existing save queues are not rewritten, so an older session can finish what
    it had already paid for. Only NEW production cards use this roster. */
 const FAC_ARSENAL={
+  /* Nova keeps every factory, air, naval and titan card. Listing it here makes
+     the Four complete without shrinking combined-arms flexibility: a missing
+     nova key used to look like an unfinished table. */
+  nova:{
+    fac:new Set([0,1,2,3,6,7,9,10,11,16,18,19,20,21,22,23,24,26,27,32]),
+    tgate:new Set([8,26]),airfield:new Set([5,17,25]),harbor:new Set([14,15])
+  },
   legion:{
     fac:new Set([0,1,2,3,7,9,10,16,18,19,20,21,22,26,27,32]),
-    tgate:new Set([26]),airfield:new Set([5,17]),harbor:new Set([14,15])
+    /* Titan Gate costs the same 820 blended as every other faction. Flavor
+       already names the Legion TITAN (Ascendant) and says the gate builds
+       TITANs. No doctrine comment forbids chassis 8 — the Basilisk-only set
+       was an incomplete cut, not a written exclude. Match Nova: TITAN + Tyrant. */
+    tgate:new Set([8,26]),airfield:new Set([5,17]),harbor:new Set([14,15])
   },
   syndicate:{
     fac:new Set([0,1,2,6,7,10,11,19,20,23,24,26,27,32]),
+    tgate:new Set([8]),airfield:new Set([5,17,25]),harbor:new Set([14,15])
+  },
+  /* Brood keeps a complete counter triangle (runners, walkers, bile, AA,
+     support) but does not copy Dominion 400-range siege or Coalition
+     beam/shield/sonic plant. Nest organisms 12/13/31 stay hive-spawned. */
+  horde:{
+    fac:new Set([0,1,2,3,7,9,10,18,19,20,21,22,27,32]),
     tgate:new Set([8]),airfield:new Set([5,17,25]),harbor:new Set([14,15])
   }
 };
@@ -136,13 +154,15 @@ function mfFactionTechActive(id){
    player to spend scarce account materials on a deliberately inert enemy-only
    node. Keep the nodes visible as intelligence, but fail closed here too. */
 const mfFactionTechDevBuyBase=devBuy;
-devBuy=function(n){
+devBuy=function(n,silent){
   if(n&&!mfFactionTechPurchasable(n.id)){
-    toast('AI DOSSIER — Brood evolution becomes researchable only when the faction is playable');
-    if(typeof sfx==='function')sfx('ui');
+    if(!silent){
+      toast('AI DOSSIER — Brood evolution becomes researchable only when the faction is playable');
+      if(typeof sfx==='function')sfx('ui');
+    }
     return false;
   }
-  return mfFactionTechDevBuyBase(n);
+  return mfFactionTechDevBuyBase(n,silent);
 };
 function mfFactionTechArtillery(type){
   const T=TYPES[type];return !!(T&&T.cat==='art');
@@ -152,8 +172,8 @@ function mfFactionTechArtillery(type){
    chain, so transports, session restore and factory production all receive
    the same maximum-health rule without cloning any production code. */
 const mfFactionTechSpawnBase=spawnUnit;
-spawnUnit=function(type,team,x,y){
-  const i=mfFactionTechSpawnBase(type,team,x,y);
+spawnUnit=function(type,team,x,y,cmdSlot){
+  const i=mfFactionTechSpawnBase(type,team,x,y,cmdSlot);
   if(i>=0){
     /* Slots are recycled immediately. Tech timers and target marks are not
        part of sim.js's core arrays, so this takeover owns clearing them. */

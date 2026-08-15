@@ -216,6 +216,11 @@ Case is not significant for SHA-256. Their durable destination should be
 
 ## Bundled owner-supplied score seeds
 
+**Removed from source 2026-08-15.** Every row below was a Suno song with
+sung vocals/lyrics. The files are no longer in `assets/audio/music/` or the
+optional pack. Hashes stay as provenance of what used to ship. The live score
+is the project-generated `mus_*` beds.
+
 `assets/audio/music.json` maps 13 bundled 18-second M4A excerpts to five
 playlists (Nova, Red Ascendancy, Syndicate, Brood and menu) and three intensity
 states. `docs/AUDIO-IDENTITY-MAP.md` records that they are derived from the nine

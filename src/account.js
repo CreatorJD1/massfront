@@ -187,6 +187,15 @@ function linkAccount(a){
    The server MUST verify `token` against the provider before trusting `id`.
    Everything below degrades quietly when `syncUrl` is unset: the game keeps
    playing, saves keep working, and the panel says sync is off. */
+function accFetch(url, opts){
+  /* Local installer files (auth.json) are not a server. Everything else in
+     this file is an account/cloud call and must honour the offline gate —
+     a hanging Google/Facebook/cloud fetch used to ignore netAllowed() and
+     spin until timeout while the rest of the game already knew it was offline. */
+  if(typeof netAllowed==='function' && !netAllowed()) throw new Error('offline');
+  if(typeof netFetch==='function') return netFetch(url, opts);
+  return fetch(url, opts);
+}
 function syncPayload(){
   return {v:1, at:Date.now(), profile:activeProf(), meta:META};
 }
@@ -194,7 +203,7 @@ async function syncPush(){
   if(!AUTH_CFG.syncUrl||!ACCOUNT) return;
   SYNC.state='syncing'; renderAccount();
   try{
-    const r=await fetch(AUTH_CFG.syncUrl.replace(/\/$/,'')+'/save',{
+    const r=await accFetch(AUTH_CFG.syncUrl.replace(/\/$/,'')+'/save',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({provider:ACCOUNT.provider,id:ACCOUNT.id,token:ACCOUNT.token,
                            payload:syncPayload()})});
@@ -211,7 +220,7 @@ async function syncPull(){
   if(!AUTH_CFG.syncUrl||!ACCOUNT){ accToast('Cloud saves are not configured for this build'); return; }
   SYNC.state='syncing'; renderAccount();
   try{
-    const r=await fetch(AUTH_CFG.syncUrl.replace(/\/$/,'')+'/load',{
+    const r=await accFetch(AUTH_CFG.syncUrl.replace(/\/$/,'')+'/load',{
       method:'POST', headers:{'Content-Type':'application/json'},
       body:JSON.stringify({provider:ACCOUNT.provider,id:ACCOUNT.id,token:ACCOUNT.token})});
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -232,16 +241,83 @@ async function syncPull(){
    and overwrites the real career. XP, research and matches all cost time to
    accumulate; a spendable currency is not evidence of progress. */
 function careerWeight(m){ return (m?(m.xp||0):0)+(m?(m.researchData||0):0)*8+(m?(m.matches||0):0)*40; }
-function applyIncoming(p,src){
-  const mine=careerWeight(META), theirs=careerWeight(p.meta);
+/* Put a loaded career into the LIVE game, not only into localStorage.
+   File/cloud restore used to write META then skip applySettings/applyColor
+   and drop commander identity (char/title/frame), so the Profile and Settings
+   screens showed the restored numbers while audio, lighting, livery and the
+   worn commander stayed on the previous device's values until a reboot. */
+function accApplySetupLive(){
+  try{
+    if(typeof wcChoice!=='undefined'){
+      wcChoice=typeof clamp==='function'?clamp(META.wcPref|0,0,3):(META.wcPref|0);
+      if(typeof document!=='undefined')
+        document.querySelectorAll('.wbtn').forEach(b=>b.classList.toggle('on',+b.dataset.w===wcChoice));
+    }
+    const su=META.setup;
+    if(su&&typeof su==='object'){
+      if(su.pf&&typeof playerFaction!=='undefined'&&
+         (typeof playableFactions!=='function'||playableFactions().includes(su.pf)))
+        playerFaction=su.pf;
+      if(su.pc&&typeof playerCommanderId!=='undefined'&&typeof commanderById==='function'){
+        const facKey=typeof commanderFactionKey==='function'?commanderFactionKey(playerFaction):playerFaction;
+        const C=commanderById(su.pc);
+        const R=typeof COMMANDER_ROSTERS!=='undefined'?COMMANDER_ROSTERS[facKey]||[]:[];
+        if(C&&!C.aiOnly&&R.indexOf(C)>=0) playerCommanderId=su.pc;
+      }
+    }
+    if(typeof renderCommanderRow==='function') renderCommanderRow();
+    if(typeof renderFacRow==='function') renderFacRow();
+  }catch(e){}
+}
+function applyCareerPayload(p,src,opts){
+  opts=opts||{};
+  if(!p||!p.meta||typeof p.meta!=='object') return false;
+  META=Object.assign({},META,p.meta);
+  if(typeof metaHarden==='function') metaHarden();
+  else {
+    if(!META.owned||typeof META.owned!=='object') META.owned={};
+    if(!META.facWins||typeof META.facWins!=='object') META.facWins={};
+    if(!META.mapWins||typeof META.mapWins!=='object') META.mapWins={};
+    if(!META.campaign||typeof META.campaign!=='object') META.campaign={missions:{}};
+    if(!META.campaign.missions||typeof META.campaign.missions!=='object') META.campaign.missions={};
+    if(typeof DEF_SETTINGS!=='undefined') META.settings=Object.assign({},DEF_SETTINGS,META.settings||{});
+    if(typeof invBag==='function') invBag();
+  }
+  if(p.profile){
+    const a=typeof activeProf==='function'?activeProf():null;
+    if(a){
+      if(p.profile.name) a.name=p.profile.name;
+      if(p.profile.emblem) a.emblem=p.profile.emblem;
+      if('char' in p.profile) a.char=p.profile.char;
+      if('title' in p.profile) a.title=p.profile.title;
+      if('frame' in p.profile) a.frame=p.profile.frame;
+      if('link' in p.profile) a.link=p.profile.link;
+      if(typeof profSave==='function') profSave();
+    }
+  }
+  if(typeof metaSave==='function') metaSave();
+  if(typeof applyColor==='function') try{ applyColor(); }catch(e){}
+  if(typeof applySettings==='function') try{ applySettings(); }catch(e){}
+  accApplySetupLive();
+  /* UI refresh is best-effort. A restore that runs before boot finishes, or
+     with a profile pane not in the DOM, must not abort after META is already
+     written — that was persist-but-not-reload for the live game. */
+  const accUi=fn=>{ try{ if(typeof fn==='function') fn(); }catch(e){} };
+  accUi(renderMetaHead); accUi(renderProfile); accUi(renderAccount);
+  accUi(renderSettings); accUi(renderBoosts); accUi(storyRefreshBadge);
+  SYNC.state='ok'; SYNC.last=Date.now();
+  if(!opts.quiet && typeof toast==='function') toast('✓ Restored from '+(src||'save'));
+  return true;
+}
+function applyIncoming(p,src,force){
   const use=()=>{
-    META=Object.assign({},META,p.meta);
-    if(p.profile){ const a=activeProf();
-      if(a){ a.name=p.profile.name||a.name; a.emblem=p.profile.emblem||a.emblem; profSave(); } }
-    metaSave(); renderMetaHead(); renderProfile(); renderAccount();
-    SYNC.state='ok'; SYNC.last=Date.now();
-    toast('✓ Restored from '+src);
+    applyCareerPayload(p,src);
+    /* An explicit file load is this device's new master copy. Mark pulled so
+       a later auto-push cannot cloudPull and undo the file we just applied. */
+    if(force) cloudMarkPulled();
   };
+  if(force){ use(); return; }
+  const mine=careerWeight(META), theirs=careerWeight(p&&p.meta);
   if(theirs>mine*1.02) use();
   else if(mine>theirs*1.02){
     accConfirm('This device is further along than the '+src+' save ('+
@@ -453,8 +529,12 @@ function renderAccount(){
     manage.onclick=()=>{if(typeof apOpen==='function')apOpen(document.getElementById('acctBtn'));};
     row.appendChild(manage);
     syncRow.style.display='block';
-    syncRow.textContent=portal.offline
+    syncRow.textContent=portal.offline || (typeof netAllowed==='function' && !netAllowed())
       ? 'Your account is cached safely. Cloud actions resume when the server is reachable.'
+      : CLOUD.state==='ok' ? '✓ Account session active · cloud backup '+
+          (CLOUD.last?new Date(CLOUD.last).toLocaleTimeString():'ready')+'.'
+      : CLOUD.state==='syncing' ? '☁ Syncing career to your account…'
+      : CLOUD.state==='pending' ? '☁ Cloud backup waiting — will retry when online.'
       : '✓ Account session active · local autosave remains available offline.';
   } else if(ACCOUNT){
     who.textContent=ACCOUNT.name;
@@ -524,6 +604,10 @@ const CLOUD={ state:'off', last:0, busy:false, dirty:false, timer:0, pulledFor:'
 function cloudBase(){ return ((typeof apEndpoint==='function'&&apEndpoint())||AUTH_CFG.syncUrl||'').replace(/\/+$/,''); }
 function cloudSession(){ return (typeof AP_SESSION!=='undefined'&&AP_SESSION&&AP_SESSION.token)?AP_SESSION:null; }
 function cloudOnline(){ return typeof netAllowed!=='function'||netAllowed(); }
+function cloudMarkPulled(){
+  const sess=cloudSession();
+  if(sess) CLOUD.pulledFor=sess.token;
+}
 async function cloudPush(){
   const sess=cloudSession();
   if(!cloudBase()||!sess) return;
@@ -535,7 +619,7 @@ async function cloudPush(){
   CLOUD.busy=true; CLOUD.dirty=false; CLOUD.state='syncing';
   try{
     const payload=await encodeSave();
-    const r=await fetch(cloudBase()+'/save',{ method:'PUT',
+    const r=await accFetch(cloudBase()+'/save',{ method:'PUT',
       headers:{'content-type':'application/json','authorization':'Bearer '+sess.token},
       cache:'no-store', body:JSON.stringify({payload}) });
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -555,34 +639,48 @@ function cloudAutoSave(){
 /* Take the objectively-further career (careerWeight) — never lose progress. */
 function cloudMerge(incoming){
   try{
+    if(!incoming||!incoming.meta){ cloudMarkPulled(); cloudAutoSave(); return; }
     const mine=careerWeight(META), theirs=careerWeight(incoming.meta);
-    if(theirs>mine){
-      META=Object.assign({},META,incoming.meta);
-      if(incoming.profile){ const a=activeProf(); if(a){ a.name=incoming.profile.name||a.name; a.emblem=incoming.profile.emblem||a.emblem; profSave(); } }
-      if(typeof metaSave==='function') metaSave();
-      if(typeof renderMetaHead==='function') renderMetaHead();
-      if(typeof renderProfile==='function') renderProfile();
-      if(typeof toast==='function') toast('✓ Progress restored from your account');
+    if(theirs>mine*1.02){
+      applyCareerPayload(incoming,'your account');
+      cloudMarkPulled();
+      return;
     }
+    if(mine>theirs*1.02){
+      cloudMarkPulled();
+      cloudAutoSave();
+      return;
+    }
+    const local=typeof syncPayload==='function'?syncPayload():{profile:null,meta:META};
+    if(typeof apSavesEquivalent==='function' && apSavesEquivalent(local, incoming)){
+      cloudMarkPulled();
+      CLOUD.state='ok'; CLOUD.last=Date.now();
+      return;
+    }
+    /* Similar career score, different contents (settings, identity, gear).
+       Do not auto-write either side — that is how a settings-only cloud copy
+       used to vanish. Manual Pull/Push in the account panel decides. */
+    CLOUD.state='ok';
+    if(typeof toast==='function')
+      toast('☁ Cloud save differs — restore or backup from Profile ▸ Account');
   }catch(e){}
-  cloudAutoSave();      // make the cloud reflect the merged/local state
 }
 async function cloudPull(){
   const sess=cloudSession();
   if(!cloudBase()||!sess||!cloudOnline()||CLOUD.busy) return;
   CLOUD.busy=true; CLOUD.state='syncing'; if(typeof renderAccount==='function') renderAccount();
-  let incoming=null;
+  let incoming=null, reached=false;
   try{
-    const r=await fetch(cloudBase()+'/save',{ method:'GET',
+    const r=await accFetch(cloudBase()+'/save',{ method:'GET',
       headers:{'authorization':'Bearer '+sess.token}, cache:'no-store' });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json();
-    CLOUD.pulledFor=sess.token; CLOUD.state='ok'; CLOUD.last=Date.now();
+    reached=true; CLOUD.state='ok'; CLOUD.last=Date.now();
     if(j&&j.payload){ try{ incoming=await decodeSave(j.payload); }catch(e){ incoming=null; } }
   }catch(e){ CLOUD.state='pending'; }
   CLOUD.busy=false;
   if(incoming&&incoming.meta) cloudMerge(incoming);
-  else if(CLOUD.pulledFor===sess.token) cloudAutoSave();   // no readable cloud save yet -> seed it
+  else if(reached){ cloudMarkPulled(); cloudAutoSave(); }
   if(typeof renderAccount==='function') renderAccount();
 }
 function initCloudSave(){
@@ -593,19 +691,52 @@ function initCloudSave(){
     metaSave=function(){ const r=_ms.apply(this,arguments); try{ cloudAutoSave(); }catch(e){} return r; };
     metaSave.__mfCloud=true;
   }
-  /* pull+merge right after a real sign-in / register */
+  /* Identity lives on the profile record (profSave), not META. Without this
+     wrap, renaming a commander or picking a title never reached the account. */
+  if(typeof profSave==='function' && !profSave.__mfCloud){
+    const _ps=profSave;
+    profSave=function(){ const r=_ps.apply(this,arguments); try{ cloudAutoSave(); }catch(e){} return r; };
+    profSave.__mfCloud=true;
+  }
+  /* Sign-in comparison belongs to apOfferSyncAfterSignIn. Auto-pull here raced
+     that dialog and could apply a cloud career before the player chose. */
   if(typeof apSetSessionFrom==='function' && !apSetSessionFrom.__mfCloud){
     const _set=apSetSessionFrom;
-    apSetSessionFrom=function(){ const r=_set.apply(this,arguments); CLOUD.pulledFor=''; CLOUD.announced=false; try{ cloudPull(); }catch(e){} return r; };
+    apSetSessionFrom=function(){
+      const r=_set.apply(this,arguments);
+      CLOUD.pulledFor=''; CLOUD.announced=false; CLOUD.dirty=false;
+      return r;
+    };
     apSetSessionFrom.__mfCloud=true;
+  }
+  if(typeof apCommitIncoming==='function' && !apCommitIncoming.__mfCloud){
+    apCommitIncoming=function(data){
+      applyCareerPayload(data,'cloud',{quiet:true});
+      cloudMarkPulled();
+      if(typeof AP_LAST_PULL!=='undefined') AP_LAST_PULL=Date.now();
+      if(typeof apSyncSet==='function')
+        apSyncSet('success','SYNCED: Cloud save restored to this device - '+
+          (typeof apSaveStats==='function'?apSaveStats(data):''), false);
+      if(typeof apToast==='function') apToast('✓ Cloud save restored');
+    };
+    apCommitIncoming.__mfCloud=true;
+  }
+  if(typeof apWriteCloudSave==='function' && !apWriteCloudSave.__mfCloud){
+    const _wr=apWriteCloudSave;
+    apWriteCloudSave=function(){
+      const r=_wr.apply(this,arguments);
+      Promise.resolve(r).then(function(res){ if(res!=null) cloudMarkPulled(); }).catch(function(){});
+      return r;
+    };
+    apWriteCloudSave.__mfCloud=true;
   }
   /* on sign-out, push the final state while the token is still valid, then reset */
   if(typeof apClearSession==='function' && !apClearSession.__mfCloud){
     const _clr=apClearSession;
-    apClearSession=function(){ try{ if(cloudSession()&&CLOUD.dirty) cloudPush(); }catch(e){} const r=_clr.apply(this,arguments); CLOUD.state='off'; CLOUD.pulledFor=''; CLOUD.announced=false; return r; };
+    apClearSession=function(){ try{ if(cloudSession()&&CLOUD.dirty&&CLOUD.pulledFor) cloudPush(); }catch(e){} const r=_clr.apply(this,arguments); CLOUD.state='off'; CLOUD.pulledFor=''; CLOUD.announced=false; return r; };
     apClearSession.__mfCloud=true;
   }
-  /* already signed in at launch -> restore/merge once */
+  /* already signed in at launch -> restore/merge once (not on a fresh sign-in) */
   if(cloudSession()) cloudPull();
   /* retry a pending push when connectivity returns, when the app is backgrounded
      (the mobile "close"), and on a light periodic timer */
@@ -652,7 +783,7 @@ async function initAccounts(){
       const when=env.exportedAt ? new Date(env.exportedAt).toLocaleString() : 'an earlier build';
       accConfirm('Load '+file.name+'? This '+env.gameVersion+' save was created '+when+
         '. Your current career on this device will be replaced.',
-        ()=>{ applyIncoming(p,'game save file'); }, null);
+        ()=>{ applyIncoming(p,'game save file',true); }, null);
     }catch(err){
       console.warn('save import failed',err); toast('Could not load file: '+((err&&err.message)||'invalid save'));
     }finally{ input.value=''; renderSaveFile(); }

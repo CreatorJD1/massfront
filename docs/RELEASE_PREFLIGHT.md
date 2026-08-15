@@ -231,12 +231,11 @@ and size for its cache key but does not enforce the index SHA itself, so this
 operator-side hash verification is required. Only after it passes may a future
 installer use `MASSFRONT_CLOUD_MUSIC=1`.
 
-Expected live layout:
+Expected live layout (source pack is now empty — vocal/lyric Suno songs were
+deleted 2026-08-15; do not re-upload those masters):
 
 ```text
 packs.json
-pack/music/ascendancy_ashes_to_crown.m4a
-pack/music/... eight more .m4a files
 ```
 
 ## 5. Publish OTA payload first, manifest last

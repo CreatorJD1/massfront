@@ -106,7 +106,8 @@ function mfAirliftSerialize(i,slots){
   return {
     type:utype[i],team:uteam[i],slots,
     hpRatio:uhpm[i]>0?uhp[i]/uhpm[i]:1,
-    veteran:uvet[i],kills:ukills[i],mode:umode[i],cool:Math.max(0,ucool[i])
+    veteran:uvet[i],kills:ukills[i],mode:umode[i],cool:Math.max(0,ucool[i]),
+    cmd:typeof uCmd!=='undefined'?uCmd[i]:-1
   };
 }
 function mfAirliftBoardPoint(O,rank){
@@ -125,23 +126,35 @@ function mfAirliftEligibleSelection(sky){
   }
   return {ok,rejected};
 }
+function mfAirliftQueueBoard(sky,entries,playerOrder){
+  if(!ualive[sky]||utype[sky]!==MF_UT_AIRLIFT)return 0;
+  const H=mfAirliftHold(sky,true),team=uteam[sky];
+  let free=H.capacity-H.used-mfAirliftReserved(sky,H.gen),n=0;
+  for(const i of entries){
+    const slots=mfAirliftSlotCost(i);
+    if(!slots||slots>free||uteam[i]!==team||i===sky)continue;
+    if(mfAirliftBoardOrders.some(O=>O.unit===i&&O.unitGen===ugen[i]))continue;
+    mfAirliftBoardOrders.push({unit:i,unitGen:ugen[i],sky,skyGen:H.gen,slots});
+    free-=slots;n++;
+  }
+  if(n){
+    utgt[sky]=-1;ustate[sky]=0;utx[sky]=ux[sky];uty[sky]=uy[sky];uhold[sky]=1;
+    if(playerOrder){
+      clearSel();usel[sky]=1;updateSelInfo();
+      toast('⇩ BOARDING '+n+' UNIT'+(n===1?'':'S'));
+      uiCommandAck('move',n,ux[sky],uy[sky]);
+    }
+  }
+  return n;
+}
 function mfAirliftIssueBoard(sky){
   if(!ualive[sky]||uteam[sky]!==0||utype[sky]!==MF_UT_AIRLIFT)return false;
-  const H=mfAirliftHold(sky,true),picked=mfAirliftEligibleSelection(sky);
-  let free=H.capacity-H.used-mfAirliftReserved(sky,H.gen),accepted=0,full=0;
-  for(const P of picked.ok){
-    if(P.slots>free){full++;continue;}
-    mfAirliftBoardOrders.push({unit:P.i,unitGen:P.gen,sky,skyGen:H.gen,slots:P.slots});
-    free-=P.slots;accepted++;
-  }
-  if(!accepted){
+  const picked=mfAirliftEligibleSelection(sky);
+  const n=mfAirliftQueueBoard(sky,picked.ok.map(P=>P.i),true);
+  if(!n){
     toast(picked.rejected.length?'CANNOT BOARD — only infantry, constructors and light vehicles':'SKYCRANE CARGO FULL');
     sfx('reject');return false;
   }
-  utgt[sky]=-1;ustate[sky]=0;utx[sky]=ux[sky];uty[sky]=uy[sky];uhold[sky]=1;
-  clearSel();usel[sky]=1;updateSelInfo();
-  toast('⇩ BOARDING '+accepted+' UNIT'+(accepted===1?'':'S')+(picked.rejected.length?' · '+picked.rejected.length+' TOO HEAVY':'')+(full?' · '+full+' NO SPACE':''));
-  uiCommandAck('move',accepted,ux[sky],uy[sky]);
   return true;
 }
 function mfAirliftFormation(cargo,x,y){
@@ -165,20 +178,45 @@ function mfAirliftCommandUnload(sky,x,y){
   if(typeof battlefieldClampPoint==='function'){const p=battlefieldClampPoint(x,y,48);x=p[0];y=p[1];}
   H.mission={x,y,slots:mfAirliftFormation(H.cargo,x,y)};
   uhold[sky]=0;utgt[sky]=-1;ustate[sky]=1;utx[sky]=x;uty[sky]=y;
-  mfAirliftAim=null;mfAirliftUpdateButton();
+  mfAirliftAim=null;if(typeof aiming!=='undefined'&&aiming===9)aiming=-1;mfAirliftUpdateButton();
   addParticle(3,x,y,0,0,.72,44,92,226,255);
-  toast('⇩ DROP ZONE CONFIRMED · '+H.cargo.length+' PASSENGERS');
-  uiCommandAck('move',1,x,y);
+  if(uteam[sky]===0){toast('⇩ DROP ZONE CONFIRMED · '+H.cargo.length+' PASSENGERS');uiCommandAck('move',1,x,y);}
   return true;
 }
 function mfAirliftArmUnload(sky){
   const H=mfAirliftHold(sky,false);
   if(!H||!H.cargo.length){toast('SKYCRANE CARGO EMPTY');sfx('reject');return false;}
   mfAirliftAim={sky,gen:ugen[sky]};
-  if(typeof aiming!=='undefined')aiming=-1;
+  /* aiming 9 is the map-confirm for UNLOAD. input.js dispatches it the same
+     way as jump/lance so a later onTap rewrite cannot leave this UI-only. */
+  if(typeof aiming!=='undefined')aiming=9;
   if(typeof armPatrol!=='undefined'&&armPatrol)cancelPatrolDraft(true);
   mfAirliftUpdateButton();
   toast('⇩ TAP THE MAP TO SET A DROP ZONE');sfx('ui');return true;
+}
+function mfAirliftConfirmAim(wx,wy){
+  const A=mfAirliftAim;mfAirliftAim=null;
+  if(typeof aiming!=='undefined'&&aiming===9)aiming=-1;
+  mfAirliftUpdateButton();
+  if(A&&mfAirliftIsLive(A.sky,A.gen))mfAirliftCommandUnload(A.sky,wx,wy);
+}
+function mfAirliftDiscardHold(H){
+  /* Wipe a manifest without UnloadNow/BirthNow. Callers that already released
+     pop-holds (killUnit) or wiped the ledger (resetWorld) must not popHold. */
+  if(!H) return;
+  H.cargo.length=0;H.used=0;H.mission=null;H.flight=0;
+}
+function mfAirliftResetHolds(){
+  /* resetWorld zeros ualive/teamCount/popCmd without killUnit, so boarded
+     pop-holds would survive into the next match. A later preTick still sees
+     the old gen on that slot (ugen is not reset) and PostTick UnloadNow /
+     Massflesh BirthNow would spawn ghosts and popCmdDec the new ledger.
+     Discard here; do not spawn and do not popHold — the cap stays 1000. */
+  for(let i=0;i<mfAirliftHolds.length;i++) mfAirliftDiscardHold(mfAirliftHolds[i]);
+  mfAirliftHolds.length=0;mfAirliftBoardOrders.length=0;mfAirliftAim=null;
+  for(let i=0;i<mfMassHolds.length;i++) mfAirliftDiscardHold(mfMassHolds[i]);
+  mfMassHolds.length=0;mfMassBoardOrders.length=0;mfMassBirthAim=null;mfMassAlertUnit=-1;
+  if(typeof aiming!=='undefined'&&(aiming===9||aiming===10)) aiming=-1;
 }
 function mfAirliftPreTick(dt){
   for(let k=mfAirliftBoardOrders.length-1;k>=0;k--){
@@ -192,16 +230,35 @@ function mfAirliftPreTick(dt){
     utx[O.unit]=P.x;uty[O.unit]=P.y;
   }
   for(let i=0;i<mfAirliftHolds.length;i++){
-    const H=mfAirliftHolds[i];if(!H||!mfAirliftIsLive(i,H.gen)||!H.mission)continue;
+    const H=mfAirliftHolds[i];
+    if(!H) continue;
+    /* Stale gen after resetWorld or slot reuse: never steer into UnloadNow. */
+    if(!mfAirliftIsLive(i,H.gen)){mfAirliftDiscardHold(H);mfAirliftHolds[i]=null;continue;}
+    if(!H.mission) continue;
     utgt[i]=-1;utgtg[i]=-1;uhold[i]=0;ustate[i]=1;utx[i]=H.mission.x;uty[i]=H.mission.y;
+  }
+}
+function mfAirliftPopHold(P,on){
+  /* Cargo stays on the seat ledger while aboard so unload cannot fail at cap
+     and so boarding cannot be used to raise the live army past FACTION_POP_CAP.
+     Do not change the cap constant; this only keeps the already-paid bodies. */
+  if(!P) return;
+  const team=P.team,slot=P.cmd;
+  if(on){
+    teamCount[team]++;
+    if(team<2&&typeof popCmdInc==='function') popCmdInc(slot);
+  }else{
+    if(teamCount[team]>0) teamCount[team]--;
+    if(team<2&&typeof popCmdDec==='function') popCmdDec(slot);
   }
 }
 function mfAirliftUnloadNow(i,H){
   const remaining=[],dropped=[];
   for(let k=0;k<H.cargo.length;k++){
     const P=H.cargo[k],S=H.mission.slots[k]||{x:H.mission.x,y:H.mission.y};
-    const u=spawnUnit(P.type,P.team,S.x,S.y);
-    if(u<0){remaining.push(P);continue;}
+    mfAirliftPopHold(P,false);
+    const u=spawnUnit(P.type,P.team,S.x,S.y,P.cmd);
+    if(u<0){mfAirliftPopHold(P,true);remaining.push(P);continue;}
     uhp[u]=clamp(uhpm[u]*P.hpRatio,1,uhpm[u]);uvet[u]=P.veteran;ukills[u]=P.kills;ucool[u]=P.cool;
     if(unitModes(P.type).indexOf(P.mode)>=0)umode[u]=P.mode;
     utx[u]=S.x;uty[u]=S.y;ustate[u]=0;
@@ -212,8 +269,8 @@ function mfAirliftUnloadNow(i,H){
   H.cargo=remaining;H.used=remaining.reduce((n,P)=>n+P.slots,0);H.mission=null;
   uhold[i]=0;ustate[i]=0;utx[i]=ux[i];uty[i]=uy[i];
   sfx('deploy',ux[i],uy[i],1.15);
-  if(dropped.length){toast('⇩ '+dropped.length+' UNIT'+(dropped.length===1?'':'S')+' DEPLOYED');uiCommandAck('deploy',dropped.length,ux[i],uy[i]);}
-  if(remaining.length)toast('DROP PARTIAL — '+remaining.length+' PASSENGERS REMAIN');
+  if(dropped.length&&uteam[i]===0){toast('⇩ '+dropped.length+' UNIT'+(dropped.length===1?'':'S')+' DEPLOYED');uiCommandAck('deploy',dropped.length,ux[i],uy[i]);}
+  if(remaining.length&&uteam[i]===0)toast('DROP PARTIAL — '+remaining.length+' PASSENGERS REMAIN');
   updateSelInfo();
 }
 function mfAirliftPostTick(dt){
@@ -227,6 +284,7 @@ function mfAirliftPostTick(dt){
     if(dist2(ux[O.unit],uy[O.unit],ux[O.sky],uy[O.sky])>reach*reach)continue;
     const H=mfAirliftHold(O.sky,true),P=mfAirliftSerialize(O.unit,O.slots),px=ux[O.unit],py=uy[O.unit];
     H.cargo.push(P);H.used+=O.slots;
+    mfAirliftPopHold(P,true);
     addBeam(px,py,ux[O.sky],uy[O.sky],3.6,86,226,255,.34,'tractor');
     addParticle(3,px,py,0,0,.45,TYPES[P.type].size*1.8,86,226,255);
     killUnit(O.unit,true);mfAirliftBoardOrders.splice(k,1);changed=true;
@@ -247,15 +305,26 @@ function mfAirliftPostTick(dt){
     }
   }
   if(changed){
-    let loaded=0;for(const H of mfAirliftHolds)if(H)loaded+=H.cargo.length;
-    toast('⇩ CARGO SECURED · '+loaded+' ABOARD');updateSelInfo();
+    let loaded=0,player=false;
+    for(let i=0;i<mfAirliftHolds.length;i++){
+      const H=mfAirliftHolds[i];if(!H)continue;loaded+=H.cargo.length;
+      if(mfAirliftIsLive(i,H.gen)&&uteam[i]===0)player=true;
+    }
+    if(player)toast('⇩ CARGO SECURED · '+loaded+' ABOARD');updateSelInfo();
   }
 }
 
 /* Takeovers preserve the base simulation as the fallback path. */
+const mfAirliftPopResetBase=populationResetLedgers;
+populationResetLedgers=function(){
+  /* resetWorld wipes the seat ledger here. Holds must die in the same breath
+     or the next preTick still owns cargo against a zeroed cap. */
+  mfAirliftResetHolds();
+  mfAirliftPopResetBase();
+};
 const mfAirliftSpawnUnitBase=spawnUnit;
-spawnUnit=function(type,team,x,y){
-  const i=mfAirliftSpawnUnitBase(type,team,x,y);
+spawnUnit=function(type,team,x,y,cmdSlot){
+  const i=mfAirliftSpawnUnitBase(type,team,x,y,cmdSlot);
   if(i>=0){mfAirliftHolds[i]=null;if(type===MF_UT_AIRLIFT)mfAirliftHold(i,true);}
   return i;
 };
@@ -268,8 +337,8 @@ killUnit=function(i,silent){
       ustate[O.unit]=0;utgt[O.unit]=-1;utx[O.unit]=ux[O.unit];uty[O.unit]=uy[O.unit];
     }
     mfAirliftBoardOrders=mfAirliftBoardOrders.filter(O=>!(O.sky===i&&O.skyGen===ugen[i]));
-    if(mfAirliftAim&&mfAirliftAim.sky===i&&mfAirliftAim.gen===ugen[i])mfAirliftAim=null;
-    if(H){H.cargo.length=0;H.used=0;H.mission=null;mfAirliftHolds[i]=null;}
+    if(mfAirliftAim&&mfAirliftAim.sky===i&&mfAirliftAim.gen===ugen[i]){mfAirliftAim=null;if(typeof aiming!=='undefined'&&aiming===9)aiming=-1;}
+    if(H){for(const P of H.cargo)mfAirliftPopHold(P,false);H.cargo.length=0;H.used=0;H.mission=null;mfAirliftHolds[i]=null;}
     if(lost&&!silent){
       addParticle(3,ux[i],uy[i],0,0,.8,70,255,112,70);
       toast('AIRLIFT LOST · '+lost+' PASSENGER'+(lost===1?'':'S')+' KILLED');
@@ -286,8 +355,7 @@ const mfAirliftOnTapBase=onTap;
 onTap=function(sx,sy){
   const W=s2w(sx,sy),wx=W[0],wy=W[1];
   if(mfAirliftAim){
-    const A=mfAirliftAim;mfAirliftAim=null;mfAirliftUpdateButton();
-    if(mfAirliftIsLive(A.sky,A.gen))mfAirliftCommandUnload(A.sky,wx,wy);
+    mfAirliftConfirmAim(wx,wy);
     return;
   }
   const pk=pickUnit(wx,wy);
@@ -663,7 +731,7 @@ function mfMassBehindPlayerTarget(i){
 function mfMassCommandBirth(i,x,y){
   const H=mfMassHold(i,false);if(!H||utype[i]!==MF_UT_MASSFLESH_AIR||!H.cargo.length)return false;
   x=clamp(x,24,MAP-24);y=clamp(y,24,MAP-24);H.mission={x,y,slots:mfAirliftFormation(H.cargo,x,y)};
-  utgt[i]=-1;ustate[i]=1;utx[i]=x;uty[i]=y;mfMassBirthAim=null;mfMassUpdateUI();
+  utgt[i]=-1;ustate[i]=1;utx[i]=x;uty[i]=y;mfMassBirthAim=null;if(typeof aiming!=='undefined'&&aiming===10)aiming=-1;mfMassUpdateUI();
   addParticle(3,x,y,0,0,.8,58,168,92,255);
   if(uteam[i]===0){toast('♒ BIRTH SITE MARKED · '+H.cargo.length+' ORGANISMS');uiCommandAck('deploy',H.cargo.length,x,y);}
   return true;
@@ -671,8 +739,10 @@ function mfMassCommandBirth(i,x,y){
 function mfMassBirthNow(i,H){
   const target=H.mission||{x:ux[i],y:uy[i],slots:mfAirliftFormation(H.cargo,ux[i],uy[i])},remaining=[],born=[];
   for(let k=0;k<H.cargo.length;k++){
-    const P=H.cargo[k],S=target.slots[k]||target,u=spawnUnit(P.type,P.team,S.x,S.y);
-    if(u<0){remaining.push(P);continue;}
+    const P=H.cargo[k],S=target.slots[k]||target;
+    mfAirliftPopHold(P,false);
+    const u=spawnUnit(P.type,P.team,S.x,S.y,P.cmd);
+    if(u<0){mfAirliftPopHold(P,true);remaining.push(P);continue;}
     uhp[u]=clamp(uhpm[u]*P.hpRatio,1,uhpm[u]);uvet[u]=P.veteran;ukills[u]=P.kills;ucool[u]=P.cool;
     if(unitModes(P.type).indexOf(P.mode)>=0)umode[u]=P.mode;
     if(P.team===1){const q=mfMassBehindPlayerTarget(i);ustate[u]=2;utx[u]=q.x;uty[u]=q.y;}
@@ -711,7 +781,10 @@ function mfMassPreTick(dt){
     utgt[O.unit]=-1;utgtg[O.unit]=-1;ustate[O.unit]=1;utx[O.unit]=P.x;uty[O.unit]=P.y;uhold[O.unit]=0;
   }
   for(let i=0;i<mfMassHolds.length;i++){
-    const H=mfMassHolds[i];if(!H||!mfMassIsLive(i,H.gen)||utype[i]!==MF_UT_MASSFLESH_AIR||!H.mission)continue;
+    const H=mfMassHolds[i];
+    if(!H) continue;
+    if(!mfMassIsLive(i,H.gen)){mfAirliftDiscardHold(H);mfMassHolds[i]=null;continue;}
+    if(utype[i]!==MF_UT_MASSFLESH_AIR||!H.mission) continue;
     utgt[i]=-1;utgtg[i]=-1;ustate[i]=1;utx[i]=H.mission.x;uty[i]=H.mission.y;uhold[i]=0;
   }
 }
@@ -723,6 +796,7 @@ function mfMassPostTick(dt){
     if(dist2(ux[O.unit],uy[O.unit],ux[O.mass],uy[O.mass])>reach*reach)continue;
     const H=mfMassHold(O.mass,true),P=mfAirliftSerialize(O.unit,O.slots),x=ux[O.unit],y=uy[O.unit];
     P.biomass=Math.round(uhp[O.unit]+TYPES[P.type].size*4);H.cargo.push(P);H.used+=O.slots;
+    mfAirliftPopHold(P,true);
     for(let q=0;q<3;q++)addBeam(x+rr(-3,3),y+rr(-3,3),ux[O.mass],uy[O.mass],2.8,145,235,76,.32,'tractor');
     addParticle(4,x,y,0,0,.55,TYPES[P.type].size*1.7,153,238,78);killUnit(O.unit,true);mfMassBoardOrders.splice(k,1);
     sfx('cre_attack',ux[O.mass],uy[O.mass],.68);
@@ -758,8 +832,8 @@ function mfMassPostTick(dt){
 }
 
 const mfMassSpawnBase=spawnUnit;
-spawnUnit=function(type,team,x,y){
-  const i=mfMassSpawnBase(type,team,x,y);
+spawnUnit=function(type,team,x,y,cmdSlot){
+  const i=mfMassSpawnBase(type,team,x,y,cmdSlot);
   if(i>=0){mfMassHolds[i]=null;if(type===MF_UT_MASSFLESH||type===MF_UT_MASSFLESH_AIR)mfMassHold(i,true);}
   return i;
 };
@@ -769,7 +843,7 @@ killUnit=function(i,silent){
     const H=mfMassHold(i,false),lost=H?H.cargo.length:0;
     for(const O of mfMassBoardOrders)if(O.mass===i&&O.massGen===ugen[i]&&ualive[O.unit]&&ugen[O.unit]===O.unitGen){ustate[O.unit]=0;utx[O.unit]=ux[O.unit];uty[O.unit]=uy[O.unit];}
     mfMassBoardOrders=mfMassBoardOrders.filter(O=>!(O.mass===i&&O.massGen===ugen[i]));
-    if(H){H.cargo.length=0;H.used=0;H.mission=null;mfMassHolds[i]=null;}
+    if(H){for(const P of H.cargo)mfAirliftPopHold(P,false);H.cargo.length=0;H.used=0;H.mission=null;mfMassHolds[i]=null;}
     if(lost&&!silent){toast('MASSFLESH SLAIN · '+lost+' STORED ORGANISMS LOST');addParticle(4,ux[i],uy[i],0,0,1.0,80,150,238,72);}
     if(mfMassAlertUnit===i)mfMassAlertUnit=-1;
   }
@@ -781,7 +855,7 @@ unitTick=function(dt){mfMassPreTick(dt);mfMassUnitTickBase(dt);mfMassPostTick(dt
 const mfMassOnTapBase=onTap;
 onTap=function(sx,sy){
   const W=s2w(sx,sy),wx=W[0],wy=W[1];
-  if(mfMassBirthAim){const A=mfMassBirthAim;mfMassBirthAim=null;if(mfMassIsLive(A.i,A.gen))mfMassCommandBirth(A.i,wx,wy);return;}
+  if(mfMassBirthAim){mfMassConfirmAim(wx,wy);return;}
   const pk=pickUnit(wx,wy);
   if(pk.own>=0&&utype[pk.own]===MF_UT_MASSFLESH&&selCount()>0&&!usel[pk.own]){
     if(mfMassIssueBoard(pk.own))return;
@@ -838,6 +912,20 @@ renderProdMenu=function(){
   tr.insertBefore(b,tr.firstChild);
   if(wants){prodTab='biomass';mfMassRenderCard();}
 };
+function mfMassConfirmAim(wx,wy){
+  const A=mfMassBirthAim;mfMassBirthAim=null;
+  if(typeof aiming!=='undefined'&&aiming===10)aiming=-1;
+  if(A&&mfMassIsLive(A.i,A.gen))mfMassCommandBirth(A.i,wx,wy);
+  mfMassUpdateUI();
+}
+function mfMassArmSelected(){
+  const i=mfMassSelected();if(i<0)return false;
+  if(utype[i]===MF_UT_MASSFLESH)return mfMassBeginFlight(i);
+  mfMassBirthAim={i,gen:ugen[i]};
+  if(typeof aiming!=='undefined')aiming=10;
+  toast('♒ TAP BEHIND THE DEFENSIVE LINE TO BIRTH THE BROOD');
+  mfMassUpdateUI();return true;
+}
 function mfMassSelected(){let found=-1;for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i]&&mfTransportKindByType(utype[i])==='massflesh'){if(found>=0)return -1;found=i;}return found;}
 function mfMassUpdateUI(){
   const b=$('mfMassActionBtn');if(!b)return;const i=mfMassSelected(),H=i>=0?mfMassHold(i,true):null,air=i>=0&&utype[i]===MF_UT_MASSFLESH_AIR;
@@ -868,7 +956,7 @@ function mfMassInitUI(){
   const row=$('tacRow');if(!row||$('mfMassActionBtn'))return;
   const b=document.createElement('button');b.type='button';b.id='mfMassActionBtn';b.className='cbtn mfMassAction';b.style.display='none';
   b.innerHTML='<span class="em">♒</span><span class="lbl">TAKE FLIGHT</span>';
-  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const i=mfMassSelected();if(i<0)return;if(utype[i]===MF_UT_MASSFLESH)mfMassBeginFlight(i);else{mfMassBirthAim={i,gen:ugen[i]};toast('♒ TAP BEHIND THE DEFENSIVE LINE TO BIRTH THE BROOD');mfMassUpdateUI();}});
+  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();mfMassArmSelected();});
   row.insertBefore(b,$('clearBtn'));
   const a=document.createElement('button');a.type='button';a.id='mfMassAlert';a.style.display='none';a.setAttribute('aria-label','Track inbound Massflesh breakthrough carrier');
   a.addEventListener('pointerdown',()=>{const i=mfMassAlertUnit;if(i>=0&&ualive[i]){cam.x=ux[i];cam.y=uy[i];camFollow=i;clampCam();camUpdateMatrices();sfx('ui');}});document.body.appendChild(a);
@@ -893,4 +981,42 @@ aiTick=function(dt){
   }
   return mfMassAiTickBase(dt);
 };
+
+/* Atlas AI uses the same takeover as Massflesh. Keep it here so ai.js can
+   stay the other agent's file: one extra airfield queue and board/drop orders. */
+let mfAirliftAiNext=160,mfAirliftAiLastT=0;
+function mfAirliftAiTick(dt){
+  if(typeof AI==='undefined'||!AI||AI.fac==='horde') return;
+  if(stats.t<mfAirliftAiLastT) mfAirliftAiNext=160;
+  mfAirliftAiLastT=stats.t;
+  if(typeof FAC_KIT!=='undefined'&&FAC_KIT[AI.fac]&&typeof FAC_KIT[AI.fac][MF_UT_AIRLIFT]!=='function') return;
+  let live=0;
+  for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===1&&utype[i]===MF_UT_AIRLIFT){
+    live++;
+    const H=mfAirliftHold(i,true);
+    if(H.aiT==null) H.aiT=2;
+    H.aiT-=dt; if(H.aiT>0) continue;
+    H.aiT=2.4;
+    if(H.used<4){
+      const near=[];
+      forUnitsIn(ux[i],uy[i],280,j=>{if(j!==i&&uteam[j]===1&&mfAirliftSlotCost(j))near.push(j);});
+      mfAirliftQueueBoard(i,near.slice(0,8),false);
+    }
+    if(H.used>=3&&!H.mission&&!mfAirliftReserved(i,H.gen)){
+      const D=typeof heroIdx!=='undefined'&&heroIdx>=0&&ualive[heroIdx]
+        ?{x:ux[heroIdx],y:uy[heroIdx]}:{x:MAP*.28,y:MAP*.28};
+      const L=findLand(clamp(D.x+rr(-80,80),24,MAP-24),clamp(D.y+rr(-80,80),24,MAP-24));
+      mfAirliftCommandUnload(i,L[0],L[1]);
+    }
+  }
+  if(stats.t>=mfAirliftAiNext){
+    const B=blds.find(B=>B.alive&&B.team===1&&B.type==='airfield'&&B.prog>=1&&B.queue.length<2);
+    if(!live&&B&&typeof populationCanSpawn==='function'&&populationCanSpawn(MF_UT_AIRLIFT,1,B.aiBaseSlot,B.x,B.y)){
+      B.queue.unshift(MF_UT_AIRLIFT);mfAirliftAiNext=stats.t+210;
+    }else mfAirliftAiNext=stats.t+14;
+  }
+}
+const mfAirliftAiTickBase=aiTick;
+aiTick=function(dt){ mfAirliftAiTick(dt); return mfAirliftAiTickBase(dt); };
+
 

@@ -73,21 +73,41 @@ invalidates the v2 signature). **Result: 51 MB → 28 MB.** Always run it.
 
 ## Testing
 
-Headless Chromium is available and WebGL works through SwiftShader. There is no
-test framework; verification is Playwright scripts run ad hoc.
+Headless Chromium is available; **use the real GPU**, never SwiftShader.
+`tools/pw-browser.mjs` is the only Playwright launcher: it reuses a project CDP
+endpoint if one is already up, otherwise kills this repo's orphaned capture
+Chromiums and launches one ANGLE D3D11 Chrome (never SwiftShader, never a
+second instance). `tools/chrome-gpu.mjs` still owns the GPU args and the
+software-renderer abort. There is no test framework; verification is
+Playwright scripts run ad hoc.
 
 ```js
-import { chromium } from 'playwright';
-const b = await chromium.launch({
-  executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome',
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
-const p = await b.newPage({ viewport:{width:412,height:900}, hasTouch:true });
-p.on('pageerror', e => console.log('ERR ' + e.message));
-await p.goto('http://127.0.0.1:8901/');
-await p.waitForTimeout(11000);          // boot + terrain generation is slow
-await p.click('#startBtn');   await p.waitForTimeout(500);
-await p.click('#setupStart'); await p.waitForTimeout(16000);   // terrain gen
-await p.click('#deployBtn');            // THIS starts the match clock
+import { launchPwBrowser, closePwBrowser } from './tools/pw-browser.mjs';
+import { assertHardwareGpu } from './tools/chrome-gpu.mjs';
+const b = await launchPwBrowser();
+try {
+  const p = await b.newPage({ viewport:{width:412,height:900}, hasTouch:true });
+  p.on('pageerror', e => console.log('ERR ' + e.message));
+  await p.goto('http://127.0.0.1:8901/');
+  await assertHardwareGpu(p);             // fail loud if SwiftShader / no GPU
+  await p.waitForTimeout(11000);          // boot is slow
+  const intro=p.locator('#mfIntroStart');
+  if(await intro.isVisible()) await intro.click();          // pre-alpha title
+  const gate=p.locator('#apCloseBtn');
+  if(await gate.isVisible()) await gate.click();            // #apForm swallows #startBtn
+  await p.click('#startBtn');                               // WAR ROOM, not setup
+  await p.click('.warCard[data-mode="standard"]');          // Standard = *_medium
+  await p.waitForTimeout(500);
+  await p.click('#setupStart'); await p.waitForTimeout(500); // ENTER SOMBRERO-I
+  // Locked stars stay on galaxy — do not tap .mfWorldChip.locked
+  await p.click('#setupStart'); await p.waitForTimeout(500); // ENTER AELOS
+  await p.click('#setupStart'); await p.waitForTimeout(500); // planet → region
+  await p.click('#setupStart'); await p.waitForTimeout(500); // region → deploy
+  await p.click('#setupStart'); await p.waitForTimeout(16000); // START BATTLE + terrain gen
+  await p.click('#deployBtn');            // THIS starts the match clock
+} finally {
+  await closePwBrowser();
+}
 ```
 
 Serve `www/` on a port (`python3 -m http.server 8901 --directory www`). Headless
@@ -124,3 +144,12 @@ container. A clean console proves nothing about a renderer.
 - Commit credentials. The Cloudflare workers are deployed; deploying again needs
   a scoped API token that is **not** in this repo.
 - Trust `console.clean === success` for anything visual.
+
+---
+
+## Five-channel update
+
+Shipping a change to only the browser, or only the OTA, or only the APK, is how
+1.33.35 became two different builds with the same number. The checklist is
+`docs/FIVE_CHANNEL_UPDATE.md`. Bump every version field together, pack `www/`,
+verify 8901, then OTA / native / Space — or name the channel you skipped.

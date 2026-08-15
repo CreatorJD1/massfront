@@ -3,64 +3,8 @@
   "packs": {
     "music": {
       "label": "MASSFRONT soundtrack",
-      "bytes": 16887479,
-      "files": [
-        {
-          "name": "ascendancy_iron_crown_1_1.m4a",
-          "size": 1563660,
-          "sha256": "6618f4b62100f1150b73dbd4d80949225ff9412d1266ff76c0ff10a765b36dfc"
-        },
-        {
-          "name": "ascendancy_iron_crown_4_1.m4a",
-          "size": 1847923,
-          "sha256": "550bfb540fbafc769c94e50b0312773d7fd1a94894c6ea9b82a25a34528f17e3"
-        },
-        {
-          "name": "horde_omen_in_the_hall_1_1.m4a",
-          "size": 1482032,
-          "sha256": "ec62cac96358b40f01c39df86c3fa5f7823a4407bd2e33855e07be35221a09ab"
-        },
-        {
-          "name": "horde_omen_in_the_hall_2.m4a",
-          "size": 1457995,
-          "sha256": "0056290db95b20d25ace94cdf3bd41452e3a9575531c9ad4bfc83a54be56f5b1"
-        },
-        {
-          "name": "menu_shadow_crown_1_1.m4a",
-          "size": 1309415,
-          "sha256": "6c417dc5725d87fe72cb41abeee2ea5cb5c37832af6d5364a2084f95e9d72d34"
-        },
-        {
-          "name": "menu_shadow_crown_2.m4a",
-          "size": 1328608,
-          "sha256": "245a37da48a6dfec0995b7e98cc79f058f40a4483b3301c5c0cb3c0e3078585d"
-        },
-        {
-          "name": "nova_black_iron_pulse_2.m4a",
-          "size": 1639781,
-          "sha256": "9a673fda3310b64acb33f7cbea4e20f90e80f0c7f4f306d4f9d4239baa5b79b0"
-        },
-        {
-          "name": "nova_blackout_crown_1.m4a",
-          "size": 1847540,
-          "sha256": "df2c2074914a95d6a4457cd2b84accc426d8ea203a12e61810768cc7a7860ea6"
-        },
-        {
-          "name": "splash_cold_crown_1_1.m4a",
-          "size": 957627,
-          "sha256": "1cb67db411e44a2d45ea2baea86876ce65819e345868c8e7788c4c7cecbd147c"
-        },
-        {
-          "name": "syndicate_iron_crown_2_1.m4a",
-          "size": 1719979,
-          "sha256": "a627e5213b6daefa3aa2c9825f1ba5bc9585e00a12f620a6c3c6c662d63eb58b"
-        },
-        {
-          "name": "syndicate_iron_crown_3_1.m4a",
-          "size": 1732919,
-          "sha256": "eb2fab03067eabc4b3dd14f32622dee6f017b86cf789ac20b35d1558d7f94b51"
-        }
-      ]
+      "bytes": 0,
+      "files": []
     },
     "voice": {
       "label": "MASSFRONT voice bank — KEEN narration and command radio",

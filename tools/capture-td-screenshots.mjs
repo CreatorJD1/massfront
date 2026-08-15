@@ -1,4 +1,5 @@
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import { mkdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,10 +12,10 @@ const url = 'http://127.0.0.1:8974/';
 const chrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 
 console.log('Launching browser to capture 3D TD screenshots...');
-const browser = await chromium.launch({
+const browser = await launchPwBrowser({
   headless: true,
   executablePath: chrome,
-  args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-gpu-sandbox']
+  args: ['--use-gl=angle', '--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu', '--disable-gpu-sandbox']
 });
 
 try {
@@ -30,6 +31,7 @@ try {
 
   console.log('Navigating to', url);
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+  await assertHardwareGpu(page);
   await page.waitForTimeout(3500);
 
   // Wait for terrain generator heightmap array heightF

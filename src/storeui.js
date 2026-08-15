@@ -373,9 +373,9 @@ function armTabsHTML(){
       const done=c.id==='inventory'?invStats.found
         :c.id==='loadout'?invStats.used
         :c.id==='identity'?0:c.items.filter(id=>{ const it=STORE.find(s=>s.id===id); return it&&(META.owned[it.id]||0)>=it.max; }).length;
-      const tot=c.id==='inventory'?invStats.total:c.id==='loadout'?5:c.items.length;
+      const tot=c.id==='inventory'?invStats.total:0;
       return '<button class="tabBtn'+(armTab===c.id?' on':'')+'" data-k="'+c.id+'">'
-        +'<span class="tEm">'+c.em+'</span>'+c.nm+(tot?' <span class="tabCt">'+done+'/'+tot+'</span>':'')+'</button>';
+        +'<span class="tEm">'+c.em+'</span>'+c.nm+(c.id==='inventory'&&tot?' <span class="tabCt">'+done+'/'+tot+'</span>':'')+'</button>';
     }).join('')
     +'</div><div class="armTabHint">SWIPE CATEGORIES →</div></div>';
 }

@@ -1,6 +1,6 @@
 /* Regression: Training is a dedicated mode and may never leak into Standard.
    Usage: node tools/test-training-standard-isolation.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -13,8 +13,8 @@ const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 await mkdir(out,{recursive:true});
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const context=await browser.newContext({viewport:{width:412,height:915},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   await context.addInitScript(()=>{try{

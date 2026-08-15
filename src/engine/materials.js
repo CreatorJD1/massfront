@@ -1,6 +1,3 @@
-;
-
-;
 /* ============================================================================
    MATERIAL ATLAS
    ----------------------------------------------------------------------------
@@ -583,12 +580,21 @@ function preloadMatAtlases(){
     /* The showcase and live renderer share one repeatable V2 fracture map.
        Per-asset soot maps would multiply memory without improving the read at
        an RTS camera, while this keeps damage scale coherent across a roster. */
-     damage:'./assets/textures/materials/mf2-carbon-cracks-v1.png',
+     damage:(typeof mf2AssetURL==='function')?mf2AssetURL('assets/textures/materials/mf2-carbon-cracks-v1.png'):'./assets/textures/materials/mf2-carbon-cracks-v1.png',
      /* This neutral tile is deliberately separate from the authored atlas.
         It adds only micro roughness/age breakup in the live V2 shader; panels,
         seams and faction markings remain authored in the primary material maps. */
-     detail:'./assets/textures/materials/mf_mechanical_microdetail_v2.webp'
+     detail:(typeof mf2AssetURL==='function')?mf2AssetURL('assets/textures/materials/mf_mechanical_microdetail_v2.webp'):'./assets/textures/materials/mf_mechanical_microdetail_v2.webp'
    };
+  /* The old embedded WebP previews were 1407px wide while the live 11×256
+     atlas is 2816px. buildMatAtlas() correctly rejected that mismatch, but it
+     meant the authored full-resolution PNGs already packaged beside the game
+     were never used. Keep the procedural generator as the failure fallback;
+     point normal launches at the real matching maps so the V2 normals,
+     roughness and material separation are actually available in battle. */
+  paths.albedo='./assets/textures/mat-albedo.png';
+  paths.normal='./assets/textures/mat-normal.png';
+  paths.orm='./assets/textures/mat-orm.png';
   return new Promise((resolve)=>{
     let done=0, ok=false;
     const tryDone=()=>{ if(++done===5 && ok) resolve(true); else if(done===5) resolve(false); };
@@ -609,6 +615,19 @@ function preloadMatAtlases(){
     if(typeof Image==='undefined') resolve(false);
   });
 }
+function mfAniso(cap){
+  /* EXT_texture_filter_anisotropic exposes MAX_TEXTURE_MAX_ANISOTROPY_EXT.
+     MAX_ANISOTROPY_EXT is not a pname: getParameter(undefined) is INVALID_ENUM
+     (1280), Math.min(8,null) is 0, and texParameterf(...,0) is INVALID_VALUE
+     (1281). Those two sat in the error flag from atlas boot — HIGH read the
+     enum, a later MEDIUM snap read the value. World V2 already used the real
+     name; the production atlas did not. */
+  const ani=gl.getExtension('EXT_texture_filter_anisotropic');
+  if(!ani) return;
+  const max=gl.getParameter(ani.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+  const n=Math.max(1, Math.min(cap==null?8:cap, max>0?max:1));
+  gl.texParameterf(gl.TEXTURE_2D, ani.TEXTURE_MAX_ANISOTROPY_EXT, n);
+}
 function uploadMatTex(img, srgb){
   /* The authored atlas is 2816px square. Three RGBA atlases plus mipmaps cost
      about 127 MB on the GPU before the terrain, post chain, models or browser
@@ -625,15 +644,13 @@ function uploadMatTex(img, srgb){
   }
   const tex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,tex);
-  gl.texImage2D(gl.TEXTURE_2D,0,srgb?gl.SRGB8_ALPHA8:gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,src);
+  gl.texImage2D(gl.TEXTURE_2D,0,srgb?gl.SRGB8_ALPHA8:gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,src);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  const ani=gl.getExtension('EXT_texture_filter_anisotropic');
-  if(ani) gl.texParameterf(gl.TEXTURE_2D,ani.TEXTURE_MAX_ANISOTROPY_EXT,
-                           Math.min(8,gl.getParameter(ani.MAX_ANISOTROPY_EXT)));
+  mfAniso(8);
   if(scratch){scratch.width=scratch.height=1;scratch=null;}
   return tex;
 }
@@ -929,11 +946,15 @@ function buildMatAtlas(){
     c.strokeStyle='rgba(20,40,60,.5)'; c.lineWidth=5;
     c.strokeRect(2,2,S-4,S-4);
   });
-  // ---- lamp / emissive ----
+  /* Geometry owns the lamp. A radial blob here stamped an orange orb on
+     every LAMP quad — civic louvres, turret corners, gate cubes — the
+     same failure TWR_GLOW already retired. Vertex colour still warms
+     unit beacons. */
   tile(MAT.LAMP,(c,S)=>{
-    c.fillStyle='#fff0c0'; c.fillRect(0,0,S,S);
-    const gr=c.createRadialGradient(S/2,S/2,4,S/2,S/2,S*0.55);
-    gr.addColorStop(0,'#ffffff'); gr.addColorStop(1,'#ffbb55');
+    const gr=c.createLinearGradient(0,0,0,S);
+    gr.addColorStop(0,'#fff4d2');
+    gr.addColorStop(.5,'#ffffff');
+    gr.addColorStop(1,'#fff4d2');
     c.fillStyle=gr; c.fillRect(0,0,S,S);
   });
   // ---- poured concrete ----
@@ -1558,18 +1579,16 @@ function buildMatAtlas(){
   /* Keep the legacy atlas upload. The authored vertex colours, material canvas,
      and model shader were tuned together in display space; switching only the
      albedo fetch to sRGB made crystals and painted model surfaces disagree. */
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,cv2);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,cv2);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  const ani=gl.getExtension('EXT_texture_filter_anisotropic');
-   if(ani) gl.texParameterf(gl.TEXTURE_2D,ani.TEXTURE_MAX_ANISOTROPY_EXT,
-                            Math.min(8,gl.getParameter(ani.MAX_ANISOTROPY_EXT)));
+  mfAniso(8);
   matOrmTex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,matOrmTex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,ov);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,ov);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
@@ -1579,18 +1598,16 @@ function buildMatAtlas(){
      on a different mip than the colour tap it is shading slides the bevels off
      the paint, and the eye reads that as shimmer crawling over the hull as the
      camera orbits — not as blur, which it would forgive. */
-   if(ani) gl.texParameterf(gl.TEXTURE_2D,ani.TEXTURE_MAX_ANISOTROPY_EXT,
-                            Math.min(8,gl.getParameter(ani.MAX_ANISOTROPY_EXT)));
+  mfAniso(8);
   matNrmTex=gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D,matNrmTex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,nv);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,nv);
   gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-   if(ani) gl.texParameterf(gl.TEXTURE_2D,ani.TEXTURE_MAX_ANISOTROPY_EXT,
-                            Math.min(8,gl.getParameter(ani.MAX_ANISOTROPY_EXT)));
+  mfAniso(8);
   buildMatDamageTex();
   buildMatDetailTex();
   return matTex;

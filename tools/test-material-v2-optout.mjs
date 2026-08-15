@@ -1,9 +1,9 @@
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 
 const base=process.argv[2]||'http://127.0.0.1:8974/';
-const browser=await chromium.launch({headless:true,
+const browser=await launchPwBrowser({headless:true,
   executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 const page=await browser.newPage({viewport:{width:412,height:915},hasTouch:true});
 await page.addInitScript(()=>localStorage.setItem('mf_auth_gate_v1','1'));
 const errors=[];

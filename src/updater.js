@@ -28,17 +28,28 @@
        fails to boot is therefore detected on the NEXT launch and rolled back
        automatically
      * the packaged build always remains on disk, so rollback is instant
+
+   What the payload actually carries (tools/bundle-update.mjs, not this file):
+     * every script in assets/data/manifest.json `order` — including
+       unitrows.js, organicfx.js, rumble.js. boot.js is NOT in that list;
+       a boot-loader change needs a new APK/Space package.
+     * window.__MF_OTA_ASSETS — binaries the 1.33.31 APK never shipped
+       (world-structure V2 maps, faction tacticon sheet, authored Rhino /
+       Gorger skins). Loaders resolve them through mf2AssetURL.
+     * Generated per-unit V2 stubs (~250 files) and nova-hq-v2 256px
+       templates stay on the APK/Space. A miss falls back to the atlas
+       already packaged / inlined — it must not 404-break the renderer.
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.31';
+const APP_VERSION = '1.33.37';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Planets are real now. Battle Setup opens on a world — choose Aelos, Pyraeth or Nordhall and its regions follow the planet, with the biome locked to the world so a desert region can never render under a polar sky. Start always opens the War Room again; the old planet fly-over screen is gone and worlds are picked inside the MAP tab, next to region, size and infestation. A patched install that predates this screen builds the planet card on the fly, so the fix reaches devices that never got the new shell.";
+const APP_NOTES = "Stacked factory queues, per-unit veterancy + building LV stars, victory Return/Continue + faction departure, map double-tap confirm, browser page-zoom lock, Chrome play() + no blur-mute.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,

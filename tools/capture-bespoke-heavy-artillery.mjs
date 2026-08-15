@@ -3,7 +3,8 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 
@@ -35,13 +36,14 @@ const server=http.createServer((req,res)=>{
 server.listen(PORT,async()=>{
   console.log('Serving on http://127.0.0.1:'+PORT);
   const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
-  const browser=await chromium.launch({headless:true,executablePath:chrome,
-    args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+  const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+    args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
   try{
     const ctx=await browser.newContext({viewport:{width:1000,height:1000},deviceScaleFactor:2,colorScheme:'dark'});
     const page=await ctx.newPage(),errors=[];
     page.on('pageerror',e=>errors.push(e.message));
     await page.goto('http://127.0.0.1:'+PORT+'/',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
     await page.waitForFunction(()=>typeof render==='function'&&typeof stopAttract==='function'&&
       typeof BLD_MDL_LEGION!=='undefined'&&typeof ensureBldFactionMeshes==='function',{timeout:60000});
     await page.waitForTimeout(800);

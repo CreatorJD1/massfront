@@ -92,6 +92,19 @@
     clearTimer();open=false;
     /* The title has now played, so the menu may show as the reveal fades out. */
     revealFront();
+    /* Move focus OUT of #mfPreAlphaIntro BEFORE aria-hidden goes on it.
+       openIntro() focuses #mfIntroStart. Parking that focus and then marking
+       the subtree aria-hidden is the aria-hidden-focus violation: Chrome
+       refuses the attribute, and a screen reader is left on a control that
+       is supposed to have vanished. Do not hand off to #startBtn first —
+       #startScreen is still aria-hidden at this instant, so that focus move
+       would only relocate the same defect. Blur to <body> now; the deferred
+       #startBtn focus below runs after startScreen is unhidden. The account
+       gate may steal that focus ~340ms later, which is fine. */
+    if(el.contains(document.activeElement)){
+      var parked=document.activeElement;
+      if(parked&&parked.blur) parked.blur();
+    }
     el.classList.remove('open');el.setAttribute('aria-hidden','true');
     document.body.classList.remove('mfIntroOpen');
     var front=document.getElementById('startScreen');if(front) front.removeAttribute('aria-hidden');
@@ -106,6 +119,11 @@
        decides whether WAR ROOM gets focus immediately. */
     if(play) setTimeout(function(){try{play.focus({preventScroll:true});}catch(e){play.focus();}},startNow?120:90);
     else if(lastFocus) lastFocus.focus();
+    /* First-run Standard still has to teach locked stars + medium theatre even
+       if they go to Training next. Arm must-see now; do not start a lecture. */
+    if(typeof window.wtpEnsureMustSee==='function'){
+      try{ window.wtpEnsureMustSee(); }catch(e){}
+    }
   }
   function openIntro(){
     if(!el) return;
@@ -135,6 +153,22 @@
     reduced=!!e.matches;if(el) el.dataset.motion=reduced?'reduce':'full';
     if(reduced) clearTimer();else scheduleClose();
   }
+  function stampFirstRunHint(root){
+    /* Title card is not a tutorial. One line for a career that has never
+       dropped Standard, so Training-first still sees locked-stars / medium
+       before they leave the reveal. Veterans keep the stock status. */
+    if(!root||root.querySelector('.mfTitleHint')) return;
+    var fresh=true;
+    try{ fresh=typeof META==='undefined'||!META||((META.standardMatches|0)+(META.matches|0))===0; }catch(e){}
+    if(!fresh) return;
+    var p=document.createElement('p');
+    p.className='mfTitleHint';
+    p.style.cssText='margin:10px 16px 0;max-width:22em;color:#9bb4c6;font:600 10px/1.35 var(--fU,system-ui);letter-spacing:.06em;text-align:center';
+    p.textContent='STANDARD walks the galaxy. Locked stars stay put. The mode is the medium theatre.';
+    var status=root.querySelector('.mfTitleStatus');
+    if(status&&status.parentNode) status.parentNode.insertBefore(p,status.nextSibling);
+    else root.appendChild(p);
+  }
   function initIntro(){
     if(el) return;
     /* Arm the launch gate for THIS run. An OTA body swap keeps <body>'s class
@@ -144,6 +178,7 @@
     var host=document.createElement('div');host.innerHTML=markup();el=host.firstElementChild;
     if(!el){ revealFront(); return; }                  // never strand the menu behind the boot cover
     document.body.appendChild(el);
+    stampFirstRunHint(el);
     protectTitleArt();
     motionQuery=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
     reduced=!!(motionQuery&&motionQuery.matches);el.dataset.motion=reduced?'reduce':'full';

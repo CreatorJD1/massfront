@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import fs from 'node:fs';
 
 const base=process.argv[2]||'http://127.0.0.1:8974/';
@@ -6,10 +6,10 @@ const authoredLod=process.argv[4]==='1'?1:0;
 const asset=process.argv[5]==='factory'?'factory':process.argv[5]==='commander'?'commander':'tank';
 const assetTag=asset==='factory'?'-factory':asset==='commander'?'-commander':'';
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
-const browser=await chromium.launch({
+const browser=await launchPwBrowser({
   headless:true,
   executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']
 });
 fs.mkdirSync('.tmp',{recursive:true});
 const results=[];

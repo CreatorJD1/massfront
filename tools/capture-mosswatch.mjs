@@ -1,6 +1,7 @@
 /* Capture the real P-01 battlefield and its first soul-plane breach.
    Usage: node tools/capture-mosswatch.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -10,8 +11,8 @@ const url=process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8100/'
 const out=join(root,'releases','campaign-prologue'),shot=join(out,'mosswatch-reality-fracture-mobile.png');
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 await mkdir(out,{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const context=await browser.newContext({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   await context.addInitScript(()=>{try{
@@ -19,6 +20,7 @@ try{
   }catch(e){}});
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof storyCampaignOpenMission==='function'&&heightF&&PASS,null,{timeout:60000});
   await page.evaluate(()=>{META.tutorial=META.tutorial||{};META.tutorial.done=true;storyCampaignOpenMission('mosswatch-breach');});
   await page.locator('#setupStart').tap();

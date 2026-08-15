@@ -1,0 +1,50 @@
+:root{
+  --ink:#d7ecff;
+  --dim:#7ea0b8;
+  --line:#1c3a4e;
+  --cyan:#5db6ff;
+  --red:#ff6b58;
+  --panel:rgba(4,10,16,.78);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#05080c;color:var(--ink);
+  font-family:ui-sans-serif,system-ui,"Segoe UI",sans-serif;overflow:hidden;user-select:none}
+#desk{min-height:100%;display:flex;align-items:center;justify-content:center;padding:18px}
+#stage{
+  width:412px;height:900px;position:relative;overflow:hidden;
+  border-radius:28px;background:#02050a;
+  box-shadow:0 0 0 2px #163044,0 28px 90px #000,inset 0 0 0 1px #0a1c28;
+}
+#view{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#chrome{position:absolute;inset:0;pointer-events:none;z-index:2}
+#chrome .panel{pointer-events:auto;background:var(--panel);border:1px solid var(--line);
+  backdrop-filter:blur(10px)}
+#chrome header{
+  position:absolute;top:0;left:0;right:0;padding:14px 14px 12px;
+  background:linear-gradient(180deg,rgba(2,8,14,.92),rgba(2,8,14,.35) 70%,transparent);
+  border:0}
+#chrome .kicker{font:800 9px/1 ui-sans-serif;letter-spacing:.22em;color:#ffb070}
+#chrome h1{font:800 13px/1.25 ui-sans-serif;letter-spacing:.08em;margin:6px 0 4px}
+#chrome .sub{font:600 10px/1.4 ui-sans-serif;color:var(--dim);letter-spacing:.04em}
+#chrome .res{display:flex;gap:12px;margin-top:10px;font:800 10px/1 ui-sans-serif;letter-spacing:.08em;color:#cfe6ff}
+#chrome .res span{opacity:.92}
+#chrome .res b{font-weight:800;color:#fff}
+#chrome .sides{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+#chrome .tag{font:800 9px/1 ui-sans-serif;letter-spacing:.14em;padding:5px 8px;border:1px solid var(--line)}
+#chrome .tag.nova{color:var(--cyan);border-color:#2a6288}
+#chrome .tag.dom{color:var(--red);border-color:#7a2e28}
+#chrome .dock{
+  position:absolute;left:12px;right:12px;bottom:14px;padding:12px 12px 11px;border-radius:14px}
+#chrome label{display:flex;justify-content:space-between;font:700 9px/1 ui-sans-serif;
+  letter-spacing:.16em;color:var(--dim);margin-bottom:8px}
+#chrome input[type=range]{width:100%;accent-color:var(--cyan)}
+#chrome .row{display:flex;gap:8px;margin-top:10px}
+#chrome button{
+  flex:1;border:1px solid var(--line);background:#0b1822;color:var(--ink);
+  font:800 9px/1 ui-sans-serif;letter-spacing:.14em;padding:10px 8px;border-radius:10px;cursor:pointer}
+#chrome button.on{border-color:#3a86b0;color:var(--cyan);background:#102838}
+#chrome .hint{margin-top:9px;font:600 9px/1.45 ui-sans-serif;color:#6d8aa0;letter-spacing:.03em}
+@media (max-width:430px){
+  #desk{padding:0}
+  #stage{width:100vw;height:100vh;border-radius:0;box-shadow:none}
+}

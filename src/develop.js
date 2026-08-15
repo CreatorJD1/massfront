@@ -73,7 +73,10 @@ function matsFromMatch(res){
     alloy  : Math.round((8+res.kills*0.004+res.built*0.5)*s*(1+t*0.14))+recovery.alloy,
     circuit: Math.round((3+res.kills*0.0016)*s*(1+t*0.12))+recovery.circuit,
     isotope: Math.round((res.win?2:0)+res.kills*0.0009*s*(1+t*0.10)),
-    relic  : (res.nests>0||res.win&&t>=4)? Math.round(s*(1+t*0.08)) : 0,
+    /* Xenobiology is the RIGHT to bank Relic Cores from hives. Ungated drops
+       made the node a displayed cost with no effect — you never needed it. */
+    relic  : (typeof devHas==='function'&&devHas('xeno')&&res.nests>0)
+              ? Math.round(s*(1+t*0.08)) : 0,
   };
 }
 
@@ -155,14 +158,42 @@ function devMissing(n){
   const data=n.data-(META.researchData||0); if(data>0) out.push(Math.ceil(data)+' Research Data');
   return out;
 }
-function devBuy(n){
-  if(devHas(n.id)) return;
-  if(!devAvail(n)){ toast('🔒 Requires '+n.req.map(r=>DEVTREE.find(x=>x.id===r).nm).join(', ')); return; }
-  if((META.researchData||0)<n.data||!matHas(n.cost)){ toast('Need '+devMissing(n).join(', ')); return; }
+function devBuy(n,silent){
+  if(!n||devHas(n.id)) return false;
+  if(typeof mfFactionTechPurchasable==='function'&&!mfFactionTechPurchasable(n.id)){
+    if(!silent) toast('AI DOSSIER — Brood evolution becomes researchable only when the faction is playable');
+    return false;
+  }
+  if(!devAvail(n)){ if(!silent) toast('🔒 Requires '+n.req.map(r=>DEVTREE.find(x=>x.id===r).nm).join(', ')); return false; }
+  if((META.researchData||0)<n.data||!matHas(n.cost)){ if(!silent) toast('Need '+devMissing(n).join(', ')); return false; }
   META.researchData-=n.data; matSpend(n.cost);
   devDone()[n.id]=1; metaSave();
-  toast('🔬 RESEARCHED — '+n.nm); sfx('level'); buzz(30);
-  renderDevelop(); renderMetaHead();
+  if(!silent){ toast('🔬 RESEARCHED — '+n.nm); sfx('level'); buzz(30); renderDevelop(); renderMetaHead(); }
+  return true;
+}
+/* The research queue is a spend plan, not a shopping list. After a match pays
+   Data and salvage, complete every queued node that is actually affordable so
+   the debrief → Development loop does not require a second trip to tap RESEARCH. */
+function devFlushQueue(){
+  const q=Array.isArray(META.resQueue)?META.resQueue.slice():[];
+  if(!q.length) return [];
+  const done=[];
+  const next=[];
+  for(const id of q){
+    const n=DEVTREE.find(x=>x.id===id);
+    if(!n||devHas(id)) continue;
+    if(devBuy(n,true)) done.push(n);
+    else next.push(id);
+  }
+  META.resQueue=next;
+  if(done.length){
+    metaSave();
+    toast('🔬 RESEARCH COMPLETE — '+done.map(n=>n.nm).join(', '));
+    if(typeof sfx==='function') sfx('level');
+    if(typeof renderDevelop==='function') renderDevelop();
+    if(typeof renderMetaHead==='function') renderMetaHead();
+  } else if(q.join('|')!==next.join('|')) metaSave();
+  return done;
 }
 function moduleSlots(){ return 1+(devHas('slot2')?1:0)+(devHas('slot3')?1:0); }
 function wearRate(){ return devHas('logistics')?0.75:1; }
@@ -405,7 +436,37 @@ function developRecord(res){
   for(const k in g) g[k]=Math.round(g[k]*y);
   matGrant(g);
   const broke=wearModules();
-  return {mats:g,recovery,broke};
+  /* metaGrant already banked Research Data. Flush now so queued nodes spend
+     the payout in this same debrief rather than sitting READY until tapped. */
+  const researched=typeof devFlushQueue==='function'?devFlushQueue():[];
+  return {mats:g,recovery,broke,researched};
 }
-function initDevelop(){ matBag(); devDone(); modOwned(); modEquipped(); renderDevelop(); }
+function initDevelop(){
+  matBag(); devDone(); modOwned(); modEquipped();
+  /* Cloud merge used to pick the career with more unused Data over the one
+     that had already spent it on nodes. Count ownership so research persists. */
+  if(typeof careerWeight==='function'&&!careerWeight._devProgress){
+    const _cw=careerWeight;
+    careerWeight=function(m){
+      let nodes=0, mats=0;
+      if(m&&m.res) for(const k in m.res) if(m.res[k]) nodes++;
+      if(m&&m.mats) for(const k in m.mats) mats+=(m.mats[k]|0);
+      return _cw(m)+nodes*80+mats*2;
+    };
+    careerWeight._devProgress=true;
+  }
+  renderDevelop();
+  /* Field Research Archives bank Data mid-match. Spend it into the queued
+     node immediately so the pickup is the unlock, not a number that waits. */
+  if(typeof applyCrate==='function'&&!applyCrate._devFlush){
+    const _ac=applyCrate;
+    applyCrate=function(k,x,y){
+      const before=META.researchData||0;
+      const r=_ac(k,x,y);
+      if((META.researchData||0)>before) devFlushQueue();
+      return r;
+    };
+    applyCrate._devFlush=true;
+  }
+}
 

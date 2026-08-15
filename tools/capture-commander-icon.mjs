@@ -14,7 +14,7 @@
      1. the player commander resolves to an icon at strategic zoom
      2. its icon is drawn LARGER than an ordinary unit's, not merely present
      3. no console errors                                                     */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
 const PORT = process.argv[2] || '8992';
@@ -22,7 +22,7 @@ const OUT = 'releases/commander-icon';
 const SPANS = [900, 1600, 2200, 2800, 3400];
 mkdirSync(OUT, { recursive: true });
 
-const browser = await chromium.launch({
+const browser = await launchPwBrowser({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: false,
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, hasTouch: true, deviceScaleFactor: 2 });

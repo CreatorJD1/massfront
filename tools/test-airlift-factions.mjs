@@ -1,6 +1,6 @@
 /* Buildable faction-carrier identity/render regression.
    Usage: node tools/test-airlift-factions.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {readFile,mkdir} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -19,8 +19,8 @@ const boot=await readFile(join(root,'boot.js'),'utf8');
 assert(boot.indexOf("'./src/airlift-factions.js'")>boot.indexOf("'./src/airlift.js'"),
   'boot airlift-factions load order is wrong');
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']});
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));

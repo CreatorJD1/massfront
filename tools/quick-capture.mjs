@@ -1,4 +1,5 @@
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { playwrightGpuLaunch, assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -9,13 +10,13 @@ const out=join(root,'.tmp');
 await mkdir(out,{recursive:true});
 const shot=join(out,'road-removal.png');
 
-const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser(playwrightGpuLaunch());
 try{
   const page=await browser.newPage({viewport:{width:412,height:915},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   const errors=[];page.on('pageerror',e=>errors.push(e.stack||e.message));
   page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  await assertHardwareGpu(page);
   await page.waitForTimeout(4000);
   await page.evaluate(()=>{
     try{META.settings.quality='cinematic';applyQualityPreset();}catch(e){}

@@ -444,7 +444,7 @@ function mdlTfcWalker(){
   cylX(t,2.70,0.72,-2.15,3.10,0.26,0.22,6,TWR_MACH,false);                // coaxial
   tubeX(t,5.85,0.72,-2.15,0.40,0.34,0.16,7,TWR_BORE);
   tfcStow(t,-3.10,3.20,0,2.60,1.00,17);
-  return {hull:m.build(),tur:t.build(),s:0.86,turH:14.75};
+  return {hull:m.build(),tur:t.build(),s:0.86,turH:14.75,muzzle:10.8};
 }
 
 /* ---------------------------------------------------------------------------
@@ -495,7 +495,7 @@ function mdlTfcArty(){
   for(const x of [6.40,10.60]) ringX(t,x,2.05,0,0.60,0.84,9,MET_L);
   t.box(-3.00,1.90,0,1.60,1.10,3.40,TWR_MACH);                            // breech block
   t.box(-3.00,3.00,0,1.20,0.16,2.40,TEAM_T);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.30};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.30,muzzle:15.0};
 }
 
 /* ---------------------------------------------------------------------------
@@ -551,7 +551,7 @@ function mdlTfcSiege(){
   for(const x of [7.20,12.60,16.20]) ringX(t,x,2.10,0,0.66,0.92,9,x>16?HOT:MET_L);
   t.box(-3.40,2.10,0,1.80,1.30,3.80,TWR_MACH);                            // breech
   t.box(-3.40,3.40,0,1.30,0.18,2.60,TEAM_T);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.05};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.05,muzzle:18.5};
 }
 
 /* ---------------------------------------------------------------------------
@@ -599,7 +599,7 @@ function mdlTfcAA(){
   t.bevelBox(-2.30,3.55,0,0.36,2.70,3.90,0.18,MET_L);
   t.box(-2.12,3.70,0,0.16,2.30,3.40,TEAM_T);
   t.box(-2.30,6.25,0,0.26,0.34,0.26,LAMP);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.00};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.00,muzzle:6.0,muzzleZ:1.30};
 }
 
 /* ---------------------------------------------------------------------------
@@ -649,7 +649,7 @@ function mdlTfcLance(){
   tubeX(t,14.10,2.45,0,0.52,0.40,0.19,8,TWR_BORE);
   for(const sd of [-1,1]) cylX(t,2.90,1.55,sd*0.95,8.20,0.20,0.17,6,MET_D,false);  // rails
   t.box(-2.60,2.90,0,1.30,0.18,2.30,TEAM_T);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.15};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.15,muzzle:14.6};
 }
 
 /* ---------------------------------------------------------------------------
@@ -705,7 +705,7 @@ function mdlTfcLauncher(){
   t.box(-0.20,3.56,0,5.20,0.20,0.70,TEAM_T);
   for(const sd of [-1,1]) t.box(-0.20,3.56,sd*2.55,5.20,0.20,0.60,sd>0?TEAM_A:TEAM_B);
   t.bevelBox(-3.40,3.10,0,1.30,2.60,3.80,0.30,MET_D);                     // reload gantry
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.35};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.35,muzzle:3.6,muzzleZ:1.65};
 }
 
 /* ---------------------------------------------------------------------------
@@ -749,7 +749,7 @@ function mdlTfcFlameTank(){
   tubeX(t,7.60,1.55,0,1.05,1.42,0.74,9,TWR_BORE);
   t.sphere(8.30,1.55,0,0.36,6,HOT,1,false);                               // pilot flame
   t.wedge(4.60,2.60,0,2.60,0.70,3.00,MET_L,Math.PI/2,true);               // heat shield
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.25};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.25,muzzle:8.3};
 }
 
 /* ---------------------------------------------------------------------------
@@ -1043,7 +1043,7 @@ function mdlTfcHeavy(){
   tubeX(t,6.70,0.95,-2.70,0.44,0.38,0.18,7,TWR_BORE);
   tfcStow(t,-3.70,3.95,0,3.00,1.10,23);
   t.box(-3.70,3.95,0,2.40,0.18,3.40,TEAM_T);
-  return {hull:m.build(),tur:t.build(),s:1.05,turH:6.85};
+  return {hull:m.build(),tur:t.build(),s:1.05,turH:6.85,muzzle:15.4};
 }
 
 /* ---------------------------------------------------------------------------
@@ -1078,16 +1078,26 @@ const TFC_NOVA_MAT=Object.freeze({
    each contract only assigns the authored procedural parts to the appropriate
    armor/machinery/glass hierarchy until a named BaseAO/NRE/mask package is
    baked for that exact model. Keeping this data beside the unit kit prevents a
-   faction-wide remap from making every Nova asset look like a Rhino. */
+   faction-wide remap from making every Nova asset look like a Rhino.
+
+   MAPS. Only the Rhino hull+turret is a published in-engine triplet
+   (`nova-rhino-v2`, `nova-rhino-v2-turret`, opt-in `?assetskin=rhino`). Every
+   other slot keeps maps:null even though generator templates of the same
+   filename exist on disk: binding those to a live unwrap paints the wrong
+   chart. Do not advertise a map name that is only a quadrant template. */
 const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
   0:Object.freeze({
-    id:'nova-striker-v2', source:'authored', maps:'nova-striker-v2',
+    id:'nova-striker-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.NOVA_COMPOSITE
     })
   }),
   1:Object.freeze({
     id:'nova-rhino-v2', source:'authored', maps:'nova-rhino-v2',
+    /* Hull and turret are separate InstMeshes (turret draws at M.turH). One
+       unwrap cannot drive both, so the turret has its own triplet. Bound from
+       this file after initFactionKits — models.js only skins hull. */
+    mapsTur:'nova-rhino-v2-turret', assetSkin:'rhino',
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.NOVA_CARBON,
       /* Ribbed appliqué instead of the faction default. Every Nova chassis was
@@ -1100,13 +1110,13 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   2:Object.freeze({
-    id:'nova-goliath-v2', source:'authored', maps:'nova-goliath-v2',
+    id:'nova-goliath-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.NOVA_COMPOSITE
     })
   }),
   3:Object.freeze({
-    id:'nova-thumper-v2', source:'authored', maps:'nova-thumper-v2',
+    id:'nova-thumper-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Open gun-mount rails and ready-rack framing stay carbon-dark, so the
          thin artillery tube reads against its carriage at RTS distance. */
@@ -1114,21 +1124,21 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   4:Object.freeze({
-    id:'nova-commander-v2', source:'authored', maps:'nova-commander-v2',
+    id:'nova-commander-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.NOVA_COMPOSITE,
       [MAT.GLASS]:MAT.HUD_CANOPY
     })
   }),
   5:Object.freeze({
-    id:'nova-wasp-v2', source:'authored', maps:'nova-wasp-v2',
+    id:'nova-wasp-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Formation lamps are navigation hardware, not cockpit/energy glow. */
       [MAT.LAMP]:MAT.UNIT_BEACON
     })
   }),
   6:Object.freeze({
-    id:'nova-longbow-v2', source:'authored', maps:'nova-longbow-v2',
+    id:'nova-longbow-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Capacitor collars are a deliberate charged-weapon landmark rather
          than the general Nova circuit treatment used by ordinary machinery. */
@@ -1136,7 +1146,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   7:Object.freeze({
-    id:'nova-hornet-v2', source:'authored', maps:'nova-hornet-v2',
+    id:'nova-hornet-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Hornet's common launcher chassis also drives Reaper/Cinder/Harbinger.
          The charged strip lives between tubes, leaving each bore physically
@@ -1146,14 +1156,14 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   8:Object.freeze({
-    id:'nova-titan-v2', source:'authored', maps:'nova-titan-v2',
+    id:'nova-titan-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.NOVA_COMPOSITE,
       [MAT.TWR_GLOW]:MAT.NOVA_CIRCUIT
     })
   }),
   9:Object.freeze({
-    id:'nova-pyro-v2', source:'authored', maps:'nova-pyro-v2',
+    id:'nova-pyro-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Heat landmarks stay localized to the projector: blue machinery must
          not become a second emissive system across the infantry body. */
@@ -1162,14 +1172,14 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   10:Object.freeze({
-    id:'nova-vulture-v2', source:'authored', maps:'nova-vulture-v2',
+    id:'nova-vulture-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_GLOW]:MAT.CHARGE_STRIP,
       [MAT.LAMP]:MAT.UNIT_BEACON
     })
   }),
   11:Object.freeze({
-    id:'nova-bulwark-v2', source:'authored', maps:'nova-bulwark-v2',
+    id:'nova-bulwark-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Its field masts are hardware with a contained circuit signature, not
          a vehicle painted with the generic weapon-charge treatment. */
@@ -1178,7 +1188,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   14:Object.freeze({
-    id:'nova-corvette-v2', source:'authored', maps:'nova-corvette-v2',
+    id:'nova-corvette-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.GLASS]:MAT.HUD_CANOPY,
       [MAT.LAMP]:MAT.UNIT_BEACON,
@@ -1186,7 +1196,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   15:Object.freeze({
-    id:'nova-dreadnought-v2', source:'authored', maps:'nova-dreadnought-v2',
+    id:'nova-dreadnought-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.GLASS]:MAT.HUD_CANOPY,
       [MAT.TRIM]:MAT.NOVA_CARBON,
@@ -1194,14 +1204,14 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   16:Object.freeze({
-    id:'nova-bombard-v2', source:'authored', maps:'nova-bombard-v2',
+    id:'nova-bombard-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.NOVA_CARBON,
       [MAT.TWR_GLOW]:MAT.CHARGE_STRIP
     })
   }),
   17:Object.freeze({
-    id:'nova-raptor-v2', source:'authored', maps:'nova-raptor-v2',
+    id:'nova-raptor-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.GLASS]:MAT.HUD_CANOPY,
       [MAT.LAMP]:MAT.UNIT_BEACON,
@@ -1209,14 +1219,14 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   18:Object.freeze({
-    id:'nova-scorcher-v2', source:'authored', maps:'nova-scorcher-v2',
+    id:'nova-scorcher-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.NOVA_COMPOSITE,
       [MAT.TWR_GLOW]:MAT.WEAPON_GLOW
     })
   }),
   19:Object.freeze({
-    id:'nova-constructor-v2', source:'authored', maps:'nova-constructor-v2',
+    id:'nova-constructor-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.GLASS]:MAT.HUD_CANOPY,
       [MAT.LAMP]:MAT.UNIT_BEACON,
@@ -1224,7 +1234,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   20:Object.freeze({
-    id:'nova-reaper-v2', source:'authored', maps:'nova-reaper-v2',
+    id:'nova-reaper-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Hornet, Reaper, Cinder and Harbinger are one mesh in four slots, so the
          SIX TUBES are the only surface that can separate them from above. The
@@ -1234,7 +1244,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   21:Object.freeze({
-    id:'nova-cinder-v2', source:'authored', maps:'nova-cinder-v2',
+    id:'nova-cinder-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Close support at 96 range: the rack is reloaded under fire and the
          bores are still lit when you see them — the exact opposite read to the
@@ -1243,7 +1253,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   22:Object.freeze({
-    id:'nova-lancer-v2', source:'authored', maps:'nova-lancer-v2',
+    id:'nova-lancer-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Shares mdlTfcLance with the Longbow. The Longbow is a beam and its
          optic stays cold; a gauss lance banks its charge in the capacitor
@@ -1256,7 +1266,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   23:Object.freeze({
-    id:'nova-resonator-v2', source:'authored', maps:'nova-resonator-v2',
+    id:'nova-resonator-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The builder's own word for the widening collars is "acoustic horn".
          Brass says pressure wave; machined servo steel says gun barrel, which
@@ -1265,7 +1275,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   24:Object.freeze({
-    id:'nova-warden-v2', source:'authored', maps:'nova-warden-v2',
+    id:'nova-warden-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* UNARMED, so the only TWR_BORE on the hull is tfcExhaust()'s outlet.
          Left generic it reads as a weapon throat on a repair vehicle. */
@@ -1274,7 +1284,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   25:Object.freeze({
-    id:'nova-kestrel-v2', source:'authored', maps:'nova-kestrel-v2',
+    id:'nova-kestrel-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Raw id, not the obvious one: the GLASS palette entry resolves through
          matResolve('glass.canopy') to CURTAIN_GLASS, so a canopy contract has
@@ -1284,7 +1294,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   26:Object.freeze({
-    id:'nova-basilisk-v2', source:'authored', maps:'nova-basilisk-v2',
+    id:'nova-basilisk-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The largest tracked hull the Command fields and the only one whose deck
          is wide enough to carry real walkways — so its bright trim becomes deck
@@ -1294,7 +1304,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   27:Object.freeze({
-    id:'nova-harbinger-v2', source:'authored', maps:'nova-harbinger-v2',
+    id:'nova-harbinger-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Siege battery at size 24 — half again the Hornet from the same mesh.
          Ribbed appliqué is what still reads at that scale, and putting it on
@@ -1303,7 +1313,7 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   }),
   32:Object.freeze({
-    id:'nova-prospector-v2', source:'authored', maps:'nova-prospector-v2',
+    id:'nova-prospector-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The drill housing is the largest single feature on the model and it
          turns. Hazard banding is what a works vehicle puts on that, and it is
@@ -1394,7 +1404,7 @@ const UNIT_MDL_NOVA={
        NOVA_*_ARM emits it directly instead of going through PLATE. */
 const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
   'mex':Object.freeze({
-    id:'nova-mex-v2', source:'authored', maps:'nova-mex-v2',
+    id:'nova-mex-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       /* The four intake collars and the throat ring are the moving parts of an
@@ -1403,7 +1413,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'pgen':Object.freeze({
-    id:'nova-pgen-v2', source:'authored', maps:'nova-pgen-v2',
+    id:'nova-pgen-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       /* TWR_MACH here is only ventBank()'s fins on the two outboard radiator
@@ -1412,7 +1422,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'fac':Object.freeze({
-    id:'nova-fac-v2', source:'authored', maps:'nova-fac-v2',
+    id:'nova-fac-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       /* A 43x42 production shed is a building, not a chassis: precast bays on
@@ -1423,7 +1433,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'turret':Object.freeze({
-    id:'nova-turret-v2', source:'authored', maps:'nova-turret-v2',
+    id:'nova-turret-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* TWR_COAT on the Sentinel is exactly the cooling cheeks and the Mk3
          reactor crown. A laser emplacement is a heat problem with a gun on it. */
@@ -1431,7 +1441,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'bunker':Object.freeze({
-    id:'nova-bunker-v2', source:'authored', maps:'nova-bunker-v2',
+    id:'nova-bunker-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Ribbed appliqué is the Command's hardened-emplacement language (it is
          also what the Rhino wears). Keyed on NOVA_COMPOSITE it lands on the
@@ -1439,8 +1449,15 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
       [MAT.NOVA_COMPOSITE]:MAT.ARMR_RIB
     })
   }),
+  'nest':Object.freeze({
+    id:'nova-nest-v2', source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      [MAT.NOVA_COMPOSITE]:MAT.ARMR_RIB
+    })
+  }),
   'sgen':Object.freeze({
-    id:'nova-sgen-v2', source:'authored', maps:'nova-sgen-v2',
+    id:'nova-sgen-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The barrier's drum is the part an attacker shoots at, so it joins the
          hardened family. The projector dome stays NOVA_CIRCUIT to match the
@@ -1449,7 +1466,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'tgate':Object.freeze({
-    id:'nova-tgate-v2', source:'authored', maps:'nova-tgate-v2',
+    id:'nova-tgate-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* This one is a gantry over a slab, and both were reading as tank hull:
          MET arrives as PLATE (arches and the 66x58 overhead crane deck), CONC_D
@@ -1460,7 +1477,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'harbor':Object.freeze({
-    id:'nova-harbor-v2', source:'authored', maps:'nova-harbor-v2',
+    id:'nova-harbor-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       /* NOVA_HARBOR_DECK is named a deck and behaves like one, but resolves to
@@ -1469,24 +1486,27 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'seafort':Object.freeze({
-    id:'nova-seafort-v2', source:'authored', maps:'nova-seafort-v2',
+    id:'nova-seafort-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
-      /* Inert until seafort gets a builder of its own: BLD_MDL has no 'seafort'
-         key, and bldMeshFor() draws it with the Bastion pair (models.js:4154),
-         so the Bastion's contract is what reaches the screen today. Recorded
-         for when it does: a FLOATING battery stands on a pontoon deck, which is
-         the one thing that should never read as poured ground. */
+      /* Live pontoon deck: a FLOATING battery must never read as poured ground. */
       [MAT.TWR_PAD]:MAT.DECK_PLATE
     })
   }),
+  'stormcaller':Object.freeze({
+    id:'nova-stormcaller-v2', source:'semantic-bake', maps:null,
+    surfaces:Object.freeze({
+      [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
+      [MAT.TWR_GLOW]:MAT.CHARGE_STRIP
+    })
+  }),
   'bastion':Object.freeze({
-    id:'nova-bastion-v2', source:'authored', maps:'nova-bastion-v2',
+    id:'nova-bastion-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.ARMR_RIB
     })
   }),
   'techlab':Object.freeze({
-    id:'nova-techlab-v2', source:'authored', maps:'nova-techlab-v2',
+    id:'nova-techlab-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       /* One 31x26 roof deck, and research is where the faction's clean-tech
@@ -1495,7 +1515,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'aatower':Object.freeze({
-    id:'nova-aatower-v2', source:'authored', maps:'nova-aatower-v2',
+    id:'nova-aatower-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The Skyguard's tracking dome is built from the GLASS palette entry,
          which lands here as CURTAIN_GLASS. It is a radome, not a window. */
@@ -1503,7 +1523,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'airfield':Object.freeze({
-    id:'nova-airfield-v2', source:'authored', maps:'nova-airfield-v2',
+    id:'nova-airfield-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       /* NOVA_AIR_DECK resolves to MAT.ROOF, so the 74x25 RUNWAY has been
@@ -1514,7 +1534,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'uplink':Object.freeze({
-    id:'nova-uplink-v2', source:'authored', maps:'nova-uplink-v2',
+    id:'nova-uplink-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* NOVA_UPLINK_ARM is the dish ring and the electronics-bunker cap and
          nothing else. The dish is the entire asset; solid composite on it was
@@ -1523,17 +1543,21 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'hq':Object.freeze({
-    id:'nova-hq-v2', source:'authored', maps:'nova-hq-v2',
+    id:'nova-hq-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
-      /* The HQ is the only Nova structure with a real glazing band, and it is
-         the player's visual anchor. Mirrored curtain wall is the cheapest thing
-         that makes it read as a headquarters rather than a large shed. */
-      [MAT.CURTAIN_GLASS]:MAT.MIRROR_TINT
+      /* MIRROR_TINT is a metal tile. Rewriting the glazing band to it made
+         every pane a chrome bevel — white crush + leaked emis, not windows.
+         Cool office glass keeps the band and the lights. */
+      [MAT.CURTAIN_GLASS]:MAT.BUILD_OFFICE_COOL,
+      /* Landmark glowOk only passes TWR_GLOW (22). The faction default
+         TWR_GLOW->NOVA_CIRCUIT left every roof lamp dark. Identity remap
+         keeps the points; mdlHQ no longer draws a rail in this id. */
+      [MAT.TWR_GLOW]:MAT.TWR_GLOW
     })
   }),
   'hellstorm':Object.freeze({
-    id:'nova-hellstorm-v2', source:'authored', maps:'nova-hellstorm-v2',
+    id:'nova-hellstorm-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* TWR_MACH is the rotary cluster's four-to-eight barrels and its race.
          Gun metal is what tells a rotary apart from the beam towers beside it. */
@@ -1541,7 +1565,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'arc':Object.freeze({
-    id:'nova-arc-v2', source:'authored', maps:'nova-arc-v2',
+    id:'nova-arc-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* A Tesla coil is wound, and TWR_COAT here is precisely the stacked
          toroid steps and the three outer risers. Copper, then, before it is
@@ -1550,7 +1574,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'rail':Object.freeze({
-    id:'nova-rail-v2', source:'authored', maps:'nova-rail-v2',
+    id:'nova-rail-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* NOVA_RAIL_GLOW resolves to SYN_CONDUIT, and it is used for one thing:
          the energized coil faces along the twin accelerator rails. A rail
@@ -1559,13 +1583,13 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'nova':Object.freeze({
-    id:'nova-nova-v2', source:'authored', maps:'nova-nova-v2',
+    id:'nova-nova-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.ARMR_RIB
     })
   }),
   'minelaser':Object.freeze({
-    id:'nova-minelaser-v2', source:'authored', maps:'nova-minelaser-v2',
+    id:'nova-minelaser-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Sustained beam, not a data link: its status strips and recoil guides
          should read as heat coming off a weapon. */
@@ -1573,7 +1597,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'missilebastion':Object.freeze({
-    id:'nova-missilebastion-v2', source:'authored', maps:'nova-missilebastion-v2',
+    id:'nova-missilebastion-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The rotating feed and fire-control block is an equipment house bolted
          to a launcher, and it is the mass that separates this from the NOVA
@@ -1582,13 +1606,13 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'plasma':Object.freeze({
-    id:'nova-plasma-v2', source:'authored', maps:'nova-plasma-v2',
+    id:'nova-plasma-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_GLOW]:MAT.PLASMA_JET
     })
   }),
   'wall':Object.freeze({
-    id:'nova-wall-v2', source:'authored', maps:'nova-wall-v2',
+    id:'nova-wall-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The rampart is already CONC and stays that way. Only the two buttress
          posts are MET_D, and armour on them is what makes a wall line read as
@@ -1597,7 +1621,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'gate':Object.freeze({
-    id:'nova-gate-v2', source:'authored', maps:'nova-gate-v2',
+    id:'nova-gate-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The curtain is a held field across the opening. A circuit pattern on a
          16x15 slab reads as a printed panel; a charge strip reads as energy. */
@@ -1605,7 +1629,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'geo':Object.freeze({
-    id:'world-geo-v2', source:'authored', maps:'world-geo-v2',
+    id:'world-geo-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       /* NOVA_GEO_TRIM carries both condenser vent banks. Louvres are what make
@@ -1614,7 +1638,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'silo':Object.freeze({
-    id:'world-silo-v2', source:'authored', maps:'world-silo-v2',
+    id:'world-silo-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Three 20-high storage cylinders. Precast concrete is both what bulk
          storage is actually made of and what ties the silo to the factory shed
@@ -1623,7 +1647,7 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     })
   }),
   'fab':Object.freeze({
-    id:'world-fab-v2', source:'authored', maps:'world-fab-v2',
+    id:'world-fab-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
       [MAT.ROOF]:MAT.HVAC_ROOF
@@ -1658,3 +1682,110 @@ for (const k in TFC_NOVA_BLD_BESPOKE_PACKS) {
   }
 }
 
+/* Turret skins. initFactionKits only calls mfAssetSkin on hull; this file
+   must not edit that owner, so we take over after it returns. ?assetskin=rhino
+   is the pack token mfPackMaps already honours, but mfAssetSkinEnabled only
+   tested =1 — extend that gate here rather than in mesh.js. */
+function tfcNovaBindTurretSkins(){
+  if(typeof mfAssetSkinEnabled!=='function'||!mfAssetSkinEnabled()) return;
+  if(typeof mfAssetSkin!=='function'||typeof FAC_MESH==='undefined'||!FAC_MESH.nova) return;
+  let q='';
+  try{ q=new URLSearchParams(location.search).get('assetskin')||''; }catch(e){ return; }
+  for(const slot in TFC_NOVA_BESPOKE_PACKS){
+    const pack=TFC_NOVA_BESPOKE_PACKS[slot];
+    if(!pack||!pack.mapsTur) continue;
+    if(q!=='1'&&q!==pack.assetSkin) continue;
+    const M=FAC_MESH.nova[slot];
+    if(M&&M.tur) mfAssetSkin(gl,M.tur,pack.mapsTur);
+  }
+}
+if(typeof mfAssetSkinEnabled==='function'){
+  const _tfcSkinOn=mfAssetSkinEnabled;
+  mfAssetSkinEnabled=function(){
+    try{ if((new URLSearchParams(location.search).get('assetskin')||'')==='rhino') return true; }catch(e){}
+    return _tfcSkinOn();
+  };
+}
+/* Per-commander kit meshes. FAC_MESH caches one hull per TYPES slot, so a
+   global material swap or a FAC_MESH.nova[4] replace would recolour every
+   type-4 on the field — including an enemy Kai when the player picked Holt.
+   Same takeover as the Rhino turret skin: models.js stays the owner, we wrap
+   initFactionKits and register extras keyed by commander id. Canonical kits
+   (Kai / Vex / Renn) keep the faction hull; only silhouette extras get their
+   own InstMesh. Additive geometry — we cannot delete the stock arm cannons
+   without editing mdlCommander. */
+const COMMANDER_KIT_MESH={};
+function mfCdrMergeGeo(a,b){
+  if(!a) return b;
+  if(!b||!b.v||!b.v.length) return a;
+  const V=VFLOATS, nA=a.v.length/V;
+  if(nA+(b.v.length/V)>65535)
+    console.warn('commander kit merge exceeds Uint16 indices');
+  const v=new Float32Array(a.v.length+b.v.length);
+  v.set(a.v,0); v.set(b.v,a.v.length);
+  const i=new Uint16Array(a.i.length+b.i.length);
+  i.set(a.i,0);
+  for(let k=0;k<b.i.length;k++) i[a.i.length+k]=b.i[k]+nA;
+  return {v,i,count:i.length,skel:a.skel,bones:a.bones,assetUV:a.assetUV||null};
+}
+function mfCdrKitInst(baseFn,decorate,surfacePass,pack){
+  const g=baseFn();
+  if(decorate){
+    const m=MB();
+    decorate(m);
+    g.hull=mfCdrMergeGeo(g.hull,m.build());
+  }
+  if(surfacePass) surfacePass(g.hull,pack||null);
+  return {hull:new InstMesh(gl,g.hull,12),tur:g.tur?new InstMesh(gl,g.tur,12):null,s:g.s||1,turH:g.turH||0,muzzle:g.muzzle||0,muzzleZ:g.muzzleZ||0};
+}
+function commanderKitMeshFor(id){
+  const k=id||(typeof playerCommanderId!=='undefined'?playerCommanderId:null);
+  return (k&&COMMANDER_KIT_MESH[k])||null;
+}
+function commanderKitMeshFlush(){
+  for(const k in COMMANDER_KIT_MESH){
+    const M=COMMANDER_KIT_MESH[k]; if(!M||!M.hull) continue;
+    M.hull.flush(gl); if(M.tur) M.tur.flush(gl);
+  }
+}
+function mfCdrDecorateHolt(m){
+  /* Engineer crane. Mast + forward boom break the backpack roofline; cargo
+     crates and welder heads are the weapon-mesh read for Arc Welder. */
+  m.bevelBox(-4.2,18.4,0,2.8,4.4,3.4,0.4,MET_D);
+  m.cyl(-4.2,22.8,0,0.78,0.58,11.2,10,MET);
+  m.box(2.2,33.6,0,13.6,0.92,0.92,MET_L);
+  m.bevelBox(9.2,32.6,0,2.4,2.2,2.0,0.32,MET_D);
+  m.cyl(10.2,31.2,0,0.58,0.20,2.4,8,ENERGY);
+  hydraulic(m,-3.2,22.2,0,11.0,0.30,MET_L,0);
+  for(const sd of [-1,1]){
+    m.bevelBox(-5.0,16.0,sd*2.6,2.6,2.4,2.4,0.32,TEAM_A);
+    m.box(8.8,13.6,sd*6.6,1.8,1.5,1.5,ENERGY);
+    cylX(m,9.6,13.6,sd*6.6,1.6,0.38,0.16,8,ENERGY,false);
+  }
+}
+function mfCdrDecorateVale(m){
+  /* Spotter rail past the stock muzzle collars, plus a scout dish. */
+  for(const sd of [-1,1]){
+    cylX(m,9.0,13.6,sd*6.6,8.8,0.44,0.30,8,DARK,false);
+    tubeX(m,17.2,13.6,sd*6.6,1.1,0.52,0.22,8,ENERGY);
+    m.box(12.8,13.6,sd*6.6,1.4,0.95,0.95,MET_L);
+  }
+  m.cyl(1.4,25.4,0,0.24,0.18,5.0,6,MET_L);
+  m.cyl(1.4,30.6,0,2.8,0.58,0.46,12,TEAM_A);
+  m.ring(1.4,30.8,0,1.5,3.0,14,ENERGY);
+  sensorMast(m,2.8,25.2,-2.2,3.6,MET_L);
+}
+function tfcNovaBindCommanderKits(){
+  if(typeof gl==='undefined'||!gl) return;
+  const pack=TFC_NOVA_BESPOKE_PACKS[4];
+  COMMANDER_KIT_MESH.nova_holt=mfCdrKitInst(mdlCommander,mfCdrDecorateHolt,tfcNovaSurfacePass,pack);
+  COMMANDER_KIT_MESH.nova_vale=mfCdrKitInst(mdlCommander,mfCdrDecorateVale,tfcNovaSurfacePass,pack);
+}
+if(typeof initFactionKits==='function'){
+  const _tfcInitKits=initFactionKits;
+  initFactionKits=function(){
+    _tfcInitKits.apply(this,arguments);
+    tfcNovaBindTurretSkins();
+    tfcNovaBindCommanderKits();
+  };
+}

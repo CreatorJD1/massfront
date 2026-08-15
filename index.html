@@ -2,25 +2,33 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+<!-- viewport-fit=cover is what makes env(safe-area-inset-*) report anything at
+     all. Page zoom is locked: this is a fullscreen WebGL RTS, and pinch / Ctrl+
+     wheel on the HUD was scaling the DOM instead of the ortho camera. Game
+     zoom lives on canvas#gl (input.js). Double-tap zoom is also suppressed
+     per-surface with touch-action. interactive-widget=resizes-content: the
+     default resizes-visual leaves the layout viewport at full height when the
+     on-screen keyboard opens, so a bottom-anchored text field (profile name,
+     the account portal) ends up behind the keyboard with nothing to scroll. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MASSFRONT">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#060c16">
 <meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.31">
-  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.31">
-  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.31">
-  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.31">
-  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.31">
-  <link rel="stylesheet" href="./src/styles/ui.css?v=1.33.31">
-  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.31">
-  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.31">
-  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.31">
-  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.31">
-  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.31">
-  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.31">
+<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.37">
+  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.37">
+  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.37">
+  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.37">
+  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.37">
+  <link rel="stylesheet" href="./src/styles/ui.css?v=1.33.37">
+  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.37">
+  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.37">
+  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.37">
+  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.37">
+  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.37">
+  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.37">
 <style>
 /* CRITICAL — inline so it holds on the FIRST painted frame even if the linked
    intro.css above is slow or fails. The launch reveal (src/intro.js, z-index 950)
@@ -78,7 +86,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 <div id="infMeter"></div>
 <div id="goalBar"></div>
 
-<div id="minimapWrap"><canvas id="minimap" width="132" height="132"></canvas></div>
+<div id="minimapWrap"><canvas id="minimap" width="256" height="256"></canvas></div>
 
 <div id="selInfo"></div>
 
@@ -105,12 +113,13 @@ body:not(.mfIntroDone) .overlay{display:none!important}
     <button class="cbtn" id="clearBtn"><span class="em" data-icon="stop">✕</span><span>Clear</span></button>
   </div>
   <button id="deployBtn">⚓ &nbsp;DEPLOY BASE HERE</button>
-  <div class="btnrow" id="grpRow" style="display:none">
+  <div class="btnrow" id="grpRow" style="display:none" role="group" aria-label="Platoons">
+    <span class="pltLabel">PLATOONS</span>
+    <button type="button" class="cbtn grpBtn" id="grpBtn1" aria-label="Platoon 1"><span class="pId">1</span><b id="grp1N">—</b></button>
+    <button type="button" class="cbtn grpBtn" id="grpBtn2" aria-label="Platoon 2"><span class="pId">2</span><b id="grp2N">—</b></button>
+    <button type="button" class="cbtn grpBtn" id="grpBtn3" aria-label="Platoon 3"><span class="pId">3</span><b id="grp3N">—</b></button>
+    <button type="button" class="cbtn grpBtn" id="grpBtn4" aria-label="Platoon 4"><span class="pId">4</span><b id="grp4N">—</b></button>
     <button class="cbtn" id="modeBtn" style="display:none"><span class="em" id="modeEm">▸</span><span id="modeNm">Mobile</span></button>
-    <button class="cbtn grpBtn" id="grpBtn1"><span class="pId">P1</span><span class="pMeta"><b id="grp1N">—</b><i id="grp1F">⋯</i></span></button>
-    <button class="cbtn grpBtn" id="grpBtn2"><span class="pId">P2</span><span class="pMeta"><b id="grp2N">—</b><i id="grp2F">⋯</i></span></button>
-    <button class="cbtn grpBtn" id="grpBtn3"><span class="pId">P3</span><span class="pMeta"><b id="grp3N">—</b><i id="grp3F">⋯</i></span></button>
-    <button class="cbtn grpBtn" id="grpBtn4"><span class="pId">P4</span><span class="pMeta"><b id="grp4N">—</b><i id="grp4F">⋯</i></span></button>
   </div>
   <div class="btnrow" id="hotSlots" role="group" aria-label="Actions for the selected units" style="display:none"></div>
   <!-- Hero/abilities source of truth. The contextual ABILITIES deck mirrors
@@ -313,6 +322,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
     <div class="secLbl">ENEMY FACTION</div>
     <div class="optRow optGrid" id="facRow">
       <button class="fbtn dbtn on" data-f="random">🎲 Random</button>
+      <button class="fbtn dbtn" data-f="nova">◆ Nova</button>
       <button class="fbtn dbtn" data-f="legion">🔺 Legion</button>
       <button class="fbtn dbtn" data-f="syndicate">🜁 Syndicate</button>
       <button class="fbtn dbtn" data-f="horde">🐛 Horde</button>
@@ -380,7 +390,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 </div>
 
 <div class="overlay" id="devScr">
-  <h2 style="color:#8be8ff;letter-spacing:.24em;font-size:19px;font-family:var(--fT);text-shadow:0 0 14px rgba(65,200,255,.5)">🔬 DEVELOPMENT</h2>
+  <h2 style="color:#8be8ff;letter-spacing:.24em;font-size:19px;font-family:var(--fT);text-shadow:0 0 14px rgba(65,200,255,.5)">🔬 RESEARCH</h2>
   <div id="matRow"></div>
   <div class="tabRow" id="devTabs" style="width:min(94vw,402px);margin:8px 0 0"></div>
   <div class="opsScroll"><div id="devBody"></div></div>
@@ -419,7 +429,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 
 <div class="overlay" id="dailyScr">
   <div class="subMenuHead">
-    <h2>📋 DAILY ORDERS</h2>
+    <h2>📋 CONTRACTS</h2>
     <span>Objectives · claimable rewards · active field boosters</span>
   </div>
   <div class="screenTabs twoTabs" id="dailyTabs" role="tablist" aria-label="Order categories">
@@ -447,7 +457,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
        behind an inline display:none — so a player who tapped Dossier, or who
        followed Operations' new "read the long-form arcs in the Dossier"
        pointer, landed on an empty screen. One purpose, so no tab row. -->
-  <h2 style="color:#8be8ff;letter-spacing:.24em;font-size:19px;font-family:var(--fT);text-shadow:0 0 14px rgba(65,200,255,.5)">📖 FACTION DOSSIER</h2>
+  <h2 style="color:#8be8ff;letter-spacing:.24em;font-size:19px;font-family:var(--fT);text-shadow:0 0 14px rgba(65,200,255,.5)">📖 INTEL</h2>
   <div class="opsScroll" id="dossScroll">
     <div id="codexList"></div>
   </div>
@@ -547,7 +557,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 
 <div class="overlay" id="profileScr">
   <div class="subMenuHead">
-    <h2>👤 PROFILE</h2>
+    <h2>👤 CAREER</h2>
     <span>Career · account · portable save transfer</span>
   </div>
   <div class="screenTabs" id="profileTabs" role="tablist" aria-label="Profile categories">
@@ -559,9 +569,10 @@ body:not(.mfIntroDone) .overlay{display:none!important}
   <div class="profileScroll">
   <section class="profilePane mfTabPanel" id="profilePane-career" role="tabpanel" aria-labelledby="profileTab-career" data-mf-panel="career">
     <div id="profStats"></div>
-    <!-- Moved from Operations: twelve boxes recording the highest threat you
-         have beaten each map/faction pair at. A checklist of what you HAVE
-         done is a career record, and Operations is for starting matches. -->
+    <!-- Moved from Operations: 192 boxes (48 homeworld sites × The Four)
+         recording the highest threat you have beaten each map/faction pair
+         at. A checklist of what you HAVE done is a career record, and
+         Operations is for starting matches. -->
     <div class="secLbl">MASTERY</div>
     <div id="masteryGrid"></div>
   </section>
@@ -637,8 +648,8 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 </div>
 
 <div class="overlay" id="armory">
-  <h2>⬡ ARMORY</h2>
-  <div class="armorySub">Upgrades · equipment · mission supplies</div>
+  <h2>⬡ ARSENAL</h2>
+  <div class="armorySub">Market · account vault · mission loadout</div>
   <div id="storeList"></div>
   <div class="setupFoot"><button class="mbtn alt" id="armoryBack">← &nbsp;BACK</button></div>
 </div>
@@ -657,7 +668,10 @@ body:not(.mfIntroDone) .overlay{display:none!important}
     <canvas id="goChart" width="330" height="120"></canvas>
     <div id="goRewards"></div>
   </div>
-  <div class="goResultFoot"><button class="mbtn" id="restartBtn">✓ &nbsp;CONTINUE</button></div>
+  <div class="goResultFoot">
+    <button class="mbtn alt" id="restartBtn">← &nbsp;RETURN TO MENU</button>
+    <button class="mbtn" id="goContinueBtn" style="display:none">▶ &nbsp;CONTINUE</button>
+  </div>
 </div>
 
 <div class="overlay" id="levelUp">

@@ -5,7 +5,8 @@
    Usage:
      node tools/capture-live-roster.mjs [base URL]
 */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {access, mkdir, rm} from 'node:fs/promises';
 import {join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -22,10 +23,10 @@ await mkdir(releases,{recursive:true});
 
 const safe=s=>String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const browser=await chromium.launch({
+const browser=await launchPwBrowser({
   headless:true,
   executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']
 });
 
 try{
@@ -38,6 +39,7 @@ try{
   const pageErrors=[];
   page.on('pageerror',e=>pageErrors.push(e.message));
   await page.goto(base+'/?rosterCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof TYPES!=='undefined'&&typeof UNIT_MESH!=='undefined'&&
     typeof BLD_MESH!=='undefined'&&typeof render==='function',{timeout:30000});
   await page.waitForTimeout(1200);

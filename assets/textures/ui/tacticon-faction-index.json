@@ -1,0 +1,339 @@
+{
+ "cell": 64,
+ "grid": 16,
+ "stride": 24,
+ "facOrder": [
+  "nova",
+  "legion",
+  "syndicate",
+  "horde"
+ ],
+ "roleOrder": [
+  "u_inf",
+  "u_veh",
+  "u_at",
+  "u_aoe",
+  "u_art",
+  "u_aa",
+  "u_air",
+  "u_nav",
+  "u_sup",
+  "u_exp",
+  "u_hero",
+  "b_eco",
+  "b_prod",
+  "b_nav",
+  "b_def",
+  "b_tech",
+  "b_wall",
+  "b_sup",
+  "b_sup2"
+ ],
+ "factions": {
+  "nova": {
+   "base": 0,
+   "cells": {
+    "u_inf": {
+     "cell": 0,
+     "label": "infantry"
+    },
+    "u_veh": {
+     "cell": 1,
+     "label": "vehicle"
+    },
+    "u_at": {
+     "cell": 2,
+     "label": "anti_tank"
+    },
+    "u_aoe": {
+     "cell": 3,
+     "label": "missile"
+    },
+    "u_art": {
+     "cell": 4,
+     "label": "artillery"
+    },
+    "u_aa": {
+     "cell": 5,
+     "label": "anti_air"
+    },
+    "u_air": {
+     "cell": 6,
+     "label": "air_unit"
+    },
+    "u_sup": {
+     "cell": 8,
+     "label": "support"
+    },
+    "u_exp": {
+     "cell": 9,
+     "label": "elite"
+    },
+    "u_hero": {
+     "cell": 10,
+     "label": "hero"
+    },
+    "b_eco": {
+     "cell": 11,
+     "label": "economy"
+    },
+    "b_prod": {
+     "cell": 12,
+     "label": "engineer"
+    },
+    "b_def": {
+     "cell": 14,
+     "label": "defense_tower"
+    },
+    "b_tech": {
+     "cell": 15,
+     "label": "tech_lab"
+    },
+    "b_wall": {
+     "cell": 16,
+     "label": "wall"
+    },
+    "b_sup": {
+     "cell": 17,
+     "label": "radar"
+    },
+    "b_sup2": {
+     "cell": 18,
+     "label": "orbital"
+    }
+   },
+   "procedural": [
+    "u_nav",
+    "b_nav"
+   ]
+  },
+  "legion": {
+   "base": 24,
+   "cells": {
+    "u_inf": {
+     "cell": 24,
+     "label": "infantry"
+    },
+    "u_veh": {
+     "cell": 25,
+     "label": "main_battle_tank"
+    },
+    "u_at": {
+     "cell": 26,
+     "label": "heavy"
+    },
+    "u_aoe": {
+     "cell": 27,
+     "label": "assault"
+    },
+    "u_art": {
+     "cell": 28,
+     "label": "artillery"
+    },
+    "u_aa": {
+     "cell": 29,
+     "label": "anti_air"
+    },
+    "u_air": {
+     "cell": 30,
+     "label": "fighter"
+    },
+    "u_sup": {
+     "cell": 32,
+     "label": "engineer"
+    },
+    "u_exp": {
+     "cell": 33,
+     "label": "mech"
+    },
+    "u_hero": {
+     "cell": 34,
+     "label": "commander"
+    },
+    "b_eco": {
+     "cell": 35,
+     "label": "power_plant"
+    },
+    "b_prod": {
+     "cell": 36,
+     "label": "factory"
+    },
+    "b_def": {
+     "cell": 38,
+     "label": "watchtower"
+    },
+    "b_tech": {
+     "cell": 39,
+     "label": "tech_lab"
+    },
+    "b_sup": {
+     "cell": 41,
+     "label": "headquarters"
+    },
+    "b_sup2": {
+     "cell": 42,
+     "label": "ion_cannon"
+    }
+   },
+   "procedural": [
+    "u_nav",
+    "b_nav",
+    "b_wall"
+   ]
+  },
+  "syndicate": {
+   "base": 48,
+   "cells": {
+    "u_inf": {
+     "cell": 48,
+     "label": "infantry"
+    },
+    "u_veh": {
+     "cell": 49,
+     "label": "light_vehicle"
+    },
+    "u_at": {
+     "cell": 50,
+     "label": "anti_armor"
+    },
+    "u_aoe": {
+     "cell": 51,
+     "label": "emp"
+    },
+    "u_art": {
+     "cell": 52,
+     "label": "artillery"
+    },
+    "u_aa": {
+     "cell": 53,
+     "label": "missile_drone"
+    },
+    "u_air": {
+     "cell": 54,
+     "label": "air_unit"
+    },
+    "u_sup": {
+     "cell": 56,
+     "label": "engineer"
+    },
+    "u_exp": {
+     "cell": 57,
+     "label": "elite"
+    },
+    "u_hero": {
+     "cell": 58,
+     "label": "boss"
+    },
+    "b_eco": {
+     "cell": 59,
+     "label": "economy"
+    },
+    "b_prod": {
+     "cell": 60,
+     "label": "market"
+    },
+    "b_def": {
+     "cell": 62,
+     "label": "shield"
+    },
+    "b_tech": {
+     "cell": 63,
+     "label": "tech_lab"
+    },
+    "b_wall": {
+     "cell": 64,
+     "label": "wall"
+    },
+    "b_sup": {
+     "cell": 65,
+     "label": "data_relay"
+    },
+    "b_sup2": {
+     "cell": 66,
+     "label": "satellite"
+    }
+   },
+   "procedural": [
+    "u_nav",
+    "b_nav"
+   ]
+  },
+  "horde": {
+   "base": 72,
+   "cells": {
+    "u_inf": {
+     "cell": 72,
+     "label": "swarmer"
+    },
+    "u_veh": {
+     "cell": 73,
+     "label": "brute"
+    },
+    "u_at": {
+     "cell": 74,
+     "label": "behemoth"
+    },
+    "u_aoe": {
+     "cell": 75,
+     "label": "spitter"
+    },
+    "u_art": {
+     "cell": 76,
+     "label": "siege_creature"
+    },
+    "u_aa": {
+     "cell": 77,
+     "label": "spore_cloud"
+    },
+    "u_air": {
+     "cell": 78,
+     "label": "flyer"
+    },
+    "u_sup": {
+     "cell": 80,
+     "label": "evolver"
+    },
+    "u_exp": {
+     "cell": 81,
+     "label": "monster"
+    },
+    "u_hero": {
+     "cell": 82,
+     "label": "brood_lord"
+    },
+    "b_eco": {
+     "cell": 83,
+     "label": "biomass"
+    },
+    "b_prod": {
+     "cell": 84,
+     "label": "spawn_pit"
+    },
+    "b_def": {
+     "cell": 86,
+     "label": "tentacle"
+    },
+    "b_tech": {
+     "cell": 87,
+     "label": "evolution_chamber"
+    },
+    "b_wall": {
+     "cell": 88,
+     "label": "spike_wall"
+    },
+    "b_sup": {
+     "cell": 89,
+     "label": "heal_nest"
+    },
+    "b_sup2": {
+     "cell": 90,
+     "label": "overmind"
+    }
+   },
+   "procedural": [
+    "u_nav",
+    "b_nav"
+   ]
+  }
+ }
+}

@@ -46,9 +46,15 @@ function netAllowed(){
 function netSetOffline(v){
   NET.forced = !!v;
   try{ localStorage.setItem(NET_KEY, NET.forced ? '1' : '0'); }catch(e){}
+  document.body.classList.toggle('offline', NET.forced);
   if(typeof renderSettings === 'function') renderSettings();
   if(typeof packRenderBar === 'function') packRenderBar();
   if(typeof renderUpdatePanel === 'function') renderUpdatePanel();
+  if(typeof renderAccount === 'function') renderAccount();
+  /* Leaving offline is the moment a queued cloud backup should flush.
+     Entering it must not start a request — netAllowed() already refuses. */
+  if(!NET.forced && typeof cloudPush === 'function' && typeof CLOUD !== 'undefined' && CLOUD.dirty)
+    try{ cloudPush(); }catch(e){}
   if(typeof toast === 'function')
     toast(NET.forced ? '✈ Offline mode — the game never contacts a server'
                      : '☁ Online features enabled');
@@ -74,9 +80,15 @@ function initOffline(){
      not need a restart to sync, and one that loses it should stop trying. */
   if(typeof window !== 'undefined'){
     window.addEventListener('online',  () => { NET.online = true;
-      if(typeof packRenderBar === 'function') packRenderBar(); });
+      if(typeof packRenderBar === 'function') packRenderBar();
+      if(typeof renderAccount === 'function') renderAccount();
+      if(typeof cloudPush === 'function' && typeof CLOUD !== 'undefined' && CLOUD.dirty)
+        try{ cloudPush(); }catch(e){}
+    });
     window.addEventListener('offline', () => { NET.online = false;
-      if(typeof packRenderBar === 'function') packRenderBar(); });
+      if(typeof packRenderBar === 'function') packRenderBar();
+      if(typeof renderAccount === 'function') renderAccount();
+    });
   }
   document.body.classList.toggle('offline', NET.forced);
 
@@ -93,14 +105,15 @@ function initOffline(){
       row.innerHTML = '<div class="sTx"><b>✈ Offline Mode</b><div class="sDs">'
         + (NET.forced
             ? 'The game never contacts a server. Everything still plays.'
-            : 'Online features on — updates, cloud saves, extra downloads')
+            : 'When on, the game never contacts a server. Updates and cloud saves stay on this device.')
         + '</div></div><div class="sBuy togB' + (NET.forced ? ' onT' : '') + '">'
         + (NET.forced ? 'ON' : 'OFF') + '</div>';
-      row.addEventListener('pointerdown', () => {
+      const flip = () => {
         netSetOffline(!NET.forced);
         if(typeof sfx === 'function') sfx('ui');
-        document.body.classList.toggle('offline', NET.forced);
-      });
+      };
+      if(typeof mfBindTap === 'function') mfBindTap(row, flip);
+      else row.addEventListener('pointerdown', flip);
       list.appendChild(row);
     };
   }

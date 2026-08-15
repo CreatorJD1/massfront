@@ -1,6 +1,6 @@
 /* Focused account-progression settlement test.
    Usage: node tools/test-progression-rewards.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -12,8 +12,8 @@ const assert=(ok,msg)=>{ if(!ok) throw new Error(msg); };
 const sum=o=>Object.values(o||{}).reduce((n,v)=>n+(Number(v)||0),0);
 await mkdir(out,{recursive:true});
 
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const context=await browser.newContext({viewport:{width:393,height:852},hasTouch:true,isMobile:true});
   await context.addInitScript(()=>{try{localStorage.setItem('mf_prealpha_cinematic_v2','reward-test-seen');}catch(e){}});

@@ -6,7 +6,8 @@
    Set BLENDER_EXE when Blender is not installed in one of the usual Windows
    locations. Pass --export-only to stop after writing geometry.json.
 */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 import {mkdir, writeFile, readFile, access} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
@@ -75,15 +76,16 @@ function uvStretch(part,stride){
 }
 
 await mkdir(outDir,{recursive:true});
-const browser=await chromium.launch({
+const browser=await launchPwBrowser({
   headless:true,
   executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox']
 });
 
 try{
   const page=await browser.newPage({viewport:{width:800,height:800}});
   await page.goto(base+'/?towerLab=1&materialCapture=1',{waitUntil:'domcontentloaded'});
+  await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof BLD_MDL!=='undefined'&&typeof BLD_TUR_MDL!=='undefined'&&
     typeof BLD_TUR_H!=='undefined'&&typeof BLD_TUR_S!=='undefined'&&
     typeof BLD_TIER_MDL!=='undefined'&&typeof BT!=='undefined',{timeout:30000});
@@ -241,7 +243,7 @@ const report=JSON.parse(await readFile(join(outDir,'report.json'),'utf8'));
 const escapeHtml=value=>String(value).replace(/[&<>"']/g,char=>({
   '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
 }[char]));
-const sheetBrowser=await chromium.launch({
+const sheetBrowser=await launchPwBrowser({
   headless:true,
   executablePath:chrome,
   args:['--disable-gpu-sandbox']

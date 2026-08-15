@@ -1,6 +1,6 @@
 /* Deterministic movement/targeting regression.
    Usage: node tools/test-unit-separation.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -12,8 +12,8 @@ const shotDir=join(root,'releases','movement');
 const shot=join(shotDir,'unit-separation-mobile.png');
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 await mkdir(shotDir,{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},hasTouch:true,isMobile:true});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));

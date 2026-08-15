@@ -1,4 +1,5 @@
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { playwrightGpuLaunch, assertHardwareGpu } from './chrome-gpu.mjs';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
@@ -39,17 +40,7 @@ const PORT = 8999;
 await new Promise(r => server.listen(PORT, '127.0.0.1', r));
 console.log(`Local web server listening on http://127.0.0.1:${PORT}`);
 
-const chrome = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const browser = await chromium.launch({
-  headless: true,
-  executablePath: chrome,
-  args: [
-    '--use-gl=angle',
-    '--use-angle=swiftshader',
-    '--enable-unsafe-swiftshader',
-    '--disable-gpu-sandbox'
-  ]
-});
+const browser = await launchPwBrowser(playwrightGpuLaunch());
 
 try {
   const page = await browser.newPage({
@@ -74,6 +65,7 @@ try {
 
   console.log('Navigating to game...');
   await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+  await assertHardwareGpu(page);
 
   // Wait for engine init & heightmap array heightF
   await page.waitForFunction(() => typeof render === 'function' && typeof heightF !== 'undefined' && !!heightF && typeof FX !== 'undefined' && !!FX.rock, { timeout: 30000 });

@@ -1,12 +1,12 @@
 /* Focused regression for SupCom-style streamed structure construction.
    Usage: node tools/test-construction-stream.mjs [local URL] */
-import {chromium} from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 
 const url=process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8100/';
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
-const browser=await chromium.launch({headless:true,executablePath:chrome,
-  args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu-sandbox']});
+const browser=await launchPwBrowser({headless:true,executablePath:chrome,
+  args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
   const context=await browser.newContext({viewport:{width:393,height:852},hasTouch:true,isMobile:true});
   await context.addInitScript(()=>{try{

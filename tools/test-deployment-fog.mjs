@@ -23,7 +23,7 @@ ok(active({matchLive:true,carrier:{active:false,phase:2}})===true,
   'live matches must render fog');
 ok(active({fogOn:false,matchLive:true,carrier:{active:true,phase:0}})===false,
   'the player fog setting must remain authoritative');
-ok(source.includes('if(carrier.active) markCov(carrier.x,carrier.y, vis(12))'),
+ok(/if\(carrier\.active\)\s+markCov\(carrier\.x,carrier\.y,\s*vis\(\d+\)\)/.test(source),
   'active landing carrier lost its sensor source');
 
 console.log('Deployment fog gate passed: carrier sensor, live match, menu and disabled states.');

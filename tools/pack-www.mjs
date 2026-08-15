@@ -11,21 +11,79 @@
    nothing had run. Copying a file list by hand is exactly the kind of thing that
    goes wrong once and then hides, so the copy is now verified below rather than
    trusted. */
-import {cpSync, rmSync, mkdirSync, existsSync, readFileSync} from 'node:fs';
-import {dirname, join} from 'node:path';
+import {cpSync, rmSync, mkdirSync, existsSync, readFileSync, readdirSync, statSync} from 'node:fs';
+import {basename, dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const www = join(root,'www');
+const beforeBytes = dirBytes(www);
+
+/* Authored / live-loaded V2 maps. Everything else under textures/materials is
+   a generated 256px stub (~80 KB, many byte-identical across units). Those
+   stubs are not named by boot, sfx, voice, or a production loader — mfAssetSkin
+   only fetches packs that opt in (rhino / gorger), world V2 fetches the shared
+   structure atlas, and ?materiallab=1 fetches the factory / heavy-tank set.
+   Shipping the stub roster was ~17 MB of installer weight that never decoded. */
+const KEEP_MATERIAL = /^(brood-gorger-v2|nova-rhino-v2|nova-factory-v2|nova-heavy-tank-v2|mf-world-structures-v2|mf2-carbon-cracks-v1|mf_mechanical_microdetail_v2)/;
+
+function dirBytes(p){
+  if(!existsSync(p)) return 0;
+  const st = statSync(p);
+  if(!st.isDirectory()) return st.size;
+  let n = 0;
+  for(const e of readdirSync(p,{withFileTypes:true})){
+    const f = join(p,e.name);
+    n += e.isDirectory() ? dirBytes(f) : statSync(f).size;
+  }
+  return n;
+}
+function relFromRoot(abs){
+  return abs.slice(root.length).replace(/\\/g,'/').replace(/^\//,'');
+}
+/* .gitignore-shaped pack filter. Capacitor copies www/ verbatim, so junk that
+   lands inside src/ or assets/ (node_modules, source maps, audit PNGs, .tmp)
+   becomes APK weight. Brand / cinematic / modifier PNGs are already inlined as
+   data URIs in index.html, story.js and ui.css — the loose files are the
+   authoring originals, not a second fetch. */
+function shouldPack(abs){
+  const rel = relFromRoot(abs);
+  const base = basename(abs);
+  if(base==='node_modules'||base==='.tmp'||base==='experimental'||base==='audit') return false;
+  if(/\.(map|tmp)$/i.test(base)) return false;
+  if(/(^|\/)(node_modules|\.tmp|experimental|audit)(\/|$)/.test(rel)) return false;
+  if(rel==='assets/packs'||rel.startsWith('assets/packs/')) return false;
+  if(rel==='assets/brand'||rel.startsWith('assets/brand/')) return false;
+  if(rel==='assets/modifiers'||rel.startsWith('assets/modifiers/')) return false;
+  if(rel==='assets/factions/cinematic'||rel.startsWith('assets/factions/cinematic/')) return false;
+  if(rel==='assets/factions/overview.jpg') return false;
+  if(rel==='assets/textures/test.png') return false;
+  if(rel==='assets/data/art-v2-assets.json') return false;
+  /* Abandoned InstMesh civic-road source. Live materials.js paints
+     ROAD_ASPHALT_WORN procedurally and never fetches this 3 MB PNG. */
+  if(rel==='assets/textures/materials/mf-civic-road-base-v1.png') return false;
+  if(rel==='assets/textures/materials/mf_mechanical_microdetail_v1.webp') return false;
+  if(rel.startsWith('assets/textures/materials/') && rel!=='assets/textures/materials' && !KEEP_MATERIAL.test(base))
+    return false;
+  return true;
+}
+
 rmSync(www,{recursive:true,force:true});
 mkdirSync(www,{recursive:true});
+/* experimental/ is a desktop Babylon preview. It is not a game load path and
+   must never ride into Capacitor — even if someone later appends it to this
+   list, the explicit wipe + verify below still refuse it. */
 for(const p of ['index.html','boot.js','src','assets'])
-  cpSync(join(root,p), join(www,p), {recursive:true});
+  cpSync(join(root,p), join(www,p), {recursive:true, filter:shouldPack});
+rmSync(join(www,'experimental'), {recursive:true, force:true});
 
 /* assets/packs is publisher staging: the same voice files laid out for the
    Hugging Face channel. Copying it into Capacitor duplicates every take inside
    the APK while no runtime URL ever reads that folder. */
 rmSync(join(www,'assets','packs'), {recursive:true, force:true});
+rmSync(join(www,'assets','brand'), {recursive:true, force:true});
+rmSync(join(www,'assets','modifiers'), {recursive:true, force:true});
+rmSync(join(www,'assets','factions','cinematic'), {recursive:true, force:true});
 
 /* The soundtrack ships INSIDE the installer by default, and the reason is worth
    recording because it reverses an earlier decision. The build had hit 51 MB and
@@ -41,7 +99,9 @@ rmSync(join(www,'assets','packs'), {recursive:true, force:true});
    downloaded pack over the bundled copy, so both paths work today. */
 /* Nine tracks ship inside the installer; the other six are download-only and
    are stripped here. music.json still lists all fifteen and flags which is
-   which, so the player knows what exists and skips what it does not have. */
+   which, so the player knows what exists and skips what it does not have.
+   Playlist music is AAC-only (.m4a). The .ogg pass is leftover insurance in
+   case an older ingest left a sibling behind. */
 if(process.env.MASSFRONT_CLOUD_MUSIC === '1'){
   rmSync(join(www,'assets','audio','music'), {recursive:true, force:true});
 } else {
@@ -60,28 +120,154 @@ if(process.env.MASSFRONT_CLOUD_MUSIC === '1'){
 }
 
 /* ---- VERIFY ---------------------------------------------------------------
-   Two sources of truth for what the build needs, both machine-readable:
-     * index.html — every local src=/href= it references
-     * boot.js    — the ordered MANIFEST of scripts it fetches at runtime
-   Anything named there and absent from www/ is a build that will open to a dead
-   screen on the device. Fail here, loudly, instead of at the user. */
+   Sources of truth for what the device will actually fetch:
+     * index.html — every local src=/href=
+     * boot.js    — the ordered MANIFEST of scripts
+     * assets/data/manifest.json — must match that MANIFEST (OTA uses it)
+     * assets/app.webmanifest — PWA icons
+     * assets/audio/sfx.json — dual-codec effects (.ogg + .m4a)
+     * assets/audio/music.json — bundled AAC tracks
+     * assets/audio/voice.json — dual-codec voice takes
+   Anything named there and absent from www/ is a build that 404s on device. */
 const missing = [];
 const check = (rel, why) => {
   const clean = rel.split('?')[0].replace(/^\.\//,'');
   if(!clean || /^(https?:|data:|blob:|#|\/\/)/.test(clean)) return;
   if(!existsSync(join(www,clean))) missing.push(clean+'   ('+why+')');
 };
+const checkDual = (relNoExt, why) => {
+  for(const ext of ['.ogg','.m4a']) check(relNoExt+ext, why);
+};
+
+if(existsSync(join(www,'experimental')))
+  missing.push('experimental/   (must not ship in Capacitor www/)');
+if(existsSync(join(www,'assets','packs')))
+  missing.push('assets/packs/   (must not ship — Hugging Face voice staging duplicate)');
+if(existsSync(join(www,'assets','brand')))
+  missing.push('assets/brand/   (must not ship — already inlined in index.html)');
+if(existsSync(join(www,'assets','modifiers')))
+  missing.push('assets/modifiers/   (must not ship — already inlined in ui.css)');
+if(existsSync(join(www,'assets','factions','cinematic')))
+  missing.push('assets/factions/cinematic/   (must not ship — already inlined in story.js)');
+if(existsSync(join(www,'node_modules'))||existsSync(join(www,'.tmp')))
+  missing.push('node_modules/ or .tmp/   (must not ship in Capacitor www/)');
 
 const html = readFileSync(join(root,'index.html'),'utf8');
 for(const m of html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"/g)) check(m[1],'index.html');
 
 const boot = readFileSync(join(root,'boot.js'),'utf8');
 const mf = boot.match(/MANIFEST\s*=\s*\[([\s\S]*?)\]/);
+let bootList = [];
 if(!mf) missing.push('boot.js MANIFEST could not be parsed — cannot verify script list');
-else for(const m of mf[1].matchAll(/'([^']+)'/g)) check(m[1],'boot.js MANIFEST');
+else {
+  bootList = [...mf[1].matchAll(/'([^']+)'/g)].map(m => m[1].replace(/^\.\//,''));
+  for(const rel of bootList) check(rel,'boot.js MANIFEST');
+}
+
+const manPath = join(www,'assets','data','manifest.json');
+if(!existsSync(manPath)) missing.push('assets/data/manifest.json   (OTA/pack order)');
+else if(bootList.length){
+  const order = JSON.parse(readFileSync(manPath,'utf8')).order || [];
+  const manList = order.map(s => String(s).replace(/^\.\//,''));
+  if(bootList.join('|') !== manList.join('|'))
+    missing.push('assets/data/manifest.json order does not match boot.js MANIFEST');
+}
+
+const wmPath = join(www,'assets','app.webmanifest');
+if(existsSync(wmPath)){
+  const wm = JSON.parse(readFileSync(wmPath,'utf8'));
+  for(const ic of wm.icons||[])
+    if(ic.src) check('assets/'+ic.src.replace(/^\.\//,''), 'app.webmanifest');
+}
+
+const sfxPath = join(www,'assets','audio','sfx.json');
+if(!existsSync(sfxPath)) missing.push('assets/audio/sfx.json   (effect bank)');
+else {
+  const sfx = JSON.parse(readFileSync(sfxPath,'utf8'));
+  for(const [slot, spec] of Object.entries(sfx.slots||{}))
+    for(const name of spec.files||[])
+      checkDual('assets/audio/'+name, 'sfx.json '+slot);
+}
+
+/* Dual-format beds are the AAC-decode fallback. Playlist music is m4a-only. */
+for(const bed of ['mus_ambient','mus_tension','mus_combat'])
+  checkDual('assets/audio/'+bed, 'AAC-decode fallback bed');
+
+const musicPath = join(www,'assets','audio','music.json');
+if(!existsSync(musicPath)) missing.push('assets/audio/music.json   (playlist)');
+else if(process.env.MASSFRONT_CLOUD_MUSIC !== '1'){
+  const music = JSON.parse(readFileSync(musicPath,'utf8'));
+  const seen = new Set();
+  for(const list of Object.values(music.playlists||{}))
+    for(const t of list){
+      if(t.bundled === false) continue;
+      const stem = 'assets/audio/music/' + t.file.split('/').pop();
+      if(seen.has(stem)) continue;
+      seen.add(stem);
+      check(stem+'.m4a', 'bundled AAC music');
+    }
+}
+
+const voicePath = join(www,'assets','audio','voice.json');
+if(existsSync(voicePath)){
+  const voice = JSON.parse(readFileSync(voicePath,'utf8'));
+  const stems = new Set();
+  const walk = v => {
+    if(Array.isArray(v)) v.forEach(x => { if(typeof x==='string') stems.add(x); });
+    else if(v && typeof v==='object') Object.values(v).forEach(walk);
+  };
+  walk(voice.lines||{});
+  for(const stem of stems) checkDual('assets/audio/voice/'+stem, 'voice.json');
+}
+
+/* Live world art a 1.33.31 OTA client will 404 without. pack-www is the APK
+   copy; bundle-update.mjs embeds the same set in __MF_OTA_ASSETS. */
+check('assets/textures/mat-albedo.png','material atlas');
+check('assets/textures/mat-normal.png','material atlas');
+check('assets/textures/mat-orm.png','material atlas');
+check('assets/textures/materials/mf-world-structures-v2-baseao.png','world V2');
+check('assets/textures/materials/mf-world-structures-v2-nre.png','world V2');
+check('assets/textures/materials/mf-world-structures-v2-masks.png','world V2');
+check('assets/textures/materials/mf2-carbon-cracks-v1.png','V2 damage');
+check('assets/textures/materials/mf_mechanical_microdetail_v2.webp','V2 detail');
+check('assets/textures/ui/tacticons-faction.png','faction tacticons');
+for(const stem of ['nova-rhino-v2','nova-rhino-v2-turret','brood-gorger-v2','nova-factory-v2','nova-heavy-tank-v2'])
+  for(const suf of ['baseao','nre','masks'])
+    check('assets/textures/materials/'+stem+'-'+suf+'.png','authored V2 '+stem);
+if(!bootList.includes('src/rumble.js')&&!bootList.includes('./src/rumble.js'))
+  missing.push('src/rumble.js   (boot.js MANIFEST — haptic JS is OTA, VIBRATE is APK-only)');
+if(!bootList.includes('assets/data/unitrows.js')&&!bootList.includes('./assets/data/unitrows.js'))
+  missing.push('assets/data/unitrows.js   (boot.js MANIFEST)');
 
 if(missing.length){
   console.error('\nwww/ is incomplete — these would 404 on the device:\n  '+missing.join('\n  ')+'\n');
   process.exit(1);
 }
-console.log('staged www/ — index.html + boot.js MANIFEST fully resolved');
+const afterBytes = dirBytes(www);
+const mib = n => (n/1048576).toFixed(1);
+const skipRows = [
+  ['assets/packs (voice staging duplicate)', join(root,'assets','packs')],
+  ['assets/brand (inlined in index.html)', join(root,'assets','brand')],
+  ['assets/modifiers (inlined in ui.css)', join(root,'assets','modifiers')],
+  ['assets/factions/cinematic (inlined in story.js)', join(root,'assets','factions','cinematic')],
+  ['generated material stubs + abandoned civic-road', join(root,'assets','textures','materials')]
+];
+let skipped = 0;
+console.log('staged www/ — index.html + boot.js MANIFEST + audio banks fully resolved');
+console.log('  www/ '+mib(beforeBytes)+' MiB before → '+mib(afterBytes)+' MiB after');
+for(const [why, p] of skipRows){
+  let bytes = dirBytes(p);
+  if(p.endsWith('materials')){
+    /* Report only what the filter left out of this folder, not the live maps. */
+    bytes = 0;
+    if(existsSync(p)){
+      for(const name of readdirSync(p)){
+        if(!KEEP_MATERIAL.test(name)) bytes += dirBytes(join(p,name));
+      }
+    }
+  }
+  if(!bytes) continue;
+  skipped += bytes;
+  console.log('  left out '+mib(bytes)+' MiB  '+why);
+}
+console.log('  filter omitted '+mib(skipped)+' MiB of source assets (voice packs, dual-codec SFX, and live maps stay)');

@@ -34,7 +34,7 @@
    ============================================================================ */
 
 const SESS_KEY = 'mf_dropped_session_v1';
-const SESS_MAX_UNITS = 4000;      // beyond this we keep the largest-value slice
+const SESS_MAX_UNITS = 4000;      // DEBT: map-total snapshot slice, not a pop cap. Per-seat cap is FACTION_POP_CAP (1000).
 const SESS_TTL_MS = 45 * 60 * 1000;
 
 function sessCanSnapshot(){
@@ -50,7 +50,8 @@ function sessCanSnapshot(){
    array of objects: JSON.stringify of 4000 objects is several times slower and
    several times larger, and this runs against a reload deadline. */
 function sessCaptureUnits(){
-  const idx=[], out={t:[],tm:[],x:[],y:[],hp:[],ang:[],st:[],tx:[],ty:[],hold:[],mode:[]};
+  const idx=[], out={t:[],tm:[],x:[],y:[],hp:[],ang:[],st:[],tx:[],ty:[],hold:[],mode:[],
+    oi:[],cmd:[],tg:[],mh:[],pr:[],pst:[],psl:[],gh:[],gg:[],qk:[],q:[]};
   for(let i=0;i<unitHigh;i++) if(ualive[i]) idx.push(i);
   /* Over the cap, keep the player's army and the enemy's commanders first —
      losing some wildlife on a resume is survivable; losing your own force is
@@ -66,20 +67,165 @@ function sessCaptureUnits(){
     out.st.push(ustate[i]);
     out.tx.push(Math.round(utx[i])); out.ty.push(Math.round(uty[i]));
     out.hold.push(uhold[i]|0); out.mode.push(typeof umode!=='undefined'?(umode[i]|0):0);
+    /* Old slot is the remap key. spawnUnit hands out new indices, so utgt /
+       guard / queue / patrol members stored as raw slots would point at the
+       wrong hulls after a resume. ufield is omitted on purpose: the field
+       ring dies with the match and is rebuilt from tx/ty. */
+    out.oi.push(i);
+    out.cmd.push(typeof uCmd!=='undefined'?uCmd[i]:-1);
+    out.tg.push(typeof utgt!=='undefined'?utgt[i]:-1);
+    out.mh.push(typeof umarch!=='undefined'?umarch[i]|0:0);
+    out.pr.push(typeof uPatrolRoute!=='undefined'?uPatrolRoute[i]:-1);
+    out.pst.push(typeof uPatrolStep!=='undefined'?uPatrolStep[i]|0:0);
+    out.psl.push(typeof uPatrolSlot!=='undefined'?uPatrolSlot[i]|0:0);
+    out.gh.push(typeof uGuard!=='undefined'?uGuard[i]:-1);
+    out.gg.push(typeof uGuardG!=='undefined'?uGuardG[i]:-1);
+    out.qk.push(typeof uQkind!=='undefined'?uQkind[i]|0:0);
+    const Q=(typeof uQueue!=='undefined'&&uQueue[i])?uQueue[i]:null;
+    out.q.push(Q?Q.map(s=>({t:s.t|0,x:Math.round(s.x||0),y:Math.round(s.y||0),h:s.h|0,g:s.g|0,mv:s.mv|0})):null);
   }
   return out;
 }
 
 function sessCaptureBuildings(){
   const out=[];
-  for(const B of blds){
-    if(!B.alive) continue;
+  for(let bi=0;bi<blds.length;bi++){
+    const B=blds[bi];
+    if(!B||!B.alive) continue;
     out.push([B.type, B.team, Math.round(B.x), Math.round(B.y),
               Math.round(B.hp), +(B.prog||0).toFixed(3), B.lvl|0,
               B.buildPaidM==null?null:+B.buildPaidM.toFixed(3),
-              B.buildPaidE==null?null:+B.buildPaidE.toFixed(3)]);
+              B.buildPaidE==null?null:+B.buildPaidE.toFixed(3),
+              bi]);
   }
   return out;
+}
+function sessCaptureWallets(){
+  const seats=[], allies=[];
+  if(typeof AI!=='undefined'){
+    if(AI.bases) for(const S of AI.bases)
+      seats.push({slot:S.slot,mass:+(S.mass||0).toFixed(2),energy:+(S.energy||0).toFixed(2),
+                  mcap:S.mcap|0,ecap:S.ecap|0});
+    if(AI.allies) for(const A of AI.allies)
+      allies.push({slot:A.slot,mass:+(A.mass||0).toFixed(2),energy:+(A.energy||0).toFixed(2)});
+  }
+  return {seats,allies};
+}
+function sessCapturePatrols(){
+  if(typeof patrolRoutes==='undefined'||!patrolRoutes.length) return [];
+  const out=[];
+  for(let ri=0;ri<patrolRoutes.length;ri++){
+    const R=patrolRoutes[ri];
+    if(!R||!R.pts||!R.members){ out.push(null); continue; }
+    out.push({
+      pts:R.pts.map(p=>({x:+p.x,y:+p.y})),
+      form:R.form|0, step:R.step|0,
+      members:R.members.map(e=>[e[0]|0,e[1]|0])
+    });
+  }
+  return out;
+}
+/* Relic handles survive a seed regen. Unit/building handles do not. */
+function sessRemapHandle(h,uMap,bMap){
+  if(h==null||h===-1) return -1;
+  if(typeof isRelicTg==='function'&&isRelicTg(h)) return h;
+  if(h>=0) return uMap.has(h)?uMap.get(h):-1;
+  const bi=-2-h;
+  return bMap.has(bi)?(-2-bMap.get(bi)):-1;
+}
+function sessApplyWallets(w){
+  if(!w||typeof AI==='undefined') return;
+  if(w.seats&&AI.bases){
+    for(const row of w.seats){
+      let S=null;
+      for(let i=0;i<AI.bases.length;i++) if(AI.bases[i].slot===row.slot){ S=AI.bases[i]; break; }
+      if(!S) continue;
+      if(row.mass!=null) S.mass=row.mass;
+      if(row.energy!=null) S.energy=row.energy;
+      if(row.mcap) S.mcap=row.mcap;
+      if(row.ecap) S.ecap=row.ecap;
+    }
+  }
+  if(w.allies&&AI.allies){
+    for(const row of w.allies){
+      let A=null;
+      for(let i=0;i<AI.allies.length;i++) if(AI.allies[i].slot===row.slot){ A=AI.allies[i]; break; }
+      if(!A) continue;
+      if(row.mass!=null) A.mass=row.mass;
+      if(row.energy!=null) A.energy=row.energy;
+    }
+  }
+  /* Fresh deploy wrote commander indices we then killed. Rebind by seat. */
+  if(AI.bases){
+    for(const S of AI.bases){
+      let best=-1,bd=1e18;
+      for(let i=0;i<unitHigh;i++){
+        if(!ualive[i]||uteam[i]!==1) continue;
+        const T=TYPES[utype[i]];
+        if(!(utype[i]===4||(T&&T.cat==='hero'))) continue;
+        if(typeof uCmd!=='undefined'&&uCmd[i]===S.slot){ best=i; break; }
+        const d=dist2(ux[i],uy[i],S.x,S.y);
+        if(d<bd){ bd=d; best=i; }
+      }
+      if(best>=0){ S.commander=best; S.commanderGen=ugen[best]; }
+    }
+  }
+  if(typeof econMirrorAiBanks==='function') econMirrorAiBanks();
+}
+function sessRestoreOrders(U,spawned,uMap,bMap,patrols){
+  if(!U||!U.oi) return;
+  for(let k=0;k<spawned.length;k++){
+    const i=spawned[k]; if(i<0) continue;
+    if(typeof umarch!=='undefined'&&U.mh) umarch[i]=U.mh[k]|0;
+    if(typeof utgt!=='undefined'&&U.tg){
+      const tg=sessRemapHandle(U.tg[k],uMap,bMap);
+      utgt[i]=tg;
+      if(typeof utgtg!=='undefined') utgtg[i]=tg>=0?ugen[tg]:-1;
+    }
+    if(typeof uGuard!=='undefined'&&U.gh){
+      const gh=sessRemapHandle(U.gh[k],uMap,bMap);
+      uGuard[i]=gh;
+      if(typeof uGuardG!=='undefined') uGuardG[i]=gh>=0?ugen[gh]:-1;
+    }
+    if(typeof uQkind!=='undefined'&&U.qk) uQkind[i]=U.qk[k]|0;
+    if(typeof uQueue!=='undefined'&&U.q&&U.q[k]){
+      uQueue[i]=U.q[k].map(s=>{
+        const h=sessRemapHandle(s.h,uMap,bMap);
+        return {t:s.t|0,x:s.x,y:s.y,h,g:h>=0?ugen[h]:-1,mv:s.mv|0};
+      });
+    }
+    if(typeof ufield!=='undefined'){
+      ufield[i]=-1;
+      const T=TYPES[utype[i]];
+      if(T&&!T.air&&(ustate[i]===1||ustate[i]===2||ustate[i]===5)&&typeof requestField==='function')
+        ufield[i]=requestField(utx[i],uty[i],!!T.naval);
+    }
+  }
+  if(typeof patrolRoutes==='undefined') return;
+  patrolRoutes.length=0;
+  if(!patrols||!patrols.length) return;
+  for(const R of patrols){
+    if(!R||!R.pts||!R.members){ patrolRoutes.push(null); continue; }
+    const members=[];
+    for(const e of R.members){
+      const ni=uMap.get(e[0]);
+      if(ni==null||!ualive[ni]) continue;
+      members.push([ni,ugen[ni]]);
+    }
+    if(!members.length){ patrolRoutes.push(null); continue; }
+    const sel=members.map(e=>e[0]);
+    const targets=(typeof patrolTargetRows==='function')?patrolTargetRows(sel,R.pts,R.form):[];
+    const rec={pts:R.pts,targets,form:R.form|0,members,step:R.step|0,legT:0,waitT:0,gcT:.45,created:performance.now()};
+    const ri=patrolRoutes.length;
+    patrolRoutes.push(rec);
+    for(let k=0;k<sel.length;k++){
+      const i=sel[k];
+      if(typeof uPatrolRoute!=='undefined') uPatrolRoute[i]=ri;
+      if(typeof uPatrolStep!=='undefined') uPatrolStep[i]=rec.step;
+      if(typeof uPatrolSlot!=='undefined') uPatrolSlot[i]=k;
+    }
+    if(typeof refreshPatrolRoute==='function') refreshPatrolRoute(ri,true);
+  }
 }
 
 function sessSnapshot(reason){
@@ -103,9 +249,11 @@ function sessSnapshot(reason){
       built: (typeof stats!=='undefined'&&stats.built)?stats.built.slice():[0,0],
       resM: typeof resM!=='undefined'?[resM[0],resM[1]]:[0,0],
       resE: typeof resE!=='undefined'?[resE[0],resE[1]]:[0,0],
+      wallets: sessCaptureWallets(),
       wave: (typeof AI!=='undefined')?{n:AI.wave|0,timer:AI.waveTimer|0}:null,
       units: sessCaptureUnits(),
       blds: sessCaptureBuildings(),
+      patrols: sessCapturePatrols(),
     };
     const text=JSON.stringify(snap);
     /* A snapshot that blows the quota would throw and take nothing with it —
@@ -156,26 +304,35 @@ function sessRestoreInto(s){
     for(const B of blds) if(B.alive&&B.type!=='nest') B.alive=false;
     refreshBldLive();
 
+    const bMap=new Map();
     for(const b of s.blds){
-      const [type,team,x,y,hp,prog,lvl,paidM,paidE]=b;
+      const [type,team,x,y,hp,prog,lvl,paidM,paidE,oldBi]=b;
       try{
         const B=addBld(type,team,x,y,true);
         if(B){ B.hp=hp; B.prog=prog; B.lvl=lvl||1;
-          if(paidM!=null)B.buildPaidM=paidM;if(paidE!=null)B.buildPaidE=paidE; }
+          if(paidM!=null)B.buildPaidM=paidM;if(paidE!=null)B.buildPaidE=paidE;
+          if(oldBi!=null) bMap.set(oldBi,blds.length-1); }
       }catch(e){}
     }
     refreshBldLive();
 
-    const U=s.units;
+    const U=s.units, uMap=new Map(), spawned=[];
     for(let k=0;k<U.t.length;k++){
-      const i=spawnUnit(U.t[k],U.tm[k],U.x[k],U.y[k]);
+      const cmd=U.cmd?U.cmd[k]:undefined;
+      const i=spawnUnit(U.t[k],U.tm[k],U.x[k],U.y[k],cmd);
+      spawned.push(i);
       if(i<0) continue;
+      if(U.oi) uMap.set(U.oi[k],i);
       uhp[i]=U.hp[k]; uang[i]=U.ang[k]; ustate[i]=U.st[k];
       utx[i]=U.tx[k]; uty[i]=U.ty[k]; uhold[i]=U.hold[k];
       if(typeof umode!=='undefined') umode[i]=U.mode[k];
     }
-    if(typeof resM!=='undefined'){ resM[0]=s.resM[0]; resM[1]=s.resM[1]; }
-    if(typeof resE!=='undefined'){ resE[0]=s.resE[0]; resE[1]=s.resE[1]; }
+    /* Player ledger first. Seat wallets then overwrite the team-1 mirror so a
+       1v2/1v3 resume does not dump three mex belts into one shared bank. */
+    if(typeof resM!=='undefined'&&s.resM){ resM[0]=s.resM[0]; if(!s.wallets) resM[1]=s.resM[1]; }
+    if(typeof resE!=='undefined'&&s.resE){ resE[0]=s.resE[0]; if(!s.wallets) resE[1]=s.resE[1]; }
+    sessApplyWallets(s.wallets);
+    sessRestoreOrders(U, spawned, uMap, bMap, s.patrols);
     if(typeof stats!=='undefined'){
       stats.t=s.t||0;
       if(s.kills) stats.kills=s.kills.slice();
@@ -248,12 +405,31 @@ function sessResume(){
     /* Put the setup back BEFORE generating, so the world regenerates from the
        same seed and the same rules the dropped match was played under. */
     if(s.setup&&typeof META!=='undefined') META.setup=s.setup;
+    const su=s.setup||{};
+    if(su.d!=null&&typeof difficulty!=='undefined') difficulty=su.d;
+    if(su.pkg&&typeof deploymentPackage!=='undefined'&&typeof DEPLOYMENT_PACKAGES!=='undefined'&&DEPLOYMENT_PACKAGES[su.pkg]) deploymentPackage=su.pkg;
+    if(su.bs&&typeof battlefieldPreset!=='undefined'&&typeof battlefieldPresetKey==='function') battlefieldPreset=battlefieldPresetKey(su.bs);
+    if(su.inf!=null&&typeof infestationOn!=='undefined') infestationOn=!!su.inf;
+    if(su.df!=null&&typeof defenseFocus!=='undefined') defenseFocus=su.df?1:0;
+    if(su.rp&&typeof resPace!=='undefined') resPace=+su.rp;
+    if(su.cr!=null&&typeof crateRate!=='undefined') crateRate=crateRateBase=+su.cr;
+    if(Array.isArray(su.ais)&&typeof aiSlots!=='undefined'){
+      for(let i=0;i<Math.min(aiSlots.length,su.ais.length);i++){
+        const S=su.ais[i]||{};
+        aiSlots[i].on=!!S.on;
+        aiSlots[i].diff=(S.diff|0);
+        aiSlots[i].ally=!!S.ally;
+        if(S.zone) aiSlots[i].zone=S.zone;
+        if(S.behavior&&typeof aiBehaviorKey==='function') aiSlots[i].behavior=aiBehaviorKey(S.behavior);
+      }
+    }
     if(s.map&&typeof curMap!=='undefined') curMap=s.map;
     if(s.theme&&typeof curTheme!=='undefined') curTheme=s.theme;
     if(s.goal&&typeof goalSel!=='undefined') goalSel=s.goal;
     if(typeof timeLimit!=='undefined') timeLimit=s.timeLimit||0;
     if(s.aiFac&&typeof aiFactionSel!=='undefined'){ aiFactionSel=s.aiFac;
       if(typeof AI!=='undefined'){ AI.fac=s.aiFac; if(typeof aiFacPicked!=='undefined') aiFacPicked=true; } }
+    else if(su.f&&typeof aiFactionSel!=='undefined') aiFactionSel=su.f;
     if(s.playerFac&&typeof playerFaction!=='undefined'&&
        (typeof playableFactions!=='function'||playableFactions().includes(s.playerFac)))playerFaction=s.playerFac;
     if(s.playerCommander&&typeof playerCommanderId!=='undefined'&&typeof commanderById==='function'){
@@ -265,6 +441,7 @@ function sessResume(){
     if(typeof sfx==='function') sfx('ui');
     if(typeof applyTheme==='function') applyTheme();
     if(typeof hideFrontScreens==='function') hideFrontScreens();
+    if(typeof audMusicEnterMatch==='function') audMusicEnterMatch();
     if(typeof newSkirmish==='function') newSkirmish();
     /* SKIP THE LANDING. A resumed match should not ask the player to choose a
        drop site again — they landed nine minutes ago, and their HQ is in the

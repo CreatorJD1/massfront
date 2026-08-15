@@ -1,5 +1,11 @@
 # MASSFRONT — Claude Handoff: Road, City and Terrain System
 
+> **Not current.** This note describes the abandoned InstMesh civic-road /
+> `applyGroundDestruction()` branch. Those APIs are not in the recovered
+> v1.33.31 tree. Current contract: `docs/HANDOFF-2026-08-13.md` section 3.1
+> (paint/masks) and "City-combat surface recovery" (`CITYG >= 1`). Do not
+> follow this document or `docs/TERRAIN_CITY_NEXT_PASS.md` as live source.
+
 **Updated:** 2026-08-11  
 **Scope:** city infrastructure, terrain contact, road topology, civic material
 quality and destruction. This is a focused continuation note; read

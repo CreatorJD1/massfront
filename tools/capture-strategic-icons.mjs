@@ -1,10 +1,9 @@
 /* Strategic-zoom acceptance capture.
 
-   REAL GPU ONLY. Most capture-*.mjs in this repo pass --use-angle=swiftshader,
-   and docs/POSTMORTEM-1.33.31-REGRESSION.md records that software previews
-   already sent one investigation down a wrong path: SwiftShader is not
-   authoritative for anything about materials, detail or lighting. This harness
-   launches headed Chrome on d3d11.
+   REAL GPU ONLY via tools/chrome-gpu.mjs (ANGLE D3D11, abort on SwiftShader).
+   docs/POSTMORTEM-1.33.31-REGRESSION.md records that software previews already
+   sent one investigation down a wrong path: SwiftShader is not authoritative
+   for materials, detail or lighting. This harness launches headed Chrome on d3d11.
 
        node tools/capture-strategic-icons.mjs [port]
 
@@ -12,7 +11,7 @@
      1. draw calls at full zoom-out are FEWER than at tactical zoom
      2. icons are absent at tactical zoom and present at strategic zoom
      3. no console errors across the sweep                                    */
-import { chromium } from 'playwright';
+import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { writeFileSync, mkdirSync } from 'node:fs';
 
 const PORT = process.argv[2] || '8992';
@@ -21,7 +20,7 @@ const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const SPANS = [900, 1600, 2100, 2200, 2300, 2400, 2800, 3400];
 
 mkdirSync(OUT, { recursive: true });
-const browser = await chromium.launch({ executablePath: CHROME, headless: false,
+const browser = await launchPwBrowser({ executablePath: CHROME, headless: false,
   args: ['--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox'] });
 const page = await browser.newPage({ viewport: { width: 412, height: 915 }, hasTouch: true });
 const errors = [];

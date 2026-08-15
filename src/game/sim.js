@@ -213,6 +213,10 @@ const utype=new Uint8Array(MAXU), uteam=new Uint8Array(MAXU);
    AI slot. Same-team combat rules make allies genuinely friendly while this
    owner tag lets their lightweight director move only its own reinforcements. */
 const uAllyBase=new Int8Array(MAXU);uAllyBase.fill(-1);
+/* Commander owner for population ledgers. Same ids as skirmish spawn:
+   -1 player, 0..2 = aiSlots. Team 0 copies this into uAllyBase so the
+   ally director keeps matching on the tag it already owns. */
+const uCmd=new Int8Array(MAXU);uCmd.fill(-1);
 const ualive=new Uint8Array(MAXU), ustate=new Uint8Array(MAXU);
 const usel=new Uint8Array(MAXU);
 const utgt=new Int32Array(MAXU);
@@ -284,22 +288,50 @@ const uheal=new Float32Array(MAXU);
 let freeList=[], unitHigh=0;
 const teamCount=[0,0,0];
 /* Population is a gameplay budget AND a mobile stability budget. MAXU remains
-   large because the renderer and save format need a wide slot address space;
-   it must not be mistaken for permission to keep tens of thousands of live
-   actors. The theatre sets the player's strategic ceiling, while enemy and
-   wildlife ceilings stay lower because both are simulation-controlled and can
-   otherwise grow until a phone loses graphics memory before the player has a
-   chance to react. */
+   large because the renderer and save format need a wide slot address space.
+   Each commander SEAT is FACTION_POP_CAP (1000). Compact 2 seats → 2000,
+   standard 3 → 3000, large 4 → 4000. That 4000 is the theatre SUM, never a
+   team blob and never this constant. HUD chip is the player seat (Track 5
+   hudPlayerPop). SESS_MAX_UNITS=4000 is a map-total snapshot — debt, not a
+   pop cap. Do not set this to 2000 or 4000. */
 const FACTION_POP_CAP=1000;
+const POP_PLAYER_SLOT=-1;
+const popCmdCount=new Uint16Array(4);   // index 0 = player (-1), 1..3 = aiSlots 0..2
+const simHot={unitTickMs:0,live:0,team0:0,team1:0,team2:0};
 function populationTheatre(){
   const k=typeof battlefieldPresetKey==='function'&&typeof battlefieldPreset!=='undefined'
     ?battlefieldPresetKey(battlefieldPreset):'standard';
   return k==='compact'||k==='large'?k:'standard';
 }
+function populationPlayerSlot(){ return POP_PLAYER_SLOT; }
+function popCmdIndex(slot){
+  const s=slot==null?POP_PLAYER_SLOT:slot|0;
+  if(s<-1||s>2) return 0;
+  return s+1;
+}
+function popCmdInc(slot){ popCmdCount[popCmdIndex(slot)]++; }
+function popCmdDec(slot){ const k=popCmdIndex(slot); if(popCmdCount[k]) popCmdCount[k]--; }
+function nCommandersOnTeam(team){
+  /* Match-setup count, not living heroes: a dead commander must not shrink
+     the team ceiling and strand the army that still belongs to that slot. */
+  if(team===0){
+    let n=1;
+    if(typeof AI!=='undefined'&&AI&&AI.allies&&AI.allies.length) n+=AI.allies.length;
+    return n;
+  }
+  if(team===1){
+    if(typeof AI!=='undefined'&&AI&&AI.bases&&AI.bases.length) return AI.bases.length;
+    return Math.max(1, enemyHeroIdxs.length||1);
+  }
+  return 0;
+}
+function populationTeamCeiling(team){
+  if(team===0||team===1) return FACTION_POP_CAP*nCommandersOnTeam(team);
+  return populationCapFor(team);
+}
 function populationCapFor(team){
-  /* Neutral wildlife uses the infestation director's smaller performance
-     budget. When the Brood is the selected opponent, its hive creatures and
-     factory organisms are one faction and share the same 1,000 population. */
+  /* Per-team DISPLAY helper stays 1000 (or wildlife bugCap). Callers that
+     need a theatre total use populationTeamCeiling. */
   if(team===2&&!(typeof broodIsEnemy==='function'&&broodIsEnemy())&&typeof bugCap==='function')return bugCap();
   return FACTION_POP_CAP;
 }
@@ -307,13 +339,87 @@ function populationUsedFor(team){
   if((team===1||team===2)&&typeof broodIsEnemy==='function'&&broodIsEnemy())return teamCount[1]+teamCount[2];
   return teamCount[team]||0;
 }
-function populationCanSpawn(type,team){
+function populationCapForCommander(slot){
+  return FACTION_POP_CAP;
+}
+function populationUsedForCommander(slot){
+  return popCmdCount[popCmdIndex(slot)]||0;
+}
+function populationDefaultSeat(team,x,y){
+  if(team===0) return POP_PLAYER_SLOT;
+  /* Team 1 must never fall through to the player bucket (-1). Missing tags
+     bind to the nearest enemy base, else aiSlots[0]. */
+  if(typeof AI!=='undefined'&&AI&&AI.bases&&AI.bases.length){
+    if(x!=null&&y!=null){
+      let best=AI.bases[0],bd=1e18;
+      for(const B of AI.bases){
+        const d=dist2(x,y,B.x,B.y);
+        if(d<bd){bd=d;best=B;}
+      }
+      if(best&&best.slot!=null) return best.slot;
+    }
+    if(AI.bases[0]&&AI.bases[0].slot!=null) return AI.bases[0].slot;
+  }
+  return 0;
+}
+function commanderSlotForBuilding(B){
+  if(!B) return POP_PLAYER_SLOT;
+  if(B.team===0) return B.allyAI==null?POP_PLAYER_SLOT:B.allyAI;
+  if(B.team===1){
+    if(B.aiBaseSlot!=null) return B.aiBaseSlot;
+    return populationDefaultSeat(1,B.x,B.y);
+  }
+  return POP_PLAYER_SLOT;
+}
+function populationResolveSlot(team,cmdSlot,x,y){
+  if(team===0) return (cmdSlot==null||cmdSlot<-1)?POP_PLAYER_SLOT:cmdSlot|0;
+  if(team===1||(team===2&&typeof broodIsEnemy==='function'&&broodIsEnemy()))
+    return (cmdSlot==null||cmdSlot<0)?populationDefaultSeat(1,x,y):cmdSlot|0;
+  return POP_PLAYER_SLOT;
+}
+function populationCanSpawn(type,team,slot,x,y){
   const T=TYPES[type];
   if(!T||team<0||team>2)return false;
   /* A scripted Commander arrival must never be deleted because ordinary units
      filled the last slot one frame earlier. Commanders are spawned at setup,
      so this exception cannot be used by factories to exceed the cap. */
-  return T.cat==='hero'||populationUsedFor(team)<populationCapFor(team);
+  if(T.cat==='hero') return true;
+  if(team===2){
+    if(typeof broodIsEnemy==='function'&&broodIsEnemy()){
+      const s=populationResolveSlot(2,slot,x,y);
+      return populationUsedForCommander(s)<populationCapForCommander(s);
+    }
+    return populationUsedFor(2)<populationCapFor(2);
+  }
+  /* Each seat is 1000. One booming seat cannot eat the team's theatre share.
+     Economy wallets stay shared until Track 4 Stage 3. */
+  if(populationUsedFor(team)>=populationTeamCeiling(team)) return false;
+  const s=populationResolveSlot(team,slot,x,y);
+  return populationUsedForCommander(s)<populationCapForCommander(s);
+}
+function assignUnitCommander(i,slot){
+  if(i<0||!ualive[i]||uteam[i]>1) return;
+  const next=populationResolveSlot(uteam[i],slot,ux[i],uy[i]);
+  const prev=uCmd[i];
+  if(prev===next){
+    if(uteam[i]===0) uAllyBase[i]=next;
+    return;
+  }
+  popCmdDec(prev);
+  uCmd[i]=next;
+  if(uteam[i]===0) uAllyBase[i]=next;
+  popCmdInc(next);
+}
+function populationResetLedgers(){
+  popCmdCount.fill(0); uCmd.fill(-1);
+}
+function populationRecountLedgers(){
+  popCmdCount.fill(0);
+  for(let i=0;i<unitHigh;i++){
+    if(!ualive[i]) continue;
+    if(uteam[i]<2) popCmdInc(uCmd[i]);
+    else if(uteam[i]===2&&uCmd[i]>=0) popCmdInc(uCmd[i]);
+  }
 }
 const titanCount=[0,0];
 let heroIdx=-1, enemyHeroIdx=-1, enemyHeroIdxs=[];
@@ -401,6 +507,144 @@ function tickMoveCohorts(){
   }
 }
 const uhold=new Uint8Array(MAXU);                                 // hold-position stance
+
+/* ================= GUARD (escort) + QUEUED ORDERS =========================
+   Two orders the genre treats as basic that this simulation had no state for.
+
+   GUARD is `ustate===7`. It is NOT `umode===2`, which the stance table also
+   calls GUARD: that one is the dug-in combat stance (−45% damage taken, −60%
+   speed) and lives in the abilities popover. The collision is inherited; keep
+   the two apart when reading this file.
+
+   What makes a guard order different from an attack-move parked on top of a
+   friendly is that every decision is taken FROM THE ANCHOR, not from wherever
+   the escort happens to be standing: threats are searched around the guarded
+   thing, and a lock is dropped as soon as the enemy leaves the anchor's leash.
+   Searching from the escort is what turns an escort into a wandering
+   attack-move that abandons the thing it was told to protect — the exact
+   failure the order exists to prevent.
+
+   QUEUED ORDERS are per-unit chains, advanced per unit. Platoon-synchronised
+   advance is what tickPatrolRoutes does for patrol legs, and it is the wrong
+   rule here: one damaged straggler must not hold the whole force at node 2.
+   C&C3 and SupCom both advance per unit, so a slow chassis simply arrives late
+   and catches up at the next node. */
+const uGuard=new Int32Array(MAXU), uGuardG=new Int32Array(MAXU);
+uGuard.fill(-1); uGuardG.fill(-1);
+/* Stand-off ring, threat radius and leash — all measured from the anchor.
+   ENGAGE < LEASH deliberately: the escort takes the fight that comes to the
+   thing it guards and follows it a little way, but breaks off long before it
+   can be baited out of position by a single fast scout. */
+const GUARD_STAND=52, GUARD_ENGAGE=230, GUARD_LEASH=330;
+/* null | array of steps. A plain array, not a typed array: depth is bounded
+   by QUEUE_MAX and only ever holds a chain a player placed by hand, so 34k
+   mostly-null slots is cheaper than eight parallel typed arrays. */
+const uQueue=new Array(MAXU);
+const QUEUE_MAX=8;
+/* Kind of the LIVE node (not the remaining chain). 0 waypoint, 1 named chase,
+   2 guard. queueTick used to wait on any lock, so a stray scout on node 1
+   froze an entire A-MOVE chain. Kind is one byte because the alternative is
+   sniffing umarch/ufield, which air waypoints and named chases share. */
+const uQkind=new Uint8Array(MAXU);
+
+function guardEntityLive(h,g){
+  if(h>=0) return !!(ualive[h]&&ugen[h]===g&&uteam[h]===0);
+  if(h<=-2){ const B=blds[-2-h]; return !!(B&&B.alive&&B.team===0); }
+  return false;
+}
+function guardEntityPos(h){
+  if(h>=0) return [ux[h],uy[h],TYPES[utype[h]].r||6];
+  const B=blds[-2-h]; return [B.x,B.y,B.r||18];
+}
+/* Position of any order handle in the encoding orders already use everywhere:
+   >=0 unit slot, relic handle, or -2-b for a building. */
+function orderTgPos(tg){
+  if(tg>=0) return ualive[tg]?[ux[tg],uy[tg]]:null;
+  if(typeof isRelicTg==='function'&&isRelicTg(tg)){
+    const R=relics[relicOf(tg)]; return R&&R.alive?[R.x,R.y]:null;
+  }
+  const B=blds[-2-tg]; return B&&B.alive?[B.x,B.y]:null;
+}
+function guardStop(i){
+  ustate[i]=0; uGuard[i]=-1; uGuardG[i]=-1;
+  utgt[i]=-1; utgtg[i]=-1; utx[i]=ux[i]; uty[i]=uy[i]; ufield[i]=-1; umarch[i]=0;
+}
+function guardSteer(i,acqMod){
+  if(!guardEntityLive(uGuard[i],uGuardG[i])){
+    /* Anchor destroyed, slot recycled, or a restored save wrote ustate 7 with
+       no guard table behind it (session.js snapshots ustate, not orders).
+       Standing down here is what makes that restore path safe. */
+    guardStop(i); return;
+  }
+  const A=guardEntityPos(uGuard[i]), T=TYPES[utype[i]];
+  if(utgt[i]!==-1){
+    const P=orderTgPos(utgt[i]);
+    if(!P||dist2(P[0],P[1],A[0],A[1])>GUARD_LEASH*GUARD_LEASH){ utgt[i]=-1; utgtg[i]=-1; }
+  }
+  if(utgt[i]===-1 && T.wk!=='n' && (i+tick)%acqMod===0){
+    const e=findEnemyDomain(A[0],A[1],uteam[i],GUARD_ENGAGE,T.targetMask,T.preferMask);
+    if(e>=0){ utgt[i]=e; utgtg[i]=ugen[e]; }
+  }
+  /* The post is a deterministic golden-angle ring slot. No per-order solve, and
+     escorts do not swap places every time the anchor turns — the same reason
+     control groups store a stable slot instead of re-sorting. */
+  const a=i*2.399963, stand=A[2]+GUARD_STAND+(T.r||4);
+  utx[i]=clamp(A[0]+Math.cos(a)*stand,15,MAP-15);
+  uty[i]=clamp(A[1]+Math.sin(a)*stand,15,MAP-15);
+  /* No flow field. The leash is 330wu, comfortably inside the range where
+     direct steering plus the walkability slide already routes correctly, and a
+     per-tick requestField for a MOVING anchor would evict the field ring (and
+     pay an O(unitHigh) detach) several times a second. */
+  ufield[i]=-1; uhold[i]=0; umarch[i]=0;
+}
+
+function queueClear(i){ if(uQueue[i]) uQueue[i]=null; uQkind[i]=0; }
+/* step: {t:0 move | 1 attack | 2 guard, x, y, h:handle, g:generation, mv:move-only} */
+function queueApply(i,s){
+  const T=TYPES[utype[i]];
+  uhold[i]=0; uPatrolRoute[i]=-1; uMoveCohort[i]=-1; uGuard[i]=-1; uGuardG[i]=-1;
+  uQkind[i]=0;
+  if(s.t===2&&guardEntityLive(s.h,s.g)){
+    uQkind[i]=2;
+    ustate[i]=7; uGuard[i]=s.h; uGuardG[i]=s.g;
+    utgt[i]=-1; utgtg[i]=-1; umarch[i]=0; ufield[i]=-1; return;
+  }
+  if(s.t===1){
+    const P=orderTgPos(s.h);
+    if(P&&(s.h<=-2||foeTgt(i,s.h,s.g))){
+      uQkind[i]=1;
+      ustate[i]=2; utgt[i]=s.h; utgtg[i]=s.g;
+      utx[i]=P[0]; uty[i]=P[1]; umarch[i]=0; ufield[i]=-1; return;
+    }
+    /* The named target died while the chain was still walking. Fall through and
+       run the node as an attack-move onto its last known position rather than
+       skipping it — silently teleporting the plan forward is worse than
+       arriving somewhere the player did point at. */
+  }
+  const legal=T.air?[s.x,s.y]:T.naval?(findWater(s.x,s.y)||[ux[i],uy[i]]):findLand(s.x,s.y);
+  ustate[i]=s.mv?1:2; utgt[i]=-1; utgtg[i]=-1; umarch[i]=s.mv?0:1;
+  utx[i]=clamp(legal[0],15,MAP-15); uty[i]=clamp(legal[1],15,MAP-15);
+  ufield[i]=T.air?-1:requestField(legal[0],legal[1],!!T.naval);
+}
+function queueNext(i){
+  const Q=uQueue[i];
+  if(!Q||!Q.length){ uQueue[i]=null; return false; }
+  const s=Q.shift();
+  if(!Q.length) uQueue[i]=null;
+  queueApply(i,s); return true;
+}
+function queueTick(i){
+  const Q=uQueue[i];
+  if(!Q||!Q.length){ uQueue[i]=null; return; }
+  if(ustate[i]===7||uQkind[i]===2) return;        // guard is terminal; it never arrives
+  /* Named chase is the node: wait until the lock dies, then advance even if
+     the hull never stood on the corpse. A waypoint (move / A-MOVE) advances
+     on arrival WHILE shooting — otherwise a scout on node 1 holds the chain. */
+  if(uQkind[i]===1){ if(utgt[i]!==-1) return; queueNext(i); return; }
+  const arrive=Math.max(15,(TYPES[utype[i]].r||4)*2.4);
+  if(ustate[i]!==0 && dist2(ux[i],uy[i],utx[i],uty[i])>arrive*arrive) return;
+  queueNext(i);
+}
 
 /* ================= UNIT COMBAT MODES ======================================
    A mode is a deliberate trade, never a free upgrade: you give up something
@@ -522,9 +766,9 @@ function modeCount(team,m){
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===team&&umode[i]===m) n++;
   return n;
 }
-function spawnUnit(type,team,x,y){
+function spawnUnit(type,team,x,y,cmdSlot){
   const T=TYPES[type];
-  if(!populationCanSpawn(type,team)) return -1;
+  if(!populationCanSpawn(type,team,cmdSlot,x,y)) return -1;
   let i;
   if(freeList.length) i=freeList.pop();
   else { if(unitHigh>=MAXU) return -1; i=unitHigh++; }
@@ -542,7 +786,9 @@ function spawnUnit(type,team,x,y){
   ucool[i]=Math.random()*T.cool; ubuff[i]=0; ustomp[i]=0;
   uclassBuff[i]=0;uclassBuffT[i]=0;ubroodLed[i]=0;uMineT[i]=0;uMineNode[i]=-1;
   utype[i]=type; uteam[i]=team; ualive[i]=1; ustate[i]=0; usel[i]=0;
-  uAllyBase[i]=-1;
+  const slot=populationResolveSlot(team,cmdSlot,x,y);
+  uCmd[i]=slot;
+  uAllyBase[i]=team===0?slot:-1;
   ugen[i]=(ugen[i]+1)|0;                    // this slot is now a different unit
   uwalk[i]=Math.random()*6.283;             // desynchronise the gait across a squad
   utgt[i]=-1; utgtg[i]=-1; ukills[i]=0; uvet[i]=0; ushielded[i]=0; uhaz[i]=0; ufireT[i]=0; ufield[i]=-1; uhold[i]=0;
@@ -552,35 +798,156 @@ function spawnUnit(type,team,x,y){
      main.js clears the array between matches, which is why this only ever
      surfaced mid-match and read as an aggro/AI bug rather than a spawn bug. */
   umarch[i]=0; ustun[i]=0; uheal[i]=0; uHurtT[i]=0;
+  uCrash[i]=0; ualt[i]=0; uCtime[i]=0;
   uPatrolRoute[i]=-1; uPatrolStep[i]=0; uPatrolSlot[i]=0;
   uMoveCohort[i]=-1; uCohesion[i]=1;
+  /* Same recycled-slot hazard as umarch above, and the reason a save restored
+     into ustate 7 is harmless: guardSteer finds no anchor and stands the unit
+     down instead of escorting whatever the dead occupant was escorting. */
+  uGuard[i]=-1; uGuardG[i]=-1; uQueue[i]=null; uQkind[i]=0;
   umode[i]=0; umodeT[i]=0;
   teamCount[team]++;
+  if(team<2) popCmdInc(slot);
+  else if(team===2&&slot>=0&&typeof broodIsEnemy==='function'&&broodIsEnemy()) popCmdInc(slot);
   if(type===8) titanCount[team]++;
+  if(typeof gridLink==='function') gridLink(i);
   return i;
 }
 /* Hero-ness is a property of the TYPE, not of slot 4. Anything keyed to
    utype===4 breaks the moment a faction lands its own commander; behaviours
    ask this instead. */
 function unitIsHero(i){ const T=TYPES[utype[i]]; return !!(T&&T.cat==='hero'); }
+/* Cruise height matches render3d's long-standing +58. Crash integrates this
+   AGL so a Wasp does not pop at cruise and a falling Atlas still meets dirt.
+   Size >=28 is the existing shell-vs-pock gate (Atlas 34, Ascendant 45;
+   Raptor 18 stays on the ordinary pock). */
+const AIR_CRUISE_ALT=58, AIR_CRASH_LARGE=28;
+const uCrash=new Uint8Array(MAXU);
+const ualt=new Float32Array(MAXU);
+const uCvx=new Float32Array(MAXU), uCvy=new Float32Array(MAXU), uCvz=new Float32Array(MAXU);
+const uCpitch=new Float32Array(MAXU), uCroll=new Float32Array(MAXU);
+const uCdPitch=new Float32Array(MAXU), uCdRoll=new Float32Array(MAXU), uCspin=new Float32Array(MAXU);
+const uCtime=new Float32Array(MAXU);
+function unitAirAlt(i){
+  if(i>=0&&uCrash[i]) return ualt[i];
+  return AIR_CRUISE_ALT;
+}
+function unitAirLarge(T){
+  return !!(T&&(T.size>=AIR_CRASH_LARGE||T.airTransport||T.massfleshAir));
+}
+function emitAirSmoke(i,T,crashing){
+  if(typeof gpfxAirSmoke!=='function') return;
+  const p=typeof mfVfxQ==='function'?mfVfxQ():1;
+  const hpFrac=uhpm[i]>0?uhp[i]/uhpm[i]:0;
+  const rich=crashing||hpFrac<0.18;
+  /* HIGH every 3–5 ticks, MEDIUM 5–8, LOW 8–14. Do not share the ground
+     combat smoke cadence — that path stays on dirt. */
+  const mod=p>=0.95?(rich?3:5):p>=0.65?(rich?5:8):(rich?8:14);
+  if((i+tick)%mod) return;
+  const h=(typeof terrainH==='function'?terrainH(ux[i],uy[i]):0)+(uCrash[i]?ualt[i]:AIR_CRUISE_ALT);
+  const heading=uang[i]-Math.PI/2;
+  const vx=uCrash[i]?uCvx[i]:Math.cos(heading)*(T.spd||20)*0.28;
+  const vy=uCrash[i]?uCvy[i]:Math.sin(heading)*(T.spd||20)*0.28;
+  gpfxAirSmoke(ux[i],uy[i],h,vx,vy,{size:T.size,rich:rich,crash:!!crashing});
+}
+function beginAirCrash(i){
+  if(!ualive[i]||uCrash[i]) return false;
+  const T=TYPES[utype[i]];
+  if(!T||!T.air) return false;
+  /* Mechanical air must not take the Brood ichor burst at cruise height.
+     Brood fliers still crash, then orgfxOnDeath runs on impact via killUnit. */
+  uCrash[i]=1; usel[i]=0; uhold[i]=1;
+  ustate[i]=0; utgt[i]=-1; utgtg[i]=-1; umarch[i]=0;
+  uQueue[i]=null; uQkind[i]=0; uPatrolRoute[i]=-1; uMoveCohort[i]=-1;
+  uhp[i]=0;
+  ualt[i]=AIR_CRUISE_ALT;
+  const heading=uang[i]-Math.PI/2;
+  const spd=(T.spd||24)*(umov[i]?0.88:0.38);
+  uCvx[i]=Math.cos(heading)*spd;
+  uCvy[i]=Math.sin(heading)*spd;
+  uCvz[i]=8+Math.random()*12;
+  uCpitch[i]=0.18+Math.random()*0.35;
+  uCroll[i]=(Math.random()-0.5)*0.7;
+  uCdPitch[i]=1.05+Math.random()*1.55;
+  uCdRoll[i]=(Math.random()<0.5?-1:1)*(1.5+Math.random()*2.1);
+  uCspin[i]=(Math.random()-0.5)*2.6;
+  uCtime[i]=0;
+  return true;
+}
+function airCrashTick(i,dt){
+  const T=TYPES[utype[i]];
+  if(!T){ killUnit(i,true); return; }
+  const drag=Math.pow(0.90,dt*10);
+  uCvx[i]*=drag; uCvy[i]*=drag;
+  uCvz[i]-=124*dt;
+  let nx=clamp(ux[i]+uCvx[i]*dt,8,MAP-8), ny=clamp(uy[i]+uCvy[i]*dt,8,MAP-8);
+  if(typeof battlefieldClampPoint==='function'){
+    const bp=battlefieldClampPoint(nx,ny,T.r+8); nx=bp[0]; ny=bp[1];
+  }
+  ux[i]=nx; uy[i]=ny;
+  ualt[i]+=uCvz[i]*dt;
+  uang[i]+=uCspin[i]*dt;
+  uCpitch[i]+=uCdPitch[i]*dt;
+  uCroll[i]+=uCdRoll[i]*dt;
+  uCtime[i]+=dt;
+  umov[i]=1;
+  if(typeof gridRelink==='function') gridRelink(i);
+  if(perfScale>0.22) emitAirSmoke(i,T,true);
+  /* Floor is hull thickness, not zero — a 34-size Atlas kissing dirt at
+     alt=0 buried the mesh a frame before the blast. 3.6s is the off-map
+     failsafe if gravity ever loses the wreck. */
+  if(ualt[i]<=Math.max(2.8,T.size*0.08) || uCtime[i]>3.6) killUnit(i);
+}
 function killUnit(i, silent){
   if(!ualive[i]) return;
+  const T0=TYPES[utype[i]];
+  if(!silent && !uCrash[i] && T0 && T0.air){
+    beginAirCrash(i);
+    return;
+  }
+  const crashImpact=uCrash[i];
+  uCrash[i]=0;
   const brood=unitIsBrood(i);
   ualive[i]=0; usel[i]=0; teamCount[uteam[i]]--;
+  if(typeof gridUnlink==='function') gridUnlink(i);
+  if(uteam[i]<2) popCmdDec(uCmd[i]);
+  else if(uteam[i]===2&&uCmd[i]>=0) popCmdDec(uCmd[i]);
+  uCmd[i]=POP_PLAYER_SLOT; uAllyBase[i]=-1;
   /* Orders retain generation handles, but clearing the live pointers here
      lets route/cohort maintenance compact the gap on its very next pass. */
-  uMoveCohort[i]=-1;uPatrolRoute[i]=-1;
+  uMoveCohort[i]=-1;uPatrolRoute[i]=-1;uGuard[i]=-1;uQueue[i]=null;uQkind[i]=0;
   if(utype[i]===8) titanCount[uteam[i]]--;
   freeList.push(i);
   const T=TYPES[utype[i]];
   if(!silent){
-    spawnExplosion(ux[i],uy[i], T.size*0.9, uteam[i]);
+    /* Infantry, wildlife and Brood used to inherit the vehicle fireball
+       (flash + mushroom + white shards). Size>24 Brood (Alpha, Sovereign)
+       still fell through and drowned orgfxOnDeath. Keep the warhead for
+       machines only. */
+    const organic=brood || (!unitIsHero(i) && !T.air && !!T.legs && T.size<=16);
+    if(organic){
+      const cr=brood?48:190, cg=brood?180:18, cb=brood?40:14;
+      addParticle(0,ux[i],uy[i],0,0,.16,T.size*1.15, cr,cg,cb);
+      addParticle(3,ux[i],uy[i],0,0,.28,T.size*1.05, cr,cg,cb);
+      addParticle(1,ux[i],uy[i],rr(-2,2),rr(-8,-3),.55,T.size*.38, brood?58:72,brood?64:42,brood?48:36);
+    } else {
+      spawnExplosion(ux[i],uy[i], T.size*0.9, uteam[i]);
+    }
     if(T.size>=20){
       const wuv=UNIT_UV[T.spr];
       if(wuv) shatterFrame(ux[i],uy[i],T.size*2.05,wuv[angFrame(uang[i])%wuv.length],uteam[i],T.size>=40?3:2,0.7+T.size/40);
     }
-    if(T.size>=16) addCrater(ux[i],uy[i],T.size*1.6);
-    if(T.size>=18) deformTerrain(ux[i],uy[i],T.size*1.3, 0.034);
+    const civic=typeof cityGroundAt==='function' && cityGroundAt(ux[i],uy[i])>=1;
+    if(T.size>=16 && !(brood&&civic)) addCrater(ux[i],uy[i],T.size*1.85);
+    if(T.size>=18 && !(brood&&civic)){
+      /* Large air crash uses the existing titan-scale blast (size*2.6 / 0.085).
+         Do not retune pock/shell radii — Raptor 18 still takes the ordinary
+         pock. CITYG bowls stay on applyDeform's 0.55×; brood+civic still skip. */
+      if(crashImpact && T.air && unitAirLarge(T))
+        deformTerrain(ux[i],uy[i],T.size*2.6, 0.085, 'blast');
+      else
+        deformTerrain(ux[i],uy[i],T.size*1.55, 0.048, T.size>=28?'shell':'pock');
+    }
     /* Wreckage from EVERY loss, both sides. Your own dead armour is salvage too
        — a grinder in your own territory quietly refunds you.                */
     /* Wildlife leaves no salvage. It used to: every insect death pushed a
@@ -593,26 +960,27 @@ function killUnit(i, silent){
        nothing from the fallen. The size gate that protects the wreck ring
        buffer from tide spam lives inside it. */
     dropRemains(i);
-    /* ---- BLOOD / ICHOR SPLATTER for infantry and brood deaths ----
-       Organic units spray directional blood (red for infantry, green for brood)
-       instead of the standard grey debris spray. Larger organics get more. */
+    /* Ichor stays on the corpse. Type 4 is a fire sprite (ignores RGB) and
+       60–110 speed launched shards into orbit — both read as cheap garnish
+       around the real hull. */
     if((T.legs||brood) && T.size<=24 && perfScale>0.35){
       const isOrg=brood;
       const cr=isOrg?48:190, cg=isOrg?180:18, cb=isOrg?40:14;
       const n=Math.round((3+T.size*0.2)*perfScale);
       for(let k=0;k<n;k++){
-        const a=Math.random()*TAU, sp=60+Math.random()*110;
-        addParticle(5,ux[i],uy[i],Math.cos(a)*sp,Math.sin(a)*sp,.35+Math.random()*.2,2.8+Math.random()*2, cr,cg,cb);
+        const a=Math.random()*TAU, sp=11+Math.random()*16;
+        addParticle(5,ux[i],uy[i],Math.cos(a)*sp,Math.sin(a)*sp,.28+Math.random()*.16,2.2+Math.random()*1.4, cr,cg,cb);
       }
-      addParticle(4,ux[i],uy[i],0,0,.4,T.size*0.6, cr,cg,cb);
     }
-    if(utype[i]===8||utype[i]===4){                       // titan / commander death = cataclysm
+    if((utype[i]===8||utype[i]===4)&&!brood){             // titan / commander death = cataclysm
       spawnExplosion(ux[i],uy[i], 60, uteam[i]);
       addParticle(3,ux[i],uy[i],0,0,1.4,340, 255,220,140);
       addParticle(3,ux[i],uy[i],0,0,1.0,220, 255,150,80);
-      addCrater(ux[i],uy[i],120);
-      deformTerrain(ux[i],uy[i],T.size*2.2, 0.055);
-      shake=16; flashScreen();
+      addCrater(ux[i],uy[i],140);
+      deformTerrain(ux[i],uy[i],T.size*2.6, 0.085, 'blast');
+      flashScreen();
+      if(typeof requestShake==='function') requestShake(ux[i],uy[i],16,'blast');
+      else shake=16;
     }
     if(WC.volatile){                                      // wildcard: every death detonates
       const vr=T.size*2.2+20, vd=T.hp*0.15+14, vx=ux[i], vy=uy[i], vt=uteam[i];
@@ -623,6 +991,7 @@ function killUnit(i, silent){
       addParticle(3,vx,vy,0,0,.45,vr, 255,150,70);
     }
     if(brood){
+      if(typeof orgfxOnDeath==='function') orgfxOnDeath(ux[i],uy[i],T.size,T.name);
       sfx('cre_death',ux[i],uy[i],clamp(T.size/18,0.65,1.8));
       if(T.size>=30) sfx('boomsmall',ux[i],uy[i],T.size/28);
     } else sfx('boom', ux[i],uy[i], T.size/16);
@@ -637,16 +1006,72 @@ function killUnit(i, silent){
 // ---------- spatial hash ----------
 const CS=44, GW=Math.ceil(MAP/CS)+2;
 const gHead=new Int32Array(GW*GW), gNext=new Int32Array(MAXU);
-gHead.fill(-1); gNext.fill(-1);        // must start empty — zeros would make cell walks cycle on unit 0
+const uGridCell=new Int32Array(MAXU);
+gHead.fill(-1); gNext.fill(-1); uGridCell.fill(-1);  // zeros would make cell walks cycle on unit 0
 function gCell(x,y){ return clamp(y/CS|0,0,GW-1)*GW + clamp(x/CS|0,0,GW-1); }
+function gridUnlink(i){
+  const c=uGridCell[i];
+  if(c<0) return;
+  let j=gHead[c], prev=-1;
+  while(j>=0){
+    if(j===i){ if(prev<0) gHead[c]=gNext[i]; else gNext[prev]=gNext[i]; break; }
+    prev=j; j=gNext[j];
+  }
+  gNext[i]=-1; uGridCell[i]=-1;
+}
+function gridLink(i){
+  /* Unlink first: a recycled slot or a test wipe that skipped killUnit would
+     otherwise prepend into its own chain and livelock findEnemy. */
+  if(uGridCell[i]>=0) gridUnlink(i);
+  const c=gCell(ux[i],uy[i]);
+  uGridCell[i]=c; gNext[i]=gHead[c]; gHead[c]=i;
+}
+function gridRelink(i){
+  const c=gCell(ux[i],uy[i]);
+  if(c===uGridCell[i]) return;
+  gridUnlink(i); gridLink(i);
+}
+/* Match reset and proofs only. Live ticks keep the hash via spawn, kill, and
+   cell-change relink — filling gHead every step was O(GW²) throwaway work.
+   Do not raise FACTION_POP_CAP or armyCap to "pay for" this. */
 function rebuildGrid(){
   gHead.fill(-1);
   for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]) continue;
+    if(!ualive[i]){ uGridCell[i]=-1; gNext[i]=-1; continue; }
     const c=gCell(ux[i],uy[i]);
+    uGridCell[i]=c;
     gNext[i]=gHead[c]; gHead[c]=i;
   }
 }
+function gridQueryProof(){
+  /* Incremental hash vs a full rebuild on the same neighbor queries.
+     Crowded-cell walk order can differ (LIFO vs index); closest enemy and
+     "does overlap still produce a separation hit" must not. */
+  const probes=[], total=teamCount[0]+teamCount[1]+teamCount[2];
+  for(let i=0;i<unitHigh && probes.length<24;i++){
+    if(!ualive[i]) continue;
+    const T=TYPES[utype[i]];
+    const fe=findEnemy(ux[i],uy[i],uteam[i],T.rng||80,0);
+    unitSeparation(i,T,uteam[i]===2,false,total);
+    probes.push({i,fe,hits:sepHits});
+  }
+  rebuildGrid();
+  let feBad=0, sepMiss=0;
+  for(let p=0;p<probes.length;p++){
+    const P=probes[p];
+    if(!ualive[P.i]) continue;
+    const T=TYPES[utype[P.i]];
+    if(findEnemy(ux[P.i],uy[P.i],uteam[P.i],T.rng||80,0)!==P.fe) feBad++;
+    unitSeparation(P.i,T,uteam[P.i]===2,false,total);
+    if((P.hits===0)!==(sepHits===0)) sepMiss++;
+  }
+  return {n:probes.length,feBad,sepMiss,ok:!feBad&&!sepMiss};
+}
+/* GHOST (umode 4) is unseen until it fires — unless a detector is in range.
+   src/intel.js takes this over so scouts/uplinks/techlabs can pierce cloak.
+   The fallback matches the old hard skip, so a missing intel module cannot
+   make silent-running hulls suddenly targetable. */
+function intelCanTarget(j,team){ return ualive[j]&&uteam[j]!==team&&umode[j]!==4&&!uCrash[j]; }
 // mode: 0 any, 1 air-only, 2 ground-only
 function findEnemy(x,y,team,rad,mode){
   mode=mode||0;
@@ -657,7 +1082,7 @@ function findEnemy(x,y,team,rad,mode){
   for(let gy=y0;gy<=y1;gy++) for(let gx=x0;gx<=x1;gx++){
     let j=gHead[gy*GW+gx];
     while(j>=0){
-      if(uteam[j]!==team && ualive[j] && umode[j]!==4){   // GHOST units aren't acquired
+      if(intelCanTarget(j,team)){
         const air=TYPES[utype[j]].air;
         if(!((mode===1&&!air)||(mode===2&&air))){
           const d=dist2(x,y,ux[j],uy[j]);
@@ -675,7 +1100,7 @@ function findEnemyDomain(x,y,team,rad,mask,prefer){
   for(let gy=Math.max(0,cy-cr);gy<=Math.min(GW-1,cy+cr);gy++)for(let gx=Math.max(0,cx-cr);gx<=Math.min(GW-1,cx+cr);gx++){
     let j=gHead[gy*GW+gx];
     while(j>=0){
-      if(uteam[j]!==team&&ualive[j]&&umode[j]!==4){
+      if(intelCanTarget(j,team)){
         const D=mfDomainOfType(TYPES[utype[j]]);
         if(mask&D){const d=dist2(x,y,ux[j],uy[j]),score=d*((prefer&D)?.62:1);if(score<bscore){bscore=score;best=j;}}
       }
@@ -825,8 +1250,46 @@ const BT={
 })();
 const ARM=[0,1,2,1,2, 0,1,1,2, 1,1,2, 0,2, 1,2, 1,0, 1, 0,
            1,1,1,1,0,0,2,2,        // Reaper Cinder Lancer Resonator Warden Kestrel Basilisk Harbinger
-           2,1,2,0,0];             // Praetor Archon Broodmother Tidecaster Prospector
+           2,1,2,0,0,              // Praetor Archon Broodmother Tidecaster Prospector
+           2,2,0];                 // Atlas Skycrane, Massflesh Carrier, Massflesh Ascendant
 const ARM_NM=['LIGHT','MEDIUM','HEAVY'];
+/* WHY 33-35 ARE LISTED HERE AND ALSO ASSIGNED IN airlift.js.
+   Those three chassis are appended to TYPES by src/airlift.js, which then wrote
+   their armour class and nothing else did. That left this table three entries
+   short, and a short table does not fail — `dmgMul` reads `ARM[i] || 0`, so a
+   missing entry silently resolves to LIGHT, the worst possible default: LIGHT
+   takes kinetic x1.55, claws x1.60 and incendiary x1.75 while gauss collapses
+   to x0.45. Any heavy body that fell off the end of this list therefore had its
+   counter triangle inverted with nothing anywhere saying so.
+
+   The live game was covered by airlift.js, but every reader of THIS file alone
+   was not — including tools/extract-design-db.mjs, which is the measurement the
+   balance pass runs on. The 2026-08-14 review consequently reported a 1850 HP
+   transport and a 2850 HP carrier as LIGHT when the running game treats both as
+   HEAVY. These values match what airlift.js installs, so the table now agrees
+   with the simulation and no multiplier moved.
+
+   The Ascendant stays LIGHT on purpose: it is the winged Massflesh state, and
+   airlift.js's own header sets the counter as "landed = HEAVY ground target ->
+   anti-tank, winged = AIR target -> anti-air". Flak is EXPLOSIVE, which is
+   x1.35 vs light and x0.70 vs heavy, so promoting it would halve the strength
+   of the documented answer to a breakthrough flight. */
+/* MAKE THE DRIFT LOUD. The invariant above used to be a comment, and a comment
+   cannot fail. Deferred by a macrotask because TYPES is still growing when this
+   file runs: the manifest loads airlift.js afterwards. Missing classes are the
+   only failure — extra trailing ARM slots (this file listing 33-35 before
+   airlift.js appends those TYPES) must not alarm extract-design-db / replay
+   tooling that evaluate sim.js alone. console.error, not throw: a thrown Error
+   on boot would black-screen a shipping match over a table typo, and the
+   design-DB already prints ARM.length vs TYPES.length. */
+if(typeof setTimeout==='function') setTimeout(()=>{
+  if(ARM.length<TYPES.length)
+    console.error('ARM.length='+ARM.length+' < TYPES.length='+TYPES.length
+      +' — dmgMul() reads ARM[i]||0 so Atlas/Massflesh silently become LIGHT');
+  for(let i=0;i<TYPES.length;i++) if(ARM[i]==null)
+    console.error('ARM: no armour class for TYPES['+i+'] '+((TYPES[i]&&TYPES[i].name)||'?')
+      +' — dmgMul() degrades it to LIGHT');
+},0);
 /* WEAPON vs ARMOUR.
    The original spread was +-15..30%, which sounds like a counter system and
    behaves like rounding error: a Striker is over three times more mass
@@ -1184,10 +1647,17 @@ function bldUpgradeDeltaText(B){
 /* The panel must expose the whole investment before the first button press.
    Hiding Mk3 behind a completed Mk2 makes an upgrade feel like an unexplained
    tax, especially on a phone where returning to a structure takes effort. */
+function bldDisplayLevel(B){
+  if(!B) return 1;
+  /* Factories store tech as tier, everything else as Mk lvl. One read so
+     billboards and selection chrome cannot disagree. */
+  if(B.type==='fac') return B.tier===2?2:1;
+  return Math.max(1,B.lvl||1);
+}
 function bldUpgradePlanText(B){
   const path=BUP[B.type];
   if(!path) return '';
-  const L=B.type==='fac'?(B.tier===2?2:1):(B.lvl||1);
+  const L=typeof bldDisplayLevel==='function'?bldDisplayLevel(B):(B.type==='fac'?(B.tier===2?2:1):(B.lvl||1));
   const out=[];
   for(let i=0;i<path.length;i++){
     const U=path[i], mk=i+2;
@@ -1277,10 +1747,12 @@ function addBld(type,team,x,y,instant,rot){
   if(type==='nova') b.cool=NOVA.cd*0.6;          // first charge after construction
   blds.push(b); rebuildBGrid();
   /* Level and pave the ground for it. Doing this at placement rather than at
-     completion means the site is visibly prepared while construction runs. */
-  if(type!=='nest'&&T.placement!=='water'){
+     completion means the site is visibly prepared while construction runs.
+     Brood harbor is water, so it must not pour concrete — but it still needs
+     the U-slip creep bed or the berth sits on a neighbour's veined disc. */
+  if(type!=='nest'&&(T.placement!=='water'||(fac==='horde'&&type==='harbor'))){
     if(fac==='horde'&&typeof makeOrganicFoundation==='function') makeOrganicFoundation(b);
-    else makeFoundation(b);
+    else if(T.placement!=='water') makeFoundation(b);
   }
   if(type==='mex'&&instant) deployExtractorMiner(b);
   return b;
@@ -1308,6 +1780,7 @@ function damageBld(b,dmg,attTeam){
   const B=blds[b]; if(!B||!B.alive) return;
   if(B.team===0&&attTeam!==0&&META.settings.godMode){B.hp=B.hpm;return;}
   if(B.team===0 && attTeam!==0) baseAlarm(B);
+  if(typeof aiOnBldHit==='function'&&B.team===1&&attTeam===0) aiOnBldHit(B,dmg,attTeam);
   B.dmgT=6;
   if(B.shieldT>0) dmg*=0.72;                                  // protected by an Aegis Relay
   if(B.team<2&&B.type!=='nest') dmg*=fortOf(B.team).armor;   // perimeter hardening
@@ -1329,13 +1802,39 @@ function damageBld(b,dmg,attTeam){
   if(B.type==='techlab'&&B.guardT>0) B.hp=Math.max(B.hpm*TECH_GUARD.floor,B.hp-dmg*.24);
   else B.hp-=dmg;
   B.hitT=0.35;                                               // drives the flinch/spark anim
+  if(typeof orgfxOnBld==='function') orgfxOnBld(B,dmg,B.hp<=0);
+  if(B.hp>0 && B.hp<B.hpm*0.78 && perfScale>0.35){
+    addParticle(0,B.x+rr(-B.r*0.55,B.r*0.55),B.y+rr(-B.r*0.55,B.r*0.55),0,0,.35,4.8,255,140,40);
+    if(Math.random()<0.65)
+      addParticle(0,B.x+rr(-B.r*0.40,B.r*0.40),B.y+rr(-B.r*0.40,B.r*0.40),0,0,.28,3.8,255,128,36);
+  }
   if(B.hp<=0){
     B.alive=false;
+    B.fallT=stats.t;
     if(B.type==='mex'&&B.dep>=0) redirectProspectorsFromNode(B.dep,B.team);
-    spawnExplosion(B.x,B.y,BT[B.type].size*1.1,B.team===2?1:B.team);
-    addCrater(B.x,B.y,BT[B.type].size*1.9);
-    addRubble(B.x,B.y,BT[B.type].size*0.9);
-    deformTerrain(B.x,B.y,BT[B.type].size*1.5, 0.045);
+    const Tb0=BT[B.type], bsz=Tb0.size;
+    const civic=typeof cityGroundAt==='function' && cityGroundAt(B.x,B.y)>=1;
+    /* A nest is grown tissue. Masonry collapse + wreck fire is the same
+       drowning fireball the large-Brood unit path used to fire. orgfxOnBld
+       already sprayed ichor; puddles stay billboards. Civic: no crater. */
+    const grown=B.type==='nest'||B.team===2
+      ||(typeof orgfxBldOrganic==='function'&&orgfxBldOrganic(B));
+    if(!grown) spawnBuildingCollapse(B.x,B.y,bsz,civic);
+    if(!(grown&&civic)){
+      addCrater(B.x,B.y, civic?Math.min(bsz*1.05,64):Math.min(bsz*1.75,120));
+      deformTerrain(B.x,B.y, civic?Math.min(bsz*1.15,52):Math.min(bsz*1.65,115), civic?0.032:0.072, civic?'shell':'blast');
+    }
+    addRubble(B.x,B.y,bsz*0.9);
+    addRubble(B.x+rr(-bsz*0.35,bsz*0.35),B.y+rr(-bsz*0.35,bsz*0.35),bsz*0.55);
+    if(!grown){
+      if(civic){
+        addGroundBurn(B.x,B.y, Math.max(bsz*1.35,48), 1);
+        spawnCivicWreckFire(B.x,B.y,bsz);
+      } else {
+        addGroundBurn(B.x,B.y, Math.max(bsz*0.95,28), 1);
+        spawnCivicWreckFire(B.x,B.y,bsz*0.72);
+      }
+    }
     shake=Math.max(shake,6);
     sfx('boom',B.x,B.y,1.6);
     rebuildBGrid(true);                       // territory catches up at end of tick
@@ -1344,8 +1843,7 @@ function damageBld(b,dmg,attTeam){
        ground afterwards gets paid, which is why you counter-attack.        */
     const Tb=BT[B.type], big=Tb.size>=46;
     /* A nest is grown tissue, not a fabricated building. */
-    const grown=B.type==='nest';
-    if(grown) addWreckField(B.x,B.y, 0, Tb.size*2.2, WRECK_BIO, Tb.size*0.75, big?4:2);
+    if(B.type==='nest') addWreckField(B.x,B.y, 0, Tb.size*2.2, WRECK_BIO, Tb.size*0.75, big?4:2);
     else addWreckField(B.x,B.y, Tb.cm*0.55+18, Tb.ce*0.30, WRECK_STRUCT, Tb.size*0.75, big?4:2);
     if(B.type==='mex') for(const D of deposits) if(D.x===B.x&&D.y===B.y) D.taken=false;
     if(B.type==='geo') for(const G of geysers) if(G.x===B.x&&G.y===B.y) G.taken=false;
@@ -1559,7 +2057,7 @@ function setupNests(){
      trickle sources and fewer eruption origins for the whole match, which is
      the actual "opening to build" the player needs. Hard is left at 5 — the
      original, intentionally-hard baseline. */
-  const nestGoal=Math.max(1, Math.round([3,4,5][diffLvl()] * (broodIsEnemy()?1:0.55)));
+  const nestGoal=Math.max(1, Math.round([3,4,5][diffLvl()] * (broodIsEnemy()?1:0.55) * ((typeof planetInfestMul==='function')?planetInfestMul():1)));
   let n=0, tries=0;
   const placed=[];
   while(n<nestGoal && tries++<200){
@@ -1578,7 +2076,8 @@ function setupNests(){
        shouldn't eat a full-strength ambush at every single hive on the map. */
     const guard=Math.round((WC.wild?6:3)*[0.67,1,1][diffLvl()]);
     for(let k=0;k<guard;k++){
-      const i=spawnUnit(12,2,L[0]+rr(-50,50),L[1]+rr(-50,50));
+      const i=spawnUnit(12,2,L[0]+rr(-50,50),L[1]+rr(-50,50),
+        (typeof broodIsEnemy==='function'&&broodIsEnemy())?populationDefaultSeat(1,L[0],L[1]):undefined);
       if(i>=0) ustate[i]=2;
     }
     n++;
@@ -1707,9 +2206,18 @@ function broodIsEnemy(){
 /* One multiplier for every quantity in this section: how many spawn, how often,
    how many can stand at once. Difficulty first, then the faction rule. */
 function infQty(){
-  /* Hiveworld overrides the faction rule: you asked for the swarm. */
+  /* Hiveworld overrides the faction rule: you asked for the swarm.
+     Brood homeworld maps also thicken the carpet even when the AI is someone
+     else — the planet is the hive. Nova homeworlds stay wildlife-thin. */
+  const world=(typeof planetInfestMul==='function')?planetInfestMul():1;
   return [0.18, 0.5, 1.0][diffLvl()] * ((broodIsEnemy() || WC.swarm) ? 1 : 0.35)
-         * (WC.swarm ? 2.2 : 1);
+         * (WC.swarm ? 2.2 : 1) * world;
+}
+function planetInfestMul(){
+  const D=(typeof MAPDEFS!=='undefined'&&MAPDEFS[curMap])?MAPDEFS[curMap]:{};
+  if(D.infest!=null) return D.infest;
+  const fac=typeof mapHomeFac==='function'?mapHomeFac():'nova';
+  return fac==='horde'?1.7:fac==='nova'?0.4:fac==='legion'?0.75:0.55;
 }
 function bugCap(){
   const D=diffLvl(),k=populationTheatre(),mapMul={compact:.78,standard:1,large:1.22}[k]||1;
@@ -1718,6 +2226,7 @@ function bugCap(){
      WebGL context. Keep Unholy dangerous through cadence and composition, not
      by allocating an unrenderable carpet. */
   let hard=[210,360,620][D]*mapMul*(broodIsEnemy()?1:.42)*(WC.swarm?1.22:1);
+  if(typeof planetInfestMul==='function'&&planetInfestMul()>1) hard*=1.22;
   if(typeof META!=='undefined'&&META.settings&&META.settings.perf==='low')hard=Math.min(hard,220);
   return Math.max(80,Math.min(FACTION_POP_CAP,Math.round(hard)));
 }
@@ -1751,10 +2260,13 @@ function nestErupt(N,count,tier){
      meant entries piled up forever at cap and then avalanched the instant
      bugs started dying — a second wave nobody triggered. What cannot spawn now
      is dropped now. */
-  const room=Math.max(0, bugCap()-populationUsedFor(2)-bugQPending());
+  const hiveSeat=(typeof broodIsEnemy==='function'&&broodIsEnemy())?populationDefaultSeat(1,N.x,N.y):POP_PLAYER_SLOT;
+  const room=Math.max(0, (typeof broodIsEnemy==='function'&&broodIsEnemy())
+    ?populationCapForCommander(hiveSeat)-populationUsedForCommander(hiveSeat)
+    :bugCap()-populationUsedFor(2)-bugQPending());
   count=Math.min(count, room);
   if(count<=0) return;
-  bugQ.push({x:N.x,y:N.y,n:count,tier,
+  bugQ.push({x:N.x,y:N.y,n:count,tier,seat:hiveSeat,
     tpx:tp?tp.x:-1,tpy:tp?tp.y:0, tex:te?te.x:-1,tey:te?te.y:0});
   // eruption FX: the ground bursts open
   spawnExplosion(N.x,N.y,30,1);
@@ -1765,14 +2277,16 @@ function nestErupt(N,count,tier){
 function bugQTick(){                      // pour queued broods out of the ground
   if(!bugQ.length) return;
   let budget=(typeof fpsShow!=='undefined'&&fpsShow<22)?60:340;   // back off if the device struggles
-  budget=Math.min(budget,bugCap()-populationUsedFor(2));
+  budget=Math.min(budget, (typeof broodIsEnemy==='function'&&broodIsEnemy())
+    ?Math.max(0,populationCapForCommander(bugQ[0].seat)-populationUsedForCommander(bugQ[0].seat))
+    :bugCap()-populationUsedFor(2));
   while(budget>0&&bugQ.length){
     const q=bugQ[0];
     const batch=Math.min(q.n,budget,70);
     for(let k=0;k<batch;k++){
       const alpha=Math.random()<0.02*q.tier;
       const typ=alpha?13:(Math.random()<0.13?17:12);
-      const i=spawnUnit(typ,2,q.x+rr(-90,90),q.y+rr(-90,90));
+      const i=spawnUnit(typ,2,q.x+rr(-90,90),q.y+rr(-90,90),q.seat>=0?q.seat:undefined);
       if(i>=0){
         ustate[i]=2; ubuff[i]=q.tier>=4?6:0;              // frenzied at high tiers
         const r3=Math.random();
@@ -1860,7 +2374,7 @@ function envTick(dt){
   if(infestT<=0){
     infestT=(Math.max(55,210-tier*30)+Math.random()*40)*[1.75,1.25,1][D]*(broodIsEnemy()?1:1.8);
     const nests=liveNests();
-    if(nests.length && populationUsedFor(2)<bugCap()){
+    if(nests.length && (broodIsEnemy()?populationCanSpawn(12,2,undefined,nests[0].x,nests[0].y):populationUsedFor(2)<bugCap())){
       const eruptN=Math.max(1,Math.min(nests.length,Math.round((1+tier*0.6)*infQty()*1.8)));
       /* 220 bugs per hive at tier 1 was the headline number, and on Easy it is
          now 55 — enough to matter at a mex outpost, not enough to end a match. */
@@ -1884,7 +2398,7 @@ function envTick(dt){
     if(tideT<=0){
       tideT=(230+Math.random()*60)*[2,1.4,1][D];
       const nests=liveNests();
-      if(nests.length && populationUsedFor(2)<bugCap()){
+      if(nests.length && (broodIsEnemy()?populationCanSpawn(12,2,undefined,nests[0].x,nests[0].y):populationUsedFor(2)<bugCap())){
         let total=0;
         const tc=Math.round((6+tier*5)*40*[0.25,0.55,1][D]);
         for(const N of nests){ total+=tc; nestErupt(N,tc,tier); mmPing(N.x,N.y); }
@@ -1897,10 +2411,15 @@ function envTick(dt){
   /* Map-exclusive hazards live in src/hazards.js and tick alongside the
      weather they belong to. */
   if(typeof hazTick==='function') hazTick(dt);
-  /* Meteors belong to authored Pyraeth sites (or the explicit wildcard).
-     Running this timer on every green, ocean and ice map made planet choice
-     cosmetic and punished new players with an unrelated global hazard. */
-  const meteorSite=WC.meteor||(typeof mapHazardKey==='function'&&mapHazardKey(curMap)==='meteor');
+  /* Meteors belong to the Meteor Season wildcard, not to authored meteor
+     sites. Those maps already strike through hazards.js (HAZ.mode==='meteor',
+     orbital debris). OR-ing mapHazardKey here stacked two inbound toasts and
+     two damage pulses on nordhall_peaks. If hazards.js is missing, the site
+     still gets this older storm so the weather is not silent. */
+  const hazMeteor=(typeof mapHazardMode==='function'?mapHazardMode(curMap)==='meteor'
+                 :(typeof mapHazardKey==='function'&&mapHazardKey(curMap)==='meteor'));
+  const hazOwnsMeteor=hazMeteor&&typeof hazTick==='function';
+  const meteorSite=!hazOwnsMeteor&&!!(WC.meteor||hazMeteor);
   if(meteorSite) stormTimer-=dt;
   if(meteorSite&&stormTimer<=0){
     stormTimer=(90+Math.random()*70)*(WC.meteor?0.33:1)*[2.1,1.4,1][D];
@@ -1915,10 +2434,14 @@ function envTick(dt){
     toast('☄ METEOR STORM INBOUND — clear the strike zones!');
     sfx('alarm');
   }
-  // smoldering rubble: persistent smoke columns for ~25s after destruction
+  // smoldering rubble: civic wreckage keeps coals + smoke, not licking flames
   if(perfScale>0.4) for(const R of rubbles){
     const age=stats.t-(R.ts||0);
-    if(age<25 && Math.random()<dt*1.6){
+    const civic=typeof cityGroundAt==='function' && cityGroundAt(R.x,R.y)>=1;
+    if(civic && age<48 && Math.random()<dt*2.2){
+      addParticle(1,R.x+rr(-R.s*0.3,R.s*0.3),R.y+rr(-R.s*0.25,R.s*0.25),rr(-3,3),rr(-14,-7),1.4,R.s*0.26, 40,32,28);
+      if(Math.random()<0.35) addParticle(0,R.x+rr(-6,6),R.y+rr(-6,6),0,0,.28,4.2, 255,140,60);
+    } else if(age<25 && Math.random()<dt*1.6){
       addParticle(1,R.x+rr(-R.s*0.4,R.s*0.4),R.y+rr(-R.s*0.3,R.s*0.3),rr(-2,2),rr(-13,-7),1.1+Math.random()*0.7,R.s*0.28, 46,44,46);
       if(Math.random()<0.25) addParticle(0,R.x+rr(-6,6),R.y+rr(-6,6),0,-4,.3,5, 255,140,60);
     }
@@ -1945,8 +2468,8 @@ function envTick(dt){
       damageScenery(M.x,M.y,R,420);
       spawnExplosion(M.x,M.y,52,1);
       addParticle(3,M.x,M.y,0,0,1.0,R*2.4, 255,150,70);
-      addCrater(M.x,M.y,95);
-      deformTerrain(M.x,M.y,100, 0.05);
+      addCrater(M.x,M.y,110);
+      deformTerrain(M.x,M.y,118, 0.068, 'blast');
       shake=Math.max(shake,10);
       sfx('boom',M.x,M.y,2.2);
     }
@@ -2146,11 +2669,15 @@ const sitePropQueue=[];  // {kind:'tank'|'crate', x, y, s}
    from the feature being off, and this placement has six independent ways to
    reject a candidate. */
 const SITE_REJ={arena:0,spawn:0,water:0,res:0,near:0,plots:0,ok:0};
-/* City occupancy is shared by terrain dressing, prop placement and render
-   LOD.  Previously each subsystem rediscovered a city from a loose radius (or
-   did not know about it at all), which is how rocks appeared through floors
-   and why a generated block looked stamped onto untouched wilderness. Values:
-   0 wild, 1 district envelope, 2 street/service verge, 3 authored plot. */
+/* City occupancy is shared by terrain dressing, prop placement, render LOD
+   and combat scarring.  Previously each subsystem rediscovered a city from a
+   loose radius (or did not know about it at all), which is how rocks appeared
+   through floors and why a generated block looked stamped onto untouched
+   wilderness. Values: 0 wild, 1 district envelope, 2 street/service verge,
+   3 authored plot. Combat still burns and craters civic ground. Civic bowls
+   stay above the waterline and PASS is not rewritten, so the Commander is
+   not trapped. Soil bowls may punch below WATER_H but stay dry dirt — they
+   must not spawn ponds or rewrite PASS to flood. */
 let CITYG=null;
 function cityGroundAt(wx,wy){
   if(!CITYG)return 0;
@@ -2164,7 +2691,7 @@ function rebuildCityGroundMask(){
   /* Keep the authored district clear of wilderness clutter, including plazas
      that do not happen to contain a live building. */
   for(const Z of cityZones){
-    const r=Z.r*1.04,x0=clamp((Z.x-r)/cell|0,0,PGS-1),x1=clamp(Math.ceil((Z.x+r)/cell),0,PGS-1);
+    const r=(Z.span||Z.r)*1.04,x0=clamp((Z.x-r)/cell|0,0,PGS-1),x1=clamp(Math.ceil((Z.x+r)/cell),0,PGS-1);
     const y0=clamp((Z.y-r)/cell|0,0,PGS-1),y1=clamp(Math.ceil((Z.y+r)/cell),0,PGS-1),r2=r*r;
     for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){
       const wx=(gx+.5)*cell,wy=(gy+.5)*cell;
@@ -2319,13 +2846,42 @@ function planDistricts(){
     }
     return false;
   };
+  /* Street frontage overwrites yaw, so every lot on a parallel avenue
+     faced the same way. Square towers/domes take 90° steps; halls only
+     flip 180° so the long face still meets the curb. */
+  const varyPlot=()=>{
+    const last=cityPlan[cityPlan.length-1]; if(!last) return;
+    const h=((last.x*17+last.y*11)|0);
+    if(last.kind===0||last.kind===1||last.kind===3||last.kind===4||last.kind===5||last.kind===7)
+      last.a+=(h&3)*Math.PI*0.5;
+    else if(last.kind===2||last.kind===6) last.a+=(h&1)*Math.PI+((h>>2)&7)*0.035-0.12;
+  };
+  /* Skip stacking the same short-lot mesh on neighboring plots. Pool is
+     the existing civic set (tower/dome/hall/civic) — no new unique meshes. */
+  const pickShortKind=(x,y,zi,civicOk,cell)=>{
+    if(civicOk) return 4;
+    const fac=typeof mapHomeFac==='function'?mapHomeFac():'nova';
+    const near=[], r2=cell*cell*0.9;
+    for(let i=0;i<cityPlan.length;i++){
+      const P=cityPlan[i];
+      if(P.zone!==zi) continue;
+      if(dist2(P.x,P.y,x,y)<r2) near.push(P.kind);
+    }
+    /* Homeworld mix uses the existing civic vocabulary: Nova wants towers and
+       intact halls, Dominion wants domes, Syndicate wants automation halls,
+       Brood wants broken low blocks — no new meshes. */
+    let pool=fac==='legion'?[1,1,1,2,0]:fac==='syndicate'?[2,2,0,1]:fac==='horde'?[1,2,2,0]:[0,0,4,2];
+    const fresh=pool.filter(k=>near.indexOf(k)<0);
+    if(fresh.length) pool=fresh;
+    return pool[(((x*19+y*11)|0)>>>0)%pool.length];
+  };
   /* Stamp an authored layout (assets/data/sitetemplates.js) at a world point.
      Deliberately a sibling of makeDistrict rather than a global: it writes
      through the same plot() closure, so a template gets the identical street
      frontage search, dry-footprint test and battlefield clamp that procedural
      plots get. A template that cannot legally place its required plots is
      rolled back whole — a half-built outpost reads as a bug, not as ruins. */
-  const stampSite=(T,cx2,cy2)=>{
+  const stampSite=(T,cx2,cy2,cls)=>{
     if(!T) return false;
     const zi=cityZones.length;
     const s0=cityStreets.length, p0=cityPlan.length;
@@ -2333,7 +2889,7 @@ function planDistricts(){
     const ca=Math.cos(ga), sa=Math.sin(ga);
     const L2W=(lx,ly)=>[cx2+lx*ca-ly*sa, cy2+lx*sa+ly*ca];
     cityZones.push({x:cx2,y:cy2,r:T.radius||200,ind:T.ind?1:0,total:0,razed:0,claimed:0,
-                    name:T.name||'SITE',tpl:1,grade:T.grade||'plane'});
+                    name:T.name||'SITE',tpl:1,grade:T.grade||'plane',site:cls||T.id||'site'});
     for(const S of (T.streets||[])){
       const a2=L2W(S[0],S[1]), b2=L2W(S[2],S[3]);
       cityStreets.push([a2[0],a2[1],b2[0],b2[1],S[4],zi]);
@@ -2365,7 +2921,7 @@ function planDistricts(){
   const makeDistrict=(cx2,cy2,ind)=>{
     const zi=cityZones.length;
     cityZones.push({x:cx2,y:cy2,r:ind?300:340,ind,total:0,razed:0,claimed:0,
-                    name:ind?'INDUSTRIAL BELT':'DERELICT DISTRICT'});
+                    name:ind?'INDUSTRIAL BELT':'DERELICT DISTRICT',site:ind?'indus':'city'});
     const ga=rr(0,TAU);                                   // whole district shares one grid angle
     const ca=Math.cos(ga), sa=Math.sin(ga);
     const L2W=(lx,ly)=>[cx2+lx*ca-ly*sa, cy2+lx*sa+ly*ca];
@@ -2398,19 +2954,35 @@ function planDistricts(){
                             [CELL*0.5,-CELL*0.5],[-CELL*0.5,-CELL*0.5],
                             [CELL*1.5,CELL*0.5],[CELL*0.5,CELL*1.5]]){
         const A=L2W(ax,ay);
-        if(isWalkable(A[0],A[1])&&plot(A[0],A[1],s5,s5,ga,5,zi)) break;
+        if(isWalkable(A[0],A[1])&&plot(A[0],A[1],s5,s5,ga,5,zi)){ varyPlot(); break; }
       }
     }
     for(let r2=0;r2<ROWS;r2++) for(let c3=0;c3<COLS;c3++){
-      if(rnd()<(ind?0.20:0.14)) continue;                  // plazas and collapsed lots
+      const fac=typeof mapHomeFac==='function'?mapHomeFac():'nova';
+      const skip=ind?(fac==='syndicate'||fac==='legion'?0.12:0.20):(fac==='nova'?0.06:fac==='horde'?0.28:0.14);
+      if(rnd()<skip) continue;                  // plazas and collapsed lots
       const lx=(half(COLS)+c3)*CELL+CELL*0.5, ly=(half(ROWS)+r2)*CELL+CELL*0.5;
       const P=L2W(lx,ly);
       if(!isWalkable(P[0],P[1])||!farFromSpawns(P[0],P[1],520)) continue;
       if(ind){
-        plot(P[0],P[1],rr(96,132),rr(62,88),ga,2,zi);      // foundry hall
+        /* Mix hall/tower/dome from the existing set so the belt is not one stamp. */
+        const kit=typeof civicKitFill==='function'?civicKitFill(fac,rnd):null;
+        if(kit){
+          if(plot(P[0],P[1], kit.w, kit.h, ga, kit.kind, zi)){
+            varyPlot(); cityPlan[cityPlan.length-1].role=kit.role;
+          }
+        }else{
+          const roll=((P[0]*13+P[1]*7)|0)%5;
+          let ikind=roll===0?0:roll===1?1:2;
+          if(fac==='legion') ikind=roll<2?1:roll<4?2:0;
+          else if(fac==='syndicate') ikind=roll<3?2:roll===3?3:0;
+          const iw=ikind===2?rr(96,132):ikind===3?rr(40,56):ikind===0?rr(44,62):rr(52,78);
+          const ih=ikind===2?rr(62,88):ikind===3?rr(40,56):ikind===0?rr(44,62):rr(38,58);
+          if(plot(P[0],P[1], iw, ih, ga, ikind, zi)) varyPlot();
+        }
         if(rnd()<0.7){
           const T2=L2W(lx+rr(-46,46), ly+(rnd()<0.5?-1:1)*rr(54,68));
-          if(isWalkable(T2[0],T2[1])) plot(T2[0],T2[1],rr(34,46),rr(34,46),ga,3,zi);  // tank farm
+          if(isWalkable(T2[0],T2[1])&&plot(T2[0],T2[1],rr(34,46),rr(34,46),ga,3,zi)) varyPlot();
         }
       } else {
         /* Varied derelict layouts: grid, organic cluster, or plaza-centered */
@@ -2421,9 +2993,12 @@ function planDistricts(){
           for(let k=0;k<n;k++){
             const Q=L2W(lx+rr(-CELL*0.22,CELL*0.22), ly+rr(-CELL*0.22,CELL*0.22));
             if(!isWalkable(Q[0],Q[1])) continue;
-            const r2b=rnd(), tall=r2b<0.42, civ=!tall&&civic<2&&r2b>=0.857;
-            if(plot(Q[0],Q[1], tall?rr(40,58):rr(56,84), tall?rr(40,58):rr(34,50),
-                    ga+rr(-0.06,0.06), tall?0:(civ?4:1), zi) && civ) civic++;
+            const r2b=rnd(), tall=r2b<(fac==='nova'?0.55:fac==='legion'?0.22:0.42), civ=!tall&&civic<(fac==='nova'?4:2)&&r2b>=(fac==='nova'?0.72:fac==='horde'?0.96:0.857);
+            const kit=!tall&&typeof civicKitFill==='function'?civicKitFill(fac,rnd):null;
+            const kind=kit?kit.kind:(tall?0:pickShortKind(Q[0],Q[1],zi,civ,CELL));
+            const w=kit?kit.w:(kind===0?rr(40,58):kind===2?rr(72,104):kind===4?rr(50,70):rr(56,84));
+            const h=kit?kit.h:(kind===0?rr(40,58):kind===2?rr(48,72):kind===4?rr(50,70):rr(34,50));
+            if(plot(Q[0],Q[1], w, h, ga, kind, zi)){ varyPlot(); if(kind===4) civic++; if(kit) cityPlan[cityPlan.length-1].role=kit.role; }
           }
         }else if(layout===1){
           /* Organic cluster - buildings grouped around center */
@@ -2432,9 +3007,12 @@ function planDistricts(){
             const ang=rnd()*TAU, dist=rr(10,CELL*0.45);
             const Q=L2W(lx+Math.cos(ang)*dist, ly+Math.sin(ang)*dist);
             if(!isWalkable(Q[0],Q[1])) continue;
-            const r2b=rnd(), tall=r2b<0.35, civ=!tall&&civic<2&&r2b>=0.88;
-            if(plot(Q[0],Q[1], tall?rr(40,60):rr(50,90), tall?rr(40,60):rr(30,55),
-                    ga+rr(-0.12,0.12), tall?0:(civ?4:1), zi) && civ) civic++;
+            const r2b=rnd(), tall=r2b<(fac==='nova'?0.48:0.35), civ=!tall&&civic<(fac==='nova'?4:2)&&r2b>=(fac==='nova'?0.74:fac==='horde'?0.96:0.88);
+            const kit=!tall&&typeof civicKitFill==='function'?civicKitFill(fac,rnd):null;
+            const kind=kit?kit.kind:(tall?0:pickShortKind(Q[0],Q[1],zi,civ,CELL));
+            const w=kit?kit.w:(kind===0?rr(40,60):kind===2?rr(70,100):kind===4?rr(50,70):rr(50,90));
+            const h=kit?kit.h:(kind===0?rr(40,60):kind===2?rr(44,68):kind===4?rr(50,70):rr(30,55));
+            if(plot(Q[0],Q[1], w, h, ga, kind, zi)){ varyPlot(); if(kind===4) civic++; if(kit) cityPlan[cityPlan.length-1].role=kit.role; }
           }
         }else{
           /* Plaza-centered - one big open space, buildings on edges */
@@ -2443,98 +3021,237 @@ function planDistricts(){
             if(rnd()<0.25) continue;
             const Q=L2W(lx+ex*CELL*0.35, ly+ey*CELL*0.35);
             if(!isWalkable(Q[0],Q[1])) continue;
-            const r2b=rnd(), tall=r2b<0.5, civ=!tall&&civic<2&&r2b>=0.82;
-            if(plot(Q[0],Q[1], tall?rr(45,65):rr(60,100), tall?rr(45,65):rr(35,60),
-                    ga+rr(-0.08,0.08), tall?0:(civ?4:1), zi) && civ) civic++;
+            const r2b=rnd(), tall=r2b<(fac==='nova'?0.62:0.5), civ=!tall&&civic<(fac==='nova'?4:2)&&r2b>=(fac==='nova'?0.70:fac==='horde'?0.96:0.82);
+            const kit=!tall&&typeof civicKitFill==='function'?civicKitFill(fac,rnd):null;
+            const kind=kit?kit.kind:(tall?0:pickShortKind(Q[0],Q[1],zi,civ,CELL));
+            const w=kit?kit.w:(kind===0?rr(45,65):kind===2?rr(72,110):kind===4?rr(52,72):rr(60,100));
+            const h=kit?kit.h:(kind===0?rr(45,65):kind===2?rr(48,74):kind===4?rr(52,72):rr(35,60));
+            if(plot(Q[0],Q[1], w, h, ga, kind, zi)){ varyPlot(); if(kind===4) civic++; if(kit) cityPlan[cityPlan.length-1].role=kit.role; }
           }
         }
       }
     }
   };
-  /* Districts are laid down with a relaxing spacing rule: try hard to keep them
-     well apart, then accept tighter packing rather than silently dropping a
-     district the map definition asked for. */
+  /* Span is the real civic disc (corner lots sit outside Z.r). Measure it
+     as soon as a site writes streets/plots so the next candidate cannot
+     land inside that disc. The old 660→470→360 relax packed two 5×5
+     grids on top of each other — stacked beige pancakes on the command
+     map and a cramped night grid in 3D. Drop a site before overlapping. */
+  const zoneSpanOf=(zi)=>{
+    const Z=cityZones[zi]; if(!Z) return 0;
+    let r=Z.r||200;
+    for(const S of cityStreets){
+      if(S[5]!==zi)continue;
+      const pad=S[4]*0.5+16;
+      r=Math.max(r, Math.hypot(S[0]-Z.x,S[1]-Z.y)+pad, Math.hypot(S[2]-Z.x,S[3]-Z.y)+pad);
+    }
+    for(const P of cityPlan){
+      if(P.zone!==zi)continue;
+      r=Math.max(r, Math.hypot(P.x-Z.x,P.y-Z.y)+Math.hypot(P.w,P.h)*0.7+16);
+    }
+    Z.span=r;
+    return r;
+  };
+  const GAP=64;
   const placed=[];
-  const tryPlace=(ind,minD)=>{
-    for(let a=0;a<70;a++){
+  const clashes=(x,y,r)=>{
+    for(const p of placed) if(dist2(x,y,p.x,p.y)<(r+p.r+GAP)*(r+p.r+GAP)) return true;
+    return false;
+  };
+  const tryPlace=(ind)=>{
+    const guess=ind?310:400;
+    for(let a=0;a<100;a++){
       const x=rr(MAP*0.18,MAP*0.82), y=rr(MAP*0.18,MAP*0.82);
       if(typeof battlefieldContains==='function'&&!battlefieldContains(x,y,310))continue;
       if(!farFromSpawns(x,y,700)||!isWalkable(x,y)) continue;
       if(!clearOfResourceSites(x,y,ind?330:370))continue;
-      let clash=false;
-      for(const p of placed) if(dist2(x,y,p[0],p[1])<minD*minD){ clash=true; break; }
-      if(clash) continue;
-      placed.push([x,y]); makeDistrict(x,y,ind); return true;
+      if(clashes(x,y,guess)) continue;
+      const zi=cityZones.length, s0=cityStreets.length, p0=cityPlan.length;
+      makeDistrict(x,y,ind);
+      const r=zoneSpanOf(zi);
+      if(clashes(x,y,r)){
+        cityStreets.length=s0; cityPlan.length=p0; cityZones.length=zi;
+        SITE_REJ.near++;
+        continue;
+      }
+      placed.push({x,y,r}); return true;
     }
     return false;
   };
-  /* Authored sites use the same relaxing spacing search, but carry their own
-     clearance from the template — an outpost is a quarter the size of a
-     district and would never place at the district's 310-unit radius. */
-  const tryStamp=(cls,minD)=>{
+  /* Authored sites carry their own clearance — an outpost is a quarter the
+     size of a district. Pairwise span still wins over a single minD so a
+     town cannot sit inside a prefecture's grid. */
+  const tryStamp=(cls)=>{
     if(typeof siteTemplateFor!=='function') return false;
-    for(let a=0;a<70;a++){
+    for(let a=0;a<100;a++){
       const T=siteTemplateFor(cls,rnd);
       if(!T) return false;
       const x=rr(MAP*0.18,MAP*0.82), y=rr(MAP*0.18,MAP*0.82);
       const clear=T.minClearRadius||220;
+      const guess=Math.max(T.radius||200, clear*0.72);
       if(typeof battlefieldContains==='function'&&!battlefieldContains(x,y,clear)){SITE_REJ.arena++;continue;}
       if(!farFromSpawns(x,y,T.minSpawnDist||800)){SITE_REJ.spawn++;continue;}
       if(!isWalkable(x,y)){SITE_REJ.water++;continue;}
       if(!clearOfResourceSites(x,y,clear)){SITE_REJ.res++;continue;}
-      let clash=false;
-      for(const p of placed) if(dist2(x,y,p[0],p[1])<minD*minD){ clash=true; break; }
-      if(clash){SITE_REJ.near++;continue;}
-      if(!stampSite(T,x,y)){SITE_REJ.plots++;continue;}   // required plot rejected
-      placed.push([x,y]); SITE_REJ.ok++; return true;
+      if(clashes(x,y,guess)){SITE_REJ.near++;continue;}
+      const zi=cityZones.length, s0=cityStreets.length, p0=cityPlan.length, q0=sitePropQueue.length;
+      if(!stampSite(T,x,y,cls)){SITE_REJ.plots++;continue;}
+      const r=zoneSpanOf(zi);
+      if(clashes(x,y,r)){
+        cityStreets.length=s0; cityPlan.length=p0; cityZones.length=zi; sitePropQueue.length=q0;
+        SITE_REJ.near++;
+        continue;
+      }
+      placed.push({x,y,r}); SITE_REJ.ok++; return true;
     }
     return false;
   };
-  for(let c2=0;c2<(def.city||0);c2++) tryPlace(0,660)||tryPlace(0,470)||tryPlace(0,360);
-  for(let c2=0;c2<(def.indus||0);c2++) tryPlace(1,660)||tryPlace(1,470)||tryPlace(1,360);
-  /* Absent keys mean zero, so every existing MAPDEFS entry is unchanged. */
-  for(let c2=0;c2<(def.outpost||0);c2++) tryStamp('outpost',520)||tryStamp('outpost',380);
-  for(let c2=0;c2<(def.relic||0);c2++)   tryStamp('relic',560)||tryStamp('relic',400);
-  for(let c2=0;c2<(def.towns||0);c2++)   tryStamp('city',700)||tryStamp('city',520);
+  /* Authored kit towns/outposts first. Aelos Standard asks for 4 procedural
+     districts AND a brutalist prefecture; if the 5x5 grids claim the map
+     first the catalog layouts lose every stamp and WORLD_KIT stays unused. */
+  for(let c2=0;c2<(def.towns||0);c2++)   tryStamp('city');
+  for(let c2=0;c2<(def.outpost||0);c2++) tryStamp('outpost');
+  for(let c2=0;c2<(def.relic||0);c2++)   tryStamp('relic');
+  for(let c2=0;c2<(def.spaceport||0);c2++) tryStamp('spaceport');
+  for(let c2=0;c2<(def.domes||0);c2++)     tryStamp('dome');
+  for(let c2=0;c2<(def.city||0);c2++) if(!tryPlace(0)) SITE_REJ.near++;
+  for(let c2=0;c2<(def.indus||0);c2++) if(!tryPlace(1)) SITE_REJ.near++;
+  /* Z.r is the authored disc. Corner lots of a 5x5 / 3x3 grid sit outside
+     that circle, which left biome grass in the blocks players read as city.
+     span covers every street and plot so CITYG and the grey fill match. */
+  for(let zi=0;zi<cityZones.length;zi++){
+    const Z=cityZones[zi];
+    let r=Z.r;
+    for(const S of cityStreets){
+      if(S[5]!==zi)continue;
+      const pad=S[4]*0.5+16;
+      r=Math.max(r, Math.hypot(S[0]-Z.x,S[1]-Z.y)+pad, Math.hypot(S[2]-Z.x,S[3]-Z.y)+pad);
+    }
+    for(const P of cityPlan){
+      if(P.zone!==zi)continue;
+      r=Math.max(r, Math.hypot(P.x-Z.x,P.y-Z.y)+Math.hypot(P.w,P.h)*0.7+16);
+    }
+    Z.span=r;
+  }
   rebuildCityGroundMask();
   if(placed.length) window.__cityAt=placed[0];
 }
 
-/* Neutral settlements used to be the only structures exempt from foundation
-   grading. Their plots were selected by a centre-point land check and could
-   therefore bridge a ridge, float at one corner, or bury their windows in a
-   slope. Grade every authored plot and street in one heightfield pass before
-   normals and navigation are built. Rotated footprints are handled in local
-   plot space; feathering keeps the district part of the terrain rather than a
-   collection of square mesas. */
+/* SuperCom bases sit on graded pads. The old pass pulled 34% toward a tilted
+   plane inside Z.r, so biome hills continued through every plaza. Flatten the
+   SPAN (corner lots live outside Z.r), then dump the cut as irregular berms —
+   mangled scrape, not a cliff and not a blend that puts lumps back on the pad. */
+function siteBermWidth(Z){
+  const s=Z.site||'';
+  /* Wide enough for dumped heaps to sit outside the pad disc. The old 32–52
+     ring was thinner than one city block and still read as a drawn circle. */
+  if(s==='indus'||s==='city') return 86;
+  if(s==='relic') return 68;
+  return 58;                                          // outpost / colony / town
+}
+function siteHash(zx,zy,a,b){
+  let n=(Math.imul(zx|0,73856093)^Math.imul(zy|0,19349663)^Math.imul(a|0,83492791)^Math.imul(b|0,2654435761))|0;
+  n=Math.imul(n^(n>>>16),0x7feb352d);
+  return ((n>>>8)&65535)/65536;
+}
 function gradeDistrictTerrain(){
-  if(!heightF||!cityPlan.length)return;
+  if(!heightF||!cityZones.length)return;
   const k=TS/MAP,sample=(wx,wy)=>heightF[clamp(wy*k|0,0,TS-1)*TS+clamp(wx*k|0,0,TS-1)];
-  /* Grade the connected district before its individual foundations. A single
-     perfectly horizontal 700 m disc would create a mesa, so each city follows
-     one very shallow fitted plane; streets/plazas are strongly pulled to it,
-     the outer cleared envelope only gently soaks into the surrounding biome.
-     The exact plot and street passes below finish the hard gameplay surfaces. */
-  for(const Z of cityZones){
-    const r=Z.r*1.04,span=r*.58;
-    const hc=Math.max(WATER_H+.016,(sample(Z.x,Z.y)+sample(Z.x+span,Z.y)+sample(Z.x-span,Z.y)
-      +sample(Z.x,Z.y+span)+sample(Z.x,Z.y-span))/5);
-    const sx=clamp((sample(Z.x+span,Z.y)-sample(Z.x-span,Z.y))/(span*2),-.00011,.00011);
-    const sy=clamp((sample(Z.x,Z.y+span)-sample(Z.x,Z.y-span))/(span*2),-.00011,.00011);
-    const x0=clamp((Z.x-r)*k|0,0,TS-1),x1=clamp(Math.ceil((Z.x+r)*k),0,TS-1);
-    const y0=clamp((Z.y-r)*k|0,0,TS-1),y1=clamp(Math.ceil((Z.y+r)*k),0,TS-1);
+  const zoneGrade=new Float32Array(cityZones.length);
+  for(let zi=0;zi<cityZones.length;zi++){
+    const Z=cityZones[zi];
+    let ang=0;
+    for(const S of cityStreets){ if(S[5]===zi){ ang=Math.atan2(S[3]-S[1],S[2]-S[0]); break; } }
+    const ca=Math.cos(-ang), sa=Math.sin(-ang);
+    let hx=36, hy=36;
+    const acc=(x,y,pad)=>{
+      const lx=(x-Z.x)*ca-(y-Z.y)*sa, ly=(x-Z.x)*sa+(y-Z.y)*ca;
+      hx=Math.max(hx,Math.abs(lx)+pad); hy=Math.max(hy,Math.abs(ly)+pad);
+    };
+    for(const S of cityStreets){
+      if(S[5]!==zi)continue;
+      const pad=S[4]*.5+18;
+      acc(S[0],S[1],pad); acc(S[2],S[3],pad);
+    }
+    for(const P of cityPlan){
+      if(P.zone!==zi)continue;
+      acc(P.x,P.y,Math.hypot(P.w,P.h)*.55+12);
+    }
+    Z.padHx=hx; Z.padHy=hy; Z.padA=ang;
+    Z._pad={ang,hx,hy};
+    const bermW=siteBermWidth(Z), ext=Math.hypot(hx,hy)+bermW*1.85;
+    const vals=[];
+    for(let i=0;i<13;i++){
+      const a=i/13*TAU, d=i?Math.min(hx,hy)*(0.28+0.22*(i%3)/3):0;
+      vals.push(sample(Z.x+Math.cos(a)*d,Z.y+Math.sin(a)*d));
+    }
+    vals.sort((a,b)=>a-b);
+    const hc=Math.max(WATER_H+.016, vals[vals.length>>1]);
+    zoneGrade[zi]=hc; Z.gradeH=hc;
+    const cW=Math.cos(ang), sW=Math.sin(ang);
+    const heaps=[];
+    const nHeap=8+((siteHash(Z.x,Z.y,zi,91)*9)|0);
+    for(let p=0;p<nHeap;p++){
+      const side=(siteHash(Z.x,Z.y,p,zi)*4)|0, u=siteHash(Z.x,Z.y,p+3,zi);
+      const extra=bermW*(0.18+1.35*siteHash(Z.x,Z.y,p+41,zi+2));
+      let lx,ly;
+      if(side===0){ lx=(u-.5)*2*hx; ly=-(hy+extra); }
+      else if(side===1){ lx=(u-.5)*2*hx; ly=hy+extra; }
+      else if(side===2){ lx=-(hx+extra); ly=(u-.5)*2*hy; }
+      else { lx=hx+extra; ly=(u-.5)*2*hy; }
+      const hxw=Z.x+lx*cW-ly*sW, hyw=Z.y+lx*sW+ly*cW;
+      if(cityGroundAt(hxw,hyw)>=2) continue;
+      const hr=bermW*(0.14+0.50*siteHash(Z.x,Z.y,p+71,zi+4));
+      const origP=sample(hxw,hyw);
+      const amp=(Math.max(0,origP-hc)*0.70+0.022)*(0.35+1.25*siteHash(Z.x,Z.y,p+9,zi));
+      heaps.push(hxw,hyw,hr,amp);
+    }
+    const x0=clamp((Z.x-ext)*k|0,0,TS-1),x1=clamp(Math.ceil((Z.x+ext)*k),0,TS-1);
+    const y0=clamp((Z.y-ext)*k|0,0,TS-1),y1=clamp(Math.ceil((Z.y+ext)*k),0,TS-1);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
-      const wx=x/k,wy=y/k,dx=wx-Z.x,dy=wy-Z.y,d=Math.hypot(dx,dy),cls=cityGroundAt(wx,wy),i=y*TS+x;
-      if(!cls||d>r||heightF[i]<WATER_H+.004)continue;
-      const edge=clamp((r-d)/(r*.16),0,1),strength=(cls===3?.78:cls===2?.64:.34)*edge;
-      const target=hc+dx*sx+dy*sy,w=strength*strength*(3-2*strength);
-      heightF[i]+=(target-heightF[i])*w;
+      const wx=x/k,wy=y/k;
+      const lx=(wx-Z.x)*ca-(wy-Z.y)*sa, ly=(wx-Z.x)*sa+(wy-Z.y)*ca;
+      const ox=Math.max(0,Math.abs(lx)-hx), oy=Math.max(0,Math.abs(ly)-hy);
+      const d=Math.hypot(ox,oy);
+      if(d>bermW*1.9)continue;
+      const i=y*TS+x, orig=heightF[i];
+      const cls=cityGroundAt(wx,wy);
+      const floor=WATER_H+.016;
+      if(orig<WATER_H+.002){
+        /* Authored rivers/lakes under the painted GRID used to stay as
+           WATER_AUTH holes: the water sheet sat in a texel-jagged pit and
+           bit blue through city pavement. Drain wet texels on the pad
+           (interior or street/plot). Berm/biome water stays authored so a
+           shoreline city does not become a square island. */
+        if(d>=5&&cls<2) continue;
+        heightF[i]=Math.max(floor, hc);
+        continue;
+      }
+      /* Interior of the GRID stays construction-flat. Outside, a wide
+         smoothstep returns to biome — a steep circular face was the cliff. */
+      if(d<5||cls>=2){
+        heightF[i]=Math.max(floor, hc);
+      }else{
+        const u=clamp(d/Math.max(14,bermW),0,1);
+        const w=u*u*(3-2*u);
+        let h=hc+(orig-hc)*w;
+        const cut=Math.max(0,orig-hc), fill=Math.max(0,hc-orig);
+        const grain=0.45+0.90*siteHash(Z.x,Z.y,x,y);
+        const pile=Math.exp(-((u-0.38)*3.1)*((u-0.38)*3.1));
+        h+=(cut*0.55+fill*0.18+0.016)*grain*pile*(0.35+siteHash(Z.x,Z.y,x+7,y));
+        for(let p=0;p<heaps.length;p+=4){
+          const hd=Math.hypot(wx-heaps[p],wy-heaps[p+1]), hr=heaps[p+2];
+          if(hd>=hr)continue;
+          const t=1-hd/hr;
+          h+=heaps[p+3]*t*t*(3-2*t);
+        }
+        heightF[i]=Math.max(floor, Math.min(0.84, h));
+      }
     }
   }
   for(const P of cityPlan){
     const ca=Math.cos(P.a),sa=Math.sin(P.a),hw=P.w*.67,hh=P.h*.67,feather=22;
-    const target=Math.max(WATER_H+.016,(sample(P.x,P.y)+sample(P.x+ca*hw*.6,P.y+sa*hw*.6)
-      +sample(P.x-ca*hw*.6,P.y-sa*hw*.6))/3);
+    const datum=zoneGrade[P.zone]||Math.max(WATER_H+.016,sample(P.x,P.y));
     const rad=Math.hypot(hw,hh)+feather,x0=clamp((P.x-rad)*k|0,0,TS-1),x1=clamp(Math.ceil((P.x+rad)*k),0,TS-1);
     const y0=clamp((P.y-rad)*k|0,0,TS-1),y1=clamp(Math.ceil((P.y+rad)*k),0,TS-1);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
@@ -2545,21 +3262,21 @@ function gradeDistrictTerrain(){
          land. Shoreline cells remain water and are later clipped out of the
          painted street/foundation passes. */
       if(d>feather||heightF[i]<WATER_H+.004)continue;const t=1-d/feather,w=t*t*(3-2*t);
-      heightF[i]+= (target-heightF[i])*w;
+      heightF[i]+= (datum-heightF[i])*w;
     }
   }
-  /* Streets follow a linearly graded centre rather than one district-wide
-     plane, so a long avenue can climb naturally without becoming a ramp wall. */
+  /* Streets share the site pad grade. Endpoint samples used to put one
+     crossing above another; the berm ring is the only place hills return. */
   for(const S of cityStreets){
     const ax=S[0],ay=S[1],bx=S[2],by=S[3],dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1;
-    const pad=S[4]*.7+16,ta=Math.max(WATER_H+.014,sample(ax,ay)),tb=Math.max(WATER_H+.014,sample(bx,by));
+    const pad=S[4]*.7+16,datum=Math.max(WATER_H+.014,zoneGrade[S[5]]||((sample(ax,ay)+sample(bx,by))*.5));
     const x0=clamp((Math.min(ax,bx)-pad)*k|0,0,TS-1),x1=clamp(Math.ceil((Math.max(ax,bx)+pad)*k),0,TS-1);
     const y0=clamp((Math.min(ay,by)-pad)*k|0,0,TS-1),y1=clamp(Math.ceil((Math.max(ay,by)+pad)*k),0,TS-1);
     for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
       const wx=x/k,wy=y/k,t=clamp(((wx-ax)*dx+(wy-ay)*dy)/L2,0,1),px=ax+dx*t,py=ay+dy*t,d=Math.hypot(wx-px,wy-py);
       const i=y*TS+x;
-      if(d>pad||heightF[i]<WATER_H+.004)continue;const q=1-d/pad,w=q*q*(3-2*q),target=ta+(tb-ta)*t;
-      heightF[i]+=(target-heightF[i])*w;
+      if(d>pad||heightF[i]<WATER_H+.004)continue;const q=1-d/pad,w=q*q*(3-2*q);
+      heightF[i]+=(datum-heightF[i])*w;
     }
   }
   for(let y=0;y<PGS;y++)for(let x=0;x<PGS;x++){
@@ -2610,6 +3327,14 @@ function setupRelics(){
     if(typeof battlefieldClampPoint==='function')L=battlefieldClampPoint(L[0],L[1],70);
     if(R.kind==='tank') tanks.push({x:L[0],y:L[1],s:R.s||rr(30,42),hp:260,alive:true,fuse:0});
     else if(R.kind==='crate'){ spawnCrate(L[0],L[1]); if(crates.length) crates[crates.length-1].alt=0; }
+    else if(R.kind==='rock'){
+      const BK=typeof biomeKit==='function'?biomeKit():null;
+      rocks.push({x:L[0],y:L[1],s:R.s||rr(18,36),a:rr(0,TAU),k:(BK&&BK.rockKind)||'stone'});
+    }else if(R.kind==='flora'){
+      const BK=typeof biomeKit==='function'?biomeKit():null;
+      trees.push({x:L[0],y:L[1],s:R.s||rr(16,28),a:rr(0,TAU),
+        k:typeof floraKind==='function'?floraKind(BK,rnd):(BK&&BK.flora)||'broad'});
+    }
   }
   sitePropQueue.length=0;
   const spawnA=[MAP*SP_LO,MAP*SP_HI], spawnB=[MAP*SP_HI,MAP*SP_LO];
@@ -2633,11 +3358,11 @@ function blowTank(T){
     const B=blds[b2];
     if(B.alive&&dist2(T.x,T.y,B.x,B.y)<(R*0.8+B.r)*(R*0.8+B.r)) damageBld(b2,DMG*0.5,2);
   }
-  spawnExplosion(T.x,T.y,T.s*1.6,1);
-  addParticle(3,T.x,T.y,0,0,1.1,R*2.2, 255,170,70);
-  addParticle(8,T.x,T.y,0,0,2.4,T.s*1.5, 255,255,255);
-  addCrater(T.x,T.y,T.s*2);
-  deformTerrain(T.x,T.y,T.s*2.2,0.05);
+  spawnExplosion(T.x,T.y,Math.min(T.s*0.55,22),1);
+  addParticle(3,T.x,T.y,0,0,1.1,Math.min(72,T.s*2.2), 255,170,70);
+  addParticle(8,T.x,T.y,0,0,2.4,Math.min(28,T.s*0.9), 255,255,255);
+  addCrater(T.x,T.y,T.s*2.4);
+  deformTerrain(T.x,T.y,T.s*2.6,0.068,'blast');
   shake=Math.max(shake,9);
   sfx('boom',T.x,T.y,2.2);
   // chain reaction through the tank farm
@@ -2656,8 +3381,12 @@ function sceneryTick(dt){
   }
   for(const R of relics){
     if(!R.alive) continue;
-    if((tick&31)===0&&R.hp<R.hpm*0.5&&Math.random()<0.4)
-      addParticle(1,R.x+rr(-R.s*0.3,R.s*0.3),R.y-R.s*0.2,rr(-3,3),rr(-12,-5),1.2,R.s*0.22, 60,58,56);
+    if((tick&15)===0 && (R.burn>0.12 || R.hp<R.hpm*0.65)){
+      if(Math.random()<0.4)
+        addParticle(1,R.x+rr(-R.s*0.3,R.s*0.3),R.y-R.s*0.2,rr(-3,3),rr(-12,-5),1.2,R.s*0.22, 60,58,56);
+      if(Math.random()<0.35)
+        addParticle(0,R.x+rr(-R.w*0.2,R.w*0.2),R.y+rr(-R.h*0.15,R.h*0.15),0,0,.28,5, 255,140,60);
+    }
   }
 }
 /* Target encoding across the sim: >=0 is a unit, <=-2 is a structure index,
@@ -2683,18 +3412,26 @@ function findRelic(x,y,rad){
 function damageRelic(R,dmg,byTeam){
   if(!R||!R.alive) return;
   R.hp-=dmg;
-  R.burn=Math.min(1,(R.burn||0)+0.06);
-  R.lean=Math.min(0.13,(R.lean||0)+0.004);
+  R.burn=Math.min(1,(R.burn||0)+Math.max(0.10,dmg/Math.max(1,R.hpm)*0.62));
+  R.lean=Math.min(0.16,(R.lean||0)+0.006);
   R.hitT=0.25;
+  if(perfScale>0.28 && (R.burn>0.08 || R.hp<R.hpm*0.82)){
+    const q=towerFxQ();
+    addParticle(0,R.x+rr(-R.w*0.28,R.w*0.28),R.y+rr(-R.h*0.22,R.h*0.22),0,0,
+      .28, Math.min(11,R.s*0.18), 255,148,48);
+    if(q>0.55)
+      addParticle(1,R.x+rr(-R.w*0.16,R.w*0.16),R.y+rr(-R.h*0.14,R.h*0.14),rr(-4,4),rr(-18,-8),
+        2.4, Math.min(10,R.s*0.16), 48,42,38);
+  }
   /* STAGED COLLAPSE. A skyscraper that vanished the instant its bar emptied
      was the least believable destruction in the game. At half health the top
      two thirds shear off as a real event — dust, debris, ground displacement,
      a salvage dividend — and the stump keeps fighting for the other half. */
   if(R.kind===5&&!R.part&&R.hp<=R.hpm*0.5&&R.hp>0){
     R.part=1; R.lean=0;
-    spawnExplosion(R.x,R.y,R.s*0.62,1);
+    spawnBuildingCollapse(R.x,R.y,R.s*0.72,true);
     addRubble(R.x,R.y,R.s*0.72);
-    deformTerrain(R.x,R.y,R.s*0.95,0.030);
+    deformTerrain(R.x,R.y,R.s*1.05,0.042,'shell');
     shake=Math.max(shake,6);
     for(let k=0;k<18;k++)
       addParticle(1,R.x+rr(-R.w*0.5,R.w*0.5),R.y+rr(-R.h*0.5,R.h*0.5),rr(-34,34),rr(-40,-8),2.3,R.s*0.38, 122,120,114);
@@ -2709,12 +3446,26 @@ let razeTip=0;
 function collapseBlock(R,byTeam){
   if(!R.alive) return;
   R.alive=false;
-  spawnExplosion(R.x,R.y,R.s*0.8,1);
+  R.fallT=stats.t;
+  R.burn=1;
+  spawnBuildingCollapse(R.x,R.y,R.s,true);
   addRubble(R.x,R.y,R.s*0.85);
-  addCrater(R.x,R.y,R.s*1.05);
+  addCrater(R.x,R.y,R.s*1.15);
+  /* Civic detonations stay small (no mushroom), but the crater they leave
+     must still BURN. spawnExplosion's capped size only stamped a ~30-unit
+     ember disc under an 80-unit hall, and the live-ruin fire loop skips
+     dead blocks — so city destroy read as a cold grey crater. */
+  if(typeof cityGroundAt==='function' && cityGroundAt(R.x,R.y)>=1){
+    addGroundBurn(R.x,R.y, Math.max(R.s*1.35, 48), 1);
+    spawnCivicWreckFire(R.x, R.y, R.s);
+  } else if(R.kind===0){
+    /* Civic towers off the painted city mask still have to burn. */
+    addGroundBurn(R.x,R.y, Math.max(R.s*0.95, 28), 1);
+    spawnCivicWreckFire(R.x, R.y, R.s*0.85);
+  }
   /* A tower block coming down displaces real ground — that's the biggest
      single deformation event in the game outside a NOVA strike. */
-  deformTerrain(R.x,R.y,R.s*(R.kind===5?1.85:1.25), R.kind===5?0.105:R.kind===0?0.070:0.045);
+  deformTerrain(R.x,R.y,R.s*(R.kind===5?2.15:1.45), R.kind===5?0.135:R.kind===0?0.090:0.058, 'blast');
   shake=Math.max(shake, R.kind===5?11:R.kind===0?7:4);
   for(let k=0;k<14;k++)
     addParticle(1,R.x+rr(-R.w*0.4,R.w*0.4),R.y+rr(-R.h*0.35,R.h*0.35),rr(-22,22),rr(-30,-6),1.9,R.s*0.32, 120,118,112);
@@ -2852,7 +3603,9 @@ function carrierTick(dt){
       sfx('carrier_deploy',carrier.x,carrier.y,1.0);
       toast('🚀 CARRIER READY — tap ground to fly there, then DEPLOY');
     } else {
-      if((tick&3)===0) addParticle(0,carrier.x+rr(-40,40),carrier.y+rr(-30,30),0,0,.4,26, 255,190,110);
+      /* Grey dust while descending — type 10 hugs the ground and never
+         blooms. Type 0 here was the orange flash on the hull. */
+      if((tick&3)===0) addParticle(10,carrier.x+rr(-40,40),carrier.y+rr(-30,30),rr(-10,10),rr(-8,8),.45,14, 150,142,124);
     }
     return;
   }
@@ -2878,11 +3631,18 @@ function carrierTick(dt){
     while(da>Math.PI)da-=TAU; while(da<-Math.PI)da+=TAU;
     carrier.ang+=clamp(da,-3.4*dt,3.4*dt);
     carrier.bank=(carrier.bank||0)+(clamp(da,-1,1)*0.34-(carrier.bank||0))*Math.min(1,dt*4);
-    carrier.dust+=dt;
-    if(carrier.clearance<46&&carrier.dust>0.07){
-      carrier.dust=0;
-      addParticle(1,carrier.x+rr(-30,30),carrier.y+rr(-20,26),rr(-14,14),rr(-6,10),1.0,17, 150,142,124);
-    }
+  }
+  /* Hover dust, not glow. Type 10 is the boot/track particulate: ground-
+     hugging, alpha-blended, no bloom. The old type-0 warm flashes (255,196,118)
+     were additive sprites that painted the hull orange. */
+  carrier.dust+=dt;
+  if(carrier.dust>0.055){
+    carrier.dust=0;
+    const loft=Math.max(8,carrier.clearance||carrier.alt||0);
+    const wash=clamp(1-loft/240,0.22,1);
+    const n=2+((wash*5)|0);
+    for(let k=0;k<n;k++)
+      addParticle(10,carrier.x+rr(-40,40),carrier.y+rr(-34,34),rr(-20,20),rr(-12,14),0.65+wash*0.45,11+wash*12,150,142,124);
   }
 }
 function carrierCanDeploy(){
@@ -2916,9 +3676,9 @@ function carrierClearLandingZone(x,y){
     if(!obbHit(x,y,CARRIER_LANDING[0],CARRIER_LANDING[1],0,
                T.x,T.y,T.s,T.s,0,8)) continue;
     T.alive=false; T.fuse=0; tankN++;
-    spawnExplosion(T.x,T.y,T.s*1.35,1);
-    addCrater(T.x,T.y,T.s*1.6);
-    addParticle(3,T.x,T.y,0,0,0.65,T.s*4.2,255,165,70);
+    spawnExplosion(T.x,T.y,Math.min(T.s*0.55,22),1);
+    addCrater(T.x,T.y,Math.min(T.s*1.2,48));
+    addParticle(3,T.x,T.y,0,0,0.65,Math.min(T.s*1.8,48),255,165,70);
   }
   /* The landing shockwave is dangerous to bodies caught under the ship, but
      active player/AI structures remain protected by carrierCanDeploy(). */
@@ -3051,9 +3811,9 @@ function markBuildZone(){
 }
 function bzAt(gx,gy){ return (gx<0||gy<0||gx>=BZN||gy>=BZN)?BZ_OUT:bzGrid[gy*BZN+gx]; }
 function bzIn(gx,gy){ return bzAt(gx,gy)!==BZ_OUT; }        // inside the territory at all
-/* Terrain can change under you — a crater floods, a razed district frees its
-   plot — so the blocked layer is refreshed on a slow cadence as well as on
-   every structure change. */
+/* Terrain can change under you — a razed district frees its plot — so the
+   blocked layer is refreshed on a slow cadence as well as on every structure
+   change. Combat craters do not rewrite PASS from depth. */
 let bzRefresh=0;
 function buildZoneTick(dt){
   bzRefresh-=dt;
@@ -3307,9 +4067,10 @@ function novaFire(b,wx,wy){
   B.tang=Math.atan2(wy-B.y,wx-B.x)+Math.PI/2;
   drawEnergy(B.team,NOVA.e);
   B.cool=NOVA.cd;
-  // launch visual from the cannon + sky-lance at the target
-  addBeam(B.x,B.y-20,B.x,B.y-620,10,255,220,140,0.5,'orbital_up');
-  addBeam(wx+30,wy-700,wx,wy,14,255,240,180,0.6,'orbital');
+  /* Renderer draws orbital_up as a vertical lance from (x0,y0). Offsetting
+     map-Y put the column south of the silo. */
+  addBeam(B.x,B.y,B.x,B.y,10,255,220,140,0.5,'orbital_up',B.team);
+  addBeam(wx,wy,wx,wy,14,255,240,180,0.6,'orbital',B.team);
   setTimeout(()=>{},0);
   const R=NOVA.aoe;
   forUnitsIn(wx,wy,R,j=>{
@@ -3323,12 +4084,12 @@ function novaFire(b,wx,wy){
       damageBld(b2,NOVA.dmg*0.7,B.team);
   }
   damageScenery(wx,wy,R,900);
-  spawnExplosion(wx,wy,band(64,86),1);
-  spawnExplosion(wx+rr(-50,50),wy+rr(-50,50),52,1);
+  spawnExplosion(wx,wy,band(64,86),B.team);
+  spawnExplosion(wx+rr(-50,50),wy+rr(-50,50),52,B.team);
   addParticle(3,wx,wy,0,0,1.3,R*2.3, 255,230,150);
   addParticle(3,wx,wy,0,0,0.9,R*1.4, 255,160,80);
-  addCrater(wx,wy,150);
-  deformTerrain(wx,wy,170,0.085);
+  addCrater(wx,wy,175);
+  deformTerrain(wx,wy,195,0.12,'blast');
   shake=22; flashScreen();
   sfx('boom',wx,wy,3.2);
   if(B.team===0) toast('☄ NOVA STRIKE — target zone annihilated');
@@ -3344,9 +4105,27 @@ function depositAt(x,y,rad){
 }
 
 // ---------- decals & doodads ----------
-const craters=[], wrecks=[], rocks=[], trees=[], crystals=[], rubbles=[];
+const craters=[], wrecks=[], rocks=[], trees=[], crystals=[], rubbles=[], cover=[];
 function addRubble(x,y,s){ rubbles.push({x,y,s,a:Math.random()*TAU,ts:stats.t}); if(rubbles.length>90) rubbles.shift(); }
-function addCrater(x,y,s){ craters.push({x,y,s,a:Math.random()*TAU}); if(craters.length>220) craters.shift(); }
+function addCrater(x,y,s){
+  /* Sprite records the hit. Depth-below-water must not flood: applyDeform
+     keeps PASS and WATER_AUTH so a bowl is dirt/ash, not a pond.
+     CITYG>=1 also stamps a noisy burnt-concrete scar into the terrain
+     canvas — the crater sprite is a square atlas cell and would otherwise
+     cut a grass/dirt rectangle into painted pavement.
+     Tiny civic sprites are the dirt-carpet; large collapses still record
+     (city-combat gate + 2D fallback). 3D hud already skips the atlas draw. */
+  const civic=typeof cityGroundAt==='function' && cityGroundAt(x,y)>=1;
+  const allow=typeof mfCraterSpriteOk==='function'?mfCraterSpriteOk(x,y,s):true;
+  if(allow){
+    craters.push({x,y,s,a:Math.random()*TAU,ts:stats.t}); if(craters.length>220) craters.shift();
+  }
+  if(civic && typeof stampGroundScar==='function'){
+    const box=stampGroundScar(x,y,s,true);
+    if(box && typeof uploadTerrainTexRegion==='function')
+      uploadTerrainTexRegion(box[0],box[1],box[2],box[3],true);
+  }
+}
 /* ---------------------------------------------------------------------------
    GROUND BURNS — the impact's thermal story, told by the terrain itself.
    An explosive strike leaves ground that GLOWS: embers in the crack network,
@@ -3354,12 +4133,29 @@ function addCrater(x,y,s){ craters.push({x,y,s,a:Math.random()*TAU}); if(craters
    different story — no heat, just violently disturbed pale earth that settles.
    These are temporary by design; the painted scorch pass remains the
    permanent record underneath.
-   kind: 1 = explosive/thermal, 0 = kinetic.
+   kind: 0 kinetic, 1 thermal, 2 void, 3 urban ash.
    --------------------------------------------------------------------------- */
 const groundBurns=[];
 function addGroundBurn(x,y,r,kind){
-  groundBurns.push({x,y,r,kind:kind?1:0,t0:stats.t});
+  /* Cities still burn and crater.  What they must not do is impersonate
+     open soil: a truthy kind used to coerce void scars into orange thermal
+     discs, and those discs read as a broken placement preview on pavement.
+     kind 0 kinetic, 1 thermal, 2 void, 3 urban ash.
+     Thermal hits stay kind 1 so plazas ember; the terrain shader converts
+     the same stamp to soot where the hardscape mask is poured. */
+  const civic=typeof cityGroundAt==='function' ? cityGroundAt(x,y) : 0;
+  const k=kind===2 ? 2 : (kind===3 ? 3 : (kind ? 1 : 0));
+  groundBurns.push({x,y,r,kind:k,t0:stats.t,civic:civic>=1});
   if(groundBurns.length>64) groundBurns.shift();
+  if(civic>=1 && k!==2 && r>=20 && typeof addShard==='function'){
+    for(let n=0;n<4;n++){
+      const a=Math.random()*TAU, sp=rr(30,90);
+      addShard(x+Math.cos(a)*10, y+Math.sin(a)*10,
+               Math.cos(a)*sp, Math.sin(a)*sp, rr(40,110),
+               rr(4,9), [0.1,0.1,0.3,0.3], 130,136,144);
+    }
+  }
+  return true;
 }
 /* ================= RECLAMATION =============================================
    Nothing on this battlefield is ever fully destroyed — it is DEMOTED into raw
@@ -3532,53 +4328,62 @@ function nearestUnitAny(x,y,rad){
   return best;
 }
 function setupDoodads(){
-  rocks.length=0; trees.length=0; crystals.length=0;
+  rocks.length=0; trees.length=0; crystals.length=0; cover.length=0;
   srand(777);
+  /* Flora needs a heightfield. newSkirmish → resetWorld can beat applyTheme
+     on a cold boot; planting against null heightF used to throw in hAt. */
+  const haveH=!!heightF;
+  const K=typeof biomeKit==='function'?biomeKit():null;
+  const treeCap=K&&K.trees!=null?K.trees:(THEMES[curTheme]&&THEMES[curTheme].trees)||180;
+  const rockCap=K&&K.rocks!=null?K.rocks:60;
+  const coverCap=K&&K.cover!=null?K.cover:40;
+  const rockKind=(K&&K.rockKind)||'stone';
   const clearOf=(x,y)=> typeof farFromStartZones==='function'?farFromStartZones(x,y,300)
     :dist2(x,y,MAP*SP_LO,MAP*SP_HI)>300*300&&dist2(x,y,MAP*SP_HI,MAP*SP_LO)>300*300;
-  for(let i=0;i<800;i++){
+  for(let i=0;i<1100;i++){
     const x=rr(60,MAP-60), y=rr(60,MAP-60);
     if(!clearOf(x,y)) continue;
     /* The city planner owns these cells. Trees and boulders are valid beyond
        the weathered verge, never through a roof, road or cleared plaza. */
     if(cityGroundAt(x,y)) continue;
+    if(!haveH) continue;
     const h=hAt(x,y);
     if(h<0.40||h>0.75) continue;
     let nearDep=false;
     for(const D of deposits) if(dist2(x,y,D.x,D.y)<70*70){ nearDep=true; break; }
     if(nearDep) continue;
-    if(trees.length<THEMES[curTheme].trees && h>0.42 && h<0.60 && rnd()<0.75) trees.push({x,y,s:rr(16,34),a:rr(0,TAU)});
-    else if(rocks.length<60 && rnd()<0.3) rocks.push({x,y,s:rr(16,44),a:rr(0,TAU)});
+    const fk=typeof floraKind==='function'?floraKind(K,rnd):(K&&K.flora)||'broad';
+    const lo=fk==='palm'?0.40:(fk==='pine'?0.50:0.42);
+    const hi=fk==='palm'?0.54:(fk==='pine'?0.72:0.60);
+    if(trees.length<treeCap && h>lo && h<hi && rnd()<0.72)
+      trees.push({x,y,s:rr(16,34),a:rr(0,TAU),k:fk});
+    else if(cover.length<coverCap && h>0.42 && h<0.62 && rnd()<0.38)
+      cover.push({x,y,s:rr(10,18),a:rr(0,TAU)});
+    else if(rocks.length<rockCap && rnd()<0.34)
+      rocks.push({x,y,s:rr(16,44),a:rr(0,TAU),k:rockKind});
   }
-  /* PHASE-CRYSTAL FIELDS. Two decorative shards could not communicate value,
-     ownership or depletion. Each economic tier now owns a concentric stratum:
-     outer Tier III spires disappear first, then Tier II, leaving a small Tier I
-     core before exhaustion. The fields are original Halcyon phase ore rather
-     than a copy of another game's resource silhouette. */
+  /* Modest crown on each mass node. The old 7+6+7 field at 17–88 world
+     units was the glow-orb carpet; crystals:0 hid the shards that belong
+     on the pad. Three core + a few close satellites stay on the outcrop. */
   for(let di=0;di<deposits.length;di++){
     const D=deposits[di],tier=D.initialTier||1;
-    /* A readable central crown makes the field recognizable at phone zoom.
-       These are real instanced crystal meshes in the 3D pass, not map pins. */
     for(let k=0;k<3;k++){
-      const a=k/3*TAU+rr(-.18,.18),d=k?rr(7,15):rr(1,5);
+      const a=k/3*TAU+rr(-.18,.18),d=k?rr(7,14):rr(1,5);
       crystals.push({x:D.x+Math.cos(a)*d,y:D.y+Math.sin(a)*d,
-        s:rr(30,41)+(tier-1)*3,a:rr(-0.28,0.28),dep:di,band:1,phase:rr(0,TAU),core:1});
+        s:rr(28,38)+(tier-1)*3,a:rr(-0.28,0.28),dep:di,band:1,phase:rr(0,TAU),core:1});
     }
-    for(let band=1;band<=tier;band++){
-      const count=band===1?7:band===2?6:7;
-      for(let k=0;k<count;k++){
-        const a=(k/count)*TAU+rr(-.18,.18)+band*.41;
-        const d=band===1?rr(17,37):band===2?rr(40,62):rr(65,88);
-        crystals.push({x:D.x+Math.cos(a)*d,y:D.y+Math.sin(a)*d,
-          s:rr(14+band*2,22+band*3),a:rr(-0.42,0.42),dep:di,band,phase:rr(0,TAU)});
-      }
+    const extra=tier>=3?3:2;
+    for(let k=0;k<extra;k++){
+      const a=(k/extra)*TAU+rr(-.2,.2)+.31,d=rr(16,26);
+      crystals.push({x:D.x+Math.cos(a)*d,y:D.y+Math.sin(a)*d,
+        s:rr(16,24),a:rr(-0.42,0.42),dep:di,band:1,phase:rr(0,TAU)});
     }
   }
 }
 
 // ---------- beams ----------
-const beams=[];    // {x0,y0,x1,y1,t,max,w,r,g,b,style,seed}
-function addBeam(x0,y0,x1,y1,w,r,g,b,life,style){
+const beams=[];    // {x0,y0,x1,y1,t,max,w,r,g,b,style,seed,team}
+function addBeam(x0,y0,x1,y1,w,r,g,b,life,style,team){
   /* Style is visual only, but it gives each weapon a readable silhouette:
      lightning branches, thermal beams pulse, and orbital lances have a wide
      bloom sheath. Keeping that data on the short-lived beam avoids another
@@ -3587,9 +4392,27 @@ function addBeam(x0,y0,x1,y1,w,r,g,b,life,style){
      frames even though the simulation processed it correctly. Keep the visual
      record alive for at least 190 ms; this changes no damage timing, it only
      guarantees one readable frame on the phones that need the feedback most. */
+  /* `team` is fog identity for the renderer. Friendly fire may stay readable
+     at the sensor edge; omitting it keeps the old "must be in a revealed cell"
+     path so repair/airlift callers do not change. */
   beams.push({x0,y0,x1,y1,t:0,max:Math.max(.19,life||0.14),w,r,g,b,
-              style:style||'laser',seed:(x0*13+y0*7+x1*3+y1+tick*11)%TAU});
+              style:style||'laser',seed:(x0*13+y0*7+x1*3+y1+tick*11)%TAU,team:team});
   if(beams.length>400) beams.shift();
+}
+/* Visual-only: land a tracer on the hull, not the navel. Damage still uses
+   the sim contact. Cap the pull so a point-blank shot cannot invert. */
+function beamHitXY(x0,y0,x1,y1,rad){
+  const dx=x1-x0, dy=y1-y0, d=Math.hypot(dx,dy)||1;
+  const pull=Math.min(Math.max(0,rad)||0, d*0.42);
+  return pull<=0.4?[x1,y1]:[x1-dx/d*pull, y1-dy/d*pull];
+}
+/* Authored gun meshes sit on BLD_TUR_S, which is larger than the collision
+   disc. `frac` is a fraction of BT.size chosen to sit on the bore (see the
+   comment on BLD_TUR_S). `side` is a perpendicular tube offset. */
+function bldMuzzleXY(B,frac,side){
+  const ma=(B.tang||0)-Math.PI/2, d=((BT[B.type]&&BT[B.type].size)||20)*(frac||0.7);
+  const c=Math.cos(ma), s=Math.sin(ma), lat=side||0;
+  return [B.x+c*d-s*lat, B.y+s*d+c*lat];
 }
 function beamTick(dt){
   for(let i=beams.length-1;i>=0;i--){
@@ -3638,9 +4461,53 @@ let pFree=[], pHigh=0;
    normally instead of clustering again — without that flag a cluster shell
    spawns cluster shells forever. fireProj returns its slot so this is a direct
    write rather than a search. */
-function fireProjSplit(type,team,x,y,tx,ty,speed,dmg,aoe,bio){
+function fireProjSplit(type,team,x,y,tx,ty,speed,dmg,aoe,bio,from){
   const k=fireProj(type,team,x,y,tx,ty,speed,dmg,aoe,-1);
-  if(k>=0){ pSplit[k]=1; pBio[k]=bio?1:0; }
+  if(k>=0){
+    pSplit[k]=1; pBio[k]=bio?1:0;
+    /* Bomblets used to spawn as wk 'n' with no commander flag, so a cluster
+       strike lost its explosive class and could not inherit the parent's
+       blast VFX. Copy both from the opening shell. */
+    if(from>=0){ pwk[k]=pwk[from]||'e'; pCannon[k]=pCannon[from]; }
+  }
+}
+function mfUnitMeshFor(i){
+  const ty=utype[i], T=TYPES[ty];
+  const kit=uteam[i]===0?((typeof playerKitKey==='function')?playerKitKey():'nova')
+    :(uteam[i]===1&&typeof AI!=='undefined'&&AI?AI.fac:null);
+  if(typeof factionUnitMeshFor==='function'&&kit){
+    const F=factionUnitMeshFor(ty,kit);
+    if(F) return F;
+  }
+  if((T.cat==='hero'||T.hero||ty===4)&&typeof commanderKitMeshFor==='function'){
+    const cid=typeof commanderIdForUnit==='function'?commanderIdForUnit(i):null;
+    if(cid){ const K=commanderKitMeshFor(cid); if(K) return K; }
+  }
+  return (typeof UNIT_MESH!=='undefined')?UNIT_MESH[ty]:null;
+}
+function mfMuzzleReachModel(T,M){
+  /* Model-space +X to the bore. T.size*0.62 was a hull guess — Rhino's
+     gunX starts at 2.6 and runs 7.6, so the flash sat halfway down the tube. */
+  if(M&&M.muzzle>0) return M.muzzle;
+  if(T.air) return 3.6;
+  if(T.naval) return 8.2;
+  if(!T.tur) return T.size>=28?8.8:T.legs?2.8:4.0;
+  if(T.minRng||T.ptype===2) return 16.0;
+  if(T.size>=20) return 14.2;
+  if(T.size>=15) return 10.2;
+  return 7.4;
+}
+function mfUnitMuzzle(i,side){
+  const T=TYPES[utype[i]], M=mfUnitMeshFor(i);
+  const ss=(T.size/15)*(M&&M.s||1)*1.5*(T.vscale||1);
+  const ma=(T.tur?uturr[i]:uang[i])-Math.PI/2;
+  const reach=mfMuzzleReachModel(T,M)*ss;
+  let lat=(M&&M.muzzleZ)||0;
+  if(!lat&&T.tur&&T.tg==='air') lat=1.15;
+  if(side==null) side=((i+(typeof tick==='number'?tick:0))&1)?1:-1;
+  lat*=ss*side;
+  return [ux[i]+Math.cos(ma)*reach-Math.sin(ma)*lat,
+          uy[i]+Math.sin(ma)*reach+Math.cos(ma)*lat];
 }
 function fireProj(type,team,x,y,tx,ty,speed,dmg,aoe,tgt){
   let i;
@@ -3682,8 +4549,8 @@ function projectileFireFX(i,x,y,dx,dy){
   const rx=-dx,ry=-dy,wk=pwk[i]||'p',ty=ptype[i],fp=mfFactionFxPalette(pteam[i]);
   const heavy=pCannon[i]||pBarrage[i]||ty===2||ty===9;
   const spark=(n,sp,r,g,b)=>{n=lowFx?Math.min(1,n):n;for(let q=0;q<n;q++){
-    const a=Math.atan2(ry,rx)+(Math.random()-.5)*.72,v=sp*(.55+Math.random()*.65);
-    addParticle(2,x+dx*3,y+dy*3,Math.cos(a)*v,Math.sin(a)*v,.08,.2+Math.random()*.16,r,g,b,.9,0);
+    const a=Math.atan2(ry,rx)+(Math.random()-.5)*.55,v=Math.min(10,sp*(.35+Math.random()*.4));
+    addParticle(2,x+dx*3,y+dy*3,Math.cos(a)*v,Math.sin(a)*v,.07,.16+Math.random()*.12,r,g,b);
   }};
   if(pBio[i]){
     addParticle(0,x+dx*4,y+dy*4,0,0,.18,14,178,255,92);
@@ -3740,24 +4607,24 @@ function projectileImpactFX(i,x,y){
        Convert at the seam so fragments do not silently become near-black. */
     if(r<=1&&g<=1&&b<=1){r*=255;g*=255;b*=255;}
     for(let q=0;q<n;q++){
-    const a=Math.atan2(ny,nx)+(Math.random()-.5)*2.45,v=sp*(.55+Math.random()*.75);
-    addParticle(7,x,y,Math.cos(a)*v,Math.sin(a)*v,.11+Math.random()*.12,.42+Math.random()*.32,r,g,b,.92,0);
+    const a=Math.atan2(ny,nx)+(Math.random()-.5)*1.6,v=Math.min(14,sp*(.4+Math.random()*.45));
+    addParticle(7,x,y,Math.cos(a)*v,Math.sin(a)*v,.10+Math.random()*.10,.36+Math.random()*.24,r,g,b);
   }};
   if(pBio[i]){
     /* Brood ammunition ruptures rather than detonates: wet luminous bile,
        chitin splinters and a delayed spore ring. Damage semantics stay in wk. */
     addParticle(0,x,y,0,0,.20,s*1.65, 178,255,92);
-    addParticle(3,x,y,0,0,.42,s*2.25, 177,95,235);
-    addParticle(1,x,y,rr(-5,5),rr(-10,-3),.92,s*.72, 65,78,48);
+    addParticle(3,x,y,0,0,.42,Math.min(16,s*1.15), 177,95,235);
+    addParticle(1,x,y,rr(-5,5),rr(-10,-3),1.45,s*.95, 65,78,48);
     const n=Math.max(2,Math.round(5*perfScale));
-    for(let k=0;k<n;k++) addParticle(2,x,y,rr(-65,65),rr(-65,65),.34,2.7, 198,255,105);
+    for(let k=0;k<n;k++) addParticle(2,x,y,rr(-14,14),rr(-14,14),.22,2.2, 198,255,105);
   } else if(pBarrage[i]){
     addParticle(0,x,y,0,0,.17,s*2.1,255,246,215);
     addParticle(3,x,y,0,0,.44,paoe[i]*1.9,255,174,72);
     addParticle(3,x,y,0,0,.72,paoe[i]*2.7,164,132,105);
-    addParticle(1,x,y,rr(-7,7),rr(-22,-9),1.75,s*1.55,48,45,43);
+    addParticle(1,x,y,rr(-7,7),rr(-22,-9),2.35,s*1.85,48,45,43);
     const n=Math.max(5,Math.round(11*perfScale));
-    for(let k=0;k<n;k++) addParticle(5,x,y,rr(-155,155),rr(-155,155),.52,4.1,255,178,74);
+    for(let k=0;k<n;k++) addParticle(5,x,y,rr(-22,22),rr(-22,22),.32,3.2,255,178,74);
     debris(5,20,.23,.18,.12);
   } else if(pCannon[i]){
     /* White pressure flash, hot fragmentation, then a broad dust column. The
@@ -3765,16 +4632,16 @@ function projectileImpactFX(i,x,y){
     addParticle(0,x,y,0,0,.18,s*2.25, 255,244,210);
     addParticle(3,x,y,0,0,.38,paoe[i]*1.85, 255,194,105);
     addParticle(3,x,y,0,0,.68,paoe[i]*2.65, 185,145,105);
-    addParticle(4,x,y,rr(-5,5),rr(-14,-5),.68,s*1.8, 255,145,48);
-    addParticle(1,x,y,rr(-6,6),rr(-20,-8),1.55,s*1.25, 50,47,44);
+    addParticle(4,x,y,0,0,.68,Math.min(16,s*1.1), 255,145,48);
+    addParticle(1,x,y,rr(-6,6),rr(-20,-8),2.15,s*1.55, 50,47,44);
     const n=Math.max(5,Math.round(10*perfScale));
-    for(let k=0;k<n;k++) addParticle(5,x,y,rr(-145,145),rr(-145,145),.48,3.8, 255,185,82);
+    for(let k=0;k<n;k++) addParticle(5,x,y,rr(-20,20),rr(-20,20),.30,3.0, 255,185,82);
     debris(7,25,.24,.2,.15);
   } else if(wk==='g'){
     addParticle(3,x,y,0,0,.24,s*1.65, 155,225,255);
     addParticle(0,x,y,0,0,.13,s*1.25, 235,250,255);
     const n=Math.round(4*perfScale);
-    for(let k=0;k<n;k++) addParticle(2,x,y,rr(-85,85),rr(-85,85),.28,2.4, 190,235,255);
+    for(let k=0;k<n;k++) addParticle(2,x,y,rr(-16,16),rr(-16,16),.18,2.0, 190,235,255);
   } else if(wk==='s'){
     addParticle(3,x,y,0,0,.34,s*1.8, 115,220,255);
     addParticle(3,x,y,0,0,.48,s*2.6, 185,125,255);
@@ -3782,31 +4649,36 @@ function projectileImpactFX(i,x,y){
   } else if(wk==='i'||ty===6){
     addParticle(3,x,y,0,0,.26,s*1.7, 75,205,255);
     addParticle(0,x,y,0,0,.22,s*1.55, 215,250,255);
-    for(let k=0;k<Math.round(3*perfScale);k++) addParticle(2,x,y,rr(-55,55),rr(-55,55),.24,2.2,95,220,255);
+    for(let k=0;k<Math.round(3*perfScale);k++) addParticle(2,x,y,rr(-12,12),rr(-12,12),.16,1.8,95,220,255);
   } else if(wk==='f'||ty===5){
-    addParticle(4,x,y,rr(-3,3),rr(-8,-3),.65,s*1.6, 255,150,55);
+    addParticle(4,x,y,0,0,.65,Math.min(16,s*1.15), 255,150,55);
     addParticle(1,x+rr(-4,4),y+rr(-4,4),rr(-3,3),rr(-12,-6),1.0,s*.75, 58,52,48);
   } else if(wk==='e'||ty===7||ty===9){
-    addParticle(4,x,y,rr(-4,4),rr(-8,-2),.48,s*1.45, 255,170,70);
+    addParticle(4,x,y,0,0,.48,Math.min(14,s*1.05), 255,170,70);
     const n=Math.round(3*perfScale);
-    for(let k=0;k<n;k++) addParticle(5,x,y,rr(-75,75),rr(-75,75),.34,3.2, 255,190,95);
-    addParticle(1,x,y,rr(-4,4),rr(-13,-6),1.1,s*.85, 55,52,52);
+    for(let k=0;k<n;k++) addParticle(5,x,y,rr(-16,16),rr(-16,16),.22,2.6, 255,190,95);
+    addParticle(1,x,y,rr(-4,4),rr(-13,-6),1.65,s*1.15, 55,52,52);
     if((paoe[i]||0)>=18) debris(3,15,.22,.19,.15);
   } else {
     const n=Math.max(1,Math.round((ty===2?5:2)*perfScale));
-    for(let k=0;k<n;k++) addParticle(2,x,y,rr(-58,58),rr(-58,58),.22,2.0, 255,210,140);
-    if(ty===1||ty===2||ty===3) addParticle(1,x,y,rr(-3,3),rr(-7,-2),.55,s*.42, 92,86,78);
+    for(let k=0;k<n;k++) addParticle(2,x,y,rr(-12,12),rr(-12,12),.16,1.7, 255,210,140);
+    if(ty===1||ty===2||ty===3) addParticle(1,x,y,rr(-3,3),rr(-7,-2),1.05,s*.62, 92,86,78);
   }
   /* The primary impact says WHAT hit; this outer pulse says WHO fired it.
      It is deliberately one cheap ring at low quality and gains a second
      faction-specific flourish only when the adaptive budget has headroom. */
   if(!pBio[i]){
-    addParticle(3,x,y,0,0,.34,s*(pCannon[i]||pBarrage[i]?2.45:1.55),fp.a[0],fp.a[1],fp.a[2]);
+    addParticle(3,x,y,0,0,.34,Math.min(16,s*(pCannon[i]||pBarrage[i]?1.15:0.85)),fp.a[0],fp.a[1],fp.a[2]);
     if(perfScale>.48){
       if(fp.key==='legion') debris(pCannon[i]?5:2,22,1,.34,.16);
-      else if(fp.key==='syndicate') addParticle(3,x,y,0,0,.52,s*2.2,fp.b[0],fp.b[1],fp.b[2]);
+      else if(fp.key==='syndicate') addParticle(3,x,y,0,0,.40,Math.min(14,s*1.05),fp.b[0],fp.b[1],fp.b[2]);
       else addParticle(0,x,y,0,0,.12,s*1.15,fp.b[0],fp.b[1],fp.b[2]);
     }
+  }
+  if(typeof gpfxEnergyBlast==='function'&&perfScale>.28){
+    const energy=wk==='g'||wk==='s'||wk==='i'||ty===6||pCannon[i]||pBarrage[i];
+    gpfxEnergyBlast(x,y,12,energy?18:8,[fp.a[0],fp.a[1],fp.a[2]],
+      {speed:energy?80:52,up:energy?0.36:0.22,life:energy?0.70:0.44,size:energy?6.8:5.4,min:3,dir:[nx,ny]});
   }
 }
 
@@ -3818,18 +4690,25 @@ function projImpact(i){
        becomes a pattern, so it punishes clumped formations far harder than a
        single big blast of the same total damage would. */
     pSplit[i]=1;
-    for(let k=0;k<6;k++){
-      const a=Math.random()*TAU, d=18+Math.random()*46;
-      fireProjSplit(9,team,x,y,x+Math.cos(a)*d,y+Math.sin(a)*d,220,dmg*0.34,aoe*0.55,pBio[i]);
+    const n=pCannon[i]?8:6, df=pCannon[i]?0.45:0.34, af=pCannon[i]?0.58:0.55;
+    for(let k=0;k<n;k++){
+      const a=pCannon[i]?(k/n)*TAU+0.21:Math.random()*TAU;
+      const d=pCannon[i]?(24+(k&3)*11):(18+Math.random()*46);
+      fireProjSplit(9,team,x,y,x+Math.cos(a)*d,y+Math.sin(a)*d,220,dmg*df,aoe*af,pBio[i],i);
     }
     addParticle(0,x,y,0,0,.2,20,pBio[i]?175:255,pBio[i]?255:220,pBio[i]?90:160);
-    sfx(pBio[i]?'cre_attack':'hit',x,y,0.8);
+    /* Bomblet open — sparks, not a gravity well. Nova cluster stays bomblets. */
+    if(typeof gpfxEnergyBlast==='function')
+      gpfxEnergyBlast(x,y,16,pCannon[i]?28:18,pBio[i]?[175,255,90]:[255,210,120],
+        {speed:96,up:0.46,life:0.66,size:6.6,min:5});
+    if(pCannon[i]){ addParticle(3,x,y,0,0,.36,aoe*0.9,255,196,82); sfx('cannon',x,y,0.95); }
+    else sfx(pBio[i]?'cre_attack':'hit',x,y,0.8);
     killProj(i); return;
   }
   if(ptype[i]===8){                     // flak: airburst fragments / bursting spores
     for(let k=0;k<9;k++){
-      const a=Math.random()*TAU, sp=90+Math.random()*150;
-      addParticle(5,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.32,3.0,pBio[i]?185:255,pBio[i]?255:215,pBio[i]?95:140);
+      const a=Math.random()*TAU, sp=12+Math.random()*18;
+      addParticle(5,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.22,2.4,pBio[i]?185:255,pBio[i]?255:215,pBio[i]?95:140);
     }
     addParticle(0,x,y,0,0,.18,aoe*0.9,pBio[i]?180:255,pBio[i]?255:225,pBio[i]?95:170);
     addParticle(3,x,y,0,0,.30,aoe*1.5,pBio[i]?175:255,pBio[i]?105:200,pBio[i]?235:120);
@@ -3876,16 +4755,26 @@ function projImpact(i){
     if(pBio[i]){
       addParticle(0,x,y,0,0,.22,aoe*.78,174,255,90);
       addParticle(3,x,y,0,0,.46,aoe*1.18,176,92,235);
-      if(aoe>=30) deformTerrain(x,y,aoe*.72,.018);
+      if(aoe>=30) deformTerrain(x,y,aoe*.85,.028,'shell');
       sfx('cre_attack',x,y,clamp(aoe/32,.7,1.4));
     } else if(ptype[i]===5){                          // flame: soft scorch, no fireball
       addParticle(0,x,y,0,0,.2,14, 255,170,60);
       if(Math.random()<0.2) addParticle(1,x,y,rr(-4,4),rr(-10,-4),.5,7, 60,55,50);
     } else {
       const heavy=pCannon[i]||pBarrage[i];
-      spawnExplosion(x,y,aoe*(heavy?0.78:0.55),team===0?1:0);
-      if(aoe>24) addCrater(x,y,aoe*(heavy?1.12:0.8));
-      if(aoe>=30) deformTerrain(x,y,aoe*(heavy?1.05:0.85),heavy?0.045:0.03);
+      const arty=heavy||ptype[i]===2||ptype[i]===9||ptype[i]===7;
+      /* Visual size only. size>=40 is the superweapon handoff, and the old
+         victim-team argument made a Nova cluster on Syndicate ground become
+         their singularity (pull, not blast). Cap the FX; damage already
+         applied above. Shooter team so any future super stays on the firer. */
+      spawnExplosion(x,y,Math.min(aoe*(heavy?0.78:0.55),36),team);
+      if(arty||aoe>=28){
+        addCrater(x,y,aoe*(arty?1.35:0.95));
+        deformTerrain(x,y,aoe*(arty?1.28:1.05),arty?0.068:0.040,arty?'blast':'shell');
+      } else if(aoe>=10){
+        addCrater(x,y,Math.max(20,aoe*0.95));
+        deformTerrain(x,y,Math.max(24,aoe*1.15),0.022,'pock');
+      }
       if(heavy){
         if(typeof cam==='undefined'||dist2(x,y,cam.x,cam.y)<900*900) shake=Math.max(shake,4.5);
         /* Player rounds are always known. This guard also prevents a future
@@ -3909,6 +4798,10 @@ function projImpact(i){
       if(e>=0) dealDamage(e,dmg,team,-1);
     }
     addParticle(0,x,y,0,0,.14,5,pBio[i]?178:255,pBio[i]?255:220,pBio[i]?92:150);
+    if(!pBio[i]&&(pCannon[i]||ptype[i]===1||ptype[i]===3)){
+      addCrater(x,y,18);
+      deformTerrain(x,y,22,0.016,'pock');
+    }
   }
   if(pSrcBld[i]) defKillCredit(pSrcBld[i],stats.kills[team]-preKills);
   killProj(i);
@@ -3919,7 +4812,7 @@ let dmgAccum=[0,0,0];
    sites do not care — but sonic uses it to bypass shields and the horde
    multiplier uses it to scale a blast against a crowd. */
 function dealDamage(j,dmg,attTeam,attacker,mu,wk){
-  if(!ualive[j]) return;
+  if(!ualive[j]||uCrash[j]) return;
   if(uteam[j]===0&&attTeam!==0&&META.settings.godMode){uhp[j]=uhpm[j];return;}
   const shielded=ushielded[j]>0 && !(wk&&WK_PIERCE[wk]);
   if(shielded){
@@ -3934,6 +4827,7 @@ function dealDamage(j,dmg,attTeam,attacker,mu,wk){
   dmg*=classTakenMul(j);
   uhp[j]-=dmg;
   if(dmg>=10) uHurtT[j]=6;                       // suppress hero regen while under real fire
+  if(typeof aiOnUnitHit==='function'&&attacker>=0&&dmg>=6) aiOnUnitHit(j,dmg,attTeam,attacker);
   if(uhp[j]>0&&unitIsBrood(j)&&dmg>=uhpm[j]*0.04&&Math.random()<0.16)
     sfx('cre_pain',ux[j],uy[j],clamp(TYPES[utype[j]].size/18,0.65,1.5));
   /* Fire persistence: incendiary hits leave units burning for 2.4s */
@@ -3947,7 +4841,7 @@ function dealDamage(j,dmg,attTeam,attacker,mu,wk){
   // combat readability: floating damage numbers + counter FX (sampled, near camera)
   if(perfScale>0.5 && Math.random()<0.28) spawnFloatText(ux[j],uy[j],dmg,mu||1);
   if(mu){
-    if(mu<=0.8 && Math.random()<0.35) addParticle(5,ux[j],uy[j],rr(-50,50),rr(-50,-20),.22,3, 200,208,218);   // deflect spark
+    if(mu<=0.8 && Math.random()<0.35) addParticle(5,ux[j],uy[j],rr(-8,8),rr(-10,-3),.16,2.0, 200,208,218);   // deflect spark
     else if(mu>=1.15 && Math.random()<0.3) addParticle(0,ux[j],uy[j],0,0,.16,9, 255,150,60);                  // rend flash
   }
   /* DIRECTIONAL IMPACT SPRAY. Hits used to flash at the victim's centre with
@@ -3962,11 +4856,14 @@ function dealDamage(j,dmg,attTeam,attacker,mu,wk){
     const nsp=dmg>=26?3:2;
     for(let k2=0;k2<nsp;k2++){
       const sway=rr(-0.55,0.55), c2=Math.cos(sway), s2=Math.sin(sway);
-      const vx2=(dx2*c2-dy2*s2)*rr(38,95), vy2=(dx2*s2+dy2*c2)*rr(38,95);
+      const vx2=(dx2*c2-dy2*s2)*rr(8,16), vy2=(dx2*s2+dy2*c2)*rr(8,16);
       if(organic) addParticle(5,ux[j],uy[j],vx2*0.7,vy2*0.7,.30,2.6, 150,235,95);
       else        addParticle(5,ux[j],uy[j],vx2,vy2,.22,2.2, 255,214,140);
     }
   }
+  /* Brood liquid lives in organicfx.js — not the energy spark path. */
+  if(uhp[j]>0&&typeof orgfxOnHit==='function'&&unitIsBrood(j)&&dmg>=6)
+    orgfxOnHit(j,dmg,attacker);
   if(uhp[j]<=0){
     const wasType=utype[j], wasTeam=uteam[j];
     killUnit(j);
@@ -3992,6 +4889,9 @@ const fvx=new Float32Array(MAXPART), fvy=new Float32Array(MAXPART);
 const flife=new Float32Array(MAXPART), fmax=new Float32Array(MAXPART), fsize=new Float32Array(MAXPART);
 const ftype=new Uint8Array(MAXPART);
 const fcr=new Uint8Array(MAXPART), fcg=new Uint8Array(MAXPART), fcb=new Uint8Array(MAXPART);
+/* 0 = terrain-relative (every existing caller). >0 = world Y for airframe
+   puffs so a Wasp trail does not stain the dirt. Ground magnitudes untouched. */
+const fzh=new Float32Array(MAXPART);
 let fHead=0, fCount=0;
 let perfScale=1;
 function addParticle(type,x,y,vx,vy,life,size,r,g,b){
@@ -4000,12 +4900,17 @@ function addParticle(type,x,y,vx,vy,life,size,r,g,b){
   ftype[i]=type; fx[i]=x; fy[i]=y; fvx[i]=vx; fvy[i]=vy;
   flife[i]=life; fmax[i]=life; fsize[i]=size;
   fcr[i]=r; fcg[i]=g; fcb[i]=b;
+  fzh[i]=0;
+}
+function addAirPuff(x,y,h,vx,vy,life,size,r,g,b){
+  addParticle(1,x,y,vx,vy,life,size,r,g,b);
+  fzh[(fHead-1+MAXPART)%MAXPART]=h;
 }
 /* ============================================================================
    SUPERWEAPON DETONATION — true destruction.
    One call delivers the whole strategic-weapon contract: blinding flash, a
    dome of three thousand GPU sparks, double shockwave, mushroom column, a
-   crater deep enough to flood, every derelict block and tree inside the ring
+   crater deep enough to read as a bowl, every derelict block and tree inside the ring
    levelled through the SAME damage paths the rest of the game uses (so
    salvage, staged skyscraper collapse and district bonuses all still apply),
    an ember field that cools over a minute, and smouldering aftermath smoke.
@@ -4017,7 +4922,7 @@ let _superT=0;
    Where every other faction burns a target, the machines DELETE it: a staged
    collapse that darkens the sky, drags the battlefield inward along an
    accretion spiral, then crushes everything past the horizon and leaves a
-   flooded void bore where the ground used to be. Terrain devastation is the
+   void bore where the ground used to be. Terrain devastation is the
    point: the crater is deeper than any warhead's and the scar burns violet.
    --------------------------------------------------------------------------- */
 const singularities=[];
@@ -4049,44 +4954,53 @@ function updateSingularities(dt){
         S.fed=0;
         const a2=rr(0,TAU), d2=rr(R*0.7,R*1.5);
         gpfxBurst(S.x+Math.cos(a2)*d2,S.y+Math.sin(a2)*d2,rr(3,26),26,
-          {speed:14,up:0.15,life:2.6,col:[186,158,255],size:2.6,drag:0.999,jit:5});
+          {speed:14,up:0.15,life:2.6,col:[186,158,255],size:6.6,drag:0.999,jit:5});
         gpfxBurst(S.x+Math.cos(a2+2.1)*d2*0.8,S.y+Math.sin(a2+2.1)*d2*0.8,rr(2,20),16,
-          {speed:10,up:0.1,life:2.2,col:[255,244,255],size:1.9,drag:0.999,jit:4});
+          {speed:10,up:0.1,life:2.2,col:[255,244,255],size:5.2,drag:0.999,jit:4});
       }
-      const grip=Math.min(1,S.t/0.7);
-      forUnitsIn(S.x,S.y,R*1.6,j=>{
+      /* Pull must actually relocate hostiles. 150 u/s plus free pathing let
+         units walk out, so the well read as a static hole. Stun + interrupt
+         keep them in the spiral until the 2.5s collapse. Friendlies stay out
+         — this is the robotic signature, not a friendly-fire toy. */
+      const grip=Math.min(1,S.t/0.45);
+      forUnitsIn(S.x,S.y,R*1.65,j=>{
+        if(uteam[j]===S.team) return;
         const dx=S.x-ux[j],dy=S.y-uy[j],d3=Math.hypot(dx,dy)||1;
-        const pull=grip*dt*(150*S.pow)*(1-Math.min(1,d3/(R*1.6)))*(TYPES[utype[j]].air?1.4:1);
+        const pull=grip*dt*(320*S.pow)*(1-Math.min(1,d3/(R*1.65)))*(TYPES[utype[j]].air?1.5:1);
         ux[j]+=dx/d3*pull; uy[j]+=dy/d3*pull;
-        if(d3<R*0.25) dealDamage(j,320*dt*S.pow,S.team,-1);
+        ustun[j]=Math.max(ustun[j],0.45);
+        utgt[j]=-1; if(ustate[j]!==0) ustate[j]=0;
+        if(d3<R*0.38) dealDamage(j,480*dt*S.pow,S.team,-1);
       });
       if(S.t>=dur) S.phase=1;
     } else if(S.phase===1){
       /* COLLAPSE. Past the horizon nothing argues. Canonical damage paths so
          salvage, staged skyscraper shears and district bonuses all apply —
          and the ground itself is DEVOURED: a void bore half again deeper
-         than a warhead crater, flooding into a black lake. */
+         than a warhead crater. The bowl stays dry — hydrology is authored. */
       S.phase=2; S.t=0;
       addParticle(0,S.x,S.y,0,0,.36,R*2.1, 232,214,255);
       addParticle(3,S.x,S.y,0,0,.7,R*1.15, 190,150,255);
       addParticle(3,S.x,S.y,0,0,1.15,R*1.9, 140,90,235);
       addParticle(8,S.x,S.y,rr(-2,2),0,3.0,R*0.4, 210,190,240);
       if(typeof gpfxBurst==='function'){
-        gpfxBurst(S.x,S.y,10,420,{speed:300*Math.sqrt(S.pow),up:0.55,life:1.7,col:[196,164,255],size:3.4,drag:0.968,jit:5});
-        gpfxBurst(S.x,S.y,8,260,{speed:180*Math.sqrt(S.pow),up:1.1,life:2.4,col:[255,250,255],size:2.6,drag:0.982,jit:4});
+        gpfxBurst(S.x,S.y,10,typeof gpfxN==='function'?gpfxN(520,80):420,{speed:340*Math.sqrt(S.pow),up:0.55,life:1.9,col:[196,164,255],size:8.4,drag:0.968,jit:5});
+        gpfxBurst(S.x,S.y,8,typeof gpfxN==='function'?gpfxN(340,60):260,{speed:210*Math.sqrt(S.pow),up:1.15,life:2.6,col:[255,250,255],size:7.0,drag:0.982,jit:4});
+        gpfxBurst(S.x,S.y,14,typeof gpfxN==='function'?gpfxN(180,40):140,{speed:420*Math.sqrt(S.pow),up:0.22,life:1.15,col:[232,214,255],size:5.6,drag:0.94,jit:3});
       }
-      deformTerrain(S.x,S.y,R*0.58, 0.26*S.pow);
-      addCrater(S.x,S.y,R*0.45);
+      deformTerrain(S.x,S.y,R*0.68, 0.30*S.pow, 'blast');
+      addCrater(S.x,S.y,R*0.52);
       if(typeof addGroundBurn==='function'){
         addGroundBurn(S.x,S.y,R*1.05,2);
         for(let k=0;k<4;k++){ const a3=rr(0,TAU),d4=rr(R*0.5,R*0.95);
           addGroundBurn(S.x+Math.cos(a3)*d4,S.y+Math.sin(a3)*d4,rr(22,46),2); }
       }
       forUnitsIn(S.x,S.y,R,j=>{
+        if(uteam[j]===S.team) return;
         dealDamage(j,(2300*S.pow)*(1-0.5*Math.sqrt(dist2(S.x,S.y,ux[j],uy[j]))/R),S.team,-1);
       });
       for(let b2=0;b2<blds.length;b2++){ const Bd=blds[b2];
-        if(Bd.alive&&dist2(S.x,S.y,Bd.x,Bd.y)<R*R)
+        if(Bd.alive&&Bd.team!==S.team&&dist2(S.x,S.y,Bd.x,Bd.y)<R*R)
           damageBld(b2,(2900*S.pow)*(1-0.5*Math.sqrt(dist2(S.x,S.y,Bd.x,Bd.y))/R),S.team);
       }
       for(const Rl of relics){ if(!Rl.alive) continue;
@@ -4106,9 +5020,12 @@ function updateSingularities(dt){
 }
 function superDetonation(x,y,pow,byTeam){
   pow=pow||1;
-  /* The robotic faction does not build warheads. Its strategic strikes route
-     into the singularity instead — same trigger paths, different physics. */
-  if(!_superT&&teamFacKeyFor(byTeam)==='syndicate'){ spawnSingularity(x,y,pow,byTeam); return; }
+  /* Shooter faction, not victim. spawnExplosion used to pass the opposite
+     team, so a Nova cluster on Syndicate/Legion ground inherited their
+     singularity — pull/stun instead of blast. Legion + Syndicate keep the
+     robotic well; Nova stays a warhead. */
+  const fac=typeof mfCombatFactionTeam==='function'?mfCombatFactionTeam(byTeam):teamFacKeyFor(byTeam);
+  if(!_superT&&(fac==='legion'||fac==='syndicate')){ spawnSingularity(x,y,pow,byTeam); return; }
   const R=210*Math.sqrt(pow);
   _superT=1;                                    // guard against recursion
   addParticle(0,x,y,0,0,.30,R*1.9, 255,252,240);          // sky-wide flash
@@ -4117,12 +5034,12 @@ function superDetonation(x,y,pow,byTeam){
   addParticle(3,x,y,0,0,.55,R*0.9, 255,190,110);          // first ring
   addParticle(3,x,y,0,0,1.05,R*1.6, 255,150,80);          // second, wider ring
   if(typeof gpfxBurst==='function'){
-    gpfxBurst(x,y,8,480,{speed:260*Math.sqrt(pow),up:0.9,life:2.2,col:[255,214,120],size:3.6,drag:0.975,jit:8});
-    gpfxBurst(x,y,6,380,{speed:150*Math.sqrt(pow),up:1.4,life:2.8,col:[255,120,40],size:4.4,drag:0.985,jit:6});
-    gpfxBurst(x,y,10,280,{speed:340*Math.sqrt(pow),up:0.35,life:1.2,col:[255,255,235],size:2.6,drag:0.955,jit:4});
+    gpfxBurst(x,y,8,480,{speed:260*Math.sqrt(pow),up:0.9,life:2.2,col:[255,214,120],size:8.2,drag:0.975,jit:8});
+    gpfxBurst(x,y,6,380,{speed:150*Math.sqrt(pow),up:1.4,life:2.8,col:[255,120,40],size:9.4,drag:0.985,jit:6});
+    gpfxBurst(x,y,10,280,{speed:340*Math.sqrt(pow),up:0.35,life:1.2,col:[255,255,235],size:5.8,drag:0.955,jit:4});
   }
-  deformTerrain(x,y,R*0.62, 0.16*pow);                    // a crater that FLOODS
-  addCrater(x,y,R*0.5);
+  deformTerrain(x,y,R*0.72, 0.20*pow, 'blast');                    // deep dry bowl; hydrology stays authored
+  addCrater(x,y,R*0.58);
   if(typeof addGroundBurn==='function'){
     addGroundBurn(x,y,R*1.15,1);
     for(let k=0;k<5;k++){ const a2=rr(0,TAU),d2=rr(R*0.5,R*1.05);
@@ -4149,50 +5066,124 @@ function superDetonation(x,y,pow,byTeam){
   }
   for(let k=0;k<6;k++)
     rubbles.push({x:x+rr(-R*0.5,R*0.5),y:y+rr(-R*0.5,R*0.5),s:rr(20,42),ts:stats.t});
-  shake=Math.max(shake,14*pow);
+  if(typeof requestShake==='function') requestShake(x,y,14*(pow||1),'blast');
+  else shake=Math.max(shake,14*pow);
   sfx('boom',x,y,2.6); sfx('alarm');
   _superT=0;
 }
-function spawnExplosion(x,y,size,victimTeam){
-  /* Detonations at strategic scale hand off to the full superweapon suite. */
-  if(size>=40&&!_superT){ superDetonation(x,y,size/44,victimTeam); return; }
-  /* Powerful detonations cook the ground; light kinetic strikes only chew it.
-     The threshold keeps small-arms chatter from carpeting the field. */
-  if(size>=16) addGroundBurn(x,y,size*2.1,1);
-  else if(size>=9) addGroundBurn(x,y,size*1.7,0);
-  addParticle(0,x,y,0,0,.2,size*2.6, 255,240,200);                        // flash
-  addParticle(6,x,y,rr(-4,4),rr(-8,-2),.5+size*0.014,size*2.6, 255,255,255); // 3D flipbook fireball
-  addParticle(3,x,y,0,0,.42,size*1.2, 255,180,90);                        // shock ring
-  if(size>=24) addParticle(8,x,y,rr(-2,2),0,2.3,size, 255,255,255);       // rising mushroom plume
-  const ns=Math.round((2+size*0.3)*perfScale);
-  for(let k=0;k<ns;k++){
-    const a=Math.random()*TAU, sp=(30+Math.random()*110)*(size/14);
-    addParticle(5,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.3+Math.random()*.35,3.5+Math.random()*3.5, 255,200,120);
+function towerFxQ(){
+  /* Preset density, not the FPS scaler. HIGH keeps the full masonry bowl;
+     MEDIUM drops GPU bursts; LOW is dust + a few flames. */
+  const q=typeof qualityKey==='function'?qualityKey():'high';
+  if(q==='low') return 0.32;
+  if(q==='medium') return 0.58;
+  return 1.0;
+}
+function towerCrumble(x,y,s,civic){ spawnBuildingCollapse(x,y,s,civic); }
+function spawnBuildingCollapse(x,y,s,civic){
+  /* Masonry death. spawnExplosion always emits a type-3 fireball (vehicle
+     mushroom); towers that used it popped into a tank blast. Dust, debris
+     shards and a bowl of embers — the hull shader already goes charcoal. */
+  const q=towerFxQ();
+  const fx=perfScale*q;
+  const sz=Math.max(12, Math.min(s, 52));
+  addParticle(0,x,y,0,0,.12,sz*0.78, 210,196,168);
+  addParticle(2,x,y,0,0,1.55,sz*1.45, 148,142,130);
+  const nd=Math.round((5+sz*0.24)*fx);
+  for(let k=0;k<nd;k++){
+    const a=Math.random()*TAU, sp=8+Math.random()*18;
+    addParticle(7,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.36+Math.random()*.28,Math.min(11,sz*(0.16+Math.random()*0.12)), 160,150,132);
   }
-  // 3D tumbling debris chunks
-  if(size>=12){
-    const nd=Math.round((1+size*0.18)*perfScale);
+  const nk=Math.round((4+sz*0.16)*fx);
+  for(let k=0;k<nk;k++){
+    const a=Math.random()*TAU, d=Math.random()*sz*0.48;
+    addParticle(1,x+Math.cos(a)*d,y+Math.sin(a)*d,rr(-12,12),rr(-24,-6),1.3+Math.random()*.8,sz*0.30, 50,44,38);
+  }
+  if(civic && typeof addGroundBurn==='function')
+    addGroundBurn(x,y,sz*1.15,1);
+  if(q>0.40 && typeof gpfxBurst==='function')
+    gpfxBurst(x,y,8, Math.round((civic?18:14)*fx),
+      {speed:22, up:0.55, life:0.72, col:[168,158,140], size:6.4, drag:0.90, jit:4});
+}
+function spawnCivicWreckFire(x,y,s){
+  /* Coals + smoke. Type-4 used to plant upright licking-flame quads that
+     lived 16–30s. Heat lives in addGroundBurn + a short GPU ember spray. */
+  const q=towerFxQ(), fx=perfScale*q;
+  if(typeof addGroundBurn==='function')
+    addGroundBurn(x,y,Math.max(s*0.85,22),1);
+  addParticle(1, x+rr(-s*0.2,s*0.2), y+rr(-s*0.2,s*0.2), rr(-3,3), rr(-12,-6), 3.8, s*0.32, 42, 34, 28);
+  if(q>0.35)
+    addParticle(1, x+rr(-s*0.28,s*0.28), y+rr(-s*0.22,s*0.22), rr(-4,4), rr(-16,-8), 2.6, s*0.24, 48, 40, 34);
+  if(q>0.40 && typeof gpfxBurst==='function')
+    gpfxBurst(x, y, 5, Math.round(16*fx),
+      {speed:7, up:0.18, life:0.72, col:[255,118,36], size:6.2, drag:0.94, jit:3.2});
+}
+function spawnExplosion(x,y,size,victimTeam){
+  const civic=typeof cityGroundAt==='function' && cityGroundAt(x,y)>=1;
+  /* City hits were bleaching the whole district: a building-scale size fed a
+     flash and mushroom that filled the phone screen. Cap BEFORE the
+     superweapon handoff — Factory/HQ death used to skip this and nuke
+     the map. Lingering burn is a separate stamp. */
+  const sz=civic?Math.min(size,13):size;
+  if(sz>=40&&!_superT){ superDetonation(x,y,sz/44,victimTeam); return; }
+  if(sz>=16) addGroundBurn(x,y,sz*2.1,1);
+  else if(sz>=8) addGroundBurn(x,y,sz*(civic?3.2:1.7),civic?1:0);
+  else if(civic&&sz>=5) addGroundBurn(x,y,sz*3.0,1);
+  addParticle(0,x,y,0,0,civic?.12:.2,sz*(civic?1.15:1.55), 255,civic?210:240,civic?150:200);
+  addParticle(6,x,y,0,0,.38+sz*0.010,Math.min(22,sz*(civic?1.05:1.45)), 255,255,255);
+  addParticle(3,x,y,0,0,civic?.22:.42,sz*(civic?0.7:1.2), 255,180,90);
+  if(sz>=24&&!civic) addParticle(8,x,y,rr(-2,2),0,2.3,sz, 255,255,255);
+  const ns=Math.round((civic?1:2+sz*0.3)*perfScale);
+  for(let k=0;k<ns;k++){
+    const a=Math.random()*TAU, sp=(8+Math.random()*14)*(civic?0.5:1);
+    addParticle(5,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.18+Math.random()*.16,2.2+Math.random()*1.4, 255,200,120);
+  }
+  if(sz>=12&&!civic){
+    const nd=Math.round((1+sz*0.18)*perfScale);
     for(let k=0;k<nd;k++){
-      const a=Math.random()*TAU, sp=(45+Math.random()*120)*(size/16);
-      addParticle(7,x,y,Math.cos(a)*sp,Math.sin(a)*sp-30,.5+Math.random()*.5,size*(0.28+Math.random()*0.22), 255,255,255);
+      const a=Math.random()*TAU, sp=10+Math.random()*16;
+      addParticle(7,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.28+Math.random()*.22,Math.min(8,sz*(0.18+Math.random()*0.12)), 168,148,122);
     }
   }
-  const nk=Math.round((2+size*0.16)*perfScale);
-  for(let k=0;k<nk;k++){
-    const a=Math.random()*TAU, d=Math.random()*size*0.5;
-    addParticle(1,x+Math.cos(a)*d,y+Math.sin(a)*d,rr(-8,8),rr(-16,-6),.9+Math.random()*.9,size*(0.5+Math.random()*0.5), 105,105,110);
+  if(civic){
+    const nf=Math.max(2, Math.round((2+sz*0.16)*perfScale));
+    for(let k=0;k<nf;k++){
+      const a=Math.random()*TAU, d=Math.random()*sz*0.55;
+      addParticle(0,x+Math.cos(a)*d,y+Math.sin(a)*d,0,0,
+        .32+Math.random()*.18, Math.min(8,sz*(0.38+Math.random()*0.22)), 255, 152, 52);
+    }
   }
+  const nk=Math.round(((civic?1:2)+sz*0.12)*perfScale);
+  for(let k=0;k<nk;k++){
+    const a=Math.random()*TAU, d=Math.random()*sz*0.5;
+    addParticle(1,x+Math.cos(a)*d,y+Math.sin(a)*d,rr(-8,8),rr(-16,-6),1.15+Math.random()*.85,sz*(civic?0.36:0.68), civic?44:105,civic?34:105,civic?28:110);
+  }
+  if(typeof gpfxEnergyBlast==='function'&&sz>=8)
+    gpfxEnergyBlast(x,y,8,civic?8:14+sz*0.45,[255,200,110],{speed:38+sz*1.3,up:0.52,life:0.78,size:6.4,min:4});
+  /* Civic hits are capped at 13 above, so they never reach this. size>=40
+     already handed off to superDetonation. 18 is a Goliath hull. */
+  if(sz>=18&&typeof requestShake==='function')
+    requestShake(x,y,sz>=30?10:6+sz*0.16,'blast');
 }
 function updParticles(dt){
+  /* Ring-buffer scan of all 9000 slots. Later FX slice: live-index list so
+     tick/draw are O(live). Civic explosion caps and type-4 flame clamp stay. */
   for(let i=0;i<MAXPART;i++){
     if(!flife[i]) continue;
     flife[i]-=dt;
     if(flife[i]<=0){ flife[i]=0; fCount--; continue; }
-    fx[i]+=fvx[i]*dt; fy[i]+=fvy[i]*dt;
     const tp=ftype[i];
-    if(tp===2||tp===5||tp===7){ fvx[i]*=0.93; fvy[i]*=0.93; }
-    else if(tp===1||tp===8||tp===10){ fsize[i]+=dt*(tp===8?5:tp===10?7:11); }
-    else if(tp===4){ fsize[i]+=dt*fsize[i]*1.6; }
+    /* Flash, ring, flame and fireball stay on the hit / hull. Integrating
+       leftover velocity walked burning wreckage into a drifting orange swarm. */
+    if(tp!==0&&tp!==3&&tp!==4&&tp!==6){
+      fx[i]+=fvx[i]*dt; fy[i]+=fvy[i]*dt;
+    }
+    if(tp===2||tp===5||tp===7){ fvx[i]*=0.82; fvy[i]*=0.82; }
+    else if(tp===1||tp===8||tp===10){ fsize[i]+=dt*(tp===8?6.5:tp===10?8:9); }
+    else if(tp===4){
+      /* Coals stay put. Growing them like a torch made leftover type-4
+         read as licking flames even after the sprite swap. */
+    }
   }
 }
 
@@ -4236,8 +5227,11 @@ let sepVX=0,sepVY=0,sepVisited=0,sepHits=0;
 function unitSeparation(i,T,isBug,swarmLOD,total){
   sepVX=0;sepVY=0;sepVisited=0;sepHits=0;
   const cx=clamp(ux[i]/CS|0,0,GW-1),cy=clamp(uy[i]/CS|0,0,GW-1);
-  const perCell=isBug&&swarmLOD?1:total>15000?1:total>6000?2:5;
-  const hitCap=isBug&&swarmLOD?3:total>15000?4:total>6000?6:12;
+  /* 1000-pop mid-tier used the small-army 5/12 neighborhood walk. That was
+     the measured JS hotspot (CDP ~197ms/3.5s at 987 live). Tighten at 800,
+     not 6000 — theatre cap is 1000/seat, not 10k. */
+  const perCell=isBug&&swarmLOD?1:total>15000?1:total>6000?2:total>800?3:5;
+  const hitCap=isBug&&swarmLOD?3:total>15000?4:total>6000?6:total>800?8:12;
   for(let c=0;c<9&&sepHits<hitCap;c++){
     const gx=cx+SEP_CX[c],gy=cy+SEP_CY[c];
     if(gx<0||gy<0||gx>=GW||gy>=GW) continue;
@@ -4314,7 +5308,8 @@ function broodCriticalMassTick(dt){
     }
     if(seed>=0&&best>=BROOD_MASS){
       const x=ux[seed],y=uy[seed]; killUnit(seed,true);
-      const c=spawnUnit(UT_BROOD_CASTER,2,x,y);
+      const c=spawnUnit(UT_BROOD_CASTER,2,x,y,
+        (typeof broodIsEnemy==='function'&&broodIsEnemy())?populationDefaultSeat(1,x,y):undefined);
       if(c>=0){
         casters.push(c); ustate[c]=2; ubroodLed[c]=3;
         addParticle(3,x,y,0,0,.8,92,180,92,255);
@@ -4408,7 +5403,7 @@ function deployExtractorMiner(B){
      is never denied by the manual support cap. If grants push the roster over
      that cap, factories simply cannot recruit more support until Commander or
      Research Lab progression catches up. */
-  const i=spawnUnit(UT_MINER,B.team,B.x+B.r+18,B.y+B.r*.45);
+  const i=spawnUnit(UT_MINER,B.team,B.x+B.r+18,B.y+B.r*.45,commanderSlotForBuilding(B));
   if(i>=0){uMineNode[i]=B.dep;utx[i]=B.x;uty[i]=B.y;if(B.team===0)toast('⛏ PROSPECTOR DEPLOYED — MINE / ASSIST / SURVEY orders unlocked');}
   return i;
 }
@@ -4475,8 +5470,38 @@ function minerUnitTick(i,dt){
   }
   return true;
 }
+/* Tick LOD. 0 Full = every simDt (commanders, selected, in-weapon-range,
+   on-screen combat). 1 March = off-screen umarch at 2×, skip sep/FX.
+   2 Idle = off-screen ustate 0, no target, at 4×, no sep/acquire.
+   Far wildlife keeps the team-2 half-rate. HP/stun/burn always use simDt.
+   Missing camBounds (boot/tests) treats the unit as on-screen so sep still runs. */
+function unitOnCam(x,y,B){
+  return !B || (x>=B.x0 && x<=B.x1 && y>=B.y0 && y<=B.y1);
+}
+function unitInWeaponRange(i,T){
+  const tg=utgt[i];
+  if(tg===-1||!T) return false;
+  let ex,ey,tr=0;
+  if(tg>=0){ if(!ualive[tg]) return false; ex=ux[tg]; ey=uy[tg]; tr=TYPES[utype[tg]].r||0; }
+  else if(isRelicTg(tg)){ const R=relics[relicOf(tg)]; if(!R||!R.alive) return false; ex=R.x; ey=R.y; tr=(R.s||0)*0.45; }
+  else { const Bld=blds[-2-tg]; if(!Bld||!Bld.alive) return false; ex=Bld.x; ey=Bld.y; tr=Bld.r||0; }
+  const rng=(T.rng||0)+tr;
+  return dist2(ux[i],uy[i],ex,ey)<=rng*rng;
+}
+function unitTickLod(i,T,onScreen){
+  if(!T||T.cat==='hero'||i===heroIdx||isEnemyCommander(i)||usel[i]) return 0;
+  if(unitInWeaponRange(i,T)) return 0;
+  if(onScreen && utgt[i]!==-1) return 0;
+  if(!onScreen && umarch[i]===1) return 1;
+  if(!onScreen && ustate[i]===0 && utgt[i]===-1) return 2;
+  return 0;
+}
 function unitTick(dt){
-  rebuildGrid();
+  const _hotT0=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+  /* Teleports (jump jets, terrain rescue) write ux/uy outside this loop.
+     Relink is a cell compare; no-op unless the bucket changed. Do not skip
+     HP / stun / burn / commanders to "save" this pass. */
+  for(let gi=0;gi<unitHigh;gi++) if(ualive[gi]) gridRelink(gi);
   tickMoveCohorts();
   broodCriticalMassTick(dt);
   /* Patrol planning lives in input.js, which loads after the simulation. The
@@ -4492,14 +5517,20 @@ function unitTick(dt){
   const dustStride=Math.max(1,Math.round(dustMod*(perfScale<.42?2.2:1)));
   const swarmLOD=teamCount[2]>3000;              // hiveworld: bugs half-rate, double-dt
   const dtBase=dt, dtBug=dt*2;
+  const camB=typeof camBounds==='function'?camBounds():null;
   for(let i=0;i<unitHigh;i++){
     if(!ualive[i]) continue;
     const isBug=uteam[i]===2;
-    if(unitIsBrood(i)&&((i+tick*13)&4095)===0)
-      sfx('cre_idle',ux[i],uy[i],clamp(TYPES[utype[i]].size/20,0.65,1.5));
-    if(isBug&&swarmLOD&&((i+tick)&1)) continue;  // this bug ticks next frame with 2x dt
-    if(isBug&&swarmLOD) dt=dtBug; else dt=dtBase;
     const T=TYPES[utype[i]];
+    if(T&&T.air&&uhp[i]<=0&&!uCrash[i]){ beginAirCrash(i); }
+    if(uCrash[i]){ airCrashTick(i,dtBase); continue; }
+    const onScreen=unitOnCam(ux[i],uy[i],camB);
+    const lod=unitTickLod(i,T,onScreen);
+    const farWild=isBug&&swarmLOD&&lod!==0;
+    if(unitIsBrood(i)&&((i+tick*13)&4095)===0)
+      sfx('cre_idle',ux[i],uy[i],clamp(T.size/20,0.65,1.5));
+    if(farWild&&((i+tick)&1)) continue;          // existing team-2 half-rate
+    if(farWild) dt=dtBug; else dt=dtBase;
     if(ucool[i]>0) ucool[i]-=dt;
     if(ubuff[i]>0) ubuff[i]-=dt;
     if(uclassBuffT[i]>0){uclassBuffT[i]-=dt;if(uclassBuffT[i]<=0){uclassBuffT[i]=0;uclassBuff[i]=0;}}
@@ -4508,6 +5539,10 @@ function unitTick(dt){
     if(ufireT[i]>0) ufireT[i]-=dt;
     if(ustomp[i]>0) ustomp[i]-=dt;
     if(uheal[i]>0) uheal[i]-=dt;
+    if(umode[i]===3){
+      uhp[i]-=uhpm[i]*0.050*dt;         // overdrive is HP — never lod-skip this
+      if(uhp[i]<=uhpm[i]*0.12){ umode[i]=0; umodeT[i]=MODE_SWITCH*0.6; }
+    }
     if(ustun[i]>0){
       ustun[i]-=dt;
       /* Held under EMP: no movement, no firing. The arc particle is what tells
@@ -4516,6 +5551,23 @@ function unitTick(dt){
       continue;
     }
     if(ushielded[i]>0) ushielded[i]-=dt;
+    /* March/Idle drop sep/acquire/FX, not clocks. Burn particles stay on the
+       skip path so incendiary readback does not vanish off-screen. */
+    const lodSkip=!farWild&&((lod===1&&((i+tick)&1))||(lod===2&&((i+tick)&3)));
+    if(lodSkip){
+      if(ufireT[i]>0 && (i+tick)%6===0 && perfScale>0.4){
+        addParticle(4,ux[i]+rr(-T.size*.2,T.size*.2),uy[i]+rr(-T.size*.2,T.size*.2),
+          0,0,.55,T.size*0.45, 255,140,35);
+        if((i+tick)%18===0) addParticle(1,ux[i]+rr(-3,3),uy[i]+rr(-3,3),
+          rr(-2,2),rr(-8,-3),.7,T.size*0.3, 58,50,44);
+      }
+      continue;
+    }
+    if(!farWild&&lod===1) dt=dtBase*2;
+    else if(!farWild&&lod===2) dt=dtBase*4;
+    const skipSep=!farWild&&(lod===1||lod===2);
+    const skipFx=!farWild&&lod===1;
+    const skipAcq=!farWild&&lod===2;
     /* ---- FACTION HERO BEHAVIOURS ------------------------------------------
        Each hero does something its faction's army cannot, so killing it changes
        the shape of the fight rather than just removing a big health bar. */
@@ -4525,14 +5577,26 @@ function unitTick(dt){
           ustomp[i]=0.5;
           forUnitsIn(ux[i],uy[i],SHIELD_R*1.6,j=>{ if(uteam[j]===uteam[i]) ushielded[j]=0.7; });
         }
-      } else if(utype[i]===30){                // BROODMOTHER — the hive walks
+      } else if(utype[i]===30){                // BROOD SOVEREIGN — Ravagers on THIS seat's 1000
         if(ustomp[i]<=0){
           ustomp[i]=6.0;
-          const n=teamCount[uteam[i]]<3000?3:1;
-          for(let k=0;k<n;k++){
-            const a=Math.random()*TAU, d=T.r+16+Math.random()*22;
-            const bb=spawnUnit(12,uteam[i],ux[i]+Math.cos(a)*d,uy[i]+Math.sin(a)*d);
-            if(bb>=0){ ustate[bb]=2; utx[bb]=utx[i]; uty[bb]=uty[i]; ubuff[bb]=4; }
+          /* Hero ability, not a factory: it never saw armyCap. Gate on the
+             Sovereign's commander seat (uCmd / nearest aiBaseSlot), never a
+             teamCount blob. Wildlife hives keep bugCap via seat===undefined. */
+          const seat=uteam[i]===0?(uCmd[i]==null?POP_PLAYER_SLOT:uCmd[i])
+            :uteam[i]===1?(uCmd[i]!=null&&uCmd[i]>=0?uCmd[i]:populationDefaultSeat(1,ux[i],uy[i]))
+            :(typeof broodIsEnemy==='function'&&broodIsEnemy()
+              ?(uCmd[i]!=null&&uCmd[i]>=0?uCmd[i]:populationDefaultSeat(1,ux[i],uy[i]))
+              :undefined);
+          if(populationCanSpawn(12,uteam[i],seat,ux[i],uy[i])){
+            const room=seat===undefined?3
+              :Math.max(0,populationCapForCommander(seat)-populationUsedForCommander(seat));
+            const n=Math.min(3,room);
+            for(let k=0;k<n;k++){
+              const a=Math.random()*TAU, d=T.r+16+Math.random()*22;
+              const bb=spawnUnit(12,uteam[i],ux[i]+Math.cos(a)*d,uy[i]+Math.sin(a)*d,seat);
+              if(bb>=0){ ustate[bb]=2; utx[bb]=utx[i]; uty[bb]=uty[i]; ubuff[bb]=4; }
+            }
           }
           if(perfScale>0.5) addParticle(3,ux[i],uy[i],0,0,0.5,T.r*1.6, 170,235,80);
         }
@@ -4543,7 +5607,8 @@ function unitTick(dt){
           ustomp[i]=5.5;
           for(let k=0;k<3;k++){
             const a=Math.random()*TAU, d=Math.random()*70;
-            fireProj(9,uteam[i],ux[i],uy[i],ux[ht]+Math.cos(a)*d,uy[ht]+Math.sin(a)*d,
+            const mz=mfUnitMuzzle(i,k===1?-1:1);
+            fireProj(9,uteam[i],mz[0],mz[1],ux[ht]+Math.cos(a)*d,uy[ht]+Math.sin(a)*d,
                      190,T.dmg*0.55,T.aoe*0.8,-1);
           }
           sfx('boom',ux[i],uy[i],1.1);
@@ -4623,37 +5688,57 @@ function unitTick(dt){
     if(tg>=0 && (!foeTgt(i,tg,utgtg[i])||!mfTargetAllowed(T,tg))){ tg=utgt[i]=-1; }
     else if(isRelicTg(tg)){ const R=relics[relicOf(tg)]; if(!R||!R.alive) tg=utgt[i]=-1; }
     else if(tg<=-2){ const B=blds[-2-tg]; if(!B||!B.alive) tg=utgt[i]=-1; }
+    /* Move-only / retreat (ustate 1) must not keep a previous attack lock.
+       Acquisition already skips this state, but a leftover utgt still made
+       the hull chase and fire — which is why "click away" felt like target
+       lock. Weapons stay silent until arrival; idle (state 0) may acquire. */
+    if(ustate[i]===1){ tg=utgt[i]=-1; utgtg[i]=-1; }
+    /* Queued waypoints and GUARD both rewrite the lock AND the goal, so they
+       run after validation (a dead target must already read -1 here) and before
+       acquisition (guard's search is anchored on the guarded thing, not on this
+       unit, and must not be overwritten by the ordinary aggro sweep). */
+    if(uQueue[i]) queueTick(i);
+    if(ustate[i]===7) guardSteer(i,acqMod);
+    tg=utgt[i];
     const md=umode[i];
     if(umodeT[i]>0) umodeT[i]-=dt;                 // deploying: locked mid-transition
-    if(md===3){                                    // OVERDRIVE runs the reactor hot
-      uhp[i]-=uhpm[i]*0.050*dt;         // ~14 s to the cutout: a real clock
-      if(uhp[i]<=uhpm[i]*0.12){ umode[i]=0; umodeT[i]=MODE_SWITCH*0.6; }   // auto-disengage
-      else if((i+tick)%9===0&&perfScale>0.4)
+    if(md===3){
+      if((i+tick)%9===0&&perfScale>0.4&&uhp[i]>uhpm[i]*0.12)
         addParticle(1,ux[i],uy[i],rr(-4,4),rr(-14,-6),.5,3, 255,140,60);
     }
     const rngM=(uteam[i]===0?resRngMult:1)*modeRngMul(md)*classRngMul(i)*(uhaz[i]>0?HAZ_RNG:1);
     // staggered acquisition
-    if(T.wk!=='n' && (i+tick)%acqMod===0 && ustate[i]!==1 && ustate[i]!==6){
+    if(!skipAcq && T.wk!=='n' && (i+tick)%acqMod===0 && ustate[i]!==1 && ustate[i]!==6 && ustate[i]!==7){
       /* On the march, acquisition shrinks to self-defence range: the column
-         shoots what is already on top of it and walks past the rest. */
+         shoots what is already on top of it and walks past the rest.
+         HOLD used full aggro range then refused to walk, so units locked a
+         target they could not shoot and looked like the button was dead. */
       const marching=umarch[i]===1;
-      const aggro=marching ? Math.min(T.rng*rngM+20, 150)
-                           : T.rng*rngM*AGGRO_MULT+AGGRO_ADD+(uteam[i]===2?120:0);
+      const holding=!!uhold[i];
+      const aggro=holding ? T.rng*rngM
+                 : marching ? Math.min(T.rng*rngM+20, 150)
+                 : T.rng*rngM*AGGRO_MULT+AGGRO_ADD+(uteam[i]===2?120:0);
       let e=findEnemyDomain(ux[i],uy[i],uteam[i],aggro,T.targetMask,T.preferMask);
       // AI focus fire: finish wounded targets already in weapon range
       if(e>=0 && uteam[i]===1 && (teamCount[0]+teamCount[1])<4000){
         let low=1, li=-1;
         forUnitsIn(ux[i],uy[i],T.rng*rngM+30,j=>{
-          if(uteam[j]===0&&ualive[j]&&mfTargetAllowed(T,j)){ const f2=uhp[j]/uhpm[j]; if(f2<low-0.18){ low=f2; li=j; } }
+          if(intelCanTarget(j,uteam[i])&&mfTargetAllowed(T,j)){ const f2=uhp[j]/uhpm[j]; if(f2<low-0.18){ low=f2; li=j; } }
         });
         if(li>=0) e=li;
       }
       if(e>=0){ tg=utgt[i]=e; utgtg[i]=ugen[e]; }
-      else if(tg===-1 && ustate[i]===2 && T.tg!=='air' && uteam[i]!==2 && !marching){
+      else if(tg===-1 && ustate[i]===2 && T.tg!=='air' && uteam[i]!==2 && !marching && !holding){
         const b=findEnemyBld(ux[i],uy[i],uteam[i],aggro+80);
         if(b>=0) tg=utgt[i]=-2-b;
       }
     }
+    /* Player A-MOVE arrives here; AI waves still drop march earlier (340) in
+       ai.js so they storm a base instead of walking onto the HQ pad. Patrol
+       must keep march or each waypoint would become a chase. Drop BEFORE the
+       goal rewrite so this tick walks toward the target, not the pad. */
+    if(umarch[i]===1 && ustate[i]!==5 && uPatrolRoute[i]<0
+       && dist2(ux[i],uy[i],utx[i],uty[i])<=18*18) umarch[i]=0;
     // goal
     let gx, gy, engaging=false, inRange=false, er=0;
     if(tg!==-1){
@@ -4668,7 +5753,7 @@ function unitTick(dt){
          goal remains the wave objective rather than whatever wandered into
          range. This is the difference between a column advancing under fire and
          a column stopping to skirmish. */
-      if(umarch[i]===1){ gx=utx[i]; gy=uty[i]; }
+      if(umarch[i]===1||uhold[i]){ gx=utx[i]; gy=uty[i]; }
       else { gx=ex; gy=ey; }
       const ta=Math.atan2(ey-uy[i],ex-ux[i])+Math.PI/2;
       // turreted units: swivel turret fast, hull turns when moving
@@ -4687,8 +5772,8 @@ function unitTick(dt){
         if(md===4){ umode[i]=0; umodeT[i]=MODE_SWITCH*0.4; }   // firing breaks GHOST cover
         const facDmg=(typeof factionDoctrineAttackMul==='function')?factionDoctrineAttackMul(uteam[i],i):1;
         const dmg=T.dmg*vet*modeDmgMul(md)*classDmgMul(i)*broodDmgMul(i)*facDmg*mfDomainDamageMul(i,tg)*(ubuff[i]>0?1.5:1)*(uteam[i]===1?aiDmgMult:(uteam[i]===0?armyDmgMult*stimDmgMult*typeDmgMult[utype[i]]:1))*(i===heroIdx?heroDmgMult:1);
-        const ma=(T.tur?uturr[i]:uang[i])-Math.PI/2;
-        const mx=ux[i]+Math.cos(ma)*T.size*0.62, my=uy[i]+Math.sin(ma)*T.size*0.62;
+        const mz=mfUnitMuzzle(i);
+        const mx=mz[0], my=mz[1];
         if(T.wk==='m'){
           // melee claw strike
           if(tg>=0){
@@ -4713,16 +5798,16 @@ function unitTick(dt){
           else damageBld(-2-tg,dmg*STM.b,uteam[i]);
           const bc = utype[i]===8? [180,235,255] : (T.ptype===5? [255,142,55] : (uteam[i]? [255,120,80] : TEAMC[0]));
           const bstyle=utype[i]===8?'lance':T.ptype===5?'thermal':utype[i]===6?'sniper':'laser';
-          addBeam(mx,my,ex,ey, utype[i]===8?7:T.ptype===5?4.5:2.6,
-            bc[0],bc[1],bc[2], utype[i]===8?.32:T.ptype===5?.24:utype[i]===6?.27:.18,bstyle);
-          addParticle(0,ex,ey,0,0,.14,utype[i]===8?16:7, bc[0],bc[1],bc[2]);
-          addParticle(0,mx,my,0,0,.1,6, 255,255,255);
+          const bh=beamHitXY(mx,my,ex,ey,trad);
+          addBeam(mx,my,bh[0],bh[1], utype[i]===8?7:T.ptype===5?4.5:2.6,
+            bc[0],bc[1],bc[2], utype[i]===8?.32:T.ptype===5?.24:utype[i]===6?.27:.18,bstyle,uteam[i]);
+          addParticle(0,bh[0],bh[1],0,0,.14,utype[i]===8?16:7, bc[0],bc[1],bc[2]);
           if(T.ptype===5){
-            addParticle(4,ex+rr(-3,3),ey+rr(-3,3),rr(-5,5),rr(-18,-7),.42,8,255,130,38);
+            addParticle(4,ex,ey,0,0,.42,8,255,130,38);
             if(perfScale>0.48) addParticle(1,ex,ey,rr(-3,3),rr(-12,-5),.8,5,65,56,50);
           } else if(utype[i]===8){
             addParticle(3,ex,ey,0,0,.22,22,150,225,255);
-            for(let s=0;s<4;s++) addParticle(2,ex,ey,rr(-55,55),rr(-55,55),.28,2.2,205,245,255);
+            for(let s=0;s<4;s++) addParticle(2,ex,ey,rr(-10,10),rr(-10,10),.16,1.8,205,245,255);
           } else if(utype[i]===6 && perfScale>0.45){
             addParticle(3,ex,ey,0,0,.16,10,180,230,255);
           }
@@ -4761,7 +5846,9 @@ function unitTick(dt){
           ustomp[i]=2.6;
           addParticle(3,ux[i],uy[i],0,0,.5,TITAN_STOMP_R*2.2, 255,200,120);
           addParticle(3,ux[i],uy[i],0,0,.7,TITAN_STOMP_R*3.0, 255,160,80);
-          shake=Math.max(shake,7); sfx('boom',ux[i],uy[i],1.2);
+          if(typeof requestShake==='function') requestShake(ux[i],uy[i],7,'blast');
+          else shake=Math.max(shake,7);
+          sfx('boom',ux[i],uy[i],1.2);
         } else ustomp[i]=0.8;
       }
     } else { gx=utx[i]; gy=uty[i]; }
@@ -4817,7 +5904,8 @@ function unitTick(dt){
       if(ustate[i]===1 && distGoal<=7) ustate[i]=0;
     }
     // physical separation; formation/order goals remain the primary velocity
-    unitSeparation(i,T,isBug,swarmLOD,total);
+    if(skipSep){ sepVX=0; sepVY=0; sepHits=0; sepVisited=0; }
+    else unitSeparation(i,T,isBug,swarmLOD,total);
     /* Near a shared destination, do not let every unit's goal vector overpower
        collision response and recreate the stack. Valid formation slots never
        enter this branch because they have no overlap (`sepHits===0`). Long
@@ -4863,18 +5951,22 @@ function unitTick(dt){
     }
     const travel=Math.hypot(nx-ox,ny-oy);
     ux[i]=nx; uy[i]=ny;
+    if(travel>0.01) gridRelink(i);
     if(i===heroIdx&&typeof commanderTerrainRecovery==='function') commanderTerrainRecovery(i,travel,dt);
     if(i===heroIdx&&T.cat==='hero'&&travel>0.01&&(tick&7)===0&&typeof commanderCrushScenery==='function')
       commanderCrushScenery(i,false);
     /* Intent is not movement: blocked walkers can still have a far-away order.
        Drive gait and movement audio from real displacement so feet stay put. */
     umov[i]=travel>0.01?1:0;
+    const _rw=uwalk[i];
     if(T.legs&&travel>0.01) uwalk[i]=(uwalk[i]+travel*(utype[i]===4?0.19:0.16))%TAU;
-    /* Water splash: ground units crossing the water threshold spawn splash
-       particles on entry and exit — white foam burst + drip particles. */
-    if(!T.air && !T.naval && travel>0.5 && perfScale>0.4){
-      const wasWet = typeof hAt==='function' && hAt(ox,oy)<WATER_H;
-      const nowWet = typeof hAt==='function' && hAt(nx,ny)<WATER_H;
+    if(typeof rumbleUnitMove==='function') rumbleUnitMove(i,T,travel,_rw);
+    /* Water splash: ground units crossing authored water (oceans/rivers/lakes),
+       not a dry crater that punched below WATER_H. */
+    if(!skipFx && !T.air && !T.naval && travel>0.5 && perfScale>0.4){
+      const wetAt=typeof authoredWaterAt==='function'?authoredWaterAt:(typeof hAt==='function'?(X,Y)=>hAt(X,Y)<WATER_H:()=>false);
+      const wasWet = wetAt(ox,oy);
+      const nowWet = wetAt(nx,ny);
       if(wasWet!==nowWet){
         for(let sp=0;sp<4;sp++){
           const sa=Math.random()*TAU, sv=40+Math.random()*60;
@@ -4884,7 +5976,7 @@ function unitTick(dt){
       }
     }
     // dust trail / ship wake
-    if(umov[i] && !T.air && (i+tick)%dustStride===0 && perfScale>0.18){
+    if(!skipFx && umov[i] && !T.air && (i+tick)%dustStride===0 && perfScale>0.18){
       if(T.naval) addParticle(1,ux[i]-mvx*0.08,uy[i]-mvy*0.08,rr(-2,2),rr(-2,2),.8,T.size*(T.vscale||1)*0.45, 210,235,245);
       else if(T.size>18) addParticle(10,ux[i]-mvx*0.06,uy[i]-mvy*0.06,rr(-5,5),rr(-5,5),.8,T.size*0.55, 140,132,110);
       else addParticle(10,ux[i]-mvx*0.06,uy[i]-mvy*0.06,rr(-3,3),rr(-3,3),.62,T.size*0.4, 128,120,100);
@@ -4895,7 +5987,10 @@ function unitTick(dt){
        into the ring buffer on one frame. Brood bleed corrosive vapour instead
        of pretending their chitin has an engine bay. */
     const hpFrac=uhp[i]/uhpm[i];
-    if(hpFrac<0.58 && T.size>=12 && perfScale>0.38){
+    /* Airframe trail is 3D (gpufx). The dirt-relative type-1 puffs below
+       stay on ground combat — do not retune those magnitudes. */
+    if(!skipFx && T.air && hpFrac<0.35 && perfScale>0.22) emitAirSmoke(i,T,false);
+    if(!skipFx && !T.air && hpFrac<0.58 && T.size>=12 && perfScale>0.38){
       const crit=hpFrac<0.20, bad=hpFrac<0.36, organic=unitIsBrood(i);
       const mod=crit?7:bad?13:25;
       if((i+tick)%mod===0){
@@ -4904,17 +5999,19 @@ function unitTick(dt){
           organic?48:crit?34:48,organic?68:crit?33:47,organic?34:crit?35:48);
       }
       if(bad&&(i+tick*3)%17===0)
-        addParticle(2,ux[i],uy[i],rr(-38,38),rr(-45,-12),.42,2.2,
+        addParticle(2,ux[i],uy[i],rr(-8,8),rr(-10,-2),.22,2.0,
           organic?145:255,organic?220:180,organic?80:75);
       if(crit&&(i+tick)%19===0)
-        addParticle(organic?0:4,ux[i]+rr(-4,4),uy[i]+rr(-4,4),rr(-3,3),rr(-9,-3),
+        addParticle(organic?0:4,ux[i]+rr(-4,4),uy[i]+rr(-4,4),0,0,
           organic?.24:.52,T.size*(organic?.36:.50),organic?130:255,organic?225:135,organic?65:38);
+      if(organic&&typeof orgfxSeep==='function'&&(i+tick)%(crit?9:17)===0)
+        orgfxSeep(ux[i],uy[i],T.size);
     }
     /* Fire persistence: units hit by incendiary weapons burn for a few seconds,
        emitting flame particles each tick to make the thermal damage visible. */
     if(ufireT[i]>0 && (i+tick)%6===0 && perfScale>0.4){
       addParticle(4,ux[i]+rr(-T.size*.2,T.size*.2),uy[i]+rr(-T.size*.2,T.size*.2),
-        rr(-3,3),rr(-10,-4),.55,T.size*0.45, 255,140,35);
+        0,0,.55,T.size*0.45, 255,140,35);
       if((i+tick)%18===0) addParticle(1,ux[i]+rr(-3,3),uy[i]+rr(-3,3),
         rr(-2,2),rr(-8,-3),.7,T.size*0.3, 58,50,44);
     }
@@ -4946,6 +6043,11 @@ function unitTick(dt){
     }
   }
   tick++;
+  if(_hotT0){
+    simHot.unitTickMs=performance.now()-_hotT0;
+    simHot.live=total;
+    simHot.team0=teamCount[0]; simHot.team1=teamCount[1]; simHot.team2=teamCount[2];
+  }
 }
 
 // ---------- projectile tick ----------
@@ -4975,9 +6077,9 @@ function projTick(dt){
           const bx=psx[i]+(pex[i]-psx[i])*q,by=psy[i]+(pey[i]-psy[i])*q;
           const d=Math.max(1,Math.hypot(pex[i]-psx[i],pey[i]-psy[i]));
           const nx=(pex[i]-psx[i])/d,ny=(pey[i]-psy[i])/d,w=artShellTurbulence(i,q);
-          const life=1.05+((i*17+(q*100|0))%7)*.035;
+          const life=1.45+((i*17+(q*100|0))%7)*.045;
           artShellSmoke.push({x:bx-ny*w,y:by+nx*w,lift:16+Math.sin(q*Math.PI)*(pArc[i]||70),
-            life,max:life,size:7.5+Math.abs(w)*.13,rot:pTurbSeed[i]*TAU+q*5.2,team:pteam[i],
+            life,max:life,size:9.6+Math.abs(w)*.16,rot:pTurbSeed[i]*TAU+q*5.2,team:pteam[i],
             hot:q>.035&&q<.965,vx:-ny*w*.34,vy:nx*w*.34,rise:7+Math.abs(w)*.18});
         }
         while(artShellSmoke.length>220)artShellSmoke.shift();
@@ -5018,7 +6120,7 @@ function projTick(dt){
         const wob=Math.sin(plife[i]*22+(i&7))*36;
         const sp=Math.max(1,Math.sqrt(pvx[i]*pvx[i]+pvy[i]*pvy[i]));
         px[i]+=(pvx[i]-pvy[i]/sp*wob*0.2)*dt; py[i]+=(pvy[i]+pvx[i]/sp*wob*0.2)*dt;
-        if((tick+i)%3===0) addParticle(pBio[i]?0:1,px[i],py[i],0,0,.4,3.5,pBio[i]?178:150,pBio[i]?255:150,pBio[i]?92:155);
+        if((tick+i)%3===0) addParticle(pBio[i]?0:1,px[i],py[i],0,0,.75,5.8,pBio[i]?178:150,pBio[i]?255:150,pBio[i]?92:155);
       } else if(ptype[i]===6){
         /* PLASMA ORB — slow, heavy, visibly travelling. Being able to SEE a
            shot cross the gap is what makes energy weapons feel different from
@@ -5174,7 +6276,7 @@ function bldTick(dt){
         if(B.cool<=0){
           B.cool=BUNKER.cool;
           const ma=B.tang-Math.PI/2;
-          const mx=B.x+Math.cos(ma)*BT.bunker.size*.80, my=B.y+Math.sin(ma)*BT.bunker.size*.80;
+          const mx=B.x+Math.cos(ma)*BT.bunker.size*.67, my=B.y+Math.sin(ma)*BT.bunker.size*.67;
           const bio=bfac==='horde',phase=bfac==='syndicate';
           const pk=fireProj(bio?6:phase?3:2,B.team,mx,my,ux[e],uy[e],bio?150:185,
             BUNKER.dmg*bldDmgMul(B)*(bio?.92:1),BUNKER.aoe*(bio?1.3:1),-1);
@@ -5201,11 +6303,16 @@ function bldTick(dt){
             if(uteam[j]!==B.team&&TYPES[utype[j]].air&&j!==e) dealDamage(j,dmgA*0.5,B.team,-1);
           });
           defKillCredit(B,stats.kills[B.team]-pre);
-          // flak burst in the sky
-          addParticle(0,ux[e]+rr(-8,8),uy[e]-9+rr(-8,8),0,0,.22,10, 255,220,170);
-          if(bfac==='syndicate') addBeam(B.x,B.y,ux[e],uy[e],2.2,176,255,95,.14,'arc');
-          else if(bfac==='horde') addParticle(0,ux[e],uy[e],0,-5,.28,15,150,255,88);
-          addParticle(1,ux[e]+rr(-6,6),uy[e]-9+rr(-6,6),rr(-4,4),rr(-4,0),.7,6, 70,70,74);
+          /* Particles have no Z. `uy-9` was a fake "height" that walked the
+             burst nine world-metres south of the aircraft. Sit on the target
+             and let the renderer lift billboards. */
+          const mz=bldMuzzleXY(B,0.57);
+          const hit=beamHitXY(mz[0],mz[1],ux[e],uy[e],TYPES[utype[e]].r);
+          addParticle(0,mz[0],mz[1],0,0,.10,8,255,230,190);
+          addParticle(0,hit[0]+rr(-6,6),hit[1]+rr(-6,6),0,0,.22,10, 255,220,170);
+          if(bfac==='syndicate') addBeam(mz[0],mz[1],hit[0],hit[1],2.2,176,255,95,.14,'arc',B.team);
+          else if(bfac==='horde') addParticle(0,hit[0],hit[1],0,0,.28,15,150,255,88);
+          addParticle(1,hit[0]+rr(-5,5),hit[1]+rr(-5,5),rr(-3,3),rr(-6,-2),.7,6, 70,70,74);
           if(Math.random()<0.4) sfx('hit',B.x,B.y,1);
         }
       } else if(B.cool<0) B.cool=0.2;
@@ -5249,14 +6356,14 @@ function bldTick(dt){
         if(e<0) e=findEnemy(B.x,B.y,B.team,trng);
       } else if(B.prio===2){                   // STRONGEST FIRST
         let bh=-1;
-        forUnitsIn(B.x,B.y,trng,j=>{ if(ualive[j]&&uteam[j]!==B.team&&uhpm[j]>bh){ bh=uhpm[j]; e=j; } });
+        forUnitsIn(B.x,B.y,trng,j=>{ if(intelCanTarget(j,B.team)&&uhpm[j]>bh){ bh=uhpm[j]; e=j; } });
       } else e=findEnemy(B.x,B.y,B.team,trng);
       /* A commander in range IS the target. Sentinels exist to punish hero
          raids; picking the nearest scout instead let the actual threat farm
          the base from the tower's blind priority. */
       if(e<0||TYPES[utype[e]].cat!=='hero'){
         let h=-1;
-        forUnitsIn(B.x,B.y,trng,j=>{ if(ualive[j]&&uteam[j]!==B.team&&umode[j]!==4&&TYPES[utype[j]].cat==='hero') h=j; });
+        forUnitsIn(B.x,B.y,trng,j=>{ if(intelCanTarget(j,B.team)&&TYPES[utype[j]].cat==='hero') h=j; });
         if(h>=0) e=h;
       }
       if(e>=0){
@@ -5269,16 +6376,17 @@ function bldTick(dt){
           defKillCredit(B,stats.kills[B.team]-pre);
           const ma=B.tang-Math.PI/2;
           const mx=B.x+Math.cos(ma)*BT.turret.size*0.73, my=B.y+Math.sin(ma)*BT.turret.size*0.73;
+          const hit=beamHitXY(mx,my,ux[e],uy[e],TYPES[utype[e]].r);
           if(bio){
-            const pk=fireProj(1,B.team,mx,my,ux[e],uy[e],260,0,4,e);
-            if(pk>=0) pBio[pk]=1;
-            addBeam(mx,my,ux[e],uy[e],1.7,174,255,88,.12,'tracer');
-            addParticle(0,ux[e],uy[e],0,0,.18,10,154,255,84);
+            /* Hitscan already applied. A 0-damage type-1 bolt then flew to the
+               corpse after the kill — a second, late tracer. */
+            addBeam(mx,my,hit[0],hit[1],1.7,174,255,88,.12,'tracer',B.team);
+            addParticle(0,hit[0],hit[1],0,0,.18,10,154,255,84);
             sfx('sonic',B.x,B.y,.85);
           }else{
             const mac=bfac==='syndicate';
-            addBeam(mx,my,ux[e],uy[e],3,mac?186:110,mac?96:255,mac?255:150,.18,'turret');
-            addParticle(0,ux[e],uy[e],0,0,.13,8,mac?190:110,mac?105:255,mac?255:150);
+            addBeam(mx,my,hit[0],hit[1],3,mac?186:110,mac?96:255,mac?255:150,.18,'turret',B.team);
+            addParticle(0,hit[0],hit[1],0,0,.13,8,mac?190:110,mac?105:255,mac?255:150);
             sfx(mac?'surge':'laser',B.x,B.y,1);
           }
         }
@@ -5303,8 +6411,11 @@ function bldTick(dt){
           const pre=stats.kills[B.team];
           for(const j of tgts){
             dealDamage(j,HELL.dmg*bldDmgMul(B)*dmgMul('p',utype[j]),B.team,-1);
-            if(perfScale>0.4) addBeam(mx,my,ux[j]+rr(-3,3),uy[j]+rr(-3,3),bio?2.5:mac?2.1:1.6,
-              bio?170:mac?192:255,bio?255:mac?100:220,bio?90:mac?255:120,bio?.16:.10,bio?'arc':mac?'lance':'tracer');
+            if(perfScale>0.4){
+              const hit=beamHitXY(mx,my,ux[j]+rr(-3,3),uy[j]+rr(-3,3),TYPES[utype[j]].r);
+              addBeam(mx,my,hit[0],hit[1],bio?2.5:mac?2.1:1.6,
+                bio?170:mac?192:255,bio?255:mac?100:220,bio?90:mac?255:120,bio?.16:.10,bio?'arc':mac?'lance':'tracer',B.team);
+            }
           }
           defKillCredit(B,stats.kills[B.team]-pre);
           addParticle(0,mx,my,0,0,.08,10,bio?170:mac?190:255,bio?255:mac?105:230,bio?90:mac?255:150);
@@ -5321,22 +6432,23 @@ function bldTick(dt){
         if(first>=0){
           const pw=drawEnergy(B.team,ARC.e);
           B.cool=ARC.cool*(pw<0.5?2.2:1);
-          const hit=new Set([first]),bio=bfac==='horde',mac=bfac==='syndicate';
+          const chained=new Set([first]),bio=bfac==='horde',mac=bfac==='syndicate';
           const pre=stats.kills[B.team];
           let px3=B.x, py3=B.y-BT.arc.size*0.45, cur=first, mult=1;
           for(let c2=0;c2<ARC.chain&&cur>=0;c2++){
             dealDamage(cur,ARC.dmg*bldDmgMul(B)*mult*dmgMul('b',utype[cur]),B.team,-1);
-            addBeam(px3,py3,ux[cur],uy[cur],2.6,bio?178:mac?202:150,bio?255:mac?96:230,bio?94:mac?255:255,.21,'arc');
+            const end=beamHitXY(px3,py3,ux[cur],uy[cur],TYPES[utype[cur]].r);
+            addBeam(px3,py3,end[0],end[1],2.6,bio?178:mac?202:150,bio?255:mac?96:230,bio?94:mac?255:255,.21,'arc',B.team);
             addParticle(0,ux[cur],uy[cur],0,0,.12,10,bio?170:mac?195:180,bio?255:mac?110:240,bio?90:mac?255:255);
             px3=ux[cur]; py3=uy[cur]; mult*=0.88;
             let nx2=-1,nd2=ARC.jump*ARC.jump;
             forUnitsIn(px3,py3,ARC.jump,j=>{
-              if(uteam[j]!==B.team&&!hit.has(j)){
+              if(uteam[j]!==B.team&&!chained.has(j)){
                 const dd=dist2(px3,py3,ux[j],uy[j]);
                 if(dd<nd2){ nd2=dd; nx2=j; }
               }
             });
-            cur=nx2; if(cur>=0) hit.add(cur);
+            cur=nx2; if(cur>=0) chained.add(cur);
           }
           defKillCredit(B,stats.kills[B.team]-pre);
           sfx('surge',B.x,B.y,1.6);
@@ -5363,9 +6475,9 @@ function bldTick(dt){
           const pre=stats.kills[B.team];
           dealDamage(e,RAIL.dmg*bldDmgMul(B)*dmgMul('g',utype[e]),B.team,-1,dmgMul('g',utype[e]),'g');
           defKillCredit(B,stats.kills[B.team]-pre);
-          addBeam(mx,my,ux[e],uy[e],5,170,235,255,.24,'lance');
-          addBeam(mx,my,ux[e],uy[e],1.6,255,255,255,.16,'tracer');
-          for(let p=0;p<5;p++) addParticle(0,ux[e]+rr(-8,8),uy[e]+rr(-8,8),rr(-2,2),rr(-7,-1),.35,8,150,225,255);
+          const hit=beamHitXY(mx,my,ux[e],uy[e],TYPES[utype[e]].r);
+          addBeam(mx,my,hit[0],hit[1],5,170,235,255,.24,'lance',B.team);
+          for(let p=0;p<5;p++) addParticle(0,hit[0]+rr(-8,8),hit[1]+rr(-8,8),rr(-2,2),rr(-7,-1),.35,8,150,225,255);
           shake=Math.max(shake,2.2);
           sfx('surge',B.x,B.y,1.8);
         }
@@ -5392,9 +6504,9 @@ function bldTick(dt){
           dealDamage(e,MINELASER.dmg*bldDmgMul(B)*mul,B.team,-1,mul,'b');
           defKillCredit(B,stats.kills[B.team]-pre);
           const mac=bfac==='syndicate';
-          addBeam(mx,my,ux[e],uy[e],5.5,mac?190:80,mac?96:215,255,.28,'lance');
-          addBeam(mx,my,ux[e],uy[e],1.5,245,255,255,.16,'tracer');
-          for(let p=0;p<3;p++) addParticle(0,ux[e]+rr(-5,5),uy[e]+rr(-5,5),rr(-2,2),rr(-6,-1),.24,7,mac?190:100,mac?105:225,255);
+          const hit=beamHitXY(mx,my,ux[e],uy[e],TYPES[utype[e]].r);
+          addBeam(mx,my,hit[0],hit[1],5.5,mac?190:80,mac?96:215,255,.28,'lance',B.team);
+          for(let p=0;p<3;p++) addParticle(0,hit[0]+rr(-5,5),hit[1]+rr(-5,5),rr(-2,2),rr(-6,-1),.24,7,mac?190:100,mac?105:225,255);
           sfx('laser',B.x,B.y,1.55);
         }
       } else if(B.cool<0) B.cool=.25;
@@ -5413,7 +6525,8 @@ function bldTick(dt){
           B.cool=MISSILE_BASTION.cool*(pw<.5?2.2:1);
           B.tang=Math.atan2(uy[targets[0]]-B.y,ux[targets[0]]-B.x)+Math.PI/2;
           for(let n=0;n<targets.length;n++){
-            const j=targets[n],mx=B.x+rr(-5,5),my=B.y+rr(-7,7);
+            const j=targets[n],mz=bldMuzzleXY(B,0.23,(n%2?1:-1)*4.1);
+            const mx=mz[0], my=mz[1];
             const pk=fireProj(7,B.team,mx,my,ux[j],uy[j],165,MISSILE_BASTION.dmg*bldDmgMul(B),MISSILE_BASTION.aoe,j);
             if(pk>=0){ pwk[pk]='e'; pBio[pk]=bio?1:0; pSrcBld[pk]=B; }
             addParticle(1,mx,my,rr(-2,2),rr(-5,-1),.45,6,92,96,106);
@@ -5449,7 +6562,8 @@ function bldTick(dt){
         B.sqT-=dt;
         while(B.sq.length&&B.sqT<=0){
           const S=B.sq.shift(); B.sqT+=STORM.cadence;
-          const mx=B.x+rr(-6,6), my=B.y+rr(-6,6);
+          const mz=bldMuzzleXY(B,0.17,rr(-4.8,4.8));
+          const mx=mz[0], my=mz[1];
           const pk=fireProj(2,B.team,mx,my,S[0],S[1],118,STORM.dmg*bldDmgMul(B),STORM.aoe,-1);
           if(pk>=0){ pwk[pk]='e'; pBarrage[pk]=1; pArc[pk]=560+rr(0,120); pSrcBld[pk]=B; }
           addParticle(0,mx,my,0,0,.15,17, 255,214,130);
@@ -5475,7 +6589,7 @@ function bldTick(dt){
           const rng=STORM.rng*bldRngMul(B), min2=STORM.minRng*STORM.minRng;
           let cx=0,cy=0,n=0,hero=-1;
           forUnitsIn(B.x,B.y,rng,j=>{
-            if(uteam[j]===B.team||TYPES[utype[j]].air||umode[j]===4) return;
+            if(!intelCanTarget(j,B.team)||TYPES[utype[j]].air) return;
             if(dist2(B.x,B.y,ux[j],uy[j])<min2) return;
             cx+=ux[j]; cy+=uy[j]; n++;
             if(TYPES[utype[j]].cat==='hero') hero=j;
@@ -5535,9 +6649,10 @@ function bldTick(dt){
         let near=0;
         forUnitsIn(B.x,B.y,320,j=>{ if(uteam[j]===2) near++; });
         const batch=Math.max(1,Math.round((4+nTier)*infQty()*1.6));
-        if(near<(4+nTier*3)*10*infQty()*1.7 && populationUsedFor(2)<bugCap()){  // ambient carpet around every hive
+        if(near<(4+nTier*3)*10*infQty()*1.7 && populationCanSpawn(12,2,undefined,B.x,B.y)){
+          const hiveSeat=(typeof broodIsEnemy==='function'&&broodIsEnemy())?populationDefaultSeat(1,B.x,B.y):undefined;
           for(let s2=0;s2<batch;s2++){
-            const i=spawnUnit(12,2,B.x+rr(-40,40),B.y+rr(-40,40));
+            const i=spawnUnit(12,2,B.x+rr(-40,40),B.y+rr(-40,40),hiveSeat);
             if(i>=0){ ustate[i]=2; const L=findLand(B.x+rr(-220,220),B.y+rr(-220,220)); utx[i]=L[0]; uty[i]=L[1]; }
           }
         }
@@ -5546,8 +6661,9 @@ function bldTick(dt){
         B.heal=0;
         let alpha=0;
         forUnitsIn(B.x,B.y,400,j=>{ if(uteam[j]===2&&utype[j]===13) alpha++; });
-        if(alpha<(nTier>=4?3:1) && populationUsedFor(2)<bugCap()){
-          const i=spawnUnit(13,2,B.x+rr(-30,30),B.y+rr(-30,30));
+        if(alpha<(nTier>=4?3:1) && populationCanSpawn(13,2,undefined,B.x,B.y)){
+          const hiveSeat=(typeof broodIsEnemy==='function'&&broodIsEnemy())?populationDefaultSeat(1,B.x,B.y):undefined;
+          const i=spawnUnit(13,2,B.x+rr(-30,30),B.y+rr(-30,30),hiveSeat);
           if(i>=0){ ustate[i]=2; utx[i]=B.x; uty[i]=B.y; }
         }
       }
@@ -5572,7 +6688,8 @@ function bldTick(dt){
            the full price, popped its queue, then spawnUnit failed and silently
            discarded the completed unit. Progress is retained just below the
            finish line and resumes as soon as a live slot opens. */
-        if(!populationCanSpawn(t,B.team)){
+        const cmdSlot=commanderSlotForBuilding(B);
+        if(!populationCanSpawn(t,B.team,cmdSlot)){
           B.prodT=Math.min(B.prodT,Math.max(0,T.bt-.02));
           continue;
         }
@@ -5590,7 +6707,7 @@ function bldTick(dt){
           B.prodT=0; B.queue.shift();
           if(B.repeat) B.queue.push(t);
           if(teamCount[B.team]<MAXU/2-10){
-            const i=spawnUnit(t,B.team,B.x+rr(-14,14),B.y+ (B.team===0?B.r+16:-(B.r+16)));
+            const i=spawnUnit(t,B.team,B.x+rr(-14,14),B.y+ (B.team===0?B.r+16:-(B.r+16)),cmdSlot);
             if(i>=0){
               ustate[i]=2;
               let rx,ry;

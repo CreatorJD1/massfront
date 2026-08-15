@@ -1,5 +1,6 @@
 {
   "order": [
+    "assets/data/unitrows.js",
     "assets/data/unitsheet.js",
     "assets/data/itemart.js",
     "src/engine/gl.js",
@@ -9,6 +10,7 @@
     "src/engine/billboard.js",
     "src/engine/tacticons.js",
     "src/engine/gpufx.js",
+    "src/engine/organicfx.js",
     "src/engine/materials.js",
     "src/engine/materials-v2.js",
     "src/engine/terrain.js",
@@ -42,6 +44,7 @@
     "src/ui/orderfx.js",
     "src/airlift.js",
     "src/airlift-factions.js",
+    "src/rumble.js",
     "src/factions.js",
     "src/factext.js",
     "src/offline.js",
@@ -66,7 +69,11 @@
     "src/faction-id.js",
     "src/glrecover.js",
     "src/main.js",
+    "src/intel.js",
+    "src/repairbay.js",
     "src/galaxyui.js",
+    "src/departure.js",
+    "src/warprimer.js",
     "src/uistack.js",
     "src/ui/hudflow.js",
     "src/ui/hotslots.js"

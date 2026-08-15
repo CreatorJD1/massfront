@@ -186,7 +186,7 @@ function mdlCoaArty(){
   tubeX(t,4.35,2.85,0,1.45,1.30,0.68,12,TWR_BORE);
   t.bevelBox(-2.7,1.20,0,1.7,2.1,3.0,0.32,DARKER);
   coaCore(t,-2.7,3.55,0,0.82,false);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.75};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:4.75,muzzle:5.0};
 }
 
 /* 16 — BOMBARD. Range 400, the longest reach on the board, and the model has
@@ -243,7 +243,7 @@ function mdlCoaSiege(){
   t.bevelBox(-3.6,1.40,0,2.0,2.6,4.2,0.36,DARKER);
   t.greeble(-2.0,3.85,0,2.6,3.4,0.36,4,TWR_MACH,0,101);
   coaCore(t,-3.6,4.30,0,1.05,false);
-  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.85};
+  return {hull:m.build(),tur:t.build(),s:1.0,turH:5.85,muzzle:17.2};
 }
 
 /* 27 — HARBINGER. 760 hp, aoe 60: a saturation platform, not a sniper. Fixed
@@ -380,6 +380,65 @@ function mdlCoaGunship(){
    THE TITAN
    ============================================================================ */
 
+/* 2 — GOLIATH. TYPES.legs:1, size 21, splash cannon. This slot used to share
+   mdlSynTank with the Longbow — a hover diamond with no SERVO, so the gait
+   flag animated nothing and the assault walker read as a second Rhino. The
+   Titan is the fortress; this is the line walker: same hex language, legs
+   stood OUTBOARD of the hull (Nova's first walker pass hid them under the
+   torso and it became a turret on a plinth), hip bridge at y=9 so the
+   shader's y=11 cut falls in the thigh. Everything below the hip is SERVO. */
+function mdlCoaWalker(){
+  const m=MB();
+  for(const sd of [-1,1]){
+    m.extrude(-0.6,0,sd*5.35,coaHex(3.15,1.85),1.35,SERVO);
+    m.box(2.15,0.22,sd*5.35,1.55,0.85,2.55,SERVO);
+    m.wedge(3.05,0.10,sd*5.35,1.35,0.62,0.85,SERVO,0,true);
+    m.cyl(-0.55,1.35,sd*5.35,1.15,0.98,0.82,8,SERVO,false);
+    m.ring(-0.55,2.18,sd*5.35,0.92,1.28,8,SERVO);
+    m.extrude(-0.25,2.15,sd*5.35,coaHex(1.70,1.55),4.15,SERVO);
+    m.bevelBox(-0.20,3.05,sd*5.35,2.35,2.45,3.15,0.34,SERVO);
+    armorPlate(m,-0.20,3.85,sd*7.05,3.05,1.85,0.38,0,SERVO,0);
+    coaRam(m,-1.55,2.20,sd*5.35,3.7,0.32,SERVO);
+    m.cyl(0.20,6.35,sd*5.35,1.75,1.55,1.45,9,SERVO,false);
+    m.ring(0.20,7.15,sd*5.35,1.55,2.05,9,SERVO);
+    m.extrude(-0.10,7.55,sd*5.35,coaHex(1.65,1.50),2.55,SERVO);
+    m.box(-1.05,8.05,sd*3.85,1.55,2.10,0.95,SERVO);
+  }
+  m.extrude(0,9.05,0,coaHex(5.15,5.25),2.85,TWR_ARM_D);
+  m.extrude(0.12,11.90,0,coaHex(4.35,4.45),1.15,TEAM_A);
+  for(const sd of [-1,1]){
+    armorPlate(m,0.15,12.00,sd*4.35,5.8,1.05,0.40,0,TWR_ARM,0);
+    coaPylon(m,-3.15,10.55,sd*3.55,2.85,0.95,0,ENERGY);
+    m.box(0.20,12.08,sd*4.35,4.4,0.22,0.95,sd>0?TEAM_A:TEAM_B);
+  }
+  m.bevelBox(-3.15,10.35,0,3.05,2.15,7.15,0.48,DARKER);
+  ventBank(m,-3.05,13.12,0,2.25,5.05,5,TWR_MACH,0);
+  m.extrude(0,13.05,0,coaHex(4.55,4.35),3.85,TWR_ARM_D);
+  m.extrude(0.22,16.90,0,coaHex(3.65,3.45),1.15,TEAM_A);
+  m.wedge(3.35,14.55,0,2.85,2.55,6.4,TEAM_T,0,true);
+  glowStrip(m,3.35,17.15,0,3.2,ENERGY,0);
+  coaBadge(m,1.15,18.10,0,1.35,TEAM_T);
+  for(const sd of [-1,1]){
+    m.bevelBox(0.35,14.35,sd*4.85,4.15,2.65,2.55,0.46,TWR_COAT);
+    m.box(0.35,17.05,sd*4.85,3.55,0.26,1.85,TEAM_A);
+    m.box(-3.05,13.55,sd*3.85,1.45,3.05,0.75,DARK);
+    for(let k=0;k<3;k++) m.box(-2.75,14.05+k*0.85,sd*4.25,1.05,0.26,0.24,TWR_TRIM);
+  }
+  coaThroat(m,-5.05,11.55,0,0.72,1.35);
+  const t=MB();
+  t.cyl(-0.55,0,0,2.35,2.05,0.85,12,TWR_PAD);
+  t.extrude(-0.25,0.85,0,coaHex(2.85,2.25),1.85,TWR_ARM_D);
+  t.extrude(-0.10,2.70,0,coaHex(2.25,1.75),0.55,TWR_ARM);
+  for(const sd of [-1,1]){
+    t.bevelBox(-0.85,1.35,sd*1.85,2.55,1.45,0.48,0.20,TWR_COAT);
+    t.box(-0.85,2.82,sd*2.02,1.85,0.18,0.40,sd>0?TEAM_A:TWR_GLOW);
+    coaCoilGun(t,1.15,1.95,sd*0.95,6.4,0.42,3,TWR_MACH);
+  }
+  t.bevelBox(-2.35,1.15,0,1.55,1.85,3.05,0.28,DARKER);
+  coaCore(t,-2.35,3.25,0,0.62,false);
+  return {hull:m.build(),tur:t.build(),s:0.86,turH:16.95};
+}
+
 /* 8 — TITAN. 16,000 hit points and size 46: this appears once in a match and
    it has to make everything beside it look small. Legs are the only geometry
    in this file painted SERVO, and everything below the hip is SERVO — mixing
@@ -498,6 +557,36 @@ function mdlCoaRocket(){
   }
   t.bevelBox(-2.9,2.10,0,1.4,2.6,4.2,0.32,DARKER);
   return {hull:m.build(),tur:t.build(),s:1.0,turH:5.10};
+}
+
+/* 6 — LONGBOW. 205-range beam, 110 hp, no turret — the hull yaws to aim.
+   Shared mdlSynTank with the Goliath, so a precision gun and an assault
+   walker were one hover diamond. This is a dedicated skiff: longer than the
+   Vulture/Lancer beam yoke, lance fixed to the deck, no elevating cheeks,
+   because a ground Longbow does not need to crane onto aircraft. */
+function mdlCoaLongbow(){
+  const m=MB();
+  coaSkirt(m,7.15,2.15,0.40,1.40,3);
+  m.extrude(0,2.15,0,coaHex(6.65,1.95),1.85,TWR_ARM_D);
+  m.extrude(0.25,4.00,0,coaHex(5.15,1.55),0.52,TWR_ARM);
+  m.wedge(5.05,4.00,0,3.35,0.95,2.55,TWR_ARM,0,true);
+  for(const sd of [-1,1]){
+    m.box(-0.35,4.58,sd*1.42,7.15,0.20,0.42,TEAM_A);
+    m.bevelBox(-4.15,4.54,sd*1.18,2.85,1.55,0.95,0.22,TWR_COAT);
+    m.box(-4.15,6.12,sd*1.18,2.05,0.18,0.38,ENERGY);
+    coaPylon(m,-5.85,4.54,sd*1.05,2.55,0.82,0,ENERGY);
+    for(let k=0;k<4;k++) m.cyl(-1.85+k*1.35,4.56,sd*1.68,0.30,0.26,1.15,7,TWR_MACH,false);
+  }
+  coaBadge(m,1.85,4.58,0,1.25,TEAM_T);
+  m.greeble(-1.15,4.56,0,2.85,1.65,0.28,4,TWR_MACH,0,181);
+  coaThroat(m,-6.85,3.05,0,0.64,1.25);
+  /* Fixed spinal lance. Four rings and a real bore; the last ring is the
+     only live face so a 16-px hull still reads as a gun, not a barge. */
+  m.bevelBox(1.15,4.55,0,3.55,1.15,1.35,0.26,TWR_COAT);
+  coaCoilGun(m,2.05,5.15,0,11.4,0.48,4,TWR_MACH);
+  m.box(2.85,6.22,0,2.15,0.20,0.85,ENERGY);
+  coaCore(m,-2.55,5.55,0,0.72,false);
+  return {hull:m.build(),tur:null,s:1.0};
 }
 
 /* 10 VULTURE / 22 LANCER. Both are standoff precision platforms on the same
@@ -997,11 +1086,11 @@ const COA_SYN_MAT=Object.freeze({
    surface material, so rebinding it would detach animated walker legs. */
 const COA_SYN_BESPOKE_PACKS=Object.freeze({
   0:Object.freeze({
-    id:'syndicate-strider-v2', source:'authored', maps:'syndicate-strider-v2',
+    id:'syndicate-strider-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({[MAT.TRIM]:MAT.SYN_NANO})
   }),
   1:Object.freeze({
-    id:'syndicate-rhino-v2', source:'authored', maps:'syndicate-rhino-v2',
+    id:'syndicate-rhino-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.SYN_HOLO,
       /* The Syndicate buys its hulls rather than forging them, so the plating is
@@ -1012,21 +1101,21 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   2:Object.freeze({
-    id:'syndicate-sabre-v2', source:'authored', maps:'syndicate-sabre-v2',
+    id:'syndicate-goliath-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.SYN_NANO,
       [MAT.TWR_GLOW]:MAT.SYN_CONDUIT
     })
   }),
   3:Object.freeze({
-    id:'syndicate-oracle-v2', source:'authored', maps:'syndicate-oracle-v2',
+    id:'syndicate-oracle-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.SYN_HOLO,
       [MAT.TWR_GLOW]:MAT.CHARGE_STRIP
     })
   }),
   5:Object.freeze({
-    id:'syndicate-drone-v2', source:'authored', maps:'syndicate-drone-v2',
+    id:'syndicate-drone-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The optic and the two cheek-pod muzzles are the only hardware on a
          30-mass airframe, and the faction default lit them with the same
@@ -1035,21 +1124,21 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   6:Object.freeze({
-    id:'syndicate-lance-v2', source:'authored', maps:'syndicate-lance-v2',
+    id:'syndicate-lance-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.SYN_NANO,
       [MAT.TWR_GLOW]:MAT.CHARGE_STRIP
     })
   }),
   7:Object.freeze({
-    id:'syndicate-rocket-v2', source:'authored', maps:'syndicate-rocket-v2',
+    id:'syndicate-rocket-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.SYN_HOLO,
       [MAT.TWR_GLOW]:MAT.SYN_CONDUIT
     })
   }),
   8:Object.freeze({
-    id:'syndicate-titan-v2', source:'authored', maps:'syndicate-titan-v2',
+    id:'syndicate-titan-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.SYN_NANO,
       [MAT.TWR_COAT]:MAT.SYN_HOLO,
@@ -1057,7 +1146,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   9:Object.freeze({
-    id:'syndicate-incinerator-v2', source:'authored', maps:'syndicate-incinerator-v2',
+    id:'syndicate-incinerator-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* HOT lands on MAT.LAMP, which the faction remap never touches, so the
          plasma core and the projector tip were wearing a cabin light. */
@@ -1066,7 +1155,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   10:Object.freeze({
-    id:'syndicate-beam-v2', source:'authored', maps:'syndicate-beam-v2',
+    id:'syndicate-beam-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The Vulture is open charge racks with a lance on top, so its live
          accelerator ring and core read as stored charge rather than as one
@@ -1076,7 +1165,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   11:Object.freeze({
-    id:'syndicate-shield-v2', source:'authored', maps:'syndicate-shield-v2',
+    id:'syndicate-shield-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Dmg 0. TWR_GLOW on this hull is exactly one thing -- the suspended
          projector core -- and it must not read as a muzzle. */
@@ -1085,7 +1174,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   14:Object.freeze({
-    id:'syndicate-skimmer-v2', source:'authored', maps:'syndicate-skimmer-v2',
+    id:'syndicate-skimmer-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Sensor-island cap, deck badge and turret cap. On a hull this low they
          are the whole of what a near-overhead camera sees, and they were the
@@ -1094,7 +1183,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   15:Object.freeze({
-    id:'syndicate-capital-v2', source:'authored', maps:'syndicate-capital-v2',
+    id:'syndicate-capital-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The live station on the spinal rail and the amidships core carry most
          of this, and the four coil-gun muzzle rings ride along with them --
@@ -1106,7 +1195,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   16:Object.freeze({
-    id:'syndicate-siege-v2', source:'authored', maps:'syndicate-siege-v2',
+    id:'syndicate-siege-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Deployed outrigger feet and the turret race. These are the only
          ground-bearing surfaces on a hover carriage, and painting them the
@@ -1117,7 +1206,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   17:Object.freeze({
-    id:'syndicate-gunship-v2', source:'authored', maps:'syndicate-gunship-v2',
+    id:'syndicate-gunship-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* At 52 range the chin bank IS the unit. TWR_COAT on this airframe is
          only the vanes, cheeks, flank belts and blast shroud -- no skirt --
@@ -1127,7 +1216,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   18:Object.freeze({
-    id:'syndicate-flamer-v2', source:'authored', maps:'syndicate-flamer-v2',
+    id:'syndicate-flamer-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The wide projector mouth. HOT resolves to MAT.LAMP and the faction
          remap has no entry for it, so the Scorcher's one hot surface was a
@@ -1137,7 +1226,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   19:Object.freeze({
-    id:'syndicate-builder-v2', source:'authored', maps:'syndicate-builder-v2',
+    id:'syndicate-builder-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Unarmed, and already the highest conduit share in the kit from the
          nozzle heads and feedstock cells. One override: the badge takes the
@@ -1146,7 +1235,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   20:Object.freeze({
-    id:'syndicate-caster-v2', source:'authored', maps:'syndicate-caster-v2',
+    id:'syndicate-caster-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Five splayed mouths on one cradle -- the Reaper's entire read. */
       [MAT.TWR_GLOW]:MAT.WEAPON_GLOW,
@@ -1154,7 +1243,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   21:Object.freeze({
-    id:'syndicate-conduit-v2', source:'authored', maps:'syndicate-conduit-v2',
+    id:'syndicate-conduit-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Shares mdlCoaCaster with slot 20 and deliberately not its contract:
          the Cinder burns ground at 96 range, so the same five mouths run hot
@@ -1165,7 +1254,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   22:Object.freeze({
-    id:'syndicate-heavybeam-v2', source:'authored', maps:'syndicate-heavybeam-v2',
+    id:'syndicate-heavybeam-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Same skiff as slot 10. The Vulture reads as stored charge; the Lancer
          reaches 230 and tracks aircraft, so its lance mouth reads as the
@@ -1175,7 +1264,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   23:Object.freeze({
-    id:'syndicate-sonic-v2', source:'authored', maps:'syndicate-sonic-v2',
+    id:'syndicate-sonic-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Lower rim, recessed deck, horn bases and plenum. The Resonator is the
          only round hull in the kit and its eight radial ribs only read as ribs
@@ -1185,7 +1274,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   24:Object.freeze({
-    id:'syndicate-service-v2', source:'authored', maps:'syndicate-service-v2',
+    id:'syndicate-service-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* TWR_ARM and TWR_ARM_D share MAT.TWR_ARMOR, so this is the whole
          armoured body -- plenum top plate, hull, upper deck, nose and boom
@@ -1199,7 +1288,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   25:Object.freeze({
-    id:'syndicate-scout-v2', source:'authored', maps:'syndicate-scout-v2',
+    id:'syndicate-scout-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* The Kestrel carries one hair-thin emitter and a sensor sphere twice
          its size; lighting both as weapon energy made it read as a smaller
@@ -1209,7 +1298,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   26:Object.freeze({
-    id:'syndicate-exp-v2', source:'authored', maps:'syndicate-exp-v2',
+    id:'syndicate-exp-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Tier 3 at four times a Rhino's price, so this is the one contract that
          spends. Ribbed appliqué on hull and turret is the same fix the Nova
@@ -1221,7 +1310,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   27:Object.freeze({
-    id:'syndicate-battery-v2', source:'authored', maps:'syndicate-battery-v2',
+    id:'syndicate-battery-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* Outrigger stabiliser feet, and on this hull TWR_PAD is nothing else --
          the Harbinger has no turret race. Same ground-bearing material as the
@@ -1232,7 +1321,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   29:Object.freeze({
-    id:'syndicate-archon-v2', source:'authored', maps:'syndicate-archon-v2',
+    id:'syndicate-archon-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TRIM]:MAT.SYN_GOLD,
       [MAT.TWR_COAT]:MAT.SYN_NANO,
@@ -1241,7 +1330,7 @@ const COA_SYN_BESPOKE_PACKS=Object.freeze({
     })
   }),
   32:Object.freeze({
-    id:'syndicate-miner-v2', source:'authored', maps:'syndicate-miner-v2',
+    id:'syndicate-miner-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       /* TWR_GLOW on this hull is the mining head's emitter and nothing else --
          the pylons and the ore-cell rim are already ENERGY. A cutting beam is
@@ -1287,8 +1376,8 @@ function coaSyndicateFactory(fn,slot){
    --------------------------------------------------------------------------- */
 const UNIT_MDL_SYNDICATE={
   0:coaSyndicateFactory(mdlSynStrider,0),       1:coaSyndicateFactory(mdlSyndicateRhino,1),
-  2:coaSyndicateFactory(mdlSynTank,2),          3:coaSyndicateFactory(mdlCoaArty,3),
-  5:coaSyndicateFactory(mdlCoaDrone,5),         6:coaSyndicateFactory(mdlSynTank,6),
+  2:coaSyndicateFactory(mdlCoaWalker,2),        3:coaSyndicateFactory(mdlCoaArty,3),
+  5:coaSyndicateFactory(mdlCoaDrone,5),         6:coaSyndicateFactory(mdlCoaLongbow,6),
   7:coaSyndicateFactory(mdlCoaRocket,7),        8:coaSyndicateFactory(mdlCoaTitan,8),
   9:coaSyndicateFactory(mdlSynIncinerator,9),  10:coaSyndicateFactory(mdlCoaBeam,10),
   11:coaSyndicateFactory(mdlCoaShield,11),      14:coaSyndicateFactory(mdlCoaSkimmer,14),
@@ -1301,4 +1390,37 @@ const UNIT_MDL_SYNDICATE={
   27:coaSyndicateFactory(mdlCoaBattery,27),    29:coaSyndicateFactory(mdlArchon,29),
   32:coaSyndicateFactory(mdlCoaMiner,32)
 };
+
+function mfCdrDecorateNyx(m){
+  /* Needle lances past the sonic horns so the outline lengthens. Renn stays
+     the stock Archon. */
+  for(const sd of [-1,1]){
+    cylX(m,8.0,4.4,sd*3.1,7.6,0.30,0.12,8,MET_L,false);
+    ringX(m,15.2,4.4,sd*3.1,0.18,0.55,8,ENERGY);
+    m.box(7.2,4.4,sd*3.1,1.8,0.72,0.72,TEAM_B);
+    m.extrude(-2.6,6.6,sd*4.4,[[-5.4,-0.30],[-0.4,-0.30],[1.4,0.30],[-4.2,0.30]],2.6,MET);
+  }
+}
+function mfCdrDecorateVoss(m){
+  /* Predictive-core grid: concentric rings around the cortex plus deck cells. */
+  m.ring(0,7.4,0,3.5,4.8,16,ENERGY);
+  m.ring(0,8.3,0,2.7,4.0,14,ENERGY);
+  m.ring(-0.6,9.5,0,2.1,3.4,12,TEAM_A);
+  for(const z of [-1.7,0,1.7]) for(const x of [-2.5,-0.4,1.7])
+    m.box(x,6.88,z,1.3,0.30,1.05,TEAM_B);
+  for(const sd of [-1,1]){
+    ringX(m,8.7,4.4,sd*3.1,0.72,1.90,10,ENERGY);
+    m.box(3.2,5.95,sd*3.1,3.6,0.46,2.3,TEAM_A);
+  }
+}
+if(typeof initFactionKits==='function'){
+  const _coaInitKits=initFactionKits;
+  initFactionKits=function(){
+    _coaInitKits.apply(this,arguments);
+    if(typeof mfCdrKitInst!=='function'||typeof COMMANDER_KIT_MESH==='undefined') return;
+    const pack=COA_SYN_BESPOKE_PACKS[29];
+    COMMANDER_KIT_MESH.syndicate_nyx=mfCdrKitInst(mdlArchon,mfCdrDecorateNyx,coaSyndicateSurfacePass,pack);
+    COMMANDER_KIT_MESH.syndicate_voss=mfCdrKitInst(mdlArchon,mfCdrDecorateVoss,coaSyndicateSurfacePass,pack);
+  };
+}
 
