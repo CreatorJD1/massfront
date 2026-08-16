@@ -19,8 +19,8 @@
                   {
                       "path":  "MASSFRONT-v1.33.39-update.js",
                       "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.39-update.js?download=true",
-                      "size":  0,
-                      "sha256":  "pending-local-pack"
+                      "size":  57274564,
+                      "sha256":  "f8b276b26459820a5358f9753527137144c029e5eb40095d9037d3af714fd8a2"
                   }
               ],
     "packsIndex":  "packs.json",
