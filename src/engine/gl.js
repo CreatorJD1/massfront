@@ -184,9 +184,18 @@ function resize(){
   if(!MF_MOBILE_GPU && (q==='high'||q==='cinematic')) cap=2;
   else if(!MF_MOBILE_GPU && q==='medium') cap=Math.min(cap,1.35);
   DPR = Math.min(raw, cap);
-  VW = cv.clientWidth || window.innerWidth; VH = cv.clientHeight || window.innerHeight;
+  /* Measure the CSS box, not the last bitmap. A leftover canvas.width/height
+     from a portrait boot used to win clientWidth on some desktop resizes, so
+     the 100%×100% rule stretched a tall buffer across a wide window. Hidden
+     menu canvases report 0 — fall back to the window so the first match frame
+     is already landscape-correct. */
+  const box=cv.getBoundingClientRect();
+  const cssW=box.width>2?box.width:(cv.clientWidth||window.innerWidth);
+  const cssH=box.height>2?box.height:(cv.clientHeight||window.innerHeight);
+  VW = cssW; VH = cssH;
   cv.width = Math.round(VW*DPR); cv.height = Math.round(VH*DPR);
   gl.viewport(0,0,cv.width,cv.height);
+  if(typeof camUpdateMatrices==='function') camUpdateMatrices();
 }
 /* Sun-depth CSM atlas binds on TEXTURE4 during csmApply only. Terrain
    already owns 0/1/2/3/7–15; ads stay on 7; post 4/5/6 never move to 0.
@@ -1574,7 +1583,7 @@ function buildAtlas(){
    TERRAIN — heightfield: water, beaches, grass, cliffs, plateaus
    ============================================================ */
 let terrainCanvas;
-const TS=2048;   // terrain texel grid — higher = crisper ground at close zoom
+const TS=2048;   // stay 2048: 4096 duplicates heightF+terrainCanvas+terrainBase on Android
 // ---------- biome themes ----------
 const THEMES={
   verdant:{ name:'Verdant',
@@ -2090,9 +2099,34 @@ function _getStars(W,H,key){
   return _starCache[k];
 }
 
+/* War Table holograms ship a fixed bitmap (560×360 planet, 600×520 galaxy)
+   then CSS `width:100%;height:100%` stretches that into a different-aspect
+   box. On a short landscape desktop that is 680×220 — circles become ovals
+   and Aelos flattens. Sync the backing store to the laid-out CSS box so
+   draw code sees the real aspect. Detached offscreen canvases (bare globe
+   blit) report clientWidth 0; leave those alone. Cap the short side: the
+   planet ray-sphere is per-pixel. */
+function mfFitCanvas2D(cv, maxShort){
+  if(!cv) return;
+  const cssW=cv.clientWidth|0, cssH=cv.clientHeight|0;
+  if(cssW<2||cssH<2) return;
+  const dpr=Math.min(typeof devicePixelRatio==='number'?devicePixelRatio:1, 1.25);
+  let w=Math.max(2, Math.round(cssW*dpr));
+  let h=Math.max(2, Math.round(cssH*dpr));
+  const cap=maxShort||640;
+  const short=Math.min(w,h);
+  if(short>cap){
+    const k=cap/short;
+    w=Math.max(2, Math.round(w*k));
+    h=Math.max(2, Math.round(h*k));
+  }
+  if(cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; }
+}
+
 /* METEORA-STYLE ORBITAL CAROUSEL & 3D PLANET SPHERE RENDERER */
 function draw3DPlanetSphere(cv, planetKey, yaw, pitch, selRegionId, bare){
   if(!cv) return;
+  if(!bare) mfFitCanvas2D(cv, 640);
   const ctx=cv.getContext('2d');
   const W=cv.width, H=cv.height;
   /* Bare fill uses more of the offscreen so the system blit is not a 102px
@@ -2560,12 +2594,12 @@ function paintRoad(c,x0,y0,x1,y1,W,city){
      shoulder language; the w*1.36 cut is what ate the walk and stacked
      black squares at civic crossings. */
   if(!city){
-    c.strokeStyle=pal.cut;c.lineWidth=w*1.36;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
-    c.strokeStyle=pal.edge;c.lineWidth=w*1.18;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+    c.strokeStyle=pal.cut;c.lineWidth=w*1.22;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+    c.strokeStyle=pal.edge;c.lineWidth=w*1.10;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
   }else{
-    c.strokeStyle=pal.edge;c.lineWidth=w*1.08;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+    c.strokeStyle=pal.edge;c.lineWidth=w*1.04;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
   }
-  c.strokeStyle=pal.slab;c.lineWidth=city?w*.94:w*.88;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+  c.strokeStyle=pal.slab;c.lineWidth=city?w*.96:w*.90;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
   /* No continuous longitudinal marks. Even dark twin grooves read as traffic
      lanes at phone zoom. Load is expressed by transverse slab joints, inset
      repair plates and edge spalling instead. City lanes are ~13 wide, so the
@@ -2610,13 +2644,13 @@ function paintRoad(c,x0,y0,x1,y1,W,city){
     for(let i=2;i<slabs;i+=4){const t=i/slabs,px2=ax+dx*t,py2=ay+dy*t;c.beginPath();c.moveTo(px2-nx*w*.22,py2-ny*w*.22);c.lineTo(px2+nx*w*.10,py2+ny*w*.10);c.stroke();}
   }
   if(city){
-    /* High-frequency grit the solid slab stroke erased. Seeded from the
-       segment so both clients draw the same oil, cracks and spall. */
-    const grit=Math.max(12,(len/5)|0);
+    /* Sparse oil / spall only. A dense ellipse spray became 2–6 m polka
+       dots at 1.56 m/texel; close-up aggregate lives in the terrain FS. */
+    const grit=Math.max(3,(len/22)|0);
     for(let i=0;i<grit;i++){
-      const t=.03+rn()*.94,px2=ax+dx*t,py2=ay+dy*t,o=(rn()-.5)*w*.46;
-      c.fillStyle=rn()>.55?'rgba(18,18,17,'+(0.22+rn()*0.32)+')':'rgba(92,84,72,'+(0.16+rn()*0.26)+')';
-      c.beginPath();c.ellipse(px2+nx*o,py2+ny*o,1.8+rn()*3.8,1.0+rn()*2.2,rn()*TAU,0,TAU);c.fill();
+      const t=.03+rn()*.94,px2=ax+dx*t,py2=ay+dy*t,o=(rn()-.5)*w*.38;
+      c.fillStyle=rn()>.55?'rgba(18,18,17,'+(0.16+rn()*0.22)+')':'rgba(92,84,72,'+(0.10+rn()*0.16)+')';
+      c.beginPath();c.ellipse(px2+nx*o,py2+ny*o,1.1+rn()*2.2,0.7+rn()*1.4,rn()*TAU,0,TAU);c.fill();
     }
     const cracks=Math.max(3,(len/22)|0);
     for(let i=0;i<cracks;i++){
@@ -2809,13 +2843,13 @@ function paintCityGround(c){
     }
     let ws=((S[0]*73856093)^(S[1]*19349663)^(S[2]*83492791))|0;
     const wrn=()=>{ws=(Math.imul(ws,1664525)+1013904223)|0;return(ws>>>8)/16777216;};
-    const walkGrit=Math.max(10,(L/k/7)|0);
+    const walkGrit=Math.max(4,(L/k/16)|0);
     for(let i=0;i<walkGrit;i++){
       const t=.04+wrn()*.92, side=wrn()>.5?1:-1;
       const o=walkOff+(wrn()-.5)*walkW*.42;
       const px2=ax+dx*t+nx*o*side,py2=ay+dy*t+ny*o*side;
-      c.fillStyle='rgba('+(70+wrn()*70|0)+','+(70+wrn()*64|0)+','+(66+wrn()*56|0)+','+(0.22+wrn()*0.28)+')';
-      c.beginPath();c.ellipse(px2,py2,2.0+wrn()*4.2,1.2+wrn()*2.4,wrn()*TAU,0,TAU);c.fill();
+      c.fillStyle='rgba('+(70+wrn()*70|0)+','+(70+wrn()*64|0)+','+(66+wrn()*56|0)+','+(0.14+wrn()*0.18)+')';
+      c.beginPath();c.ellipse(px2,py2,1.2+wrn()*2.4,0.8+wrn()*1.4,wrn()*TAU,0,TAU);c.fill();
     }
     /* Kerb lives at the walk/asphalt join — a thin formed rim, not a second
        full-width dark stroke that collapses into a centre line. */
@@ -3883,7 +3917,7 @@ function buildGroundMask(){
      highway a die-cut border. A modest blur here widens the mask's grey
      transition band; the shader's crack-noise threshold then eats that band
      irregularly, so concrete crumbles into soil at every termination. */
-  c.filter='blur(1.1px)';
+  c.filter='blur(0.45px)';
   c.drawImage(groundMaskCanvas,0,0);
   c.filter='none';
   if(groundMaskTex){ try{ gl.deleteTexture(groundMaskTex); }catch(e){} }
@@ -4028,8 +4062,8 @@ function shadeRegion(rx0,ry0,rw,rh,ctx,keepCivic){
         const dk=isLava?26:8;
         r=cr+det*dk; g=cg+det*dk; b=cb+det*8;
       } else if(h<WATER_H){
-        /* Dry crater bowl. Live height below WATER_H used to paint a pond
-           here; water exists only as authored oceans / rivers / lakes. */
+        /* Dry inland bowl. Shoreline floods write WATER_AUTH first, so they
+           take the pond branch above — the old beach-crater fill. */
         r=g00*0.55+det*10; g=g01*0.48+det*8; b=g02*0.40+det*6;
       } else if(h<BEACH_H){
         const t=(h-WATER_H)/(BEACH_H-WATER_H);
@@ -4438,11 +4472,11 @@ let paveCanvas=null, paveCtx=null, terrainBase=null, concretePat=null;
 /* One seamless concrete tile, used as a repeating pattern so paving of any
    shape or size shares identical surface detail with no visible joins. */
 function makeConcreteTile(){
-  const S=128, t=document.createElement('canvas'); t.width=t.height=S;
+  const S=256, t=document.createElement('canvas'); t.width=t.height=S;
   const c=mf2d(t);
   c.fillStyle='#858780'; c.fillRect(0,0,S,S);
   // wrapped value noise: mottling that tiles
-  const cells=8, g=[];
+  const cells=16, g=[];
   for(let y=0;y<cells;y++){ g[y]=[]; for(let x=0;x<cells;x++) g[y][x]=Math.random(); }
   const at=(x,y)=>g[((y%cells)+cells)%cells][((x%cells)+cells)%cells];
   const sm=v=>v*v*(3-2*v);
@@ -4461,22 +4495,22 @@ function makeConcreteTile(){
      what makes the tile genuinely seamless rather than merely low-contrast. */
   const wrap=f=>{ for(let oy=-1;oy<=1;oy++) for(let ox=-1;ox<=1;ox++){
     c.save(); c.translate(ox*S,oy*S); f(); c.restore(); } };
-  for(let i=0;i<240;i++){                   // exposed aggregate
-    const px=Math.random()*S, py=Math.random()*S, r=0.6+Math.random()*2.0;
-    c.fillStyle='rgba('+(112+Math.random()*70|0)+','+(112+Math.random()*66|0)+','+(106+Math.random()*58|0)+','+(0.12+Math.random()*0.22)+')';
+  for(let i=0;i<720;i++){                   // exposed aggregate — fine, not pebble stamps
+    const px=Math.random()*S, py=Math.random()*S, r=0.35+Math.random()*1.15;
+    c.fillStyle='rgba('+(112+Math.random()*70|0)+','+(112+Math.random()*66|0)+','+(106+Math.random()*58|0)+','+(0.10+Math.random()*0.18)+')';
     wrap(()=>{ c.beginPath(); c.arc(px,py,r,0,TAU); c.fill(); });
   }
-  for(let i=0;i<12;i++){                     // hairline cracks
+  for(let i=0;i<18;i++){                     // hairline cracks
     const pts=[[Math.random()*S,Math.random()*S]];
     for(let j=0;j<3;j++){ const p=pts[pts.length-1];
-      pts.push([p[0]+(Math.random()-0.5)*50, p[1]+(Math.random()-0.5)*50]); }
-    c.strokeStyle='rgba(70,68,63,'+(0.14+Math.random()*0.16)+')';
-    c.lineWidth=0.8+Math.random()*1.2;
+      pts.push([p[0]+(Math.random()-0.5)*70, p[1]+(Math.random()-0.5)*70]); }
+    c.strokeStyle='rgba(70,68,63,'+(0.12+Math.random()*0.14)+')';
+    c.lineWidth=0.6+Math.random()*0.9;
     wrap(()=>{ c.beginPath(); c.moveTo(pts[0][0],pts[0][1]);
       for(let j=1;j<pts.length;j++) c.lineTo(pts[j][0],pts[j][1]); c.stroke(); });
   }
-  for(let i=0;i<70;i++){                     // pour staining / trowel mottle
-    const px=Math.random()*S, py=Math.random()*S, r=4+Math.random()*16;
+  for(let i=0;i<140;i++){                    // pour staining / trowel mottle
+    const px=Math.random()*S, py=Math.random()*S, r=6+Math.random()*22;
     c.fillStyle='rgba('+(96+Math.random()*40|0)+','+(94+Math.random()*38|0)+','+(88+Math.random()*34|0)+',0.06)';
     wrap(()=>{ c.beginPath(); c.arc(px,py,r,0,TAU); c.fill(); });
   }
@@ -4593,7 +4627,7 @@ function paintPave(sx,sy,w,h){
   //    never ends in a hard cut against grass
   const verge=document.createElement('canvas'); verge.width=w; verge.height=h;
   const vc=verge.getContext('2d');
-  vc.filter='blur(2.5px)'; vc.drawImage(mask,0,0); vc.filter='none';
+  vc.filter='blur(1.2px)'; vc.drawImage(mask,0,0); vc.filter='none';
   vc.globalCompositeOperation='source-in';
   vc.fillStyle='#6d685e'; vc.fillRect(0,0,w,h);
   // 4) kerb: the mask minus an eroded copy of itself — a rim that hugs the

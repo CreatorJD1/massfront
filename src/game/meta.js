@@ -1603,7 +1603,7 @@ function renderSettings(){
       else if(k==='gfxSSAO') gfxOverToggle('ao');
       else if(k==='gfxBloom') gfxOverToggle('bloom');
       else if(k==='gfxContact') gfxOverToggle('contact');
-      else if(k==='gfxWater') gfxOverCycle('waterAmp',[0.40,0.70,1,1.15]);
+      else if(k==='gfxWater') gfxOverCycle('waterAmp',[0.40,0.80,1,1.15]);
       else if(k==='gfxParticles') gfxOverCycle('particles',[0.5,0.75,1,1.5]);
       else if(k==='gfxAniso') gfxOverCycle('aniso',[1,4,8]);
       else if(k==='gfxDpr') gfxOverCycle('dprCap',[1,1.15,1.25,1.5,0]);

@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.37';
+const APP_VERSION = '1.33.39';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Stacked factory queues, per-unit veterancy + building LV stars, victory Return/Continue + faction departure, map double-tap confirm, browser page-zoom lock, Chrome play() + no blur-mute.";
+const APP_NOTES = "Crystal vein mex (no crater disks), War Table aspect fit, volumetric water + shoreline crater flood, barrel-height shots, commander/titan close-zoom rumble, realistic ground grain.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,

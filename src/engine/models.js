@@ -82,7 +82,7 @@ const NOVA_FAB_ROOF=C(102,124,148), NOVA_FAB_GLASS=C(50,138,204);
    and support structures. These are still palette selectors for the live V2
    material atlas, not a claim that bespoke UV-authored maps are complete. */
 const NOVA_MEX_ARM=C(126,148,174), NOVA_MEX_CORE=C(34,50,68);
-const NOVA_MEX_TRIM=C(160,180,202), NOVA_MEX_GLOW=C(48,148,186);
+const NOVA_MEX_TRIM=C(160,180,202), NOVA_MEX_GLOW=C(22,70,92);
 /* Service-deck plating. Its own palette entry so retiring it from a pad
    cannot disturb TWR_COAT, which many other surfaces still use. */
 const NOVA_DECK=C(111,119,131);
@@ -156,7 +156,7 @@ function bindMat(){
   COL_MAT.set(NOVA_FAB_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_FAB_CORE,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_FAB_ROOF,matResolve('structure.roof')); COL_MAT.set(NOVA_FAB_GLASS,matResolve('glass.canopy'));
   COL_MAT.set(NOVA_MEX_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_MEX_CORE,MAT.NOVA_CARBON);
-  COL_MAT.set(NOVA_MEX_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_MEX_GLOW,matResolve('emissive.energy'));
+  COL_MAT.set(NOVA_MEX_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_MEX_GLOW,matResolve('emissive.light'));
   COL_MAT.set(NOVA_DECK,MAT.DECK_PLATE);
   COL_MAT.set(NOVA_GEO_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_GEO_CORE,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_GEO_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_GEO_GLOW,matResolve('emissive.energy'));
@@ -2383,7 +2383,7 @@ function novaServicePad(m,w,d,h,quiet){
 }
 function mdlMex(){
   const m=MB();
-  const y=novaServicePad(m,33,33,2.6);
+  const y=novaServicePad(m,33,33,2.6,true);
   /* A four-way ore intake is legible from any camera facing.  The old derrick
      was four identical thin posts around a box, so command view reduced it to
      visual grit and never communicated extraction. */
@@ -2395,11 +2395,13 @@ function mdlMex(){
     const a=k/4*TAU,x=Math.cos(a)*11.2,z=Math.sin(a)*11.2;
     m.bevelBox(x,y+.2,z,9.2,4.2,6.0,.75,NOVA_MEX_CORE,a);
     m.cyl(x,y+4.4,z,2.6,2.1,3.0,10,NOVA_MEX_TRIM);
-    m.box(x,y+7.3,z,2.3,.24,2.3,k===0?TWR_TEAM:NOVA_MEX_GLOW,a);
+    m.box(x,y+7.3,z,2.3,.24,2.3,k===0?TWR_TEAM:NOVA_MEX_TRIM,a);
     m.box(Math.cos(a)*6.7,y+2.7,Math.sin(a)*6.7,8.2,1.2,1.6,NOVA_MEX_ARM,a);
   }
   ringX(m,0,y+12.2,0,4.3,5.1,14,NOVA_MEX_TRIM);
-  m.sphere(0,y+13.0,0,2.1,9,NOVA_MEX_GLOW,1,false);
+  /* A 1.15 emissive.light sphere sat past the 0.936 bloom thresh and became
+     the white disc on every occupied node after deposit sprites were cut. */
+  m.sphere(0,y+13.0,0,1.15,8,NOVA_MEX_CORE,1,false);
   return m.build();
 }
 function mdlPgen(){

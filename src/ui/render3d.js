@@ -525,7 +525,8 @@ function addBeamRibbon(uv,x0,h0,y0,x1,h1,y1,width,r,g,b,a,maxPx){
 function addBeamPathFx(x0,h0,y0,x1,h1,y1,width,r,g,b,a){
   /* Pearl-necklace of circular energy + smoke. sprites.beam is a thin atlas
      line — the shaft has to be GLOW KNOTS or it reads as a cheap streak.
-     Position-seeded, no velocity. */
+     Position-seeded, no velocity. First and last knots sit on the bore and
+     the impact; jitter in the middle only. */
   const q=typeof mfVfxQ==='function'?mfVfxQ():1;
   if(q<0.35||a<14) return;
   if(typeof orthoSpan==='number'&&orthoSpan>1800) return;
@@ -537,18 +538,19 @@ function addBeamPathFx(x0,h0,y0,x1,h1,y1,width,r,g,b,a){
   const smoke=sprites.smoke||sprites.glow;
   for(let i=0;i<=n;i++){
     const u=i/n;
-    const jx=Math.sin(seed+i*12.9898)*width*0.16;
-    const jy=Math.cos(seed+i*78.233)*width*0.16;
+    const end=i===0||i===n;
+    const jx=end?0:Math.sin(seed+i*12.9898)*width*0.16;
+    const jy=end?0:Math.cos(seed+i*78.233)*width*0.16;
     const x=x0+dx*u+jx, y=y0+dy*u+jy, h=h0+dh*u;
-    const sz=width*(1.55+(Math.sin(seed*3.1+i*2.4)*0.5+0.5)*0.85);
-    bbAdd.add(sprites.glow,x,y,h,sz*3.4,0,r,g,b,a*0.58);
-    bbAdd.add(sprites.glow,x,y,h,sz*1.55,0,r,g,b,a*0.78);
+    const sz=width*(end?1.15:1.55+(Math.sin(seed*3.1+i*2.4)*0.5+0.5)*0.85);
+    bbAdd.add(sprites.glow,x,y,h,sz*3.4,0,r,g,b,a*(end?0.72:0.58));
+    bbAdd.add(sprites.glow,x,y,h,sz*1.55,0,r,g,b,a*(end?0.90:0.78));
     bbAdd.add(sprites.glow,x,y,h,sz*0.58,0,255,253,248,a*0.92);
-    if(q>=0.55&&(i&1))
+    if(q>=0.55&&(i&1)&&!end)
       bbAlpha.add(smoke,x,y,h+1.6,sz*3.8,seed+i, 52+r*0.14,48+g*0.11,44+b*0.09, Math.min(95,a*0.28));
   }
 }
-function addBeam3D(mesh,x0,h0,y0,x1,h1,y1,rad,r,g,b,a){
+function addBeam3D(mesh,x0,h0,y0,x1,h1,y1,rad,r,g,b,a,opt){
   const q=typeof mfVfxQ==='function'?mfVfxQ():1;
   const width=Math.max(4.80,rad*(q>=1.25?6.40:q>=0.95?5.85:q>=0.65?5.40:4.20));
   /* Glow-tube + knots. The beam atlas cell is a 1px streak — do not use it
@@ -560,7 +562,9 @@ function addBeam3D(mesh,x0,h0,y0,x1,h1,y1,rad,r,g,b,a){
   addBeamRibbon(sprites.glow,x0,h0,y0,x1,h1,y1,
     Math.max(2.40,width*0.88),255,253,248,Math.min(255,a*1.40),150);
   addBeamPathFx(x0,h0,y0,x1,h1,y1,width,r,g,b,a);
-  /* Muzzle starburst at the barrel, not a hull-center flash. */
+  /* Mid-flight tracers pass noMuzzle — a burst behind the round is the
+     floating flash that made shots look disconnected from the barrel. */
+  if(opt&&opt.noMuzzle) return;
   bbAdd.add(sprites.glow,x0,y0,h0,width*2.8,0,r,g,b,a*0.85);
   bbAdd.add(sprites.glow,x0,y0,h0,width*1.15,0,255,253,246,a);
 }
@@ -649,6 +653,35 @@ function addWreckCoalBed(x,y,h,span,heat,seed,n){
   /* C&C wreck language: compact coals + a thin dark column, not licking tongues. */
   if(heat>0.22&&sprites.smoke)
     bbAlpha.add(sprites.smoke,x,y,h+span*0.55,span*0.85,seed, 38,36,34, Math.min(90,48*heat));
+}
+function stampCrystalVeins(D,H,col,pulse,fieldR,taken){
+  /* Branching ground veins. sprites.crater under every node was the dark
+     disk on crystal spawns — including occupied mex pads. Veins read as
+     ore in the dirt and stay after the extractor lands. Additive, not a
+     circular stain. gh() is render()'s local — this helper is top-level. */
+  if(!sprites.glow) return;
+  const th=(typeof terrainH==='function')?terrainH:()=>0;
+  const seed=(D.pulse||0)+D.x*0.017+D.y*0.013;
+  const n=fieldR>52?6:5;
+  const a0=taken?15:28;
+  for(let k=0;k<n;k++){
+    const a=seed+k*1.047+Math.sin(seed*2.7+k)*0.28;
+    const len=fieldR*(0.38+((Math.abs((D.x*13+k*19)|0)%9)*0.035))*pulse;
+    const x1=D.x+Math.cos(a)*len, y1=D.y+Math.sin(a)*len;
+    addBeamRibbon(sprites.glow,D.x,H+0.24,D.y,x1,th(x1,y1)+0.26,y1,
+      2.15+(k&1)*0.55,col[0],col[1],col[2],a0,90);
+    if(k<3){
+      const mid=0.52, a2=a+((k&1)?0.62:-0.62);
+      const mx=D.x+Math.cos(a)*len*mid, my=D.y+Math.sin(a)*len*mid;
+      const len2=len*0.42;
+      const x2=mx+Math.cos(a2)*len2, y2=my+Math.sin(a2)*len2;
+      addBeamRibbon(sprites.glow,mx,th(mx,my)+0.24,my,x2,th(x2,y2)+0.26,y2,
+        1.55,col[0],col[1],col[2],taken?11:18,80);
+    }
+  }
+  /* Occupied pads already have the mex. The small centre glow sat under
+     the column and bloomed into a second white disc. */
+  if(!taken) bbAdd.add(sprites.glow,D.x,D.y,H+0.30,fieldR*0.18*pulse,0,col[0],col[1],col[2],12);
 }
 
 /* Combat VFX is authored in 2D (fx/fy, beam x0/y0). The draw path used a
@@ -1068,6 +1101,9 @@ function render(dtDraw){
   }
   for(const cs of crystals){
     const D=deposits[cs.dep],tier=depositTier(D);if(!D||cs.band>tier||!vis(cs.x,cs.y,140))continue;
+    /* Occupied pad: the extractor owns the node. Drawing the shard cluster
+       plus additive glows under a mex stacked into the white bloom discs. */
+    if(D.taken)continue;
     if(!fogPointVisible(cs.x,cs.y))continue;
     const fill=clamp((D.remaining-(tier-1)*DEPOSIT_BAND)/DEPOSIT_BAND,0,1),edge=cs.band===tier?(.46+.54*fill):1;
     const col=cs.band===3?[255,120,255]:cs.band===2?[105,255,176]:[105,226,255];
@@ -1109,27 +1145,21 @@ function render(dtDraw){
     const tier=depositTier(D);
     const col=tier===3?[255,122,255]:tier===2?[110,255,180]:tier===1?[112,228,255]:[88,92,100];
     const pulse=.82+.18*Math.sin(t*2.1+(D.pulse||0)),H=gh(D.x,D.y);
+    const fieldR=46+(D.initialTier||1)*8;
+    stampCrystalVeins(D,H,col,pulse,fieldR,!!D.taken);
+    /* Occupied: veins stay (ore is still in the dirt). Skip the unused-node
+       halo — CRYST + mex lamp stacked into the white discs on the QA shot. */
+    if(D.taken) continue;
     if(FX.dep) FX.dep.add(D.x,D.y,H,1.18+tier*.17,0,col[0],col[1],col[2],tier?255:145);
-    /* 2D hud.js stamped crater + glow + ring; 3D never called that path, so
-       shards sat on bare grass with no halo. These are the same stamps —
-       dark rocky stain under the cluster, then a large faint cyan aura.
-       Ring alpha stays well below a selection disc (those sit at 170+). */
+    /* Unused nodes keep a faint seep + ring. Veins already mark the bed. */
     const depGlow=(!matchLive&&typeof carrier!=='undefined'&&carrier.active)?0.9:0;
     const depQ=Math.max(0.55, depGlow, clamp((perfScale-0.28)/0.45,0,1));
-    const fieldR=46+(D.initialTier||1)*8;
-    if(bbAlpha&&sprites.crater){
-      /* Outcrop stain hugs the cluster. The 90+ wu disc was the hole that
-         hid the mesh; this stays a rocky bed, not a terrain punch. */
-      bbAlpha.add(sprites.crater,D.x,D.y,H+0.26,fieldR*1.38,(D.pulse||0)+.35,40,38,36,tier?140:84);
-      bbAlpha.add(sprites.crater,D.x+5,D.y-4,H+0.30,fieldR*1.02,-(D.pulse||0)-.7,34,40,44,tier?88:52);
-    }
     const halo=fieldR*pulse;
     /* One ground aura + one faint ring — the old 2D hud.js language.
        Five stacked additive sprites (halo*2.55 + pool + H+10/H+12 punches
        at alpha 140) blew the node into a white disc and bypassed bloom. */
-    const occ=D.taken?0.42:1;
-    bbAdd.add(sprites.glow,D.x,D.y,H+0.48,halo*1.4,0,col[0],col[1],col[2],(tier?24:8)*depQ*occ);
-    if(tier&&sprites.ring) bbAdd.add(sprites.ring,D.x,D.y,H+0.62,halo*1.15,t*.10+(D.pulse||0),col[0],col[1],col[2],18*depQ*occ);
+    bbAdd.add(sprites.glow,D.x,D.y,H+0.48,halo*0.82,0,col[0],col[1],col[2],(tier?10:4)*depQ);
+    if(tier&&sprites.ring) bbAdd.add(sprites.ring,D.x,D.y,H+0.62,halo*0.70,t*.10+(D.pulse||0),col[0],col[1],col[2],8*depQ);
   }
   for(const G of geysers){ if(!vis(G.x,G.y,180)||!fogPointVisible(G.x,G.y)) continue;
     const tier=typeof geyserTier==='function'?geyserTier(G):(G.taken?2:3);
@@ -2175,21 +2205,27 @@ function render(dtDraw){
     const c=TEAMB[pteam[i]], wk=pwk[i]||'p', bio=!!pBio[i], nova=fac==='nova'&&!pCannon[i]&&!pBarrage[i];
     const fp=typeof mfFactionFxPalette==='function'?mfFactionFxPalette(pteam[i]):{a:c,b:[255,250,240]};
     const ty=ptype[i], power=clamp(Math.sqrt(Math.max(1,pdmg[i]))/6,.7,2.45);
-    const H=gh(X,Y)+ (ty===2? 16+Math.sin(pt[i]*Math.PI)*(pArc[i]||70) : ty===7? 20 : 12);
     const yaw=Math.atan2(pvy[i],pvx[i]);
     const vl=Math.hypot(pvx[i],pvy[i])||1, nx=pvx[i]/vl, ny=pvy[i]/vl;
     const age=Math.max(0,(pmax[i]||plife[i])-plife[i]);
+    const ballistic=ty===2||!!pBarrage[i];
+    const ox=ballistic?psx[i]:X-pvx[i]*age, oy=ballistic?psy[i]:Y-pvy[i]*age;
+    const hMuz=fxWeaponH(ox,oy,true);
+    /* Stay on the bore. gh()+12 dropped every tracer onto the dirt while
+       turrets sit at M.turH — the floating-behind-the-round look. */
+    const H=ballistic?gh(X,Y)+16+Math.sin(pt[i]*Math.PI)*(pArc[i]||70)
+      :ty===7?hMuz+8:ty===9?hMuz+10:hMuz;
     const vq=typeof mfVfxQ==='function'?mfVfxQ():1;
     const streakMul=vq>=1.2?1.78:vq>=0.95?1.48:vq>=0.65?1.16:0.86;
     const streak=clamp(vl*(wk==='g'?0.28:ty===1?0.23:0.18)*streakMul, 48*streakMul, (wk==='g'?198:ty===1?162:136)*streakMul);
-    const bx=X-nx*streak, by=Y-ny*streak;
-    const ballistic=ty===2||!!pBarrage[i];
-    const young=ballistic?pt[i]<0.05:age<0.12;
+    const young=ballistic?pt[i]<0.08:age<0.22;
+    const fromMuz=young||ballistic;
+    const bx=fromMuz?ox:X-nx*Math.min(streak,48), by=fromMuz?oy:Y-ny*Math.min(streak,48);
+    const bH=fromMuz?hMuz:H;
+    const beamOpt=fromMuz?null:{noMuzzle:1};
     if(young){
-      const ox=ballistic?psx[i]:X-pvx[i]*age, oy=ballistic?psy[i]:Y-pvy[i]*age;
-      const mh=fxWeaponH(ox,oy,true);
-      addMuzzleFlash(ox,oy,mh,nx,ny,(pCannon[i]||pBarrage[i]||ty===2||ty===9)?8.2:5.0*power,
-        nova?110:255, nova?230:185, nova?255:80, 230*(ballistic?1-pt[i]/0.05:1-age/0.12));
+      addMuzzleFlash(ox,oy,hMuz,nx,ny,(pCannon[i]||pBarrage[i]||ty===2||ty===9)?8.2:5.0*power,
+        nova?110:255, nova?230:185, nova?255:80, 230*(ballistic?1-pt[i]/0.08:1-age/0.22));
     }
     if(pBarrage[i]){
       /* A slow, dark shell remains readable against its own hot fuse. The
@@ -2199,58 +2235,56 @@ function render(dtDraw){
       bbAdd.add(sprites.glow,X,Y,H,7.5*power,0,255,155,54,200);
       const q0=Math.max(0,pt[i]-.022),tx0=psx[i]+(pex[i]-psx[i])*q0,ty0=psy[i]+(pey[i]-psy[i])*q0;
       const h0=gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
-      addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.55*power,255,132,42,210);
+      addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.55*power,255,132,42,210,beamOpt);
     } else if(bio){
       const pulse=.84+Math.sin(t*15+i*1.7)*.16;
       bbAdd.add(sprites.glow,X,Y,H,8.4*power*pulse,0,205,255,118,250);
       bbAdd.add(sprites.glow,X,Y,H,16*power,0,164,76,232,110);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,.92*power,145,220,80,210);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,.92*power,145,220,80,210,beamOpt);
     } else if(wk==='g'){
-      /* Gauss is a hard white/cyan needle: origin behind the round, destination
-         at the tip. No corona ring — that read as a spark circling the shot. */
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.18*power,fp.a[0],fp.a[1],fp.a[2],255);
+      /* Gauss needle: muzzle→tip while young, then a short same-height streak. */
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,1.18*power,fp.a[0],fp.a[1],fp.a[2],255,beamOpt);
       bbAdd.add(sprites.glow,X,Y,H,5.8*power,0,245,252,255,250);
     } else if(wk==='s'){
       const pulse=.86+Math.sin(t*18+i)*.14;
       bbAdd.add(sprites.glow,X,Y,H,8.4*power*pulse,0,225,245,255,240);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,.92*power,fp.a[0],fp.a[1],fp.a[2],220);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,.92*power,fp.a[0],fp.a[1],fp.a[2],220,beamOpt);
     } else if(wk==='f'){
       bbAdd.add(sprites.flame||sprites.fireball||sprites.glow,X,Y,H,8*power,yaw+Math.PI/2,255,235,175,245);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.22*power,255,105,24,210);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,1.22*power,255,105,24,210,beamOpt);
     } else if(wk==='i'||ty===6){
       /* Plasma orb: a slow glowing ball. A directed trail names the axis
          without turning the orb into a laser. */
       bbAdd.add(sprites.glow,X,Y,H,(9+Math.sin(t*13+i)*1.2)*power,0,235,252,255,255);
       bbAdd.add(sprites.glow,X,Y,H,(20+Math.sin(t*9+i)*2)*power,0,80,205,255,165);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.22*power,fp.a[0],fp.a[1],fp.a[2],205);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,1.22*power,fp.a[0],fp.a[1],fp.a[2],205,beamOpt);
     } else if(ty===4){
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,7.5*power,yaw+Math.PI/2,nova?155:205,nova?225:210,nova?255:215,245);
-      bbAdd.add(sprites.glow,bx,by,H,9*power,0,nova?100:255,nova?225:130,nova?255:45,180);
-      addBeam3D(FX.beam,bx-nx*6,H,by-ny*6,X,H,Y,1.32*power,fp.a[0],fp.a[1],fp.a[2],200);
+      bbAdd.add(sprites.glow,bx,by,bH,9*power,0,nova?100:255,nova?225:130,nova?255:45,180);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,1.32*power,fp.a[0],fp.a[1],fp.a[2],200,beamOpt);
     } else if(ty===7){
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,7.4*power,yaw+Math.PI/2,nova?160:220,nova?230:225,255,245);
-      const ex=X-nx*7, ey=Y-ny*7;
-      bbAdd.add(sprites.glow,ex,ey,H,(10+Math.sin(t*22+i)*2)*power,0,nova?105:255,nova?225:180,nova?255:90,200);
-      addBeam3D(FX.beam,ex-nx*8,H,ey-ny*8,X,H,Y,1.38*power,fp.a[0],fp.a[1],fp.a[2],220);
+      bbAdd.add(sprites.glow,X,Y,H,(10+Math.sin(t*22+i)*2)*power,0,nova?105:255,nova?225:180,nova?255:90,200);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,1.38*power,fp.a[0],fp.a[1],fp.a[2],220,beamOpt);
     } else if(ty===8){
-      addBeam3D(FX.beam,bx,H+14,by,X,H+14,Y,.88*power,255,220,140,250);
-      bbAdd.add(sprites.glow,X,Y,H+14,5.2*power,0,255,235,190,245);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,.88*power,255,220,140,250,beamOpt);
+      bbAdd.add(sprites.glow,X,Y,H,5.2*power,0,255,235,190,245);
     } else if(ty===9){
-      bbAlpha.add(sprites.debris||sprites.glow,X,Y,H+26,8.2*power,yaw+Math.PI/2,nova?145:205,nova?218:198,nova?255:188,245);
-      addBeam3D(FX.beam,bx,H+24,by,X,H+26,Y,1.42*power,fp.a[0],fp.a[1],fp.a[2],200);
+      bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,8.2*power,yaw+Math.PI/2,nova?145:205,nova?218:198,nova?255:188,245);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,1.42*power,fp.a[0],fp.a[1],fp.a[2],200,beamOpt);
     } else if(ty===2){
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,6.5*power,yaw+Math.PI/2,nova?110:95,nova?145:90,nova?175:86,255);
       bbAdd.add(sprites.glow,X,Y,H,5.2*power,0,nova?100:255,nova?220:170,nova?255:75,190);
       const q0=Math.max(0,pt[i]-.03),tx0=psx[i]+(pex[i]-psx[i])*q0,ty0=psy[i]+(pey[i]-psy[i])*q0;
       const h0=gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
-      addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.28*power,255,150,60,205);
+      addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.28*power,255,150,60,205,beamOpt);
     } else if(ty===3||pCannon[i]){
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,9.5*power,yaw+Math.PI/2,86,82,78,255);
       bbAdd.add(sprites.glow,X,Y,H,8*power,0,255,165,62,210);
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,1.55*power,255,135,45,225);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,1.55*power,255,135,45,225,beamOpt);
     } else {
       const cr=fp.a[0], cg=fp.a[1], cb=fp.a[2];
-      addBeam3D(FX.beam,bx,H,by,X,H,Y,(ty===1?1.72:1.32)*power,cr,cg,cb,ty===1?255:245);
+      addBeam3D(FX.beam,bx,bH,by,X,H,Y,(ty===1?1.72:1.32)*power,cr,cg,cb,ty===1?255:245,beamOpt);
       bbAdd.add(sprites.glow,X,Y,H,(ty===1?8.4:6.8)*power,0,255,252,240,255);
       bbAdd.add(sprites.glow,X,Y,H,(ty===1?3.6:2.8)*power,0,255,255,248,255);
     }
@@ -2380,9 +2414,10 @@ function render(dtDraw){
     if(!vis(X,Y,90)) continue;
     if(!fogPointVisible(X,Y)) continue;
     const lf=flife[i]/fmax[i], ty=ftype[i], H=gh(X,Y);
-    /* Type 0 flashes are 2D (no height). Small ones are muzzle/hit sparks —
-       lift to turret/hull. Large ones are crater detonations and stay on dirt. */
-    const Hfx=ty===0&&fsize[i]<22?fxWeaponH(X,Y,fsize[i]<11):H;
+    /* Type 0 flashes are 2D (no height). Commander/heavy muzzle stamps are
+       size 21–27 — the old <22 cutoff left those on the dirt. Type 2 sparks
+       from projectileFireFX are sub-0.5 and belong on the bore too. */
+    const Hfx=(ty===0&&fsize[i]<36)||(ty===2&&fsize[i]<0.5)?fxWeaponH(X,Y,true):H;
     /* Skip additive flashes/flames on the hull. Dust (type 1/10) still draws. */
     if(!matchLive&&typeof carrier!=='undefined'&&carrier.active&&carrier.phase<2
        &&(ty===0||ty===2||ty===4)){
@@ -2428,8 +2463,9 @@ function render(dtDraw){
          Hop used to launch sparks 20+ units off the crater; keep them in the
          bowl so a volley does not read as an orbiting swarm. */
       const age=1-lf,hop=(1.2+fsize[i]*.22)*lf*age,sz=Math.max(0.85,fsize[i]*(ty===5?.36:.22));
-      FX.shard.add(X,Y,H+1.4+hop,sz,i*.83,fcr[i],fcg[i],fcb[i],lf<.18?lf*1300:235);
-      if(ty===2) bbAdd.add(sGlowB,X,Y,H+1.4+hop,Math.max(1.0,sz*1.45),0,fcr[i],fcg[i],fcb[i],155*lf);
+      const sparkH=Hfx+1.4+hop;
+      FX.shard.add(X,Y,sparkH,sz,i*.83,fcr[i],fcg[i],fcb[i],lf<.18?lf*1300:235);
+      if(ty===2) bbAdd.add(sGlowB,X,Y,sparkH,Math.max(1.0,sz*1.45),0,fcr[i],fcg[i],fcb[i],155*lf);
     } else if(ty===4){                        // ember coal — not an upright licking flame
       const sz=Math.min(10,fsize[i]*0.72);
       const flick=0.86+0.14*lf;

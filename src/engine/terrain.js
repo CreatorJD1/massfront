@@ -39,13 +39,17 @@ let waterMesh=null, waterVAO=null, waterVBO=null, waterIBO=null, waterIdxCount=0
    the heightfield all match long — craters, superweapon pits, singularity
    collapses — but punching a bowl below WATER_H must not grow that sheet
    into an inland pond. Coverage is gated on WATER_AUTH (frozen at gen).
-   Shoreline / shallow bowls are the exception: WATER_LIP is a visual-only
-   flood from authored water a few dozen metres into a crater that actually
-   touches the waterline, so the sheet + foam read as fluid reacting. It
-   never writes WATER_AUTH, PASS or NAV. terrainDirty still flags a
-   mismatch so a crater blasted *in* a lake keeps water over the hole. */
+   Shoreline bowls are the exception: a crater that actually touches the
+   waterline enqueues a flood job. The front walks from the breach through
+   below-table cells inside that bowl (~54 wu/s). Those cells become real
+   water again — WATER_AUTH, PASS, naval mask, albedo — the way a beach
+   crater used to fill before inland punches were locked dry. Isolated
+   inland bowls still stay dirt. */
 let waterNeed=null, waterTH=null, waterDirty=false, waterRebuildT=0, waterBaseCol=null, waterBowlSynced=0;
 let WATER_LIP=null;
+const WATER_FLOOD_CAP=6;
+const waterFloods=[];
+let waterTickAt=-1;
 /* The playable heightfield still ends at MAP, but the camera is deliberately
    allowed to overhang it so a corner base can remain centred while the player
    rotates. A cheap low-density skirt gives that overhang real depth instead
@@ -82,6 +86,8 @@ function waterVisualWetTexel(ix,iy){
 function waterLipReset(){
   WATER_LIP=null;
   waterBowlSynced=0;
+  waterFloods.length=0;
+  waterTickAt=-1;
 }
 function terrainWorldH(ix,iy){
   const h=heightF[iy*TS+ix];
@@ -467,13 +473,117 @@ function waterMaintain(dt){
   if(waterRebuildT>0) waterRebuildT-=dt;
   if(waterRebuildT<=0) waterBowlSynced=0;
   if(!waterDirty||waterRebuildT>0||!waterTH||typeof gl==='undefined'||!gl) return;
-  waterRebuildT=0.45;
+  waterRebuildT=waterFloods.length?0.14:0.45;
   waterBowlSynced=0;
   buildWaterMesh(waterTH);
 }
+function waterFloodEnqueue(wx,wy,rad,hx,hy){
+  const r=rad||40;
+  for(let i=0;i<waterFloods.length;i++){
+    const F=waterFloods[i];
+    if(Math.hypot(F.x-wx,F.y-wy)<Math.max(F.r,r)*0.65){
+      F.r=Math.max(F.r,r);
+      F.maxFront=Math.max(F.maxFront, r*1.18+10);
+      F.hx=hx; F.hy=hy;
+      return F;
+    }
+  }
+  if(waterFloods.length>=WATER_FLOOD_CAP) waterFloods.shift();
+  const F={x:wx,y:wy,r:r,hx:hx,hy:hy,front:0,maxFront:r*1.18+10,speed:54,age:0,fxT:0};
+  waterFloods.push(F);
+  return F;
+}
+/* Grow WATER_LIP from authored water through below-table cells inside
+   this bowl. Path distance, not a disc — water comes through the breach. */
+function waterFloodMark(F,frontWu){
+  if(!waterLipEnsure()) return false;
+  const k=TS/MAP;
+  const cx=F.x*k, cy=F.y*k;
+  const cr=Math.max(6,F.r*k);
+  const frontT=Math.max(1,frontWu*k);
+  const reach=cr+frontT+3;
+  const x0=clamp(Math.floor(cx-reach),0,TS-1), x1=clamp(Math.ceil(cx+reach),0,TS-1);
+  const y0=clamp(Math.floor(cy-reach),0,TS-1), y1=clamp(Math.ceil(cy+reach),0,TS-1);
+  const W=x1-x0+1, Hh=y1-y0+1;
+  const seen=new Uint8Array(W*Hh);
+  const at=(x,y)=>(y-y0)*W+(x-x0);
+  const q=[];
+  for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
+    if(!WATER_AUTH[y*TS+x]) continue;
+    if(heightF[y*TS+x]>=WATER_H+0.012) continue;
+    q.push(x,y,0);
+    seen[at(x,y)]=1;
+  }
+  if(!q.length) return false;
+  const DX=[1,-1,0,0], DY=[0,0,1,-1];
+  const bowlR=cr*1.22;
+  let marked=false, qh=0;
+  while(qh<q.length){
+    const x=q[qh++], y=q[qh++], dist=q[qh++];
+    if(dist>frontT) continue;
+    for(let i=0;i<4;i++){
+      const nx=x+DX[i], ny=y+DY[i];
+      if(nx<x0||nx>x1||ny<y0||ny>y1) continue;
+      const si=at(nx,ny);
+      if(seen[si]) continue;
+      seen[si]=1;
+      if(heightF[ny*TS+nx]>=WATER_H+0.012) continue;
+      const nd=dist+1;
+      const dx=nx-cx, dy=ny-cy;
+      if(dx*dx+dy*dy>bowlR*bowlR) continue;
+      if(!WATER_AUTH[ny*TS+nx]&&nd<=frontT){
+        if(waterFloodCommit(nx,ny)) marked=true;
+      }
+      if(nd<=frontT) q.push(nx,ny,nd);
+    }
+  }
+  return marked;
+}
+function waterFloodTick(dt){
+  if(dt>0&&waterFloods.length){
+    let marked=false;
+    for(let i=waterFloods.length-1;i>=0;i--){
+      const F=waterFloods[i];
+      F.age+=dt;
+      F.front=Math.min(F.maxFront, F.front+F.speed*dt);
+      if(waterFloodMark(F,F.front)){
+        marked=true;
+        if(typeof waterFxImpact==='function'){
+          const ang=Math.atan2(F.y-F.hy,F.x-F.hx);
+          waterFxImpact(F.hx+Math.cos(ang)*F.front*0.82, F.hy+Math.sin(ang)*F.front*0.82,
+            9+F.r*0.07, 0.62, true);
+        }
+      }
+      F.fxT+=dt;
+      if(F.fxT>=0.48&&typeof waterFxCrater==='function'){
+        F.fxT=0;
+        waterFxCrater(F.x,F.y,Math.max(22,F.r*0.62),0.035,F.hx,F.hy);
+      }
+      if(F.front>=F.maxFront-0.05||F.age>3.6){
+        if(waterFloodMark(F,F.maxFront)) marked=true;
+        waterFloods.splice(i,1);
+      }
+    }
+    if(marked){
+      waterDirty=true;
+      if(waterRebuildT>0.12) waterRebuildT=0.12;
+      const k=TS/MAP;
+      for(let i=0;i<waterFloods.length;i++){
+        const F=waterFloods[i];
+        const cr=Math.max(6,F.r*k), reach=cr+F.front*k+4;
+        waterFloodRelight(
+          clamp(Math.floor(F.x*k-reach),0,TS-1),
+          clamp(Math.floor(F.y*k-reach),0,TS-1),
+          clamp(Math.ceil(F.x*k+reach),0,TS-1),
+          clamp(Math.ceil(F.y*k+reach),0,TS-1));
+      }
+    }
+  }
+  waterMaintain(dt);
+}
 /* True when the live water mesh still misses a wet (authored or lip) cell
-   in this crater window. Inland dry bowls stay false — WATER_LIP is the
-   only new coverage, and it never writes WATER_AUTH / PASS / NAV. */
+   in this crater window. Inland dry bowls stay false — only a flood that
+   walked from WATER_AUTH writes AUTH / PASS / NAV via waterFloodCommit. */
 function waterBowlMeshMisses(wx,wy,rad){
   if(!waterNeed) return true;
   const cell=MAP/TGRID, pad=2, r=rad||40;
@@ -529,65 +639,78 @@ function waterLipEnsure(){
   if(!WATER_LIP||WATER_LIP.length!==WATER_AUTH.length) WATER_LIP=new Uint8Array(WATER_AUTH.length);
   return true;
 }
-/* Visual flood only: authored water may run a short way into a crater bowl
-   that actually touches the waterline. Inland punches stay dirt. */
-function waterLipMark(wx,wy,rad){
-  if(!waterLipEnsure()) return false;
-  const k=TS/MAP;
-  const cx=wx*k, cy=wy*k;
-  const lipWorld=Math.min(32,Math.max(14,(rad||40)*0.35));
-  const lip=lipWorld*k;
-  const cr=Math.max(5,(rad||40)*k);
-  const reach=cr+lip+2;
-  const x0=clamp(Math.floor(cx-reach),0,TS-1), x1=clamp(Math.ceil(cx+reach),0,TS-1);
-  const y0=clamp(Math.floor(cy-reach),0,TS-1), y1=clamp(Math.ceil(cy+reach),0,TS-1);
-  const W=x1-x0+1, seen=new Uint8Array((x1-x0+1)*(y1-y0+1));
-  const at=(x,y)=>(y-y0)*W+(x-x0);
-  const q=[];
-  for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++){
-    if(!WATER_AUTH[y*TS+x]) continue;
-    if(heightF[y*TS+x]>=WATER_H+0.012) continue;
-    q.push(x,y,0);
-    seen[at(x,y)]=1;
-  }
-  if(!q.length) return false;
-  const DX=[1,-1,0,0,1,1,-1,-1], DY=[0,0,1,-1,1,-1,1,-1];
-  let marked=false, qh=0;
-  const bowlR=cr*1.18;
-  while(qh<q.length){
-    const x=q[qh++], y=q[qh++], dist=q[qh++];
-    if(dist>lip) continue;
-    for(let i=0;i<8;i++){
-      const nx=x+DX[i], ny=y+DY[i];
-      if(nx<x0||nx>x1||ny<y0||ny>y1) continue;
-      const si=at(nx,ny);
-      if(seen[si]) continue;
-      seen[si]=1;
-      if(heightF[ny*TS+nx]>=WATER_H+0.012) continue;
-      const nd=dist+1;
-      const dx=nx-cx, dy=ny-cy;
-      if(dx*dx+dy*dy>bowlR*bowlR) continue;
-      if(!WATER_AUTH[ny*TS+nx]&&nd<=lip){
-        if(!WATER_LIP[ny*TS+nx]){ WATER_LIP[ny*TS+nx]=1; marked=true; }
+/* One texel becomes authored water. This is the old crater-flood write:
+   mesh coverage, pond albedo, ground blocked, ships may enter if the
+   cell inherits the shoreline's naval component. Civic pads stay dry
+   (JET ASSIST). Inland soil never reaches here — no path from WATER_AUTH. */
+function waterFloodCommit(ix,iy){
+  const i=iy*TS+ix;
+  if(WATER_AUTH[i]) return false;
+  const wx=(ix+0.5)/TS*MAP, wy=(iy+0.5)/TS*MAP;
+  if(typeof cityGroundAt==='function'&&cityGroundAt(wx,wy)>=1) return false;
+  WATER_AUTH[i]=1;
+  if(WATER_LIP) WATER_LIP[i]=1;
+  if(PASS){
+    const px=clamp(wx/MAP*PGS|0,0,PGS-1), py=clamp(wy/MAP*PGS|0,0,PGS-1);
+    const pi=py*PGS+px;
+    PASS[pi]=0;
+    if(typeof NAVW!=='undefined'&&NAVW){
+      NAVW[pi]=1;
+      if(typeof NAVCOMP!=='undefined'&&NAVCOMP&&!NAVCOMP[pi]){
+        const DX=[1,-1,0,0], DY=[0,0,1,-1];
+        for(let k=0;k<4;k++){
+          const qx=px+DX[k], qy=py+DY[k];
+          if(qx<0||qy<0||qx>=PGS||qy>=PGS) continue;
+          const c=NAVCOMP[qy*PGS+qx];
+          if(c){
+            NAVCOMP[pi]=c;
+            if(typeof NAV_SIZE!=='undefined'&&NAV_SIZE) NAV_SIZE[c]=(NAV_SIZE[c]||0)+1;
+            break;
+          }
+        }
       }
-      if(nd<=lip) q.push(nx,ny,nd);
     }
   }
-  return marked;
+  return true;
+}
+function waterFloodRelight(x0,y0,x1,y1){
+  if(typeof shadeRegion!=='function'||!heightF) return;
+  const sx=clamp(x0-2,0,TS-1), sy=clamp(y0-2,0,TS-1);
+  const ex=clamp(x1+2,0,TS-1), ey=clamp(y1+2,0,TS-1);
+  const w=ex-sx+1, h=ey-sy+1;
+  if(w<=0||h<=0) return;
+  shadeRegion(sx,sy,w,h,null,true);
+  if(typeof gl==='undefined'||!gl||!terrainCanvas||typeof terrainTex==='undefined'||!terrainTex) return;
+  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
+  tmp.getContext('2d').drawImage(terrainCanvas,sx,sy,w,h,0,0,w,h);
+  const was=gl.getParameter(gl.ACTIVE_TEXTURE);
+  gl.activeTexture(gl.TEXTURE10);
+  const prev=gl.getParameter(gl.TEXTURE_BINDING_2D);
+  gl.bindTexture(gl.TEXTURE_2D,terrainTex);
+  gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RGBA,gl.UNSIGNED_BYTE,tmp);
+  gl.bindTexture(gl.TEXTURE_2D,prev);
+  gl.activeTexture(was);
 }
 function waterReactDeform(wx,wy,rad,depth){
   if(typeof battlefieldWaterMode==='function'&&battlefieldWaterMode()==='none') return false;
   const r=rad||40;
   const onWet=typeof authoredWaterAt==='function'&&authoredWaterAt(wx,wy);
-  const hit=onWet? [wx,wy] : waterNearAuthored(wx,wy,r+22);
+  const hit=onWet? [wx,wy] : waterNearAuthored(wx,wy,r+40);
   if(!hit) return false;
-  const marked=waterLipMark(wx,wy,r);
-  if(marked){
+  const F=waterFloodEnqueue(wx,wy,r,hit[0],hit[1]);
+  /* Seed a thin contact so the splash lands on wet sheet, then the tick
+     walks the front through the bowl. Instant full-lip was a painted stain. */
+  F.front=Math.max(F.front, 8);
+  if(waterFloodMark(F,F.front)){
     waterDirty=true;
     waterSyncBowl(wx,wy,r);
+    const k=TS/MAP, cr=Math.max(6,r*k), reach=cr+F.front*k+4;
+    waterFloodRelight(
+      clamp(Math.floor(wx*k-reach),0,TS-1),
+      clamp(Math.floor(wy*k-reach),0,TS-1),
+      clamp(Math.ceil(wx*k+reach),0,TS-1),
+      clamp(Math.ceil(wy*k+reach),0,TS-1));
   }
-  /* terrainDirty pads radius 1.6x for the mesh window. The foam ring has
-     to sit on the bowl, not a hundred metres out past the camera. */
   if(typeof waterFxCrater==='function') waterFxCrater(wx,wy,Math.max(22,r*0.62),depth,hit[0],hit[1]);
   return true;
 }
@@ -599,6 +722,9 @@ function waterReactDeform(wx,wy,rad,depth){
    Not biome (lava/ice) — that stays uKind. Small NAV components on an
    ocean map are lakes so a lagoon does not heave like the open sea. */
 function waterHydroAt(wx,wy){
+  /* Flooded crater bowls are enclosed ponds — ocean swell in a 60 wu hole
+     reads as the sheet tearing. */
+  if(typeof waterLipAt==='function'&&waterLipAt(wx,wy)) return 2;
   const mode=typeof battlefieldWaterMode==='function'?battlefieldWaterMode():'none';
   if(mode==='river') return 1;
   if(mode==='ocean'){
@@ -1132,6 +1258,12 @@ void main(){
   float dusk=step(2.5,uKind);
   vec3 body=mix(uShalC*1.04, uDeepC*1.08, pow(deep,0.85));
   body=mix(body,vCol,0.06);
+  /* Fake volume. Optical depth thickens at grazing angles so the sheet
+     reads as a body, not a painted plane. Beer-Lambert toward a darker
+     navy; not a raymarch — WFX crater/wake/ripple uniforms stay. */
+  float od=deep/max(ndv,0.12);
+  body*=exp(-vec3(0.88,0.44,0.15)*od*0.70);
+  body=mix(body, uDeepC*0.52, clamp(od*0.16,0.0,0.38));
   vec3 reflDir=reflect(-V,n);
   float skyT=clamp(reflDir.y*0.55+0.42,0.0,1.0);
   vec3 skyRefl=mix(uFogC*1.18, uAmbSky*1.12, skyT);
@@ -1150,6 +1282,8 @@ void main(){
   vec3 amb=mix(uAmbGnd,uAmbSky,n.y*0.5+0.5);
   float ndl=max(dot(n,uSun),0.0);
   vec3 lit=body*(amb*1.10 + uSunC*(ndl*0.55+0.28));
+  float sss=(1.0-deep)*max(dot(n,uSun)*0.38+0.22,0.0)*(0.16+0.26*(1.0-ndv));
+  lit+=vec3(0.09,0.24,0.22)*sss*(1.0-lava)*(1.0-ice*0.55);
   lit=mix(lit, skyRefl, clamp(0.12+fres*0.30,0.0,0.40));
   lit+=uSunC*spec*(0.62+0.55*ice);
   float sp=sin(wxz.x*0.33+t*0.78)*sin(wxz.y*0.29-t*0.64);
@@ -1234,7 +1368,7 @@ void main(){
   float fow=texture(uFowMap,clamp(vMapUV,0.0,1.0)).a*uFowOn;
   lit=mix(lit, mix(uAmbGnd*0.10,uFogC*0.20,0.5), fow);
   lit=mix(lit,uFogC,vFog*(1.0-fow));
-  float alpha=mix(0.74,0.93,pow(deep,0.70));
+  float alpha=mix(0.80,0.97,pow(deep,0.58));
   alpha=mix(alpha,0.94,lava);
   alpha=mix(alpha,0.78,ice);
   alpha=mix(alpha,0.88,foam*0.75);
@@ -1422,6 +1556,10 @@ function drawTerrainEdge(){
   drawCalls++; triCount+=terrEdgeIdxCount/3;
 }
 function drawWater(){
+  const now=(typeof performance!=='undefined'?performance.now():0)*0.001;
+  const dt=waterTickAt<0?0.016:Math.min(0.05,now-waterTickAt);
+  waterTickAt=now;
+  waterFloodTick(dt);
   if(!waterVAO||!waterIdxCount) return;
   const dummy=(typeof terrainTex!=='undefined'&&terrainTex)||null;
   const ht=(typeof heightTex!=='undefined'&&heightTex)||dummy;

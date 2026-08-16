@@ -14,17 +14,17 @@
                       ],
     "base":  "",
     "severity":  "recommended",
-    "notes":  "Stacked factory queues, per-unit veterancy + building LV stars, victory Return/Continue + faction departure, map double-tap confirm, browser page-zoom lock, Chrome play() + no blur-mute.",
+    "notes":  "Crystal vein mex (no crater disks), War Table aspect fit, volumetric water + shoreline crater flood, barrel-height shots, commander/titan close-zoom rumble, realistic ground grain.",
     "files":  [
                   {
-                      "path":  "MASSFRONT-v1.33.37-update.js",
-                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.37-update.js?download=true",
-                      "size":  57256557,
-                      "sha256":  "4f214fe255c9dabd91ba28f063688116885a9b4322b9a96c42cf88853388b3f2"
+                      "path":  "MASSFRONT-v1.33.39-update.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.39-update.js?download=true",
+                      "size":  0,
+                      "sha256":  "pending-local-pack"
                   }
               ],
     "packsIndex":  "packs.json",
     "minBaseVersion":  "1.22.0",
     "channel":  "stable",
-    "version":  "1.33.37"
+    "version":  "1.33.39"
 }

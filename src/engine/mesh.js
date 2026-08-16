@@ -1363,7 +1363,7 @@ void main(){
   if(vMat==CRYST_CONST){
     tex=vec3(0.62,0.86,1.0);
     n=normalize(vNrm);
-    ao=0.82; gloss=0.82; emis=0.08; metal=0.02;
+    ao=0.82; gloss=0.70; emis=0.028; metal=0.02;
   }
   // the tile is authored around mid-grey; remapping around 0.5 keeps the
   // vertex colour in charge of hue while the texture supplies detail
@@ -1373,7 +1373,7 @@ void main(){
      the top few code values — the exposure curve was compressing the mistake,
      not fixing it. */
   vec3 alb=clamp(vCol*(0.42+tex*0.62), 0.0, 0.88);
-  if(vMat==CRYST_CONST) alb=clamp(vCol*vec3(0.44,0.72,1.0),0.0,0.92);
+  if(vMat==CRYST_CONST) alb=clamp(vCol*vec3(0.36,0.58,0.82),0.0,0.62);
   /* Maintained vehicles still have sparse rubbed corners and service wear.
      Normal-map relief supplies the local edge cue; the shared tile breaks it
      up so broad faces remain quiet instead of receiving uniform white rims. */
@@ -1545,8 +1545,10 @@ void main(){
   if(vMat==CRYST_CONST){
     float back=pow(max(dot(-n,uSun),0.0),1.5);
     float rim=pow(1.0-abs(dot(n,uHalf)),3.5);
-    lit+=uSunC*vCol*back*0.22 + vec3(0.18,0.58,1.0)*rim*0.28
-      + vCol*vec3(0.02,0.08,0.16);
+    /* Rim 0.28 + alb 0.92 sat past the 0.936 bloom thresh and turned every
+       mined outcrop into a white disc. Identity stays cyan; energy stays low. */
+    lit+=uSunC*vCol*back*0.10 + vec3(0.14,0.48,0.88)*rim*0.09
+      + vCol*vec3(0.015,0.05,0.10);
   }
   /* Diagnostic modes intentionally bypass fog/tonemapping decisions as much
      as possible: an artist needs to see the input values, not a pretty frame. */
@@ -1733,6 +1735,19 @@ float mfCoalFlick(vec2 c){
   float h=fract(sin(dot(c,vec2(78.233,12.9898)))*23421.631);
   return 0.90+0.10*sin(uEdgeTime*(1.15+h*1.45)+h*6.2831853);
 }
+/* World-XZ hash / value noise. Close-up aggregate only — no hatch, no cell
+   outline, no tiled stamp. Cheap enough to run whenever a 2048 texel is
+   magnified; fades with hppx so command zoom stays the painted map. */
+float mfH21(vec2 p){
+  return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);
+}
+float mfVN(vec2 p){
+  vec2 i=floor(p), f=fract(p);
+  f=f*f*(3.0-2.0*f);
+  float a=mfH21(i), b=mfH21(i+vec2(1.0,0.0));
+  float c=mfH21(i+vec2(0.0,1.0)), d=mfH21(i+vec2(1.0,1.0));
+  return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);
+}
 void main(){
   vec3 n=normalize(vNrm);
   vec3 base=texture(uMap,vMapUV).rgb;
@@ -1746,11 +1761,11 @@ void main(){
      spends work when the player can actually resolve it — at command zoom
      closeG is 0 and this whole block reduces to the old two-octave path. */
   float ppx=length(fwidth(vDetUV))*512.0;
-  /* PER-LAYER RANGE GATES. One shared "close" gate was why mid zoom — where
-     an RTS is actually played — stayed blurry: everything switched off
-     together at span ~600. Each layer now fades exactly where ITS data stops
-     resolving, measured in its own texels per screen pixel. */
-  float closeG=1.0-smoothstep(1.4,4.5,ppx);
+  /* PER-LAYER RANGE GATES. The old 1.4–4.5 band was already 0 at SPAN_MIN
+     420 on a 412×900 phone (ppx≈7, retina≈3.5), so splat / crack tooth /
+     pave normals never ran in play. Gate stays fully on at tactical zoom
+     and dies by command altitude. */
+  float closeG=1.0-smoothstep(6.5,20.0,ppx);
   float hppx=length(fwidth(vMapUV))*2048.0;
   /* ARTIFICIAL GROUND STANDS APART. The hardscape mask is read FIRST so that
      every natural layer below — crack grain, mid-band plates, macro patching,
@@ -1773,6 +1788,7 @@ void main(){
   float band=mix(0.40,0.06,steep);
   float hm=smoothstep(0.5-band+edgeN,0.5+band+edgeN,mRaw);
   float nat=1.0-hm;
+  float cityYard=smoothstep(0.16,0.40,mRaw);
   /* Kerb line: the pale formed rim living in the mask's transition band —
      exactly where a real kerb sits. The single strongest "engineered" cue in
      the reference roads. */
@@ -1813,7 +1829,7 @@ void main(){
   /* Third, finer octave fades in with proximity: sub-metre gravel the 512
      detail texture already carries but fixed weights never let through.
      Normals strengthen with it so the tooth actually catches the sun. */
-  vec4 dt3=texture(uDetail,vDetUV*3.1);
+  vec4 dt3=texture(uDetail,vDetUV*4.6);
   float d3=dt3.r;
   vec2 dn=((dt1.gb*2.0-1.0)*(0.105+0.34*closeG)
          +(dt2.gb*2.0-1.0)*0.045
@@ -1828,10 +1844,11 @@ void main(){
   float crackTone=d1*0.62+d3*0.38;
   /* Paved city used to skip this with nat=0, which is why civic streets
      read as a flat grey fill even when the paint had grain. Let cracks
-     bite hardscape at reduced strength. */
+     bite hardscape at reduced strength — hairline, not cartoon grooves. */
   float paveTooth=max(nat,0.62);
-  base*= (0.90 + (d1*0.14 + d2*0.07)*max(nat,0.50))
-       * mix(1.0, 0.52+crackTone*0.92, closeG*paveTooth);
+  float crackAmt=closeG*mix(0.48,0.18,max(hm,cityYard));
+  base*= (0.92 + (d1*0.10 + d2*0.05)*max(nat,0.50))
+       * mix(1.0, 0.74+crackTone*0.42, crackAmt*paveTooth);
   /* MATERIAL SPLAT. The painted map supplies the world's TINT; the actual
      surface a metre of ground is made of comes from the shared atlas — soil
      or rock across the open field, real concrete inside the planner's mask.
@@ -1847,9 +1864,12 @@ void main(){
   vec4 dtM2=texture(uDetail,(mat2(0.86,-0.51,0.51,0.86)*vDetUV)*0.071);
   float mG=1.0-smoothstep(14.0,30.0,ppx);
   float plateM=dtM.r*0.64+dtM2.r*0.36;
-  base*=mix(1.0, 0.72+plateM*0.52, mG*mix(0.38,0.85,nat));
+  /* Mid-band Worley slabs are a mid-zoom read. At SPAN_MIN they become
+     metre-wide cartoon cells; fade them as close grain takes over. */
+  float plateAmt=mG*mix(1.0,0.28,closeG)*mix(0.38,0.85,nat);
+  base*=mix(1.0, 0.72+plateM*0.52, plateAmt);
   n=normalize(n+vec3((dtM.g*2.0-1.0)*0.62+(dtM2.g*2.0-1.0)*0.38,0.0,
-                     (dtM.b*2.0-1.0)*0.62+(dtM2.b*2.0-1.0)*0.38)*0.17*mG*max(nat,0.45));
+                     (dtM.b*2.0-1.0)*0.62+(dtM2.b*2.0-1.0)*0.38)*0.17*plateAmt);
   /* ---- GROUND FROM REAL TEXTURE INPUTS --------------------------------
      The surface is authored, seamless, tileable image assets — an artist can
      drop replacements into assets/terrain/ and the whole world reskins. Two
@@ -1857,8 +1877,11 @@ void main(){
      channel becomes a normal via two offset taps and darkens crevices. The
      painted map remains the long-range TINT so tactical design survives. */
   if(uRealTex>0.5){
-    vec2 uvA=wxz*0.011;
-    vec2 uvB=(mat2(0.86,-0.51,0.51,0.86)*wxz)*0.0253;
+    /* Tighter world-scale tiling so SPAN_MIN sees real sheet grain instead
+       of one 90-unit blob per tile. Still two decorrelated octaves — not a
+       checker, not a toon clump. */
+    vec2 uvA=wxz*0.018;
+    vec2 uvB=(mat2(0.86,-0.51,0.51,0.86)*wxz)*0.041;
     /* THREE-WAY NATURAL BLEND, patch-shaped like the reference: grass holds
        the wetter macro patches, bare soil the trafficked ones, cracked earth
        the parched remainder. Two decorrelated macro factors keep the borders
@@ -1873,7 +1896,6 @@ void main(){
        soil is not snapped to concrete. Tight threshold: a 0.12 band still
        treated mossy lots as "green enough" for the grass sheet. */
     float paintGreen=base.g-max(base.r,base.b);
-    float cityYard=smoothstep(0.16,0.40,mRaw);
     float yard=(1.0-smoothstep(0.012,0.055,paintGreen))*cityYard;
     grassMix*=1.0-yard;
     soilMix*=1.0-yard*0.70;
@@ -1882,11 +1904,13 @@ void main(){
     /* Pave octaves stay AXIS-ALIGNED and gently weighted: the rotated second
        tap crossed the sheet's own joints into a diagonal lattice on every
        road — the exact moire the C&C references never show. */
-    vec4 pA=texture(uPaveT,wxz*0.0222), pB=texture(uPaveT,wxz*0.060);
+    vec4 pA=texture(uPaveT,wxz*0.028), pB=texture(uPaveT,wxz*0.068);
+    float pFine=dot(texture(uPaveT,wxz*0.19).rgb,vec3(0.299,0.587,0.114));
     /* Grey yards use pave too. hm alone missed plazas: district mask is
        mid-grey, not street-white, so cityHard lifts them onto concrete. */
     float cityHard=max(hm, yard*0.82);
-    vec4 mat=mix(gA*0.62+gB*0.38, pA*0.78+pB*0.22, cityHard);
+    vec4 mat=mix(gA*0.62+gB*0.38, pA*0.74+pB*0.26, cityHard);
+    mat.rgb*=1.0+(pFine-0.5)*0.10*cityHard*closeG;
     /* AUTHORED NORMAL MAPS. The four sheets now carry baked Sobel normals —
        full diagonal response, correct amplitude, one tap per layer instead of
        the two-tap axis-biased bump this replaces. Decode in the geometric TBN
@@ -1895,10 +1919,10 @@ void main(){
     if(hGate>0.03){
       vec2 dxA=dFdx(uvA), dyA=dFdy(uvA);
       vec2 dxG=dFdx(uvA*1.9), dyG=dFdy(uvA*1.9);
-      vec2 dxP=dFdx(wxz*0.0222), dyP=dFdy(wxz*0.0222);
+      vec2 dxP=dFdx(wxz*0.028), dyP=dFdy(wxz*0.028);
       vec3 nA=mix(mix(textureGrad(uGroundN,uvA,dxA,dyA).rgb,textureGrad(uSoilN,uvA,dxA,dyA).rgb,soilMix),
                   textureGrad(uGrassN,uvA*1.9,dxG,dyG).rgb,grassMix);
-      vec3 nP=textureGrad(uPaveN,wxz*0.0222,dxP,dyP).rgb;
+      vec3 nP=textureGrad(uPaveN,wxz*0.028,dxP,dyP).rgb;
       vec3 tn=mix(nA,nP,cityHard)*2.0-1.0;
       vec3 gN=normalize(n);
       vec3 T=cross(gN,vec3(0.0,0.0,1.0));
@@ -1913,11 +1937,16 @@ void main(){
        On city hardscape the pave sheet must add GRAIN, not replace value —
        full splat turned dark asphalt and pale walks into one light-grey
        ribbon (the 12:44 three-line road). */
-    float splat=closeG*0.85+mG*0.10;
-    splat*=mix(1.0, 0.30, max(hm, cityYard));
-    base=mix(base*(0.84+texL*0.34),
-             base*(0.30+0.05)+mat.rgb*(base*1.9+vec3(0.06)),
-             splat);
+    /* Wilderness: art owns the surface at close. Hardscape: painted value
+       stays (dark asphalt / pale walk); the pave sheet only adds grain.
+       Full-color splat was the 12:44 light-grey ribbon. */
+    float splat=closeG*0.88+mG*0.12;
+    vec3 art=base*(0.28)+mat.rgb*(base*1.85+vec3(0.05));
+    vec3 grain=base*(0.90+(mat.rgb-vec3(texL))*1.10+vec3(texL)*0.20);
+    float hardW=max(hm, cityYard);
+    base=mix(mix(base*(0.84+texL*0.34), art, splat),
+             mix(base, grain, splat*0.86),
+             hardW);
     /* Kill leftover grass hue only. A full grey snap erased oil stains,
        slab seams and pave grain — the "vector placeholder" road. */
     float leftoverG=max(0.0,base.g-max(base.r,base.b));
@@ -1937,8 +1966,35 @@ void main(){
     float rbChroma=abs(base.r-base.b)+abs(base.g-0.5*(base.r+base.b));
     base=mix(base,vec3(paveGrey)*vec3(1.02,1.01,0.98),
       max(hm,yard)*smoothstep(0.012,0.055,rbChroma));
-    base*=mix(1.0, 0.62+mat.a*0.52, closeG*0.7);        // crevice shading
-    base+=vec3(0.075,0.076,0.070)*kerb*(0.35+0.65*closeG);   // pale formed kerb
+    base*=mix(1.0, 0.70+mat.a*0.40, closeG*0.55);        // crevice shading
+    base+=vec3(0.055,0.056,0.052)*kerb*(0.30+0.70*closeG);   // pale formed kerb
+  }
+  /* CLOSE-UP MATERIAL GRAIN.
+     The 2048 albedo is 1.56 m/texel — at SPAN_MIN that is a few screen
+     pixels per texel, which is the blocky road. TS=4096 would duplicate
+     tens of MB (heightF + terrainCanvas + terrainBase). Hash/value noise
+     on world XZ plus the tighter splat above supply sub-metre aggregate
+     without a second heightfield.
+     Look lock: fine aggregate / compaction / oil sheen — never hatch,
+     cel outline, checker, or painted lane dashes. */
+  float grainG=1.0-smoothstep(0.50,2.20,hppx);
+  if(grainG>0.02){
+    float agg=mfH21(wxz*8.4)+mfH21(wxz*21.7+13.2);
+    float fine=mfH21(wxz*46.0+9.1);
+    float compact=mfVN(wxz*0.62)*0.58+mfVN(wxz*1.85+6.1)*0.42;
+    float dirt=mfVN(wxz*3.2+2.4);
+    float oil=mfVN(wxz*0.19+4.7);
+    float hard=max(hm,cityYard);
+    /* Asphalt: fine aggregate + faint oil pockets. Amplitude stays a multiply
+       around 1 so dark slab / pale walk values survive. */
+    float aN=(agg-1.0)*0.050+(fine-0.5)*0.055+(oil-0.5)*0.030;
+    base*=1.0+aN*hard*grainG;
+    base+=vec3(0.014,0.013,0.011)*max(0.0,0.42-oil)*hard*grainG*closeG;
+    /* Soil: compaction patches + grit, not a spray of dots. */
+    float sN=(compact-0.5)*0.12+(dirt-0.5)*0.07+(agg-1.0)*0.022;
+    base*=1.0+sN*nat*grainG;
+    /* Formed carriageway is a hair darker down the crown — wear, not a stripe. */
+    base*=1.0-smoothstep(0.68,0.94,mRaw)*steep*0.045*grainG;
   }
   /* ---- MACRO GROUND VARIATION -----------------------------------------
      Natural ground in the references is never one tone: it carries broad
@@ -3159,10 +3215,15 @@ function camEye(){
   eyeZ=cam.y - Math.sin(camYaw)*hor;
   eyeY=Math.sin(camPitch)*CAM_HEIGHT + terrainH(cam.x,cam.y);
 }
+function camAspect(){
+  return (cv&&cv.width>0&&cv.height>0)?(cv.width/cv.height):(VW/Math.max(1,VH));
+}
 function camUpdateMatrices(){
   camEye();
   const gh=terrainH(cam.x,cam.y);
-  const asp=VW/Math.max(1,VH);
+  /* Drawing-buffer aspect, not CSS VW/VH. A one-pixel DPR round or a
+     contain-letterbox frame must not squash the ortho frustum. */
+  const asp=camAspect();
   const hh=orthoSpan*0.5, hw=hh*asp;
   m4ortho(matP,-hw,hw,-hh,hh,-6000,9000);
   m4look(matV,eyeX,eyeY,eyeZ, cam.x,gh,cam.y, 0,1,0);
@@ -3177,7 +3238,7 @@ function s2w(sx,sy){
   const rx=m[0], ry=m[4], rz=m[8];
   const ux=m[1], uy=m[5], uz=m[9];
   const bx=m[2], by=m[6], bz=m[10];
-  const asp=VW/Math.max(1,VH);
+  const asp=camAspect();
   const hh=orthoSpan*0.5, hw=hh*asp;
   const ndx=((sx/VW)*2-1)*hw, ndy=(1-(sy/VH)*2)*hh;
   const ox=eyeX+rx*ndx+ux*ndy, oy=eyeY+ry*ndx+uy*ndy, oz=eyeZ+rz*ndx+uz*ndy;
@@ -3220,7 +3281,7 @@ function camBounds(){
      tilts, and that axis rotates with the yaw — so project both. */
   /* Reused object: render + sim + HUD all call this every frame. A fresh
      literal was mid-tier GC for identical numbers. Callers read immediately. */
-  const asp=VW/Math.max(1,VH);
+  const asp=camAspect();
   const hh=orthoSpan*0.5, hw=hh*asp;
   const depth=hh/Math.max(0.30,Math.sin(camPitch));     // along-view ground span
   const c=Math.abs(Math.cos(camYaw)), s=Math.abs(Math.sin(camYaw));

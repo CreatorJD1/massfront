@@ -362,14 +362,20 @@ function renderLegacySprites(dtDraw){
     if(d.x<x0||d.x>x1||d.y<y0||d.y>y1) continue;
     const tier=depositTier(d),frac=d.capacity?d.remaining/d.capacity:0;
     const col=tier===3?[188,82,255]:tier===2?[58,225,150]:tier===1?[58,190,255]:[72,76,88];
-    /* Corrupted terrain is a world feature, not a UI pin. Layered fractured
-       decals, subsurface bloom and counter-rotating rings remain under an
-       Extractor and desaturate as the finite field collapses. */
-    const fieldR=72+(d.initialTier||1)*20;
-    batN.add(sCrater,d.x,d.y,fieldR*1.8,fieldR*1.32,(d.pulse||0)+.35,col[0]*.62|0,col[1]*.58|0,col[2]*.68|0,tier?72:42);
-    batN.add(sCrater,d.x+8,d.y-5,fieldR*1.35,fieldR*.95,-(d.pulse||0)-.7,col[0]*.86|0,col[1]*.78|0,col[2]*.92|0,tier?46:28);
-    batN.add(glow,d.x,d.y,fieldR*2.05,fieldR*2.05,0,col[0],col[1],col[2],tier?(42+24*frac)|0:8);
-    batN.add(selRing,d.x,d.y,fieldR*1.45,fieldR*1.45,t*.10+(d.pulse||0),col[0],col[1],col[2],tier?76:20);
+    /* 2D fallback of the 3D vein stamp. Crater discs were the dark pads
+       under every crystal spawn. Thin glow rects stay after a mex lands. */
+    const fieldR=46+(d.initialTier||1)*8;
+    const pulse=.82+.18*Math.sin(t*2.1+(d.pulse||0));
+    const seed=(d.pulse||0)+d.x*0.017+d.y*0.013;
+    for(let k=0;k<5;k++){
+      const a=seed+k*1.047;
+      const len=fieldR*(0.52+((k*17)%9)*0.03)*pulse;
+      batA.add(glow,d.x+Math.cos(a)*len*0.5,d.y+Math.sin(a)*len*0.5,
+        3.2,len,a,col[0],col[1],col[2],d.taken?(tier?20:10):(tier?38:16));
+    }
+    if(!d.taken){
+      batA.add(glow,d.x,d.y,fieldR*0.28,fieldR*0.28,0,col[0],col[1],col[2],tier?(16+10*frac)|0:6);
+    }
     /* 3D owns the outcrop. The 2D dep stamp is a circular pad — it is what
        made live nodes look like a grey plate under the shards. */
     if(tier>0&&!d.taken&&!use3D){
@@ -391,7 +397,7 @@ function renderLegacySprites(dtDraw){
       addParticle(1,gz.x+rr(-5,5),gz.y+rr(-4,4),rr(-2,2),rr(-17,-10),1.3,9, 165,225,250);
   }
   for(const cst of crystals){ if(cst.x<x0||cst.x>x1||cst.y<y0||cst.y>y1) continue;
-    const D=deposits[cst.dep],tier=depositTier(D);if(!D||cst.band>tier)continue;
+    const D=deposits[cst.dep],tier=depositTier(D);if(!D||cst.band>tier||D.taken)continue;
     const bandFill=clamp((D.remaining-(tier-1)*DEPOSIT_BAND)/DEPOSIT_BAND,0,1);
     const edge=cst.band===tier?(.42+.58*bandFill):1,pulse=.94+.08*Math.sin(t*1.45+(cst.phase||0));
     const s=cst.s*edge*pulse*(cst.core?1.42:1.18),col=cst.band===3?[220,112,255]:cst.band===2?[78,255,170]:[78,225,255];

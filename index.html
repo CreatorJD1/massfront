@@ -17,18 +17,18 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#060c16">
 <meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.37">
-  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.37">
-  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.37">
-  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.37">
-  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.37">
-  <link rel="stylesheet" href="./src/styles/ui.css?v=1.33.37">
-  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.37">
-  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.37">
-  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.37">
-  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.37">
-  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.37">
-  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.37">
+<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.39">
+  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.39">
+  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.39">
+  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.39">
+  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.39">
+  <link rel="stylesheet" href="./src/styles/ui.css?v=1.33.39">
+  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.39">
+  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.39">
+  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.39">
+  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.39">
+  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.39">
+  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.39">
 <style>
 /* CRITICAL — inline so it holds on the FIRST painted frame even if the linked
    intro.css above is slow or fails. The launch reveal (src/intro.js, z-index 950)
@@ -51,7 +51,9 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 </head>
 <body>
 
-<div id="mfBootCover" aria-hidden="true" style="position:fixed;inset:0;z-index:930;background:#02060c"></div>
+<div id="mfBootCover" aria-hidden="true" style="position:fixed;inset:0;z-index:930;background:#02060c">
+  <div id="mfBootMsg" style="position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);color:#9bb8c9;font:800 11px/1.55 system-ui,sans-serif;letter-spacing:.22em;text-align:center">MASSFRONT<br><span id="mfBootPct">LOADING</span></div>
+</div>
 <canvas id="gl"></canvas>
 <div id="grade"></div>
 <div id="vignette"></div>

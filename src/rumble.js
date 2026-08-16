@@ -13,12 +13,19 @@
    and quality-scaled request so a far-off TITAN does not rattle the phone.
    ============================================================================ */
 
-const RUMBLE_STEP_R=720;
+const RUMBLE_STEP_R=1100;
 const RUMBLE_BLAST_R=1400;
 let rumbleReduced=false;
 let rumbleLastHap=0;
 let rumbleStepHap=0;
 const rumbleAcc=typeof MAXU==='number'?new Float32Array(MAXU):new Float32Array(1);
+const rumbleHumT=typeof MAXU==='number'?new Float32Array(MAXU):new Float32Array(1);
+
+function rumbleZoomClose(){
+  /* Tactical zoom: a commander fills the frame. Command zoom is a map
+     read — footsteps should not rattle the phone there. */
+  return typeof camDist==='number'&&camDist<980;
+}
 
 function rumbleReadReduced(){
   try{
@@ -86,24 +93,33 @@ function rumbleHaptic(ms,pattern){
 
 function requestShake(x,y,power,kind){
   if(!(power>0)||!rumbleInMatch()) return;
-  const step=kind==='step';
+  const step=kind==='step'||kind==='hum';
   const settings=typeof META!=='undefined'&&META.settings;
   const wantShake=!(settings&&settings.shake===false)&&!(typeof shakeMult==='number'&&shakeMult<=0);
   const wantHap=!(settings&&settings.haptics===false);
   if(!wantShake&&!wantHap) return;
   if(rumbleReduced&&step) return;
-  if(step&&typeof camDist==='number'&&camDist>2200) return;
-  const reach=step?RUMBLE_STEP_R:RUMBLE_BLAST_R;
+  if(step&&typeof camDist==='number'&&camDist>1800) return;
+  const zoomed=rumbleZoomClose();
+  const reach=step?(zoomed?1600:RUMBLE_STEP_R):RUMBLE_BLAST_R;
   const mul=rumbleDistMul(x,y,reach)*rumbleGfxMul();
-  const amt=power*mul;
-  if(amt<0.35) return;
+  /* World-space cam nudge of ±2.6 is invisible at command zoom and still
+     shy at SPAN_MIN 420. Boost only when the chassis fills the view. */
+  const zoomBoost=zoomed?clamp(980/Math.max(420,camDist),1,2.35):1;
+  const amt=power*mul*(kind==='hum'?1:zoomBoost);
+  if(amt<0.28) return;
   if(wantShake&&typeof shake==='number') shake=Math.max(shake,amt);
   if(!wantHap) return;
-  if(step){
+  if(kind==='hum'){
     const t=performance.now();
-    if(t-rumbleStepHap<90) return;
+    if(t-rumbleStepHap<420) return;
     rumbleStepHap=t;
-    rumbleHaptic(amt>=2.6?18:12);
+    rumbleHaptic(10,[8,40,8]);
+  }else if(step){
+    const t=performance.now();
+    if(t-rumbleStepHap<(zoomed?55:90)) return;
+    rumbleStepHap=t;
+    rumbleHaptic(zoomed?(amt>=3.2?28:18):(amt>=2.6?18:12), zoomed?[14,36,12]:null);
   }else{
     rumbleHaptic(amt>=12?55:amt>=7?36:22, amt>=12?[40,28,48]:null);
   }
@@ -124,21 +140,32 @@ function rumbleHeavyWeight(type,T){
 
 function rumbleUnitMove(i,T,travel,prevWalk){
   const w=rumbleHeavyWeight(utype[i],T);
-  if(!w||!(travel>0.02)) return;
-  if(T.legs){
-    /* Plant when the gait sine falls through zero — one foot down, matching
-       the vertex bob (abs(sin)) that hits twice per TAU. */
-    const s0=Math.sin(prevWalk), s1=Math.sin(uwalk[i]);
-    if(!(s0>0&&s1<=0)) return;
-    const power=(T.size>=40?3.4:T.cat==='hero'?2.6:2.0)*w;
-    requestShake(ux[i],uy[i],power,'step');
-  }else{
-    rumbleAcc[i]+=travel;
-    const period=T.air?28:18;
-    if(rumbleAcc[i]<period) return;
-    rumbleAcc[i]=0;
-    requestShake(ux[i],uy[i],1.8*w,'step');
+  if(!w) return;
+  const zoomed=rumbleZoomClose();
+  if(travel>0.02){
+    if(T.legs){
+      /* Plant when the gait sine falls through zero — one foot down, matching
+         the vertex bob (abs(sin)) that hits twice per TAU. */
+      const s0=Math.sin(prevWalk), s1=Math.sin(uwalk[i]);
+      if(!(s0>0&&s1<=0)) return;
+      const power=(T.size>=40?4.2:T.cat==='hero'?3.6:2.4)*w*(zoomed?1.35:1);
+      requestShake(ux[i],uy[i],power,'step');
+    }else{
+      rumbleAcc[i]+=travel;
+      const period=T.air?28:(zoomed?8:14);
+      if(rumbleAcc[i]<period) return;
+      rumbleAcc[i]=0;
+      requestShake(ux[i],uy[i],(zoomed?2.6:1.8)*w,'step');
+    }
+    return;
   }
+  /* Idle reactor / gyro hum — only when a commander or titan fills the view. */
+  if(!zoomed) return;
+  if(!(T.cat==='hero'||T.hero||utype[i]===8||T.size>=40)) return;
+  rumbleHumT[i]+=(typeof dt==='number'?dt:0.016);
+  if(rumbleHumT[i]<0.55) return;
+  rumbleHumT[i]=0;
+  requestShake(ux[i],uy[i],0.95*w,'hum');
 }
 
 function rumbleUndoRaw(prevShake,raw){

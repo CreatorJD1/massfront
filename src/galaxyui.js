@@ -147,7 +147,10 @@ function mfGalaxyCss(){
     clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 10px,100% calc(100% - 10px),calc(100% - 10px) 100%,10px 100%,0 calc(100% - 10px),0 10px)}
   /* System keeps the galaxy dock: War Room left, Enter right. Do not hide .setupFoot. */
   .mfSystemSub{max-width:540px;margin:0 auto 8px}
-  #mfGalaxyCanvas,#mfPlanetCanvas,#mfSystemCanvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab}
+  /* object-fit:contain is the one-frame safety net before mfFitCanvas2D
+     syncs the bitmap. Without it a 560×360 planet smashed into a wide
+     short box is an oval for a frame (or forever, if JS never runs). */
+  #mfGalaxyCanvas,#mfPlanetCanvas,#mfSystemCanvas{display:block;width:100%;height:100%;object-fit:contain;touch-action:none;cursor:grab}
   /* Help sits UNDER the hologram, not on the canvas. Overlaying it on
      LOCAL CLUSTER / 4 SYSTEMS (and the system sun caption) was the QA
      sweep P1: two instruction layers in the same phone lane. */
@@ -305,6 +308,20 @@ function mfGalaxyCss(){
     .mfModeContract{margin:0 0 6px;padding:7px 10px}
     #setupScr.galaxyFlow .setupHead{padding-bottom:5px}
     .mfGalaxyStep{min-height:44px;padding-top:15px}
+  }
+  /* Desktop landscape: the hologram host is already 680px, but header /
+     footer / MAP tabs live outside it and went full window — START BATTLE
+     became an 800px strip. Cap them to the same column. Taller planet box
+     so the globe is not a postage stamp after the aspect-correct resize.
+     Phone-short landscape (max-height:560) keeps the tighter clamps above. */
+  @media(orientation:landscape) and (min-width:900px) and (min-height:561px){
+    #setupScr.galaxyFlow .setupHead,#setupScr.galaxyFlow .setupFoot,#setupScr .setupTabs,
+    #setupScr.galaxyFlow.galaxyStage-deploy .opsBrief{
+      width:min(100%,720px);margin-left:auto;margin-right:auto;box-sizing:border-box}
+    #setupScr.galaxyFlow .setupFoot{grid-template-columns:minmax(0,340px) minmax(0,340px);justify-content:center;width:100%}
+    .mfPlanetViewport{height:min(52dvh,460px)}
+    .mfGalaxyViewport{height:min(56dvh,520px)}
+    .mfSystemViewport{height:min(56dvh,540px)}
   }
   `;
   (document.head||document.documentElement).appendChild(st);
@@ -551,7 +568,9 @@ function mfGalaxyDrawSystemMark(ctx,x,y,S,selected,W,H){
 }
 
 function mfGalaxyDraw(t){
-  const cv=$('mfGalaxyCanvas');if(!cv)return;const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const cv=$('mfGalaxyCanvas');if(!cv)return;
+  if(typeof mfFitCanvas2D==='function')mfFitCanvas2D(cv,720);
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height;
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#010208';ctx.fillRect(0,0,W,H);
   const warm=ctx.createRadialGradient(W*.16,H*.58,8,W*.16,H*.58,W*.66);
@@ -694,7 +713,9 @@ function mfGalaxyDrawLoreBody(ctx,x,y,r,kind,tint,lx,ly){
 }
 
 function mfGalaxyDrawSystemView(t){
-  const cv=$('mfSystemCanvas');if(!cv)return;const ctx=cv.getContext('2d'),W=cv.width,H=cv.height,S=mfGalaxySystem();
+  const cv=$('mfSystemCanvas');if(!cv)return;
+  if(typeof mfFitCanvas2D==='function')mfFitCanvas2D(cv,720);
+  const ctx=cv.getContext('2d'),W=cv.width,H=cv.height,S=mfGalaxySystem();
   const key=S.home,P=PLANETS[key];if(!P)return;
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#010208';ctx.fillRect(0,0,W,H);

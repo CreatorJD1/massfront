@@ -27,7 +27,7 @@
      otherwise reuse a stale source even after the installer or local preview
      has changed, which made new settings appear to be missing until cache was
      cleared manually. Patch bundles keep their content-addressed Blob URLs. */
-   var PACKAGED_REV='1.33.37';
+   var PACKAGED_REV='1.33.39';
   var DB='massfront-updates', STORE='bundles';
   var bootShield=null, bootShieldTimer=0, bootShieldWatchdog=0;
   var bootShieldEvents=['pointerdown','pointerup','touchstart','touchend','click'];
@@ -194,33 +194,43 @@
       });
   }
 
-  function runPackaged(){
-    var i=0;
-    (function next(){
-      if(i>=MANIFEST.length) return;
+  function bootProgress(done,total){
+    var el=document.getElementById('mfBootPct');
+    if(el) el.textContent=total?('LOADING  '+done+' / '+total):'LOADING';
+  }
+  function injectScripts(makeSrc,total){
+    /* Append every tag now. async=false BEFORE src, plus document order, keeps
+       the one-scope contract. The old onload→next chain waited for each file
+       before requesting the next, so 77 scripts (unitsheet is 1.6 MB) left
+       #mfBootCover black for ~10s and looked like a failed launch. */
+    var left=total;
+    function tick(src){
+      left--;
+      bootProgress(total-left,total);
+      if(src) console.error('boot: failed',src);
+    }
+    bootProgress(0,total);
+    for(var i=0;i<total;i++){
       var s=document.createElement('script');
-      s.src=MANIFEST[i++]+'?v='+PACKAGED_REV; s.async=false;
-      s.onload=next;
-      s.onerror=function(){ console.error('boot: failed',s.src); next(); };
+      s.async=false;
+      makeSrc(s,i);
+      s.onload=function(){ tick(); };
+      s.onerror=(function(src){ return function(){ tick(src); }; })(s.src||s.getAttribute('data-src')||'?');
       document.body.appendChild(s);
-    })();
+    }
+  }
+  function runPackaged(){
+    injectScripts(function(s,i){ s.src=MANIFEST[i]+'?v='+PACKAGED_REV; }, MANIFEST.length);
   }
   function runBundle(b){
     /* Blob URLs rather than inline text: the browser keeps a real filename for
        each source, so a stack trace from a patched build is still readable. */
     var order=b.order&&b.order.length? b.order : MANIFEST;
-    var i=0;
-    (function next(){
-      if(i>=order.length) return;
-      var path=order[i++], src=b.files[path];
-      var s=document.createElement('script');
-      s.async=false;
-      if(src==null){ s.src=path; }
+    injectScripts(function(s,i){
+      var path=order[i], src=b.files[path];
+      if(src==null) s.src=path;
       else s.src=URL.createObjectURL(new Blob([src+'\n//# sourceURL='+path],{type:'text/javascript'}));
-      s.onload=next;
-      s.onerror=function(){ console.error('boot: failed',path); next(); };
-      document.body.appendChild(s);
-    })();
+    }, order.length);
   }
 
   idb().then(function(db){

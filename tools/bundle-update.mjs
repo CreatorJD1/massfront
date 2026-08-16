@@ -47,7 +47,13 @@ const otaBinaryAssets=[
   'assets/textures/mat-albedo.png',
   'assets/textures/mat-normal.png',
   'assets/textures/mat-orm.png',
-  'assets/audio/voice.json'
+  'assets/audio/voice.json',
+  /* Same class as voice.json: audLoadPlaylists fetches
+     './assets/audio/music.json' from disk. OTA patches no files, so a 1.33.37
+     APK would keep the old vocal playlist and then consult a stale remote
+     music.json. Inlining the empty curated list makes packagedHasTracks false
+     on every OTA client and blocks that overlay. */
+  'assets/audio/music.json'
 ].map(path=>{
   const ext=path.split('.').pop().toLowerCase();
   const mime=OTA_MIME[ext];

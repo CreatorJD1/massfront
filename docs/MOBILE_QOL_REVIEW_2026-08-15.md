@@ -105,4 +105,65 @@ Concept shots (2026-08-15 images 3–5): gamified home with a 3D base diorama, r
 
 - Hub chrome + shortcuts that **open the existing screens** (War Room, Development, Ops). No second progression system.
 - Research-as-minigame and MMO preview stay out until Custom / MMO have a real loop.
-- Do not rewrite `startScreen` in the glow/icon/water pass.
+- Do not rewrite `startScreen` in a VFX pass.
+
+### 8.1 What the concept shots actually ask for
+
+The 2026-08-15 images are a **home hub**, not a new game. Three layers:
+
+1. **Chrome** — resource header, Continue Campaign, mode cards, bottom tabs. This is navigation. Every destination already exists (`#warScr`, `#devScr`, `#opsScr`, `#armory`, `#profileScr`).
+2. **War Room as a base-node graph** — a spatial index over the same 48-site conquest, not a second map. `galaxyui.js` already owns galaxy → system → planet → region.
+3. **Research as a mobile minigame** — a short session that **pays into the existing `RESEARCH[]` / `develop.js` graph**, not a parallel skill tree.
+
+The failure mode to avoid: a hub that invents its own XP, a research toy that grants different bonuses than `applyResearch()`, or an MMO preview that writes `META.mapWins`.
+
+### 8.2 Research minigame — options that reuse the live graph
+
+Live match research (`src/game/sim.js` `RESEARCH[]`) is eleven nodes, paid in mass/energy while a Complex runs, with `req` edges (`bal1→bal2`, `plate1→plate2`, `hardpoint→defnet`). Account development (`src/develop.js`) is materials + a tree that unlocks **what you may build**, plus modules that wear out.
+
+A menu minigame should be a **shortcut into one of those two graphs**, not a third.
+
+| Option | Loop (phone, <90s) | Pays into | Why it fits | Why not yet |
+|---|---|---|---|---|
+| **A. Field sample** | Tap-trace a 2D vein / circuit on a still of the attract diorama. Accuracy + time → a **progress tick** on the next affordable `RESEARCH` node (or a material drip). | Match `RESEARCH[]` carry (`researchCarry`) or `META.mats` | Same language as crystal veins / salvage. One finger. | Needs a Complex (or a menu stand-in) so the tick has a legal sink. Without Custom/MMO, a menu tick that completes `bal2` skips the match economy. |
+| **B. Module bench** | Drag a worn module onto a repair plate; hold to spend Alloy/Circuitry. Break risk if you release early. | `develop.js` wear / `matSpend` | Wear is already the point of Development. Makes the bench visible instead of a list row. | Repair-as-hold is a settings slider with extra chrome unless wear is felt in Standard (it is, but only after several matches). |
+| **C. Doctrine hand** | Three cards from the next unlocked `develop.js` nodes. Pick one to **queue**, not grant. Queue spends on next match start. | `devHas` / next unlock | Forces a decision before War Room. No instant power. | Card UX fights the existing `#devScr` graph. Two UIs for one tree is how players lose track of `req`. |
+| **D. MMO scout** | 30s flyover of a locked theatre with one salvage grab. | Nothing permanent; flavour + maybe 1 Alloy | Matches the concept-shot “preview the loop.” | Writes nothing. Harmless, also pointless until MMO has a loop. Do not let the grab call `matsFromMatch`. |
+
+**Recommend A or B as the first prototype, never C+D together.** A is the one that looks like a minigame. B is the one that respects the economy that already exists.
+
+Rules if A is built later:
+
+- Grant **elapsed time** on an in-progress node (`bankResearchProgress`), or a small `matGrant`, never `applyResearch(id)` from the menu.
+- Cap once per real-world day (dailies already exist — hook there, do not add a fourth streak).
+- Fail / quit grants nothing. A skippable toy that always pays is a second store.
+- Use the attract GL view as the board (`stopAttract` already shows `#gl`). Do not load a second WebGL context.
+
+### 8.3 Mobile constraints
+
+- One thumb, portrait 355–430 CSS px. No two-stick “play the RTS in the menu.”
+- Session ≤ 90s or it blocks Continue Campaign — the actual door.
+- Haptics: `buzz` / `rumbleHaptic` on success only. Menu shake would nudge the diorama (`rumbleInMatch` already refuses that).
+- No new large media in the installer. Reuse `ITEM_ART`, unit sheet, attract scene.
+- `#startScreen` stay the fallback. Hub chrome is a takeover that **calls** `showScr('devScr')` etc., same as `src/offline.js` wraps settings.
+
+### 8.4 What maps to which file
+
+| Hub beat | Owner today | Takeover later |
+|---|---|---|
+| Continue Campaign | `#startBtn` → War Room → last site | Same function, bigger button |
+| Mode cards | `#warScr` / `meta.js` locked copy | Unchanged until Custom/MMO exist |
+| Research graph | `develop.js` + `restree3d.js` | Minigame writes `researchCarry` / `matBag` only |
+| Ops / contracts | `#opsScr` | Tab opens this screen |
+| Arsenal | `#armory` | Tab opens this screen |
+| 3D base | Attract in `main.js` | Keep; do not replace with a fake city |
+
+### 8.5 Ship gate
+
+Do **not** implement the hub or the minigame until:
+
+1. Custom is a real War Room card (no `mapWins`) — section 7.1.
+2. The match research Complex path is the one players still use (minigame is a drip, not a replacement).
+3. MMO stays a locked card. A scout flyover (option D) may exist as flavour only.
+
+This VFX pass does not rewrite `startScreen`.

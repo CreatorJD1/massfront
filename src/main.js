@@ -1259,7 +1259,12 @@ function attractTick(dt){
     ss.style.setProperty('--py',ly.toFixed(2)+'deg');
   }
 }
-function stopAttract(){ attractOn=false; document.body.classList.remove('menuMode'); }
+function stopAttract(){
+  attractOn=false; document.body.classList.remove('menuMode');
+  /* #gl is display:none under menuMode.bgOff. Remeasure after it is shown
+     so a landscape desktop window is not stuck with the hidden-canvas size. */
+  if(typeof resize==='function') resize();
+}
 function frame(ts){
   requestAnimationFrame(frame);
   if(!bootConfirmed) confirmBoot();
@@ -1687,7 +1692,7 @@ function renderPlanetRow(){
     + '<div><span style="display:block;font-size:8px;color:#5a84a0;letter-spacing:0.05em">CLIMATE</span><b style="color:#ffffff;font-size:9px">' + (P.climate||'Tropical') + '</b></div>'
     + '</div></div>'
     + '<div style="position:relative;width:100%;height:230px;margin:0 auto;background:rgba(3,10,18,0.85);border-radius:8px;border:1px solid rgba(140,230,255,0.25);overflow:hidden;box-sizing:border-box">'
-    + '<canvas id="planetSphereCanvas" width="440" height="230" style="width:100%;height:100%;cursor:grab;touch-action:none"></canvas>'
+    + '<canvas id="planetSphereCanvas" width="440" height="230" style="width:100%;height:100%;object-fit:contain;cursor:grab;touch-action:none"></canvas>'
     + '<div style="position:absolute;bottom:6px;left:10px;right:10px;display:flex;justify-content:space-between;pointer-events:none;font-size:10px;color:#a0d4f5;font-weight:700">'
     + '<span>⬡ REVERSE BIODOME: '+ (P.biodome||'ACTIVE') +'</span>'
     + '<span>TAP REGION ↺</span>'

@@ -213,7 +213,7 @@ function beginBB(tex){
   _bbSyncCull();
   gl.useProgram(progBB);
   gl.uniformMatrix4fv(UBB.uVP,false,matVP);
-  const asp=VW/Math.max(1,VH);
+  const asp=(typeof camAspect==='function')?camAspect():(VW/Math.max(1,VH));
   gl.uniform2f(UBB.uScale,2/(Math.max(1,orthoSpan)*asp),2/Math.max(1,orthoSpan));
   gl.uniform1i(UBB.uTex,0);
   /* Unit 0 is the material atlas for models. Binding a different sheet here is
