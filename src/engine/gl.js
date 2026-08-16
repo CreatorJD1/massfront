@@ -2981,64 +2981,87 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
   const K=typeof biomeKit==='function'?biomeKit():null;
   const habit=kind==='mass'?(K&&K.mass)||'ore':(K&&K.energy)||'vent';
   const k=TS/MAP,cx=N.x*k,cy=N.y*k,initial=N.initialTier||3;
-  /* Scar frames the mound/vent. The old 70–105 wu near-black disc WAS the
-     hole in the user shots — mesh sat in the middle and vanished. Civic
-     pavement must not get that disc: CITYG already has identity. */
-  const civic=typeof cityGroundAt==='function'&&cityGroundAt(N.x,N.y)>=1;
-  const maxR=(kind==='mass'?(civic?16:24)+initial*4:(civic?20:28))*k;
-  const liveR=maxR*(tier>0?.58+tier*.12:.40);
+  /* Field matches the gameplay node (~50–70 wu). The old 24+4*tier scar was
+     ~22 texels at TS/MAP=0.64 — hairline strokes vanished once the radial
+     dirt disk (the dark plate) was removed. */
+  const liveR=((kind==='mass'?50:42)+initial*8)*k*(tier>0?.92:.58);
   let rs=((N.x*92821)^(N.y*68917)^(kind==='mass'?0x51a7:0xe912))|0;
   const rn=()=>{rs=(Math.imul(rs,1103515245)+12345)|0;return (rs>>>8)/16777216;};
-  /* Habit is lithology, not a HUD colour. Cyan/pink orbs were the same
-     sticker on every planet; ore/ice/slag/ichor scars are the ground wound. */
-  const scar=habit==='ice'?['rgba(92,118,138,.48)','rgba(120,148,168,.36)','rgba(78,104,128,.32)','rgba(186,220,236,.34)']
-    :habit==='slag'?['rgba(88,58,46,.50)','rgba(118,72,50,.36)','rgba(132,78,48,.32)','rgba(214,132,78,.30)']
-    :habit==='ichor'?['rgba(78,42,58,.50)','rgba(108,52,72,.36)','rgba(124,48,74,.32)','rgba(200,88,122,.32)']
-    :habit==='frost'?['rgba(70,92,108,.46)','rgba(96,124,140,.34)','rgba(80,118,136,.30)','rgba(176,226,236,.30)']
-    :habit==='heat'?['rgba(92,54,36,.48)','rgba(128,72,40,.36)','rgba(148,78,36,.32)','rgba(232,140,64,.30)']
-    :habit==='spore'?['rgba(74,44,62,.48)','rgba(104,56,80,.36)','rgba(118,50,86,.32)','rgba(190,92,148,.30)']
-    :habit==='vent'?['rgba(52,96,104,.40)','rgba(78,148,156,.32)','rgba(64,128,136,.28)','rgba(130,216,224,.36)']
-    :['rgba(96,82,62,.46)','rgba(128,108,78,.34)','rgba(118,108,72,.30)','rgba(186,164,104,.28)'];
-  c.save();
-  if(collapsed){
-    const dead=c.createRadialGradient(cx,cy,maxR*.08,cx,cy,maxR*1.15);
-    dead.addColorStop(0,scar[0]);dead.addColorStop(.58,scar[1]);dead.addColorStop(1,'rgba(22,22,22,0)');
-    c.fillStyle=dead;c.beginPath();c.arc(cx,cy,maxR*1.15,0,TAU);c.fill();
-  }
+  /* Crystal in the crack, not a HUD orb. Habit only shifts the mineral. */
+  const cry=habit==='ice'||habit==='frost'?'rgba(168,214,232,.58)'
+    :habit==='slag'||habit==='heat'?'rgba(214,132,72,.54)'
+    :habit==='ichor'||habit==='spore'?'rgba(206,88,138,.54)'
+    :habit==='vent'?'rgba(92,196,206,.50)'
+    :'rgba(72,186,220,.56)';
+  const dead='rgba(92,88,82,.20)';
   const active=tier>0;
-  const g=c.createRadialGradient(cx,cy,liveR*.05,cx,cy,liveR);
-  g.addColorStop(0,active?scar[2]:scar[0]);g.addColorStop(.55,active?scar[1]:scar[0]);g.addColorStop(1,'rgba(20,20,20,0)');
-  c.fillStyle=g;c.beginPath();
-  const pts=18;
-  for(let p=0;p<=pts;p++){
-    const a=p/pts*TAU,r=liveR*(.82+rn()*.22),x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r;
-    if(!p)c.moveTo(x,y);else c.lineTo(x,y);
-  }
-  c.closePath();c.fill();
-  const veins=kind==='mass'?7+initial*3:10;
-  c.lineCap='round';
-  for(let n=0;n<veins;n++){
-    const a=n/veins*TAU+(rn()-.5)*.30,r0=liveR*(.12+rn()*.10),r1=liveR*(.62+rn()*.32);
-    c.strokeStyle=active?scar[3]:'rgba(90,86,80,.14)';
-    c.lineWidth=Math.max(.65,(1.1+rn()*1.8)*k);
-    c.beginPath();c.moveTo(cx+Math.cos(a)*r0,cy+Math.sin(a)*r0);
-    c.quadraticCurveTo(cx+Math.cos(a+(rn()-.5)*.65)*r1*.54,cy+Math.sin(a+(rn()-.5)*.65)*r1*.54,cx+Math.cos(a)*r1,cy+Math.sin(a)*r1);c.stroke();
-  }
-  if(kind==='energy'){
-    c.strokeStyle=active?scar[3]:'rgba(96,91,82,.16)';c.lineWidth=Math.max(1,2.2*k);
-    c.beginPath();c.arc(cx,cy,liveR*.34,0,TAU);c.stroke();
-    for(let n=0;n<9;n++){
-      const a=n/9*TAU+rn()*.18,d=liveR*(.38+rn()*.25),sz=(2+rn()*5)*k;
-      c.fillStyle='rgba(25,29,29,'+(active?.24:.16)+')';c.beginPath();c.ellipse(cx+Math.cos(a)*d,cy+Math.sin(a)*d,sz*1.7,sz,rn()*TAU,0,TAU);c.fill();
+  c.save();
+  c.lineCap='round';c.lineJoin='round';
+  /* Branching fracture. Regular rays read as a star / disk at command zoom;
+     jittered polylines with forks stay a crack network. No radial fill. */
+  const nVein=kind==='mass'?10+initial*2:8;
+  const stroke=(pts,col,w)=>{
+    if(pts.length<2)return;
+    c.strokeStyle=col;c.lineWidth=w;c.beginPath();
+    c.moveTo(pts[0][0],pts[0][1]);
+    for(let i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]);
+    c.stroke();
+  };
+  const chip=(x,y,s,a)=>{
+    c.save();c.translate(x,y);c.rotate(a);
+    c.fillStyle=active?cry:dead;
+    c.beginPath();c.moveTo(0,-s*1.6);c.lineTo(s*.7,s*.9);c.lineTo(-s*.7,s*.9);c.closePath();c.fill();
+    c.restore();
+  };
+  for(let n=0;n<nVein;n++){
+    let a=n/nVein*TAU+(rn()-.5)*.72,x=cx+(rn()-.5)*liveR*.10,y=cy+(rn()-.5)*liveR*.10;
+    const segs=3+(rn()*3)|0,pts=[[x,y]];
+    for(let s=0;s<segs;s++){
+      a+=(rn()-.5)*.78;
+      const step=liveR*(.16+rn()*.30);
+      x+=Math.cos(a)*step;y+=Math.sin(a)*step;pts.push([x,y]);
     }
-  }else{
-    for(let n=0;n<6+initial*2;n++){
-      const a=rn()*TAU,d=liveR*(.28+rn()*.55),s=(1.4+rn()*3.2)*k;
-      c.fillStyle=active?'rgba(120,108,88,.20)':'rgba(70,66,60,.12)';
-      c.beginPath();c.moveTo(cx+Math.cos(a)*d,cy+Math.sin(a)*d-s*1.8);c.lineTo(cx+Math.cos(a)*d+s,cy+Math.sin(a)*d+s);c.lineTo(cx+Math.cos(a)*d-s,cy+Math.sin(a)*d+s);c.closePath();c.fill();
+    const dw=Math.max(2.2,(3.4+rn()*2.6)*k),cw=Math.max(1.0,dw*.42);
+    stroke(pts,active?'rgba(16,18,20,.72)':'rgba(28,28,26,.30)',dw);
+    stroke(pts,active?cry:dead,cw);
+    if(n<nVein*.6&&pts.length>2){
+      const mid=pts[1+(rn()*(pts.length-2))|0];
+      const a2=a+((n&1)?1.05:-1.05)+(rn()-.5)*.4,len=liveR*(.22+rn()*.20);
+      const fork=[mid,[mid[0]+Math.cos(a2)*len,mid[1]+Math.sin(a2)*len]];
+      stroke(fork,active?'rgba(16,18,20,.62)':'rgba(28,28,26,.24)',dw*.78);
+      stroke(fork,active?cry:dead,cw*.78);
+      if(active)chip(fork[1][0],fork[1][1],Math.max(1.3,2.4*k),a2);
+    }
+    if(active){
+      const p=pts[1+(rn()*(pts.length-1))|0];
+      chip(p[0],p[1],Math.max(1.2,(1.8+rn()*1.6)*k),a+(rn()-.5)*.5);
+    }
+  }
+  /* Energy vents keep a few dark rock chips — a wound, not a crystal bed.
+     No ring: that circle was the disk under the cairn. */
+  if(kind==='energy'){
+    for(let n=0;n<5+initial;n++){
+      const a=rn()*TAU,d=liveR*(.22+rn()*.50),sz=(1.6+rn()*3.4)*k;
+      c.fillStyle='rgba(28,30,30,'+(active?.22:.12)+')';
+      c.beginPath();c.ellipse(cx+Math.cos(a)*d,cy+Math.sin(a)*d,sz*1.6,sz,rn()*TAU,0,TAU);c.fill();
     }
   }
   c.restore();
+}
+function restampResourceNodesInTex(sx,sy,w,h){
+  /* Concrete and creep overwrite the gen-time cracks. Stamp them back on
+     top so every node — free or occupied — still reads as a vein field. */
+  if(!terrainCanvas||typeof deposits==='undefined')return;
+  const k=TS/MAP,c=terrainCanvas.getContext('2d'),pad=90;
+  const x0=sx/k-pad,y0=sy/k-pad,x1=(sx+w)/k+pad,y1=(sy+h)/k+pad;
+  for(const D of deposits){
+    if(D.x<x0||D.x>x1||D.y<y0||D.y>y1)continue;
+    paintResourceGroundNode(c,D,'mass',typeof depositTier==='function'?depositTier(D):D.tier||1,false);
+  }
+  if(typeof geysers!=='undefined')for(const G of geysers){
+    if(G.x<x0||G.x>x1||G.y<y0||G.y>y1)continue;
+    paintResourceGroundNode(c,G,'energy',typeof geyserTier==='function'?geyserTier(G):(G.taken?2:3),false);
+  }
 }
 function refreshResourceTerrainNode(N,kind,before,after){
   if(!terrainCanvas||before===after)return;
@@ -4665,6 +4688,7 @@ function paintPave(sx,sy,w,h){
   c.drawImage(tmp,sx,sy);
   c.restore();
   }
+  restampResourceNodesInTex(sx,sy,w,h);
 }
 /* ---- CONNECTING CONDUITS --------------------------------------------------
    A base made of structures that merely happen to be near each other reads as
@@ -4859,6 +4883,8 @@ function makeOrganicFoundation(B){
   };
   if(terrainBase) paint(terrainBase.getContext('2d'));
   paint(terrainCanvas.getContext('2d'));
+  restampResourceNodesInTex(clamp(Math.floor(cx-rr*1.4),0,TS-1),clamp(Math.floor(cy-rr*1.4),0,TS-1),
+    Math.min(TS,rr*2.8),Math.min(TS,rr*2.8));
   const ext=kind==='harbor'?1.55:kind==='airfield'?1.15:1.25;
   const sx=clamp(Math.floor(cx-rr*ext),0,TS-1),sy=clamp(Math.floor(cy-rr*ext),0,TS-1);
   uploadTerrainTexRegion(sx,sy,Math.min(TS-sx,rr*ext*2),Math.min(TS-sy,rr*ext*2),true);

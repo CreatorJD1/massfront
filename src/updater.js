@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.39';
+const APP_VERSION = '1.33.42';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Crystal vein mex (no crater disks), War Table aspect fit, volumetric water + shoreline crater flood, barrel-height shots, commander/titan close-zoom rumble, realistic ground grain.";
+const APP_NOTES = "Hotfix: mass nodes no longer emit a white bloom disc during deploy; additive vein ribbons and standing glow pools are gone — terrain cracks and crystal meshes remain.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,

@@ -655,33 +655,10 @@ function addWreckCoalBed(x,y,h,span,heat,seed,n){
     bbAlpha.add(sprites.smoke,x,y,h+span*0.55,span*0.85,seed, 38,36,34, Math.min(90,48*heat));
 }
 function stampCrystalVeins(D,H,col,pulse,fieldR,taken){
-  /* Branching ground veins. sprites.crater under every node was the dark
-     disk on crystal spawns — including occupied mex pads. Veins read as
-     ore in the dirt and stay after the extractor lands. Additive, not a
-     circular stain. gh() is render()'s local — this helper is top-level. */
-  if(!sprites.glow) return;
-  const th=(typeof terrainH==='function')?terrainH:()=>0;
-  const seed=(D.pulse||0)+D.x*0.017+D.y*0.013;
-  const n=fieldR>52?6:5;
-  const a0=taken?15:28;
-  for(let k=0;k<n;k++){
-    const a=seed+k*1.047+Math.sin(seed*2.7+k)*0.28;
-    const len=fieldR*(0.38+((Math.abs((D.x*13+k*19)|0)%9)*0.035))*pulse;
-    const x1=D.x+Math.cos(a)*len, y1=D.y+Math.sin(a)*len;
-    addBeamRibbon(sprites.glow,D.x,H+0.24,D.y,x1,th(x1,y1)+0.26,y1,
-      2.15+(k&1)*0.55,col[0],col[1],col[2],a0,90);
-    if(k<3){
-      const mid=0.52, a2=a+((k&1)?0.62:-0.62);
-      const mx=D.x+Math.cos(a)*len*mid, my=D.y+Math.sin(a)*len*mid;
-      const len2=len*0.42;
-      const x2=mx+Math.cos(a2)*len2, y2=my+Math.sin(a2)*len2;
-      addBeamRibbon(sprites.glow,mx,th(mx,my)+0.24,my,x2,th(x2,y2)+0.26,y2,
-        1.55,col[0],col[1],col[2],taken?11:18,80);
-    }
-  }
-  /* Occupied pads already have the mex. The small centre glow sat under
-     the column and bloomed into a second white disc. */
-  if(!taken) bbAdd.add(sprites.glow,D.x,D.y,H+0.30,fieldR*0.18*pulse,0,col[0],col[1],col[2],12);
+  /* Terrain paintResourceGroundNode owns the crack network. Additive
+     glow ribbons + a centre sprite stacked with crystal pools into the
+     white disc on every free node — the ore-refinery bloom in deploy. */
+  return;
 }
 
 /* Combat VFX is authored in 2D (fx/fy, beam x0/y0). The draw path used a
@@ -1110,28 +1087,17 @@ function render(dtDraw){
     const sc=cs.s*(cs.core?.090:.074)*edge;
     const H=gh(cs.x,cs.y);
     FX.crystal.add(cs.x,cs.y,H,sc,cs.a,col[0],col[1],col[2],255);
-    /* Facet glints. A crystal that never flashes is a rock. Each cluster
-       twinkles on its own phase (position-hashed), one short bright spark at
-       a time - plus a standing cool glow pooled at the base, the light the
-       translucent shader path implies it is leaking into the ground. */
-    /* FADE, do not gate: a hard cutoff pops glows on and off when a machine
-       legitimately crosses the threshold; scaled alpha arrives as dimming.
-       Floor stays up during deploy — matchLive is false there, and the 0.45
-       perfScale cutoff left crystals looking like unlit rocks. */
-    const deployGlow=(!matchLive&&typeof carrier!=='undefined'&&carrier.active)?0.9:0;
-    const glowQ=Math.max(0.65, deployGlow, clamp((perfScale-0.28)/0.45,0,1));
+    /* Facet glints only. Standing glow pools under every shard — and a
+       deploy floor of 0.9 while matchLive is false — were the white disc
+       on DEPLOY BASE. The CRYST mesh plus terrain cracks carry identity. */
+    const glowQ=clamp((perfScale-0.28)/0.45,0,1);
     if(glowQ>0.02){
       const tw=Math.sin(t*2.1+cs.x*0.37+cs.y*0.113);
       if(tw>0.97){
         const f=(tw-0.97)*33, ga=cs.a+cs.x;
         bbAdd.add(sprites.spark||sprites.glow,
           cs.x+Math.cos(ga)*sc*46, cs.y+Math.sin(ga)*sc*46, H+sc*175*(0.55+0.4*Math.sin(cs.y)),
-          1.8+f*2.2, t*2+cs.x, 235,250,255, 140*f*glowQ);
-      }
-      if(cs.core){
-        bbAdd.add(sprites.glow,cs.x,cs.y,H+1.5,sc*14,0,col[0],col[1],col[2],32*glowQ);
-      } else {
-        bbAdd.add(sprites.glow,cs.x,cs.y,H+1.3,sc*8,0,col[0],col[1],col[2],20*glowQ);
+          1.8+f*2.2, t*2+cs.x, 235,250,255, 70*f*glowQ);
       }
     }
   }
@@ -1147,19 +1113,8 @@ function render(dtDraw){
     const pulse=.82+.18*Math.sin(t*2.1+(D.pulse||0)),H=gh(D.x,D.y);
     const fieldR=46+(D.initialTier||1)*8;
     stampCrystalVeins(D,H,col,pulse,fieldR,!!D.taken);
-    /* Occupied: veins stay (ore is still in the dirt). Skip the unused-node
-       halo — CRYST + mex lamp stacked into the white discs on the QA shot. */
-    if(D.taken) continue;
-    if(FX.dep) FX.dep.add(D.x,D.y,H,1.18+tier*.17,0,col[0],col[1],col[2],tier?255:145);
-    /* Unused nodes keep a faint seep + ring. Veins already mark the bed. */
-    const depGlow=(!matchLive&&typeof carrier!=='undefined'&&carrier.active)?0.9:0;
-    const depQ=Math.max(0.55, depGlow, clamp((perfScale-0.28)/0.45,0,1));
-    const halo=fieldR*pulse;
-    /* One ground aura + one faint ring — the old 2D hud.js language.
-       Five stacked additive sprites (halo*2.55 + pool + H+10/H+12 punches
-       at alpha 140) blew the node into a white disc and bypassed bloom. */
-    bbAdd.add(sprites.glow,D.x,D.y,H+0.48,halo*0.82,0,col[0],col[1],col[2],(tier?10:4)*depQ);
-    if(tier&&sprites.ring) bbAdd.add(sprites.ring,D.x,D.y,H+0.62,halo*0.70,t*.10+(D.pulse||0),col[0],col[1],col[2],8*depQ);
+    /* Occupied: extractor owns the pad. Free-node halo + ring + vein
+       ribbons were the white bloom disc in the deploy screenshot. */
   }
   for(const G of geysers){ if(!vis(G.x,G.y,180)||!fogPointVisible(G.x,G.y)) continue;
     const tier=typeof geyserTier==='function'?geyserTier(G):(G.taken?2:3);
@@ -1351,11 +1306,11 @@ function render(dtDraw){
     }
     if(fac==='syndicate'){
       bob+=1.15+Math.sin(an*2.25+Bd.x*.01)*0.55;
-      em+=0.05+Math.abs(Math.sin(an*2.1))*0.05;
+      if(Bd.type!=='mex') em+=0.05+Math.abs(Math.sin(an*2.1))*0.05;
     }else if(fac==='horde'){
       bob*=0.18;
       sq*=1+Math.sin(an*1.72+Bd.y*.012)*0.026;
-      em+=0.025+Math.abs(Math.sin(an*2.8))*0.035;
+      if(Bd.type!=='mex') em+=0.025+Math.abs(Math.sin(an*2.8))*0.035;
     }
     if(Bd.hitT>0) em+=0.35;
     if(deployAge<2.4){
@@ -2866,22 +2821,10 @@ function render(dtDraw){
          previously had no readback on the unit itself. */
       if(ushielded[i]>0) putShieldBar(ux[i],uy[i],bh+6*hbPx,bw*0.72,clamp(ushielded[i]/0.7,0,1));
     };
-    /* A type-select can contain hundreds of units in regular formation. One
-       bar per chassis then touches its neighbours and becomes a solid stripe.
-       Collapse dense selections/always-on views to the most damaged unit in
-       each view-sized cell. Small squads still retain one bar per unit. */
-    if(hbN>48){
-      /* Numeric key, not 'x,y' — the string was the single biggest source of
-         per-frame garbage here. Cells are at least 48 world units, so a map
-         would have to be 8192 cells across to collide; MAP is far below that. */
-      const cell=Math.max(48,orthoSpan/17);
-      _hbCells.clear();
-      for(let k=0;k<hbN;k++){
-        const i=_hbI[k], key=((uy[i]/cell)|0)*8192+((ux[i]/cell)|0), old=_hbCells.get(key);
-        if(old===undefined||_hbF[k]<_hbF[old]) _hbCells.set(key,k);
-      }
-      for(const k of _hbCells.values()) putUnitBar(k);
-    } else for(let k=0;k<hbN;k++) putUnitBar(k);
+    /* One bar per eligible unit. Cell-collapse (most-damaged per view cell
+       once hbN>48) changed the approved select/always-on language without
+       a go-ahead — bars vanished inside any real formation. */
+    for(let k=0;k<hbN;k++) putUnitBar(k);
   }
 
   /* Per-unit veterancy and per-structure Mk/tech pips. Not an army rank —

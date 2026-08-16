@@ -14,17 +14,17 @@
                       ],
     "base":  "",
     "severity":  "recommended",
-    "notes":  "Crystal vein mex (no crater disks), War Table aspect fit, volumetric water + shoreline crater flood, barrel-height shots, commander/titan close-zoom rumble, realistic ground grain.",
+    "notes":  "Hotfix: finished extractors no longer bloom white; resource nodes use vein cracks instead of a dark disk; occupied pads keep the crack stamp.",
     "files":  [
                   {
-                      "path":  "MASSFRONT-v1.33.39-update.js",
-                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.39-update.js?download=true",
-                      "size":  57274564,
-                      "sha256":  "f8b276b26459820a5358f9753527137144c029e5eb40095d9037d3af714fd8a2"
+                      "path":  "MASSFRONT-v1.33.41-update.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.41-update.js?download=true",
+                      "size":  57274398,
+                      "sha256":  "a199f246e6e1e8c8d0893a344c535dc5e68f672be71455b2f64430a3f61634bb"
                   }
               ],
     "packsIndex":  "packs.json",
     "minBaseVersion":  "1.22.0",
     "channel":  "stable",
-    "version":  "1.33.39"
+    "version":  "1.33.41"
 }

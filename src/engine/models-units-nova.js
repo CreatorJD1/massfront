@@ -1407,9 +1407,9 @@ const TFC_NOVA_BLD_BESPOKE_PACKS=Object.freeze({
     id:'nova-mex-v2', source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_PAD]:MAT.FOUNDATION_PAD,
-      /* The four intake collars and the throat ring are the moving parts of an
-         ore extractor, and banding is what a mine puts on those. */
-      [MAT.TRIM]:MAT.WARN
+      /* Intake collars / throat ring. WARN (#e8bf3a) sat past the 0.936 bloom
+         thresh and became the white disc the moment the mex finished growing. */
+      [MAT.TRIM]:MAT.TWR_MACH
     })
   }),
   'pgen':Object.freeze({

@@ -304,7 +304,7 @@ function mdlLegEconomy(kind){
     m.bevelBox(0,5,0,24,9,22,1.5,LEG_ARM); m.cyl(0,14,0,7,5,12,10,LEG_MACH);
     for(const s of [-1,1]){
       m.bevelBox(s*10,5,0,5,13,8,.5,LEG_PANEL);
-      m.box(s*10,17.75,0,2.4,.22,4,s>0?LEG_RED:LEG_HOT);
+      m.box(s*10,17.75,0,2.4,.22,4,s>0?LEG_RED:LEG_MACH);
     }
   }else if(kind==='pgen'||kind==='geo'){
     m.cyl(0,6,0,12,9,15,12,LEG_ARM); m.cyl(0,21,0,7,4,6,12,LEG_MACH); legCore(m,0,27,0,3.5);
@@ -496,7 +496,7 @@ const DOM_LEGION_STRUCTURE_PACKS=Object.freeze({
     id:'legion-mex-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.LEGION_RIVET,[MAT.TWR_COAT]:MAT.LEGION_CAST,
-      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_THERMITE,
+      [MAT.TWR_MACH]:MAT.LEGION_SIEGE,[MAT.TWR_GLOW]:MAT.LEGION_CAST,
       [MAT.TWR_PAD]:MAT.LEGION_SIEGE,[MAT.TRIM]:MAT.LEGION_RIVET
     })
   }),

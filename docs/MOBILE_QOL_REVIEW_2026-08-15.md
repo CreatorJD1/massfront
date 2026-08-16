@@ -82,13 +82,15 @@ APK-only leftovers: vibrate, `boot.js`, GLES/cutout/FileProvider already in the 
 2. Arcade T1–T5 from planet + size; Custom player-picked threat, ~0.65× payout.
 3. Minimap phone pass.
 4. Ship Codex `icons-*.png` when art exists.
-5. Menu hub (section 8) as its own project.
+5. Menu hub (section 8 + `docs/MENU_HUB_RESEARCH_2026-08-15.md`) as its own project — after Custom.
 
 ---
 
 ## 8. Menu / research hub — research only
 
 Concept shots (2026-08-15 images 3–5): gamified home with a 3D base diorama, resource header, Continue Campaign, mode cards, bottom tab bar; War Room as a base-node graph; research as a mobile minigame that shortcuts an MMO loop.
+
+Implementer tables (front-screen openers, concept mapping, A–D sinks, first slice): `docs/MENU_HUB_RESEARCH_2026-08-15.md`. `docs/HANDOFF.md` does not describe a hub. Custom is still not a mode (`docs/CUSTOM_VS_ARCADE_2026-08-15.md`).
 
 ### What exists today
 
@@ -134,8 +136,9 @@ A menu minigame should be a **shortcut into one of those two graphs**, not a thi
 
 Rules if A is built later:
 
-- Grant **elapsed time** on an in-progress node (`bankResearchProgress`), or a small `matGrant`, never `applyResearch(id)` from the menu.
-- Cap once per real-world day (dailies already exist — hook there, do not add a fourth streak).
+- Grant **elapsed time** on an in-progress node, or a small `matGrant` / `META.researchData` drip, never `applyResearch(id)` from the menu.
+- `bankResearchProgress` / `researchCarry` are **this match only**. `resetWorld()` (called by `setupAttract` and `newSkirmish`) wipes them. A menu write does not survive. Account Data/mats are the safe sink. A match-graph ticket must be consumed in `newSkirmish` **after** `resetWorld`, and the player still starts the study on a Complex (`renderResearchMenu`).
+- Cap once per real-world day (dailies already exist — hook `META.daily.day`, do not add a fourth streak).
 - Fail / quit grants nothing. A skippable toy that always pays is a second store.
 - Use the attract GL view as the board (`stopAttract` already shows `#gl`). Do not load a second WebGL context.
 
@@ -145,15 +148,15 @@ Rules if A is built later:
 - Session ≤ 90s or it blocks Continue Campaign — the actual door.
 - Haptics: `buzz` / `rumbleHaptic` on success only. Menu shake would nudge the diorama (`rumbleInMatch` already refuses that).
 - No new large media in the installer. Reuse `ITEM_ART`, unit sheet, attract scene.
-- `#startScreen` stay the fallback. Hub chrome is a takeover that **calls** `showScr('devScr')` etc., same as `src/offline.js` wraps settings.
+- `#startScreen` stay the fallback. Hub chrome is a takeover that **calls** `showFrontScreen('devScr')` etc., same as `src/offline.js` wraps settings. `showScr` is a local `boot()` helper, not a global router.
 
 ### 8.4 What maps to which file
 
 | Hub beat | Owner today | Takeover later |
 |---|---|---|
-| Continue Campaign | `#startBtn` → War Room → last site | Same function, bigger button |
+| Continue Campaign | `#startBtn` → War Room; `#sessResume` → `sessResume()`; Table CONTINUE → `mfGalaxyResumeConquest` | Same functions, bigger button. Not the locked Campaign card |
 | Mode cards | `#warScr` / `meta.js` locked copy | Unchanged until Custom/MMO exist |
-| Research graph | `develop.js` + `restree3d.js` | Minigame writes `researchCarry` / `matBag` only |
+| Research graph | `develop.js` + `restree3d.js` | Minigame writes `matBag` / `META.researchData` / `META.resQueue`, or a post-`resetWorld` carry ticket — never `applyResearch` |
 | Ops / contracts | `#opsScr` | Tab opens this screen |
 | Arsenal | `#armory` | Tab opens this screen |
 | 3D base | Attract in `main.js` | Keep; do not replace with a fake city |
@@ -162,8 +165,16 @@ Rules if A is built later:
 
 Do **not** implement the hub or the minigame until:
 
-1. Custom is a real War Room card (no `mapWins`) — section 7.1.
-2. The match research Complex path is the one players still use (minigame is a drip, not a replacement).
-3. MMO stays a locked card. A scout flyover (option D) may exist as flavour only.
+1. Custom is a real War Room card (no `mapWins`) — section 7.1 and `docs/CUSTOM_VS_ARCADE_2026-08-15.md`. `metaGrant` today still writes `META.mapWins` when the conquest gate is off; that leak must die first.
+2. The match research Complex path is the one players still use (minigame is a drip, not a replacement). Never `applyResearch()` from the menu.
+3. MMO stays a locked card. A scout flyover (option D) may exist as flavour only — no `mapWins`, no `matsFromMatch`.
 
-This VFX pass does not rewrite `startScreen`.
+Until those gates land, **no hub chrome** (not even a tab bar that only calls `showFrontScreen`). This VFX pass does not rewrite `startScreen`.
+
+### 8.6 This pass — first later slice and hard do-nots
+
+Full inventory and A–D function sinks: `docs/MENU_HUB_RESEARCH_2026-08-15.md`.
+
+**Later first slice (do not code it here):** one takeover file, registered in `boot.js` and `manifest.json` `order`. Overlay a bottom tab bar on `#startScreen` (Home / Deploy / Research / Ops / Arsenal) plus one CONTINUE. Each control only calls the live opener (`renderWarRoom` + `showFrontScreen('warScr')`, `renderDevelop` + `devScr`, and so on). Continue is `sessResume` if a dropped session exists, else War Room — **not** the locked Campaign card. No minigame, no home mode cards, no new `META` fields.
+
+**Do not implement now:** hub chrome; `#startScreen` rewrite; research minigame; second progression / hub XP; `applyResearch` or `devBuy` from the menu; menu writes to `researchCarry`; Custom/Campaign/MMO/Co-op as playable hub cards; Sandbox as Custom; `META.mapWins` from Custom or a scout; second WebGL context; a second 48-site graph; version bump / bundle.

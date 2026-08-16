@@ -1817,14 +1817,17 @@ void main(){
      bilinear is what read as "blurry ground". A 4-tap unsharp against its own
      local blur restores the painted edges (roads, scorch, biome breaks)
      without inventing detail the artist never put there. */
-  float uGate=1.0-smoothstep(0.9,1.8,hppx);
+  /* hppx at SPAN_MIN on a 412 phone is ~0.5–1.0, but mid-tactical is 2–4
+     and the old 0.9–1.8 gate was already 0 there — painted roads went
+     bilinear-soft the moment the player backed off a few metres. */
+  float uGate=1.0-smoothstep(2.4,6.0,hppx);
   if(uGate>0.03){
     vec2 texel=1.0/vec2(textureSize(uMap,0));
     vec3 blurM=(texture(uMap,vMapUV+vec2(texel.x,0.0)).rgb
                +texture(uMap,vMapUV-vec2(texel.x,0.0)).rgb
                +texture(uMap,vMapUV+vec2(0.0,texel.y)).rgb
                +texture(uMap,vMapUV-vec2(0.0,texel.y)).rgb)*0.25;
-    base=max(base+(base-blurM)*(1.30*uGate),vec3(0.0));
+    base=max(base+(base-blurM)*(2.05*uGate),vec3(0.0));
   }
   /* Third, finer octave fades in with proximity: sub-metre gravel the 512
      detail texture already carries but fixed weights never let through.
@@ -1977,17 +1980,18 @@ void main(){
      without a second heightfield.
      Look lock: fine aggregate / compaction / oil sheen — never hatch,
      cel outline, checker, or painted lane dashes. */
-  float grainG=1.0-smoothstep(0.50,2.20,hppx);
+  float grainG=1.0-smoothstep(0.40,4.50,hppx);
   if(grainG>0.02){
     float agg=mfH21(wxz*8.4)+mfH21(wxz*21.7+13.2);
     float fine=mfH21(wxz*46.0+9.1);
+    float micro=mfH21(wxz*78.0+3.7);
     float compact=mfVN(wxz*0.62)*0.58+mfVN(wxz*1.85+6.1)*0.42;
     float dirt=mfVN(wxz*3.2+2.4);
     float oil=mfVN(wxz*0.19+4.7);
     float hard=max(hm,cityYard);
     /* Asphalt: fine aggregate + faint oil pockets. Amplitude stays a multiply
        around 1 so dark slab / pale walk values survive. */
-    float aN=(agg-1.0)*0.050+(fine-0.5)*0.055+(oil-0.5)*0.030;
+    float aN=(agg-1.0)*0.050+(fine-0.5)*0.055+(micro-0.5)*0.040+(oil-0.5)*0.030;
     base*=1.0+aN*hard*grainG;
     base+=vec3(0.014,0.013,0.011)*max(0.0,0.42-oil)*hard*grainG*closeG;
     /* Soil: compaction patches + grit, not a spray of dots. */

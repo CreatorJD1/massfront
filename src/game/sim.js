@@ -1738,7 +1738,7 @@ function addBld(type,team,x,y,instant,rot){
             buildPaidM:instant?T.cm:0,buildPaidE:instant?T.ce:0,buildStalled:false};
   if(type==='mex') for(let di=0;di<deposits.length;di++){
     const D=deposits[di];
-    if(dist2(D.x,D.y,x,y)<9){ b.dep=di; b.rich=(D.initialTier||1)>=3; break; }
+    if(dist2(D.x,D.y,x,y)<9){ b.dep=di; b.rich=(D.initialTier||1)>=3; D.taken=true; break; }
   }
   if(type==='geo') for(let gi=0;gi<geysers.length;gi++){
     const G=geysers[gi];

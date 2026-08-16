@@ -109,7 +109,7 @@ function mdlMacMex(){
   m.tube(0,9.8,0,5.2,3.1,13.5,16,MAC_BORE);
   m.cyl(0,10.2,0,2.9,1.6,18,12,MAC_MECH,false);
   m.cyl(0,28.2,0,1.8,.25,5.2,10,MAC_TRIM,false);
-  m.ring(0,22.0,0,7.0,8.2,22,MAC_GLOW);
+  m.ring(0,22.0,0,7.0,8.2,22,MAC_TRIM);
   for(let i=0;i<3;i++){
     const a=i*TAU/3,x=Math.cos(a)*12,z=Math.sin(a)*12;
     m.bevelBox(x,9,z,5.5,6.5,5.5,.65,MAC_COAT,a);
@@ -779,7 +779,7 @@ const SYN_MACHINE_STRUCTURE_PACKS=Object.freeze({
     id:'syndicate-mex-v2',source:'semantic-bake', maps:null,
     surfaces:Object.freeze({
       [MAT.TWR_ARMOR]:MAT.SYN_NANO,[MAT.TWR_COAT]:MAT.SYN_HOLO,
-      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_CONDUIT,
+      [MAT.TWR_MACH]:MAT.SYN_GOLD,[MAT.TWR_GLOW]:MAT.SYN_NANO,
       [MAT.TWR_PAD]:MAT.SYN_HOLO,[MAT.TRIM]:MAT.SYN_NANO
     })
   }),

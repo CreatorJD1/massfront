@@ -294,7 +294,7 @@ var INF_ICHOR=Object.freeze({
     for(let i=0;i<3;i++){
       const a=(i-1)*.72;infOpenLimb(m,[-4,8,Math.sin(a)*5],[10+Math.cos(a)*5,12+i*3,Math.sin(a)*13],3.1,1.45,8);
     }
-    infGlowNode(m,-5,9,0,2.1);infBulb(m,-8,6,-6,3.0,INF_SAC,.82);
+    infBulb(m,-8,6,-6,3.0,INF_SAC,.82);
     return m.build();
   }
   function mdlInfPgen(){

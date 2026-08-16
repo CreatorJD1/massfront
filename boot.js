@@ -27,7 +27,7 @@
      otherwise reuse a stale source even after the installer or local preview
      has changed, which made new settings appear to be missing until cache was
      cleared manually. Patch bundles keep their content-addressed Blob URLs. */
-   var PACKAGED_REV='1.33.39';
+   var PACKAGED_REV='1.33.42';
   var DB='massfront-updates', STORE='bundles';
   var bootShield=null, bootShieldTimer=0, bootShieldWatchdog=0;
   var bootShieldEvents=['pointerdown','pointerup','touchstart','touchend','click'];

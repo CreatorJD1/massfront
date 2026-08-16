@@ -1677,7 +1677,11 @@ function radioAck(action,count,wx,wy){
      tutorialVoice / 5200ms throttle used to swallow almost every ack. */
   if(!brood && typeof sfx==='function') sfx('radio',wx,wy,0.9);
   RADIO_ACK.voiceAt=now;
-  voPlay(A.id, action, wx, wy, lines.indexOf(line));
+  /* Pack has no retreat/underfire/victory/defeat/guard takes. Aliasing those
+     onto stop/attack/ability/hold played the wrong spoken line (victory said
+     "Commander system armed"; underfire said "Weapons free"). HUD copy stays;
+     VO only plays when the bank actually has that action. */
+  if(voActionKey(action)===action) voPlay(A.id, action, wx, wy, lines.indexOf(line));
   return true;
 }
 

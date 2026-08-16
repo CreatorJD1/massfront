@@ -360,27 +360,24 @@ function renderLegacySprites(dtDraw){
     batN.add(sRock,r.x,r.y,r.s,r.s,r.a,255,255,255,255); }
   for(const d of deposits){
     if(d.x<x0||d.x>x1||d.y<y0||d.y>y1) continue;
-    const tier=depositTier(d),frac=d.capacity?d.remaining/d.capacity:0;
+    const tier=depositTier(d);
     const col=tier===3?[188,82,255]:tier===2?[58,225,150]:tier===1?[58,190,255]:[72,76,88];
-    /* 2D fallback of the 3D vein stamp. Crater discs were the dark pads
-       under every crystal spawn. Thin glow rects stay after a mex lands. */
     const fieldR=46+(d.initialTier||1)*8;
-    const pulse=.82+.18*Math.sin(t*2.1+(d.pulse||0));
-    const seed=(d.pulse||0)+d.x*0.017+d.y*0.013;
-    for(let k=0;k<5;k++){
-      const a=seed+k*1.047;
-      const len=fieldR*(0.52+((k*17)%9)*0.03)*pulse;
-      batA.add(glow,d.x+Math.cos(a)*len*0.5,d.y+Math.sin(a)*len*0.5,
-        3.2,len,a,col[0],col[1],col[2],d.taken?(tier?20:10):(tier?38:16));
-    }
-    if(!d.taken){
-      batA.add(glow,d.x,d.y,fieldR*0.28,fieldR*0.28,0,col[0],col[1],col[2],tier?(16+10*frac)|0:6);
-    }
-    /* 3D owns the outcrop. The 2D dep stamp is a circular pad — it is what
-       made live nodes look like a grey plate under the shards. */
-    if(tier>0&&!d.taken&&!use3D){
-      if(tier===3) batN.add(sprites.depR,d.x,d.y,51,51,0,col[0],col[1],col[2],255);
-      else batN.add(sDep,d.x,d.y,42+tier*4,42+tier*4,0,col[0],col[1],col[2],255);
+    /* 3D owns veins (terrain bake) and shards. 2D glow rects under every
+       free node were the white disc + cyan rays on DEPLOY BASE. */
+    if(!use3D){
+      const pulse=.82+.18*Math.sin(t*2.1+(d.pulse||0));
+      const seed=(d.pulse||0)+d.x*0.017+d.y*0.013;
+      for(let k=0;k<5;k++){
+        const a=seed+k*1.047;
+        const len=fieldR*(0.52+((k*17)%9)*0.03)*pulse;
+        batN.add(sPx,d.x+Math.cos(a)*len*0.5,d.y+Math.sin(a)*len*0.5,
+          2.2,len,a,col[0],col[1],col[2],d.taken?(tier?70:28):(tier?110:48));
+      }
+      if(tier>0&&!d.taken){
+        if(tier===3) batN.add(sprites.depR,d.x,d.y,51,51,0,col[0],col[1],col[2],255);
+        else batN.add(sDep,d.x,d.y,42+tier*4,42+tier*4,0,col[0],col[1],col[2],255);
+      }
     }
     if(tier>0&&perfScale>.45&&Math.random()<.018*tier)
       addParticle(0,d.x+rr(-fieldR*.55,fieldR*.55),d.y+rr(-fieldR*.42,fieldR*.42),rr(-3,3),rr(-12,-4),.55,3.5,col[0],col[1],col[2]);
@@ -388,15 +385,18 @@ function renderLegacySprites(dtDraw){
   for(const gz of geysers){
     if(gz.x<x0||gz.x>x1||gz.y<y0||gz.y>y1) continue;
     const gc=gz.taken?[95,118,125]:[105,235,255];
-    batN.add(glow,gz.x,gz.y,88,88,0,gc[0],gc[1],gc[2],gz.taken?28:86);
-    batN.add(selRing,gz.x,gz.y,82,82,t*.26,gc[0],gc[1],gc[2],gz.taken?35:140);
-    /* sprites.geyser is the metal iris (dark ellipses + 5 rim arcs + cyan
-       hole). That stamp is the phone-shot hatch. 3D draws the vent. */
-    if(!use3D) batN.add(sprites.geyser,gz.x,gz.y,52,52,0,gc[0],gc[1],gc[2],255);
+    if(!use3D){
+      batN.add(glow,gz.x,gz.y,88,88,0,gc[0],gc[1],gc[2],gz.taken?28:86);
+      batN.add(selRing,gz.x,gz.y,82,82,t*.26,gc[0],gc[1],gc[2],gz.taken?35:140);
+      /* sprites.geyser is the metal iris (dark ellipses + 5 rim arcs + cyan
+         hole). That stamp is the phone-shot hatch. 3D draws the vent. */
+      batN.add(sprites.geyser,gz.x,gz.y,52,52,0,gc[0],gc[1],gc[2],255);
+    }
     if(perfScale>0.4&&Math.random()<0.06)
       addParticle(1,gz.x+rr(-5,5),gz.y+rr(-4,4),rr(-2,2),rr(-17,-10),1.3,9, 165,225,250);
   }
   for(const cst of crystals){ if(cst.x<x0||cst.x>x1||cst.y<y0||cst.y>y1) continue;
+    if(use3D) continue;
     const D=deposits[cst.dep],tier=depositTier(D);if(!D||cst.band>tier||D.taken)continue;
     const bandFill=clamp((D.remaining-(tier-1)*DEPOSIT_BAND)/DEPOSIT_BAND,0,1);
     const edge=cst.band===tier?(.42+.58*bandFill):1,pulse=.94+.08*Math.sin(t*1.45+(cst.phase||0));
@@ -736,7 +736,7 @@ function renderLegacySprites(dtDraw){
          batA.add(sprites.glow,Bd.x,ry,9+pips*3,7,0,255,210,87,46);
        }
        // animated working parts
-      if(Bd.type==='mex') batN.add(sprites.rotor,Bd.x,Bd.y-sz*0.09,sz*0.5,sz*0.5,t*2.4+b,255,255,255,235);
+      if(Bd.type==='mex'&&!use3D) batN.add(sprites.rotor,Bd.x,Bd.y-sz*0.09,sz*0.5,sz*0.5,t*2.4+b,255,255,255,235);
       if(Bd.type==='pgen') batA.add(sprites.glow,Bd.x,Bd.y-sz*0.04,sz*0.7+Math.sin(t*3.2+b)*4,sz*0.7+Math.sin(t*3.2+b)*4,0,255,205,90,44);
       if(Bd.type==='sgen'){
         batA.add(sprites.ring,Bd.x,Bd.y,240,240,t*0.4,80,220,160,26);

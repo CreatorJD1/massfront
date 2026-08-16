@@ -9,8 +9,8 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         // Must match APP_VERSION/PACKAGED_REV. An older wrapper label made a
         // recovered 1.33.31 build appear to be the pre-recovery 1.33.8 build.
-        versionCode 13339
-        versionName "1.33.39"
+        versionCode 13342
+        versionName "1.33.42"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

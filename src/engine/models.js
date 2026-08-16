@@ -156,7 +156,7 @@ function bindMat(){
   COL_MAT.set(NOVA_FAB_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_FAB_CORE,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_FAB_ROOF,matResolve('structure.roof')); COL_MAT.set(NOVA_FAB_GLASS,matResolve('glass.canopy'));
   COL_MAT.set(NOVA_MEX_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_MEX_CORE,MAT.NOVA_CARBON);
-  COL_MAT.set(NOVA_MEX_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_MEX_GLOW,matResolve('emissive.light'));
+  COL_MAT.set(NOVA_MEX_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_MEX_GLOW,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_DECK,MAT.DECK_PLATE);
   COL_MAT.set(NOVA_GEO_ARM,matResolve('faction.nova')); COL_MAT.set(NOVA_GEO_CORE,MAT.NOVA_CARBON);
   COL_MAT.set(NOVA_GEO_TRIM,matResolve('hull.trim')); COL_MAT.set(NOVA_GEO_GLOW,matResolve('emissive.energy'));
@@ -2395,7 +2395,7 @@ function mdlMex(){
     const a=k/4*TAU,x=Math.cos(a)*11.2,z=Math.sin(a)*11.2;
     m.bevelBox(x,y+.2,z,9.2,4.2,6.0,.75,NOVA_MEX_CORE,a);
     m.cyl(x,y+4.4,z,2.6,2.1,3.0,10,NOVA_MEX_TRIM);
-    m.box(x,y+7.3,z,2.3,.24,2.3,k===0?TWR_TEAM:NOVA_MEX_TRIM,a);
+    m.box(x,y+7.3,z,2.3,.24,2.3,NOVA_MEX_CORE,a);
     m.box(Math.cos(a)*6.7,y+2.7,Math.sin(a)*6.7,8.2,1.2,1.6,NOVA_MEX_ARM,a);
   }
   ringX(m,0,y+12.2,0,4.3,5.1,14,NOVA_MEX_TRIM);
@@ -3723,16 +3723,10 @@ function mdlCrystal(){
   return m.build();
 }
 function mdlDeposit(){
-  /* Original mass outcrop: dark circular rocky bed + upright CRYST shards.
-     The boulder pile read as brown plates from look-down; a 20-shard doodad
-     field was the glow-orb carpet. This mesh is the cluster — empty rings
-     still instance it, so a site is never a bare grey disc. */
+  /* Shards only. The two STONE cylinders (r 32 / r 17) were the dark
+     disk under every crystal node — same hole the terrain scar painted.
+     Veins mark the bed; FX.crystal owns the outcrop. */
   const m=MB();
-  m.mat(MAT.STONE);
-  /* Wide low apron under the satellite shards. The inner bed alone left
-     extras sitting on grass; a boulder pile read as brown plates. */
-  m.cyl(0,-0.18,0,32,28,1.4,16,C(54,50,46));
-  m.cyl(0,0,0,17,15,2.8,14,C(72,68,62));
   m.mat(MAT.CRYST);
   const BASE=C(150,178,198), MID=C(214,236,248), TIP=C(255,255,255);
   for(let k=0;k<6;k++){
