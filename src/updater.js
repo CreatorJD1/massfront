@@ -428,7 +428,12 @@ async function updVerifyHash(bytes,want,path){
 }
 
 const UPD={ state:'idle', manifest:null, pct:0, got:0, total:0, rate:0, err:null,
-            abort:null, lastCheck:0, checkedVersion:null, source:null, channel:'stable' };
+            abort:null, lastCheck:0, checkedVersion:null, source:null, channel:'stable',
+            /* Per-file feed. The download loop has always walked m.files, but only
+               aggregate bytes were ever surfaced, so a multi-file patch looked
+               identical to one big blob and a stall gave no clue which object was
+               stuck. feed[] carries one row per file: name, size, and state. */
+            feed:[], fileIdx:-1 };
 
 function updSet(st,extra){
   UPD.state=st;
@@ -513,9 +518,17 @@ async function updDownload(){
   updSet('downloading',{pct:0,got:0,total,rate:0,err:null,abort:ac});
   const t0=performance.now();
   const out={};
+  /* Build the feed up front so every file is visible as PENDING before the
+     first byte lands — a 900MB object that has not started yet is exactly the
+     case where silence looks like a hang. */
+  UPD.feed=m.files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
+  UPD.fileIdx=-1;
   try{
     let got=0;
-    for(const f of m.files){
+    for(let fi=0;fi<m.files.length;fi++){
+      const f=m.files[fi];
+      UPD.fileIdx=fi;
+      if(UPD.feed[fi]) UPD.feed[fi].state='downloading';
       const src=f.url||base+f.path;
       const r=await fetch(src+(src.includes('?')?'&':'?')+'v='+encodeURIComponent(m.version),
                           {cache:'no-store',signal:ac.signal});
@@ -528,6 +541,7 @@ async function updDownload(){
           const {done,value}=await rd.read();
           if(done) break;
           chunks.push(value); n+=value.length; got+=value.length;
+          if(UPD.feed[fi]) UPD.feed[fi].got=n;
           const el=(performance.now()-t0)/1000;
           UPD.got=got; UPD.pct=Math.min(99,got/total*100);
           UPD.rate=el>0.25? got/el : 0;
@@ -555,6 +569,9 @@ async function updDownload(){
       const bytes=new Uint8Array(n); let at=0;
       for(const c of chunks){ bytes.set(c,at); at+=c.length; }
       await updVerifyHash(bytes,f.sha256,f.path);
+      /* Only after BOTH the size check and the sha256 — a green row must mean
+         verified, not merely received. */
+      if(UPD.feed[fi]){ UPD.feed[fi].state='ok'; UPD.feed[fi].got=n; }
       out[f.path]=new TextDecoder().decode(bytes);
     }
     /* Commit only once every file is present and accounted for. */
@@ -568,6 +585,8 @@ async function updDownload(){
     await updDel('applyFailure');
     updSet('ready',{pct:100,abort:null});
   }catch(e){
+    if(UPD.fileIdx>=0&&UPD.feed[UPD.fileIdx]&&UPD.feed[UPD.fileIdx].state==='downloading')
+      UPD.feed[UPD.fileIdx].state='fail';
     if(e&&e.name==='AbortError'){ updSet('available',{pct:0,got:0,abort:null}); return; }
     updSet('error',{err:(e&&e.message)||'Download failed',abort:null});
   }
@@ -645,6 +664,23 @@ async function updInstalledVersion(){
    collapses to a single version line and opens itself only when it has real
    news — a patch found, a download running, or a failure worth reading. */
 let updVerShown=APP_VERSION, updOpen=false;
+/* Patch taxonomy. A manifest may declare `kind` explicitly; otherwise infer it
+   from payload size so existing manifests get a sensible label with no publisher
+   change. HOTFIX is a handful of files a player should take immediately;
+   OVERHAUL is a full payload replacement worth warning about on mobile data. */
+const UPD_KINDS={hotfix:{nm:'HOTFIX',ds:'Small fix — installs in seconds'},
+                 content:{nm:'CONTENT PATCH',ds:'New content and fixes'},
+                 overhaul:{nm:'OVERHAUL',ds:'Full rebuild — large download'}};
+function updKind(m){
+  if(!m) return null;
+  const declared=String(m.kind||'').toLowerCase();
+  if(UPD_KINDS[declared]) return declared;
+  const bytes=(m.files||[]).reduce((a,f)=>a+(f.size||0),0);
+  if(bytes<=2*1024*1024) return 'hotfix';
+  if(bytes<=20*1024*1024) return 'content';
+  return 'overhaul';
+}
+function updKindLabel(m){ const k=updKind(m); return k?UPD_KINDS[k]:null; }
 function updWants(){
   return UPD.state==='available'||UPD.state==='downloading'||
          UPD.state==='ready'||UPD.state==='applying'||UPD.state==='applyError'||
@@ -749,13 +785,15 @@ function renderUpdatePanel(){
       txt.textContent='CHECKING FOR UPDATES';
       sub.textContent='v'+updVerShown;
       bar.style.width='12%'; btn.textContent='…'; btn.disabled=true; break;
-    case 'available':
-      txt.textContent='UPDATE AVAILABLE';
+    case 'available':{
+      const K=updKindLabel(m);
+      txt.textContent=K?('UPDATE AVAILABLE  ·  '+K.nm):'UPDATE AVAILABLE';
       sub.textContent='v'+updVerShown+'  →  v'+m.version+'   ·   '+fmtBytes(m.files.reduce((s,f)=>s+(f.size||0),0))+
         '   ·   '+String(channel).toUpperCase()+(m.severity?' / '+String(m.severity).toUpperCase():'');
-      bar.style.width='0%'; btn.textContent='DOWNLOAD'; btn.disabled=false; break;
+      bar.style.width='0%'; btn.textContent='DOWNLOAD'; btn.disabled=false; break; }
     case 'downloading':{
-      txt.textContent='DOWNLOADING  '+UPD.pct.toFixed(0)+'%';
+      const KD=updKindLabel(m);
+      txt.textContent='DOWNLOADING  '+UPD.pct.toFixed(0)+'%'+(KD?('  ·  '+KD.nm):'');
       const sp=UPD.rate? '  ·  '+fmtBytes(UPD.rate)+'/s' : '';
       sub.textContent=fmtBytes(UPD.got)+' of '+fmtBytes(UPD.total)+sp;
       bar.style.width=UPD.pct.toFixed(1)+'%'; btn.textContent='…'; btn.disabled=true; break; }
@@ -800,6 +838,27 @@ function renderUpdatePanel(){
       sub.textContent='v'+updVerShown+updWhen();
       bar.style.width='0%'; btn.textContent='CHECK'; btn.disabled=false;
   }
+  updRenderFeed();
+}
+/* One row per file: name, size, and a state glyph. Written as a signature diff
+   so a 60fps download does not rebuild this list every chunk. */
+function updRenderFeed(){
+  const host=document.getElementById('updFeed');
+  if(!host) return;
+  const show=(UPD.state==='downloading'||UPD.state==='ready'||UPD.state==='error')&&UPD.feed&&UPD.feed.length;
+  host.style.display=show?'block':'none';
+  if(!show) return;
+  const sig=UPD.feed.map(f=>f.state+':'+((f.got/1048576)|0)).join('|');
+  if(host._mfSig===sig) return;
+  host._mfSig=sig;
+  const GL={pending:'·',downloading:'▸',ok:'✓',fail:'✕'};
+  host.innerHTML=UPD.feed.map(f=>{
+    const nm=String(f.path).split('/').pop();
+    const sz=f.size?fmtBytes(f.size):'';
+    const got=f.state==='downloading'&&f.size?(' '+Math.min(99,(f.got/f.size*100)|0)+'%'):'';
+    return '<div class="updFRow '+f.state+'"><span class="updFG">'+GL[f.state]+'</span>'+
+           '<span class="updFN">'+nm+'</span><span class="updFS">'+sz+got+'</span></div>';
+  }).join('');
 }
 function updWhen(){
   if(!UPD.lastCheck) return '';
