@@ -4441,6 +4441,14 @@ const pBarrage=new Uint8Array(MAXP);      // coordinated active-fire payload; wi
    direct-fire towers use — checked for aliveness at credit time. */
 const pSrcBld=new Array(MAXP).fill(null);
 const pArc=new Float32Array(MAXP);         // authored visual arc height for true ballistic shells
+/* REAL BALLISTIC Z. Until now a shell had no height state at all: the renderer
+   derived its apparent altitude from gh(X,Y) -- the ground beneath its CURRENT
+   xy -- plus a sine of flight phase. So the shell's height was a property of
+   whatever terrain it happened to be over: firing across a ridge made the round
+   climb with it, and a shot over a crater dipped into the hole. pz0/pz1 capture
+   the muzzle and impact GROUND heights once at spawn; pz carries the live
+   height, so the arc is a real trajectory between two fixed points. */
+const pz0=new Float32Array(MAXP), pz1=new Float32Array(MAXP), pz=new Float32Array(MAXP);
 const pSmokeT=new Float32Array(MAXP);      // fixed-rate barrage wake; independent of render FPS / global tick
 const pFlightCue=new Uint8Array(MAXP);     // two restrained pressure cues per shell, never one per frame
 const pTurbSeed=new Float32Array(MAXP);    // stable phase for the filtered-noise smoke path
@@ -4519,6 +4527,12 @@ function fireProj(type,team,x,y,tx,ty,speed,dmg,aoe,tgt){
   px[i]=x; py[i]=y;
   if(type===2){
     psx[i]=x; psy[i]=y; pex[i]=tx; pey[i]=ty; pt[i]=0;
+    /* Sampled once, at the two ends only. terrainH is a 9-tap box blur (36
+       heightF reads), so per-frame per-shell sampling would be the most
+       expensive thing in this loop for no gain — the endpoints define the arc. */
+    pz0[i]=(typeof terrainH==='function')?terrainH(x,y):0;
+    pz1[i]=(typeof terrainH==='function')?terrainH(tx,ty):0;
+    pz[i]=pz0[i]+16;
     const d=Math.max(1,Math.sqrt(dist2(x,y,tx,ty)));
     /* The renderer orients shells from velocity. Ballistics used to inherit a
        recycled slot's old velocity, so their bodies and smoke could point at
@@ -6068,6 +6082,9 @@ function projTick(dt){
       if(pt[i]>=1){ px[i]=pex[i]; py[i]=pey[i]; projImpact(i); continue; }
       px[i]=psx[i]+(pex[i]-psx[i])*pt[i];
       py[i]=psy[i]+(pey[i]-psy[i])*pt[i];
+      /* Ground-to-ground lerp plus the authored arc. The +16 the renderer used
+         to add is folded in so muzzle and impact sit clear of the deck. */
+      pz[i]=pz0[i]+(pz1[i]-pz0[i])*pt[i]+16+Math.sin(pt[i]*Math.PI)*(pArc[i]||70);
       if(pBarrage[i]){
         /* The shell itself follows the authored ballistic path; its wake does
            not. Fixed-rate samples are pushed sideways by smooth deterministic

@@ -2213,7 +2213,11 @@ function render(dtDraw){
     const hMuz=fxWeaponH(ox,oy,true);
     /* Stay on the bore. gh()+12 dropped every tracer onto the dirt while
        turrets sit at M.turH — the floating-behind-the-round look. */
-    const H=ballistic?gh(X,Y)+16+Math.sin(pt[i]*Math.PI)*(pArc[i]||70)
+    /* pz is a real trajectory between muzzle and impact ground heights, built
+       in projTick. The old expression re-derived height from the ground under
+       the shell's CURRENT xy, so a round crossing a ridge rose with it. Falls
+       back to the old form for any shell that predates pz. */
+    const H=ballistic?(pz[i]||gh(X,Y)+16+Math.sin(pt[i]*Math.PI)*(pArc[i]||70))
       :ty===7?hMuz+8:ty===9?hMuz+10:hMuz;
     const vq=typeof mfVfxQ==='function'?mfVfxQ():1;
     const streakMul=vq>=1.2?1.78:vq>=0.95?1.48:vq>=0.65?1.16:0.86;
@@ -2234,7 +2238,10 @@ function render(dtDraw){
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,10.5*power,yaw+Math.PI/2,72,68,64,255);
       bbAdd.add(sprites.glow,X,Y,H,7.5*power,0,255,155,54,200);
       const q0=Math.max(0,pt[i]-.022),tx0=psx[i]+(pex[i]-psx[i])*q0,ty0=psy[i]+(pey[i]-psy[i])*q0;
-      const h0=gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
+      /* Same fix for the trail: sample the trajectory at q0 rather than the
+         terrain under the sample, or the smoke ribbon hugs the ground. */
+      const h0=(pz0[i]||pz1[i])?(pz0[i]+(pz1[i]-pz0[i])*q0+16+Math.sin(q0*Math.PI)*(pArc[i]||70))
+                               :gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
       addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.55*power,255,132,42,210,beamOpt);
     } else if(bio){
       const pulse=.84+Math.sin(t*15+i*1.7)*.16;
@@ -2276,7 +2283,10 @@ function render(dtDraw){
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,6.5*power,yaw+Math.PI/2,nova?110:95,nova?145:90,nova?175:86,255);
       bbAdd.add(sprites.glow,X,Y,H,5.2*power,0,nova?100:255,nova?220:170,nova?255:75,190);
       const q0=Math.max(0,pt[i]-.03),tx0=psx[i]+(pex[i]-psx[i])*q0,ty0=psy[i]+(pey[i]-psy[i])*q0;
-      const h0=gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
+      /* Same fix for the trail: sample the trajectory at q0 rather than the
+         terrain under the sample, or the smoke ribbon hugs the ground. */
+      const h0=(pz0[i]||pz1[i])?(pz0[i]+(pz1[i]-pz0[i])*q0+16+Math.sin(q0*Math.PI)*(pArc[i]||70))
+                               :gh(tx0,ty0)+16+Math.sin(q0*Math.PI)*(pArc[i]||70);
       addBeam3D(FX.beam,tx0,h0,ty0,X,H,Y,1.28*power,255,150,60,205,beamOpt);
     } else if(ty===3||pCannon[i]){
       bbAlpha.add(sprites.debris||sprites.glow,X,Y,H,9.5*power,yaw+Math.PI/2,86,82,78,255);
