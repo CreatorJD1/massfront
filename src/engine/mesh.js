@@ -1885,14 +1885,15 @@ void main(){
        checker, not a toon clump. */
     vec2 uvA=wxz*0.018;
     vec2 uvB=(mat2(0.86,-0.51,0.51,0.86)*wxz)*0.041;
-    /* THREE-WAY NATURAL BLEND, patch-shaped like the reference: grass holds
-       the wetter macro patches, bare soil the trafficked ones, cracked earth
-       the parched remainder. Two decorrelated macro factors keep the borders
+    /* THREE-WAY NATURAL BLEND + SLOPE SCREE: grass holds
+       the wetter macro patches, bare soil the trafficked ones, cracked earth / scree
+       the parched remainder and steep cliff faces. Two decorrelated macro factors keep the borders
        organic — grass dies out in ragged fingers, never a gradient band. */
     float mA=texture(uDetail,vDetUV*0.043).r;
     float mB=texture(uDetail,vDetUV*0.027+vec2(0.37,0.61)).r;
-    float grassMix=smoothstep(0.44,0.58,mA*0.6+mB*0.4+(d1-0.5)*0.14);
-    float soilMix=smoothstep(0.38,0.62,mB)*(1.0-grassMix);
+    float slopeW=clamp((1.0-n.y)*2.6-0.30,0.0,1.0);
+    float grassMix=smoothstep(0.44,0.58,mA*0.6+mB*0.4+(d1-0.5)*0.14)*(1.0-slopeW*0.92);
+    float soilMix=mix(smoothstep(0.38,0.62,mB)*(1.0-grassMix), 0.85, slopeW);
     /* Painted city fill is grey compacted yard. Grass only survives where the
        map albedo is actually greener than its red/blue — leftover biome lawn
        inside a district must not win. Gated by uGMask so brown wilderness

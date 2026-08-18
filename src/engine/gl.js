@@ -392,10 +392,10 @@ const batT=new Batch(4);
 /* ============================================================
    PROCEDURAL ART — 2048px atlas, 256px cells, pseudo-3D style
    ============================================================ */
-const ATLAS=2048, CELL=256, PAD=20;
+const ATLAS=2048, ATLAS_W=2048, ATLAS_H=4096, CELL=256, PAD=20;
 const sprites={};
 let atlasCanvas=document.createElement('canvas');
-atlasCanvas.width=ATLAS; atlasCanvas.height=ATLAS;
+atlasCanvas.width=ATLAS_W; atlasCanvas.height=ATLAS_H;
 const ac=atlasCanvas.getContext('2d');
 let cellIdx=0;
 // sprites that get the "material pass": directional key light + AO for a rendered-3D feel
@@ -404,7 +404,7 @@ const SHADE=new Set(['bot','tankH','tankT','heavyH','heavyT','artyH','artyT','cd
   'corv','dread','harbor',
   // every hand-authored structure gets the full material treatment too
   'hellB','arcB','novaB','fabB','silo','wall','carrier','relicT','relicD','relicI','relicK','tankF','crate',
-  'dep','depR','geyser','rock','crystal']);
+  'dep','depR','geyser','rock','crystal','rockIce','rockSlag']);
 // procedural micro-surface used by the material pass — gives flat vector art real texture
 let MATNOISE=null;
 function matNoise(){
@@ -466,7 +466,7 @@ function defSprite(name, fn){
   }
   ac.restore();
   const inset=6;
-  sprites[name]=[(cx+inset)/ATLAS,(cy+inset)/ATLAS,(cx+CELL-inset)/ATLAS,(cy+CELL-inset)/ATLAS];
+  sprites[name]=[(cx+inset)/ATLAS_W,(cy+inset)/ATLAS_H,(cx+CELL-inset)/ATLAS_W,(cy+CELL-inset)/ATLAS_H];
 }
 function rg(c,x,y,r,stops){ const g=c.createRadialGradient(x,y,0,x,y,r); for(const s of stops) g.addColorStop(s[0],s[1]); return g; }
 function lg(c,x0,y0,x1,y1,stops){ const g=c.createLinearGradient(x0,y0,x1,y1); for(const s of stops) g.addColorStop(s[0],s[1]); return g; }
@@ -479,7 +479,7 @@ function panelLines(c,x,y,w,h,n,alpha){
 function rivets(c,pts){ c.fillStyle='rgba(230,240,248,.55)'; for(const p of pts){ c.beginPath(); c.arc(p[0],p[1],3,0,TAU); c.fill(); } }
 
 function buildAtlas(){
-  ac.clearRect(0,0,ATLAS,ATLAS);
+  ac.clearRect(0,0,ATLAS_W,ATLAS_H);
   defSprite('px', c=>{ c.fillStyle='#fff'; c.fillRect(-80,-80,160,160); });
 
   // ================= GROUND UNITS (nose = -y) =================
@@ -943,6 +943,94 @@ function buildAtlas(){
     c.fillStyle='rgba(190,230,140,.45)';
     c.beginPath(); c.arc(-14,-34,12,0,TAU); c.fill();
     c.beginPath(); c.arc(16,-18,9,0,TAU); c.fill();
+  });
+  defSprite('treePine', c=>{
+    c.fillStyle='rgba(0,0,0,.4)'; c.beginPath(); c.ellipse(6,46,44,22,0,0,TAU); c.fill();
+    c.fillStyle='#463422'; c.beginPath(); c.moveTo(-10,48); c.lineTo(10,48); c.lineTo(5,0); c.lineTo(-5,0); c.closePath(); c.fill();
+    const conTier=(y0,y1,w,c1,c2)=>{
+      ac.fillStyle=lg(ac,-w,0,w,0,[[0,c1],[0.4,c2],[1,c1]]);
+      ac.beginPath(); ac.moveTo(0,y1); ac.lineTo(w,y0); ac.lineTo(-w,y0); ac.closePath(); ac.fill();
+      ac.strokeStyle='#1b2f15'; ac.lineWidth=2.5; ac.stroke();
+    };
+    conTier(32,-8,56,'#1a3314','#2a5020');
+    conTier(8,-36,44,'#23441b','#35632a');
+    conTier(-22,-68,32,'#2d5722','#447c35');
+    c.fillStyle='rgba(180,240,140,.35)';
+    c.beginPath(); c.moveTo(0,-68); c.lineTo(0,-22); c.lineTo(-24,-22); c.closePath(); c.fill();
+  });
+  defSprite('treePalm', c=>{
+    c.fillStyle='rgba(0,0,0,.35)'; c.beginPath(); c.ellipse(12,48,50,20,0,0,TAU); c.fill();
+    c.strokeStyle='#664828'; c.lineWidth=14; c.lineCap='round';
+    c.beginPath(); c.moveTo(4,46); c.quadraticCurveTo(-14,6,6,-28); c.stroke();
+    c.strokeStyle='#422e18'; c.lineWidth=2;
+    for(let i=0;i<6;i++){ const t=i/6; c.beginPath(); c.arc(4*(1-t)-14*t, 46*(1-t)+6*t, 7, 0, TAU); c.stroke(); }
+    const frond=(ang,len,tilt)=>{
+      ac.save(); ac.translate(6,-28); ac.rotate(ang);
+      ac.fillStyle=lg(ac,0,-12,len,12,[[0,'#519028'],[0.6,'#3c701c'],[1,'#264c10']]);
+      ac.beginPath(); ac.moveTo(0,0); ac.quadraticCurveTo(len*0.5,tilt,len,tilt*1.5); ac.quadraticCurveTo(len*0.5,tilt*0.3,0,0); ac.fill();
+      ac.strokeStyle='#7ac442'; ac.lineWidth=1.5; ac.stroke();
+      ac.restore();
+    };
+    for(let i=0;i<7;i++){ frond((i/7)*TAU-0.4, 52+((i%3)*6), 18+((i%2)*8)); }
+  });
+  defSprite('treeDead', c=>{
+    c.fillStyle='rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(6,46,40,18,0,0,TAU); c.fill();
+    c.strokeStyle='#3a332a'; c.lineWidth=12; c.lineCap='round'; c.lineJoin='round';
+    c.beginPath(); c.moveTo(0,46); c.lineTo(-4,10); c.lineTo(6,-24); c.lineTo(-2,-56); c.stroke();
+    c.lineWidth=6;
+    c.beginPath(); c.moveTo(-4,10); c.lineTo(-28,-8); c.lineTo(-44,-6); c.stroke();
+    c.beginPath(); c.moveTo(6,-24); c.lineTo(32,-42); c.lineTo(46,-36); c.stroke();
+    c.beginPath(); c.moveTo(-2,-56); c.lineTo(16,-72); c.stroke();
+    c.strokeStyle='#584f42'; c.lineWidth=2;
+    c.beginPath(); c.moveTo(-3,44); c.lineTo(-5,12); c.stroke();
+  });
+  defSprite('treeSpore', c=>{
+    c.fillStyle='rgba(0,0,0,.38)'; c.beginPath(); c.ellipse(6,44,52,24,0,0,TAU); c.fill();
+    c.fillStyle=lg(c,-16,0,16,0,[[0,'#3c2246'],[0.5,'#684278'],[1,'#3c2246']]);
+    c.beginPath(); c.moveTo(-14,44); c.lineTo(14,44); c.lineTo(8,-8); c.lineTo(-8,-8); c.closePath(); c.fill();
+    c.fillStyle=rg(c,0,-24,68,[[0,'#5affba'],[0.45,'#28a876'],[0.85,'#184e3c'],[1,'#0e2c22']]);
+    c.beginPath(); c.ellipse(0,-24,58,34,0,0,TAU); c.fill();
+    c.strokeStyle='#7affca'; c.lineWidth=3; c.stroke();
+    c.fillStyle='rgba(130,255,210,.75)';
+    c.beginPath(); c.arc(-22,-14,6,0,TAU); c.fill();
+    c.beginPath(); c.arc(18,-18,8,0,TAU); c.fill();
+    c.beginPath(); c.arc(0,-38,7,0,TAU); c.fill();
+  });
+  defSprite('bush', c=>{
+    c.fillStyle='rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(4,22,60,26,0,0,TAU); c.fill();
+    const blob=(x,y,r,c1,c2)=>{ ac.fillStyle=rg(ac,x-r*0.2,y-r*0.2,r*1.3,[[0,c1],[1,c2]]);
+      ac.beginPath(); ac.arc(x,y,r,0,TAU); ac.fill(); };
+    blob(-24,6,32,'#5b9432','#2e5418');
+    blob(22,8,28,'#629e36','#355e1c');
+    blob(0,-10,34,'#6fae3e','#3e6b22');
+    c.fillStyle='rgba(195,245,145,.4)';
+    c.beginPath(); c.arc(-8,-16,9,0,TAU); c.fill();
+    c.beginPath(); c.arc(14,-6,7,0,TAU); c.fill();
+  });
+  defSprite('rockIce', c=>{
+    c.fillStyle='rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(6,28,68,36,0,0,TAU); c.fill();
+    const g=lg(c,-60,-60,60,60,[[0,'#d4f2ff'],[0.4,'#76bde8'],[1,'#2c608a']]);
+    c.fillStyle=g; c.beginPath();
+    c.moveTo(-64,16); c.lineTo(-38,-56); c.lineTo(24,-64); c.lineTo(68,-8); c.lineTo(48,46); c.lineTo(-26,52);
+    c.closePath(); c.fill();
+    c.strokeStyle='#aee5ff'; c.lineWidth=4; c.stroke();
+    c.fillStyle='rgba(255,255,255,.45)'; c.beginPath();
+    c.moveTo(-38,-56); c.lineTo(24,-64); c.lineTo(12,-18); c.lineTo(-24,-12); c.closePath(); c.fill();
+    c.fillStyle='rgba(70,160,230,.35)'; c.beginPath();
+    c.moveTo(12,-18); c.lineTo(68,-8); c.lineTo(48,46); c.lineTo(4,22); c.closePath(); c.fill();
+  });
+  defSprite('rockSlag', c=>{
+    c.fillStyle='rgba(0,0,0,.45)'; c.beginPath(); c.ellipse(8,24,72,42,0,0,TAU); c.fill();
+    const g=lg(c,-60,-60,60,60,[[0,'#4d4444'],[0.5,'#282222'],[1,'#141010']]);
+    c.fillStyle=g; c.beginPath();
+    c.moveTo(-68,18); c.lineTo(-42,-50); c.lineTo(18,-62); c.lineTo(70,-14); c.lineTo(52,42); c.lineTo(-22,54);
+    c.closePath(); c.fill();
+    c.strokeStyle='#1a1414'; c.lineWidth=5; c.stroke();
+    c.strokeStyle='#ff5a22'; c.lineWidth=3.5; c.lineCap='round';
+    c.beginPath(); c.moveTo(-32,-24); c.lineTo(-8,-6); c.lineTo(26,-16); c.lineTo(42,12); c.stroke();
+    c.strokeStyle='#ffa23a'; c.lineWidth=1.5;
+    c.beginPath(); c.moveTo(-28,-22); c.lineTo(-8,-6); c.lineTo(24,-14); c.stroke();
+    c.fillStyle='rgba(255,90,34,.25)'; c.beginPath(); c.arc(-8,-6,18,0,TAU); c.fill();
   });
   defSprite('crystal', c=>{
     c.fillStyle='rgba(0,0,0,.3)'; c.beginPath(); c.ellipse(6,34,60,26,0,0,TAU); c.fill();
@@ -1572,7 +1660,7 @@ function buildAtlas(){
      naturally under additive blending. The procedural cell above is a safe
      boot/offline fallback rather than a second effect layered on top. */
   const fireImg=new Image();fireImg.onload=()=>{
-    const uv=sprites.flame,cx=Math.floor(uv[0]*ATLAS/CELL)*CELL,cy=Math.floor(uv[1]*ATLAS/CELL)*CELL;
+    const uv=sprites.flame,cx=Math.floor(uv[0]*ATLAS_W/CELL)*CELL,cy=Math.floor(uv[1]*ATLAS_H/CELL)*CELL;
     const tile=document.createElement('canvas');tile.width=tile.height=CELL;
     const tc=tile.getContext('2d');tc.fillStyle='#000';tc.fillRect(0,0,CELL,CELL);tc.drawImage(fireImg,0,0,CELL,CELL);
     ac.clearRect(cx,cy,CELL,CELL);ac.drawImage(tile,cx,cy);
@@ -3581,103 +3669,208 @@ function composeMinimapTerrain(ctx,S){
    preview as empty grassland. Stamp civic pads from the same MAPDEFS counts
    the live planner uses — approximate footprints, not InstMesh roads. */
 function paintPreviewCivic(ctx,def,W,H){
-  const nCity=(def.city||0)+(def.towns||0);
-  const nInd=def.indus||0;
-  const nPad=(def.outpost||0)+(def.spaceport||0)+(def.domes||0);
-  if(!nCity&&!nInd&&!nPad&&!def.roads) return;
-  let s=(def.seed^0x7ACE1)|1;
-  const rn=()=>{ s=(Math.imul(s,1664525)+1013904223)|0; return ((s>>>9)&0x7fffff)/0x800000; };
+  // Subtle infrastructure markings matching live road network
+  if(!def.roads) return;
   ctx.save();
-  if(def.roads){
-    ctx.strokeStyle='rgb(42,42,40)';
-    ctx.lineWidth=Math.max(2.4, W*0.018);
-    ctx.lineCap='butt';
-    ctx.beginPath();
-    ctx.moveTo(SP_LO*W, SP_HI*H);
-    ctx.lineTo(SP_HI*W, SP_LO*H);
-    ctx.stroke();
-  }
-  const placed=[];
-  const stamp=(ind,scale)=>{
-    for(let a=0;a<48;a++){
-      const x=0.18+rn()*0.64, y=0.18+rn()*0.64;
-      if(Math.hypot(x-SP_LO,y-SP_HI)<0.22||Math.hypot(x-SP_HI,y-SP_LO)<0.22) continue;
-      let clash=false;
-      for(const p of placed) if(Math.hypot(x-p[0],y-p[1])<0.14){ clash=true; break; }
-      if(clash) continue;
-      placed.push([x,y]);
-      const px=x*W, py=y*H, hx=W*scale*1.35, hy=H*scale*1.2;
-      ctx.fillStyle=ind?'rgb(52,50,46)':'rgb(78,78,74)';
-      ctx.fillRect(px-hx,py-hy,hx*2,hy*2);
-      ctx.strokeStyle='rgb(32,32,30)';
-      ctx.lineWidth=Math.max(1.3, W*0.008);
-      ctx.beginPath();
-      ctx.moveTo(px-hx,py); ctx.lineTo(px+hx,py);
-      ctx.moveTo(px,py-hy); ctx.lineTo(px,py+hy);
-      ctx.stroke();
-      return true;
-    }
-    return false;
-  };
-  for(let i=0;i<nCity;i++) stamp(0,0.055)||stamp(0,0.042);
-  for(let i=0;i<nInd;i++) stamp(1,0.060)||stamp(1,0.044);
-  for(let i=0;i<nPad;i++) stamp(0,0.032)||stamp(0,0.024);
+  const x0=SP_LO*W, y0=SP_HI*H, x1=SP_HI*W, y1=SP_LO*H;
+  // Natural asphalt corridor
+  ctx.strokeStyle='rgba(20,24,28,0.70)';
+  ctx.lineWidth=Math.max(2.8, W*0.012);
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+
+  ctx.strokeStyle='rgba(65,72,80,0.85)';
+  ctx.lineWidth=Math.max(1.6, W*0.007);
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+
+  ctx.strokeStyle='rgba(180,215,240,0.6)';
+  ctx.lineWidth=Math.max(0.6, W*0.0025);
+  ctx.setLineDash([W*0.015, W*0.015]);
+  ctx.beginPath(); ctx.moveTo(x0,y0); ctx.lineTo(x1,y1); ctx.stroke();
+  ctx.setLineDash([]);
   ctx.restore();
 }
 
-/* ---------- faithful map preview thumbnails (same seed + formula) ---------- */
+/* ---------- photorealistic satellite orthophoto & tactical reconnaissance preview ---------- */
 function drawMapPreview(cv3,def,themeKey,showBases=true){
+  const mix=(a,b,t)=>a+(b-a)*t;
+  const clampVal=(v,mn,mx)=>Math.max(mn,Math.min(mx,v));
+  const smoothVal=t=>t*t*(3-2*t);
   const TH=typeof themePaint==='function'?themePaint(THEMES[themeKey||curTheme]||THEMES.verdant,def):
     (THEMES[themeKey||curTheme]||THEMES.verdant);
   const W=cv3.width, H=cv3.height;
   const ctx3=cv3.getContext('2d');
   const img=ctx3.createImageData(W,H);
   srand(def.seed);
-  const GN=64, g1=new Float32Array((GN+1)*(GN+1)), g2=new Float32Array((GN+1)*(GN+1));
+
+  const GN=64, g1=new Float32Array((GN+1)*(GN+1)), g2=new Float32Array((GN+1)*(GN+1)), g3=new Float32Array((GN+1)*(GN+1));
   for(let i=0;i<g1.length;i++) g1[i]=rnd();
   for(let i=0;i<g2.length;i++) g2[i]=rnd();
-  const sm=t2=>t2*t2*(3-2*t2);
+  for(let i=0;i<g3.length;i++) g3[i]=rnd();
+
   const vn=(g,x,y)=>{
     x=((x%GN)+GN)%GN; y=((y%GN)+GN)%GN;
-    const xi=x|0, yi=y|0, xf=sm(x-xi), yf=sm(y-yi);
+    const xi=x|0, yi=y|0, xf=smoothVal(x-xi), yf=smoothVal(y-yi);
     const a=g[yi*(GN+1)+xi], b=g[yi*(GN+1)+xi+1], d=g[(yi+1)*(GN+1)+xi], e=g[(yi+1)*(GN+1)+xi+1];
     return a+(b-a)*xf+(d-a)*yf+(a-b-d+e)*xf*yf;
   };
-  const bumps=[[MAP*SP_LO,MAP*SP_HI,420,0.17],[MAP*SP_HI,MAP*SP_LO,420,0.17],[MAP*0.5,MAP*0.5,360,0.12]];
-  if(typeof START_ZONES!=='undefined') for(const Z of START_ZONES) bumps.push([MAP*Z.x,MAP*Z.y,310,0.14]);
-  const sA={x:MAP*SP_LO,y:MAP*SP_HI}, sB={x:MAP*SP_HI,y:MAP*SP_LO};
+
   const rel=def.relief;
+  const hGrid=new Float32Array(W*H);
+
+  // Pass 1: Natural continuous fractal terrain elevation (no artificial flat discs)
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     const u=x/W*GN, v=y/H*GN, wx=x/W*MAP, wy=y/H*MAP;
-    let h=vn(g1,u*0.18,v*0.18)*0.52+vn(g1,u*0.55,v*0.55)*0.27*rel
-         +vn(g2,u*1.6,v*1.6)*0.14*rel+vn(g2,u*4.5,v*4.5)*0.07*rel;
+    let h = vn(g1,u*0.18,v*0.18)*0.52 
+          + vn(g1,u*0.55,v*0.55)*0.27*rel
+          + vn(g2,u*1.6,v*1.6)*0.14*rel 
+          + vn(g2,u*4.5,v*4.5)*0.07*rel
+          + vn(g1,u*9.5,v*9.5)*0.045*rel
+          + vn(g3,u*18.0,v*18.0)*0.020*rel;
     h=mapMod(def,wx,wy,h);
-    for(const Bp of bumps){
-      const d=Math.sqrt(dist2(wx,wy,Bp[0],Bp[1]));
-      if(d<Bp[2]) h=Math.max(h,0.42+Bp[3]*(1-d/Bp[2]));
-    }
-    const dx=sB.x-sA.x, dy=sB.y-sA.y;
-    const tt=clamp(((wx-sA.x)*dx+(wy-sA.y)*dy)/(dx*dx+dy*dy),0,1);
-    const cd=Math.sqrt(dist2(wx,wy,sA.x+dx*tt,sA.y+dy*tt));
-    if(cd<300) h=Math.max(h,0.46+0.08*(1-cd/300));
-    let r2,g3,b2;
-    if(h<WATER_H){ const d2=clamp((WATER_H-h)/0.12,0,1);
-      r2=TH.wShal[0]+(TH.wDeep[0]-TH.wShal[0])*d2; g3=TH.wShal[1]+(TH.wDeep[1]-TH.wShal[1])*d2; b2=TH.wShal[2]+(TH.wDeep[2]-TH.wShal[2])*d2; }
-    else if(h<BEACH_H){ r2=TH.b0[0]; g3=TH.b0[1]; b2=TH.b0[2]; }
-    else if(h<0.52){ r2=TH.g0[0]; g3=TH.g0[1]; b2=TH.g0[2]; }
-    else if(h<0.58){ r2=TH.cliff[0]; g3=TH.cliff[1]; b2=TH.cliff[2]; }
-    else { r2=TH.plat[0]; g3=TH.plat[1]; b2=TH.plat[2]; }
-    const sh=0.86+h*0.34;               // cheap relief tint
-    const o=(y*W+x)*4;
-    img.data[o]=r2*sh; img.data[o+1]=g3*sh; img.data[o+2]=b2*sh; img.data[o+3]=255;
+
+    // Smooth organic land guarantees (gentle Gaussian blend rather than harsh Math.max)
+    const d0=Math.hypot(wx-MAP*SP_LO, wy-MAP*SP_HI);
+    if(d0<450) h += Math.exp(-(d0*d0)/(280*280))*0.06;
+    const d1=Math.hypot(wx-MAP*SP_HI, wy-MAP*SP_LO);
+    if(d1<450) h += Math.exp(-(d1*d1)/(280*280))*0.06;
+    const dC=Math.hypot(wx-MAP*0.5, wy-MAP*0.5);
+    if(dC<400) h += Math.exp(-(dC*dC)/(240*240))*0.04;
+
+    hGrid[y*W+x]=h;
   }
+
+  // Pass 2: High-contrast directional hillshading, slope normal mapping & multi-material orthophoto texturing
+  const sunX=-0.577, sunY=-0.577, sunZ=0.577;
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const idx=y*W+x, h=hGrid[idx];
+    const u=x/W*GN, v=y/H*GN;
+    const xL=Math.max(0,x-1), xR=Math.min(W-1,x+1);
+    const yU=Math.max(0,y-1), yD=Math.min(H-1,y+1);
+    const dhx=(hGrid[y*W+xR]-hGrid[y*W+xL])*24.0;
+    const dhy=(hGrid[yD*W+x]-hGrid[yU*W+x])*24.0;
+    const len=Math.hypot(dhx, dhy, 1.0);
+    const nx=-dhx/len, ny=-dhy/len, nz=1.0/len;
+    const slope=1.0-nz;
+
+    // Organic surface micro-texture noise
+    const mNoise=vn(g3,u*12.0,v*12.0);
+    const mGrain=vn(g2,u*24.0,v*24.0)*0.16 - 0.08;
+
+    let r2,g3c,b2;
+    if(h<WATER_H){
+      const d2=clampVal((WATER_H-h)/0.12,0,1);
+      // Realistic deep ocean bathymetry
+      r2=TH.wShal[0]+(TH.wDeep[0]-TH.wShal[0])*d2;
+      g3c=TH.wShal[1]+(TH.wDeep[1]-TH.wShal[1])*d2;
+      b2=TH.wShal[2]+(TH.wDeep[2]-TH.wShal[2])*d2;
+      // White water coastal surf
+      if(h>WATER_H-0.010){
+        const wave=(WATER_H-h)/0.010;
+        r2=mix(r2,220,1-wave); g3c=mix(g3c,245,1-wave); b2=mix(b2,255,1-wave);
+      }
+    } else if(h<BEACH_H){
+      const bT=clampVal((h-WATER_H)/(BEACH_H-WATER_H),0,1);
+      r2=mix(TH.b0[0], TH.g0[0], bT*0.5) + mGrain*30;
+      g3c=mix(TH.b0[1], TH.g0[1], bT*0.5) + mGrain*30;
+      b2=mix(TH.b0[2], TH.g0[2], bT*0.5) + mGrain*20;
+    } else {
+      // Land: organic vegetation with canopy modulation, slope rock scree, and weathered plateau
+      const grassR=TH.g0[0] + (mNoise*0.2-0.1)*35;
+      const grassG=TH.g0[1] + (mNoise*0.2-0.1)*45;
+      const grassB=TH.g0[2] + (mNoise*0.2-0.1)*25;
+
+      const cliffR=TH.cliff[0] + mGrain*35;
+      const cliffG=TH.cliff[1] + mGrain*35;
+      const cliffB=TH.cliff[2] + mGrain*40;
+
+      const platR=TH.plat[0] + mGrain*30;
+      const platG=TH.plat[1] + mGrain*30;
+      const platB=TH.plat[2] + mGrain*30;
+
+      const slopeFactor=clampVal((slope-0.14)*4.8, 0, 1);
+      const highFactor=clampVal((h-0.54)/0.12, 0, 1);
+
+      let rM=mix(grassR, cliffR, slopeFactor);
+      let gM=mix(grassG, cliffG, slopeFactor);
+      let bM=mix(grassB, cliffB, slopeFactor);
+      r2=mix(rM, platR, highFactor);
+      g3c=mix(gM, platG, highFactor);
+      b2=mix(bM, platB, highFactor);
+    }
+
+    // Directional sun illumination + ambient sky light
+    const dot=Math.max(0, nx*sunX + ny*sunY + nz*sunZ);
+    const lit=h<WATER_H ? (0.78 + dot*0.32) : (0.38 + dot*0.90 + (h-0.45)*0.26);
+
+    const o=idx*4;
+    img.data[o]=clampVal(r2*lit, 0, 255);
+    img.data[o+1]=clampVal(g3c*lit, 0, 255);
+    img.data[o+2]=clampVal(b2*lit, 0, 255);
+    img.data[o+3]=255;
+  }
+
   ctx3.putImageData(img,0,0);
   paintPreviewCivic(ctx3,def,W,H);
-  // legacy two-player card markers; the deployment planner draws its own set.
+
+  // 3. High-tech tactical HUD overlay
+  ctx3.save();
+
+  // Fine holographic grid lines
+  ctx3.strokeStyle='rgba(0,225,255,0.06)';
+  ctx3.lineWidth=0.6;
+  const stepX=W/6, stepY=H/4;
+  ctx3.beginPath();
+  for(let gx=stepX;gx<W;gx+=stepX){ ctx3.moveTo(gx,0); ctx3.lineTo(gx,H); }
+  for(let gy=stepY;gy<H;gy+=stepY){ ctx3.moveTo(0,gy); ctx3.lineTo(W,gy); }
+  ctx3.stroke();
+
+  // Tactical orbital corner brackets
+  const bL=Math.min(W,H)*0.07;
+  ctx3.strokeStyle='rgba(0,229,255,0.60)';
+  ctx3.lineWidth=1.2;
+  // Top-left
+  ctx3.beginPath(); ctx3.moveTo(6,6+bL); ctx3.lineTo(6,6); ctx3.lineTo(6+bL,6); ctx3.stroke();
+  // Top-right
+  ctx3.beginPath(); ctx3.moveTo(W-6-bL,6); ctx3.lineTo(W-6,6); ctx3.lineTo(W-6,6+bL); ctx3.stroke();
+  // Bottom-left
+  ctx3.beginPath(); ctx3.moveTo(6,H-6-bL); ctx3.lineTo(6,H-6); ctx3.lineTo(6+bL,H-6); ctx3.stroke();
+  // Bottom-right
+  ctx3.beginPath(); ctx3.moveTo(W-6-bL,H-6); ctx3.lineTo(W-6,H-6); ctx3.lineTo(W-6,H-6-bL); ctx3.stroke();
+
+  // Telemetry HUD stamp
+  ctx3.font='600 ' + Math.max(7, Math.round(H*0.046)) + 'px monospace';
+  ctx3.fillStyle='rgba(0,229,255,0.65)';
+  ctx3.fillText('ORBITAL SAT-SCAN // SECTOR ' + (def.seed % 88 + 11), 12, 16);
+
+  // 4. Strategic deployment beacons
   if(showBases){
-    ctx3.fillStyle='#41c8ff'; ctx3.beginPath(); ctx3.arc(0.16*W,0.84*H,2.6,0,TAU); ctx3.fill();
-    ctx3.fillStyle='#ff5d43'; ctx3.beginPath(); ctx3.arc(0.84*W,0.16*H,2.6,0,TAU); ctx3.fill();
+    // Player Spawn Beacon (Cyan target reticle)
+    const px=0.16*W, py=0.84*H;
+    ctx3.strokeStyle='rgba(0,229,255,0.50)';
+    ctx3.lineWidth=1.0;
+    ctx3.beginPath(); ctx3.arc(px,py,8.5,0,TAU); ctx3.stroke();
+    ctx3.fillStyle='rgba(0,229,255,0.32)'; ctx3.beginPath(); ctx3.arc(px,py,5.0,0,TAU); ctx3.fill();
+    ctx3.fillStyle='#00e5ff'; ctx3.beginPath(); ctx3.arc(px,py,2.2,0,TAU); ctx3.fill();
+    ctx3.fillStyle='#ffffff'; ctx3.beginPath(); ctx3.arc(px,py,1.0,0,TAU); ctx3.fill();
+
+    // Enemy Spawn Beacon (Crimson target reticle)
+    const ex=0.84*W, ey=0.16*H;
+    ctx3.strokeStyle='rgba(255,60,40,0.50)';
+    ctx3.lineWidth=1.0;
+    ctx3.beginPath(); ctx3.arc(ex,ey,8.5,0,TAU); ctx3.stroke();
+    ctx3.fillStyle='rgba(255,60,40,0.32)'; ctx3.beginPath(); ctx3.arc(ex,ey,5.0,0,TAU); ctx3.fill();
+    ctx3.fillStyle='#ff3b30'; ctx3.beginPath(); ctx3.arc(ex,ey,2.2,0,TAU); ctx3.fill();
+    ctx3.fillStyle='#ffffff'; ctx3.beginPath(); ctx3.arc(ex,ey,1.0,0,TAU); ctx3.fill();
   }
+
+  // 5. Tactical orbital vignette
+  const grad=ctx3.createRadialGradient(W*0.5,H*0.5,Math.min(W,H)*0.45, W*0.5,H*0.5,Math.hypot(W*0.5,H*0.5));
+  grad.addColorStop(0,'rgba(0,0,0,0)');
+  grad.addColorStop(1,'rgba(0,10,20,0.40)');
+  ctx3.fillStyle=grad;
+  ctx3.fillRect(0,0,W,H);
+
+  ctx3.restore();
 }
 
 let atlasTex, terrainTex;

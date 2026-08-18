@@ -933,15 +933,65 @@ function mfGalaxyRenderPlanet(){
   };
 }
 
+function getSiteIntel(mapId){
+  const id=mapId||(typeof curMap!=='undefined'?curMap:'aelos_north_medium');
+  const D=(typeof MAPDEFS!=='undefined'&&MAPDEFS[id])||{};
+  const L=typeof mfConquestLocate==='function'?mfConquestLocate(id):null;
+  const haz=(typeof mapHazardDef==='function')?mapHazardDef(id):((typeof MAPHAZ!=='undefined'&&MAPHAZ[id])?MAPHAZ[id]:{nm:'Standard Atmosphere',em:'☀',ds:'No anomalous weather or tectonic instability detected.'});
+  const diff=(typeof difficulty!=='undefined'?difficulty:1);
+  const diffLabels=['LOW RISK / RECON','MODERATE CONFLICT','HEAVY RESISTANCE','EXTREME HOSTILITY','CRITICAL APEX'];
+  const p=(typeof resPace!=='undefined'?resPace:1);
+  const resLabel=p===1.6?'RICH (+60% SURGE)':p<1?'LEAN (-30% SCARCE)':'STANDARD HARVEST';
+  const depCount=D.deposits?D.deposits.length:(D.size==='large'?14:D.size==='compact'?6:10);
+  const enemyFac=(L&&L.P&&(L.P.fac||L.P.id))||(typeof AI!=='undefined'&&AI.fac)||'legion';
+  const enemyNm=typeof facDisplayName==='function'?facDisplayName(enemyFac):enemyFac.toUpperCase();
+  const scale=(typeof BATTLEFIELD_PRESETS!=='undefined'&&typeof battlefieldPresetKey==='function'&&BATTLEFIELD_PRESETS[battlefieldPresetKey(D.size||'standard')])||{km:'2.6 KM',dur:'12-18 MIN'};
+  const modsActive=(typeof OPMODS!=='undefined'&&typeof opModActive==='function')?OPMODS.filter(k=>opModActive(k.id)):[];
+  const payout=(typeof payoutMult==='function')?Math.round(payoutMult()*100)+'%':'100%';
+  return {
+    id,
+    name: D.nm||id,
+    tier: L?L.tier:1,
+    size: D.size||'standard',
+    scale: scale.km||'2.6 KM',
+    dur: scale.dur||'15 MIN',
+    threat: {
+      level: diff+1,
+      label: diffLabels[clamp(diff,0,4)],
+      enemy: enemyNm,
+      infestation: (typeof infestationOn!=='undefined'&&infestationOn&&D.infest!==false)
+    },
+    resources: {
+      pace: resLabel,
+      nodes: depCount+' STRATEGIC DEPOSITS',
+      supply: (typeof crateRate!=='undefined'&&crateRate>0)?'ORBITAL CRATES ACTIVE':'NO SUPPLY DROPS'
+    },
+    hazard: {
+      icon: haz.em||'⚠',
+      name: haz.nm||'Atmosphere',
+      desc: haz.ds||'Standard conditions.'
+    },
+    modifiers: modsActive.length,
+    payout
+  };
+}
+
 function mfGalaxyRenderRegion(){
-  const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),M=mfGalaxyLiveMeta(mfGalaxyPlanetKey()),hero=$('mfRegionHero'),wins=mfConquestRegionWins(R);if(hero)hero.innerHTML='<small>'+mfGalaxyEsc(P.nm)+' // '+mfGalaxyEsc(M.front)+'</small><b>'+mfGalaxyEsc(R.nm)+'</b><span>'+mfGalaxyEsc(R.hook||'Secure Compact, Standard and Large sites in order.')+(R.poi?' Landmark: '+mfGalaxyEsc(R.poi)+'.':'')+'</span><div class="mfConquestBar"><b>'+wins+' / 3 SECURED</b><span>'+(wins===3?'REGION LIBERATED':['COMPACT · EASY','STANDARD · NORMAL','LARGE · HARD'][wins]+' NEXT')+'</span></div>';
+  const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),M=mfGalaxyLiveMeta(mfGalaxyPlanetKey()),hero=$('mfRegionHero'),wins=mfConquestRegionWins(R);
+  const intel=getSiteIntel(curMap);
+  if(hero)hero.innerHTML='<small>'+mfGalaxyEsc(P.nm)+' // '+mfGalaxyEsc(M.front)+'</small><b>'+mfGalaxyEsc(R.nm)+'</b><span>'+mfGalaxyEsc(R.hook||'Secure Compact, Standard and Large sites in order.')+(R.poi?' Landmark: '+mfGalaxyEsc(R.poi)+'.':'')+'</span>'
+    +'<div class="mfConquestBar"><b>'+wins+' / 3 SECURED</b><span>'+(wins===3?'REGION LIBERATED':['COMPACT · EASY','STANDARD · NORMAL','LARGE · HARD'][wins]+' NEXT')+'</span></div>'
+    +'<div class="mfSiteIntelDossier"><div class="mfIntelChip"><span>THREAT</span><b>'+mfGalaxyEsc(intel.threat.label)+'</b></div><div class="mfIntelChip"><span>HOSTILE</span><b>'+mfGalaxyEsc(intel.threat.enemy)+'</b></div><div class="mfIntelChip"><span>RESOURCE</span><b>'+mfGalaxyEsc(intel.resources.pace)+'</b></div><div class="mfIntelChip"><span>HAZARD</span><b>'+intel.hazard.icon+' '+mfGalaxyEsc(intel.hazard.name)+'</b></div></div>';
   const panel=$('mfStageRegion');if(panel)panel.style.setProperty('--rc',R.color||M.color);renderMapRow();
 }
 function mfGalaxySummary(){
   const P=mfGalaxyPlanet(),R=mfGalaxyRegion(),D=MAPDEFS[curMap]||{},C=typeof commanderById==='function'?commanderById(playerCommanderId):null;
-  const payout=$('opsBriefPayout')?$('opsBriefPayout').textContent:'LIVE',mods=$('opsBriefMods')?$('opsBriefMods').textContent:'0',threat=$('opsBriefThreat')?$('opsBriefThreat').textContent:('T'+(difficulty+1));
+  const intel=getSiteIntel(curMap);
+  const payout=$('opsBriefPayout')?$('opsBriefPayout').textContent:intel.payout,mods=$('opsBriefMods')?$('opsBriefMods').textContent:String(intel.modifiers),threat=$('opsBriefThreat')?$('opsBriefThreat').textContent:('T'+(difficulty+1));
   const scale=BATTLEFIELD_PRESETS[battlefieldPresetKey(D.size||battlefieldPreset)]||{},domain=D.navalEnabled?(D.waterMode==='river'?'RIVER + NAVAL':'OCEAN + NAVAL'):'LAND DOMAIN';
-  const CQ=mfConquestLocate(curMap),hero=$('mfMissionHero');if(hero)hero.innerHTML='<div class="mfMissionKicker">'+mfGalaxyEsc(P.nm)+' / '+mfGalaxyEsc(R.nm)+(D.poi?' / '+mfGalaxyEsc(D.poi):'')+'</div><h3>'+mfGalaxyEsc(D.nm||'BATTLEFIELD')+'</h3><p>'+mfGalaxyEsc(D.ds||'Operational theatre ready for deployment.')+'</p><div class="mfMissionTags">'+(CQ?'<span>CONQUEST FRONT '+CQ.tier+'</span>':'')+'<span>'+mfGalaxyEsc(threat)+' THREAT</span><span>'+mfGalaxyEsc(scale.km||String(D.size||battlefieldPreset).toUpperCase())+'</span><span>'+mfGalaxyEsc(scale.dur||'LIVE')+'</span><span>'+mfGalaxyEsc(domain)+'</span><span>'+mfGalaxyEsc(String(D.hazard||'CLEAR').toUpperCase())+'</span><span>'+mfGalaxyEsc(mods)+' MODIFIERS</span><span>'+mfGalaxyEsc(payout)+' PAYOUT</span><span>'+mfGalaxyEsc(C?C.name||C.nm:'COMMANDER')+'</span></div>';
+  const CQ=mfConquestLocate(curMap),hero=$('mfMissionHero');if(hero)hero.innerHTML='<div class="mfMissionKicker">'+mfGalaxyEsc(P.nm)+' / '+mfGalaxyEsc(R.nm)+(D.poi?' / '+mfGalaxyEsc(D.poi):'')+'</div><h3>'+mfGalaxyEsc(D.nm||'BATTLEFIELD')+'</h3><p>'+mfGalaxyEsc(D.ds||'Operational theatre ready for deployment.')+'</p>'
+    +'<div class="mfMissionTags">'+(CQ?'<span>CONQUEST FRONT '+CQ.tier+'</span>':'')+'<span>'+mfGalaxyEsc(threat)+' THREAT</span><span>'+mfGalaxyEsc(scale.km||String(D.size||battlefieldPreset).toUpperCase())+'</span><span>'+mfGalaxyEsc(scale.dur||'LIVE')+'</span><span>'+mfGalaxyEsc(domain)+'</span><span>'+intel.hazard.icon+' '+mfGalaxyEsc(String(D.hazard||'CLEAR').toUpperCase())+'</span><span>'+mfGalaxyEsc(mods)+' MODIFIERS</span><span>'+mfGalaxyEsc(payout)+' PAYOUT</span><span>'+mfGalaxyEsc(C?C.name||C.nm:'COMMANDER')+'</span></div>'
+    +'<div class="mfSiteIntelBar"><div class="mfSiteIntelCol"><small>ORBITAL TELEMETRY</small><b>'+mfGalaxyEsc(intel.resources.nodes)+'</b> · <span>'+mfGalaxyEsc(intel.resources.pace)+'</span></div><div class="mfSiteIntelCol"><small>TACTICAL FORECAST</small><b>'+intel.hazard.icon+' '+mfGalaxyEsc(intel.hazard.name)+'</b> · <span>'+mfGalaxyEsc(intel.hazard.desc)+'</span></div></div>';
   for(const d of document.querySelectorAll('.mfConfigDrawer')){const out=d.querySelector('.mfDrawerTx small');if(!out)continue;const k=d.dataset.drawer;if(k==='command')out.textContent=(C?(C.name||C.nm):'Commander')+' · '+activeAiSlots().length+' AI';else if(k==='mission')out.textContent=(goalDef().nm||goalSel)+' · '+(timeLimit?Math.round(timeLimit/60)+' MIN':'NO LIMIT');else if(k==='logistics')out.textContent=(resPace===1.6?'RICH':resPace<1?'LEAN':'NORMAL')+' RESOURCES';else out.textContent=mods+' ACTIVE · '+payout;}
 }
 

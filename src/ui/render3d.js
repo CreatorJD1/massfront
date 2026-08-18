@@ -1049,11 +1049,25 @@ function render(dtDraw){
   const floraMesh=k=>k==='pine'?(FX.treePine||FX.tree):k==='palm'?(FX.treePalm||FX.tree):
     k==='dead'?(FX.treeDead||FX.tree):k==='spore'?(FX.treeSpore||FX.tree):FX.tree;
   const rockMesh=k=>k==='ice'?(FX.rockIce||FX.rock):k==='slag'?(FX.rockSlag||FX.rock):FX.rock;
+  const floraSprite=k=>(typeof sprites!=='undefined'&&(k==='pine'?sprites.treePine:k==='palm'?sprites.treePalm:
+    k==='dead'?sprites.treeDead:k==='spore'?sprites.treeSpore:sprites.tree))||(typeof sprites!=='undefined'&&sprites.tree)||null;
+  const rockSprite=k=>(typeof sprites!=='undefined'&&(k==='ice'?sprites.rockIce:k==='slag'?sprites.rockSlag:sprites.rock))||(typeof sprites!=='undefined'&&sprites.rock)||null;
+
+  const ROCK_BB_D=typeof mfLodSpan==='function'?mfLodSpan(650):650;
+  const rockBBd2=ROCK_BB_D*ROCK_BB_D;
   for(let ri=0;ri<rocks.length;ri++){
-    if(sceneryStep>1&&(ri%sceneryStep)) continue;
     const r=rocks[ri];
     if(!vis(r.x,r.y,40)||!fogPointVisible(r.x,r.y)) continue;
-    rockMesh(r.k).add(r.x,r.y,gh(r.x,r.y),r.s*0.035,r.a,rockTint[0],rockTint[1],rockTint[2],255);
+    const dx2=r.x-cam.x, dy2=r.y-cam.y;
+    const farRock=(dx2*dx2+dy2*dy2)>rockBBd2;
+    const sprR=rockSprite(r.k);
+    if(farRock&&sprR){
+      const sz=r.s*0.85;
+      bbAlpha.add(sprR,r.x,r.y,gh(r.x,r.y)+sz*0.35,sz,r.a,rockTint[0],rockTint[1],rockTint[2],255);
+    } else {
+      if(sceneryStep>1&&(ri%sceneryStep)) continue;
+      rockMesh(r.k).add(r.x,r.y,gh(r.x,r.y),r.s*0.035,r.a,rockTint[0],rockTint[1],rockTint[2],255);
+    }
   }
   /* Settlements: one instanced draw per kit piece + one per site fill mesh.
      Fog rule matches buildings — an unscouted town stays dark. */
@@ -1068,48 +1082,41 @@ function render(dtDraw){
   const tt=(BK&&BK.treeTint)||THEMES[curTheme].treeTint;
   const ct=(BK&&BK.coverTint)||[86,118,58];
   /* TREE LOD — impostor billboards past a distance band.
-     Every tree was an instanced 3D mesh at every range. That is correct up
-     close and wasteful far away: at command zoom a trunk is about two pixels,
-     and the mesh still costs its full vertex count. Distant trees now draw as
-     ONE camera-facing quad from the existing sprites.tree atlas cell, which is
-     the classic impostor trade (Unity calls these tree billboards).
-
-     Why this is worth doing here specifically: scatter now CLUSTERS into
-     stands, so the interesting camera framings are the ones with many trees on
-     screen at once. Billboards are what make a dense forest affordable.
-
-     The split is in WORLD units against the camera, not a global flag, so the
-     near trees around the player's base keep full geometry while the treeline
-     across the valley goes flat. bbAlpha (not bbAdd) because foliage is
-     occluding, not emissive — additive would make a forest glow.
-
-     Billboards are cheap enough that the sceneryStep decimation is lifted for
-     them: dropping every other distant tree was a fill-rate concession that a
-     quad no longer needs, and holes in a treeline read worse than flat trees. */
+     Every tree was an instanced 3D mesh at every range. Distant trees draw as
+     ONE camera-facing quad from the species billboard atlas cell. */
   const TREE_BB_D=typeof mfLodSpan==='function'?mfLodSpan(760):760;
   const treeBBd2=TREE_BB_D*TREE_BB_D;
-  const bbFlora=(typeof sprites!=='undefined'&&sprites.tree)||null;
   for(let ti=0;ti<trees.length;ti++){
     const tr=trees[ti];
     if(!vis(tr.x,tr.y,50)||!fogPointVisible(tr.x,tr.y)) continue;
     const dx2=tr.x-cam.x, dy2=tr.y-cam.y;
     const far=(dx2*dx2+dy2*dy2)>treeBBd2;
-    if(far&&bbFlora){
-      /* 0.030 is the mesh scale; the quad is sized to the same silhouette so a
-         tree does not visibly resize as it crosses the band. Lifted half its
-         height so the quad sits ON the ground rather than through it. */
+    const spr=floraSprite(tr.k);
+    if(far&&spr){
+      /* Quad is sized to match 3D mesh silhouette. Lifted half its height so
+         the quad sits on ground rather than through it. */
       const hgt=tr.s*0.92;
-      bbAlpha.add(bbFlora,tr.x,tr.y,gh(tr.x,tr.y)+hgt*0.5,hgt,tr.a,tt[0],tt[1],tt[2],255);
+      bbAlpha.add(spr,tr.x,tr.y,gh(tr.x,tr.y)+hgt*0.5,hgt,tr.a,tt[0],tt[1],tt[2],255);
     } else {
       if(sceneryStep>1&&(ti%sceneryStep)) continue;
       floraMesh(tr.k).add(tr.x,tr.y,gh(tr.x,tr.y),tr.s*0.030,tr.a,tt[0],tt[1],tt[2],255);
     }
   }
+  const BUSH_BB_D=typeof mfLodSpan==='function'?mfLodSpan(520):520;
+  const bushBBd2=BUSH_BB_D*BUSH_BB_D;
+  const bbBush=(typeof sprites!=='undefined'&&sprites.bush)||null;
   if(typeof cover!=='undefined'&&FX.bush) for(let ci=0;ci<cover.length;ci++){
-    if(sceneryStep>1&&(ci%sceneryStep)) continue;
     const b=cover[ci];
     if(!vis(b.x,b.y,36)||!fogPointVisible(b.x,b.y)) continue;
-    FX.bush.add(b.x,b.y,gh(b.x,b.y),b.s*0.042,b.a,ct[0],ct[1],ct[2],255);
+    const dx2=b.x-cam.x, dy2=b.y-cam.y;
+    const farBush=(dx2*dx2+dy2*dy2)>bushBBd2;
+    if(farBush&&bbBush){
+      const hgt=b.s*0.75;
+      bbAlpha.add(bbBush,b.x,b.y,gh(b.x,b.y)+hgt*0.35,hgt,b.a,ct[0],ct[1],ct[2],255);
+    } else {
+      if(sceneryStep>1&&(ci%sceneryStep)) continue;
+      FX.bush.add(b.x,b.y,gh(b.x,b.y),b.s*0.042,b.a,ct[0],ct[1],ct[2],255);
+    }
   }
   for(const cs of crystals){
     const D=deposits[cs.dep],tier=depositTier(D);if(!D||cs.band>tier||!vis(cs.x,cs.y,140))continue;

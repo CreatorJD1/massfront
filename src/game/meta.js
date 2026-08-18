@@ -1079,6 +1079,83 @@ function mfGreetName(){
   return 'Commander';
 }
 
+function getNextUnlockTrack(maxItems){
+  const max=maxItems||3;
+  const items=[];
+  
+  // 1. Account Rank Progression
+  const r=metaRankIdx();
+  const nextRank=RANKS[r+1];
+  if(nextRank){
+    const req=nextRank.xp;
+    const cur=(typeof META!=='undefined'&&META.xp)||0;
+    const pct=Math.min(100,Math.round(metaRankProg()*100));
+    items.push({
+      type:'rank',
+      title:'ACCOUNT RANK '+(r+2),
+      name:nextRank.nm,
+      badge:nextRank.em||'🎖',
+      progress:pct,
+      progressLabel:cur+' / '+req+' XP ('+pct+'%)',
+      desc:nextRank.reward||('Unlocks '+nextRank.nm+' clearance and perks')
+    });
+  }
+
+  // 2. Next Conquest Battlefield
+  if(typeof mfConquestCatalog==='function'){
+    const catalog=mfConquestCatalog();
+    const nextSite=catalog.find(x=>!x.won&&x.open);
+    if(nextSite){
+      const D=(typeof MAPDEFS!=='undefined'&&MAPDEFS[nextSite.key])||{};
+      const rew=(typeof mfConquestReward==='function')?mfConquestReward(nextSite.key):null;
+      items.push({
+        type:'conquest',
+        title:'FRONT '+nextSite.tier+' / 48',
+        name:D.nm||nextSite.key,
+        badge:'⚔',
+        progress:Math.round((nextSite.tier-1)/48*100),
+        progressLabel:'FRONT '+nextSite.tier+' / 48',
+        desc:rew?('First Clear: +'+rew.xp+' XP · +'+rew.cores+' Cores'):(D.ds||'Operational theatre')
+      });
+    }
+  }
+
+  // 3. Next Armory Perk
+  if(typeof STORE!=='undefined'){
+    const unbought=STORE.filter(it=>!(META&&META.store&&META.store[it.id]));
+    if(unbought.length>0){
+      const affordable=unbought.find(it=>(META.cores||0)>=it.cost)||unbought[0];
+      const curCores=(typeof META!=='undefined'&&META.cores)||0;
+      const pct=Math.min(100,Math.round(curCores/Math.max(1,affordable.cost)*100));
+      items.push({
+        type:'armory',
+        title:'ARMORY REQUISITION',
+        name:affordable.nm,
+        badge:affordable.em||'⚙',
+        progress:pct,
+        progressLabel:curCores+' / '+affordable.cost+' Cores',
+        desc:affordable.ds||'Permanent combat doctrine upgrade'
+      });
+    }
+  }
+
+  return items.slice(0,max);
+}
+
+function renderNextUnlockRail(){
+  const box=document.getElementById('mfNextUnlockRail');
+  if(!box) return;
+  const tracks=getNextUnlockTrack(3);
+  box.innerHTML=tracks.map(t=>
+    '<div class="mfNextCard type-'+t.type+'">'
+    +'<div class="mfNextHead"><span class="mfNextBadge">'+t.badge+'</span><b>'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.title):t.title)+'</b></div>'
+    +'<div class="mfNextName">'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.name):t.name)+'</div>'
+    +'<div class="mfNextProg"><div class="mfNextFill" style="width:'+t.progress+'%"></div></div>'
+    +'<div class="mfNextMeta"><span>'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.progressLabel):t.progressLabel)+'</span><small>'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.desc):t.desc)+'</small></div>'
+    +'</div>'
+  ).join('');
+}
+
 /* ---------- menu header + armory UI ---------- */
 function renderMetaHead(){
   const r=metaRankIdx(), R=RANKS[r], next=RANKS[r+1], P=activeProf();
@@ -1109,6 +1186,7 @@ function renderMetaHead(){
      the one reliable place to refresh the Inbox badge. Without this the dot only
      appeared after opening the Inbox — which is the one moment it is useless. */
   if(typeof storyRefreshBadge==='function'){ try{ storyRefreshBadge(); }catch(e){} }
+  renderNextUnlockRail();
 }
 
 /* ---------- war room ----------
