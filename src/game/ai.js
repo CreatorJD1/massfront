@@ -281,7 +281,14 @@ function aiCanAfford(cm,ce,seat){
   return typeof canAfford==='function'?canAfford(1,cm,ce,S&&S.slot):((S.mass||0)>=cm&&(S.energy||0)>=ce);
 }
 let aiArmyMemoT=-1, aiArmyMemo=[];
-let aiAirMemoT=-1, aiAirMemo=-1;
+/* COUNTER-COMPOSITION SENSING. The AI used to own exactly ONE sense organ —
+   playerAirCount — so armour balls and turret lines were literally invisible
+   to production. See playerForceScan / playerStaticDefCount / aiCounterPick
+   below. Same memo discipline as the air count they replace: one sweep per
+   aiTick (0.5 s), never per frame, never once per factory. */
+let aiForceMemoT=-1;
+const aiForceMemo={air:0,armourMass:0,combatMass:0};
+let aiDefMemoT=-1, aiDefMemo=-1;
 function aiSeatArmy(slot){
   /* Same aiTick can ask this per factory. 1000-pop scans were ~16ms of aiTick. */
   const k=(slot==null?0:slot+1)|0;
@@ -368,12 +375,166 @@ function aiWaveMuster(B,WD){
     if(ualive[i]&&uteam[i]===1&&!isEnemyCommander(i)&&utype[i]!==UT_ENGINEER&&aiUnitBelongsToBase(i,B)) army++;
   return {army,need:Math.min([14,18,22][WD],[7,9,11][WD]+Math.ceil(AI.wave/AI.bases.length))};
 }
-function playerAirCount(){
-  if(aiAirMemoT===AI.t && aiAirMemo>=0) return aiAirMemo;
+/* ---------- WHAT THE AI IS ALLOWED TO NOTICE ------------------------------
+   playerAirCount was the whole of the AI's reactive sensing: it raised
+   Skyguards and rolled Vultures when the player flew, and was blind to
+   everything else on the board. The roster already ships the other two thirds
+   of the counter triangle and production never read either of them — WKM gives
+   GAUSS x1.85 and BEAM x1.60 into HEAVY plate, STM gives EXPLOSIVE x1.55 into
+   structures — so a player who massed Goliaths, or who walled in behind a
+   Sentinel line, met precisely the same phase-table army as one who massed
+   Strikers in the open. Three axes now, one sweep.
+
+   COST IS THE METRIC, not head count. A hero and free wildlife are cm 0, so
+   nothing the player did not actually PAY for can inflate the armour reading,
+   and a Goliath (64) outweighs four Strikers (60) the way it should. HEAVY is
+   the armour class the anti-tank answer is aimed at; cat 'veh'/'exp' catches
+   the chassis a player reads as armour regardless of its plate class. */
+function playerForceScan(){
+  if(aiForceMemoT===AI.t) return aiForceMemo;
+  let air=0,armourMass=0,combatMass=0;
+  for(let i=0;i<unitHigh;i++){
+    if(!ualive[i]||uteam[i]!==0) continue;
+    const tp=utype[i],T=TYPES[tp];
+    if(!T) continue;
+    if(T.air) air++;
+    const cm=T.cm||0;
+    if(cm<=0) continue;
+    combatMass+=cm;
+    if(ARM[tp]===2||T.cat==='veh'||T.cat==='exp') armourMass+=cm;
+  }
+  aiForceMemo.air=air; aiForceMemo.armourMass=armourMass; aiForceMemo.combatMass=combatMass;
+  aiForceMemoT=AI.t;
+  return aiForceMemo;
+}
+function playerAirCount(){ return playerForceScan().air; }
+/* STATIC DEFENCE the AI has to break, not every structure the player owns.
+   BT[].bcat==='def' is the same classification the build menu reads, so walls,
+   economy and tech buildings do not masquerade as a turret line. bldLive is
+   tens of entries rather than a thousand, but the production loop asks once
+   per factory, so it is memoised on the same clock as the unit sweep. */
+function playerStaticDefCount(){
+  if(aiDefMemoT===AI.t && aiDefMemo>=0) return aiDefMemo;
   let n=0;
-  for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===0&&TYPES[utype[i]].air) n++;
-  aiAirMemoT=AI.t; aiAirMemo=n;
+  for(const B of bldLive){
+    if(!B.alive||B.team!==0||B.prog<1) continue;
+    const D=BT[B.type];
+    if(D&&D.bcat==='def') n++;
+  }
+  aiDefMemoT=AI.t; aiDefMemo=n;
   return n;
+}
+/* ---------- COUNTER POOLS -------------------------------------------------
+   Read off the damage tables, not off feel:
+     ARMOUR t2 — 22 Lancer (GAUSS x1.85 into HEAVY) and 6 Longbow (BEAM x1.60).
+                 FAC_ARSENAL gives every faction at least one of the two
+                 (Dominion and Brood the Lancer, Coalition the Longbow, Nova
+                 both), so this pool can never resolve to "no answer".
+     ARMOUR t1 — there is no gauss or beam chassis at tier 1 at all. The honest
+                 tier-1 reply to plate is per-shot weight, which is the Rhino:
+                 16 damage a shot against the Striker's 5.4, and kinetic's
+                 x0.55 vs HEAVY punishes the small round far harder.
+     SIEGE  t2 — 16 Bombard (rng 400), 3 Thumper (265), 27 Harbinger (210),
+                 7 Hornet (175). All EXPLOSIVE (STM x1.55 vs structures) and
+                 every one of them outranges the 155 of a Sentinel or Bulwark,
+                 which is the actual requirement for cracking a turret line.
+     SIEGE  t1 — 9 Pyro carries CLAWS, the best structure multiplier (x1.10) a
+                 tier-1 plant can field; 1 Rhino covers the factions with no
+                 Pyro card. Both are intersected with `legal` before use.
+   Every entry is filtered against the faction's legal roster at the call site,
+   so widening the AI's eyes can never widen its arsenal. */
+const AI_CTR_ARMOUR={1:[1],2:[22,6]};
+const AI_CTR_SIEGE ={1:[9,1],2:[16,3,27,7]};
+/* A BIAS, NOT A TAKEOVER. At most this share of factory rolls is decided by
+   what the player fielded; doctrine, phase and faction identity keep the rest.
+   An AI that answers your army perfectly is not a better opponent, it is a
+   mirror, and the 2026-08 threat-clock pass already learned that lesson. */
+const AI_CTR_MAX=0.5;
+function aiCounterWeights(){
+  const F=playerForceScan();
+  /* ABSOLUTE MASS **AND** SHARE. One Goliath escorting thirty Strikers is not
+     an armour problem; three Goliaths and nothing else is. Requiring both
+     stops a single heavy chassis from flipping an entire production line, and
+     stops a big cheap army from reading as armour because of its bulk. */
+  const share=F.combatMass>0?F.armourMass/F.combatMass:0;
+  let armour=clamp((F.armourMass-70)/260,0,1)*clamp((share-0.22)/0.38,0,1);
+  let siege=clamp((playerStaticDefCount()-2)/7,0,1);
+  const k=AI_CTR_MAX/Math.max(1,armour+siege);
+  return {armour:armour*k,siege:siege*k};
+}
+function aiCounterPick(legal,tier){
+  if(!legal||!legal.length) return -1;
+  const w=aiCounterWeights(),r=Math.random();
+  const pool = r<w.armour ? AI_CTR_ARMOUR[tier===2?2:1]
+             : r<w.armour+w.siege ? AI_CTR_SIEGE[tier===2?2:1] : null;
+  if(!pool) return -1;
+  const ok=pool.filter(t=>legal.indexOf(t)>=0&&TYPES[t]&&TYPES[t].bt>0);
+  if(!ok.length) return -1;
+  /* Faction weights still choose WITHIN the counter, so the Dominion answer to
+     armour still looks like a Dominion answer. */
+  return aiWeightedPick(ok,aiFactionBias());
+}
+/* ---------- FACTORY COMPOSITION -------------------------------------------
+   Lifted out of the aiTick production loop unchanged so the whole pick — phase
+   table, doctrine focus, arsenal filter, faction bias, counter-composition and
+   the Vulture guard — can be sampled directly by tools/test-ai-counter-comp.mjs
+   instead of being inferred from what eventually walked out of a factory. */
+function aiFactoryPick(B){
+  let t=0;
+  const r=Math.random();
+  // war footing advances with BOTH match time and the player's commander level
+  const phase=Math.max(AI.t, (heroLvl-1)*75);
+  if(B.tier===1){
+    /* 10 is the Vulture, which cannot shoot ground at all. Rolling it into
+       ground waves regardless of whether the player owns a single aircraft
+       sent free kills across the map every wave. */
+    const airThreat=playerAirCount()>0;
+    if(phase<110) t = r<0.8?0 : 1;
+    else if(phase<240) t = r<0.45?0 : r<0.8?1 : (r<0.92?9:(airThreat?10:1));
+    else t = r<0.25?0 : r<0.55?1 : r<0.72?9 : (r<0.88?(airThreat?10:2):5);
+  } else {
+    if(phase<420) t = r<0.2?0 : r<0.42?1 : r<0.58?2 : r<0.72?3 : r<0.84?7 : (r<0.94?6:11);
+    else t = r<0.14?1 : r<0.32?2 : r<0.48?3 : r<0.6?16 : r<0.72?6 : r<0.84?7 : (r<0.93?11:5);
+  }
+  /* Personality shapes the faction's LEGAL roster, never replaces it.
+     This pass happens before the arsenal filter below so a Dominion Air
+     AI still fields Dominion escorts and a Syndicate Turtle cannot roll a
+     chassis its faction does not own. */
+  const behavior=aiBuildingBehavior(B),focus=aiBehaviorUnitPool(behavior,B.tier,'fac');
+  if(focus&&Math.random()<(behavior==='balanced'?0:behavior==='rush'?.9:.76))t=focus[Math.random()*focus.length|0];
+  /* This guard makes future wildlife/hero additions fail safe instead of
+     turning one bad doctrine entry into a permanent production deadlock. */
+  if(!TYPES[t]||TYPES[t].bt<=0) t=B.tier===2?(Math.random()<0.6?21:20):(Math.random()<0.5?0:9);
+  /* The same arsenal seam drives player cards and enemy factories. A bias
+     alone still lets a Dominion line randomly field Coalition shields or
+     a Coalition plant roll Dominion siege; filter the final choice, then
+     replace it from that faction's legal counter-complete pool. */
+  let legal=null;
+  if(typeof factionDoctrineRoster==='function'){
+    const basePool=B.tier===2?[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]:[0,1,9,10,19,24,32];
+    legal=factionDoctrineRoster(basePool,B.type||'fac',1).filter(q=>TYPES[q]&&TYPES[q].bt>0);
+    if(legal.length&&legal.indexOf(t)<0) t=legal[Math.random()*legal.length|0];
+  }
+  /* Faction identity used to be three hardcoded pools that disagreed with
+     FACTIONS[k].bias (Legion never rolled Harbinger). 0.45 matches the old
+     Legion chance: keep the phase mix most of the time, overlay the table
+     often enough that the design-DB weights are a real production lever. */
+  if(legal&&legal.length){
+    const themed=aiFactionBiasOverride(legal);
+    if(themed>=0&&Math.random()<0.45) t=themed;
+  }
+  /* COUNTER-COMPOSITION, last word before the Vulture guard and drawn only
+     from `legal`, so the faction arsenal still owns "can this be built". This
+     is deliberately downstream of the bias overlay: the player's actual army
+     is newer information than a static design-DB weight. It stays off the
+     surplus-mass dump above on purpose — that path is a bank valve with no
+     arsenal filter, and pushing an illegal chassis through it would let the
+     AI field cards its faction does not own. */
+  const counter=aiCounterPick(legal,B.tier);
+  if(counter>=0) t=counter;
+  /* Vultures remain pure AA even if bias or the phase roll named one. */
+  if(t===10&&playerAirCount()<=0) t=legal&&legal.indexOf(23)>=0?23:(B.tier===2&&legal&&legal.indexOf(2)>=0?2:1);
+  return t;
 }
 function aiFreeSpot(type){
   const fac=AI.fac||'legion', f=bldFoot(type,fac), edge=Math.max(f[0],f[1])*.5+12;
@@ -714,54 +875,7 @@ function aiTick(dt){
       const biased=aiFactionBiasOverride(dump);
       B.queue.push(biased>=0?biased:dump[Math.random()*dump.length|0]);
     }
-    if(!B.queue.length){
-      let t=0;
-      const r=Math.random();
-      // war footing advances with BOTH match time and the player's commander level
-      const phase=Math.max(AI.t, (heroLvl-1)*75);
-      if(B.tier===1){
-        /* 10 is the Vulture, which cannot shoot ground at all. Rolling it into
-           ground waves regardless of whether the player owns a single aircraft
-           sent free kills across the map every wave. */
-        const aa = playerAirCount()>0;
-        if(phase<110) t = r<0.8?0 : 1;
-        else if(phase<240) t = r<0.45?0 : r<0.8?1 : (r<0.92?9:(aa?10:1));
-        else t = r<0.25?0 : r<0.55?1 : r<0.72?9 : (r<0.88?(aa?10:2):5);
-      } else {
-        if(phase<420) t = r<0.2?0 : r<0.42?1 : r<0.58?2 : r<0.72?3 : r<0.84?7 : (r<0.94?6:11);
-        else t = r<0.14?1 : r<0.32?2 : r<0.48?3 : r<0.6?16 : r<0.72?6 : r<0.84?7 : (r<0.93?11:5);
-      }
-      /* Personality shapes the faction's LEGAL roster, never replaces it.
-         This pass happens before the arsenal filter below so a Dominion Air
-         AI still fields Dominion escorts and a Syndicate Turtle cannot roll a
-         chassis its faction does not own. */
-      const behavior=aiBuildingBehavior(B),focus=aiBehaviorUnitPool(behavior,B.tier,'fac');
-      if(focus&&Math.random()<(behavior==='balanced'?0:behavior==='rush'?.9:.76))t=focus[Math.random()*focus.length|0];
-      /* This guard makes future wildlife/hero additions fail safe instead of
-         turning one bad doctrine entry into a permanent production deadlock. */
-      if(!TYPES[t]||TYPES[t].bt<=0) t=B.tier===2?(Math.random()<0.6?21:20):(Math.random()<0.5?0:9);
-      /* The same arsenal seam drives player cards and enemy factories. A bias
-         alone still lets a Dominion line randomly field Coalition shields or
-         a Coalition plant roll Dominion siege; filter the final choice, then
-         replace it from that faction's legal counter-complete pool. */
-      let legal=null;
-      if(typeof factionDoctrineRoster==='function'){
-        const basePool=B.tier===2?[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]:[0,1,9,10,19,24,32];
-        legal=factionDoctrineRoster(basePool,B.type||'fac',1).filter(q=>TYPES[q]&&TYPES[q].bt>0);
-        if(legal.length&&legal.indexOf(t)<0) t=legal[Math.random()*legal.length|0];
-      }
-      /* Faction identity used to be three hardcoded pools that disagreed with
-         FACTIONS[k].bias (Legion never rolled Harbinger). 0.45 matches the old
-         Legion chance: keep the phase mix most of the time, overlay the table
-         often enough that the design-DB weights are a real production lever. */
-      if(legal&&legal.length){
-        const themed=aiFactionBiasOverride(legal);
-        if(themed>=0&&Math.random()<0.45) t=themed;
-      }
-      /* Vultures remain pure AA even if bias or the phase roll named one. */
-      if(t===10&&playerAirCount()<=0) t=legal&&legal.indexOf(23)>=0?23:(B.tier===2&&legal&&legal.indexOf(2)>=0?2:1);
-      B.queue.push(t);
-    }
+    if(!B.queue.length) B.queue.push(aiFactoryPick(B));
   }
   // ---------- wave attacks ----------
   if(!AI.warned && AI.waveTimer<=16 && AI.waveTimer>0){
