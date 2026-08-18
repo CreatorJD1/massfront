@@ -2000,6 +2000,7 @@ function continueToNextMap(){
   if(typeof adClearPostMatchAd==='function') adClearPostMatchAd();
   closeMenus(); cancelPlace();
   hideFrontScreens();
+  mfLoadScreenFill();
   $('loadScr').style.display='flex';
   requestAnimationFrame(()=>requestAnimationFrame(()=>{
     applyTheme(); newSkirmish();
@@ -2007,6 +2008,49 @@ function continueToNextMap(){
     stopAttract();
     if(typeof mfFlowLayout==='function') mfFlowLayout();
   }));
+}
+/* Fill the loading screen with the intel the game already authored. PLANETS
+   (gl.js:1768) carries ds / biodome / sector / diameter / dayLen / temp /
+   climate / lore, and each region carries poi + hook — a genuinely large body
+   of worldbuilding that the player never saw, because the only place it could
+   appear was a screen that said "SURVEYING TERRAIN…" and nothing else.
+   Everything is optional-chained: an unknown map must still load. */
+function mfLoadScreenFill(){
+  const $=id=>document.getElementById(id);
+  const setT=(id,v)=>{ const e=$(id); if(e) e.textContent=v||''; };
+  const MD=(typeof MAPDEFS!=='undefined'&&typeof curMap!=='undefined')?MAPDEFS[curMap]:null;
+  let P=null,R=null;
+  try{
+    const pk=(typeof planetForMap==='function')?planetForMap(curMap):null;
+    P=(pk&&typeof PLANETS!=='undefined')?PLANETS[pk]:null;
+    if(P&&P.regions) R=P.regions.find(r=>r.maps&&r.maps.indexOf(curMap)>=0)||null;
+  }catch(e){}
+  /* Title prefers the authored map name over the generic status line. */
+  setT('loadTitle',(MD&&MD.nm)||'GENERATING BATTLEFIELD');
+  setT('loadEyebrow',P?('DEPLOYING TO  ·  '+P.nm):'DEPLOYING');
+  /* poi is the named location; hook is the one-line scene set. */
+  setT('loadPoi',(R&&R.poi)||(MD&&MD.poi)||'');
+  setT('loadHook',(R&&R.hook)||(MD&&MD.ds)||'');
+  const host=$('loadStats');
+  if(host){
+    const chips=[];
+    const add=(k,v)=>{ if(v) chips.push('<div class="lsChip"><span class="lsK">'+k+
+      '</span><span class="lsV">'+String(v).toUpperCase()+'</span></div>'); };
+    add('REGION',R&&R.nm);
+    add('SECTOR',P&&P.sector);
+    add('CLIMATE',P&&P.climate);
+    add('TEMP',P&&P.temp);
+    add('DAY',P&&P.dayLen);
+    add('SCALE',MD&&MD.size);
+    add('HAZARD',MD&&MD.hazard);
+    host.innerHTML=chips.join('');
+  }
+  /* Rotate the status line so a long generate does not look frozen on one
+     string. Terrain gen blocks the main thread, so this is set once per show
+     rather than animated — an interval would not tick anyway. */
+  const subs=['SURVEYING TERRAIN…','MAPPING HYDROLOGY…','PLACING RESOURCE NODES…',
+              'RAISING SETTLEMENTS…','SEEDING FLORA…'];
+  setT('loadSub',subs[(Math.random()*subs.length)|0]);
 }
 function wire(){
   document.querySelectorAll('.hudDeckBtn').forEach(b=>mfBindTap(b,e=>{
@@ -2217,6 +2261,7 @@ function wire(){
     }
     hideFrontScreens(); sfx('ui');
     // terrain generation is heavy at this resolution — show it, don't freeze on it
+    mfLoadScreenFill();
     $('loadScr').style.display='flex';
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       applyTheme(); newSkirmish();

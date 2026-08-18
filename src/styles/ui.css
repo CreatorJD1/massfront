@@ -1363,6 +1363,22 @@ input,textarea,#profName{-webkit-user-select:text;user-select:text}
 #updBtn:disabled{opacity:.45}
 #updCancel{padding:9px 10px;background:linear-gradient(180deg,rgba(70,28,24,.96),rgba(34,12,10,.97)) padding-box,
              linear-gradient(160deg,#ffc9bd,#ff6a55 45%,#5e1d14 75%,#ffb0a2) border-box}
+/* LOADING SCREEN. PLANETS[] carries ds/biodome/sector/diameter/dayLen/temp/
+   climate/lore plus per-region poi/hook, and almost none of it was ever shown.
+   The wait is unavoidable (terrain gen is heavy at 2048); use it to say where
+   the player actually is. */
+/* Opaque, unlike the shared .overlay 0.9 alpha: the menu showing through a
+   loading screen reads as a stuck transition rather than a deliberate wait,
+   and the intel text below has to sit on a settled background to be read. */
+#loadScr{background:radial-gradient(120% 90% at 50% 34%,#0a1622 0%,#050b13 58%,#03070e 100%)}
+#loadEyebrow{font:700 9.5px/1 var(--fT);letter-spacing:.30em;color:#5f87a6;margin-bottom:9px}
+#loadPoi{margin-top:7px;font:700 12px/1.3 var(--fT);letter-spacing:.20em;color:#5dff9a}
+#loadHook{margin-top:9px;max-width:min(86vw,470px);font:500 12px/1.6 var(--fU);color:#9fb8cc;text-align:center}
+#loadStats{margin-top:12px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 8px;max-width:min(86vw,470px)}
+#loadStats .lsChip{display:flex;gap:5px;align-items:baseline;padding:3px 8px;border-radius:6px;
+  background:rgba(12,21,34,.66);border:1px solid rgba(120,180,220,.16)}
+#loadStats .lsK{font:700 8px/1 var(--fT);letter-spacing:.16em;color:#5f87a6}
+#loadStats .lsV{font:700 9.5px/1 var(--fT);letter-spacing:.08em;color:#cfe6ff}
 #updBarO{margin-top:9px;height:7px;border-radius:5px;overflow:hidden;
   background:rgba(4,10,18,.85);box-shadow:inset 0 1px 3px rgba(0,0,0,.7)}
 /* Per-file download feed. Hidden in mini exactly like the bar it sits under. */
