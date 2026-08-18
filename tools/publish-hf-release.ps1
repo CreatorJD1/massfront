@@ -163,6 +163,17 @@ Compress-Archive -Path $archiveItems.FullName -DestinationPath $source -Compress
 Need ((Get-Item -LiteralPath $source).Length -gt 1048576) "Source archive is implausibly small; refusing to publish an unusable handoff."
 Remove-Item -LiteralPath $stage -Recurse -Force
 
+
+# Force the classic LFS upload path. With hf-xet installed the client defaults
+# to Xet, and on this machine that handshake hangs on the ~960 MB source
+# archive: three runs sat at zero CPU with zero bytes read, never opening the
+# file, while the 55 MB OTA and 67 MB APK went up fine in the same session.
+# v1.33.41 shipped with NO source archive because of it, and v1.33.43 stalled
+# here until this was set. Classic path uploaded 960 MB cleanly twice.
+# Upgrading huggingface_hub 1.24.0 -> 1.27.0 did NOT verifiably fix it (hf-xet
+# stayed put, and the retest deduped instead of transferring), so this stays
+# until someone proves the Xet path works with genuinely new bytes.
+$env:HF_HUB_DISABLE_XET='1'
 Run 'Publish OTA patch' { & $Hf upload $Repo $ota "MASSFRONT-v$Version-update.js" --type dataset --commit-message "Publish MASSFRONT v$Version OTA" }
 Run 'Publish Android installer' { & $Hf upload $Repo $apk "MASSFRONT-v$Version-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer" }
 Run 'Publish source archive' { & $Hf upload $Repo $source "MASSFRONT-v$Version-source.zip" --type dataset --commit-message "Publish MASSFRONT v$Version source archive" }

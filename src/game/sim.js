@@ -5419,7 +5419,9 @@ function prospectorAssistTick(i,dt){
   const B=blds[bi],a=Math.atan2(B.y-uy[i],B.x-ux[i]);umov[i]=0;uang[i]=a+Math.PI/2;
   B.tractorT=.18;B.tractorN=Math.min(2,(B.tractorFrame===tick?(B.tractorN||0)+1:1));B.tractorFrame=tick;
   const mx=ux[i]+Math.cos(a)*TYPES[UT_MINER].size*.55,my=uy[i]+Math.sin(a)*TYPES[UT_MINER].size*.55;
-  addBeam(mx,my,B.x,B.y,3.2,90,225,255,.11,'laser');
+  /* Same clamped-beam case as the extraction laser: LABOUR holds on a build
+     site for its whole duration, so the weapon burst saturates there too. */
+  addBeam(mx,my,B.x,B.y,3.2,90,225,255,.11,'mining');
   if(B.type==='hq'&&uteam[i]<2){resM[uteam[i]]=Math.min(RES_MCAP[uteam[i]],resM[uteam[i]]+.42*dt);resE[uteam[i]]=Math.min(RES_ECAP[uteam[i]],resE[uteam[i]]+1.8*dt);}
   return true;
 }
@@ -5455,7 +5457,9 @@ function minerUnitTick(i,dt){
   const a=Math.atan2(D.y-uy[i],D.x-ux[i]); uang[i]=a+Math.PI/2;
   const mx=ux[i]+Math.cos(a)*TYPES[utype[i]].size*.55,my=uy[i]+Math.sin(a)*TYPES[utype[i]].size*.55;
   const tier=depositTier(D),col=tier===3?[205,105,255]:tier===2?[80,255,165]:[80,220,255];
-  addBeam(mx,my,D.x+Math.cos(D.pulse||0)*5,D.y+Math.sin(D.pulse||0)*5,3.4,col[0],col[1],col[2],.11,'laser');
+  /* 'mining', not 'laser': a beam clamped on one point forever must not use
+     the weapon terminus burst. See the sty==='mining' branch in render3d.js. */
+  addBeam(mx,my,D.x+Math.cos(D.pulse||0)*5,D.y+Math.sin(D.pulse||0)*5,3.4,col[0],col[1],col[2],.11,'mining');
   addParticle(0,D.x+rr(-9,9),D.y+rr(-9,9),rr(-5,5),rr(-14,-4),.25,4,col[0],col[1],col[2]);
   uMineT[i]-=dt;
   if(uMineT[i]<=0){

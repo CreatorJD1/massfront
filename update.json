@@ -14,17 +14,17 @@
                       ],
     "base":  "",
     "severity":  "recommended",
-    "notes":  "Hotfix: finished extractors no longer bloom white; resource nodes use vein cracks instead of a dark disk; occupied pads keep the crack stamp.",
+    "notes":  "Fixes the white bloom disc on resource nodes. The extraction and build-assist beams no longer use the weapon impact burst, so extractors and the ground under them stay readable.",
     "files":  [
                   {
-                      "path":  "MASSFRONT-v1.33.41-update.js",
-                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.41-update.js?download=true",
-                      "size":  57274398,
-                      "sha256":  "a199f246e6e1e8c8d0893a344c535dc5e68f672be71455b2f64430a3f61634bb"
+                      "path":  "MASSFRONT-v1.33.44-update.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.44-update.js?download=true",
+                      "size":  57272352,
+                      "sha256":  "d8b64cc91b921d06e5bc6464c3613f0bda71b9b3796369cddd924762e7abb013"
                   }
               ],
     "packsIndex":  "packs.json",
     "minBaseVersion":  "1.22.0",
     "channel":  "stable",
-    "version":  "1.33.41"
+    "version":  "1.33.44"
 }

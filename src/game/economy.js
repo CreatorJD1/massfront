@@ -464,27 +464,31 @@ function confirmPlace(){
     else toast('Blocked terrain — find open, flat ground clear of structures');
     return;
   }
+  /* Hold the INDEX across the claim. The rollback below used to re-derive it
+     with depositAt(), but depositAt/geyserAt both filter on !taken — so once
+     the claim above set the flag they could never find the node they were
+     meant to release. A failed beginBuild() stranded the deposit for the rest
+     of the match (it drops out of placementValid, buildableSites and AI
+     targeting), and if a second free node sat inside the 34-unit radius the
+     rollback cleared THAT one instead. */
+  let claimD=-1, claimG=-1;
   if(placing.type==='mex'){
-    const d=depositAt(placing.x,placing.y,34);
-    placing.x=deposits[d].x; placing.y=deposits[d].y;
-    deposits[d].taken=true;
+    claimD=depositAt(placing.x,placing.y,34);
+    placing.x=deposits[claimD].x; placing.y=deposits[claimD].y;
+    deposits[claimD].taken=true;
   }
   if(placing.type==='geo'){
-    const g=geyserAt(placing.x,placing.y,34);
-    placing.x=geysers[g].x; placing.y=geysers[g].y;
-    geysers[g].taken=true;
+    claimG=geyserAt(placing.x,placing.y,34);
+    placing.x=geysers[claimG].x; placing.y=geysers[claimG].y;
+    geysers[claimG].taken=true;
   }
   const B=beginBuild(0,placing.type,placing.x,placing.y,placing.rot||0);
   /* placementValid checked the escrow immediately before this call. The guard
      still protects against another system spending the last resource in the
      same input frame. Do not claim a node if the site did not start. */
   if(!B){
-    if(placing.type==='mex'){
-      const d=depositAt(placing.x,placing.y,34); if(d>=0) deposits[d].taken=false;
-    }
-    if(placing.type==='geo'){
-      const g=geyserAt(placing.x,placing.y,34); if(g>=0) geysers[g].taken=false;
-    }
+    if(claimD>=0) deposits[claimD].taken=false;
+    if(claimG>=0) geysers[claimG].taken=false;
     toast('Construction site could not reserve resources — try again');
     return;
   }
