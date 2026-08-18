@@ -10,7 +10,18 @@ param(
   # A local manifest is written before uploads begin. If a build/upload process
   # is interrupted, explicit Resume rebuilds the exact version and activates
   # only after every artifact is uploaded again.
-  [switch]$Resume
+  [switch]$Resume,
+  # Additional artifacts published ALONGSIDE the OTA payload and listed in the
+  # same manifest, each with its own size and sha256. The client already walks
+  # manifest.files and verifies every entry independently -- that half has been
+  # multi-file correct for a long time; only the publisher ever emitted one
+  # object. This is what lets a wasm blob ship as its own cached file instead of
+  # being base64-inlined into every payload at +33% on an already ~54 MB update.
+  # Paths are relative to the repo root, e.g. -Extra 'releases/massfront-physics.wasm'
+  [string[]]$Extra=@(),
+  # Patch taxonomy surfaced in the updater UI. Omit to let the client infer it
+  # from payload size (<=2MB hotfix / <=20MB content / larger overhaul).
+  [ValidateSet('hotfix','content','overhaul')][string]$Kind=''
 )
 
 $ErrorActionPreference='Stop'
@@ -38,6 +49,26 @@ Need ($advancesSource -or $resumesFailedRelease) "Version $Version must be highe
 $code=([int]($Version.Split('.')[0])*10000)+([int]($Version.Split('.')[1])*100)+[int]$Version.Split('.')[2]
 $verb=if($resumesFailedRelease){'resuming failed publish after'}else{'replacing'}
 Write-Host "Preparing MASSFRONT v$Version (Android code $code), $verb v$publishedLocal."
+
+# Extra artifacts: verify each exists and is non-empty, then hash it. Done
+# BEFORE the manifest is written so a typo in -Extra fails the release early
+# rather than after two large uploads have already been committed.
+$extraEntries=@()
+foreach($rel in $Extra){
+  $full=Join-Path $Root $rel
+  Need (Test-Path -LiteralPath $full) "Extra artifact not found: $rel"
+  $ei=Get-Item -LiteralPath $full
+  Need ($ei.Length -gt 0) "Extra artifact is empty: $rel"
+  $name=Split-Path $rel -Leaf
+  $extraEntries+=[ordered]@{
+    path=$name
+    url="https://huggingface.co/datasets/$Repo/resolve/main/$name?download=true"
+    size=$ei.Length
+    sha256=(Get-FileHash $full -Algorithm SHA256).Hash.ToLower()
+    local=$rel
+  }
+}
+if($extraEntries.Count){ Write-Host ("Publishing " + $extraEntries.Count + " extra artifact(s) alongside the OTA payload.") -ForegroundColor Cyan }
 
 if($DryRun){
   Write-Host 'Dry run only: no source, release artifact, or Hugging Face file was changed.' -ForegroundColor Yellow
@@ -116,13 +147,16 @@ $manifest=[ordered]@{
   notes=$Notes
   version=$Version
   base=''
-  files=@([ordered]@{
+  files=@(@([ordered]@{
     path="MASSFRONT-v$Version-update.js"
     url="https://huggingface.co/datasets/$Repo/resolve/main/MASSFRONT-v$Version-update.js?download=true"
     size=$otaInfo.Length
     sha256=$otaHash
-  })
+  }) + @($extraEntries | ForEach-Object { [ordered]@{ path=$_.path; url=$_.url; size=$_.size; sha256=$_.sha256 } }))
 }
+# The OTA payload must stay files[0]: updApply reads the manifest order to
+# decide what to evaluate as the new source. Extras follow it as cached data.
+if($Kind){ $manifest.kind=$Kind }
 WriteReleaseManifest 'update.json' $manifest
 WriteReleaseManifest 'releases/MASSFRONT-update.json' $manifest
 WriteReleaseManifest "releases/update-v$Version.json" $manifest
@@ -176,6 +210,10 @@ Remove-Item -LiteralPath $stage -Recurse -Force
 $env:HF_HUB_DISABLE_XET='1'
 Run 'Publish OTA patch' { & $Hf upload $Repo $ota "MASSFRONT-v$Version-update.js" --type dataset --commit-message "Publish MASSFRONT v$Version OTA" }
 Run 'Publish Android installer' { & $Hf upload $Repo $apk "MASSFRONT-v$Version-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer" }
+foreach($x in $extraEntries){
+  $xPath=$x.path; $xLocal=$x.local
+  Run "Publish extra artifact ($xPath)" { & $Hf upload $Repo $xLocal $xPath --type dataset --commit-message "Publish MASSFRONT v$Version artifact $xPath" }
+}
 Run 'Publish source archive' { & $Hf upload $Repo $source "MASSFRONT-v$Version-source.zip" --type dataset --commit-message "Publish MASSFRONT v$Version source archive" }
 Run 'Publish historical manifest' { & $Hf upload $Repo "releases/update-v$Version.json" "update-v$Version.json" --type dataset --commit-message "Publish MASSFRONT v$Version manifest" }
 Run 'Publish release manifest mirror' { & $Hf upload $Repo 'releases/MASSFRONT-update.json' 'MASSFRONT-update.json' --type dataset --commit-message "Publish MASSFRONT v$Version updater mirror" }
