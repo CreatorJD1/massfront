@@ -104,6 +104,28 @@ const SCREEN_GRADES={
            ds:'Heavy contrast for dim or flat displays. Crushes dark detail to black — this was the old default.'}
 };
 function screenGradeKey(){ return SCREEN_GRADES[META.settings.screenGrade]?META.settings.screenGrade:'neutral'; }
+/* GPU vendor tiering. gl.js (manifest slot 3) stores the unmasked renderer
+   string in __MF_GL_INFO long before meta.js (slot 35) runs, but nothing ever
+   read it: the string was captured for diagnostics and then discarded, so an
+   integrated laptop and a discrete desktop both booted on HIGH. Classify it
+   once. Returns '' when the extension is masked, which is common and must
+   leave the existing defaults alone rather than guess. */
+function mfGpuTier(){
+  try{
+    const info=(typeof window!=='undefined'&&window.__MF_GL_INFO)||null;
+    const r=String((info&&info.renderer)||'').toLowerCase();
+    if(!r) return '';
+    /* Discrete desktop parts and Apple silicon carry the full preset. */
+    if(/geforce|rtx\s*\d|gtx\s*\d|radeon\s*(rx|pro)|quadro|arc\s*a\d/.test(r)) return 'high';
+    if(/apple m\d/.test(r)) return 'high';
+    /* Integrated desktop: honest mid, not aspirational HIGH. */
+    if(/intel|uhd graphics|hd graphics|iris/.test(r)) return 'medium';
+    /* Recent mobile silicon holds medium; older parts are demonstrably low. */
+    if(/adreno\s*(7|8)\d\d|mali-g[78]\d|apple a1[5-9]/.test(r)) return 'medium';
+    if(/adreno|mali|powervr|videocore/.test(r)) return 'low';
+  }catch(e){}
+  return '';
+}
 function mfGuessMobile(){
   /* CINEMATIC/HIGH must not be the silent phone default. A 412×900 flagship
      at DPR 3 plus the FBO chain is the context-loss spike; mid-tier is the
@@ -172,6 +194,20 @@ function metaHarden(){
     if(mfGuessMobile()&&META.settings.quality==='high'&&stock)
       META.settings.quality='medium';
     META.settings.gfxPhoneMed=1;
+  }
+  /* One-time GPU tier, stamped separately from gfxPhoneMed so the two never
+     fight. Runs AFTER the phone default, so on mobile it may only lower the
+     preset further, never raise it back to HIGH. Skipped entirely once the
+     player has any Advanced override — an explicit choice always wins. */
+  if(!META.settings.gfxGpuTier){
+    const gOver=META.settings.gfxOver;
+    const gStock=!gOver||typeof gOver!=='object'||!Object.keys(gOver).length;
+    const tier=mfGpuTier();
+    if(gStock&&tier){
+      if(mfGuessMobile()){ if(tier==='low') META.settings.quality='low'; }
+      else META.settings.quality=tier;
+    }
+    META.settings.gfxGpuTier=1;
   }
   if(typeof invBag==='function') invBag();
   if(typeof COLORS!=='undefined'&&!COLORS[META.color]) META.color='azure';

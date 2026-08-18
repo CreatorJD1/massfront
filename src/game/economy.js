@@ -393,6 +393,11 @@ function startPlacing(type){
   /* Facing carries over between placements, so laying a whole wall run or a row
      of aligned factories doesn't mean re-aiming every single one. */
   placing={type, x:0, y:0, rx:clamp(wx,40,MAP-40), ry:clamp(wy,40,MAP-40), rot:lastPlaceRot};
+  /* bzGrid is rasterised on a 1.2s tick while placementValid() runs per frame,
+     so the territory overlay could disagree with the ghost's own red/green for
+     over a second after a structure lands. Re-rasterise once on entry — the
+     overlay is only trustworthy if it agrees with the thing it sits under. */
+  if(typeof markBuildZone==='function') markBuildZone();
   snapPlace();
   document.getElementById('placeUI').style.display='flex';
   document.getElementById('buildMenu').style.display='none';

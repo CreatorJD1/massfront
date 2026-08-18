@@ -877,7 +877,10 @@ function render(dtDraw){
      made. Placement has its cheaper local-cell overlay below. */
   const buildCatalogue=document.getElementById('buildMenu');
   const buildCatalogueOpen=!!(buildCatalogue&&buildCatalogue.style.display==='block');
-  if(buildCatalogueOpen) bzShow=1;
+  /* Pin while placing too. startPlacing() hides #buildMenu, so without this the
+     overlay would fade out over ~2s exactly as the player starts aiming — the
+     same failure the removed `&&!placing` guard caused, just slower. */
+  if(buildCatalogueOpen||placing) bzShow=1;
   else if(bzShow>0) bzShow=Math.max(0,bzShow-dtDraw*0.5);
   /* Screen shake is now a camera-space nudge rather than a world offset — with
      a perspective camera you shake the EYE, not the contents of the world. */
@@ -1963,7 +1966,15 @@ function render(dtDraw){
      and made the battle appear frozen until the player hit X. The expensive
      frontier is now only a short change pulse; placement keeps its precise
      local feedback below. */
-  if(bzShow>0&&!placing){
+  /* The `&&!placing` that used to be here hid the whole territory overlay the
+     instant the player picked up a ghost — i.e. exactly when "where may I
+     build?" is the only question being asked. The comment justifying it said
+     the placement UI already draws the local grid and invalid cells "in
+     hud.js"; that code lives inside renderLegacySprites, which is called from
+     nowhere (only a test touches it via .toString()). So the justification was
+     void and the player got only the ghost outline. Keep the zone up while
+     placing — it is the whole point of it. */
+  if(bzShow>0){
     const glow=bzShow;
     /* Mobile builder zones are drawn directly rather than rasterised into the
        static grid: they move every frame, and re-stamping a 37k-cell grid at
@@ -2316,6 +2327,25 @@ function render(dtDraw){
       addBeamRibbon(sprites.glow,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*2.2,br,bgc,bbc,lf*70,150);
       addBeamRibbon(sprites.glow,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*0.9,br,bgc,bbc,lf*95,150);
       bbAdd.add(sprites.glow,bm.x1,bm.y1,h1,bm.w*1.5,0,br,bgc,bbc,lf*48);
+      continue;
+    }
+    if(sty==='repair'){
+      /* The un-fixed twin of the mining disc. A constructor holds this on ONE
+         target for the whole repair/salvage, so the weapon terminus repaints
+         the same texels every frame: addBeam3D rescales bm.w*1.55 to width ~20
+         and lays ribbons at width*5.10 (~101 world units) with a white inner at
+         a*1.40, then addBeamBurst adds 8 more additive sprites on the target.
+         life 0.5 overlaps MORE than the 0.11 mining beam did.
+         Keep the travelling green pulses — they are what makes repair read as
+         repair — and drop the shaft rescale and the burst. */
+      addBeamRibbon(sprites.glow,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*2.0,br,bgc,bbc,lf*64,150);
+      addBeamRibbon(sprites.glow,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*0.85,br,bgc,bbc,lf*90,150);
+      if(perfScale>.4) for(let k=0;k<2;k++){
+        const q=(k/2+t*2.2+bm.seed)%1;
+        bbAdd.add(sprites.glow,bm.x0+(bm.x1-bm.x0)*q,bm.y0+(bm.y1-bm.y0)*q,
+          h0+(h1-h0)*q,bm.w*1.4,0,145,255,185,lf*95);
+      }
+      bbAdd.add(sprites.glow,bm.x1,bm.y1,h1,bm.w*1.4,0,br,bgc,bbc,lf*44);
       continue;
     }
     const pulse=sty==='thermal'?(0.78+Math.sin(t*24+bm.seed)*0.22):1;
