@@ -4,7 +4,7 @@
    INPUT — touch camera, selection, orders (mobile-first)
    ============================================================ */
 const ptrs=new Map();
-let boxMode=false, boxStart=null, pinchD=0, pinchZ=1, tapT=0, pinchA=0, pinchYaw=0;
+let boxMode=false, boxStart=null, boxAdd=false, pinchD=0, pinchZ=1, tapT=0, pinchA=0, pinchYaw=0;
 let pinchMY=0, pinchPitch=0.92;
 let openBld=-1;             // building whose menu is open
 let shake=0;
@@ -995,8 +995,15 @@ cv.addEventListener('pointerdown',e=>{
     pinchMY=(a[0].y+a[1].y)/2; pinchPitch=pitchTarget;
     pinchA=Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x); pinchYaw=yawTarget;
   }
-  if(ptrs.size===1 && boxMode && !placing){
+  /* Box select used to require arming #boxBtn first, so on desktop the
+     universal RTS gesture — shift+drag — did nothing and a bare drag panned.
+     Touch keeps the button (a bare one-finger drag MUST stay camera pan on a
+     phone; there is no spare gesture), but a mouse gets shift+drag directly.
+     Shift also makes the box ADDITIVE instead of replacing the selection,
+     which is what shift means everywhere else in the genre. */
+  if(ptrs.size===1 && !placing && (boxMode || (e.pointerType==='mouse' && e.shiftKey))){
     boxStart=[e.clientX,e.clientY];
+    boxAdd=!!e.shiftKey;
   }
 });
 cv.addEventListener('pointermove',e=>{
@@ -1104,18 +1111,24 @@ function endPtr(e){
     // finish box select
     const bx=document.getElementById('selbox'); bx.style.display='none';
     const boxStartX=boxStart[0], boxStartY=boxStart[1];
-    boxStart=null; boxMode=false; document.getElementById('boxBtn').classList.remove('on');
+    boxStart=null;
+    /* One-shot only for the button — its toast promises a single drag, and a
+       sticky box mode would strand a phone player with no way to pan. A
+       shift-drag never armed the button, so it must not clear it either. */
+    if(boxMode){ boxMode=false; const bb=document.getElementById('boxBtn'); if(bb) bb.classList.remove('on'); }
     const sx0=Math.min(boxStartX,p.x), sx1=Math.max(boxStartX,p.x);
     const sy0=Math.min(boxStartY,p.y), sy1=Math.max(boxStartY,p.y);
     if(sx1-sx0>10||sy1-sy0>10){
-      clearSel(); let n=0;
+      const additive=boxAdd; boxAdd=false;
+      if(!additive) clearSel();
+      let n=0;
       /* Stage 0: walk every live slot and project to screen. At cap this is
          the army-select cost. Stage 1 should query a spatial hash for the
          world AABB of the box instead of testing unitHigh. */
       for(let i=0;i<unitHigh;i++){
         if(!ualive[i]||uteam[i]!==0) continue;
         const sp=w2s(ux[i],uy[i],terrainH(ux[i],uy[i])+TYPES[utype[i]].size*0.5);
-        if(sp[0]>=sx0&&sp[0]<=sx1&&sp[1]>=sy0&&sp[1]<=sy1){ usel[i]=1; n++; }
+        if(sp[0]>=sx0&&sp[0]<=sx1&&sp[1]>=sy0&&sp[1]<=sy1){ if(!usel[i]) n++; usel[i]=1; }
       }
       if(n) uiCommandAck('select',n);
       updateSelInfo();
@@ -1181,6 +1194,7 @@ addEventListener('keydown',e=>{
    button. Every route back to the front end calls this before rebuilding the
    attract scene, so input starts from a genuinely idle state. */
 function resetInputState(){
+  boxAdd=false;
   clearTimeout(holdTimer);
   for(const id of ptrs.keys()){
     try{ if(cv.hasPointerCapture(id)) cv.releasePointerCapture(id); }catch(e){}
