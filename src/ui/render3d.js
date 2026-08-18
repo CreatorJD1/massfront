@@ -1809,9 +1809,22 @@ function render(dtDraw){
         const mx=(A.x+B2.x)*.5,my=(A.y+B2.y)*.5;
         if(vis(mx,my,len*.55+30)){
           FX.line.add(mx,my,gh(mx,my)+3.2,len,Math.atan2(dy,dx),col[0],col[1],col[2],active?225:(draft?175:105),active?4.4:(draft?3.2:2.4));
+          /* Chevrons, not rings. A ring travelling down a line tells you the
+             route is live but not which way the column is going; on a closed
+             patrol loop that is the only question worth answering. Two short
+             arms swept back from a moving tip read as an arrowhead at command
+             zoom without needing a sprite or a glyph atlas. */
+          const ang=Math.atan2(dy,dx);
           for(let q=0;q<3;q++){
             const f=(t*.32+q/3+j*.11)%1,px3=A.x+dx*f,py3=A.y+dy*f;
-            if(vis(px3,py3,20))FX.ring.add(px3,py3,gh(px3,py3)+3.7,active?3.8:2.6,-t*.6,col[0],col[1],col[2],active?205:135);
+            if(!vis(px3,py3,20))continue;
+            const ph=gh(px3,py3)+3.7,arm=active?5.4:3.9,aw=active?2.6:1.9;
+            const aa=active?215:145;
+            for(const sgn of [1,-1]){
+              const a2=ang+sgn*2.44;                     // ~140 deg swept back
+              const ex=px3+Math.cos(a2)*arm, ey=py3+Math.sin(a2)*arm;
+              FX.line.add((px3+ex)*.5,(py3+ey)*.5,ph,arm,a2,col[0],col[1],col[2],aa,aw);
+            }
           }
         }
       }
@@ -1841,6 +1854,27 @@ function render(dtDraw){
         }
       }
       if(typeof patrolDraft!=='undefined'&&patrolDraft)p3Route(patrolDraft.pts,patrolDraft.pts.length>2,true,null);
+    }
+    /* RALLY FLAGS. The sprite path drew these (hud.js:900) but that whole
+       renderer is dead code, so a rally point was invisible in every shipped
+       build even though the panel button reported "RALLY SET — TAP TO MOVE".
+       Ground decals, so they inherit depth and survive camera tilt. */
+    for(const Bd of blds){
+      if(!Bd.alive||Bd.team!==0||!Bd.rally)continue;
+      const R2=Bd.rally;
+      if(!vis(R2.x,R2.y,40))continue;
+      const rh=gh(R2.x,R2.y),rp=0.55+0.45*Math.sin(t*3.1+R2.x*0.01);
+      FX.ring.add(R2.x,R2.y,rh+3.4,7.4+rp*1.6,t*0.5,120,255,170,195);
+      FX.ring.add(R2.x,R2.y,rh+3.0,12.6,-t*0.28,120,255,170,80);
+      bbAdd.add(sprites.glow,R2.x,R2.y,rh+7,7+rp*2,0,120,255,170,62);
+      /* Line back to its factory only while that factory's panel is open —
+         the same rule the sprite path used, so ten factories do not draw ten
+         permanent leashes across the base. */
+      if(openBld>=0&&blds[openBld]===Bd){
+        const mx=(Bd.x+R2.x)*.5,my=(Bd.y+R2.y)*.5;
+        const rl=Math.hypot(R2.x-Bd.x,R2.y-Bd.y);
+        if(rl>6)FX.line.add(mx,my,gh(mx,my)+3.0,rl,Math.atan2(R2.y-Bd.y,R2.x-Bd.x),120,255,170,72,2.2);
+      }
     }
     const now3=performance.now(),confirm3=typeof orderConfirm!=='undefined'&&orderConfirm&&now3<orderConfirm.until;
     if(typeof orderConfirm!=='undefined'&&orderConfirm&&!confirm3)orderConfirm=null;
