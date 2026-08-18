@@ -3159,19 +3159,42 @@ function renderProdMenu(){
   if(openBld<0) return;
   const B=blds[openBld];
   renderProdNav(B);
-  let list;
+  /* Locked units used to be DELETED from the roster: a tier-1 factory simply
+     did not draw the twelve tier-2 chassis, and factionDoctrineRoster silently
+     dropped whatever the faction does not field. Structures have always shown
+     their locks (grey + padlock + reason); units showed nothing, so the player
+     could not tell a missing card from a card that does not exist. Keep the
+     removed entries and render them locked. */
+  let list, lockedTier=[], lockedDoc=[];
   if(B.type==='tgate') list=[8,26];
   else if(B.type==='harbor') list=[14,15];
   else if(B.type==='airfield') list=[5,17,25];
-  else list = B.tier===2? [0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]
-                        : [0,1,9,10,19,24,32];
-  if(typeof factionDoctrineRoster==='function') list=factionDoctrineRoster(list,B.type,0);
+  else {
+    const T2=[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32];
+    const T1=[0,1,9,10,19,24,32];
+    list = B.tier===2? T2 : T1;
+    if(B.tier!==2) lockedTier=T2.filter(t=>T1.indexOf(t)<0);
+  }
+  if(typeof factionDoctrineRoster==='function'){
+    const kept=factionDoctrineRoster(list,B.type,0);
+    lockedDoc=list.filter(t=>kept.indexOf(t)<0);
+    /* A chassis the faction does not field is not unlocked by TECH 2 either. */
+    if(lockedTier.length) lockedTier=factionDoctrineRoster(lockedTier,B.type,0);
+    list=kept;
+  }
+  const lockWhy={};
+  for(const t of lockedTier) lockWhy[t]='TECH 2';
+  for(const t of lockedDoc) lockWhy[t]='NOT FIELDED';
+  const lockedAll=lockedTier.concat(lockedDoc);
   /* ROLE TABS. A flat grid of eighteen cards is a wall; one tap per role lets
      the player find the answer to whatever is killing them without reading
      every stat block on the way there. */
   const order=['inf','veh','at','aoe','art','aa','air','nav','sup','exp'];
   const groups={};
   for(const t of list){ const c=TYPES[t].cat||'veh'; (groups[c]||(groups[c]=[])).push(t); }
+  /* Locked chassis join their own role tab so the tab itself stops lying about
+     how deep the roster is. They sort last within the tab. */
+  for(const t of lockedAll){ const c=TYPES[t].cat||'veh'; (groups[c]||(groups[c]=[])).push(t); }
   const tabs=order.filter(c=>groups[c]);
   if(tabs.indexOf(prodTab)<0) prodTab=tabs[0];
   const tr=$('prodTabs'); tr.innerHTML='';
@@ -3185,13 +3208,21 @@ function renderProdMenu(){
     tr.appendChild(b);
   }
   renderMenuRoleBrief('unit',prodTab,groups[prodTab]||[]);
-  (groups[prodTab]||[]).forEach(tIdx=>{
+  const tabList=(groups[prodTab]||[]).slice().sort((a,b)=>(lockWhy[a]?1:0)-(lockWhy[b]?1:0));
+  tabList.forEach(tIdx=>{
     const T=TYPES[tIdx];
+    const why=lockWhy[tIdx]||'';
     const C=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,0):{m:T.cm,e:T.ce};
     const d=document.createElement('div');
-    d.className='bcard';
-    d.innerHTML='<div class="nm">'+intelUnitName(tIdx)+'</div><div class="cost">'+C.m+'m <span>'+C.e+'e</span></div>'
-      +'<div class="wkTag">'+ammoName(T)+'</div><div class="cardPurpose">'+intelUnitLine(tIdx)+'</div>';
+    d.className='bcard'+(why?' locked':'');
+    /* Build time was never shown anywhere on a unit card — only cost. It is the
+       one number that tells you whether a queue will arrive in time. */
+    const btTag=T.bt?('<span class="qEta"> · '+(T.bt>=10?Math.round(T.bt):(Math.round(T.bt*10)/10))+'s</span>'):'';
+    d.innerHTML='<div class="nm">'+intelUnitName(tIdx)+'</div>'
+      +(why?'<div class="cost" style="color:#ffd257">'+why+'</div>'
+           :'<div class="cost">'+C.m+'m <span>'+C.e+'e</span>'+btTag+'</div>')
+      +'<div class="wkTag">'+ammoName(T)+'</div><div class="cardPurpose">'+intelUnitLine(tIdx)+'</div>'
+      +(why?'<span class="lockOv">🔒</span>':'');
     d.setAttribute('role','button');
     d.setAttribute('aria-label','Build '+intelUnitName(tIdx)+'. '+intelUnitLine(tIdx));
     const icw=document.createElement('div'); icw.className='icw';
@@ -3199,6 +3230,13 @@ function renderProdMenu(){
     d.insertBefore(icw,d.firstChild);
     d.addEventListener('pointerdown',ev=>{
       ev.stopPropagation();
+      if(why){
+        if(typeof sfx==='function') sfx('deny');
+        toast(why==='TECH 2'
+          ? '🔒 '+intelUnitName(tIdx)+' needs a TECH 2 factory — upgrade this factory to field it'
+          : '🔒 '+intelUnitName(tIdx)+' is not fielded by your faction');
+        return;
+      }
       if(openBld<0) return;
       const Bb=blds[openBld];
       const popSlot=typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(Bb):-1;
@@ -3340,6 +3378,19 @@ function renderQueue(){
     const T=TYPES[q[0]];
     bar.style.width=T?((clamp(B.prodT/T.bt,0,1)*100)+'%'):'0';
   }
+  /* Unit production was the ONLY system with no numeric time readout —
+     structures show 'UPGRADING… Ns', research shows its countdown, Nova shows
+     charge seconds, and a factory showed a bar with no scale. Written outside
+     the signature-diff above so it ticks without rebuilding the row. */
+  let eta=el.querySelector('.qEtaLine');
+  if(q.length){
+    const T0=TYPES[q[0]];
+    let total=0; for(const t of q) total+=(TYPES[t].bt||0);
+    const rem=Math.max(0,total-(B.prodT||0));
+    const head=T0?Math.max(0,Math.ceil((T0.bt||0)-(B.prodT||0))):0;
+    if(!eta){ eta=document.createElement('div'); eta.className='qAdj qEtaLine'; el.appendChild(eta); }
+    eta.textContent='▶ '+intelUnitName(q[0])+' in '+head+'s'+(q.length>1?('  ·  queue '+Math.ceil(rem)+'s'):'');
+  } else if(eta) eta.remove();
 }
 function renderBuildMenu(){
   const g=$('buildGrid'); g.innerHTML='';

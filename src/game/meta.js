@@ -115,14 +115,26 @@ function mfGpuTier(){
     const info=(typeof window!=='undefined'&&window.__MF_GL_INFO)||null;
     const r=String((info&&info.renderer)||'').toLowerCase();
     if(!r) return '';
-    /* Discrete desktop parts and Apple silicon carry the full preset. */
-    if(/geforce|rtx\s*\d|gtx\s*\d|radeon\s*(rx|pro)|quadro|arc\s*a\d/.test(r)) return 'high';
+    /* Chrome on Windows wraps everything as "ANGLE (vendor, part, D3D11)", and
+       integrated AMD parts are named "Radeon(TM) 610M" with no RX/Pro token —
+       a first pass that keyed on RX/Pro classified this author's own AMD box as
+       '' and silently did nothing. Every branch below is unit-tested against
+       real renderer strings; do not tighten one without a case for it. */
+    if(/swiftshader|llvmpipe|lavapipe|software|basic render/.test(r)) return 'low';
     if(/apple m\d/.test(r)) return 'high';
-    /* Integrated desktop: honest mid, not aspirational HIGH. */
-    if(/intel|uhd graphics|hd graphics|iris/.test(r)) return 'medium';
-    /* Recent mobile silicon holds medium; older parts are demonstrably low. */
-    if(/adreno\s*(7|8)\d\d|mali-g[78]\d|apple a1[5-9]/.test(r)) return 'medium';
-    if(/adreno|mali|powervr|videocore/.test(r)) return 'low';
+    if(/apple a1[5-9]|apple a2\d/.test(r)) return 'medium';
+    if(/geforce|\brtx\b|\bgtx\b|quadro|nvidia|titan/.test(r)) return 'high';
+    /* AMD: discrete carries RX / Pro / FirePro / Wx000; APU graphics read as
+       "Radeon(TM) NNNm" or "Radeon(TM) Graphics" or "Vega N Graphics". */
+    if(/radeon/.test(r)||/\bamd\b/.test(r)){
+      if(/\brx\b|radeon pro|firepro|\bw[5-7]\d00\b/.test(r)) return 'high';
+      return 'medium';
+    }
+    if(/\barc\s*(\(tm\)\s*)?a\d{3}/.test(r)) return 'high';
+    if(/intel|uhd graphics|\bhd graphics\b|iris/.test(r)) return 'medium';
+    if(/adreno\s*(\(tm\)\s*)?(7|8)\d\d/.test(r)) return 'medium';
+    if(/mali-g[78]\d/.test(r)) return 'medium';
+    if(/adreno|mali|powervr|videocore|xclipse/.test(r)) return 'low';
   }catch(e){}
   return '';
 }

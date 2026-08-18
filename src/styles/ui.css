@@ -653,6 +653,10 @@ html.cmdIcons .em[data-icon="options"]   {background-position:100% 42.8571%}
   color:#9fffc4;font:800 11px/1 var(--fT)}
 .qBar{position:absolute;left:4px;right:4px;bottom:3px;height:3px;width:0;background:#5dff9a;border-radius:2px}
 .qAdj{margin-top:4px;color:#ffe291;font:700 9px/1 var(--fT);letter-spacing:.06em}
+/* Build-time tag on a unit card cost line, and the queue ETA readout. Muted
+   against the green cost so cost stays the primary number. */
+.bcard .cost .qEta{color:#9fb8cc;font-weight:600}
+.qEtaLine{color:#5dff9a}
 #repeatBtn,#upBtn{margin-top:6px;width:100%;height:44px;min-height:44px;border-radius:8px;color:#dfeeff;font-size:12px;font-weight:700;letter-spacing:.08em;
   border:1px solid transparent;background:var(--panelG2) padding-box,var(--steelB) border-box;font-family:var(--fU);text-transform:uppercase}
 #upBtn{color:var(--gold);background:linear-gradient(180deg,rgba(64,48,14,.95),rgba(30,22,6,.97)) padding-box,var(--goldB) border-box}
