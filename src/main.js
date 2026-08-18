@@ -1814,7 +1814,7 @@ function renderMapRow(){
          visibly blocky stamp. 192×120 stays under five MB even if every one of
          the 48 sites is browsed and cached, but keeps rivers, roads and city
          footprints legible during map choice. */
-      cv3=document.createElement('canvas'); cv3.width=192; cv3.height=120;
+      cv3=document.createElement('canvas'); cv3.width=384; cv3.height=240;
       drawMapPreview(cv3,def,def.theme||curTheme);
       mapPrevCache[ck]=cv3;
     }
@@ -2444,9 +2444,15 @@ function wire(){
     B.alive=false; rebuildBGrid();
     if(B.type==='mex'){
       if(B.dep>=0) redirectProspectorsFromNode(B.dep,B.team);
-      for(const D of deposits) if(D.x===B.x&&D.y===B.y) D.taken=false;
+      /* Same fix as sim.js: release by the claiming index. Recycling a mex
+         bound by proximity used to leak its deposit permanently. */
+      if(B.dep>=0&&deposits[B.dep]){ deposits[B.dep].taken=false; B.dep=-1; }
+      else for(const D of deposits) if(D.x===B.x&&D.y===B.y) D.taken=false;
     }
-    if(B.type==='geo') for(const G of geysers) if(G.x===B.x&&G.y===B.y) G.taken=false;
+    if(B.type==='geo'){
+      if(B.geo>=0&&geysers[B.geo]){ geysers[B.geo].taken=false; B.geo=-1; }
+      else for(const G of geysers) if(G.x===B.x&&G.y===B.y) G.taken=false;
+    }
     addParticle(3,B.x,B.y,0,0,.5,BT[B.type].size, 120,230,255);
     toast('♻ '+BT[B.type].name+' recycled · +'+refund+' mass');
     closeMenus(); sfx('ui');

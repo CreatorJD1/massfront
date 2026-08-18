@@ -1683,7 +1683,14 @@ function bldUpgradePlanText(B){
    broken rather than intentionally costly. Energy is deliberately not refunded:
    it is operating power, not recoverable material. */
 function bldRecycleMass(B){
-  let invested=BT[B.type].cm||0;
+  /* MUST scale by committed progress. Construction pays a 2% escrow up front
+     (MF_BUILD_ESCROW_FRAC) and streams the rest as B.prog advances, so
+     refunding against the FULL cost on an unfinished site returned far more
+     than was ever paid — an unlimited mass printer via place/recycle. The
+     completed-upgrade terms below are paid in full at purchase, so they are
+     NOT scaled; only the base structure cost is progress-weighted. */
+  const progPaid=Math.max(0,Math.min(1,B.prog!=null?B.prog:1));
+  let invested=(BT[B.type].cm||0)*progPaid;
   const path=BUP[B.type]||[];
   const completed=B.type==='fac'?(B.tier===2?1:0):Math.max(0,(B.lvl||1)-1);
   for(let i=0;i<Math.min(completed,path.length);i++) invested+=path[i].cm||0;
@@ -1857,8 +1864,20 @@ function damageBld(b,dmg,attTeam){
     /* A nest is grown tissue, not a fabricated building. */
     if(B.type==='nest') addWreckField(B.x,B.y, 0, Tb.size*2.2, WRECK_BIO, Tb.size*0.75, big?4:2);
     else addWreckField(B.x,B.y, Tb.cm*0.55+18, Tb.ce*0.30, WRECK_STRUCT, Tb.size*0.75, big?4:2);
-    if(B.type==='mex') for(const D of deposits) if(D.x===B.x&&D.y===B.y) D.taken=false;
-    if(B.type==='geo') for(const G of geysers) if(G.x===B.x&&G.y===B.y) G.taken=false;
+      /* Release by the INDEX that claimed the node, not by coordinate equality.
+         econBindResourceNode (economy.js:174/184) binds any node within 34wu
+         and sets taken=true without moving the building onto it, so an exact
+         float compare could never match and the reservation leaked forever.
+         The coordinate scan stays as a fallback for anything bound before
+         B.dep/B.geo existed. */
+    if(B.type==='mex'){
+      if(B.dep>=0&&deposits[B.dep]){ deposits[B.dep].taken=false; B.dep=-1; }
+      else for(const D of deposits) if(D.x===B.x&&D.y===B.y) D.taken=false;
+    }
+    if(B.type==='geo'){
+      if(B.geo>=0&&geysers[B.geo]){ geysers[B.geo].taken=false; B.geo=-1; }
+      else for(const G of geysers) if(G.x===B.x&&G.y===B.y) G.taken=false;
+    }
     if(attTeam===0) heroXP(26);
     if(B.type==='nest'&&attTeam===0){
       stats.nests=(stats.nests||0)+1;            // counted for daily orders
