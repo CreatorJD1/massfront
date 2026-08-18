@@ -4339,9 +4339,49 @@ function nearestUnitAny(x,y,rad){
   forUnitsIn(x,y,rad,j=>{ if(uteam[j]>1) return; const d=dist2(x,y,ux[j],uy[j]); if(d<bd){bd=d;best=j;} });
   return best;
 }
+/* Smooth deterministic value noise for scatter fields. Deliberately local and
+   tiny rather than reaching into terragen's lattice: this runs once per map on
+   a few thousand samples, and coupling scatter to the erosion generator would
+   mean a terrain tuning change silently moved every tree. */
+function mfScatterNoise(x,y,freq,seed){
+  const fx=x*freq/MAP, fy=y*freq/MAP;
+  const x0=Math.floor(fx), y0=Math.floor(fy);
+  const tx=fx-x0, ty=fy-y0;
+  const sx=tx*tx*(3-2*tx), sy=ty*ty*(3-2*ty);      // smoothstep, not linear
+  const h=(a,b)=>{ let n=(a*374761393+b*668265263+seed*1442695040888963407)|0;
+    n=(n^(n>>>13))*1274126177|0; return ((n^(n>>>16))>>>0)/4294967295; };
+  const v00=h(x0,y0), v10=h(x0+1,y0), v01=h(x0,y0+1), v11=h(x0+1,y0+1);
+  return (v00*(1-sx)+v10*sx)*(1-sy)+(v01*(1-sx)+v11*sx)*sy;
+}
+/* Flora height gates below were tuned against the OLD narrow distribution.
+   TERRA.reliefGain expands land about WATER_H, so those literals now describe
+   different ground than when they were chosen: the measured effect was tree
+   count collapsing to 58 against a cap of 240 — the expansion quietly thinned
+   every forest. Map each tuned constant through the same transform so a band
+   keeps meaning the same PLACE it always did. */
+function mfFloraH(h){
+  const g=(typeof TERRA!=='undefined'&&TERRA.reliefGain)||1;
+  const w=(typeof WATER_H!=='undefined')?WATER_H:0.335;
+  return h>w? w+(h-w)*g : h;
+}
 function setupDoodads(){
   rocks.length=0; trees.length=0; crystals.length=0; cover.length=0;
-  srand(777);
+  /* Was srand(777): a literal constant, so every map on every planet drew the
+     SAME candidate points. Terrain and biome filters then carved different
+     subsets out of one shared pattern, which is a large part of why regions
+     read as the same place with a different palette. Seed from the map id. */
+  let mapSeed=777;
+  if(typeof curMap==='string'){ for(let c=0;c<curMap.length;c++) mapSeed=(mapSeed*31+curMap.charCodeAt(c))|0; }
+  if(typeof MAPDEFS!=='undefined'&&MAPDEFS[curMap]&&MAPDEFS[curMap].seed) mapSeed^=MAPDEFS[curMap].seed;
+  srand(mapSeed>>>0);
+  /* GROVE + ZONE FIELDS. There was no clustering of any kind — "forest" was
+     not a concept, only uniform scatter, which is why woodland read as gravel
+     spread evenly over a map. groveN concentrates canopy into stands with
+     genuine clearings between them; zoneN keeps species coherent over an area
+     instead of rolling per candidate, so a pine stand stays a pine stand. */
+  const GROVE_SEED=(mapSeed^0x9e37)>>>0, ZONE_SEED=(mapSeed^0x85eb)>>>0;
+  const groveN=(x,y)=>mfScatterNoise(x,y,7.5,GROVE_SEED)*0.68+mfScatterNoise(x,y,17,GROVE_SEED^5)*0.32;
+  const zoneN =(x,y)=>mfScatterNoise(x,y,4.2,ZONE_SEED);
   /* Flora needs a heightfield. newSkirmish → resetWorld can beat applyTheme
      on a cold boot; planting against null heightF used to throw in hAt. */
   const haveH=!!heightF;
@@ -4352,7 +4392,10 @@ function setupDoodads(){
   const rockKind=(K&&K.rockKind)||'stone';
   const clearOf=(x,y)=> typeof farFromStartZones==='function'?farFromStartZones(x,y,300)
     :dist2(x,y,MAP*SP_LO,MAP*SP_HI)>300*300&&dist2(x,y,MAP*SP_HI,MAP*SP_LO)>300*300;
-  for(let i=0;i<1100;i++){
+  /* Raised from 1100: clustering REJECTS candidates in clearings, so the same
+     count would thin the map overall. Caps still bound the result, so this
+     costs candidate tests, not objects. */
+  for(let i=0;i<2600;i++){
     const x=rr(60,MAP-60), y=rr(60,MAP-60);
     if(!clearOf(x,y)) continue;
     /* The city planner owns these cells. Trees and boulders are valid beyond
@@ -4360,18 +4403,36 @@ function setupDoodads(){
     if(cityGroundAt(x,y)) continue;
     if(!haveH) continue;
     const h=hAt(x,y);
-    if(h<0.40||h>0.75) continue;
+    if(h<mfFloraH(0.40)||h>mfFloraH(0.75)) continue;
     let nearDep=false;
     for(const D of deposits) if(dist2(x,y,D.x,D.y)<70*70){ nearDep=true; break; }
     if(nearDep) continue;
-    const fk=typeof floraKind==='function'?floraKind(K,rnd):(K&&K.flora)||'broad';
-    const lo=fk==='palm'?0.40:(fk==='pine'?0.50:0.42);
-    const hi=fk==='palm'?0.54:(fk==='pine'?0.72:0.60);
-    if(trees.length<treeCap && h>lo && h<hi && rnd()<0.72)
+    /* Species by LOCATION, not per candidate. floraKind rolls a fresh random
+       for every point, so a mixed kit produced salt-and-pepper: a pine beside a
+       palm beside a pine. Feeding it a position-stable value makes the same
+       call return the same species across a whole zone, so stands are coherent
+       and the boundary between them is where the noise crosses. */
+    const zv=zoneN(x,y);
+    const fk=typeof floraKind==='function'?floraKind(K,()=>zv):(K&&K.flora)||'broad';
+    /* Grove weight: >1 inside a stand, ~0 in a clearing. */
+    const gv=groveN(x,y);
+    /* Sharper than the first attempt (0.34/0.30), which measured a nearest-
+       neighbour ratio of 0.94-0.98 — barely distinguishable from uniform
+       scatter. Higher threshold and narrower ramp make clearings genuinely
+       empty, which is what makes a stand read as a stand. */
+    const grove=clamp((gv-0.44)/0.20,0,1);
+    const lo=mfFloraH(fk==='palm'?0.40:(fk==='pine'?0.50:0.42));
+    const hi=mfFloraH(fk==='palm'?0.54:(fk==='pine'?0.72:0.60));
+    if(trees.length<treeCap && h>lo && h<hi && rnd()<0.06+0.92*grove)
       trees.push({x,y,s:rr(16,34),a:rr(0,TAU),k:fk});
-    else if(cover.length<coverCap && h>0.42 && h<0.62 && rnd()<0.38)
+    /* Undergrowth follows the canopy but reaches past its edge, so a stand has
+       a soft margin instead of a hard disc. */
+    else if(cover.length<coverCap && h>mfFloraH(0.42) && h<mfFloraH(0.62) && rnd()<0.10+0.44*Math.sqrt(grove))
       cover.push({x,y,s:rr(10,18),a:rr(0,TAU)});
-    else if(rocks.length<rockCap && rnd()<0.34)
+    /* Boulders prefer the OPEN ground the canopy left behind. Previously rocks
+       only ever received the trees' rejects, so they inherited tree
+       distribution instead of having one of their own. */
+    else if(rocks.length<rockCap && rnd()<0.12+0.34*(1-grove))
       rocks.push({x,y,s:rr(16,44),a:rr(0,TAU),k:rockKind});
   }
   /* Modest crown on each mass node. The old 7+6+7 field at 17–88 world
