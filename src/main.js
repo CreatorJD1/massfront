@@ -1308,8 +1308,15 @@ function frame(ts){
        particle COUNTS would fade rather than step, but a count going from 5 to
        3 is invisible while a shadow pass vanishing is not. */
     perfScale=perfBand;
-    if(total>7000) perfScale=Math.min(perfScale,0.55);
-    if(total>18000) perfScale=Math.min(perfScale,0.3);
+    /* These were 7000 and 18000 — thresholds inherited from the 10,000-unit
+       Mega demo, which no longer exists. A real match caps at FACTION_POP_CAP
+       (1000) per commander seat, so a four-commander large map tops out at
+       4000: BOTH old thresholds sat above the maximum reachable count and
+       could never fire. The game has effectively had no population throttle
+       in normal play. Re-scaled to the 4k reality so a genuinely heavy fight
+       is protected before the frame is already gone. */
+    if(total>2600) perfScale=Math.min(perfScale,0.55);
+    if(total>3400) perfScale=Math.min(perfScale,0.3);
     if(META.settings.perf==='low') perfScale=Math.min(perfScale,0.45);
     /* CINEMATIC sets a floor under the automatic scaler, so a heavy fight
        cannot quietly strip the frame back to the low preset — which is the

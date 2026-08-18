@@ -260,6 +260,13 @@ function mfApplyAnisoBudget(){
   if(typeof matDamageTex!=='undefined'&&matDamageTex) list.push(matDamageTex);
   if(typeof matDetailTex!=='undefined'&&matDetailTex) list.push(matDetailTex);
   if(typeof terrainTex!=='undefined'&&terrainTex) list.push(terrainTex);
+  /* detailTex was the one albedo-class sheet missing from this walk. It is the
+     close-up crack/tooth sheet sampled at seven frequencies, so it is exactly
+     where a grazing-angle ground plane loses definition first — the macro
+     terrainTex above it was already covered, which is why the loss read as
+     "close up looks soft" rather than "the whole map is blurry". groundMaskTex
+     is deliberately still excluded: like heightTex it is data, not colour. */
+  if(typeof detailTex!=='undefined'&&detailTex) list.push(detailTex);
   if(typeof mfWorld2BaseAO!=='undefined'&&mfWorld2BaseAO) list.push(mfWorld2BaseAO);
   if(typeof mfWorld2NRE!=='undefined'&&mfWorld2NRE) list.push(mfWorld2NRE);
   if(typeof mfWorld2Masks!=='undefined'&&mfWorld2Masks) list.push(mfWorld2Masks);

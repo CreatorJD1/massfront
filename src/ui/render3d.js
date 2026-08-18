@@ -2925,6 +2925,40 @@ function render(dtDraw){
     for(let k=0;k<hbN;k++) putUnitBar(k);
   }
 
+  /* ---- AMBIENT SKY LIFE (harvested from the dead sprite renderer) --------
+     Cloud shadows and bird flocks were both fully implemented in
+     renderLegacySprites (hud.js:351 and :1379) — a function called from
+     nowhere. The bird SIMULATION has been running live the whole time
+     (sim.js:2314 spawns, moves and despawns flocks every tick); nothing drew
+     the result. Ported here as alpha billboards: at this camera pitch
+     (1.05–1.50 rad) a camera-facing sprite at ground height reads as a
+     ground shadow, which is exactly how the 2D version read. */
+  if(perfScale>0.4){
+    if(sprites.cloud) for(let k=0;k<4;k++){
+      const sp=[7,10,5,12][k], sz=[720,560,880,480][k];
+      const cxx=((t*sp+k*730)%(MAP+1600))-800;
+      const cyy=(k*690+t*sp*0.35)%MAP;
+      if(!vis(cxx,cyy,sz)) continue;
+      /* Day only, and fade with night: a cloud shadow under a black sky is
+         noise. 52 alpha matched the 2D look; scale it by daylight. */
+      const ca=52*(1-Math.min(1,S_nA*1.6));
+      if(ca>4) bbAlpha.add(sprites.cloud,cxx,cyy,gh(cxx,cyy)+2.5,sz,k*1.3,10,12,16,ca);
+    }
+    if(sprites.bird&&S_nA<0.75) for(const F of birds){
+      const rot=Math.atan2(F.vy,F.vx)+Math.PI/2;
+      for(let k2=0;k2<F.n;k2++){
+        const bx2=F.x-F.vx*k2*0.55+Math.sin(F.ph+k2*1.7)*13;
+        const by2=F.y-F.vy*k2*0.55+Math.cos(F.ph*0.7+k2*2.1)*10;
+        if(!vis(bx2,by2,20)) continue;
+        const bh2=gh(bx2,by2), flap=0.45+Math.abs(Math.sin(F.ph*2.2+k2))*0.75;
+        /* Shadow on the ground, bird well above it — the height gap is what
+           says "flying" from a top-down camera. */
+        bbAlpha.add(sprites.glow,bx2+6,by2+10,bh2+1.2,7,0,0,0,0,42);
+        bbAlpha.add(sprites.bird,bx2,by2,bh2+64,10*flap,rot,26,30,38,225);
+      }
+    }
+  }
+
   /* Per-unit veterancy and per-structure Mk/tech pips. Not an army rank —
      ukills/uvet and B.lvl stay on the entity. Screen-space sizing matches
      the health bars so a chevron stays readable at tactical zoom. */
