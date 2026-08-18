@@ -2925,6 +2925,37 @@ function render(dtDraw){
     for(let k=0;k<hbN;k++) putUnitBar(k);
   }
 
+  /* ---- OFF-SCREEN THREAT ARROW (harvested from the dead sprite renderer) --
+     showAlert() sets alertPos and clears it on a timer, so the alert system is
+     live and the banner does appear — but renderOffscreenArrows() (hud.js:1665)
+     was only ever called from renderLegacySprites, which runs nowhere. The
+     result: the player is told they are under attack and never told WHERE.
+     Ported to world-space decals; the original already computed the edge
+     intersection in world units, so no projection change is needed. */
+  if(typeof alertPos!=='undefined'&&alertPos){
+    const ab=camBounds();
+    const inView=alertPos[0]>=ab.x0&&alertPos[0]<=ab.x1&&alertPos[1]>=ab.y0&&alertPos[1]<=ab.y1;
+    if(!inView){
+      const adx=alertPos[0]-cam.x, ady=alertPos[1]-cam.y;
+      const aang=Math.atan2(ady,adx), ac=Math.cos(aang), as=Math.sin(aang);
+      const hw=(ab.x1-ab.x0)*0.5, hh=(ab.y1-ab.y0)*0.5;
+      const tEdge=Math.min(Math.abs(hw/Math.max(0.001,Math.abs(ac))),
+                           Math.abs(hh/Math.max(0.001,Math.abs(as))))*0.88;
+      const axp=cam.x+ac*tEdge, ayp=cam.y+as*tEdge, ah=gh(axp,ayp);
+      const apulse=0.6+0.4*Math.sin(t*4);
+      bbAdd.add(sprites.glow,axp,ayp,ah+3,30,0,255,50,30,apulse*150);
+      /* Chevron rather than the original thin beam: the mining-beam lesson is
+         that a static clamped marker must not stack additive sprites, and two
+         short arms read as a pointer at any zoom. */
+      const arm=Math.max(9,orthoSpan*0.016);
+      for(const sg of [1,-1]){
+        const a2=aang+sg*2.44;
+        const ex=axp+Math.cos(a2)*arm, ey=ayp+Math.sin(a2)*arm;
+        FX.line.add((axp+ex)*.5,(ayp+ey)*.5,ah+3.4,arm,a2,255,80,55,apulse*230,3.0);
+      }
+    }
+  }
+
   /* ---- AMBIENT SKY LIFE (harvested from the dead sprite renderer) --------
      Cloud shadows and bird flocks were both fully implemented in
      renderLegacySprites (hud.js:351 and :1379) — a function called from
