@@ -471,6 +471,7 @@ function aiThreat(){
 function aiTick(dt){
   AI.t+=dt; AI.buildTimer-=dt; AI.waveTimer-=dt;
   aiAllyTick(dt);
+  aiRetreatTick(dt);
   // scale economy, damage, toughness and build speed off the threat clock
   const thr=aiThreat(), FA=FACTIONS[AI.fac]||FACTIONS.legion;
   AI.thr=thr;
@@ -974,6 +975,45 @@ function aiCombatAI(i){
   return ualive[i]&&uteam[i]===1&&!isEnemyCommander(i)&&utype[i]!==UT_ENGINEER&&TYPES[utype[i]].wk!=='n';
 }
 
+/* RETREAT. The AI never read its own units' health: a wave fought to the last
+   chassis every time, which reads as mindless rather than difficult and hands
+   the player free kills and free veterancy. A unit below the threshold breaks
+   contact and pulls toward its base; it is NOT healed or protected, it simply
+   stops feeding itself into a fight it is losing.
+   Deliberately narrow:
+     - commanders and engineers are exempt (commanders have their own logic,
+       engineers are already non-combat)
+     - only while actually engaged, so idle damaged units do not stampede
+     - a cooldown per unit so a unit cannot oscillate between fight and flee
+     - the threshold is a named constant, so it can be tuned or set to 0 to
+       disable the behaviour entirely in one edit. */
+const AI_RETREAT_HP=0.28;      // fraction of max health
+const AI_RETREAT_COOL=6;       // seconds before the same unit may retreat again
+function aiRetreatTick(dt){
+  if(AI_RETREAT_HP<=0) return;
+  const R=AI.retreatT||(AI.retreatT={});
+  for(let i=0;i<unitHigh;i++){
+    if(!ualive[i]||uteam[i]!==1) continue;
+    if(isEnemyCommander(i)||utype[i]===UT_ENGINEER) continue;
+    if(R[i]>0){ R[i]-=dt; continue; }
+    if(uhpm[i]<=0) continue;
+    if(uhp[i]/uhpm[i]>AI_RETREAT_HP) continue;
+    /* Only break off an actual engagement. */
+    if(ustate[i]!==2&&utgt[i]<0) continue;
+    /* Fall back to the main base. Per-seat bases exist (AI.bases) but there is
+       no unit->base lookup, only aiUnitBelongsToBase(i,B) which is a test, not
+       a query — walking every base per retreating unit is not worth it for a
+       pull-back destination. */
+    let bx=AI.base.x, by=AI.base.y;
+    if(AI.bases&&AI.bases.length>1){
+      for(const B of AI.bases){ if(B&&aiUnitBelongsToBase(i,B)){ bx=B.x; by=B.y; break; } }
+    }
+    utgt[i]=-1; utgtg[i]=-1;
+    ustate[i]=1; umarch[i]=0;
+    utx[i]=bx; uty[i]=by;
+    R[i]=AI_RETREAT_COOL;
+  }
+}
 function aiOnUnitHit(j,dmg,attTeam,attacker){
   if(attTeam!==0||uteam[j]!==1||attacker<0||dmg<6) return;
   if(!ualive[attacker]||uteam[attacker]!==0) return;

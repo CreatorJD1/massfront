@@ -1102,7 +1102,19 @@ function findEnemyDomain(x,y,team,rad,mask,prefer){
     while(j>=0){
       if(intelCanTarget(j,team)){
         const D=mfDomainOfType(TYPES[utype[j]]);
-        if(mask&D){const d=dist2(x,y,ux[j],uy[j]),score=d*((prefer&D)?.62:1);if(score<bscore){bscore=score;best=j;}}
+        if(mask&D){
+          const d=dist2(x,y,ux[j],uy[j]);
+          /* Wounded bias. hpFrac 1.0 leaves score unchanged; a target at 25%
+             health scores 0.66x, so it wins against an equal-distance healthy
+             one but does NOT beat a much closer target — deliberately mild, so
+             units do not walk past the thing shooting them to finish something
+             across the field. 0.45 was too strong in reasoning: it inverted
+             distance entirely at low health. */
+          const hpFrac=uhpm[j]>0?clamp(uhp[j]/uhpm[j],0,1):1;
+          const wounded=0.55+0.45*hpFrac;
+          const score=d*((prefer&D)?.62:1)*wounded;
+          if(score<bscore){bscore=score;best=j;}
+        }
       }
       j=gNext[j];
     }
