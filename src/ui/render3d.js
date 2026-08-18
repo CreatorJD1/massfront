@@ -1067,11 +1067,43 @@ function render(dtDraw){
   }
   const tt=(BK&&BK.treeTint)||THEMES[curTheme].treeTint;
   const ct=(BK&&BK.coverTint)||[86,118,58];
+  /* TREE LOD — impostor billboards past a distance band.
+     Every tree was an instanced 3D mesh at every range. That is correct up
+     close and wasteful far away: at command zoom a trunk is about two pixels,
+     and the mesh still costs its full vertex count. Distant trees now draw as
+     ONE camera-facing quad from the existing sprites.tree atlas cell, which is
+     the classic impostor trade (Unity calls these tree billboards).
+
+     Why this is worth doing here specifically: scatter now CLUSTERS into
+     stands, so the interesting camera framings are the ones with many trees on
+     screen at once. Billboards are what make a dense forest affordable.
+
+     The split is in WORLD units against the camera, not a global flag, so the
+     near trees around the player's base keep full geometry while the treeline
+     across the valley goes flat. bbAlpha (not bbAdd) because foliage is
+     occluding, not emissive — additive would make a forest glow.
+
+     Billboards are cheap enough that the sceneryStep decimation is lifted for
+     them: dropping every other distant tree was a fill-rate concession that a
+     quad no longer needs, and holes in a treeline read worse than flat trees. */
+  const TREE_BB_D=typeof mfLodSpan==='function'?mfLodSpan(760):760;
+  const treeBBd2=TREE_BB_D*TREE_BB_D;
+  const bbFlora=(typeof sprites!=='undefined'&&sprites.tree)||null;
   for(let ti=0;ti<trees.length;ti++){
-    if(sceneryStep>1&&(ti%sceneryStep)) continue;
     const tr=trees[ti];
     if(!vis(tr.x,tr.y,50)||!fogPointVisible(tr.x,tr.y)) continue;
-    floraMesh(tr.k).add(tr.x,tr.y,gh(tr.x,tr.y),tr.s*0.030,tr.a,tt[0],tt[1],tt[2],255);
+    const dx2=tr.x-cam.x, dy2=tr.y-cam.y;
+    const far=(dx2*dx2+dy2*dy2)>treeBBd2;
+    if(far&&bbFlora){
+      /* 0.030 is the mesh scale; the quad is sized to the same silhouette so a
+         tree does not visibly resize as it crosses the band. Lifted half its
+         height so the quad sits ON the ground rather than through it. */
+      const hgt=tr.s*0.92;
+      bbAlpha.add(bbFlora,tr.x,tr.y,gh(tr.x,tr.y)+hgt*0.5,hgt,tr.a,tt[0],tt[1],tt[2],255);
+    } else {
+      if(sceneryStep>1&&(ti%sceneryStep)) continue;
+      floraMesh(tr.k).add(tr.x,tr.y,gh(tr.x,tr.y),tr.s*0.030,tr.a,tt[0],tt[1],tt[2],255);
+    }
   }
   if(typeof cover!=='undefined'&&FX.bush) for(let ci=0;ci<cover.length;ci++){
     if(sceneryStep>1&&(ci%sceneryStep)) continue;
