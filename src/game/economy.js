@@ -46,6 +46,13 @@ function credit(team,m,e,slot){
     return;
   }
   if(team===1){
+    /* Gated. When false this deliberately writes the MIRROR, which the next
+       econTick erases - i.e. the current shipped behaviour, byte for byte. */
+    if(!econAiReal()){
+      if(m) resM[1]=Math.min(RES_MCAP[1],resM[1]+m);
+      if(e) resE[1]=Math.min(RES_ECAP[1],resE[1]+e);
+      return;
+    }
     const S=econSeatFor(1,slot)||econAiSeat(slot);
     if(S){ S.mass=Math.min(S.mcap||MCAP0,(S.mass||0)+(m||0));
            S.energy=Math.min(S.ecap||ECAP0,(S.energy||0)+(e||0));
@@ -67,6 +74,33 @@ function econAiBuildingSlot(B){
   let best=AI.bases[0],bd=1e18;
   for(const S of AI.bases){ const d=dist2(B.x,B.y,S.x,S.y); if(d<bd){bd=d;best=S;} }
   return best.slot;
+}
+/* ENEMY ECONOMY: REAL, OR MIRRORED?
+   resM[1]/resE[1] are a pure DERIVED MIRROR - econMirrorAiBanks recomputes
+   them as the sum of the seat wallets, and bldTick runs BEFORE econTick
+   every frame. So anything that writes the team-1 ledger directly is erased
+   milliseconds later, and it cuts BOTH ways:
+     - enemy energy weapons are FREE       (measured: 201 e/s for a Hard Nova
+       base, 463 e/s for a Hard Syndicate turtle at its ai.js build caps)
+     - enemy reclaim, mobile mining and HQ labour are VOID - they earn nothing
+   Fixing only the spend side would be a pure nerf wearing a bugfix costume.
+   Both sides route through the seat when this is true.
+
+   SHIPS FALSE ON PURPOSE. Turning it on is a live difficulty change, and it
+   would land inside a release already carrying 36 bug fixes and the whole
+   delivery rewrite - any "the AI feels different" report would be
+   unattributable. It is a constant rather than a comment so BOTH paths stay
+   exercised by the probe, and flipping it is a config change you can A/B in
+   one play session rather than code archaeology months later.
+
+   What turning it on buys: destroying an enemy reactor currently does
+   NOTHING to their turrets and Nova. "Cut their power, then push" is a core
+   RTS verb that is inert against the AI today. That is the point of this,
+   more than the numbers. */
+let AI_ECON_REAL=false;
+function econAiReal(){
+  const o=(typeof window!=='undefined')?window.__aiEconReal:undefined;
+  return (typeof o==='boolean')?o:AI_ECON_REAL;
 }
 function econMirrorAiBanks(){
   if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return;
@@ -188,6 +222,17 @@ function beginBuild(team,type,x,y,rot,slot){
   return B;
 }
 function drawEnergy(team,e,slot){    // power weapons sip the grid; returns 0..1 satisfaction
+  /* Enemy weapons draw from their SEAT when the real economy is on. Off, it
+     falls through to resE[1] - the mirror - which is why enemy energy
+     weapons cost nothing today. */
+  if(team===1&&econAiReal()&&slot!=null&&slot>=0){
+    const S=econSeatFor(1,slot)||econAiSeat(slot);
+    if(S){
+      if((S.energy||0)>=e){ S.energy-=e; econMirrorAiBanks(); return 1; }
+      const got=Math.max(0,S.energy||0); S.energy=0; econMirrorAiBanks();
+      return e>0?got/e:1;
+    }
+  }
   if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot);
     if(!S) return 0;
     if((S.energy||0)>=e){ S.energy-=e; return 1; }

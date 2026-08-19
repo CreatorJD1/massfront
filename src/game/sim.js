@@ -4429,7 +4429,7 @@ function reclaimTick(dt){
       const takeE=Math.min(W.en, rate*dt*1.6);
       if(take>0){
         if(team===0) credit(0,take*salvageMult,0,rs);
-        else resM[team]=Math.min(RES_MCAP[team], resM[team]+take);
+        else credit(team,take,0,rs);                   // team 1: void today; real when the gate is on
         stats.reclaimed=(stats.reclaimed||0)+ (human?take:0);
       }
       if(takeE>0){
@@ -5725,7 +5725,9 @@ function prospectorAssistTick(i,dt){
      human bank. Team 1 keeps the raw mirror write on purpose. */
   if(B.type==='hq'){
     if(uteam[i]===0) credit(0,.42*dt,1.8*dt,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);
-    else if(uteam[i]===1){resM[1]=Math.min(RES_MCAP[1],resM[1]+.42*dt);resE[1]=Math.min(RES_ECAP[1],resE[1]+1.8*dt);}
+    /* Enemy HQ labour: void today (the mirror erases it), real when the
+       enemy economy is switched on. credit() owns that decision. */
+    else if(uteam[i]===1) credit(1,.42*dt,1.8*dt,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);
   }
   return true;
 }
@@ -5770,7 +5772,7 @@ function minerUnitTick(i,dt){
     uMineT[i]=.68; const before=D.tier,got=drainDeposit(D,1.15);
     /* An ALLY Prospector's ore belongs to the ally seat, not to the player. */
     if(uteam[i]===0) credit(0,got,0,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);
-    else if(uteam[i]===1) resM[1]=Math.min(RES_MCAP[1],resM[1]+got);
+    else if(uteam[i]===1) credit(1,got,0,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);   // void today; real when the gate is on
     if((tick+i)%9===0) sfx('laser',ux[i],uy[i],.42);
     if(uteam[i]===0&&D.tier!==before){
       toast(D.tier?'◇ MOBILE MINING — field dropped to Tier '+D.tier:'◇ MOBILE MINING — field depleted');
@@ -6360,10 +6362,10 @@ function unitTick(dt){
           if(dist2(ux[i],uy[i],W.x,W.y)<130*130){
             const team=uteam[i];
             const sm=(team===0?salvageMult:1);
-            resM[team]=Math.min(RES_MCAP[team],resM[team]+W.mass*sm);
+            credit(team,W.mass*sm,0,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);          // team 1: void today; real when the gate is on
             /* Pay the energy too. The wreck is spliced out immediately below,
                so anything not banked here is destroyed. */
-            if(W.en>0) resE[team]=Math.min(RES_ECAP[team],resE[team]+W.en*sm);
+            if(W.en>0) credit(team,0,W.en*sm,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);
             addBeam(ux[i],uy[i],W.x,W.y,2.4,120,255,170,0.5,'repair');
             addParticle(0,W.x,W.y,0,0,.4,14, 120,255,170);
             if(team===0){
