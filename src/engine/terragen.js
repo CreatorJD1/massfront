@@ -278,10 +278,18 @@ function terraBlur(src,W,r,tmp){
    and before anything reads the field back — passability, district planning,
    the painted macro map, the mesh and the normal sheet all see eroded ground.
    --------------------------------------------------------------------------- */
-function terraShape(heightF,TS,MD,bumps,corridorFns,depPts){
+function terraShape(heightF,TS,MD,bumps,corridorFns,depPts,workOverride){
   if(typeof TERRA_ENABLED!=='undefined'&&!TERRA_ENABLED) return null;
   const t0=(typeof performance!=='undefined')?performance.now():0;
-  const W=TERRA.work, N=W*W, step=TS/W;
+  /* WORK RESOLUTION. Defaults to TERRA.work (512) so every existing caller is
+     byte-for-byte unchanged. A caller may ask for a coarser grid: the map
+     preview runs this exact algorithm at a fraction of the cost so a site card
+     shows the landform the player will actually get, instead of a second,
+     divergent generator that omitted ridges, drainage and coast warp entirely.
+     Clamped to <=TS because the downsample below point-samples cell centres and
+     a W above TS would just resample the same texels while costing more. */
+  const _wo=workOverride|0;
+  const W=_wo>0?Math.max(32,Math.min(TS,_wo)):TERRA.work, N=W*W, step=TS/W;
   const rand=terraRng((MD.seed^0xE20D10)|1);
   const LN=64;
   const gr=terraLattice(rand,LN), gm=terraLattice(rand,LN), gw1=terraLattice(rand,LN), gw2=terraLattice(rand,LN);

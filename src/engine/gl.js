@@ -3802,26 +3802,74 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
   const rel=def.relief;
   const hGrid=new Float32Array(W*H);
 
-  // Pass 1: Natural continuous fractal terrain elevation (no artificial flat discs)
-  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
-    const u=x/W*GN, v=y/H*GN, wx=x/W*MAP, wy=y/H*MAP;
-    let h = vn(g1,u*0.18,v*0.18)*0.52 
+  /* ---- PASS 1: THE REAL LANDFORM, not a second one -------------------------
+     This was an independent generator. It shared the seed and the first five
+     octaves with buildTerrain and then diverged: it added a SIXTH octave the
+     real map never has, replaced the land guarantees with Gaussian mounds, and
+     skipped terraShape entirely - so every ridge line, every drainage channel
+     and every warped coastline was absent from the card. A player chose a site
+     from a picture of a map that did not exist.
+
+     Now the card runs the same code the match runs:
+       * the base is bit-identical - srand(def.seed), GN=64, and because g3 is
+         filled LAST, g1 is exactly buildTerrain's `grid` and g2 its `grid2`;
+       * the land guarantees are the same Math.max bumps and corridor floors;
+       * terraShape runs at a reduced working grid - identical algorithm, same
+         seed, ~25 ms instead of a measured 944 ms at work=512. ridgeAmp is
+         identical at every work value and relief reaches ~86% of the match's.
+     g3 is still built (it feeds the surface grain below) but no longer
+     contributes height, which is what made the card's landform wrong. */
+  const PN=256;                       // square field: the world is square
+  const hf=new Float32Array(PN*PN);
+  const bumps=[[MAP*SP_LO,MAP*SP_HI,420,0.17],[MAP*SP_HI,MAP*SP_LO,420,0.17],[MAP*0.5,MAP*0.5,360,0.12]];
+  if(typeof START_ZONES!=='undefined') for(const Z of START_ZONES) bumps.push([MAP*Z.x,MAP*Z.y,310,0.14]);
+  const segA={x:MAP*SP_LO,y:MAP*SP_HI}, segB={x:MAP*SP_HI,y:MAP*SP_LO};
+  const segC={x:MAP*SP_LO,y:MAP*SP_LO}, segD={x:MAP*SP_HI,y:MAP*SP_HI};
+  const segDist=(wx,wy,A,B2)=>{
+    const dx=B2.x-A.x, dy=B2.y-A.y;
+    const t=clampVal(((wx-A.x)*dx+(wy-A.y)*dy)/(dx*dx+dy*dy),0,1);
+    return Math.hypot(wx-(A.x+dx*t), wy-(A.y+dy*t));
+  };
+  const corridorP=(wx,wy)=>segDist(wx,wy,segA,segB);
+  const crossCorridorP=(wx,wy)=>segDist(wx,wy,segC,segD);
+  for(let y=0;y<PN;y++) for(let x=0;x<PN;x++){
+    const u=x/PN*GN, v=y/PN*GN, wx=x/PN*MAP, wy=y/PN*MAP;
+    let h = vn(g1,u*0.18,v*0.18)*0.52
           + vn(g1,u*0.55,v*0.55)*0.27*rel
-          + vn(g2,u*1.6,v*1.6)*0.14*rel 
+          + vn(g2,u*1.6,v*1.6)*0.14*rel
           + vn(g2,u*4.5,v*4.5)*0.07*rel
-          + vn(g1,u*9.5,v*9.5)*0.045*rel
-          + vn(g3,u*18.0,v*18.0)*0.020*rel;
+          + vn(g1,u*9.5,v*9.5)*0.045*rel;
     h=mapMod(def,wx,wy,h);
-
-    // Smooth organic land guarantees (gentle Gaussian blend rather than harsh Math.max)
-    const d0=Math.hypot(wx-MAP*SP_LO, wy-MAP*SP_HI);
-    if(d0<450) h += Math.exp(-(d0*d0)/(280*280))*0.06;
-    const d1=Math.hypot(wx-MAP*SP_HI, wy-MAP*SP_LO);
-    if(d1<450) h += Math.exp(-(d1*d1)/(280*280))*0.06;
-    const dC=Math.hypot(wx-MAP*0.5, wy-MAP*0.5);
-    if(dC<400) h += Math.exp(-(dC*dC)/(240*240))*0.04;
-
-    hGrid[y*W+x]=h;
+    for(const B2 of bumps){
+      const d=Math.hypot(wx-B2[0],wy-B2[1]);
+      if(d<B2[2]) h=Math.max(h, 0.42+B2[3]*(1-d/B2[2]));
+    }
+    const cd=corridorP(wx,wy);
+    if(cd<300) h=Math.max(h,0.452+0.010*(1-cd/300));
+    if(def.roads){
+      const xd=crossCorridorP(wx,wy);
+      if(xd<260) h=Math.max(h,0.452+0.009*(1-xd/260));
+    }
+    hf[y*PN+x]=h;
+  }
+  /* ridges, D8 drainage, coast warp, relief gain - the largest single
+     contributor to how a MASSFRONT map reads, and the card had none of it. */
+  if(typeof terraShape==='function'){
+    try{ terraShape(hf,PN,def,bumps,[corridorP,crossCorridorP],[],128); }
+    catch(e){ console.warn('preview terraShape failed',e); }
+  }
+  /* Diagnostic hook: lets a probe assert that the card's landform matches the
+     map a match would build. The divergence this replaced went unnoticed
+     through several releases precisely because nothing could measure it. */
+  try{ window.__mfPreviewField={PN:PN,hf:hf,seed:def.seed}; }catch(e){}
+  /* Resample the square world field into the card. Every downstream pass
+     (slope, hillshade, materials, civic paint) then works unchanged. */
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const fx=x/W*(PN-1), fy=y/H*(PN-1);
+    const xa=fx|0, ya=fy|0, xb=Math.min(PN-1,xa+1), yb=Math.min(PN-1,ya+1);
+    const tx=fx-xa, ty=fy-ya;
+    hGrid[y*W+x]=(hf[ya*PN+xa]*(1-tx)+hf[ya*PN+xb]*tx)*(1-ty)
+                +(hf[yb*PN+xa]*(1-tx)+hf[yb*PN+xb]*tx)*ty;
   }
 
   // Pass 2: High-contrast directional hillshading, slope normal mapping & multi-material orthophoto texturing
@@ -3930,7 +3978,11 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
   // 4. Strategic deployment beacons
   if(showBases){
     // Player Spawn Beacon (Cyan target reticle)
-    const px=0.16*W, py=0.84*H;
+    /* SP_LO/SP_HI, not 0.16/0.84. This same function already used SP_LO and
+       SP_HI for its land guarantees, so the card raised ground at one place
+       and drew the beacon at another - the reticle sat outside the spawn it
+       claimed to mark. */
+    const px=SP_LO*W, py=SP_HI*H;
     ctx3.strokeStyle='rgba(0,229,255,0.50)';
     ctx3.lineWidth=1.0;
     ctx3.beginPath(); ctx3.arc(px,py,8.5,0,TAU); ctx3.stroke();
@@ -3939,7 +3991,7 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
     ctx3.fillStyle='#ffffff'; ctx3.beginPath(); ctx3.arc(px,py,1.0,0,TAU); ctx3.fill();
 
     // Enemy Spawn Beacon (Crimson target reticle)
-    const ex=0.84*W, ey=0.16*H;
+    const ex=SP_HI*W, ey=SP_LO*H;
     ctx3.strokeStyle='rgba(255,60,40,0.50)';
     ctx3.lineWidth=1.0;
     ctx3.beginPath(); ctx3.arc(ex,ey,8.5,0,TAU); ctx3.stroke();

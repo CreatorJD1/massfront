@@ -192,6 +192,10 @@ let weeklyMode=false;
    "doesn't make sense": you set up a match, played one Weekly, and your setup
    was someone else's. Same borrow/return shape tutorial.js already uses for
    training (saveTrainingConfig / restoreTrainingConfig). */
+/* Rendered site previews for the Weekly card, keyed by map id. drawMapPreview()
+   re-runs the match terrain generator, so it is paid once per site per session
+   exactly like the War Room map row does with mapPrevCache. */
+const weeklyMapPrevCache={};
 let weeklyPrev=null;
 function saveWeeklyConfig(){
   weeklyPrev={ threatSel:META.threatSel, opmods:Object.assign({},META.opmods||{}),
@@ -429,6 +433,28 @@ function renderOps(){
       +'<div class="wkRecord"><span>PERSONAL BEST</span><b>'+(wb.best||0).toLocaleString()+'</b>'
         +'<small>'+(wb.runs?wb.runs+' completed run'+(wb.runs>1?'s':''):'No attempts this rotation')+'</small></div>'
       +'</article>';
+    /* THE PREVIEW IS THE REAL LANDFORM, NOT A STAND-IN.
+       This tile used to be four CSS rules keyed on vanguard/highland/isles/
+       crater -- map ids retired from the drop pool -- so no selector could ever
+       match what weeklyDef() picks out of the 48 authored sites, and every week
+       showed the same generic gradient. It now runs the same drawMapPreview()
+       the War Room site cards run, off MAPDEFS + the region BIOME_KITS palette,
+       so the card shows the terrain the match will actually generate. Nothing
+       is keyed on an id: any site added to PLANETS/MAPDEFS is covered for free.
+       If the site has no def or the render throws, the .wkMapPreview gradient in
+       ui.css is the last-resort fallback. */
+    const wkPrevBox=wk.querySelector('.wkMapPreview'), wkDef=MAPDEFS[wd.map];
+    if(wkPrevBox&&wkDef&&typeof drawMapPreview==='function'){
+      let cv=weeklyMapPrevCache[wd.map];
+      if(!cv){
+        try{
+          cv=document.createElement('canvas'); cv.width=320; cv.height=200;
+          drawMapPreview(cv,wkDef,wkDef.theme||curTheme);
+          weeklyMapPrevCache[wd.map]=cv;
+        }catch(err){ cv=null; }
+      }
+      if(cv) wkPrevBox.insertBefore(cv,wkPrevBox.firstChild);
+    }
   }
   /* Mastery */
   const mg=document.getElementById('masteryGrid');

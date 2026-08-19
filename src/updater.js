@@ -42,7 +42,7 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.44';
+const APP_VERSION = '1.33.46';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
@@ -245,7 +245,7 @@ function updValidManifest(m){
          a manifest that simply omitted both downloaded and APPLIED executable
          JavaScript with no verification at all - the integrity checks were
          opt-in by the very document an attacker would control. The publisher
-         always emits both (publish-hf-release.ps1) and the live 1.33.44
+         always emits both (publish-hf-release.ps1) and the live 1.33.46
          manifest carries them, so requiring them rejects nothing genuine. */
       typeof f.sha256==='string'&&/^[0-9a-f]{64}$/i.test(f.sha256)&&
       Number.isFinite(f.size)&&f.size>0)&&
@@ -565,7 +565,7 @@ async function updDownload(){
 
        (a) A fresh package install has NO `active` record at all - the packaged
            build lives in the APK, not in IndexedDB. Comparing only versions
-           made patchFrom==='1.33.44' match a fresh 1.33.44 device, so it
+           made patchFrom==='1.33.46' match a fresh 1.33.46 device, so it
            downloaded the whole delta and only then discovered there was
            nothing to merge onto. That is the MAJORITY cohort after any release.
 
@@ -897,7 +897,17 @@ function updEnsureChannelControl(){
     const bar=document.getElementById('updBarO');
     panel.insertBefore(row,bar||null);
   }
+  /* Driven by configuration, not hardcoded: the moment update-config.json
+     carries a channels.preview endpoint, this button stops apologising. */
+  const previewLive=!!(updChannelUrls&&updChannelUrls.preview);
   for(const b of row.querySelectorAll('button')){
+    if(b.dataset.channel==='preview'){
+      b.textContent=previewLive?'PREVIEW':'PREVIEW · SOON';
+      b.style.opacity=previewLive?'1':'.55';
+      b.setAttribute('aria-label',previewLive
+        ?'Preview channel: early builds, ahead of stable'
+        :'Preview channel: no preview build has been published; you will stay on stable');
+    }
     const on=b.dataset.channel===updChannel();
     b.setAttribute('aria-pressed',on?'true':'false');
     b.style.background=on?'linear-gradient(180deg,rgba(30,105,146,.95),rgba(12,49,76,.98))':'rgba(7,18,31,.82)';
