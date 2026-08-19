@@ -113,6 +113,7 @@ async function packDownload(pack, onProgress){
   }
   const base = packEndpoint();
   if(!base) return false;
+  if(PACK.busy) return false;              // second reader of the flag; see packStarting
   const miss = await packMissing(pack);
   if(!miss.files.length){ PACK.state = 'ready'; return true; }
   PACK.busy = true; PACK.state = 'downloading';
@@ -224,7 +225,22 @@ function packRenderBar(){
    notices missing, not by what was written first. */
 const PACK_WANT = ['voice', 'music'];
 
+/* Re-entrancy latch for packStart. PACK.busy exists but is only ever set and
+   cleared INSIDE packDownload, and packStart awaits the index plus one
+   packMissing() per pack before it gets there — so from the first tap until
+   the first byte, PACK.state is still 'offer' and the panel button's
+   `state === 'downloading'` guard is wide open. Two taps in that window (or a
+   tap landing while the 4s initAssetPacks timer fires) started two complete,
+   concurrent downloads of the same files: double the player's mobile data,
+   double the writes, and a progress bar driven by two writers at once. */
+let packStarting = false;
 async function packStart(manual){
+  if(packStarting) return;
+  packStarting = true;
+  try{ return await packStartInner(manual); }
+  finally{ packStarting = false; }
+}
+async function packStartInner(manual){
   packPanel();
   const idx = PACK.idx || await packLoadIndex();
   if(!idx){ PACK.state = 'idle'; packRenderBar(); return; }
@@ -246,9 +262,29 @@ async function packStart(manual){
   try{ pref = localStorage.getItem(PACK_PREF) || 'ask'; }catch(e){}
   if(!manual && pref !== 'auto'){ PACK.state = 'offer'; packRenderBar(); return; }
   try{ localStorage.setItem(PACK_PREF, 'auto'); }catch(e){}
-  let ok = true;
-  for(const p of need) ok = (await packDownload(p)) && ok;
-  if(ok && typeof audAttachPack === 'function') audAttachPack();
+  const failed = [];
+  for(const p of need) if(!(await packDownload(p))) failed.push(p);
+  /* Attach on ANY complete pack, never on a clean sweep of all of them.
+     `ok = (await packDownload(p)) && ok` meant a single permanently
+     unavailable file in ONE pack suppressed audAttachPack() for every pack
+     that had downloaded perfectly — and it stayed suppressed on every launch
+     afterwards, because the finished pack reports nothing missing (so it is
+     not even retried) while the broken one keeps failing and keeps holding
+     `ok` false. A player could be carrying the entire 16 MB soundtrack in
+     IndexedDB and never hear a note of it, permanently, with no control in
+     the UI that would fix it. Re-derived from storage rather than from the
+     download results so a pack completed on an EARLIER launch also counts. */
+  let haveOne = false;
+  for(const p of want) if(!(await packMissing(p)).files.length){ haveOne = true; break; }
+  if(haveOne && typeof audAttachPack === 'function') audAttachPack();
+  /* A later pack succeeding must not bury an earlier one's failure: PACK.state
+     is what the panel reads, and 'ready' hides the panel outright — so voice
+     failing and music succeeding used to leave no trace anywhere on screen. */
+  if(failed.length){
+    PACK.state = 'error';
+    PACK.err = 'Some audio could not be downloaded — the game runs without it';
+    packRenderBar();
+  }
 }
 
 function initAssetPacks(){

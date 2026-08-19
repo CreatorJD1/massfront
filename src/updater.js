@@ -101,7 +101,18 @@ function updChannel(){
 async function updSetChannel(channel){
   const next=updChannelName(channel);
   try{ localStorage.setItem(UPD_CHANNEL_KEY,next); }catch(e){}
-  updResolved=false; UPDATE_URL=null; UPD.manifest=null;
+  updResolved=false; UPDATE_URL=null;
+  /* Drop the STATE together with the manifest. Nulling UPD.manifest while
+     UPD.state was still 'available' (or 'ready') made the renderUpdatePanel
+     call at the end of this function dereference m.version on a null, which
+     threw out of this async function before the caller's updSet('idle') and
+     updCheck(true) could run. Symptom: tapping PREVIEW/STABLE while an update
+     was on offer highlighted the new button, froze the panel on the OLD
+     channel's offer, and turned DOWNLOAD into a dead control — updDownload
+     returns immediately on a null manifest — with no way back short of
+     restarting the app. */
+  UPD.manifest=null; UPD.checkedVersion=null; UPD.source=null; UPD.err=null;
+  UPD.state='idle'; UPD.channel=next;
   await updResolveEndpoint(true);
   if(typeof renderUpdatePanel==='function') renderUpdatePanel();
   return UPDATE_URL;
@@ -658,7 +669,11 @@ async function updDownload(){
       const prior=priorRec||await updGet('active');
       const priorFiles=(prior&&prior.files)||null;
       if(!priorFiles){
-        updSet('error',{err:'The patch base is missing — reinstall the full update'});
+        /* abort:null, or this bail-out leaves UPD.abort holding the controller
+           of a download that has already finished. updCancel() would then fire
+           at a dead request, and the handle keeps the whole response pipeline
+           reachable for the life of the document. */
+        updSet('error',{err:'The patch base is missing — reinstall the full update',abort:null});
         return;
       }
       commitFiles=Object.assign({},priorFiles,out);
@@ -699,12 +714,37 @@ async function updApply(){
     const current=await updGet('active');
     const running=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
     /* Only the bundle this document is demonstrably running is known-good.
-       Preserve that exact copy before replacing it so rollback returns one
-       release, not all the way to an old APK payload. */
-    if(current&&current.files&&running&&String(current.version)===running&&
-       String(current.version)!==String(p.version)) await updPut('previous',current);
-    await updPut('active',p);
+       Preserve that exact copy so rollback returns one release, not all the
+       way to an old APK payload. */
+    const keepPrev=!!(current&&current.files&&running&&String(current.version)===running&&
+                      String(current.version)!==String(p.version));
+    /* THE ORDER OF THESE THREE WRITES IS THE SAFETY PROPERTY.
+
+       `probation` FIRST. It is the only record that tells boot.js a patch was
+       started, and it is what arms the automatic rollback. Writing `active`
+       first meant that if the sequence died in the gap - a quota rejection, a
+       killed transaction, the document torn down - the next launch found a new
+       bundle with NO probation record: an unguarded patch, run with the
+       failed-start detector disarmed. The opposite gap is harmless; probation
+       standing over the OLD active just costs one counted attempt, which
+       __bootOk() clears on the first frame.
+
+       `previous` LAST, and best-effort. It is a THIRD full copy of the payload
+       - `pending`, `active` and `previous` are ~27 MB each on the live channel,
+       ~80 MB in flight - and it is the one write the install does not need.
+       Going first, a storage rejection on it failed the ENTIRE install, and
+       failed it identically on every retry, because neither `current` nor `p`
+       changes between attempts: a permanent "Could not prepare the update" on
+       exactly the devices least able to afford one. Losing the rollback copy
+       costs a revert path. Losing the install costs the update. */
     await updPut('probation',{version:p.version,at:Date.now(),tries:0});
+    await updPut('active',p);
+    if(keepPrev){
+      /* And if it will not fit, drop it rather than leave a stale record
+         claiming to be the build we just replaced. */
+      try{ await updPut('previous',current); }
+      catch(e){ try{ await updDel('previous'); }catch(e2){} }
+    }
     /* Preserve a prior failed-start count when retrying the same bytes. The
        boot loader quarantines the patch after two failures; clearing the count
        here previously made every attempt look like the first one forever. A
@@ -914,6 +954,11 @@ function renderUpdatePanel(){
      the rest of the boot wiring down with it. */
   if(!bar||!txt||!sub||!btn) return;
   const m=UPD.manifest;
+  /* Belt and braces for the same class of fault: 'available' and 'ready' are
+     the only two arms that dereference the manifest, so never enter them
+     without one. Rendering the neutral version line is recoverable; throwing
+     out of the renderer takes every caller down with it. */
+  const st=(!m&&(UPD.state==='available'||UPD.state==='ready'))?'idle':UPD.state;
   const channel=(m&&m.channel)||UPD.channel||updChannel();
   if(cancel) cancel.style.display=UPD.state==='downloading'?'block':'none';
   if(notes){
@@ -924,7 +969,7 @@ function renderUpdatePanel(){
   el.classList.toggle('good',UPD.state==='ready'||UPD.state==='installed');
   el.classList.toggle('mini',!(updOpen||updWants()));
   if(channelRow) channelRow.style.display=el.classList.contains('mini')?'none':'grid';
-  switch(UPD.state){
+  switch(st){
     case 'checking':
       txt.textContent='CHECKING FOR UPDATES';
       sub.textContent='v'+updVerShown;
@@ -1012,7 +1057,10 @@ function updWhen(){
   return '  ·  checked '+Math.round(s/3600)+'h ago';
 }
 function updButton(){
-  if(UPD.state==='available') updDownload();
+  /* Same guard as the renderer: 'available' without a manifest is a state we
+     should never be in, and updDownload() silently returns on one, so route it
+     to a fresh check instead of giving the player a button that does nothing. */
+  if(UPD.state==='available'&&UPD.manifest) updDownload();
   else if(UPD.state==='ready'||UPD.state==='applyError') updApply();
   else updCheck(true);
 }
@@ -1138,10 +1186,14 @@ async function initUpdater(){
     if(e.target.closest('button')) return;
     updOpen=!updOpen; renderUpdatePanel();
   });
-  /* A quiet check on launch, so the player finds out there is a patch without
-     having to go looking. Never downloads on its own — that is their data. */
-  if(UPDATE_URL && UPD.state!=='installed' && UPD.state!=='applyError' &&
-     (typeof netAllowed!=='function' || netAllowed()))
-    setTimeout(()=>updCheck(false),2500);
+  /* The quiet launch check lives in the 1400ms timer above and NOWHERE ELSE.
+     A second copy used to sit here on a 2500ms timer, so every cold start ran
+     the launch check TWICE. updLoadManifest is not one request: it sweeps the
+     configured endpoint, every configured mirror, the Hugging Face repo API
+     and two official URLs, so the duplicate cost up to five extra requests on
+     the player's data on every single launch, and the second sweep landed on
+     top of whatever state the first had just settled into. The surviving timer
+     is also the better of the two: it re-tests netAllowed() when it FIRES,
+     rather than reading it once at wiring time. */
 }
 

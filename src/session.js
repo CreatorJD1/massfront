@@ -50,7 +50,7 @@ function sessCanSnapshot(){
    array of objects: JSON.stringify of 4000 objects is several times slower and
    several times larger, and this runs against a reload deadline. */
 function sessCaptureUnits(){
-  const idx=[], out={t:[],tm:[],x:[],y:[],hp:[],ang:[],st:[],tx:[],ty:[],hold:[],mode:[],
+  const idx=[], out={t:[],tm:[],x:[],y:[],hp:[],ang:[],st:[],tx:[],ty:[],hold:[],mode:[],vt:[],kl:[],
     oi:[],cmd:[],tg:[],mh:[],pr:[],pst:[],psl:[],gh:[],gg:[],qk:[],q:[]};
   for(let i=0;i<unitHigh;i++) if(ualive[i]) idx.push(i);
   /* Over the cap, keep the player's army and the enemy's commanders first —
@@ -67,6 +67,13 @@ function sessCaptureUnits(){
     out.st.push(ustate[i]);
     out.tx.push(Math.round(utx[i])); out.ty.push(Math.round(uty[i]));
     out.hold.push(uhold[i]|0); out.mode.push(typeof umode!=='undefined'?(umode[i]|0):0);
+    /* Veterancy and its kill counter. spawnUnit ZEROES both on every spawn, so
+       a restore that does not carry them hands the player back a rankless army:
+       the ★ chevrons vanish from the world and the selection panel, and the
+       +15%-per-rank damage in the damage roll (uvet[i]*0.15) is silently gone.
+       airlift.js already round-trips exactly this pair for the same reason. */
+    out.vt.push(typeof uvet!=='undefined'?uvet[i]|0:0);
+    out.kl.push(typeof ukills!=='undefined'?ukills[i]|0:0);
     /* Old slot is the remap key. spawnUnit hands out new indices, so utgt /
        guard / queue / patrol members stored as raw slots would point at the
        wrong hulls after a resume. ufield is omitted on purpose: the field
@@ -103,7 +110,17 @@ function sessCaptureBuildings(){
                  snapshots lack the fields and restore as undefined = player-
                  owned, which matches their pre-fix reality. */
               B.allyAI==null?null:B.allyAI,
-              B.aiBaseSlot==null?null:B.aiBaseSlot]);
+              B.aiBaseSlot==null?null:B.aiBaseSlot,
+              /* addBld DERIVES b.fac from the team, and main.js then overwrites
+                 it on every AI/ally base structure (baseB: `B.fac=fac`). Ally
+                 bases are team 0, so a restore that lets addBld re-derive gives
+                 them the player's own faction architecture instead of the kit
+                 they were built with — the ally's base changes appearance
+                 across a resume. aiBehavior has no derivation at all: without
+                 it aiBuildingBehavior() falls back to the nearest base, so a
+                 forward structure in a 1v3 answers to the wrong doctrine. */
+              B.fac==null?null:B.fac,
+              B.aiBehavior==null?null:B.aiBehavior]);
   }
   return out;
 }
@@ -308,18 +325,29 @@ function sessRestoreInto(s){
     /* Clear whatever the fresh start spawned before laying the snapshot down,
        or the player resumes with two commanders and a doubled army. */
     for(let i=0;i<unitHigh;i++) if(ualive[i]) killUnit(i,true);
-    for(const B of blds) if(B.alive&&B.type!=='nest') B.alive=false;
+    /* EVERY structure, nests included. sessCaptureBuildings has no type filter,
+       so the snapshot already holds every live hive; exempting them from the
+       wipe therefore did not preserve them, it DUPLICATED them. setupNests()
+       is seeded off the map seed (srand((def.seed^0x1234f)|1)), so the fresh
+       generation lays hives down at the exact same coordinates the snapshot
+       recorded — one resume put two stacked nests on every site, a second
+       resume put four, and every one of them trickles and erupts independently.
+       It also resurrected at full health every hive the player had cleared.
+       Wiping them and replaying the snapshot makes the snapshot authoritative,
+       which is what it is for the other 30-odd structure types already. */
+    for(const B of blds) if(B.alive) B.alive=false;
     refreshBldLive();
 
     const bMap=new Map();
     for(const b of s.blds){
-      const [type,team,x,y,hp,prog,lvl,paidM,paidE,oldBi,allyAI,aiBaseSlot]=b;
+      const [type,team,x,y,hp,prog,lvl,paidM,paidE,oldBi,allyAI,aiBaseSlot,bfac,bBehavior]=b;
       try{
         const B=addBld(type,team,x,y,true);
         if(B){ B.hp=hp; B.prog=prog; B.lvl=lvl||1;
           if(paidM!=null)B.buildPaidM=paidM;if(paidE!=null)B.buildPaidE=paidE;
           if(oldBi!=null) bMap.set(oldBi,blds.length-1);
-          if(allyAI!=null)B.allyAI=allyAI; if(aiBaseSlot!=null)B.aiBaseSlot=aiBaseSlot; }
+          if(allyAI!=null)B.allyAI=allyAI; if(aiBaseSlot!=null)B.aiBaseSlot=aiBaseSlot;
+          if(bfac!=null)B.fac=bfac; if(bBehavior!=null)B.aiBehavior=bBehavior; }
       }catch(e){}
     }
     refreshBldLive();
@@ -334,6 +362,11 @@ function sessRestoreInto(s){
       uhp[i]=U.hp[k]; uang[i]=U.ang[k]; ustate[i]=U.st[k];
       utx[i]=U.tx[k]; uty[i]=U.ty[k]; uhold[i]=U.hold[k];
       if(typeof umode!=='undefined') umode[i]=U.mode[k];
+      /* Guarded on the array, not on the snapshot version: a v1 snapshot taken
+         before these were captured simply has no vt/kl and keeps its old
+         behaviour of resuming at rank 0. */
+      if(typeof uvet!=='undefined'&&U.vt) uvet[i]=U.vt[k]|0;
+      if(typeof ukills!=='undefined'&&U.kl) ukills[i]=U.kl[k]|0;
     }
     /* Player ledger first. Seat wallets then overwrite the team-1 mirror so a
        1v2/1v3 resume does not dump three mex belts into one shared bank. */
