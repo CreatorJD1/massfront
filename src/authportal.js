@@ -1101,7 +1101,7 @@ function initAuthPortal(){
    ============================================================================
    The verification-first server exposes:
 
-     GET  /social/friends            -> {friends:[…], incoming:[…], blocked:[…]}
+     GET  /social/friends            -> {friends:[…], incoming:[…]}   (server pre-filters blocks)
      POST /social/request  {username}   exact username, no search, no discovery
      POST /social/respond  {id,accept}
      POST /social/block    {username}
@@ -1186,7 +1186,12 @@ async function socialFriends(){
     return { ok:true,
              friends:  apSocialList(d && (d.friends  || d.list)),
              incoming: apSocialList(d && (d.incoming || d.requests || d.pending)),
-             blocked:  apSocialList(d && d.blocked) };
+             /* No `blocked` key on purpose. The server filters blocked
+                parties out of BOTH friends and incoming, in both
+                directions, before it answers - so a client-side list here
+                would be a decorative second gate that the next reader
+                mistakes for enforcement. Blocking is a server control. */
+             };
   }catch(e){ return apSocialFail(e); }
 }
 /* Exact username, deliberately. There is no directory and no search: the only

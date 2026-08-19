@@ -531,8 +531,13 @@ function inboxFriendsState(c){
 /* Zero unless a real server answered with real requests, which is what keeps
    the mailbox dot honest on a build with no backend at all. */
 function inboxUnreadFriends(){
+  /* Live session, not the cache. The cached flag is only refreshed by
+     renderInboxFriends(), and sign-out does not re-render the inbox - so
+     trusting it left a friend-request badge lit after sign-out, pointing at
+     requests the player can no longer see. */
+  if(typeof mfSocialSignedIn!=='function'||!mfSocialSignedIn()) return 0;
   const c=INBOX_FRIENDS;
-  return (c&&c.signedIn&&c.loaded&&c.incoming)?c.incoming.length:0;
+  return (c&&c.loaded&&c.incoming)?c.incoming.length:0;
 }
 /* The .sHead directly above a list is where inboxSectionCount() hangs its
    badge (see ~line 240): a list created without one silently loses its count
