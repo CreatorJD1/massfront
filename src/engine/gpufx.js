@@ -28,6 +28,25 @@ let gpfxProgU=null, gpfxProgR=null, gpfxHead=0, gpfxFlip=0, gpfxLive=0;
 let gpfxHi=0, gpfxAge=0, gpfxDrawN=0;
 let gpfxUup={}, gpfxUr={};
 let gpfxAttr=[0,0,0,0];      // set by the sim while a singularity is live
+/* WHICH GL CONTEXT THESE HANDLES BELONG TO, and whether the build already
+   failed on it. Both exist because gpfxInit()'s only guard used to be
+   `if(gpfxProgU) return`, and that single line carried two real defects:
+
+   1. A LOST CONTEXT LEAVES gpfxProgU TRUTHY. glrecover.js rebuilds the renderer
+      in place after Android reclaims the GPU, and every other subsystem is on
+      its list; this one was not, and gpfxGLReset() — which exists precisely for
+      this — had no caller anywhere in the tree. So after a restore the guard
+      saw a dead WebGLProgram, refused to re-init, and the transform-feedback
+      pass kept driving dead VAOs: GL errors every frame until gpfxAge passed
+      4 s, then silence. No sparks, embers, impact spray or superweapon
+      fragments for the rest of the session.
+
+   2. A FAILED BUILD RETRIED PER BURST. On failure the guard stayed null, so the
+      NEXT gpfxBurst re-entered gpfxInit — and gpfxBurst is called by
+      addMuzzleFlash. On a device where this program will not compile, every
+      shot fired compiled four shaders and linked two programs, then dropped
+      them undeleted. Latch the failure per epoch instead. */
+let gpfxEpoch=-1, gpfxInitFailed=false;
 const GPFX_SCRATCH=new Float32Array(GPFX_FLOATS*512);
 
 const GPFX_VSU=`#version 300 es
@@ -120,25 +139,51 @@ void main(){
   o=vec4(hot*k*vA,k*vA);
 }`;
 
+/* Call before touching any gpfx handle. A new GL epoch (initGL3D bumps it, on
+   cold boot AND on every context restore) invalidates every handle this module
+   owns, so drop them and allow exactly one rebuild attempt on the new context. */
+function gpfxCtxCheck(){
+  const ep=(typeof glEpoch!=='undefined')?glEpoch:0;
+  if(gpfxEpoch===ep) return;
+  gpfxEpoch=ep;
+  gpfxInitFailed=false;
+  gpfxGLReset();
+}
 function gpfxInit(){
-  if(gpfxProgU||typeof gl==='undefined'||!gl) return;
+  if(gpfxProgU||gpfxInitFailed||typeof gl==='undefined'||!gl) return;
   const mk=(vs,fs,tf)=>{
     const p=gl.createProgram();
+    /* Shaders are refcounted by the program once attached, so deleting them
+       here frees them with it instead of stranding them for the session — and
+       on the failure path below they are the objects that used to leak. */
+    const shaders=[];
+    let ok=true;
     for(const [ty,src] of [[gl.VERTEX_SHADER,vs],[gl.FRAGMENT_SHADER,fs]]){
       const sh=gl.createShader(ty); gl.shaderSource(sh,src); gl.compileShader(sh);
-      if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){
-        console.error('gpufx shader',gl.getShaderInfoLog(sh)); return null; }
+      shaders.push(sh);
       gl.attachShader(p,sh);
+      if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){
+        console.error('gpufx shader',gl.getShaderInfoLog(sh)); ok=false; }
     }
-    if(tf) gl.transformFeedbackVaryings(p,['tfP','tfV','tfC'],gl.INTERLEAVED_ATTRIBS);
-    gl.linkProgram(p);
-    if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
-      console.error('gpufx link',gl.getProgramInfoLog(p)); return null; }
+    if(ok){
+      if(tf) gl.transformFeedbackVaryings(p,['tfP','tfV','tfC'],gl.INTERLEAVED_ATTRIBS);
+      gl.linkProgram(p);
+      if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
+        console.error('gpufx link',gl.getProgramInfoLog(p)); ok=false; }
+    }
+    for(const sh of shaders) gl.deleteShader(sh);
+    if(!ok){ gl.deleteProgram(p); return null; }
     return p;
   };
   gpfxProgU=mk(GPFX_VSU,GPFX_FSU,true);
   gpfxProgR=mk(GPFX_VSR,GPFX_FSR,false);
-  if(!gpfxProgU||!gpfxProgR){ gpfxProgU=gpfxProgR=null; return; }
+  if(!gpfxProgU||!gpfxProgR){
+    /* One of the two may have linked. Release it rather than orphaning it, and
+       latch so the next muzzle flash does not recompile the whole pair. */
+    if(gpfxProgU) gl.deleteProgram(gpfxProgU);
+    if(gpfxProgR) gl.deleteProgram(gpfxProgR);
+    gpfxProgU=gpfxProgR=null; gpfxInitFailed=true; return;
+  }
   gpfxUup={dt:gl.getUniformLocation(gpfxProgU,'uDt'),grav:gl.getUniformLocation(gpfxProgU,'uGrav'),
            attr:gl.getUniformLocation(gpfxProgU,'uAttr'),
            height:gl.getUniformLocation(gpfxProgU,'uHeight'),
@@ -216,6 +261,7 @@ function gpfxEnergyBlast(x,y,h,n,col,opts){
 /* Emit n particles. kind of spray is caller-shaped via speed/spread/gravity:
    sparks (fast, hot, heavy), embers (slow, drifting), debris (mid, dark). */
 function gpfxBurst(x,y,h,n,opts){
+  gpfxCtxCheck();
   if(!gpfxProgU){ gpfxInit(); if(!gpfxProgU) return; }
   n=Math.min(n|0,512); if(n<=0) return;
   const o=opts||{};
@@ -285,6 +331,10 @@ function gpfxBurst(x,y,h,n,opts){
 
 /* One call per frame from the additive pass: advance, then draw. */
 function gpfxFrame(dt,matVP,viewH){
+  /* Before the live check, not after: a context loss during combat leaves
+     gpfxLive non-zero, and without this the first frames after a restore ran
+     transform feedback through dead VAOs. */
+  gpfxCtxCheck();
   if(!gpfxProgU||!gpfxLive){ gpfxDrawN=0; return; }
   /* Longest authored life is ~2.8×1.2. After that the field is dead — do not
      keep transform-feedbacking the buffer. HIGH also drops; a quiet map is

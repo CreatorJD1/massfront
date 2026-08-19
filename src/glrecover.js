@@ -67,6 +67,15 @@ function glrRebuildResources(){
   step('terrainGLReset',()=>{ if(typeof terrainGLReset==='function') terrainGLReset(); });
   step('worldKitGLReset',()=>{ if(typeof worldKitGLReset==='function') worldKitGLReset(); });
   step('fogGLReset',    ()=>{ if(typeof fogGLReset==='function') fogGLReset(); });
+  /* GPU particles. gpfxGLReset() shipped with NO caller anywhere in the tree,
+     so the transform-feedback program, its two buffers, both VAOs and the
+     transform-feedback object all stayed truthy-but-dead after a restore.
+     gpfxInit()'s guard is `if(gpfxProgU) return`, so it never rebuilt: sparks,
+     embers, impact spray and superweapon fragments were gone for the rest of
+     the session, after several seconds of per-frame GL errors from drawing
+     through the dead VAOs. gpufx.js now also self-heals on the epoch, but this
+     resets it on the same ordered pass as every other subsystem. */
+  step('gpfxGLReset',   ()=>{ if(typeof gpfxGLReset==='function') gpfxGLReset(); });
   step('initGL3D',      ()=>initGL3D());
   step('buildMatAtlas', ()=>buildMatAtlas());
   step('initMaterialV2',()=>{ if(typeof initMaterialV2==='function') initMaterialV2(); });

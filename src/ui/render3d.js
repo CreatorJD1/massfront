@@ -321,6 +321,16 @@ function selectCinematicLights(nA){
      lighting. Billboard headlamps illuminate the ground visually; these local
      sources make adjacent hulls and building faces react to them too. */
   let promoted=0;
+  /* Player faction colour, resolved ONCE. It was resolved inside the loop
+     through `playerFactionKey`, which is not defined anywhere in the tree — the
+     typeof guard therefore always took the 'nova' branch, so a Legion or Horde
+     player's commander and selected vehicles threw NOVA-BLUE local light while
+     every billboard, headlamp sprite and structure beside them used the faction
+     palette. playerKitKey() is the resolver the rest of the tree uses for the
+     player's own team (see bldFactionKey's team-0 branch) and returns exactly
+     the nova/legion/syndicate/horde keys sceneLightColor switches on. */
+  const _playerLightC=_lin(sceneLightColor(
+    typeof playerKitKey==='function'?playerKitKey():'nova'));
   for(let i=0;i<unitHigh&&promoted<18;i++){
     if(!ualive[i]||uteam[i]!==0)continue;
     const T=TYPES[utype[i]];if(T.air||unitIsBrood(i))continue;
@@ -328,7 +338,7 @@ function selectCinematicLights(nA){
     if(!isCommander&&!chosen&&(i%19)!==0)continue;
     const dx=ux[i]-cam.x,dy=uy[i]-cam.y,d2=dx*dx+dy*dy;
     if(d2>orthoSpan*orthoSpan*.48)continue;
-    const c=_lin(sceneLightColor(typeof playerFactionKey==='function'?playerFactionKey():'nova'));
+    const c=_playerLightC;
     const range=isCommander?108:58,boost=isCommander?1.42:(chosen?1.05:.76);
     /* THROWN AHEAD, not centred on the hull. A light sitting inside the unit
        brightens the unit and leaves the direction it faces dark — the exact
@@ -634,7 +644,13 @@ function addWreckEmbers(x,y,h,size,heat,seed){
   /* Static coal bed + local flicker. Upright flame quads were the licking
      tongues the civic ground-burn pass already retired. */
   if(heat<0.08||size<0.8) return;
-  const tt=typeof t==='number'?t:0;
+  /* `t` is render()'s block-scoped animation clock and is NOT visible here —
+     there is no global `t` anywhere in the tree, so `typeof t` was always
+     'undefined' and tt was pinned at 0. Math.sin(0*5.8+seed) is a per-position
+     constant, which means the "local flicker" this function is named for never
+     flickered: every burning wreck, ruin and destroyed structure sat under a
+     dead-still ember glow. fxT is render3d's own seconds accumulator. */
+  const tt=fxT;
   const flick=0.88+0.12*Math.abs(Math.sin(tt*5.8+seed));
   const a=heat*flick;
   const s=Math.max(2.2,size*0.78);
@@ -1150,13 +1166,15 @@ function render(dtDraw){
   const enCol=enHabit==='frost'?[176,216,226]:enHabit==='heat'?[226,128,58]:
     enHabit==='spore'?[186,78,140]:[92,196,206];
   for(const D of deposits){ if(!vis(D.x,D.y,180)||!fogPointVisible(D.x,D.y)) continue;
-    const tier=depositTier(D);
-    const col=tier===3?[255,122,255]:tier===2?[110,255,180]:tier===1?[112,228,255]:[88,92,100];
-    const pulse=.82+.18*Math.sin(t*2.1+(D.pulse||0)),H=gh(D.x,D.y);
-    const fieldR=46+(D.initialTier||1)*8;
-    stampCrystalVeins(D,H,col,pulse,fieldR,!!D.taken);
-    /* Occupied: extractor owns the pad. Free-node halo + ring + vein
-       ribbons were the white bloom disc in the deploy screenshot. */
+    /* stampCrystalVeins() was reduced to `return;` when the free-node vein
+       ribbons turned into the white bloom disc, but its four arguments were
+       still built here every frame for every visible node: a fresh colour
+       array, a sin(), a terrainH() sample and a radius, all discarded on the
+       callee's first line. Deleted — nothing here painted a pixel.
+       depositTier(D) STAYS: despite the name it writes D.tier and D.depleted
+       (sim.js:1971), so it is not a pure read and this loop is the refresh for
+       every node the camera can see. */
+    depositTier(D);
   }
   for(const G of geysers){ if(!vis(G.x,G.y,180)||!fogPointVisible(G.x,G.y)) continue;
     const tier=typeof geyserTier==='function'?geyserTier(G):(G.taken?2:3);
