@@ -17,18 +17,18 @@ const TYPES=[
     should be — the fastest thing you can field and the first thing that dies.
     It still wins early because it arrives early, and it stops scaling into the
     late game where the heavy chassis are supposed to take over. */
- {name:'Striker',  spr:'bot',    tur:null,     size:12, r:4.4, hp:40,   dmg:5.4,rng:62,  cool:.65, spd:38, psp:340, ptype:0, aoe:0,  wk:'p', tg:'a',  cm:15,  ce:34,   bt:1.1, air:0, tier:1, legs:1},
+ {name:'Striker',  spr:'bot',    tur:null,     size:12, r:4.4, hp:40,   dmg:5.4,rng:62,  cool:.65, spd:21, psp:340, ptype:0, aoe:0,  wk:'p', tg:'a',  cm:15,  ce:34,   bt:1.1, air:0, tier:1, legs:1},
  /* RHINO was the next universal answer after the Striker pass: 0.702 DPS and
     7.95 HP per mass, while also being the faster-to-field durable chassis.
     It needs to lead an early push, not erase the reason to graduate into a
     Goliath. The price increase does most of the work; the small stat trim keeps
     its head-on advantage from scaling back through the cheaper unit count. */
- {name:'Rhino',    spr:'tankH',  tur:'tankT',  size:16, r:6.0, hp:130,  dmg:16, rng:88,  cool:1.1, spd:27, psp:300, ptype:1, aoe:0,  wk:'p', tg:'a',  cm:26,  ce:100,  bt:2.6, air:0, tier:1},
- {name:'Goliath',  spr:'heavyH', tur:'heavyT', size:21, r:7.8, hp:450,  dmg:42, rng:104, cool:1.6, spd:22, psp:300, ptype:1, aoe:10, wk:'p', tg:'a',  cm:64,  ce:250,  bt:6.0, air:0, tier:2, legs:1},
- {name:'Thumper',  spr:'artyH',  tur:'artyT',  size:17, r:6.4, hp:135,  dmg:60, rng:265, cool:3.7, spd:22, psp:150, ptype:2, aoe:38, wk:'e', tg:'g',  cm:56,  ce:230,  bt:5.2, air:0, tier:2, minRng:80},
- {name:'Commander',spr:'cdr',    tur:null,     size:32, r:11.5,hp:5200,dmg:135, rng:140,cool:1.25,spd:30, psp:330, ptype:3, aoe:48, wk:'e', tg:'a',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', hero:'nova', legs:1},
- {name:'Wasp',     spr:'gun',    tur:null,     size:15, r:5.4, hp:135,  dmg:13, rng:78,  cool:.75, spd:74, psp:380, ptype:0, aoe:0,  wk:'p', tg:'a',  cm:30,  ce:150,  bt:3.4, air:1, tier:1},
- {name:'Longbow',  spr:'longbow',tur:null,     size:16, r:5.8, hp:110,  dmg:95, rng:205, cool:3.0, spd:26, psp:0,   ptype:0, aoe:0,  wk:'b', tg:'a',  cm:60,  ce:240,  bt:5.5, air:0, tier:2},
+ {name:'Rhino',    spr:'tankH',  tur:'tankT',  size:16, r:6.0, hp:130,  dmg:16, rng:88,  cool:1.1, spd:13, psp:300, ptype:1, aoe:0,  wk:'p', tg:'a',  cm:26,  ce:100,  bt:2.6, air:0, tier:1},
+ {name:'Goliath',  spr:'heavyH', tur:'heavyT', size:21, r:7.8, hp:450,  dmg:42, rng:104, cool:1.6, spd:10, psp:300, ptype:1, aoe:10, wk:'p', tg:'a',  cm:64,  ce:250,  bt:6.0, air:0, tier:2, legs:1},
+ {name:'Thumper',  spr:'artyH',  tur:'artyT',  size:17, r:6.4, hp:135,  dmg:60, rng:265, cool:3.7, spd:10, psp:150, ptype:2, aoe:38, wk:'e', tg:'g',  cm:56,  ce:230,  bt:5.2, air:0, tier:2, minRng:80},
+ {name:'Commander',spr:'cdr',    tur:null,     size:32, r:11.5,hp:5200,dmg:135, rng:140,cool:1.25,spd:14, psp:330, ptype:3, aoe:48, wk:'e', tg:'a',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', hero:'nova', legs:1},
+ {name:'Wasp',     spr:'gun',    tur:null,     size:15, r:5.4, hp:135,  dmg:13, rng:78,  cool:.75, spd:46, psp:380, ptype:0, aoe:0,  wk:'p', tg:'a',  cm:30,  ce:150,  bt:3.4, air:1, tier:1},
+ {name:'Longbow',  spr:'longbow',tur:null,     size:16, r:5.8, hp:110,  dmg:95, rng:205, cool:3.0, spd:12, psp:0,   ptype:0, aoe:0,  wk:'b', tg:'a',  cm:60,  ce:240,  bt:5.5, air:0, tier:2},
  /* HORNET was the only strictly dominated purchase in the whole roster. Measured
     against the Vulture — a TIER ONE unit costing 6 less mass — it lost on
     splash-adjusted output (0.40 vs 1.57 per mass), on durability (3.23 vs 4.05
@@ -37,9 +37,9 @@ const TYPES=[
     been that it shoots ground as well as air, so it now buys the longer reach
     of the two and still pays for it in efficiency — a decision instead of a
     trap. Numbers from tools/balance-audit.mjs, not from feel. */
- {name:'Hornet',   spr:'hornet', tur:null,     size:16, r:6.0, hp:210,  dmg:27, rng:175, cool:1.8, spd:40, psp:150, ptype:4, aoe:24, wk:'e', tg:'a',  cm:48,  ce:200,  bt:4.5, air:0, tier:2},
- {name:'TITAN',    spr:'titan',  tur:null,     size:46, r:18,  hp:14000,dmg:160,rng:175, cool:.5,  spd:15, psp:0,   ptype:0, aoe:0,  wk:'b', tg:'a',  cm:900, ce:3600, bt:45,  air:0, tier:3, legs:1},
- {name:'Pyro',     spr:'pyro',   tur:null,     size:16, r:6.0, hp:210,  dmg:11, rng:58,  cool:.38, spd:36, psp:130, ptype:5, aoe:18, wk:'m', tg:'g',  cm:40,  ce:160,  bt:3.5, air:0, tier:1, legs:1},
+ {name:'Hornet',   spr:'hornet', tur:null,     size:16, r:6.0, hp:210,  dmg:27, rng:175, cool:1.8, spd:20, psp:150, ptype:4, aoe:24, wk:'e', tg:'a',  cm:48,  ce:200,  bt:4.5, air:0, tier:2},
+ {name:'TITAN',    spr:'titan',  tur:null,     size:46, r:18,  hp:14000,dmg:160,rng:175, cool:.5,  spd:8, psp:0,   ptype:0, aoe:0,  wk:'b', tg:'a',  cm:900, ce:3600, bt:45,  air:0, tier:3, legs:1},
+ {name:'Pyro',     spr:'pyro',   tur:null,     size:16, r:6.0, hp:210,  dmg:11, rng:58,  cool:.38, spd:18, psp:130, ptype:5, aoe:18, wk:'m', tg:'g',  cm:40,  ce:160,  bt:3.5, air:0, tier:1, legs:1},
  /* VULTURE stays a hard counter — it cannot shoot ground at all, so a game with
     no enemy air makes its whole cost a dead stat, and that asymmetry earns it
     the best rate in the roster. But it was measured at 1.57 splash-adjusted
@@ -48,19 +48,19 @@ const TYPES=[
     tier-1 chassis while outranging every aircraft in the game. Air was not a
     counterplay problem, it was an unaffordable one. Trimmed to ~32 dps at
     172px: still the sharpest counter on the board, no longer an eraser. */
- {name:'Vulture',  spr:'vulture',tur:null,     size:16, r:6.0, hp:170,  dmg:52, rng:172, cool:1.6, spd:42, psp:300, ptype:8, aoe:26,  wk:'e', tg:'air',cm:42,  ce:170,  bt:3.6, air:0, tier:1},
- {name:'Bulwark',  spr:'bulwark',tur:null,     size:21, r:7.8, hp:950,  dmg:0,  rng:0,   cool:9,   spd:28, psp:0,   ptype:0, aoe:0,  wk:'n', tg:'a',  cm:90,  ce:380,  bt:7.0, air:0, tier:2, upkeepE:5},
- {name:'Ravager',  spr:'rav',    tur:null,     size:16, r:5.6, hp:118,  dmg:27, rng:20,  cool:.9, spd:49, psp:0,   ptype:0, aoe:0,  wk:'m', tg:'g',  cm:0,   ce:0,    bt:0,   air:0, tier:0, legs:1, brood:1, bldMul:1.55},
- {name:'Alpha Ravager',spr:'rav',tur:null,     size:28, r:10,  hp:780,  dmg:82, rng:26,  cool:1.25,spd:38, psp:0,   ptype:0, aoe:12, wk:'m', tg:'g',  cm:0,   ce:0,    bt:0,   air:0, tier:0, legs:1, brood:1, bldMul:1.75},
+ {name:'Vulture',  spr:'vulture',tur:null,     size:16, r:6.0, hp:170,  dmg:52, rng:172, cool:1.6, spd:22, psp:300, ptype:8, aoe:26,  wk:'e', tg:'air',cm:42,  ce:170,  bt:3.6, air:0, tier:1},
+ {name:'Bulwark',  spr:'bulwark',tur:null,     size:21, r:7.8, hp:950,  dmg:0,  rng:0,   cool:9,   spd:11, psp:0,   ptype:0, aoe:0,  wk:'n', tg:'a',  cm:90,  ce:380,  bt:7.0, air:0, tier:2, upkeepE:5},
+ {name:'Ravager',  spr:'rav',    tur:null,     size:16, r:5.6, hp:118,  dmg:27, rng:20,  cool:.9, spd:25, psp:0,   ptype:0, aoe:0,  wk:'m', tg:'g',  cm:0,   ce:0,    bt:0,   air:0, tier:0, legs:1, brood:1, bldMul:1.55},
+ {name:'Alpha Ravager',spr:'rav',tur:null,     size:28, r:10,  hp:780,  dmg:82, rng:26,  cool:1.25,spd:15, psp:0,   ptype:0, aoe:12, wk:'m', tg:'g',  cm:0,   ce:0,    bt:0,   air:0, tier:0, legs:1, brood:1, bldMul:1.75},
  /* Naval hulls are authored longer than land chassis. Applying the universal
     1.5x command-view exaggeration to their full `size` made a Dreadnought as
     large as a city block and left no room to read a fleet. `vscale` is render
     only: collision, selection tolerance, range, health and spacing stay on the
     measured simulation values above. */
- {name:'Corvette', spr:'corv',   tur:null,     size:20, r:7.5, hp:320,  dmg:24, rng:115, cool:1.0, spd:42, psp:120, ptype:6, aoe:0,  wk:'i', tg:'a',  cm:55,  ce:220,  bt:5.0, air:0, tier:1, naval:1,vscale:.66},
- {name:'Dreadnought',spr:'dread',tur:null,     size:32, r:12,  hp:1300, dmg:88, rng:290, cool:5.0, spd:20, psp:150, ptype:2, aoe:34, wk:'e', tg:'g',  cm:170, ce:680,  bt:12,  air:0, tier:2, naval:1,vscale:.54},
- {name:'Bombard',  spr:'bombH',  tur:'bombT',  size:21, r:8,   hp:400,  dmg:95, rng:400, cool:5.8, spd:14, psp:150, ptype:9, aoe:44, wk:'e', tg:'g',  cm:140, ce:560,  bt:10,  air:0, tier:2, minRng:100},
- {name:'Raptor',   spr:'raptor', tur:null,     size:18, r:6.5, hp:280,  dmg:85, rng:52,  cool:3.8, spd:62, psp:130, ptype:7, aoe:32, wk:'e', tg:'g',  cm:70,  ce:330,  bt:6.5, air:1, tier:1},
+ {name:'Corvette', spr:'corv',   tur:null,     size:20, r:7.5, hp:320,  dmg:24, rng:115, cool:1.0, spd:21, psp:120, ptype:6, aoe:0,  wk:'i', tg:'a',  cm:55,  ce:220,  bt:5.0, air:0, tier:1, naval:1,vscale:.66},
+ {name:'Dreadnought',spr:'dread',tur:null,     size:32, r:12,  hp:1300, dmg:88, rng:290, cool:5.0, spd:10, psp:150, ptype:2, aoe:34, wk:'e', tg:'g',  cm:170, ce:680,  bt:12,  air:0, tier:2, naval:1,vscale:.54},
+ {name:'Bombard',  spr:'bombH',  tur:'bombT',  size:21, r:8,   hp:400,  dmg:95, rng:400, cool:5.8, spd:8, psp:150, ptype:9, aoe:44, wk:'e', tg:'g',  cm:140, ce:560,  bt:10,  air:0, tier:2, minRng:100},
+ {name:'Raptor',   spr:'raptor', tur:null,     size:18, r:6.5, hp:280,  dmg:85, rng:52,  cool:3.8, spd:40, psp:130, ptype:7, aoe:32, wk:'e', tg:'g',  cm:70,  ce:330,  bt:6.5, air:1, tier:1},
  /* SCORCHER is the Pyro's graduation and had the Pyro's profile exactly
     inverted. Classed as BEAM it did x1.60 into heavy plate and x0.60 into
     light — measured, the second-hardest anti-heavy weapon in the game, on a
@@ -71,10 +71,10 @@ const TYPES=[
     the tier-1 version all already said. Per-shot damage comes down with it:
     incendiary carries the largest crowd multiplier in WK_HORDE, so keeping 15
     would have made this the best unit in the game against everything light. */
- {name:'Scorcher', spr:'pyro',   tur:null,     size:24, r:8.5, hp:640,  dmg:13, rng:80,  cool:.34, spd:24, psp:140, ptype:5, aoe:38, wk:'f', tg:'g',  cm:95,  ce:390,  bt:7.5, air:0, tier:2},
+ {name:'Scorcher', spr:'pyro',   tur:null,     size:24, r:8.5, hp:640,  dmg:13, rng:80,  cool:.34, spd:12, psp:140, ptype:5, aoe:38, wk:'f', tg:'g',  cm:95,  ce:390,  bt:7.5, air:0, tier:2},
  /* CONSTRUCTOR — unarmed, and the only mobile source of build range besides
     the Commander. Cheap enough to lose, valuable enough to escort. */
- {name:'Constructor',spr:'bot',  tur:null,     size:15, r:5.6, hp:220,  dmg:0,  rng:0,   cool:9,   spd:44, psp:0,   ptype:0, aoe:0,  wk:'n', tg:'a',  cm:35,  ce:140,  bt:4.0, air:0, tier:1, builder:1, legs:1},
+ {name:'Constructor',spr:'bot',  tur:null,     size:15, r:5.6, hp:220,  dmg:0,  rng:0,   cool:9,   spd:22, psp:0,   ptype:0, aoe:0,  wk:'n', tg:'a',  cm:35,  ce:140,  bt:4.0, air:0, tier:1, builder:1, legs:1},
  /* ==========================================================================
     SECOND WAVE — the roles the original roster had no answer for.
     Every entry here exists because something was unanswerable without it:
@@ -82,39 +82,39 @@ const TYPES=[
     only one unit could hurt, and a tech tree with nothing between tier 1 chaff
     and a nine-hundred-mass titan.
     ========================================================================== */
- {name:'Reaper',   spr:'reaper', tur:null,     size:19, r:7.0, hp:300,  dmg:26, rng:120, cool:1.5, spd:30, psp:230, ptype:8, aoe:52, wk:'e', tg:'g',  cm:72,  ce:290,  bt:5.4, air:0, tier:2, cat:'aoe'},
- {name:'Cinder',   spr:'cinder', tur:null,     size:17, r:6.2, hp:260,  dmg:19, rng:96,  cool:1.1, spd:34, psp:170, ptype:2, aoe:46, wk:'f', tg:'g',  cm:58,  ce:230,  bt:4.4, air:0, tier:2, cat:'aoe'},
- {name:'Lancer',   spr:'lancer', tur:null,     size:18, r:6.6, hp:190,  dmg:150,rng:230, cool:4.2, spd:24, psp:900, ptype:1, aoe:0,  wk:'g', tg:'a',  cm:82,  ce:330,  bt:6.2, air:0, tier:2, cat:'at'},
+ {name:'Reaper',   spr:'reaper', tur:null,     size:19, r:7.0, hp:300,  dmg:26, rng:120, cool:1.5, spd:15, psp:230, ptype:8, aoe:52, wk:'e', tg:'g',  cm:72,  ce:290,  bt:5.4, air:0, tier:2, cat:'aoe'},
+ {name:'Cinder',   spr:'cinder', tur:null,     size:17, r:6.2, hp:260,  dmg:19, rng:96,  cool:1.1, spd:16, psp:170, ptype:2, aoe:46, wk:'f', tg:'g',  cm:58,  ce:230,  bt:4.4, air:0, tier:2, cat:'aoe'},
+ {name:'Lancer',   spr:'lancer', tur:null,     size:18, r:6.6, hp:190,  dmg:150,rng:230, cool:4.2, spd:12, psp:900, ptype:1, aoe:0,  wk:'g', tg:'a',  cm:82,  ce:330,  bt:6.2, air:0, tier:2, cat:'at'},
  /* Labelled ANTI-TANK, it does x1.05 into heavy armour — the intel panel was
     printing "High-damage armor hunter" over a unit that is mediocre against
     armour on purpose (see WKM.s). Its real job is the only thing in the roster
     that ignores the Bulwark bubble, which no screen said out loud. `cat` is now
     honest; the pierce is advertised in the intel copy instead. Both categories
     feed the same assault class ability, so nothing is lost. */
- {name:'Resonator',spr:'reson',  tur:null,     size:18, r:6.6, hp:340,  dmg:34, rng:130, cool:1.7, spd:28, psp:240,   ptype:6, aoe:18, wk:'s', tg:'a',  cm:66,  ce:270,  bt:5.0, air:0, tier:2, cat:'veh'},
- {name:'Warden',   spr:'warden', tur:null,     size:16, r:6.0, hp:420,  dmg:0,  rng:0,   cool:9,   spd:36, psp:0,   ptype:0, aoe:0,  wk:'n', tg:'a',  cm:62,  ce:250,  bt:5.0, air:0, tier:2, cat:'sup', medic:1},
- {name:'Kestrel',  spr:'kestrel',tur:null,     size:14, r:5.2, hp:120,  dmg:14, rng:150, cool:1.0, spd:96, psp:420, ptype:0, aoe:0,  wk:'p', tg:'a',  cm:34,  ce:150,  bt:3.0, air:1, tier:1, cat:'air', scout:1},
- {name:'Basilisk', spr:'basil',  tur:'basilT', size:26, r:9.5, hp:1100, dmg:120,rng:190, cool:2.6, spd:18, psp:340, ptype:1, aoe:20, wk:'g', tg:'a',  cm:260, ce:1050, bt:14,  air:0, tier:3, cat:'exp'},
- {name:'Harbinger',spr:'harb',   tur:null,     size:24, r:9.0, hp:760,  dmg:44, rng:210, cool:2.0, spd:22, psp:200, ptype:7, aoe:60, wk:'e', tg:'g',  cm:190, ce:760,  bt:11,  air:0, tier:3, cat:'aoe'},
+ {name:'Resonator',spr:'reson',  tur:null,     size:18, r:6.6, hp:340,  dmg:34, rng:130, cool:1.7, spd:13, psp:240,   ptype:6, aoe:18, wk:'s', tg:'a',  cm:66,  ce:270,  bt:5.0, air:0, tier:2, cat:'veh'},
+ {name:'Warden',   spr:'warden', tur:null,     size:16, r:6.0, hp:420,  dmg:0,  rng:0,   cool:9,   spd:18, psp:0,   ptype:0, aoe:0,  wk:'n', tg:'a',  cm:62,  ce:250,  bt:5.0, air:0, tier:2, cat:'sup', medic:1},
+ {name:'Kestrel',  spr:'kestrel',tur:null,     size:14, r:5.2, hp:120,  dmg:14, rng:150, cool:1.0, spd:58, psp:420, ptype:0, aoe:0,  wk:'p', tg:'a',  cm:34,  ce:150,  bt:3.0, air:1, tier:1, cat:'air', scout:1},
+ {name:'Basilisk', spr:'basil',  tur:'basilT', size:26, r:9.5, hp:1100, dmg:120,rng:190, cool:2.6, spd:9, psp:340, ptype:1, aoe:20, wk:'g', tg:'a',  cm:260, ce:1050, bt:14,  air:0, tier:3, cat:'exp'},
+ {name:'Harbinger',spr:'harb',   tur:null,     size:24, r:9.0, hp:760,  dmg:44, rng:210, cool:2.0, spd:10, psp:200, ptype:7, aoe:60, wk:'e', tg:'g',  cm:190, ce:760,  bt:11,  air:0, tier:3, cat:'aoe'},
  /* ---- FACTION HEROES ------------------------------------------------------
     One per faction, and each one changes how its army plays rather than just
     hitting harder. They are never buildable: a faction fields its own. */
- {name:'Lord Darion Vex',  spr:'praetor',tur:null,     size:34, r:12,  hp:6200, dmg:130,rng:250, cool:2.4, spd:22, psp:210, ptype:9, aoe:70, wk:'e', tg:'a',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', legs:1, hero:'legion'},
+ {name:'Lord Darion Vex',  spr:'praetor',tur:null,     size:34, r:12,  hp:6200, dmg:130,rng:250, cool:2.4, spd:13, psp:210, ptype:9, aoe:70, wk:'e', tg:'a',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', legs:1, hero:'legion'},
  /* rng 165 outranged every basic defence in the game (turret/bunker 155) —
     combined with the fastest hero chassis it made the green Commander a solo
     army: kite, farm, never get hit. 150 keeps the raid identity (fast, long
     for a hero) but puts it inside defensive fire. */
- {name:'Broker Lys Renn',   spr:'archon', tur:null,     size:30, r:11,  hp:4600, dmg:70, rng:150, cool:.55, spd:38, psp:240,   ptype:6, aoe:10, wk:'s', tg:'a',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', hero:'syndicate'},
- {name:'The Brood Sovereign',spr:'brood',tur:null,     size:38, r:14,  hp:7400, dmg:110,rng:34,  cool:1.2, spd:30, psp:0,   ptype:0, aoe:26, wk:'m', tg:'g',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', legs:1, hero:'horde', brood:1, bldMul:1.65},
+ {name:'Broker Lys Renn',   spr:'archon', tur:null,     size:30, r:11,  hp:4600, dmg:70, rng:150, cool:.55, spd:17, psp:240,   ptype:6, aoe:10, wk:'s', tg:'a',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', hero:'syndicate'},
+ {name:'The Brood Sovereign',spr:'brood',tur:null,     size:38, r:14,  hp:7400, dmg:110,rng:34,  cool:1.2, spd:14, psp:0,   ptype:0, aoe:26, wk:'m', tg:'g',  cm:0,   ce:0,    bt:0,   air:0, tier:0, cat:'hero', legs:1, hero:'horde', brood:1, bldMul:1.65},
  /* A Tidecaster is not built. A critical mass of nearby Ravagers grows one,
     trading an individual body for coordination, speed and a target-minded
     tide. Its own health stays deliberately low: the counterplay is to pick the
     leader out of the crowd and let the mass dissolve back into animals. */
- {name:'Brood Tidecaster',spr:'brood',tur:null, size:24, r:8.5, hp:390, dmg:24, rng:142, cool:2.4, spd:40, psp:175, ptype:6, aoe:26, wk:'s', tg:'a', cm:0, ce:0, bt:0, air:0, tier:0, cat:'sup', legs:1, brood:1, caster:1, bldMul:1.35},
+ {name:'Brood Tidecaster',spr:'brood',tur:null, size:24, r:8.5, hp:390, dmg:24, rng:142, cool:2.4, spd:19, psp:175, ptype:6, aoe:26, wk:'s', tg:'a', cm:0, ce:0, bt:0, air:0, tier:0, cat:'sup', legs:1, brood:1, caster:1, bldMul:1.35},
  /* Mobile resource utility. Prospectors earn less than an Extractor but can
     work a field before territory reaches it; the authored mining beam makes
     the economic action readable from the ordinary battle camera. */
- {name:'Prospector',spr:'warden',tur:null, size:17, r:6.2, hp:190, dmg:0, rng:0, cool:9, spd:39, psp:0, ptype:0, aoe:0, wk:'n', tg:'a', cm:52, ce:210, bt:5.0, air:0, tier:1, cat:'sup', miner:1},
+ {name:'Prospector',spr:'warden',tur:null, size:17, r:6.2, hp:190, dmg:0, rng:0, cool:9, spd:19, psp:0, ptype:0, aoe:0, wk:'n', tg:'a', cm:52, ce:210, bt:5.0, air:0, tier:1, cat:'sup', miner:1},
 ];
 /* UNIT CATEGORIES. Used by the build menu, the unit card and the AI's
    composition logic, so a role is a real thing the game reasons about rather
@@ -526,7 +526,9 @@ function tickMoveCohorts(){
     const live=C.members.filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0&&uMoveCohort[e[0]]===ci);
     C.members=live;
     if(!live.length){moveCohorts[ci]=null;continue;}
-    let far=0,arrived=0;
+    let far=0,arrived=0,slowest=Infinity;
+    for(const e of live){ const T0=TYPES[utype[e[0]]]; if(T0&&T0.spd>0) slowest=Math.min(slowest,T0.spd); }
+    if(!isFinite(slowest)) slowest=0;
     for(const e of live){
       const i=e[0],P=C.targets[e[2]];if(!P)continue;
       const d=Math.hypot(ux[i]-P.x,uy[i]-P.y);far=Math.max(far,d);if(d<=12)arrived++;
@@ -540,7 +542,25 @@ function tickMoveCohorts(){
       const d=Math.hypot(ux[i]-P.x,uy[i]-P.y),lead=far-d;
       /* Only leaders are throttled. Rear units keep their authored speed, so
          cohesion never makes a slow vehicle even slower or deadlock the move. */
-      uCohesion[i]=d<=12&&far>34?.18:lead>140?.52:lead>75?.76:1;
+      /* PACE TO THE SLOWEST MEMBER, NOT TO A FRACTION OF YOUR OWN SPEED.
+         The old table throttled by lead distance alone - a fast unit pulled
+         ahead, was cut to x0.52, fell back, was released, pulled ahead again.
+         Averaged over a march every member converged on the pack rate, so a
+         scout, a medium tank and a Commander all appeared to move at one
+         speed. This is the single line most responsible for that.
+         Now a leader is reined in toward the group's slowest authored speed,
+         which is what a formation move should do - and crucially, a group of
+         like units has ratio 1 and is never throttled at all, so speed
+         differences are visible again the moment you move units separately. */
+      const T1=TYPES[utype[i]], own=(T1&&T1.spd>0)?T1.spd:0;
+      const pace=own>0?Math.min(1,slowest/own):1;
+      /* Tight deadband, not a long ramp. A 60-unit ramp starting at 25 needed
+         several seconds of lead before it bit, so a fast unit spent most of a
+         short march at full speed and the formation still strung out. One
+         unit-width of slack is enough: inside it everyone runs free so
+         stragglers can close, beyond it a leader drops to the group's pace. */
+      const blend=Math.max(0,Math.min(1,(lead-10)/14));
+      uCohesion[i]=d<=12&&far>34 ? .35 : (1-blend*(1-pace));
     }
   }
 }
@@ -5571,7 +5591,16 @@ function unitSeparation(i,T,isBug,swarmLOD,total){
     }
   }
   const mag=Math.hypot(sepVX,sepVY);
-  const cap=isBug?24:Math.min(54,Math.max(26,T.spd+14));
+  /* SEPARATION MUST NOT OUTRUN THE UNIT ITSELF.
+     This was Math.min(54,Math.max(26,T.spd+14)) - a FLOOR of 26 regardless of
+     chassis. Every unit authored slower than 26 was therefore shoved through a
+     crowd faster than its own maximum: a Bombard at 14 could be pushed to 26,
+     nearly twice its top speed. That is why slow things looked fast and why
+     nothing read as heavy. After the speed re-scale the floor would have
+     exceeded EVERY ground unit, flattening the whole army onto one rate.
+     Proportional now, so crowding still unsticks a jam but can never make a
+     siege gun keep pace with a raider. */
+  const cap=Math.max(2, T.spd*(isBug?0.70:0.85));
   if(mag>cap){sepVX=sepVX/mag*cap;sepVY=sepVY/mag*cap;}
 }
 let tick=0;
@@ -6292,7 +6321,14 @@ function unitTick(dt){
        Drive gait and movement audio from real displacement so feet stay put. */
     umov[i]=travel>0.01?1:0;
     const _rw=uwalk[i];
-    if(T.legs&&travel>0.01) uwalk[i]=(uwalk[i]+travel*(utype[i]===4?0.19:0.16))%TAU;
+    /* Stride cadence scales INVERSELY with chassis size: a bigger machine
+       covers more ground per step, so its legs cycle fewer times per metre.
+       size 18 reproduces the old 0.16 exactly, so nothing mid-sized shifts. */
+    if(T.legs&&travel>0.01){
+      const _sz=T.size>0?T.size:18;
+      const _cad=(utype[i]===4?0.19:0.16)*Math.max(0.45,Math.min(1.8,18/_sz));
+      uwalk[i]=(uwalk[i]+travel*_cad)%TAU;
+    }
     if(typeof rumbleUnitMove==='function') rumbleUnitMove(i,T,travel,_rw);
     /* Water splash: ground units crossing authored water (oceans/rivers/lakes),
        not a dry crater that punched below WATER_H. */

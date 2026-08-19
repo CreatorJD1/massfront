@@ -676,6 +676,11 @@ function mfRescueHiddenSetupCards(){
 }
 
 function newSkirmish(){
+  /* Game speed is a per-match control, not a profile setting. It was never
+     reset here, so one tap to 1.5x or 2x silently carried into every later
+     match in the session - and since it multiplies the whole simulation
+     accumulator, everything simply ran fast with no indication why. */
+  gameSpeed=1; try{ const _b=document.getElementById('spdBtn'); if(_b) _b.textContent='1×'; }catch(e){}
   consumeMatchSetup();
   /* Pull the player faction's radio bank now, while the loading screen is up,
      so the first order of the match speaks instead of falling back to whatever
