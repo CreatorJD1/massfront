@@ -410,13 +410,35 @@ function hotSlotPlace(){
 
 /* One extra pass on the existing HUD tick rather than a timer of its own: the
    mirrored state is only written every 10th frame anyway. */
+let hotHudSynced=false;
 if(typeof updateSelInfo==='function'){
   const hotBaseSelInfo=updateSelInfo;
-  updateSelInfo=function(){ hotBaseSelInfo(); hotSlotSync(false); };
+  updateSelInfo=function(){ hotBaseSelInfo(); hotHudSynced=true; hotSlotSync(false); };
 }
+/* THE "EVERY 10th FRAME" ABOVE WAS NOT TRUE OF THIS HOOK.
+   hud.js gates its own body on `(hudFrame++)%10`, and hudflow.js then wraps
+   updateHUD with a second gate that RETURNS BEFORE calling the base. This file
+   loads last, so it wrapped hudflow's wrapper: `hotBaseUpdateHUD(fps)` returned
+   immediately on the nine skipped frames and `hotSlotSync(false)` ran anyway —
+   sixty times a second, not six. Each of those runs calls hotSelectionSig(),
+   which walks `unitHigh`, walks it again inside artBarrageSelected(), and calls
+   getComputedStyle() on #abClass (a forced style recalc, on a HUD that dirties
+   style constantly). main.js absorbs the cost by sliding simDt, so it never
+   looks like a bug: the match just runs slow.
+   `hudFrame` read BEFORE the base call predicts the painting frame under both
+   gates (hud.js paints when the pre-increment value %10 is 0; hudflow only
+   forwards on exactly those frames), so this now matches the comment. */
 if(typeof updateHUD==='function'){
   const hotBaseUpdateHUD=updateHUD;
-  updateHUD=function(fps){ hotBaseUpdateHUD(fps); hotSlotSync(false); };
+  updateHUD=function(fps){
+    const paints=(typeof hudFrame!=='number')||(hudFrame%10===0);
+    hotHudSynced=false;
+    hotBaseUpdateHUD(fps);
+    /* hud.js's painted body already calls the wrapped updateSelInfo above, so
+       the row is in sync by the time we get here on a painting frame. Only run
+       a second pass if that call did not happen. */
+    if(paints&&!hotHudSynced) hotSlotSync(false);
+  };
 }
 addEventListener('resize',()=>hotSlotPlace());
 hotSlotRow();

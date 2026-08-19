@@ -248,8 +248,20 @@ function setFormation(n,quiet){
   if(b){b.querySelector('.em').textContent=F.em;b.querySelector('span:nth-child(2)').textContent=F.nm;}
   if(!quiet) toast(F.em+' '+F.nm+' armed — drag the hologram and release to place '+selCount()+' units');
 }
+/* ARMING ANY MAP-TAP MODE DISARMS THE RALLY FLAG.
+   onTap tests `armRally>=0` before selection, before the queue planner and
+   before patrol, so an armed rally silently EATS the next map tap no matter
+   what the player armed after it. Sequence that reproduces it: open a Factory,
+   tap SET RALLY, change your mind and tap PATROL (or QUEUE, or FORM) — the
+   planner toasts "tap waypoints", the first tap plants a rally flag there
+   instead and the planner is still sitting at zero waypoints. Nothing else
+   cancels a rally arm: closeMenus() does not, and resetInputState() — whose
+   own comment promises "input starts from a genuinely idle state" — did not
+   list it either. Last instruction wins. */
+function disarmRally(){ armRally=-1; }
 function armFormationOrder(){
   if(!selCount()){toast('Select units first');return;}
+  disarmRally();
   setFormation(selFormation+1,false);armFormation=true;
   const b=document.getElementById('formBtn');if(b)b.classList.add('on');
   sfx('ui');
@@ -337,6 +349,7 @@ function beginPatrolDraft(){
   if(!sel.length){toast('Select units first');return false;}
   let x=0,y=0;for(const i of sel){x+=ux[i];y+=uy[i];}
   patrolDraft={members:sel.map(i=>[i,ugen[i]]),pts:[{x:x/sel.length,y:y/sel.length}],form:selFormation};
+  disarmRally();
   armPatrol=true;armFormation=false;orderPreview=null;orderConfirm=null;patrolButtonState();
   toast('PATROL PLAN — tap up to 5 waypoints, then tap START');sfx('ui');return true;
 }
@@ -599,6 +612,7 @@ function beginQueueDraft(){
   const sel=formationMembers();
   if(!sel.length){ toast('Select units first'); sfx('reject'); return false; }
   if(armPatrol) cancelPatrolDraft(true);
+  disarmRally();
   armFormation=false; orderPreview=null; orderConfirm=null;
   const fb=document.getElementById('formBtn'); if(fb) fb.classList.remove('on');
   queueDraft={members:sel.map(i=>[i,ugen[i]]),steps:[],form:selFormation,fx:null,fxT:0};
@@ -1118,6 +1132,18 @@ function endPtr(e){
     return;
   }
   if(orderPreview&&orderPreview.pid===e.pointerId){
+    /* THE PINCH CASE THE FORMATION PREVIEW NEVER GOT.
+       multiTouch already stops the last finger of a pinch from becoming a
+       phantom ground tap (endPtr's tap gate) and from firing an armed
+       artillery barrage (the aiming===5 branch above). This branch had
+       neither test, and it runs BEFORE both — so with FORM armed the very
+       first contact of ANY two-finger gesture builds an orderPreview, and
+       releasing that finger committed a full formation move order to
+       wherever it happened to be. Net effect: while FORM is lit the player
+       cannot pinch to frame the destination without ordering the platoon to
+       a spot they never chose. Swallow the release and leave FORM armed —
+       the same contract the barrage aim uses, so re-framing costs nothing. */
+    if(multiTouch||wasMulti){ orderPreview=null; return; }
     const P=orderPreview;orderPreview=null;armFormation=false;
     const fb=document.getElementById('formBtn');if(fb)fb.classList.remove('on');
     if(e.type!=='pointercancel'){
@@ -1234,6 +1260,11 @@ function resetInputState(){
   }
   if(armPatrol) cancelPatrolDraft(true);
   if(armQueue) cancelQueueDraft(true);
+  /* An armed rally survived every route back to the front end. It is cleared
+     by resetWorld at the START of the next match, so the leak only shows on
+     paths that re-enter a live match without a world reset — but this function
+     is the one that claims a genuinely idle input state, so it owns the bit. */
+  disarmRally();
   lastGroundT=0;
   const sb=document.getElementById('selbox'); if(sb) sb.style.display='none';
   const bb=document.getElementById('boxBtn'); if(bb) bb.classList.remove('on');

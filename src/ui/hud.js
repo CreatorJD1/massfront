@@ -1617,6 +1617,25 @@ function closeMenus(){
   $('bldMenu2').style.display='none';
   openBld=-1;
 }
+/* THE PANEL MUST DIE WITH THE STRUCTURE.
+   `blds` entries are never spliced during a match — a destroyed structure just
+   gets `alive=false` (sim.js) and its slot stays in the array until resetWorld
+   empties it. Every menu renderer here only ever asked `openBld<0`, and the
+   800ms refresh in main.js only asks `!blds[openBld]`, so NONE of those tests
+   can ever notice a death. A raid that killed the factory you had open left the
+   production sheet on screen, still painting that factory's queue and ETA, and
+   still accepting unit taps with a confirm sound — every unit queued that way
+   went into a corpse and never appeared. (The batch-hold path two lines below
+   the single push already checked `B5.alive`, which is what makes the missing
+   check on the single push an omission rather than a decision.)
+   One guard, called at the top of every renderer, closes the sheet instead. */
+function openBldGone(){
+  if(openBld<0) return true;
+  const B=blds[openBld];
+  if(B&&B.alive) return false;
+  closeMenus();
+  return true;
+}
 function openBldMenu(b){
   closeMenus();
   const B=blds[b];
@@ -1676,7 +1695,7 @@ function renderProdNav(B){
   }
   nav.style.display='grid';
 }
-function renderBldPanel(){
+function renderBldPanel(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld], T=BT[B.type];
   const bi=$('bp_ic'); bi.innerHTML='';
@@ -1730,7 +1749,7 @@ function renderBldPanel(){
     } else fb.style.display='none';
   }
 }
-function renderResearchMenu(){
+function renderResearchMenu(){ if(openBldGone()) return;
   const g=$('prodGrid'); g.innerHTML='';
   if(openBld<0) return;
   const B=blds[openBld];
@@ -1760,6 +1779,11 @@ function renderResearchMenu(){
     d.addEventListener('pointerdown',ev=>{
       ev.stopPropagation();
       if(lockLvl){ toast('🔒 '+R.nm+' unlocks at Commander level '+R.clvl); return; }
+      /* Same corpse hazard as the production sheet, plus a hard throw: a lab
+         destroyed while its card list was on screen left openBld pointing at a
+         dead slot, and `Bb.res` on a cleared openBld (-1) is a TypeError that
+         kills the whole pointerdown handler chain. */
+      if(openBldGone()) return;
       const Bb=blds[openBld];
       if(Bb.res>=0){ toast('Already researching '+RESEARCH[Bb.res].nm); return; }
       Bb.res=idx; Bb.resT=Math.min(R.t-.01,researchResumeTime(R.id)); sfx('ui'); renderQueue();
@@ -1935,7 +1959,7 @@ function toggleBaseFinder(){
   }
   renderBaseFinder();p.style.display='block';
 }
-function renderProdMenu(){
+function renderProdMenu(){ if(openBldGone()) return;
   const g=$('prodGrid'); g.innerHTML='';
   $('repeatBtn').style.display='block';
   if(openBld<0) return;
@@ -2019,7 +2043,10 @@ function renderProdMenu(){
           : '🔒 '+intelUnitName(tIdx)+' is not fielded by your faction');
         return;
       }
-      if(openBld<0) return;
+      /* The structure can die between opening the sheet and this tap. Without
+         this the push lands in a corpse: sfx('ui') fires, the plate paints, and
+         the unit is never built. */
+      if(openBldGone()) return;
       const Bb=blds[openBld];
       const popSlot=typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(Bb):-1;
       if(!populationCanSpawn(tIdx,0,popSlot)){
@@ -2102,7 +2129,7 @@ function cancelQueuedUnit(B,start){
   } else B.queue.splice(last,1);
   return true;
 }
-function renderQueue(){
+function renderQueue(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld];
   const el=$('prodQueue'); if(!el) return;
