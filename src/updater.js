@@ -546,17 +546,42 @@ async function updDownload(){
      this wrong after the bytes are on disk would mean either a broken merge
      or a wasted download. */
   const installedNow=await updInstalledVersion();
-  let patching=false, files=m.files;
+  let patching=false, files=m.files, priorRec=null;
   if(updIsPatch(m)){
-    if(updPatchApplies(m,installedNow)) patching=true;
+    /* Test against the RECORD WE WOULD MERGE ONTO, not merely against the
+       running version string. Two holes closed here, both of which shipped in
+       the first cut of this feature and both of which a critic caught:
+
+       (a) A fresh package install has NO `active` record at all - the packaged
+           build lives in the APK, not in IndexedDB. Comparing only versions
+           made patchFrom==='1.33.44' match a fresh 1.33.44 device, so it
+           downloaded the whole delta and only then discovered there was
+           nothing to merge onto. That is the MAJORITY cohort after any release.
+
+       (b) A device that previously took the `full` fallback holds a payload of
+           a different SHAPE (one concatenated blob) while carrying the new
+           version number. Version alone therefore said "yes" to a per-file
+           patch, which would merge source files on top of a build that already
+           contains them - every top-level const redeclared, a hard boot
+           failure. Requiring every patched path to ALREADY EXIST in the base
+           is what actually distinguishes the two payload shapes, and it is the
+           honest question anyway: you can only overwrite what is there. */
+    priorRec=await updGet('active');
+    const priorFiles=(priorRec&&priorRec.files)||null;
+    const sameBase=!!priorRec&&String(priorRec.version)===String(m.patchFrom);
+    const shapeOK=!!priorFiles&&m.files.every(f=>Object.prototype.hasOwnProperty.call(priorFiles,f.path));
+    if(sameBase&&shapeOK) patching=true;
     else{
       const full=updFullEntry(m);
       if(!full){
-        updSet('error',{err:'This update patches '+m.patchFrom+' but you are on '+
-                            installedNow+', and no full payload was published'});
+        const why=!priorRec ? 'there is no installed update to patch'
+                : !sameBase ? ('it patches '+m.patchFrom+' and you have '+priorRec.version)
+                : 'it patches files your installed build does not contain';
+        updSet('error',{err:'This update cannot be applied because '+why+
+                            ', and no full payload was published'});
         return;
       }
-      files=[full];   // not our base: take the complete build instead
+      files=full;   // not our base, or not our payload shape: take a complete build
     }
   }
   const total=files.reduce((s,f)=>s+(f.size||0),0)||1;
@@ -627,7 +652,10 @@ async function updDownload(){
        order - so keep the base order and append only genuinely new paths. */
     let commitFiles=out, commitOrder=files.map(f=>f.path);
     if(patching){
-      const prior=await updGet('active');
+      /* Already fetched and validated in the decision block above, so this
+         cannot be null here - but re-read defensively rather than trusting a
+         value captured before a multi-megabyte download. */
+      const prior=priorRec||await updGet('active');
       const priorFiles=(prior&&prior.files)||null;
       if(!priorFiles){
         updSet('error',{err:'The patch base is missing — reinstall the full update'});
@@ -734,10 +762,18 @@ function updIsPatch(m){ return !!(m&&String(m.kind||'').toLowerCase()==='patch')
 function updPatchApplies(m,installed){
   return updIsPatch(m)&&!!m.patchFrom&&String(m.patchFrom)===String(installed);
 }
+function updValidFile(f){
+  return !!(f&&typeof f.path==='string'&&typeof f.sha256==='string'&&
+            /^[0-9a-f]{64}$/i.test(f.sha256)&&Number.isFinite(f.size)&&f.size>0);
+}
+/* Accepts a single entry OR a list. It has to accept a list: once the payload
+   ships as N per-file artifacts, a COMPLETE build is N entries, and the
+   fallback exists precisely to deliver a complete build. Returns null rather
+   than a partial set - half a payload is worse than none. */
 function updFullEntry(m){
   const f=m&&m.full;
-  return (f&&typeof f.path==='string'&&typeof f.sha256==='string'&&
-          /^[0-9a-f]{64}$/i.test(f.sha256)&&Number.isFinite(f.size)&&f.size>0)?f:null;
+  if(Array.isArray(f)) return (f.length&&f.every(updValidFile))?f.slice():null;
+  return updValidFile(f)?[f]:null;
 }
 async function updInstalledVersion(){
   const running=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
