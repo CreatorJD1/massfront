@@ -120,3 +120,32 @@ server-side, usernames treated as UGC.
 - iOS version bump remains manual at publish time; publisher carries the Xet
   fix; `www/` must be re-packed after every `src/` edit before any browser
   verification.
+
+---
+
+## 5. DISTRIBUTION — the record, corrected
+
+**MASSFRONT does not ship through GitHub.** A `github.com/CreatorJD1/massfront.git`
+remote exists in the repo config and the first draft of this plan carried a
+"push and open a PR" step; the owner struck that, and it is struck here so it
+stops reading as pending intent. Nothing in this session pushed, fetched from
+`origin`, or opened a PR — git has been used **locally only**, for commit
+history and for moving work between agent worktrees.
+
+The actual pipeline, which every delivery change this cycle was built against:
+
+| Layer | Role |
+|---|---|
+| **Hugging Face** | Release host — `CREATORJD/massfront-releases`. `update.json`, the OTA payload, the APK, the source archive. `tools/publish-hf-release.ps1` is the only publish path, and the per-file/delta manifest work emits absolute `huggingface.co/datasets/.../resolve/main/v<version>/...` urls pinned to an immutable commit sha. |
+| **Cloudflare** | Workers + D1 — `massfront-auth` (users/sessions/saves/attempts, plus the new verification/friends/blocks/reports tables), `massfront-economy`, `massfront-update`. |
+| **Google Drive** | Design and asset source material (map layout / reference art). |
+
+Consequences that matter for the remaining plan:
+- "Publish" means the HF script, never a git push. The release freeze is a
+  freeze on **that script**, not on committing.
+- The unverified item is HF-side: the folder-upload path, commit pinning and
+  resume behaviour have never been exercised, and `-DryRun` exits before the
+  manifest is built.
+- The social system's blocking item is Cloudflare-side: the production D1 is
+  still unconfirmed to exist (`wrangler.toml` records that it does not), and a
+  human with dashboard access must check before any social feature is scheduled.
