@@ -2582,13 +2582,24 @@ function render(dtDraw){
       bbAdd.add(sGlowB,X,Y,H+1.35,sz*0.62,0,Math.min(255,fcr[i]+20),Math.min(255,fcg[i]+30),Math.min(255,fcb[i]+20),Math.min(170,120*lf*flick));
     } else if(ty===6){                        // volumetric explosion fireball
       const age=1-lf, S=Math.min(40,fsize[i]);
-      /* Expand and spin. This grew 10% over its whole life with a literal 0
-         yaw, so every fireball was the same still image at the same size -
-         the 'flipbook' this branch is named for was never implemented (batU2
-         in gl.js is declared and never used). Real growth plus a per-instance
-         rotation gives a blast a sense of release without a sheet. */
-      bbAdd.add(sprites.fireball||sFireB,X,Y,H+S*.12,S*(0.55+age*0.85),(i*0.7)+age*0.35,255,255,255,245*lf);
-      bbAdd.add(sGlowB,X,Y,H+1.4,S*0.95,0,255,135,55,52*lf);
+      /* Draw at the puff's OWN height. fpz is world z in terrainH's frame,
+         exactly as type 7 uses it, so a cluster occupies a volume instead of
+         every quad sitting on the ground plane. */
+      const pz=(typeof fpz!=='undefined'&&fpz[i]>0)?fpz[i]:H;
+      const yaw=(i*0.7)+age*0.6;
+      /* Hot early, smoke late. Fire is additive because it emits light; smoke
+         is alpha because it OCCLUDES - and that hand-over is most of why a
+         real blast reads as mass rather than as a glow. */
+      const hot=Math.max(0.0,1.0-age*2.0);
+      if(hot>0.04)
+        bbAdd.add(sprites.fireball||sFireB,X,Y,pz+S*.12,S*(0.55+age*0.85),yaw,
+          255,(120+130*hot)|0,(35+150*hot*hot)|0,(235*lf*hot+38*lf)|0);
+      const smoke=Math.min(1.0,age*1.45);
+      if(smoke>0.05)
+        bbAlpha.add(sSmokeB,X,Y,pz+S*.16,S*(0.70+age*1.10),yaw*0.6,
+          92,84,78,(150*lf*smoke)|0);
+      if(hot>0.15)
+        bbAdd.add(sGlowB,X,Y,pz+1.4,S*0.95,0,255,135,55,(52*lf*hot)|0);
     } else if(ty===7){                        // ballistic solid debris
       /* No hop cheat. The sim owns this fragment's altitude now — fpz is world
          z in terrainH's frame, and gh() here IS terrainH — so the arc you see

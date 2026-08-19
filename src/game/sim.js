@@ -5188,6 +5188,15 @@ function addAirPuff(x,y,h,vx,vy,life,size,r,g,b){
    obeys DEBRIS_G in updParticles and settles on whatever terrain is under it
    when it lands. Same stamp-the-head-slot pattern as addAirPuff — no new
    allocation and no change to the ring accounting. */
+/* A fire puff that knows how high it is. Same trick as addDebris: spawn the
+   particle, then write world z and a rise rate into the slot it took. Height
+   is what turns a ring of billboards into a cloud with a silhouette. */
+function addFirePuff(x,y,zOff,vx,vy,vz,life,size,r,g,b){
+  addParticle(6,x,y,vx,vy,life,size,r,g,b);
+  const i=(fHead-1+MAXPART)%MAXPART;
+  fpz[i]=(typeof terrainH==='function'?terrainH(x,y):0)+Math.max(0.35,zOff);
+  fpvz[i]=vz;
+}
 function addDebris(x,y,vx,vy,vz,life,size,r,g,b){
   addParticle(7,x,y,vx,vy,life,size,r,g,b);
   fpvz[(fHead-1+MAXPART)%MAXPART]=vz;
@@ -5428,7 +5437,26 @@ function spawnExplosion(x,y,size,victimTeam){
   else if(sz>=8) addGroundBurn(x,y,sz*(civic?3.2:1.7),civic?1:0);
   else if(civic&&sz>=5) addGroundBurn(x,y,sz*3.0,1);
   addParticle(0,x,y,0,0,civic?.12:.2,sz*(civic?1.15:1.55), 255,civic?210:240,civic?150:200);
-  addParticle(6,x,y,0,0,.38+sz*0.010,Math.min(22,sz*(civic?1.05:1.45)), 255,255,255);
+  /* A CLUSTER, not one quad. Puffs are offset in x/y AND in height, thrown
+     outward and upward at varying rates, with independent sizes and lives -
+     so the burst has an outline that changes as it rises instead of being a
+     disc that fades. Floored at 3 so the shape survives a weak device. */
+  {
+    const np=Math.max(3, Math.round((civic?3:5+sz*0.10)*Math.max(0.55,perfScale)));
+    const baseS=Math.min(40, sz*(civic?1.05:1.45));
+    for(let k=0;k<np;k++){
+      const a=Math.random()*TAU, rad=Math.random();
+      const sp=(civic?4:7)+Math.random()*(civic?5:11);
+      addFirePuff(
+        x+Math.cos(a)*sz*0.22*rad, y+Math.sin(a)*sz*0.22*rad,
+        sz*(0.10+Math.random()*0.55),
+        Math.cos(a)*sp, Math.sin(a)*sp,
+        (civic?7:12)+Math.random()*(civic?9:20),
+        (.34+sz*0.010)*(0.75+Math.random()*0.65),
+        baseS*(0.42+Math.random()*0.52),
+        255,255,255);
+    }
+  }
   addParticle(3,x,y,0,0,civic?.22:.42,sz*(civic?0.7:1.2), 255,180,90);
   if(sz>=24&&!civic) addParticle(8,x,y,rr(-2,2),0,2.3,sz, 255,255,255);
   const ns=Math.round((civic?1:2+sz*0.3)*perfScale);
@@ -5477,7 +5505,9 @@ function updParticles(dt){
     const tp=ftype[i];
     /* Flash, ring, flame and fireball stay on the hit / hull. Integrating
        leftover velocity walked burning wreckage into a drifting orange swarm. */
-    if(tp!==0&&tp!==3&&tp!==4&&tp!==6){
+    /* Puffs (type 6 with a height) DO travel - that spread is half the shape.
+       Every other type-6 caller leaves fpz at 0 and still stays put. */
+    if(tp!==0&&tp!==3&&tp!==4&&(tp!==6||fpz[i]>0)){
       fx[i]+=fvx[i]*dt; fy[i]+=fvy[i]*dt;
     }
     if(tp===2||tp===5){ fvx[i]*=0.82; fvy[i]*=0.82; }
@@ -5509,6 +5539,17 @@ function updParticles(dt){
            re-launches it (gz drops, the airborne branch takes over next tick). */
         fpz[i]=gz; fpvz[i]=0; fvx[i]=0; fvy[i]=0;
       }
+    }
+    else if(tp===6&&fpz[i]>0){
+      /* Buoyant, not ballistic. Hot gas accelerates upward, then settles to a
+         terminal rise as it entrains air; lateral throw bleeds off fast and
+         the puff expands. That expansion is what makes the cloud read as
+         volume rather than a sprite being scaled. */
+      fpvz[i]+=(16-fpvz[i])*1.4*dt;
+      fpz[i]+=fpvz[i]*dt;
+      const dr=1-Math.min(0.6,1.9*dt);
+      fvx[i]*=dr; fvy[i]*=dr;
+      fsize[i]+=dt*fsize[i]*0.62;
     }
     else if(tp===1||tp===8||tp===10){ fsize[i]+=dt*(tp===8?6.5:tp===10?8:9); }
     else if(tp===4){

@@ -3107,13 +3107,25 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
   /* Branching fracture. Regular rays read as a star / disk at command zoom;
      jittered polylines with forks stay a crack network. No radial fill. */
   const nVein=kind==='mass'?10+initial*2:8;
+  /* Quadratic through midpoints: a smooth seam, not a chain of facets. */
   const stroke=(pts,col,w)=>{
     if(pts.length<2)return;
     c.strokeStyle=col;c.lineWidth=w;c.beginPath();
     c.moveTo(pts[0][0],pts[0][1]);
-    for(let i=1;i<pts.length;i++)c.lineTo(pts[i][0],pts[i][1]);
+    if(pts.length===2){ c.lineTo(pts[1][0],pts[1][1]); }
+    else{
+      for(let i=1;i<pts.length-1;i++){
+        const mx=(pts[i][0]+pts[i+1][0])*.5, my=(pts[i][1]+pts[i+1][1])*.5;
+        c.quadraticCurveTo(pts[i][0],pts[i][1],mx,my);
+      }
+      const n=pts.length-1;
+      c.quadraticCurveTo(pts[n][0],pts[n][1],pts[n][0],pts[n][1]);
+    }
     c.stroke();
   };
+  /* A wide, almost invisible pass under the casing. Without it the stroke
+     ends exactly on a texel boundary and magnifies into a hard jagged edge. */
+  const feather=(pts,col,w)=>{ stroke(pts,col,w); };
   const chip=(x,y,s,a)=>{
     c.save();c.translate(x,y);c.rotate(a);
     c.fillStyle=active?cry:dead;
@@ -3128,14 +3140,23 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
       const step=liveR*(.16+rn()*.30);
       x+=Math.cos(a)*step;y+=Math.sin(a)*step;pts.push([x,y]);
     }
-    const dw=Math.max(2.2,(3.4+rn()*2.6)*k),cw=Math.max(1.0,dw*.42);
-    stroke(pts,active?'rgba(16,18,20,.72)':'rgba(28,28,26,.30)',dw);
+    /* Wide enough to survive magnification. The core was ~1 texel = 1.6 world
+       units; at tactical zoom that is one bilinear-smeared pixel line, which
+       is why it beaded into dashes. ~3 texels of core inside ~6 of casing
+       reads as a mineral seam at every zoom. */
+    const dw=Math.max(5.0,(7.0+rn()*4.0)*k),cw=Math.max(2.6,dw*.46);
+    /* feather first, widest and faintest, so the edge fades out */
+    feather(pts,active?'rgba(14,16,18,.16)':'rgba(26,26,24,.08)',dw*1.85);
+    stroke(pts,active?'rgba(16,18,20,.50)':'rgba(28,28,26,.22)',dw);
     stroke(pts,active?cry:dead,cw);
+    /* a faint bright centre line keeps the seam legible when it is thin */
+    if(active) stroke(pts,'rgba(190,238,252,.20)',Math.max(1.0,cw*.34));
     if(n<nVein*.6&&pts.length>2){
       const mid=pts[1+(rn()*(pts.length-2))|0];
       const a2=a+((n&1)?1.05:-1.05)+(rn()-.5)*.4,len=liveR*(.22+rn()*.20);
       const fork=[mid,[mid[0]+Math.cos(a2)*len,mid[1]+Math.sin(a2)*len]];
-      stroke(fork,active?'rgba(16,18,20,.62)':'rgba(28,28,26,.24)',dw*.78);
+      feather(fork,active?'rgba(14,16,18,.13)':'rgba(26,26,24,.06)',dw*1.45);
+      stroke(fork,active?'rgba(16,18,20,.44)':'rgba(28,28,26,.18)',dw*.78);
       stroke(fork,active?cry:dead,cw*.78);
       if(active)chip(fork[1][0],fork[1][1],Math.max(1.3,2.4*k),a2);
     }

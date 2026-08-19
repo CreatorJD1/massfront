@@ -151,15 +151,39 @@ try {
 
   await step(6);
 
-  /* ---- 1. explosions: a big one and a small one, side by side ------------- */
-  await page.evaluate(() => {
-    const cx = MAP * 0.5, cy = MAP * 0.5;
-    spawnExplosion(cx - 70, cy, 40, 0);     // large
-    spawnExplosion(cx + 70, cy, 8, 1);      // small
+  /* ---- 1. explosions: a big one and a small one, side by side -------------
+     Two traps the first version fell into, both of which meant the cluster
+     code never ran:
+       * sz >= 40 short-circuits into superDetonation() and RETURNS, so the
+         "big" blast was testing the superweapon path, not an explosion;
+       * over a city cityGroundAt() makes it civic, which caps sz to 13 and
+         cuts every count. The camera started at map centre, which is a city.
+     So: find open ground, and stay under the superweapon threshold. */
+  const boom = await page.evaluate(() => {
+    let p = null;
+    for (let r = 200; r < MAP * 0.45 && !p; r += 90) {
+      for (let a = 0; a < 12; a++) {
+        const x = MAP * 0.5 + Math.cos(a * 0.523) * r, y = MAP * 0.5 + Math.sin(a * 0.523) * r;
+        if (x < 200 || y < 200 || x > MAP - 200 || y > MAP - 200) continue;
+        const civic = typeof cityGroundAt === 'function' && cityGroundAt(x, y) >= 1;
+        if (!civic && isWalkable(x, y)) { p = [x, y]; break; }
+      }
+    }
+    if (!p) return 'no open ground';
+    cam.x = p[0]; cam.y = p[1]; camPitch = pitchTarget = 1.02;
+    orthoSpan = distTarget = 260;
+    if (typeof camUpdateMatrices === 'function') camUpdateMatrices();
+    spawnExplosion(p[0] - 60, p[1], 34, 0);   // large, but under the sz>=40 superweapon gate
+    spawnExplosion(p[0] + 60, p[1], 9, 1);    // small
+    return 'open ground at ' + Math.round(p[0]) + ',' + Math.round(p[1])
+         + '  civic=' + (typeof cityGroundAt === 'function' ? cityGroundAt(p[0], p[1]) : '?');
   });
-  await step(3);
+  say('boom: ' + boom);
+  /* let the puffs actually rise and separate - at 3 frames they are still
+     stacked on the spawn point and read as one disc no matter what */
+  await step(11);
   await page.screenshot({ path: join(outDir, '1-explosion-big-vs-small.png') });
-  say('shot 1: explosion size contrast (sz 40 vs sz 8)');
+  say('shot 1: explosion size contrast (sz 34 vs sz 9), 11 frames in');
 
   /* ---- 2. a destroyed structure ------------------------------------------ */
   const wreck = await page.evaluate(() => {
