@@ -1206,8 +1206,22 @@ function mfGalaxyWire(){
 }
 
 function initGalaxyUI(){
-  if(mfGalaxyReady||!$('setupScr')||typeof PLANETS==='undefined')return;mfRenameFrontNav();mfGalaxyCss();if(!mfGalaxyBuild())return;mfGalaxyReady=true;mfGalaxyOriginalPlanetRow=renderPlanetRow;mfConquestNormalizeSelection();
-  renderPlanetRow=function(){if(mfGalaxyReady)mfGalaxyRenderStage();else mfGalaxyOriginalPlanetRow();};
+  /* Each precondition reports itself. This was ONE compound guard that
+     returned silently, so a load-order slip left the LEGACY tabbed setup
+     screen with no error anywhere - three times. If the War Table ever
+     looks old again, the console now says exactly which check failed. */
+  if(mfGalaxyReady) return;
+  if(!$('setupScr')){ console.error('initGalaxyUI: #setupScr missing'); return; }
+  if(typeof PLANETS==='undefined'){ console.error('initGalaxyUI: PLANETS undefined - src/engine/gl.js has not executed yet'); return; }
+  mfRenameFrontNav(); mfGalaxyCss();
+  if(!mfGalaxyBuild()){ console.error('initGalaxyUI: mfGalaxyBuild failed - #setupScr .setupScroll missing'); return; }
+  mfGalaxyReady=true;mfGalaxyOriginalPlanetRow=renderPlanetRow;mfConquestNormalizeSelection();
+  /* THE OLD SYSTEM IS GONE. This used to fall back to the legacy planet row
+     whenever mfGalaxyReady was false - which is precisely the state the
+     load-order bug produced, so the fallback is what MADE the regression
+     visible instead of loud. There is no path back to it now: the new stage
+     renderer is unconditional, and if it cannot run the console says why. */
+  renderPlanetRow=function(){ mfGalaxyRenderStage(); };
   mfGalaxyOpenOriginal=window.openPlanetarySetup;window.openPlanetarySetup=(mode)=>{
     /* Unbuilt modes must not enter the galaxy war table. The original already
        toasts and returns; skip the stage paint so a locked card cannot load a
@@ -1223,3 +1237,15 @@ function initGalaxyUI(){
   mfGalaxyWire();mfGalaxyRenderStage();
 }
 
+
+
+/* SELF-INITIALISE - the fix that cannot regress.
+   src/main.js is manifest index 68 and calls boot() at its top level; this
+   file is index 71. So when main.js walked its init list, window.initGalaxyUI
+   DID NOT EXIST YET and its `typeof` guard skipped it in silence. Nothing
+   else ever called it, galaxyFlow was never applied, and the War Table fell
+   back to the legacy tabbed screen. Three times.
+   This line runs after every declaration in this file, so it cannot race
+   itself, and mfGalaxyReady makes a later call from main.js harmless.
+   tools/bundle.mjs now also FAILS THE BUILD on this ordering hazard. */
+try{ initGalaxyUI(); }catch(e){ console.error('initGalaxyUI threw',e); }

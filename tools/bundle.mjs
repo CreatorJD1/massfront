@@ -18,6 +18,77 @@ let html   = readFileSync(join(root,'index.html'),'utf8');
    declared by index.html and strip only its query/hash from the disk path. */
 html = html.replace(/<link\s+rel="stylesheet"\s+href="\.\/([^"?#]+)(?:[?#][^"]*)?">/g,
   (_,p) => `<style data-source="${p}">\n${readFileSync(join(root,p),'utf8')}\n</style>`);
+/* MF_INIT_ORDER_GATE ---------------------------------------------------------
+   src/main.js calls boot() at its own top level and walks a list of init
+   function NAMES, skipping any that is not yet defined. In one global scope
+   with ordered classic scripts, a function declared in a file that loads AFTER
+   main.js does not exist at that moment - so it was skipped IN SILENCE and the
+   feature was simply absent at runtime.
+
+   That is not hypothetical: it silently disabled the entire War Table galaxy /
+   system / planet flow THREE separate times, each time leaving the legacy
+   tabbed screen in its place with no error anywhere.
+
+   This gate turns that class of bug into a BUILD FAILURE. If an init-list name
+   is declared in a file that loads later than main.js, the release stops here.
+   Fix by moving the file earlier in assets/data/manifest.json, or by having it
+   self-initialise at its own end (which is what src/galaxyui.js now does). */
+function mfInitOrderGate(order, readFile){
+  const mainIdx = order.indexOf('src/main.js');
+  if(mainIdx < 0) return;
+  const mainSrc = readFile('src/main.js');
+  const listRe = /for\(const fn of \[([^\]]*)\]/g;
+  const names = [];
+  let m;
+  while((m = listRe.exec(mainSrc))){
+    for(const raw of m[1].split(',')){
+      const n = raw.trim().replace(/^['"`]|['"`]$/g, '');
+      if(/^[A-Za-z_$][\w$]*$/.test(n)) names.push(n);
+    }
+  }
+  if(!names.length) return;
+  const declaredIn = new Map();
+  for(let i = 0; i < order.length; i++){
+    let src; try{ src = readFile(order[i]); }catch(e){ continue; }
+    for(const n of names){
+      if(declaredIn.has(n)) continue;
+      if(new RegExp('(^|\\n)\\s*function\\s+' + n + '\\s*\\(').test(src)) declaredIn.set(n, i);
+    }
+  }
+  /* A late file that INVOKES its own init at its end has already solved this -
+     that call runs after every declaration in that file and cannot race. Only
+     flag the ones with no such call, which are the genuinely silent ones. */
+  const selfInits = new Set();
+  for(const [n, idx] of declaredIn){
+    let src; try{ src = readFile(order[idx]); }catch(e){ continue; }
+    /* String scan, deliberately: does this file CALL its own init somewhere
+       other than the declaration line? Written without regex because escaped
+       patterns kept losing their backslashes in transit, and a silently
+       broken gate is worse than no gate. */
+    let calls = 0;
+    const needle = n + '(';
+    let at = src.indexOf(needle);
+    while(at >= 0){
+      const before = src.lastIndexOf('function', at);
+      const isDecl = before >= 0 && src.slice(before, at).trim() === 'function';
+      const prev = at > 0 ? src[at-1] : ' ';
+      const isMember = prev === '.';
+      if(!isDecl && !isMember) calls++;
+      at = src.indexOf(needle, at + needle.length);
+    }
+    if(calls > 0) selfInits.add(n);
+  }
+  const late = [];
+  for(const [n, idx] of declaredIn) if(idx > mainIdx && !selfInits.has(n)) late.push(n + ' (declared in ' + order[idx] + ', index ' + idx + ')');
+  if(late.length){
+    throw new Error(
+      'INIT ORDER: main.js (index ' + mainIdx + ') calls these before they exist:\n  ' +
+      late.join('\n  ') +
+      '\nThey would be SKIPPED IN SILENCE at runtime and the feature would be missing.\n' +
+      'Move the file earlier in assets/data/manifest.json, or self-initialise at the end of that file.');
+  }
+}
+mfInitOrderGate(manifest.order, p=>readFileSync(join(root,p),'utf8'));
 const scripts = manifest.order.map(p => readFileSync(join(root,p),'utf8')).join('\n');
 /* The single-file build has no loader: every source is inlined, so the boot
    script tag goes with the rest. The updater still runs — it just reports that

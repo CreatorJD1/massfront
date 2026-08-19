@@ -2791,7 +2791,24 @@ async function boot(){
   /* New subsystems. Each lives in its own module and registers its own UI, so
      none of them need to touch index.html or this file beyond this line. */
   for(const fn of ['initOffline','initSampleAudio','initAssetPacks','initAuthPortal','initTutorial','initAdBoards','initStoreUI','initResTree3D','initEconomyNet','initIntro','initGalaxyUI','initWarPrimer'])
+    /* NEVER skip in silence. A function belonging to a file that loads AFTER
+       main.js does not exist yet, and this guard used to drop it with no
+       error - the feature was simply absent at runtime. That is how the War
+       Table lost its galaxy flow three separate times. Defer anything not yet
+       defined to the next macrotask, by which point every manifest script has
+       run; if it is STILL missing, say so loudly and record it. */
     if(typeof window[fn]==='function'){ try{ window[fn](); }catch(e){ console.error(fn,e); } }
+    else (function(name){
+      setTimeout(function(){
+        if(typeof window[name]==='function'){
+          console.warn('init deferred (declared after main.js in the manifest): '+name);
+          try{ window[name](); }catch(e){ console.error(name,e); }
+        } else {
+          (window.__MF_INIT_MISSING=window.__MF_INIT_MISSING||[]).push(name);
+          console.error('init function NEVER became available: '+name+' - a feature is silently absent');
+        }
+      },0);
+    })(fn);
   mfRescueHiddenSetupCards();
   /* The auth portal loads its cached AP_SESSION synchronously. Initialise the
      Profile account/save panel afterwards so it renders that real session,

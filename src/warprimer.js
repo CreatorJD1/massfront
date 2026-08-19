@@ -316,4 +316,15 @@ window.__wtpDebug=function(){ return {STAGES:STAGES,MUST_SEE:MUST_SEE,armed:arme
   stage:(activePanel()||{dataset:{}}).dataset.stage||'',
   finish:finish,replay:replay,skipGuide:skipGuide}; };
 
+
+/* SELF-INITIALISE. src/main.js (manifest index 68) lists initWarPrimer in the
+   init loop it runs from boot(), but this file is index 73 - so the function
+   did not exist yet and was SKIPPED IN SILENCE, exactly like initGalaxyUI. The
+   war primer has been dead in every build for the same reason, and nobody
+   noticed because nothing errored. Found by the new init-order gate in
+   tools/bundle.mjs on its very first run.
+   Safe here: __wtpInit makes it idempotent, and this file loads AFTER
+   src/galaxyui.js (71), which is the ordering its own wrapStandardEntry
+   comment requires. */
+try{ initWarPrimer(); }catch(e){ if(window.console) console.error('initWarPrimer threw',e); }
 })();
