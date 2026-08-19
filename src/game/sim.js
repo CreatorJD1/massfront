@@ -4794,7 +4794,13 @@ function projectileImpactFX(i,x,y){
     if(r<=1&&g<=1&&b<=1){r*=255;g*=255;b*=255;}
     for(let q=0;q<n;q++){
     const a=Math.atan2(ny,nx)+(Math.random()-.5)*1.6,v=Math.min(14,sp*(.4+Math.random()*.45));
-    addParticle(7,x,y,Math.cos(a)*v,Math.sin(a)*v,.10+Math.random()*.10,.36+Math.random()*.24,r,g,b);
+    /* Spall off armour, not masonry: a small launch rate. Life had to grow —
+       0.10s is a SINGLE tick at the 1/12 s heavy-load step, so a chip could
+       never finish an arc. ONE roll (dq) drives both the launch rate and the
+       life, so 22..56 wu/s (0.15..0.39 s of flight) always outlives its own
+       arc at 0.34..0.60 s instead of dying at apex on an unlucky pair. */
+    const dq=Math.random();
+    addDebris(x,y,Math.cos(a)*v,Math.sin(a)*v,22+dq*34,.34+dq*.26,.36+Math.random()*.24,r,g,b);
   }};
   if(pBio[i]){
     /* Brood ammunition ruptures rather than detonates: wet luminous bile,
@@ -5086,6 +5092,17 @@ const fcr=new Uint8Array(MAXPART), fcg=new Uint8Array(MAXPART), fcb=new Uint8Arr
 /* 0 = terrain-relative (every existing caller). >0 = world Y for airframe
    puffs so a Wasp trail does not stain the dirt. Ground magnitudes untouched. */
 const fzh=new Float32Array(MAXPART);
+/* Solid debris (type 7) carries REAL vertical state. It used to be a planar
+   particle plus a render-time "hop" cheat, so a fragment could hang in the air
+   over the crater it had just been thrown out of, and it always "settled" at
+   the ground height of the point it was BORN at. fpz is WORLD z in the same
+   frame terrainH() returns (NOT an offset), fpvz its vertical rate, fpbnc the
+   one-bounce latch mirroring shBounced. Gravity matches SH_G so shards and
+   debris fall at one rate. Allocated once at load and rearmed by addParticle,
+   so the tick allocates nothing. Only type 7 reads them. */
+const fpz=new Float32Array(MAXPART), fpvz=new Float32Array(MAXPART);
+const fpbnc=new Uint8Array(MAXPART);
+const DEBRIS_G=290;                  // wu/s^2 — same rate as SH_G shards
 let fHead=0, fCount=0;
 let perfScale=1;
 function addParticle(type,x,y,vx,vy,life,size,r,g,b){
@@ -5095,10 +5112,23 @@ function addParticle(type,x,y,vx,vy,life,size,r,g,b){
   flife[i]=life; fmax[i]=life; fsize[i]=size;
   fcr[i]=r; fcg[i]=g; fcb[i]=b;
   fzh[i]=0;
+  /* Type 7 is the only ballistic particle. Seed it ON the ground under the
+     spawn point so a fragment created through the plain path can never render
+     at world z 0 (underground); addDebris supplies the launch rate. */
+  fpz[i]=type===7?((typeof terrainH==='function'?terrainH(x,y):0)+0.05):0;
+  fpvz[i]=0; fpbnc[i]=0;
 }
 function addAirPuff(x,y,h,vx,vy,life,size,r,g,b){
   addParticle(1,x,y,vx,vy,life,size,r,g,b);
   fzh[(fHead-1+MAXPART)%MAXPART]=h;
+}
+/* Ballistic solid debris. vz is the launch rate in wu/s; the fragment then
+   obeys DEBRIS_G in updParticles and settles on whatever terrain is under it
+   when it lands. Same stamp-the-head-slot pattern as addAirPuff — no new
+   allocation and no change to the ring accounting. */
+function addDebris(x,y,vx,vy,vz,life,size,r,g,b){
+  addParticle(7,x,y,vx,vy,life,size,r,g,b);
+  fpvz[(fHead-1+MAXPART)%MAXPART]=vz;
 }
 /* ============================================================================
    SUPERWEAPON DETONATION — true destruction.
@@ -5286,7 +5316,11 @@ function spawnBuildingCollapse(x,y,s,civic){
   const nd=Math.round((5+sz*0.24)*fx);
   for(let k=0;k<nd;k++){
     const a=Math.random()*TAU, sp=8+Math.random()*18;
-    addParticle(7,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.36+Math.random()*.28,Math.min(11,sz*(0.16+Math.random()*0.12)), 160,150,132);
+    /* Masonry is thrown hard and lands hard: 62..150 wu/s is a 0.43..1.03 s
+       flight; dq ties life to the throw (0.98..1.60 s) so the life always
+       covers the arc plus the bounce and a moment of rest. */
+    const dq=Math.random();
+    addDebris(x,y,Math.cos(a)*sp,Math.sin(a)*sp,62+dq*88,.98+dq*.62,Math.min(11,sz*(0.16+Math.random()*0.12)), 160,150,132);
   }
   const nk=Math.round((4+sz*0.16)*fx);
   for(let k=0;k<nk;k++){
@@ -5336,7 +5370,11 @@ function spawnExplosion(x,y,size,victimTeam){
     const nd=Math.round((1+sz*0.18)*perfScale);
     for(let k=0;k<nd;k++){
       const a=Math.random()*TAU, sp=10+Math.random()*16;
-      addParticle(7,x,y,Math.cos(a)*sp,Math.sin(a)*sp,.28+Math.random()*.22,Math.min(8,sz*(0.18+Math.random()*0.12)), 168,148,122);
+      /* 55..135 wu/s is a 0.38..0.93 s flight under DEBRIS_G; dq ties life to
+         the throw (0.92..1.44 s) so every fragment outlives its own arc and
+         lies where it landed for a beat before it fades. */
+      const dq=Math.random();
+      addDebris(x,y,Math.cos(a)*sp,Math.sin(a)*sp,55+dq*80,.92+dq*.52,Math.min(8,sz*(0.18+Math.random()*0.12)), 168,148,122);
     }
   }
   if(civic){
@@ -5372,7 +5410,36 @@ function updParticles(dt){
     if(tp!==0&&tp!==3&&tp!==4&&tp!==6){
       fx[i]+=fvx[i]*dt; fy[i]+=fvy[i]*dt;
     }
-    if(tp===2||tp===5||tp===7){ fvx[i]*=0.82; fvy[i]*=0.82; }
+    if(tp===2||tp===5){ fvx[i]*=0.82; fvy[i]*=0.82; }
+    else if(tp===7){
+      /* REAL BALLISTICS. The old path was planar drag plus a render-time hop:
+         debris never rose, never landed, and its resting height came from the
+         spawn point. Now z integrates under gravity and settles against
+         terrainH sampled at the fragment's CURRENT x/y — the ground moves
+         (craters, deformation), so a fragment thrown across a fresh bowl drops
+         into it instead of resting on air. One bounce with energy loss,
+         mirroring the shBounced latch; after that it skids to a stop. */
+      const gz=(typeof terrainH==='function'?terrainH(fx[i],fy[i]):0);
+      if(fpz[i]>gz+0.002||fpvz[i]>0){
+        fpvz[i]-=DEBRIS_G*dt;
+        fpz[i]+=fpvz[i]*dt;
+        /* Air drag only. The 0.82-per-tick planar drag the sparks use kills a
+           throw in three ticks and leaves no arc to look at. */
+        const ad=1-Math.min(0.5,0.55*dt);
+        fvx[i]*=ad; fvy[i]*=ad;
+        if(fpz[i]<=gz&&fpvz[i]<0){
+          fpz[i]=gz;
+          if(!fpbnc[i]&&fpvz[i]<-55){
+            fpbnc[i]=1;
+            fpvz[i]*=-0.34; fvx[i]*=0.52; fvy[i]*=0.52;
+          } else { fpvz[i]=0; fvx[i]*=0.18; fvy[i]*=0.18; }
+        }
+      } else {
+        /* Resting. Track the ground: a crater opening under settled debris
+           re-launches it (gz drops, the airborne branch takes over next tick). */
+        fpz[i]=gz; fpvz[i]=0; fvx[i]=0; fvy[i]=0;
+      }
+    }
     else if(tp===1||tp===8||tp===10){ fsize[i]+=dt*(tp===8?6.5:tp===10?8:9); }
     else if(tp===4){
       /* Coals stay put. Growing them like a torch made leftover type-4

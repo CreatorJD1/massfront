@@ -2563,8 +2563,15 @@ function render(dtDraw){
       bbAdd.add(sprites.fireball||sFireB,X,Y,H+S*.12,S*(0.88+age*.10),0,255,255,255,245*lf);
       bbAdd.add(sGlowB,X,Y,H+1.4,S*0.95,0,255,135,55,52*lf);
     } else if(ty===7){                        // ballistic solid debris
-      const age=1-lf, hop=fsize[i]*0.55*lf*age;
-      FX.shard.add(X,Y,H+1.6+hop,Math.max(1.2,fsize[i]*.42),i*.7,fcr[i],fcg[i],fcb[i],lf<.22?lf*1100:240);
+      /* No hop cheat. The sim owns this fragment's altitude now — fpz is world
+         z in terrainH's frame, and gh() here IS terrainH — so the arc you see
+         is the arc that was integrated, including the bounce and the settle
+         onto whatever ground ended up underneath it. The only render-side term
+         is half the shard's own thickness, so a settled fragment rests ON the
+         surface instead of half-buried in it. */
+      const dsz=Math.max(1.2,fsize[i]*.42);
+      const dz=(typeof fpz!=='undefined'?fpz[i]:H)+dsz*0.55;
+      FX.shard.add(X,Y,dz,dsz,i*.7,fcr[i],fcg[i],fcb[i],lf<.22?lf*1100:240);
     } else if(ty===9){                        // ambience: snow, ash, drifting sand
       const age=1-lf;
       bbAlpha.add(sSmokeB,X,Y,H+3+age*2,fsize[i]*(0.85+Math.sin(t*2.5+i)*0.18),
@@ -2668,7 +2675,42 @@ function render(dtDraw){
     /* Night work-light pools used to stamp a warm orange billboard on
        every finished building after dusk — the orb this pass retired.
        Mesh windows, HQ_LAMP discs and towerCrumble fire already mark a
-       powered or burning structure. Specialist type glows above stay. */
+       powered or burning structure. Specialist type glows above stay.
+
+       REVIVAL EVALUATED AND REJECTED, 2026-08. The proposal was to bring the
+       feature back as real light SHAFTS — a cone of lit air over each powered
+       building, plus the authored sweep and approach-lamp motifs — on top of
+       the existing FX.cone primitive. Three fatals, all measured, all in the
+       geometry and the pass order rather than in taste:
+
+       1. FX.cone CANNOT BE A SHAFT. mdlCone (models.js:3777) is
+          cyl(r0=1, r1=0.06, h=1) — base radius and height are both 1 — and the
+          instanced vertex shader (mesh.js:1591) transforms it as
+            sp = vec3(aPos.x*aInst.w, aPos.y*aInst.w, aPos.z*aWide)
+          so the SINGLE instance scale aInst.w multiplies height AND base radius
+          together. Raising the cone always widens it by the same factor: the
+          aspect is locked at 1:1, i.e. a squat 45-degree bowl. aWide stretches
+          only the z half-axis, which makes the bowl elliptical, not tall. No
+          instance parameter in this layout produces a shaft.
+       2. YAW IS A NO-OP HERE. The same shader rotates about Y
+          (sp.x*c - sp.z*s, sp.y, sp.x*s + sp.z*c), and the cone is a solid of
+          revolution about Y drawn UNLIT (flat vCol, no normal term). Rotating
+          it changes nothing on screen, so the sweep and approach-lamp motifs —
+          which are entirely yaw animation — are unreachable with this mesh.
+       3. THE BLOOM ARGUMENT WAS AIMED AT THE WRONG PASS. The standing objection
+          was "shafts would blow the bright-pass budget". Bloom is extracted
+          BEFORE any of this draws: aoExtractBloom() runs at render3d.js:2040,
+          and the ADDITIVE EFFECTS pass — where FX.cone would flush — does not
+          begin until :2064. Additive shafts can never reach the bright pass at
+          all. The real risk is the opposite end: aoColB is RGBA8
+          (mesh.js:2369), so stacked SRC_ALPHA/ONE cones saturate it to flat
+          white and the scene loses contrast with no bloom involved.
+
+       REVIVAL REQUIRES a NEW pre-stretched primitive — a cone authored tall, or
+       a separate height scale added to the instance layout — with its own
+       flush, budgeted against aoColB saturation measured as peak channel value
+       in the additive pass, NOT as bright-pass cost. Do not re-open this
+       against FX.cone. */
   }
   /* Mobile lights are intentionally budgeted. At command zoom, lighting every
      single tank in a 2,000-unit battle would become a white carpet. The
