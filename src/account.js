@@ -600,7 +600,7 @@ function renderAccount(){
    one. Non-blocking and offline-safe (netAllowed), the same contract
    economy-net.js/offline.js use. Signed-out play is untouched — the local save
    in game/meta.js stays the source of truth. */
-const CLOUD={ state:'off', last:0, busy:false, dirty:false, timer:0, pulledFor:'', announced:false };
+const CLOUD={ state:'off', last:0, busy:false, dirty:false, timer:0, pulledFor:'', announced:false, diffToldFor:null };
 function cloudBase(){ return ((typeof apEndpoint==='function'&&apEndpoint())||AUTH_CFG.syncUrl||'').replace(/\/+$/,''); }
 function cloudSession(){ return (typeof AP_SESSION!=='undefined'&&AP_SESSION&&AP_SESSION.token)?AP_SESSION:null; }
 function cloudOnline(){ return typeof netAllowed!=='function'||netAllowed(); }
@@ -652,7 +652,23 @@ function cloudMerge(incoming){
       return;
     }
     const local=typeof syncPayload==='function'?syncPayload():{profile:null,meta:META};
-    if(typeof apSavesEquivalent==='function' && apSavesEquivalent(local, incoming)){
+    /* COMPARE IN ONE ENCODING.
+       src/faction-id.js maintains a canonical<->runtime seam in which two of the
+       four factions rename: dominion<->legion and brood<->horde. It then wraps
+       BOTH sides of this comparison, in OPPOSITE directions - syncPayload gets
+       persistMeta (canonical) at faction-id.js:49, and this function's argument
+       gets restoreMeta (runtime) at faction-id.js:51. So for any career that has
+       ever selected, favoured or won with Crimson Dominion or Brood Swarm, the
+       two operands could NEVER be equal, no matter how perfectly the saves
+       matched - and the player was told their cloud save differs, forever, on a
+       ~30 second floor. (Nova/Syndicate-only careers escape, because their keys
+       are identical across the seam. That is why this went unnoticed.)
+       Normalise the incoming side back to canonical so both are in the same
+       encoding. The comparator is correct; it was being fed mismatched inputs. */
+    const incomingCanon=(typeof facPersistMeta==='function'&&incoming&&incoming.meta)
+      ? Object.assign({},incoming,{meta:facPersistMeta(incoming.meta)})
+      : incoming;
+    if(typeof apSavesEquivalent==='function' && apSavesEquivalent(local, incomingCanon)){
       cloudMarkPulled();
       CLOUD.state='ok'; CLOUD.last=Date.now();
       return;
@@ -661,8 +677,18 @@ function cloudMerge(incoming){
        Do not auto-write either side — that is how a settings-only cloud copy
        used to vanish. Manual Pull/Push in the account panel decides. */
     CLOUD.state='ok';
-    if(typeof toast==='function')
-      toast('☁ Cloud save differs — restore or backup from Profile ▸ Account');
+    /* SAY IT ONCE PER SESSION, NOT EVERY 30 SECONDS.
+       toast() has no dedupe or rate limit and CSS stamps every toast with the
+       COMMAND NOTICE header, so this shared the in-match rail with wave
+       warnings and fired on each autosave debounce (~4 s during play) and on an
+       unconditional 30 s retry. Repeating it adds no information: the state is
+       identical each time and the remedy is a manual action in another screen. */
+    const _sess=cloudSession(), _tok=_sess?_sess.token:'';
+    if(CLOUD.diffToldFor!==_tok){
+      CLOUD.diffToldFor=_tok;
+      if(typeof toast==='function')
+        toast('☁ Cloud save differs — restore or backup from Profile ▸ Account');
+    }
   }catch(e){}
 }
 async function cloudPull(){

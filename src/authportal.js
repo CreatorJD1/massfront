@@ -310,17 +310,33 @@ function apLocalPayload(){
   return { v: 1, at: Date.now(), profile: typeof activeProf === 'function' ? activeProf() : null, meta: META };
 }
 function apStableValue(v){
+  /* A Date has no own enumerable keys, so the object branch below would render
+     it as '{}' locally while the round-tripped cloud copy is an ISO string.
+     Normalise to the form the cloud side will always have. */
+  if (v instanceof Date) return JSON.stringify(v.toISOString());
   if (Array.isArray(v)) return '[' + v.map(apStableValue).join(',') + ']';
   if (v && typeof v === 'object'){
-    const keys = Object.keys(v).filter(k => k !== 'at').sort();
+    /* Drop undefined-valued keys. Object.keys() still lists a key set to
+       undefined and JSON.stringify(undefined) returns the VALUE undefined,
+       which concatenates as the literal "key":undefined - while the cloud copy
+       has been through JSON round-tripping, which DROPS such keys. That is a
+       permanent, invisible inequality between two identical saves. */
+    const keys = Object.keys(v).filter(k => k !== 'at' && v[k] !== undefined).sort();
     return '{' + keys.map(k => JSON.stringify(k) + ':' + apStableValue(v[k])).join(',') + '}';
   }
   return JSON.stringify(v);
 }
 function apSavesEquivalent(a, b){
   if (!a || !b) return false;
-  return apStableValue({ profile: a.profile || null, meta: a.meta || {} }) ===
-         apStableValue({ profile: b.profile || null, meta: b.meta || {} });
+  /* profile.id is a device-local slot name ('p1','p2'...) that syncPayload
+     ships but which NO restore path ever writes back - applyCareerPayload and
+     apCommitIncoming both copy only name/emblem/etc. So two copies of the same
+     career made on different slots differ forever on a field the player cannot
+     see or change. Exclude it rather than report an unactionable difference. */
+  const prof = p => { if (!p || typeof p !== 'object') return p || null;
+                      const q = Object.assign({}, p); delete q.id; return q; };
+  return apStableValue({ profile: prof(a.profile), meta: a.meta || {} }) ===
+         apStableValue({ profile: prof(b.profile), meta: b.meta || {} });
 }
 function apSaveStats(data){
   const m = data && data.meta || {};
@@ -424,6 +440,11 @@ async function apPushSave(){
     }
     if (apSavesEquivalent(local, cloud.data)){
       AP_LAST_PUSH = Date.now();
+      /* Equivalent means this session has reconciled with the account, even
+         though there was nothing to write. Record that, or the push path stays
+         disabled by the pulledFor guard and the device silently stops backing
+         up for the rest of the session. */
+      if(typeof cloudMarkPulled==='function') cloudMarkPulled();
       apSyncSet('success', 'SYNCED: Cloud and this device already match - nothing was overwritten', false);
       return;
     }
@@ -462,6 +483,11 @@ async function apOfferSyncAfterSignIn(){
     }
     if (apSavesEquivalent(local, cloud.data)){
       AP_LAST_PULL = Date.now();
+      /* Equivalent means this session has reconciled with the account, even
+         though there was nothing to write. Record that, or the push path stays
+         disabled by the pulledFor guard and the device silently stops backing
+         up for the rest of the session. */
+      if(typeof cloudMarkPulled==='function') cloudMarkPulled();
       apSyncSet('success', 'SYNCED: Signed in - cloud and this device already match', false);
       return;
     }
