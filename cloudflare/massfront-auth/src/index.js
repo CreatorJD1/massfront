@@ -82,6 +82,12 @@ const MAX_SAVE_LEN = 500000;          // real save codes run ~hundreds of bytes;
    from many IPs is still slowed even though the per-IP bucket alone wouldn't
    catch it. */
 const RATE_LIMITS = {
+  /* Username routes. These two buckets were REQUESTED by handleUsernameCheck
+     and handleUsernameClaim from day one but never defined here, so the
+     lookup below threw on undefined and every call to either route was a
+     500. The rule lookup is also now fail-closed (deny, not throw). */
+  uname_check_ip: { limit: 60, windowSec: 300 },
+  uname_claim_user: { limit: 5, windowSec: 43200 },
   register_ip: { limit: 8, windowSec: 3600 },
   login_ip: { limit: 20, windowSec: 900 },
   login_email: { limit: 8, windowSec: 900 },
@@ -208,6 +214,12 @@ function clientIp(request) {
 }
 async function checkRateLimit(env, bucket, key) {
   const rule = RATE_LIMITS[bucket];
+  /* An unknown bucket must DENY, not throw. A throw here becomes a blanket
+     500 through the router catch, which reads as "the server is down" and
+     - because it fires before the INSERT - leaves no trace in attempts.
+     That failure mode is exactly how both username routes shipped dead
+     without anyone noticing. */
+  if (!rule) return false;
   const cutoff = Date.now() - rule.windowSec * 1000;
   const row = await env.DB.prepare(
     'SELECT COUNT(*) AS n FROM attempts WHERE bucket=?1 AND akey=?2 AND created_at>?3'
@@ -392,6 +404,12 @@ async function handleAgeConfirm(request, env) {
    player commits, but it is rate limited: an unlimited exact-match lookup over
    a user table is a scraping endpoint. */
 async function handleUsernameCheck(request, env) {
+  /* Signed-in only. No shipped client flow calls this route at all (the
+     portal claims via POST /username directly), so requiring a session
+     breaks nothing - and an unauthenticated availability probe behind
+     wildcard CORS is a handle-existence oracle anyone can farm. */
+  const s = await requireSession(request, env);
+  if (!s) return err(401, 'unauthenticated', 'Your session has expired — sign in again.');
   const ip = clientIp(request);
   if (!(await checkRateLimit(env, 'uname_check_ip', ip)))
     return err(429, 'rate_limited', 'Too many lookups — wait a moment.');
