@@ -21,7 +21,14 @@ param(
   [string[]]$Extra=@(),
   # Patch taxonomy surfaced in the updater UI. Omit to let the client infer it
   # from payload size (<=2MB hotfix / <=20MB content / larger overhaul).
-  [ValidateSet('hotfix','content','overhaul')][string]$Kind=''
+  [ValidateSet('hotfix','content','overhaul')][string]$Kind='',
+  # Publish a DELTA against an already-published version instead of a full
+  # payload. Only artifacts whose sha256 differs from that release are
+  # uploaded and listed in files[]; the complete build is still named in
+  # full[] so a device on any other version can recover in one step.
+  # Deliberately NOT a $Kind value: kind describes how big a change feels to
+  # a player, this describes how the bytes are delivered. Orthogonal.
+  [ValidatePattern('^([0-9]+[.][0-9]+[.][0-9]+)?$')][string]$PatchFrom=''
 )
 
 $ErrorActionPreference='Stop'
@@ -130,13 +137,64 @@ $env:ANDROID_BUILD_TOOLS=(Resolve-Path '.toolchains/android-sdk/build-tools/*' |
 Run 'Optimize and sign APK' { & 'C:\Program Files\Git\bin\bash.exe' -lc "export PATH=/usr/bin:/bin:`$PATH; bash tools/shrink-apk.sh android/app/build/outputs/apk/debug/app-debug.apk '$apk'" }
 Run 'Build OTA patch' { node tools/bundle-update.mjs $Version }
 
-$ota="releases/MASSFRONT-v$Version-update.js"
+# The OTA is a per-file payload now: a staging folder plus an index carrying
+# size and sha256 for every artifact. bundle-update.mjs writes both.
+$otaStage="releases/staging-v$Version"
+$otaIndexPath=Join-Path $otaStage "artifacts.json"
 Need (Test-Path $apk) "APK was not created: $apk"
-Need (Test-Path $ota) "OTA patch was not created: $ota"
-$otaInfo=Get-Item $ota
-$otaHash=(Get-FileHash $ota -Algorithm SHA256).Hash.ToLower()
+  Need (Test-Path $otaStage) "OTA staging folder was not created: $otaStage"
+  Need (Test-Path $otaIndexPath) "OTA artifact index was not created: $otaIndexPath"
+$otaIndex=@(Get-Content -LiteralPath $otaIndexPath -Raw -Encoding utf8 | ConvertFrom-Json)
+Need ($otaIndex.Count -gt 0) "OTA artifact index is empty"
+# Every artifact must exist on disk with the exact bytes the index claims.
+# A manifest that names an artifact which failed to stage is the one failure
+# the client cannot recover from: boot.js rejects the whole bundle if any
+# entry is missing, and it cannot be patched on devices already at 1.33.44.
+foreach($a in $otaIndex){
+  $full=Join-Path $otaStage $a.path
+  Need (Test-Path -LiteralPath $full) "Staged artifact missing: $($a.path)"
+  $fi=Get-Item -LiteralPath $full
+  Need ($fi.Length -eq $a.size) "Staged artifact size mismatch for $($a.path): $($fi.Length) vs $($a.size)"
+  $h=(Get-FileHash -LiteralPath $full -Algorithm SHA256).Hash.ToLower()
+  Need ($h -eq $a.sha256) "Staged artifact sha256 mismatch for $($a.path)"
+}
+# The sources in the payload must be exactly the manifest order, in order.
+# An add, a removal or a reorder changes what boot.js concatenates, and the
+# client keeps a prior order wholesale when merging a patch - so a delta can
+# never express such a change and must be published as a full release.
+$declaredOrder=@((Get-Content -LiteralPath (Join-Path $Root "assets/data/manifest.json") -Raw -Encoding utf8 | ConvertFrom-Json).order)
+$stagedSources=@($otaIndex | Where-Object { $_.path -notlike "ota/*" } | ForEach-Object { $_.path })
+Need (($stagedSources -join "|") -eq ($declaredOrder -join "|")) "Staged sources do not match assets/data/manifest.json order"
 # Preserve the v2 delivery contract. Rebuilding this as the old minimal manifest
 # silently removed release channels and optional packs from every published update.
+# Where each artifact lives. A full release publishes everything under
+# v<version>/; a delta publishes only what changed there, and points full[]
+# at the release it was cut from so a device on any other version recovers.
+$otaBase="https://huggingface.co/datasets/$Repo/resolve/main"
+$fullFiles=@($otaIndex | ForEach-Object {
+  [pscustomobject]@{ path=$_.path; size=$_.size; sha256=$_.sha256
+                     url="$otaBase/v$Version/$($_.path)?download=true"; local=(Join-Path $otaStage $_.path) }
+})
+if($PatchFrom){
+  $priorPath=Join-Path $Root "releases/update-v$PatchFrom.json"
+  Need (Test-Path -LiteralPath $priorPath) "Cannot cut a delta against $PatchFrom - releases/update-v$PatchFrom.json is missing"
+  $prior=Get-Content -LiteralPath $priorPath -Raw -Encoding utf8 | ConvertFrom-Json
+  $priorBy=@{}; foreach($pf in @($prior.files)){ $priorBy[$pf.path]=$pf.sha256 }
+  # A delta may only OVERWRITE. The client keeps the base order wholesale and
+  # requires every patched path to already exist, so an added or removed
+  # source cannot be expressed as a patch - it must be a full release.
+  foreach($a in $otaIndex){ Need ($priorBy.ContainsKey($a.path)) "Artifact $($a.path) does not exist in $PatchFrom; publish a full release instead" }
+  foreach($k in $priorBy.Keys){ Need (@($otaIndex | Where-Object { $_.path -eq $k }).Count -eq 1) "Artifact $k was removed since $PatchFrom; publish a full release instead" }
+  $publishFiles=@($fullFiles | Where-Object { $priorBy[$_.path] -ne $_.sha256 })
+  Need ($publishFiles.Count -gt 0) "Nothing changed since $PatchFrom - there is no patch to publish"
+  # full[] must point at the LAST FULL release, not at this delta folder.
+  $fullFiles=@($prior.files | ForEach-Object { [pscustomobject]@{ path=$_.path; size=$_.size; sha256=$_.sha256; url=$_.url; local=$null } })
+  Write-Host ("Delta against $PatchFrom : " + $publishFiles.Count + " of " + $otaIndex.Count + " artifacts changed") -ForegroundColor Cyan
+} else {
+  $publishFiles=$fullFiles
+}
+Need ($publishFiles.Count -gt 0) "Refusing to publish an empty file list"
+
 $manifest=[ordered]@{
   schema=if($previousManifest.schema){[int]$previousManifest.schema}else{2}
   channel=if($previousManifest.channel){[string]$previousManifest.channel}else{'stable'}
@@ -147,16 +205,33 @@ $manifest=[ordered]@{
   notes=$Notes
   version=$Version
   base=''
-  files=@(@([ordered]@{
-    path="MASSFRONT-v$Version-update.js"
-    url="https://huggingface.co/datasets/$Repo/resolve/main/MASSFRONT-v$Version-update.js?download=true"
-    size=$otaInfo.Length
-    sha256=$otaHash
+  # PER-FILE DELIVERY. Every entry carries an ABSOLUTE url rather than
+  # relying on the manifest-wide `base` prefix, because `base` is read once
+  # by the client before it decides whether it is applying a patch - so on a
+  # patch manifest it points at the delta folder, which is the one place a
+  # complete payload is guaranteed NOT to be. Absolute urls also let each
+  # entry be re-pinned to an immutable commit sha independently.
+  files=@(@($publishFiles | ForEach-Object {
+    [ordered]@{ path=$_.path; url=$_.url; size=$_.size; sha256=$_.sha256 }
   }) + @($extraEntries | ForEach-Object { [ordered]@{ path=$_.path; url=$_.url; size=$_.size; sha256=$_.sha256 } }))
 }
 # The OTA payload must stay files[0]: updApply reads the manifest order to
 # decide what to evaluate as the new source. Extras follow it as cached data.
 if($Kind){ $manifest.kind=$Kind }
+if($PatchFrom){
+  # kind:"patch" is what makes the client MERGE these files over the payload
+  # it already has instead of replacing it. patchFrom names the build this
+  # was cut against; the client refuses unless its installed record carries
+  # that version AND already contains every path listed here.
+  $manifest.kind="patch"
+  $manifest.patchFrom=$PatchFrom
+}
+# The complete build, always. There is ONE manifest url for every device, so
+# a client whose installed version is not the patch base has nowhere else to
+# look - full[] is how it recovers in a single step instead of being stranded.
+$manifest.full=@($fullFiles | ForEach-Object {
+  [ordered]@{ path=$_.path; url=$_.url; size=$_.size; sha256=$_.sha256 }
+})
 WriteReleaseManifest 'update.json' $manifest
 WriteReleaseManifest 'releases/MASSFRONT-update.json' $manifest
 WriteReleaseManifest "releases/update-v$Version.json" $manifest
@@ -208,7 +283,18 @@ Remove-Item -LiteralPath $stage -Recurse -Force
 # stayed put, and the retest deduped instead of transferring), so this stays
 # until someone proves the Xet path works with genuinely new bytes.
 $env:HF_HUB_DISABLE_XET='1'
-Run 'Publish OTA patch' { & $Hf upload $Repo $ota "MASSFRONT-v$Version-update.js" --type dataset --commit-message "Publish MASSFRONT v$Version OTA" }
+# Upload the artifacts that this release actually publishes. A full release
+# sends the whole staging folder in one commit; a delta sends only the
+# changed files. Either way every uploaded path sits under v<version>/ so a
+# previous release keeps its own bytes and full[] stays resolvable forever.
+if($PatchFrom){
+  foreach($pf in $publishFiles){
+    $rel=$pf.path; $loc=$pf.local
+    Run "Publish artifact ($rel)" { & $Hf upload $Repo $loc "v$Version/$rel" --type dataset --commit-message "Publish MASSFRONT v$Version artifact $rel" }
+  }
+} else {
+  Run 'Publish OTA payload' { & $Hf upload $Repo $otaStage "v$Version" --type dataset --commit-message "Publish MASSFRONT v$Version OTA payload" }
+}
 Run 'Publish Android installer' { & $Hf upload $Repo $apk "MASSFRONT-v$Version-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer" }
 foreach($x in $extraEntries){
   $xPath=$x.path; $xLocal=$x.local
