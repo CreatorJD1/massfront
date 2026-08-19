@@ -1281,8 +1281,9 @@ void main(){
      explode across every tile wrap, so the hardware picks the coarsest mip and
      draws a blurry grey line at each repeat — a visible seam on every unit and
      building. Supplying the derivatives of the UNWRAPPED coordinate fixes it. */
-  vec2 dxu=dFdx(vUV*matFreq(floor(matS+0.5)))*MSTEP_CONST;
-  vec2 dyu=dFdy(vUV*matFreq(floor(matS+0.5)))*MSTEP_CONST;
+  vec2 dvx=dFdx(vUV), dvy=dFdy(vUV);
+  vec2 dxu=dvx*matFreq(floor(matS+0.5))*MSTEP_CONST;
+  vec2 dyu=dvy*matFreq(floor(matS+0.5))*MSTEP_CONST;
   /* The bevels, rivets, louvres and panel breaks all live here rather than in
      geometry: perturbing the normal lights them exactly as if they were
      modelled, at a fraction of the vertex cost. */
@@ -1290,7 +1291,7 @@ void main(){
   if(uAssetOn>0.5){
     /* Uniform branch: constant for the whole draw call, so it neither diverges
        nor invalidates the derivatives taken above. */
-    vec2 dxa=mfUvGradClamp(dFdx(vUV)), dya=mfUvGradClamp(dFdy(vUV));
+    vec2 dxa=mfUvGradClamp(dvx), dya=mfUvGradClamp(dvy);
     vec4 ba=textureGrad(uAssetBase,vUV,dxa,dya), nr=textureGrad(uAssetNre,vUV,dxa,dya), mk=textureGrad(uAssetMask,vUV,dxa,dya);
     vec2 nxy=nr.rg*2.0-1.0;
     tex=ba.rgb;
@@ -1309,8 +1310,8 @@ void main(){
      Wall panes still require a facade; downward interiors stay dark. */
   if(winTile>0.5&&uAssetOn<0.5){
     vec2 muvE=matUV(vUV,matOrig);
-    vec2 dxe=dFdx(vUV*matFreq(floor(matOrig+0.5)))*MSTEP_CONST;
-    vec2 dye=dFdy(vUV*matFreq(floor(matOrig+0.5)))*MSTEP_CONST;
+    vec2 dxe=dvx*matFreq(floor(matOrig+0.5))*MSTEP_CONST;
+    vec2 dye=dvy*matFreq(floor(matOrig+0.5))*MSTEP_CONST;
     float srcEmis=textureGrad(uOrm,muvE,dxe,dye).b;
     emis=mix(emis, srcEmis, max(facade, cap));
   }
@@ -1760,13 +1761,15 @@ void main(){
      screen pixel: small when the camera is close. Everything below only
      spends work when the player can actually resolve it — at command zoom
      closeG is 0 and this whole block reduces to the old two-octave path. */
-  float ppx=length(fwidth(vDetUV))*512.0;
+  vec2 dDx=dFdx(vDetUV), dDy=dFdy(vDetUV);
+  float ppx=length(abs(dDx)+abs(dDy))*512.0;
   /* PER-LAYER RANGE GATES. The old 1.4–4.5 band was already 0 at SPAN_MIN
      420 on a 412×900 phone (ppx≈7, retina≈3.5), so splat / crack tooth /
      pave normals never ran in play. Gate stays fully on at tactical zoom
      and dies by command altitude. */
   float closeG=1.0-smoothstep(6.5,20.0,ppx);
-  float hppx=length(fwidth(vMapUV))*2048.0;
+  vec2 dMx=dFdx(vMapUV), dMy=dFdy(vMapUV);
+  float hppx=length(abs(dMx)+abs(dMy))*2048.0;
   /* ARTIFICIAL GROUND STANDS APART. The hardscape mask is read FIRST so that
      every natural layer below — crack grain, mid-band plates, macro patching,
      grass — can stand down inside a poured surface. A base platform is
@@ -1919,11 +1922,13 @@ void main(){
        full diagonal response, correct amplitude, one tap per layer instead of
        the two-tap axis-biased bump this replaces. Decode in the geometric TBN
        (WebGL2), not world XZ — hillsides otherwise bend the bump the wrong way. */
+    /* Derivatives hoisted above the hGate branch: dFdx/dFdy inside
+       non-uniform control flow is undefined per GLSL ES 3.0. */
+    vec2 dxA=dFdx(uvA), dyA=dFdy(uvA);
+    vec2 dxG=dFdx(uvA*1.9), dyG=dFdy(uvA*1.9);
+    vec2 dxP=dFdx(wxz*0.028), dyP=dFdy(wxz*0.028);
     float hGate=max(closeG,0.45*mG);
     if(hGate>0.03){
-      vec2 dxA=dFdx(uvA), dyA=dFdy(uvA);
-      vec2 dxG=dFdx(uvA*1.9), dyG=dFdy(uvA*1.9);
-      vec2 dxP=dFdx(wxz*0.028), dyP=dFdy(wxz*0.028);
       vec3 nA=mix(mix(textureGrad(uGroundN,uvA,dxA,dyA).rgb,textureGrad(uSoilN,uvA,dxA,dyA).rgb,soilMix),
                   textureGrad(uGrassN,uvA*1.9,dxG,dyG).rgb,grassMix);
       vec3 nP=textureGrad(uPaveN,wxz*0.028,dxP,dyP).rgb;
