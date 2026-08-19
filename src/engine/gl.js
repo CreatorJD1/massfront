@@ -3126,6 +3126,24 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
   /* A wide, almost invisible pass under the casing. Without it the stroke
      ends exactly on a texel boundary and magnifies into a hard jagged edge. */
   const feather=(pts,col,w)=>{ stroke(pts,col,w); };
+  /* TAPERED stroke: resample the path, then walk the width down along it so
+     the vein ends in a hairline instead of a blunt uniform ribbon. */
+  const taper=(pts,col,w0,w1)=>{
+    if(pts.length<2)return;
+    const N=Math.max(8,(pts.length-1)*5), Q=[];
+    for(let i=0;i<N;i++){
+      const tt=i/(N-1)*(pts.length-1);
+      const i0=Math.min(pts.length-2,tt|0), fr=tt-i0;
+      Q.push([pts[i0][0]+(pts[i0+1][0]-pts[i0][0])*fr,
+              pts[i0][1]+(pts[i0+1][1]-pts[i0][1])*fr]);
+    }
+    c.strokeStyle=col;
+    for(let i=0;i<Q.length-1;i++){
+      const u=i/(Q.length-2);
+      c.lineWidth=Math.max(0.35,w0+(w1-w0)*(u*u*0.65+u*0.35));
+      c.beginPath();c.moveTo(Q[i][0],Q[i][1]);c.lineTo(Q[i+1][0],Q[i+1][1]);c.stroke();
+    }
+  };
   const chip=(x,y,s,a)=>{
     c.save();c.translate(x,y);c.rotate(a);
     c.fillStyle=active?cry:dead;
@@ -3133,10 +3151,12 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
     c.restore();
   };
   for(let n=0;n<nVein;n++){
-    let a=n/nVein*TAU+(rn()-.5)*.72,x=cx+(rn()-.5)*liveR*.10,y=cy+(rn()-.5)*liveR*.10;
+    /* Own arc slot with only a small jitter: .72 rad of slop on a ~.5 rad slot
+       meant neighbouring veins routinely crossed and merged into blobs. */
+    let a=n/nVein*TAU+(rn()-.5)*.26,x=cx+(rn()-.5)*liveR*.06,y=cy+(rn()-.5)*liveR*.06;
     const segs=3+(rn()*3)|0,pts=[[x,y]];
     for(let s=0;s<segs;s++){
-      a+=(rn()-.5)*.78;
+      a+=(rn()-.5)*.44;                    // gentler wander, so paths stay apart
       const step=liveR*(.16+rn()*.30);
       x+=Math.cos(a)*step;y+=Math.sin(a)*step;pts.push([x,y]);
     }
@@ -3144,20 +3164,19 @@ function paintResourceGroundNode(c,N,kind,tier,collapsed){
        units; at tactical zoom that is one bilinear-smeared pixel line, which
        is why it beaded into dashes. ~3 texels of core inside ~6 of casing
        reads as a mineral seam at every zoom. */
-    const dw=Math.max(5.0,(7.0+rn()*4.0)*k),cw=Math.max(2.6,dw*.46);
-    /* feather first, widest and faintest, so the edge fades out */
-    feather(pts,active?'rgba(14,16,18,.16)':'rgba(26,26,24,.08)',dw*1.85);
-    stroke(pts,active?'rgba(16,18,20,.50)':'rgba(28,28,26,.22)',dw);
-    stroke(pts,active?cry:dead,cw);
-    /* a faint bright centre line keeps the seam legible when it is thin */
-    if(active) stroke(pts,'rgba(190,238,252,.20)',Math.max(1.0,cw*.34));
+    /* Root width varies per vein so they are not uniform; every one thins to
+       ~14% of its root by the tip. */
+    const dw=(4.2+rn()*3.4)*k, cw=dw*.44;
+    taper(pts,active?'rgba(14,16,18,.13)':'rgba(26,26,24,.07)',dw*1.7,dw*0.30);
+    taper(pts,active?'rgba(16,18,20,.46)':'rgba(28,28,26,.20)',dw,dw*0.16);
+    taper(pts,active?cry:dead,cw,cw*0.14);
+    if(active) taper(pts,'rgba(200,242,255,.17)',cw*.36,cw*.07);
     if(n<nVein*.6&&pts.length>2){
       const mid=pts[1+(rn()*(pts.length-2))|0];
       const a2=a+((n&1)?1.05:-1.05)+(rn()-.5)*.4,len=liveR*(.22+rn()*.20);
       const fork=[mid,[mid[0]+Math.cos(a2)*len,mid[1]+Math.sin(a2)*len]];
-      feather(fork,active?'rgba(14,16,18,.13)':'rgba(26,26,24,.06)',dw*1.45);
-      stroke(fork,active?'rgba(16,18,20,.44)':'rgba(28,28,26,.18)',dw*.78);
-      stroke(fork,active?cry:dead,cw*.78);
+      taper(fork,active?'rgba(16,18,20,.38)':'rgba(28,28,26,.16)',dw*.62,dw*0.10);
+      taper(fork,active?cry:dead,cw*.62,cw*0.10);
       if(active)chip(fork[1][0],fork[1][1],Math.max(1.3,2.4*k),a2);
     }
     if(active){
@@ -3786,11 +3805,39 @@ function composeMinimapTerrain(ctx,S){
 /* War Table thumbs never run planDistricts, so a dense TFC metro used to
    preview as empty grassland. Stamp civic pads from the same MAPDEFS counts
    the live planner uses — approximate footprints, not InstMesh roads. */
-function paintPreviewCivic(ctx,def,W,H){
+/* ---------- THE PREVIEW WINDOW IS THE THEATRE, NOT THE BUFFER --------------
+   MAP is a fixed 3200 x 3200 allocation because terrain, pathfinding, fog and
+   the shaders are all baked against that one square. Only the CENTRED
+   BATTLEFIELD_PRESETS[...].world fraction of it is playable - .8125 for
+   STANDARD, i.e. 2600 m, exactly the "2.6 KM" the preset advertises, and the
+   same window battlefieldPlayBounds() hands the match. A preview that paints
+   the whole buffer shows a border of ground no unit can reach; worse, the two
+   preview surfaces used to squeeze that square world into a 4:3 (site card)
+   and a 12:7 (spawn planner) box, by different amounts, so one site did not
+   look like itself between two screens. Both are square now and crop to this
+   window. `large` has world=1, so its mapping is the identity - a built-in
+   control: if a large-site preview shifts, the crop maths is wrong. */
+function previewWorldSpan(sizeKey){
+  const key=sizeKey||(typeof battlefieldPreset!=='undefined'?battlefieldPreset:'standard');
+  const k=(typeof battlefieldPresetKey==='function')?battlefieldPresetKey(key):'standard';
+  const P=(typeof BATTLEFIELD_PRESETS!=='undefined'&&BATTLEFIELD_PRESETS)?BATTLEFIELD_PRESETS[k]:null;
+  const w=P&&+P.world>0?+P.world:1;
+  return (w>0&&w<=1)?w:1;
+}
+function previewWorldLo(sizeKey){ return (1-previewWorldSpan(sizeKey))*0.5; }
+/* world fraction of MAP (0..1) -> pixels along a preview side of length S */
+function previewFrac2Px(f,sizeKey,S){ return (f-previewWorldLo(sizeKey))/previewWorldSpan(sizeKey)*S; }
+/* preview side fraction (0..1) -> world fraction of MAP. Inverse of the above.
+   The planner's tap hit-test needs it: without it a tap is compared against
+   zone positions in a different coordinate space and resolves to the wrong
+   zone near every zone boundary. */
+function previewPx2Frac(t,sizeKey){ return previewWorldLo(sizeKey)+t*previewWorldSpan(sizeKey); }
+
+function paintPreviewCivic(ctx,def,W,H,sizeKey){
   // Subtle infrastructure markings matching live road network
   if(!def.roads) return;
   ctx.save();
-  const x0=SP_LO*W, y0=SP_HI*H, x1=SP_HI*W, y1=SP_LO*H;
+  const SZ=sizeKey||(def&&def.size)||null, x0=previewFrac2Px(SP_LO,SZ,W), y0=previewFrac2Px(SP_HI,SZ,H), x1=previewFrac2Px(SP_HI,SZ,W), y1=previewFrac2Px(SP_LO,SZ,H);
   // Natural asphalt corridor
   ctx.strokeStyle='rgba(20,24,28,0.70)';
   ctx.lineWidth=Math.max(2.8, W*0.012);
@@ -3809,13 +3856,13 @@ function paintPreviewCivic(ctx,def,W,H){
 }
 
 /* ---------- photorealistic satellite orthophoto & tactical reconnaissance preview ---------- */
-function drawMapPreview(cv3,def,themeKey,showBases=true){
+function drawMapPreview(cv3,def,themeKey,showBases=true,sizeKey){
   const mix=(a,b,t)=>a+(b-a)*t;
   const clampVal=(v,mn,mx)=>Math.max(mn,Math.min(mx,v));
   const smoothVal=t=>t*t*(3-2*t);
   const TH=typeof themePaint==='function'?themePaint(THEMES[themeKey||curTheme]||THEMES.verdant,def):
     (THEMES[themeKey||curTheme]||THEMES.verdant);
-  const W=cv3.width, H=cv3.height;
+  const W=cv3.width, H=cv3.height; const CSZ=sizeKey||(def&&def.size)||null, CW=previewWorldSpan(CSZ), CLO=previewWorldLo(CSZ);
   const ctx3=cv3.getContext('2d');
   const img=ctx3.createImageData(W,H);
   srand(def.seed);
@@ -3894,11 +3941,11 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
   /* Diagnostic hook: lets a probe assert that the card's landform matches the
      map a match would build. The divergence this replaced went unnoticed
      through several releases precisely because nothing could measure it. */
-  try{ window.__mfPreviewField={PN:PN,hf:hf,seed:def.seed}; }catch(e){}
+  try{ window.__mfPreviewField={PN:PN,hf:hf,seed:def.seed,world:CW,lo:CLO,W:W,H:H,size:CSZ}; }catch(e){}
   /* Resample the square world field into the card. Every downstream pass
      (slope, hillshade, materials, civic paint) then works unchanged. */
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
-    const fx=x/W*(PN-1), fy=y/H*(PN-1);
+    const fx=(CLO+x/W*CW)*(PN-1), fy=(CLO+y/H*CW)*(PN-1);
     const xa=fx|0, ya=fy|0, xb=Math.min(PN-1,xa+1), yb=Math.min(PN-1,ya+1);
     const tx=fx-xa, ty=fy-ya;
     hGrid[y*W+x]=(hf[ya*PN+xa]*(1-tx)+hf[ya*PN+xb]*tx)*(1-ty)
@@ -3909,7 +3956,7 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
   const sunX=-0.577, sunY=-0.577, sunZ=0.577;
   for(let y=0;y<H;y++) for(let x=0;x<W;x++){
     const idx=y*W+x, h=hGrid[idx];
-    const u=x/W*GN, v=y/H*GN;
+    const u=(CLO+x/W*CW)*GN, v=(CLO+y/H*CW)*GN;
     const xL=Math.max(0,x-1), xR=Math.min(W-1,x+1);
     const yU=Math.max(0,y-1), yD=Math.min(H-1,y+1);
     const dhx=(hGrid[y*W+xR]-hGrid[y*W+xL])*24.0;
@@ -3976,7 +4023,7 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
   }
 
   ctx3.putImageData(img,0,0);
-  paintPreviewCivic(ctx3,def,W,H);
+  paintPreviewCivic(ctx3,def,W,H,CSZ);
 
   // 3. High-tech tactical HUD overlay
   ctx3.save();
@@ -3984,14 +4031,14 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
   // Fine holographic grid lines
   ctx3.strokeStyle='rgba(0,225,255,0.06)';
   ctx3.lineWidth=0.6;
-  const stepX=W/6, stepY=H/4;
+  const stepX=W/6, stepY=H/6;
   ctx3.beginPath();
   for(let gx=stepX;gx<W;gx+=stepX){ ctx3.moveTo(gx,0); ctx3.lineTo(gx,H); }
   for(let gy=stepY;gy<H;gy+=stepY){ ctx3.moveTo(0,gy); ctx3.lineTo(W,gy); }
   ctx3.stroke();
 
   // Tactical orbital corner brackets
-  const bL=Math.min(W,H)*0.07;
+  const bL=Math.min(W,H)*0.044;
   ctx3.strokeStyle='rgba(0,229,255,0.60)';
   ctx3.lineWidth=1.2;
   // Top-left
@@ -4004,7 +4051,7 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
   ctx3.beginPath(); ctx3.moveTo(W-6-bL,H-6); ctx3.lineTo(W-6,H-6); ctx3.lineTo(W-6,H-6-bL); ctx3.stroke();
 
   // Telemetry HUD stamp
-  ctx3.font='600 ' + Math.max(7, Math.round(H*0.046)) + 'px monospace';
+  ctx3.font='600 ' + Math.max(7, Math.round(Math.min(W,H)*0.029)) + 'px monospace'; ctx3.textAlign='left'; ctx3.textBaseline='alphabetic';
   ctx3.fillStyle='rgba(0,229,255,0.65)';
   ctx3.fillText('ORBITAL SAT-SCAN // SECTOR ' + (def.seed % 88 + 11), 12, 16);
 
@@ -4015,7 +4062,7 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
        SP_HI for its land guarantees, so the card raised ground at one place
        and drew the beacon at another - the reticle sat outside the spawn it
        claimed to mark. */
-    const px=SP_LO*W, py=SP_HI*H;
+    const px=previewFrac2Px(SP_LO,CSZ,W), py=previewFrac2Px(SP_HI,CSZ,H);
     ctx3.strokeStyle='rgba(0,229,255,0.50)';
     ctx3.lineWidth=1.0;
     ctx3.beginPath(); ctx3.arc(px,py,8.5,0,TAU); ctx3.stroke();
@@ -4024,7 +4071,7 @@ function drawMapPreview(cv3,def,themeKey,showBases=true){
     ctx3.fillStyle='#ffffff'; ctx3.beginPath(); ctx3.arc(px,py,1.0,0,TAU); ctx3.fill();
 
     // Enemy Spawn Beacon (Crimson target reticle)
-    const ex=SP_HI*W, ey=SP_LO*H;
+    const ex=previewFrac2Px(SP_HI,CSZ,W), ey=previewFrac2Px(SP_LO,CSZ,H);
     ctx3.strokeStyle='rgba(255,60,40,0.50)';
     ctx3.lineWidth=1.0;
     ctx3.beginPath(); ctx3.arc(ex,ey,8.5,0,TAU); ctx3.stroke();

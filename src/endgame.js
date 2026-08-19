@@ -448,7 +448,9 @@ function renderOps(){
       let cv=weeklyMapPrevCache[wd.map];
       if(!cv){
         try{
-          cv=document.createElement('canvas'); cv.width=320; cv.height=200;
+          /* Square: the world is square, and this card crops to the playable
+             theatre like the War Table cards do. 320x200 left it stretched 1.6x. */
+          cv=document.createElement('canvas'); cv.width=320; cv.height=320;
           drawMapPreview(cv,wkDef,wkDef.theme||curTheme);
           weeklyMapPrevCache[wd.map]=cv;
         }catch(err){ cv=null; }

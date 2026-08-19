@@ -408,11 +408,14 @@ function setSpawnTargetZone(key,zone){
 }
 function drawSpawnPlanner(){
   const cv3=$('spawnMap'); if(!cv3||typeof drawMapPreview!=='function') return;
-  drawMapPreview(cv3,MAPDEFS[curMap]||MAPDEFS.vanguard,curTheme,false);
+  /* Square backing store, enforced here rather than in the markup: the world
+     is square, and this is the surface a player reads positions off. */
+  const SIDE=384; if(cv3.width!==SIDE||cv3.height!==SIDE){ cv3.width=SIDE; cv3.height=SIDE; }
+  drawMapPreview(cv3,MAPDEFS[curMap]||MAPDEFS.vanguard,curTheme,false,battlefieldPreset);
   const c=cv3.getContext('2d'), W=cv3.width,H=cv3.height;
   const picked=spawnTargetZone(spawnPick);
   for(const Z0 of START_ZONES){
-    const Z=startZone(Z0.id),x=Z.x*W,y=Z.y*H, sel=Z.id===picked;
+    const Z=startZone(Z0.id),x=previewFrac2Px(Z.x,battlefieldPreset,W),y=previewFrac2Px(Z.y,battlefieldPreset,H), sel=Z.id===picked;
     c.beginPath(); c.arc(x,y,sel?14:11,0,TAU);
     c.fillStyle='rgba(5,13,23,.82)'; c.fill();
     c.lineWidth=sel?3:1.5; c.strokeStyle=sel?'#fff':'rgba(210,235,250,.72)'; c.stroke();
@@ -423,7 +426,7 @@ function drawSpawnPlanner(){
     label:(aiSlots[i].ally?'ALLY ':'ENEMY ')+(i+1),col:aiSlots[i].ally?'#66e5a2':'#ff5d43',
     fac:aiSlots[i].ally?playerFaction:(aiFactionSel==='random'?'':aiFactionSel),behavior:aiSlots[i].behavior});
   for(const M of marks){
-    const Z=startZone(M.zone),x=Z.x*W,y=Z.y*H;
+    const Z=startZone(M.zone),x=previewFrac2Px(Z.x,battlefieldPreset,W),y=previewFrac2Px(Z.y,battlefieldPreset,H);
     c.beginPath(); c.arc(x,y,11,0,TAU); c.fillStyle='rgba(4,12,21,.94)'; c.fill();
     c.lineWidth=2.5;c.strokeStyle=M.col;c.stroke();
     const I=typeof facIconCanvas==='function'?facIconCanvas(M.fac,drawSpawnPlanner):null;
@@ -527,7 +530,7 @@ function initSpawnPlanner(){
   const cv3=$('spawnMap'); if(!cv3||cv3.dataset.wired) return;
   cv3.dataset.wired='1';
   cv3.addEventListener('pointerdown',e=>{
-    e.stopPropagation(); const r=cv3.getBoundingClientRect(),u=(e.clientX-r.left)/r.width,v=(e.clientY-r.top)/r.height;
+    e.stopPropagation(); const r=cv3.getBoundingClientRect(),u=previewPx2Frac((e.clientX-r.left)/r.width,battlefieldPreset),v=previewPx2Frac((e.clientY-r.top)/r.height,battlefieldPreset);
     let best=START_ZONES[0],bd=1e9;
     for(const Z0 of START_ZONES){ const Z=startZone(Z0.id),d=(u-Z.x)*(u-Z.x)+(v-Z.y)*(v-Z.y);if(d<bd){bd=d;best=Z;} }
     if(setSpawnTargetZone(spawnPick,best.id)===false){ sfx('deny'); return; }
@@ -1822,7 +1825,19 @@ function renderPlanetRow(){
   };
 }
 
-const mapPrevCache={};
+/* Bounded, least-recently-used. Square backing stores took each entry from
+   0.37 MB to 0.59 MB; all 48 sites would be ~28 MB of canvases on a device
+   whose heightfield family already costs ~76 MB. 12 covers a browsing session
+   without the tail sitting in memory for the rest of the match. */
+const mapPrevCache={}; const mapPrevOrder=[]; const MAP_PREV_MAX=12;
+function mapPrevTouch(k){
+  const at=mapPrevOrder.indexOf(k); if(at>=0) mapPrevOrder.splice(at,1);
+  mapPrevOrder.push(k);
+  while(mapPrevOrder.length>MAP_PREV_MAX){
+    const old=mapPrevOrder.shift();
+    if(old!==k) delete mapPrevCache[old];
+  }
+}
 function syncBattlefieldFromMap(key){
   const def=MAPDEFS[key]; if(!def) return false;
   if(typeof mfConquestMapOpen==='function'&&!mfConquestMapOpen(key))return false;
@@ -1856,9 +1871,10 @@ function renderMapRow(){
          visibly blocky stamp. 192×120 stays under five MB even if every one of
          the 48 sites is browsed and cached, but keeps rivers, roads and city
          footprints legible during map choice. */
-      cv3=document.createElement('canvas'); cv3.width=384; cv3.height=240;
+      cv3=document.createElement('canvas'); cv3.width=384; cv3.height=384;
       drawMapPreview(cv3,def,def.theme||curTheme);
       mapPrevCache[ck]=cv3;
+      mapPrevTouch(ck);
     }
     card.appendChild(cv3);
     const hz=(typeof mapHazardDef==='function')?mapHazardDef(key):((typeof MAPHAZ!=='undefined'&&MAPHAZ[key])?MAPHAZ[key]:null);

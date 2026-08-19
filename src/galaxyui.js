@@ -195,7 +195,10 @@ function mfGalaxyCss(){
     color:#d7e9f2;background:rgba(3,9,16,.68);font:900 9px/1.25 var(--fT);letter-spacing:.08em;text-align:center}
   .mConquest{display:flex;justify-content:space-between;gap:5px;margin:6px 8px 0;color:#6f9cb5;font:800 7px/1 var(--fT);letter-spacing:.08em}.mConquest b{color:#ffd676}
   .mReward{display:flex;justify-content:space-between;gap:5px;margin:5px 8px 7px;padding-top:5px;border-top:1px solid rgba(105,180,215,.16);color:#76e7a9;font:800 7px/1.15 var(--fT);letter-spacing:.04em}.mReward b{color:#ffe189;text-align:right}
-  #setupScr.galaxyFlow #mapRow .mapCard canvas{aspect-ratio:16/10}
+  /* No aspect-ratio here. This injected 16/10 at runtime, and because it lands
+     later in the cascade with higher specificity it silently overrode
+     ui.css:1114 - so the site card was never the 4:3 that stylesheet claimed.
+     The world is square (MAP 3200x3200); ui.css now owns the 1/1 aspect. */
   .mfMissionHero{position:relative;margin:4px 0 9px;padding:14px 14px 13px;border:1px solid rgba(114,207,245,.32);border-radius:15px;overflow:hidden;
     background:linear-gradient(100deg,rgba(8,24,40,.98),rgba(8,24,40,.76) 68%,rgba(38,118,153,.23));box-shadow:0 10px 28px rgba(0,0,0,.28)}
   .mfMissionHero:after{content:'';position:absolute;right:-54px;top:-74px;width:180px;height:180px;border-radius:50%;border:12px double rgba(99,218,255,.09)}

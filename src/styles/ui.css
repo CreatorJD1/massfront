@@ -1111,7 +1111,16 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
 #setupScr #mapRow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
   max-width:100%;margin:0;padding:2px 0 6px;overflow:visible}
 #setupScr .mapCard{width:auto;min-width:0;box-sizing:border-box}
-#setupScr .mapCard canvas{width:100%;height:auto;aspect-ratio:4/3;box-sizing:border-box}
+#setupScr .mapCard canvas{width:100%;height:auto;aspect-ratio:1/1;box-sizing:border-box}
+/* src/galaxyui.js injects `#setupScr.galaxyFlow #mapRow .mapCard canvas
+   {aspect-ratio:16/10}` into <head> at runtime: later in the cascade and at
+   higher specificity, so the rule above never reached the live War Table
+   card - it was 16:10 on screen while this file said otherwise. The world is
+   square (MAP 3200 x 3200) and this is the surface a player picks a site
+   from, so it is square too. !important rather than a specificity hack
+   because the loser is a runtime-injected string in another module; delete
+   galaxyui.js's 16/10 declaration and this line goes with it. */
+#setupScr.galaxyFlow #mapRow .mapCard canvas{aspect-ratio:1/1}
 #setupScr .mapCard b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #setupScr .mapCard .mNm{font-size:11.5px;margin-top:6px}
 #setupScr .mapCard .mDs{font-size:9.5px}
@@ -1139,7 +1148,7 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
    abstract compass text that does not resemble the actual map. */
 .spawnMapWrap{position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(120,190,230,.42);
   background:#08131f;box-shadow:inset 0 0 22px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.35)}
-#spawnMap{display:block;width:100%;height:auto;aspect-ratio:12/7;touch-action:manipulation}
+#spawnMap{display:block;width:100%;height:auto;aspect-ratio:1/1;touch-action:manipulation}
 .spawnLegend{position:absolute;left:8px;bottom:7px;display:flex;gap:10px;padding:5px 7px;border-radius:7px;
   color:#cce5f5;background:rgba(4,10,18,.78);font:700 9px/1 var(--fT);letter-spacing:.08em}
 .spawnLegend span{display:flex;align-items:center;gap:4px}.spawnLegend i{width:7px;height:7px;border-radius:50%;display:block}
