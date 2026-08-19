@@ -237,7 +237,10 @@ function updValidManifest(m){
          always emits both (publish-hf-release.ps1) and the live 1.33.44
          manifest carries them, so requiring them rejects nothing genuine. */
       typeof f.sha256==='string'&&/^[0-9a-f]{64}$/i.test(f.sha256)&&
-      Number.isFinite(f.size)&&f.size>0));
+      Number.isFinite(f.size)&&f.size>0)&&
+    /* A patch that does not say what it patches is unapplicable by
+       construction - reject it here rather than merging onto the wrong build. */
+    (String(m.kind||'').toLowerCase()!=='patch'||/^\d+\.\d+\.\d+$/.test(String(m.patchFrom||''))));
 }
 function updManifestForChannel(m){
   /* A schema-v1 manifest has no channel and is Stable by definition. This is
@@ -539,7 +542,24 @@ async function updDownload(){
   const m=UPD.manifest;
   if(!m||UPD.state==='downloading') return;
   const base=m.base||'';
-  const total=m.files.reduce((s,f)=>s+(f.size||0),0)||1;
+  /* Decide UP FRONT whether this is a delta we can actually apply. Getting
+     this wrong after the bytes are on disk would mean either a broken merge
+     or a wasted download. */
+  const installedNow=await updInstalledVersion();
+  let patching=false, files=m.files;
+  if(updIsPatch(m)){
+    if(updPatchApplies(m,installedNow)) patching=true;
+    else{
+      const full=updFullEntry(m);
+      if(!full){
+        updSet('error',{err:'This update patches '+m.patchFrom+' but you are on '+
+                            installedNow+', and no full payload was published'});
+        return;
+      }
+      files=[full];   // not our base: take the complete build instead
+    }
+  }
+  const total=files.reduce((s,f)=>s+(f.size||0),0)||1;
   const ac=new AbortController();
   updSet('downloading',{pct:0,got:0,total,rate:0,err:null,abort:ac});
   const t0=performance.now();
@@ -547,12 +567,12 @@ async function updDownload(){
   /* Build the feed up front so every file is visible as PENDING before the
      first byte lands — a 900MB object that has not started yet is exactly the
      case where silence looks like a hang. */
-  UPD.feed=m.files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
+  UPD.feed=files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
   UPD.fileIdx=-1;
   try{
     let got=0;
-    for(let fi=0;fi<m.files.length;fi++){
-      const f=m.files[fi];
+    for(let fi=0;fi<files.length;fi++){
+      const f=files[fi];
       UPD.fileIdx=fi;
       if(UPD.feed[fi]) UPD.feed[fi].state='downloading';
       const src=f.url||base+f.path;
@@ -601,10 +621,30 @@ async function updDownload(){
       out[f.path]=new TextDecoder().decode(bytes);
     }
     /* Commit only once every file is present and accounted for. */
+    /* MERGE, do not replace, when this was a delta. The cached payload is the
+       whole build; the patch is a handful of files to overwrite inside it.
+       Order matters as much as content - boot.js concatenates in manifest
+       order - so keep the base order and append only genuinely new paths. */
+    let commitFiles=out, commitOrder=files.map(f=>f.path);
+    if(patching){
+      const prior=await updGet('active');
+      const priorFiles=(prior&&prior.files)||null;
+      if(!priorFiles){
+        updSet('error',{err:'The patch base is missing — reinstall the full update'});
+        return;
+      }
+      commitFiles=Object.assign({},priorFiles,out);
+      const priorOrder=(prior&&Array.isArray(prior.order)&&prior.order.length)
+                        ? prior.order.slice() : Object.keys(priorFiles);
+      for(const path of commitOrder) if(priorOrder.indexOf(path)<0) priorOrder.push(path);
+      commitOrder=priorOrder;
+    }
     await updPut('pending',{version:m.version, notes:m.notes||'', at:Date.now(),
                             schema:m.schema||1,channel:m.channel||'stable',
                             severity:m.severity||'recommended',
-                            order:m.files.map(f=>f.path), files:out});
+                            kind:updIsPatch(m)?'patch':(m.kind||'full'),
+                            patchedFrom:patching?String(m.patchFrom):'',
+                            order:commitOrder, files:commitFiles});
     /* Stage the notes where the NEXT document can read them without touching
        the megabytes of source sitting in the record above. */
     updStageNotes(m.version,m.notes);
@@ -674,6 +714,30 @@ async function updRollback(){
   }
   await updDel('pending');
   updHardReload();
+}
+/* ---- PATCH MANIFESTS ------------------------------------------------------
+   A `kind:'patch'` manifest lists ONLY the source files that changed. It
+   cannot simply replace the cached payload the way a full update does -
+   `active` holds the complete file set the boot loader concatenates, so
+   installing a one-file list verbatim would leave the build with one file.
+   A patch is therefore MERGED over the payload it was built against, which
+   is why it names that build in `patchFrom`.
+
+   NOTE the field name: `base` is already the URL prefix for relative file
+   paths in this manifest format, so the base VERSION needs its own key.
+
+   `full` is the escape hatch. A device whose installed build is not the one
+   the patch was cut against cannot apply it, and there is only one manifest
+   URL for every client - so the patch manifest carries a complete payload
+   entry alongside the deltas and such a device downloads that instead. */
+function updIsPatch(m){ return !!(m&&String(m.kind||'').toLowerCase()==='patch'); }
+function updPatchApplies(m,installed){
+  return updIsPatch(m)&&!!m.patchFrom&&String(m.patchFrom)===String(installed);
+}
+function updFullEntry(m){
+  const f=m&&m.full;
+  return (f&&typeof f.path==='string'&&typeof f.sha256==='string'&&
+          /^[0-9a-f]{64}$/i.test(f.sha256)&&Number.isFinite(f.size)&&f.size>0)?f:null;
 }
 async function updInstalledVersion(){
   const running=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
