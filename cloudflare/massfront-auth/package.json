@@ -8,7 +8,10 @@
     "tail": "wrangler tail",
     "db:create": "wrangler d1 create massfront-accounts",
     "db:schema": "wrangler d1 execute massfront-accounts --file=schema.sql --remote",
-    "db:schema:local": "wrangler d1 execute massfront-accounts --file=schema.sql --local"
+    "db:schema:local": "wrangler d1 execute massfront-accounts --file=schema.sql --local",
+    "db:migrate": "wrangler d1 execute massfront-accounts --file=migrations/0001-social-columns.sql --remote",
+    "db:migrate:local": "wrangler d1 execute massfront-accounts --file=migrations/0001-social-columns.sql --local",
+    "test": "node test/social.test.mjs"
   },
   "devDependencies": { "wrangler": "^4" }
 }

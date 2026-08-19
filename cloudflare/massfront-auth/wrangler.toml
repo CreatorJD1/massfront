@@ -26,6 +26,26 @@ binding       = "DB"
 database_name = "massfront-accounts"
 database_id = "e3c74e0d-59b8-427e-92b8-ea8a3bbd6573"
 
+# ---- e-mail verification -----------------------------------------------------
+# DEV_ECHO_CODE=1 makes POST /verify/request return the six-digit code in its own
+# response body. It exists so the verification path can be driven end to end
+# before a mail provider is wired up — see sendVerificationEmail() in
+# src/index.js and test/social.test.mjs. It is deliberately NOT set here:
+# setting it on a deployed worker turns "prove you own this inbox" into "ask
+# nicely", which is the entire value of verification. Use it only locally:
+#
+#   npx wrangler dev --local --var DEV_ECHO_CODE:1
+#
+# The provider key, when there is one, is a SECRET and never a var:
+#
+#   npx wrangler secret put MAIL_API_KEY
+#
+# ---- migrations ----------------------------------------------------------------
+# schema.sql is safe to re-run; migrations/0001-social-columns.sql is run ONCE
+# and must run AFTER it (see the header of that file):
+#
+#   npm run db:schema && npm run db:migrate
+
 [observability]
 enabled = true
 

@@ -67,3 +67,122 @@ CREATE TABLE IF NOT EXISTS attempts (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_attempts_lookup ON attempts(bucket, akey, created_at);
+
+-- ============================================================================
+-- SOCIAL — verification, friends, blocking, reports          (added 2026-08)
+-- ----------------------------------------------------------------------------
+-- Everything below is IF NOT EXISTS, exactly like the four tables above, so
+-- re-running this file is still a no-op. The four original tables are NOT
+-- touched by anything in this section.
+--
+-- TWO COLUMNS ON `users` CANNOT LIVE HERE. SQLite (and therefore D1) has no
+-- `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, so an ALTER in this file would
+-- make the file throw on its second run and stop being idempotent. They live
+-- in migrations/0001-social-columns.sql instead. MIGRATION ORDER:
+--
+--   1.  npx wrangler d1 execute massfront-accounts --file=schema.sql --remote
+--   2.  npx wrangler d1 execute massfront-accounts \
+--         --file=migrations/0001-social-columns.sql --remote      (ONCE, ever)
+--
+-- Step 2 is the only non-idempotent step in the project. Running it a second
+-- time fails with `duplicate column name: verified_at`, which means "already
+-- applied" and is safe to ignore — nothing is written in that case. Step 1 may
+-- be re-run at any time. A fresh database needs both, in that order.
+-- ============================================================================
+
+-- A pending e-mail verification, one row per user (the row is REPLACED when a
+-- new code is requested, so there is never more than one live code). The code
+-- itself is never stored: code_hash is `<saltHex>$<pbkdf2Hex>`, the same
+-- WebCrypto PBKDF2-SHA256 the passwords use, with a fresh random salt per
+-- issue. A six-digit code only has a million possibilities, so a plain digest
+-- would be trivially reversible from a database leak; salted PBKDF2 at the
+-- project's iteration floor is not, and `attempts` caps online guessing at
+-- VERIFY_MAX_ATTEMPTS before the row is destroyed.
+CREATE TABLE IF NOT EXISTS email_verifications (
+  user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  code_hash  TEXT NOT NULL,          -- '<saltHex>$<pbkdf2Hex>' — never the code
+  expires_at INTEGER NOT NULL,       -- unix ms
+  attempts   INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
+);
+
+-- A friendship is ONE row, not two. Storing it twice (a->b and b->a) means
+-- every write has to keep two rows consistent and every read has to dedupe;
+-- the CHECK below makes the single canonical row unforgeable — lo_id is always
+-- the smaller user id, so the primary key IS the pair identity and a duplicate
+-- friendship cannot be inserted from the other direction.
+CREATE TABLE IF NOT EXISTS friendships (
+  lo_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  hi_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (lo_id, hi_id),
+  CHECK (lo_id < hi_id)
+);
+/* The primary key already indexes lo_id; hi_id needs its own index because
+   "who are my friends" scans both columns. */
+CREATE INDEX IF NOT EXISTS idx_friendships_hi ON friendships(hi_id);
+
+-- Outstanding invitations. status: 'pending' | 'accepted' | 'declined'.
+CREATE TABLE IF NOT EXISTS friend_requests (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status       TEXT NOT NULL DEFAULT 'pending',
+  created_at   INTEGER NOT NULL,
+  responded_at INTEGER
+);
+/* PARTIAL unique index: one live invitation per ordered pair, while leaving
+   the historical accepted/declined rows unconstrained. A plain UNIQUE on
+   (from_id,to_id) would mean a declined request could never be re-sent. This
+   is what makes the dedupe in POST /social/friend/request a database
+   guarantee rather than a hopeful SELECT-then-INSERT race. */
+CREATE UNIQUE INDEX IF NOT EXISTS friend_requests_pending
+  ON friend_requests (from_id, to_id) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_friend_requests_inbox
+  ON friend_requests (to_id, status, created_at);
+
+-- Blocking is DIRECTIONAL as stored (blocker_id blocked blocked_id) and
+-- SYMMETRIC as enforced: every social action checks both directions, so the
+-- blocked player cannot reach the blocker either. Storing it one way keeps
+-- "who did I block" (the list the player manages) exact.
+CREATE TABLE IF NOT EXISTS blocks (
+  blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (blocker_id, blocked_id)
+);
+/* "am I blocked by them" is the other half of every check. */
+CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);
+
+-- Abuse reports. body_snapshot is a JSON blob captured at report time so the
+-- evidence survives the reported player editing or deleting whatever prompted
+-- it. It carries usernames and the reporter's reason — never an e-mail
+-- address; see the snapshot builder in src/index.js.
+CREATE TABLE IF NOT EXISTS reports (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  reporter_id   INTEGER NOT NULL,
+  subject_user  INTEGER NOT NULL,
+  body_snapshot TEXT,
+  created_at    INTEGER NOT NULL,
+  resolved      INTEGER NOT NULL DEFAULT 0
+);
+/* The moderation queue reads open reports oldest-first. */
+CREATE INDEX IF NOT EXISTS idx_reports_open ON reports(resolved, created_at);
+
+-- ----------------------------------------------------------------------------
+-- NOT WIRED UP. There are no message routes in this release and none are
+-- planned for it — direct messaging is a moderation surface that needs the
+-- reporting flow above to already be live and load-bearing first. The table
+-- shape is declared now only so the eventual migration is additive (routes,
+-- not a schema change) and so the account-deletion purge in src/index.js can
+-- already name it. Nothing reads or writes this table today.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS messages (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_id    INTEGER NOT NULL,
+  to_id      INTEGER NOT NULL,
+  body       TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  read_at    INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_messages_inbox ON messages(to_id, created_at);
