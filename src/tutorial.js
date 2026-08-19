@@ -956,8 +956,10 @@ function trainingSafety(){
   if(typeof AI!=='undefined'){
     AI.waveTimer=Math.max(AI.waveTimer||0,300); AI.harassTimer=Math.max(AI.harassTimer||0,300); AI.warned=false;
   }
-  if(typeof resM!=='undefined'&&typeof RES_MCAP!=='undefined') resM[0]=Math.min(RES_MCAP[0],Math.max(resM[0],620));
-  if(typeof resE!=='undefined'&&typeof RES_ECAP!=='undefined') resE[0]=Math.min(RES_ECAP[0],Math.max(resE[0],2200));
+  /* A FLOOR, not income - econFloorBanks says so in its name and keeps the
+     Math.min(cap,Math.max(cur,floor)) arithmetic verbatim. */
+  if(typeof econFloorBanks==='function') econFloorBanks(620,2200);
+
   if(typeof heroIdx==='number'&&heroIdx>=0&&ualive[heroIdx]) uhp[heroIdx]=Math.max(uhp[heroIdx],uhpm[heroIdx]*.72);
   var H=playerBld('hq'); if(H) H.hp=Math.max(H.hp,H.hpm*.75);
   var step=trainingStepId();

@@ -634,9 +634,9 @@ const INV_GEAR=[
    `apply(ty)` receives the locked TYPES index, or -1 for army-wide. */
 const INV_CONSUMABLES=[
  {id:'c_supply',rarity:'common',nm:'Supply Pack',em:'▰',scope:'army',
-  ds:'Next match: +220 starting mass',apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+220);}},
+  ds:'Next match: +220 starting mass',apply:()=>{credit(0,220,0);}},
  {id:'c_power',rarity:'uncommon',nm:'Charged Power Cell',em:'ϟ',scope:'army',
-  ds:'Next match: +900 starting energy',apply:()=>{resE[0]=Math.min(RES_ECAP[0],resE[0]+900);}},
+  ds:'Next match: +900 starting energy',apply:()=>{credit(0,0,900);}},
  {id:'c_nanites',rarity:'rare',nm:'Repair Nanites',em:'✚',scope:'type',
   ds:'Next match: +26% health, locked to one chassis',
   apply:(ty)=>{ if(ty>=0&&typeof typeHpMult!=='undefined') typeHpMult[ty]*=1.26; else resHpMult*=1.08; }},
@@ -652,12 +652,12 @@ const INV_CONSUMABLES=[
     of reducing "boosted rewards" to a line of temporary payout text. */
  {id:'c_standard_order',rarity:'uncommon',nm:'Skirmish Requisition',em:'⚔',scope:'army',mode:'standard',
   ds:'Standard victory supply: +280 starting mass and +800 starting energy',
-  apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+280);resE[0]=Math.min(RES_ECAP[0],resE[0]+800);}},
+  apply:()=>{credit(0,280,800);}},
  {id:'c_campaign_intel',rarity:'rare',nm:'Campaign Command Intel',em:'◇',scope:'army',mode:'campaign',
   ds:'Campaign mission supply: +6% army damage for one deployment',apply:()=>{armyDmgMult+=0.06;}},
  {id:'c_warfront_beacon',rarity:'epic',nm:'Warfront Logistics Beacon',em:'☷',scope:'army',mode:'mmo',
   ds:'MMO warfront supply: +400 starting mass and +1400 starting energy',
-  apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+400);resE[0]=Math.min(RES_ECAP[0],resE[0]+1400);}},
+  apply:()=>{credit(0,400,1400);}},
 ];
 function invConsumableScope(id){
   const c=INV_CONSUMABLES.find(x=>x.id===id);
@@ -824,7 +824,9 @@ function applyMetaPerks(){                    // call AFTER resetWorld, skirmish
      the previous match left behind. Drop Priority compounded 1.25x per tier per
      match — ten matches in with tier 2 it had multiplied by roughly fifty. */
   crateRate=crateRateBase;
-  if(o.cache){ resM[0]=Math.min(RES_MCAP[0],resM[0]+300); resE[0]=Math.min(RES_ECAP[0],resE[0]+1200); }
+  /* The loadout belongs to the HUMAN commander, never to a seat: credit with
+     no slot is the human bank by construction. */
+  if(o.cache){ credit(0,300,1200); }
   resHpMult*=1+0.08*(o.armor||0);
   armyDmgMult+=0.06*(o.targeting||0);
   bonusMass+=1.5*(o.trade||0); bonusEnergy+=5*(o.trade||0);

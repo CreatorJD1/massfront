@@ -1740,11 +1740,16 @@ function renderBldPanel(){ if(openBldGone()) return;
   const fb=$('bp_fire');
   if(fb){
     if(B.type==='nova'&&B.prog>=1){
-      const lowE=resE[0]<NOVA.e;
+      /* novaFire spends the wallet that OWNS the silo. Reading resE[0] here made
+         the button say READY on an ally Nova the ally could not afford, and
+         NEEDS ENERGY on one it could. Ask the same wallet the shot will bill. */
+      const novaBank=(typeof econBankE==='function'&&typeof commanderSlotForBuilding==='function')
+        ? econBankE(0,commanderSlotForBuilding(B)) : resE[0];
+      const lowE=novaBank<NOVA.e;
       fb.style.display='block';
       fb.disabled=B.cool>0||lowE;
       fb.textContent=B.cool>0? ('☄ CHARGING… '+Math.ceil(B.cool)+'s')
-                    : lowE? ('⚡ NEEDS '+NOVA.e+' ENERGY ('+Math.floor(resE[0])+')')
+                    : lowE? ('⚡ NEEDS '+NOVA.e+' ENERGY ('+Math.floor(novaBank)+')')
                           : '☄ FIRE NOVA — then tap any target';
     } else fb.style.display='none';
   }

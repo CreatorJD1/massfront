@@ -198,6 +198,50 @@ function drawEnergy(team,e,slot){    // power weapons sip the grid; returns 0..1
   return e>0?got/e:1;
 }
 
+/* ---- NAMED WHOLESALE BANK WRITES ---------------------------------------
+   credit() means somebody EARNED something and the right wallet has to be
+   found. These three are the only places that legitimately OVERWRITE a bank
+   outright - match init, God Mode, and the training floor - and they are now
+   named for what they do instead of hiding behind a Math.min that reads like
+   a credit. Keeping them here means the seat rules only ever have to be
+   taught to one file. */
+function econSetBanks(m,e,team){
+  /* Match init. Omitting team resets BOTH ledgers and both caps, which is
+     exactly what resetWorld has always done on the two lines this replaces. */
+  if(team==null){
+    resM[0]=resM[1]=m; resE[0]=resE[1]=e;
+    RES_MCAP[0]=RES_MCAP[1]=MCAP0; RES_ECAP[0]=RES_ECAP[1]=ECAP0;
+    return;
+  }
+  resM[team]=m; resE[team]=e;
+}
+function econFillBanks(team){
+  /* God Mode tops the ledger up every sim step. Fill to the CURRENT cap so a
+     Silo raised mid-cheat still lifts the ceiling. */
+  const t=team==null?0:team;
+  resM[t]=RES_MCAP[t]; resE[t]=RES_ECAP[t];
+}
+function econFloorBanks(m,e,team){
+  /* Training floor: raise a bank to a minimum, never lower it, never exceed
+     the cap. Math.min(cap,Math.max(cur,floor)) verbatim. */
+  const t=team==null?0:team;
+  if(m!=null) resM[t]=Math.min(RES_MCAP[t],Math.max(resM[t],m));
+  if(e!=null) resE[t]=Math.min(RES_ECAP[t],Math.max(resE[t],e));
+}
+/* Readable balance of the SAME wallet payStream/drawEnergy would touch.
+   Affordability checks that read resE[team] directly were correct only while
+   every team-0 structure shared one bank: an ally turret has to ask its own
+   seat, or it reads the human grid and then spends the human grid. The branch
+   below is deliberately identical to drawEnergy s, so a check and the spend it
+   guards can never disagree about which wallet is being asked. */
+function econBankM(team,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot); return S?(S.mass||0):0; }
+  return resM[team]||0;
+}
+function econBankE(team,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot); return S?(S.energy||0):0; }
+  return resE[team]||0;
+}
 /* addBld only stamps dep/geo when dist2<9 (~3wu). Placement allows 34wu, and
    session restore rounds structure coords, so a finished Extractor can sit on
    a live node with dep=-1 and pay nothing. Repair here — not in sim.js —

@@ -549,8 +549,10 @@ function resetWorld(){
   pFree=[]; pHigh=0; palive.fill(0); pSplit.fill(0);
   pSmokeT.fill(0);pFlightCue.fill(0);artShellSmoke.length=0;
   flife.fill(0); fCount=0; fHead=0;
-  resM[0]=resM[1]=260; resE[0]=resE[1]=1000;
-  RES_MCAP[0]=RES_MCAP[1]=MCAP0; RES_ECAP[0]=RES_ECAP[1]=ECAP0;
+  /* Wholesale reset, not a credit. econSetBanks also restores both caps,
+     which is why the RES_MCAP/RES_ECAP line that used to follow is gone. */
+  econSetBanks(260,1000);
+
   mSpend=eSpend=mSpendAcc=eSpendAcc=spendT=0; mWasted=0;
   aiHpMult=1;
   stats.kills=[0,0,0]; stats.built=[0,0]; stats.t=0; stats.nests=0; stats.reclaimed=0;
@@ -1379,7 +1381,7 @@ function frame(ts){
       /* God Mode is deliberately obvious and deterministic: the gold badge
          stays visible while the solo-test economy refills every sim step. */
       if(!demoMode&&matchLive&&META.settings.godMode){
-        resM[0]=RES_MCAP[0]; resE[0]=RES_ECAP[0];
+        econFillBanks(0);
         for(let k=0;k<abCool.length;k++) abCool[k]=0;
       }
       /* Only reel the camera in when the ship has genuinely left the view, and

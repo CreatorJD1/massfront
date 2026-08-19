@@ -1542,8 +1542,9 @@ function startUpgrade(b){
   if(U.req && !hasBld(B.team,U.req)) return 'Requires a '+BT[U.req].name;
   if(B.team===0 && U.clvl && heroLvl<U.clvl) return '🔒 Requires Commander level '+U.clvl;
   if(B.upT>0) return 'Already upgrading';
-  if(!canAfford(B.team,U.cm,U.ce)) return 'Need '+U.cm+' mass, '+U.ce+' energy';
-  pay(B.team,U.cm,U.ce);
+  const upSlot=commanderSlotForBuilding(B);
+  if(!canAfford(B.team,U.cm,U.ce,upSlot)) return 'Need '+U.cm+' mass, '+U.ce+' energy';
+  pay(B.team,U.cm,U.ce,upSlot);
   B.upT=U.t; B.upMax=U.t;
   return null;
 }
@@ -1934,7 +1935,7 @@ function damageBld(b,dmg,attTeam){
     if(attTeam===0) heroXP(26);
     if(B.type==='nest'&&attTeam===0){
       stats.nests=(stats.nests||0)+1;            // counted for daily orders
-      resM[0]=Math.min(RES_MCAP[0],resM[0]+200);
+      credit(0,200,0);
       heroXP(60);
       toast('🐛 Nest destroyed — +200 mass bounty!');
     }
@@ -2637,6 +2638,8 @@ function spawnResourceSiteCrate(){
   C.alt=0; C.site=true; C.siteName=S.site; C.announced=false;
   return C;
 }
+/* Unit that walked onto the crate this frame; applyCrate consumes it. */
+let mfCrateClaimer=-1;
 function crateTick(dt){
   if(!matchLive||demoMode) return;
   crateT-=dt;
@@ -2672,6 +2675,7 @@ function crateTick(dt){
     let got=-1;
     forUnitsIn(C.x,C.y,62,j=>{ if(got<0&&uteam[j]===0) got=j; });
     if(got>=0){
+      mfCrateClaimer=got;
       applyCrate(C.kind,C.x,C.y);
       const cc=C.kind.col||[255,225,140], burst=10+(C.kind.rarity||0)*3;
       addParticle(3,C.x,C.y,0,0,.8,150+(C.kind.rarity||0)*16,cc[0],cc[1],cc[2]);
@@ -2687,10 +2691,17 @@ function crateTick(dt){
   }
 }
 function applyCrate(k,x,y){
-  if(k.id==='mass'){ resM[0]=Math.min(RES_MCAP[0],resM[0]+450); pickupToast(k,'+450 MASS'); }
-  else if(k.id==='power'){ resE[0]=Math.min(RES_ECAP[0],resE[0]+1800); pickupToast(k,'+1,800 ENERGY'); }
+  /* The crate is claimed by whichever friendly unit walked onto it, and that
+     unit may belong to an ALLY seat: routing every pickup into the human bank
+     let an ally's scout bankroll the player. With no ally seat uCmd is -1 for
+     every team-0 unit, cs is null, and credit() lands on resM[0]/resE[0]
+     exactly as the Math.min lines it replaces did. */
+  const cu=mfCrateClaimer; mfCrateClaimer=-1;
+  const cs=(cu>=0&&typeof uCmd!=='undefined'&&uCmd[cu]>=0)?uCmd[cu]:null;
+  if(k.id==='mass'){ credit(0,450,0,cs); pickupToast(k,'+450 MASS'); }
+  else if(k.id==='power'){ credit(0,0,1800,cs); pickupToast(k,'+1,800 ENERGY'); }
   else if(k.id==='supply'){
-    resM[0]=Math.min(RES_MCAP[0],resM[0]+250);resE[0]=Math.min(RES_ECAP[0],resE[0]+900);
+    credit(0,250,900,cs);
     pickupToast(k,'+250 MASS · +900 ENERGY');
   }
   else if(k.id==='vet'){
@@ -2724,12 +2735,12 @@ function applyCrate(k,x,y){
     /* A reclaimed hulk pays out like any other salvage: the No Salvage wildcard
        and Salvage Rigs both apply, so a dead tank is worth exactly what the
        player's economy doctrine says wreckage is worth. */
-    resM[0]=Math.min(RES_MCAP[0],resM[0]+25*salvageMult);
+    credit(0,25*salvageMult,0,cs);
     pickupToast(k,'+25 MASS');
   }
   else if(k.id==='nova'){
     let n=0; for(const B of blds) if(B.alive&&B.team===0&&B.type==='nova'&&B.cool>0){ B.cool=0; n++; }
-    resE[0]=Math.min(RES_ECAP[0],resE[0]+1500);
+    credit(0,0,1500,cs);
     pickupToast(k,(n||0)+' NOVA RECHARGED · +1,500 ENERGY');
   }
   else if(k.id==='xp'){ heroXP(heroXpNext-heroXp+1); pickupToast(k,'COMMANDER LEVEL GAINED'); }
@@ -3590,8 +3601,7 @@ function collapseBlock(R,byTeam){
     if(Z.razed===Z.total&&Z.total>0&&byTeam===0){
       /* Clearing an entire district is a milestone worth chasing: a lump
          bonus, XP, and open ground you can now build on. */
-      resM[0]=Math.min(RES_MCAP[0],resM[0]+340);
-      resE[0]=Math.min(RES_ECAP[0],resE[0]+900);
+      credit(0,340,900);
       heroXP(120);
       toast('🏙 '+Z.name+' LEVELLED — +340 mass, +900 energy, ground cleared for building');
       sfx('deploy',Z.x,Z.y,1.4);
@@ -4160,14 +4170,20 @@ function fortTick(dt){
 function novaFire(b,wx,wy){
   const B=blds[b];
   if(!B||!B.alive||B.type!=='nova'||B.cool>0) return false;
-  if(resE[B.team]<NOVA.e){                          // the shot needs a charged grid
-    if(B.team===0) toast('⚡ NOVA needs '+NOVA.e+' energy — you have '+Math.floor(resE[0])+'. Build Reactors or a Silo');
+  /* The gate read resE[B.team] while the spend went through drawEnergy. For an
+     ALLY Nova those are two different wallets: it checked, and then drained,
+     the human grid. econBankE mirrors drawEnergy's own branch exactly, so gate
+     and spend can never disagree; for a player Nova the slot is -1 and this is
+     the old resE[0] read verbatim. */
+  const novaSlot=commanderSlotForBuilding(B);
+  if(econBankE(B.team,novaSlot)<NOVA.e){          // the shot needs a charged grid
+    if(B.team===0) toast('⚡ NOVA needs '+NOVA.e+' energy — you have '+Math.floor(econBankE(0,novaSlot))+'. Build Reactors or a Silo');
     return false;
   }
   /* Manual superweapon orders bypass the normal auto-target loop, so rotate
      the newly articulated launcher toward its strike point before firing. */
   B.tang=Math.atan2(wy-B.y,wx-B.x)+Math.PI/2;
-  drawEnergy(B.team,NOVA.e);
+  drawEnergy(B.team,NOVA.e,novaSlot);
   B.cool=NOVA.cd;
   /* Renderer draws orbital_up as a vertical lance from (x0,y0). Offsetting
      map-Y put the column south of the silo. */
@@ -4384,18 +4400,21 @@ function reclaimTick(dt){
     if(W.glow>0) W.glow-=dt;
     /* Fabricators run salvage drones over a wide area — that is the building's
        second job and the reason to plant one behind the front line.         */
-    let team=-1, rate=0;
+    let team=-1, rate=0, rslot=null;
     /* Iterate the FABRICATORS, not the buildings. The original scanned every
        structure in the game for every wreck, every tick — at the wreck cap and
        a few hundred structures that is six figures of distance tests per tick.
        There are only ever a handful of fabricators, and they are cached. */
     for(const B of fabList){
-      if(dist2(B.x,B.y,W.x,W.y)<FAB_RECL_R*FAB_RECL_R){ team=B.team; rate=FAB_RECL_RATE; break; }
+      if(dist2(B.x,B.y,W.x,W.y)<FAB_RECL_R*FAB_RECL_R){ team=B.team; rate=FAB_RECL_RATE;
+        const fslot=(typeof commanderSlotForBuilding==='function')?commanderSlotForBuilding(B):null;
+        rslot=(fslot!=null&&fslot>=0)?fslot:null; break; }
     }
     if(team<0){                       // otherwise: any unit standing on it strips it
       const u=nearestUnitAny(W.x,W.y,RECL_R);
       if(u>=0&&uteam[u]<2){
         team=uteam[u];
+        rslot=(typeof uCmd!=='undefined'&&uCmd[u]>=0)?uCmd[u]:null;
         /* A dedicated engineer should be the obvious salvage tool. Previously
            every chassis reclaimed at the same rate, so the Constructor had no
            economic identity after the base was standing. */
@@ -4403,18 +4422,25 @@ function reclaimTick(dt){
       }
     }
     if(team>=0){
+      /* rs is null for the human and for team 1; a non-null rs means an ALLY
+         seat owns this salvage and must be the one paid and credited. */
+      const rs=team===0?rslot:null, human=(team===0&&rs==null);
       const take=Math.min(W.mass, rate*dt);
       const takeE=Math.min(W.en, rate*dt*1.6);
       if(take>0){
-        resM[team]=Math.min(RES_MCAP[team], resM[team]+take*(team===0?salvageMult:1));
-        stats.reclaimed=(stats.reclaimed||0)+ (team===0?take:0);
+        if(team===0) credit(0,take*salvageMult,0,rs);
+        else resM[team]=Math.min(RES_MCAP[team], resM[team]+take);
+        stats.reclaimed=(stats.reclaimed||0)+ (human?take:0);
       }
-      if(takeE>0) resE[team]=Math.min(RES_ECAP[team], resE[team]+takeE*(team===0?salvageMult:1));
+      if(takeE>0){
+        if(team===0) credit(0,0,takeE*salvageMult,rs);
+        else resE[team]=Math.min(RES_ECAP[team], resE[team]+takeE);
+      }
       W.mass-=take; W.en-=takeE; W.glow=0.5;
       if(team===0&&(tick&15)===0) addParticle(0,W.x,W.y,rr(-6,6),rr(-16,-6),.45,9, 120,255,170);
-      if(team===0&&!reclTip&&W.kind===2){ reclTip=1; toast('♻ Salvaging ruins — raze derelict cities for mass and energy'); }
+      if(human&&!reclTip&&W.kind===2){ reclTip=1; toast('♻ Salvaging ruins — raze derelict cities for mass and energy'); }
       if(W.mass<=0.01&&W.en<=0.01){
-        if(team===0) heroXP(1);
+        if(human) heroXP(1);
         addParticle(0,W.x,W.y,0,0,.35,16, 140,255,190);
         wrecks.splice(w,1); continue;
       }
@@ -5694,7 +5720,13 @@ function prospectorAssistTick(i,dt){
   /* Same clamped-beam case as the extraction laser: LABOUR holds on a build
      site for its whole duration, so the weapon burst saturates there too. */
   addBeam(mx,my,B.x,B.y,3.2,90,225,255,.11,'mining');
-  if(B.type==='hq'&&uteam[i]<2){resM[uteam[i]]=Math.min(RES_MCAP[uteam[i]],resM[uteam[i]]+.42*dt);resE[uteam[i]]=Math.min(RES_ECAP[uteam[i]],resE[uteam[i]]+1.8*dt);}
+  /* The labourer's OWN seat is paid, matching the survey and salvage credits
+     above. An allied hauler working an allied HQ used to trickle into the
+     human bank. Team 1 keeps the raw mirror write on purpose. */
+  if(B.type==='hq'){
+    if(uteam[i]===0) credit(0,.42*dt,1.8*dt,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);
+    else if(uteam[i]===1){resM[1]=Math.min(RES_MCAP[1],resM[1]+.42*dt);resE[1]=Math.min(RES_ECAP[1],resE[1]+1.8*dt);}
+  }
   return true;
 }
 function prospectorSurveyTick(i,dt){
@@ -5736,7 +5768,9 @@ function minerUnitTick(i,dt){
   uMineT[i]-=dt;
   if(uMineT[i]<=0){
     uMineT[i]=.68; const before=D.tier,got=drainDeposit(D,1.15);
-    if(uteam[i]<2) resM[uteam[i]]=Math.min(RES_MCAP[uteam[i]],resM[uteam[i]]+got);
+    /* An ALLY Prospector's ore belongs to the ally seat, not to the player. */
+    if(uteam[i]===0) credit(0,got,0,(typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null);
+    else if(uteam[i]===1) resM[1]=Math.min(RES_MCAP[1],resM[1]+got);
     if((tick+i)%9===0) sfx('laser',ux[i],uy[i],.42);
     if(uteam[i]===0&&D.tier!==before){
       toast(D.tier?'◇ MOBILE MINING — field dropped to Tier '+D.tier:'◇ MOBILE MINING — field depleted');
@@ -5907,10 +5941,16 @@ function unitTick(dt){
       if(ustomp[i]<=0){
         ustomp[i]=0.5;
         const up=(T.upkeepE||0)*0.5;
-        if(uteam[i]>1 || resE[uteam[i]]>=up){
-          if(uteam[i]<2) resE[uteam[i]]-=up;
+        /* An ALLY Bulwark ran its shield off the HUMAN grid: both the gate and
+              the debit read resE[0] regardless of who owned the unit. upkeepE 5 on
+              a 0.5s pulse is 5 e/s per Bulwark, so a pack of six was 30 e/s
+                         silently disappearing from the player's own reactors. */
+        const bwSlot=(uteam[i]===0&&typeof uCmd!=='undefined'&&uCmd[i]>=0)?uCmd[i]:null;
+        if(uteam[i]>1 || econBankE(uteam[i],bwSlot)>=up){
+          if(bwSlot!=null) pay(0,0,up,bwSlot);
+          else if(uteam[i]<2) resE[uteam[i]]-=up;
           forUnitsIn(ux[i],uy[i],SHIELD_R,j=>{ if(uteam[j]===uteam[i]) ushielded[j]=0.7; });
-        } else if(uteam[i]===0 && (tick&63)===0) stallE=0.8;
+        } else if(uteam[i]===0 && bwSlot==null && (tick&63)===0) stallE=0.8;
       }
     }
     /* ---- SUPPORT UNITS: Warden field medic & Constructor engineer -----------
@@ -6492,13 +6532,17 @@ function bldTick(dt){
       if(B.buildPaidM==null){B.buildPaidM=T.cm;B.buildPaidE=T.ce;}
       const needM=Math.max(0,T.cm*nextProg-B.buildPaidM);
       const needE=Math.max(0,T.ce*nextProg-B.buildPaidE);
-      if(payStream(B.team,needM,needE)){
+      /* A streaming ALLY foundation billed the HUMAN bank: payStream with no
+         slot falls through to resM[0]. Latent only because ally bases spawn
+         prebuilt today; it arms itself the moment an ally lays a structure. */
+      const bSlot=commanderSlotForBuilding(B);
+      if(payStream(B.team,needM,needE,bSlot)){
         B.buildPaidM+=needM; B.buildPaidE+=needE; B.buildStalled=false;
         B.prog=nextProg;
         B.hp=Math.min(B.hpm,B.hpm*(.1+.9*B.prog));
       }else{
         B.buildStalled=true;
-        if(B.team===0){ if(resM[0]<needM)stallM=.8; if(resE[0]<needE)stallE=.8; }
+        if(B.team===0&&bSlot<0){ if(resM[0]<needM)stallM=.8; if(resE[0]<needE)stallE=.8; }
       }
       if((tick&7)===0) addParticle(2,B.x+rr(-B.r,B.r),B.y+rr(-B.r,B.r),rr(-4,4),rr(-10,-2),.3,3, 160,230,255);
       if(wasProg<1&&B.prog>=1){
@@ -6557,7 +6601,7 @@ function bldTick(dt){
       if(B.res>=0){
         const R=RESEARCH[B.res];
         const frac=dt/R.t;
-        if(payStream(B.team, R.cm*frac, R.ce*frac)){
+        if(payStream(B.team, R.cm*frac, R.ce*frac, commanderSlotForBuilding(B))){
           B.resT+=dt;
           if(B.team===0) bankResearchProgress(R.id,B.resT);
           if(B.resT>=R.t){ applyResearch(R.id); B.res=-1; B.resT=0; }
@@ -6700,7 +6744,7 @@ function bldTick(dt){
           if(intelCanTarget(j,B.team)&&!TYPES[utype[j]].air&&tgts.length<HELL.tgts) tgts.push(j);
         });
         if(tgts.length){
-          const pw=drawEnergy(B.team,HELL.e);            // brownouts slow the guns
+          const pw=drawEnergy(B.team,HELL.e,commanderSlotForBuilding(B)); // brownouts slow the guns
           B.cool=HELL.cool*(pw<0.5?2.2:1);
           B.tang=Math.atan2(uy[tgts[0]]-B.y,ux[tgts[0]]-B.x)+Math.PI/2;
           const ma=B.tang-Math.PI/2;
@@ -6728,7 +6772,7 @@ function bldTick(dt){
         const rng=ARC.rng*bldRngMul(B);
         const first=findEnemy(B.x,B.y,B.team,rng);
         if(first>=0){
-          const pw=drawEnergy(B.team,ARC.e);
+          const pw=drawEnergy(B.team,ARC.e,commanderSlotForBuilding(B));
           B.cool=ARC.cool*(pw<0.5?2.2:1);
           const chained=new Set([first]),bio=bfac==='horde',mac=bfac==='syndicate';
           const pre=stats.kills[B.team];
@@ -6766,7 +6810,7 @@ function bldTick(dt){
       if(e>=0){
         B.tang=Math.atan2(uy[e]-B.y,ux[e]-B.x)+Math.PI/2;
         if(B.cool<=0){
-          const pw=drawEnergy(B.team,RAIL.e);
+          const pw=drawEnergy(B.team,RAIL.e,commanderSlotForBuilding(B));
           B.cool=RAIL.cool*(pw<.5?2.1:1);
           const ma=B.tang-Math.PI/2;
           const mx=B.x+Math.cos(ma)*BT.rail.size*.715, my=B.y+Math.sin(ma)*BT.rail.size*.715;
@@ -6793,7 +6837,7 @@ function bldTick(dt){
       if(e>=0){
         B.tang=Math.atan2(uy[e]-B.y,ux[e]-B.x)+Math.PI/2;
         if(B.cool<=0){
-          const pw=drawEnergy(B.team,MINELASER.e);
+          const pw=drawEnergy(B.team,MINELASER.e,commanderSlotForBuilding(B));
           B.cool=MINELASER.cool*(pw<.5?2.15:1);
           const ma=B.tang-Math.PI/2;
           const mx=B.x+Math.cos(ma)*BT.minelaser.size*.72,my=B.y+Math.sin(ma)*BT.minelaser.size*.72;
@@ -6819,7 +6863,7 @@ function bldTick(dt){
           if(intelCanTarget(j,B.team)&&!TYPES[utype[j]].air&&targets.length<max) targets.push(j);
         });
         if(targets.length){
-          const pw=drawEnergy(B.team,MISSILE_BASTION.e);
+          const pw=drawEnergy(B.team,MISSILE_BASTION.e,commanderSlotForBuilding(B));
           B.cool=MISSILE_BASTION.cool*(pw<.5?2.2:1);
           B.tang=Math.atan2(uy[targets[0]]-B.y,ux[targets[0]]-B.x)+Math.PI/2;
           for(let n=0;n<targets.length;n++){
@@ -6839,7 +6883,7 @@ function bldTick(dt){
       if(e>=0){
         B.tang=Math.atan2(uy[e]-B.y,ux[e]-B.x)+Math.PI/2;
         if(B.cool<=0){
-          const pw=drawEnergy(B.team,PLASMA_CHARGER.e);
+          const pw=drawEnergy(B.team,PLASMA_CHARGER.e,commanderSlotForBuilding(B));
           B.cool=PLASMA_CHARGER.cool*(pw<.5?2.25:1);
           const bio=bfac==='horde',mac=bfac==='syndicate';
           const pk=fireProj(6,B.team,B.x,B.y,ux[e],uy[e],bio?125:150,PLASMA_CHARGER.dmg*bldDmgMul(B)*(bio?.88:1),PLASMA_CHARGER.aoe*(bio?1.28:1),e);
@@ -6871,7 +6915,7 @@ function bldTick(dt){
         }
         if(!B.sq.length) B.sq=null;
       } else if(B.cool>0){                                     // CHARGING
-        if(payStream(B.team,0,(STORM.e/STORM.cd)*dt)){
+        if(payStream(B.team,0,(STORM.e/STORM.cd)*dt,commanderSlotForBuilding(B))){
           B.cool-=dt;
           if(B.cool<=0){
             B.cool=0;
@@ -6996,8 +7040,8 @@ function bldTick(dt){
         const speed=(B.team===1?aiBuildMult:playerBuildMult)*facSpeed*(1+0.12*Math.min(2,B.adj||0))*fortOf(B.team).prod*tractor;
         const frac=dt*speed/T.bt;
         const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,B.team):{m:T.cm,e:T.ce};
-        if(!payStream(B.team, facCost.m*frac, facCost.e*frac)){
-          if(B.team===0){ if(resM[0]<facCost.m*frac) stallM=0.8; if(resE[0]<facCost.e*frac) stallE=0.8; }
+        if(!payStream(B.team, facCost.m*frac, facCost.e*frac, cmdSlot)){
+          if(B.team===0&&cmdSlot<0){ if(resM[0]<facCost.m*frac) stallM=0.8; if(resE[0]<facCost.e*frac) stallE=0.8; }
           continue;
         }
         B.prodT+=dt*speed;
