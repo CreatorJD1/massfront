@@ -111,7 +111,11 @@ $g=[regex]::Replace($g,'versionName\s+"[^"]+"','versionName "'+$Version+'"')
 
 Run 'Bundle syntax gate' { node tools/bundle.mjs }
 Run 'Stage web build' { node tools/pack-www.mjs }
-Run 'Sync Android wrapper' { & 'C:\Program Files\nodejs\npx.cmd' cap sync android }
+if($PatchFrom){
+  Write-Host "Hotfix: skipping Android wrapper sync (a delta cannot change the APK)." -ForegroundColor Yellow
+} else {
+  Run 'Sync Android wrapper' { & 'C:\Program Files\nodejs\npx.cmd' cap sync android }
+}
 
 $jdk=(Resolve-Path '.toolchains/jdk-21/jdk-21.0.12+8').Path
 $sdk=(Resolve-Path '.toolchains/android-sdk').Path
@@ -134,7 +138,11 @@ finally { Pop-Location }
 
 $apk="releases/MASSFRONT-v$Version-mobile-install.apk"
 $env:ANDROID_BUILD_TOOLS=(Resolve-Path '.toolchains/android-sdk/build-tools/*' | Sort-Object Path -Descending | Select-Object -First 1).Path
-Run 'Optimize and sign APK' { & 'C:\Program Files\Git\bin\bash.exe' -lc "export PATH=/usr/bin:/bin:`$PATH; bash tools/shrink-apk.sh android/app/build/outputs/apk/debug/app-debug.apk '$apk'" }
+if($PatchFrom){
+  Write-Host "Hotfix: skipping APK build. Devices keep the 1.33.x installer they already have." -ForegroundColor Yellow
+} else {
+  Run 'Optimize and sign APK' { & 'C:\Program Files\Git\bin\bash.exe' -lc "export PATH=/usr/bin:/bin:`$PATH; bash tools/shrink-apk.sh android/app/build/outputs/apk/debug/app-debug.apk '$apk'" }
+}
 Run 'Build OTA patch' { node tools/bundle-update.mjs $Version }
 
 # The OTA is a per-file payload now: a staging folder plus an index carrying
@@ -273,7 +281,11 @@ $source="releases/MASSFRONT-v$Version-source.zip"
 if(Test-Path $source){ Remove-Item -LiteralPath $source -Force }
 $archiveItems=@(Get-ChildItem -LiteralPath $stage -Force)
 Need ($archiveItems.Count -gt 0) "Source archive staging is empty; refusing to publish an unusable handoff."
-Compress-Archive -Path $archiveItems.FullName -DestinationPath $source -CompressionLevel Optimal
+if($PatchFrom){
+  Write-Host "Hotfix: skipping the ~1 GB source archive. The previous release archive still stands." -ForegroundColor Yellow
+} else {
+  Compress-Archive -Path $archiveItems.FullName -DestinationPath $source -CompressionLevel Optimal
+}
 Need ((Get-Item -LiteralPath $source).Length -gt 1048576) "Source archive is implausibly small; refusing to publish an unusable handoff."
 Remove-Item -LiteralPath $stage -Recurse -Force
 
@@ -300,12 +312,20 @@ if($PatchFrom){
 } else {
   Run 'Publish OTA payload' { & $Hf upload $Repo $otaStage "v$Version" --type dataset --commit-message "Publish MASSFRONT v$Version OTA payload" }
 }
-Run 'Publish Android installer' { & $Hf upload $Repo $apk "MASSFRONT-v$Version-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer" }
+if($PatchFrom){
+  Write-Host "Hotfix: skipping this upload - the APK is unchanged." -ForegroundColor Yellow
+} else {
+  Run 'Publish Android installer' { & $Hf upload $Repo $apk "MASSFRONT-v$Version-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer" }
+}
 foreach($x in $extraEntries){
   $xPath=$x.path; $xLocal=$x.local
   Run "Publish extra artifact ($xPath)" { & $Hf upload $Repo $xLocal $xPath --type dataset --commit-message "Publish MASSFRONT v$Version artifact $xPath" }
 }
-Run 'Publish source archive' { & $Hf upload $Repo $source "MASSFRONT-v$Version-source.zip" --type dataset --commit-message "Publish MASSFRONT v$Version source archive" }
+if($PatchFrom){
+  Write-Host "Hotfix: skipping this upload - the source archive is unchanged." -ForegroundColor Yellow
+} else {
+  Run 'Publish source archive' { & $Hf upload $Repo $source "MASSFRONT-v$Version-source.zip" --type dataset --commit-message "Publish MASSFRONT v$Version source archive" }
+}
 Run 'Publish historical manifest' { & $Hf upload $Repo "releases/update-v$Version.json" "update-v$Version.json" --type dataset --commit-message "Publish MASSFRONT v$Version manifest" }
 Run 'Publish release manifest mirror' { & $Hf upload $Repo 'releases/MASSFRONT-update.json' 'MASSFRONT-update.json' --type dataset --commit-message "Publish MASSFRONT v$Version updater mirror" }
 Run 'Activate live updater last' { & $Hf upload $Repo 'update.json' 'update.json' --type dataset --commit-message "Activate MASSFRONT v$Version live updater" }
