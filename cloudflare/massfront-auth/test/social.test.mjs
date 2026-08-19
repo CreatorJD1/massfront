@@ -571,10 +571,14 @@ let reqId = 0;
   const mutated = SRC.replace("  uname_check_ip: { limit: 60", "  uname_check_ip_RENAMED: { limit: 60");
   check('CONTROL the mutation applied', mutated !== SRC && mutated.indexOf('uname_check_ip_RENAMED') > 0);
   const brokenWorker = await loadWorker(mutated);
-  const denied = await call(brokenWorker, env, 'GET', '/username/check?u=alice', { ip: '192.0.2.9' });
+  /* /username/check requires a session on this branch (5e52673 closed it as a
+     public handle-existence oracle), so these probes must authenticate or they
+     401 before the rate limiter is ever consulted and the assertion below
+     stops testing what it claims to test. The bar is unchanged: 429, not 500. */
+  const denied = await call(brokenWorker, env, 'GET', '/username/check?u=alice', { ip: '192.0.2.9', token: zed.token });
   eq('unknown bucket denies (429, not 500)', denied.status, 429);
   eq('unknown bucket error', denied.body.error, 'rate_limited');
-  const allowed = await call(worker, env, 'GET', '/username/check?u=alice', { ip: '192.0.2.9' });
+  const allowed = await call(worker, env, 'GET', '/username/check?u=alice', { ip: '192.0.2.9', token: zed.token });
   eq('CONTROL the same call succeeds with the bucket declared', allowed.status, 200);
 }
 
