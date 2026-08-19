@@ -370,8 +370,15 @@ function sessRestoreInto(s){
     }
     /* Player ledger first. Seat wallets then overwrite the team-1 mirror so a
        1v2/1v3 resume does not dump three mex belts into one shared bank. */
-    if(typeof resM!=='undefined'&&s.resM){ resM[0]=s.resM[0]; if(!s.wallets) resM[1]=s.resM[1]; }
-    if(typeof resE!=='undefined'&&s.resE){ resE[0]=s.resE[0]; if(!s.wallets) resE[1]=s.resE[1]; }
+    /* A wholesale RESTORE, not income - econSetBanks, never credit(). Called
+       PER TEAM on purpose: the team-less form also resets both caps to
+       MCAP0/ECAP0, which would silently wipe the silo bonuses this save is
+       carrying. Keeps the A6 invariant true without pretending a restore is an
+       earning. */
+    if(typeof econSetBanks==='function'&&s.resM&&s.resE){
+      econSetBanks(s.resM[0], s.resE[0], 0);
+      if(!s.wallets) econSetBanks(s.resM[1], s.resE[1], 1);
+    }
     sessApplyWallets(s.wallets);
     sessRestoreOrders(U, spawned, uMap, bMap, s.patrols);
     if(typeof stats!=='undefined'){

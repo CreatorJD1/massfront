@@ -1040,8 +1040,11 @@ function fireLance(wx,wy){
 const _econTick=econTick;
 econTick=function(dt){
   _econTick(dt);
-  resM[0]=Math.min(RES_MCAP[0],resM[0]+bonusMass*dt);
-  resE[0]=Math.min(RES_ECAP[0],resE[0]+bonusEnergy*dt);
+  /* Meta-perk income, so it belongs to the human by definition - but it goes
+     through credit() like every other income event, which clamps to cap and
+     keeps the A6 invariant (no direct bank writes outside economy.js) true.
+     Behaviour is identical: credit() applies the same Math.min. */
+  credit(0,bonusMass*dt,bonusEnergy*dt);
   mRate+=bonusMass; eRate+=bonusEnergy;
 };
 
