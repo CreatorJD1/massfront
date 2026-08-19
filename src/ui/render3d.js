@@ -2299,6 +2299,25 @@ function render(dtDraw){
       addBeamBurst(bm.x1,bm.y1,h1,bm.w*3.2,155,225,255,lf*220);
       continue;
     }
+    if(sty==='mining'){
+      /* THE WHITE DISC. Extraction (TITHE) and build-assist (LABOUR) clamp a
+         beam on ONE fixed point for as long as they work, so every frame
+         repaints the same texels. The weapon path is built for a transient,
+         moving terminus: addBeamBurst lays 8 additive sprites there including
+         a 255,253,244 core at full alpha, and addBeam3D rescales rad to
+         max(4.80,rad*5.85) then draws ribbons at width*5.10 — ~116 world
+         units — the innermost white at a*1.40, plus addBeamPathFx knots and a
+         muzzle burst. One beam landed several times over the 0.936 bright-pass
+         and bloom spread it into the disc that swallowed the extractor and the
+         node under it. Verified by suppressing addBeam at the node: disc gone;
+         suppressing the particles changed nothing.
+         Two thin ribbons in the tier colour and a soft terminus. No white
+         core, no knots, no burst, and do NOT route this through addBeam3D. */
+      addBeamRibbon(sprites.glow,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*2.2,br,bgc,bbc,lf*70,150);
+      addBeamRibbon(sprites.glow,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*0.9,br,bgc,bbc,lf*95,150);
+      bbAdd.add(sprites.glow,bm.x1,bm.y1,h1,bm.w*1.5,0,br,bgc,bbc,lf*48);
+      continue;
+    }
     const pulse=sty==='thermal'?(0.78+Math.sin(t*24+bm.seed)*0.22):1;
     const outer=sty==='lance'?2.85:sty==='thermal'?2.35:sty==='repair'?1.55:sty==='sniper'?1.48:sty==='tracer'?1.42:1.58;
     addBeam3D(FX.beam,bm.x0,h0,bm.y0,bm.x1,h1,bm.y1,bm.w*outer*pulse,br,bgc,bbc,lf*(sty==='tracer'?250:245));
@@ -2488,6 +2507,21 @@ function render(dtDraw){
     if(!fogEntityVisible(Bd.team,Bd.x,Bd.y)) continue;
     const sz=BT[Bd.type].size, H=BT[Bd.type].placement==='water'?0:gh(Bd.x,Bd.y);
     if(Bd.type==='geo')  bbAdd.add(sprites.glow,Bd.x,Bd.y,H+sz*0.85,sz*0.55,0,80,220,255,170);
+    if(Bd.type==='mex'){
+      /* Extraction glow, deliberately SLIGHT. 1.33.42 stripped the node halo,
+         the ring, the vein ribbons and the standing crystal pools in one pass
+         to kill the white disc — which left a finished extractor with no
+         readback at all. What bloomed was the STACK: five additive sprites at
+         alpha 140-255 over the same texels, which saturates before bloom even
+         samples it. One sprite in the 40s does not. Do not add a second.
+         Tier only shifts hue: a rich node should be legible without being
+         brighter, or the disc comes back on exactly the pads that had it. */
+      const mD=(Bd.dep>=0&&deposits[Bd.dep])||null;
+      const mTier=mD?depositTier(mD):1;
+      const mc=mTier===3?[206,150,255]:mTier===2?[120,232,188]:[120,214,255];
+      const mPulse=0.88+Math.sin(t*2.2+(Bd.anim||0))*0.12;
+      bbAdd.add(sprites.glow,Bd.x,Bd.y,H+sz*0.55,sz*0.34*mPulse,0,mc[0],mc[1],mc[2],46);
+    }
     if(Bd.type==='fab')  bbAdd.add(sprites.glow,Bd.x,Bd.y,H+sz*0.95,sz*0.5*(1+Math.abs(Math.sin(t*5))*0.35),0,255,170,70,230);
     if(Bd.type==='arc')  bbAdd.add(sprites.glow,Bd.x,Bd.y,H+sz*1.15,sz*0.42,0,150,230,255,210);
     if(Bd.type==='rail'){

@@ -920,6 +920,15 @@ function deployCarrier(){
 }
 
 function newDemo(){
+  /* The 10,000-unit Mega / SANDBOX bench is GONE. It was a player-facing
+     stress toy that no longer represented the game, and it sat on the front
+     strip beside CAREER and INTEL as if it were a mode. newDemo() now serves
+     only the three hidden QA capture labs; with no lab token in the URL there
+     is nothing to enter, so bail before touching world or HUD state. */
+  const cannonLab=location.search.indexOf('cannonshow=1')>=0;
+  const defenseLab=location.search.indexOf('defenseshow=1')>=0;
+  const ammoLab=location.search.indexOf('ammoshow=1')>=0;
+  if(!cannonLab&&!defenseLab&&!ammoLab) return;
   stopAttract();
   resetWorld();
   demoMode=true; matchLive=true;
@@ -930,9 +939,6 @@ function newDemo(){
   fogOn=false;
   /* Hidden device-QA layout. `?cannonshow=1` keeps the real combat simulation
      but brings smaller opposing lines into cannon range for readable captures. */
-  const cannonLab=location.search.indexOf('cannonshow=1')>=0;
-  const defenseLab=location.search.indexOf('defenseshow=1')>=0;
-  const ammoLab=location.search.indexOf('ammoshow=1')>=0;
   if(defenseLab){
     const cx=MAP/2, cy=MAP/2+45, g=v=>Math.round(v/SNAP_GRID)*SNAP_GRID;
     const base=[
@@ -983,8 +989,8 @@ function newDemo(){
     toast('⚡ AMMUNITION LAB — 24 mirrored weapon duels running live');
     return;
   }
-  const perSide=cannonLab?72:5000;
-  const cols=cannonLab?12:100;
+  /* 72 a side, not 5000: the only caller left is the cannon capture lab. */
+  const perSide=72, cols=12;
   for(let k=0;k<perSide;k++){
     const col=k%cols, row=(k/cols)|0;
     /* The stress battle also doubles as a visual combat showcase. Keep the
@@ -1004,7 +1010,7 @@ function newDemo(){
   }
   cam.x=MAP/2; cam.y=MAP/2; orthoSpan=distTarget=cannonLab?720:3200; clampCam(); camUpdateMatrices();
   running=true; paused=false;
-  toast(cannonLab?'💥 COMMANDER CANNON QA — live damage and effects':'🔥 10,000 units engaged — pinch to zoom into the carnage');
+  toast('💥 COMMANDER CANNON QA — live damage and effects');
 }
 
 function checkVictory(){
@@ -2230,7 +2236,6 @@ function wire(){
     if(e&&e.target&&e.target.closest&&e.target.closest('button')) return;
     initAudio(); sfx('ui'); renderProfile(); showFrontScreen('profileScr');
   });
-  mfBindTap($('demoBtn'),()=>{ initAudio(); hideFrontScreens(); applyTheme(); newDemo(); sfx('ui'); });
   mfBindTap($('restartBtn'),returnToMainMenu);
   const goCont=$('goContinueBtn');
   if(goCont&&goCont.dataset.bound!=='1'){

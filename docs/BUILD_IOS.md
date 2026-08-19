@@ -116,6 +116,11 @@ figures. 9+ is the usual outcome; 12+ if you describe it conservatively.
 *Privacy* — the game collects nothing and makes no network requests. Declare
 "Data Not Collected", which is the simplest possible nutrition label.
 
-*Screenshots* — 6.7" and 6.5" iPhone sizes are required. The Mega Battle mode is
-the single most convincing frame you can capture, and the base-building view is
-the one that communicates what the game is.
+*Screenshots* — 6.7" and 6.5" iPhone sizes are required. The base-building view
+is the one that communicates what the game is; for the action frame, capture a
+live match at command zoom with a full army engaged.
+
+The Mega Battle / SANDBOX mode was removed in 1.33.45 — it was a 10,000-unit
+bench that no longer represented the game, and it sat on the front strip as if
+it were a mode. It used to be the recommended screenshot source, so capture
+from a real match instead.

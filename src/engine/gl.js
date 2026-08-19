@@ -3054,6 +3054,17 @@ function restampResourceNodesInTex(sx,sy,w,h){
   if(!terrainCanvas||typeof deposits==='undefined')return;
   const k=TS/MAP,c=terrainCanvas.getContext('2d'),pad=90;
   const x0=sx/k-pad,y0=sy/k-pad,x1=(sx+w)/k+pad,y1=(sy+h)/k+pad;
+  /* CLIP to the rect the caller is going to upload. The pad above is a node
+     PICKER — a node just outside the region still owns cracks that reach into
+     it — but painting the whole field unclipped wrote up to pad*k texels of
+     canvas that no texSubImage2D covers, so the CPU canvas and the GPU texture
+     drifted apart until some later unrelated upload happened to include them.
+     Worse, the strokes are alpha-blended and the PRNG is seeded from N.x/N.y,
+     so every restamp lays byte-identical geometry over the margin: .72 twice
+     is .92, three times .98. Nodes beside heavy construction crept to solid
+     black while identical nodes elsewhere stayed at .72. */
+  c.save();
+  c.beginPath();c.rect(sx,sy,w,h);c.clip();
   for(const D of deposits){
     if(D.x<x0||D.x>x1||D.y<y0||D.y>y1)continue;
     paintResourceGroundNode(c,D,'mass',typeof depositTier==='function'?depositTier(D):D.tier||1,false);
@@ -3062,6 +3073,7 @@ function restampResourceNodesInTex(sx,sy,w,h){
     if(G.x<x0||G.x>x1||G.y<y0||G.y>y1)continue;
     paintResourceGroundNode(c,G,'energy',typeof geyserTier==='function'?geyserTier(G):(G.taken?2:3),false);
   }
+  c.restore();
 }
 function refreshResourceTerrainNode(N,kind,before,after){
   if(!terrainCanvas||before===after)return;

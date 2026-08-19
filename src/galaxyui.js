@@ -1074,7 +1074,7 @@ function mfRenameFrontNav(){
   const start=$('startBtn');if(start){start.innerHTML='&#9654;&nbsp;DEPLOY';start.setAttribute('aria-label','Open deployment war table');}
   const grid={opsBtn:['&#9876;','OPERATIONS'],devBtn:['&#9672;','RESEARCH'],armoryBtn:['&#11041;','ARSENAL'],dailyBtn:['&#10003;','CONTRACTS']};
   for(const id of Object.keys(grid)){const b=$(id),v=grid[id];if(!b)continue;b.innerHTML='<span class="gEm">'+v[0]+'</span>'+v[1]+(id==='dailyBtn'?'<span class="gDot" id="dailyDot"></span>':'');}
-  const strip={profileBtn:'CAREER',dossierBtn:'INTEL',demoBtn:'SANDBOX',settingsBtn:'SETTINGS'};
+  const strip={profileBtn:'CAREER',dossierBtn:'INTEL',settingsBtn:'SETTINGS'};
   for(const id of Object.keys(strip)){const b=$(id),s=b&&b.querySelector('span:last-child');if(s)s.textContent=strip[id];}
   const title=document.querySelector('#armory>h2'),sub=document.querySelector('#armory>.armorySub');if(title)title.textContent='ARSENAL';if(sub)sub.textContent='Market · account vault · mission loadout';
 }
