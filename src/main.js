@@ -2708,6 +2708,16 @@ async function boot(){
   initBillboards();              // sprite layer for smoke, fire and energy
   initModels();                  // procedural geometry for every unit, structure and prop
   atlasTex=buildAtlas();         // (2D atlas retained for HUD icons and the minimap)
+  /* Baked unit sheet. loadUnitSheet had NO call site anywhere in the tree, so
+     unitTexReady stayed false forever and shatterFrame (sim.js) returned on its
+     first line - meaning large units died without their textured shatter, while
+     the 1.62 MB sheet shipped in every payload regardless. Both UNIT_ROWS and
+     UNIT_SHEET_B64 are already loaded by the manifest; only the call was
+     missing, and git shows it arriving with the reconstructed baseline rather
+     than being deliberately retired. Async and self-contained: it decodes an
+     image and flips unitTexReady when ready, so a slow decode costs nothing at
+     boot and simply leaves shatter off until it lands. */
+  loadUnitSheet();
   if(typeof mfIconInitGL==='function') mfIconInitGL();   // tactical icon sheet + its batch
   buildDetailTex();
   loadTerrainTextures();   // real tileable ground art (async decode)

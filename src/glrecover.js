@@ -74,6 +74,9 @@ function glrRebuildResources(){
   step('initModels',    ()=>initModels());
   step('buildAtlas',    ()=>{ if(typeof buildAtlas==='function') atlasTex=buildAtlas(); });
   step('mfIconInitGL',  ()=>{ if(typeof mfIconInitGL==='function') mfIconInitGL(); });
+  /* unitTex belongs to the lost context; without this, shatter silently stops
+     working for the rest of the session after a context restore. */
+  step('loadUnitSheet', ()=>{ if(typeof loadUnitSheet==='function') loadUnitSheet(); });
   step('buildDetailTex',()=>{ if(typeof buildDetailTex==='function') buildDetailTex(); });
   step('terrainTextures',()=>{ terrGroundTex=terrSoilTex=terrPaveTex=terrGrassTex=null;
     terrGroundNrm=terrSoilNrm=terrPaveNrm=terrGrassNrm=null;

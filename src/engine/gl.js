@@ -5167,6 +5167,10 @@ function deformMaintain(dt){
 let unitTex=null, unitTexReady=false;
 const UNIT_UV={};              // name → [32 uv rects]
 function loadUnitSheet(){
+  /* Callable more than once - glrecover re-runs it after a lost context. Drop
+     readiness first: unitTex belongs to the dead context, and anything drawing
+     from it in the gap would sample a stale handle. */
+  unitTexReady=false; unitTex=null;
   try{
     const S=4096, e=0.0008;
     for(const name in UNIT_ROWS){
