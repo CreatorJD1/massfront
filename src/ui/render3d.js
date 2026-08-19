@@ -2139,6 +2139,19 @@ function render(dtDraw){
   /* Bloom is extracted first so the ocean is not a bright-pass source.
      Depth stays the opaque scene, so hulls still occlude the sheet. */
   if(typeof mfGfxScissor==='function') mfGfxScissor(false);
+  /* VOLUMETRICS. This is the LAST point in the frame where a pass can still
+     reach the bright pass: aoExtractBloom() is the very next line, and
+     everything after it (water, the additive block, billboards, gpufx) is
+     invisible to bloom — the same reasoning already recorded further down
+     this file. A fireball with no bloom in an RGBA8 buffer is a flat orange
+     blob, so the raymarch composites HERE. Depth is complete (opaques, CSM,
+     units and modules all flushed; the decals above write no depth), AO is
+     already resolved, and the scissor rect is off as of the line above.
+     volFxDraw restores blend-off / depth-on / depthMask-true / cull-on and
+     leaves aoFB2 + aoDepth bound at aoW x aoH exactly as it found them.
+     Inert unless GFX volSteps>0 and the offscreen path is up; the sprite
+     smoke path is the fallback and is untouched. */
+  if(aoActive&&typeof volFxDraw==='function') volFxDraw(dtDraw,Sun);
   if(aoActive&&typeof aoExtractBloom==='function') aoExtractBloom();
   if(waterIdxCount){
     if((tick&3)===0) animateWater(t);
@@ -2590,14 +2603,19 @@ function render(dtDraw){
       /* Hot early, smoke late. Fire is additive because it emits light; smoke
          is alpha because it OCCLUDES - and that hand-over is most of why a
          real blast reads as mass rather than as a glow. */
-      const hot=Math.max(0.0,1.0-age*2.0);
+      /* A dark puff is SMOKE and never lights anything: it exists to occlude
+         and to give the blast an outline. A bright puff is the core. */
+      const lum=fcr[i]+fcg[i]+fcb[i];
+      const isSmoke=lum<330.0;
+      const hot=isSmoke?0.0:Math.max(0.0,1.0-age*2.0);
       if(hot>0.04)
         bbAdd.add(sprites.fireball||sFireB,X,Y,pz+S*.12,S*(0.55+age*0.85),yaw,
           255,(120+130*hot)|0,(35+150*hot*hot)|0,(235*lf*hot+38*lf)|0);
-      const smoke=Math.min(1.0,age*1.45);
+      const smoke=isSmoke?Math.min(1.0,0.35+age*0.9):Math.min(1.0,age*1.45);
       if(smoke>0.05)
         bbAlpha.add(sSmokeB,X,Y,pz+S*.16,S*(0.70+age*1.10),yaw*0.6,
-          92,84,78,(150*lf*smoke)|0);
+          isSmoke?(38+18*age)|0:92, isSmoke?(33+16*age)|0:84, isSmoke?(31+15*age)|0:78,
+          (( isSmoke?190:150 )*lf*smoke)|0);
       if(hot>0.15)
         bbAdd.add(sGlowB,X,Y,pz+1.4,S*0.95,0,255,135,55,(52*lf*hot)|0);
     } else if(ty===7){                        // ballistic solid debris

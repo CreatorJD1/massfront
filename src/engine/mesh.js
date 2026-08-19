@@ -2047,8 +2047,20 @@ void main(){
   for(int bi=0;bi<uBurnN;bi++){
     vec4 B=uBurns[bi];
     float bd=distance(wxz,B.xy);
-    if(bd>=B.z) continue;
-    float m=1.0-smoothstep(B.z*0.38,B.z,bd);
+    /* IRREGULAR EDGE. A radial smoothstep is a perfect circle by definition -
+       that circle is what read as a 'glowing disc'. Two octaves of angular
+       noise, seeded from the burn's own world position so it is stable for the
+       life of the burn, push the rim in and out like a real scorch. */
+    vec2 bdir=(wxz-B.xy)/max(bd,0.001);
+    float bang=atan(bdir.y,bdir.x);
+    float lobe=sin(bang*3.0+B.x*0.031)*0.5+sin(bang*7.0-B.y*0.027)*0.28
+             +sin(bang*13.0+B.x*0.019-B.y*0.013)*0.13;
+    float bRad=B.z*(0.80+0.26*lobe);
+    if(bd>=bRad) continue;
+    float m=1.0-smoothstep(bRad*0.30,bRad,bd);
+    /* fine crust break-up so the interior is charcoal, not a flat tint */
+    float crust=mfH21(wxz*0.62+B.xy*0.05)*0.6+mfH21(wxz*1.9-B.xy*0.03)*0.4;
+    m*=0.62+0.55*crust;
     float cool=B.w;
     if(uBurnKind[bi]>2.5){
       /* URBAN ASH / SOOT — explosion aftermath over hardscape pavement.
