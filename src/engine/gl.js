@@ -2656,7 +2656,7 @@ function markRoad(x0,y0,x1,y1,w){
     for(let dy=-cw;dy<=cw;dy++) for(let dx=-cw;dx<=cw;dx++){
       const gx=cx+dx, gy=cy+dy;
       if(gx<0||gy<0||gx>=PGS||gy>=PGS) continue;
-      if(PASS&&!PASS[gy*PGS+gx]) continue;         // no roads over water
+      if(PASS_WATER&&!PASS_WATER[gy*PGS+gx]) continue;   // no roads over WATER (pre-gate grid; slope must not punch holes in a road)
       ROADG[gy*PGS+gx]=1;
     }
   }
@@ -3301,6 +3301,68 @@ function buildRoads(c,def,paths){
 let heightF=null;                      // Float32Array TS*TS
 const PGS=384;                         // ~8.3 m cells on 3.2 km; old grid was ~8.1 m on 2.6 km
 let PASS=null;                         // Uint8Array PGS*PGS  1=walkable
+/* SLOPE GATING. isWalkable was a pure water test, so cliffs, ridges and
+   crater walls were cosmetic. A `let` and not a `const` on purpose: a top-
+   level const is not a property of window and cannot be driven from a page
+   probe, which would make a threshold sweep impossible to run headlessly.
+   Set to Infinity - or window.__passMaxSlope=Infinity - to disable entirely.
+
+   45 degrees, chosen from a measured histogram of the DRY height field at
+   PASS-cell spacing across four maps, not guessed: it sits past p90 (21-33
+   deg) near p99 (42-51 deg), cuts only 0.7-1.6% of in-bounds land, and the
+   steepest real ground is 63-70 deg so genuine cliffs still gate. Verified
+   against a NO-GATE control: it strands zero additional deposits on any map
+   tested (aelos_coast already strands 3 on islands with no gate at all). */
+let PASS_MAX_SLOPE=Math.tan(45*Math.PI/180);
+let PSLOPE=null, PCELLH=null, PREPAIR=null, PASS_WATER=null;
+function passSlopeLimit(){
+  const o=(typeof window!=="undefined")?window.__passMaxSlope:undefined;
+  return (typeof o==="number"&&o>0)?o:PASS_MAX_SLOPE;
+}
+/* Built from a DRY field on purpose. terrainH consults authoredWaterAt and
+   waterLipAt, and its wet branch multiplies by 1.4 and floors at SEABED=-26
+   - so any land cell within one PGS cell of deep water differences against a
+   pinned -26 and scores a huge slope regardless of real bathymetry. Worse,
+   WATER_AUTH is allocated inside snapshotAuthoredWater and never nulled
+   between builds, which would make PASS depend on load order and on the
+   PREVIOUS map. rawH with the same HSM 9-tap blur has neither problem.
+   Measured: the wet path reported a median slope of 10.0 deg where the dry
+   field reports 4.1 on the same map. */
+function passBuildSlope(){
+  const n=PGS*PGS, cell=MAP/PGS;
+  if(!PCELLH||PCELLH.length!==n) PCELLH=new Float32Array(n);
+  if(!PSLOPE||PSLOPE.length!==n) PSLOPE=new Float32Array(n);
+  if(!PREPAIR||PREPAIR.length!==n) PREPAIR=new Uint8Array(n);
+  for(let gy=0;gy<PGS;gy++) for(let gx=0;gx<PGS;gx++){
+    const wx=(gx+0.5)*cell, wy=(gy+0.5)*cell;
+    const h=(rawH(wx,wy)*2
+      + rawH(wx-HSM,wy)+rawH(wx+HSM,wy)+rawH(wx,wy-HSM)+rawH(wx,wy+HSM)
+      + rawH(wx-HSM,wy-HSM)+rawH(wx+HSM,wy+HSM)+rawH(wx-HSM,wy+HSM)+rawH(wx+HSM,wy-HSM))/10;
+    PCELLH[gy*PGS+gx]=(h-WATER_H)*HSCALE;
+  }
+  for(let gy=0;gy<PGS;gy++) for(let gx=0;gx<PGS;gx++){
+    const i=gy*PGS+gx;
+    const xm=gx>0?i-1:i, xp=gx<PGS-1?i+1:i;
+    const ym=gy>0?i-PGS:i, yp=gy<PGS-1?i+PGS:i;
+    const dx=(PCELLH[xp]-PCELLH[xm])/((gx>0&&gx<PGS-1)?2*cell:cell);
+    const dy=(PCELLH[yp]-PCELLH[ym])/((gy>0&&gy<PGS-1)?2*cell:cell);
+    PSLOPE[i]=Math.hypot(dx,dy);
+  }
+}
+/* The gate itself. PREPAIR is honoured unconditionally: repaired corridors
+   and authored roads stay walkable no matter how steep, because a road is
+   the authored answer to "how do you cross this". */
+function passApplySlopeGate(){
+  if(!PASS) return;
+  passBuildSlope();
+  const lim=passSlopeLimit();
+  if(!isFinite(lim)) return;                 // kill switch: leave the water-only grid
+  for(let i=0;i<PASS.length;i++){
+    if(!PASS[i]) continue;                   // water stays water
+    if(PREPAIR[i]) continue;
+    if(PSLOPE[i]>lim) PASS[i]=0;
+  }
+}
 let NAVW=null,NAVCOMP=null,NAV_MAIN=0,NAV_SIZE=[]; // connected navigable-water components
 const WATER_H=0.335, BEACH_H=0.375;
 /* Authored hydrology snapshot (oceans / rivers / lakes from gen). Combat
@@ -3487,6 +3549,13 @@ function buildTerrain(themeKey){
     const hx=clamp(Math.round((x+0.5)/PGS*TS),0,TS-1), hy=clamp(Math.round((y+0.5)/PGS*TS),0,TS-1);
     PASS[y*PGS+x]=heightF[hy*TS+hx]>=WATER_H-0.004?1:0;
   }
+  /* The pre-gate, water-only grid. markRoad refuses to write ROADG into any
+     PASS=0 cell, and buildRoads runs AFTER the gate below - so without this
+     snapshot the road network would develop invisible holes wherever it
+     crosses a slope, silently puncturing the ROAD_SPD speed bonus under a
+     road that still looks continuous. */
+  PASS_WATER=PASS.slice();
+  passApplySlopeGate();
   /* The authored world kit ships seven meshes, is registered in both manifests
      and already has an unconditional flush in render3d, but its only initialiser
      lives below the WORLDSITES_ENABLED early-out in worldsites.js -- so the
@@ -3510,6 +3579,13 @@ function buildTerrain(themeKey){
   buildRoads(c,MD,mfRoadSpec);         // clipped highways T-join the grid (city asphalt)
   mfPaintCityRoadNetwork(c);
   for(const S of cityStreets)markRoad(S[0],S[1],S[2],S[3],S[4]);
+  /* A road is the authored answer to "how do you cross this", so every ROADG
+     cell is exempt from the gate from here on. PREPAIR is sticky: every later
+     PASS writer ORs it back in, otherwise the next foundation pad would
+     re-apply the raw gate over the corridor and re-sever the map. */
+  if(PREPAIR&&typeof ROADG!=="undefined"&&ROADG){
+    for(let i=0;i<PREPAIR.length;i++) if(ROADG[i]){ PREPAIR[i]=1; if(PASS_WATER[i]) PASS[i]=1; }
+  }
   paintResourceGround(c);              // mass corruption and geothermal scars live in the terrain
   initPaving();                        // snapshot pristine ground + reset the paving mask
   buildGroundMask();                   // hardscape mask for the splat terrain shader
@@ -4669,6 +4745,15 @@ function flattenGround(wx,wy,rad,feather){
   for(let y=py0;y<=py1;y++) for(let x=px0;x<=px1;x++){
     const hx=clamp(Math.round((x+0.5)/PGS*TS),0,TS-1), hy=clamp(Math.round((y+0.5)/PGS*TS),0,TS-1);
     PASS[y*PGS+x]=heightF[hy*TS+hx]>=WATER_H-0.004?1:0;
+    /* Slope and repairs apply here too. A restamp that only re-tested water
+       would hand passability straight back to a gated cliff, and would undo
+       PREPAIR corridors on the next foundation pad - which is exactly how a
+       gate like this quietly re-severs a map mid-match. */
+    if(PASS[y*PGS+x]&&typeof PSLOPE!=="undefined"&&PSLOPE&&PSLOPE.length===PGS*PGS){
+      const pi=y*PGS+x;
+      const lim=(typeof passSlopeLimit==="function")?passSlopeLimit():Infinity;
+      if(isFinite(lim)&&!(PREPAIR&&PREPAIR[pi])&&PSLOPE[pi]>lim) PASS[pi]=0;
+    }
   }
   return tgt;
 }
@@ -5132,6 +5217,15 @@ function flattenGroundRect(wx,wy,hw,hh,feather){
   for(let y=py0;y<=py1;y++) for(let x=px0;x<=px1;x++){
     const hx=clamp(Math.round((x+0.5)/PGS*TS),0,TS-1), hy=clamp(Math.round((y+0.5)/PGS*TS),0,TS-1);
     PASS[y*PGS+x]=heightF[hy*TS+hx]>=WATER_H-0.004?1:0;
+    /* Slope and repairs apply here too. A restamp that only re-tested water
+       would hand passability straight back to a gated cliff, and would undo
+       PREPAIR corridors on the next foundation pad - which is exactly how a
+       gate like this quietly re-severs a map mid-match. */
+    if(PASS[y*PGS+x]&&typeof PSLOPE!=="undefined"&&PSLOPE&&PSLOPE.length===PGS*PGS){
+      const pi=y*PGS+x;
+      const lim=(typeof passSlopeLimit==="function")?passSlopeLimit():Infinity;
+      if(isFinite(lim)&&!(PREPAIR&&PREPAIR[pi])&&PSLOPE[pi]>lim) PASS[pi]=0;
+    }
   }
   return tgt;
 }

@@ -438,6 +438,40 @@ function unitIsBrood(i){
     (uteam[i]===1 && typeof AI!=='undefined' && AI.fac==='horde');
 }
 
+/* GROUND ESCAPE. Slope gating can turn a cell a unit is standing on into
+   blocked ground - a crater rim raised under it, a foundation pad levelled
+   beside it, or simply the gate switching on mid-match. Only the commander
+   had a way out (commanderTerrainRecovery, hero-gated on its first line);
+   every other ground unit would press against the wall forever, because the
+   movement code refuses the step and nothing ever re-sites the unit.
+
+   Deliberately quiet: no jets, no toast, no particles. This is a correctness
+   backstop, not an ability, and if it ever fires in bulk that is a bug in the
+   gate rather than something to celebrate on screen. Counted so a probe can
+   assert it stays near zero.
+
+   Runs only for units that are BOTH stuck and standing on blocked ground -
+   a unit merely blocked by a crowd is the flow field's problem, not this. */
+let groundRescues=0;
+const uStuckFor=new Float32Array(MAXU);
+function groundTerrainRecovery(i,travel,dt){
+  if(!ualive[i]) return;
+  const T=TYPES[utype[i]];
+  if(!T||T.air||T.naval) return;
+  if(i===heroIdx) return;                 // the hero has its own, louder path
+  const blocked=(typeof isWalkable==="function"&&!isWalkable(ux[i],uy[i]));
+  if(!blocked){ uStuckFor[i]=0; return; }
+  uStuckFor[i]+=dt;
+  if(uStuckFor[i]<1.2) return;            // ride out transient deforms
+  uStuckFor[i]=0;
+  const P=findLand(ux[i],uy[i]);
+  if(!P) return;                          // nowhere to go: leave it rather than teleport into the sea
+  if(P[0]===ux[i]&&P[1]===uy[i]) return;
+  ux[i]=P[0]; uy[i]=P[1];
+  utgt[i]=-1; utgtg[i]=-1; ufield[i]=-1;
+  groundRescues++;
+}
+
 function findLand(x,y){
   if(isWalkable(x,y)) return [x,y];
   for(let r=20;r<400;r+=24){
@@ -3341,6 +3375,15 @@ function gradeDistrictTerrain(){
   for(let y=0;y<PGS;y++)for(let x=0;x<PGS;x++){
     const hx=clamp(Math.round((x+.5)/PGS*TS),0,TS-1),hy=clamp(Math.round((y+.5)/PGS*TS),0,TS-1);
     PASS[y*PGS+x]=heightF[hy*TS+hx]>=WATER_H-.004?1:0;
+    /* Slope and repairs apply here too. A restamp that only re-tested water
+       would hand passability straight back to a gated cliff, and would undo
+       PREPAIR corridors on the next foundation pad - which is exactly how a
+       gate like this quietly re-severs a map mid-match. */
+    if(PASS[y*PGS+x]&&typeof PSLOPE!=="undefined"&&PSLOPE&&PSLOPE.length===PGS*PGS){
+      const pi=y*PGS+x;
+      const lim=(typeof passSlopeLimit==="function")?passSlopeLimit():Infinity;
+      if(isFinite(lim)&&!(PREPAIR&&PREPAIR[pi])&&PSLOPE[pi]>lim) PASS[pi]=0;
+    }
   }
 }
 
