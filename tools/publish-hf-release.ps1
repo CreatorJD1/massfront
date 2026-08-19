@@ -144,7 +144,12 @@ $otaIndexPath=Join-Path $otaStage "artifacts.json"
 Need (Test-Path $apk) "APK was not created: $apk"
   Need (Test-Path $otaStage) "OTA staging folder was not created: $otaStage"
   Need (Test-Path $otaIndexPath) "OTA artifact index was not created: $otaIndexPath"
-$otaIndex=@(Get-Content -LiteralPath $otaIndexPath -Raw -Encoding utf8 | ConvertFrom-Json)
+# NOTE (PowerShell 5.1): do NOT write @(... | ConvertFrom-Json). ConvertFrom-Json
+# emits a JSON array as a SINGLE object down the pipeline in 5.1, so @() wraps it
+# again - .Count reads 1, [0] is the whole array, and $entry.path then member-
+# enumerates into an Object[]. That is what aborted the first 1.33.45 publish, at
+# Join-Path, AFTER the APK build but BEFORE any upload. Cast explicitly instead.
+[object[]]$otaIndex = Get-Content -LiteralPath $otaIndexPath -Raw -Encoding utf8 | ConvertFrom-Json
 Need ($otaIndex.Count -gt 0) "OTA artifact index is empty"
 # Every artifact must exist on disk with the exact bytes the index claims.
 # A manifest that names an artifact which failed to stage is the one failure
@@ -162,7 +167,7 @@ foreach($a in $otaIndex){
 # An add, a removal or a reorder changes what boot.js concatenates, and the
 # client keeps a prior order wholesale when merging a patch - so a delta can
 # never express such a change and must be published as a full release.
-$declaredOrder=@((Get-Content -LiteralPath (Join-Path $Root "assets/data/manifest.json") -Raw -Encoding utf8 | ConvertFrom-Json).order)
+[object[]]$declaredOrder = (Get-Content -LiteralPath (Join-Path $Root "assets/data/manifest.json") -Raw -Encoding utf8 | ConvertFrom-Json).order
 $stagedSources=@($otaIndex | Where-Object { $_.path -notlike "ota/*" } | ForEach-Object { $_.path })
 Need (($stagedSources -join "|") -eq ($declaredOrder -join "|")) "Staged sources do not match assets/data/manifest.json order"
 # Preserve the v2 delivery contract. Rebuilding this as the old minimal manifest
