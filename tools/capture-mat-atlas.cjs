@@ -1,4 +1,5 @@
 const http = require('http'), fs = require('fs'), path = require('path');
+const pnglib = require('./artv2/pnglib.cjs');
 const root = path.resolve('www');
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
 const server = http.createServer((req, res) => {
@@ -22,7 +23,7 @@ const server = http.createServer((req, res) => {
     await assertHardwareGpu(p);
     await p.waitForTimeout(20000);   // boot + initGL3D + buildMatAtlas
     const atlas = await p.evaluate(() => window.__MF_MATERIAL_ATLASES || null);
-    if (!atlas || !atlas.albedo || !atlas.normal || !atlas.orm) {
+    if (!atlas || !atlas.albedo || !atlas.normal || !atlas.ormRaw) {
       console.error('Material atlas capture failed');
       process.exitCode = 1;
       return;
@@ -38,7 +39,13 @@ const server = http.createServer((req, res) => {
     };
     save('mat-albedo.png', atlas.albedo);
     save('mat-normal.png', atlas.normal);
-    save('mat-orm.png', atlas.orm);
+    /* The ORM leaves the page as raw bytes: its alpha is METALNESS, and any
+       canvas PNG encode would premultiply by it — that is the corruption this
+       capture path used to ship (metal 1.0 everywhere, emissives crushed). */
+    const raw = Buffer.from(atlas.ormRaw, 'base64');
+    const ormOut = path.join(outDir, 'mat-orm.png');
+    pnglib.encode(atlas.ormSize, atlas.ormSize, raw, ormOut);
+    console.log('mat-orm.png -> ' + ormOut + ' (' + (fs.statSync(ormOut).size / 1024).toFixed(1) + ' KB)');
   } finally {
     await closePwBrowser();
     server.close();
