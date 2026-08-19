@@ -1150,6 +1150,34 @@ function confirmBoot(){
   bootConfirmed=true;
   if(window.__MASSFRONT_RELEASE_INPUT_GUARD)
     window.__MASSFRONT_RELEASE_INPUT_GUARD();
+  /* ALL-OR-NOTHING BOOT.
+     __bootOk() clears probation, which is what permanently marks a patch as
+     good. Today that is safe by accident: the OTA is ONE concatenated blob in
+     ONE script tag, so a throw anywhere kills the whole payload, no frame ever
+     lands, confirmBoot never runs, and boot.js rolls the device back.
+
+     A per-file payload destroys that property. Separate script tags do not
+     stop one another, so a throw in artifact 50 of 86 leaves the other 85
+     running - the frame still lands, confirmBoot still fires, and a HALF-BOOTED
+     build gets promoted to good and keeps its probation cleared. The device is
+     then stuck on a broken version with the recovery state deleted.
+
+     So the payload counts itself. Each artifact increments __MF_OTA_RAN as its
+     last statement (only a file that ran to completion counts), and the first
+     artifact stamps __MF_OTA_EXPECT with the count baked in at publish time.
+     A short count means we withhold __bootOk: probation survives, and boot.js
+     quarantines and rolls back after its second failed start, exactly as it
+     does for a blob that threw.
+
+     A packaged build sets neither global, so this is a no-op there and the
+     behaviour is unchanged for anyone who has never taken an OTA. */
+  const expect=window.__MF_OTA_EXPECT|0;
+  if(expect>0 && (window.__MF_OTA_RAN|0)!==expect){
+    try{ console.error('boot: OTA payload incomplete - '+(window.__MF_OTA_RAN|0)+
+                       ' of '+expect+' artifacts ran; withholding __bootOk so the'+
+                       ' update stays retryable'); }catch(e){}
+    return;
+  }
   if(window.__bootOk) window.__bootOk();
 }
 /* ============================================================================

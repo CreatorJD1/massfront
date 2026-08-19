@@ -766,14 +766,32 @@ function updValidFile(f){
   return !!(f&&typeof f.path==='string'&&typeof f.sha256==='string'&&
             /^[0-9a-f]{64}$/i.test(f.sha256)&&Number.isFinite(f.size)&&f.size>0);
 }
+/* A `full` entry must carry an ABSOLUTE url of its own, and this is not
+   pedantry. updDownload resolves a bare path as `base + f.path` using the
+   manifest's single `base` prefix, which on a patch manifest points at the
+   PATCH's folder - the one place the complete payload is guaranteed not to be.
+   A full entry without its own url would therefore 404, or worse fetch a
+   same-named delta artifact. Requiring the url here rejects that manifest
+   before a byte moves. */
+function updValidFullFile(f){
+  /* startsWith, not a regex. Three patch scripts in a row have silently eaten
+     the backslashes out of an emitted regex literal; the previous version of
+     this line landed as /^https?:///i, which JS reads as the regex /^https?:/
+     followed by a // comment - leaving a truthy RegExp as the final operand,
+     so it accepted every url including relative ones. String methods cannot
+     fail that way. */
+  if(!updValidFile(f)||typeof f.url!=='string') return false;
+  const u=f.url.toLowerCase();
+  return u.startsWith('https://')||u.startsWith('http://');
+}
 /* Accepts a single entry OR a list. It has to accept a list: once the payload
    ships as N per-file artifacts, a COMPLETE build is N entries, and the
    fallback exists precisely to deliver a complete build. Returns null rather
    than a partial set - half a payload is worse than none. */
 function updFullEntry(m){
   const f=m&&m.full;
-  if(Array.isArray(f)) return (f.length&&f.every(updValidFile))?f.slice():null;
-  return updValidFile(f)?[f]:null;
+  if(Array.isArray(f)) return (f.length&&f.every(updValidFullFile))?f.slice():null;
+  return updValidFullFile(f)?[f]:null;
 }
 async function updInstalledVersion(){
   const running=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
