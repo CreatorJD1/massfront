@@ -2,7 +2,8 @@
    the classic scripts so an older installed package is never asked to run new
    controllers against stale menu markup. One payload also keeps the channel
    atomic: shell and behavior can only arrive together. */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -120,8 +121,10 @@ const shellBody=bodyMatch[1].replace(/\s*<script\s+src=["']\.\/boot\.js["']><\/s
 const stylePaths=Array.from(html.matchAll(/<link\s+rel=["']stylesheet["']\s+href=["']([^"']+)["'][^>]*>/gi),m=>m[1].split('?')[0].replace(/^\.\//,''));
 const shell={version,title:(html.match(/<title>([\s\S]*?)<\/title>/i)||[])[1]||'MASSFRONT',body:shellBody,
   styles:stylePaths.map(path=>({path,css:inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))}))};
-const prelude=`(function(){
-  var shell=${JSON.stringify(shell)};
+const preludeRuntime=`(function(){
+  /* The shell object lives in the shell artifact only. Keeping a copy here
+     too duplicated ~4.5 MB of markup and inlined CSS into an artifact that
+     never reads it, and would have made every stylesheet tweak re-send both. */
   /* Published before any source runs so a loader's first request already
      resolves. Absent in the APK/dev build, where the real files are on disk and
      the loaders fall back to their normal path. */
@@ -167,22 +170,87 @@ const prelude=`(function(){
   /* Fail open even if a renderer or optional module crashes before confirmBoot.
      A broken feature may show an error, but it must never brick every control. */
   guardWatchdog=setTimeout(clearGuard,5000);
+})();
+`;
+/* SECOND prelude artifact: everything that touches the visible document.
+   Split from the runtime half above so the asset table and mf2AssetURL are
+   live before ANY source runs - a loader firing during the very first source
+   must already resolve. */
+const preludeShell=`(function(){
+  var shell=${JSON.stringify(shell)};
   document.querySelectorAll('link[rel="stylesheet"],style[data-mf-shell-style]').forEach(function(n){n.remove();});
   shell.styles.forEach(function(file){
     var s=document.createElement('style'); s.setAttribute('data-mf-shell-style',file.path);
     s.textContent=file.css; document.head.appendChild(s);
   });
-  document.body.innerHTML=shell.body; document.title=shell.title;
+  /* NOT document.body.innerHTML=. boot.js injectScripts appends EVERY script
+     tag to document.body in ONE synchronous loop before any of them runs
+     ("Append every tag now"), so by the time this artifact executes all of
+     its siblings are already body children. Assigning innerHTML would delete
+     every source that has not run yet and stop the build dead. That is
+     invisible today only because the payload is a single tag. */
+  (function(){
+    var kill=[],k,n;
+    for(k=0;k<document.body.childNodes.length;k++){
+      n=document.body.childNodes[k];
+      if(n.nodeType===1&&n.tagName==="SCRIPT") continue;
+      kill.push(n);
+    }
+    for(k=0;k<kill.length;k++) kill[k].parentNode.removeChild(kill[k]);
+    var frag=document.createElement("div");
+    frag.innerHTML=shell.body;
+    var first=document.body.firstChild;
+    while(frag.firstChild) document.body.insertBefore(frag.firstChild,first);
+  })();
+  document.title=shell.title;
   shield=document.createElement('div'); shield.setAttribute('aria-hidden','true');
   shield.setAttribute('data-mf-input-shield','');
   shield.style.cssText='position:fixed;inset:0;z-index:2147483647;background:transparent;pointer-events:auto;touch-action:none';
   document.body.appendChild(shield);
   window.__MASSFRONT_SHELL=shell.version;
 })();\n`;
-const sources=order.map(path=>inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))+'\n//# sourceURL='+path).join('\n;\n');
-const body=prelude+sources;
+/* PER-FILE PAYLOAD.
+   The OTA used to be one concatenated blob, which made a hotfix a full
+   re-download of everything - the reason the delta work exists. boot.js already
+   runs a manifest as N separate script tags (it does exactly that for the
+   packaged build every launch), so this needs no loader change.
+
+   Each artifact ENDS by incrementing __MF_OTA_RAN, and the first stamps
+   __MF_OTA_EXPECT. src/main.js withholds __bootOk() unless they match, which
+   restores the all-or-nothing property a single blob had for free: separate
+   script tags do not stop one another, so without the count a throw in one
+   artifact would leave a half-booted build promoted to good with its recovery
+   state deleted. The counter is the last statement on purpose - a file that
+   threw halfway must not count itself. */
+const sources=order.map(path=>({path, text:inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))}));
+const artifacts=[
+  {path:'ota/00-runtime.js', text:preludeRuntime},
+  {path:'ota/01-shell.js',   text:preludeShell},
+  ...sources,
+];
+const stamp=(a,i)=>(i===0?'window.__MF_OTA_EXPECT='+artifacts.length+';\n':'')
+  +a.text+'\n;window.__MF_OTA_RAN=(window.__MF_OTA_RAN|0)+1;\n';
+
+/* Syntax gate over the WHOLE payload concatenated in execution order, exactly
+   as the browser will run it. Built in memory and thrown away - the blob is no
+   longer published. A parse error in any artifact fails the release here rather
+   than on a device. */
+const body=artifacts.map(stamp).join('\n;\n');
 new Function(body);
-const out=join(root,'releases',`MASSFRONT-v${version}-update.js`);
-mkdirSync(dirname(out),{recursive:true});
-writeFileSync(out,body);
-console.log(`${order.length} sources -> ${out} (${(Buffer.byteLength(body)/1048576).toFixed(2)} MB)`);
+
+const stage=join(root,'releases','staging-v'+version);
+rmSync(stage,{recursive:true,force:true});
+const index=[];
+for(let i=0;i<artifacts.length;i++){
+  const text=stamp(artifacts[i],i);
+  const dest=join(stage,artifacts[i].path);
+  mkdirSync(dirname(dest),{recursive:true});
+  writeFileSync(dest,text);
+  index.push({path:artifacts[i].path, size:Buffer.byteLength(text),
+              sha256:createHash('sha256').update(text).digest('hex')});
+}
+writeFileSync(join(stage,'artifacts.json'),JSON.stringify(index,null,1));
+const total=index.reduce((n,f)=>n+f.size,0);
+console.log(artifacts.length+' artifacts -> '+stage+' ('+(total/1048576).toFixed(2)+' MB total)');
+console.log('  largest: '+index.slice().sort((a,b)=>b.size-a.size).slice(0,3)
+  .map(f=>f.path+' '+(f.size/1048576).toFixed(2)+'MB').join(', '));
