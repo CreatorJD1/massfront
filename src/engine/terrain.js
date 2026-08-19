@@ -47,6 +47,10 @@ let waterMesh=null, waterVAO=null, waterVBO=null, waterIBO=null, waterIdxCount=0
    inland bowls still stay dirt. */
 let waterNeed=null, waterTH=null, waterDirty=false, waterRebuildT=0, waterBaseCol=null, waterBowlSynced=0;
 let WATER_LIP=null;
+/* Wall clock for the rebuild throttle. -1 = "no reading yet", which makes the
+   first call after a reset fall back to the caller's dt instead of charging
+   the throttle for every second since page load. */
+let waterMaintAt=-1;
 const WATER_FLOOD_CAP=6;
 const waterFloods=[];
 let waterTickAt=-1;
@@ -88,6 +92,7 @@ function waterLipReset(){
   waterBowlSynced=0;
   waterFloods.length=0;
   waterTickAt=-1;
+  waterMaintAt=-1;                       // a new map must not inherit a stale clock
 }
 function terrainWorldH(ix,iy){
   const h=heightF[iy*TS+ix];
@@ -470,7 +475,19 @@ function terrainDirty(wx,wy,rad,depth){
    First shoreline miss does not wait here — waterSyncBowl rebuilds with
    the splash so the hole is wet when the ring reads. */
 function waterMaintain(dt){
-  if(waterRebuildT>0) waterRebuildT-=dt;
+  /* ADVANCE ON A WALL CLOCK, NOT ON THE CALLER'S dt. Two independent per-frame
+     callers reach this throttle in the SAME frame: main's deformMaintain(dt)
+     and, inside render, drawWater -> waterFloodTick(dt') -> here. Each passed a
+     full frame's worth of time, so the countdown burned ~2 frames per frame and
+     the 0.45s / 0.14s guards expired in roughly half the intended wall time -
+     doubling how often buildWaterMesh tears down and recreates the whole water
+     VAO/VBO/IBO during exactly the shoreline bombardment it exists to damp.
+     Elapsed time is measured once here instead, so extra callers cost nothing
+     and the guard means what it says. */
+  const _now=(typeof performance!=='undefined'?performance.now()*0.001:0);
+  const _el=(waterMaintAt<0)?Math.max(0,dt||0):Math.max(0,Math.min(0.25,_now-waterMaintAt));
+  waterMaintAt=_now;
+  if(waterRebuildT>0) waterRebuildT-=_el;
   if(waterRebuildT<=0) waterBowlSynced=0;
   if(!waterDirty||waterRebuildT>0||!waterTH||typeof gl==='undefined'||!gl) return;
   waterRebuildT=waterFloods.length?0.14:0.45;

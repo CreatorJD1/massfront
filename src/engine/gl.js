@@ -3332,7 +3332,16 @@ function passBuildSlope(){
   const n=PGS*PGS, cell=MAP/PGS;
   if(!PCELLH||PCELLH.length!==n) PCELLH=new Float32Array(n);
   if(!PSLOPE||PSLOPE.length!==n) PSLOPE=new Float32Array(n);
-  if(!PREPAIR||PREPAIR.length!==n) PREPAIR=new Uint8Array(n);
+  /* PREPAIR must be CLEARED per build, not merely allocated. PGS is a const,
+     so the length test never re-fires after the first map and the only other
+     writer (the ROADG sweep in buildTerrain) is OR-only - so every road
+     corridor ever stamped stayed exempt for the rest of the session. On map 2
+     the gate then skipped every cell that map 1 had paved, leaving genuine
+     cliffs walkable wherever the two road networks happened to overlap.
+     passApplySlopeGate is the sole caller and runs once per buildTerrain,
+     before the ROADG sweep re-stamps this map's corridors, so clearing here
+     is exactly one clear per terrain build. */
+  if(!PREPAIR||PREPAIR.length!==n) PREPAIR=new Uint8Array(n); else PREPAIR.fill(0);
   for(let gy=0;gy<PGS;gy++) for(let gx=0;gx<PGS;gx++){
     const wx=(gx+0.5)*cell, wy=(gy+0.5)*cell;
     const h=(rawH(wx,wy)*2
@@ -4753,6 +4762,17 @@ function flattenGround(wx,wy,rad,feather){
       const pi=y*PGS+x;
       const lim=(typeof passSlopeLimit==="function")?passSlopeLimit():Infinity;
       if(isFinite(lim)&&!(PREPAIR&&PREPAIR[pi])&&PSLOPE[pi]>lim) PASS[pi]=0;
+      /* THE FLOOD OUTRANKS THE HEIGHT TEST. This restamp derives PASS purely
+         from heightF>=WATER_H-0.004, but a shoreline flood claims cells by
+         PATH from real water across everything under WATER_H+0.012 - and it
+         only commits cells that were NOT authored water, i.e. heightF>=WATER_H.
+         Every such cell therefore stamps back as WALKABLE here, so dropping a
+         foundation beside a flooded breach handed the drowned ground straight
+         back to pathing. waterLipAt is the runtime flood mask only (null until
+         a flood runs), so authored shoreline and inland dry craters are
+         untouched - this cannot re-flood what the build already decided. */
+      if(PASS[pi]&&typeof waterLipAt==='function'
+         &&waterLipAt((x+0.5)/PGS*MAP,(y+0.5)/PGS*MAP)) PASS[pi]=0;
     }
   }
   return tgt;
@@ -5225,6 +5245,17 @@ function flattenGroundRect(wx,wy,hw,hh,feather){
       const pi=y*PGS+x;
       const lim=(typeof passSlopeLimit==="function")?passSlopeLimit():Infinity;
       if(isFinite(lim)&&!(PREPAIR&&PREPAIR[pi])&&PSLOPE[pi]>lim) PASS[pi]=0;
+      /* THE FLOOD OUTRANKS THE HEIGHT TEST. This restamp derives PASS purely
+         from heightF>=WATER_H-0.004, but a shoreline flood claims cells by
+         PATH from real water across everything under WATER_H+0.012 - and it
+         only commits cells that were NOT authored water, i.e. heightF>=WATER_H.
+         Every such cell therefore stamps back as WALKABLE here, so dropping a
+         foundation beside a flooded breach handed the drowned ground straight
+         back to pathing. waterLipAt is the runtime flood mask only (null until
+         a flood runs), so authored shoreline and inland dry craters are
+         untouched - this cannot re-flood what the build already decided. */
+      if(PASS[pi]&&typeof waterLipAt==='function'
+         &&waterLipAt((x+0.5)/PGS*MAP,(y+0.5)/PGS*MAP)) PASS[pi]=0;
     }
   }
   return tgt;
