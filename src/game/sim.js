@@ -1495,8 +1495,8 @@ function defKillCredit(B,got){
   if(!B||!B.alive||!(got>0)) return;
   B.kills=(B.kills||0)+got;
   if(B.team===0){
-    resM[0]=Math.min(RES_MCAP[0],resM[0]+3*got);
-    resE[0]=Math.min(RES_ECAP[0],resE[0]+9*got);
+    /* Kill salvage pays the seat whose turret earned it. */
+    credit(0,3*got,9*got,typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B):null);
     if(perfScale>0.4) addParticle(0,B.x,B.y-8,0,-16,.5,8, 255,215,120);
   }
   const v=B.vet||0;
@@ -5068,7 +5068,7 @@ function dealDamage(j,dmg,attTeam,attacker,mu,wk){
     stats.kills[attTeam]++;
     /* Rendering a kill in the field pays ENERGY - there is no alloy in an
        insect, and paying mass here minted metal out of meat. */
-    if(attTeam===0&&wasTeam===2){ resE[0]=Math.min(RES_ECAP[0],resE[0]+(wasType===13?90:8)*salvageMult); }
+    if(attTeam===0&&wasTeam===2){ credit(0,0,(wasType===13?90:8)*salvageMult,(attacker>=0&&uCmd[attacker]>=0)?uCmd[attacker]:null); }
     if(attTeam===0) heroXP(wasTeam===2?1.2:4+TYPES[wasType].size*0.5);   // bug kills give trickle XP (swarms would flood level-ups)
     if(attacker>=0) unitKillCredit(attacker,ugen[attacker],1);
   }
@@ -5633,7 +5633,7 @@ function prospectorSurveyTick(i,dt){
   const D=deposits[di];if(dist2(ux[i],uy[i],D.x,D.y)>110*110)return false;
   D.surveyed=(D.surveyed||0)|bit;uMineT[i]=1.5;
   addParticle(3,D.x,D.y,0,0,.8,155,80,225,255);if(typeof mmPing==='function')mmPing(D.x,D.y);
-  if(uteam[i]===0){resM[0]=Math.min(RES_MCAP[0],resM[0]+35+depositTier(D)*15);toast('⌾ SURVEY COMPLETE — Tier '+depositTier(D)+' phase field charted');sfx('notify',D.x,D.y,.8);}
+  if(uteam[i]===0){credit(0,35+depositTier(D)*15,0,uCmd[i]>=0?uCmd[i]:null);toast('⌾ SURVEY COMPLETE — Tier '+depositTier(D)+' phase field charted');sfx('notify',D.x,D.y,.8);}
   uMineNode[i]=-1;return true;
 }
 function minerUnitTick(i,dt){

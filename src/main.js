@@ -756,7 +756,14 @@ function newSkirmish(){
     const h=spawnUnit(heroType,team,exs,eys,S.slot);
     if(h>=0){if(ally)uAllyBase[h]=S.slot;else enemyHeroIdxs.push(h);}
     const a=Math.atan2(MAP*.5-eys,MAP*.5-exs),fx=Math.cos(a),fy=Math.sin(a),rx=-fy,ry=fx;
-    const baseB=(type,x,y)=>{const B=addBld(type,team,x,y,true);B.fac=fac;B.aiBaseSlot=S.slot;B.aiBehavior=aiBehaviorKey(S.behavior);if(ally)B.allyAI=S.slot;return B;};
+    /* B.allyAI had FOUR readers and ZERO writers. Ally bases stamped only
+       aiBaseSlot, so: the ally-factory lookup in aiAllyTick never matched and
+       allies NEVER produced a unit after their opening guard squad; the
+       econTick guard never fired, so ally reactors donated their income to
+       the player bank - the exact thing its own comment forbids; and
+       commanderSlotForBuilding billed every ally structure to the player
+       population seat. One missing stamp, three shipped bugs. */
+    const baseB=(type,x,y)=>{const B=addBld(type,team,x,y,true);B.fac=fac;B.aiBaseSlot=S.slot;if(ally)B.allyAI=S.slot;B.aiBehavior=aiBehaviorKey(S.behavior);if(ally)B.allyAI=S.slot;return B;};
     baseB('pgen',egx+fx*105+rx*45,egy+fy*105+ry*45);
     baseB('fac',egx+fx*105-rx*70,egy+fy*105-ry*70);
     if(S.diff>=1)baseB('turret',egx+fx*178,egy+fy*178);
@@ -2468,7 +2475,9 @@ function wire(){
       renderBldPanel(); sfx('ui');
       return;
     }
-    resM[0]=Math.min(RES_MCAP[0],resM[0]+refund);
+    /* Same theft primitive as the production-cancel refund: the refund
+       lands in the wallet of the seat that owns the structure. */
+    credit(0,refund,0,typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B):null);
     B.alive=false; rebuildBGrid();
     if(B.type==='mex'){
       if(B.dep>=0) redirectProspectorsFromNode(B.dep,B.team);

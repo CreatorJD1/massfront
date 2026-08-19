@@ -232,9 +232,12 @@ setMode=function(i,m){
    storage, construction escrow and account resources are intentionally not
    touched, so the stated 15% field-system saving is the complete effect. */
 const mfFactionTechDrawEnergyBase=drawEnergy;
-drawEnergy=function(team,e){
+drawEnergy=function(team,e,slot){
   if(team===0&&mfFactionTechActive('syn_quantum_grid'))e*=.85;
-  return mfFactionTechDrawEnergyBase(team,e);
+  /* Forward the SEAT too. This wrapper predates per-seat wallets, and its
+     two-argument signature silently dropped the slot - measured, not
+     hypothetical: the seat kept its 1900 energy while resE[0] paid the 300. */
+  return mfFactionTechDrawEnergyBase(team,e,slot);
 };
 
 /* A lightweight per-target generation mark avoids allocating objects during

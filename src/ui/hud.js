@@ -2091,8 +2091,11 @@ function cancelQueuedUnit(B,start){
     if(T&&B.prodT>0&&B.team===0){
       const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,0):{m:T.cm,e:T.ce};
       const frac=Math.min(1,B.prodT/Math.max(0.01,T.bt));
-      resM[0]=Math.min(RES_MCAP[0],resM[0]+facCost.m*frac);
-      resE[0]=Math.min(RES_ECAP[0],resE[0]+facCost.e*frac);
+      /* Refund the seat that OWNS the factory. Refunding the human bank
+         while an ally seat paid the stream is a wallet-to-wallet theft
+         primitive under shared control: queue in an ally factory, cancel,
+         pocket the refund. */
+      credit(0,facCost.m*frac,facCost.e*frac,typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B):null);
     }
     B.queue.shift();
     B.prodT=0;

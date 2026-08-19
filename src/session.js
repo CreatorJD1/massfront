@@ -96,7 +96,14 @@ function sessCaptureBuildings(){
               Math.round(B.hp), +(B.prog||0).toFixed(3), B.lvl|0,
               B.buildPaidM==null?null:+B.buildPaidM.toFixed(3),
               B.buildPaidE==null?null:+B.buildPaidE.toFixed(3),
-              bi]);
+              bi,
+              /* Seat ownership. Without these every resume stripped allyAI,
+                 at which point the econTick guard stopped firing and the
+                 ally seat's reactors started paying the human's bank. Old
+                 snapshots lack the fields and restore as undefined = player-
+                 owned, which matches their pre-fix reality. */
+              B.allyAI==null?null:B.allyAI,
+              B.aiBaseSlot==null?null:B.aiBaseSlot]);
   }
   return out;
 }
@@ -306,12 +313,13 @@ function sessRestoreInto(s){
 
     const bMap=new Map();
     for(const b of s.blds){
-      const [type,team,x,y,hp,prog,lvl,paidM,paidE,oldBi]=b;
+      const [type,team,x,y,hp,prog,lvl,paidM,paidE,oldBi,allyAI,aiBaseSlot]=b;
       try{
         const B=addBld(type,team,x,y,true);
         if(B){ B.hp=hp; B.prog=prog; B.lvl=lvl||1;
           if(paidM!=null)B.buildPaidM=paidM;if(paidE!=null)B.buildPaidE=paidE;
-          if(oldBi!=null) bMap.set(oldBi,blds.length-1); }
+          if(oldBi!=null) bMap.set(oldBi,blds.length-1);
+          if(allyAI!=null)B.allyAI=allyAI; if(aiBaseSlot!=null)B.aiBaseSlot=aiBaseSlot; }
       }catch(e){}
     }
     refreshBldLive();

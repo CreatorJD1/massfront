@@ -22,6 +22,38 @@ let stallM=0, stallE=0;                 // production starving for mass / energy
    payStream(team,m,e) with no slot (Track 3 owns that file), so team-1
    streams infer the paying building this frame. Compact 1v1 is one seat. */
 let _econBldDt=0, _econPayUsed=null;
+/* Seat lookup for EITHER team. Team 0 scans AI.allies, team 1 AI.bases, and
+   a miss returns NULL - deliberately unlike econAiSeat's AI.bases[0]
+   fallback, because slot ids are shared across both arrays and a silent
+   miss must fail loudly rather than charge an arbitrary commander. */
+function econSeatFor(team,slot){
+  if(slot==null||slot<0||typeof AI==='undefined') return null;
+  const arr=team===0?AI.allies:AI.bases;
+  if(!arr||!arr.length) return null;
+  for(let i=0;i<arr.length;i++) if(arr[i].slot===slot) return arr[i];
+  return null;
+}
+/* Every income event routes here. Team-0 seat credits land in the ally
+   wallet; slot null/-1 is the human bank, byte-identical to the old inline
+   Math.min(RES_*CAP,...) form. Team 1 pays the AI seat and re-mirrors. */
+function credit(team,m,e,slot){
+  if(team===0){
+    const S=econSeatFor(0,slot);
+    if(S){ S.mass=Math.min(S.mcap||1400,(S.mass||0)+(m||0));
+           S.energy=Math.min(S.ecap||6200,(S.energy||0)+(e||0)); return; }
+    if(m) resM[0]=Math.min(RES_MCAP[0],resM[0]+m);
+    if(e) resE[0]=Math.min(RES_ECAP[0],resE[0]+e);
+    return;
+  }
+  if(team===1){
+    const S=econSeatFor(1,slot)||econAiSeat(slot);
+    if(S){ S.mass=Math.min(S.mcap||MCAP0,(S.mass||0)+(m||0));
+           S.energy=Math.min(S.ecap||ECAP0,(S.energy||0)+(e||0));
+           econMirrorAiBanks(); return; }
+    if(m) resM[1]=Math.min(RES_MCAP[1],resM[1]+m);
+    if(e) resE[1]=Math.min(RES_ECAP[1],resE[1]+e);
+  }
+}
 function econAiSeat(slot){
   if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return null;
   if(slot==null) return AI.base||AI.bases[0];
@@ -97,6 +129,16 @@ function econInferAiPaySlot(m,e){
   return fallback;
 }
 function payStream(team,m,e,slot){
+  /* A NAMED seat that cannot be found refuses - it never falls through to
+     the human bank. That fall-through is the econAiSeat fallback bug all
+     over again, and it is exactly what the first cut of this branch did:
+     measured, slot 7 with no matching seat took 50 mass out of resM[0]. */
+  if(team===0&&slot!=null&&slot>=0){
+    const S=econSeatFor(0,slot);
+    if(!S) return false;
+    if((S.mass||0)<m||(S.energy||0)<e) return false;
+    S.mass-=m; S.energy-=e; return true;
+  }
   if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
     if(slot==null) slot=econInferAiPaySlot(m,e);
     return econPayAiSeat(slot,m,e);
@@ -109,6 +151,7 @@ function payStream(team,m,e,slot){
   return false;
 }
 function canAfford(team,m,e,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot); return !!S&&(S.mass||0)>=m&&(S.energy||0)>=e; }
   if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
     const S=econAiSeat(slot);
     return !!S&&(S.mass||0)>=m&&(S.energy||0)>=e;
@@ -116,6 +159,8 @@ function canAfford(team,m,e,slot){
   return resM[team]>=m && resE[team]>=e;
 }
 function pay(team,m,e,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot);
+    if(S){ S.mass=Math.max(0,(S.mass||0)-m); S.energy=Math.max(0,(S.energy||0)-e); } return; }
   if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
     econPayAiSeat(slot,m,e); return;
   }
@@ -142,7 +187,11 @@ function beginBuild(team,type,x,y,rot,slot){
   if(team===1&&slot!=null) B.aiBaseSlot=slot;
   return B;
 }
-function drawEnergy(team,e){            // power weapons sip the grid; returns 0..1 satisfaction
+function drawEnergy(team,e,slot){    // power weapons sip the grid; returns 0..1 satisfaction
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot);
+    if(!S) return 0;
+    if((S.energy||0)>=e){ S.energy-=e; return 1; }
+    const got=Math.max(0,S.energy||0); S.energy=0; return e>0?got/e:1; }
   if(resE[team]>=e){ resE[team]-=e; if(team===0) eSpendAcc+=e; return 1; }
   const got=Math.max(0,resE[team]); resE[team]=0;
   if(team===0){ eSpendAcc+=got; stallE=0.8; }
