@@ -89,6 +89,10 @@ let updResolved = false;
 let updMirrors = [];
 let updChannelUrls = {};
 const UPD_CHANNEL_KEY='mf_update_channel';
+/* Set when PREVIEW was requested but no preview endpoint exists, so the
+   channel check knows to accept the Stable manifest we deliberately fell back
+   to instead of rejecting every update as "wrong update channel". */
+let updPreviewFellBack=false;
 function updChannelName(v){ return String(v||'').toLowerCase()==='preview'?'preview':'stable'; }
 function updChannel(){
   try{ return updChannelName(localStorage.getItem(UPD_CHANNEL_KEY)||'stable'); }
@@ -113,6 +117,7 @@ function updPackagedHost(){
 async function updResolveEndpoint(force){
   if(updResolved&&!force) return UPDATE_URL;
   updResolved=true;
+  updPreviewFellBack=false;
   const channel=updChannel();
   updMirrors=[]; updChannelUrls={};
   if(typeof window!=='undefined' && window.MASSFRONT_UPDATE_CHANNELS){
@@ -148,7 +153,16 @@ async function updResolveEndpoint(force){
   /* A damaged/missing local config must not permanently disable the updater.
      The official public channel is safe to embed because it contains no key or
      account data. */
-  if(channel==='preview'){ updSrc='unset preview'; return (UPDATE_URL=null); }
+  /* PREVIEW used to resolve to null here, and null does not mean "no preview
+     build yet" - it switches the updater OFF. One tap in Settings and the
+     device stops receiving updates entirely, including security fixes, with
+     no error to explain it and no hint that STABLE must be re-selected to
+     recover. Serve Stable instead and record that we did. */
+  if(channel==='preview'){
+    updPreviewFellBack=true;
+    updSrc='preview unavailable - using stable';
+    return (UPDATE_URL=UPD_OFFICIAL_MANIFEST);
+  }
   updSrc='fallback'; return (UPDATE_URL=UPD_OFFICIAL_MANIFEST);
 }
 function updEndpoint(){ return UPDATE_URL||''; }
@@ -214,11 +228,23 @@ function updNormalizeManifest(raw){
 }
 function updValidManifest(m){
   return !!(m&&/^\d+\.\d+\.\d+$/.test(String(m.version||''))&&
-    Array.isArray(m.files)&&m.files.every(f=>f&&typeof f.path==='string'));
+    Array.isArray(m.files)&&m.files.length>0&&m.files.every(f=>f&&typeof f.path==='string'&&
+      /* sha256 and size are REQUIRED, not optional. updVerifyHash returns early
+         on a falsy hash and the size check is guarded by `if(f.size && ...)`, so
+         a manifest that simply omitted both downloaded and APPLIED executable
+         JavaScript with no verification at all - the integrity checks were
+         opt-in by the very document an attacker would control. The publisher
+         always emits both (publish-hf-release.ps1) and the live 1.33.44
+         manifest carries them, so requiring them rejects nothing genuine. */
+      typeof f.sha256==='string'&&/^[0-9a-f]{64}$/i.test(f.sha256)&&
+      Number.isFinite(f.size)&&f.size>0));
 }
 function updManifestForChannel(m){
   /* A schema-v1 manifest has no channel and is Stable by definition. This is
      the backward-compatibility rule that lets old publishers keep working. */
+  /* When preview is unavailable we knowingly serve Stable to a player whose
+     channel says preview; accept it rather than failing every check. */
+  if(updPreviewFellBack) return !!(m&&updChannelName(m.channel||'stable')==='stable');
   return !!(m&&updChannelName(m.channel||'stable')===updChannel());
 }
 function updExposePacks(m){

@@ -5,6 +5,14 @@
    ============================================================ */
 const ptrs=new Map();
 let boxMode=false, boxStart=null, boxAdd=false, pinchD=0, pinchZ=1, tapT=0, pinchA=0, pinchYaw=0;
+/* True from the moment a gesture has two fingers down until every finger has
+   lifted. Pointer events are delivered one at a time, so when the second
+   finger of a pinch is released ptrs.size is back to 0 and that release is
+   indistinguishable from a deliberate one-finger tap. Two bugs came out of
+   that: a two-finger tap issued a ground move order at the second finger's
+   position, and a pinch begun during box-select committed a selection
+   rectangle stretching to wherever the zoom happened to end. */
+let multiTouch=false;
 let pinchMY=0, pinchPitch=0.92;
 let openBld=-1;             // building whose menu is open
 let shake=0;
@@ -989,11 +997,20 @@ cv.addEventListener('pointerdown',e=>{
     const [gx2,gy2]=w2s(placing.x,placing.y);
     dragGhost=Math.hypot(e.clientX-gx2,e.clientY-gy2)<90;
   }
+  if(ptrs.size>=2) multiTouch=true;
   if(ptrs.size===2){
     const a=[...ptrs.values()];
     pinchD=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y); pinchZ=orthoSpan;
     pinchMY=(a[0].y+a[1].y)/2; pinchPitch=pitchTarget;
     pinchA=Math.atan2(a[1].y-a[0].y,a[1].x-a[0].x); pinchYaw=yawTarget;
+    /* A second finger turns this into a camera gesture. Abandon any box in
+       progress and hide it, or the release below would select everything
+       between the box origin and wherever the pinch ended. */
+    if(boxStart){
+      boxStart=null; boxAdd=false;
+      const bx=document.getElementById('selbox'); if(bx) bx.style.display='none';
+      if(boxMode){ boxMode=false; const bb=document.getElementById('boxBtn'); if(bb) bb.classList.remove('on'); }
+    }
   }
   /* Box select used to require arming #boxBtn first, so on desktop the
      universal RTS gesture — shift+drag — did nothing and a bare drag panned.
@@ -1086,8 +1103,17 @@ function endPtr(e){
   clearTimeout(holdTimer);
   const p=ptrs.get(e.pointerId);
   ptrs.delete(e.pointerId);
+  /* Read before the early returns below, clear as soon as the last finger is
+     off the glass. wasMulti gates the tap commit further down. */
+  const wasMulti=multiTouch;
+  if(ptrs.size===0) multiTouch=false;
   if(!p) return;
   if(aiming===5&&ptrs.size===0){
+    /* Zooming to line up the shot ended it. The release that finishes a pinch
+       reached onTap and fired the barrage wherever the second finger happened
+       to be. Swallow it and leave the aim ARMED rather than cancelling, so
+       framing the target costs the player nothing. */
+    if(wasMulti) return;
     if(e.type==='pointercancel')cancelArtilleryBarrageAim(true);else onTap(p.x,p.y);
     return;
   }
@@ -1143,7 +1169,7 @@ function endPtr(e){
   const dt=performance.now()-p.t;
   const withinHold=performance.now()-p.t<HOLD_MS;
   const slop=Math.hypot(p.x-p.sx,p.y-p.sy);
-  if(!p.held && withinHold && ptrs.size===0 && (!p.moved || (dt<TAP_JITTER_MS && slop<TAP_JITTER_PX))){
+  if(!wasMulti && !p.held && withinHold && ptrs.size===0 && (!p.moved || (dt<TAP_JITTER_MS && slop<TAP_JITTER_PX))){
     if(placing){
       // tap anywhere to move the ghost there (then confirm with ✓)
       const [wx,wy]=s2w(p.x,p.y);
@@ -1200,7 +1226,7 @@ function resetInputState(){
     try{ if(cv.hasPointerCapture(id)) cv.releasePointerCapture(id); }catch(e){}
   }
   ptrs.clear();
-  boxMode=false; boxStart=null; pinchD=0; dragGhost=false;
+  boxMode=false; boxStart=null; pinchD=0; dragGhost=false; multiTouch=false;
   armFormation=false; orderPreview=null; orderConfirm=null;
   if(typeof aiming!=='undefined'&&aiming>=0){
     if(aiming===5&&typeof cancelArtilleryBarrageAim==='function')cancelArtilleryBarrageAim(true);

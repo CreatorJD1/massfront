@@ -190,6 +190,10 @@ const uang=new Float32Array(MAXU), uturr=new Float32Array(MAXU);
 const utx=new Float32Array(MAXU), uty=new Float32Array(MAXU);
 const uhp=new Float32Array(MAXU), uhpm=new Float32Array(MAXU);
 const ucool=new Float32Array(MAXU), ubuff=new Float32Array(MAXU), ustomp=new Float32Array(MAXU);
+/* Separate from ustomp on purpose: sharing one timer between a hero ability
+   and commander reclaim meant whichever ran first in the tick starved the
+   other for good. */
+const ureclaim=new Float32Array(MAXU);
 /* Contextual class abilities use their own effect channel. `ubuff` is the
    Commander surge and intentionally boosts everything; class doctrine needs
    narrower, readable trades so an interceptor does not receive the same buff
@@ -783,7 +787,7 @@ function spawnUnit(type,team,x,y,cmdSlot){
   ux[i]=x; uy[i]=y; uang[i]=team?Math.PI:0; uturr[i]=uang[i];
   utx[i]=x; uty[i]=y;
   uhp[i]=T.hp*(team===0?resHpMult*typeHpMult[type]*(T.cat==='hero'?commanderHpMult:1):(team===1?aiHpMult*(WC.iron?1.25:1):1)); uhpm[i]=uhp[i];
-  ucool[i]=Math.random()*T.cool; ubuff[i]=0; ustomp[i]=0;
+  ucool[i]=Math.random()*T.cool; ubuff[i]=0; ustomp[i]=0; ureclaim[i]=0;
   uclassBuff[i]=0;uclassBuffT[i]=0;ubroodLed[i]=0;uMineT[i]=0;uMineNode[i]=-1;
   utype[i]=type; uteam[i]=team; ualive[i]=1; ustate[i]=0; usel[i]=0;
   const slot=populationResolveSlot(team,cmdSlot,x,y);
@@ -1438,6 +1442,21 @@ function bldDmgMulAt(B,lvl){
    team kill counter delta around the structure's damage call, which means
    splash and chain kills all attribute correctly. */
 const DEF_VET_TIERS=[6,16,32];
+/* Kill credit for a UNIT. liveTgt is the codebase's existing slot-reuse guard
+   (index + generation), so a shell whose shooter died mid-flight credits
+   nobody instead of promoting the stranger who took its slot. */
+function unitKillCredit(a,gen,got){
+  if(!(got>0)||!liveTgt(a,gen)) return;
+  ukills[a]+=got;
+  const k=ukills[a];
+  /* Raise only, never lower. The original inline code used an if/else-if that
+     simply never assigned 0, so a rank could not be taken away; a flat
+     assignment would DEMOTE any unit holding a rank it did not earn from
+     kills (airlift.js restores uvet and ukills as a pair, and a future
+     veteran-production upgrade would too). Keep the old semantics exactly. */
+  const v=k>=24?3:k>=10?2:k>=4?1:0;
+  if(v>uvet[a]) uvet[a]=v;
+}
 function defKillCredit(B,got){
   if(!B||!B.alive||!(got>0)) return;
   B.kills=(B.kills||0)+got;
@@ -2361,11 +2380,86 @@ function envTick(dt){
      starter nests, queued broods, later spread, eruptions or global tides.
      A Horde AI remains a normal enemy faction and is intentionally separate
      from this neutral-map infestation switch. */
+  /* WEATHER FIRST, then the infestation. These are independent systems and
+     the order within a frame does not matter - but the infestation gate below
+     is an early `return`, and everything after it used to be skipped when the
+     player turned Infestation off. That silently disabled map hazards (lava
+     flows, fault lines, orbital debris, vision storms), the Meteor Season
+     wildcard and rubble smoulder. The switch is meant to remove the bugs, not
+     the weather, so the weather now runs before the gate can return. */
+  const D=diffLvl();
+  /* Map-exclusive hazards live in src/hazards.js and tick alongside the
+     weather they belong to. */
+  if(typeof hazTick==='function') hazTick(dt);
+  /* Meteors belong to the Meteor Season wildcard, not to authored meteor
+     sites. Those maps already strike through hazards.js (HAZ.mode==='meteor',
+     orbital debris). OR-ing mapHazardKey here stacked two inbound toasts and
+     two damage pulses on nordhall_peaks. If hazards.js is missing, the site
+     still gets this older storm so the weather is not silent. */
+  const hazMeteor=(typeof mapHazardMode==='function'?mapHazardMode(curMap)==='meteor'
+                 :(typeof mapHazardKey==='function'&&mapHazardKey(curMap)==='meteor'));
+  const hazOwnsMeteor=hazMeteor&&typeof hazTick==='function';
+  const meteorSite=!hazOwnsMeteor&&!!(WC.meteor||hazMeteor);
+  if(meteorSite) stormTimer-=dt;
+  if(meteorSite&&stormTimer<=0){
+    stormTimer=(90+Math.random()*70)*(WC.meteor?0.33:1)*[2.1,1.4,1][D];
+    const n=Math.max(1,(2+Math.random()*3|0)-[2,1,0][D])+(WC.meteor?2:0);
+    // aim near random units for drama
+    for(let k=0;k<n;k++){
+      let x=rr(300,MAP-300), y=rr(300,MAP-300);
+      const pick=Math.random()*unitHigh|0;
+      if(ualive[pick]&&Math.random()<0.7){ x=clamp(ux[pick]+rr(-160,160),100,MAP-100); y=clamp(uy[pick]+rr(-160,160),100,MAP-100); }
+      meteors.push({x,y,t:3.2+k*0.5});
+    }
+    toast('☄ METEOR STORM INBOUND — clear the strike zones!');
+    sfx('alarm');
+  }
+  // smoldering rubble: civic wreckage keeps coals + smoke, not licking flames
+  if(perfScale>0.4) for(const R of rubbles){
+    const age=stats.t-(R.ts||0);
+    const civic=typeof cityGroundAt==='function' && cityGroundAt(R.x,R.y)>=1;
+    if(civic && age<48 && Math.random()<dt*2.2){
+      addParticle(1,R.x+rr(-R.s*0.3,R.s*0.3),R.y+rr(-R.s*0.25,R.s*0.25),rr(-3,3),rr(-14,-7),1.4,R.s*0.26, 40,32,28);
+      if(Math.random()<0.35) addParticle(0,R.x+rr(-6,6),R.y+rr(-6,6),0,0,.28,4.2, 255,140,60);
+    } else if(age<25 && Math.random()<dt*1.6){
+      addParticle(1,R.x+rr(-R.s*0.4,R.s*0.4),R.y+rr(-R.s*0.3,R.s*0.3),rr(-2,2),rr(-13,-7),1.1+Math.random()*0.7,R.s*0.28, 46,44,46);
+      if(Math.random()<0.25) addParticle(0,R.x+rr(-6,6),R.y+rr(-6,6),0,-4,.3,5, 255,140,60);
+    }
+  }
+  updateSingularities(dt);
+  for(let m=meteors.length-1;m>=0;m--){
+    const M=meteors[m];
+    M.t-=dt;
+    if(M.t<=0.35 && !M.fired){
+      M.fired=true;
+      addParticle(0,M.x,M.y-600,0,0,.35,60, 255,220,150);
+    }
+    if(M.t<=0){
+      meteors.splice(m,1);
+      const R=85, DMG=340;
+      forUnitsIn(M.x,M.y,R,j=>{
+        const fall=1-0.55*Math.sqrt(dist2(M.x,M.y,ux[j],uy[j]))/R;
+        dealDamage(j,DMG*fall,2,-1);
+      });
+      for(let b=0;b<blds.length;b++){
+        const Bd=blds[b];
+        if(Bd.alive&&dist2(M.x,M.y,Bd.x,Bd.y)<(R+Bd.r)*(R+Bd.r)) damageBld(b,DMG*0.7,2);
+      }
+      damageScenery(M.x,M.y,R,420);
+      spawnExplosion(M.x,M.y,52,1);
+      addParticle(3,M.x,M.y,0,0,1.0,R*2.4, 255,150,70);
+      addCrater(M.x,M.y,110);
+      deformTerrain(M.x,M.y,118, 0.068, 'blast');
+      shake=Math.max(shake,10);
+      sfx('boom',M.x,M.y,2.2);
+    }
+  }
+
   if(typeof infestationOn==='boolean'&&!infestationOn){
     bugQ.length=0; infestLvl=0; return;
   }
   // ---- HIVEWORLD infestation: hives spread, swell, and erupt in tides ----
-  const tier=infTier(), D=diffLvl();
+  const tier=infTier();   // D is hoisted above the gate
   infestLvl=tier;
   // hive spread — faster and denser as the threat grows
   nestSpreadT-=dt;
@@ -2437,72 +2531,6 @@ function envTick(dt){
         toast('☠☠ THE TIDE ☠☠ — '+total.toLocaleString()+' bugs rising. The ground itself is moving. HOLD THE LINE!');
         sfx('alarm');
       }
-    }
-  }
-  /* Map-exclusive hazards live in src/hazards.js and tick alongside the
-     weather they belong to. */
-  if(typeof hazTick==='function') hazTick(dt);
-  /* Meteors belong to the Meteor Season wildcard, not to authored meteor
-     sites. Those maps already strike through hazards.js (HAZ.mode==='meteor',
-     orbital debris). OR-ing mapHazardKey here stacked two inbound toasts and
-     two damage pulses on nordhall_peaks. If hazards.js is missing, the site
-     still gets this older storm so the weather is not silent. */
-  const hazMeteor=(typeof mapHazardMode==='function'?mapHazardMode(curMap)==='meteor'
-                 :(typeof mapHazardKey==='function'&&mapHazardKey(curMap)==='meteor'));
-  const hazOwnsMeteor=hazMeteor&&typeof hazTick==='function';
-  const meteorSite=!hazOwnsMeteor&&!!(WC.meteor||hazMeteor);
-  if(meteorSite) stormTimer-=dt;
-  if(meteorSite&&stormTimer<=0){
-    stormTimer=(90+Math.random()*70)*(WC.meteor?0.33:1)*[2.1,1.4,1][D];
-    const n=Math.max(1,(2+Math.random()*3|0)-[2,1,0][D])+(WC.meteor?2:0);
-    // aim near random units for drama
-    for(let k=0;k<n;k++){
-      let x=rr(300,MAP-300), y=rr(300,MAP-300);
-      const pick=Math.random()*unitHigh|0;
-      if(ualive[pick]&&Math.random()<0.7){ x=clamp(ux[pick]+rr(-160,160),100,MAP-100); y=clamp(uy[pick]+rr(-160,160),100,MAP-100); }
-      meteors.push({x,y,t:3.2+k*0.5});
-    }
-    toast('☄ METEOR STORM INBOUND — clear the strike zones!');
-    sfx('alarm');
-  }
-  // smoldering rubble: civic wreckage keeps coals + smoke, not licking flames
-  if(perfScale>0.4) for(const R of rubbles){
-    const age=stats.t-(R.ts||0);
-    const civic=typeof cityGroundAt==='function' && cityGroundAt(R.x,R.y)>=1;
-    if(civic && age<48 && Math.random()<dt*2.2){
-      addParticle(1,R.x+rr(-R.s*0.3,R.s*0.3),R.y+rr(-R.s*0.25,R.s*0.25),rr(-3,3),rr(-14,-7),1.4,R.s*0.26, 40,32,28);
-      if(Math.random()<0.35) addParticle(0,R.x+rr(-6,6),R.y+rr(-6,6),0,0,.28,4.2, 255,140,60);
-    } else if(age<25 && Math.random()<dt*1.6){
-      addParticle(1,R.x+rr(-R.s*0.4,R.s*0.4),R.y+rr(-R.s*0.3,R.s*0.3),rr(-2,2),rr(-13,-7),1.1+Math.random()*0.7,R.s*0.28, 46,44,46);
-      if(Math.random()<0.25) addParticle(0,R.x+rr(-6,6),R.y+rr(-6,6),0,-4,.3,5, 255,140,60);
-    }
-  }
-  updateSingularities(dt);
-  for(let m=meteors.length-1;m>=0;m--){
-    const M=meteors[m];
-    M.t-=dt;
-    if(M.t<=0.35 && !M.fired){
-      M.fired=true;
-      addParticle(0,M.x,M.y-600,0,0,.35,60, 255,220,150);
-    }
-    if(M.t<=0){
-      meteors.splice(m,1);
-      const R=85, DMG=340;
-      forUnitsIn(M.x,M.y,R,j=>{
-        const fall=1-0.55*Math.sqrt(dist2(M.x,M.y,ux[j],uy[j]))/R;
-        dealDamage(j,DMG*fall,2,-1);
-      });
-      for(let b=0;b<blds.length;b++){
-        const Bd=blds[b];
-        if(Bd.alive&&dist2(M.x,M.y,Bd.x,Bd.y)<(R+Bd.r)*(R+Bd.r)) damageBld(b,DMG*0.7,2);
-      }
-      damageScenery(M.x,M.y,R,420);
-      spawnExplosion(M.x,M.y,52,1);
-      addParticle(3,M.x,M.y,0,0,1.0,R*2.4, 255,150,70);
-      addCrater(M.x,M.y,110);
-      deformTerrain(M.x,M.y,118, 0.068, 'blast');
-      shake=Math.max(shake,10);
-      sfx('boom',M.x,M.y,2.2);
     }
   }
 }
@@ -4532,6 +4560,15 @@ const pBarrage=new Uint8Array(MAXP);      // coordinated active-fire payload; wi
    Lets shell/missile kills feed the same veterancy + bounty loop the
    direct-fire towers use — checked for aliveness at credit time. */
 const pSrcBld=new Array(MAXP).fill(null);
+/* Who FIRED this shot. Kill credit - and therefore veterancy - was reachable
+   only by melee and instant-beam units, because those two call dealDamage with
+   a real attacker index while every projectile path passed -1. 23 of 29 armed
+   chassis fire projectiles, so almost the whole roster could never be promoted
+   no matter how it performed. Stored as index + generation because projectile
+   slots outlive unit slots and the pool recycles: without the generation the
+   credit could land on whatever new unit inherited the shooter's slot. */
+const pSrcUnit=new Int32Array(MAXP).fill(-1);
+const pSrcGen=new Int32Array(MAXP).fill(-1);
 const pArc=new Float32Array(MAXP);         // authored visual arc height for true ballistic shells
 /* REAL BALLISTIC Z. Until now a shell had no height state at all: the renderer
    derived its apparent altitude from gh(X,Y) -- the ground beneath its CURRENT
@@ -4612,7 +4649,7 @@ function mfUnitMuzzle(i,side){
 function fireProj(type,team,x,y,tx,ty,speed,dmg,aoe,tgt){
   let i;
   if(pFree.length) i=pFree.pop(); else { if(pHigh>=MAXP) return -1; i=pHigh++; }
-  palive[i]=1; ptype[i]=type; pteam[i]=team; pdmg[i]=dmg; paoe[i]=aoe; ptgt[i]=tgt; pSplit[i]=0; pCannon[i]=0; pBio[i]=0; pBarrage[i]=0; pArc[i]=0; pConcuss[i]=0; pSrcBld[i]=null;
+  palive[i]=1; ptype[i]=type; pteam[i]=team; pdmg[i]=dmg; paoe[i]=aoe; ptgt[i]=tgt; pSplit[i]=0; pCannon[i]=0; pBio[i]=0; pBarrage[i]=0; pArc[i]=0; pConcuss[i]=0; pSrcBld[i]=null; pSrcUnit[i]=-1; pSrcGen[i]=-1;
   pSmokeT[i]=0;pFlightCue[i]=0;
   ptgtg[i]=tgt>=0?ugen[tgt]:-1;
   pmu0[i]=1; pwk[i]='n';
@@ -4855,7 +4892,13 @@ function projImpact(i){
       }
     } else {
       const nb=findEnemyBld(x,y,team,aoe+16);
-      if(nb>=0) damageBld(nb,dmg,team);
+      /* base, not dmg. dmg still carries the multiplier for whatever UNIT this
+         shot was aimed at, so a shell aimed at a light scout hit the building
+         behind it with the anti-light bonus - and one aimed at heavy armour
+         hit the same building for a fraction of its rating. Up to a 3.9x swing
+         on identical shots. The heavy-splash branch above already converts to
+         the structure multiplier; this branch never did. */
+      if(nb>=0) damageBld(nb,base*(STM[wk]||1),team);
     }
     damageScenery(x,y,aoe+8,dmg*0.85,team);      // splash chews through ruins too
     if(pBio[i]){
@@ -4910,6 +4953,12 @@ function projImpact(i){
     }
   }
   if(pSrcBld[i]) defKillCredit(pSrcBld[i],stats.kills[team]-preKills);
+  /* Same diff-the-counter trick the defence path above uses, for the same
+     reason: one shell can kill several units, and this counts all of them.
+     Credited here rather than by passing the shooter into dealDamage, so the
+     directional impact spray and aiOnUnitHit keep their current behaviour -
+     this fixes attribution only, and adds no particles to a projectile hit. */
+  if(pSrcUnit[i]>=0) unitKillCredit(pSrcUnit[i],pSrcGen[i],stats.kills[team]-preKills);
   killProj(i);
 }
 
@@ -4978,11 +5027,7 @@ function dealDamage(j,dmg,attTeam,attacker,mu,wk){
        insect, and paying mass here minted metal out of meat. */
     if(attTeam===0&&wasTeam===2){ resE[0]=Math.min(RES_ECAP[0],resE[0]+(wasType===13?90:8)*salvageMult); }
     if(attTeam===0) heroXP(wasTeam===2?1.2:4+TYPES[wasType].size*0.5);   // bug kills give trickle XP (swarms would flood level-ups)
-    if(attacker>=0 && ualive[attacker]){
-      ukills[attacker]++;
-      const k=ukills[attacker];
-      if(k>=24) uvet[attacker]=3; else if(k>=10) uvet[attacker]=2; else if(k>=4) uvet[attacker]=1;
-    }
+    if(attacker>=0) unitKillCredit(attacker,ugen[attacker],1);
   }
 }
 
@@ -5648,6 +5693,7 @@ function unitTick(dt){
     if(uhaz[i]>0) uhaz[i]-=dt;
     if(ufireT[i]>0) ufireT[i]-=dt;
     if(ustomp[i]>0) ustomp[i]-=dt;
+    if(ureclaim[i]>0) ureclaim[i]-=dt;
     if(uheal[i]>0) uheal[i]-=dt;
     if(umode[i]===3){
       uhp[i]-=uhpm[i]*0.050*dt;         // overdrive is HP — never lod-skip this
@@ -5932,6 +5978,8 @@ function unitTick(dt){
           const commanderCannon=utype[i]===4;
           if(pk>=0){
             pmu0[pk]=pmu; pwk[pk]=T.wk||'p'; pCannon[pk]=commanderCannon?1:0;
+
+            pSrcUnit[pk]=i; pSrcGen[pk]=ugen[i];   // kill credit survives the flight
             pBio[pk]=unitIsBrood(i)?1:0;
             projectileFireFX(pk,mx,my,ex-mx,ey-my);
           }
@@ -6132,18 +6180,22 @@ function unitTick(dt){
          shells are landing it runs at 25%, so a defended base can actually
          out-damage a commander instead of feeding it a solo playthrough. */
       uhp[i]=Math.min(uhpm[i],uhp[i]+ (i===heroIdx?heroRegen:8)*(uHurtT[i]>0?0.25:1)*dt);
-      if(ustomp[i]<=0){
-        ustomp[i]=0.85;
+      if(ureclaim[i]<=0){
+        ureclaim[i]=0.85;
         for(let w=0;w<wrecks.length;w++){
           const W=wrecks[w];
           if(dist2(ux[i],uy[i],W.x,W.y)<130*130){
             const team=uteam[i];
-            resM[team]=Math.min(RES_MCAP[team],resM[team]+W.mass*(team===0?salvageMult:1));
+            const sm=(team===0?salvageMult:1);
+            resM[team]=Math.min(RES_MCAP[team],resM[team]+W.mass*sm);
+            /* Pay the energy too. The wreck is spliced out immediately below,
+               so anything not banked here is destroyed. */
+            if(W.en>0) resE[team]=Math.min(RES_ECAP[team],resE[team]+W.en*sm);
             addBeam(ux[i],uy[i],W.x,W.y,2.4,120,255,170,0.5,'repair');
             addParticle(0,W.x,W.y,0,0,.4,14, 120,255,170);
             if(team===0){
               heroXP(3);
-              if(!window.__reclaimTip){ window.__reclaimTip=1; toast('♻ Commander reclaimed a wreck +'+W.mass+' mass'); }
+              if(!window.__reclaimTip){ window.__reclaimTip=1; toast('♻ Commander reclaimed a wreck +'+Math.round(W.mass)+' mass'+(W.en>0?' +'+Math.round(W.en)+' energy':'')); }
             }
             wrecks.splice(w,1);
             break;
