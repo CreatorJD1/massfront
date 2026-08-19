@@ -1096,3 +1096,174 @@ function initAuthPortal(){
   });
 }
 
+/* ============================================================================
+   SOCIAL CLIENT — thin, NON-THROWING wrappers over apRequest
+   ============================================================================
+   The verification-first server exposes:
+
+     GET  /social/friends            -> {friends:[…], incoming:[…], blocked:[…]}
+     POST /social/request  {username}   exact username, no search, no discovery
+     POST /social/respond  {id,accept}
+     POST /social/block    {username}
+     POST /social/unblock  {username}
+
+   and refuses an account that may not use social at all with 403 plus one of
+   three codes: 'unverified', 'age_restricted', 'social_banned'. apRequest
+   already lifts {error,message} off a non-2xx body onto e.kind/e.message, so
+   those three arrive here intact.
+
+   Everything below RESOLVES. Not one of these functions rejects, because the
+   caller is a mailbox section that repaints mid-match: an unhandled rejection
+   from a friends list is not allowed to be the reason a player loses a game.
+   Failure is {ok:false, code, message} and the message is always a sentence a
+   player can read.
+
+   THE 'offline' DEFECT ENDS HERE. apRequest refuses an offline device by
+   throwing `new Error('offline')` — a BARE error with no .kind, whose .message
+   is the single lowercase word "offline". Any caller that printed e.message
+   showed a player the literal word "offline" with no capital, no punctuation
+   and no explanation. This layer is where that word becomes a sentence; no
+   caller above should ever see it again. */
+const AP_SOCIAL_OFFLINE_MSG =
+  "You're offline — friends will sync the next time you have a connection.";
+
+function apSocialFail(e){
+  const kind = (e && e.kind) || '';
+  const raw  = (e && e.message) || '';
+  /* Bare Error('offline') from apRequest's own offline gate: no kind at all,
+     which is the only way to tell it apart from a server that answered. */
+  if (!kind && raw === 'offline')
+    return { ok:false, code:'offline', message: AP_SOCIAL_OFFLINE_MSG };
+  if (kind === 'network')
+    return { ok:false, code:'offline',
+             message:"Can't reach the friends service right now — your game is unaffected." };
+  if (kind === 'no_server')
+    return { ok:false, code:'no_server',
+             message:'This build has no friends service set up.' };
+  if (kind === 'no_session')
+    return { ok:false, code:'signed_out',
+             message:'Sign in to send and accept friend requests.' };
+  if (kind === 'unverified')
+    return { ok:false, code:'unverified',
+             message: raw || 'Verify your email address before using friends.' };
+  if (kind === 'age_restricted')
+    return { ok:false, code:'age_restricted',
+             message: raw || 'Friends are not available on this account.' };
+  if (kind === 'social_banned')
+    return { ok:false, code:'social_banned',
+             message: raw || 'Friends have been disabled on this account.' };
+  return { ok:false, code: kind || 'server',
+           message: raw || 'Something went wrong — try again in a moment.' };
+}
+/* One shape out, whatever shape the server sends in. Remote strings are
+   COERCED here (String(), never trusted as objects) so that the renderer only
+   ever meets primitives — a username that arrives as {toString:…} cannot then
+   surprise a text node. */
+function apSocialList(v){
+  if (!Array.isArray(v)) return [];
+  const out = [];
+  for (const raw of v){
+    if (raw == null) continue;
+    if (typeof raw === 'string' || typeof raw === 'number'){
+      out.push({ id:'', username:String(raw), at:0, status:'' });
+      continue;
+    }
+    if (typeof raw !== 'object') continue;
+    const u = raw.username != null ? raw.username
+            : raw.name     != null ? raw.name
+            : raw.from     != null ? raw.from : '';
+    const id = raw.id != null ? raw.id
+             : raw.requestId != null ? raw.requestId : '';
+    out.push({ id:String(id), username:String(u == null ? '' : u),
+               at:Number(raw.at || raw.createdAt || 0) || 0,
+               status:String(raw.status == null ? '' : raw.status) });
+  }
+  return out;
+}
+async function socialFriends(){
+  try{
+    const d = await apRequest('GET', '/social/friends', undefined, true);
+    return { ok:true,
+             friends:  apSocialList(d && (d.friends  || d.list)),
+             incoming: apSocialList(d && (d.incoming || d.requests || d.pending)),
+             blocked:  apSocialList(d && d.blocked) };
+  }catch(e){ return apSocialFail(e); }
+}
+/* Exact username, deliberately. There is no directory and no search: the only
+   way to be found is for someone to already know what you call yourself. */
+async function socialRequest(u){
+  const name = String(u == null ? '' : u).trim();
+  if (!name)
+    return { ok:false, code:'invalid_username',
+             message:'Enter the exact username of the commander you want to add.' };
+  try{
+    const d = await apRequest('POST', '/social/request', { username:name }, true);
+    return { ok:true, data: d || null };
+  }catch(e){ return apSocialFail(e); }
+}
+async function socialRespond(id, ok){
+  const rid = String(id == null ? '' : id).trim();
+  if (!rid)
+    return { ok:false, code:'bad_request',
+             message:'That friend request is no longer available.' };
+  try{
+    const d = await apRequest('POST', '/social/respond', { id:rid, accept: !!ok }, true);
+    return { ok:true, data: d || null };
+  }catch(e){ return apSocialFail(e); }
+}
+async function socialBlock(u){
+  const name = String(u == null ? '' : u).trim();
+  if (!name) return { ok:false, code:'invalid_username', message:'No commander named.' };
+  try{
+    const d = await apRequest('POST', '/social/block', { username:name }, true);
+    return { ok:true, data: d || null };
+  }catch(e){ return apSocialFail(e); }
+}
+async function socialUnblock(u){
+  const name = String(u == null ? '' : u).trim();
+  if (!name) return { ok:false, code:'invalid_username', message:'No commander named.' };
+  try{
+    const d = await apRequest('POST', '/social/unblock', { username:name }, true);
+    return { ok:true, data: d || null };
+  }catch(e){ return apSocialFail(e); }
+}
+/* ---- gates ------------------------------------------------------------------
+   mfSocialGate answers ONE question — "is this account allowed to use social at
+   all?" — and nothing else. A network failure is not a gate, so it answers
+   'ok': the UI must not tell an offline player that their account is banned.
+   Accepts either a wrapper result or a bare code string. */
+function mfSocialGate(x){
+  const code = (x && typeof x === 'object') ? (x.code || x.kind || '') : String(x || '');
+  if (code === 'unverified'     || code === 'email_unverified') return 'unverified';
+  if (code === 'age_restricted' || code === 'age')              return 'age';
+  if (code === 'social_banned'  || code === 'banned')           return 'banned';
+  return 'ok';
+}
+/* The nudge that goes with each gate. Only ONE of the three is actionable —
+   an unverified email is fixed by the player, from the account portal, which
+   is why this lives in the file that owns the portal rather than in the
+   mailbox. Age and ban are stated plainly and offer no button, because
+   offering a button that cannot help is worse than offering none. */
+function mfSocialNudge(gate){
+  const g = mfSocialGate(gate);
+  if (g === 'unverified')
+    return { gate:g,
+             text:'Verify your email address to send and accept friend requests. '+
+                  'Everything else in the game keeps working.',
+             cta:'OPEN ACCOUNT',
+             act:(trigger)=>{ try{ if (typeof apOpen === 'function') apOpen(trigger || null); }catch(e){} } };
+  if (g === 'age')
+    return { gate:g, text:'Friends are not available on this account.', cta:'', act:null };
+  if (g === 'banned')
+    return { gate:g, text:'Friends have been disabled on this account.', cta:'', act:null };
+  return null;
+}
+/* The mailbox asks this before it renders anything or fetches anything.
+   AP_SESSION is a top-level `let` in this file, so it is reachable from every
+   other classic script — but only through a function that lives HERE, so that
+   a bundle built without authportal.js degrades to "signed out" instead of
+   throwing a ReferenceError inside renderInbox(). */
+function mfSocialSignedIn(){
+  try{ return !!(AP_SESSION && AP_SESSION.token); }catch(e){ return false; }
+}
+/* ---- end social client ---- */

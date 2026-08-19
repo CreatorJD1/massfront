@@ -219,7 +219,7 @@ function storyMarkSeen(i){ storySeen()['d'+i]=1; metaSave(); storyRefreshBadge()
 /* One number for the mailbox dot. Anything else that becomes unread mail —
    release notes, friend requests — adds its term HERE and nowhere else, so no
    two features ever have to edit the same line of storyRefreshBadge(). */
-function inboxUnreadCount(){ return storyUnreadCount()+inboxUnreadUpdates(); }
+function inboxUnreadCount(){ return storyUnreadCount()+inboxUnreadUpdates()+inboxUnreadFriends(); }
 /* The UPDATES tab has no count element: index.html only gave one to DISPATCHES.
    Create it once here rather than asking for a shell edit — an OTA bundle is
    scripts only (boot.js replaces sources, never index.html or the stylesheet),
@@ -348,8 +348,10 @@ function renderInbox(){
         +(unread? '  ·  '+unread+' unread' : '');
     }
   }
-  const f=document.getElementById('inboxFriends');
-  if(f) f.innerHTML='<div class="inboxEmpty">Friend requests arrive here once the friends update ships.</div>';
+  /* Four states, cache-driven, synchronous — renderInbox() runs mid-match. */
+  renderInboxFriends();
+  /* One network fill per open (45s window inside), never a poll, never awaited. */
+  inboxFriendsRefresh(false);
   const m=document.getElementById('inboxMessages');
   if(m) m.innerHTML='<div class="inboxEmpty">Direct messages arrive here once the friends update ships.</div>';
   renderInboxUpdates();
@@ -466,6 +468,271 @@ function renderInboxNews(){
        .catch(()=>{});
   }catch(e){}
 }
+
+/* ---------- FRIENDS ----------
+   The mailbox's friends section, in four states and nothing else:
+
+     signed-out  one line plus a door into the account panel. Friends are the
+                 only part of this game that needs an account, so this is the
+                 ONLY place that ever asks for one, and it asks once, quietly.
+     offline     a quiet line. Never an error wall: being on a train is not a
+                 fault condition, and a red box on the mailbox of an offline
+                 player is a bug report waiting to happen.
+     empty       an invitation. Signed in, reachable, nobody there yet.
+     data        incoming requests first (they are the thing with a decision
+                 attached), then the friends list.
+
+   renderInboxFriends() is SYNCHRONOUS and reads only INBOX_FRIENDS, because
+   renderInbox() is called mid-match from the HUD button and an await there
+   would paint an empty overlay over the battlefield for a network round trip.
+   The network half is inboxFriendsRefresh(), which repaints when it lands.
+
+   NOTHING here may block play. Every socialX() wrapper resolves — it never
+   rejects — and every one of them is called through a typeof guard, so a
+   bundle without authportal.js renders the signed-out state and stops. */
+let INBOX_FRIENDS={signedIn:false,loaded:false,busy:false,at:0,
+                   code:'',msg:'',gate:'ok',friends:[],incoming:[]};
+/* One fill per inbox open, never a poll. renderInbox() also runs when a
+   dispatch is dismissed and when the HUD button reopens the overlay, so the
+   window below is what turns "render again" into "do not ask the server
+   again". A failed attempt latches the same window: a device with no signal
+   must not retry once per repaint. */
+const INBOX_FRIENDS_MIN_MS=45000;
+
+/* Usernames are UGC and are written with textContent EVERYWHERE below — that
+   is the escaping, and it is why this section builds elements instead of
+   joining an HTML string like the dispatch list above does. This helper does
+   not escape (escaping before textContent would show a player the literal
+   text "&amp;"); it only strips the control and bidi-override characters that
+   a text node would otherwise honour, and clamps the length so one very long
+   name cannot push the ACCEPT button off the row. */
+function inboxFriendsName(f){
+  let n=String((f&&f.username)||'');
+  let out='';
+  for(let i=0;i<n.length;i++){
+    const c=n.charCodeAt(i);
+    if(c<32||c===127||(c>=0x202a&&c<=0x202e)||(c>=0x2066&&c<=0x2069)) continue;
+    out+=n.charAt(i);
+  }
+  out=out.trim();
+  if(out.length>32) out=out.slice(0,31)+'…';
+  return out||'Commander';
+}
+/* The whole state machine, pure, so it can be tested without a DOM. Data beats
+   everything: a cache that already holds friends keeps showing them when a
+   later refresh fails, because a list that empties itself the moment a tunnel
+   swallows the signal reads as "your friends were deleted". */
+function inboxFriendsState(c){
+  if(!c||!c.signedIn) return 'signed-out';
+  if((c.friends&&c.friends.length)||(c.incoming&&c.incoming.length)) return 'data';
+  if(c.loaded) return 'empty';
+  return c.code?'offline':'empty';
+}
+/* Zero unless a real server answered with real requests, which is what keeps
+   the mailbox dot honest on a build with no backend at all. */
+function inboxUnreadFriends(){
+  const c=INBOX_FRIENDS;
+  return (c&&c.signedIn&&c.loaded&&c.incoming)?c.incoming.length:0;
+}
+/* The .sHead directly above a list is where inboxSectionCount() hangs its
+   badge (see ~line 240): a list created without one silently loses its count
+   forever, which is exactly the defect that killed the dispatch counts when
+   the mailbox was rebuilt as one scrolling page. So the create-if-missing path
+   creates the HEADING TOO, and puts the pair where the shipped shell has it —
+   above MESSAGES — rather than appending it to the bottom of the page. */
+function inboxSHeadAbove(el){
+  let h=el?el.previousElementSibling:null;
+  while(h&&!(h.classList&&h.classList.contains('sHead'))) h=h.previousElementSibling;
+  return h;
+}
+function inboxFriendsHost(){
+  let g=document.getElementById('inboxFriends');
+  if(g) return g;
+  const scr=document.querySelector('#inboxScr .inboxScroll')||document.getElementById('inboxScr');
+  if(!scr) return null;
+  const h=document.createElement('div');
+  h.className='sHead'; h.style.marginTop='14px'; h.textContent='FRIEND REQUESTS';
+  g=document.createElement('div'); g.id='inboxFriends';
+  const anchor=inboxSHeadAbove(document.getElementById('inboxMessages'));
+  if(anchor&&anchor.parentNode===scr){ scr.insertBefore(h,anchor); scr.insertBefore(g,anchor); }
+  else { scr.appendChild(h); scr.appendChild(g); }
+  return g;
+}
+function inboxFriendsLine(txt){
+  const d=document.createElement('div');
+  d.className='inboxEmpty';
+  d.textContent=txt;
+  return d;
+}
+/* 44px minimum on every tap target, set inline: this file cannot add a rule to
+   ui.css, and an OTA bundle is scripts only, so a class that does not already
+   exist on disk would reach nobody. min-height beats a class height. */
+function inboxFriendsBtn(label,fn){
+  const b=document.createElement('button');
+  b.type='button';
+  b.className='mbtn alt';
+  b.textContent=label;
+  b.style.minHeight='44px'; b.style.minWidth='44px';
+  b.style.padding='0 12px'; b.style.fontSize='10px'; b.style.flex='0 0 auto';
+  if(typeof mfBindTap==='function') mfBindTap(b,fn);
+  else b.addEventListener('click',fn);
+  return b;
+}
+function inboxFriendsToast(m){
+  if(typeof toast==='function'){ try{ toast(m); }catch(e){} }
+}
+function inboxFriendsOpenAccount(trigger){
+  if(typeof sfx==='function'){ try{ sfx('ui'); }catch(e){} }
+  if(typeof apOpen==='function'){ try{ apOpen(trigger||null); return; }catch(e){} }
+  if(typeof showFrontScreen==='function'){ try{ showFrontScreen('profileScr'); }catch(e){} }
+}
+/* One row per person. b is the username and it is set with textContent, so a
+   name of "<script>x</script>" arrives as thirty-odd inert characters. */
+function inboxFriendsRow(f,sub){
+  const row=document.createElement('div');
+  row.className='inboxItem inboxLog';
+  row.style.minHeight='44px';
+  const dot=document.createElement('span');
+  dot.className='inboxDot'; dot.setAttribute('aria-hidden','true');
+  row.appendChild(dot);
+  const tx=document.createElement('span');
+  tx.className='inboxTx';
+  const b=document.createElement('b');
+  b.textContent=inboxFriendsName(f);
+  const s=document.createElement('span');
+  s.textContent=sub||'';
+  tx.appendChild(b); tx.appendChild(s);
+  row.appendChild(tx);
+  return row;
+}
+function inboxFriendsRequestRow(r){
+  const row=inboxFriendsRow(r,'wants to be friends');
+  row.className='inboxItem unread';
+  const acts=document.createElement('span');
+  acts.className='inboxMeta';
+  acts.style.display='flex'; acts.style.gap='6px'; acts.style.alignItems='center';
+  acts.appendChild(inboxFriendsBtn('ACCEPT',()=>inboxFriendsRespond(r,true)));
+  acts.appendChild(inboxFriendsBtn('DECLINE',()=>inboxFriendsRespond(r,false)));
+  row.appendChild(acts);
+  return row;
+}
+/* Optimistic only AFTER the server agrees. Dropping the row on tap and putting
+   it back on failure is worse than a 300ms wait: the row that reappears looks
+   like a second request from the same person. */
+function inboxFriendsRespond(r,accept){
+  const c=INBOX_FRIENDS;
+  if(!r||c.busy) return;
+  if(typeof socialRespond!=='function'){
+    inboxFriendsToast('Friends are not available in this build.');
+    return;
+  }
+  c.busy=true;
+  Promise.resolve(socialRespond(r.id||r.username,accept)).then(res=>{
+    c.busy=false;
+    if(res&&res.ok){
+      c.incoming=(c.incoming||[]).filter(x=>x!==r);
+      if(accept) c.friends=(c.friends||[]).concat([{id:r.id,username:r.username}]);
+      inboxFriendsToast(accept?('Friend request accepted — '+inboxFriendsName(r))
+                              :'Friend request declined');
+    }else{
+      const gate=(typeof mfSocialGate==='function')?mfSocialGate(res):'ok';
+      if(gate!=='ok') c.gate=gate;
+      inboxFriendsToast((res&&res.message)||'Could not reach the friends service.');
+    }
+    renderInboxFriends();
+    if(typeof storyRefreshBadge==='function') storyRefreshBadge();
+  }).catch(()=>{ c.busy=false; });
+}
+/* The network half. Refuses in every case where a request would be pointless
+   or rude — signed out, offline, no wrapper, already asked inside the window —
+   and it is a plain function, not an async one, so renderInbox() stays
+   synchronous when it calls it. */
+function inboxFriendsRefresh(force){
+  const c=INBOX_FRIENDS;
+  if(c.busy) return false;
+  if(typeof socialFriends!=='function') return false;
+  if(typeof mfSocialSignedIn!=='function'||!mfSocialSignedIn()) return false;
+  if(typeof netAllowed==='function'&&!netAllowed()){
+    /* Not an error and not a retry: mark the cache offline and repaint the
+       quiet line. No request is issued, so nothing to time out. */
+    if(!c.loaded){ c.code='offline'; c.at=Date.now(); renderInboxFriends(); }
+    return false;
+  }
+  const now=Date.now();
+  if(!force&&c.at&&(now-c.at)<INBOX_FRIENDS_MIN_MS) return false;
+  c.busy=true; c.at=now;
+  Promise.resolve(socialFriends()).then(res=>{
+    c.busy=false;
+    if(res&&res.ok){
+      c.friends=res.friends||[]; c.incoming=res.incoming||[];
+      c.loaded=true; c.code=''; c.msg=''; c.gate='ok';
+    }else{
+      c.code=(res&&res.code)||'server';
+      c.msg=(res&&res.message)||'';
+      c.gate=(typeof mfSocialGate==='function')?mfSocialGate(res):'ok';
+    }
+    renderInboxFriends();
+    if(typeof storyRefreshBadge==='function') storyRefreshBadge();
+  }).catch(()=>{ c.busy=false; });
+  return true;
+}
+function renderInboxFriends(){
+  const g=inboxFriendsHost(); if(!g) return;
+  const c=INBOX_FRIENDS;
+  c.signedIn=(typeof mfSocialSignedIn==='function')?mfSocialSignedIn():false;
+  /* Signing out has to empty the cache, not just hide it — otherwise the next
+     player on this device sees the previous player's friends for one frame. */
+  if(!c.signedIn){ c.loaded=false; c.friends=[]; c.incoming=[]; c.code=''; c.gate='ok'; }
+  while(g.firstChild) g.removeChild(g.firstChild);
+  const st=inboxFriendsState(c);
+  if(st==='signed-out'){
+    g.appendChild(inboxFriendsLine(
+      'Sign in to add friends by username and see who wants to squad up. '+
+      'Everything else in the game works exactly the same without an account.'));
+    const b=inboxFriendsBtn('OPEN ACCOUNT',()=>inboxFriendsOpenAccount(b));
+    b.style.marginTop='8px';
+    g.appendChild(b);
+  }else if(st==='offline'){
+    /* A gate is not a network failure: an account that has not verified its
+       email needs a door, not an apology. */
+    const nudge=(typeof mfSocialNudge==='function')?mfSocialNudge(c.gate):null;
+    if(nudge){
+      g.appendChild(inboxFriendsLine(nudge.text));
+      if(nudge.cta){
+        const b=inboxFriendsBtn(nudge.cta,()=>{ if(nudge.act) nudge.act(b); });
+        b.style.marginTop='8px';
+        g.appendChild(b);
+      }
+    }else{
+      g.appendChild(inboxFriendsLine(
+        'Friends are offline right now — this list fills in the next time '+
+        'you open the mailbox with a connection.'));
+    }
+  }else if(st==='empty'){
+    g.appendChild(inboxFriendsLine(c.loaded
+      ? 'No friend requests. Add a commander by their exact username to send one.'
+      : 'Checking for friend requests…'));
+  }else{
+    for(const r of (c.incoming||[])) g.appendChild(inboxFriendsRequestRow(r));
+    if((c.friends||[]).length){
+      const h=document.createElement('div');
+      h.className='sHead'; h.style.marginTop='10px'; h.textContent='FRIENDS';
+      g.appendChild(h);
+      for(const f of c.friends) g.appendChild(inboxFriendsRow(f,'friend'));
+    }
+  }
+  /* Same badge helper the dispatch and update lists use, on the heading this
+     list actually sits under. */
+  if(typeof inboxSectionCount==='function'){
+    const cnt=inboxSectionCount('inboxFriends');
+    if(cnt){
+      const n=inboxUnreadFriends();
+      cnt.textContent=n>99?'99+':String(n);
+      cnt.classList.toggle('on',n>0);
+    }
+  }
+}
+/* ---------- END FRIENDS ---------- */
 
 /* The portraits are canonical command identities, not interchangeable avatars.
    A Nova survey memo still travels through Captain Kai's authenticated command
