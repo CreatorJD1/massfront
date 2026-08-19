@@ -5878,9 +5878,15 @@ function unitTick(dt){
           if(perfScale>0.5) addParticle(3,ux[i],uy[i],0,0,0.5,T.r*1.6, 170,235,80);
         }
       } else if(utype[i]===28){                // PRAETOR — walking siege battery
-        /* Target validation happens further down, so read the raw handle. */
+        /* Target validation happens further down, so read the raw handle - but
+           check it HERE with the generation guard. `ualive[ht]` alone proves the
+           SLOT is occupied, not that it still holds the unit this Praetor aimed
+           at: killUnit returns dead slots to the shared freeList, so a target
+           that died last frame can be a brand new unit - frequently a friendly
+           one - by the time this block runs a frame later. The battery then
+           walked three cluster shells onto its own line. */
         const ht=utgt[i];
-        if(ustomp[i]<=0 && ht>=0 && ualive[ht]){
+        if(ustomp[i]<=0 && ht>=0 && foeTgt(i,ht,utgtg[i])){
           ustomp[i]=5.5;
           for(let k=0;k<3;k++){
             const a=Math.random()*TAU, d=Math.random()*70;
@@ -6232,6 +6238,12 @@ function unitTick(dt){
     ux[i]=nx; uy[i]=ny;
     if(travel>0.01) gridRelink(i);
     if(i===heroIdx&&typeof commanderTerrainRecovery==='function') commanderTerrainRecovery(i,travel,dt);
+    /* Every OTHER ground unit needs the same escape. The backstop existed but
+       nothing ever invoked it, so only the commander could leave ground that
+       slope gating had turned impassable under it. Self-gated: hero, air and
+       naval return immediately, and it only acts on a unit that is BOTH stuck
+       and standing on blocked ground. */
+    groundTerrainRecovery(i,travel,dt);
     if(i===heroIdx&&T.cat==='hero'&&travel>0.01&&(tick&7)===0&&typeof commanderCrushScenery==='function')
       commanderCrushScenery(i,false);
     /* Intent is not movement: blocked walkers can still have a far-away order.
@@ -6685,7 +6697,7 @@ function bldTick(dt){
         const rng=HELL.rng*bldRngMul(B);
         const tgts=[];
         forUnitsIn(B.x,B.y,rng,j=>{
-          if(uteam[j]!==B.team&&!TYPES[utype[j]].air&&tgts.length<HELL.tgts) tgts.push(j);
+          if(intelCanTarget(j,B.team)&&!TYPES[utype[j]].air&&tgts.length<HELL.tgts) tgts.push(j);
         });
         if(tgts.length){
           const pw=drawEnergy(B.team,HELL.e);            // brownouts slow the guns
@@ -6729,7 +6741,7 @@ function bldTick(dt){
             px3=ux[cur]; py3=uy[cur]; mult*=0.88;
             let nx2=-1,nd2=ARC.jump*ARC.jump;
             forUnitsIn(px3,py3,ARC.jump,j=>{
-              if(uteam[j]!==B.team&&!chained.has(j)){
+              if(intelCanTarget(j,B.team)&&!chained.has(j)){
                 const dd=dist2(px3,py3,ux[j],uy[j]);
                 if(dd<nd2){ nd2=dd; nx2=j; }
               }
@@ -6747,7 +6759,7 @@ function bldTick(dt){
       const rng=RAIL.rng*bldRngMul(B);
       let e=-1, best=-1;
       forUnitsIn(B.x,B.y,rng,j=>{
-        if(uteam[j]===B.team||TYPES[utype[j]].air) return;
+        if(!intelCanTarget(j,B.team)||TYPES[utype[j]].air) return;
         const score=uhpm[j]*(ARM[utype[j]]===2?1.65:1);
         if(score>best){ best=score; e=j; }
       });
@@ -6774,7 +6786,7 @@ function bldTick(dt){
       const rng=MINELASER.rng*bldRngMul(B);
       let e=-1,best=-1;
       forUnitsIn(B.x,B.y,rng,j=>{
-        if(uteam[j]===B.team||TYPES[utype[j]].air) return;
+        if(!intelCanTarget(j,B.team)||TYPES[utype[j]].air) return;
         const score=(ARM[utype[j]]===2?2.2:1)*uhp[j];
         if(score>best){ best=score; e=j; }
       });
@@ -6804,7 +6816,7 @@ function bldTick(dt){
         const rng=MISSILE_BASTION.rng*bldRngMul(B),targets=[];
         const max=MISSILE_BASTION.tgts+((B.lvl||1)>=3?1:0);
         forUnitsIn(B.x,B.y,rng,j=>{
-          if(uteam[j]!==B.team&&!TYPES[utype[j]].air&&targets.length<max) targets.push(j);
+          if(intelCanTarget(j,B.team)&&!TYPES[utype[j]].air&&targets.length<max) targets.push(j);
         });
         if(targets.length){
           const pw=drawEnergy(B.team,MISSILE_BASTION.e);
