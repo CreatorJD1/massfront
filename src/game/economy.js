@@ -235,6 +235,66 @@ function econBindResourceNode(B){
   }
   return null;
 }
+/* ALLY SEAT INCOME. econTickAiSeats already does exactly this for enemy
+   commanders; allies had nothing equivalent, so aiAllyTick paid them a flat
+   difficulty-keyed drip instead - income that no map feature produced and
+   that destroying their Extractor could not touch. Two consequences beyond
+   the obvious: an ally seat could never STALL, and allied Extractors never
+   depleted their deposit, because econTick skips every B.allyAI structure
+   and nothing else was counting them. Same yield table as the enemy seats,
+   deliberately - a seat is a seat. */
+function econTickPlayerSeats(dt){
+  if(typeof AI==='undefined'||!AI.allies||!AI.allies.length) return;
+  for(const S of AI.allies){
+    if(S.mass==null) S.mass=220;
+    if(S.energy==null) S.energy=900;
+    let mi=0.6, ei=2, silos=0, fabs=0, owned=0;
+    for(const B of bldLive){
+      if(!B.alive||B.team!==0||B.prog<1) continue;
+      if(B.allyAI!==S.slot) continue;
+      owned++;
+      if(B.type==='hq'){ mi+=5.0; ei+=26; }
+      if(B.type==='mex'){
+        const D=econBindResourceNode(B), before=depositTier(D);
+        if(before>0){
+          const base=(B.lvl===3?11 : B.lvl===2?7 : 4)*(DEPOSIT_YIELD[before]||1);
+          const raw=drainDeposit(D,base*dt);
+          const got=raw*(typeof factionDoctrineNodeYieldMul==='function'?factionDoctrineNodeYieldMul(0):1);
+          mi+=got/Math.max(dt,.0001);
+          B.nodeTier=depositTier(D); B.nodeRemaining=D.remaining;
+        } else { B.nodeTier=0; B.nodeRemaining=0; }
+      }
+      else if(B.type==='pgen') ei+= B.lvl===3?38 : B.lvl===2?24 : 14;
+      else if(B.type==='geo'){
+        const G=econBindResourceNode(B), before=geyserTier(G);
+        if(before>0){
+          const raw=drainGeyser(G,30*dt);
+          const got=raw*(typeof factionDoctrineNodeYieldMul==='function'?factionDoctrineNodeYieldMul(0):1);
+          ei+=got/Math.max(dt,.0001);
+          B.nodeTier=geyserTier(G); B.nodeRemaining=G.remaining;
+        } else { B.nodeTier=0; B.nodeRemaining=0; }
+      }
+      else if(B.type==='silo') silos++;
+      else if(B.type==='fab') fabs++;
+    }
+    /* A seat holding no income structure at all still trickles, exactly as
+       the base 0.6/2 above gives a player with a bare HQ a way back. Without
+       this a seat whose base is levelled is dead rather than crippled. */
+    mi*=resPace; ei*=resPace;
+    /* Difficulty still shapes an ally, but as a MULTIPLIER on real income
+       rather than as income itself, so the map is always the source. */
+    const dm=1+0.15*(S.diff||0); mi*=dm; ei*=dm;
+    if(fabs){
+      const thr=clamp((S.energy||0)/900,0,1);
+      ei-=FAB_E*fabs*thr;
+      mi+=FAB_M*fabs*thr;
+    }
+    S.mcap=MCAP0+600*silos; S.ecap=ECAP0+2000*silos;
+    S.mass=Math.max(0,Math.min(S.mcap,S.mass+mi*dt));
+    S.energy=Math.max(0,Math.min(S.ecap,S.energy+ei*dt));
+    S.ownedStructures=owned;
+  }
+}
 function econTickAiSeats(dt){
   /* One wallet per enemy commander. Mex/pgen/geo/fab/silo follow B.aiBaseSlot
      the same way ally buildings skip the player bank via B.allyAI. Compact
@@ -286,6 +346,9 @@ function econTickAiSeats(dt){
   return true;
 }
 function econTick(dt){
+  /* Ally seats bank their own structures before the player ledger runs, so
+     a stall on one seat cannot be masked by another seat is income. */
+  econTickPlayerSeats(dt);
   for(let team=0;team<2;team++){
     if(team===1&&econTickAiSeats(dt)) continue;
     /* The HQ is a working installation, not just a spawn point: it runs its own

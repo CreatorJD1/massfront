@@ -358,7 +358,18 @@ function sessRestoreInto(s){
       const T=TYPES[utype[i]];
       const isCdr = utype[i]===4 || (T && T.cat==='hero');
       if(!isCdr) continue;
-      if(uteam[i]===0){ if(heroIdx<0) heroIdx=i; }
+      /* The PLAYER seat, not merely team 0. Ally commanders are also team 0
+         and cat==="hero", and they spawn at LOWER indices than the player on
+         a resume - so this first-match scan handed heroIdx to the ALLY, and
+         from that moment abilities, the HUD, hero XP and the victory check
+         all pointed at a unit the player does not control. uCmd is captured
+         (U.cmd) and replayed through spawnUnit above, so the seat is known
+         here. The fallback keeps a legacy snapshot with no seat data
+         resumable, which is what it did before. */
+      if(uteam[i]===0){
+        if(uCmd[i]===POP_PLAYER_SLOT){ if(heroIdx<0||uCmd[heroIdx]!==POP_PLAYER_SLOT) heroIdx=i; }
+        else if(heroIdx<0) heroIdx=i;   // legacy snapshot: better a hero than none
+      }
       else if(uteam[i]===1){ if(enemyHeroIdx<0) enemyHeroIdx=i; enemyHeroIdxs.push(i); }
     }
     if(heroIdx<0) return (sessClear(),false);   // nothing to resume into

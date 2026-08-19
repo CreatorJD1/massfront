@@ -948,6 +948,16 @@ function commanderAiFireSecondary(i,S){
   if(pk>=0){pwk[pk]=W.wk||'p';pCannon[pk]=1;if(W.ptype===2){pBarrage[pk]=1;pArc[pk]=90;}projectileFireFX(pk,mz[0],mz[1],ux[e]-mz[0],uy[e]-mz[1]);}
   sfx(W.sfx||'cannon',ux[i],uy[i],1.2);
 }
+/* Which wallet a commander power spends. The four baseline powers hardcoded
+   pay(0,0,...) - the PLAYER bank - so an ally commander firing its primary,
+   barrage, class ability or jump jets billed the human. Harmless while ally
+   seats had no wallet; a straight transfer now that they do. */
+function commanderUnitSeatSlot(i){
+  if(i==null||i<0) return null;
+  if(typeof uCmd==='undefined') return null;
+  const s=uCmd[i];
+  return (s!=null&&s>=0)?s:null;
+}
 function commanderAiTick(dt){
   if(typeof AI==='undefined'||!AI) return;
   const seats=[].concat(AI.bases||[],AI.allies||[]);
@@ -956,6 +966,11 @@ function commanderAiTick(dt){
     const i=S.commander;
     if(!ualive[i]||(S.commanderGen!=null&&ugen[i]!==S.commanderGen)) continue;
     if(typeof heroIdx!=='undefined'&&i===heroIdx) continue;
+    /* A seat a human occupies is never driven by the director. Nothing sets
+       S.human yet - co-op has not landed - so this is inert today, and the
+       ===true test keeps it inert for an undefined field rather than
+       accidentally parking every AI commander. */
+    if(S&&S.human===true) continue;
     S.activeCool=Math.max(0,(S.activeCool||0)-dt);
     if(!S.weaponCool) S.weaponCool=[0,0];
     S.weaponCool[0]=Math.max(0,S.weaponCool[0]-dt);
@@ -965,6 +980,22 @@ function commanderAiTick(dt){
     const C=commanderDefForUnit(i),A=C&&C.active; if(!A) continue;
     const aim=commanderAiAimPoint(i,A);
     if(!commanderAiShouldCast(i,A,aim)||!aim) continue;
+    /* ALLY abilities now cost the ally seat. fireCommanderActiveAt pays
+       NOTHING - the player UI callers pay before invoking it - so an AI
+       commander cast has always been free. That was invisible while ally
+       seats had no wallet; now that they earn from real structures it should
+       cost them, exactly as it costs the player. Enemy seats are deliberately
+       left free: charging them is a live difficulty change and belongs to a
+       balance pass, not to this one. A seat that cannot afford its ability
+       simply does not cast, which is what canAfford is for.
+       commanderUnitSeatSlot resolves the seat from uCmd on the firing unit. */
+    if(uteam[i]===0 && A.energy){
+      const seat=commanderUnitSeatSlot(i);
+      if(seat!=null){
+        if(!canAfford(0,0,A.energy,seat)) continue;
+        pay(0,0,A.energy,seat);
+      }
+    }
     fireCommanderActiveAt(i,aim.x,aim.y,true);
   }
 }

@@ -223,8 +223,13 @@ function aiSetup(diff,bases,allies){
 function aiAllyTick(dt){
   if(!AI.allies||!AI.allies.length)return;
   for(const A of AI.allies){
-    A.mass=Math.min(1400,(A.mass||0)+dt*(4.4+A.diff*1.6));
-    A.energy=Math.min(6200,(A.energy||0)+dt*(22+A.diff*9));
+    /* The flat drip is gone. econTickPlayerSeats (economy.js) banks this
+       seat from the structures it actually owns, on the same yield table the
+       enemy seats use - so an ally that loses its Extractor visibly weakens,
+       which the drip could never express. A seat with NO income structures
+       still gets the 0.6/2 floor there, so a levelled ally is crippled
+       rather than dead. Caps move to MCAP0/ECAP0 + silos for the same
+       reason: a seat is a seat. */
     A.spawnT=(A.spawnT||0)-dt;A.orderT=(A.orderT||0)-dt;
     let live=typeof populationUsedForCommander==='function'?populationUsedForCommander(A.slot):0;
     if(!live){
