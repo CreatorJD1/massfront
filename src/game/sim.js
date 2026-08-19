@@ -4513,6 +4513,17 @@ function setupDoodads(){
     const grove=clamp((gv-0.44)/0.20,0,1);
     const lo=mfFloraH(fk==='palm'?0.40:(fk==='pine'?0.50:0.42));
     const hi=mfFloraH(fk==='palm'?0.54:(fk==='pine'?0.72:0.60));
+    /* Clearing baseline stays 0.06. Lowering it to 0.02 was measured and
+       REVERTED: tree counts collapsed 75/72/80/48 -> 22/34/32/12, a 55-75%
+       loss of forest. The reasoning that failed was "the cap still fills,
+       2600 candidates for a cap of 48-240" - but candidates reaching this test
+       are already filtered by height band, spawn clearance, city ground and
+       deposit proximity, and this is an if/else-if chain, so a rejected tree
+       falls through to cover/rocks rather than being retried. The 6% is
+       load-bearing for reaching the cap, not salt in the clearings.
+       Clustering at 0.06 measures R=0.787/0.895/0.866/0.825 against matched
+       uniform controls of 0.975-1.155, which is real clustering; push it
+       further by sharpening the GROVE FIELD, never by starving the accept. */
     if(trees.length<treeCap && h>lo && h<hi && rnd()<0.06+0.92*grove)
       trees.push({x,y,s:rr(16,34),a:rr(0,TAU),k:fk});
     /* Undergrowth follows the canopy but reaches past its edge, so a stand has
