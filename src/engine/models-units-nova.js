@@ -1323,6 +1323,249 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
     })
   })
 });
+/* ============================================================================
+   NOVA HULL FINISH — THE METAL RESPONSE
+   ----------------------------------------------------------------------------
+   What was actually wrong, established from a real-GPU capture and not from
+   reading the code: the Nova roster is NOT untextured. Every hull surface
+   already carries an atlas tile with panel breaks, brushed grain, a derived
+   normal map and real gloss. But the live ORM is NOT the procedural one the
+   MAT_GLOSS / MAT_METAL tables in materials.js describe: materials.js prefers
+   a baked assets/textures/mat-orm.png, and a GPU read-back of matOrmTex matches
+   that PNG texel-for-texel (PLATE gloss 120 / TWR_GLOW emis 13 / PLASMA_JET
+   emis 0) while matching the procedural tables nowhere. Two facts fall out of
+   the shipped bake and they decide this entire pass:
+     - ITS ALPHA IS 255 EVERYWHERE, so metal = 1.0 on every surface in the
+       game and MAT_METAL is dead data. At metal 1.0 FS3D halves the diffuse
+       term (kd=(1-F)*mix(1,0.55,metal)) and sets f0 = albedo, so a surface IS
+       its own albedo seen through a GGX lobe. A 0.6-0.7 near-white albedo at
+       metal 1.0 is a flat pale mirror -- which is precisely what the roster
+       looked like. Deep navy at metal 1.0 is tinted gunmetal with a bright
+       specular edge, which is the reference.
+     - NOVA_COMPOSITE gloss 0.55 against MAT.TRIM 0.87: the trim edge every
+       MET_L highlight resolves to ALREADY carries a tight highlight. It was
+       invisible only because the plate beside it sat at the same value.
+   So the problem is VALUE. The palette this roster paints with —
+   MET (158,166,176), MET_L (206,214,222) — is near-white, and the tile it
+   multiplies is #9cafc4, so FS3D's
+
+       alb = clamp(vCol*(0.42+tex*0.62), 0.0, 0.88)
+
+   lands at 0.5-0.7 across the whole machine. At that albedo a metal's GGX lobe
+   adds almost nothing over its own near-white f0, the exposure curve
+   lit = 1-exp(-lit*1.55) compresses what is left, and a gloss-0.87 trim edge is
+   indistinguishable from matte paint. The army reads as pale plastic. Nothing
+   about that is fixed by adding another texture.
+
+   So this darkens and cools the HULL FAMILY ONLY, through a gamma curve rather
+   than a flat multiply, which is what keeps the existing relief:
+
+       k   = luminance(sourceColour) ^ 1.28
+       rgb = k * (0.500, 0.560, 0.665)
+
+   The gamma is the load-bearing part. A linear scale moves a recess and a
+   highlight by the same ratio and the surface stays as flat as it was; the
+   exponent pushes DARKER (32,36,42) down to ~0.04 while MET_L only falls to
+   ~0.40, so the seam recesses, vent slots and shadow gaps that were ALREADY
+   MODELLED finally have somewhere dark to be. That is the "panel-line detail"
+   win — the lines exist, they were being washed out.
+
+   WHAT IS DELIBERATELY NOT TOUCHED:
+     - team-flagged vertices (aMat<0). They carry the faction livery and the
+       faction-readability suite keys on them; darkening the identity panels to
+       chase a reference photograph is how an RTS loses its army colours.
+     - glass, bore, tread, rubber, lamp, energy and every damage material.
+     - MATERIAL IDS. This writes vertex COLOUR only, so SERVO stays SERVO and
+       the vertex stage's gait marker is untouched by construction.
+     - Nova STRUCTURES. tfcNovaBldFactory has its own route and does not call
+       this; a building is a different lighting problem and its own review.
+   ============================================================================ */
+const TFC_FINISH_SRC=Object.freeze({
+  [MAT.PLATE]:1,[MAT.GREEBLE]:1,[MAT.TRIM]:1,[MAT.SERVO]:1,
+  [MAT.TWR_ARMOR]:1,[MAT.TWR_MACH]:1,[MAT.TWR_COAT]:1,[MAT.TWR_PAD]:1,
+  [MAT.NOVA_COMPOSITE]:1,[MAT.NOVA_CARBON]:1,[MAT.NOVA_SERVO]:1
+});
+const TFC_HULL_TINT=Object.freeze([0.500,0.560,0.665]);
+const TFC_HULL_GAMMA=1.28;
+function tfcNovaFinishPass(geo){
+  if(!geo||!geo.v)return geo;
+  const v=geo.v,T=TFC_HULL_TINT;
+  /* MUST run before tfcNovaSurfacePass: that rewrites the id in place, so
+     after it a PLATE vertex says NOVA_COMPOSITE and TWR_MACH says NOVA_SERVO.
+     Keying on the post-remap id would silently miss half the hull. */
+  for(let o=11;o<v.length;o+=VFLOATS){
+    const raw=v[o];
+    if(raw<0)continue;                       // team livery panel — leave it alone
+    if(TFC_FINISH_SRC[Math.floor(raw)-1]!==1)continue;
+    const c=o-5;                             // pos3 nrm3 COL3 uv2 mat1 -> colour at o-5
+    const L=v[c]*0.299+v[c+1]*0.587+v[c+2]*0.114;
+    if(L<=0)continue;
+    const k=Math.pow(L,TFC_HULL_GAMMA);
+    v[c]=k*T[0];v[c+1]=k*T[1];v[c+2]=k*T[2];
+  }
+  return geo;
+}
+
+/* ---------------------------------------------------------------------------
+   THRUSTER PLUMES
+   ---------------------------------------------------------------------------
+   Nova's three aircraft had no exhaust efflux of any kind — a hollow bore, a
+   HOT ring inside it, and then nothing. Tail-on they read as a parked airframe.
+
+   WHERE THIS CAN AND CANNOT LIVE. A per-frame particle or additive-billboard
+   plume belongs in render3d.js / gpufx.js, which this pass does not own, and
+   would also be the wrong call for the target device: the owner's phone runs at
+   perfScale 0.4125 and the most common FX gate in this codebase is
+   `perfScale > 0.48`, i.e. ABOVE it — a gated plume is a plume that player
+   never sees. Mesh geometry has no gate at all. It is drawn by the same
+   instanced call as the hull, costs no new draw call, no particle budget and no
+   uniform, and is therefore identical at 0.4125 and at 1.0.
+
+   WHICH MATERIAL ACTUALLY GLOWS. The first build of this plume used
+   MAT.PLASMA_JET (74) on the strength of its procedural painter, which fills
+   a fully white emissive. The capture disagreed: the brightest plume pixel came
+   back (104,115,186), a mid slate blue, and a read of the SHIPPED ORM says why —
+   PLASMA_JET emissive is baked at 0. It is not an emissive material in the game
+   that ships; it is a blue tile, and the capture proves it: a strongly-cyan
+   pixel count over the whole frame was 0 before this pass AND 0 with the plume
+   on PLASMA_JET, against 11540 once it moved to a tile that actually emits.
+
+   AND THE TILE CENTRE IS THE WRONG NUMBER TO READ. Picking a material by its
+   centre texel gave CHARGE_STRIP (78) at 178/255 -- but its emissive is a band
+   across a fifth of the tile, so its MIP AVERAGE is 40/255, and the mip is what
+   an RTS camera samples. Ranked by tile-average emissive the shipped atlas is:
+     77 WEAPON_GLOW 217 | 75 ENGINE_VENT 87 | 61 LEGION_THERMITE 42
+     78 CHARGE_STRIP 40 | 71/72/73 26      | 22 TWR_GLOW 13 | 74 PLASMA_JET 0
+   WEAPON_GLOW is five times anything else and is the only tile in the game that
+   can carry a hot core. Its albedo is orange (255,102,0), which does not matter:
+   FS3D takes the emissive COLOUR from vCol (vCol*emis*1.45*1.18) and the albedo
+   only feeds the lit term, which at metal 1.0 is a fraction of the emissive. The
+   warm albedo actually helps -- it lifts the red channel that a pure cyan tile
+   cannot reach, so the core goes white-hot instead of staying cyan-starved.
+   THE FALLOFF IS THEREFORE A MATERIAL LADDER, not a vertex ramp:
+     segments 0-1  WEAPON_GLOW  emis 0.85  - the hot core
+     segment  2    CHARGE_STRIP emis 0.16  - still glowing, cyan albedo
+     segments 3-4  PLASMA_JET   emis 0.00  - lit only, spent gas
+   Three real surface changes fall off far more convincingly than five shades of
+   one material could, and cost exactly the same.
+   WITHIN each material the vertex colour is the only intensity control there is,
+   and MeshBuilder's colour is per primitive, so the taper has to be a STACK of
+   five short frusta rather than one cone: five segments, each dimmer and
+   narrower than the last and each LONGER, so the efflux is a white-hot core at
+   the nozzle falling through cyan to deep blue as it stretches and closes.
+   One flat cone at one colour is exactly the "paper dart" read this replaces.
+
+   All three ids are >18.5, so the vertex stage gives the efflux the
+   restrained 0.14 team wash rather than the full 0.46 hull wash: the efflux
+   stays cyan for both armies instead of turning red for the enemy, which is
+   correct -- an engine's exhaust is not livery.
+
+   NO GL PASS IS ADDED. This is ordinary mesh geometry inside the existing
+   instanced unit draw, so AGENTS.md Rule 4 (save/restore BLEND, CULL_FACE,
+   DEPTH_TEST, DEPTH_WRITEMASK and call begin3D(S_nA) afterwards) has nothing
+   to bind here: no program, no framebuffer and no texture unit is touched, and
+   in particular units 4/5/6 -- which carry the Material V2 assetMaps base/nre/
+   mask plus matTex during the model pass -- are never rebound.
+   --------------------------------------------------------------------------- */
+const TFC_PLUME_COL=[
+  C(214,246,255),   // core: WEAPON_GLOW carries it, vCol supplies the hue
+  C(148,222,255),
+  C(96,182,244),
+  C(70,132,232),
+  C(38,86,192)      // tail: lit-only PLASMA_JET, nearly spent
+];
+/* Registered by ARRAY IDENTITY, which is how COL_MAT works — the same object
+   has to reach the primitive call or matDetect falls through its heuristics and
+   a pale cyan face becomes CURTAIN_GLASS instead. */
+/* Core on the one material that is actually baked emissive; tail on the blue
+   tile, which is lit-only and therefore fades on its own. */
+COL_MAT.set(TFC_PLUME_COL[0],MAT.WEAPON_GLOW);
+COL_MAT.set(TFC_PLUME_COL[1],MAT.WEAPON_GLOW);
+COL_MAT.set(TFC_PLUME_COL[2],MAT.CHARGE_STRIP);
+COL_MAT.set(TFC_PLUME_COL[3],MAT.PLASMA_JET);
+COL_MAT.set(TFC_PLUME_COL[4],MAT.PLASMA_JET);
+/* Restrained painted accent. BRASS is metal 0.92 / gloss 0.70 with a plain
+   warm fill, so a 0.2wu strip of it reads as an anodised edge stripe that
+   catches the same sun the hull now does. Deliberately not MAT.WARN: that tile
+   is diagonal hazard chevrons, which at strip width becomes noise, and its
+   #e8bf3a sits at the bloom threshold this project has already been bitten by. */
+const TFC_ACCENT=C(152,118,46);
+COL_MAT.set(TFC_ACCENT,MAT.BRASS);
+/* Radii and lengths as fractions of (r0, len). Radius bulges 10% just off the
+   nozzle — a real efflux expands before it collapses — then closes to 9%.
+   Segment length GROWS downstream so the bright end is short and the faded end
+   is long, which is what makes a static mesh read as moving gas. */
+const TFC_PLUME_R=[1.00,1.12,0.94,0.68,0.38,0.10];
+const TFC_PLUME_L=[0.16,0.19,0.21,0.22,0.22];
+/* Efflux along -X (aft). cylX grows toward +X from its origin, so each segment
+   is emitted at its OWN aft end with the smaller radius first. */
+function tfcPlume(m,x,y,z,len,r0){
+  let ax=x;
+  for(let k=0;k<TFC_PLUME_L.length;k++){
+    const sl=len*TFC_PLUME_L[k];
+    cylX(m,ax-sl,y,z,sl,r0*TFC_PLUME_R[k+1],r0*TFC_PLUME_R[k],8,TFC_PLUME_COL[k],false);
+    ax-=sl;
+  }
+  return m;
+}
+
+/* ---------------------------------------------------------------------------
+   AIRCRAFT DECORATION
+   ---------------------------------------------------------------------------
+   mdlWasp, mdlRaptor and mdlKestrel are built in models.js, which this pass
+   does not own. They are reached the same way the commander kits already reach
+   mdlCommander: build the extra geometry into a scratch MeshBuilder and weld it
+   onto the returned hull with mfCdrMergeGeo. Purely additive — nothing in
+   models.js is edited, moved or removed.
+
+   Nozzle coordinates are read from the builders, not guessed:
+     Wasp    tubeX(-5.12, 1.34, +-3.75) bore rIn .43, HOT ring at -5.15
+     Raptor  tubeX(-5.67, 1.62, +-3.78) bore rIn .55, HOT ring at -5.71
+     Kestrel tubeX(-7.66,  .92, +-1.14) bore rIn .27, HOT ring at -7.73
+   --------------------------------------------------------------------------- */
+function tfcDecorWasp(m){
+  for(const sd of [-1,1]){
+    tfcPlume(m,-5.24,1.34,sd*3.75,5.80,0.60);
+    ringX(m,-5.20,1.34,sd*3.75,0.26,0.56,10,TFC_PLUME_COL[0]);   // lit nozzle lip
+    m.box(-3.05,2.24,sd*3.75,0.34,0.16,1.05,TFC_ACCENT);         // squadron band ACROSS
+    m.box(-3.66,2.24,sd*3.75,0.20,0.16,1.05,TFC_ACCENT);         // ...and its thin partner
+    tfcSeam(m,-1.50,1.66,sd*6.00,2.90,0.30,MET_L,0);             // outer-wing panel break
+  }
+  m.box(-2.30,3.40,0,0.34,0.12,1.02,TFC_ACCENT);                  // spine band
+}
+function tfcDecorRaptor(m){
+  for(const sd of [-1,1]){
+    tfcPlume(m,-5.80,1.62,sd*3.78,6.80,0.76);
+    ringX(m,-5.76,1.62,sd*3.78,0.32,0.72,12,TFC_PLUME_COL[0]);
+    m.box(-3.60,2.80,sd*3.78,0.38,0.17,1.30,TFC_ACCENT);
+    m.box(-4.32,2.80,sd*3.78,0.22,0.17,1.30,TFC_ACCENT);
+    tfcSeam(m,-1.60,1.99,sd*5.00,3.10,0.32,MET_L,0);
+  }
+  m.box(-2.60,4.28,0,0.38,0.12,0.98,TFC_ACCENT);
+}
+function tfcDecorKestrel(m){
+  for(const sd of [-1,1]){
+    tfcPlume(m,-7.82,0.92,sd*1.14,4.60,0.34);
+    ringX(m,-7.78,0.92,sd*1.14,0.15,0.32,10,TFC_PLUME_COL[0]);
+    m.box(-6.20,1.53,sd*1.14,0.24,0.12,0.62,TFC_ACCENT);
+    m.box(-6.66,1.53,sd*1.14,0.14,0.12,0.62,TFC_ACCENT);
+    tfcSeam(m,-1.90,1.26,sd*4.30,2.70,0.28,MET_L,0);
+  }
+  m.box(-1.90,3.04,0,0.26,0.10,0.72,TFC_ACCENT);
+}
+/* Slot-keyed so a builder shared by several roles is decorated only where the
+   role actually wants it — the same trap tfcNovaFactory documents for packs. */
+const TFC_NOVA_DECOR=Object.freeze({5:tfcDecorWasp,17:tfcDecorRaptor,25:tfcDecorKestrel});
+/* One entry point for a UNIT. Order is not cosmetic: the finish pass keys on
+   the RAW material id and the surface pass overwrites that id in place, so
+   running them the other way round retones nothing on any surface the pack
+   or the faction map touches -- which is most of the hull. Structures do NOT
+   come through here; tfcNovaBldFactory still calls tfcNovaSurfacePass alone. */
+function tfcNovaUnitPass(geo,pack){
+  tfcNovaFinishPass(geo);
+  return tfcNovaSurfacePass(geo,pack);
+}
+
 function tfcNovaSurfacePass(geo,pack){
   if(!geo||!geo.v)return geo;
   const v=geo.v;
@@ -1345,7 +1588,12 @@ function tfcNovaFactory(fn,slot){
   const wrapped=function(){
     const g=fn();
     const pack=TFC_NOVA_BESPOKE_PACKS[slot]||null;
-    tfcNovaSurfacePass(g.hull,pack);tfcNovaSurfacePass(g.tur,pack);
+    /* Additive decoration for builders that live in models.js. Same route the
+       commander kits already use -- weld extra geometry onto the returned hull
+       rather than editing a file this pass does not own. */
+    const dec=TFC_NOVA_DECOR[slot];
+    if(dec&&g.hull){ const dm=MB(); dec(dm); g.hull=mfCdrMergeGeo(g.hull,dm.build()); }
+    tfcNovaUnitPass(g.hull,pack);tfcNovaUnitPass(g.tur,pack);
     return g;
   };
   /* initFactionKits caches identical builders by name. Every wrapper therefore
@@ -1778,8 +2026,8 @@ function mfCdrDecorateVale(m){
 function tfcNovaBindCommanderKits(){
   if(typeof gl==='undefined'||!gl) return;
   const pack=TFC_NOVA_BESPOKE_PACKS[4];
-  COMMANDER_KIT_MESH.nova_holt=mfCdrKitInst(mdlCommander,mfCdrDecorateHolt,tfcNovaSurfacePass,pack);
-  COMMANDER_KIT_MESH.nova_vale=mfCdrKitInst(mdlCommander,mfCdrDecorateVale,tfcNovaSurfacePass,pack);
+  COMMANDER_KIT_MESH.nova_holt=mfCdrKitInst(mdlCommander,mfCdrDecorateHolt,tfcNovaUnitPass,pack);
+  COMMANDER_KIT_MESH.nova_vale=mfCdrKitInst(mdlCommander,mfCdrDecorateVale,tfcNovaUnitPass,pack);
 }
 if(typeof initFactionKits==='function'){
   const _tfcInitKits=initFactionKits;

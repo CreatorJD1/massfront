@@ -5376,6 +5376,10 @@ function towerFxQ(){
 }
 function towerCrumble(x,y,s,civic){ spawnBuildingCollapse(x,y,s,civic); }
 function spawnBuildingCollapse(x,y,s,civic){
+  /* Real slabs that fall and settle, alongside the dust/shard language
+     below. The uniform 22-38% wreck mesh in render3d.js stays as the
+     footprint; these are the pieces that came off it. */
+  if(typeof mfPhysCollapse==='function') mfPhysCollapse(x,y,s,{civic:civic});
   /* Masonry death. spawnExplosion always emits a type-3 fireball (vehicle
      mushroom); towers that used it popped into a tank blast. Dust, debris
      shards and a bowl of embers — the hull shader already goes charcoal. */
@@ -5433,6 +5437,9 @@ function spawnExplosion(x,y,size,victimTeam){
      the map. Lingering burn is a separate stamp. */
   const sz=civic?Math.min(size,13):size;
   if(sz>=40&&!_superT){ superDetonation(x,y,sz/44,victimTeam); return; }
+  /* A real impulse, applied off-centre so a blast SPINS what it shoves.
+     Sited after the superweapon handoff so sz is the capped civic value. */
+  if(typeof mfPhysBlast==='function') mfPhysBlast(x,y,sz);
   if(sz>=16) addGroundBurn(x,y,sz*2.1,1);
   else if(sz>=8) addGroundBurn(x,y,sz*(civic?3.2:1.7),civic?1:0);
   else if(civic&&sz>=5) addGroundBurn(x,y,sz*3.0,1);
@@ -5442,22 +5449,63 @@ function spawnExplosion(x,y,size,victimTeam){
      so the burst has an outline that changes as it rises instead of being a
      disc that fades. Floored at 3 so the shape survives a weak device. */
   {
-    const np=Math.max(3, Math.round((civic?3:5+sz*0.10)*Math.max(0.55,perfScale)));
+    const q=Math.max(0.55,perfScale);
     const baseS=Math.min(40, sz*(civic?1.05:1.45));
-    for(let k=0;k<np;k++){
-      const a=Math.random()*TAU, rad=Math.random();
-      const sp=(civic?4:7)+Math.random()*(civic?5:11);
+    /* CORE - the light. Few, small, near-white, short. */
+    const nc=Math.max(2, Math.round((civic?2:3)*q));
+    for(let k=0;k<nc;k++){
+      const a2=Math.random()*TAU;
       addFirePuff(
-        x+Math.cos(a)*sz*0.22*rad, y+Math.sin(a)*sz*0.22*rad,
-        sz*(0.10+Math.random()*0.55),
-        Math.cos(a)*sp, Math.sin(a)*sp,
-        (civic?7:12)+Math.random()*(civic?9:20),
-        (.34+sz*0.010)*(0.75+Math.random()*0.65),
-        baseS*(0.42+Math.random()*0.52),
-        255,255,255);
+        x+Math.cos(a2)*sz*0.12*Math.random(), y+Math.sin(a2)*sz*0.12*Math.random(),
+        sz*(0.06+Math.random()*0.30),
+        Math.cos(a2)*(3+Math.random()*6), Math.sin(a2)*(3+Math.random()*6),
+        (civic?10:16)+Math.random()*14,
+        (.20+sz*0.005)*(0.8+Math.random()*0.5),
+        baseS*(0.30+Math.random()*0.26),
+        255,248,232);
+    }
+    /* SMOKE - the mass. More, larger, DARK, long, slow, spread wider. */
+    const nsm=Math.max(3, Math.round((civic?3:5+sz*0.11)*q));
+    for(let k=0;k<nsm;k++){
+      const a2=Math.random()*TAU, rad=0.35+Math.random()*0.65;
+      const sp=(civic?5:8)+Math.random()*(civic?6:13);
+      addFirePuff(
+        x+Math.cos(a2)*sz*0.34*rad, y+Math.sin(a2)*sz*0.34*rad,
+        sz*(0.08+Math.random()*0.40),
+        Math.cos(a2)*sp, Math.sin(a2)*sp,
+        (civic?5:8)+Math.random()*(civic?7:13),
+        (.55+sz*0.016)*(0.8+Math.random()*0.7),
+        baseS*(0.55+Math.random()*0.65),
+        58,50,46);
+    }
+    /* EMBERS - bright, small, thrown, and they FALL. Type 5 already flickers
+       and drags; this is what reads as 'burning debris' rather than a glow. */
+    if(!civic){
+      const ne=Math.max(4, Math.round((6+sz*0.55)*q));
+      for(let k=0;k<ne;k++){
+        const a2=Math.random()*TAU, sp=14+Math.random()*38, dq=Math.random();
+        addDebris(x,y,Math.cos(a2)*sp,Math.sin(a2)*sp, 42+dq*88, .55+dq*.75,
+          0.9+Math.random()*1.5, 255, 150+((Math.random()*80)|0), 40+((Math.random()*50)|0));
+      }
     }
   }
   addParticle(3,x,y,0,0,civic?.22:.42,sz*(civic?0.7:1.2), 255,180,90);
+  /* PRESSURE WAVE. Distinct from the ring above, which belongs to the
+     fireball. This one starts tight and expands to ~3.4x the blast radius in
+     under a third of a second, so it visibly leaves the fire behind - that
+     separation is what reads as a shock front rather than a bigger explosion.
+     Threshold at 14 so a rifle hit does not generate one; civic gets a smaller
+     one because the sz cap has already shrunk the blast to <=13. */
+  if(sz>=14||civic){
+    const shockR=sz*(civic?2.1:3.4);
+    /* leading edge: bright, thin, fast */
+    addParticle(3,x,y,0,0,civic?.16:.26, shockR, 255,236,208);
+    /* trailing dust skirt: wider, slower, dirtier - gives the front depth */
+    addParticle(3,x,y,0,0,civic?.26:.40, shockR*0.72, 214,196,168);
+    /* and a low ground-hugging dust ring where the wave scours the surface */
+    if(!civic&&perfScale>0.30)
+      addParticle(2,x,y,0,0,.34, shockR*0.55, 198,182,158);
+  }
   if(sz>=24&&!civic) addParticle(8,x,y,rr(-2,2),0,2.3,sz, 255,255,255);
   const ns=Math.round((civic?1:2+sz*0.3)*perfScale);
   for(let k=0;k<ns;k++){
@@ -5496,6 +5544,10 @@ function spawnExplosion(x,y,size,victimTeam){
     requestShake(x,y,sz>=30?10:6+sz*0.16,'blast');
 }
 function updParticles(dt){
+  /* RIGID BODIES. src/engine/physics.js owns real debris: angular motion,
+     terrain contacts, resting. Stepped here because updParticles is the one
+     function called exactly once per fixed sim step by every loop. */
+  if(typeof mfPhysStep==='function') mfPhysStep(dt);
   /* Ring-buffer scan of all 9000 slots. Later FX slice: live-index list so
      tick/draw are O(live). Civic explosion caps and type-4 flame clamp stay. */
   for(let i=0;i<MAXPART;i++){
