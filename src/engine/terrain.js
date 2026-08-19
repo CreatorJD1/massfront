@@ -1303,12 +1303,23 @@ void main(){
   lit+=vec3(0.09,0.24,0.22)*sss*(1.0-lava)*(1.0-ice*0.55);
   lit=mix(lit, skyRefl, clamp(0.12+fres*0.30,0.0,0.40));
   lit+=uSunC*spec*(0.62+0.55*ice);
-  float sp=sin(wxz.x*0.33+t*0.78)*sin(wxz.y*0.29-t*0.64);
-  float caus=pow(max(0.0, sp*0.62+0.22), 4.8)*mix(0.14,0.24,deep)*mix(1.0,0.45,ice);
+  /* Two decorrelated wave trains, not a separable product (see note below). */
+  /* ~50 world-unit swells, well away from Nyquist at command zoom. */
+  float sp=sin(dot(wxz,vec2(0.061,0.098))+t*0.37)*0.60
+          +sin(dot(wxz,vec2(-0.115,0.043))+t*0.26)*0.40;
+  /* Exponent 2.2, not 4.8: broad light variation, not hard bars. Shallower
+     water carries the brighter caustic - it was 71% stronger in DEEP water,
+     which is backwards, and 1.33.39's absorption then darkened the deep body
+     to near-black so the fixed-brightness caustic became the dominant read. */
+  float caus=pow(max(0.0, sp*0.55+0.30), 2.2)*mix(0.15,0.05,deep)*mix(1.0,0.45,ice);
   /* River: scrolling streaks along the carve axis. This is the read at
      command zoom — vertex travel alone is a sub-pixel. */
-  float streak=pow(0.5+0.5*sin(along*0.11-t*2.4)*sin(across*0.55+t*0.18), mix(3.2,5.5,uDetail));
-  caus=mix(caus, streak*mix(0.18,0.32,deep), river);
+  /* sin(across*0.55) is an 11-unit comb straight across the flow, which reads
+     as corduroy rather than current. Widen it and soften the exponent; the
+     along-flow scroll is what carries the intended read. */
+  float _mA=sin(across*0.055+t*0.13)*1.9, _mB=sin(across*0.021-t*0.07)*1.1;
+  float streak=pow(0.5+0.5*sin(along*0.11-t*2.4+_mA+_mB), mix(2.0,3.0,uDetail));
+  caus=mix(caus, streak*mix(0.13,0.055,deep), river);
   caus=mix(caus, caus*0.45, lake);
   lit+=mix(vec3(0.32,0.55,0.62), vec3(0.55,0.18,0.04), lava)*caus;
   lit+=body*lava*(0.16+0.12*max(0.0,w1))*(0.45+0.55*uNight);

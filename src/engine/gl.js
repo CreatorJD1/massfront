@@ -903,11 +903,23 @@ function buildAtlas(){
       c.beginPath(); c.arc(Math.cos(a)*48,Math.sin(a)*48,44,0,TAU); c.fill(); }
   });
   defSprite('fireball', c=>{
-    c.fillStyle=rg(c,0,0,104,[[0,'#fffbe8'],[.25,'#ffd257'],[.55,'#ff8b3a'],[.8,'rgba(220,70,30,.6)'],[1,'rgba(140,40,20,0)']]);
+    /* A radial gradient plus seven flat circles is a gaussian smudge: no core,
+       no ragged silhouette, no dark breaks. Stacked additively it saturates to
+       a featureless blob, which is what an explosion actually looked like. */
+    c.fillStyle=rg(c,0,0,104,[[0,'#fffbe8'],[.18,'#ffe08a'],[.42,'#ffab45'],[.68,'#ff6a24'],[.86,'rgba(190,55,24,.55)'],[1,'rgba(120,32,16,0)']]);
     c.beginPath(); c.arc(0,0,104,0,TAU); c.fill();
-    for(let i=0;i<7;i++){ const a=i*TAU/7+0.4, d=52+((i*37)%30);
-      c.fillStyle='rgba(255,150,60,.55)';
-      c.beginPath(); c.arc(Math.cos(a)*d,Math.sin(a)*d,30,0,TAU); c.fill(); }
+    /* ragged lobes at varied radius and size, so the outline is not a disc */
+    for(let i=0;i<13;i++){ const a=i*TAU/13+0.37, d=46+((i*53)%42), r=14+((i*29)%22);
+      c.fillStyle='rgba(255,'+(120+((i*37)%70))+',50,.50)';
+      c.beginPath(); c.arc(Math.cos(a)*d,Math.sin(a)*d,r,0,TAU); c.fill(); }
+    /* soot voids - the dark breaks are what stop additive stacking from
+       flattening the whole sprite into one saturated disc */
+    for(let i=0;i<7;i++){ const a=i*TAU/7+1.1, d=30+((i*61)%54);
+      c.fillStyle='rgba(40,18,10,.34)';
+      c.beginPath(); c.arc(Math.cos(a)*d,Math.sin(a)*d,10+((i*23)%13),0,TAU); c.fill(); }
+    /* core last so it survives the soot and the blast has a centre */
+    c.fillStyle=rg(c,0,0,40,[[0,'rgba(255,255,240,1)'],[.5,'rgba(255,226,150,.85)'],[1,'rgba(255,170,70,0)']]);
+    c.beginPath(); c.arc(0,0,40,0,TAU); c.fill();
   });
   defSprite('debris', c=>{
     const g=lg(c,0,-60,0,60,[[0,'rgba(255,240,200,0)'],[.4,'#ffcf7a'],[1,'#ff7030']]);

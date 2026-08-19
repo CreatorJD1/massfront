@@ -4845,7 +4845,12 @@ function projectileImpactFX(i,x,y){
   const wk=pwk[i]||'p', ty=ptype[i],fp=mfFactionFxPalette(pteam[i]);
   const s=clamp(5+Math.sqrt(Math.max(1,pdmg[i]))*0.34+(paoe[i]||0)*0.12,6,34);
   const vl=Math.hypot(pvx[i],pvy[i])||1,nx=pvx[i]/vl,ny=pvy[i]/vl;
-  const debris=(n,sp,r,g,b)=>{if(perfScale<=.48)return;
+  /* 0.48 was above the target device. A phone on the medium preset at 28-42
+     fps sits at perfScale 0.4125 (band .55 x GFX.particles .75), so impact
+     debris NEVER drew there - every hit was a bare soft flash. The count is
+     already scaled by perfScale below, so a weaker device still gets fewer
+     particles; this only decides whether it gets any at all. */
+  const debris=(n,sp,r,g,b)=>{if(perfScale<=.32)return;
     /* Older callers use normalized colours while particle storage is Uint8.
        Convert at the seam so fragments do not silently become near-black. */
     if(r<=1&&g<=1&&b<=1){r*=255;g*=255;b*=255;}
@@ -4918,7 +4923,7 @@ function projectileImpactFX(i,x,y){
      faction-specific flourish only when the adaptive budget has headroom. */
   if(!pBio[i]){
     addParticle(3,x,y,0,0,.34,Math.min(16,s*(pCannon[i]||pBarrage[i]?1.15:0.85)),fp.a[0],fp.a[1],fp.a[2]);
-    if(perfScale>.48){
+    if(perfScale>.32){                    // see the note on the debris gate above
       if(fp.key==='legion') debris(pCannon[i]?5:2,22,1,.34,.16);
       else if(fp.key==='syndicate') addParticle(3,x,y,0,0,.40,Math.min(14,s*1.05),fp.b[0],fp.b[1],fp.b[2]);
       else addParticle(0,x,y,0,0,.12,s*1.15,fp.b[0],fp.b[1],fp.b[2]);
@@ -5370,7 +5375,15 @@ function spawnBuildingCollapse(x,y,s,civic){
   const sz=Math.max(12, Math.min(s, 52));
   addParticle(0,x,y,0,0,.12,sz*0.78, 210,196,168);
   addParticle(2,x,y,0,0,1.55,sz*1.45, 148,142,130);
-  const nd=Math.round((5+sz*0.24)*fx);
+  /* Floor the counts. fx = perfScale * towerFxQ() lands at 0.4125 * 0.58 =
+     0.239 on the target device, so a 52-unit structure collapsed into about
+     four shards and three puffs - a building the size of a factory fell over
+     almost silently. Deliberately NOT adding a fireball here: the comment
+     above records that towers using spawnExplosion 'popped into a tank blast',
+     and that judgement stands. It also says the hull shader already goes
+     charcoal, which is what this collapse leans on - and that had been broken
+     by the carbon/damageData coupling in mesh.js, fixed separately. */
+  const nd=Math.max(6, Math.round((5+sz*0.24)*fx));
   for(let k=0;k<nd;k++){
     const a=Math.random()*TAU, sp=8+Math.random()*18;
     /* Masonry is thrown hard and lands hard: 62..150 wu/s is a 0.43..1.03 s

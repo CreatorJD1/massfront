@@ -1392,7 +1392,19 @@ void main(){
      burned. TWR_* ids 19..24 plus the HQ landmark band. */
   float structBurn=max(max(landmarkProfile,structureProfile), step(18.5,vMat)*(1.0-step(24.5,vMat)));
   float critical=smoothstep(mix(.58,.30,structBurn),.97,state);
-  float carbon=critical*smoothstep(.08,.46,damageData)*mechanical;
+  /* SOOT MUST NOT BE GATED BY THE CRACK MASK.
+     This multiplied carbonisation by smoothstep(.08,.46,damageData), where
+     damageData is a triplanar sample of mf2-carbon-cracks-v1.png - a texture
+     whose bulk luminance is 0.10-0.20. So over ~85% of a hull the term
+     evaluated to smoothstep(.08,.46,0.15) = 0.088, and a structure at 100%
+     damage KEPT ~92% OF ITS TEAM COLOUR. Wrecks read as flat saturated red
+     boxes with faint darker lines - those lines being the only pixels where
+     the mask rose enough to bite. The comment above promises the surface
+     'first soots, then carbonises'; the mask made that impossible.
+     The crack network should say where soot is HEAVIEST, not whether soot
+     happens at all. Floor it: uniform carbonisation at critical damage,
+     deepening along the cracks. */
+  float carbon=critical*mix(0.62,1.0,smoothstep(.08,.46,damageData))*mechanical;
   float hotCrack=smoothstep(mix(.78,.38,structBurn),.985,state)*smoothstep(mix(.68,.48,structBurn),.86,damageData)*(1.0-smoothstep(.985,1.0,state));
   alb=mix(alb,vec3(.016,.013,.011),carbon*.94);
   gloss=mix(gloss,.025,carbon);metal=mix(metal,0.0,carbon*.96);
@@ -1830,7 +1842,19 @@ void main(){
                +texture(uMap,vMapUV-vec2(texel.x,0.0)).rgb
                +texture(uMap,vMapUV+vec2(0.0,texel.y)).rgb
                +texture(uMap,vMapUV-vec2(0.0,texel.y)).rgb)*0.25;
-    base=max(base+(base-blurM)*(2.05*uGate),vec3(0.0));
+    /* SHARPEN LUMINANCE, NOT EACH CHANNEL, AND NOT AT 2.05.
+       Per-channel unsharp at amount 2.05 (conventional is 0.3-0.8) invents
+       colour at any high-chroma boundary. paintResourceGroundNode stamps cyan
+       veins rgba(72,186,220) into this very map over brown ground, so just
+       outside a vein (base-blurM) is strongly negative in G and B but barely
+       negative in R; amplified 2.05x and clipped at zero, G and B went to
+       black while R survived - a dark RED halo around every cyan deposit. The
+       same clipped undershoot is the black speckle along road edges.
+       Adding the luminance difference equally to all three channels sharpens
+       exactly as intended and cannot shift hue. */
+    float _lb=dot(blurM,vec3(.2126,.7152,.0722));
+    float _lc=dot(base ,vec3(.2126,.7152,.0722));
+    base=max(base+vec3((_lc-_lb)*(0.85*uGate)),vec3(0.0));
   }
   /* Third, finer octave fades in with proximity: sub-metre gravel the 512
      detail texture already carries but fixed weights never let through.

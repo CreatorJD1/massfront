@@ -2559,7 +2559,11 @@ function render(dtDraw){
       if(vq>=0.95) bbAlpha.add(sSmokeB,X+Math.cos(i*1.8)*gsz*.20,Y+Math.sin(i*2.4)*gsz*.18,
         H+28+age*62,gsz*.58,i*.22+t*.14,fcr[i]+4,fcg[i]+3,fcb[i]+3,95*lf);
     } else if(ty===3){                        // shock ring — on the crater, not a spinning halo
-      bbAdd.add(sRingB,X,Y,H+1.15,Math.min(18,fsize[i]*(0.55+(1-lf)*0.5)),0, fcr[i],fcg[i],fcb[i], 200*lf);
+      /* The clamp was 18 while spawnExplosion asks for up to ~62 world units,
+         so a TITAN and a scout detonated at an identical size. Raised enough
+         that magnitude reads; still bounded so one blast cannot fill the
+         screen with additive fill. */
+      bbAdd.add(sRingB,X,Y,H+1.15,Math.min(46,fsize[i]*(0.55+(1-lf)*0.5)),0, fcr[i],fcg[i],fcb[i], 200*lf);
     } else if(ty===2||ty===5){                // hot sparks and fragments
       /* The debris atlas cell is a camera-facing quad. At phone size its soft
          alpha collapses into a bright white square—the exact blocks reported
@@ -2577,8 +2581,13 @@ function render(dtDraw){
       bbAdd.add(sGlowB,X,Y,H+1.15,sz*1.55,0,fcr[i],Math.max(32,(fcg[i]*0.55)|0),Math.max(20,(fcb[i]*0.35)|0),Math.min(80,52*lf*flick));
       bbAdd.add(sGlowB,X,Y,H+1.35,sz*0.62,0,Math.min(255,fcr[i]+20),Math.min(255,fcg[i]+30),Math.min(255,fcb[i]+20),Math.min(170,120*lf*flick));
     } else if(ty===6){                        // volumetric explosion fireball
-      const age=1-lf, S=Math.min(16,fsize[i]);
-      bbAdd.add(sprites.fireball||sFireB,X,Y,H+S*.12,S*(0.88+age*.10),0,255,255,255,245*lf);
+      const age=1-lf, S=Math.min(40,fsize[i]);
+      /* Expand and spin. This grew 10% over its whole life with a literal 0
+         yaw, so every fireball was the same still image at the same size -
+         the 'flipbook' this branch is named for was never implemented (batU2
+         in gl.js is declared and never used). Real growth plus a per-instance
+         rotation gives a blast a sense of release without a sheet. */
+      bbAdd.add(sprites.fireball||sFireB,X,Y,H+S*.12,S*(0.55+age*0.85),(i*0.7)+age*0.35,255,255,255,245*lf);
       bbAdd.add(sGlowB,X,Y,H+1.4,S*0.95,0,255,135,55,52*lf);
     } else if(ty===7){                        // ballistic solid debris
       /* No hop cheat. The sim owns this fragment's altitude now — fpz is world
