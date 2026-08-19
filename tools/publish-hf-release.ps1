@@ -286,7 +286,11 @@ if($PatchFrom){
 } else {
   Compress-Archive -Path $archiveItems.FullName -DestinationPath $source -CompressionLevel Optimal
 }
-Need ((Get-Item -LiteralPath $source).Length -gt 1048576) "Source archive is implausibly small; refusing to publish an unusable handoff."
+if($PatchFrom){
+  Write-Host "Hotfix: no source archive was built, so its size assertion does not apply." -ForegroundColor Yellow
+} else {
+  Need ((Get-Item -LiteralPath $source).Length -gt 1048576) "Source archive is implausibly small; refusing to publish an unusable handoff."
+}
 Remove-Item -LiteralPath $stage -Recurse -Force
 
 
