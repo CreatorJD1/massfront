@@ -1,7 +1,8 @@
 # MASSFRONT master plan — Stage 8 progress · 2026-08-28
 
-Status: **IN PROGRESS** on `cursor/strip-mass-node-bloom` at committed tip
-`c4090cc`. This checkout is the sole Main Source integration target.
+Status: **IN PROGRESS** on `cursor/strip-mass-node-bloom`. This slice started
+from local Main Source tip `2d882397`; the local checkout remains the sole
+integration authority and dated folders remain transfer inputs only.
 
 Stage 7 engineering is complete. Its remaining unfamiliar-player comprehension
 check is human acceptance, not an automation gap, and still blocks release
@@ -26,6 +27,27 @@ collected.
   `.tmp/commander-hud/runs/2026-08-28T17-00-32-793Z/report.json`.
 - The updater retry regression discovers `gl.js` by manifest identity instead
   of a historical fixed index, preserving the same check as data scripts move.
+- Portable `.mfsave` imports now have a guarded two-record transaction. Profile
+  and career writes retry once, require byte-exact read-back, and report strict
+  success/failure instead of swallowing quota errors. A failed import restores
+  live career, identity, sync state, and the exact prior storage records; if
+  storage disappears during rollback, the game explicitly tells the player to
+  keep the session open rather than claiming the disk copy is safe. Cloud pull,
+  forced file replacement, and the Auth Portal now honor that result and never
+  mark a failed import synced or pulled.
+- Legacy Armory-refund grant signals are held until the imported career is
+  durable. Rollback discards the non-durable signal, preventing a rejected old
+  save from queuing a phantom Core refund. The canonical-faction takeover also
+  forwards the full file-import argument list, so a player-confirmed lower-
+  progress file still replaces the current career as requested.
+- A temporary economy-queue storage failure now retains the idempotent grant in
+  the career record, survives restart, retries it into the durable queue every
+  45 seconds, and blocks server reconciliation from replacing local Cores while
+  that grant is still pending. A queue revision also rejects a stale server
+  balance response when a new gameplay grant arrives during the GET. Automatic
+  cloud pull distinguishes an empty account slot from
+  a present but unreadable payload; corrupt or unsupported cloud data is shown
+  as an error and is never silently overwritten by the device save.
 - `commander-anime-flat-v1` is the sole new-work authority for human and robotic
   commanders: solid fills, crisp linework, and no shading. The registered
   portraits and PBR-lit robotic battle chassis currently fail that new visual
@@ -49,7 +71,10 @@ Deterministic contracts:
 - `node tools/test-stage8-effects-budget.mjs`
 - `node tools/test-stage8-audio-buses.mjs`
 - `node tools/test-stage8-commander-entry-clock.mjs`
+- `node tools/test-stage8-save-transfer.mjs`
 - `node tools/test-save-persist.mjs`
+- `node tools/test-stage7-armory-migration.mjs`
+- `node tools/test-faction-canonical-identity.mjs`
 - `node tools/test-updater-boot-retry.mjs`
 - `node tools/probe-commander-voice.mjs --json`
 - `node tools/evidence-foundation/workspace-guard-self-test.mjs`
@@ -105,13 +130,35 @@ and only when its own report is `PASS` with matching start/end fingerprints.
 - Current GL recovery, terrain comparison, color-vision/high-contrast,
   non-color/non-audio alarm, keyboard/focus, large-text, and native Android Back
   acceptance.
-- Real `.mfsave` export/download/re-import, corrupted input, low-storage, and
-  interrupted local update/cancel/retry coverage.
+- Actual Chromium download/re-selection and native Files/Share physical-device
+  acceptance for `.mfsave` remains open. The deterministic contract now covers
+  production encode/decode, a fresh-device decoded-file import, magic/schema/
+  hash/truncation/size rejection, download fallback/cancel, both quota keys,
+  retry-once, read-back mismatch, absent prior records, mid-transaction outage
+  disclosure, faction canonicalization, legacy-refund side effects, recovered
+  grant-queue persistence/restart replay, stale-balance rejection, and corrupt-
+  cloud preservation. The guarded real-
+  browser probe is implemented at `tools/probe-stage8-save-transfer.mjs`, but
+  its 2026-08-28 attempt was blocked before browser launch because Claude's
+  hard-surface process was still writing cityforms GLBs. That is a source-
+  identity blocker, not a browser pass or product failure; rerun after those
+  writers stop.
+- Interrupted local update download/cancel/retry coverage.
 - Current Android APK and iOS IPA install, lifecycle, interruption, offline,
   clean-install, upgrade, and new-game-to-result device runs.
 - Hardening performance/device/updater harnesses to set `mf_offline=1` and
   reject every non-loopback request before they are allowed to run. No release,
   upload, deployment, or production request is authorized by this stage slice.
+
+## Next ordered local slices
+
+1. Complete the real Chromium save download/re-selection probe, then keep native
+   Documents/Cache/Share behavior for Android/iOS device acceptance.
+2. Add the color-vision-safe tactical team-identification mode with non-color
+   minimap allegiance shapes; default faction identity must remain unchanged.
+3. Apply the shared fail-closed offline boundary to the remaining performance
+   diagnostics, then run current 1v1/1v2/1v3 evidence only after hard-surface
+   writers stop and source identity can remain stable for the whole capture.
 
 ## Stage 7 human acceptance still required
 

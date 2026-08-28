@@ -217,7 +217,7 @@ assert.equal(feasibleDays,366,'fresh-player starter feasibility is not 366/366')
 /* ---- source-executed first-week curve ------------------------------------ */
 const trainingReward=+(tutorial.match(/var TRAINING_REWARD=(\d+);/)||[])[1];
 assert.equal(trainingReward,150,'training reward drifted');
-const helperSource=between(meta,'const META_CORE_GRANT_PENDING','function armoryRetireOverlaps');
+const helperSource=between(meta,'let metaCoreGrantObserver','function armoryRetireOverlaps');
 const modeSource=between(meta,'const MODE_REWARD_CONTRACTS','function invGrantModeReward');
 const curveContext={
   META:{xp:0,cores:0,researchData:0,matches:0,standardMatches:0,wins:0,losses:0,kills:0,

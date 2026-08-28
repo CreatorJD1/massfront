@@ -66,6 +66,7 @@ const ECO = {
   entitlements: null,
   queue: [],            // [{id,kind:'grant'|'spend',...,idemKey,queuedAt}]
   flushing: false,
+  revision: 0,          // invalidates a balance GET when a grant arrives in flight
 };
 const ECO_QUEUE_KEY = 'massfront_econ_queue_v1';
 const ECO_URL_KEY = 'massfront_econ_url';
@@ -117,11 +118,17 @@ async function ecoResolveEndpoint() {
 function ecoEndpoint() { return ECO.endpoint || ''; }
 
 /* ---- queue persistence --------------------------------------------------------- */
-function ecoSaveQueue() { try { localStorage.setItem(ECO_QUEUE_KEY, JSON.stringify(ECO.queue)); } catch (e) {} }
+function ecoSaveQueue() {
+  try {
+    const text=JSON.stringify(ECO.queue);
+    localStorage.setItem(ECO_QUEUE_KEY,text);
+    return localStorage.getItem(ECO_QUEUE_KEY)===text;
+  } catch (e) { return false; }
+}
 function ecoLoadQueue() {
   try {
     const s = localStorage.getItem(ECO_QUEUE_KEY);
-    if (s) { const a = JSON.parse(s); if (Array.isArray(a)) ECO.queue = a; }
+    if (s) { const a = JSON.parse(s); if (Array.isArray(a)) { ECO.queue = a; ECO.revision++; } }
   } catch (e) { ECO.queue = []; }
 }
 
@@ -169,10 +176,17 @@ function ecoGetEntitlements() { return { entitlements: ECO.entitlements, confirm
 function ecoGrant(amount, reason, opts) {
   amount = Math.trunc(Number(amount));
   if (!Number.isFinite(amount) || amount <= 0) return;
+  const idemKey = (opts && opts.idemKey) || ecoId('g');
+  /* META can retain the event if its pending-removal save loses a race with an
+     OS kill. The same stable key may therefore appear again after restart; an
+     already-durable queue entry is success, not a second logical operation. */
+  if (ECO.queue.some(item => item && item.kind === 'grant' && item.idemKey === idemKey)) return true;
   const op = { id: ecoId('grant'), kind: 'grant', amount, reason: String(reason || 'grant').slice(0, 64),
-               idemKey: (opts && opts.idemKey) || ecoId('g'), queuedAt: Date.now() };
-  ECO.queue.push(op); ecoSaveQueue();
+               idemKey, queuedAt: Date.now() };
+  ECO.queue.push(op); ECO.revision++;
+  if(!ecoSaveQueue()){ ECO.queue.pop(); ECO.revision++; return false; }
   ecoFlush();   // best-effort, never awaited by the caller
+  return true;
 }
 
 /* ---- public: spend (purchases) --------------------------------------------------
@@ -226,12 +240,12 @@ async function ecoFlush() {
           /* `continue` alone jumped straight back to the while test WITHOUT
              reaching the shift() below, so queue[0] stayed the same unknown op
              and the loop spun forever, wedging the tab. Drop it here instead. */
-          ECO.queue.shift(); ecoSaveQueue(); continue;
+          ECO.queue.shift(); ECO.revision++; ecoSaveQueue(); continue;
         }
       } catch (e) {
         break; // leave op[0] in place, try again on the next flush trigger
       }
-      ECO.queue.shift(); ecoSaveQueue();
+      ECO.queue.shift(); ECO.revision++; ecoSaveQueue();
     }
   } finally { ECO.flushing = false; }
 }
@@ -246,15 +260,29 @@ async function ecoFlush() {
       point of "server-authoritative": on any disagreement, the number a
       human can see and edit loses to the number only the worker can write. */
 async function ecoReconcile() {
+  /* A locally credited Core grant must enter the durable queue before server
+     reconciliation is allowed to replace META.cores. A transient quota error
+     keeps the grant pending in meta.js and this retry makes recovery automatic. */
+  if (typeof metaRetryCoreGrants === 'function' && !metaRetryCoreGrants()) {
+    ECO.confirmed = false; return;
+  }
   if (typeof netAllowed === 'function' && !netAllowed()) { ECO.confirmed = false; return; }
   if (typeof AP_SESSION === 'undefined' || !AP_SESSION || !AP_SESSION.token) { ECO.confirmed = false; return; }
   await ecoFlush();
   if (ECO.queue.length) return;   // flush didn't fully drain (offline/error) — don't claim confirmed on a partial picture
+  const reconcileRevision=ECO.revision;
   try {
     const [bal, ent] = await Promise.all([
       ecoRequest('GET', '/balance'),
       ecoRequest('GET', '/entitlements'),
     ]);
+    const pendingSettled=typeof metaRetryCoreGrants!=='function'||metaRetryCoreGrants();
+    /* A grant may arrive while the two GETs are in flight. Even if its POST
+       already completed, the older balance response cannot overwrite the
+       newly credited local value; the next reconciliation will read it back. */
+    if(!pendingSettled||ECO.queue.length||ECO.flushing||ECO.revision!==reconcileRevision){
+      ECO.confirmed=false; return;
+    }
     ECO.serverCores = bal.cores; ECO.entitlements = ent.entitlements || [];
     ECO.confirmed = true; ECO.lastSync = Date.now();
     if (typeof META === 'object' && META && META.cores !== bal.cores) {
@@ -276,9 +304,8 @@ function initEconomyNet() {
      grant event only; queued pre-init grants drain here before reconciliation,
      so a signed-in metaLoad migration cannot be overwritten and lost. */
   if (typeof metaObserveCoreGrants === 'function') {
-    metaObserveCoreGrants(grant => {
-      ecoGrant(grant.amount, grant.reason, grant.idemKey ? { idemKey: grant.idemKey } : undefined);
-    });
+    metaObserveCoreGrants(grant =>
+      ecoGrant(grant.amount, grant.reason, grant.idemKey ? { idemKey: grant.idemKey } : undefined));
   } else if (typeof console !== 'undefined') {
     console.error('economy-net: metaObserveCoreGrants not found at init — check MANIFEST load order (economy-net.js must load after game/meta.js)');
   }
@@ -310,7 +337,10 @@ function initEconomyNet() {
 
   /* Light periodic retry — covers "came back online but missed the event"
      (some WebViews don't fire it reliably) without polling aggressively. */
-  setInterval(() => { if (ECO.queue.length) ecoFlush(); }, 45000);
+  setInterval(() => {
+    if (typeof metaRetryCoreGrants === 'function') metaRetryCoreGrants();
+    if (ECO.queue.length) ecoFlush();
+  }, 45000);
 }
 
 /* ---- public surface ------------------------------------------------------------- */

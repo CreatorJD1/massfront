@@ -24,6 +24,7 @@ function between(src,start,end){
 function clone(v){ return JSON.parse(JSON.stringify(v)); }
 
 const migrationSource=between(meta,'const ARMORY_RETIRED_OVERLAPS','const META_DEF');
+const freshSource=between(meta,'function metaFresh(){','let META=metaFresh();');
 const migrationContext={META:{}};
 vm.createContext(migrationContext);
 vm.runInContext(migrationSource+'\nglobalThis.__api={ARMORY_RETIRED_OVERLAPS,armoryRetireOverlaps};',
@@ -45,7 +46,7 @@ for(const id of retired){
     const second=migration.armoryRetireOverlaps();
     assert.deepEqual({changed:second.changed,refund:second.refund},{changed:false,refund:0},
       id+' migration was not idempotent');
-    assert.deepEqual(migrationContext.META,snapshot,id+' second migration changed state');
+    assert.deepEqual(clone(migrationContext.META),snapshot,id+' second migration changed state');
   }
 }
 
@@ -65,11 +66,12 @@ const preserved={
 };
 const preservedExpected=clone(preserved);
 preservedExpected.cores+=1200;
+preservedExpected.coreGrantPending=[{amount:1200,reason:'armory_retirement',idemKey:'armory-retirement:v1'}];
 delete preservedExpected.owned.armor;
 delete preservedExpected.deals.claimed.armor;
 migrationContext.META=clone(preserved);
 assert.equal(migration.armoryRetireOverlaps().refund,1200);
-assert.deepEqual(migrationContext.META,preservedExpected,'migration changed unrelated career state');
+assert.deepEqual(clone(migrationContext.META),preservedExpected,'migration changed unrelated career state');
 
 const loadSource=between(meta,'function metaLoad(){','/* Local save is the source of truth');
 const saveSource=between(meta,'function metaSave(){','/* The live graphics budget');
@@ -92,7 +94,7 @@ const loadContext={
   localStorage:{getItem(){return JSON.stringify(legacyLoad);}},
 };
 vm.createContext(loadContext);
-vm.runInContext(migrationSource+`
+vm.runInContext(migrationSource+freshSource+`
 let __saveCount=0,__persisted=null;
 function metaKey(){return 'legacy';}
 function metaHarden(){if(!META.owned||typeof META.owned!=='object')META.owned={};META.settings=Object.assign({},DEF_SETTINGS,META.settings||{});}

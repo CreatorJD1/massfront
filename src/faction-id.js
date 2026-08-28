@@ -47,7 +47,7 @@
   if(typeof metaLoad==='function'){var metaLoadBase=metaLoad;metaLoad=function(){var r=metaLoadBase.apply(this,arguments);META=restoreMeta(META);return r;};}
   if(typeof metaSave==='function'){var metaSaveBase=metaSave;metaSave=function(){var live=META;try{META=persistMeta(live);return metaSaveBase.apply(this,arguments);}finally{META=live;}};metaSave.__mfFactionIds=true;}
   if(typeof syncPayload==='function'){var syncPayloadBase=syncPayload;syncPayload=function(){var p=syncPayloadBase.apply(this,arguments);if(p&&p.meta)p.meta=persistMeta(p.meta);return p;};}
-  if(typeof applyIncoming==='function'){var applyIncomingBase=applyIncoming;applyIncoming=function(p,src){if(p&&p.meta)p=Object.assign({},p,{meta:restoreMeta(p.meta)});return applyIncomingBase.call(this,p,src);};}
+  if(typeof applyIncoming==='function'){var applyIncomingBase=applyIncoming;applyIncoming=function(){var args=Array.prototype.slice.call(arguments),p=args[0];if(p&&p.meta)args[0]=Object.assign({},p,{meta:restoreMeta(p.meta)});return applyIncomingBase.apply(this,args);};}
   if(typeof cloudMerge==='function'){var cloudMergeBase=cloudMerge;cloudMerge=function(p){if(p&&p.meta)p=Object.assign({},p,{meta:restoreMeta(p.meta)});return cloudMergeBase.call(this,p);};}
   if(typeof sessSnapshot==='function'&&typeof SESS_KEY!=='undefined'){var sessSnapshotBase=sessSnapshot;sessSnapshot=function(reason){
     var ok=sessSnapshotBase.call(this,reason);if(!ok)return ok;try{var s=JSON.parse(localStorage.getItem(SESS_KEY));if(s){
@@ -57,4 +57,3 @@
     if(s.setup)s.setup=restoreMeta({setup:s.setup}).setup;if(s.aiFac&&s.aiFac!=='random')s.aiFac=runtime(s.aiFac)||s.aiFac;
     if(s.playerFac)s.playerFac=runtime(s.playerFac)||s.playerFac;return s;};}
 })();
-

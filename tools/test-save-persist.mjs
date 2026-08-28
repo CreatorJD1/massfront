@@ -40,8 +40,16 @@ function makeHarness(){
     metaHarden(){
       ctx.META.settings = Object.assign({}, ctx.DEF_SETTINGS, ctx.META.settings||{});
     },
-    metaSave(){ ctx.__saved = JSON.parse(JSON.stringify(ctx.META)); },
-    profSave(){ ctx.__profSaved = true; },
+    metaSave(){
+      store['massfront_meta_'+ctx.PROFILES.active]=JSON.stringify(ctx.META);
+      ctx.__saved = JSON.parse(JSON.stringify(ctx.META));
+      return true;
+    },
+    profSave(){
+      store.massfront_profiles_v1=JSON.stringify(ctx.PROFILES);
+      ctx.__profSaved = true;
+      return true;
+    },
     applyColor(){ ctx.__color = ctx.META.color; },
     applySettings(){ ctx.__applied = Object.assign({}, ctx.META.settings); },
     renderMetaHead(){}, renderProfile(){}, renderAccount(){}, renderSettings(){},

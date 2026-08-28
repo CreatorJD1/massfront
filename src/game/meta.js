@@ -60,7 +60,18 @@ function profIdentity(){
 }
 
 
-function profSave(){ try{ localStorage.setItem(PROF_KEY,JSON.stringify(PROFILES)); }catch(e){} }
+function profSave(){
+  let text;
+  try{ text=JSON.stringify(PROFILES); }
+  catch(e){ return false; }
+  try{ localStorage.setItem(PROF_KEY,text); if(localStorage.getItem(PROF_KEY)===text)return true; }
+  catch(e){}
+  /* Some Android WebViews briefly reject a write while their storage process
+     is being resumed. Match career saves and retry once before reporting the
+     record as unavailable; callers that need atomicity can trust the boolean. */
+  try{ localStorage.setItem(PROF_KEY,text); return localStorage.getItem(PROF_KEY)===text; }
+  catch(e2){ return false; }
+}
 function profLoad(){
   try{ const s=localStorage.getItem(PROF_KEY); const o=s&&JSON.parse(s);
     if(o&&Array.isArray(o.list)) PROFILES=o; }catch(e){}
@@ -181,26 +192,78 @@ const ARMORY_RETIRED_OVERLAPS=Object.freeze({
   salvage:Object.freeze([400,800]),
   reactor:Object.freeze([380,760,1500]),
 });
-/* One local authority credits every earned Core. economy-net installs the
-   observer after its durable queue is ready; grants made earlier (notably a
-   retirement migration during metaLoad) wait here and are replayed to that
-   queue without touching the already-credited local balance a second time. */
-const META_CORE_GRANT_PENDING=[];
+/* One local authority credits every earned Core. Pending idempotent grant
+   events live inside the career record, not only in module memory: every real
+   reward path saves META immediately after crediting it, so an OS kill cannot
+   erase the server-reconciliation half of an already-saved local reward. */
 let metaCoreGrantObserver=null;
+let metaCoreGrantTransaction=null;
+function metaCoreGrantId(){
+  try{ if(typeof crypto!=='undefined'&&crypto.randomUUID) return 'meta:'+crypto.randomUUID(); }
+  catch(e){}
+  return 'meta:'+Date.now().toString(36)+':'+Math.random().toString(36).slice(2,12);
+}
+function metaCoreGrantQueue(){
+  if(!META||typeof META!=='object') return [];
+  if(!Array.isArray(META.coreGrantPending)) META.coreGrantPending=[];
+  return META.coreGrantPending;
+}
+function metaDispatchCoreGrant(grant){
+  if(!metaCoreGrantObserver){ metaCoreGrantQueue().push(grant); return true; }
+  try{ return metaCoreGrantObserver(grant)!==false; }
+  catch(e){ return false; }
+}
+/* Imported legacy careers can earn an Armory-retirement refund while their two
+   local records are still being verified. Hold that external grant signal
+   until the save transaction commits; rolling the live META back must also
+   discard its not-yet-durable refund. */
+function metaCoreGrantTxnBegin(){
+  if(metaCoreGrantTransaction) return false;
+  metaCoreGrantTransaction=[];
+  return true;
+}
+function metaCoreGrantTxnEnd(commit){
+  const held=metaCoreGrantTransaction||[];
+  metaCoreGrantTransaction=null;
+  if(!commit) return true;
+  const queuedBefore=metaCoreGrantQueue().length;
+  let accepted=true;
+  for(const grant of held) if(!metaDispatchCoreGrant(grant)) accepted=false;
+  /* Import can run before economy-net has installed its observer. In that case
+     dispatch stores the held grant on META after the candidate's first write;
+     make that queue addition durable before the account transaction succeeds. */
+  if(accepted&&metaCoreGrantQueue().length!==queuedBefore&&typeof metaSave==='function')
+    accepted=metaSave(true)===true;
+  return accepted;
+}
+function metaRetryCoreGrants(){
+  const queue=metaCoreGrantQueue();
+  if(!queue.length) return true;
+  if(!metaCoreGrantObserver) return false;
+  const pending=queue.splice(0);
+  let accepted=true;
+  for(const grant of pending){
+    if(!metaDispatchCoreGrant(grant)){ queue.push(grant); accepted=false; }
+  }
+  /* Accepted events are already durable in economy-net's queue. Persist their
+     removal from META so restart cannot replay duplicates; idempotency still
+     makes a failed cleanup write safe. */
+  if(typeof metaSave==='function') metaSave(true);
+  return accepted&&!queue.length;
+}
 function metaObserveCoreGrants(observer){
   metaCoreGrantObserver=typeof observer==='function'?observer:null;
-  if(!metaCoreGrantObserver||!META_CORE_GRANT_PENDING.length) return;
-  const pending=META_CORE_GRANT_PENDING.splice(0);
-  for(const grant of pending) metaCoreGrantObserver(grant);
+  metaRetryCoreGrants();
 }
 function metaGrantCores(amount,reason,idemKey){
   amount=Math.trunc(Number(amount));
   if(!Number.isFinite(amount)||amount<=0) return 0;
   const balance=Number(META.cores);
   META.cores=(Number.isFinite(balance)?balance:0)+amount;
-  const grant={amount,reason:String(reason||'grant').slice(0,64),idemKey:idemKey||''};
-  if(metaCoreGrantObserver) metaCoreGrantObserver(grant);
-  else META_CORE_GRANT_PENDING.push(grant);
+  const grant={amount,reason:String(reason||'grant').slice(0,64),
+    idemKey:String(idemKey||metaCoreGrantId()).slice(0,160)};
+  if(metaCoreGrantTransaction) metaCoreGrantTransaction.push(grant);
+  else if(!metaDispatchCoreGrant(grant)) metaCoreGrantQueue().push(grant);
   return amount;
 }
 function armoryRetireOverlaps(){
@@ -226,14 +289,20 @@ function armoryRetireOverlaps(){
 const META_DEF={xp:0,cores:0,researchData:0,owned:{},color:'azure',wins:0,matches:0,standardMatches:0,kills:0,wcPref:0,
   losses:0, streak:0, bestStreak:0, playSec:0, built:0, lost:0, structs:0,
   bestKills:0, fastestWin:0, favFac:'', facWins:{}, mapWins:{}, firstPlayed:0, lastPlayed:0,
-  campaign:{missions:{}},
+  campaign:{missions:{}}, coreGrantPending:[],
   /* Account research/crafting lived only on first UI open, so a match started
      before Development, or a cloud merge that omitted the keys, dropped the
      tree, queue and bag. Defaults here make every load a complete career. */
   res:{}, resQueue:[], mats:{alloy:0,circuit:0,isotope:0,relic:0}, mods:{}, equip:[],
   inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
   settings:{...DEF_SETTINGS}};
-let META={...META_DEF};
+function metaFresh(){
+  return {...META_DEF,owned:{},facWins:{},mapWins:{},campaign:{missions:{}},coreGrantPending:[],
+    res:{},resQueue:[],mats:{alloy:0,circuit:0,isotope:0,relic:0},mods:{},equip:[],
+    inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
+    settings:{...DEF_SETTINGS}};
+}
+let META=metaFresh();
 function metaKey(){ return 'massfront_meta_'+PROFILES.active; }
 function metaHarden(){
   if(!META.owned||typeof META.owned!=='object') META.owned={};
@@ -241,6 +310,11 @@ function metaHarden(){
   if(!META.mapWins||typeof META.mapWins!=='object') META.mapWins={};
   if(!META.campaign||typeof META.campaign!=='object') META.campaign={missions:{}};
   if(!META.campaign.missions||typeof META.campaign.missions!=='object') META.campaign.missions={};
+  if(!Array.isArray(META.coreGrantPending)) META.coreGrantPending=[];
+  else META.coreGrantPending=META.coreGrantPending.filter(grant=>grant&&
+    Number.isFinite(Number(grant.amount))&&Number(grant.amount)>0).map(grant=>({
+      amount:Math.trunc(Number(grant.amount)),reason:String(grant.reason||'grant').slice(0,64),
+      idemKey:String(grant.idemKey||metaCoreGrantId()).slice(0,160)}));
   if(!META.res||typeof META.res!=='object') META.res={};
   if(!Array.isArray(META.resQueue)) META.resQueue=[];
   if(!META.mats||typeof META.mats!=='object') META.mats={alloy:0,circuit:0,isotope:0,relic:0};
@@ -298,10 +372,7 @@ function metaLoad(){
   /* Nested bags are cloned, not shared with META_DEF. A shallow spread left
      res/mats/mods pointing at the defaults, so researching on one profile
      silently wrote into the next empty career. */
-  META={...META_DEF, owned:{}, facWins:{}, mapWins:{}, campaign:{missions:{}},
-    res:{}, resQueue:[], mats:{alloy:0,circuit:0,isotope:0,relic:0}, mods:{}, equip:[],
-    inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
-    settings:{...DEF_SETTINGS}};
+  META=metaFresh();
   let loadedCareer=false,loadedStandardCount=false;
   try{
     const s=localStorage.getItem(metaKey());
@@ -317,9 +388,11 @@ function metaLoad(){
   const needExplorationKey=!!(META.settings
     &&!Object.prototype.hasOwnProperty.call(META.settings,'experimentalExploration')
     &&Object.prototype.hasOwnProperty.call(META.settings,'expExploration'));
+  const needCoreGrantRepair=Array.isArray(META.coreGrantPending)&&META.coreGrantPending.some(grant=>
+    !grant||!Number.isFinite(Number(grant.amount))||Number(grant.amount)<=0||!grant.idemKey);
   metaHarden();
   const overlapMigration=armoryRetireOverlaps();
-  if(needGfxMed||needExplorationKey||overlapMigration.changed) metaSave();
+  if(needGfxMed||needExplorationKey||needCoreGrantRepair||overlapMigration.changed) metaSave();
 }
 /* Local save is the source of truth for progress on THIS device. Harden it so a
    transient write failure (quota pressure, a WebView hiccup) does not silently
@@ -327,18 +400,26 @@ function metaLoad(){
    point them at the account backup, which now survives even a reinstall. */
 let metaSaveWarned=false;
 function metaSave(){
+  const quiet=arguments[0]===true;
   /* Auth Portal restores assign META directly and then call metaSave without
      metaHarden. Keep the retirement invariant at the serialization boundary
      so local, cloud, file-import and profile-switch paths all converge. */
   armoryRetireOverlaps();
-  try{ localStorage.setItem(metaKey(),JSON.stringify(META)); metaSaveWarned=false; return; }
+  let text;
+  try{ text=JSON.stringify(META); }
+  catch(e){ text=null; }
+  const key=metaKey();
+  try{ if(text===null) throw new Error('serialize'); localStorage.setItem(key,text);
+    if(localStorage.getItem(key)!==text)throw new Error('readback');metaSaveWarned=false;return true; }
   catch(e){}
-  try{ localStorage.setItem(metaKey(),JSON.stringify(META)); metaSaveWarned=false; }
+  try{ if(text===null) throw new Error('serialize'); localStorage.setItem(key,text);
+    if(localStorage.getItem(key)!==text)throw new Error('readback');metaSaveWarned=false;return true; }
   catch(e2){
-    if(!metaSaveWarned && typeof toast==='function'){
+    if(!quiet&&!metaSaveWarned && typeof toast==='function'){
       metaSaveWarned=true;
       toast('⚠ Progress could not be saved on this device — sign in to back it up to your account');
     }
+    return false;
   }
 }
 /* The live graphics budget. Every quality gate in the renderer reads this
