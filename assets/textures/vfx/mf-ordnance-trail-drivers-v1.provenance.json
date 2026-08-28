@@ -1,0 +1,21 @@
+{
+  "asset": "mf-ordnance-trail-drivers-v1.png",
+  "created": "2026-08-26",
+  "generator": "OpenAI built-in image generation",
+  "sourceType": "original generated production art",
+  "layout": {
+    "width": 2048,
+    "height": 1024,
+    "rows": [
+      { "name": "energy-plasma", "y": 0, "height": 512 },
+      { "name": "physical-shell-combustion-smoke", "y": 512, "height": 512 }
+    ]
+  },
+  "alpha": "true RGBA transparency validated; no checkerboard or matte in the accepted sources",
+  "referencePolicy": "User-supplied images guided scale, turbulence, continuity, and readability only. No reference pixels or protected game assets were copied into this file.",
+  "prompts": [
+    "One original continuous physically grounded blue-cyan energy-artillery plasma wake with a narrow dissipating tail, turbulent sheath, white-hot filament, compact leading head, transparent background, no environment or text.",
+    "One original continuous rocket-assisted artillery wake with cool expanding soot, brown-gray rolling smoke, orange combustion, white-yellow exhaust throat, transparent background, no environment or text."
+  ],
+  "processing": "Accepted transparent sources were alpha-trimmed, Lanczos-resampled into two padded 2048x512 rows, and composited into one transparent 2048x1024 runtime atlas using Sharp."
+}

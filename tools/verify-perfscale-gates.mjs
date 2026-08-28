@@ -24,6 +24,7 @@
 
    This counts the crossings directly rather than arguing about them.          */
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { installOfflineNetworkIsolation } from './offline-network-isolation.mjs';
 import { createServer } from 'node:http';
 import { readFileSync, existsSync } from 'node:fs';
 import { join, extname, resolve } from 'node:path';
@@ -46,7 +47,8 @@ await new Promise(r => server.listen(PORT, '127.0.0.1', r));
 const browser = await launchPwBrowser({
   executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe', headless: false,
   args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu', '--disable-gpu-sandbox'] });
-const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2 });
+const page = await browser.newPage({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 2, serviceWorkers: 'block' });
+const networkIsolation = await installOfflineNetworkIsolation(page);
 await page.goto(`http://127.0.0.1:${PORT}/`, { waitUntil: 'domcontentloaded' });
 await page.waitForTimeout(13000);
 const renderer = await page.evaluate(() => { try {
@@ -90,6 +92,7 @@ await page.evaluate(() => {
 await page.waitForTimeout(45000);
 const ps = await page.evaluate(() => { clearInterval(window.__load); return window.__ps; });
 await browser.close(); server.close();
+const networkEvidence = networkIsolation.snapshot();
 
 const TH = [['lowFx', 0.32], ['walker dust', 0.35], ['rubble/sparks', 0.40],
   ['doctrine FX', 0.45], ['debris', 0.48], ['AMBIENT OCCLUSION', 0.50]];
@@ -132,8 +135,12 @@ if (spreads.length > 1) worstSpread = spreads[spreads.length - 1] - spreads[0];
 const simultaneous = spreads.length <= 1;
 console.log(`gate-crossing events: ${spreads.length}  (frames between first and last: ${worstSpread})`);
 
-const PASS = distinct.length <= 6 && simultaneous;
+const offlineSafe = networkEvidence.blockedRequests.length===0&&networkEvidence.blockedWebSockets.length===0;
+console.log(`non-loopback attempts: ${networkEvidence.blockedRequests.length+networkEvidence.blockedWebSockets.length}`);
+const PASS = distinct.length <= 6 && simultaneous && offlineSafe;
 console.log('\n' + (PASS
   ? `PASS — perfScale is quantised (${distinct.length} levels) and every gate switched in ONE step: a single quality change, not a strobe`
+  : !offlineSafe
+    ? `FAIL — offline isolation blocked ${networkEvidence.blockedRequests.length+networkEvidence.blockedWebSockets.length} non-loopback attempt(s)`
   : `FAIL — ${distinct.length} distinct levels and crossings spread over ${worstSpread} frames: effects peel off one at a time`));
 process.exit(PASS ? 0 : 1);

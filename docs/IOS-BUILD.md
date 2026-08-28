@@ -82,9 +82,9 @@ intend to publish to the App Store.
 - Launch screen: the 2732×2732 splash is in
   `ios/App/App/Assets.xcassets/Splash.imageset`.
 - `Info.plist`: status bar hidden, home indicator auto-hidden, full screen,
-  portrait-only on iPhone and iPad (this is a portrait-first mobile RTS —
-  matches `assets/app.webmanifest`'s `"orientation": "portrait"` and the
-  actual HUD layout, which has no landscape mode), `arm64`/`metal` only
+  portrait plus both landscape directions on iPhone, all four orientations on
+  iPad, and a matching `assets/app.webmanifest` `"orientation": "any"` policy.
+  The War Table/HUD capture gate covers portrait and landscape. `arm64`/`metal` only
   (no 32-bit), and `ITSAppUsesNonExemptEncryption = false` so App Store
   Connect stops asking the export-compliance question.
 - Inline media playback and no-user-gesture-required playback are already on

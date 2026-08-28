@@ -401,6 +401,17 @@ showUnitCard=function(uIdx,bIdx,pinned){
   if(chip)chip.innerHTML='<i>▦</i>'+H.used+' / '+H.capacity+' SLOTS';
 };
 
+/* Extension production cards must obey the same release/drag contract as the
+   core roster. Mark them locally safe only after mfBindTap owns the gesture;
+   the pointerdown fallback stays unmarked so input.js guards and replays it on
+   a completed release instead of trusting an unsafe caller. */
+function mfAirliftBindReleaseCard(d,fn){
+  if(typeof mfBindTap==='function'){
+    d.dataset.mfReleaseSafe='1';
+    mfBindTap(d,fn);
+  }else d.addEventListener('pointerdown',fn);
+}
+
 function mfAirliftRenderCard(){
   const g=$('prodGrid'),T=TYPES[MF_UT_AIRLIFT];g.innerHTML='';
   renderMenuRoleBrief('unit','transport',[MF_UT_AIRLIFT]);
@@ -410,7 +421,7 @@ function mfAirliftRenderCard(){
     +'<div class="cardPurpose">INFANTRY · CONSTRUCTORS · LIGHT VEHICLES</div>';
   d.setAttribute('role','button');d.setAttribute('aria-label','Build Atlas Skycrane heavy air transport, capacity 12 slots');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_AIRLIFT,48));d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{
+  mfAirliftBindReleaseCard(d,ev=>{
     ev.stopPropagation();if(openBld<0)return;const B=blds[openBld];
     if(B&&B.alive&&B.queue.length<30){B.queue.push(MF_UT_AIRLIFT);sfx('ui');renderQueue();}
   });
@@ -452,7 +463,7 @@ function mfAirliftAppendCard(g){
   d.setAttribute('aria-label','Build Atlas Skycrane heavy air transport, capacity '+T.transportCap+' slots');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_AIRLIFT,48));
   d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{
+  mfAirliftBindReleaseCard(d,ev=>{
     ev.stopPropagation();if(openBld<0)return;const B=blds[openBld];
     if(B&&B.alive&&B.queue.length<30){B.queue.push(MF_UT_AIRLIFT);sfx('ui');renderQueue();}
   });
@@ -896,7 +907,7 @@ function mfMassRenderCard(){
     +'<div class="cardPurpose">MERGE · ASCEND · BIRTH BEHIND DEFENSES</div>';
   d.setAttribute('role','button');d.setAttribute('aria-label','Grow Massflesh Brood breakthrough carrier');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_MASSFLESH,48));d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{ev.stopPropagation();const B=openBld>=0?blds[openBld]:null;if(B&&bldFactionKey(B)==='horde'&&B.queue.length<30){B.queue.push(MF_UT_MASSFLESH);sfx('ui');renderQueue();}});
+  mfAirliftBindReleaseCard(d,ev=>{ev.stopPropagation();const B=openBld>=0?blds[openBld]:null;if(B&&bldFactionKey(B)==='horde'&&B.queue.length<30){B.queue.push(MF_UT_MASSFLESH);sfx('ui');renderQueue();}});
   addCardIntelButton(d,'unit',MF_UT_MASSFLESH);g.appendChild(d);
 }
 const mfMassRenderProdBase=renderProdMenu;
@@ -1018,5 +1029,3 @@ function mfAirliftAiTick(dt){
 }
 const mfAirliftAiTickBase=aiTick;
 aiTick=function(dt){ mfAirliftAiTick(dt); return mfAirliftAiTickBase(dt); };
-
-

@@ -40,6 +40,7 @@ const SITE_TPL = {
      ruined, so it is mostly kit geometry and it keeps its street. */
   outpost_ridge_gate: {
     class:'outpost', name:'RIDGE GATE OUTPOST', climate:'any',
+    planet:'any', biome:'any', faction:'any', purpose:'outpost', era:'occupied', condition:'garrisoned',
     radius:150, ind:0, grade:'plane', rotation:'random',
     minClearRadius:190, minSpawnDist:820,
     streets:[
@@ -59,6 +60,7 @@ const SITE_TPL = {
 
   outpost_supply_yard: {
     class:'outpost', name:'SUPPLY YARD', climate:'civic',
+    planet:'aelos', biome:'civic', faction:'nova', purpose:'supply-yard', era:'occupied', condition:'intact',
     radius:150, ind:1, grade:'plane', rotation:'random',
     minClearRadius:190, minSpawnDist:820,
     streets:[ [-110, -24, 110, -24, 13] ],
@@ -77,6 +79,7 @@ const SITE_TPL = {
      still stamps a construction pad + berm so relic bases are not hillside. */
   relic_gauss_shrine: {
     class:'relic', name:'GAUSS SHRINE',
+    climate:'any', planet:'any', biome:'any', faction:'any', purpose:'relic-shrine', era:'ruin', condition:'derelict',
     radius:120, ind:0, grade:'follow', rotation:'random',
     minClearRadius:210, minSpawnDist:900,
     streets:[],
@@ -91,6 +94,7 @@ const SITE_TPL = {
 
   relic_broken_span: {
     class:'relic', name:'BROKEN SPAN',
+    climate:'any', planet:'any', biome:'any', faction:'any', purpose:'relic-span', era:'ruin', condition:'derelict',
     radius:130, ind:0, grade:'follow', rotation:'random',
     minClearRadius:210, minSpawnDist:900,
     streets:[],
@@ -108,6 +112,7 @@ const SITE_TPL = {
      existing map changes appearance. */
   city_wall_town: {
     class:'city', name:'WALLED TOWN', climate:'dusk',
+    planet:'pyraeth', biome:'dusk', faction:'legion', purpose:'walled-town', era:'occupied', condition:'intact',
     radius:250, ind:0, grade:'plane', rotation:'random',
     minClearRadius:330, minSpawnDist:900,
     streets:[
@@ -137,11 +142,16 @@ const SITE_TPL = {
   /* Nova homeworld towns: stacked towers + intact civic, not a ruined wall. */
   city_brutalist_grid: {
     class:'city', name:'BRUTALIST PREFECTURE', climate:'civic',
+    planet:'aelos', biome:'civic', faction:'nova', purpose:'prefecture', era:'occupied', condition:'intact',
     radius:240, ind:0, grade:'plane', rotation:'random',
     minClearRadius:240, minSpawnDist:640,
     streets:[
       [-160, 0, 160, 0, 13],
-      [0, -140, 0, 140, 11]
+      /* Leave a civic plaza around the required prefecture anchor. A single
+         continuous cross-street bisected its 1.18x placement apron at every
+         rotation, so the real planner atomically rejected the whole site. */
+      [0, -160, 0, -100, 11],
+      [0,  100, 0,  160, 11]
     ],
     plots:[
       { kind:5, x:  0, y:  0, w:56, h:56, a:0, role:'anchor', required:true },
@@ -168,6 +178,7 @@ const SITE_TPL = {
   /* Dominion orbital pads. Existing kit meshes — no new art. */
   spaceport_apron: {
     class:'spaceport', name:'ORBITAL APRON', climate:'dusk',
+    planet:'pyraeth', biome:'dusk', faction:'legion', purpose:'spaceport', era:'occupied', condition:'exposed',
     radius:220, ind:1, grade:'plane', rotation:'random',
     minClearRadius:280, minSpawnDist:860,
     streets:[
@@ -188,11 +199,15 @@ const SITE_TPL = {
   /* Dominion pressure-dome cluster. Kind 1 is the existing low/dome block. */
   dome_cluster: {
     class:'dome', name:'PRESSURE DOME COURT', climate:'dusk',
+    planet:'pyraeth', biome:'dusk', faction:'legion', purpose:'pressure-dome', era:'occupied', condition:'pressurized',
     radius:210, ind:0, grade:'plane', rotation:'random',
     minClearRadius:270, minSpawnDist:840,
     streets:[
       [-120, 0, 120, 0, 11],
-      [0, -100, 0, 100, 9]
+      /* The dome court is an authored pressure plaza, not a road junction.
+         Split the cross-street around it instead of weakening roadClear(). */
+      [0, -150, 0, -90, 9],
+      [0,   90, 0, 150, 9]
     ],
     plots:[
       { kind:1, x:  0, y:  0, w:64, h:48, a:0, role:'dome', required:true },
@@ -206,23 +221,114 @@ const SITE_TPL = {
   }
 };
 
-/* Pick a template of a class. Kept out of sim.js's planDistricts closure so a
-   caller (or a test) can ask what exists without running world generation. */
-function siteTemplateFor(cls, pick){
-  const climate=(typeof biomeKit==='function'&&biomeKit().climate)||'civic';
-  const match=[];
+/* Compatibility is authored on each template. There is no class-wide remainder
+   pool: a hive/alpine/oceanic request that matches nothing must return null,
+   not a civic prefecture. Aliases stay empty on purpose — hive is not dusk. */
+const SITE_TPL_RULES={
+  fields:['planet','climate','biome','faction','purpose','era','condition'],
+  aliases:{}
+};
+const SITE_TPL_QUERY={
+  context:null,
+  force:null,
+  telem:{asks:{},hits:{},miss:{},reason:{},mismatch:{}}
+};
+let SITE_TPL_FORCE=null;
+function siteTplWild(v){ return v==null||v===''||v==='any'; }
+function siteTplKeys(){ return ['city','outpost','relic','spaceport','dome']; }
+function siteTplTelemReset(){
+  const t=SITE_TPL_QUERY.telem;
+  t.asks={}; t.hits={}; t.miss={}; t.reason={}; t.mismatch={};
+  for(let i=0,k=siteTplKeys();i<k.length;i++){
+    t.asks[k[i]]=0; t.hits[k[i]]=0; t.miss[k[i]]=0; t.reason[k[i]]=''; t.mismatch[k[i]]=null;
+  }
+}
+siteTplTelemReset();
+function siteTplFieldOk(tplVal, locVal){
+  if(siteTplWild(tplVal)) return true;
+  if(locVal==null||locVal===''||locVal==='any') return true;
+  const aliases=SITE_TPL_RULES.aliases[locVal];
+  if(aliases&&aliases.indexOf(tplVal)>=0) return true;
+  return tplVal===locVal;
+}
+function siteTemplateContext(map){
+  if(SITE_TPL_QUERY.context) return SITE_TPL_QUERY.context;
+  const id=map||((typeof curMap!=='undefined'&&curMap)||'');
+  const D=(typeof MAPDEFS!=='undefined'&&MAPDEFS[id])||{};
+  const kit=(typeof biomeKit==='function'&&biomeKit(id))||{};
+  const region=D.region||'';
+  let planet=region?region.split('_')[0]:'';
+  if(!planet&&typeof planetForMap==='function') planet=planetForMap(id)||'';
+  if(!planet) planet='aelos';
+  const climate=kit.climate||'civic';
+  return {
+    map:id, planet:planet, climate:climate, biome:kit.biome||climate,
+    faction:(typeof mapHomeFac==='function'&&mapHomeFac(id))||'nova',
+    purpose:D.purpose||null, era:D.era||null,
+    condition:D.condition||(D.infest?'infested':null),
+    water:D.waterMode||null, theme:D.theme||null
+  };
+}
+function siteTemplateCompat(T, ctx){
+  ctx=ctx||siteTemplateContext();
+  const miss=[];
+  if(!siteTplFieldOk(T.planet, ctx.planet)) miss.push('planet');
+  if(!siteTplFieldOk(T.climate, ctx.climate)) miss.push('climate');
+  if(!siteTplFieldOk(T.biome, ctx.biome||ctx.climate)) miss.push('biome');
+  if(!siteTplFieldOk(T.faction, ctx.faction)) miss.push('faction');
+  if(!siteTplFieldOk(T.purpose, ctx.purpose)) miss.push('purpose');
+  if(!siteTplFieldOk(T.era, ctx.era)) miss.push('era');
+  if(!siteTplFieldOk(T.condition, ctx.condition)) miss.push('condition');
+  return {ok:!miss.length, mismatch:miss};
+}
+function siteTemplatePool(cls, ctx){
+  ctx=ctx||siteTemplateContext();
+  const ids=[]; const missCount={}; let exists=false;
   for(const id in SITE_TPL){
     const T=SITE_TPL[id];
     if(T.class!==cls) continue;
-    const c=T.climate;
-    if(!c||c==='any'||c===climate||(climate==='ice'&&c==='alpine')||(climate==='hive'&&c==='dusk'))
-      match.push(id);
+    exists=true;
+    const hit=siteTemplateCompat(T, ctx);
+    if(hit.ok){ ids.push(id); continue; }
+    for(let i=0;i<hit.mismatch.length;i++){
+      const k=hit.mismatch[i]; missCount[k]=(missCount[k]|0)+1;
+    }
   }
-  const ids=match.length?match:[];
-  if(!ids.length) for(const id in SITE_TPL) if(SITE_TPL[id].class===cls) ids.push(id);
-  if(!ids.length) return null;
-  const r = (typeof pick === 'function') ? pick() : Math.random();
-  return SITE_TPL[ids[Math.min(ids.length - 1, (r * ids.length) | 0)]];
+  const mismatch=[];
+  for(const k in missCount) mismatch.push(k);
+  return {ids:ids, exists:exists, context:ctx, mismatch:mismatch};
+}
+function siteTplNote(cls, hit, reason, mismatch){
+  const t=SITE_TPL_QUERY.telem;
+  if(t.asks[cls]==null){ t.asks[cls]=0; t.hits[cls]=0; t.miss[cls]=0; t.reason[cls]=''; t.mismatch[cls]=null; }
+  t.asks[cls]++;
+  if(hit){ t.hits[cls]++; return; }
+  t.miss[cls]++;
+  if(!t.reason[cls]) t.reason[cls]=reason||'TEMPLATE_MISSING';
+  if(mismatch&&!t.mismatch[cls]) t.mismatch[cls]=mismatch;
+}
+function siteTemplateFor(cls, pick){
+  /* Exact-template probes set SITE_TPL_FORCE. Production never sets it, so
+     a compatible pool still consumes pick() in insertion order. A pin applies
+     only to that class; other classes keep this selector. tryStamp returns
+     false immediately on null and increments no SITE_REJ bucket — that miss
+     is recorded here as TEMPLATE_MISSING / INCOMPATIBLE. */
+  const pin=(typeof SITE_TPL_FORCE==='string'&&SITE_TPL_FORCE)
+    ||(SITE_TPL_QUERY&&typeof SITE_TPL_QUERY.force==='string'&&SITE_TPL_QUERY.force)
+    ||'';
+  if(pin){
+    const forced=SITE_TPL[pin];
+    if(forced&&forced.class===cls){ siteTplNote(cls, true); return forced; }
+  }
+  const pool=siteTemplatePool(cls);
+  if(!pool.ids.length){
+    siteTplNote(cls, false, pool.exists?'INCOMPATIBLE':'TEMPLATE_MISSING',
+      pool.mismatch&&pool.mismatch.length?pool.mismatch:null);
+    return null;
+  }
+  siteTplNote(cls, true);
+  const r=(typeof pick==='function')?pick():Math.random();
+  return SITE_TPL[pool.ids[Math.min(pool.ids.length-1,(r*pool.ids.length)|0)]];
 }
 
 /* Nova districts already have tower/civic/hall. This sprinkles the unused

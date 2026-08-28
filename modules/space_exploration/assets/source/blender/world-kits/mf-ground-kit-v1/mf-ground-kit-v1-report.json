@@ -1,0 +1,3081 @@
+{
+  "format": "MassfrontGroundKitV1",
+  "version": 1,
+  "units": "metres",
+  "deterministic": true,
+  "generator": "tools/blender/build-mf-ground-kit.py",
+  "sharesVocabularyWith": "tools/blender/build-mf-modular-building-kit.py",
+  "blenderVersion": "5.2.0 LTS",
+  "groundContract": {
+    "placementGridM": 32.0,
+    "paveZ": 0.0,
+    "terraceDropM": 6.0,
+    "carriagewayWidthM": 20.0,
+    "edgeJointM": 0.0,
+    "notes": [
+      "Ground tiles abut with NO joint: geometry must land EXACTLY on the cell plane on all four edges, unlike buildings which stop short of it. A tile 5 cm short shows a crack the length of a street.",
+      "Paving slabs are boxes, not chamfered octagons -- a chamfer would open a hole where four tiles meet.",
+      "Carriageway is 20 m, matching mf-modular-road-v1 and the 20 m gate clearances in the building and superstructure kits.",
+      "Every edge socket declares mf_edge_z so a placer never butts a grade tile against the low side of a terrace edge."
+    ]
+  },
+  "styles": {
+    "colonial": {
+      "label": "Neutral colonial",
+      "modules": 12
+    },
+    "brutalist": {
+      "label": "Nova brutalist",
+      "modules": 12
+    },
+    "ruined": {
+      "label": "Derelict",
+      "modules": 12
+    }
+  },
+  "classes": [
+    "plaza",
+    "road"
+  ],
+  "moduleCount": 36,
+  "triangleSummary": {
+    "lod0Total": 19380,
+    "lod0Min": 276,
+    "lod0Max": 1324,
+    "lod0Mean": 538.3,
+    "lod1Total": 6408,
+    "lod2Total": 2280
+  },
+  "tilingProof": [
+    {
+      "id": "street_grid",
+      "style": "brutalist",
+      "items": [
+        "landing_pad",
+        "plaza_deck",
+        "road_cross",
+        "road_straight",
+        "road_tee"
+      ]
+    },
+    {
+      "id": "terrace",
+      "style": "colonial",
+      "items": [
+        "plaza_corner",
+        "plaza_deck",
+        "plaza_edge",
+        "plaza_steps"
+      ]
+    },
+    {
+      "id": "service_yard",
+      "style": "colonial",
+      "items": [
+        "plaza_deck",
+        "plaza_ramp",
+        "plaza_vent",
+        "road_straight",
+        "service_trench"
+      ]
+    },
+    {
+      "id": "dead_plaza",
+      "style": "ruined",
+      "items": [
+        "landing_pad",
+        "plaza_deck",
+        "plaza_edge",
+        "plaza_steps",
+        "road_cross",
+        "road_straight",
+        "service_trench"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "colonial_plaza_deck",
+      "archetype": "plaza_deck",
+      "style": "colonial",
+      "groundClass": "plaza",
+      "form": "pave",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_DECK_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_DECK_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_DECK_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_DECK_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 80
+        },
+        {
+          "lod": 1,
+          "triangles": 12
+        },
+        {
+          "lod": 2,
+          "triangles": 12
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 12,
+        "pave_groove": 192,
+        "pave_marking": 12,
+        "pave_slab": 12,
+        "service_lid": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 80,
+        "lod1": 12,
+        "lod2": 12
+      },
+      "polys": {
+        "lod0": 32,
+        "lod1": 6,
+        "lod2": 6
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_plaza_corner",
+      "archetype": "plaza_corner",
+      "style": "colonial",
+      "groundClass": "plaza",
+      "form": "pave_corner",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_CORNER_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_CORNER_SOCKET_E",
+          "direction": "E",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_CORNER_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_CORNER_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 512
+        },
+        {
+          "lod": 1,
+          "triangles": 172
+        },
+        {
+          "lod": 2,
+          "triangles": 92
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 180,
+        "pave_slab": 36,
+        "retaining_cap": 88,
+        "retaining_rib": 184,
+        "retaining_wall": 184
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 512,
+        "lod1": 172,
+        "lod2": 92
+      },
+      "polys": {
+        "lod0": 190,
+        "lod1": 70,
+        "lod2": 38
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_plaza_edge",
+      "archetype": "plaza_edge",
+      "style": "colonial",
+      "groundClass": "plaza",
+      "form": "pave_edge",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_EDGE_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_EDGE_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_EDGE_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_EDGE_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 690
+        },
+        {
+          "lod": 1,
+          "triangles": 176
+        },
+        {
+          "lod": 2,
+          "triangles": 52
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 300,
+        "pave_marking": 36,
+        "pave_slab": 24,
+        "retaining_cap": 44,
+        "retaining_rib": 368,
+        "retaining_wall": 92
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 690,
+        "lod1": 176,
+        "lod2": 52
+      },
+      "polys": {
+        "lod0": 214,
+        "lod1": 68,
+        "lod2": 22
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_plaza_steps",
+      "archetype": "plaza_steps",
+      "style": "colonial",
+      "groundClass": "plaza",
+      "form": "steps",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_STEPS_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_STEPS_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_STEPS_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_STEPS_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1056
+        },
+        {
+          "lod": 1,
+          "triangles": 252
+        },
+        {
+          "lod": 2,
+          "triangles": 160
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 240,
+        "pave_marking": 24,
+        "pave_slab": 24,
+        "retaining_cap": 88,
+        "retaining_rib": 184,
+        "retaining_wall": 184,
+        "step": 264,
+        "step_cheek": 184
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1056,
+        "lod1": 252,
+        "lod2": 160
+      },
+      "polys": {
+        "lod0": 400,
+        "lod1": 102,
+        "lod2": 64
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_plaza_ramp",
+      "archetype": "plaza_ramp",
+      "style": "colonial",
+      "groundClass": "plaza",
+      "form": "ramp",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_RAMP_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_RAMP_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_RAMP_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_RAMP_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 738
+        },
+        {
+          "lod": 1,
+          "triangles": 108
+        },
+        {
+          "lod": 2,
+          "triangles": 84
+        }
+      ],
+      "geometryRoleTriangles": {
+        "kerb": 88,
+        "pave_bay": 36,
+        "pave_groove": 156,
+        "pave_marking": 24,
+        "pave_slab": 36,
+        "ramp_deck": 352
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 738,
+        "lod1": 108,
+        "lod2": 84
+      },
+      "polys": {
+        "lod0": 283,
+        "lod1": 54,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_plaza_vent",
+      "archetype": "plaza_vent",
+      "style": "colonial",
+      "groundClass": "plaza",
+      "form": "vent",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_VENT_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_VENT_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_VENT_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_PLAZA_VENT_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 198
+        },
+        {
+          "lod": 1,
+          "triangles": 36
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "louvre_bank": 24,
+        "louvre_fin": 108,
+        "pave_bay": 24,
+        "pave_groove": 180,
+        "pave_marking": 12,
+        "pave_slab": 12,
+        "service_lid": 24,
+        "vent_bay": 12,
+        "vent_frame": 44
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 198,
+        "lod1": 36,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 43,
+        "lod1": 18,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_road_straight",
+      "archetype": "road_straight",
+      "style": "colonial",
+      "groundClass": "road",
+      "form": "road",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 352
+        },
+        {
+          "lod": 1,
+          "triangles": 238
+        },
+        {
+          "lod": 2,
+          "triangles": 70
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 36,
+        "kerb": 88,
+        "lane_marking": 72,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 352,
+        "lod1": 238,
+        "lod2": 70
+      },
+      "polys": {
+        "lod0": 120,
+        "lod1": 119,
+        "lod2": 35
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_road_corner",
+      "archetype": "road_corner",
+      "style": "colonial",
+      "groundClass": "road",
+      "form": "road_corner",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CORNER_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CORNER_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CORNER_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CORNER_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 336
+        },
+        {
+          "lod": 1,
+          "triangles": 240
+        },
+        {
+          "lod": 2,
+          "triangles": 72
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 36,
+        "kerb": 88,
+        "lane_marking": 72,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 336,
+        "lod1": 240,
+        "lod2": 72
+      },
+      "polys": {
+        "lod0": 129,
+        "lod1": 120,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_road_tee",
+      "archetype": "road_tee",
+      "style": "colonial",
+      "groundClass": "road",
+      "form": "road_tee",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_TEE_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_TEE_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_TEE_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_TEE_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": true
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 368
+        },
+        {
+          "lod": 1,
+          "triangles": 274
+        },
+        {
+          "lod": 2,
+          "triangles": 70
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 48,
+        "kerb": 44,
+        "lane_marking": 108,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 368,
+        "lod1": 274,
+        "lod2": 70
+      },
+      "polys": {
+        "lod0": 132,
+        "lod1": 137,
+        "lod2": 35
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_road_cross",
+      "archetype": "road_cross",
+      "style": "colonial",
+      "groundClass": "road",
+      "form": "road_cross",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CROSS_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CROSS_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CROSS_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_ROAD_CROSS_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": true
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 416
+        },
+        {
+          "lod": 1,
+          "triangles": 308
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 60,
+        "lane_marking": 144,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 416,
+        "lod1": 308,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 140,
+        "lod1": 154,
+        "lod2": 34
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_service_trench",
+      "archetype": "service_trench",
+      "style": "colonial",
+      "groundClass": "road",
+      "form": "trench",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_SERVICE_TRENCH_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_SERVICE_TRENCH_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_SERVICE_TRENCH_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_SERVICE_TRENCH_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 521
+        },
+        {
+          "lod": 1,
+          "triangles": 168
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 48,
+        "pave_groove": 300,
+        "pave_marking": 12,
+        "pave_slab": 12,
+        "trench": 12,
+        "trench_duct": 84,
+        "trench_edge": 88,
+        "trench_grate": 72
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 521,
+        "lod1": 168,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 116,
+        "lod1": 72,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_landing_pad",
+      "archetype": "landing_pad",
+      "style": "colonial",
+      "groundClass": "plaza",
+      "form": "pad",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_COLONIAL_LANDING_PAD_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_LANDING_PAD_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_LANDING_PAD_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_COLONIAL_LANDING_PAD_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 378
+        },
+        {
+          "lod": 1,
+          "triangles": 144
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "approach_light": 96,
+        "pad_marking": 36,
+        "pave_bay": 24,
+        "pave_groove": 144,
+        "pave_slab": 12,
+        "service_lid": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 378,
+        "lod1": 144,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 94,
+        "lod1": 72,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_plaza_deck",
+      "archetype": "plaza_deck",
+      "style": "brutalist",
+      "groundClass": "plaza",
+      "form": "pave",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_DECK_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_DECK_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_DECK_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_DECK_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 122
+        },
+        {
+          "lod": 1,
+          "triangles": 12
+        },
+        {
+          "lod": 2,
+          "triangles": 12
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 192,
+        "pave_slab": 12,
+        "service_lid": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 122,
+        "lod1": 12,
+        "lod2": 12
+      },
+      "polys": {
+        "lod0": 35,
+        "lod1": 6,
+        "lod2": 6
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_plaza_corner",
+      "archetype": "plaza_corner",
+      "style": "brutalist",
+      "groundClass": "plaza",
+      "form": "pave_corner",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_CORNER_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_CORNER_SOCKET_E",
+          "direction": "E",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_CORNER_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_CORNER_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 578
+        },
+        {
+          "lod": 1,
+          "triangles": 172
+        },
+        {
+          "lod": 2,
+          "triangles": 92
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 156,
+        "pave_marking": 12,
+        "pave_slab": 36,
+        "retaining_cap": 88,
+        "retaining_rib": 184,
+        "retaining_wall": 184
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 578,
+        "lod1": 172,
+        "lod2": 92
+      },
+      "polys": {
+        "lod0": 198,
+        "lod1": 70,
+        "lod2": 38
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_plaza_edge",
+      "archetype": "plaza_edge",
+      "style": "brutalist",
+      "groundClass": "plaza",
+      "form": "pave_edge",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_EDGE_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_EDGE_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_EDGE_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_EDGE_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 650
+        },
+        {
+          "lod": 1,
+          "triangles": 176
+        },
+        {
+          "lod": 2,
+          "triangles": 52
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 60,
+        "pave_groove": 252,
+        "pave_slab": 24,
+        "retaining_cap": 44,
+        "retaining_rib": 368,
+        "retaining_wall": 92
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 650,
+        "lod1": 176,
+        "lod2": 52
+      },
+      "polys": {
+        "lod0": 204,
+        "lod1": 68,
+        "lod2": 22
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_plaza_steps",
+      "archetype": "plaza_steps",
+      "style": "brutalist",
+      "groundClass": "plaza",
+      "form": "steps",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_STEPS_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_STEPS_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_STEPS_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_STEPS_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1056
+        },
+        {
+          "lod": 1,
+          "triangles": 252
+        },
+        {
+          "lod": 2,
+          "triangles": 160
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 324,
+        "pave_marking": 36,
+        "pave_slab": 24,
+        "retaining_cap": 88,
+        "retaining_rib": 184,
+        "retaining_wall": 184,
+        "step": 264,
+        "step_cheek": 184
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1056,
+        "lod1": 252,
+        "lod2": 160
+      },
+      "polys": {
+        "lod0": 402,
+        "lod1": 102,
+        "lod2": 64
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_plaza_ramp",
+      "archetype": "plaza_ramp",
+      "style": "brutalist",
+      "groundClass": "plaza",
+      "form": "ramp",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_RAMP_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_RAMP_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_RAMP_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_RAMP_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 782
+        },
+        {
+          "lod": 1,
+          "triangles": 108
+        },
+        {
+          "lod": 2,
+          "triangles": 84
+        }
+      ],
+      "geometryRoleTriangles": {
+        "kerb": 88,
+        "pave_bay": 48,
+        "pave_groove": 216,
+        "pave_marking": 12,
+        "pave_slab": 36,
+        "ramp_deck": 352
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 782,
+        "lod1": 108,
+        "lod2": 84
+      },
+      "polys": {
+        "lod0": 283,
+        "lod1": 54,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_plaza_vent",
+      "archetype": "plaza_vent",
+      "style": "brutalist",
+      "groundClass": "plaza",
+      "form": "vent",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_VENT_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_VENT_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_VENT_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_PLAZA_VENT_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 166
+        },
+        {
+          "lod": 1,
+          "triangles": 36
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "louvre_bank": 24,
+        "louvre_fin": 108,
+        "pave_bay": 12,
+        "pave_groove": 216,
+        "pave_marking": 24,
+        "pave_slab": 12,
+        "service_lid": 24,
+        "vent_bay": 12,
+        "vent_frame": 44
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 166,
+        "lod1": 36,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 47,
+        "lod1": 18,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_road_straight",
+      "archetype": "road_straight",
+      "style": "brutalist",
+      "groundClass": "road",
+      "form": "road",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 352
+        },
+        {
+          "lod": 1,
+          "triangles": 238
+        },
+        {
+          "lod": 2,
+          "triangles": 70
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 36,
+        "kerb": 88,
+        "lane_marking": 72,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 352,
+        "lod1": 238,
+        "lod2": 70
+      },
+      "polys": {
+        "lod0": 120,
+        "lod1": 119,
+        "lod2": 35
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_road_corner",
+      "archetype": "road_corner",
+      "style": "brutalist",
+      "groundClass": "road",
+      "form": "road_corner",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CORNER_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CORNER_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CORNER_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CORNER_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 334
+        },
+        {
+          "lod": 1,
+          "triangles": 240
+        },
+        {
+          "lod": 2,
+          "triangles": 72
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 36,
+        "kerb": 88,
+        "lane_marking": 72,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 334,
+        "lod1": 240,
+        "lod2": 72
+      },
+      "polys": {
+        "lod0": 128,
+        "lod1": 120,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_road_tee",
+      "archetype": "road_tee",
+      "style": "brutalist",
+      "groundClass": "road",
+      "form": "road_tee",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_TEE_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_TEE_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_TEE_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_TEE_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": true
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 368
+        },
+        {
+          "lod": 1,
+          "triangles": 274
+        },
+        {
+          "lod": 2,
+          "triangles": 70
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 48,
+        "kerb": 44,
+        "lane_marking": 108,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 368,
+        "lod1": 274,
+        "lod2": 70
+      },
+      "polys": {
+        "lod0": 132,
+        "lod1": 137,
+        "lod2": 35
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_road_cross",
+      "archetype": "road_cross",
+      "style": "brutalist",
+      "groundClass": "road",
+      "form": "road_cross",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CROSS_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CROSS_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CROSS_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_ROAD_CROSS_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": true
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 368
+        },
+        {
+          "lod": 1,
+          "triangles": 308
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 60,
+        "lane_marking": 144,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 368,
+        "lod1": 308,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 134,
+        "lod1": 154,
+        "lod2": 34
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_service_trench",
+      "archetype": "service_trench",
+      "style": "brutalist",
+      "groundClass": "road",
+      "form": "trench",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_SERVICE_TRENCH_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_SERVICE_TRENCH_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_SERVICE_TRENCH_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_SERVICE_TRENCH_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 453
+        },
+        {
+          "lod": 1,
+          "triangles": 168
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 48,
+        "pave_groove": 276,
+        "pave_marking": 12,
+        "pave_slab": 12,
+        "trench": 12,
+        "trench_duct": 84,
+        "trench_edge": 88,
+        "trench_grate": 72
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 453,
+        "lod1": 168,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 102,
+        "lod1": 72,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_landing_pad",
+      "archetype": "landing_pad",
+      "style": "brutalist",
+      "groundClass": "plaza",
+      "form": "pad",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_LANDING_PAD_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_LANDING_PAD_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_LANDING_PAD_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_BRUTALIST_LANDING_PAD_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 374
+        },
+        {
+          "lod": 1,
+          "triangles": 144
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "approach_light": 96,
+        "pad_marking": 36,
+        "pave_bay": 12,
+        "pave_groove": 120,
+        "pave_slab": 12,
+        "service_lid": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 374,
+        "lod1": 144,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 99,
+        "lod1": 72,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_plaza_deck",
+      "archetype": "plaza_deck",
+      "style": "ruined",
+      "groundClass": "plaza",
+      "form": "pave",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_DECK_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_DECK_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_DECK_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_DECK_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 82
+        },
+        {
+          "lod": 1,
+          "triangles": 12
+        },
+        {
+          "lod": 2,
+          "triangles": 12
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 24,
+        "pave_groove": 192,
+        "pave_slab": 12,
+        "service_lid": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 82,
+        "lod1": 12,
+        "lod2": 12
+      },
+      "polys": {
+        "lod0": 27,
+        "lod1": 6,
+        "lod2": 6
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_plaza_corner",
+      "archetype": "plaza_corner",
+      "style": "ruined",
+      "groundClass": "plaza",
+      "form": "pave_corner",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_CORNER_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_CORNER_SOCKET_E",
+          "direction": "E",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_CORNER_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_CORNER_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 592
+        },
+        {
+          "lod": 1,
+          "triangles": 172
+        },
+        {
+          "lod": 2,
+          "triangles": 92
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 276,
+        "pave_slab": 36,
+        "retaining_cap": 88,
+        "retaining_rib": 184,
+        "retaining_wall": 184
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 592,
+        "lod1": 172,
+        "lod2": 92
+      },
+      "polys": {
+        "lod0": 192,
+        "lod1": 70,
+        "lod2": 38
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_plaza_edge",
+      "archetype": "plaza_edge",
+      "style": "ruined",
+      "groundClass": "plaza",
+      "form": "pave_edge",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_EDGE_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_EDGE_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_EDGE_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_EDGE_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 586
+        },
+        {
+          "lod": 1,
+          "triangles": 176
+        },
+        {
+          "lod": 2,
+          "triangles": 52
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 240,
+        "pave_slab": 24,
+        "retaining_cap": 44,
+        "retaining_rib": 368,
+        "retaining_wall": 92
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 586,
+        "lod1": 176,
+        "lod2": 52
+      },
+      "polys": {
+        "lod0": 198,
+        "lod1": 68,
+        "lod2": 22
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_plaza_steps",
+      "archetype": "plaza_steps",
+      "style": "ruined",
+      "groundClass": "plaza",
+      "form": "steps",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_STEPS_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_STEPS_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_STEPS_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_STEPS_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 998
+        },
+        {
+          "lod": 1,
+          "triangles": 252
+        },
+        {
+          "lod": 2,
+          "triangles": 160
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 36,
+        "pave_groove": 228,
+        "pave_marking": 12,
+        "pave_slab": 24,
+        "retaining_cap": 88,
+        "retaining_rib": 184,
+        "retaining_wall": 184,
+        "step": 264,
+        "step_cheek": 184
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 998,
+        "lod1": 252,
+        "lod2": 160
+      },
+      "polys": {
+        "lod0": 394,
+        "lod1": 102,
+        "lod2": 64
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_plaza_ramp",
+      "archetype": "plaza_ramp",
+      "style": "ruined",
+      "groundClass": "plaza",
+      "form": "ramp",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -7.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_RAMP_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_RAMP_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_RAMP_SOCKET_S",
+          "direction": "S",
+          "edgeZ": -6.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_RAMP_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 743
+        },
+        {
+          "lod": 1,
+          "triangles": 108
+        },
+        {
+          "lod": 2,
+          "triangles": 84
+        }
+      ],
+      "geometryRoleTriangles": {
+        "kerb": 88,
+        "pave_bay": 48,
+        "pave_groove": 192,
+        "pave_marking": 12,
+        "pave_slab": 36,
+        "ramp_deck": 352
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 743,
+        "lod1": 108,
+        "lod2": 84
+      },
+      "polys": {
+        "lod0": 275,
+        "lod1": 54,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_plaza_vent",
+      "archetype": "plaza_vent",
+      "style": "ruined",
+      "groundClass": "plaza",
+      "form": "vent",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_VENT_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_VENT_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_VENT_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_PLAZA_VENT_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 220
+        },
+        {
+          "lod": 1,
+          "triangles": 36
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "louvre_bank": 24,
+        "louvre_fin": 108,
+        "pave_bay": 12,
+        "pave_groove": 192,
+        "pave_marking": 12,
+        "pave_slab": 12,
+        "service_lid": 24,
+        "vent_bay": 12,
+        "vent_frame": 44
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 220,
+        "lod1": 36,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 50,
+        "lod1": 18,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_road_straight",
+      "archetype": "road_straight",
+      "style": "ruined",
+      "groundClass": "road",
+      "form": "road",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 352
+        },
+        {
+          "lod": 1,
+          "triangles": 238
+        },
+        {
+          "lod": 2,
+          "triangles": 70
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 36,
+        "kerb": 88,
+        "lane_marking": 72,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 352,
+        "lod1": 238,
+        "lod2": 70
+      },
+      "polys": {
+        "lod0": 120,
+        "lod1": 119,
+        "lod2": 35
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_road_corner",
+      "archetype": "road_corner",
+      "style": "ruined",
+      "groundClass": "road",
+      "form": "road_corner",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CORNER_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CORNER_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CORNER_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CORNER_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 336
+        },
+        {
+          "lod": 1,
+          "triangles": 240
+        },
+        {
+          "lod": 2,
+          "triangles": 72
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 36,
+        "kerb": 88,
+        "lane_marking": 72,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 336,
+        "lod1": 240,
+        "lod2": 72
+      },
+      "polys": {
+        "lod0": 129,
+        "lod1": 120,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_road_tee",
+      "archetype": "road_tee",
+      "style": "ruined",
+      "groundClass": "road",
+      "form": "road_tee",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_TEE_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_TEE_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_TEE_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_TEE_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": true
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 368
+        },
+        {
+          "lod": 1,
+          "triangles": 274
+        },
+        {
+          "lod": 2,
+          "triangles": 70
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 48,
+        "kerb": 44,
+        "lane_marking": 108,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 368,
+        "lod1": 274,
+        "lod2": 70
+      },
+      "polys": {
+        "lod0": 132,
+        "lod1": 137,
+        "lod2": 35
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_road_cross",
+      "archetype": "road_cross",
+      "style": "ruined",
+      "groundClass": "road",
+      "form": "road_cross",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CROSS_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CROSS_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CROSS_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": true
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_ROAD_CROSS_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": true
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 385
+        },
+        {
+          "lod": 1,
+          "triangles": 308
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "carriageway": 60,
+        "lane_marking": 144,
+        "pave_slab": 12,
+        "service_lid": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 385,
+        "lod1": 308,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 135,
+        "lod1": 154,
+        "lod2": 34
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_service_trench",
+      "archetype": "service_trench",
+      "style": "ruined",
+      "groundClass": "road",
+      "form": "trench",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_SERVICE_TRENCH_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_SERVICE_TRENCH_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_SERVICE_TRENCH_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_SERVICE_TRENCH_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 406
+        },
+        {
+          "lod": 1,
+          "triangles": 168
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pave_bay": 24,
+        "pave_groove": 252,
+        "pave_marking": 12,
+        "pave_slab": 12,
+        "trench": 12,
+        "trench_duct": 84,
+        "trench_edge": 88,
+        "trench_grate": 72
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 406,
+        "lod1": 168,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 109,
+        "lod1": 72,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_landing_pad",
+      "archetype": "landing_pad",
+      "style": "ruined",
+      "groundClass": "plaza",
+      "form": "pad",
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "topZ": 0.0,
+      "bottomZ": -1.8,
+      "sockets": [
+        {
+          "name": "MF_GROUND_V1_RUINED_LANDING_PAD_SOCKET_N",
+          "direction": "N",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_LANDING_PAD_SOCKET_E",
+          "direction": "E",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_LANDING_PAD_SOCKET_S",
+          "direction": "S",
+          "edgeZ": 0.0,
+          "carriageway": false
+        },
+        {
+          "name": "MF_GROUND_V1_RUINED_LANDING_PAD_SOCKET_W",
+          "direction": "W",
+          "edgeZ": 0.0,
+          "carriageway": false
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 388
+        },
+        {
+          "lod": 1,
+          "triangles": 144
+        },
+        {
+          "lod": 2,
+          "triangles": 24
+        }
+      ],
+      "geometryRoleTriangles": {
+        "approach_light": 96,
+        "pad_marking": 36,
+        "pave_bay": 12,
+        "pave_groove": 144,
+        "pave_slab": 12,
+        "service_lid": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 388,
+        "lod1": 144,
+        "lod2": 24
+      },
+      "polys": {
+        "lod0": 100,
+        "lod1": 72,
+        "lod2": 12
+      },
+      "objectsPerModule": 3
+    }
+  ],
+  "exports": [
+    {
+      "module": "colonial_plaza_deck",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-plaza-deck.glb"
+    },
+    {
+      "module": "colonial_plaza_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-plaza-corner.glb"
+    },
+    {
+      "module": "colonial_plaza_edge",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-plaza-edge.glb"
+    },
+    {
+      "module": "colonial_plaza_steps",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-plaza-steps.glb"
+    },
+    {
+      "module": "colonial_plaza_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-plaza-ramp.glb"
+    },
+    {
+      "module": "colonial_plaza_vent",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-plaza-vent.glb"
+    },
+    {
+      "module": "colonial_road_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-road-straight.glb"
+    },
+    {
+      "module": "colonial_road_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-road-corner.glb"
+    },
+    {
+      "module": "colonial_road_tee",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-road-tee.glb"
+    },
+    {
+      "module": "colonial_road_cross",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-road-cross.glb"
+    },
+    {
+      "module": "colonial_service_trench",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-service-trench.glb"
+    },
+    {
+      "module": "colonial_landing_pad",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-colonial-landing-pad.glb"
+    },
+    {
+      "module": "brutalist_plaza_deck",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-plaza-deck.glb"
+    },
+    {
+      "module": "brutalist_plaza_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-plaza-corner.glb"
+    },
+    {
+      "module": "brutalist_plaza_edge",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-plaza-edge.glb"
+    },
+    {
+      "module": "brutalist_plaza_steps",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-plaza-steps.glb"
+    },
+    {
+      "module": "brutalist_plaza_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-plaza-ramp.glb"
+    },
+    {
+      "module": "brutalist_plaza_vent",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-plaza-vent.glb"
+    },
+    {
+      "module": "brutalist_road_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-road-straight.glb"
+    },
+    {
+      "module": "brutalist_road_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-road-corner.glb"
+    },
+    {
+      "module": "brutalist_road_tee",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-road-tee.glb"
+    },
+    {
+      "module": "brutalist_road_cross",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-road-cross.glb"
+    },
+    {
+      "module": "brutalist_service_trench",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-service-trench.glb"
+    },
+    {
+      "module": "brutalist_landing_pad",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-brutalist-landing-pad.glb"
+    },
+    {
+      "module": "ruined_plaza_deck",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-plaza-deck.glb"
+    },
+    {
+      "module": "ruined_plaza_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-plaza-corner.glb"
+    },
+    {
+      "module": "ruined_plaza_edge",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-plaza-edge.glb"
+    },
+    {
+      "module": "ruined_plaza_steps",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-plaza-steps.glb"
+    },
+    {
+      "module": "ruined_plaza_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-plaza-ramp.glb"
+    },
+    {
+      "module": "ruined_plaza_vent",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-plaza-vent.glb"
+    },
+    {
+      "module": "ruined_road_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-road-straight.glb"
+    },
+    {
+      "module": "ruined_road_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-road-corner.glb"
+    },
+    {
+      "module": "ruined_road_tee",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-road-tee.glb"
+    },
+    {
+      "module": "ruined_road_cross",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-road-cross.glb"
+    },
+    {
+      "module": "ruined_service_trench",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-service-trench.glb"
+    },
+    {
+      "module": "ruined_landing_pad",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/exports/mf-gnd-ruined-landing-pad.glb"
+    }
+  ],
+  "evidenceRenders": [
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-ground-kit-v1-overview-colonial.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-ground-kit-v1-overview-brutalist.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-ground-kit-v1-overview-ruined.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-deck-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-deck-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-deck-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-edge-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-edge-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-edge-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-steps-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-steps-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-steps-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-vent-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-vent-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-plaza-vent-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-tee-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-tee-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-tee-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-cross-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-cross-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-road-cross-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-service-trench-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-service-trench-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-service-trench-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-landing-pad-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-landing-pad-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-colonial-landing-pad-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-deck-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-deck-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-deck-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-edge-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-edge-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-edge-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-steps-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-steps-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-steps-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-vent-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-vent-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-plaza-vent-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-tee-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-tee-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-tee-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-cross-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-cross-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-road-cross-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-service-trench-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-service-trench-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-service-trench-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-landing-pad-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-landing-pad-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-brutalist-landing-pad-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-deck-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-deck-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-deck-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-edge-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-edge-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-edge-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-steps-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-steps-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-steps-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-vent-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-vent-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-plaza-vent-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-tee-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-tee-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-tee-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-cross-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-cross-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-road-cross-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-service-trench-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-service-trench-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-service-trench-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-landing-pad-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-landing-pad-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-gnd-ruined-landing-pad-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-street-grid-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-street-grid-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-terrace-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-terrace-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-service-yard-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-service-yard-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-dead-plaza-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/evidence/mf-tiling-dead-plaza-top.png"
+  ],
+  "blend": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/mf-ground-kit-v1.blend",
+  "runtimeIntegration": {
+    "state": "SOURCE_CANDIDATE",
+    "note": "Nothing registered in boot.js or manifest.json."
+  },
+  "consolidated": {
+    "tool": "tools/blender/consolidate-mf-kits.py",
+    "oneObjectPerModulePerLod": true,
+    "modulesRefreshed": 36
+  }
+}

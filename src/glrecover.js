@@ -39,6 +39,13 @@
    a countdown. The session snapshot makes the automatic reload recoverable. */
 const GLR_WAIT_MS = 8000;
 let glrLost = false, glrDeadline = 0, glrTick = 0, glrWasRunning = false;
+let glrWasPaused = false, glrPauseOwned = false;
+/* `webglcontextrestored` is normally delivered once, but GPU/process recovery
+   can fan it out across listeners while a previous rebuild is still running.
+   Rebuilding resources twice races live texture/program handles. Give-up can
+   likewise be reached by the timer, the button, and a failed rebuild, so both
+   paths have explicit one-shot latches. */
+let glrRebuilding = false, glrGiveupQueued = false;
 
 function glrQualityDown(){
   try{
@@ -64,6 +71,11 @@ function glrRebuildResources(){
      but dead, so without this the terrain rebuild poured vertices into dead
      buffers and the ground stayed a fog-coloured void for the rest of the
      match (seen on device at 11:37: units and structures back, terrain gone). */
+  /* Timer-query objects are context-owned too. A restored WebGL context keeps
+     the same JavaScript `gl` identity in browsers, so perf telemetry cannot
+     infer restoration from `g===mfPerfGL`; explicitly discard its dead query
+     ring before any rebuilt pass can submit fresh work. */
+  step('mfPerfGLReset', ()=>{ if(typeof mfPerfGLReset==='function') mfPerfGLReset(); });
   step('terrainGLReset',()=>{ if(typeof terrainGLReset==='function') terrainGLReset(); });
   step('worldKitGLReset',()=>{ if(typeof worldKitGLReset==='function') worldKitGLReset(); });
   step('fogGLReset',    ()=>{ if(typeof fogGLReset==='function') fogGLReset(); });
@@ -76,10 +88,20 @@ function glrRebuildResources(){
      through the dead VAOs. gpufx.js now also self-heals on the epoch, but this
      resets it on the same ordered pass as every other subsystem. */
   step('gpfxGLReset',   ()=>{ if(typeof gpfxGLReset==='function') gpfxGLReset(); });
+  step('mfOrdnanceTrailGLReset',()=>{ if(typeof mfOrdnanceTrailGLReset==='function') mfOrdnanceTrailGLReset(); });
+  step('macroFxGLReset',()=>{ if(typeof macroFxGLReset==='function') macroFxGLReset(); });
+  step('shieldFxGLReset',()=>{ if(typeof shieldFxGLReset==='function') shieldFxGLReset(); });
+  step('mfNoiseGLReset',()=>{ if(typeof mfNoiseGLReset==='function') mfNoiseGLReset(); });
+  step('mfShockwaveGLReset',()=>{ if(typeof mfShockwaveGLReset==='function') mfShockwaveGLReset(); });
+  /* War Table planet maps rebuild lazily after the base renderer is healthy;
+     this reset only discards truthy handles from the dead context. */
+  step('mfPlanetPreviewGLReset',()=>{ if(typeof mfPlanetPreviewGLReset==='function') mfPlanetPreviewGLReset(); });
   step('initGL3D',      ()=>initGL3D());
+  step('shieldFxBoot',  ()=>{ if(typeof shieldFxBoot==='function') shieldFxBoot(); });
   step('buildMatAtlas', ()=>buildMatAtlas());
   step('initMaterialV2',()=>{ if(typeof initMaterialV2==='function') initMaterialV2(); });
   step('initBillboards',()=>{ if(typeof initBillboards==='function') initBillboards(); });
+  step('macroFxBoot',   ()=>{ if(typeof macroFxBoot==='function') macroFxBoot(); });
   step('initModels',    ()=>initModels());
   step('buildAtlas',    ()=>{ if(typeof buildAtlas==='function') atlasTex=buildAtlas(); });
   step('mfIconInitGL',  ()=>{ if(typeof mfIconInitGL==='function') mfIconInitGL(); });
@@ -128,10 +150,19 @@ function glrOnLost(e){
   if(e&&e.preventDefault) e.preventDefault();   // required, or the context is never restorable
   if(glrLost) return;
   glrLost=true;
+  glrGiveupQueued=false;
   glrWasRunning=(typeof running!=='undefined')&&running&&!(typeof gameEnded!=='undefined'&&gameEnded);
+  glrWasPaused=(typeof paused!=='undefined')&&!!paused;
+  glrPauseOwned=!!(glrWasRunning&&!glrWasPaused);
   /* PAUSE, do not stop. `running=false` tears down the match; the sim state is
-     fine and we intend to carry on with it. */
-  try{ if(typeof paused!=='undefined') paused=true; }catch(_){}
+     fine and we intend to carry on with it. Only claim the pause when an
+     active, previously-unpaused match needs one: menus and modal-paused games
+     keep their intentional state across restoration. */
+  try{ if(glrPauseOwned&&typeof paused!=='undefined') paused=true; }catch(_){}
+  /* Stop telemetry touching timer queries while the context is lost. The
+     restore rebuild resets it again because animation frames can run between
+     these two events and browsers retain the same `gl` wrapper. */
+  try{ if(typeof mfPerfGLReset==='function') mfPerfGLReset(); }catch(_){}
   /* Belt and braces: if recovery fails and we do end up reloading, the match is
      already on disk. */
   try{ if(typeof sessSnapshot==='function') sessSnapshot('contextlost'); }catch(_){}
@@ -150,18 +181,28 @@ function glrOnLost(e){
 }
 
 function glrOnRestored(){
-  if(!glrLost) return;
+  if(!glrLost||glrRebuilding||glrGiveupQueued) return;
   clearInterval(glrTick);
   glrCardBody('Graphics restored. Rebuilding…');
   let ok=false;
+  glrRebuilding=true;
   try{ ok=glrRebuildResources(); }catch(e){ ok=false; }
+  finally{ glrRebuilding=false; }
   if(!ok){ glrGiveUp(); return; }
   /* Step down so the same fight does not exhaust the same GPU again in ninety
      seconds. Told plainly, because a silent quality drop reads as the game
      getting worse for no reason. */
   const now=glrQualityDown();
   glrLost=false; glrHide();
-  try{ if(typeof paused!=='undefined') paused=false; }catch(_){}
+  try{
+    const stillRunning=(typeof running!=='undefined')&&running&&
+      !(typeof gameEnded!=='undefined'&&gameEnded);
+    /* Undo only the pause this recovery cycle introduced. An already-paused
+       match/modal stays paused, and a match that ended during recovery is not
+       revived or otherwise rewritten here. */
+    if(glrPauseOwned&&glrWasRunning&&stillRunning&&typeof paused!=='undefined') paused=glrWasPaused;
+  }catch(_){}
+  glrWasRunning=false;glrWasPaused=false;glrPauseOwned=false;
   try{
     if(typeof toast==='function')
       toast(now ? '◈ GRAPHICS RESTORED — quality lowered to '+String(now).toUpperCase()+' to keep it stable'
@@ -172,14 +213,38 @@ function glrOnRestored(){
 /* Last resort only. The session was snapshotted at the moment of loss, and
    sessRenderResume() offers it the moment the menu comes back. */
 function glrGiveUp(){
+  if(glrGiveupQueued) return;
+  glrGiveupQueued=true;
   clearInterval(glrTick);
   glrQualityDown();
   try{ if(typeof sessSnapshot==='function') sessSnapshot('contextlost'); }catch(_){}
-  glrCardBody('Graphics did not come back. Reloading — your match is saved, and RESUME DROPPED SESSION will pick it up.');
+  const probe=glrProbeURL();
+  glrCardBody(probe
+    ?'Graphics did not come back. Releasing the FX probe and reloading normal graphics — your match is saved.'
+    :'Graphics did not come back. Reloading — your match is saved, and RESUME DROPPED SESSION will pick it up.');
   setTimeout(function(){
-    try{ const u=new URL(location.href); u.searchParams.set('mf_glreset',Date.now().toString(36)); location.replace(u.href); }
+    try{ location.replace(glrRecoveryURL()); }
     catch(e){ location.reload(); }
   },900);
+}
+
+/* A failed diagnostic probe must not repeatedly reload into the same optional
+   diagnostic workload. Remove only probe-only flags; all ordinary game route
+   state survives the recovery URL exactly as before. */
+function glrProbeURL(){
+  try{
+    const q=new URL(location.href).searchParams;
+    return q.has('volfxprobe')||q.has('fxprobe')||q.has('macrofxprobe')||q.has('orgfxprobe');
+  }catch(e){ return false; }
+}
+function glrRecoveryURL(){
+  const u=new URL(location.href);
+  if(glrProbeURL()){
+    ['volfxprobe','fxprobe','macrofxprobe','orgfxprobe','allowsoftware'].forEach(k=>u.searchParams.delete(k));
+    try{ if(typeof mfProbeLeaseRelease==='function') mfProbeLeaseRelease(); }catch(e){}
+  }
+  u.searchParams.set('mf_glreset',Date.now().toString(36));
+  return u.href;
 }
 
 (function glrInstall(){

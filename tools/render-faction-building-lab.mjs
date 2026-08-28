@@ -15,6 +15,7 @@ import {access, mkdir, readFile, readdir, writeFile} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {dirname, join, resolve} from 'node:path';
+import {writeMaterialAtlases} from './material-atlas-io.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const releaseVersion=JSON.parse(await readFile(join(root,'package.json'),'utf8')).version;
@@ -232,7 +233,7 @@ if(reuseRender){
 
 await writeFile(join(outDir,'discovery-report.json'),JSON.stringify({format:'massfront-faction-discovery-v1',
   sourceFiles:factionSource,...payload.discovery,missing:payload.missing},null,2));
-for(const [kind,dataUrl] of Object.entries(atlases))await writeFile(join(outDir,`material-atlas-${kind}.png`),Buffer.from(dataUrl.slice(dataUrl.indexOf(',')+1),'base64'));
+await writeMaterialAtlases(outDir,atlases);
 
 const geometryReport={format:'massfront-faction-building-geometry-v1',buildings:{}};
 const uvReport={format:'massfront-faction-building-uv-v1',limit:UV_LIMIT,buildings:{}};

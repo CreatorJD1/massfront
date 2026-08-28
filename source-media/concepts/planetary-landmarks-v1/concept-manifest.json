@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "planetary_landmark_resource_library_v1",
+  "status": "approved_for_first_modeling_pass",
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "runtimeUse": {
+    "pixelsUsedAsTexture": false,
+    "sourceOnly": true,
+    "requiresAuthoredGeometryAndMaterials": true
+  },
+  "concepts": [
+    {
+      "id": "planetary_landmark_resource_model_sheet_v1",
+      "file": "planetary-landmark-resource-model-sheet-v1.png",
+      "sha256": "7ae66f4d14b1f98fb0208689ebbdf4a3c5ff2d1ff68502904e3295a46bac5b88",
+      "bytes": 2702846,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen",
+        "executionId": "exec-931a733a-6121-4572-8349-8583b0196750"
+      },
+      "biomeOrBiodome": [
+        "volcanic",
+        "alien_jungle",
+        "cyber_purple",
+        "golden_jade",
+        "terrestrial",
+        "gas_high_atmosphere"
+      ],
+      "faction": ["uga", "nova", "dominion", "syndicate", "brood", "faction_neutral"],
+      "intention": [
+        "hero_landmark",
+        "resource_site",
+        "survey_anomaly",
+        "mission_objective",
+        "environmental_storytelling",
+        "modular_faction_overlay",
+        "damage_and_depletion_state",
+        "lod_silhouette"
+      ],
+      "camera": ["orbital_map", "approach", "tilted_top_down_mobile_rts"],
+      "scale": ["planet_region", "landmark", "human_and_ground_module"],
+      "modelingTargets": [
+        "six_biome_authentic_landmark_families",
+        "modular_uga_nova_dominion_syndicate_and_brood_overlays",
+        "resource_and_survey_snap_sockets",
+        "road_tunnel_cargo_and_survey_connectors",
+        "pristine_scanned_exploited_and_damaged_states",
+        "orbit_approach_and_ground_lod_silhouettes",
+        "authored_terrain_integration"
+      ]
+    }
+  ],
+  "constraints": [
+    "concept_pixels_must_not_ship_as_runtime_textures",
+    "faction_overlay_must_not_replace_biome_identity",
+    "no_space_combat",
+    "no_generic_runtime_cubes",
+    "ground_accessible_assets_require_human_scale",
+    "readable_from_orbit_through_tactical_ground_camera"
+  ]
+}

@@ -73,27 +73,52 @@ function worldKitDecode(rec){
   for(let i=0;i<count;i++) idx[i]=i;
   return {v, i:idx, count, bones:0, skel:new Float32Array(10)};
 }
-/* Material id per kit piece, resolved lazily — this file loads before
-   materials.js so a top-level MAT reference would be a boot error. STONE /
-   CONC give background props a matte non-metal read that never blows out. */
+/* Material style per kit piece, resolved lazily — this file loads before
+   materials.js so a top-level MAT reference would be a boot error. Imported
+   geometry keeps its footprint and vertex/team tint; only its surface language
+   changes from generic concrete/stone to the authored world-kit atlas cells. */
 let WORLD_KIT_MAT=null;
+const WORLD_KIT_ARCH_UV=0.08;
 function worldKitMats(){
   if(WORLD_KIT_MAT) return WORLD_KIT_MAT;
   const M=(typeof MAT!=='undefined')?MAT:{};
   const conc=M.CONC!=null?M.CONC:6, stone=M.STONE!=null?M.STONE:12, rust=M.RUST!=null?M.RUST:7;
-  WORLD_KIT_MAT={ barracks:conc, tower:conc, block:conc, depot:stone, watchtower:conc,
-    gauss:stone, gatehouse:conc, ruinApartment:conc, ruinHighrise:conc,
-    ruinFactory:rust, ruinSpire:stone, fuelFarm:rust, fuelTank:rust, ruinTower:conc };
+  const gun=M.WORLDKIT_GUNMETAL!=null?M.WORLDKIT_GUNMETAL:conc;
+  const composite=M.WORLDKIT_COMPOSITE!=null?M.WORLDKIT_COMPOSITE:stone;
+  const vent=M.WORLDKIT_VENT!=null?M.WORLDKIT_VENT:gun;
+  const trim=M.WORLDKIT_TRIM!=null?M.WORLDKIT_TRIM:rust;
+  const style=(wall,roof,edge)=>({wall,roof,edge:edge==null?gun:edge,trim});
+  /* Screenshot-critical outpost pieces are deliberately semantic: pale
+     composite walls separate from graphite structure, while barracks/depot
+     service roofs share one readable ventilation-deck material. */
+  WORLD_KIT_MAT={
+    /* Command views primarily see decks. Keep those decks dark gunmetal or
+       ventilated service metal, and reserve the lighter blue composite for
+       vertical facade bays. This creates a stable roof/facade/trim hierarchy
+       without the chalk-white roofs in the close mobile capture. */
+    gatehouse:style(composite,gun,trim),
+    barracks:style(composite,vent,gun),
+    depot:style(gun,vent,trim),
+    tower:style(composite,gun,trim), block:style(composite,gun,vent),
+    watchtower:style(gun,vent,trim), gauss:style(gun,gun,vent),
+    ruinApartment:style(composite,gun,trim), ruinHighrise:style(composite,gun,trim),
+    ruinFactory:style(gun,vent,trim), ruinSpire:style(composite,gun,trim),
+    fuelFarm:style(gun,composite,vent), fuelTank:style(gun,gun,trim),
+    ruinTower:style(composite,gun,trim)
+  };
   return WORLD_KIT_MAT;
 }
-function worldKitAssignMats(geo, hullMat){
+function worldKitAssignMats(geo, kitStyle){
   /* MeshBuilder stores MAT+1 (shader does floor(abs)-1). The converter wrote
      material 0 and baked window light into vertex RGB; writing raw MAT.CONC
      made every kit vert read as LAMP — the orange orb tile civic already
-     rejected. Hull stays CONC/STONE; only the bright facade tail gets office
-     glass so cyan/amber panes match the catalog without lighting the slab. */
+     rejected. Keep the established bright-facade window classifier verbatim;
+     assign the remaining triangle soup by architectural job. */
   const M=(typeof MAT!=='undefined')?MAT:{};
-  const hull=((hullMat!=null?hullMat:(M.CONC!=null?M.CONC:6))+1);
+  const fallback=M.CONC!=null?M.CONC:6;
+  const s=(kitStyle&&typeof kitStyle==='object')?kitStyle:
+    {wall:kitStyle!=null?kitStyle:fallback,roof:kitStyle!=null?kitStyle:fallback,
+      edge:kitStyle!=null?kitStyle:fallback,trim:kitStyle!=null?kitStyle:fallback};
   const cool=(M.BUILD_OFFICE_COOL!=null?M.BUILD_OFFICE_COOL:6)+1;
   const warm=(M.BUILD_OFFICE_LIT!=null?M.BUILD_OFFICE_LIT:6)+1;
   const n=geo.count, lumas=new Float32Array(n);
@@ -103,14 +128,46 @@ function worldKitAssignMats(geo, hullMat){
   }
   const sorted=Array.from(lumas).sort((a,b)=>a-b);
   const cut=sorted[Math.min(n-1,(n*0.74)|0)];
-  for(let i=0;i<n;i++){
-    const o=i*12, r=geo.v[o+6], g=geo.v[o+7], b=geo.v[o+8], ny=geo.v[o+4];
-    const facade=Math.abs(ny)<0.35;
-    const cyan=b>r+0.04&&g>r-0.03;
-    const amber=r>b+0.07&&r>g-0.03;
-    if(facade&&lumas[i]>=cut&&(cyan||amber||lumas[i]>0.78))
-      geo.v[o+11]=amber&&!cyan?warm:cool;
-    else geo.v[o+11]=hull;
+  const darkCut=sorted[Math.min(n-1,(n*0.20)|0)];
+  for(let t=0;t+2<n;t+=3){
+    const o0=t*12,o1=o0+12,o2=o0+24;
+    /* Material jobs follow the geometric FACE, not imported smooth normals.
+       Averaging smoothed normals pushed bevelled roof triangles below the roof
+       threshold and painted most visible decks with dark edge/trim material.
+       The expanded triangle soup gives us a stable face normal for free. */
+    const ex=geo.v[o1]-geo.v[o0], ey=geo.v[o1+1]-geo.v[o0+1], ez=geo.v[o1+2]-geo.v[o0+2];
+    const fx=geo.v[o2]-geo.v[o0], fy=geo.v[o2+1]-geo.v[o0+1], fz=geo.v[o2+2]-geo.v[o0+2];
+    const nx=ey*fz-ez*fy, ny0=ez*fx-ex*fz, nz=ex*fy-ey*fx;
+    const nl=Math.hypot(nx,ny0,nz)||1, ny=ny0/nl, ay=Math.abs(ny);
+    const avgL=(lumas[t]+lumas[t+1]+lumas[t+2])/3;
+    const avgR=(geo.v[o0+6]+geo.v[o1+6]+geo.v[o2+6])/3;
+    const avgG=(geo.v[o0+7]+geo.v[o1+7]+geo.v[o2+7])/3;
+    const avgB=(geo.v[o0+8]+geo.v[o1+8]+geo.v[o2+8])/3;
+    const facade=ay<0.30, cyan=avgB>avgR+0.04&&avgG>avgR-0.03;
+    const amber=avgR>avgB+0.07&&avgR>avgG-0.03;
+    const hasWindow=facade&&avgL>=cut&&(cyan||amber||avgL>0.78);
+    let base;
+    if(hasWindow) base=(amber&&!cyan?warm:cool)-1;
+    else if(ny>0.52) base=avgL<=darkCut?s.edge:s.roof;
+    else if(ny<-0.58) base=s.trim;
+    else if(ay<0.30) base=avgL<=darkCut?s.trim:s.wall;
+    else base=avgL<=darkCut?s.trim:s.edge;
+    base=(base!=null?base:fallback)+1;
+    for(let k=0;k<3;k++){
+      const o=o0+k*12;
+      /* vMat is flat in FS3D: one triangle must carry one semantic id. Mixed
+         per-vertex window ids depended on the provoking vertex and produced
+         unstable grey facets across otherwise continuous facades. */
+      geo.v[o+11]=base;
+      /* aInst.w applies the placed building scale later. Reducing source UVs
+         here yields one coherent architectural bay instead of vehicle-scale
+         panel repetition. Never rescale a mixed window triangle: keeping one
+         projection across all three vertices avoids a warped interpolation. */
+      if(!hasWindow){
+        geo.v[o+9]*=WORLD_KIT_ARCH_UV;
+        geo.v[o+10]*=WORLD_KIT_ARCH_UV;
+      }
+    }
   }
 }
 function initWorldKit(){
@@ -122,13 +179,22 @@ function initWorldKit(){
     try{
       const geo=worldKitDecode(WORLD_KIT_DATA[k]);
       worldKitAssignMats(geo, mats[k]);
-      WORLD_KIT[k]={mesh:new InstMesh(gl,geo,320),height:WORLD_KIT_DATA[k].height,tris:WORLD_KIT_DATA[k].tris};
+      const mesh=new InstMesh(gl,geo,320);
+      /* Atomically promotes all four WORLDKIT_* ids to the compact 512px/cell
+         triplet when it finishes decoding. Until then the same semantic ids
+         stay visible through the shared atlas -- no double-render or blank. */
+      if(typeof mfWorldKitSkin==='function') mfWorldKitSkin(gl,mesh);
+      WORLD_KIT[k]={mesh,height:WORLD_KIT_DATA[k].height,tris:WORLD_KIT_DATA[k].tris};
       n++;
     }catch(e){ console.warn('worldkit '+k+':',e&&e.message); }
   }
   return n;
 }
-function worldKitGLReset(){ for(const k in WORLD_KIT) delete WORLD_KIT[k]; worldSites.length=0; worldSitesBuilt=''; }
+function worldKitGLReset(){
+  for(const k in WORLD_KIT) delete WORLD_KIT[k];
+  if(typeof mfWorldKitSkinReset==='function') mfWorldKitSkinReset();
+  worldSites.length=0; worldSitesBuilt='';
+}
 
 /* ---------- archetypes ---------------------------------------------------- */
 const SITE_ARCH={
@@ -223,6 +289,7 @@ function worldSitesGenerate(){
      Nova districts already stamp kinds 6/7; without initWorldKit those plots
      fall back to the derelict dome and the authored GLB kit never appears. */
   initWorldKit();
+  siteStampInstall();
   if(!WORLDSITES_ENABLED) return 0;
   const key=(typeof curMap!=='undefined'?curMap:'?')+'|'+(typeof curTheme!=='undefined'?curTheme:'?');
   if(worldSitesBuilt===key&&worldSites.length) return worldSites.length;
@@ -272,5 +339,132 @@ const worldKitBaseInitModels=initModels;
 initModels=function(){
   worldKitBaseInitModels();
   initWorldKit();
+  siteStampInstall();
 };
 
+/* Stamp RESULT telemetry. planDistricts/stampSite stay in sim.js so the
+   shared roadClear() rule and the deterministic srand stream are untouched.
+   Compatibility misses are typed here as TEMPLATE_MISSING / INCOMPATIBLE,
+   distinct from ENVIRONMENTAL_EXHAUSTION (arena/spawn/water/res/near) and
+   REQUIRED_PLOT_ROLLBACK (SITE_REJ.plots after a compatible template was
+   selected). The wrap records requested-vs-realized after the planner. */
+const SITE_STAMP={
+  ver:2, map:'',
+  requested:{city:0,outpost:0,relic:0,spaceport:0,dome:0},
+  realized:{city:0,outpost:0,relic:0,spaceport:0,dome:0},
+  zones:[], fails:[], rej:null, telem:null, ok:true, hash:''
+};
+function siteStampClassKey(cls){
+  if(cls==='city'||cls==='towns') return 'city';
+  if(cls==='dome'||cls==='domes') return 'dome';
+  return cls||'site';
+}
+function siteStampCopyTelem(){
+  const src=(typeof SITE_TPL_QUERY==='object'&&SITE_TPL_QUERY&&SITE_TPL_QUERY.telem)||null;
+  if(!src) return null;
+  const keys=typeof siteTplKeys==='function'?siteTplKeys():['city','outpost','relic','spaceport','dome'];
+  const asks={},hits={},miss={},reason={},mismatch={};
+  for(let i=0;i<keys.length;i++){
+    const k=keys[i];
+    asks[k]=src.asks&&src.asks[k]|0;
+    hits[k]=src.hits&&src.hits[k]|0;
+    miss[k]=src.miss&&src.miss[k]|0;
+    reason[k]=(src.reason&&src.reason[k])||'';
+    mismatch[k]=(src.mismatch&&src.mismatch[k])||null;
+  }
+  return {asks:asks, hits:hits, miss:miss, reason:reason, mismatch:mismatch};
+}
+function siteStampFailReason(id, telem, rej){
+  const why=(telem&&telem.reason&&telem.reason[id])||'';
+  if(why==='TEMPLATE_MISSING') return 'TEMPLATE_MISSING';
+  if(why==='INCOMPATIBLE') return 'INCOMPATIBLE';
+  const plots=rej?rej.plots|0:0;
+  const env=rej?((rej.arena|0)+(rej.spawn|0)+(rej.water|0)+(rej.res|0)+(rej.near|0)):0;
+  const hits=telem&&telem.hits?telem.hits[id]|0:0;
+  if(hits>0&&plots>0) return 'REQUIRED_PLOT_ROLLBACK';
+  if(env>0) return 'ENVIRONMENTAL_EXHAUSTION';
+  if(hits===0) return 'TEMPLATE_MISSING';
+  return 'ENVIRONMENTAL_EXHAUSTION';
+}
+function siteStampBegin(){
+  /* Production always derives compatibility from the live map. A leftover
+     SITE_TPL_QUERY.context from a fixture must not leak into planDistricts. */
+  if(typeof SITE_TPL_QUERY==='object'&&SITE_TPL_QUERY){
+    SITE_TPL_QUERY.context=null;
+    SITE_TPL_QUERY.force=null;
+  }
+  if(typeof siteTplTelemReset==='function') siteTplTelemReset();
+  SITE_STAMP.map=(typeof curMap!=='undefined'?String(curMap):'');
+  const def=(typeof MAPDEFS!=='undefined'&&MAPDEFS[SITE_STAMP.map])||{};
+  SITE_STAMP.requested={
+    city:def.towns|0, outpost:def.outpost|0, relic:def.relic|0,
+    spaceport:def.spaceport|0, dome:def.domes|0
+  };
+  SITE_STAMP.realized={city:0,outpost:0,relic:0,spaceport:0,dome:0};
+  SITE_STAMP.zones=[]; SITE_STAMP.fails=[]; SITE_STAMP.rej=null; SITE_STAMP.telem=null;
+  SITE_STAMP.ok=true; SITE_STAMP.hash='';
+}
+function siteStampEnd(){
+  const names=[];
+  if(typeof cityZones!=='undefined'){
+    for(let i=0;i<cityZones.length;i++){
+      const Z=cityZones[i]; if(!Z||!Z.tpl) continue;
+      const key=siteStampClassKey(Z.site);
+      if(SITE_STAMP.realized[key]!=null) SITE_STAMP.realized[key]++;
+      const plots=[];
+      if(typeof cityPlan!=='undefined'){
+        for(let p=0;p<cityPlan.length;p++){
+          const P=cityPlan[p]; if(!P||P.zone!==i) continue;
+          plots.push({kind:P.kind,role:P.role||null});
+        }
+      }
+      SITE_STAMP.zones.push({i,name:Z.name||'',site:Z.site||'',r:Z.r|0,plots});
+      names.push(Z.name||'');
+    }
+  }
+  SITE_STAMP.rej=(typeof SITE_REJ!=='undefined')?{
+    arena:SITE_REJ.arena|0, spawn:SITE_REJ.spawn|0, water:SITE_REJ.water|0,
+    res:SITE_REJ.res|0, near:SITE_REJ.near|0, plots:SITE_REJ.plots|0, ok:SITE_REJ.ok|0
+  }:null;
+  SITE_STAMP.telem=siteStampCopyTelem();
+  const req=SITE_STAMP.requested, got=SITE_STAMP.realized, telem=SITE_STAMP.telem;
+  const keys=['city','outpost','relic','spaceport','dome'];
+  for(let k=0;k<keys.length;k++){
+    const id=keys[k];
+    if((got[id]|0)<(req[id]|0)){
+      const reason=siteStampFailReason(id, telem, SITE_STAMP.rej);
+      SITE_STAMP.fails.push({
+        class:id, requested:req[id]|0, realized:got[id]|0,
+        plots:SITE_STAMP.rej?SITE_STAMP.rej.plots:0,
+        asks:telem&&telem.asks?telem.asks[id]|0:0,
+        hits:telem&&telem.hits?telem.hits[id]|0:0,
+        miss:telem&&telem.miss?telem.miss[id]|0:0,
+        mismatch:(telem&&telem.mismatch&&telem.mismatch[id])||null,
+        reason:reason
+      });
+    }
+  }
+  SITE_STAMP.ok=!SITE_STAMP.fails.length;
+  /* FNV-1a over the result, not a save key. Same map seed must hash the same.
+     Typed miss reasons are part of the fingerprint so INCOMPATIBLE cannot
+     collide with ENVIRONMENTAL_EXHAUSTION or REQUIRED_PLOT_ROLLBACK. */
+  let h=2166136261;
+  const failSig=SITE_STAMP.fails.map(function(f){ return f.class+':'+f.reason; }).join(',');
+  const telemSig=telem?JSON.stringify(telem.reason):'';
+  const s=SITE_STAMP.map+'|'+JSON.stringify(req)+'|'+JSON.stringify(got)+'|'+names.join(',')+'|'+failSig+'|'+telemSig;
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  SITE_STAMP.hash=(h>>>0).toString(16);
+}
+function siteStampWrapPlan(){
+  siteStampBegin();
+  const r=siteStampWrapPlan.base.apply(this, arguments);
+  siteStampEnd();
+  return r;
+}
+function siteStampInstall(){
+  if(typeof planDistricts!=='function'||planDistricts.__mfSiteStampWrap) return 0;
+  siteStampWrapPlan.base=planDistricts;
+  siteStampWrapPlan.__mfSiteStampWrap=1;
+  planDistricts=siteStampWrapPlan;
+  return 1;
+}

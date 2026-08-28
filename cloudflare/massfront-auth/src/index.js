@@ -1,7 +1,7 @@
 /* ============================================================================
    MASSFRONT ACCOUNTS SERVER  —  Cloudflare Worker + D1
    ----------------------------------------------------------------------------
-   Six routes:
+   Core account routes:
 
      POST /register   {email,password}                 -> {token,expiresAt,user}
      POST /login       {email,password}                 -> {token,expiresAt,user}
@@ -57,6 +57,12 @@
      POST /social/block     {username}
      POST /social/unblock   {username}
      POST /social/report    {username,reason}
+     GET  /social/capabilities
+     POST /social/message/send  {username,body}
+     GET  /social/messages      ?with=<username>&before=<message-id>&limit=<n>
+     POST /social/message/report {messageId,reason}
+     POST /social/presence      {state}
+     GET  /social/presence
 
    Two rules hold across all of them, and both are load-bearing:
 
@@ -75,9 +81,10 @@
       and there is no search endpoint, because a searchable account list is a
       directory that can be enumerated.
 
-   Messaging is NOT in this release. schema.sql declares the table shape so the
-   eventual change is routes-only, but nothing reads or writes it — a DM
-   surface needs the reporting flow here to be live and proven first.
+   Chat and presence are a compiled, tested foundation, not an active release
+   feature. Capability discovery reports both false unless the operator sets
+   the exact feature flags and the required tables pass a live schema probe.
+   The checked-in wrangler configuration intentionally enables neither flag.
    ============================================================================ */
 
 const CORS = {
@@ -141,6 +148,19 @@ const RATE_LIMITS = {
   block_user: { limit: 30, windowSec: 3600, keyed: 'user' },
   unblock_user: { limit: 30, windowSec: 3600, keyed: 'user' },
   report_user: { limit: 10, windowSec: 43200, keyed: 'user' },
+  capabilities_user: { limit: 120, windowSec: 3600, keyed: 'user' },
+  message_send_user: { limit: 30, windowSec: 60, keyed: 'user' },
+  message_send_pair: { limit: 120, windowSec: 3600, keyed: 'pair' },
+  message_list_user: { limit: 240, windowSec: 3600, keyed: 'user' },
+  message_report_user: { limit: 10, windowSec: 43200, keyed: 'user' },
+  presence_write_user: { limit: 240, windowSec: 3600, keyed: 'user' },
+  presence_list_user: { limit: 240, windowSec: 3600, keyed: 'user' },
+  lobby_create_user: { limit: 12, windowSec: 3600, keyed: 'user' },
+  lobby_mutate_user: { limit: 120, windowSec: 3600, keyed: 'user' },
+  lobby_read_user: { limit: 360, windowSec: 3600, keyed: 'user' },
+  lobby_invite_user: { limit: 40, windowSec: 3600, keyed: 'user' },
+  lobby_invite_pair: { limit: 12, windowSec: 43200, keyed: 'pair' },
+  lobby_invites_list_user: { limit: 180, windowSec: 3600, keyed: 'user' },
   /* These two were being asked for by handleUsernameCheck/handleUsernameClaim
      without ever being declared here, which made checkRateLimit throw on
      `rule.windowSec` and turned both username routes into a 500. */
@@ -267,8 +287,10 @@ function validateAgeOk(raw) {
 
 /* ---- rate limiting -----------------------------------------------------------
    A sliding window kept in D1 itself — no KV or Durable Object binding
-   required. Cheap by construction: one indexed COUNT, then one INSERT, and
-   only when the caller is about to do real work (a PBKDF2 hash, a write).   */
+   required. Admission is ONE conditional INSERT. A separate COUNT followed
+   by INSERT lets parallel requests all observe the same pre-insert count and
+   overrun the limit; SQLite serializes this write statement and evaluates the
+   indexed subquery while it owns the write transaction. */
 function clientIp(request) {
   return request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || 'unknown';
 }
@@ -281,18 +303,20 @@ async function checkRateLimit(env, bucket, key) {
      CLOSED: an unknown bucket denies, so the mistake surfaces as a visible
      429 on one route and never as an accidentally-open one. */
   if (!rule) return false;
-  const cutoff = Date.now() - rule.windowSec * 1000;
-  const row = await env.DB.prepare(
-    'SELECT COUNT(*) AS n FROM attempts WHERE bucket=?1 AND akey=?2 AND created_at>?3'
-  ).bind(bucket, key, cutoff).first();
-  if (row && row.n >= rule.limit) return false;
-  await env.DB.prepare('INSERT INTO attempts (bucket, akey, created_at) VALUES (?1,?2,?3)')
-    .bind(bucket, key, Date.now()).run();
+  const now = Date.now(), cutoff = now - rule.windowSec * 1000;
+  const admission = await env.DB.prepare(
+    'INSERT INTO attempts (bucket,akey,created_at) '
+    + 'SELECT ?1,?2,?4 WHERE ('
+    + 'SELECT COUNT(*) FROM attempts WHERE bucket=?1 AND akey=?2 AND created_at>?3'
+    + ')<?5'
+  ).bind(bucket, key, cutoff, now, rule.limit).run();
+  const admitted = Number(admission && admission.meta && admission.meta.changes) === 1;
+  if (!admitted) return false;
   /* Opportunistic prune on ~2% of calls — keeps the table bounded without a
      cron trigger or a second binding. */
   if (Math.random() < 0.02) {
     await env.DB.prepare('DELETE FROM attempts WHERE created_at < ?1')
-      .bind(Date.now() - 86400000).run().catch(() => {});
+      .bind(now - 86400000).run().catch(() => {});
   }
   return true;
 }
@@ -532,11 +556,25 @@ async function handleAccountDelete(request, env) {
      that makes a deletion claim untrue. If moderation ever needs continuity,
      the answer is a pseudonymous hash on the report, not a retained user id. */
   await env.DB.prepare('DELETE FROM reports WHERE reporter_id=?1 OR subject_user=?1').bind(uid).run().catch(() => {});
-  /* messages has no routes yet (see schema.sql) — deleted anyway so that
-     shipping them later cannot resurrect a deleted player's words. Caught in
-     case this worker is running against a database where migration 0001 and
-     the social tables have not been applied yet. */
+  /* Messages and ephemeral presence are both purged explicitly. These deletes
+     are caught so account deletion still succeeds against an older database
+     where the social migrations have not been applied yet. */
   await env.DB.prepare('DELETE FROM messages WHERE from_id=?1 OR to_id=?1').bind(uid).run().catch(() => {});
+  await env.DB.prepare('DELETE FROM presence WHERE user_id=?1').bind(uid).run().catch(() => {});
+  /* Foreign keys are not guaranteed to be enabled on every D1 execution
+     path. Purge the COMPLETE footprint of lobbies this account hosts before
+     deleting only this player's rows elsewhere. Without these two hosted-id
+     deletes, other members and their invites become orphans when the lobby
+     row is removed with PRAGMA foreign_keys=OFF. */
+  await env.DB.prepare(
+    'DELETE FROM multiplayer_invites WHERE lobby_id IN (SELECT id FROM multiplayer_lobbies WHERE host_id=?1)'
+  ).bind(uid).run().catch(() => {});
+  await env.DB.prepare(
+    'DELETE FROM multiplayer_lobby_members WHERE lobby_id IN (SELECT id FROM multiplayer_lobbies WHERE host_id=?1)'
+  ).bind(uid).run().catch(() => {});
+  await env.DB.prepare('DELETE FROM multiplayer_invites WHERE from_id=?1 OR to_id=?1').bind(uid).run().catch(() => {});
+  await env.DB.prepare('DELETE FROM multiplayer_lobby_members WHERE user_id=?1').bind(uid).run().catch(() => {});
+  await env.DB.prepare('DELETE FROM multiplayer_lobbies WHERE host_id=?1').bind(uid).run().catch(() => {});
   /* Rate-limit rows are personal data too: `attempts` holds this account's
      e-mail address against every sign-in it made. The e-mail-keyed rows go by
      address, the user-keyed ones by id and bucket (bucket-scoped so a numeric
@@ -599,6 +637,16 @@ const VERIFY_CODE_TTL_MS = 15 * 60 * 1000;
 const VERIFY_MAX_ATTEMPTS = 5;
 const MAX_REPORT_REASON_LEN = 500;
 const MAX_REPORT_CONTEXT_LEN = 2000;
+const SOCIAL_PROTOCOL_VERSION = 1;
+const MAX_MESSAGE_CHARS = 500;
+const MAX_MESSAGE_BYTES = 2000;
+const MESSAGE_PAGE_DEFAULT = 30;
+const MESSAGE_PAGE_MAX = 50;
+const PRESENCE_TTL_MS = 120000;
+const PRESENCE_LIST_MAX = 512;
+const LOBBY_TTL_MS = 2 * 3600 * 1000;
+const LOBBY_INVITE_TTL_MS = 30 * 60 * 1000;
+const LOBBY_MAX_MEMBERS = 4;
 
 /* Uniform over 000000..999999. `getRandomValues() % 1000000` is not: 2^32 is
    not a multiple of a million, so the low codes would come up very slightly
@@ -626,12 +674,12 @@ async function verifyCodeMatches(code, stored) {
   return timingSafeEqual(saltHex + '$' + digest, s);
 }
 
-/* ---- TODO-provider ------------------------------------------------------------
-   THE ONE INTEGRATION POINT FOR OUTBOUND E-MAIL. No provider is wired up yet,
-   so this is the entire seam: when a transactional sender is chosen (Resend,
-   Postmark, MailChannels, SES, ...), it is implemented HERE and nothing else
-   in this worker changes. Everything around it — issuing, hashing, storing,
-   expiring, confirming, rate limiting — already works and is already tested.
+/* ---- Cloudflare Email Service binding ----------------------------------------
+   THE ONE INTEGRATION POINT FOR OUTBOUND E-MAIL. When env.EMAIL (a native
+   `send_email` binding) and env.MAIL_FROM are both configured, the structured
+   MessageBuilder path is used. When either is absent, the old no-provider
+   behavior remains exactly intact. See wrangler.toml for the intentionally
+   commented binding/var contract; no live domain is assumed here.
 
    Contract:
      - returns { delivered: true } once a provider accepts the message;
@@ -640,18 +688,30 @@ async function verifyCodeMatches(code, stored) {
        500; the code is already stored and the player can ask again.
      - MUST NOT log `code`. It is a credential for the length of its TTL.
 
-   Sketch of the eventual body:
-     const r = await fetch('https://api.<provider>/send', {
-       method: 'POST',
-       headers: { authorization: 'Bearer ' + env.MAIL_API_KEY,
-                  'content-type': 'application/json' },
-       body: JSON.stringify({ to: email, from: env.MAIL_FROM,
-                              subject: 'Your MASSFRONT code',
-                              text: 'Your code is ' + code + '. It expires in 15 minutes.' })
-     });
-     return r.ok ? { delivered: true } : { delivered: false, reason: 'provider_' + r.status };  */
+   No code, bearer token, raw provider error, or message body is logged. */
 async function sendVerificationEmail(env, email, code) {
-  return { delivered: false, reason: 'no_provider' };
+  if (!env || !env.EMAIL || typeof env.EMAIL.send !== 'function')
+    return { delivered: false, reason: 'no_provider' };
+  const from = validateEmail(env.MAIL_FROM);
+  const to = validateEmail(email);
+  if (!from.ok) return { delivered: false, reason: 'mail_from_invalid' };
+  if (!to.ok) return { delivered: false, reason: 'recipient_invalid' };
+  const value = String(code || '');
+  if (!/^[0-9]{6}$/.test(value)) return { delivered: false, reason: 'code_invalid' };
+  try {
+    await env.EMAIL.send({
+      to: to.value,
+      from: from.value,
+      subject: 'Your MASSFRONT verification code',
+      text: 'Your MASSFRONT verification code is ' + value + '. It expires in 15 minutes. If you did not request it, ignore this message.',
+      html: '<p>Your MASSFRONT verification code is <strong>' + value + '</strong>.</p><p>It expires in 15 minutes. If you did not request it, ignore this message.</p>',
+    });
+    return { delivered: true };
+  } catch (e) {
+    /* Fail closed and quiet: provider errors can contain addresses or message
+       fragments. /verify/request only needs the delivered boolean. */
+    return { delivered: false, reason: 'provider_error' };
+  }
 }
 
 /* POST /verify/request — issue a code for the signed-in account's own address.
@@ -793,6 +853,78 @@ async function findUserByUsername(env, raw) {
 async function usernameOf(env, userId) {
   const row = await env.DB.prepare('SELECT username FROM users WHERE id=?1').bind(Number(userId)).first();
   return (row && row.username) || null;
+}
+async function areFriends(env, a, b) {
+  const pair = pairKey(a, b);
+  const row = await env.DB.prepare('SELECT lo_id FROM friendships WHERE lo_id=?1 AND hi_id=?2')
+    .bind(pair.lo, pair.hi).first();
+  return !!row;
+}
+function featureEnabled(env, key) {
+  return !!(env && String(env[key] || '') === '1');
+}
+function chatEnabled(env) { return featureEnabled(env, 'SOCIAL_CHAT_ENABLED'); }
+function presenceEnabled(env) { return featureEnabled(env, 'SOCIAL_PRESENCE_ENABLED'); }
+function lobbiesEnabled(env) { return featureEnabled(env, 'MULTIPLAYER_LOBBIES_ENABLED'); }
+function invitesEnabled(env) { return featureEnabled(env, 'MULTIPLAYER_INVITES_ENABLED'); }
+async function chatAvailable(env) {
+  /* Chat is user-generated content. A flag and table are not enough to make
+     it safe: capability discovery must fail closed unless the moderation
+     service binding itself is present. */
+  if (!chatEnabled(env) || !env || !env.CONTENT_SAFETY || typeof env.CONTENT_SAFETY.fetch !== 'function') return false;
+  try { await env.DB.prepare('SELECT id FROM messages LIMIT 1').first(); return true; }
+  catch (e) { return false; }
+}
+async function presenceAvailable(env) {
+  if (!presenceEnabled(env)) return false;
+  try { await env.DB.prepare('SELECT user_id FROM presence LIMIT 1').first(); return true; }
+  catch (e) { return false; }
+}
+async function lobbiesAvailable(env) {
+  if (!lobbiesEnabled(env)) return false;
+  try { await env.DB.prepare('SELECT id FROM multiplayer_lobbies LIMIT 1').first(); return true; }
+  catch (e) { return false; }
+}
+async function invitesAvailable(env) {
+  if (!invitesEnabled(env) || !(await lobbiesAvailable(env))) return false;
+  try { await env.DB.prepare('SELECT id FROM multiplayer_invites LIMIT 1').first(); return true; }
+  catch (e) { return false; }
+}
+function featureDisabled(name) {
+  return err(503, 'feature_disabled', name + ' is not enabled on this server.');
+}
+function parsePositiveInt(raw) {
+  const s = String(raw == null ? '' : raw).trim();
+  if (!/^[0-9]+$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+function normalizeMessageBody(raw) {
+  if (typeof raw !== 'string') return { ok: false, error: 'invalid_message', message: 'Write a message first.' };
+  let value = raw.normalize ? raw.normalize('NFKC') : raw;
+  value = value.replace(/\r\n?/g, '\n')
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '')
+    .replace(/[ \t]+\n/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
+  if (!value) return { ok: false, error: 'invalid_message', message: 'Write a message first.' };
+  if (Array.from(value).length > MAX_MESSAGE_CHARS || new TextEncoder().encode(value).byteLength > MAX_MESSAGE_BYTES)
+    return { ok: false, error: 'message_too_long', message: 'Keep messages to 500 characters.' };
+  return { ok: true, value };
+}
+async function inspectMessageSafety(env, text) {
+  const service = env && env.CONTENT_SAFETY;
+  if (!service || typeof service.fetch !== 'function') return { ok: false, unavailable: true };
+  try {
+    const response = await service.fetch(new Request('https://content-safety.internal/v1/check', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ kind: 'friend_message', text }),
+    }));
+    if (!response || !response.ok) return { ok: false, unavailable: true };
+    const result = await response.json();
+    if (result && result.allow === true) return { ok: true, mode: 'service' };
+    return { ok: false, unavailable: false };
+  } catch (e) {
+    return { ok: false, unavailable: true };
+  }
 }
 
 /* POST /social/friend/request {username} */
@@ -978,6 +1110,14 @@ async function handleBlock(request, env) {
   await env.DB.prepare(
     'DELETE FROM friend_requests WHERE (from_id=?1 AND to_id=?2) OR (from_id=?2 AND to_id=?1)'
   ).bind(pair.lo, pair.hi).run();
+  /* A pending lobby invitation is another direct reachability path. Revoke
+     both directions immediately so neither an inbox refresh nor a known
+     invite id can bridge a newly-created block. Keep this optional for older
+     databases that have not applied the lobby migration yet. */
+  await env.DB.prepare(
+    "UPDATE multiplayer_invites SET status='revoked',responded_at=?3 WHERE status='pending' "
+    + 'AND ((from_id=?1 AND to_id=?2) OR (from_id=?2 AND to_id=?1))'
+  ).bind(pair.lo, pair.hi, now).run().catch(() => {});
   return json({ ok: true, blocked: true, username: target.username });
 }
 
@@ -1044,6 +1184,477 @@ async function handleReport(request, env) {
   return json({ ok: true, reported: true, id: Number(res.meta.last_row_id) }, 201);
 }
 
+/* ---- disabled-by-default staging lobbies + friend invitations --------------
+   These routes provide authenticated roster coordination. They deliberately
+   do not issue a match token or advertise realtimeMatch: deterministic command
+   relay remains a separate capability and cannot be inferred from a lobby. */
+function lobbyRules(raw) {
+  const r=raw&&typeof raw==='object'?raw:{};
+  const mode=r.mode==='coop'?'coop':'skirmish';
+  const slots=Math.max(2,Math.min(LOBBY_MAX_MEMBERS,Number(r.slots)||2));
+  const map=String(r.map||'auto').replace(/[^a-z0-9_-]/gi,'').slice(0,64)||'auto';
+  return {mode,slots,map};
+}
+async function lobbyAvailableOrError(env, invites) {
+  const ok=invites?await invitesAvailable(env):await lobbiesAvailable(env);
+  return ok?null:featureDisabled(invites?'Lobby invitations':'Player lobbies');
+}
+async function lobbyView(env,id,userId) {
+  const lobby=await env.DB.prepare(
+    'SELECT id,code,host_id,state,revision,rules_json,created_at,expires_at FROM multiplayer_lobbies WHERE id=?1'
+  ).bind(String(id)).first();
+  if(!lobby||lobby.state!=='waiting'||Number(lobby.expires_at)<=Date.now())return null;
+  const mine=await env.DB.prepare('SELECT user_id FROM multiplayer_lobby_members WHERE lobby_id=?1 AND user_id=?2')
+    .bind(String(id),Number(userId)).first();
+  if(!mine)return null;
+  const rows=await env.DB.prepare(
+    'SELECT u.username AS username,m.user_id AS user_id,m.ready AS ready,m.joined_at AS joined_at '
+    +'FROM multiplayer_lobby_members m JOIN users u ON u.id=m.user_id WHERE m.lobby_id=?1 ORDER BY m.joined_at,m.user_id'
+  ).bind(String(id)).all();
+  let rules={mode:'skirmish',slots:2,map:'auto'};try{rules=lobbyRules(JSON.parse(lobby.rules_json));}catch(e){}
+  return {id:String(lobby.id),code:String(lobby.code),state:'waiting',revision:Number(lobby.revision),
+    hostId:Number(lobby.host_id),rules,expiresAt:Number(lobby.expires_at),
+    members:(rows.results||[]).map(r=>({username:String(r.username||''),ready:Number(r.ready)===1,
+      host:Number(r.user_id)===Number(lobby.host_id),self:Number(r.user_id)===Number(userId)}))};
+}
+async function lobbyJoin(env,lobby,userId,now) {
+  const blocked=await env.DB.prepare(
+    'SELECT b.blocker_id FROM blocks b JOIN multiplayer_lobby_members m ON m.user_id=CASE WHEN b.blocker_id=?2 THEN b.blocked_id ELSE b.blocker_id END '
+    +'WHERE m.lobby_id=?1 AND ((b.blocker_id=?2) OR (b.blocked_id=?2)) LIMIT 1'
+  ).bind(String(lobby.id),Number(userId)).first();
+  if(blocked)return {res:err(403,'blocked','A lobby member cannot be joined.')};
+  let rules={slots:2};try{rules=lobbyRules(JSON.parse(lobby.rules_json));}catch(e){}
+  /* Capacity is enforced inside the INSERT itself. D1/SQLite serializes this
+     write, so two simultaneous last-slot requests cannot both observe the
+     old COUNT and overfill the roster. The revision update is in the same D1
+     batch and is conditional on changes() from the INSERT. */
+  const results=await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO multiplayer_lobby_members(lobby_id,user_id,ready,joined_at,updated_at) '
+      +'SELECT l.id,?2,0,?3,?3 FROM multiplayer_lobbies l '
+      +'WHERE l.id=?1 AND l.state=\'waiting\' AND l.expires_at>?3 '
+      +'AND (SELECT COUNT(*) FROM multiplayer_lobby_members c WHERE c.lobby_id=l.id)<?4 '
+      +'AND NOT EXISTS (SELECT 1 FROM blocks b JOIN multiplayer_lobby_members m ON m.lobby_id=l.id '
+      +'WHERE (b.blocker_id=?2 AND b.blocked_id=m.user_id) OR (b.blocked_id=?2 AND b.blocker_id=m.user_id)) '
+      +'ON CONFLICT(lobby_id,user_id) DO NOTHING'
+    ).bind(String(lobby.id),Number(userId),now,rules.slots),
+    env.DB.prepare('UPDATE multiplayer_lobbies SET revision=revision+1 WHERE id=?1 AND changes()=1')
+      .bind(String(lobby.id)),
+  ]);
+  const inserted=Number(results&&results[0]&&results[0].meta&&results[0].meta.changes)===1;
+  const revised=Number(results&&results[1]&&results[1].meta&&results[1].meta.changes)===1;
+  if(inserted!==revised)throw new Error('lobby_join_atomicity');
+  if(inserted)return {ok:true};
+  const existing=await env.DB.prepare(
+    'SELECT user_id FROM multiplayer_lobby_members WHERE lobby_id=?1 AND user_id=?2'
+  ).bind(String(lobby.id),Number(userId)).first();
+  if(existing)return {ok:true,existing:true};
+  const nowBlocked=await env.DB.prepare(
+    'SELECT b.blocker_id FROM blocks b JOIN multiplayer_lobby_members m ON m.user_id=CASE WHEN b.blocker_id=?2 THEN b.blocked_id ELSE b.blocker_id END '
+    +'WHERE m.lobby_id=?1 AND ((b.blocker_id=?2) OR (b.blocked_id=?2)) LIMIT 1'
+  ).bind(String(lobby.id),Number(userId)).first();
+  if(nowBlocked)return {res:err(403,'blocked','A lobby member cannot be joined.')};
+  const live=await env.DB.prepare(
+    'SELECT id FROM multiplayer_lobbies WHERE id=?1 AND state=\'waiting\' AND expires_at>?2'
+  ).bind(String(lobby.id),now).first();
+  return {res:live?err(409,'lobby_full','That lobby is full.'):err(404,'no_such_lobby','That lobby is unavailable.')};
+}
+async function handleLobbyCreate(request,env){
+  const g=await socialGate(request,env);if(g.res)return g.res;
+  const unavailable=await lobbyAvailableOrError(env,false);if(unavailable)return unavailable;
+  if(!(await checkRateLimit(env,'lobby_create_user',String(g.s.user_id))))return err(429,'rate_limited','Too many lobbies created — wait a while.');
+  let body={};try{body=await request.json();}catch(e){}
+  const now=Date.now(),id=randomHex(16),code=randomHex(4).toUpperCase(),rules=lobbyRules(body&&body.rules);
+  const made=await env.DB.batch([
+    env.DB.prepare(
+      'INSERT INTO multiplayer_lobbies(id,code,host_id,state,revision,rules_json,created_at,expires_at) VALUES(?1,?2,?3,\'waiting\',1,?4,?5,?6)'
+    ).bind(id,code,Number(g.s.user_id),JSON.stringify(rules),now,now+LOBBY_TTL_MS),
+    env.DB.prepare('INSERT INTO multiplayer_lobby_members(lobby_id,user_id,ready,joined_at,updated_at) VALUES(?1,?2,0,?3,?3)')
+      .bind(id,Number(g.s.user_id),now),
+  ]);
+  if(Number(made&&made[0]&&made[0].meta&&made[0].meta.changes)!==1
+    ||Number(made&&made[1]&&made[1].meta&&made[1].meta.changes)!==1)
+    throw new Error('lobby_create_atomicity');
+  return json({ok:true,lobby:await lobbyView(env,id,g.s.user_id)},201);
+}
+async function handleLobbyGet(request,env,id){
+  const g=await socialGate(request,env);if(g.res)return g.res;
+  const unavailable=await lobbyAvailableOrError(env,false);if(unavailable)return unavailable;
+  if(!(await checkRateLimit(env,'lobby_read_user',String(g.s.user_id))))return err(429,'rate_limited','Slow down a moment.');
+  const lobby=await lobbyView(env,id,g.s.user_id);return lobby?json({ok:true,lobby}):err(404,'no_such_lobby','That lobby is unavailable.');
+}
+async function handleLobbyJoin(request,env){
+  const g=await socialGate(request,env);if(g.res)return g.res;
+  const unavailable=await lobbyAvailableOrError(env,false);if(unavailable)return unavailable;
+  if(!(await checkRateLimit(env,'lobby_mutate_user',String(g.s.user_id))))return err(429,'rate_limited','Slow down a moment.');
+  let body;try{body=await request.json();}catch(e){return err(400,'bad_request','Malformed request.');}
+  const key=String(body&&body.code||'').trim().toUpperCase();
+  if(!/^[A-F0-9]{8}$/.test(key))return err(400,'invalid_code','Enter the eight-character lobby code.');
+  const row=await env.DB.prepare('SELECT id,rules_json,state,expires_at FROM multiplayer_lobbies WHERE code=?1').bind(key).first();
+  if(!row||row.state!=='waiting'||Number(row.expires_at)<=Date.now())return err(404,'no_such_lobby','That lobby is unavailable.');
+  const joined=await lobbyJoin(env,row,g.s.user_id,Date.now());if(joined.res)return joined.res;
+  return json({ok:true,lobby:await lobbyView(env,row.id,g.s.user_id)});
+}
+async function handleLobbyAction(request,env,id,action){
+  const g=await socialGate(request,env);if(g.res)return g.res;
+  const unavailable=await lobbyAvailableOrError(env,false);if(unavailable)return unavailable;
+  if(!(await checkRateLimit(env,'lobby_mutate_user',String(g.s.user_id))))return err(429,'rate_limited','Slow down a moment.');
+  const lobby=await lobbyView(env,id,g.s.user_id);if(!lobby)return err(404,'no_such_lobby','That lobby is unavailable.');
+  let body={};try{body=await request.json();}catch(e){}
+  if(body.revision!=null&&Number(body.revision)!==lobby.revision)return err(409,'stale_revision','Lobby state changed — refresh and try again.');
+  const now=Date.now();
+  if(action==='ready'){
+    const ready=body.ready===true?1:0;
+    /* Reserve this revision with a compare-and-swap, then mutate the member
+       only when changes() proves this batch won. Parallel requests carrying
+       the same revision therefore produce one success and one 409. */
+    const changed=await env.DB.batch([
+      env.DB.prepare(
+        'UPDATE multiplayer_lobbies SET revision=revision+1 WHERE id=?1 AND revision=?2 '
+        +'AND state=\'waiting\' AND expires_at>?4 AND EXISTS ('
+        +'SELECT 1 FROM multiplayer_lobby_members WHERE lobby_id=?1 AND user_id=?3)'
+      ).bind(String(id),lobby.revision,Number(g.s.user_id),now),
+      env.DB.prepare(
+        'UPDATE multiplayer_lobby_members SET ready=?3,updated_at=?4 '
+        +'WHERE lobby_id=?1 AND user_id=?2 AND changes()=1'
+      ).bind(String(id),Number(g.s.user_id),ready,now),
+    ]);
+    const reserved=Number(changed&&changed[0]&&changed[0].meta&&changed[0].meta.changes)===1;
+    const memberChanged=Number(changed&&changed[1]&&changed[1].meta&&changed[1].meta.changes)===1;
+    if(!reserved)return err(409,'stale_revision','Lobby state changed — refresh and try again.');
+    if(!memberChanged)throw new Error('lobby_ready_atomicity');
+  }else if(action==='leave'){
+    const nextRevision=lobby.revision+1;
+    const left=await env.DB.batch([
+      env.DB.prepare(
+        'UPDATE multiplayer_lobbies SET revision=revision+1 WHERE id=?1 AND revision=?2 '
+        +'AND state=\'waiting\' AND expires_at>?4 AND EXISTS ('
+        +'SELECT 1 FROM multiplayer_lobby_members WHERE lobby_id=?1 AND user_id=?3)'
+      ).bind(String(id),lobby.revision,Number(g.s.user_id),now),
+      env.DB.prepare(
+        'DELETE FROM multiplayer_lobby_members WHERE lobby_id=?1 AND user_id=?2 AND changes()=1'
+      ).bind(String(id),Number(g.s.user_id)),
+      env.DB.prepare(
+        'UPDATE multiplayer_lobbies SET host_id=(SELECT user_id FROM multiplayer_lobby_members '
+        +'WHERE lobby_id=?1 ORDER BY joined_at,user_id LIMIT 1) WHERE id=?1 AND revision=?2 '
+        +'AND NOT EXISTS (SELECT 1 FROM multiplayer_lobby_members WHERE lobby_id=?1 AND user_id=?3) '
+        +'AND EXISTS (SELECT 1 FROM multiplayer_lobby_members WHERE lobby_id=?1)'
+      ).bind(String(id),nextRevision,Number(g.s.user_id)),
+      env.DB.prepare(
+        'DELETE FROM multiplayer_invites WHERE lobby_id=?1 AND EXISTS ('
+        +'SELECT 1 FROM multiplayer_lobbies WHERE id=?1 AND revision=?2) '
+        +'AND NOT EXISTS (SELECT 1 FROM multiplayer_lobby_members WHERE lobby_id=?1)'
+      ).bind(String(id),nextRevision),
+      env.DB.prepare(
+        'DELETE FROM multiplayer_lobbies WHERE id=?1 AND revision=?2 '
+        +'AND NOT EXISTS (SELECT 1 FROM multiplayer_lobby_members WHERE lobby_id=?1)'
+      ).bind(String(id),nextRevision),
+    ]);
+    const reserved=Number(left&&left[0]&&left[0].meta&&left[0].meta.changes)===1;
+    const memberDeleted=Number(left&&left[1]&&left[1].meta&&left[1].meta.changes)===1;
+    if(!reserved)return err(409,'stale_revision','Lobby state changed — refresh and try again.');
+    if(!memberDeleted)throw new Error('lobby_leave_atomicity');
+    const closed=Number(left&&left[4]&&left[4].meta&&left[4].meta.changes)===1;
+    return json({ok:true,left:true,closed,revision:closed?null:nextRevision});
+  }else return err(404,'route_not_found','No such lobby action.');
+  return json({ok:true,lobby:await lobbyView(env,id,g.s.user_id)});
+}
+async function handleLobbyInvite(request,env){
+  const g=await socialGate(request,env);if(g.res)return g.res;
+  const unavailable=await lobbyAvailableOrError(env,true);if(unavailable)return unavailable;
+  let body;try{body=await request.json();}catch(e){return err(400,'bad_request','Malformed request.');}
+  const lobby=await lobbyView(env,body&&body.lobbyId,g.s.user_id);if(!lobby)return err(404,'no_such_lobby','That lobby is unavailable.');
+  const found=await findUserByUsername(env,body&&body.username);if(!found.ok)return found.res;
+  const target=found.user;if(Number(target.id)===Number(g.s.user_id))return err(400,'self_invite',"You can't invite yourself.");
+  if(await blockedEitherWay(env,g.s.user_id,target.id))return err(403,'blocked',"You can't invite that player.");
+  if(!(await areFriends(env,g.s.user_id,target.id)))return err(403,'friend_only','Only accepted friends can be invited.');
+  if(!(await checkRateLimit(env,'lobby_invite_user',String(g.s.user_id))))return err(429,'rate_limited','Too many invitations — wait a while.');
+  const pair=pairKey(g.s.user_id,target.id);if(!(await checkRateLimit(env,'lobby_invite_pair',pair.lo+':'+pair.hi)))return err(429,'rate_limited','That player was invited too often.');
+  const now=Date.now(),iid=randomHex(16);
+  try{await env.DB.prepare('INSERT INTO multiplayer_invites(id,lobby_id,from_id,to_id,status,created_at,expires_at) VALUES(?1,?2,?3,?4,\'pending\',?5,?6)')
+    .bind(iid,lobby.id,Number(g.s.user_id),Number(target.id),now,now+LOBBY_INVITE_TTL_MS).run();}
+  catch(e){return err(409,'already_invited','That player already has a pending invitation.');}
+  return json({ok:true,invite:{id:iid,lobbyId:lobby.id,to:target.username,expiresAt:now+LOBBY_INVITE_TTL_MS}},201);
+}
+async function handleLobbyInvites(request,env){
+  const g=await socialGate(request,env);if(g.res)return g.res;
+  const unavailable=await lobbyAvailableOrError(env,true);if(unavailable)return unavailable;
+  if(!(await checkRateLimit(env,'lobby_invites_list_user',String(g.s.user_id))))return err(429,'rate_limited','Slow down a moment.');
+  const now=Date.now();await env.DB.prepare(
+    "UPDATE multiplayer_invites SET status='revoked',responded_at=?2 WHERE to_id=?1 AND status='pending' AND ("
+    +'expires_at<=?2 OR NOT EXISTS (SELECT 1 FROM multiplayer_lobbies l WHERE l.id=multiplayer_invites.lobby_id AND l.state=\'waiting\' AND l.expires_at>?2) '
+    +'OR NOT EXISTS (SELECT 1 FROM friendships f WHERE (f.lo_id=multiplayer_invites.from_id AND f.hi_id=?1) OR (f.lo_id=?1 AND f.hi_id=multiplayer_invites.from_id)) '
+    +'OR EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=?1 AND b.blocked_id=multiplayer_invites.from_id) OR (b.blocked_id=?1 AND b.blocker_id=multiplayer_invites.from_id)))'
+  ).bind(Number(g.s.user_id),now).run();
+  const rows=await env.DB.prepare(
+    "SELECT i.id,i.lobby_id,i.expires_at,l.code,u.username AS from_name FROM multiplayer_invites i JOIN multiplayer_lobbies l ON l.id=i.lobby_id JOIN users u ON u.id=i.from_id WHERE i.to_id=?1 AND i.status='pending' AND i.expires_at>?2 AND l.state='waiting' AND l.expires_at>?2 "
+    +"AND EXISTS (SELECT 1 FROM friendships f WHERE (f.lo_id=i.from_id AND f.hi_id=?1) OR (f.lo_id=?1 AND f.hi_id=i.from_id)) "
+    +"AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.blocker_id=?1 AND b.blocked_id=i.from_id) OR (b.blocked_id=?1 AND b.blocker_id=i.from_id)) ORDER BY i.created_at DESC LIMIT 50"
+  ).bind(Number(g.s.user_id),now).all();
+  return json({ok:true,invites:(rows.results||[]).map(r=>({id:String(r.id),lobbyId:String(r.lobby_id),code:String(r.code),from:String(r.from_name),expiresAt:Number(r.expires_at)}))});
+}
+async function handleLobbyInviteRespond(request,env,id){
+  const g=await socialGate(request,env);if(g.res)return g.res;
+  const unavailable=await lobbyAvailableOrError(env,true);if(unavailable)return unavailable;
+  let body={};try{body=await request.json();}catch(e){}
+  const row=await env.DB.prepare("SELECT i.id,i.lobby_id,i.from_id,i.expires_at,l.rules_json,l.state,l.expires_at AS lobby_expires FROM multiplayer_invites i JOIN multiplayer_lobbies l ON l.id=i.lobby_id WHERE i.id=?1 AND i.to_id=?2 AND i.status='pending'")
+    .bind(String(id),Number(g.s.user_id)).first();
+  if(!row||Number(row.expires_at)<=Date.now()||row.state!=='waiting'||Number(row.lobby_expires)<=Date.now())return err(404,'no_such_invite','That invitation is unavailable.');
+  const now=Date.now(),accept=body.accept===true;
+  if(await blockedEitherWay(env,g.s.user_id,row.from_id)||!(await areFriends(env,g.s.user_id,row.from_id))){
+    await env.DB.prepare("UPDATE multiplayer_invites SET status='revoked',responded_at=?3 WHERE id=?1 AND to_id=?2 AND status='pending'")
+      .bind(String(id),Number(g.s.user_id),now).run();
+    return err(404,'no_such_invite','That invitation is unavailable.');
+  }
+  if(accept){const joined=await lobbyJoin(env,{id:row.lobby_id,rules_json:row.rules_json},g.s.user_id,now);if(joined.res)return joined.res;}
+  await env.DB.prepare("UPDATE multiplayer_invites SET status=?3,responded_at=?4 WHERE id=?1 AND to_id=?2").bind(String(id),Number(g.s.user_id),accept?'accepted':'declined',now).run();
+  return json({ok:true,accepted:accept,lobby:accept?await lobbyView(env,row.lobby_id,g.s.user_id):null});
+}
+
+/* ---- disabled-by-default friend chat + presence -----------------------------
+   Capability discovery itself is gated, authenticated and rate limited. A
+   client may only turn on chat/presence after THIS server answers with the
+   expected protocol version and a literal true. Environment flags alone are
+   not enough: the table probe must also succeed, so a missed migration cannot
+   produce a lying handshake followed by 500s. */
+async function handleSocialCapabilities(request, env) {
+  const g = await socialGate(request, env);
+  if (g.res) return g.res;
+  if (!(await checkRateLimit(env, 'capabilities_user', String(g.s.user_id))))
+    return err(429, 'rate_limited', 'Slow down a moment.');
+  const chat = await chatAvailable(env);
+  const presence = await presenceAvailable(env);
+  const lobbies = await lobbiesAvailable(env);
+  const invites = await invitesAvailable(env);
+  return json({
+    ok: true,
+    protocol: 'massfront-social',
+    version: SOCIAL_PROTOCOL_VERSION,
+    capabilities: {
+      friends: true,
+      blocking: true,
+      reporting: true,
+      chat,
+      presence,
+      lobbies,
+      invites,
+      realtimeMatch: false,
+    },
+    limits: {
+      messageChars: MAX_MESSAGE_CHARS,
+      messageBytes: MAX_MESSAGE_BYTES,
+      pageMax: MESSAGE_PAGE_MAX,
+      presenceTtlMs: PRESENCE_TTL_MS,
+    },
+  });
+}
+
+/* POST /social/message/send {username,body} */
+async function handleMessageSend(request, env) {
+  const g = await socialGate(request, env);
+  if (g.res) return g.res;
+  if (!(await chatAvailable(env))) return featureDisabled('Friend chat');
+  const s = g.s;
+  let body;
+  try { body = await request.json(); } catch (e) { return err(400, 'bad_request', 'Malformed request.'); }
+  const message = normalizeMessageBody(body && body.body);
+  if (!message.ok) return err(400, message.error, message.message);
+  const found = await findUserByUsername(env, body && body.username);
+  if (!found.ok) return found.res;
+  const target = found.user;
+  if (Number(target.id) === Number(s.user_id))
+    return err(400, 'self_message', "You can't message yourself.");
+  if (await blockedEitherWay(env, s.user_id, target.id))
+    return err(403, 'blocked', "You can't message that player.");
+  if (!(await areFriends(env, s.user_id, target.id)))
+    return err(403, 'friend_only', 'Messages are only available between friends.');
+  if (!(await checkRateLimit(env, 'message_send_user', String(s.user_id))))
+    return err(429, 'rate_limited', 'Too many messages — wait a moment.');
+  const pair = pairKey(s.user_id, target.id);
+  if (!(await checkRateLimit(env, 'message_send_pair', pair.lo + ':' + pair.hi)))
+    return err(429, 'rate_limited', 'This conversation is moving too quickly — wait a moment.');
+  const safety = await inspectMessageSafety(env, message.value);
+  if (!safety.ok) {
+    if (safety.unavailable)
+      return err(503, 'safety_unavailable', 'Message safety checks are unavailable — try again later.');
+    return err(400, 'unsafe_content', 'That message cannot be sent.');
+  }
+  const now = Date.now();
+  const res = await env.DB.prepare(
+    'INSERT INTO messages (from_id,to_id,body,created_at,read_at) VALUES (?1,?2,?3,?4,NULL)'
+  ).bind(Number(s.user_id), Number(target.id), message.value, now).run();
+  return json({
+    ok: true,
+    message: { id: Number(res.meta.last_row_id), to: target.username, body: message.value, at: now },
+  }, 201);
+}
+
+/* GET /social/messages?with=<exact username>&before=<message id>&limit=30
+   Newest-first keyset pagination. No offsets, no unbounded scans, and no
+   arbitrary inbox: the requested party must still be an unblocked friend. */
+async function handleMessagesList(request, env) {
+  const g = await socialGate(request, env);
+  if (g.res) return g.res;
+  if (!(await chatAvailable(env))) return featureDisabled('Friend chat');
+  const s = g.s, url = new URL(request.url);
+  const found = await findUserByUsername(env, url.searchParams.get('with'));
+  if (!found.ok) return found.res;
+  const target = found.user;
+  if (Number(target.id) === Number(s.user_id))
+    return err(400, 'self_message', "You can't open a conversation with yourself.");
+  if (await blockedEitherWay(env, s.user_id, target.id))
+    return err(403, 'blocked', "You can't open that conversation.");
+  if (!(await areFriends(env, s.user_id, target.id)))
+    return err(403, 'friend_only', 'Messages are only available between friends.');
+  if (!(await checkRateLimit(env, 'message_list_user', String(s.user_id))))
+    return err(429, 'rate_limited', 'Slow down a moment.');
+  let limit = MESSAGE_PAGE_DEFAULT;
+  if (url.searchParams.has('limit')) {
+    limit = parsePositiveInt(url.searchParams.get('limit'));
+    if (limit == null || limit > MESSAGE_PAGE_MAX)
+      return err(400, 'invalid_page', 'Message pages contain between 1 and 50 items.');
+  }
+  let before = 0;
+  if (url.searchParams.has('before')) {
+    before = parsePositiveInt(url.searchParams.get('before'));
+    if (before == null) return err(400, 'invalid_page', 'That message page cursor is invalid.');
+  }
+  const res = await env.DB.prepare(
+    'SELECT id,from_id,to_id,body,created_at,read_at FROM messages '
+    + 'WHERE ((from_id=?1 AND to_id=?2) OR (from_id=?2 AND to_id=?1)) '
+    + 'AND (?3=0 OR id<?3) ORDER BY id DESC LIMIT ?4'
+  ).bind(Number(s.user_id), Number(target.id), before, limit + 1).all();
+  const rows = (res && res.results) || [], hasMore = rows.length > limit;
+  if (hasMore) rows.length = limit;
+  const mineName = await usernameOf(env, s.user_id), messages = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i], mine = Number(row.from_id) === Number(s.user_id);
+    messages.push({
+      id: Number(row.id),
+      from: mine ? mineName : target.username,
+      to: mine ? target.username : mineName,
+      body: String(row.body),
+      at: Number(row.created_at),
+      mine,
+      readAt: row.read_at == null ? null : Number(row.read_at),
+    });
+  }
+  const nextBefore = hasMore && messages.length ? messages[messages.length - 1].id : null;
+  return json({ ok: true, with: target.username, messages, count: messages.length, order: 'newest_first', hasMore, nextBefore });
+}
+
+function buildMessageReportSnapshot(reporterName, subjectName, reason, row, fromName, toName, at) {
+  return JSON.stringify({
+    v: 2,
+    kind: 'friend_message',
+    at,
+    reporter: reporterName || null,
+    subject: subjectName || null,
+    reason,
+    message: {
+      id: Number(row.id),
+      from: fromName || null,
+      to: toName || null,
+      body: String(row.body),
+      at: Number(row.created_at),
+    },
+  });
+}
+
+/* POST /social/message/report {messageId,reason}
+   Reporting remains available if an operator temporarily disables new chat:
+   a player must still be able to report already-delivered evidence. It does
+   not require the friendship to still exist, but it DOES require the reporter
+   to be one of the two message participants. */
+async function handleMessageReport(request, env) {
+  const g = await socialGate(request, env);
+  if (g.res) return g.res;
+  const s = g.s;
+  if (!(await checkRateLimit(env, 'message_report_user', String(s.user_id))))
+    return err(429, 'rate_limited', 'Too many reports — try again later.');
+  let body;
+  try { body = await request.json(); } catch (e) { return err(400, 'bad_request', 'Malformed request.'); }
+  const id = parsePositiveInt(body && body.messageId);
+  if (id == null) return err(400, 'bad_request', 'Which message?');
+  let reason = String((body && body.reason) || '');
+  reason = reason.normalize ? reason.normalize('NFKC') : reason;
+  reason = reason.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, ' ').trim();
+  if (!reason) return err(400, 'invalid_reason', 'Tell us what happened.');
+  if (Array.from(reason).length > MAX_REPORT_REASON_LEN)
+    return err(400, 'invalid_reason', 'Keep the report to 500 characters.');
+  const row = await env.DB.prepare('SELECT id,from_id,to_id,body,created_at FROM messages WHERE id=?1')
+    .bind(id).first();
+  const uid = Number(s.user_id);
+  if (!row || (Number(row.from_id) !== uid && Number(row.to_id) !== uid))
+    return err(404, 'no_such_message', 'That message is not available.');
+  const subjectId = Number(row.from_id) === uid ? Number(row.to_id) : Number(row.from_id);
+  const reporterName = await usernameOf(env, uid), subjectName = await usernameOf(env, subjectId);
+  const fromName = Number(row.from_id) === uid ? reporterName : subjectName;
+  const toName = Number(row.to_id) === uid ? reporterName : subjectName;
+  const now = Date.now();
+  const snapshot = buildMessageReportSnapshot(reporterName, subjectName, reason, row, fromName, toName, now);
+  const res = await env.DB.prepare(
+    'INSERT INTO reports (reporter_id,subject_user,body_snapshot,created_at,resolved) VALUES (?1,?2,?3,?4,0)'
+  ).bind(uid, subjectId, snapshot, now).run();
+  return json({ ok: true, reported: true, messageId: id, id: Number(res.meta.last_row_id) }, 201);
+}
+
+/* POST /social/presence {state:'online'|'away'|'offline'} */
+async function handlePresenceWrite(request, env) {
+  const g = await socialGate(request, env);
+  if (g.res) return g.res;
+  if (!(await presenceAvailable(env))) return featureDisabled('Friend presence');
+  const s = g.s;
+  if (!(await checkRateLimit(env, 'presence_write_user', String(s.user_id))))
+    return err(429, 'rate_limited', 'Too many presence updates — wait a moment.');
+  let body;
+  try { body = await request.json(); } catch (e) { return err(400, 'bad_request', 'Malformed request.'); }
+  const state = String((body && body.state) || '').trim().toLowerCase();
+  if (state !== 'online' && state !== 'away' && state !== 'offline')
+    return err(400, 'invalid_presence', 'Presence must be online, away or offline.');
+  if (state === 'offline') {
+    await env.DB.prepare('DELETE FROM presence WHERE user_id=?1').bind(Number(s.user_id)).run();
+    return json({ ok: true, state: 'offline', expiresAt: null });
+  }
+  const now = Date.now(), expiresAt = now + PRESENCE_TTL_MS;
+  await env.DB.prepare(
+    'INSERT INTO presence (user_id,state,updated_at,expires_at) VALUES (?1,?2,?3,?4) '
+    + 'ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,updated_at=excluded.updated_at,expires_at=excluded.expires_at'
+  ).bind(Number(s.user_id), state, now, expiresAt).run();
+  return json({ ok: true, state, expiresAt });
+}
+
+/* GET /social/presence — no username parameter, by design. The only rows the
+   query can produce are current friends, with a second two-way block filter as
+   defense in depth even though blocking also severs the friendship. */
+async function handlePresenceList(request, env) {
+  const g = await socialGate(request, env);
+  if (g.res) return g.res;
+  if (!(await presenceAvailable(env))) return featureDisabled('Friend presence');
+  const s = g.s;
+  if (!(await checkRateLimit(env, 'presence_list_user', String(s.user_id))))
+    return err(429, 'rate_limited', 'Slow down a moment.');
+  const now = Date.now();
+  await env.DB.prepare('DELETE FROM presence WHERE expires_at<=?1').bind(now).run().catch(() => {});
+  const res = await env.DB.prepare(
+    'SELECT u.id AS user_id,u.username AS username,p.state AS state,p.updated_at AS updated_at '
+    + 'FROM friendships f JOIN users u ON u.id=(CASE WHEN f.lo_id=?1 THEN f.hi_id ELSE f.lo_id END) '
+    + 'LEFT JOIN presence p ON p.user_id=u.id AND p.expires_at>?2 '
+    + 'WHERE (f.lo_id=?1 OR f.hi_id=?1) AND NOT EXISTS ('
+    + 'SELECT 1 FROM blocks b WHERE (b.blocker_id=?1 AND b.blocked_id=u.id) '
+    + 'OR (b.blocker_id=u.id AND b.blocked_id=?1)) '
+    + 'ORDER BY lower(u.username) LIMIT ?3'
+  ).bind(Number(s.user_id), now, PRESENCE_LIST_MAX + 1).all();
+  const rows = (res && res.results) || [], truncated = rows.length > PRESENCE_LIST_MAX;
+  if (truncated) rows.length = PRESENCE_LIST_MAX;
+  const friends = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i], live = row.state === 'online' || row.state === 'away';
+    if (row.username) friends.push({ username: row.username, state: live ? row.state : 'offline', at: live ? Number(row.updated_at) : 0 });
+  }
+  return json({ ok: true, friends, count: friends.length, truncated });
+}
+
 /* ---- router ------------------------------------------------------------------ */
 export default {
   async fetch(request, env) {
@@ -1064,7 +1675,13 @@ export default {
           + '  POST /verify/request\n  POST /verify/confirm\n'
           + '  POST /social/friend/request\n  POST /social/friend/respond\n'
           + '  GET  /social/friends\n  GET  /social/requests\n'
-          + '  POST /social/block\n  POST /social/unblock\n  POST /social/report\n',
+          + '  POST /social/block\n  POST /social/unblock\n  POST /social/report\n'
+          + '  GET  /social/capabilities\n  POST /social/message/send\n'
+          + '  GET  /social/messages\n  POST /social/message/report\n'
+          + '  POST /social/presence\n  GET  /social/presence\n'
+          + '  POST /multiplayer/lobbies\n  POST /multiplayer/lobbies/join\n'
+          + '  GET  /multiplayer/lobbies/:id\n  POST /multiplayer/lobbies/:id/ready|leave\n'
+          + '  GET|POST /multiplayer/invites\n  POST /multiplayer/invites/:id/respond\n',
           { headers: { 'content-type': 'text/plain; charset=utf-8', ...CORS } });
 
       if (path === '/health') return json({ status: 'ok', service: 'massfront-auth' });
@@ -1113,6 +1730,34 @@ export default {
         return request.method === 'POST' ? handleUnblock(request, env) : err(405, 'method_not_allowed', 'Use POST.');
       if (path === '/social/report')
         return request.method === 'POST' ? handleReport(request, env) : err(405, 'method_not_allowed', 'Use POST.');
+      if (path === '/social/capabilities')
+        return request.method === 'GET' ? handleSocialCapabilities(request, env) : err(405, 'method_not_allowed', 'Use GET.');
+      if (path === '/social/message/send')
+        return request.method === 'POST' ? handleMessageSend(request, env) : err(405, 'method_not_allowed', 'Use POST.');
+      if (path === '/social/messages')
+        return request.method === 'GET' ? handleMessagesList(request, env) : err(405, 'method_not_allowed', 'Use GET.');
+      if (path === '/social/message/report')
+        return request.method === 'POST' ? handleMessageReport(request, env) : err(405, 'method_not_allowed', 'Use POST.');
+      if (path === '/social/presence') {
+        if (request.method === 'GET') return handlePresenceList(request, env);
+        if (request.method === 'POST') return handlePresenceWrite(request, env);
+        return err(405, 'method_not_allowed', 'Use GET or POST.');
+      }
+      if (path === '/multiplayer/lobbies')
+        return request.method === 'POST' ? handleLobbyCreate(request, env) : err(405, 'method_not_allowed', 'Use POST.');
+      if (path === '/multiplayer/lobbies/join')
+        return request.method === 'POST' ? handleLobbyJoin(request, env) : err(405, 'method_not_allowed', 'Use POST.');
+      let route=path.match(/^\/multiplayer\/lobbies\/([a-f0-9]{32})$/i);
+      if(route)return request.method==='GET'?handleLobbyGet(request,env,route[1]):err(405,'method_not_allowed','Use GET.');
+      route=path.match(/^\/multiplayer\/lobbies\/([a-f0-9]{32})\/(ready|leave)$/i);
+      if(route)return request.method==='POST'?handleLobbyAction(request,env,route[1],route[2]):err(405,'method_not_allowed','Use POST.');
+      if(path==='/multiplayer/invites'){
+        if(request.method==='GET')return handleLobbyInvites(request,env);
+        if(request.method==='POST')return handleLobbyInvite(request,env);
+        return err(405,'method_not_allowed','Use GET or POST.');
+      }
+      route=path.match(/^\/multiplayer\/invites\/([a-f0-9]{32})\/respond$/i);
+      if(route)return request.method==='POST'?handleLobbyInviteRespond(request,env,route[1]):err(405,'method_not_allowed','Use POST.');
       return err(404, 'route_not_found', 'No such endpoint.');
     } catch (e) {
       return err(500, 'server_error', 'Something went wrong on the server.');

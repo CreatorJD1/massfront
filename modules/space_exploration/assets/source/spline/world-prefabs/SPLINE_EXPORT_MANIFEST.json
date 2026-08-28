@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "exportedDate": "2026-08-28",
+  "method": "Spline desktop UI, Export > 3D Formats > GLB, Material 'Color & Texture'",
+  "note": "The Spline MCP bridge has no export verb, so these were driven through the application UI. Format defaults to GLTF with grey material per document and must be set to GLB + Color & Texture each time.",
+  "status": "SOURCE_AUTHORING_ONLY - not runtime accepted, no LOD or collision derived",
+  "files": [
+    {
+      "id": "gsite-aelos-caldris-customs-depot-spline-v1",
+      "file": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/spline-exports/gsite-aelos-caldris-customs-depot-spline-v1.glb",
+      "bytes": 14391476,
+      "sha256": "a08e405e747c87708809c8a73ce704725c2aca61382049fb2054fb593a3cb1ba"
+    },
+    {
+      "id": "gsite-aelos-caldris-hero-spline-v1",
+      "file": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/spline-exports/gsite-aelos-caldris-hero-spline-v1.glb",
+      "bytes": 13607472,
+      "sha256": "08447d233d4a18259f8f5dba04c0c9558342886510d8201399370269f9bc7008"
+    },
+    {
+      "id": "mf-hy3d-n7-deployer-lane-8x8-spline-v1",
+      "file": "modules/space_exploration/assets/source/spline/hunyuan/spline-exports/mf-hy3d-n7-deployer-lane-8x8-spline-v1.glb",
+      "bytes": 560240,
+      "sha256": "ef1786b89f9638efca030cf7ede82591535933a116bb3b44d47708ac2d186abe"
+    },
+    {
+      "id": "mf-hy3d-nordhall-skyscraper-spline-v1",
+      "file": "modules/space_exploration/assets/source/spline/hunyuan/spline-exports/mf-hy3d-nordhall-skyscraper-spline-v1.glb",
+      "bytes": 13080756,
+      "sha256": "db71920b3aa9ba24bf4886b7253ffb0c2394a0709c25d4b16b809e09056e38fc"
+    },
+    {
+      "id": "MF_PROP_CARGODEPOT_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_CARGODEPOT_01.glb",
+      "bytes": 112292,
+      "sha256": "2ae179a21bb0510bfbe083bf9eec082cab68f6c96e88bced2c4154835e865d88"
+    },
+    {
+      "id": "MF_PROP_CRYSTAL_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_CRYSTAL_01.glb",
+      "bytes": 198048,
+      "sha256": "968d2ad7c43069d42b08b086cf74763dbf88787816e444e7c216ceb1c4665cea"
+    },
+    {
+      "id": "MF_PROP_DEPOSIT_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_DEPOSIT_01.glb",
+      "bytes": 252680,
+      "sha256": "3b4c09ddb1fd87c5a754b546564280c0babf21041a09a2034a830182a3bc8063"
+    },
+    {
+      "id": "MF_PROP_GEYSER_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_GEYSER_01.glb",
+      "bytes": 258556,
+      "sha256": "7d6ce6cbda447392dc184e62c4f79ff3ff99b7c06fedee56ca7b65fc4eb79367"
+    },
+    {
+      "id": "MF_PROP_ICESPIRE_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_ICESPIRE_01.glb",
+      "bytes": 283684,
+      "sha256": "bfb9342a45b308d369a498a071ebc0497f6c754fee8a429187df3eb3b12d8d40"
+    },
+    {
+      "id": "MF_PROP_MOUNTAIN_02",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_MOUNTAIN_02.glb",
+      "bytes": 13466460,
+      "sha256": "e12bbbcbcd6bb1030412c71c7de366d2ca4f17e0c5a68f906c0852e3fc6b8c6b"
+    },
+    {
+      "id": "MF_PROP_RELIC_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_RELIC_01.glb",
+      "bytes": 177940,
+      "sha256": "e5ba9b6f08f3e87674b0cc2634b567cbbd4d72915aa67d2cda77c5301c380332"
+    },
+    {
+      "id": "MF_PROP_ROCK_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_ROCK_01.glb",
+      "bytes": 156632,
+      "sha256": "a6af035cd260b048f8fa4a43ddbeb2b1d3319dde85eff988d8fd920130346a48"
+    },
+    {
+      "id": "MF_PROP_ROCKARCH_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_ROCKARCH_01.glb",
+      "bytes": 112276,
+      "sha256": "1ba57079073e55b7128e0995dd58e21c148866d02a3a41eb5edb01048c9ef3e0"
+    },
+    {
+      "id": "MF_PROP_TREE_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_TREE_01.glb",
+      "bytes": 138380,
+      "sha256": "3e7f53d7c6cc4112515bb6483f23270db4a40acfde630d9663ddfc7f846cc226"
+    },
+    {
+      "id": "MF_PROP_TREE_02",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_TREE_02.glb",
+      "bytes": 13535516,
+      "sha256": "3141855d9ad9964a087ea4d9fe9e4aabe1d50d02d4b91b369035b6023392df36"
+    },
+    {
+      "id": "MF_PROP_WRECK_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_WRECK_01.glb",
+      "bytes": 114412,
+      "sha256": "84932eed48dbd0172b82e32228cabd69094f98ffdc34016ffe3516d2a727626c"
+    },
+    {
+      "id": "MF_STRUCT_CITYDOME_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYDOME_01.glb",
+      "bytes": 140396,
+      "sha256": "e2ce12ef66c4983e80da4d6cb04a48c7caab89f787935ec228938040c8d65d08"
+    },
+    {
+      "id": "MF_STRUCT_CITYTOWER_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYTOWER_01.glb",
+      "bytes": 66948,
+      "sha256": "971dcbc622405b60166a7e73773bcee2dd58a69f8c9c4e02a001a5a779f8ded6"
+    },
+    {
+      "id": "MF_STRUCT_CITYTOWER_02",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYTOWER_02.glb",
+      "bytes": 15037384,
+      "sha256": "e089ef9a1c627cefea2f3511607990c42275d3c78969e1572443e9cf10a06d4a"
+    },
+    {
+      "id": "MF_STRUCT_CIVICBLOCK_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CIVICBLOCK_01.glb",
+      "bytes": 49956,
+      "sha256": "b073cbf6c708ffb8c373237c05ea23f974ec8f79c1a7693394c46ecccc9111af"
+    },
+    {
+      "id": "MF_STRUCT_COMMSRELAY_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_COMMSRELAY_01.glb",
+      "bytes": 296824,
+      "sha256": "031d63181729df1944a96b076321782f1db5d1720a688f246bd9ca4a82afb3aa"
+    },
+    {
+      "id": "MF_STRUCT_REFINERY_01",
+      "file": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_REFINERY_01.glb",
+      "bytes": 256276,
+      "sha256": "59d29d3a9fc9e1e8d5484f02b041211126932f2706d71c0c178bb97da4358d4a"
+    }
+  ]
+}

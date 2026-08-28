@@ -547,6 +547,14 @@ function updatePlaceRotUI(){
   if(el&&placing) el.textContent=(Math.round(((placing.rot||0)*180/Math.PI)%360+360)%360)+'°';
 }
 const SNAP=SNAP_GRID;          // placement snaps to the same grid the build zone is drawn on
+function mfPlayerPlacementFaction(){
+  return (typeof playerKitKey==='function')?playerKitKey():'nova';
+}
+function mfReservedPlacementFoot(type){
+  /* No explicit tier means bldFoot returns the largest authored family
+     envelope — the same space addBld reserves through footTier. */
+  return bldFoot(type,mfPlayerPlacementFaction());
+}
 function snapPlace(){
   if(!placing) return;
   let x=placing.rx, y=placing.ry;
@@ -573,7 +581,7 @@ function snapPlace(){
      cell BOUNDARY for its edges to land on grid lines; an odd span has to sit
      on a cell CENTRE. Snapping the centre blindly to the grid put half of them
      permanently half a cell out of alignment. */
-  const f=bldFoot(placing.type), rot=placing.rot||0;
+  const f=mfReservedPlacementFoot(placing.type), rot=placing.rot||0;
   const swap=(Math.round(rot/(Math.PI/2))&1)===1;
   const fw=swap?f[1]:f[0], fh=swap?f[0]:f[1];
   const cellsX=Math.max(1,Math.round(fw/SNAP)), cellsY=Math.max(1,Math.round(fh/SNAP));
@@ -608,7 +616,7 @@ function startPlacing(type){
 }
 function placementHasShoreAccess(type,x,y,rot){
   if(type!=='harbor')return true;
-  const f=bldFoot(type),reach=Math.max(f[0],f[1])*.5;
+  const f=mfReservedPlacementFoot(type),reach=Math.max(f[0],f[1])*.5;
   for(let a=0;a<TAU;a+=Math.PI/8){
     for(const d of [reach+18,reach+42,reach+68]){
       const wx=x+Math.cos(a)*d,wy=y+Math.sin(a)*d;
@@ -619,33 +627,30 @@ function placementHasShoreAccess(type,x,y,rot){
 }
 function placementValid(){
   if(!placing) return false;
-  const T=BT[placing.type];
+  const T=BT[placing.type],fac=mfPlayerPlacementFaction(),f=bldFoot(placing.type,fac);
   if(typeof battlefieldContains==='function'){
-    const f=bldFoot(placing.type),edgePad=Math.hypot(f[0],f[1])*.5+8;
+    const edgePad=Math.hypot(f[0],f[1])*.5+8;
     if(!battlefieldContains(placing.x,placing.y,edgePad))return false;
   }
   if(!canStartBuild(0,T)) return false;
-  if(placing.type==='mex'){
-    return depositAt(placing.x,placing.y,34)>=0;
-  }
-  if(placing.type==='geo'){
-    return geyserAt(placing.x,placing.y,34)>=0;
-  }
+  const resourceSite=placing.type==='mex'||placing.type==='geo';
+  if(placing.type==='mex'&&depositAt(placing.x,placing.y,34)<0)return false;
+  if(placing.type==='geo'&&geyserAt(placing.x,placing.y,34)<0)return false;
   // everything except resource claims must sit inside your construction zone
-  if(!inBuildRange(placing.x,placing.y,0)) return false;
+  if(!resourceSite&&!inBuildRange(placing.x,placing.y,0)) return false;
   if(T.placement==='water'){
     if(typeof battlefieldNavalEnabled!=='function'||!battlefieldNavalEnabled())return false;
-    if(!footOnWater(placing.type,placing.x,placing.y,placing.rot||0))return false;
+    if(!footOnWater(placing.type,placing.x,placing.y,placing.rot||0,fac))return false;
     if(!placementHasShoreAccess(placing.type,placing.x,placing.y,placing.rot||0))return false;
-  }else if(!footOnLand(placing.type,placing.x,placing.y,placing.rot||0)) return false;
+  }else if(!footOnLand(placing.type,placing.x,placing.y,placing.rot||0,fac)) return false;
   // no overlapping footprints — rectangles must not intersect, at any facing
-  if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0)) return false;
+  if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0,null,fac)) return false;
   // ruins occupy ground too: raze them before you build over them
   for(const Rc of relics){
-    if(Rc.alive && obbHit(placing.x,placing.y,bldFoot(placing.type)[0],bldFoot(placing.type)[1],placing.rot||0,
+    if(Rc.alive && obbHit(placing.x,placing.y,f[0],f[1],placing.rot||0,
                           Rc.x,Rc.y,Rc.w,Rc.h,Rc.a,4)) return false;
   }
-  for(const D of deposits){
+  if(placing.type!=='mex')for(const D of deposits){
     if(!D.taken && dist2(placing.x,placing.y,D.x,D.y)<(T.r+18)*(T.r+18)) return false;
   }
   return true;
@@ -654,18 +659,18 @@ function confirmPlace(){
   if(!placing) return;
   const T=BT[placing.type];
   if(!placementValid()){
-    const site=buildStartCost(T);
+    const site=buildStartCost(T),fac=mfPlayerPlacementFaction();
     if(!canAfford(0,site.m,site.e)) toast(resM[0]<site.m?('Need '+site.m+' mass to establish this site ('+Math.floor(resM[0])+' stored)'):('Need '+site.e+' energy to establish this site ('+Math.floor(resE[0])+' stored)'));
-    else if(placing.type==='mex') toast('Place extractors on a ◆ deposit');
-    else if(placing.type==='geo') toast('Place Geo Plants on a ✦ geyser');
-    else if(!inBuildRange(placing.x,placing.y,0)) toast('⬡ Outside command territory — stay inside the HQ grid or research a Targeting Array relay');
+    else if(placing.type==='mex'&&depositAt(placing.x,placing.y,34)<0) toast('Place extractors on a ◆ deposit');
+    else if(placing.type==='geo'&&geyserAt(placing.x,placing.y,34)<0) toast('Place Geo Plants on a ✦ geyser');
+    else if(placing.type!=='mex'&&placing.type!=='geo'&&!inBuildRange(placing.x,placing.y,0)) toast('⬡ Outside command territory — stay inside the HQ grid or research a Targeting Array relay');
     else if(T.placement==='water'&&(typeof battlefieldNavalEnabled!=='function'||!battlefieldNavalEnabled()))
       toast('✕ NAVAL UNAVAILABLE — this battlefield has no connected ocean or river domain');
-    else if(T.placement==='water'&&!footOnWater(placing.type,placing.x,placing.y,placing.rot||0))
+    else if(T.placement==='water'&&!footOnWater(placing.type,placing.x,placing.y,placing.rot||0,fac))
       toast('⚓ Entire footprint must sit in the connected navigable water domain');
     else if(T.placement==='water'&&!placementHasShoreAccess(placing.type,placing.x,placing.y,placing.rot||0))
       toast('⚓ Harbor needs a nearby friendly shoreline inside your build zone');
-    else if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0))
+    else if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0,null,fac))
       toast('⬛ Footprints overlap — nudge it clear or rotate with ⟳');
     else toast('Blocked terrain — find open, flat ground clear of structures');
     return;
@@ -706,7 +711,7 @@ function confirmPlace(){
     /* Advance along the wall's own facing, not blindly east, so a rotated run
        keeps running in the direction you actually pointed it. */
     const px2=placing.x, py2=placing.y, rt=placing.rot||0, ty=placing.type;
-    const step=bldFoot(ty)[0]+2;
+    const step=mfReservedPlacementFoot(ty)[0]+2;
     startPlacing(ty);
     placing.rot=rt;
     placing.rx=clamp(px2+Math.cos(rt)*step,40,MAP-40);
@@ -719,7 +724,7 @@ function confirmPlace(){
      The player exits intentionally with Cancel instead of returning to a menu
      after every factory, generator, or defensive building. */
   const px2=placing.x, py2=placing.y, rt=placing.rot||0, ty=placing.type;
-  const foot=bldFoot(ty),step=Math.max(foot[0],foot[1])+8;
+  const foot=mfReservedPlacementFoot(ty),step=Math.max(foot[0],foot[1])+8;
   startPlacing(ty);
   placing.rot=rt;
   placing.rx=clamp(px2+Math.cos(rt)*step,40,MAP-40);
@@ -744,4 +749,3 @@ if(typeof bldTick==='function'&&!bldTick._econSeatWrap){
   };
   bldTick._econSeatWrap=true;
 }
-

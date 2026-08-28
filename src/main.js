@@ -9,6 +9,9 @@ let difficulty=1;
 let defenseFocus=0;             // 0 combined arms, 1 fortress / tower-defence cadence
 let infestationOn=true;         // neutral map nests, guards, spread, eruptions and tides
 let deploymentPackage='prepared'; // supported opening for newcomers; classic start remains selectable
+/* Settings owns the isolated Galactic preview while it is experimental. This
+   callback is assigned during UI wiring and never mutates the main menu. */
+let mfOpenExploration=null;
 let hudDeck='orders';           // one secondary command row at a time on phones
 /* Phone command dock is platoon-first (4 groups, deck tabs). Army/box/rings
    still treat the army as one blob. Stage A HUD (after Stage 0 screenshots,
@@ -34,8 +37,8 @@ function startFirstContactGuide(){
   const say=(delay,msg)=>firstContactTimers.push(setTimeout(()=>{
     if(running&&matchLive&&activeWarMode==='standard'&&!(typeof TUT!=='undefined'&&TUT.trainingMode)) toast(msg);
   },delay));
-  if(battle===1) say(900,'◇ FIRST CONTACT 1 / 3 — Standard medium theatre (*_medium). Locked stars stay on the galaxy. HQ is down. HUD pop reads n/1K.');
-  else say(900,'◇ FIRST CONTACT '+battle+' / 3 — HQ, Reactor and Factory are deployed. Income next. HUD pop reads n/1K — 1K is this commander\'s cap.');
+  if(battle===1) say(900,'◇ FIRST CONTACT 1 / 3 — Standard medium theatre (*_medium). Locked stars stay on the galaxy. HQ is down. HUD pop reads n/500.');
+  else say(900,'◇ FIRST CONTACT '+battle+' / 3 — HQ, Reactor and Factory are deployed. Income next. HUD pop reads n/500 — 500 is this commander\'s cap.');
   say(11000,'◆ CLAIM MASS — place an Extractor on a nearby deposit, then protect the route back to base.');
   say(28500,'⚔ FORM A SCREEN — queue a small force. SINGLE-TAP ground is attack-move (fight on the way). DOUBLE-TAP open ground is retreat (break contact, no fighting).');
   say(56000,'⌖ HOLD TERRITORY — construction stays inside HQ range until a Targeting Array extends your network.');
@@ -258,10 +261,10 @@ let aiSlots=[
   {on:false,diff:1,zone:'nw',ally:false,behavior:'balanced'},
   {on:false,diff:1,zone:'se',ally:false,behavior:'balanced'}
 ];
-/* Theatre size owns participant density and the 1000-pop-per-slot lock:
-   Compact 2 / Standard 3 / Large 4 seats → 2000 / 3000 / 4000 total. Rows stay
-   visible but MAP-locked so a larger war table expands the match. This does
-   not raise FACTION_POP_CAP (still 1000 per seat). Authored seats: Compact
+/* Theatre size owns participant density while every combat faction shares one
+   hard 500-unit admission cap across its commander seats. Rows stay visible
+   but MAP-locked so a larger war table expands the match without multiplying
+   FACTION_POP_CAP. Authored seats: Compact
    duel SW–NE; second enemy SE never NW; ally NW; Large 1v3 four corners.
    Adjacent cardinals (~1028 m) are crush — never a default. */
 const BATTLEFIELD_FACTION_CAP={compact:2,standard:3,large:4};
@@ -541,17 +544,34 @@ function initSpawnPlanner(){
 
 function resetWorld(){
   clearFirstContactGuide();
-  ualive.fill(0); usel.fill(0);
+  /* Commander dialogue is match-scoped. Clear queued subtitles/audio gates at
+     the same authoritative world boundary as units and projectiles so a cue
+     from the previous operation cannot leak into the next deployment. */
+  if(typeof commanderDialogueReset==='function') commanderDialogueReset();
+  if(typeof cmdrTxReset==='function') cmdrTxReset();
+  ualive.fill(0); usel.fill(0); ugen.fill(0); utgtg.fill(-1);
   freeList=[]; unitHigh=0; teamCount[0]=0; teamCount[1]=0;
   if(typeof populationResetLedgers==='function') populationResetLedgers();
   if(typeof uAllyBase!=='undefined') uAllyBase.fill(-1);
   rebuildGrid();                                   // spatial grid must never hold stale chains
   heroIdx=-1; enemyHeroIdx=-1; enemyHeroIdxs.length=0;
   blds.length=0; rebuildBGrid();
-  craters.length=0; wrecks.length=0; rubbles.length=0;
+  craters.length=0; wrecks.length=0; rubbles.length=0; groundBurns.length=0;
   pFree=[]; pHigh=0; palive.fill(0); pSplit.fill(0);
   pSmokeT.fill(0);pFlightCue.fill(0);artShellSmoke.length=0;
   flife.fill(0); fCount=0; fHead=0;
+  /* Optional effect pools live outside the legacy particle arrays above.
+     Without an explicit reset, rubble and queued volumes from the previous
+     battlefield survive into the next match until their individual TTLs run
+     out, now sampling and rendering against a different heightfield. */
+  if(typeof mfPhysClear==='function') mfPhysClear();
+  if(typeof volFxClear==='function') volFxClear();
+  if(typeof mfOrdnanceTrailSimReset==='function') mfOrdnanceTrailSimReset();
+  if(typeof mfAirReset==='function') mfAirReset(typeof seed==='number'?seed:undefined);
+  if(typeof macroFxReset==='function') macroFxReset();
+  if(typeof shieldFxReset==='function') shieldFxReset();
+  if(typeof mfShockwaveReset==='function') mfShockwaveReset();
+  if(typeof mfCloudFxReset==='function') mfCloudFxReset();
   /* Wholesale reset, not a credit. econSetBanks also restores both caps,
      which is why the RES_MCAP/RES_ECAP line that used to follow is gone. */
   econSetBanks(260,1000);
@@ -893,6 +913,13 @@ function deployCarrier(){
   }
   AI.base.x=AI.base.x; // (AI base already placed)
   matchLive=true; stats.t=0; matchClock=timeLimit;
+  if(typeof commanderVoicePrewarm==='function') commanderVoicePrewarm(playerCommanderId);
+  /* The HUD drains gameplay dialogue on the fixed-step match clock, not page
+     time. This cue is raised at the same zero boundary as stats.t so a slow
+     boot cannot age it before the first simulated battle frame. */
+  if(typeof commanderCue==='function') commanderCue('objective','assigned',{
+    subject:(typeof goalDef==='function'&&goalDef().id)||'match',now:0,force:true
+  });
   /* The setup modifier strip is useful before launch but becomes a duplicate
      of the compact MOD chip once the battle begins. Hide it at the state
      transition instead of waiting for another setup render that never comes. */
@@ -1076,6 +1103,14 @@ function checkVictory(){
   }
 }
 function endGame(win,reason){
+  /* Emit the terminal commander line before gameEnded hides the battlefield
+     rail. Audio may be absent, but the deterministic event still reaches the
+     transcript and any active presentation listener exactly once. */
+  if(!gameEnded&&typeof commanderCue==='function'){
+    const cueNow=Math.max(0,(Number(stats.t)||0)*1000);
+    commanderCue('outcome',win?'victory':'defeat',{subject:String(reason||'match'),now:cueNow,force:true});
+    if(typeof commanderDialogueDrain==='function') commanderDialogueDrain(cueNow);
+  }
   gameEnded=true;
   // report match result to a hosting shell (Base44 app) if embedded
   try{
@@ -1121,11 +1156,11 @@ function endGame(win,reason){
       if(rw.loot&&rw.loot.gear){
         const g=rw.loot.gear, rr=invRarity(g.rarity);
         loot+='<div class="goLoot" style="--rar:'+rr.col+'"><span class="goLootEm">'+g.em+'</span><div><i>'+rr.nm+' GEAR</i><b>'+g.nm+'</b>'
-          +'<small>'+(g.duplicate?'DUPLICATE · OWNED ×'+g.count:'AUTO-EQUIPPED IF SLOT WAS EMPTY')+'</small></div></div>';
+          +mfOwnershipBadgeHTML('equipped')+'<small>'+(g.duplicate?'DUPLICATE · OWNED ×'+g.count:'AUTO-EQUIPPED IF SLOT WAS EMPTY')+'</small></div></div>';
       }
       if(rw.loot) for(const c of rw.loot.consumables||[]){
         const rr=invRarity(c.rarity);
-        loot+='<div class="goLoot" style="--rar:'+rr.col+'"><span class="goLootEm">'+c.em+'</span><div><i>'+rr.nm+' '+(c.exclusive?'MODE REWARD':'CONSUMABLE')+'</i><b>'+c.nm+' ×'+c.count+'</b><small>'+(c.exclusive?'EXCLUSIVE '+String(c.mode||'').toUpperCase()+' VICTORY SUPPLY':'BANKED TO ARMORY INVENTORY')+'</small></div></div>';
+        loot+='<div class="goLoot" style="--rar:'+rr.col+'"><span class="goLootEm">'+c.em+'</span><div><i>'+rr.nm+' '+(c.exclusive?'MODE REWARD':'CONSUMABLE')+'</i><b>'+c.nm+' ×'+c.count+'</b>'+mfOwnershipBadgeHTML('match')+'<small>'+(c.exclusive?'EXCLUSIVE '+String(c.mode||'').toUpperCase()+' VICTORY SUPPLY':'BANKED TO ARMORY INVENTORY')+'</small></div></div>';
       }
       $('goRewards').innerHTML='<section class="goSection"><h3>MISSION PAYOUT'
         +(rw.modeContract&&rw.modeContract.xp>1?'<small>'+rw.modeContract.nm+' · +'+Math.round((rw.modeContract.xp-1)*100)+'% XP</small>'
@@ -1161,12 +1196,9 @@ let aiAcc=0, fogAcc=0;
    than at the end of setup: reaching a frame means the renderer, the sim and
    the UI all initialised, which is the only definition of "it boots" worth
    acting on. */
-let bootConfirmed=false;
+let bootConfirmed=false,bootIncompleteCount=-1;
 function confirmBoot(){
   if(bootConfirmed) return;
-  bootConfirmed=true;
-  if(window.__MASSFRONT_RELEASE_INPUT_GUARD)
-    window.__MASSFRONT_RELEASE_INPUT_GUARD();
   /* ALL-OR-NOTHING BOOT.
      __bootOk() clears probation, which is what permanently marks a patch as
      good. Today that is safe by accident: the OTA is ONE concatenated blob in
@@ -1190,11 +1222,24 @@ function confirmBoot(){
      behaviour is unchanged for anyone who has never taken an OTA. */
   const expect=window.__MF_OTA_EXPECT|0;
   if(expect>0 && (window.__MF_OTA_RAN|0)!==expect){
-    try{ console.error('boot: OTA payload incomplete - '+(window.__MF_OTA_RAN|0)+
-                       ' of '+expect+' artifacts ran; withholding __bootOk so the'+
-                       ' update stays retryable'); }catch(e){}
+    /* main.js is not the final OTA artifact. On Android the first rAF can land
+       while the tail scripts are still executing. Latching bootConfirmed here
+       made that harmless timing window permanent: probation survived, and the
+       next launch rolled the update back to the old APK. Leave the latch open
+       so the frame loop retries; log only when the observed count changes. A
+       genuinely throwing/missing artifact still never reaches `expect`, so the
+       existing rollback safety remains intact. */
+    const ran=window.__MF_OTA_RAN|0;
+    if(bootIncompleteCount!==ran){
+      bootIncompleteCount=ran;
+      try{ console.warn('boot: OTA payload still loading - '+ran+' of '+expect+
+                        ' artifacts ran; boot confirmation will retry'); }catch(e){}
+    }
     return;
   }
+  bootConfirmed=true;
+  if(window.__MASSFRONT_RELEASE_INPUT_GUARD)
+    window.__MASSFRONT_RELEASE_INPUT_GUARD();
   if(window.__bootOk) window.__bootOk();
 }
 /* ============================================================================
@@ -1318,6 +1363,7 @@ function stopAttract(){
 }
 function frame(ts){
   requestAnimationFrame(frame);
+  if(typeof mfPerfFrameBegin==='function') mfPerfFrameBegin();
   if(!bootConfirmed) confirmBoot();
   if(!lastT) lastT=ts;
   let dt=(ts-lastT)/1000; lastT=ts;
@@ -1355,13 +1401,13 @@ function frame(ts){
     perfScale=perfBand;
     /* These were 7000 and 18000 — thresholds inherited from the 10,000-unit
        Mega demo, which no longer exists. A real match caps at FACTION_POP_CAP
-       (1000) per commander seat, so a four-commander large map tops out at
-       4000: BOTH old thresholds sat above the maximum reachable count and
+       (500) per commander seat, so a four-commander large map tops out at
+       2000: BOTH old thresholds sat above the maximum reachable count and
        could never fire. The game has effectively had no population throttle
-       in normal play. Re-scaled to the 4k reality so a genuinely heavy fight
+       in normal play. Re-scaled to the 2k reality so a genuinely heavy fight
        is protected before the frame is already gone. */
-    if(total>2600) perfScale=Math.min(perfScale,0.55);
-    if(total>3400) perfScale=Math.min(perfScale,0.3);
+    if(total>1300) perfScale=Math.min(perfScale,0.55);
+    if(total>1700) perfScale=Math.min(perfScale,0.3);
     if(META.settings.perf==='low') perfScale=Math.min(perfScale,0.45);
     /* CINEMATIC sets a floor under the automatic scaler, so a heavy fight
        cannot quietly strip the frame back to the low preset — which is the
@@ -1378,6 +1424,7 @@ function frame(ts){
     if(typeof GFX!=='undefined'&&GFX.particles) perfScale*=GFX.particles;
   }
   if(running&&!paused){
+    if(typeof mfPerfBegin==='function') mfPerfBegin('sim');
     const totAll=teamCount[0]+teamCount[1]+teamCount[2];
     const simDt= totAll>22000?1/12 : totAll>13000?1/16 : totAll>6500?1/22 : totAll>900?1/26 : 1/30;
     acc+=dt*gameSpeed;
@@ -1426,12 +1473,14 @@ function frame(ts){
     }
     if(acc>simDt*3) acc=0;
     checkVictory();
+    if(typeof mfPerfEnd==='function') mfPerfEnd('sim');
   }
   if(!running && attractOn && attractVisible){
     attractTick(dt);
     processDeforms();
     render(dt);
     musicTickFrame(dt);
+    if(typeof mfPerfFrameEnd==='function') mfPerfFrameEnd();
     return;
   }
   camTick(dt);
@@ -1441,99 +1490,33 @@ function frame(ts){
     deformMaintain(dt);
     render(dt);
     floatTextTick(dt);
+    if(typeof mfPerfBegin==='function') mfPerfBegin('minimap');
     renderMinimap();
+    if(typeof mfPerfEnd==='function') mfPerfEnd('minimap');
+    if(typeof mfPerfBegin==='function') mfPerfBegin('hud');
     updateHUD(fpsShow);
+    if(typeof mfPerfEnd==='function') mfPerfEnd('hud');
   }
   musicTickFrame(dt);
+  if(typeof mfPerfFrameEnd==='function') mfPerfFrameEnd();
 }
 
-/* Mid-tier CPU at 1000 pop. GPU fillrate is the quality preset; this is
+/* Mid-tier CPU at 500 pop per commander seat. GPU fillrate is the quality preset; this is
    sim/HUD/pathfinding. Takeover, not edits to the renderer files. */
 function mfCpuBind(){
-  mfCpuBindPath();
+  /* Pathfinding is simulation authority. Replacing computeField/requestField
+     here made runtime behavior depend on boot order and silently discarded
+     blocker, clearance and replay fixes made in src/game/sim.js. Keep CPU
+     tuning on the authoritative implementation instead of shadowing it. */
   mfCpuBindSep();
   mfCpuBindMinimap();
   mfCpuBindIcons();
   mfCpuBindFx();
 }
-function mfGfxKey(){
-  if(typeof qualityKey==='function') return qualityKey();
-  const q=typeof META!=='undefined'&&META.settings&&META.settings.quality;
-  return q==='low'||q==='medium'||q==='cinematic'?q:'high';
-}
-function mfCpuBindPath(){
-  if(typeof computeField!=='function'||typeof PGS!=='number'||typeof requestField!=='function') return;
-  const pool=[];
-  let mark=null, epoch=0;
-  computeField=function(tx,ty,naval){
-    const N=PGS*PGS;
-    if(!ffDistA){ ffDistA=new Uint16Array(N); ffQueue=new Int32Array(N); }
-    if(!mark||mark.length!==N){ mark=new Uint16Array(N); epoch=0; }
-    let dirs=pool.pop();
-    if(!dirs||dirs.length!==N) dirs=new Uint8Array(N);
-    dirs.fill(8);
-    epoch++;
-    if(epoch===65535){ mark.fill(0); epoch=1; }
-    const dist=ffDistA;
-    const pass=i=>naval?!!(NAVW&&NAVW[i]&&NAVCOMP[i]===NAV_MAIN):!!PASS[i];
-    let goal=ffCell(tx,ty);
-    if(!pass(goal)){
-      const gx=goal%PGS, gy=goal/PGS|0;
-      outer: for(let r=1;r<24;r++)
-        for(let a=0;a<TAU;a+=0.5){
-          const nx=clamp(gx+Math.round(Math.cos(a)*r),0,PGS-1), ny=clamp(gy+Math.round(Math.sin(a)*r),0,PGS-1);
-          if(pass(ny*PGS+nx)){ goal=ny*PGS+nx; break outer; }
-        }
-    }
-    if(!pass(goal)) return dirs;
-    let qh=0, qt=0;
-    dist[goal]=0; mark[goal]=epoch; ffQueue[qt++]=goal;
-    while(qh<qt){
-      const c=ffQueue[qh++];
-      const cx=c%PGS, cy=c/PGS|0, cd=dist[c];
-      for(let k=0;k<8;k++){
-        const nx2=cx+DIRX[k], ny2=cy+DIRY[k];
-        if(nx2<0||ny2<0||nx2>=PGS||ny2>=PGS) continue;
-        const n=ny2*PGS+nx2;
-        if(!pass(n)||mark[n]===epoch) continue;
-        if(k&1){
-          if(!pass(cy*PGS+nx2)||!pass(ny2*PGS+cx)) continue;
-        }
-        mark[n]=epoch;
-        dist[n]=cd+((k&1)?3:2);
-        ffQueue[qt++]=n;
-      }
-    }
-    for(let qi=0;qi<qt;qi++){
-      const c=ffQueue[qi];
-      if(c===goal) continue;
-      const cx=c%PGS, cy=c/PGS|0;
-      let bk=8, bd2=dist[c];
-      for(let k=0;k<8;k++){
-        const nx2=cx+DIRX[k], ny2=cy+DIRY[k];
-        if(nx2<0||ny2<0||nx2>=PGS||ny2>=PGS) continue;
-        const n=ny2*PGS+nx2;
-        if(mark[n]!==epoch) continue;
-        const dn=dist[n];
-        if(dn<bd2){ bd2=dn; bk=k; }
-      }
-      dirs[c]=bk;
-    }
-    return dirs;
-  };
-  requestField=function(tx,ty,naval){
-    naval=!!naval;
-    for(let f=0;f<fields.length;f++){
-      if(fields[f]&&!!fields[f].naval===naval&&dist2(fields[f].tx,fields[f].ty,tx,ty)<70*70) return f;
-    }
-    const f=ffNext; ffNext=(ffNext+1)%FF_MAX;
-    for(let i=0;i<unitHigh;i++) if(ufield[i]===f) ufield[i]=-1;
-    const old=fields[f];
-    if(old&&old.dirs) pool.push(old.dirs);
-    fields[f]={tx,ty,naval,dirs:computeField(tx,ty,naval)};
-    return f;
-  };
-}
+/* mfGfxKey() lives in src/engine/gl.js (manifest index 3). This file is index
+   79, so a duplicate here silently overwrote that one — editing the documented
+   definition in gl.js would have had no effect. Do not re-add it.
+   tools/verify-global-scope.mjs fails the build on this class of shadowing. */
 function mfCpuBindSep(){
   if(typeof unitSeparation!=='function') return;
   const orig=unitSeparation;
@@ -1559,7 +1542,7 @@ function mfCpuBindMinimap(){
     const now=performance.now();
     const q=mfGfxKey();
     /* Deform stamps null mmBg on every crater. The 2048→256 civic downsample
-       (drawImage of terrainCanvas) is the #2 CPU hotspot at 1000 pop.
+       (drawImage of terrainCanvas) is the #2 CPU hotspot at 500 pop per seat.
        HIGH/CINEMATIC refresh scars sooner; MEDIUM holds the last bake longer. */
     const hold=q==='low'?1600:q==='medium'?1100:q==='cinematic'?320:520;
     /* Hold only a bake from this map gen. Restoring a black/stale keep
@@ -1886,7 +1869,7 @@ function renderMapRow(){
     const rewardItem=contract&&contract.item&&typeof INV_CONSUMABLES!=='undefined'?INV_CONSUMABLES.find(x=>x.id===contract.item):null;
     card.insertAdjacentHTML('beforeend','<div class="mSize">'+sz+'</div><div class="mNm">'+def.nm+'</div><div class="mDs">'+def.ds+'</div>'
       +(CQ?'<div class="mConquest"><span>FRONT '+CQ.tier+' / 48</span><b>'+(conquestWon?'SECURED':conquestOpen?['EASY','NORMAL','HARD'][CQ.mi]+' THREAT':'LOCKED')+'</b></div>':'')
-      +(firstClear?'<div class="mReward"><span>FIRST CLEAR · +'+rewardXp+' XP · +'+firstClear.cores+' CORES</span><b>'+(rewardItem?rewardItem.em+' '+rewardItem.nm:'')+'</b></div>':'')
+      +(firstClear?'<div class="mReward"><span>FIRST CLEAR · +'+rewardXp+' XP · +'+firstClear.cores+' CORES</span><b>'+(rewardItem?rewardItem.em+' '+rewardItem.nm+' · ONE MATCH':'')+'</b></div>':'')
       +(hz?'<div class="mHz"><b>'+hz.em+' '+hz.nm+'</b>'+hz.ds+'</div>':''));
     card.addEventListener('pointerdown',()=>{if(!conquestOpen){toast('🔒 SECURE THE PREVIOUS BATTLEFIELD FIRST');sfx('deny');return;}window._mfTheatrePick=def.size;syncBattlefieldFromMap(key); if(typeof sfx==='function') sfx('ui'); renderMapRow(); renderSpawnPlanner(); });
     row.appendChild(card);
@@ -1895,7 +1878,7 @@ function renderMapRow(){
 }
 let settingsFrom='menu';
 let inboxFromMatch=false;
-const FRONT_SCREEN_IDS=['startScreen','warScr','setupScr','devScr','opsScr','dailyScr','dossierScr','inboxScr','updScr','profileScr','settingsScr','armory'];
+const FRONT_SCREEN_IDS=['startScreen','warScr','setupScr','devScr','opsScr','dailyScr','dossierScr','inboxScr','socialScr','updScr','profileScr','settingsScr','armory'];
 /* THE DIORAMA IS THE MENU'S BACKGROUND, AND NOTHING ELSE'S.
    Every other front screen — War Room, Development, Operations, Armory, the
    Dossier, the store, Settings — is an opaque full-screen panel. Behind them
@@ -1905,6 +1888,15 @@ const FRONT_SCREEN_IDS=['startScreen','warScr','setupScr','devScr','opsScr','dai
    heating the device, and then handing a thermally throttled GPU to the match
    the player opens next. */
 let attractVisible=true;
+function frontRouteTarget(id){
+  const el=(typeof id==='string'&&id)?$(id):null;
+  if(el)return el;
+  /* Mixed OTA installs can briefly run newer JS against an older HTML shell.
+     Refuse the transition before touching the currently visible route; a
+     missing optional screen must leave a usable menu, never a blank app. */
+  try{console.warn('[front-route] target unavailable:',id);}catch(e){}
+  return null;
+}
 function hideFrontScreens(except){
   for(const id of FRONT_SCREEN_IDS){
     if(id===except) continue;
@@ -1915,19 +1907,43 @@ function hideFrontScreens(except){
   const apc=$('apConfirmOverlay'); if(apc) apc.style.display='none';
   if(except===undefined){
     attractVisible=false;   // bare call = dropping into a match
+    if(document.body&&document.body.dataset){
+      document.body.dataset.frontScreen='';
+      delete document.body.dataset.frontPopup;
+    }
     if(typeof audMusicEnterMatch==='function') audMusicEnterMatch();
   }
 }
 function showFrontScreen(id){
+  const el=frontRouteTarget(id);if(!el)return false;
   hideFrontScreens(id);
-  const el=$(id); if(el) el.style.display='flex';
-  document.body.dataset.frontScreen=id||'';
+  el.style.display='flex';
+  document.body.dataset.frontScreen=id;
+  delete document.body.dataset.frontPopup;
   attractVisible=(id==='startScreen');
   /* Re-evaluated every time the menu is shown rather than once at boot: a
      session can be dropped mid-play, and the offer has to be there when the
      player lands back here — which is the moment they are looking for it. */
   if(id==='startScreen'&&typeof sessRenderResume==='function') sessRenderResume();
   if(typeof audMusicEnterScreen==='function') audMusicEnterScreen(id);
+  return true;
+}
+/* Match overlays are not front screens: opening one must keep match music and
+   closing it must reveal the battlefield rather than route to the menu. They
+   still use a validated, explicit route so optional OTA UI cannot blank the
+   shell and Android Back can close the same state the HUD button opened. */
+function showMatchPopup(id){
+  const el=frontRouteTarget(id);if(!el)return false;
+  hideFrontScreens();
+  el.style.display='flex';
+  document.body.dataset.frontPopup=id;
+  return true;
+}
+function closeMatchPopup(id){
+  const el=frontRouteTarget(id);if(!el)return false;
+  el.style.display='none';
+  if(document.body.dataset.frontPopup===id)delete document.body.dataset.frontPopup;
+  return true;
 }
 function openSettings(from){
   settingsFrom=from;
@@ -1955,13 +1971,14 @@ function handleNativeBack(AppPlugin){
   if(nativeLayerVisible('mfNoticeHistory')){if(typeof mfNoticeHistoryClose==='function')mfNoticeHistoryClose();return;}
   /* Close the topmost modal first. Android Back now follows the same visual
      hierarchy as the on-screen controls instead of terminating the Activity. */
+  if(nativeLayerVisible('apConfirmOverlay')){nativeBackTap('apConfirmNo');return;}
   if(nativeLayerVisible('apOverlay')){if(typeof apClose==='function')apClose();return;}
   if(nativeLayerVisible('accDlg')){nativeBackTap('accDlgN');return;}
   if(nativeLayerVisible('dispatch')){nativeBackTap('dispOk');return;}
   const layers=[
     ['settingsScr','setBack'],['profileScr','profBack'],['armory','armoryBack'],
     ['setupScr','setupBack'],['warScr','warBack'],['devScr','devBack'],['opsScr','opsBack'],
-    ['dailyScr','dailyBack'],['dossierScr','dossBack'],['inboxScr','inboxBack'],['updScr','updBack'],['gameOver','restartBtn']
+    ['dailyScr','dailyBack'],['dossierScr','dossBack'],['socialScr','socialBack'],['inboxScr','inboxBack'],['updScr','updBack'],['gameOver','restartBtn']
   ];
   for(const L of layers)if(nativeLayerVisible(L[0])){nativeBackTap(L[1]);return;}
   if(nativeLayerVisible('pauseOverlay')){nativeBackTap('resumeBtn');return;}
@@ -1971,10 +1988,17 @@ function handleNativeBack(AppPlugin){
     toast('Targeting cancelled');sfx('ui');return;
   }
   if(typeof placing!=='undefined'&&placing){cancelPlace();sfx('ui');return;}
-  if(nativeLayerVisible('buildMenu')||nativeLayerVisible('bldPanel')||nativeLayerVisible('prodMenu')){
+  if(nativeLayerVisible('buildMenu')||nativeLayerVisible('bldMenu2')||nativeLayerVisible('prodMenu')){
     closeMenus();sfx('ui');return;
   }
   if(nativeLayerVisible('baseFinder')){ $('baseFinder').style.display='none';sfx('ui');return; }
+  /* Drafted map commands outrank Pause. Leaving either mode armed while opening
+     the overlay makes the first tap after Resume execute an old instruction. */
+  if(typeof armQueue!=='undefined'&&armQueue){cancelQueueDraft(false);return;}
+  if(typeof armRally!=='undefined'&&armRally>=0){
+    if(typeof disarmRally==='function')disarmRally();else armRally=-1;
+    toast('Rally placement cancelled');sfx('ui');return;
+  }
   if(typeof armPatrol!=='undefined'&&armPatrol){cancelPatrolDraft(false);return;}
   if(typeof armFormation!=='undefined'&&armFormation){
     armFormation=false;orderPreview=null;
@@ -1986,7 +2010,18 @@ function handleNativeBack(AppPlugin){
   if(now-nativeBackExitAt<1800){if(AppPlugin&&AppPlugin.exitApp)AppPlugin.exitApp();return;}
   nativeBackExitAt=now;toast('Press Back again to exit MASSFRONT');
 }
+function nativeBackEscape(e){
+  /* Desktop Escape follows the same hierarchy as Android Back. Capture-owned
+     modals (the intro and account portal) either preventDefault or stop the
+     event first, so their local focus traps remain authoritative. */
+  if(e.key!=='Escape'||e.defaultPrevented||e.repeat||e.isComposing)return;
+  e.preventDefault();e.stopPropagation();handleNativeBack();
+}
 function initNativeNavigation(){
+  if(typeof window!=='undefined'&&!window.__mfNativeEscapeReady){
+    window.__mfNativeEscapeReady=true;
+    window.addEventListener('keydown',nativeBackEscape);
+  }
   const C=typeof window!=='undefined'&&window.Capacitor;
   const A=C&&C.Plugins&&C.Plugins.App;
   if(!A||typeof A.addListener!=='function')return;
@@ -2197,6 +2232,31 @@ function wire(){
       if(typeof renderOps==='function') renderOps();
     });
   });
+  /* EXPERIMENTAL SPACE EXPLORATION — Settings-only, with two gates.
+     The module is a separate document with its own three.js and its own WebGL
+     canvas, so it is opened as a document rather than imported: two contexts
+     fighting over one canvas is the failure this avoids, and a crash in an
+     unfinished module then cannot take the RTS down with it.
+     Gate 1 is the player's setting. Gate 2 is a launch-time HEAD probe, because
+     the module is NOT in the installer. Nothing is inserted into the base main
+     menu or War Table; the module performs those conversions inside its own
+     isolated shell. Nothing here runs during a match or touches saves. */
+  (function mfWireExploration(){
+    const URL_='./modules/space_exploration/index.html';
+    mfOpenExploration=async function(){
+      const enabled=!!(typeof META!=='undefined'&&META.settings&&META.settings.experimentalExploration);
+      if(!enabled){ if(typeof toast==='function') toast('Enable Experimental: Galactic Campaign first'); return false; }
+      initAudio(); sfx('ui');
+      let present=false;
+      try{ const r=await fetch(URL_,{method:'HEAD',cache:'no-store'}); present=r.ok; }
+      catch(e){}
+      if(!present){ if(typeof toast==='function') toast('Galactic preview is not installed in this build'); return false; }
+      /* Same tab: the ship and RTS renderers must never compete for WebGL. */
+      try{ location.href=URL_; return true; }
+      catch(e){ if(typeof toast==='function') toast('Galactic preview could not be opened'); return false; }
+    };
+  })();
+
   mfBindTap($('armoryBtn'),()=>{
     initAudio(); sfx('ui');
     renderMetaHead(); renderArmory();
@@ -2278,7 +2338,9 @@ function wire(){
     showFrontScreen('warScr'); });
   mfBindTap($('setupStart'),()=>{
     initAudio();
-    if(activeWarMode==='coop'||activeWarMode==='mmo'||activeWarMode==='campaign'){
+    const campaignMission=activeWarMode==='campaign'
+      &&typeof storyCampaignActiveId!=='undefined'&&!!storyCampaignActiveId;
+    if(activeWarMode==='coop'||activeWarMode==='mmo'||(activeWarMode==='campaign'&&!campaignMission)){
       sfx('deny');
       toast((activeWarMode==='mmo'?'MMO':activeWarMode==='coop'?'CO-OP':'CAMPAIGN')+' is not available yet.');
       return;
@@ -2292,7 +2354,7 @@ function wire(){
     /* Training restore rewinds live globals. The buttons still show the plan
        the player just set — copy them back before META.setup is written. */
     armMatchSetup();
-    const loan=typeof weeklyMode!=='undefined'&&weeklyMode;
+    const loan=(typeof weeklyMode!=='undefined'&&weeklyMode)||campaignMission;
     const training=typeof trainingMissionActive==='function'&&trainingMissionActive();
     if(!loan&&!training){
       if(typeof isHomeworldMap==='function'&&!isHomeworldMap(curMap)){
@@ -2392,23 +2454,21 @@ function wire(){
   mfBindTap($('inboxBtn'),()=>{
     initAudio(); sfx('ui');
     if(typeof renderInbox==='function') renderInbox();
-    showFrontScreen('inboxScr');
+    if(showFrontScreen('inboxScr'))inboxFromMatch=false;
   });
   mfBindTap($('inboxBack'),()=>{ sfx('ui');
-    if(inboxFromMatch){ inboxFromMatch=false; $('inboxScr').style.display='none'; return; }
+    if(inboxFromMatch||document.body.dataset.frontPopup==='inboxScr'){ inboxFromMatch=false; closeMatchPopup('inboxScr'); return; }
     renderMetaHead(); showFrontScreen('startScreen'); });
-  /* In-match the Inbox is a POPUP, not a front screen: showFrontScreen would
-     hide the battlefield HUD and leave the player staring at an empty overlay
-     when they closed it. Close every other panel first so it never opens on top
-     of a build menu or a unit card. */
+  /* In-match the Inbox is an explicit popup route, not a front screen. Close
+     every other panel first so it never opens on top of a build menu or a unit
+     card; closeMatchPopup returns to the still-running battlefield. */
   mfBindTap($('inboxHudBtn'),()=>{
     initAudio(); sfx('ui');
+    if(!showMatchPopup('inboxScr'))return;
     if(typeof closeMenus==='function') closeMenus();
-    if(typeof hideFrontScreens==='function') hideFrontScreens();
     const uc=$('unitCard'); if(uc) uc.style.display='none';
     if(typeof renderInbox==='function') renderInbox();
     inboxFromMatch=true;
-    $('inboxScr').style.display='flex';
   });
   mfBindTap($('profBack'),()=>{
     renderMetaHead(); sfx('ui'); showFrontScreen('startScreen');
@@ -2433,7 +2493,7 @@ function wire(){
     toast('👤 New profile created — progress now saves here');
   });
   let resetArm=0;
-  $('profReset').addEventListener('pointerdown',()=>{
+  mfBindTap($('profReset'),()=>{
     if(performance.now()-resetArm>2600){
       resetArm=performance.now();
       toast('⚠ Tap RESET again to wipe this profile\'s progress'); sfx('alarm'); return;
@@ -2443,7 +2503,7 @@ function wire(){
     toast('Progress reset for '+activeProf().name);
   });
   let delArm=0;
-  $('profDel').addEventListener('pointerdown',()=>{
+  mfBindTap($('profDel'),()=>{
     if(PROFILES.list.length<=1){ toast('Cannot delete the last profile'); return; }
     if(performance.now()-delArm>2600){
       delArm=performance.now();
@@ -2483,7 +2543,7 @@ function wire(){
     if(err) toast(err); else sfx('ui');
     renderBldPanel();
   });
-  $('bp_sell').addEventListener('pointerdown',()=>{
+  mfBindTap($('bp_sell'),()=>{
     if(openBld<0) return;
     const B=blds[openBld];
     if(!B.alive) return;
@@ -2735,9 +2795,11 @@ async function boot(){
   resize();
   await preloadMatAtlases();     // load premade PBR atlases if present
   initGL3D();                    // depth buffer, culling, the lit + additive programs
+  if(typeof shieldFxBoot==='function') shieldFxBoot(); // instanced domes, plates and hit ripples
   buildMatAtlas();               // upload premade atlases or generate procedurally
   if(typeof initMaterialV2==='function') initMaterialV2(); // allocates only for ?materiallab=1
   initBillboards();              // sprite layer for smoke, fire and energy
+  if(typeof macroFxBoot==='function') macroFxBoot();   // authored one-billboard macro layers
   initModels();                  // procedural geometry for every unit, structure and prop
   atlasTex=buildAtlas();         // (2D atlas retained for HUD icons and the minimap)
   /* Baked unit sheet. loadUnitSheet had NO call site anywhere in the tree, so
@@ -2782,11 +2844,11 @@ async function boot(){
   /* One pinned button, two operations. Its label is set by opsSyncGo(); this
      is the matching action, so the CAMPAIGN tab starts a mission and the
      WEEKLY tab starts the weekly, and neither needs its own buried control. */
-  $('weeklyGo').addEventListener('pointerdown',e=>{
+  mfBindTap($('weeklyGo'),e=>{
     const mode=e.currentTarget&&e.currentTarget.dataset.opsMode;
     if(mode==='campaign'){
-      sfx('deny');
-      toast('CAMPAIGN is not available yet.');
+      if(typeof storyCampaignStartNext==='function') storyCampaignStartNext();
+      else { sfx('deny'); toast('CAMPAIGN systems are still loading.'); }
       return;
     }
     startWeekly();
@@ -2811,7 +2873,7 @@ async function boot(){
     sfx('ui'); });
   /* New subsystems. Each lives in its own module and registers its own UI, so
      none of them need to touch index.html or this file beyond this line. */
-  for(const fn of ['initOffline','initSampleAudio','initAssetPacks','initAuthPortal','initTutorial','initAdBoards','initStoreUI','initResTree3D','initEconomyNet','initIntro','initGalaxyUI','initWarPrimer'])
+  for(const fn of ['initOffline','initSampleAudio','initAssetPacks','initAuthPortal','initSocialUI','initTutorial','initAdBoards','initStoreUI','initResTree3D','initEconomyNet','initIntro','initGalaxyUI','initWarPrimer'])
     /* NEVER skip in silence. A function belonging to a file that loads AFTER
        main.js does not exist yet, and this guard used to drop it with no
        error - the feature was simply absent at runtime. That is how the War

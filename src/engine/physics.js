@@ -75,7 +75,10 @@
    --------------------------------------------------------------------------- */
 const MFPHYS_MAX = 256;                 // hard pool ceiling (allocation, not budget)
 const MFPHYS_CHUNKS = 6;                // render chunks per body
+const MFPHYS_EVENT_MAX = 3;             // one grouped debris layer = at most 3 readable slabs
 const MFPHYS_G = 290;                   // wu/s^2 — matches SH_G / DEBRIS_G exactly
+const MFPHYS_MAX_V = 650;               // cosmetic rubble must never become a simulation projectile
+const MFPHYS_MAX_W = 32;                // rad/s; above this rotation aliases at RTS scale
 
 const mfpX  = new Float32Array(MFPHYS_MAX), mfpY = new Float32Array(MFPHYS_MAX), mfpZ = new Float32Array(MFPHYS_MAX);
 const mfpVX = new Float32Array(MFPHYS_MAX), mfpVY= new Float32Array(MFPHYS_MAX), mfpVZ= new Float32Array(MFPHYS_MAX);
@@ -90,6 +93,7 @@ const mfpSleepT=new Float32Array(MFPHYS_MAX);
 const mfpR=new Uint8Array(MFPHYS_MAX), mfpG=new Uint8Array(MFPHYS_MAX), mfpB=new Uint8Array(MFPHYS_MAX);
 const mfpState=new Uint8Array(MFPHYS_MAX);        // 0 free, 1 awake, 2 asleep
 const mfpNCh =new Uint8Array(MFPHYS_MAX);
+const mfpTrail=new Uint8Array(MFPHYS_MAX);        // render-only velocity line; never a sim particle
 const mfpSeq =new Float64Array(MFPHYS_MAX);       // spawn order, for eviction
 /* Local ground plane cache: g(x,y) ~= g0 + gx*(x-ax) + gy*(y-ay).
    terrainH() is nine rawH() taps; sampling it per corner per step would be the
@@ -105,6 +109,58 @@ let mfpLive=0, mfpAwake=0, mfpSeqNext=1;
 let mfpStepMs=0, mfpEmitMs=0, mfpChunksDrawn=0;
 let mfpHooked=false, mfpEmittedFrame=-1, mfpFrame=0;
 let mfpEnabled=true;
+
+/* Physics is presentation-only, so it must not consume Math.random() and
+   perturb gameplay's random stream. A private xorshift32 makes destruction
+   reproducible for a map, event order and quality tier without adding any
+   save/replay/network field. mfPhysClear() re-seeds it at match reset. */
+let mfpSeedBase=0x6d2b79f5, mfpRandState=mfpSeedBase;
+const mfpAudit={
+  steps:0, spawns:0, retired:0, invalidRetires:0,
+  evictions:0, budgetTrims:0, motionClamps:0, groundQueries:0,
+  burstEvents:0, collapseEvents:0, blastEvents:0,
+  impulseEvents:0, impulseHits:0, rigidPieces:0,
+  attractEvents:0, attractHits:0, attractConsumed:0,
+  attractClamps:0, attractWakeups:0, attractPeakAccel:0,
+  groupClamps:0, maxGroup:0, maxLive:0, rngDraws:0,
+  emitCalls:0, emittedChunks:0, velocityTrails:0, pausedEmitSkips:0,
+  offscreenRetires:0, subpixelRetires:0, acceleratedLife:0
+};
+
+function mfPhysHashWord(h,v){
+  h^=v>>>0;
+  return Math.imul(h,16777619)>>>0;
+}
+function mfPhysWorldSeed(){
+  let h=2166136261>>>0;
+  const key=(typeof curMap==='string'&&curMap)?curMap:'massfront';
+  for(let i=0;i<key.length;i++) h=mfPhysHashWord(h,key.charCodeAt(i));
+  if(typeof MAPDEFS!=='undefined'&&MAPDEFS&&MAPDEFS[key]&&Number.isFinite(MAPDEFS[key].seed))
+    h=mfPhysHashWord(h,MAPDEFS[key].seed);
+  return h||0x6d2b79f5;
+}
+function mfPhysSeed(seed){
+  let s;
+  if(seed===undefined||seed===null) s=mfPhysWorldSeed();
+  else if(typeof seed==='number'&&Number.isFinite(seed)) s=seed>>>0;
+  else{
+    const key=String(seed); s=2166136261>>>0;
+    for(let i=0;i<key.length;i++) s=mfPhysHashWord(s,key.charCodeAt(i));
+  }
+  mfpSeedBase=(s>>>0)||0x6d2b79f5;
+  mfpRandState=mfpSeedBase;
+  return mfpSeedBase;
+}
+function mfPhysRand(){
+  let x=mfpRandState>>>0;
+  x^=x<<13; x^=x>>>17; x^=x<<5;
+  mfpRandState=(x>>>0)||0x6d2b79f5;
+  mfpAudit.rngDraws++;
+  return mfpRandState/4294967296;
+}
+function mfPhysResetAudit(){
+  for(const k in mfpAudit) mfpAudit[k]=0;
+}
 
 /* Sleep thresholds. Deliberately generous: rubble that keeps micro-jittering
    reads as broken, and every sleeping body is a body the solver skips. */
@@ -123,6 +179,40 @@ function mfPhysBudget(){
   return 224;
 }
 
+/* Camera-aware retirement is presentation policy only: it changes no damage,
+   collision, salvage or gameplay state. One camBounds sample is shared by the
+   complete step so the policy does not turn into a per-body layout query. */
+let mfpViewClass=0,mfpViewPx=999;
+function mfPhysViewSample(i,B){
+  const x=mfpX[i],y=mfpY[i],r=Math.max(mfpHX[i],mfpHY[i],mfpHZ[i]);
+  mfpViewClass=0;mfpViewPx=999;
+  if(B&&Number.isFinite(B.x0)&&Number.isFinite(B.x1)&&Number.isFinite(B.y0)&&Number.isFinite(B.y1)){
+    const dx=x<B.x0?B.x0-x:x>B.x1?x-B.x1:0;
+    const dy=y<B.y0?B.y0-y:y>B.y1?y-B.y1:0;
+    const w=Math.max(1,B.x1-B.x0),h=Math.max(1,B.y1-B.y0);
+    mfpViewClass=(dx<=60+r&&dy<=60+r)?0:(dx<=w*.42+120&&dy<=h*.42+120?1:2);
+    const vh=(typeof innerHeight==='number'&&innerHeight>0)?innerHeight:720;
+    mfpViewPx=r*2*vh/h;
+  }else if(typeof orthoSpan==='number'&&orthoSpan>0){
+    const vh=(typeof innerHeight==='number'&&innerHeight>0)?innerHeight:720;
+    mfpViewPx=r*2*vh/orthoSpan;
+  }
+  return mfpViewClass;
+}
+function mfPhysCamBounds(){
+  if(typeof camBounds!=='function')return null;
+  try{return camBounds()||null;}catch(err){return null;}
+}
+function mfPhysScaledTTL(i,base){
+  const ps=Math.max(.2,Math.min(1,(typeof perfScale==='number'&&perfScale>0)?perfScale:1));
+  const pressure=Math.max(0,Math.min(1,mfpLive/Math.max(1,mfPhysBudget())));
+  const view=mfPhysViewSample(i,mfPhysCamBounds());
+  let scale=(.70+.30*ps)*(1-.36*pressure*pressure);
+  if(view===1)scale*=.72;else if(view===2)scale*=.46;
+  if(mfpViewPx<1.5)scale*=.72;
+  return Math.max(1.35,base*scale);
+}
+
 function mfPhysSampleGround(i){
   const x=mfpX[i], y=mfpY[i], d=6;
   const g0=mfPhysGround(x,y);
@@ -131,6 +221,7 @@ function mfPhysSampleGround(i){
   mfpGY[i]=(mfPhysGround(x,y+d)-g0)/d;
   mfpAX[i]=x; mfpAY[i]=y;
   mfpGT[i]=0.28+((i*0.0137)%0.22);        // staggered so refreshes never bunch
+  mfpAudit.groundQueries+=3;
 }
 function mfPhysPlaneAt(i,x,y){
   return mfpG0[i]+mfpGX[i]*(x-mfpAX[i])+mfpGY[i]*(y-mfpAY[i]);
@@ -158,7 +249,33 @@ function mfPhysAlloc(){
     if(free>=0){ mfpLive++; return free; }
     return -1;
   }
+  mfpAudit.evictions++;
   return victim;
+}
+
+/* perfScale can fall after a dense scene is already alive. Allocation alone
+   cannot enforce the new lower budget, so trim deterministically: oldest
+   sleeping rubble first, then oldest airborne rubble. This runs only on a
+   tier transition (normally one frame), not as a permanent O(n^2) cost. */
+function mfPhysTrimToBudget(){
+  const budget=mfPhysBudget();
+  let removed=0;
+  while(mfpLive>budget){
+    let victim=-1, best=Infinity, victimAsleep=false;
+    for(let i=0;i<MFPHYS_MAX;i++){
+      if(mfpState[i]===0) continue;
+      const asleep=mfpState[i]===2;
+      if(victimAsleep&&!asleep) continue;
+      if(asleep&&!victimAsleep){ victim=i; best=mfpSeq[i]; victimAsleep=true; continue; }
+      if(mfpSeq[i]<best){ victim=i; best=mfpSeq[i]; }
+    }
+    if(victim<0) break;
+    if(mfpState[victim]===1&&mfpAwake>0) mfpAwake--;
+    mfpState[victim]=0; mfpLive--; removed++;
+  }
+  mfpAudit.budgetTrims+=removed;
+  mfpAudit.retired+=removed;
+  return removed;
 }
 
 /* ---------------------------------------------------------------------------
@@ -181,13 +298,13 @@ function mfPhysSpawn(x,y,z,o){
   mfpVX[i]=o.vx||0; mfpVY[i]=o.vy||0; mfpVZ[i]=o.vz||0;
   /* Random start orientation: a slab that always begins axis-aligned reads as
      a spawned prop, not as something that just came off a building. */
-  const a=Math.random()*Math.PI*2, b=Math.random()*Math.PI*2, c=Math.random()*Math.PI*2;
+  const a=mfPhysRand()*Math.PI*2, b=mfPhysRand()*Math.PI*2, c=mfPhysRand()*Math.PI*2;
   const ca=Math.cos(a*0.5), sa=Math.sin(a*0.5), cb=Math.cos(b*0.5), sb=Math.sin(b*0.5), cc=Math.cos(c*0.5), sc=Math.sin(c*0.5);
   mfpQW[i]=ca*cb*cc+sa*sb*sc; mfpQX[i]=sa*cb*cc-ca*sb*sc;
   mfpQY[i]=ca*sb*cc+sa*cb*sc; mfpQZ[i]=ca*cb*sc-sa*sb*cc;
-  mfpWX[i]=o.wx!==undefined?o.wx:(Math.random()*2-1)*7;
-  mfpWY[i]=o.wy!==undefined?o.wy:(Math.random()*2-1)*7;
-  mfpWZ[i]=o.wz!==undefined?o.wz:(Math.random()*2-1)*7;
+  mfpWX[i]=o.wx!==undefined?o.wx:(mfPhysRand()*2-1)*7;
+  mfpWY[i]=o.wy!==undefined?o.wy:(mfPhysRand()*2-1)*7;
+  mfpWZ[i]=o.wz!==undefined?o.wz:(mfPhysRand()*2-1)*7;
   mfpHX[i]=hx; mfpHY[i]=hy; mfpHZ[i]=hz;
   mfpIM[i]=1/m;
   /* Solid box inertia about the centre of mass. Full extents are 2h, so
@@ -195,11 +312,13 @@ function mfPhysSpawn(x,y,z,o){
   mfpIIX[i]=3/(m*(hy*hy+hz*hz));
   mfpIIY[i]=3/(m*(hx*hx+hz*hz));
   mfpIIZ[i]=3/(m*(hx*hx+hy*hy));
-  mfpTTL[i]=o.ttl||18; mfpLife[i]=mfpTTL[i];
+  const baseTTL=o.ttl||18;
+  mfpTTL[i]=mfPhysScaledTTL(i,baseTTL); mfpLife[i]=mfpTTL[i];
   mfpRest[i]=o.restitution!==undefined?o.restitution:0.22;
   mfpFric[i]=o.friction!==undefined?o.friction:0.62;
   mfpSleepT[i]=0;
   mfpR[i]=o.r!==undefined?o.r:150; mfpG[i]=o.g!==undefined?o.g:142; mfpB[i]=o.b!==undefined?o.b:126;
+  mfpTrail[i]=o.trail?1:0;
   mfpState[i]=1;
   mfpSeq[i]=mfpSeqNext++;
   mfPhysSampleGround(i);
@@ -211,16 +330,18 @@ function mfPhysSpawn(x,y,z,o){
   const longX=hx>=hy&&hx>=hz, longY=hy>=hx&&hy>=hz;
   for(let k=0;k<want;k++){
     const t=want===1?0:(k/(want-1))*2-1;                 // -1..1 along the long axis
-    const j=Math.random()*0.34;
-    const ox=longX?t*hx*0.72:(Math.random()*2-1)*hx*0.42;
-    const oy=longY?t*hy*0.72:(Math.random()*2-1)*hy*0.42;
-    const oz=(!longX&&!longY)?t*hz*0.72:(Math.random()*2-1)*hz*0.42;
+    const j=mfPhysRand()*0.34;
+    const ox=longX?t*hx*0.72:(mfPhysRand()*2-1)*hx*0.42;
+    const oy=longY?t*hy*0.72:(mfPhysRand()*2-1)*hy*0.42;
+    const oz=(!longX&&!longY)?t*hz*0.72:(mfPhysRand()*2-1)*hz*0.42;
     /* Overlapping, not spaced: the cluster has to read as ONE solid piece
        whose shape rotates, and gaps between chunks read as separate specks. */
     const r=Math.max(hx,hy,hz)*(0.66+j)/Math.max(1,Math.sqrt(want)*0.68);
     mfpCh[base+k*4  ]=ox; mfpCh[base+k*4+1]=oy;
     mfpCh[base+k*4+2]=oz; mfpCh[base+k*4+3]=r;
   }
+  mfpAudit.spawns++;
+  if(mfpLive>mfpAudit.maxLive) mfpAudit.maxLive=mfpLive;
   mfPhysHook();
   return i;
 }
@@ -267,6 +388,19 @@ function mfPhysApplyImpulse(i,jx,jy,jz,rx,ry,rz){
   const tx=ry*jz-rz*jy, ty=rz*jx-rx*jz, tz=rx*jy-ry*jx;
   mfPhysInvInertiaMul(i,tx,ty,tz,_mfpC);
   mfpWX[i]+=_mfpC[0]; mfpWY[i]+=_mfpC[1]; mfpWZ[i]+=_mfpC[2];
+  /* Bound pathological chain blasts. Beyond these speeds a one-frame streak
+     is all the player sees, while contact impulses and quaternion integration
+     become needlessly unstable. Direction and momentum ratio are preserved. */
+  const v2=mfpVX[i]*mfpVX[i]+mfpVY[i]*mfpVY[i]+mfpVZ[i]*mfpVZ[i];
+  if(v2>MFPHYS_MAX_V*MFPHYS_MAX_V){
+    const s=MFPHYS_MAX_V/Math.sqrt(v2);
+    mfpVX[i]*=s; mfpVY[i]*=s; mfpVZ[i]*=s; mfpAudit.motionClamps++;
+  }
+  const w2=mfpWX[i]*mfpWX[i]+mfpWY[i]*mfpWY[i]+mfpWZ[i]*mfpWZ[i];
+  if(w2>MFPHYS_MAX_W*MFPHYS_MAX_W){
+    const s=MFPHYS_MAX_W/Math.sqrt(w2);
+    mfpWX[i]*=s; mfpWY[i]*=s; mfpWZ[i]*=s; mfpAudit.motionClamps++;
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -281,15 +415,32 @@ function mfPhysStep(dt){
   if(!mfpEnabled||mfpLive<=0){ mfpAwake=0; mfpStepMs=mfpStepMs*0.9; return; }
   if(!(dt>0)) return;
   if(dt>0.1) dt=0.1;                    // never integrate a stall
+  mfPhysTrimToBudget();
+  if(mfpLive<=0){ mfpAwake=0; return; }
   const t0=performance.now();
   let awake=0, live=0;
+  const viewB=mfPhysCamBounds();
+  const ps=Math.max(.2,Math.min(1,(typeof perfScale==='number'&&perfScale>0)?perfScale:1));
+  const pressure=Math.max(0,Math.min(1,mfpLive/Math.max(1,mfPhysBudget())));
+  const pressureAge=1+(1-ps)*.42+pressure*.68;
+  mfpAudit.steps++;
 
   for(let i=0;i<MFPHYS_MAX;i++){
     const st=mfpState[i];
     if(st===0) continue;
     live++;
-    mfpLife[i]-=dt;
-    if(mfpLife[i]<=0){ mfpState[i]=0; live--; continue; }
+    const view=mfPhysViewSample(i,viewB),subpixel=mfpViewPx<1.5;
+    let ageMul=pressureAge;
+    if(view===1)ageMul*=1.75;else if(view===2)ageMul*=3.40;
+    if(subpixel)ageMul*=1.55;
+    if(st===2)ageMul*=1.35;
+    mfpAudit.acceleratedLife+=dt*Math.max(0,ageMul-1);
+    mfpLife[i]-=dt*ageMul;
+    if(mfpLife[i]<=0){
+      mfpState[i]=0;live--;mfpAudit.retired++;
+      if(view>0)mfpAudit.offscreenRetires++;if(subpixel)mfpAudit.subpixelRetires++;
+      continue;
+    }
 
     /* Sleeping bodies are skipped entirely, but the ground under them can
        still move — a crater opening beneath settled rubble has to relaunch
@@ -428,7 +579,11 @@ function mfPhysStep(dt){
 
     /* A body that has fallen through the world (map edge, a torn heightfield)
        is retired rather than integrated forever. */
-    if(mfpZ[i]<-400||!(mfpX[i]===mfpX[i])||!(mfpZ[i]===mfpZ[i])){ mfpState[i]=0; live--; awake--; }
+    if(mfpZ[i]<-400||!Number.isFinite(mfpX[i])||!Number.isFinite(mfpY[i])||
+       !Number.isFinite(mfpZ[i])||!Number.isFinite(mfpVX[i])||
+       !Number.isFinite(mfpVY[i])||!Number.isFinite(mfpVZ[i])){
+      mfpState[i]=0; live--; awake--; mfpAudit.retired++; mfpAudit.invalidRetires++;
+    }
   }
   mfpLive=live; mfpAwake=awake;
   /* Exponential average — a single frame's number is noise on a WebView. */
@@ -441,6 +596,7 @@ function mfPhysStep(dt){
    --------------------------------------------------------------------------- */
 function mfPhysImpulse(x,y,z,radius,power){
   if(!mfpEnabled||mfpLive<=0) return 0;
+  mfpAudit.impulseEvents++;
   const r2=radius*radius;
   let hit=0;
   for(let i=0;i<MFPHYS_MAX;i++){
@@ -459,10 +615,76 @@ function mfPhysImpulse(x,y,z,radius,power){
     const ul=Math.sqrt(ux*ux+uy*uy+uz*uz)||1;
     const off=Math.max(mfpHX[i],mfpHY[i],mfpHZ[i])*0.7;
     mfPhysApplyImpulse(i,ux/ul*mag,uy/ul*mag,uz/ul*mag,
-      (Math.random()*2-1)*off,(Math.random()*2-1)*off,(Math.random()*2-1)*off);
+      (mfPhysRand()*2-1)*off,(mfPhysRand()*2-1)*off,(mfPhysRand()*2-1)*off);
     hit++;
   }
+  mfpAudit.impulseHits+=hit;
   return hit;
+}
+
+/* ---------------------------------------------------------------------------
+   PUBLIC: bounded attraction field. This is deliberately an acceleration,
+   not an outward-style impulse multiplied by body mass: every loose chunk
+   should visibly fall into a singularity, while the authoritative unit mass
+   resistance remains in sim.js. `tangent` adds an accretion-orbit component;
+   `consumeRadius` retires cosmetic matter that crosses the horizon.
+   --------------------------------------------------------------------------- */
+function mfPhysAttract(x,y,z,radius,strength,dt,tangent,consumeRadius){
+  if(!mfpEnabled||mfpLive<=0||!Number.isFinite(x)||!Number.isFinite(y)||
+     !Number.isFinite(z)||!Number.isFinite(radius)||!Number.isFinite(strength)||
+     !Number.isFinite(dt)||!(dt>0)||!(radius>0)||!(strength>0)) return 0;
+  mfpAudit.attractEvents++;
+  /* The positional form is the shipped compatibility surface:
+       attract(x,y,z,radius,strength,dt,orbit,consumeRadius)
+     New callers may pass an options object in `orbit` without creating a
+     second singularity API. All limits are presentation-only and deterministic. */
+  const o=tangent&&typeof tangent==='object'?tangent:null;
+  let orbit=o?o.orbit:tangent;
+  orbit=Number.isFinite(orbit)?Math.max(-1.5,Math.min(1.5,orbit)):0;
+  let horizon=o?o.consumeRadius:consumeRadius;
+  horizon=Number.isFinite(horizon)?Math.max(0,Math.min(radius*.85,horizon)):0;
+  const maxConsume=Math.max(0,Math.min(16,Math.floor(o&&Number.isFinite(o.maxConsume)?o.maxConsume:6)));
+  const maxAccel=Math.max(1,Math.min(2400,o&&Number.isFinite(o.maxAcceleration)?o.maxAcceleration:strength));
+  const maxSpeed=Math.max(8,Math.min(MFPHYS_MAX_V,o&&Number.isFinite(o.maxSpeed)?o.maxSpeed:MFPHYS_MAX_V));
+  const verticalScale=Math.max(0,Math.min(1.5,o&&Number.isFinite(o.verticalScale)?o.verticalScale:1));
+  const step=Math.min(dt,1/15);
+  if(step!==dt||maxAccel!==strength) mfpAudit.attractClamps++;
+  const r2=radius*radius;
+  const horizon2=horizon*horizon;
+  let hit=0, consumed=0;
+  for(let i=0;i<MFPHYS_MAX;i++){
+    const state=mfpState[i];
+    if(state===0) continue;
+    const dx=x-mfpX[i],dy=y-mfpY[i],dz=z-mfpZ[i];
+    const d2=dx*dx+dy*dy+dz*dz;
+    if(d2>r2) continue;
+    if(horizon>0&&d2<=horizon2&&consumed<maxConsume){
+      mfpState[i]=0;
+      mfpLive=Math.max(0,mfpLive-1);
+      if(state===1) mfpAwake=Math.max(0,mfpAwake-1);
+      mfpAudit.retired++; consumed++; continue;
+    }
+    const d=Math.sqrt(d2)||0.001, fall=1-d/radius;
+    const accel=Math.min(maxAccel,strength*fall*fall);
+    const invD=1/d, tx=-dy*invD,ty=dx*invD;
+    if(state===2) mfpAudit.attractWakeups++;
+    mfPhysWake(i);
+    mfpVX[i]+=(dx*invD+tx*orbit)*accel*step;
+    mfpVY[i]+=(dy*invD+ty*orbit)*accel*step;
+    mfpVZ[i]+=dz*invD*accel*verticalScale*step;
+    const v2=mfpVX[i]*mfpVX[i]+mfpVY[i]*mfpVY[i]+mfpVZ[i]*mfpVZ[i];
+    if(v2>maxSpeed*maxSpeed){
+      const s=maxSpeed/Math.sqrt(v2);
+      mfpVX[i]*=s;mfpVY[i]*=s;mfpVZ[i]*=s;
+      mfpAudit.motionClamps++;mfpAudit.attractClamps++;
+    }
+    mfpSleepT[i]=0;
+    if(accel>mfpAudit.attractPeakAccel) mfpAudit.attractPeakAccel=accel;
+    hit++;
+  }
+  mfpAudit.attractHits+=hit;
+  mfpAudit.attractConsumed+=consumed;
+  return hit+consumed;
 }
 
 /* ---------------------------------------------------------------------------
@@ -471,26 +693,49 @@ function mfPhysImpulse(x,y,z,radius,power){
 function mfPhysBurst(x,y,z,size,o){
   if(!mfpEnabled) return 0;
   o=o||{};
+  mfpAudit.burstEvents++;
   const ps=(typeof perfScale==='number'&&perfScale>0)?perfScale:1;
   const room=Math.max(0,mfPhysBudget()-mfpLive);
-  let n=Math.round((o.count!==undefined?o.count:Math.max(3,Math.min(14,2+size*0.30)))*Math.max(0.45,ps));
+  const raw=Math.max(0,Math.round(o.count!==undefined?o.count:Math.max(1,2+size*0.30)));
+  const requested=Math.min(MFPHYS_EVENT_MAX,raw);
+  if(raw>requested) mfpAudit.groupClamps++;
+  let n=requested>0?Math.max(1,Math.round(requested*Math.max(0.45,ps))):0;
   n=Math.min(n,room);
   if(n<=0) return 0;
+  if(n>mfpAudit.maxGroup) mfpAudit.maxGroup=n;
   const sp=o.speed!==undefined?o.speed:(24+size*0.9);
   const up=o.up!==undefined?o.up:(70+size*1.5);
   const r=o.r!==undefined?o.r:150, g=o.g!==undefined?o.g:142, b=o.b!==undefined?o.b:126;
+  let aim=0,aimed=false;
+  if(o.direction&&o.direction.length>=2){
+    const dl=Math.hypot(o.direction[0],o.direction[1]);
+    if(dl>.0001){aim=Math.atan2(o.direction[1]/dl,o.direction[0]/dl);aimed=true;}
+  }
+  const spread=o.spread!==undefined?Math.max(.05,o.spread):.62;
   let made=0;
   for(let k=0;k<n;k++){
-    const a=Math.random()*Math.PI*2, v=sp*(0.45+Math.random()*0.9);
-    const s=Math.max(0.5,size*(0.042+Math.random()*0.052));
-    const id=mfPhysSpawn(x+Math.cos(a)*size*0.22,y+Math.sin(a)*size*0.22,z+Math.random()*size*0.35,{
-      hx:s*(0.7+Math.random()*0.9), hy:s*(0.7+Math.random()*0.9), hz:s*(0.5+Math.random()*0.6),
-      vx:Math.cos(a)*v, vy:Math.sin(a)*v, vz:up*(0.5+Math.random()*0.8),
-      r:r,g:g,b:b, ttl:o.ttl||(11+Math.random()*7),
-      restitution:0.24, friction:0.66, chunks:o.chunks||2
+    const a=aimed?aim+(mfPhysRand()*2-1)*spread:mfPhysRand()*Math.PI*2;
+    const v=sp*(0.72+mfPhysRand()*0.62);
+    /* Each body is an unmistakable shard: one long axis and two unequal thin
+       axes. The former independent 0.7-1.6 multipliers frequently converged
+       on a cube and the 4.2% scale floor vanished at the tactical camera. */
+    const s=Math.max(.82,size*(.050+mfPhysRand()*.040));
+    const longAxis=(mfPhysRand()*3)|0,long=1.9+mfPhysRand()*.9;
+    const thinA=.52+mfPhysRand()*.32,thinB=.38+mfPhysRand()*.28;
+    const hx=s*(longAxis===0?long:longAxis===1?thinA:thinB);
+    const hy=s*(longAxis===1?long:longAxis===2?thinA:thinB);
+    const hz=s*(longAxis===2?long:longAxis===0?thinA:thinB);
+    const launchR=o.launchRadius!==undefined?Math.max(0,o.launchRadius):size*.12;
+    const id=mfPhysSpawn(x+Math.cos(a)*launchR,y+Math.sin(a)*launchR,z+mfPhysRand()*size*.28,{
+      hx:hx,hy:hy,hz:hz,
+      vx:Math.cos(a)*v, vy:Math.sin(a)*v, vz:up*(0.5+mfPhysRand()*0.8),
+      r:r,g:g,b:b, ttl:o.ttl||(11+mfPhysRand()*7),
+      restitution:0.24, friction:0.66,
+      chunks:o.chunks!==undefined?o.chunks:2,trail:!!o.trail
     });
     if(id>=0) made++;
   }
+  mfpAudit.rigidPieces+=made;
   return made;
 }
 
@@ -498,7 +743,7 @@ function mfPhysBurst(x,y,z,size,o){
    PUBLIC: STRUCTURE COLLAPSE.
    The current wreck path scales one uniform mesh to 22-38% for fourteen
    seconds (src/ui/render3d.js:1351). This breaks the same footprint into real
-   slabs that fall, hit the ground, tip over the debris already on it and come
+   1-3 large slabs that fall, hit the ground, tip over the debris already on it and come
    to rest at whatever angle they land at. Pieces are biased OUTWARD and
    DOWNWARD from the structure's own volume, so the pile grows from the
    footprint instead of erupting from a point.
@@ -506,44 +751,49 @@ function mfPhysBurst(x,y,z,size,o){
 function mfPhysCollapse(x,y,size,o){
   if(!mfpEnabled) return 0;
   o=o||{};
+  mfpAudit.collapseEvents++;
   const ps=(typeof perfScale==='number'&&perfScale>0)?perfScale:1;
   const room=Math.max(0,mfPhysBudget()-mfpLive);
   const sz=Math.max(8,Math.min(size||24,72));
-  /* Floored, not merely scaled. At the target device's perfScale of 0.4125 a
-     pure multiply gave a factory three pieces, which is not a collapse. */
-  let n=Math.min(room,Math.max(5,Math.round((4+sz*0.30)*Math.max(0.5,ps))));
+  const raw=Math.max(0,Math.round(o.count!==undefined?o.count:3));
+  const requested=Math.min(MFPHYS_EVENT_MAX,raw);
+  if(raw>requested) mfpAudit.groupClamps++;
+  let n=requested>0?Math.max(1,Math.round(requested*Math.max(0.45,ps))):0;
+  n=Math.min(room,n);
   if(n<=0) return 0;
+  if(n>mfpAudit.maxGroup) mfpAudit.maxGroup=n;
   const g=mfPhysGround(x,y);
   const civic=!!o.civic;
   const r=o.r!==undefined?o.r:(civic?146:132), gg=o.g!==undefined?o.g:(civic?140:128), b=o.b!==undefined?o.b:(civic?128:118);
   let made=0;
   for(let k=0;k<n;k++){
-    const a=Math.random()*Math.PI*2;
-    const rad=sz*0.14+Math.random()*sz*0.34;
+    const a=mfPhysRand()*Math.PI*2;
+    const rad=sz*0.14+mfPhysRand()*sz*0.34;
     /* Slabs, not cubes: one axis two to four times the others. A slab is what
        makes end-over-end rotation legible at RTS camera distance. */
     /* BT sizes are diameters (fac is size:48, r:24). Pieces sit between a
        sixth and a third of the footprint — big enough to read as masonry,
        small enough that a dozen of them look like a collapse. */
-    const base=sz*(0.026+Math.random()*0.034);
-    const longAxis=(Math.random()*3)|0;
-    const hx=base*(longAxis===0?2.0+Math.random()*1.0:0.72+Math.random()*0.46);
-    const hy=base*(longAxis===1?2.0+Math.random()*1.0:0.72+Math.random()*0.46);
-    const hz=base*(longAxis===2?1.7+Math.random()*0.9:0.44+Math.random()*0.38);
+    const base=sz*(0.036+mfPhysRand()*0.042);
+    const longAxis=(mfPhysRand()*3)|0;
+    const hx=base*(longAxis===0?2.0+mfPhysRand()*1.0:0.72+mfPhysRand()*0.46);
+    const hy=base*(longAxis===1?2.0+mfPhysRand()*1.0:0.72+mfPhysRand()*0.46);
+    const hz=base*(longAxis===2?2.15+mfPhysRand()*0.85:0.44+mfPhysRand()*0.38);
     /* Launch from the structure's own height band, thrown outward, with a
        modest lift — masonry falls, it does not fountain. */
-    const zStart=g+sz*(0.18+Math.random()*0.75);
-    const out=14+Math.random()*sz*0.55;
+    const zStart=g+sz*(0.18+mfPhysRand()*0.75);
+    const out=14+mfPhysRand()*sz*0.55;
     const id=mfPhysSpawn(x+Math.cos(a)*rad,y+Math.sin(a)*rad,zStart,{
       hx:hx, hy:hy, hz:hz,
-      vx:Math.cos(a)*out, vy:Math.sin(a)*out, vz:18+Math.random()*sz*1.05,
+      vx:Math.cos(a)*out, vy:Math.sin(a)*out, vz:18+mfPhysRand()*sz*1.05,
       r:r,g:gg,b:b,
-      ttl:o.ttl||(24+Math.random()*10),
+      ttl:o.ttl||(24+mfPhysRand()*10),
       restitution:0.15, friction:0.78,
       chunks:Math.max(3,Math.min(MFPHYS_CHUNKS,3+((sz/22)|0)))
     });
     if(id>=0) made++;
   }
+  mfpAudit.rigidPieces+=made;
   return made;
 }
 
@@ -553,15 +803,17 @@ function mfPhysCollapse(x,y,size,o){
    --------------------------------------------------------------------------- */
 function mfPhysBlast(x,y,size,o){
   if(!mfpEnabled) return 0;
+  o=o||{};
+  mfpAudit.blastEvents++;
   const g=mfPhysGround(x,y);
   const sz=Math.max(3,size||8);
   mfPhysImpulse(x,y,g+sz*0.30,sz*2.6,sz*0.36);
   /* Only hull-scale detonations mint bodies. Every rifle hit calling
      mfPhysBurst would evict a collapsing factory's rubble within a second —
      the budget is small on purpose and structure collapse has first claim. */
-  if(sz<12) return 0;
+  if(sz<12&&!(o.count>0)) return 0;
   return mfPhysBurst(x,y,g+sz*0.25,sz,
-    Object.assign({count:Math.min(5,2+Math.round(sz*0.10))},o||{}));
+    Object.assign({count:Math.min(3,2+Math.round(sz*0.10))},o));
 }
 
 /* ---------------------------------------------------------------------------
@@ -579,7 +831,13 @@ let mfpDraw=null;
 function mfPhysDrawStream(){
   if(typeof FX==='undefined'||!FX) return null;
   if(mfpDraw&&mfpDraw.mesh) return mfpDraw;
-  if(FX.wreck)      mfpDraw={mesh:FX.wreck, halfW:8.15, cy:4.0};
+  /* Rigid debris is fractured material, not a miniature wreck token. The
+     wreck mesh has rectangular panels and a pale cap, so clustered bodies
+     read as tiny cubes around the blast. mdlShard is a closed asymmetric
+     extrusion; multiple overlapping instances form a jagged slab while the
+     solver still owns the body's full 3-axis tumble and terrain contact. */
+  if(FX.shard)      mfpDraw={mesh:FX.shard, halfW:0.62, cy:0.0};
+  else if(FX.wreck) mfpDraw={mesh:FX.wreck, halfW:8.15, cy:4.0};
   else if(FX.rock)  mfpDraw={mesh:FX.rock,  halfW:10.0, cy:3.6};
   else if(FX.crate) mfpDraw={mesh:FX.crate, halfW:10.8, cy:10.0};
   else return null;
@@ -587,6 +845,10 @@ function mfPhysDrawStream(){
 }
 function mfPhysEmit(){
   mfpFrame++;
+  mfpAudit.emitCalls++;
+  /* Pausing freezes mfPhysStep, not presentation. Instanced streams are
+     flushed every render, so the same frozen bodies must be re-submitted or
+     every shard disappears the instant a capture/pause overlay opens. */
   if(!mfpEnabled||mfpLive<=0){ mfpChunksDrawn=0; return 0; }
   const D=mfPhysDrawStream();
   if(!D||!D.mesh||typeof D.mesh.add!=='function'){ mfpChunksDrawn=0; return 0; }
@@ -603,9 +865,40 @@ function mfPhysEmit(){
     if(mfpState[i]===0) continue;
     const x=mfpX[i], y=mfpY[i];
     if(x<bx0||x>bx1||y<by0||y>by1) continue;
+    /* Destruction is not intelligence. Enemy rubble can be spawned by combat
+       outside allied vision, so the renderer must obey the same disclosure
+       gate as every other battlefield effect. */
+    if(typeof fogPointVisible==='function'&&!fogPointVisible(x,y)) continue;
     /* Fade out over the last second rather than blinking off. */
     const a=mfpLife[i]<1?Math.max(0,mfpLife[i])*255:255;
     if(a<=4) continue;
+    /* One short velocity-aligned streak belongs to this rigid body. It is
+       queued straight into the render stream and creates no particle/entity,
+       so three bodies remain one bounded debris layer and paused renders
+       cannot grow a pool. Only the fast, early ballistic phase receives it. */
+    const age=1-mfpLife[i]/Math.max(.001,mfpTTL[i]);
+    const flightAge=Math.max(0,mfpTTL[i]-mfpLife[i]);
+    const speed=Math.hypot(mfpVX[i],mfpVY[i],mfpVZ[i]);
+    if(mfpTrail[i]&&mfpState[i]===1&&flightAge<.72&&speed>18&&
+       typeof FX!=='undefined'&&FX.beam){
+      const lag=Math.min(.13,.050+flightAge*.11),tx=x-mfpVX[i]*lag,ty=y-mfpVY[i]*lag;
+      const floor=mfPhysPlaneAt(i,tx,ty)+.35,tz=Math.max(floor,mfpZ[i]-mfpVZ[i]*lag);
+      const fade=Math.max(0,1-flightAge/.72);
+      const w=Math.max(.46,Math.min(1.40,Math.max(mfpHX[i],mfpHY[i],mfpHZ[i])*.16));
+      const tr=Math.max(146,mfpR[i]),tg=Math.max(104,mfpG[i]),tb=Math.max(68,mfpB[i]);
+      /* Soft heated wake plus a narrow leading velocity line. Both are
+         render-only stamps on this one body—no pool growth and no extra
+         logical layer. The paired widths remain readable against fire and
+         disappear before the first bounce. */
+      if(typeof addBeamRibbon==='function'&&typeof sprites!=='undefined'&&sprites.glow){
+        addBeamRibbon(sprites.glow,tx,tz,ty,x,mfpZ[i],y,w*1.55,tr,tg,tb,26+44*fade,150);
+        addBeamRibbon(sprites.glow,tx,tz,ty,x,mfpZ[i],y,w*.48,255,218,164,54+72*fade,150);
+      }else if(typeof addBeam3D==='function'){
+        addBeam3D(FX.beam,tx,tz,ty,x,mfpZ[i],y,w,tr,tg,tb,72+98*fade,
+          {projectile:1,noMuzzle:true});
+      }
+      mfpAudit.velocityTrails++;
+    }
     /* Yaw for the instance stream: the heading of the body's own +X axis
        projected onto the ground plane. Positions carry pitch and roll. */
     mfPhysRot(i,1,0,0,_mfpA);
@@ -621,6 +914,7 @@ function mfPhysEmit(){
     }
   }
   mfpChunksDrawn=drawn;
+  mfpAudit.emittedChunks+=drawn;
   mfpEmitMs=mfpEmitMs*0.86+(performance.now()-t0)*0.14;
   return drawn;
 }
@@ -651,7 +945,9 @@ function mfPhysHook(){
 
 function mfPhysClear(){
   for(let i=0;i<MFPHYS_MAX;i++) mfpState[i]=0;
-  mfpLive=0; mfpAwake=0; mfpChunksDrawn=0;
+  mfpLive=0; mfpAwake=0; mfpChunksDrawn=0; mfpSeqNext=1;
+  mfPhysResetAudit();
+  mfPhysSeed();
 }
 function mfPhysEnable(on){ mfpEnabled=!!on; if(!mfpEnabled) mfPhysClear(); }
 
@@ -660,14 +956,76 @@ function mfPhysStats(){
   for(let i=0;i<MFPHYS_MAX;i++){ if(mfpState[i]===0) continue; live++; if(mfpState[i]===1) awake++; }
   return {bodies:live, awake:awake, asleep:live-awake,
           chunks:mfpChunksDrawn, budget:mfPhysBudget(),
-          stepMs:mfpStepMs, emitMs:mfpEmitMs, hooked:mfpHooked, enabled:mfpEnabled};
+          eventMax:MFPHYS_EVENT_MAX, stepMs:mfpStepMs, emitMs:mfpEmitMs,
+          velocityTrails:mfpAudit.velocityTrails,
+          pausedEmitSkips:mfpAudit.pausedEmitSkips, budgetTrims:mfpAudit.budgetTrims,
+          attractEvents:mfpAudit.attractEvents, attractHits:mfpAudit.attractHits,
+          attractConsumed:mfpAudit.attractConsumed, attractClamps:mfpAudit.attractClamps,
+          attractWakeups:mfpAudit.attractWakeups, attractPeakAccel:mfpAudit.attractPeakAccel,
+          offscreenRetires:mfpAudit.offscreenRetires,subpixelRetires:mfpAudit.subpixelRetires,
+          hooked:mfpHooked, enabled:mfpEnabled};
+}
+
+/* Exact float32 state hash for replay/device probes. It intentionally omits
+   timing telemetry and render counters; equal seeds + event/step sequences
+   should yield the same hash even when frames are rendered at different rates. */
+const _mfpHashBuf=new ArrayBuffer(4), _mfpHashView=new DataView(_mfpHashBuf);
+function mfPhysHashFloat(h,v){
+  _mfpHashView.setFloat32(0,v,true);
+  return mfPhysHashWord(h,_mfpHashView.getUint32(0,true));
+}
+function mfPhysStateHash(){
+  let h=2166136261>>>0;
+  for(let i=0;i<MFPHYS_MAX;i++){
+    if(mfpState[i]===0) continue;
+    h=mfPhysHashWord(h,i); h=mfPhysHashWord(h,mfpState[i]);
+    h=mfPhysHashFloat(h,mfpX[i]); h=mfPhysHashFloat(h,mfpY[i]); h=mfPhysHashFloat(h,mfpZ[i]);
+    h=mfPhysHashFloat(h,mfpVX[i]); h=mfPhysHashFloat(h,mfpVY[i]); h=mfPhysHashFloat(h,mfpVZ[i]);
+    h=mfPhysHashFloat(h,mfpQX[i]); h=mfPhysHashFloat(h,mfpQY[i]);
+    h=mfPhysHashFloat(h,mfpQZ[i]); h=mfPhysHashFloat(h,mfpQW[i]);
+    h=mfPhysHashFloat(h,mfpWX[i]); h=mfPhysHashFloat(h,mfpWY[i]); h=mfPhysHashFloat(h,mfpWZ[i]);
+    h=mfPhysHashFloat(h,mfpLife[i]);
+  }
+  return ('00000000'+(h>>>0).toString(16)).slice(-8);
+}
+function mfPhysProbe(reset){
+  let live=0, finite=true;
+  for(let i=0;i<MFPHYS_MAX;i++){
+    if(mfpState[i]===0) continue;
+    live++;
+    if(!Number.isFinite(mfpX[i])||!Number.isFinite(mfpY[i])||!Number.isFinite(mfpZ[i])||
+       !Number.isFinite(mfpVX[i])||!Number.isFinite(mfpVY[i])||!Number.isFinite(mfpVZ[i])) finite=false;
+  }
+  const out={
+    bodies:live, budget:mfPhysBudget(), withinBudget:live<=mfPhysBudget(), finite:finite,
+    eventMax:MFPHYS_EVENT_MAX, maxGroup:mfpAudit.maxGroup,
+    layerBounded:mfpAudit.maxGroup<=MFPHYS_EVENT_MAX,
+    stateHash:mfPhysStateHash(), seed:mfpSeedBase>>>0, rngState:mfpRandState>>>0,
+    steps:mfpAudit.steps, spawns:mfpAudit.spawns, retired:mfpAudit.retired,
+    invalidRetires:mfpAudit.invalidRetires, evictions:mfpAudit.evictions,
+    budgetTrims:mfpAudit.budgetTrims, motionClamps:mfpAudit.motionClamps,
+    groundQueries:mfpAudit.groundQueries, burstEvents:mfpAudit.burstEvents,
+    collapseEvents:mfpAudit.collapseEvents, blastEvents:mfpAudit.blastEvents,
+    impulseEvents:mfpAudit.impulseEvents, impulseHits:mfpAudit.impulseHits,
+    attractEvents:mfpAudit.attractEvents, attractHits:mfpAudit.attractHits,
+    attractConsumed:mfpAudit.attractConsumed, attractClamps:mfpAudit.attractClamps,
+    attractWakeups:mfpAudit.attractWakeups, attractPeakAccel:mfpAudit.attractPeakAccel,
+    rigidPieces:mfpAudit.rigidPieces, groupClamps:mfpAudit.groupClamps,
+    rngDraws:mfpAudit.rngDraws, emitCalls:mfpAudit.emitCalls,
+    emittedChunks:mfpAudit.emittedChunks, velocityTrails:mfpAudit.velocityTrails,
+    pausedEmitSkips:mfpAudit.pausedEmitSkips,
+    offscreenRetires:mfpAudit.offscreenRetires,subpixelRetires:mfpAudit.subpixelRetires,
+    acceleratedLife:mfpAudit.acceleratedLife
+  };
+  if(reset) mfPhysResetAudit();
+  return out;
 }
 
 /* Read-only view for any system that wants to draw or query bodies itself —
    a renderer with a real orientation attribute, an audio impact layer, or a
    test harness. cb(handle, view) with view reused between calls. */
 const _mfpView={i:0,x:0,y:0,z:0,vx:0,vy:0,vz:0,wx:0,wy:0,wz:0,
-                qx:0,qy:0,qz:0,qw:1,hx:0,hy:0,hz:0,life:0,asleep:false};
+                qx:0,qy:0,qz:0,qw:1,hx:0,hy:0,hz:0,life:0,ttl:0,trail:false,asleep:false};
 function mfPhysForEach(cb){
   let n=0;
   for(let i=0;i<MFPHYS_MAX;i++){
@@ -678,7 +1036,8 @@ function mfPhysForEach(cb){
     _mfpView.wx=mfpWX[i]; _mfpView.wy=mfpWY[i]; _mfpView.wz=mfpWZ[i];
     _mfpView.qx=mfpQX[i]; _mfpView.qy=mfpQY[i]; _mfpView.qz=mfpQZ[i]; _mfpView.qw=mfpQW[i];
     _mfpView.hx=mfpHX[i]; _mfpView.hy=mfpHY[i]; _mfpView.hz=mfpHZ[i];
-    _mfpView.life=mfpLife[i]; _mfpView.asleep=mfpState[i]===2;
+    _mfpView.life=mfpLife[i]; _mfpView.ttl=mfpTTL[i]; _mfpView.trail=!!mfpTrail[i];
+    _mfpView.asleep=mfpState[i]===2;
     cb(i,_mfpView); n++;
   }
   return n;
@@ -692,12 +1051,14 @@ function mfPhysForEach(cb){
    function declarations, exactly like every other system in this build.
    --------------------------------------------------------------------------- */
 (function mfPhysInit(){
+  mfPhysSeed();
   if(typeof window==='undefined') return;
   window.MFPhys={
     spawn:mfPhysSpawn, burst:mfPhysBurst, collapse:mfPhysCollapse,
-    blast:mfPhysBlast, impulse:mfPhysImpulse, step:mfPhysStep,
-    emit:mfPhysEmit, stats:mfPhysStats, clear:mfPhysClear,
-    enable:mfPhysEnable, forEach:mfPhysForEach, budget:mfPhysBudget
+    blast:mfPhysBlast, impulse:mfPhysImpulse, attract:mfPhysAttract, step:mfPhysStep,
+    emit:mfPhysEmit, stats:mfPhysStats, probe:mfPhysProbe, stateHash:mfPhysStateHash,
+    seed:mfPhysSeed, clear:mfPhysClear, enable:mfPhysEnable,
+    forEach:mfPhysForEach, budget:mfPhysBudget
   };
   /* Try once now in case the load order ever changes; harmless if render() is
      not there yet, because mfPhysSpawn retries. */

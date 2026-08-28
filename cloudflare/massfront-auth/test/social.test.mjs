@@ -73,6 +73,9 @@ class MockStatement {
     catch (e) { throw new Error('D1_ERROR: ' + e.message); }
   }
   async run() {
+    return this._runSync();
+  }
+  _runSync() {
     const { stmt, params } = this._prep();
     try {
       const r = stmt.run(...params);
@@ -84,6 +87,21 @@ class MockStatement {
 class MockD1 {
   constructor(db) { this.db = db; }
   prepare(sql) { return new MockStatement(this.db, sql, []); }
+  async batch(statements) {
+    /* D1 batch() executes sequentially and atomically. Mirror that contract,
+       including one SQLite connection so changes() in statement N+1 observes
+       statement N. No await inside the transaction: Promise.all race tests
+       must not interleave half of one batch with half of another. */
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const out = statements.map((statement) => statement._runSync());
+      this.db.exec('COMMIT');
+      return out;
+    } catch (e) {
+      try { this.db.exec('ROLLBACK'); } catch (_rollbackError) {}
+      throw e;
+    }
+  }
 }
 
 function openDb() {
@@ -92,8 +110,18 @@ function openDb() {
      ON DELETE CASCADE would quietly clean up after the account-delete handler
      and the purge test would pass without the handler doing anything. */
   db.exec('PRAGMA foreign_keys = OFF;');
+  /* schema.sql is the synchronised SNAPSHOT of the ledger's end state, so it
+     already carries the two social columns that legacy 0001 used to add with
+     ALTER. Applying migrations-legacy/0001 on top would now fail with
+     `duplicate column name` — that file is archived precisely because it can
+     only ever run once, against the pre-19-August shape. The ledger, not the
+     legacy file, is the source of truth here. */
   db.exec(readFileSync(join(ROOT, 'schema.sql'), 'utf8'));
-  db.exec(readFileSync(join(ROOT, 'migrations', '0001-social-columns.sql'), 'utf8'));
+  /* 0002 is deliberately idempotent. Apply it twice so the test proves that
+     operational promise instead of merely repeating the comment. */
+  const chatMigration = readFileSync(join(ROOT, 'migrations-ledger', '0002-chat-presence.sql'), 'utf8');
+  db.exec(chatMigration);
+  db.exec(chatMigration);
   return db;
 }
 
@@ -189,6 +217,12 @@ const SOCIAL_ROUTES = [
   ['POST', '/social/block', { username: 'somebody' }],
   ['POST', '/social/unblock', { username: 'somebody' }],
   ['POST', '/social/report', { username: 'somebody', reason: 'spam' }],
+  ['GET', '/social/capabilities', undefined],
+  ['POST', '/social/message/send', { username: 'somebody', body: 'hello' }],
+  ['GET', '/social/messages?with=somebody', undefined],
+  ['POST', '/social/message/report', { messageId: 1, reason: 'spam' }],
+  ['POST', '/social/presence', { state: 'online' }],
+  ['GET', '/social/presence', undefined],
 ];
 const NEW_ROUTES = [['POST', '/verify/request', undefined], ['POST', '/verify/confirm', { code: '123456' }]]
   .concat(SOCIAL_ROUTES);
@@ -199,6 +233,32 @@ const NEW_ROUTES = [['POST', '/verify/request', undefined], ['POST', '/verify/co
 const db = openDb();
 const env = { DB: new MockD1(db), DEV_ECHO_CODE: '1' };
 const envProd = { DB: new MockD1(db) };            // no dev echo — same database
+const SAFETY_CALLS = [];
+const CONTENT_SAFETY = {
+  async fetch(req) {
+    const body = await req.json();
+    SAFETY_CALLS.push(body);
+    if (String(body.text).indexOf('[fail]') >= 0) return new Response('down', { status: 503 });
+    return new Response(JSON.stringify({ allow: String(body.text).indexOf('[reject]') < 0 }),
+      { status: 200, headers: { 'content-type': 'application/json' } });
+  },
+};
+/* Deliberately simple explicit test binding: it proves chat can be enabled
+   with a real binding contract even when the test only needs normalization,
+   while an absent binding remains a hard capability failure. */
+const NORMALIZATION_ONLY_SAFETY = {
+  async fetch() {
+    return new Response(JSON.stringify({ allow: true }),
+      { status: 200, headers: { 'content-type': 'application/json' } });
+  },
+};
+const envSocialOn = {
+  DB: new MockD1(db), DEV_ECHO_CODE: '1',
+  SOCIAL_CHAT_ENABLED: '1', SOCIAL_PRESENCE_ENABLED: '1', CONTENT_SAFETY,
+};
+const envLobbyOn = {
+  ...envSocialOn, MULTIPLAYER_LOBBIES_ENABLED:'1', MULTIPLAYER_INVITES_ENABLED:'1',
+};
 const worker = await loadWorker(SRC);
 const count = (sql, ...a) => Number(db.prepare(sql).get(...a).n);
 
@@ -206,8 +266,12 @@ const count = (sql, ...a) => Number(db.prepare(sql).get(...a).n);
 {
   const tables = db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map((r) => r.name);
-  for (const t of ['blocks', 'email_verifications', 'friend_requests', 'friendships', 'messages', 'reports'])
+  for (const t of ['blocks', 'email_verifications', 'friend_requests', 'friendships', 'messages', 'presence', 'reports',
+    'multiplayer_lobbies','multiplayer_lobby_members','multiplayer_invites'])
     check('schema: table ' + t + ' exists', tables.indexOf(t) >= 0, tables.join(','));
+  const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name").all().map((r) => r.name);
+  for (const i of ['idx_messages_from', 'idx_messages_to_page', 'idx_presence_expires'])
+    check('schema: index ' + i + ' exists', indexes.indexOf(i) >= 0, indexes.join(','));
   const cols = db.prepare("SELECT name FROM pragma_table_info('users')").all().map((r) => r.name);
   check('migration: users.verified_at exists', cols.indexOf('verified_at') >= 0, cols.join(','));
   check('migration: users.social_banned exists', cols.indexOf('social_banned') >= 0, cols.join(','));
@@ -249,6 +313,11 @@ const banned = await makeUser(worker, env, db, 'bannedone');
 const noage = await makeUser(worker, env, db, 'noageone');
 const zed = await makeUser(worker, env, db, 'zed');
 const capper = await makeUser(worker, env, db, 'capper');
+const msga = await makeUser(worker, env, db, 'msga');
+const msgb = await makeUser(worker, env, db, 'msgb');
+const lurker = await makeUser(worker, env, db, 'lurker');
+const mailok = await makeUser(worker, env, db, 'mailok');
+const mailbad = await makeUser(worker, env, db, 'mailbad');
 
 /* ---- 3. every new route 401s without a token -------------------------------- */
 for (const [method, path, body] of NEW_ROUTES) {
@@ -297,12 +366,59 @@ for (const [method, path, body] of NEW_ROUTES) {
   check('CONTROL a code was still issued', count('SELECT COUNT(*) AS n FROM email_verifications WHERE user_id=?', bob.id) === 1);
   db.prepare('DELETE FROM email_verifications WHERE user_id=?').run(bob.id);
 }
+/* Native Cloudflare Email Service MessageBuilder. No live binding is used:
+   this captures the exact object handed to env.EMAIL.send(). */
+{
+  const deliveries = [];
+  const envMail = {
+    DB: new MockD1(db), MAIL_FROM: 'verify@massfront.test',
+    EMAIL: { async send(message) { deliveries.push(message); return { messageId: 'local-test' }; } },
+  };
+  const r = await call(worker, envMail, 'POST', '/verify/request', { token: mailok.token, ip: mailok.ip });
+  eq('native email request 200', r.status, 200);
+  check('native email binding reports sent:true', r.body.sent === true, r.text);
+  check('production email response does not echo code', r.body.code === undefined, r.text);
+  eq('native email binding called exactly once', deliveries.length, 1);
+  const msg = deliveries[0] || {};
+  eq('native email recipient is session address', msg.to, mailok.email);
+  eq('native email sender is MAIL_FROM', msg.from, 'verify@massfront.test');
+  check('native email uses bounded structured fields',
+    Object.keys(msg).sort().join(',') === 'from,html,subject,text,to', Object.keys(msg).join(','));
+  const codeMatch = /\b([0-9]{6})\b/.exec(String(msg.text || ''));
+  check('native email contains one six-digit code', !!codeMatch, msg.subject || '');
+  check('native email states the expiry', String(msg.text).indexOf('15 minutes') >= 0, msg.text);
+  const confirm = await call(worker, envMail, 'POST', '/verify/confirm', {
+    token: mailok.token, ip: mailok.ip, body: { code: codeMatch ? codeMatch[1] : '' },
+  });
+  eq('native email code confirms successfully', confirm.status, 200);
+
+  let badCalls = 0;
+  const envBadFrom = {
+    DB: new MockD1(db), MAIL_FROM: 'not-an-address',
+    EMAIL: { async send() { badCalls++; } },
+  };
+  const badFrom = await call(worker, envBadFrom, 'POST', '/verify/request', { token: mailbad.token, ip: mailbad.ip });
+  check('invalid MAIL_FROM preserves sent:false fallback', badFrom.status === 200 && badFrom.body.sent === false, badFrom.text);
+  eq('invalid MAIL_FROM never calls binding', badCalls, 0);
+  const envMailThrow = {
+    DB: new MockD1(db), MAIL_FROM: 'verify@massfront.test',
+    EMAIL: { async send() { throw new Error('provider body must not escape'); } },
+  };
+  const thrown = await call(worker, envMailThrow, 'POST', '/verify/request', { token: mailbad.token, ip: mailbad.ip });
+  check('email provider throw preserves 200 + sent:false', thrown.status === 200 && thrown.body.sent === false, thrown.text);
+  check('provider error text is not reflected', thrown.text.indexOf('provider body') < 0, thrown.text);
+  const emailFn = SRC.slice(SRC.indexOf('async function sendVerificationEmail'), SRC.indexOf('async function handleVerifyRequest'));
+  check('email integration contains no logging call', !/console\s*\./.test(emailFn), emailFn.slice(0, 120));
+}
 await verifyUser(worker, env, bob);
 await verifyUser(worker, env, carol);
 await verifyUser(worker, env, dave);
 await verifyUser(worker, env, banned);
 await verifyUser(worker, env, noage);
 await verifyUser(worker, env, zed);
+await verifyUser(worker, env, msga);
+await verifyUser(worker, env, msgb);
+await verifyUser(worker, env, lurker);
 db.prepare('UPDATE users SET social_banned=1 WHERE id=?').run(banned.id);
 db.prepare('UPDATE users SET age_ok=0 WHERE id=?').run(noage.id);
 
@@ -350,10 +466,10 @@ for (const [method, path, body] of SOCIAL_ROUTES) {
   check('banned 403 on ' + method + ' ' + path,
         r.status === 403 && r.body && r.body.error === 'social_banned', r.status + ' ' + r.text);
 }
-{
-  const r = await call(worker, env, 'GET', '/social/friends', { token: noage.token });
-  eq('age_ok=0 is age_restricted', r.body.error, 'age_restricted');
-  eq('age_ok=0 status', r.status, 403);
+for (const [method, path, body] of SOCIAL_ROUTES) {
+  const r = await call(worker, env, method, path, { token: noage.token, body });
+  check('age-restricted 403 on ' + method + ' ' + path,
+        r.status === 403 && r.body && r.body.error === 'age_restricted', r.status + ' ' + r.text);
 }
 /* CONTROL for all of the above: a verified, aged, unbanned account gets
    through the very same route. Without this, a handler that 403s
@@ -442,6 +558,29 @@ let reqId = 0;
   const pendingBefore = count("SELECT COUNT(*) AS n FROM friend_requests WHERE status='pending'");
   check('CONTROL a pending request exists before block', pendingBefore >= 1, String(pendingBefore));
 
+  /* Plant live lobby invites in BOTH directions plus one unrelated control.
+     The block route, not a cascade, must revoke exactly the pair. */
+  const blockNow = Date.now(), blockExpiry = blockNow + 600000;
+  const blockLobbyA = 'a1'.repeat(16), blockLobbyB = 'b2'.repeat(16), blockLobbyOther = 'c3'.repeat(16);
+  const insLobby = db.prepare(
+    "INSERT INTO multiplayer_lobbies(id,code,host_id,state,revision,rules_json,created_at,expires_at) VALUES (?,? ,?,'waiting',1,'{\"slots\":4}',?,?)");
+  insLobby.run(blockLobbyA, 'A1B2C3D4', alice.id, blockNow, blockExpiry);
+  insLobby.run(blockLobbyB, 'B1C2D3E4', bob.id, blockNow, blockExpiry);
+  insLobby.run(blockLobbyOther, 'C1D2E3F4', dave.id, blockNow, blockExpiry);
+  const insLobbyMember = db.prepare(
+    'INSERT INTO multiplayer_lobby_members(lobby_id,user_id,ready,joined_at,updated_at) VALUES (?,?,0,?,?)');
+  insLobbyMember.run(blockLobbyA, alice.id, blockNow, blockNow);
+  insLobbyMember.run(blockLobbyB, bob.id, blockNow, blockNow);
+  insLobbyMember.run(blockLobbyOther, dave.id, blockNow, blockNow);
+  const insLobbyInvite = db.prepare(
+    "INSERT INTO multiplayer_invites(id,lobby_id,from_id,to_id,status,created_at,expires_at) VALUES (?,?,?,?,'pending',?,?)");
+  insLobbyInvite.run('d1'.repeat(16), blockLobbyA, alice.id, bob.id, blockNow, blockExpiry);
+  insLobbyInvite.run('d2'.repeat(16), blockLobbyB, bob.id, alice.id, blockNow, blockExpiry);
+  insLobbyInvite.run('d3'.repeat(16), blockLobbyOther, dave.id, carol.id, blockNow, blockExpiry);
+  eq('CONTROL pending lobby invites exist in both directions before block',
+    count("SELECT COUNT(*) AS n FROM multiplayer_invites WHERE status='pending' AND ((from_id=? AND to_id=?) OR (from_id=? AND to_id=?))",
+      alice.id, bob.id, bob.id, alice.id), 2);
+
   const b = await call(worker, env, 'POST', '/social/block', { token: bob.token, body: { username: 'alice' } });
   eq('bob blocks alice', b.status, 200);
   eq('block row written', count('SELECT COUNT(*) AS n FROM blocks WHERE blocker_id=? AND blocked_id=?', bob.id, alice.id), 1);
@@ -449,6 +588,11 @@ let reqId = 0;
   eq('block deleted requests between the pair',
      count('SELECT COUNT(*) AS n FROM friend_requests WHERE (from_id=? AND to_id=?) OR (from_id=? AND to_id=?)',
            alice.id, bob.id, bob.id, alice.id), 0);
+  eq('block revoked pending lobby invites in both directions',
+    count("SELECT COUNT(*) AS n FROM multiplayer_invites WHERE status='revoked' AND responded_at IS NOT NULL AND ((from_id=? AND to_id=?) OR (from_id=? AND to_id=?))",
+      alice.id, bob.id, bob.id, alice.id), 2);
+  eq('CONTROL block preserved an unrelated lobby invite',
+    count("SELECT COUNT(*) AS n FROM multiplayer_invites WHERE id=? AND status='pending'", 'd3'.repeat(16)), 1);
   const other = count("SELECT COUNT(*) AS n FROM friend_requests WHERE from_id=? AND to_id=? AND status='pending'", dave.id, bob.id);
   eq('CONTROL an unrelated pending request survived the block', other, 1);
 
@@ -523,7 +667,265 @@ let reqId = 0;
   eq('self report refused', selfReport.body.error, 'self_report');
 }
 
-/* ---- 9. no e-mail address in any social response ---------------------------- */
+/* ---- 9. disabled capability handshake --------------------------------------- */
+{
+  const off = await call(worker, env, 'GET', '/social/capabilities', { token: msga.token });
+  eq('capability handshake 200 while disabled', off.status, 200);
+  eq('chat is false without exact server flag', off.body.capabilities.chat, false);
+  eq('presence is false without exact server flag', off.body.capabilities.presence, false);
+  eq('capability protocol name', off.body.protocol, 'massfront-social');
+  eq('capability protocol version', off.body.version, 1);
+  eq('capability page max is bounded', off.body.limits.pageMax, 50);
+
+  const wrongFlags = { DB: new MockD1(db), SOCIAL_CHAT_ENABLED: 'true', SOCIAL_PRESENCE_ENABLED: 'yes' };
+  const wrong = await call(worker, wrongFlags, 'GET', '/social/capabilities', { token: msga.token });
+  check('truthy-looking flags do not enable capabilities',
+    wrong.body.capabilities.chat === false && wrong.body.capabilities.presence === false, wrong.text);
+
+  const on = await call(worker, envSocialOn, 'GET', '/social/capabilities', { token: msga.token });
+  check('exact flags + ready tables enable handshake',
+    on.body.capabilities.chat === true && on.body.capabilities.presence === true, on.text);
+  check('capability response has no account e-mail', on.text.indexOf('@') < 0, on.text);
+
+  const flagAndTableOnly = await call(worker, {
+    DB: new MockD1(db), SOCIAL_CHAT_ENABLED: '1', SOCIAL_PRESENCE_ENABLED: '1',
+  }, 'GET', '/social/capabilities', { token: msga.token });
+  check('chat capability fails closed without CONTENT_SAFETY binding',
+    flagAndTableOnly.body.capabilities.chat === false
+      && flagAndTableOnly.body.capabilities.presence === true, flagAndTableOnly.text);
+
+  class MissingMessagesD1 {
+    constructor(inner) { this.inner = inner; }
+    prepare(sql) {
+      if (sql === 'SELECT id FROM messages LIMIT 1')
+        return { async first() { throw new Error('no such table: messages'); } };
+      return this.inner.prepare(sql);
+    }
+  }
+  const missing = await call(worker, {
+    DB: new MissingMessagesD1(new MockD1(db)),
+    SOCIAL_CHAT_ENABLED: '1', SOCIAL_PRESENCE_ENABLED: '1', CONTENT_SAFETY,
+  }, 'GET', '/social/capabilities', { token: msga.token });
+  check('flag cannot lie when chat migration is missing',
+    missing.body.capabilities.chat === false && missing.body.capabilities.presence === true, missing.text);
+
+  const toml = readFileSync(join(ROOT, 'wrangler.toml'), 'utf8');
+  const activeToml = toml.split(/\r?\n/).filter((line) => !/^\s*#/.test(line)).join('\n');
+  check('shipped wrangler has no active chat flag', activeToml.indexOf('SOCIAL_CHAT_ENABLED') < 0, activeToml);
+  check('shipped wrangler has no active presence flag', activeToml.indexOf('SOCIAL_PRESENCE_ENABLED') < 0, activeToml);
+  check('shipped wrangler has no active EMAIL binding', !/^\s*\[\[send_email\]\]/m.test(activeToml), activeToml);
+}
+
+/* ---- 10. friend-only chat, safety and bounded pagination -------------------- */
+let evidenceMessageId = 0;
+{
+  const pair = [msga.id, msgb.id].sort((a, b) => a - b);
+  db.prepare('INSERT OR IGNORE INTO friendships (lo_id,hi_id,created_at) VALUES (?,?,?)')
+    .run(pair[0], pair[1], Date.now());
+  eq('CONTROL chat users are friends', count('SELECT COUNT(*) AS n FROM friendships WHERE lo_id=? AND hi_id=?', pair[0], pair[1]), 1);
+  eq('CONTROL lurker is not their friend', count('SELECT COUNT(*) AS n FROM friendships WHERE lo_id=? OR hi_id=?', lurker.id, lurker.id), 0);
+
+  const disabled = await call(worker, env, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: 'must stay off' },
+  });
+  check('disabled chat rejects sends without writing', disabled.status === 503 && disabled.body.error === 'feature_disabled', disabled.text);
+  eq('disabled send wrote no message', count('SELECT COUNT(*) AS n FROM messages'), 0);
+
+  const nonfriend = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'lurker', body: 'hello' },
+  });
+  eq('non-friend message is forbidden', nonfriend.body.error, 'friend_only');
+  const self = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msga', body: 'hello' },
+  });
+  eq('self message is forbidden', self.body.error, 'self_message');
+
+  const beforeSafety = SAFETY_CALLS.length;
+  const normalized = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: '  Ｈｅｌｌｏ\r\nworld\u202e  ' },
+  });
+  eq('normalized friend message created', normalized.status, 201);
+  eq('NFKC/line/control normalization is authoritative', normalized.body.message.body, 'Hello\nworld');
+  check('content safety hook ran once', SAFETY_CALLS.length === beforeSafety + 1, String(SAFETY_CALLS.length));
+  const safetyBody = SAFETY_CALLS[SAFETY_CALLS.length - 1];
+  check('safety hook receives only kind + normalized text',
+    Object.keys(safetyBody).sort().join(',') === 'kind,text' && safetyBody.text === 'Hello\nworld', JSON.stringify(safetyBody));
+  check('safety hook receives no account e-mail', JSON.stringify(safetyBody).indexOf('@') < 0, JSON.stringify(safetyBody));
+  evidenceMessageId = Number(normalized.body.message.id);
+  eq('stored body matches normalized response', db.prepare('SELECT body FROM messages WHERE id=?').get(evidenceMessageId).body, 'Hello\nworld');
+
+  const tooLong = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: 'x'.repeat(501) },
+  });
+  eq('501-character message rejected', tooLong.body.error, 'message_too_long');
+  const tooManyBytes = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: '😀'.repeat(501) },
+  });
+  eq('oversized multibyte message rejected', tooManyBytes.body.error, 'message_too_long');
+
+  const writesBeforeReject = count('SELECT COUNT(*) AS n FROM messages');
+  const rejected = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: '[reject] unsafe' },
+  });
+  check('safety hook rejection fails closed', rejected.status === 400 && rejected.body.error === 'unsafe_content', rejected.text);
+  const unavailable = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: '[fail] service' },
+  });
+  check('safety hook outage fails closed', unavailable.status === 503 && unavailable.body.error === 'safety_unavailable', unavailable.text);
+  eq('safety failures write no rows', count('SELECT COUNT(*) AS n FROM messages'), writesBeforeReject);
+
+  const missingSafetyEnv = { DB: new MockD1(db), SOCIAL_CHAT_ENABLED: '1' };
+  const localOnly = await call(worker, missingSafetyEnv, 'POST', '/social/message/send', {
+    token: msgb.token, body: { username: 'msga', body: 'local safety baseline' },
+  });
+  check('flag + table without safety binding refuses chat',
+    localOnly.status === 503 && localOnly.body.error === 'feature_disabled', localOnly.text);
+  const explicitNormalizationEnv = {
+    DB: new MockD1(db), SOCIAL_CHAT_ENABLED: '1', CONTENT_SAFETY: NORMALIZATION_ONLY_SAFETY,
+  };
+  const normalizedOnly = await call(worker, explicitNormalizationEnv, 'POST', '/social/message/send', {
+    token: msgb.token, body: { username: 'msga', body: 'local safety baseline' },
+  });
+  eq('normalization-only test safety binding can send when explicitly present', normalizedOnly.status, 201);
+
+  /* Real sliding-window enforcement: exactly 30 user sends, then a deny. */
+  db.prepare("DELETE FROM attempts WHERE bucket IN ('message_send_user','message_send_pair')").run();
+  let allowed = 0;
+  for (let i = 0; i < 30; i++) {
+    const r = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+      token: msga.token, body: { username: 'msgb', body: 'rate ' + i },
+    });
+    if (r.status === 201) allowed++;
+  }
+  eq('message user rate allows exactly 30/minute', allowed, 30);
+  const thirtyFirst = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: 'rate denied' },
+  });
+  check('message user rate denies 31st', thirtyFirst.status === 429 && thirtyFirst.body.error === 'rate_limited', thirtyFirst.text);
+
+  /* Pair bucket control at its 120/hour boundary without waiting an hour. */
+  db.prepare("DELETE FROM attempts WHERE bucket IN ('message_send_user','message_send_pair')").run();
+  const pairKey = pair[0] + ':' + pair[1], now = Date.now();
+  const insAttempt = db.prepare("INSERT INTO attempts (bucket,akey,created_at) VALUES ('message_send_pair',?,?)");
+  for (let i = 0; i < 119; i++) insAttempt.run(pairKey, now);
+  const pair120 = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: 'pair boundary' },
+  });
+  eq('message pair rate allows 120th/hour', pair120.status, 201);
+  db.prepare("DELETE FROM attempts WHERE bucket='message_send_user'").run();
+  const pair121 = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msgb.token, body: { username: 'msga', body: 'pair denied' },
+  });
+  check('message pair rate denies either direction at 121st', pair121.status === 429 && pair121.body.error === 'rate_limited', pair121.text);
+
+  /* Deterministic keyset pages, independent from the sends above. */
+  db.prepare('DELETE FROM messages WHERE (from_id=? AND to_id=?) OR (from_id=? AND to_id=?)')
+    .run(msga.id, msgb.id, msgb.id, msga.id);
+  const ins = db.prepare('INSERT INTO messages (from_id,to_id,body,created_at,read_at) VALUES (?,?,?,?,NULL)');
+  for (let i = 1; i <= 55; i++) ins.run(i % 2 ? msga.id : msgb.id, i % 2 ? msgb.id : msga.id, 'page-' + i, 1000 + i);
+  db.prepare("DELETE FROM attempts WHERE bucket='message_list_user'").run();
+  const page1 = await call(worker, envSocialOn, 'GET', '/social/messages?with=msgb&limit=20', { token: msga.token });
+  check('message page 1 is bounded/newest-first', page1.status === 200 && page1.body.count === 20 && page1.body.hasMore === true,
+    page1.text.slice(0, 180));
+  check('message page 1 order is descending', page1.body.messages.every((m, i, a) => i === 0 || a[i - 1].id > m.id));
+  const page2 = await call(worker, envSocialOn, 'GET',
+    '/social/messages?with=msgb&limit=20&before=' + page1.body.nextBefore, { token: msga.token });
+  const ids1 = new Set(page1.body.messages.map((m) => m.id));
+  check('message page 2 has no overlap', page2.body.messages.length === 20 && page2.body.messages.every((m) => !ids1.has(m.id)), page2.text.slice(0, 120));
+  check('message rows expose no e-mail field',
+    page1.body.messages.every((m) => Object.keys(m).sort().join(',') === 'at,body,from,id,mine,readAt,to'), JSON.stringify(page1.body.messages[0]));
+  const badLimit = await call(worker, envSocialOn, 'GET', '/social/messages?with=msgb&limit=51', { token: msga.token });
+  eq('message page rejects limit > 50', badLimit.body.error, 'invalid_page');
+  const badCursor = await call(worker, envSocialOn, 'GET', '/social/messages?with=msgb&before=nan', { token: msga.token });
+  eq('message page rejects malformed cursor', badCursor.body.error, 'invalid_page');
+  const strangerList = await call(worker, envSocialOn, 'GET', '/social/messages?with=lurker', { token: msga.token });
+  eq('non-friend cannot read a conversation', strangerList.body.error, 'friend_only');
+
+  /* One stored block is effective in both directions and on reads. Keep the
+     friendship row to prove the block check, not friendship deletion, denies. */
+  db.prepare('INSERT OR IGNORE INTO blocks (blocker_id,blocked_id,created_at) VALUES (?,?,?)').run(msgb.id, msga.id, Date.now());
+  const ab = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msga.token, body: { username: 'msgb', body: 'blocked a' },
+  });
+  const ba = await call(worker, envSocialOn, 'POST', '/social/message/send', {
+    token: msgb.token, body: { username: 'msga', body: 'blocked b' },
+  });
+  const blockedRead = await call(worker, envSocialOn, 'GET', '/social/messages?with=msgb', { token: msga.token });
+  check('one block denies both send directions', ab.body.error === 'blocked' && ba.body.error === 'blocked', ab.text + ba.text);
+  eq('block also denies conversation history', blockedRead.body.error, 'blocked');
+  db.prepare('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(msgb.id, msga.id);
+
+  evidenceMessageId = page1.body.messages[0].id;
+}
+
+/* ---- 11. message-specific immutable reporting ------------------------------- */
+{
+  const report = await call(worker, env, 'POST', '/social/message/report', {
+    token: msgb.token, body: { messageId: evidenceMessageId, reason: '  targeted abuse\u202e  ' },
+  });
+  eq('message report works even while new chat is disabled', report.status, 201);
+  const row = db.prepare('SELECT * FROM reports WHERE id=?').get(Number(report.body.id));
+  const snap = JSON.parse(row.body_snapshot);
+  eq('message report snapshot kind', snap.kind, 'friend_message');
+  eq('message report snapshot message id', snap.message.id, evidenceMessageId);
+  check('message report captures immutable body', /^page-/.test(snap.message.body), snap.message.body);
+  check('message report captures participant usernames',
+    [snap.message.from, snap.message.to].sort().join(',') === 'msga,msgb', JSON.stringify(snap.message));
+  eq('message report subject is the other participant', Number(row.subject_user), msga.id);
+  check('message report snapshot has no e-mail', row.body_snapshot.indexOf('@') < 0, row.body_snapshot);
+  const outsider = await call(worker, envSocialOn, 'POST', '/social/message/report', {
+    token: lurker.token, body: { messageId: evidenceMessageId, reason: 'probe' },
+  });
+  check('non-participant cannot report/probe message id', outsider.status === 404 && outsider.body.error === 'no_such_message', outsider.text);
+  const longReason = await call(worker, envSocialOn, 'POST', '/social/message/report', {
+    token: msgb.token, body: { messageId: evidenceMessageId, reason: 'x'.repeat(501) },
+  });
+  eq('message report reason is bounded', longReason.body.error, 'invalid_reason');
+}
+
+/* ---- 12. friend-only ephemeral presence ------------------------------------- */
+{
+  const off = await call(worker, env, 'POST', '/social/presence', { token: msga.token, body: { state: 'online' } });
+  check('presence disabled by default', off.status === 503 && off.body.error === 'feature_disabled', off.text);
+  const invalid = await call(worker, envSocialOn, 'POST', '/social/presence', { token: msga.token, body: { state: 'invisible' } });
+  eq('presence state is an allowlist', invalid.body.error, 'invalid_presence');
+  const a = await call(worker, envSocialOn, 'POST', '/social/presence', { token: msga.token, body: { state: 'ONLINE' } });
+  const b = await call(worker, envSocialOn, 'POST', '/social/presence', { token: msgb.token, body: { state: 'away' } });
+  const l = await call(worker, envSocialOn, 'POST', '/social/presence', { token: lurker.token, body: { state: 'online' } });
+  check('presence writes normalize allowed states', a.body.state === 'online' && b.body.state === 'away' && l.body.state === 'online', a.text + b.text + l.text);
+  check('presence expiry is bounded near 120 seconds',
+    Number(a.body.expiresAt) - Date.now() > 115000 && Number(a.body.expiresAt) - Date.now() <= 120000, a.text);
+  const list = await call(worker, envSocialOn, 'GET', '/social/presence?with=lurker', { token: msga.token });
+  eq('presence returns exactly one friend', list.body.count, 1);
+  eq('presence shows friend state', list.body.friends[0].username + ':' + list.body.friends[0].state, 'msgb:away');
+  check('presence ignores arbitrary-user probe and hides non-friend',
+    list.text.indexOf('lurker') < 0 && list.text.indexOf('msga') < 0, list.text);
+  check('presence rows expose only username/state/at',
+    Object.keys(list.body.friends[0]).sort().join(',') === 'at,state,username', JSON.stringify(list.body.friends[0]));
+
+  db.prepare('UPDATE presence SET expires_at=? WHERE user_id=?').run(Date.now() - 1, msgb.id);
+  const expired = await call(worker, envSocialOn, 'GET', '/social/presence', { token: msga.token });
+  eq('expired friend presence becomes offline', expired.body.friends[0].state, 'offline');
+  eq('offline presence does not disclose last-seen time', expired.body.friends[0].at, 0);
+  eq('expired presence row is purged', count('SELECT COUNT(*) AS n FROM presence WHERE user_id=?', msgb.id), 0);
+
+  await call(worker, envSocialOn, 'POST', '/social/presence', { token: msgb.token, body: { state: 'online' } });
+  db.prepare('INSERT OR IGNORE INTO blocks (blocker_id,blocked_id,created_at) VALUES (?,?,?)').run(msgb.id, msga.id, Date.now());
+  const blocked = await call(worker, envSocialOn, 'GET', '/social/presence', { token: msga.token });
+  eq('presence query filters a two-way block', blocked.body.count, 0);
+  db.prepare('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(msgb.id, msga.id);
+  const offline = await call(worker, envSocialOn, 'POST', '/social/presence', { token: msgb.token, body: { state: 'offline' } });
+  eq('explicit offline deletes live row', count('SELECT COUNT(*) AS n FROM presence WHERE user_id=?', msgb.id), 0);
+  eq('offline response has no expiry', offline.body.expiresAt, null);
+
+  db.prepare("DELETE FROM attempts WHERE bucket='presence_write_user' AND akey=?").run(String(msga.id));
+  const ins = db.prepare("INSERT INTO attempts (bucket,akey,created_at) VALUES ('presence_write_user',?,?)");
+  for (let i = 0; i < 240; i++) ins.run(String(msga.id), Date.now());
+  const limited = await call(worker, envSocialOn, 'POST', '/social/presence', { token: msga.token, body: { state: 'away' } });
+  check('presence write rate is enforced', limited.status === 429 && limited.body.error === 'rate_limited', limited.text);
+}
+
+/* ---- 13. no e-mail address in any social response --------------------------- */
 {
   const scan = (bodies) => bodies.filter((b) => b.text.indexOf('@') >= 0);
   /* CONTROL FIRST: the scanner must object to a body that does leak. If this
@@ -552,7 +954,105 @@ let reqId = 0;
         stripComments('async function f(){ return json({ ok: true, ...row }); }').indexOf('...') >= 0);
 }
 
-/* ---- 10. rate-limit buckets ---------------------------------------------------- */
+/* ---- 14. authenticated staging lobbies + friend invitations ------------------ */
+{
+  const loba=await makeUser(worker,env,db,'loba'),lobb=await makeUser(worker,env,db,'lobb');
+  await verifyUser(worker,env,loba);await verifyUser(worker,env,lobb);
+  const fr=await call(worker,env,'POST','/social/friend/request',{token:loba.token,body:{username:'lobb'}});
+  await call(worker,env,'POST','/social/friend/respond',{token:lobb.token,body:{id:fr.body.id,accept:true}});
+  const off=await call(worker,env,'POST','/multiplayer/lobbies',{token:loba.token,body:{rules:{mode:'coop',slots:4}}});
+  check('lobbies disabled by default',off.status===503&&off.body.error==='feature_disabled',off.text);
+  const caps=await call(worker,envLobbyOn,'GET','/social/capabilities',{token:loba.token});
+  check('handshake independently enables lobbies and invites',caps.body.capabilities.lobbies===true&&caps.body.capabilities.invites===true&&caps.body.capabilities.realtimeMatch===false, caps.text);
+  const made=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:loba.token,body:{rules:{mode:'coop',slots:4,map:'aelos'}}});
+  check('verified player creates bounded lobby',made.status===201&&/^[A-F0-9]{8}$/.test(made.body.lobby.code)&&made.body.lobby.members.length===1,made.text);
+  const lobby=made.body.lobby;
+  const invite=await call(worker,envLobbyOn,'POST','/multiplayer/invites',{token:loba.token,body:{lobbyId:lobby.id,username:'lobb'}});
+  check('accepted friend receives opaque lobby invite',invite.status===201&&/^[a-f0-9]{32}$/.test(invite.body.invite.id),invite.text);
+  const inbox=await call(worker,envLobbyOn,'GET','/multiplayer/invites',{token:lobb.token});
+  check('invite inbox reveals username/code but no e-mail',inbox.body.invites.length===1&&inbox.body.invites[0].from==='loba'&&inbox.text.indexOf('@')<0,inbox.text);
+  const accept=await call(worker,envLobbyOn,'POST','/multiplayer/invites/'+invite.body.invite.id+'/respond',{token:lobb.token,body:{accept:true}});
+  check('invite acceptance joins authoritative roster',accept.status===200&&accept.body.lobby.members.length===2,accept.text);
+  const ready=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+lobby.id+'/ready',{token:lobb.token,body:{revision:accept.body.lobby.revision,ready:true}});
+  check('ready transition increments revision',ready.status===200&&ready.body.lobby.revision===accept.body.lobby.revision+1&&ready.body.lobby.members.some(m=>m.username==='lobb'&&m.ready),ready.text);
+  const stale=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+lobby.id+'/ready',{token:loba.token,body:{revision:1,ready:true}});
+  check('stale lobby revision is rejected',stale.status===409&&stale.body.error==='stale_revision',stale.text);
+  const leave=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+lobby.id+'/leave',{token:loba.token,body:{revision:ready.body.lobby.revision}});
+  const migrated=await call(worker,envLobbyOn,'GET','/multiplayer/lobbies/'+lobby.id,{token:lobb.token});
+  check('host leave migrates host deterministically',leave.status===200&&leave.body.left===true&&migrated.body.lobby.members.length===1&&migrated.body.lobby.members[0].host===true&&migrated.body.lobby.members[0].username==='lobb',leave.text+migrated.text);
+  const finish=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+lobby.id+'/leave',{token:lobb.token,body:{revision:migrated.body.lobby.revision}});
+  check('last member closes lobby',finish.status===200&&finish.body.closed===true&&count('SELECT COUNT(*) AS n FROM multiplayer_lobbies WHERE id=?',lobby.id)===0,finish.text);
+
+  /* Real parallel last-slot race: host + exactly one winner in a two-slot
+     lobby, regardless of how Promise scheduling orders the four contenders. */
+  const raced=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:loba.token,body:{rules:{slots:2,map:'race'}}});
+  const raceLobby=raced.body.lobby;
+  const contenders=[lobb,msga,msgb,lurker];
+  const joins=await Promise.all(contenders.map(u=>call(worker,envLobbyOn,'POST','/multiplayer/lobbies/join',{
+    token:u.token,body:{code:raceLobby.code},
+  })));
+  const joinOk=joins.filter(r=>r.status===200),joinFull=joins.filter(r=>r.status===409&&r.body.error==='lobby_full');
+  check('CONCURRENT lobby capacity admits exactly one last-slot winner',
+    joinOk.length===1&&joinFull.length===contenders.length-1,
+    joins.map(r=>r.status+':'+(r.body&&r.body.error||'ok')).join(','));
+  const raceView=await call(worker,envLobbyOn,'GET','/multiplayer/lobbies/'+raceLobby.id,{token:loba.token});
+  eq('CONCURRENT capacity leaves exactly two authoritative members',raceView.body.lobby.members.length,2);
+
+  /* Two members mutate the exact same revision at the same time. The CAS must
+     allow one transition and reject the other rather than incrementing twice. */
+  const winningUser=contenders[joins.findIndex(r=>r.status===200)];
+  const raceRevision=raceView.body.lobby.revision;
+  const readyRace=await Promise.all([
+    call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+raceLobby.id+'/ready',{
+      token:loba.token,body:{revision:raceRevision,ready:true},
+    }),
+    call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+raceLobby.id+'/ready',{
+      token:winningUser.token,body:{revision:raceRevision,ready:true},
+    }),
+  ]);
+  check('CONCURRENT same-revision mutation has one winner and one stale loser',
+    readyRace.filter(r=>r.status===200).length===1
+      &&readyRace.filter(r=>r.status===409&&r.body.error==='stale_revision').length===1,
+    readyRace.map(r=>r.status+':'+(r.body&&r.body.error||'ok')).join(','));
+  const raceAfter=await call(worker,envLobbyOn,'GET','/multiplayer/lobbies/'+raceLobby.id,{token:loba.token});
+  eq('CONCURRENT revision increments exactly once',raceAfter.body.lobby.revision,raceRevision+1);
+
+  /* Inbox defense in depth: one valid friend invite remains visible while a
+     nonfriend sender and an expired lobby are both hidden and revoked. */
+  const validLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:msga.token,body:{rules:{slots:4,map:'valid'}}})).body.lobby;
+  const validInvite=await call(worker,envLobbyOn,'POST','/multiplayer/invites',{token:msga.token,body:{lobbyId:validLobby.id,username:'msgb'}});
+  const expiredLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:msga.token,body:{rules:{slots:4,map:'expired'}}})).body.lobby;
+  const expiredInvite=await call(worker,envLobbyOn,'POST','/multiplayer/invites',{token:msga.token,body:{lobbyId:expiredLobby.id,username:'msgb'}});
+  db.prepare('UPDATE multiplayer_lobbies SET expires_at=? WHERE id=?').run(Date.now()-1,expiredLobby.id);
+  const strangerLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:lurker.token,body:{rules:{slots:4,map:'stranger'}}})).body.lobby;
+  const strangerInviteId='e4'.repeat(16);
+  db.prepare("INSERT INTO multiplayer_invites(id,lobby_id,from_id,to_id,status,created_at,expires_at) VALUES (?,?,?,?,'pending',?,?)")
+    .run(strangerInviteId,strangerLobby.id,lurker.id,msgb.id,Date.now(),Date.now()+600000);
+  const filteredInbox=await call(worker,envLobbyOn,'GET','/multiplayer/invites',{token:msgb.token});
+  check('invite inbox keeps only live unblocked friend senders',
+    filteredInbox.status===200&&filteredInbox.body.invites.length===1
+      &&filteredInbox.body.invites[0].id===validInvite.body.invite.id,
+    filteredInbox.text);
+  eq('expired-lobby invite is revoked during inbox cleanup',
+    db.prepare('SELECT status FROM multiplayer_invites WHERE id=?').get(expiredInvite.body.invite.id).status,'revoked');
+  eq('nonfriend invite is revoked during inbox cleanup',
+    db.prepare('SELECT status FROM multiplayer_invites WHERE id=?').get(strangerInviteId).status,'revoked');
+
+  /* Preserve the friendship row and plant a block directly so this assertion
+     proves the inbox query itself filters blocks, independently of the block
+     handler's eager revocation test above. */
+  const blockedLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:loba.token,body:{rules:{slots:4,map:'blocked'}}})).body.lobby;
+  const blockedInvite=await call(worker,envLobbyOn,'POST','/multiplayer/invites',{token:loba.token,body:{lobbyId:blockedLobby.id,username:'lobb'}});
+  db.prepare('INSERT OR IGNORE INTO blocks(blocker_id,blocked_id,created_at) VALUES (?,?,?)').run(lobb.id,loba.id,Date.now());
+  const blockedInbox=await call(worker,envLobbyOn,'GET','/multiplayer/invites',{token:lobb.token});
+  check('invite inbox hides a blocked sender even if friendship row remains',
+    blockedInbox.body.invites.every(i=>i.id!==blockedInvite.body.invite.id),blockedInbox.text);
+  eq('blocked inbox row is revoked, not merely omitted',
+    db.prepare('SELECT status FROM multiplayer_invites WHERE id=?').get(blockedInvite.body.invite.id).status,'revoked');
+  db.prepare('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(lobb.id,loba.id);
+}
+
+/* ---- 15. rate-limit buckets ---------------------------------------------------- */
 {
   /* Every bucket the source asks for must be declared. This is the check that
      would have caught uname_check_ip / uname_claim_user being missing. */
@@ -580,9 +1080,22 @@ let reqId = 0;
   eq('unknown bucket error', denied.body.error, 'rate_limited');
   const allowed = await call(worker, env, 'GET', '/username/check?u=alice', { ip: '192.0.2.9', token: zed.token });
   eq('CONTROL the same call succeeds with the bucket declared', allowed.status, 200);
+
+  /* All 70 requests race the same 60-slot admission window. Promise.all is
+     intentional: a COUNT-then-INSERT implementation can over-admit here. */
+  const rateRaceIp='198.18.0.77';
+  db.prepare("DELETE FROM attempts WHERE bucket='uname_check_ip' AND akey=?").run(rateRaceIp);
+  const rateRace=await Promise.all(Array.from({length:70},()=>call(
+    worker,env,'GET','/username/check?u=alice',{ip:rateRaceIp,token:capper.token})));
+  const rateAllowed=rateRace.filter(r=>r.status===200).length;
+  const rateDenied=rateRace.filter(r=>r.status===429&&r.body.error==='rate_limited').length;
+  check('CONCURRENT rate admission allows exactly the declared 60 requests',
+    rateAllowed===60&&rateDenied===10,'allowed='+rateAllowed+' denied='+rateDenied);
+  eq('CONCURRENT rate log contains exactly 60 admitted rows',
+    count("SELECT COUNT(*) AS n FROM attempts WHERE bucket='uname_check_ip' AND akey=?",rateRaceIp),60);
 }
 
-/* ---- 11. account deletion purges the social tables -------------------------- */
+/* ---- 15. account deletion purges the social tables -------------------------- */
 {
   /* Build zed a full footprint: friendship, pending request, block, report,
      verification row, and an e-mail-keyed attempts row from a real sign-in. */
@@ -595,9 +1108,32 @@ let reqId = 0;
   db.prepare('INSERT INTO email_verifications (user_id,code_hash,expires_at,attempts,created_at) VALUES (?,?,?,0,?)')
     .run(zed.id, 'x$y', Date.now() + 60000, Date.now());
   db.prepare('INSERT INTO messages (from_id,to_id,body,created_at) VALUES (?,?,?,?)')
-    .run(zed.id, dave.id, 'unused table', Date.now());
+    .run(zed.id, dave.id, 'deletion evidence', Date.now());
+  db.prepare("INSERT INTO presence (user_id,state,updated_at,expires_at) VALUES (?,'online',?,?)")
+    .run(zed.id, Date.now(), Date.now() + 120000);
   await call(worker, env, 'POST', '/login', { ip: zed.ip, body: { email: zed.email, password: 'correct horse battery' } });
   await call(worker, env, 'PUT', '/save', { token: zed.token, body: { payload: 'blob' } });
+
+  /* Foreign keys are OFF in this test database. A hosted lobby contains rows
+     owned by OTHER users, which must still be deleted with the hosted lobby.
+     A second lobby hosted by Dave proves that the purge is narrowly scoped:
+     Zed's membership/invite go, Dave and Capper's rows survive. */
+  const deleteNow=Date.now(),deleteExpiry=deleteNow+600000;
+  const hostedLobby='f1'.repeat(16),survivorLobby='f2'.repeat(16);
+  const insDeleteLobby=db.prepare(
+    "INSERT INTO multiplayer_lobbies(id,code,host_id,state,revision,rules_json,created_at,expires_at) VALUES (?,?,?,'waiting',1,'{\"slots\":4}',?,?)");
+  insDeleteLobby.run(hostedLobby,'F1E2D3C4',zed.id,deleteNow,deleteExpiry);
+  insDeleteLobby.run(survivorLobby,'F2E3D4C5',dave.id,deleteNow,deleteExpiry);
+  const insDeleteMember=db.prepare(
+    'INSERT INTO multiplayer_lobby_members(lobby_id,user_id,ready,joined_at,updated_at) VALUES (?,?,0,?,?)');
+  for(const uid of [zed.id,dave.id,capper.id])insDeleteMember.run(hostedLobby,uid,deleteNow,deleteNow);
+  for(const uid of [dave.id,capper.id,zed.id])insDeleteMember.run(survivorLobby,uid,deleteNow,deleteNow);
+  const insDeleteInvite=db.prepare(
+    "INSERT INTO multiplayer_invites(id,lobby_id,from_id,to_id,status,created_at,expires_at) VALUES (?,?,?,?,'pending',?,?)");
+  const hostedOtherInvite='f3'.repeat(16),survivorOtherInvite='f4'.repeat(16),survivorZedInvite='f5'.repeat(16);
+  insDeleteInvite.run(hostedOtherInvite,hostedLobby,dave.id,capper.id,deleteNow,deleteExpiry);
+  insDeleteInvite.run(survivorOtherInvite,survivorLobby,dave.id,capper.id,deleteNow,deleteExpiry);
+  insDeleteInvite.run(survivorZedInvite,survivorLobby,zed.id,bob.id,deleteNow,deleteExpiry);
 
   const footprint = () => ({
     friendships: count('SELECT COUNT(*) AS n FROM friendships WHERE lo_id=? OR hi_id=?', zed.id, zed.id),
@@ -606,11 +1142,17 @@ let reqId = 0;
     reports: count('SELECT COUNT(*) AS n FROM reports WHERE reporter_id=? OR subject_user=?', zed.id, zed.id),
     email_verifications: count('SELECT COUNT(*) AS n FROM email_verifications WHERE user_id=?', zed.id),
     messages: count('SELECT COUNT(*) AS n FROM messages WHERE from_id=? OR to_id=?', zed.id, zed.id),
+    presence: count('SELECT COUNT(*) AS n FROM presence WHERE user_id=?', zed.id),
     saves: count('SELECT COUNT(*) AS n FROM saves WHERE user_id=?', zed.id),
     sessions: count('SELECT COUNT(*) AS n FROM sessions WHERE user_id=?', zed.id),
     users: count('SELECT COUNT(*) AS n FROM users WHERE id=?', zed.id),
     attempts_email: count('SELECT COUNT(*) AS n FROM attempts WHERE akey=?', zed.email),
     attempts_user: count("SELECT COUNT(*) AS n FROM attempts WHERE akey=? AND bucket LIKE '%_user'", String(zed.id)),
+    hosted_lobbies: count('SELECT COUNT(*) AS n FROM multiplayer_lobbies WHERE host_id=?',zed.id),
+    hosted_lobby_members: count('SELECT COUNT(*) AS n FROM multiplayer_lobby_members WHERE lobby_id IN (SELECT id FROM multiplayer_lobbies WHERE host_id=?)',zed.id),
+    hosted_lobby_invites: count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE lobby_id IN (SELECT id FROM multiplayer_lobbies WHERE host_id=?)',zed.id),
+    lobby_memberships: count('SELECT COUNT(*) AS n FROM multiplayer_lobby_members WHERE user_id=?',zed.id),
+    lobby_invites_personal: count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE from_id=? OR to_id=?',zed.id,zed.id),
   });
   const before = footprint();
   /* CONTROL: every counter this test is about to assert is zero must be
@@ -626,19 +1168,31 @@ let reqId = 0;
   const leftovers = Object.keys(after).filter((k) => after[k] !== 0);
   check('account delete purged every table', leftovers.length === 0,
         'left: ' + leftovers.map((k) => k + '=' + after[k]).join(',') + ' :: ' + JSON.stringify(after));
+  eq('account delete preserved a lobby hosted by somebody else',
+    count('SELECT COUNT(*) AS n FROM multiplayer_lobbies WHERE id=?',survivorLobby),1);
+  eq('account delete removed only the deleted user from the surviving roster',
+    count('SELECT COUNT(*) AS n FROM multiplayer_lobby_members WHERE lobby_id=?',survivorLobby),2);
+  eq('account delete preserved unrelated invite in surviving lobby',
+    count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE id=?',survivorOtherInvite),1);
+  eq('account delete removed deleted user invite from surviving lobby',
+    count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE id=?',survivorZedInvite),0);
+  eq('account delete removed every other-user row under the deleted hosted lobby',
+    count('SELECT COUNT(*) AS n FROM multiplayer_lobby_members WHERE lobby_id=?',hostedLobby)
+      +count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE lobby_id=?',hostedLobby),0);
   /* CONTROL: other players' rows were not collateral damage. */
   check('CONTROL other accounts survived the purge',
         count('SELECT COUNT(*) AS n FROM users') >= 8 && count('SELECT COUNT(*) AS n FROM reports') >= 1,
         String(count('SELECT COUNT(*) AS n FROM users')));
 }
 
-/* ---- 12. method + shape smoke ------------------------------------------------ */
+/* ---- 16. method + shape smoke ------------------------------------------------ */
 {
   const wrongMethod = await call(worker, env, 'GET', '/social/block', { token: alice.token });
   eq('wrong method on a social route', wrongMethod.status, 405);
   const root = await worker.fetch(request('GET', '/'), env);
   const rootText = await root.text();
-  const missing = ['/verify/request', '/verify/confirm', '/social/friends', '/social/block', '/social/report']
+  const missing = ['/verify/request', '/verify/confirm', '/social/friends', '/social/block', '/social/report',
+    '/social/capabilities', '/social/message/send', '/social/messages', '/social/message/report', '/social/presence']
     .filter((p) => rootText.indexOf(p) < 0);
   check('the index page lists the new routes', missing.length === 0, missing.join(' '));
 }

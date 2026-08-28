@@ -320,12 +320,20 @@ Exit gate:
 
 ### Stage 7 — progression and economy coherence
 
+Status update (2026-08-28): **ENGINEERING COMPLETE; HUMAN ACCEPTANCE
+PENDING**. All implementation items and the deterministic currency exit gate
+are complete in the canonical source checkout. Stage 8 engineering may begin.
+The fresh-profile comprehension gate remains a required early Stage 8
+acceptance item and must close before release sign-off. Evidence, the measured
+first-week envelope, and the exact human protocol are recorded in
+`docs/MASTER_PLAN_STAGE7_PROGRESS_2026-08-28.md`.
+
 Goal: every meta system answers a different player question.
 
 Recommended ownership:
 
 - **Rank:** identity and broad access milestones.
-- **Armory:** permanent account capabilities, cosmetics, and command unlocks—not duplicate percentage stats.
+- **Arsenal:** permanent account capabilities, cosmetics, and command unlocks—not duplicate percentage stats.
 - **Development:** research unlocks recipes; crafted modules provide temporary, replaceable match modifiers.
 - **Orders:** short-session direction and small rewards.
 - **Threat/Operations:** self-selected difficulty and score multiplication.
@@ -333,18 +341,27 @@ Recommended ownership:
 
 Implementation:
 
-- Remove or migrate overlapping permanent percentage upgrades from Armory where Development already owns that fantasy.
-- Show “Permanent,” “Crafted/Wears,” “Per-match,” and “Cosmetic” badges consistently.
-- Give rank visible unlock milestones or reduce its visual prominence.
-- Add a single Loadout summary before battle: permanent perks, equipped modules with durability, commander identity, and mode preset.
-- Balance core/material income against a target first-week progression curve rather than each screen independently.
+- **Complete:** remove and migrate four overlapping permanent percentage upgrades from Arsenal where Development owns that fantasy.
+- **Complete:** show the four duration labels “Permanent,” “Equipped,” “Wears,” and “One Match” from one shared authority; cosmetics carry a “Permanent · Cosmetic” qualifier.
+- **Complete:** restrict Core spending to permanent protocols, sidegrades, and cosmetics; mission supplies are recovered in operations and cannot be Core-restocked.
+- **Complete:** give rank ten visible, catalog-derived unlock milestones.
+- **Complete:** add one live Loadout summary before battle: permanent perks, equipped modules with durability, fitted account gear, supplies, commander identity, team, and mode preset.
+- **Complete:** measure Core/material income against the recorded first-week progression envelope rather than each screen independently.
 
 Exit gate:
 
-- A new player can explain why Armory and Development both exist after viewing each once.
-- No reward currency has only one obscure use or several unexplained competing uses.
+- **Human pending:** a fresh-profile player can explain why Arsenal and Development both exist after viewing each once. This is required before release sign-off.
+- **PASS:** no reward currency has only one obscure use or several unexplained competing uses.
 
 ### Stage 8 — polish, performance, accessibility, and release
+
+Status update (2026-08-28): **IN PROGRESS**. The adaptive effects-budget
+contract and independent effects/ambience/music/voice mixer are implemented.
+The final quiescent shipping gate and interface matrix must be rerun after this
+source freeze. Physical-device performance, current Android/iOS packages,
+save/update interruption, lifecycle, and minimum-device acceptance remain
+open; earlier evidence must not be treated as current when its fingerprint
+differs.
 
 Goal: ship reliably on actual Android and iOS hardware.
 
@@ -352,6 +369,7 @@ Implementation:
 
 - Tune adaptive particle, shadow, billboard, world-loop, and unit caps from measured frame time.
 - Add color-vision-safe team palettes, high-contrast HUD plates, reduced motion, camera-shake control, subtitle/caption support, and independent ambience/music/effects/voice levels.
+- Enforce `commander-anime-flat-v1` for every human or robotic commander: crisp continuous lines, solid fills, and no surface shading. The measurable contract and PBR exception live in `docs/FACTION-ART-CONVERSION.md`.
 - Ensure alarms, objectives, wave warnings, and damage states never rely only on sound or color.
 - Validate local `.mfsave` export/import, update manifest comparison, interrupted downloads, signature/package identity, offline fallback, and clean-install/upgrade paths.
 - Run portrait/landscape, cutout, gesture bar, three-button navigation, background/resume, interrupted audio, phone call, low storage, and no-network tests.

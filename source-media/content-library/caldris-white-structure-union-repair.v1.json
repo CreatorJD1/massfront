@@ -1,0 +1,290 @@
+{
+  "schemaVersion": 1,
+  "contractId": "mf_caldris_white_structure_union_repair_v1",
+  "auditDate": "2026-08-26",
+  "status": "SOURCE_REPAIR_REQUIRED",
+  "runtimeReady": false,
+  "purpose": "Remove the authoring-time coplanar and near-coplanar pale structural shells that can flicker in the Caldris modular road kit without flattening the road, guide, or hazard material language.",
+  "sourceTruth": {
+    "checkedInSplineScene": null,
+    "checkedInSceneGenerator": null,
+    "checkedInSourceGlb": null,
+    "liveSplineDocumentState": "CLOSED_UNEXPORTED",
+    "liveObjectEnumeration": "UNAVAILABLE",
+    "geometryOverlapEvidence": "UNKNOWN",
+    "noLiveMutationClaim": true,
+    "finding": "A full repository and local source-text search found no authoring file containing CAL_END_, CAL_X_, CAL_T_, CAL_CR_, or CAL_ST_. Exact literal object-name enumeration would therefore be fabricated until the scene is exported. The fail-closed semantic selectors below are the authoritative repair sets."
+  },
+  "coordinateContract": {
+    "upAxis": "+Y",
+    "northAxis": "+Z",
+    "unitMeters": 1,
+    "pivot": "footprint center at ground Y=0"
+  },
+  "materialRoles": {
+    "STRUCTURAL_WHITE": {
+      "requiredCanonicalMaterial": "MF_CALDRIS_STRUCT_WHITE",
+      "description": "Pearl ceramic/composite curbs, caps, frames, parapets, and pressure-safe edge structure.",
+      "mergePolicy": "BOOLEAN_UNION_TOUCHING_CLUSTERS_THEN_JOIN_OUTPUT",
+      "mustRemainSeparateFrom": [
+        "ROADWAY_DARK",
+        "GUIDE_CYAN",
+        "HAZARD_AMBER",
+        "SOCKET_ANCHOR",
+        "NAV_PROXY"
+      ]
+    },
+    "ROADWAY_DARK": {
+      "requiredCanonicalMaterial": "MF_CALDRIS_ROAD_DARK",
+      "mergePolicy": "SEPARATE_CONTINUOUS_SOLID"
+    },
+    "GUIDE_CYAN": {
+      "requiredCanonicalMaterial": "MF_CALDRIS_GUIDE_CYAN",
+      "mergePolicy": "ROADWAY_EMISSIVE_MASK_PREFERRED"
+    },
+    "HAZARD_AMBER": {
+      "requiredCanonicalMaterial": "MF_CALDRIS_HAZARD_AMBER",
+      "mergePolicy": "ROADWAY_EMISSIVE_MASK_PREFERRED"
+    }
+  },
+  "globalOperandRules": {
+    "exactSetResolution": "Select every object whose name begins with the module prefix AND whose sole authoring role is STRUCTURAL_WHITE. Before union, assign the canonical material and add it to the module's operand collection. Any pale/white object under the prefix that is not in the collection is a hard failure.",
+    "includeRoleTokens": [
+      "CURB",
+      "CAP",
+      "FRAME",
+      "PARAPET",
+      "WALL",
+      "RIB",
+      "FLANGE",
+      "SKIRT",
+      "JAMB",
+      "THRESHOLD",
+      "ARMOR",
+      "SHELL",
+      "STRUCT"
+    ],
+    "excludeRoleTokens": [
+      "ROAD",
+      "ROADWAY",
+      "ASPHALT",
+      "DECK",
+      "GUIDE",
+      "CYAN",
+      "AMBER",
+      "HAZARD",
+      "MARKING",
+      "EMISSIVE",
+      "SOCKET",
+      "ANCHOR",
+      "NAV",
+      "COLLISION",
+      "LIGHT",
+      "CAMERA"
+    ],
+    "unmatchedStructuralWhitePolicy": "FAIL",
+    "emptyOperandSetPolicy": "FAIL",
+    "mixedMaterialOperandPolicy": "FAIL",
+    "requiredIntersectionBeforeUnionMeters": 0.005,
+    "mergeByDistanceMeters": 0.0005,
+    "coplanarDistanceToleranceMeters": 0.002,
+    "coplanarOverlapAreaToleranceSquareMeters": 0.000001,
+    "duplicateTriangleTolerance": 0,
+    "booleanSolver": "EXACT",
+    "modifierOrder": [
+      "apply transforms",
+      "establish positive operand intersection",
+      "Boolean union touching structural-white clusters",
+      "remove interior faces",
+      "merge by distance",
+      "recalculate outward normals",
+      "bevel union result",
+      "join disconnected structural-white clusters into one output object without changing topology"
+    ]
+  },
+  "moduleRepairs": [
+    {
+      "moduleId": "caldris_road_endcap",
+      "liveNamePrefix": "CAL_END_",
+      "operandObjectSetId": "CAL_END_STRUCTURAL_WHITE_OPERANDS",
+      "exactSemanticSelector": {
+        "namePrefix": "CAL_END_",
+        "requiredMaterialRole": "STRUCTURAL_WHITE",
+        "excludeRoleTokensFromGlobalRules": true
+      },
+      "expectedOutputObjectName": "CAL_END_STRUCTURAL_WHITE_UNION",
+      "preserveMaterialRoles": ["ROADWAY_DARK", "GUIDE_CYAN", "HAZARD_AMBER"],
+      "socketFaces": ["road_n_or_s_by_authored_orientation"],
+      "notes": "The closing barrier, returns, and curb caps must be one non-self-overlapping structural output; the dark road end and its guide/hazard masks remain independent."
+    },
+    {
+      "moduleId": "caldris_road_cross_plaza",
+      "liveNamePrefix": "CAL_X_",
+      "operandObjectSetId": "CAL_X_STRUCTURAL_WHITE_OPERANDS",
+      "exactSemanticSelector": {
+        "namePrefix": "CAL_X_",
+        "requiredMaterialRole": "STRUCTURAL_WHITE",
+        "excludeRoleTokensFromGlobalRules": true
+      },
+      "expectedOutputObjectName": "CAL_X_STRUCTURAL_WHITE_UNION",
+      "preserveMaterialRoles": ["ROADWAY_DARK", "GUIDE_CYAN", "HAZARD_AMBER"],
+      "socketFaces": ["road_n", "road_e", "road_s", "road_w"],
+      "notes": "Corner-return curb solids must be authored as a single perimeter profile around the four road apertures. No white corner plate may overlap another return or cross the 28 m no-plot center."
+    },
+    {
+      "moduleId": "caldris_road_t_junction",
+      "liveNamePrefix": "CAL_T_",
+      "operandObjectSetId": "CAL_T_STRUCTURAL_WHITE_OPERANDS",
+      "exactSemanticSelector": {
+        "namePrefix": "CAL_T_",
+        "requiredMaterialRole": "STRUCTURAL_WHITE",
+        "excludeRoleTokensFromGlobalRules": true
+      },
+      "expectedOutputObjectName": "CAL_T_STRUCTURAL_WHITE_UNION",
+      "preserveMaterialRoles": ["ROADWAY_DARK", "GUIDE_CYAN", "HAZARD_AMBER"],
+      "socketFaces": ["road_n", "road_e_or_w_by_authored_orientation", "road_s"],
+      "notes": "The closed-side curb and both intersection returns must be cut from one perimeter solid instead of stacking a cap plate over straight-module curbs."
+    },
+    {
+      "moduleId": "caldris_road_corner",
+      "liveNamePrefix": "CAL_CR_",
+      "operandObjectSetId": "CAL_CR_STRUCTURAL_WHITE_OPERANDS",
+      "exactSemanticSelector": {
+        "namePrefix": "CAL_CR_",
+        "requiredMaterialRole": "STRUCTURAL_WHITE",
+        "excludeRoleTokensFromGlobalRules": true
+      },
+      "expectedOutputObjectName": "CAL_CR_STRUCTURAL_WHITE_UNION",
+      "preserveMaterialRoles": ["ROADWAY_DARK", "GUIDE_CYAN", "HAZARD_AMBER"],
+      "socketFaces": ["road_n", "road_e_by_authored_orientation"],
+      "notes": "Build the inner and outer curb arcs from non-overlapping swept profiles. Do not overlap straight curb boxes at the elbow tangent."
+    },
+    {
+      "moduleId": "caldris_road_straight",
+      "liveNamePrefix": "CAL_ST_",
+      "operandObjectSetId": "CAL_ST_STRUCTURAL_WHITE_OPERANDS",
+      "exactSemanticSelector": {
+        "namePrefix": "CAL_ST_",
+        "requiredMaterialRole": "STRUCTURAL_WHITE",
+        "excludeRoleTokensFromGlobalRules": true
+      },
+      "expectedOutputObjectName": "CAL_ST_STRUCTURAL_WHITE_UNION",
+      "preserveMaterialRoles": ["ROADWAY_DARK", "GUIDE_CYAN", "HAZARD_AMBER"],
+      "socketFaces": ["road_n", "road_s"],
+      "notes": "Each side curb is one extruded profile with end faces exactly on its socket plane. Decorative caps must be modeled into that profile, never placed as coincident thin plates."
+    }
+  ],
+  "guideAndMarkingContract": {
+    "preferredRepresentation": "A cyan/amber emissive mask in the roadway material or a non-overlapping inlay cut into the roadway.",
+    "forbiddenRepresentation": "A zero-thickness or thin marking plate sharing a coplanar face with the roadway.",
+    "geometryFallback": {
+      "mustHaveDisjointFootprintFromOtherMarkingGeometry": true,
+      "minimumRecessMeters": 0.008,
+      "maximumTopOffsetAboveRoadMeters": 0.002,
+      "mustNotIntersectStructuralWhite": true
+    }
+  },
+  "n7DeployerLane": {
+    "splineDocumentName": "MF_HY3D_N7_DEPLOYER_LANE_8X8_V1",
+    "repositorySourceScene": null,
+    "repositorySourceGlb": null,
+    "status": "UNKNOWN_SOURCE_UNAVAILABLE",
+    "runtimeReady": false,
+    "geometryOverlapEvidence": "UNKNOWN",
+    "doNotAutoRepair": true,
+    "observedNameInventorySource": "Published runtime preview metadata only; not an editable source authority.",
+    "structuralWhiteCandidateSetsForFutureSourceAudit": {
+      "leftWallCluster": [
+        "NX7 Ceramic Wall L",
+        "NX7 Wall Backing L",
+        "NX7 Wall Band L",
+        "NX7 Wall Skirt L",
+        "NX7 Top Flange L",
+        "NX7 Wall Rib L1",
+        "NX7 Wall Rib L2",
+        "NX7 Wall Rib L3",
+        "NX7 Wall Rib L4"
+      ],
+      "rightWallCluster": [
+        "NX7 Ceramic Wall R",
+        "NX7 Wall Backing R",
+        "NX7 Wall Band R",
+        "NX7 Wall Skirt RR",
+        "NX7 Top Flange R",
+        "NX7 Wall Rib R1",
+        "NX7 Wall Rib R2",
+        "NX7 Wall Rib R3",
+        "NX7 Wall Rib R4"
+      ],
+      "northSocketCluster": [
+        "NX7 Socket Head N",
+        "NX7 Socket Jamb LN",
+        "NX7 Socket Jamb RN",
+        "NX7 Socket Threshold N"
+      ],
+      "southSocketCluster": [
+        "NX7 Socket Head S",
+        "NX7 Socket Jamb LS",
+        "NX7 Socket Jamb RS",
+        "NX7 Socket Threshold S"
+      ]
+    },
+    "preserveSeparateObjectsOrMaterialRegions": [
+      "NX7 Lane Deck",
+      "NX7 Side Walk L",
+      "NX7 Side Walk R",
+      "NX7 Deck Guidance L",
+      "NX7 Deck Guidance R",
+      "NX7 Walk Guidance L",
+      "NX7 Walk Guidance R",
+      "NX7 Deck Warn 11",
+      "NX7 Deck Warn 12",
+      "NX7 Deck Warn 13",
+      "NX7 Deck Warn 14",
+      "NX7 Deck Warn 21",
+      "NX7 Deck Warn 22",
+      "NX7 Deck Warn 23",
+      "NX7 Deck Warn 24"
+    ],
+    "admissionRule": "Export editable source first, verify actual material assignments and transforms, then run the same duplicate/coplanar/intersection audit. Candidate names are not permission to Boolean-union blind."
+  },
+  "authoringPreventionContract": {
+    "structuralWhiteConstruction": "Author one perimeter/profile solid per touching curb, frame, or wall cluster. If primitives are used, overlap them by at least 5 mm and Boolean-union before beveling or UV finalization.",
+    "noStackedShells": true,
+    "noCoincidentCaps": true,
+    "noBooleanAfterAtlasBake": true,
+    "oneNamedOutputPerModule": true,
+    "socketCutOrder": "Cut road apertures and socket faces into the unioned structural solid before beveling; do not cap them with additional plates.",
+    "requiredSourceCollections": [
+      "<MODULE>_STRUCTURAL_WHITE_OPERANDS",
+      "<MODULE>_ROADWAY_DARK",
+      "<MODULE>_GUIDE_CYAN",
+      "<MODULE>_HAZARD_AMBER",
+      "<MODULE>_SOCKETS",
+      "<MODULE>_NAV_PROXY"
+    ],
+    "requiredEvidence": [
+      "source object-name and material-role inventory",
+      "pre-repair coplanar/duplicate/intersection report",
+      "post-repair zero duplicate-triangle report",
+      "post-repair zero near-coplanar overlap report at the declared tolerance",
+      "top, isometric, and grazing-angle captures",
+      "32-bit depth-buffer mobile capture at tactical and close zoom",
+      "socket dimension and clear-width report"
+    ]
+  },
+  "admissionGates": {
+    "literalSourceObjectsEnumerated": true,
+    "allStructuralWhiteObjectsClassified": true,
+    "oneStructuralWhiteOutputPerModule": true,
+    "duplicateTriangles": 0,
+    "nearCoplanarStructuralOverlapPairs": 0,
+    "roadwayMaterialPreserved": true,
+    "cyanGuideMaterialPreserved": true,
+    "amberHazardMaterialPreserved": true,
+    "socketClearancePreserved": true,
+    "grazingAngleFlicker": 0,
+    "mobileCaptureApproved": true,
+    "currentResult": "BLOCKED_UNTIL_SOURCE_EXPORT"
+  }
+}

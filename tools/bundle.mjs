@@ -12,12 +12,26 @@ import {fileURLToPath} from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const manifest = JSON.parse(readFileSync(join(root,'assets/data/manifest.json'),'utf8'));
 let html   = readFileSync(join(root,'index.html'),'utf8');
+const modifierAtlas = 'assets/modifiers/modifier-art-atlas-v1.png';
+const modifierCssUrl = '../../'+modifierAtlas;
 
 /* Cache-busting query strings are part of the packaged HTML, so matching one
    hard-coded href left archive builds unstyled. Inline every local stylesheet
    declared by index.html and strip only its query/hash from the disk path. */
 html = html.replace(/<link\s+rel="stylesheet"\s+href="\.\/([^"?#]+)(?:[?#][^"]*)?">/g,
-  (_,p) => `<style data-source="${p}">\n${readFileSync(join(root,p),'utf8')}\n</style>`);
+  (_,p) => {
+    let css=readFileSync(join(root,p),'utf8');
+    if(p==='src/styles/ui.css'){
+      /* Source and Capacitor load the modifier atlas as one cacheable file.
+         The archive channel promises a self-contained HTML, so inline those
+         exact same source bytes only while producing that artifact. */
+      const needle=`url('${modifierCssUrl}')`;
+      if(!css.includes(needle))throw new Error('ARCHIVE CSS: modifier atlas reference missing from '+p);
+      const data='data:image/png;base64,'+readFileSync(join(root,modifierAtlas)).toString('base64');
+      css=css.replace(needle,`url('${data}')`);
+    }
+    return `<style data-source="${p}">\n${css}\n</style>`;
+  });
 /* MF_INIT_ORDER_GATE ---------------------------------------------------------
    src/main.js calls boot() at its own top level and walks a list of init
    function NAMES, skipping any that is not yet defined. In one global scope

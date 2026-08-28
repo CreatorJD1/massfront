@@ -17,18 +17,19 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#060c16">
 <meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.46">
-  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.46">
-  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.46">
-  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.46">
-  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.46">
-  <link rel="stylesheet" href="./src/styles/ui.css?v=1.33.46">
-  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.46">
-  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.46">
-  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.46">
-  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.46">
-  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.46">
-  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.46">
+<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.48">
+  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.48">
+  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.48">
+  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.48">
+  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.48">
+  <link rel="stylesheet" href="./src/styles/ui.css?v=1.33.48">
+  <link rel="stylesheet" href="./assets/ui.css?v=1.33.48-ui-safety">
+  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.48">
+  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.48">
+  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.48">
+  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.48">
+  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.48">
+  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.48">
 <style>
 /* CRITICAL — inline so it holds on the FIRST painted frame even if the linked
    intro.css above is slow or fails. The launch reveal (src/intro.js, z-index 950)
@@ -87,6 +88,21 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 <div id="wcRow"></div>
 <div id="infMeter"></div>
 <div id="goalBar"></div>
+
+<!-- COMMANDER TRANSMISSION RAIL. One reused node for the whole match: the
+     presentation layer for commanderDialogueOn() cues (see the COMMANDER
+     TRANSMISSION RAIL block in src/ui/hud.js). Deliberately inert — no
+     tabindex, no interactive children, pointer-events:none in CSS — so it can
+     float over the battlefield without ever taking a tap or the focus ring.
+     role=status + aria-live announces the subtitle instead of focusing it.
+     Position is solved from live HUD rects at runtime, not authored here. -->
+<div id="cmdrTx" data-state="idle" role="status" aria-live="polite" aria-atomic="true">
+  <span id="cmdrTxPortrait"><img id="cmdrTxImg" alt="" decoding="async"><i id="cmdrTxInitial"></i></span>
+  <span id="cmdrTxBody">
+    <span id="cmdrTxHead"><b id="cmdrTxWho"></b><span id="cmdrTxRank"></span><span id="cmdrTxTag"></span></span>
+    <span id="cmdrTxLine"></span>
+  </span>
+</div>
 
 <div id="minimapWrap"><canvas id="minimap" width="256" height="256"></canvas></div>
 
@@ -213,6 +229,8 @@ body:not(.mfIntroDone) .overlay{display:none!important}
     <button class="gbtn" id="devBtn"><span class="gEm">🔬</span>Development</button>
     <button class="gbtn" id="armoryBtn"><span class="gEm">⬡</span>Armory</button>
     <button class="gbtn" id="dailyBtn"><span class="gEm">📋</span>Orders<span class="gDot" id="dailyDot"></span></button>
+    <!-- Galactic Campaign intentionally has no main-menu destination while it
+         remains experimental. Settings owns its opt-in and isolated launch. -->
   </div>
   <!-- The rest are visited rarely enough to live as icons. -->
   <div class="menuStrip">
@@ -693,6 +711,6 @@ body:not(.mfIntroDone) .overlay{display:none!important}
   <button class="mbtn alt" id="pauseSettings">⚙ &nbsp;SETTINGS</button>
   <button class="mbtn alt" id="quitBtn">✦ &nbsp;ABANDON MATCH</button>
 </div>
-<script src="./boot.js"></script>
+<script src="./boot.js?v=1.33.48-boot3"></script>
 </body>
 </html>

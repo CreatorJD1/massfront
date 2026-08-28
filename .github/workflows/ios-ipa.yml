@@ -42,6 +42,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          lfs: true
 
       - uses: actions/setup-node@v4
         with:
@@ -53,6 +55,12 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
         run: npm install --no-audit --no-fund
+
+      - name: Verify release freeze
+        run: node tools/verify-release-freeze.mjs
+
+      - name: Verify clean-checkout reproducibility
+        run: node tools/verify-clean-checkout.mjs
 
       - name: Stage web assets and sync into the iOS project
         # pack-www verifies its own output — it fails loudly if index.html or

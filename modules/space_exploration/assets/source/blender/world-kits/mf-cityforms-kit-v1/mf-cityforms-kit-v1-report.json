@@ -1,0 +1,7118 @@
+{
+  "format": "MassfrontCityFormsKitV1",
+  "version": 1,
+  "units": "metres",
+  "deterministic": true,
+  "generator": "tools/blender/build-mf-cityforms-kit.py",
+  "sharesVocabularyWith": [
+    "tools/blender/build-mf-superstructure-kit.py",
+    "tools/blender/build-mf-modular-building-kit.py"
+  ],
+  "blenderVersion": "5.2.0 LTS",
+  "newPrimitives": [
+    "lathe (revolve a radius/height profile)"
+  ],
+  "contract": {
+    "placementGridM": 32.0,
+    "partyJointM": 0.06,
+    "notes": [
+      "Nothing crosses the party plane.",
+      "Round forms come from one lathe primitive: drums, domes, hyperboloid cooling towers, silos, tapered chimneys and dishes."
+    ]
+  },
+  "styles": {
+    "colonial": {
+      "label": "Neutral colonial",
+      "modules": 24
+    },
+    "brutalist": {
+      "label": "Nova brutalist",
+      "modules": 24
+    },
+    "ruined": {
+      "label": "Derelict",
+      "modules": 24
+    }
+  },
+  "classes": [
+    "form",
+    "industry"
+  ],
+  "moduleCount": 72,
+  "tallestM": 158.0,
+  "triangleSummary": {
+    "lod0Total": 353256,
+    "lod0Min": 476,
+    "lod0Max": 20116,
+    "lod0Mean": 4906.3,
+    "lod1Total": 47742,
+    "lod2Total": 11388
+  },
+  "tilingProof": [
+    {
+      "id": "drum_district",
+      "style": "brutalist",
+      "items": [
+        "drum_tower",
+        "drum_tower_tall",
+        "drum_cluster",
+        "hex_tower",
+        "blade_tower"
+      ]
+    },
+    {
+      "id": "mega_district",
+      "style": "colonial",
+      "items": [
+        "podium_block",
+        "mega_slab",
+        "mega_slab_stepped"
+      ]
+    },
+    {
+      "id": "industrial_yard",
+      "style": "colonial",
+      "items": [
+        "cooling_tower",
+        "chimney_stack",
+        "silo_bank",
+        "tank_cluster",
+        "container_yard",
+        "substation"
+      ]
+    },
+    {
+      "id": "service_run",
+      "style": "brutalist",
+      "items": [
+        "pipe_trestle",
+        "pipe_corner",
+        "conveyor",
+        "gantry_crane",
+        "antenna_farm"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "colonial_drum_tower",
+      "archetype": "drum_tower",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "drum",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 96.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3382
+        },
+        {
+          "lod": 1,
+          "triangles": 964
+        },
+        {
+          "lod": 2,
+          "triangles": 104
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 576,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "roof_deck": 92,
+        "roof_duct": 24,
+        "roof_plant": 168,
+        "shell_mass": 332,
+        "window_drum": 3456,
+        "window_emissive": 768,
+        "window_glass": 1152
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3382,
+        "lod1": 964,
+        "lod2": 104
+      },
+      "polys": {
+        "lod0": 1294,
+        "lod1": 447,
+        "lod2": 43
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_drum_tower_tall",
+      "archetype": "drum_tower_tall",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "drum_tall",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 158.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_TALL_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_TALL_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_TALL_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_TOWER_TALL_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 4036
+        },
+        {
+          "lod": 1,
+          "triangles": 1348
+        },
+        {
+          "lod": 2,
+          "triangles": 104
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 576,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "roof_deck": 92,
+        "roof_plant": 168,
+        "shell_mass": 332,
+        "window_drum": 5760,
+        "window_emissive": 960,
+        "window_glass": 1920
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 4036,
+        "lod1": 1348,
+        "lod2": 104
+      },
+      "polys": {
+        "lod0": 1656,
+        "lod1": 639,
+        "lod2": 43
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_drum_cluster",
+      "archetype": "drum_cluster",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "drum_cluster",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 132.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_E_0",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_E_1",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_W_0",
+          "direction": "W",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DRUM_CLUSTER_SOCKET_W_1",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 12050
+        },
+        {
+          "lod": 1,
+          "triangles": 2632
+        },
+        {
+          "lod": 2,
+          "triangles": 160
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "cornice": 1440,
+        "deck_groove": 120,
+        "deck_panel": 36,
+        "shell_mass": 828,
+        "window_drum": 11520,
+        "window_emissive": 2112,
+        "window_glass": 3840
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 12050,
+        "lod1": 2632,
+        "lod2": 160
+      },
+      "polys": {
+        "lod0": 4244,
+        "lod1": 1288,
+        "lod2": 64
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_hex_tower",
+      "archetype": "hex_tower",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "hex",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 112.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_HEX_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_HEX_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_HEX_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_HEX_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2974
+        },
+        {
+          "lod": 1,
+          "triangles": 332
+        },
+        {
+          "lod": 2,
+          "triangles": 36
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 164,
+        "cornice": 336,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "roof_duct": 12,
+        "roof_plant": 196,
+        "shell_mass": 164,
+        "window_drum": 2688,
+        "window_emissive": 192,
+        "window_glass": 384
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2974,
+        "lod1": 332,
+        "lod2": 36
+      },
+      "polys": {
+        "lod0": 1088,
+        "lod1": 155,
+        "lod2": 15
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_blade_tower",
+      "archetype": "blade_tower",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "blade",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 140.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BLADE_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BLADE_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BLADE_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BLADE_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 13936
+        },
+        {
+          "lod": 1,
+          "triangles": 650
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 220,
+        "cornice_reveal": 28,
+        "fin": 864,
+        "panel_detail": 2208,
+        "parapet_wall": 376,
+        "spandrel": 3300,
+        "window_drum": 3080,
+        "window_emissive": 324,
+        "window_glass": 672
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 13936,
+        "lod1": 650,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 4843,
+        "lod1": 247,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_dome_small",
+      "archetype": "dome_small",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "dome",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 28.4,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_SMALL_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_SMALL_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_SMALL_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_SMALL_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 14648
+        },
+        {
+          "lod": 1,
+          "triangles": 760
+        },
+        {
+          "lod": 2,
+          "triangles": 86
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 672,
+        "dome_oculus": 332,
+        "dome_rib": 6912,
+        "dome_shell": 586,
+        "window_emissive": 224
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 14648,
+        "lod1": 760,
+        "lod2": 86
+      },
+      "polys": {
+        "lod0": 5857,
+        "lod1": 364,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_dome_large",
+      "archetype": "dome_large",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "dome_large",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 50.4,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_E_0",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_E_1",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_W_0",
+          "direction": "W",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_DOME_LARGE_SOCKET_W_1",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 14082
+        },
+        {
+          "lod": 1,
+          "triangles": 760
+        },
+        {
+          "lod": 2,
+          "triangles": 86
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 672,
+        "dome_oculus": 332,
+        "dome_rib": 6912,
+        "dome_shell": 586,
+        "window_emissive": 224
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 14082,
+        "lod1": 760,
+        "lod2": 86
+      },
+      "polys": {
+        "lod0": 5614,
+        "lod1": 364,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_mega_slab",
+      "archetype": "mega_slab",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "mega_slab",
+      "cells": [
+        3,
+        3
+      ],
+      "footprintM": [
+        96.0,
+        96.0
+      ],
+      "heightM": 62.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_N_2",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_E_2",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_S_2",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_SOCKET_W_2",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 15658
+        },
+        {
+          "lod": 1,
+          "triangles": 890
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 1836,
+        "base_block": 220,
+        "coping": 220,
+        "cornice_reveal": 28,
+        "fin": 2592,
+        "louvre_bank": 312,
+        "louvre_fin": 1164,
+        "mast_antenna": 76,
+        "panel_detail": 2424,
+        "parapet_wall": 280,
+        "riser_stack": 120,
+        "roof_duct": 108,
+        "roof_plant": 1036,
+        "spandrel": 1320,
+        "vent_bank": 96,
+        "window_drum": 1100,
+        "window_emissive": 72,
+        "window_glass": 120
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 15658,
+        "lod1": 890,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 4771,
+        "lod1": 361,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_mega_slab_stepped",
+      "archetype": "mega_slab_stepped",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "mega_stepped",
+      "cells": [
+        4,
+        4
+      ],
+      "footprintM": [
+        128.0,
+        128.0
+      ],
+      "heightM": 96.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_N_2",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_N_3",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_E_2",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_E_3",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_S_2",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_S_3",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_W_2",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_MEGA_SLAB_STEPPED_SOCKET_W_3",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 11158
+        },
+        {
+          "lod": 1,
+          "triangles": 1402
+        },
+        {
+          "lod": 2,
+          "triangles": 346
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 660,
+        "cornice_reveal": 84,
+        "louvre_bank": 696,
+        "louvre_fin": 2436,
+        "mast_antenna": 76,
+        "panel_detail": 744,
+        "parapet_wall": 840,
+        "riser_stack": 60,
+        "roof_duct": 300,
+        "roof_plant": 3024,
+        "spandrel": 2200,
+        "vent_bank": 48,
+        "window_drum": 1540,
+        "window_emissive": 48,
+        "window_glass": 84
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 11158,
+        "lod1": 1402,
+        "lod2": 346
+      },
+      "polys": {
+        "lod0": 3848,
+        "lod1": 505,
+        "lod2": 127
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_podium_block",
+      "archetype": "podium_block",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "podium",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 34.0,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_E_0",
+          "direction": "E",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_E_1",
+          "direction": "E",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PODIUM_BLOCK_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2960
+        },
+        {
+          "lod": 1,
+          "triangles": 666
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 220,
+        "cornice_reveal": 28,
+        "deck_groove": 120,
+        "deck_panel": 36,
+        "handrail": 240,
+        "lamp_head": 168,
+        "lamp_post": 120,
+        "parapet_wall": 280,
+        "planting": 1100,
+        "podium_deck": 108,
+        "spandrel": 880,
+        "window_drum": 660,
+        "window_emissive": 24,
+        "window_glass": 72
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2960,
+        "lod1": 666,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 1157,
+        "lod1": 275,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_stack_terraced",
+      "archetype": "stack_terraced",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "terraced",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 84.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_STACK_TERRACED_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 6544
+        },
+        {
+          "lod": 1,
+          "triangles": 548
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 880,
+        "cornice_reveal": 112,
+        "parapet_wall": 1120,
+        "planting": 660,
+        "spandrel": 2640,
+        "window_drum": 1760,
+        "window_emissive": 36,
+        "window_glass": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 6544,
+        "lod1": 548,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 3056,
+        "lod1": 198,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_bridge_block",
+      "archetype": "bridge_block",
+      "style": "colonial",
+      "formClass": "form",
+      "form": "bridge_block",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 104.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BRIDGE_BLOCK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BRIDGE_BLOCK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BRIDGE_BLOCK_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BRIDGE_BLOCK_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BRIDGE_BLOCK_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_BRIDGE_BLOCK_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 11280
+        },
+        {
+          "lod": 1,
+          "triangles": 896
+        },
+        {
+          "lod": 2,
+          "triangles": 240
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 440,
+        "cornice_reveal": 56,
+        "panel_detail": 1404,
+        "parapet_wall": 624,
+        "skybridge": 220,
+        "spandrel": 4620,
+        "window_drum": 4180,
+        "window_emissive": 168,
+        "window_glass": 468
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 11280,
+        "lod1": 896,
+        "lod2": 240
+      },
+      "polys": {
+        "lod0": 5168,
+        "lod1": 324,
+        "lod2": 88
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_cooling_tower",
+      "archetype": "cooling_tower",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "cooling",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 78.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_COOLING_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_COOLING_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_COOLING_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_COOLING_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2802
+        },
+        {
+          "lod": 1,
+          "triangles": 576
+        },
+        {
+          "lod": 2,
+          "triangles": 80
+        }
+      ],
+      "geometryRoleTriangles": {
+        "cooling_shell": 520,
+        "cornice": 624,
+        "inlet_leg": 1080,
+        "inlet_ring": 624,
+        "window_emissive": 208
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2802,
+        "lod1": 576,
+        "lod2": 80
+      },
+      "polys": {
+        "lod0": 952,
+        "lod1": 288,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_chimney_stack",
+      "archetype": "chimney_stack",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "chimney",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 125.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CHIMNEY_STACK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CHIMNEY_STACK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CHIMNEY_STACK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CHIMNEY_STACK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3048
+        },
+        {
+          "lod": 1,
+          "triangles": 630
+        },
+        {
+          "lod": 2,
+          "triangles": 66
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 248,
+        "chimney_band": 2160,
+        "chimney_cap": 432,
+        "chimney_shell": 212,
+        "service_ladder": 12,
+        "warning_light": 204
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3048,
+        "lod1": 630,
+        "lod2": 66
+      },
+      "polys": {
+        "lod0": 1275,
+        "lod1": 279,
+        "lod2": 27
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_flare_stack",
+      "archetype": "flare_stack",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "flare",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 74.4,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_FLARE_STACK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_FLARE_STACK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_FLARE_STACK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_FLARE_STACK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1996
+        },
+        {
+          "lod": 1,
+          "triangles": 404
+        },
+        {
+          "lod": 2,
+          "triangles": 140
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "flare_tip": 72,
+        "mast_brace": 384,
+        "mast_leg": 880
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1996,
+        "lod1": 404,
+        "lod2": 140
+      },
+      "polys": {
+        "lod0": 682,
+        "lod1": 170,
+        "lod2": 50
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_silo_bank",
+      "archetype": "silo_bank",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "silo",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 42.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SILO_BANK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SILO_BANK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SILO_BANK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SILO_BANK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3066
+        },
+        {
+          "lod": 1,
+          "triangles": 804
+        },
+        {
+          "lod": 2,
+          "triangles": 180
+        }
+      ],
+      "geometryRoleTriangles": {
+        "conveyor_gallery": 108,
+        "service_ladder": 12,
+        "silo_band": 1920,
+        "silo_shell": 1580
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3066,
+        "lod1": 804,
+        "lod2": 180
+      },
+      "polys": {
+        "lod0": 1342,
+        "lod1": 372,
+        "lod2": 78
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_tank_cluster",
+      "archetype": "tank_cluster",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "tanks",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 26.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_TANK_CLUSTER_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_TANK_CLUSTER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_TANK_CLUSTER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_TANK_CLUSTER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1388
+        },
+        {
+          "lod": 1,
+          "triangles": 464
+        },
+        {
+          "lod": 2,
+          "triangles": 344
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe_rack": 72,
+        "sphere_tank": 720,
+        "storage_tank": 496,
+        "tank_leg": 160
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1388,
+        "lod1": 464,
+        "lod2": 344
+      },
+      "polys": {
+        "lod0": 673,
+        "lod1": 218,
+        "lod2": 164
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_substation",
+      "archetype": "substation",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "substation",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 22.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SUBSTATION_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SUBSTATION_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SUBSTATION_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_SUBSTATION_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1920
+        },
+        {
+          "lod": 1,
+          "triangles": 408
+        },
+        {
+          "lod": 2,
+          "triangles": 168
+        }
+      ],
+      "geometryRoleTriangles": {
+        "insulator": 180,
+        "pylon_mast": 872,
+        "shell_mass": 220,
+        "transformer": 660,
+        "window_emissive": 12
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1920,
+        "lod1": 408,
+        "lod2": 168
+      },
+      "polys": {
+        "lod0": 882,
+        "lod1": 162,
+        "lod2": 60
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_pipe_trestle",
+      "archetype": "pipe_trestle",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "pipe_run",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 16.0,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_TRESTLE_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_TRESTLE_SOCKET_E",
+          "direction": "E",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_TRESTLE_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_TRESTLE_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1394
+        },
+        {
+          "lod": 1,
+          "triangles": 300
+        },
+        {
+          "lod": 2,
+          "triangles": 208
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe": 140,
+        "pipe_wrap": 108,
+        "trestle_beam": 216,
+        "trestle_leg": 880,
+        "window_emissive": 12
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1394,
+        "lod1": 300,
+        "lod2": 208
+      },
+      "polys": {
+        "lod0": 527,
+        "lod1": 114,
+        "lod2": 76
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_pipe_corner",
+      "archetype": "pipe_corner",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "pipe_corner",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 16.4,
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_CORNER_SOCKET_N",
+          "direction": "N",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_CORNER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_CORNER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_PIPE_CORNER_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 904
+        },
+        {
+          "lod": 1,
+          "triangles": 284
+        },
+        {
+          "lod": 2,
+          "triangles": 284
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe": 200,
+        "pipe_wrap": 220,
+        "trestle_leg": 440
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 904,
+        "lod1": 284,
+        "lod2": 284
+      },
+      "polys": {
+        "lod0": 399,
+        "lod1": 110,
+        "lod2": 110
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_conveyor",
+      "archetype": "conveyor",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "conveyor",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 33.4,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONVEYOR_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONVEYOR_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONVEYOR_SOCKET_E",
+          "direction": "E",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONVEYOR_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONVEYOR_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONVEYOR_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1624
+        },
+        {
+          "lod": 1,
+          "triangles": 252
+        },
+        {
+          "lod": 2,
+          "triangles": 180
+        }
+      ],
+      "geometryRoleTriangles": {
+        "conveyor_gallery": 108,
+        "conveyor_hood": 108,
+        "conveyor_rib": 120,
+        "trestle_leg": 1320
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1624,
+        "lod1": 252,
+        "lod2": 180
+      },
+      "polys": {
+        "lod0": 792,
+        "lod1": 102,
+        "lod2": 66
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_gantry_crane",
+      "archetype": "gantry_crane",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "gantry",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 40.2,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_GANTRY_CRANE_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_GANTRY_CRANE_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_GANTRY_CRANE_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_GANTRY_CRANE_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_GANTRY_CRANE_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_GANTRY_CRANE_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1535
+        },
+        {
+          "lod": 1,
+          "triangles": 260
+        },
+        {
+          "lod": 2,
+          "triangles": 148
+        }
+      ],
+      "geometryRoleTriangles": {
+        "gantry_beam": 216,
+        "gantry_brace": 48,
+        "gantry_hook": 20,
+        "gantry_leg": 880,
+        "gantry_rail": 216,
+        "gantry_trolley": 108,
+        "warning_light": 20
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1535,
+        "lod1": 260,
+        "lod2": 148
+      },
+      "polys": {
+        "lod0": 526,
+        "lod1": 110,
+        "lod2": 58
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_antenna_farm",
+      "archetype": "antenna_farm",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "antenna",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 44.8,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_ANTENNA_FARM_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_ANTENNA_FARM_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_ANTENNA_FARM_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_ANTENNA_FARM_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 848
+        },
+        {
+          "lod": 1,
+          "triangles": 298
+        },
+        {
+          "lod": 2,
+          "triangles": 56
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "dish": 372,
+        "dish_mast": 60,
+        "mast_antenna": 76,
+        "warning_light": 20
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 848,
+        "lod1": 298,
+        "lod2": 56
+      },
+      "polys": {
+        "lod0": 315,
+        "lod1": 127,
+        "lod2": 20
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_container_yard",
+      "archetype": "container_yard",
+      "style": "colonial",
+      "formClass": "industry",
+      "form": "containers",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 14.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONTAINER_YARD_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONTAINER_YARD_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONTAINER_YARD_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_COLONIAL_CONTAINER_YARD_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1592
+        },
+        {
+          "lod": 1,
+          "triangles": 172
+        },
+        {
+          "lod": 2,
+          "triangles": 72
+        }
+      ],
+      "geometryRoleTriangles": {
+        "container": 1944,
+        "yard_barrier": 216,
+        "yard_office": 220
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1592,
+        "lod1": 172,
+        "lod2": 72
+      },
+      "polys": {
+        "lod0": 572,
+        "lod1": 82,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_drum_tower",
+      "archetype": "drum_tower",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "drum",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 96.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3304
+        },
+        {
+          "lod": 1,
+          "triangles": 964
+        },
+        {
+          "lod": 2,
+          "triangles": 104
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 576,
+        "dish_array": 56,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "roof_deck": 92,
+        "roof_plant": 168,
+        "shell_mass": 332,
+        "window_drum": 3456,
+        "window_emissive": 384,
+        "window_glass": 1152
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3304,
+        "lod1": 964,
+        "lod2": 104
+      },
+      "polys": {
+        "lod0": 1317,
+        "lod1": 447,
+        "lod2": 43
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_drum_tower_tall",
+      "archetype": "drum_tower_tall",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "drum_tall",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 158.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_TALL_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_TALL_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_TALL_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_TOWER_TALL_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3980
+        },
+        {
+          "lod": 1,
+          "triangles": 1348
+        },
+        {
+          "lod": 2,
+          "triangles": 104
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 576,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "roof_deck": 92,
+        "roof_duct": 24,
+        "roof_plant": 112,
+        "shell_mass": 332,
+        "window_drum": 5760,
+        "window_emissive": 960,
+        "window_glass": 1920
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3980,
+        "lod1": 1348,
+        "lod2": 104
+      },
+      "polys": {
+        "lod0": 1741,
+        "lod1": 639,
+        "lod2": 43
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_drum_cluster",
+      "archetype": "drum_cluster",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "drum_cluster",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 132.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_E_0",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_E_1",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_W_0",
+          "direction": "W",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DRUM_CLUSTER_SOCKET_W_1",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 11870
+        },
+        {
+          "lod": 1,
+          "triangles": 2632
+        },
+        {
+          "lod": 2,
+          "triangles": 160
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "cornice": 1440,
+        "deck_groove": 120,
+        "deck_panel": 36,
+        "shell_mass": 828,
+        "window_drum": 11520,
+        "window_emissive": 1728,
+        "window_glass": 3840
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 11870,
+        "lod1": 2632,
+        "lod2": 160
+      },
+      "polys": {
+        "lod0": 4255,
+        "lod1": 1288,
+        "lod2": 64
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_hex_tower",
+      "archetype": "hex_tower",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "hex",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 112.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_HEX_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_HEX_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_HEX_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_HEX_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2202
+        },
+        {
+          "lod": 1,
+          "triangles": 332
+        },
+        {
+          "lod": 2,
+          "triangles": 36
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 164,
+        "cornice": 336,
+        "louvre_bank": 24,
+        "louvre_fin": 84,
+        "roof_plant": 140,
+        "shell_mass": 164,
+        "window_drum": 2688,
+        "window_emissive": 192,
+        "window_glass": 384
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2202,
+        "lod1": 332,
+        "lod2": 36
+      },
+      "polys": {
+        "lod0": 847,
+        "lod1": 155,
+        "lod2": 15
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_blade_tower",
+      "archetype": "blade_tower",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "blade",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 140.0,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 12172
+        },
+        {
+          "lod": 1,
+          "triangles": 626
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 220,
+        "cornice_reveal": 28,
+        "fin": 648,
+        "panel_detail": 1344,
+        "parapet_wall": 296,
+        "spandrel": 3300,
+        "window_drum": 3080,
+        "window_emissive": 276,
+        "window_glass": 672
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 12172,
+        "lod1": 626,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 4599,
+        "lod1": 235,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_dome_small",
+      "archetype": "dome_small",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "dome",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 28.4,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_SMALL_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_SMALL_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_SMALL_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_SMALL_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 14948
+        },
+        {
+          "lod": 1,
+          "triangles": 760
+        },
+        {
+          "lod": 2,
+          "triangles": 86
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 672,
+        "dome_oculus": 332,
+        "dome_rib": 6912,
+        "dome_shell": 586,
+        "window_emissive": 224
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 14948,
+        "lod1": 760,
+        "lod2": 86
+      },
+      "polys": {
+        "lod0": 5777,
+        "lod1": 364,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_dome_large",
+      "archetype": "dome_large",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "dome_large",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 50.4,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_E_0",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_E_1",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_W_0",
+          "direction": "W",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_DOME_LARGE_SOCKET_W_1",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 14178
+        },
+        {
+          "lod": 1,
+          "triangles": 760
+        },
+        {
+          "lod": 2,
+          "triangles": 86
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 332,
+        "cornice": 672,
+        "dome_oculus": 332,
+        "dome_rib": 6912,
+        "dome_shell": 586,
+        "window_emissive": 224
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 14178,
+        "lod1": 760,
+        "lod2": 86
+      },
+      "polys": {
+        "lod0": 5511,
+        "lod1": 364,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_mega_slab",
+      "archetype": "mega_slab",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "mega_slab",
+      "cells": [
+        3,
+        3
+      ],
+      "footprintM": [
+        96.0,
+        96.0
+      ],
+      "heightM": 62.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_N_2",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_E_2",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_S_2",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_SOCKET_W_2",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 14652
+        },
+        {
+          "lod": 1,
+          "triangles": 846
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 1188,
+        "base_block": 220,
+        "coping": 220,
+        "cornice_reveal": 28,
+        "fin": 2376,
+        "louvre_bank": 312,
+        "louvre_fin": 1164,
+        "panel_detail": 2304,
+        "parapet_wall": 280,
+        "roof_duct": 108,
+        "roof_plant": 1036,
+        "spandrel": 1320,
+        "vent_bank": 48,
+        "window_drum": 1100,
+        "window_emissive": 36,
+        "window_glass": 120
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 14652,
+        "lod1": 846,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 4383,
+        "lod1": 341,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_mega_slab_stepped",
+      "archetype": "mega_slab_stepped",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "mega_stepped",
+      "cells": [
+        4,
+        4
+      ],
+      "footprintM": [
+        128.0,
+        128.0
+      ],
+      "heightM": 96.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_N_2",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_N_3",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_E_2",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_E_3",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_S_2",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_S_3",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_W_2",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_MEGA_SLAB_STEPPED_SOCKET_W_3",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 8678
+        },
+        {
+          "lod": 1,
+          "triangles": 1206
+        },
+        {
+          "lod": 2,
+          "triangles": 346
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 660,
+        "cornice_reveal": 84,
+        "dish_array": 56,
+        "hab_pod": 220,
+        "louvre_bank": 504,
+        "louvre_fin": 1764,
+        "mast_antenna": 76,
+        "panel_detail": 768,
+        "parapet_wall": 840,
+        "pod_light": 12,
+        "roof_duct": 228,
+        "roof_plant": 2184,
+        "spandrel": 2200,
+        "window_drum": 1540,
+        "window_emissive": 36,
+        "window_glass": 84
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 8678,
+        "lod1": 1206,
+        "lod2": 346
+      },
+      "polys": {
+        "lod0": 3310,
+        "lod1": 435,
+        "lod2": 127
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_podium_block",
+      "archetype": "podium_block",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "podium",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 34.0,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_E_0",
+          "direction": "E",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_E_1",
+          "direction": "E",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PODIUM_BLOCK_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3004
+        },
+        {
+          "lod": 1,
+          "triangles": 666
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 220,
+        "cornice_reveal": 28,
+        "deck_groove": 120,
+        "deck_panel": 36,
+        "handrail": 240,
+        "lamp_head": 168,
+        "lamp_post": 120,
+        "parapet_wall": 280,
+        "planting": 1100,
+        "podium_deck": 108,
+        "spandrel": 880,
+        "window_drum": 660,
+        "window_emissive": 48,
+        "window_glass": 72
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3004,
+        "lod1": 666,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 1158,
+        "lod1": 275,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_stack_terraced",
+      "archetype": "stack_terraced",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "terraced",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 84.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_STACK_TERRACED_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 6720
+        },
+        {
+          "lod": 1,
+          "triangles": 548
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 880,
+        "cornice_reveal": 112,
+        "parapet_wall": 1120,
+        "planting": 660,
+        "spandrel": 2640,
+        "window_drum": 1760,
+        "window_emissive": 24,
+        "window_glass": 96
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 6720,
+        "lod1": 548,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 3098,
+        "lod1": 198,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_bridge_block",
+      "archetype": "bridge_block",
+      "style": "brutalist",
+      "formClass": "form",
+      "form": "bridge_block",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 104.0,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BRIDGE_BLOCK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BRIDGE_BLOCK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BRIDGE_BLOCK_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BRIDGE_BLOCK_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BRIDGE_BLOCK_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_BRIDGE_BLOCK_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 10996
+        },
+        {
+          "lod": 1,
+          "triangles": 896
+        },
+        {
+          "lod": 2,
+          "triangles": 240
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 440,
+        "cornice_reveal": 56,
+        "panel_detail": 1248,
+        "parapet_wall": 560,
+        "skybridge": 220,
+        "spandrel": 4620,
+        "window_drum": 4180,
+        "window_emissive": 204,
+        "window_glass": 468
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 10996,
+        "lod1": 896,
+        "lod2": 240
+      },
+      "polys": {
+        "lod0": 5021,
+        "lod1": 324,
+        "lod2": 88
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_cooling_tower",
+      "archetype": "cooling_tower",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "cooling",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 78.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_COOLING_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_COOLING_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_COOLING_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_COOLING_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2744
+        },
+        {
+          "lod": 1,
+          "triangles": 576
+        },
+        {
+          "lod": 2,
+          "triangles": 80
+        }
+      ],
+      "geometryRoleTriangles": {
+        "cooling_shell": 520,
+        "cornice": 624,
+        "inlet_leg": 1080,
+        "inlet_ring": 624,
+        "window_emissive": 208
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2744,
+        "lod1": 576,
+        "lod2": 80
+      },
+      "polys": {
+        "lod0": 962,
+        "lod1": 288,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_chimney_stack",
+      "archetype": "chimney_stack",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "chimney",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 125.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CHIMNEY_STACK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CHIMNEY_STACK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CHIMNEY_STACK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CHIMNEY_STACK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3052
+        },
+        {
+          "lod": 1,
+          "triangles": 630
+        },
+        {
+          "lod": 2,
+          "triangles": 66
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 248,
+        "chimney_band": 2160,
+        "chimney_cap": 432,
+        "chimney_shell": 212,
+        "service_ladder": 12,
+        "warning_light": 204
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3052,
+        "lod1": 630,
+        "lod2": 66
+      },
+      "polys": {
+        "lod0": 1275,
+        "lod1": 279,
+        "lod2": 27
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_flare_stack",
+      "archetype": "flare_stack",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "flare",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 74.4,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_FLARE_STACK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_FLARE_STACK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_FLARE_STACK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_FLARE_STACK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1996
+        },
+        {
+          "lod": 1,
+          "triangles": 404
+        },
+        {
+          "lod": 2,
+          "triangles": 140
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "flare_tip": 72,
+        "mast_brace": 384,
+        "mast_leg": 880
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1996,
+        "lod1": 404,
+        "lod2": 140
+      },
+      "polys": {
+        "lod0": 682,
+        "lod1": 170,
+        "lod2": 50
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_silo_bank",
+      "archetype": "silo_bank",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "silo",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 42.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SILO_BANK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SILO_BANK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SILO_BANK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SILO_BANK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3050
+        },
+        {
+          "lod": 1,
+          "triangles": 804
+        },
+        {
+          "lod": 2,
+          "triangles": 180
+        }
+      ],
+      "geometryRoleTriangles": {
+        "conveyor_gallery": 108,
+        "service_ladder": 12,
+        "silo_band": 1920,
+        "silo_shell": 1580
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3050,
+        "lod1": 804,
+        "lod2": 180
+      },
+      "polys": {
+        "lod0": 1339,
+        "lod1": 372,
+        "lod2": 78
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_tank_cluster",
+      "archetype": "tank_cluster",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "tanks",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 26.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_TANK_CLUSTER_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_TANK_CLUSTER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_TANK_CLUSTER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_TANK_CLUSTER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1388
+        },
+        {
+          "lod": 1,
+          "triangles": 464
+        },
+        {
+          "lod": 2,
+          "triangles": 344
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe_rack": 72,
+        "sphere_tank": 720,
+        "storage_tank": 496,
+        "tank_leg": 160
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1388,
+        "lod1": 464,
+        "lod2": 344
+      },
+      "polys": {
+        "lod0": 673,
+        "lod1": 218,
+        "lod2": 164
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_substation",
+      "archetype": "substation",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "substation",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 22.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SUBSTATION_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SUBSTATION_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SUBSTATION_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_SUBSTATION_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1920
+        },
+        {
+          "lod": 1,
+          "triangles": 408
+        },
+        {
+          "lod": 2,
+          "triangles": 168
+        }
+      ],
+      "geometryRoleTriangles": {
+        "insulator": 180,
+        "pylon_mast": 872,
+        "shell_mass": 220,
+        "transformer": 660,
+        "window_emissive": 12
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1920,
+        "lod1": 408,
+        "lod2": 168
+      },
+      "polys": {
+        "lod0": 882,
+        "lod1": 162,
+        "lod2": 60
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_pipe_trestle",
+      "archetype": "pipe_trestle",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "pipe_run",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 16.0,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_TRESTLE_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_TRESTLE_SOCKET_E",
+          "direction": "E",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_TRESTLE_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_TRESTLE_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 909
+        },
+        {
+          "lod": 1,
+          "triangles": 300
+        },
+        {
+          "lod": 2,
+          "triangles": 208
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe": 140,
+        "pipe_wrap": 108,
+        "trestle_beam": 216,
+        "trestle_leg": 880,
+        "window_emissive": 12
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 909,
+        "lod1": 300,
+        "lod2": 208
+      },
+      "polys": {
+        "lod0": 337,
+        "lod1": 114,
+        "lod2": 76
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_pipe_corner",
+      "archetype": "pipe_corner",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "pipe_corner",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 16.4,
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_CORNER_SOCKET_N",
+          "direction": "N",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_CORNER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_CORNER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_PIPE_CORNER_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 904
+        },
+        {
+          "lod": 1,
+          "triangles": 284
+        },
+        {
+          "lod": 2,
+          "triangles": 284
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe": 200,
+        "pipe_wrap": 220,
+        "trestle_leg": 440
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 904,
+        "lod1": 284,
+        "lod2": 284
+      },
+      "polys": {
+        "lod0": 399,
+        "lod1": 110,
+        "lod2": 110
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_conveyor",
+      "archetype": "conveyor",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "conveyor",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 33.4,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONVEYOR_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONVEYOR_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONVEYOR_SOCKET_E",
+          "direction": "E",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONVEYOR_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONVEYOR_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONVEYOR_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1624
+        },
+        {
+          "lod": 1,
+          "triangles": 252
+        },
+        {
+          "lod": 2,
+          "triangles": 180
+        }
+      ],
+      "geometryRoleTriangles": {
+        "conveyor_gallery": 108,
+        "conveyor_hood": 108,
+        "conveyor_rib": 120,
+        "trestle_leg": 1320
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1624,
+        "lod1": 252,
+        "lod2": 180
+      },
+      "polys": {
+        "lod0": 792,
+        "lod1": 102,
+        "lod2": 66
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_gantry_crane",
+      "archetype": "gantry_crane",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "gantry",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 40.2,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_GANTRY_CRANE_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_GANTRY_CRANE_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_GANTRY_CRANE_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_GANTRY_CRANE_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_GANTRY_CRANE_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_GANTRY_CRANE_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1920
+        },
+        {
+          "lod": 1,
+          "triangles": 260
+        },
+        {
+          "lod": 2,
+          "triangles": 148
+        }
+      ],
+      "geometryRoleTriangles": {
+        "gantry_beam": 216,
+        "gantry_brace": 48,
+        "gantry_hook": 20,
+        "gantry_leg": 880,
+        "gantry_rail": 216,
+        "gantry_trolley": 108,
+        "warning_light": 20
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1920,
+        "lod1": 260,
+        "lod2": 148
+      },
+      "polys": {
+        "lod0": 694,
+        "lod1": 110,
+        "lod2": 58
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_antenna_farm",
+      "archetype": "antenna_farm",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "antenna",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 44.8,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_ANTENNA_FARM_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_ANTENNA_FARM_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_ANTENNA_FARM_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_ANTENNA_FARM_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 818
+        },
+        {
+          "lod": 1,
+          "triangles": 298
+        },
+        {
+          "lod": 2,
+          "triangles": 56
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "dish": 372,
+        "dish_mast": 60,
+        "mast_antenna": 76,
+        "warning_light": 20
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 818,
+        "lod1": 298,
+        "lod2": 56
+      },
+      "polys": {
+        "lod0": 314,
+        "lod1": 127,
+        "lod2": 20
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_container_yard",
+      "archetype": "container_yard",
+      "style": "brutalist",
+      "formClass": "industry",
+      "form": "containers",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 14.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONTAINER_YARD_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONTAINER_YARD_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONTAINER_YARD_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_BRUTALIST_CONTAINER_YARD_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1976
+        },
+        {
+          "lod": 1,
+          "triangles": 232
+        },
+        {
+          "lod": 2,
+          "triangles": 108
+        }
+      ],
+      "geometryRoleTriangles": {
+        "container": 2916,
+        "yard_barrier": 216,
+        "yard_office": 220
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1976,
+        "lod1": 232,
+        "lod2": 108
+      },
+      "polys": {
+        "lod0": 695,
+        "lod1": 112,
+        "lod2": 54
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_drum_tower",
+      "archetype": "drum_tower",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "drum",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 62.76,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2026
+        },
+        {
+          "lod": 1,
+          "triangles": 772
+        },
+        {
+          "lod": 2,
+          "triangles": 104
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 236,
+        "cornice": 384,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 56,
+        "roof_deck": 92,
+        "roof_plant": 168,
+        "shell_mass": 236,
+        "window_drum": 1152,
+        "window_glass": 576
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2026,
+        "lod1": 772,
+        "lod2": 104
+      },
+      "polys": {
+        "lod0": 735,
+        "lod1": 351,
+        "lod2": 43
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_drum_tower_tall",
+      "archetype": "drum_tower_tall",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "drum_tall",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 85.71,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_TALL_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_TALL_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_TALL_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_TOWER_TALL_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2140
+        },
+        {
+          "lod": 1,
+          "triangles": 964
+        },
+        {
+          "lod": 2,
+          "triangles": 104
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 236,
+        "cornice": 384,
+        "louvre_bank": 24,
+        "louvre_fin": 84,
+        "mast_antenna": 56,
+        "roof_deck": 92,
+        "roof_plant": 140,
+        "shell_mass": 236,
+        "window_drum": 1920,
+        "window_glass": 960
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2140,
+        "lod1": 964,
+        "lod2": 104
+      },
+      "polys": {
+        "lod0": 827,
+        "lod1": 447,
+        "lod2": 43
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_drum_cluster",
+      "archetype": "drum_cluster",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "drum_cluster",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 88.79,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_E_0",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_E_1",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_W_0",
+          "direction": "W",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DRUM_CLUSTER_SOCKET_W_1",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 6132
+        },
+        {
+          "lod": 1,
+          "triangles": 1864
+        },
+        {
+          "lod": 2,
+          "triangles": 160
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "cornice": 960,
+        "deck_groove": 120,
+        "deck_panel": 36,
+        "shell_mass": 588,
+        "window_drum": 4608,
+        "window_glass": 2304
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 6132,
+        "lod1": 1864,
+        "lod2": 160
+      },
+      "polys": {
+        "lod0": 2058,
+        "lod1": 904,
+        "lod2": 64
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_hex_tower",
+      "archetype": "hex_tower",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "hex",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 71.96,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_HEX_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_HEX_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_HEX_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_HEX_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2910
+        },
+        {
+          "lod": 1,
+          "triangles": 284
+        },
+        {
+          "lod": 2,
+          "triangles": 36
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 68,
+        "cornice": 144,
+        "louvre_bank": 24,
+        "louvre_fin": 84,
+        "roof_plant": 140,
+        "shell_mass": 68,
+        "window_drum": 720,
+        "window_glass": 240
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2910,
+        "lod1": 284,
+        "lod2": 36
+      },
+      "polys": {
+        "lod0": 1027,
+        "lod1": 131,
+        "lod2": 15
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_blade_tower",
+      "archetype": "blade_tower",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "blade",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 88.48,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_BLADE_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BLADE_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BLADE_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BLADE_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5264
+        },
+        {
+          "lod": 1,
+          "triangles": 458
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "coping": 92,
+        "cornice_reveal": 28,
+        "fin": 264,
+        "panel_detail": 1140,
+        "parapet_wall": 144,
+        "spandrel": 828,
+        "window_drum": 736,
+        "window_glass": 384
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 5264,
+        "lod1": 458,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 1821,
+        "lod1": 175,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_dome_small",
+      "archetype": "dome_small",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "dome",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 22.41,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_SMALL_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_SMALL_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_SMALL_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_SMALL_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 8326
+        },
+        {
+          "lod": 1,
+          "triangles": 632
+        },
+        {
+          "lod": 2,
+          "triangles": 86
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "cornice": 448,
+        "dome_oculus": 220,
+        "dome_rib": 2816,
+        "dome_shell": 530
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 8326,
+        "lod1": 632,
+        "lod2": 86
+      },
+      "polys": {
+        "lod0": 3472,
+        "lod1": 300,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_dome_large",
+      "archetype": "dome_large",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "dome_large",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 32.96,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_E_0",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_E_1",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_W_0",
+          "direction": "W",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_DOME_LARGE_SOCKET_W_1",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 7798
+        },
+        {
+          "lod": 1,
+          "triangles": 632
+        },
+        {
+          "lod": 2,
+          "triangles": 86
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "cornice": 448,
+        "dome_oculus": 220,
+        "dome_rib": 2816,
+        "dome_shell": 530
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 7798,
+        "lod1": 632,
+        "lod2": 86
+      },
+      "polys": {
+        "lod0": 3255,
+        "lod1": 300,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_mega_slab",
+      "archetype": "mega_slab",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "mega_slab",
+      "cells": [
+        3,
+        3
+      ],
+      "footprintM": [
+        96.0,
+        96.0
+      ],
+      "heightM": 40.52,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_N_2",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_E_2",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_S_2",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_SOCKET_W_2",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 8854
+        },
+        {
+          "lod": 1,
+          "triangles": 790
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 308,
+        "base_block": 92,
+        "coping": 92,
+        "cornice_reveal": 28,
+        "fin": 968,
+        "louvre_bank": 312,
+        "louvre_fin": 1164,
+        "panel_detail": 1632,
+        "parapet_wall": 136,
+        "roof_duct": 108,
+        "roof_plant": 1036,
+        "spandrel": 368,
+        "vent_bank": 48,
+        "window_drum": 276,
+        "window_glass": 72
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 8854,
+        "lod1": 790,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 2508,
+        "lod1": 321,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_mega_slab_stepped",
+      "archetype": "mega_slab_stepped",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "mega_stepped",
+      "cells": [
+        4,
+        4
+      ],
+      "footprintM": [
+        128.0,
+        128.0
+      ],
+      "heightM": 68.37,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_2",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_3",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_2",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_3",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_2",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_3",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_2",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_3",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5662
+        },
+        {
+          "lod": 1,
+          "triangles": 1234
+        },
+        {
+          "lod": 2,
+          "triangles": 346
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "coping": 276,
+        "cornice_reveal": 84,
+        "louvre_bank": 600,
+        "louvre_fin": 2100,
+        "mast_antenna": 56,
+        "panel_detail": 648,
+        "parapet_wall": 408,
+        "riser_stack": 60,
+        "roof_duct": 252,
+        "roof_plant": 2632,
+        "spandrel": 736,
+        "vent_bank": 48,
+        "window_drum": 460,
+        "window_glass": 60
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 5662,
+        "lod1": 1234,
+        "lod2": 346
+      },
+      "polys": {
+        "lod0": 1870,
+        "lod1": 445,
+        "lod2": 127
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_podium_block",
+      "archetype": "podium_block",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "podium",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 21.3,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_E_0",
+          "direction": "E",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_E_1",
+          "direction": "E",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PODIUM_BLOCK_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1308
+        },
+        {
+          "lod": 1,
+          "triangles": 610
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "coping": 92,
+        "cornice_reveal": 28,
+        "deck_groove": 120,
+        "deck_panel": 36,
+        "handrail": 240,
+        "parapet_wall": 136,
+        "planting": 460,
+        "podium_deck": 44,
+        "spandrel": 276,
+        "window_drum": 184,
+        "window_glass": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1308,
+        "lod1": 610,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 488,
+        "lod1": 255,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_stack_terraced",
+      "archetype": "stack_terraced",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "terraced",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "heightM": 41.71,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_STACK_TERRACED_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2088
+        },
+        {
+          "lod": 1,
+          "triangles": 436
+        },
+        {
+          "lod": 2,
+          "triangles": 134
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "coping": 368,
+        "cornice_reveal": 112,
+        "parapet_wall": 544,
+        "planting": 276,
+        "spandrel": 736,
+        "window_drum": 368,
+        "window_glass": 48
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2088,
+        "lod1": 436,
+        "lod2": 134
+      },
+      "polys": {
+        "lod0": 1033,
+        "lod1": 158,
+        "lod2": 49
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_bridge_block",
+      "archetype": "bridge_block",
+      "style": "ruined",
+      "formClass": "form",
+      "form": "bridge_block",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 64.89,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_BRIDGE_BLOCK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BRIDGE_BLOCK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BRIDGE_BLOCK_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BRIDGE_BLOCK_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BRIDGE_BLOCK_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_BRIDGE_BLOCK_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3748
+        },
+        {
+          "lod": 1,
+          "triangles": 672
+        },
+        {
+          "lod": 2,
+          "triangles": 240
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "coping": 184,
+        "cornice_reveal": 56,
+        "panel_detail": 936,
+        "parapet_wall": 288,
+        "skybridge": 92,
+        "spandrel": 1196,
+        "window_drum": 1012,
+        "window_glass": 276
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 3748,
+        "lod1": 672,
+        "lod2": 240
+      },
+      "polys": {
+        "lod0": 1774,
+        "lod1": 244,
+        "lod2": 88
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_cooling_tower",
+      "archetype": "cooling_tower",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "cooling",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 45.34,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_COOLING_TOWER_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_COOLING_TOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_COOLING_TOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_COOLING_TOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2224
+        },
+        {
+          "lod": 1,
+          "triangles": 464
+        },
+        {
+          "lod": 2,
+          "triangles": 80
+        }
+      ],
+      "geometryRoleTriangles": {
+        "cooling_shell": 520,
+        "cornice": 416,
+        "inlet_leg": 440,
+        "inlet_ring": 416
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2224,
+        "lod1": 464,
+        "lod2": 80
+      },
+      "polys": {
+        "lod0": 778,
+        "lod1": 232,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_chimney_stack",
+      "archetype": "chimney_stack",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "chimney",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 60.24,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_CHIMNEY_STACK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CHIMNEY_STACK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CHIMNEY_STACK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CHIMNEY_STACK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1962
+        },
+        {
+          "lod": 1,
+          "triangles": 498
+        },
+        {
+          "lod": 2,
+          "triangles": 66
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 176,
+        "chimney_band": 1440,
+        "chimney_cap": 288,
+        "chimney_shell": 140,
+        "service_ladder": 12
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1962,
+        "lod1": 498,
+        "lod2": 66
+      },
+      "polys": {
+        "lod0": 768,
+        "lod1": 237,
+        "lod2": 27
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_flare_stack",
+      "archetype": "flare_stack",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "flare",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 48.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1226
+        },
+        {
+          "lod": 1,
+          "triangles": 404
+        },
+        {
+          "lod": 2,
+          "triangles": 140
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "flare_tip": 72,
+        "mast_brace": 384,
+        "mast_leg": 368
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1226,
+        "lod1": 404,
+        "lod2": 140
+      },
+      "polys": {
+        "lod0": 359,
+        "lod1": 170,
+        "lod2": 50
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_silo_bank",
+      "archetype": "silo_bank",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "silo",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 24.48,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_SILO_BANK_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_SILO_BANK_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_SILO_BANK_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_SILO_BANK_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2234
+        },
+        {
+          "lod": 1,
+          "triangles": 804
+        },
+        {
+          "lod": 2,
+          "triangles": 180
+        }
+      ],
+      "geometryRoleTriangles": {
+        "conveyor_gallery": 44,
+        "service_ladder": 12,
+        "silo_band": 1280,
+        "silo_shell": 1100
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 2234,
+        "lod1": 804,
+        "lod2": 180
+      },
+      "polys": {
+        "lod0": 925,
+        "lod1": 372,
+        "lod2": 78
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_tank_cluster",
+      "archetype": "tank_cluster",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "tanks",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 15.03,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_TANK_CLUSTER_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_TANK_CLUSTER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_TANK_CLUSTER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_TANK_CLUSTER_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1100
+        },
+        {
+          "lod": 1,
+          "triangles": 464
+        },
+        {
+          "lod": 2,
+          "triangles": 344
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe_rack": 72,
+        "sphere_tank": 576,
+        "storage_tank": 352,
+        "tank_leg": 160
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 1100,
+        "lod1": 464,
+        "lod2": 344
+      },
+      "polys": {
+        "lod0": 529,
+        "lod1": 218,
+        "lod2": 164
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_substation",
+      "archetype": "substation",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "substation",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 13.07,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_SUBSTATION_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_SUBSTATION_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_SUBSTATION_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_SUBSTATION_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 772
+        },
+        {
+          "lod": 1,
+          "triangles": 396
+        },
+        {
+          "lod": 2,
+          "triangles": 168
+        }
+      ],
+      "geometryRoleTriangles": {
+        "insulator": 180,
+        "pylon_mast": 360,
+        "shell_mass": 92,
+        "transformer": 276
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 772,
+        "lod1": 396,
+        "lod2": 168
+      },
+      "polys": {
+        "lod0": 421,
+        "lod1": 156,
+        "lod2": 60
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_pipe_trestle",
+      "archetype": "pipe_trestle",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "pipe_run",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 10.71,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_TRESTLE_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_TRESTLE_SOCKET_E",
+          "direction": "E",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_TRESTLE_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_TRESTLE_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 711
+        },
+        {
+          "lod": 1,
+          "triangles": 288
+        },
+        {
+          "lod": 2,
+          "triangles": 208
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe": 140,
+        "pipe_wrap": 44,
+        "trestle_beam": 88,
+        "trestle_leg": 368
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 711,
+        "lod1": 288,
+        "lod2": 208
+      },
+      "polys": {
+        "lod0": 301,
+        "lod1": 108,
+        "lod2": 76
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_pipe_corner",
+      "archetype": "pipe_corner",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "pipe_corner",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 8.48,
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_CORNER_SOCKET_N",
+          "direction": "N",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_CORNER_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_CORNER_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_PIPE_CORNER_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 462
+        },
+        {
+          "lod": 1,
+          "triangles": 284
+        },
+        {
+          "lod": 2,
+          "triangles": 284
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pipe": 200,
+        "pipe_wrap": 92,
+        "trestle_leg": 184
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 462,
+        "lod1": 284,
+        "lod2": 284
+      },
+      "polys": {
+        "lod0": 208,
+        "lod1": 110,
+        "lod2": 110
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_conveyor",
+      "archetype": "conveyor",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "conveyor",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 21.81,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_CONVEYOR_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONVEYOR_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONVEYOR_SOCKET_E",
+          "direction": "E",
+          "type": "open"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONVEYOR_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONVEYOR_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONVEYOR_SOCKET_W",
+          "direction": "W",
+          "type": "open"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 672
+        },
+        {
+          "lod": 1,
+          "triangles": 252
+        },
+        {
+          "lod": 2,
+          "triangles": 180
+        }
+      ],
+      "geometryRoleTriangles": {
+        "conveyor_gallery": 44,
+        "conveyor_hood": 44,
+        "conveyor_rib": 120,
+        "trestle_leg": 552
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 672,
+        "lod1": 252,
+        "lod2": 180
+      },
+      "polys": {
+        "lod0": 390,
+        "lod1": 102,
+        "lod2": 66
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_gantry_crane",
+      "archetype": "gantry_crane",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "gantry",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "heightM": 27.9,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_GANTRY_CRANE_SOCKET_N_0",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_GANTRY_CRANE_SOCKET_N_1",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_GANTRY_CRANE_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_GANTRY_CRANE_SOCKET_S_0",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_GANTRY_CRANE_SOCKET_S_1",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_GANTRY_CRANE_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 946
+        },
+        {
+          "lod": 1,
+          "triangles": 240
+        },
+        {
+          "lod": 2,
+          "triangles": 148
+        }
+      ],
+      "geometryRoleTriangles": {
+        "gantry_beam": 88,
+        "gantry_brace": 48,
+        "gantry_hook": 20,
+        "gantry_leg": 368,
+        "gantry_rail": 88,
+        "gantry_trolley": 44
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 946,
+        "lod1": 240,
+        "lod2": 148
+      },
+      "polys": {
+        "lod0": 370,
+        "lod1": 102,
+        "lod2": 58
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_antenna_farm",
+      "archetype": "antenna_farm",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "antenna",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 33.7,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_ANTENNA_FARM_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_ANTENNA_FARM_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_ANTENNA_FARM_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_ANTENNA_FARM_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 687
+        },
+        {
+          "lod": 1,
+          "triangles": 278
+        },
+        {
+          "lod": 2,
+          "triangles": 56
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "dish": 288,
+        "dish_mast": 60,
+        "mast_antenna": 76
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 687,
+        "lod1": 278,
+        "lod2": 56
+      },
+      "polys": {
+        "lod0": 252,
+        "lod1": 119,
+        "lod2": 20
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_container_yard",
+      "archetype": "container_yard",
+      "style": "ruined",
+      "formClass": "industry",
+      "form": "containers",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "heightM": 6.62,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_N",
+          "direction": "N",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_E",
+          "direction": "E",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_S",
+          "direction": "S",
+          "type": "service"
+        },
+        {
+          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_W",
+          "direction": "W",
+          "type": "service"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 940
+        },
+        {
+          "lod": 1,
+          "triangles": 232
+        },
+        {
+          "lod": 2,
+          "triangles": 108
+        }
+      ],
+      "geometryRoleTriangles": {
+        "container": 1188,
+        "yard_barrier": 88,
+        "yard_office": 92
+      },
+      "collision": {
+        "triangles": 12
+      },
+      "tris": {
+        "lod0": 940,
+        "lod1": 232,
+        "lod2": 108
+      },
+      "polys": {
+        "lod0": 398,
+        "lod1": 112,
+        "lod2": 54
+      },
+      "objectsPerModule": 3
+    }
+  ],
+  "exports": [
+    {
+      "module": "colonial_drum_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-drum-tower.glb"
+    },
+    {
+      "module": "colonial_drum_tower_tall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-drum-tower-tall.glb"
+    },
+    {
+      "module": "colonial_drum_cluster",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-drum-cluster.glb"
+    },
+    {
+      "module": "colonial_hex_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-hex-tower.glb"
+    },
+    {
+      "module": "colonial_blade_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-blade-tower.glb"
+    },
+    {
+      "module": "colonial_dome_small",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-dome-small.glb"
+    },
+    {
+      "module": "colonial_dome_large",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-dome-large.glb"
+    },
+    {
+      "module": "colonial_mega_slab",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-mega-slab.glb"
+    },
+    {
+      "module": "colonial_mega_slab_stepped",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-mega-slab-stepped.glb"
+    },
+    {
+      "module": "colonial_podium_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-podium-block.glb"
+    },
+    {
+      "module": "colonial_stack_terraced",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-stack-terraced.glb"
+    },
+    {
+      "module": "colonial_bridge_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-bridge-block.glb"
+    },
+    {
+      "module": "colonial_cooling_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-cooling-tower.glb"
+    },
+    {
+      "module": "colonial_chimney_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-chimney-stack.glb"
+    },
+    {
+      "module": "colonial_flare_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-flare-stack.glb"
+    },
+    {
+      "module": "colonial_silo_bank",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-silo-bank.glb"
+    },
+    {
+      "module": "colonial_tank_cluster",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-tank-cluster.glb"
+    },
+    {
+      "module": "colonial_substation",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-substation.glb"
+    },
+    {
+      "module": "colonial_pipe_trestle",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-pipe-trestle.glb"
+    },
+    {
+      "module": "colonial_pipe_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-pipe-corner.glb"
+    },
+    {
+      "module": "colonial_conveyor",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-conveyor.glb"
+    },
+    {
+      "module": "colonial_gantry_crane",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-gantry-crane.glb"
+    },
+    {
+      "module": "colonial_antenna_farm",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-antenna-farm.glb"
+    },
+    {
+      "module": "colonial_container_yard",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-colonial-container-yard.glb"
+    },
+    {
+      "module": "brutalist_drum_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-drum-tower.glb"
+    },
+    {
+      "module": "brutalist_drum_tower_tall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-drum-tower-tall.glb"
+    },
+    {
+      "module": "brutalist_drum_cluster",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-drum-cluster.glb"
+    },
+    {
+      "module": "brutalist_hex_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-hex-tower.glb"
+    },
+    {
+      "module": "brutalist_blade_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-blade-tower.glb"
+    },
+    {
+      "module": "brutalist_dome_small",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-dome-small.glb"
+    },
+    {
+      "module": "brutalist_dome_large",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-dome-large.glb"
+    },
+    {
+      "module": "brutalist_mega_slab",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-mega-slab.glb"
+    },
+    {
+      "module": "brutalist_mega_slab_stepped",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-mega-slab-stepped.glb"
+    },
+    {
+      "module": "brutalist_podium_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-podium-block.glb"
+    },
+    {
+      "module": "brutalist_stack_terraced",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-stack-terraced.glb"
+    },
+    {
+      "module": "brutalist_bridge_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-bridge-block.glb"
+    },
+    {
+      "module": "brutalist_cooling_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-cooling-tower.glb"
+    },
+    {
+      "module": "brutalist_chimney_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-chimney-stack.glb"
+    },
+    {
+      "module": "brutalist_flare_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-flare-stack.glb"
+    },
+    {
+      "module": "brutalist_silo_bank",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-silo-bank.glb"
+    },
+    {
+      "module": "brutalist_tank_cluster",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-tank-cluster.glb"
+    },
+    {
+      "module": "brutalist_substation",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-substation.glb"
+    },
+    {
+      "module": "brutalist_pipe_trestle",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-pipe-trestle.glb"
+    },
+    {
+      "module": "brutalist_pipe_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-pipe-corner.glb"
+    },
+    {
+      "module": "brutalist_conveyor",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-conveyor.glb"
+    },
+    {
+      "module": "brutalist_gantry_crane",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-gantry-crane.glb"
+    },
+    {
+      "module": "brutalist_antenna_farm",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-antenna-farm.glb"
+    },
+    {
+      "module": "brutalist_container_yard",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-container-yard.glb"
+    },
+    {
+      "module": "ruined_drum_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-drum-tower.glb"
+    },
+    {
+      "module": "ruined_drum_tower_tall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-drum-tower-tall.glb"
+    },
+    {
+      "module": "ruined_drum_cluster",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-drum-cluster.glb"
+    },
+    {
+      "module": "ruined_hex_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-hex-tower.glb"
+    },
+    {
+      "module": "ruined_blade_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-blade-tower.glb"
+    },
+    {
+      "module": "ruined_dome_small",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-dome-small.glb"
+    },
+    {
+      "module": "ruined_dome_large",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-dome-large.glb"
+    },
+    {
+      "module": "ruined_mega_slab",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-mega-slab.glb"
+    },
+    {
+      "module": "ruined_mega_slab_stepped",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-mega-slab-stepped.glb"
+    },
+    {
+      "module": "ruined_podium_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-podium-block.glb"
+    },
+    {
+      "module": "ruined_stack_terraced",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-stack-terraced.glb"
+    },
+    {
+      "module": "ruined_bridge_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-bridge-block.glb"
+    },
+    {
+      "module": "ruined_cooling_tower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-cooling-tower.glb"
+    },
+    {
+      "module": "ruined_chimney_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-chimney-stack.glb"
+    },
+    {
+      "module": "ruined_flare_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-flare-stack.glb"
+    },
+    {
+      "module": "ruined_silo_bank",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-silo-bank.glb"
+    },
+    {
+      "module": "ruined_tank_cluster",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-tank-cluster.glb"
+    },
+    {
+      "module": "ruined_substation",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-substation.glb"
+    },
+    {
+      "module": "ruined_pipe_trestle",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-pipe-trestle.glb"
+    },
+    {
+      "module": "ruined_pipe_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-pipe-corner.glb"
+    },
+    {
+      "module": "ruined_conveyor",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-conveyor.glb"
+    },
+    {
+      "module": "ruined_gantry_crane",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-gantry-crane.glb"
+    },
+    {
+      "module": "ruined_antenna_farm",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-antenna-farm.glb"
+    },
+    {
+      "module": "ruined_container_yard",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-container-yard.glb"
+    }
+  ],
+  "evidenceRenders": [
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-cityforms-kit-v1-overview-colonial.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-cityforms-kit-v1-overview-brutalist.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-cityforms-kit-v1-overview-ruined.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-tower-tall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-tower-tall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-tower-tall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-cluster-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-cluster-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-drum-cluster-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-hex-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-hex-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-hex-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-blade-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-blade-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-blade-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-dome-small-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-dome-small-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-dome-small-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-dome-large-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-dome-large-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-dome-large-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-mega-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-mega-slab-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-mega-slab-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-mega-slab-stepped-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-mega-slab-stepped-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-mega-slab-stepped-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-podium-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-podium-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-podium-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-stack-terraced-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-stack-terraced-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-stack-terraced-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-bridge-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-bridge-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-bridge-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-cooling-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-cooling-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-cooling-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-chimney-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-chimney-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-chimney-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-flare-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-flare-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-flare-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-silo-bank-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-silo-bank-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-silo-bank-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-tank-cluster-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-tank-cluster-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-tank-cluster-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-substation-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-substation-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-substation-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-pipe-trestle-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-pipe-trestle-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-pipe-trestle-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-pipe-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-pipe-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-pipe-corner-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-conveyor-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-conveyor-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-conveyor-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-gantry-crane-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-gantry-crane-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-gantry-crane-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-antenna-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-antenna-farm-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-antenna-farm-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-container-yard-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-container-yard-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-colonial-container-yard-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-tower-tall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-tower-tall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-tower-tall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-cluster-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-cluster-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-drum-cluster-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-hex-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-hex-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-hex-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-blade-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-blade-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-blade-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-small-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-small-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-small-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-large-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-large-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-large-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-mega-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-mega-slab-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-mega-slab-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-mega-slab-stepped-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-mega-slab-stepped-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-mega-slab-stepped-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-podium-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-podium-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-podium-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-stack-terraced-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-stack-terraced-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-stack-terraced-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-bridge-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-bridge-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-bridge-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-cooling-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-cooling-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-cooling-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-chimney-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-chimney-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-chimney-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-flare-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-flare-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-flare-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-silo-bank-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-silo-bank-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-silo-bank-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-tank-cluster-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-tank-cluster-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-tank-cluster-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-substation-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-substation-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-substation-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-pipe-trestle-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-pipe-trestle-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-pipe-trestle-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-pipe-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-pipe-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-pipe-corner-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-conveyor-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-conveyor-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-conveyor-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-gantry-crane-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-gantry-crane-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-gantry-crane-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-antenna-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-antenna-farm-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-antenna-farm-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-container-yard-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-container-yard-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-container-yard-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-tower-tall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-tower-tall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-tower-tall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-cluster-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-cluster-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-drum-cluster-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-hex-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-hex-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-hex-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-blade-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-blade-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-blade-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-dome-small-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-dome-small-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-dome-small-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-dome-large-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-dome-large-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-dome-large-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-stepped-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-stepped-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-stepped-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-podium-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-podium-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-podium-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-stack-terraced-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-stack-terraced-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-stack-terraced-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-bridge-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-bridge-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-bridge-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-cooling-tower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-cooling-tower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-cooling-tower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-chimney-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-chimney-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-chimney-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-flare-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-flare-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-flare-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-silo-bank-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-silo-bank-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-silo-bank-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-tank-cluster-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-tank-cluster-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-tank-cluster-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-substation-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-substation-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-substation-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-pipe-trestle-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-pipe-trestle-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-pipe-trestle-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-pipe-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-pipe-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-pipe-corner-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-conveyor-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-conveyor-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-conveyor-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-gantry-crane-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-gantry-crane-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-gantry-crane-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-antenna-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-antenna-farm-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-antenna-farm-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-container-yard-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-container-yard-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-container-yard-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-drum-district-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-drum-district-elevation.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-mega-district-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-mega-district-elevation.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-industrial-yard-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-industrial-yard-elevation.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-service-run-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-service-run-elevation.png"
+  ],
+  "blend": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/mf-cityforms-kit-v1.blend",
+  "runtimeIntegration": {
+    "state": "SOURCE_CANDIDATE",
+    "note": "Nothing registered in boot.js or manifest.json."
+  },
+  "consolidated": {
+    "tool": "tools/blender/consolidate-mf-kits.py",
+    "oneObjectPerModulePerLod": true,
+    "modulesRefreshed": 72
+  }
+}

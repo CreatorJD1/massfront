@@ -17,6 +17,135 @@ let pinchMY=0, pinchPitch=0.92;
 let openBld=-1;             // building whose menu is open
 let shake=0;
 
+/* --------------------------------------------------------------------------
+   UI ACTION SAFETY
+   Benign navigation remains one tap. Disruptive gameplay actions wait for a
+   completed, non-drag gesture; irreversible actions retain their existing
+   confirmation and updater rollback gains one here. Capture phase is required:
+   the legacy owners live in main.js and listen on both pointerdown and pointerup.
+   -------------------------------------------------------------------------- */
+const MF_UI_DESTRUCTIVE_IDS=new Set(['bp_sell','profReset','profDel','quitBtn','updRoll','saveFilePut']);
+const MF_UI_DISRUPTIVE_IDS=new Set([
+  'setupStart','weeklyGo','goContinueBtn','deployBtn','placeOk','upBtn','bp_up','bp_fire',
+  'rallyBtn','queueBtn','patrolBtn','holdBtn','formBtn','moveBtn','stopBtn','modeBtn',
+  'abOver','abHeal','abRage','abLance','abEmp','abJump','abClass','abBarrage'
+]);
+const MF_UI_EXISTING_CONFIRM=new Set(['bp_sell','profReset','profDel','quitBtn','saveFilePut']);
+const MF_UI_CONFIRM_COPY={updRoll:'Revert to the packaged build? The installed update will be removed and the game will restart.'};
+let mfUiReplay=false,mfUiLastTarget=null,mfUiLastAt=-1e9,mfUiPanelDismissedAt=-1e9;
+const mfUiGestures=new Map(),mfUiBlockedPointers=new Set(),mfUiDownTargets=new Map();
+const mfUiSafetyAudit={downs:0,guarded:0,bounceBlocks:0,panelBlocks:0,releases:0,replays:0};
+function mfUiControlTarget(node){return node&&node.closest?node.closest('button,[role="button"],input,select,textarea,.bcard'):null;}
+/* Only bypass the global release guard when the card proves that its own
+   caller already commits on release. Standard production/build cards expose
+   previewKind; extension cards opt in after binding mfBindTap. A bare bcard is
+   deliberately unsafe — Field Study cards are legacy pointerdown callers. */
+function mfUiLocallyReleaseGuarded(el){
+  return !!(el&&el.matches('.bcard')&&(
+    el.dataset.mfReleaseSafe==='1'||el.dataset.previewKind==='unit'||el.dataset.previewKind==='building'));
+}
+function mfUiRisk(el){
+  if(!el)return 'benign';
+  if(MF_UI_DESTRUCTIVE_IDS.has(el.id))return 'destructive';
+  if(MF_UI_DISRUPTIVE_IDS.has(el.id)||el.matches('.abtn,.hotSlot,.hotUtility'))return 'disruptive';
+  if(el.matches('.bcard')&&(el.closest('#prodGrid')||el.closest('#buildGrid')))return 'disruptive';
+  return 'benign';
+}
+function mfUiMarkPanelDismiss(){mfUiPanelDismissedAt=performance.now();}
+function mfUiReplayGesture(el,ev){
+  if(!el||!el.isConnected)return;
+  mfUiReplay=true;
+  try{
+    /* mfBindTap rejects explicitly non-primary contacts. Synthetic
+       PointerEvents default isPrimary to false, so guarded controls bound via
+       mfBindTap became inert when this replay omitted the real contact state. */
+    const init={bubbles:true,cancelable:true,isPrimary:ev.isPrimary!==false,pointerId:ev.pointerId||1,pointerType:ev.pointerType||'touch',clientX:ev.clientX||0,clientY:ev.clientY||0,button:0,buttons:1};
+    const PE=typeof PointerEvent==='function'?PointerEvent:Event;
+    el.dispatchEvent(PE===Event?new Event('pointerdown',{bubbles:true,cancelable:true}):new PE('pointerdown',init));
+    init.buttons=0;
+    el.dispatchEvent(PE===Event?new Event('pointerup',{bubbles:true,cancelable:true}):new PE('pointerup',init));
+  }finally{mfUiReplay=false;}
+  mfUiLastTarget=el;mfUiLastAt=performance.now();
+  mfUiSafetyAudit.replays++;
+}
+function mfUiControlInventory(root){
+  root=root||document;
+  const out={benign:[],disruptive:[],destructive:[]};
+  root.querySelectorAll('button,[role="button"],input,select,textarea,.bcard').forEach(el=>{
+    const risk=mfUiRisk(el),r=el.getBoundingClientRect(),localRelease=mfUiLocallyReleaseGuarded(el);
+    el.dataset.mfRisk=risk;
+    out[risk].push({id:el.id||'',className:String(el.className||''),label:(el.getAttribute('aria-label')||el.textContent||el.getAttribute('placeholder')||el.tagName).replace(/\s+/g,' ').trim().slice(0,100),visible:getComputedStyle(el).display!=='none'&&r.width>0&&r.height>0,protection:risk==='destructive'?(MF_UI_EXISTING_CONFIRM.has(el.id)?'existing-confirmation':'confirmation'):(risk==='disruptive'?(localRelease?'local-release-after-drag-threshold':'global-release-after-drag-threshold'):'one-tap')});
+  });
+  return out;
+}
+if(typeof window!=='undefined'){
+  window.mfUiControlInventory=mfUiControlInventory;
+  window.mfUiSafetyProbe=()=>({replay:mfUiReplay,lastTarget:mfUiLastTarget&&mfUiLastTarget.id||'',sinceLast:performance.now()-mfUiLastAt,sincePanelDismiss:performance.now()-mfUiPanelDismissedAt,pending:mfUiGestures.size,blocked:mfUiBlockedPointers.size,audit:{...mfUiSafetyAudit}});
+}
+
+/* Window capture is intentional. Several legacy panels own document-capture
+   listeners and may stop propagation; a global cross-control/tap-through guard
+   must observe the contact before any one panel can consume it. */
+const mfUiEventRoot=typeof window!=='undefined'?window:document;
+mfUiEventRoot.addEventListener('pointerdown',ev=>{
+  if(mfUiReplay)return;
+  mfUiSafetyAudit.downs++;
+  const el=mfUiControlTarget(ev.target),now=performance.now(),pid=ev.pointerId||1;
+  mfUiDownTargets.set(pid,el);
+  if(!el)return;
+  const risk=mfUiRisk(el);
+  /* Destructive two-step actions still need two COMPLETED taps. A second
+     pointerdown inside the hardware-bounce window is never confirmation, even
+     on the same control; the normal 2.6-3s confirmation window remains intact. */
+  if(mfUiLastTarget&&now-mfUiLastAt<180&&(el!==mfUiLastTarget||risk==='destructive')){
+    mfUiBlockedPointers.add(pid);mfUiSafetyAudit.bounceBlocks++;ev.preventDefault();ev.stopImmediatePropagation();return;
+  }
+  /* Production/build cards own a release/drag contract in hud.js (build cards
+     through mfBindTap, production cards through their batch-aware handler). */
+  const locallyGuarded=mfUiLocallyReleaseGuarded(el)&&(el.closest('#prodGrid')||el.closest('#buildGrid'));
+  if(risk==='benign'||locallyGuarded||(risk==='destructive'&&MF_UI_EXISTING_CONFIRM.has(el.id))){
+    mfUiLastTarget=el;mfUiLastAt=now;return;
+  }
+  if(risk==='disruptive'&&now-mfUiPanelDismissedAt<220){
+    mfUiBlockedPointers.add(pid);mfUiSafetyAudit.panelBlocks++;ev.preventDefault();ev.stopImmediatePropagation();
+    if(typeof toast==='function')toast('Panel closed — tap the action again to confirm');
+    return;
+  }
+  mfUiGestures.set(pid,{el,x:ev.clientX,y:ev.clientY,t:now,moved:false,risk});
+  mfUiSafetyAudit.guarded++;
+  ev.preventDefault();ev.stopImmediatePropagation();
+},true);
+mfUiEventRoot.addEventListener('pointermove',ev=>{
+  const g=mfUiGestures.get(ev.pointerId||1);if(!g)return;
+  if(Math.hypot(ev.clientX-g.x,ev.clientY-g.y)>10)g.moved=true;
+},true);
+mfUiEventRoot.addEventListener('pointerup',ev=>{
+  if(mfUiReplay)return;
+  mfUiSafetyAudit.releases++;
+  const pid=ev.pointerId||1,down=mfUiDownTargets.get(pid),up=mfUiControlTarget(ev.target);
+  mfUiDownTargets.delete(pid);
+  if(mfUiBlockedPointers.has(pid)){mfUiBlockedPointers.delete(pid);mfUiGestures.delete(pid);ev.preventDefault();ev.stopImmediatePropagation();return;}
+  /* A panel disappearing under the finger must not turn that release into an
+     ability activation on the newly exposed command bar. */
+  if(up&&up!==down&&mfUiRisk(up)==='disruptive'){
+    mfUiGestures.delete(pid);ev.preventDefault();ev.stopImmediatePropagation();return;
+  }
+  const g=mfUiGestures.get(pid);if(!g)return;
+  mfUiGestures.delete(pid);ev.preventDefault();ev.stopImmediatePropagation();
+  if(g.moved||performance.now()-g.t>900||!g.el.isConnected)return;
+  const copy=MF_UI_CONFIRM_COPY[g.el.id];
+  if(g.risk==='destructive'&&copy){
+    const go=()=>mfUiReplayGesture(g.el,ev);
+    if(typeof accConfirm==='function')accConfirm(copy,go);
+    else if(window.confirm(copy))go();
+    return;
+  }
+  mfUiReplayGesture(g.el,ev);
+},true);
+mfUiEventRoot.addEventListener('pointercancel',ev=>{
+  const pid=ev.pointerId||1;mfUiGestures.delete(pid);mfUiBlockedPointers.delete(pid);mfUiDownTargets.delete(pid);
+},true);
+
 /* CAMERA AUTHORITY.
    Anything that moves the camera automatically has to yield to the player the
    moment they touch it. Without that, panning away to scout a landing site or
@@ -289,16 +418,13 @@ function orderMove(wx,wy,patrol,retreat){
   const sel=formationMembers();
   if(!sel.length) return false;
   if(typeof battlefieldClampPoint==='function'){const p=battlefieldClampPoint(wx,wy,24);wx=p[0];wy=p[1];}
-  const landGoal=findLand(wx,wy),waterGoal=findWater(wx,wy);
-  const fld=requestField(landGoal[0],landGoal[1],false);
-  const navalFld=waterGoal?requestField(waterGoal[0],waterGoal[1],true):-1;
   const form=FORMS[selFormation].id;
   const targets=formationTargets(sel,wx,wy,form);
   const cohort=patrol?-1:allocMoveCohort(sel,targets,selFormation);
   /* Retreat/move-only is ustate 1: sim skips acquisition and will not chase a
      leftover lock. Attack-move stays ustate 2. Double-tap ground passes
      `retreat` so the A-MOVE toggle is not required to break contact. */
-  const moveOnly=!patrol&&(retreat||moveMode);
+  const moveOnly=!patrol&&(retreat||moveMode);let routeField=-1;
   for(let k=0;k<sel.length;k++){
     const i=sel[k],T=TYPES[utype[i]],rawx=targets[k].x,rawy=targets[k].y;
     const legal=T.naval?(findWater(rawx,rawy)||[ux[i],uy[i]]):T.air?[rawx,rawy]:findLand(rawx,rawy);
@@ -308,7 +434,8 @@ function orderMove(wx,wy,patrol,retreat){
     /* A-MOVE/patrol keep the click as hull goal while shooting. Retreat/MOVE
        must not: umarch is fire-on-the-move, the opposite of breaking contact. */
     umarch[i]=moveOnly?0:1;
-    ufield[i]=T.air?-1:(T.naval?navalFld:fld); uhold[i]=0;
+    ufield[i]=T.air?-1:requestField(tx,ty,!!T.naval,mfNavUnitClearance(T)); uhold[i]=0;
+    if(routeField<0&&ufield[i]>=0)routeField=ufield[i];
     uPatrolRoute[i]=-1;uPatrolStep[i]=0;
     /* A direct order replaces the plan, it does not append to it. Appending is
        the queue planner's job and it has its own commit. */
@@ -317,12 +444,18 @@ function orderMove(wx,wy,patrol,retreat){
     if(patrol){ upx1[i]=ux[i]; upy1[i]=uy[i]; upx2[i]=clamp(tx,15,MAP-15); upy2[i]=clamp(ty,15,MAP-15); }
     utx[i]=clamp(tx,15,MAP-15);
     uty[i]=clamp(ty,15,MAP-15);
+    if(T.air&&typeof mfAirIssueMission==='function'){
+      /* Air attack-move/patrol is CAP over the ordered area; MOVE is a direct
+         relocation. Both enter the fixed-step air authority immediately so
+         the generic state cannot be overwritten by its previous orbit. */
+      mfAirIssueMission(i,(patrol||!moveOnly)?'cap':'none',{x:utx[i],y:uty[i]});
+    }
   }
   addParticle(3,wx,wy,0,0,.5,26, patrol?120:65, patrol?255:200, patrol?170:255);
   if(!patrol){
     /* The route the field will actually walk, drawn at the moment of the
        order (src/ui/orderfx.js) - amber for attack-move, cyan for move. */
-    if(typeof moveFxOrder==='function') moveFxOrder(sel,wx,wy,fld,moveOnly?1:0);
+    if(typeof moveFxOrder==='function') moveFxOrder(sel,wx,wy,routeField,moveOnly?1:0);
     /* And the formation footprint. This reuses the confirm hologram that
        formation drags always had, so a plain tap now shows where each unit
        will STAND, not just where the tap landed. `noLine` suppresses the
@@ -381,7 +514,7 @@ function domainOrderPoint(i,P){
   const T=TYPES[utype[i]];
   if(T.air)return {x:P.x,y:P.y,field:-1};
   const L=T.naval?(findWater(P.x,P.y)||[ux[i],uy[i]]):findLand(P.x,P.y);
-  return {x:L[0],y:L[1],field:requestField(L[0],L[1],!!T.naval)};
+  return {x:L[0],y:L[1],field:requestField(L[0],L[1],!!T.naval,mfNavUnitClearance(T))};
 }
 /* Prune generation-stale handles and compact the remaining slots. Leaving a
    dead unit's hole in every waypoint gradually turns a damaged platoon into a
@@ -515,6 +648,8 @@ function orderHold(){
     uhold[i]=1;ustate[i]=0;utgt[i]=-1;utgtg[i]=-1;umarch[i]=0;
     utx[i]=ux[i];uty[i]=uy[i];uPatrolRoute[i]=-1;uMoveCohort[i]=-1;
     queueClear(i);uGuard[i]=-1;n++;
+    if(TYPES[utype[i]].air&&typeof mfAirIssueMission==='function')
+      mfAirIssueMission(i,'none',{x:ux[i],y:uy[i]});
   }
   markStopDisp(false);
   if(n){ toast('⛊ '+n+' units holding position — they fire but never chase'); uiCommandAck('hold',n); updateSelInfo(); }
@@ -531,6 +666,9 @@ function orderAttack(target){   // target: unit idx or -2-b
        keep walking the old ground click while the order said "that unit". */
     utx[i]=ex;uty[i]=ey;uhold[i]=0;umarch[i]=0;uPatrolRoute[i]=-1;uMoveCohort[i]=-1;
     queueClear(i);uGuard[i]=-1;any=true;
+    if(TYPES[utype[i]].air&&typeof mfAirIssueMission==='function')
+      mfAirIssueMission(i,(target>=0&&TYPES[utype[target]].air)?'intercept':'strike',
+        {x:ex,y:ey,target,generation:target>=0?ugen[target]:-1});
   }
   if(any){
     markStopDisp(false);
@@ -568,16 +706,17 @@ function guardLabel(h){
 }
 function orderGuard(h,quiet){
   if(!guardEntityLive(h,h>=0?ugen[h]:-1)) return false;
-  let n=0;
+  const P=guardEntityPos(h);let n=0;
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]&&i!==h){
     queueClear(i);
     ustate[i]=7; uGuard[i]=h; uGuardG[i]=h>=0?ugen[h]:-1;
     utgt[i]=-1; utgtg[i]=-1; uhold[i]=0; umarch[i]=0;
     uPatrolRoute[i]=-1; uMoveCohort[i]=-1; ufield[i]=-1;
+    if(TYPES[utype[i]].air&&typeof mfAirIssueMission==='function')
+      mfAirIssueMission(i,'escort',{x:P[0],y:P[1],escort:h,escortGeneration:h>=0?ugen[h]:-1});
     n++;
   }
   if(!n) return false;
-  const P=guardEntityPos(h);
   addParticle(3,P[0],P[1],0,0,.6,Math.max(34,P[2]*2.4), 120,255,190);
   if(!quiet) toast('⛨ GUARD — '+n+' unit'+(n===1?'':'s')+' escorting '+guardLabel(h));
   markStopDisp(false);
@@ -785,12 +924,189 @@ function pickUnit(wx,wy){
   }
   return {own:best, enemy:bestEnemy};
 }
-function pickBld(wx,wy){
+/* Pointer selection is a screen-space question. The world-radius picker above
+   remains the right API for scripts/orders that already have a world point,
+   but at command zoom its expanding radius could select a unit whose drawn
+   hull did not overlap the finger at all. Keep forUnitsIn as the broad phase,
+   then require the pointer to touch a projected, facing-aware hull (or the
+   tactical icon that replaced it). The only forgiveness is a bounded CSS-px
+   allowance: precise mouse, slightly wider pen, full fingertip for touch. */
+function mfPointerPickAllowance(pointerType){
+  return pointerType==='mouse'?6:pointerType==='pen'?8:10;
+}
+function mfPointerSegDist2(px,py,ax,ay,bx,by){
+  const dx=bx-ax,dy=by-ay,dd=dx*dx+dy*dy;
+  const t=dd>1e-8?clamp(((px-ax)*dx+(py-ay)*dy)/dd,0,1):0;
+  const x=ax+dx*t,y=ay+dy*t;
+  return dist2(px,py,x,y);
+}
+function mfPointerHull(points){
+  if(points.length<=2) return points.slice();
+  const p=points.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  const lo=[],hi=[];
+  const cross=(a,b,c)=>(b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]);
+  for(const q of p){ while(lo.length>1&&cross(lo[lo.length-2],lo[lo.length-1],q)<=0)lo.pop(); lo.push(q); }
+  for(let k=p.length-1;k>=0;k--){ const q=p[k]; while(hi.length>1&&cross(hi[hi.length-2],hi[hi.length-1],q)<=0)hi.pop(); hi.push(q); }
+  lo.pop();hi.pop();return lo.concat(hi);
+}
+function mfPointerHullHit(sx,sy,hull,allow){
+  if(!hull.length) return false;
+  let inside=false;
+  for(let i=0,j=hull.length-1;i<hull.length;j=i++){
+    const a=hull[i],b=hull[j];
+    if(((a[1]>sy)!==(b[1]>sy))&&sx<(b[0]-a[0])*(sy-a[1])/((b[1]-a[1])||1e-9)+a[0]) inside=!inside;
+    if(mfPointerSegDist2(sx,sy,a[0],a[1],b[0],b[1])<=allow*allow) return true;
+  }
+  return inside;
+}
+function mfPointerUnitGround(T,i){
+  if(typeof unitGroundY==='function') return unitGroundY(T,ux[i],uy[i],i);
+  if(T.air) return terrainH(ux[i],uy[i])+(typeof unitAirAlt==='function'?unitAirAlt(i):58);
+  if(T.naval) return (typeof waterSurfaceY==='function'?waterSurfaceY(ux[i],uy[i]):0)+.95;
+  return terrainH(ux[i],uy[i]);
+}
+function mfPointerUnitMetric(i,sx,sy,allow){
+  const T=TYPES[utype[i]]; if(!T) return Infinity;
+  const vs=Math.max(4,T.size*(T.vscale||1)),ang=(uang[i]||0)-Math.PI*.5;
+  const ca=Math.cos(ang),sa=Math.sin(ang),rx=-sa,ry=ca;
+  const hf=vs*(T.naval?1.72:T.air?1.42:T.legs ? .92:1.28);
+  const hw=vs*(T.naval ? .62:T.air ? .78:T.legs ? .66:.82);
+  const ht=vs*(T.air ? .92:T.naval ? .72:T.legs?1.62:1.12);
+  const h0=mfPointerUnitGround(T,i),pts=[];
+  for(const z of [0,ht]) for(const f of [-hf,hf]) for(const w of [-hw,hw])
+    pts.push(w2s(ux[i]+ca*f+rx*w,uy[i]+sa*f+ry*w,h0+z));
+  const hull=mfPointerHull(pts),bodyHit=mfPointerHullHit(sx,sy,hull,allow);
+  const mid=w2s(ux[i],uy[i],h0+ht*.5),wp=Math.max(.01,orthoSpan/Math.max(1,VH));
+  let metric=bodyHit?dist2(sx,sy,mid[0],mid[1])/Math.max(16,(vs/wp)*(vs/wp)):Infinity;
+  /* A tactical icon is presentation, not decoration: once it fades over or
+     replaces a mesh, its visible plate is the selectable silhouette. */
+  const iconQ=Math.max(
+    typeof mfIconQ==='function'&&typeof mfUnitSpan==='function'?mfIconQ(mfUnitSpan(T)):0,
+    typeof mfCmdIconQ==='function'?mfCmdIconQ(T):0);
+  if(iconQ>0){
+    const c=w2s(ux[i],uy[i],h0+2),d=typeof mfIconDpx==='function'?mfIconDpx(T):clamp(18+vs*.36,22,40)*wp;
+    const r=d/wp*.5+allow,dm=dist2(sx,sy,c[0],c[1]);
+    if(dm<=r*r) metric=Math.min(metric,dm/Math.max(16,r*r));
+  }
+  return metric;
+}
+function mfPointerStackMetric(lead,sx,sy,allow){
+  if(lead<0||!ualive[lead]||!fogEntityVisible(uteam[lead],ux[lead],uy[lead])) return Infinity;
+  const T=TYPES[utype[lead]],C=typeof mfIconStackCentroid==='function'?mfIconStackCentroid(lead):[ux[lead],uy[lead],1];
+  const x=C[0],y=C[1],n=C[2]||1,wp=Math.max(.01,orthoSpan/Math.max(1,VH));
+  const h=T.naval?1.5:mfPointerUnitGround(T,lead)+2,c=w2s(x,y,h);
+  const d=(typeof mfIconDpx==='function'?mfIconDpx(T):clamp(18+T.size*.36,22,40)*wp)
+    *(1+Math.min(.35,Math.log(n)*.12));
+  const r=d/wp*.5+allow,dm=dist2(sx,sy,c[0],c[1]);
+  return dm<=r*r?dm/Math.max(16,r*r):Infinity;
+}
+function pickUnitPointer(wx,wy,sx,sy,pointerType){
+  const allow=mfPointerPickAllowance(pointerType),wp=Math.max(.01,orthoSpan/Math.max(1,VH));
+  let maxSpan=48;
+  for(let k=0;k<TYPES.length;k++) if(TYPES[k]) maxSpan=Math.max(maxSpan,TYPES[k].size*(TYPES[k].vscale||1)*3.4);
+  /* Broad only: the result cannot be accepted until its projected hull hits. */
+  const broad=maxSpan+allow*wp+48;
+  let own=-1,enemy=-1,om=Infinity,em=Infinity;
+  const stackTeams=new Set([0]);
+  const take=(j,m)=>{
+    if(!isFinite(m)) return;
+    if(uteam[j]===0){ if(m<om-1e-9||(Math.abs(m-om)<=1e-9&&(own<0||j<own))){om=m;own=j;} }
+    else if(fogEntityVisible(uteam[j],ux[j],uy[j])&&(m<em-1e-9||(Math.abs(m-em)<=1e-9&&(enemy<0||j<enemy)))){em=m;enemy=j;}
+  };
+  forUnitsIn(wx,wy,broad,j=>{
+    stackTeams.add(uteam[j]);
+    if(uteam[j]!==0&&!fogEntityVisible(uteam[j],ux[j],uy[j])) return;
+    if(typeof mfIconStackSkip==='function'&&mfIconStackSkip(j)) return;
+    take(j,mfPointerUnitMetric(j,sx,sy,allow));
+  });
+  if(typeof mfIconStackPick==='function'){
+    for(const team of stackTeams){
+      const lead=mfIconStackPick(wx,wy,team);
+      if(lead>=0) take(lead,mfPointerStackMetric(lead,sx,sy,allow));
+    }
+  }
+  return {own:own,enemy:enemy};
+}
+/* One pointer read owns unit + structure arbitration. Friendly structures keep
+   their established precedence over parked friendly units; a visible enemy
+   unit remains attackable over a structure when a force is selected. */
+function pickPointerEntities(wx,wy,sx,sy,pointerType){
+  const pk=pickUnitPointer(wx,wy,sx,sy,pointerType),b=pickBld(wx,wy,sx,sy);
+  if(b>=0&&blds[b]&&blds[b].team===0) pk.own=-1;
+  pk.bld=b;
+  return pk;
+}
+/* Structure placement is rectangle/rotation aware, but selection used the
+   legacy circular `B.r` radius. A Factory corner or the upper, projected half
+   of a tall structure could therefore ray-pick as empty ground; if workers
+   were parked there, their strategic stack consumed the tap and produced a
+   notice instead of opening production. Keep the forgiving touch pad, but
+   test the real reserved footprint first. */
+function bldPickFoot(B){
+  if(!B||typeof bldFoot!=='function') return null;
+  try{
+    const f=bldFoot(B);
+    return f&&isFinite(f[0])&&isFinite(f[1])?[Math.max(1,f[0]),Math.max(1,f[1])]:null;
+  }catch(_){ return null; }
+}
+function bldWorldPick(B,wx,wy,pad){
+  const f=bldPickFoot(B);
+  if(f){
+    const a=B.rot||0,dx=wx-B.x,dy=wy-B.y,c=Math.cos(a),s=Math.sin(a);
+    const lx=dx*c+dy*s,ly=-dx*s+dy*c;
+    return Math.abs(lx)<=f[0]*.5+pad&&Math.abs(ly)<=f[1]*.5+pad;
+  }
+  const r=(B.r||12)+pad;
+  return dist2(wx,wy,B.x,B.y)<=r*r;
+}
+function screenQuadHit(sx,sy,q){
+  let sign=0;
+  for(let i=0;i<4;i++){
+    const a=q[i],b=q[(i+1)&3],cross=(sx-a[0])*(b[1]-a[1])-(sy-a[1])*(b[0]-a[0]);
+    if(Math.abs(cross)<.5) continue;
+    if(sign&&cross*sign<0) return false;
+    sign=cross;
+  }
+  return !!sign;
+}
+/* `s2w()` deliberately hits terrain, not a model mesh. For a tall structure
+   this means a tap on the roof maps to ground behind its footprint. Test the
+   projected rectangular prism only as a fallback after an exact ground-foot
+   hit; that makes the visible model tappable without letting it steal a closer
+   ground target. */
+function bldScreenPick(B,sx,sy){
+  const f=bldPickFoot(B);
+  if(!f||typeof w2s!=='function'||!isFinite(sx)||!isFinite(sy)) return false;
+  const a=B.rot||0,c=Math.cos(a),s=Math.sin(a),hx=f[0]*.5,hy=f[1]*.5;
+  const T=typeof BT!=='undefined'&&BT[B.type],lift=Math.max(8,Math.min(130,((T&&T.size)||B.r*2||24)*1.35));
+  const base=[],top=[];
+  for(const p of [[-hx,-hy],[hx,-hy],[hx,hy],[-hx,hy]]){
+    const x=B.x+p[0]*c-p[1]*s,y=B.y+p[0]*s+p[1]*c;
+    const h=typeof terrainH==='function'?terrainH(x,y):0;
+    base.push(w2s(x,y,h)); top.push(w2s(x,y,h+lift));
+  }
+  if(screenQuadHit(sx,sy,base)||screenQuadHit(sx,sy,top)) return true;
+  for(let i=0;i<4;i++) if(screenQuadHit(sx,sy,[base[i],base[(i+1)&3],top[(i+1)&3],top[i]])) return true;
+  return false;
+}
+function pickBld(wx,wy,sx,sy){
+  const pad=clamp((orthoSpan||800)*.01,10,22);
+  let world=-1,worldD=Infinity,screen=-1,screenD=Infinity;
   for(let b=0;b<blds.length;b++){
     const B=blds[b];
-    if(B.alive&&fogEntityVisible(B.team,B.x,B.y)&&dist2(wx,wy,B.x,B.y)<(B.r+10)*(B.r+10)) return b;
+    if(!B||!B.alive||!fogEntityVisible(B.team,B.x,B.y)) continue;
+    const d=dist2(wx,wy,B.x,B.y);
+    if(bldWorldPick(B,wx,wy,pad)){
+      if(d<worldD){ world=b; worldD=d; }
+      continue;
+    }
+    if(sx!=null&&sy!=null&&bldScreenPick(B,sx,sy)){
+      const P=w2s(B.x,B.y,(typeof terrainH==='function'?terrainH(B.x,B.y):0)+((BT[B.type]||{}).size||B.r*2||24)*.68);
+      const sd=dist2(sx,sy,P[0],P[1]);
+      if(sd<screenD){ screen=b; screenD=sd; }
+    }
   }
-  return -1;
+  return world>=0?world:screen;
 }
 
 let armRally=-1, armPatrol=false, lastSelT=0, lastSelType=-1, lastTapShift=false;
@@ -809,9 +1125,13 @@ function stampGroundTap(sx,sy,consumed){
   lastGroundX=sx; lastGroundY=sy;
 }
 let novaSrc=-1;
-function onTap(sx,sy){
+function onTap(sx,sy,pointerType){
   const [wx,wy]=s2w(sx,sy);
-  if(aiming===5){ beginArtilleryBarrage(wx,wy); return; }
+  if(aiming===5){
+    const picked=pickUnitPointer(wx,wy,sx,sy,pointerType||'touch'),target=picked.enemy;
+    beginArtilleryBarrage(wx,wy,target>=0?target:undefined,target>=0?ugen[target]:undefined);
+    return;
+  }
   if(aiming===6){ fireCommanderActive(wx,wy); return; }
   if(aiming===7){ fireCommanderWeapon(0,wx,wy); return; }
   if(aiming===8){ fireCommanderWeapon(1,wx,wy); return; }
@@ -852,7 +1172,11 @@ function onTap(sx,sy){
     return;
   }
   if(carrier.active) return;                    // still falling — ignore taps
-  const pk=pickUnit(wx,wy);
+  /* Only real pointer gestures take the silhouette path. A legacy/programmatic
+     onTap call with no pointer type retains the historical world picker. */
+  const pp=pointerType?pickPointerEntities(wx,wy,sx,sy,pointerType):null;
+  const pk=pp||pickUnit(wx,wy);
+  const b=pp?pp.bld:pickBld(wx,wy,sx,sy);
   const haveSel=selCount()>0;
   /* Queue planning owns every map tap while it is armed — including taps on
      units and structures, which is what makes "chain an attack then an escort"
@@ -874,15 +1198,27 @@ function onTap(sx,sy){
     return;
   }
   if(armPatrol)cancelPatrolDraft(true);
-  // enemy tapped → attack order
+  // A visible enemy still owns the tap, even when standing over one of our
+  // structure footprints. This preserves the direct attack gesture while the
+  // building-first rule below only resolves friendly stack/building overlap.
   if(pk.enemy>=0 && haveSel){ lastGroundT=0; orderAttack(pk.enemy); return; }
+  /* A structure footprint is a more precise target than the strategic unit
+     stack plate drawn above it. Resolving the plate first made constructors
+     parked at a factory select as a STACK, close every sheet and emit notices;
+     the production building directly under the finger was unreachable. Armed
+     queue/patrol modes still own the tap above, while an ordinary direct hit on
+     one of our structures now opens its real menu. */
+  if(b>=0&&blds[b].team===0){
+    lastGroundT=0;
+    clearSel();openBldMenu(b);return;
+  }
   /* WHY: pickUnit's radius at command camera is often larger than the empty
      ground between selected hulls. A double-tap meant as retreat hit an own
      unit, reset lastGroundT, and became select-all. If the first tap was a
      ground order, the second contact at the same screen point is retreat —
      even when a friendly silhouette is inside the pick disc. Enemy / building
      taps still win so this cannot steal attack or a factory menu. */
-  if(haveSel && groundDoubleTap(sx,sy) && pk.enemy<0 && pickBld(wx,wy)<0){
+  if(haveSel && groundDoubleTap(sx,sy) && pk.enemy<0 && b<0){
     stampGroundTap(sx,sy,true);
     orderMove(wx,wy,false,true);
     return;
@@ -912,7 +1248,6 @@ function onTap(sx,sy){
     closeMenus(); return;
   }
   // building tapped
-  const b=pickBld(wx,wy);
   if(b>=0){
     lastGroundT=0;
     const B=blds[b];
@@ -941,7 +1276,7 @@ const TAP_JITTER_MS=220, TAP_JITTER_PX=28;
 cv.addEventListener('pointerdown',e=>{
   try{ cv.setPointerCapture(e.pointerId); }catch(_){}
   const rec={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false,held:false,
-             shift:!!e.shiftKey,t:performance.now()};
+             shift:!!e.shiftKey,pointerType:e.pointerType||'touch',t:performance.now()};
   ptrs.set(e.pointerId,rec);
   if(aiming===5&&ptrs.size===1){
     const [bwx,bwy]=s2w(e.clientX,e.clientY);setArtBarragePreview(bwx,bwy);
@@ -963,8 +1298,8 @@ cv.addEventListener('pointerdown',e=>{
   if(ptrs.size===1 && !placing && !boxMode && running && selCount()
      && !armQueue && !armPatrol && aiming<0 && groundDoubleTap(e.clientX,e.clientY)){
     const [wx,wy]=s2w(e.clientX,e.clientY);
-    const pk=pickUnit(wx,wy);
-    if(pk.enemy<0 && pickBld(wx,wy)<0){
+    const pp=pickPointerEntities(wx,wy,e.clientX,e.clientY,e.pointerType||'touch');
+    if(pp.enemy<0 && pp.bld<0){
       rec.held=true; rec.retreat=1;
       armFormation=false; orderPreview=null;
       const fb=document.getElementById('formBtn'); if(fb) fb.classList.remove('on');
@@ -989,9 +1324,10 @@ cv.addEventListener('pointerdown',e=>{
     holdTimer=setTimeout(()=>{
       const p=ptrs.get(e.pointerId);
       if(!p||p.moved||p.held||ptrs.size!==1) return;
-      const pk2=pickUnit(hwx,hwy);
+      const pp2=pickPointerEntities(hwx,hwy,e.clientX,e.clientY,e.pointerType||'touch');
+      const pk2=pp2;
       const ui2=pk2.own>=0?pk2.own:pk2.enemy;
-      const bi2=ui2<0?pickBld(hwx,hwy):-1;
+      const bi2=ui2<0?pp2.bld:-1;
       /* GUARD rides the long press (see the orders block above for why it gets
          no dock button). It only fires on a FRIENDLY that is not already part
          of the selection, so the intel card keeps every other long press:
@@ -1128,7 +1464,7 @@ function endPtr(e){
        to be. Swallow it and leave the aim ARMED rather than cancelling, so
        framing the target costs the player nothing. */
     if(wasMulti) return;
-    if(e.type==='pointercancel')cancelArtilleryBarrageAim(true);else onTap(p.x,p.y);
+    if(e.type==='pointercancel')cancelArtilleryBarrageAim(true);else onTap(p.x,p.y,p.pointerType);
     return;
   }
   if(orderPreview&&orderPreview.pid===e.pointerId){
@@ -1168,6 +1504,10 @@ function endPtr(e){
        sticky box mode would strand a phone player with no way to pan. A
        shift-drag never armed the button, so it must not clear it either. */
     if(boxMode){ boxMode=false; const bb=document.getElementById('boxBtn'); if(bb) bb.classList.remove('on'); }
+    /* pointercancel is teardown, never a command. WebView can cancel a contact
+       for an app interruption or lost capture; treating that coordinate as the
+       corner of a completed box selected units the player never released on. */
+    if(e.type==='pointercancel'){ boxAdd=false; return; }
     const sx0=Math.min(boxStartX,p.x), sx1=Math.max(boxStartX,p.x);
     const sy0=Math.min(boxStartY,p.y), sy1=Math.max(boxStartY,p.y);
     if(sx1-sx0>10||sy1-sy0>10){
@@ -1195,13 +1535,13 @@ function endPtr(e){
   const dt=performance.now()-p.t;
   const withinHold=performance.now()-p.t<HOLD_MS;
   const slop=Math.hypot(p.x-p.sx,p.y-p.sy);
-  if(!wasMulti && !p.held && withinHold && ptrs.size===0 && (!p.moved || (dt<TAP_JITTER_MS && slop<TAP_JITTER_PX))){
+  if(e.type!=='pointercancel' && !wasMulti && !p.held && withinHold && ptrs.size===0 && (!p.moved || (dt<TAP_JITTER_MS && slop<TAP_JITTER_PX))){
     if(placing){
       // tap anywhere to move the ghost there (then confirm with ✓)
       const [wx,wy]=s2w(p.x,p.y);
       placing.rx=clamp(wx,40,MAP-40); placing.ry=clamp(wy,40,MAP-40);
       snapPlace();
-    } else { lastTapShift=!!p.shift; onTap(p.x,p.y); lastTapShift=false; }
+    } else { lastTapShift=!!p.shift; onTap(p.x,p.y,p.pointerType); lastTapShift=false; }
   }
 }
 cv.addEventListener('pointerup',endPtr);
@@ -1214,7 +1554,8 @@ cv.addEventListener('dblclick',e=>{
   e.preventDefault();
   if(!groundDoubleTap(e.clientX,e.clientY)) return;
   const [wx,wy]=s2w(e.clientX,e.clientY);
-  if(pickUnit(wx,wy).enemy>=0||pickBld(wx,wy)>=0) return;
+  const pp=pickPointerEntities(wx,wy,e.clientX,e.clientY,'mouse');
+  if(pp.enemy>=0||pp.bld>=0) return;
   stampGroundTap(e.clientX,e.clientY,true);
   orderMove(wx,wy,false,true);
 });

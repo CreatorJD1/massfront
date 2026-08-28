@@ -1,0 +1,990 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.invalid/schemas/content-library/assets.v1.schema.json",
+  "title": "MASSFRONT Content Library Registry V1",
+  "description": "Authoritative inventory and promotion contract for source, derived, and runtime art assets.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "libraryId", "styleProfiles", "assets"],
+  "properties": {
+    "$schema": { "const": "./assets.v1.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "libraryId": { "const": "massfront-content-library" },
+    "styleProfiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/styleProfile" }
+    },
+    "assets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/asset" }
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "relativePath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:[\\\\/])(?!\\\\\\\\)(?!file:)(?!~[\\\\/])(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))[A-Za-z0-9._/-]+$"
+    },
+    "styleProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "renderLanguage"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "label": { "type": "string", "minLength": 1 },
+        "renderLanguage": { "type": "string", "minLength": 1 },
+        "notes": { "type": "string" }
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "status", "digest"],
+      "properties": {
+        "algorithm": { "const": "sha256" },
+        "status": { "enum": ["pending", "verified", "mismatch"] },
+        "digest": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "verified" } } },
+          "then": { "properties": { "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" } } }
+        }
+      ]
+    },
+    "classification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["biomeOrBiodome", "faction", "intention"],
+      "properties": {
+        "biomeOrBiodome": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "verdant", "ashland", "arctic", "vespera",
+              "uga_ship_biodome", "uga_ship_interior", "uga_ship_research_industrial",
+              "uga_ship_science_observatory", "uga_ship_expedition_staging",
+              "aelos_north", "aelos_basin", "aelos_coast", "aelos_ridge",
+              "pyraeth_crater", "pyraeth_belt", "pyraeth_caldera", "pyraeth_flats",
+              "nordhall_isles", "nordhall_cliff", "nordhall_frost", "nordhall_peaks",
+              "vespera_spire", "vespera_dunes", "vespera_refinery", "vespera_plateau",
+              "volcanic", "alien_jungle", "cyber_purple", "golden_jade", "terrestrial", "gas",
+              "orbital_arcology", "relay_superstructure", "industrial_station", "derelict_megaframe",
+              "gravitic_observatory", "ancient_subsurface", "abandoned_colony", "subterranean_transit",
+              "brood_hive_depths"
+            ]
+          }
+        },
+        "faction": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["uga", "nova", "dominion", "syndicate", "brood"] }
+        },
+        "intention": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "combat-unit", "production-structure", "civic-exploration-space", "navigation-prop",
+              "world-landmark", "resource-site", "cinematic-character", "damage-state",
+              "ship-layout", "interior-kit", "environment-material-language", "vfx-presentation",
+              "ship-crew", "commander-icon-source", "cliff-rock-kit", "flora-kit",
+              "destructible-cover", "road-bridge-kit", "civic-ruin", "crater-scorch-insert",
+              "ship-resident", "playable-commander", "humanoid-personnel", "strike-team-roster"
+            ]
+          }
+        }
+      }
+    },
+    "conceptEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "conceptId", "sourceOnly", "sourcePath", "plannedPath", "integrity", "approvalStatus",
+        "pixelUsage", "pixelsUsedAsTexture", "generationEvidence"
+      ],
+      "properties": {
+        "conceptId": { "$ref": "#/$defs/identifier" },
+        "sourceOnly": { "const": true },
+        "sourcePath": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/relativePath" }
+          ]
+        },
+        "plannedPath": { "$ref": "#/$defs/relativePath" },
+        "integrity": { "$ref": "#/$defs/integrity" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "resolution": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "integer", "minimum": 1 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "approvalStatus": { "enum": ["CANDIDATE", "REVIEW", "APPROVED", "REJECTED"] },
+        "pixelUsage": { "const": "concept-reference-only" },
+        "pixelsUsedAsTexture": { "const": false },
+        "generationEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["system"],
+          "properties": {
+            "system": { "enum": ["imagegen", "spline-image-generation", "manual"] },
+            "generationId": { "type": "string", "minLength": 1 },
+            "assetId": { "type": "string", "minLength": 1 },
+            "executionId": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "facePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["presentation", "faceAnimation"],
+      "properties": {
+        "presentation": {
+          "enum": ["sealed-helmet", "opaque-mask", "visible-face", "open-helmet", "transparent-visor"]
+        },
+        "faceAnimation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "facialRig", "morphTargets", "lipSync", "expressions", "closeUpQa"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "facialRig": { "type": "boolean" },
+            "morphTargets": { "type": "boolean" },
+            "lipSync": { "type": "boolean" },
+            "expressions": { "type": "boolean" },
+            "closeUpQa": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["status"],
+              "properties": {
+                "status": { "enum": ["not-applicable", "pending", "verified", "failed"] },
+                "evidence": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "presentation": { "enum": ["visible-face", "open-helmet", "transparent-visor"] }
+            }
+          },
+          "then": {
+            "properties": {
+              "faceAnimation": {
+                "properties": {
+                  "enabled": { "const": true },
+                  "facialRig": { "const": true },
+                  "morphTargets": { "const": true },
+                  "lipSync": { "const": true },
+                  "expressions": { "const": true },
+                  "closeUpQa": {
+                    "properties": {
+                      "status": { "const": "verified" },
+                      "evidence": { "type": "string", "minLength": 1 }
+                    },
+                    "required": ["status", "evidence"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "faceAnimation": { "properties": { "enabled": { "const": false } } }
+            }
+          },
+          "then": {
+            "properties": {
+              "presentation": { "enum": ["sealed-helmet", "opaque-mask"] }
+            }
+          }
+        }
+      ]
+    },
+    "sourceDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["usage", "runtimeEligible", "automaticDecimationAllowed", "reason", "topologyFinding", "evidence", "rebuildFromConceptId"],
+      "properties": {
+        "usage": { "enum": ["authoring-source", "reference-only"] },
+        "runtimeEligible": { "type": "boolean" },
+        "automaticDecimationAllowed": { "type": "boolean" },
+        "reason": { "enum": ["candidate-evaluation", "clean-rebuild-required", "runtime-source-approved"] },
+        "topologyFinding": { "type": "string", "minLength": 1 },
+        "evidence": { "type": "string", "minLength": 1 },
+        "rebuildFromConceptId": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["originSystem", "authorship", "sourceSceneUrl", "sceneObjectId", "integrity"],
+      "properties": {
+        "originSystem": { "enum": ["spline", "blender", "imagegen", "manual", "licensed"] },
+        "authorship": { "enum": ["original-user-authored", "original-ai-assisted-user-directed", "licensed-third-party"] },
+        "sourceSceneUrl": { "type": "string", "pattern": "^https://" },
+        "sceneObjectId": { "type": "string", "minLength": 1 },
+        "sourceImageGenerationId": { "type": "string", "minLength": 1 },
+        "sourceImageAssetId": { "type": "string", "minLength": 1 },
+        "copyrightedReferencePixelsUsed": { "const": false },
+        "notes": { "type": "string" },
+        "integrity": { "$ref": "#/$defs/integrity" }
+      }
+    },
+    "triangleRange": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max", "use"],
+      "properties": {
+        "min": { "type": "integer", "minimum": 1 },
+        "max": { "type": "integer", "minimum": 1 },
+        "use": { "type": "string", "minLength": 1 }
+      }
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "status": { "enum": ["pending", "verified", "failed", "not-applicable"] },
+        "evidence": { "type": "string" }
+      }
+    },
+    "conceptSourceEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceOnly", "sourcePath", "plannedPath", "integrity", "approvalStatus",
+        "pixelUsage", "pixelsUsedAsTexture", "generationEvidence"
+      ],
+      "properties": {
+        "sourceOnly": { "const": true },
+        "sourcePath": {
+          "oneOf": [
+            { "type": "null" },
+            { "$ref": "#/$defs/relativePath" }
+          ]
+        },
+        "plannedPath": { "$ref": "#/$defs/relativePath" },
+        "integrity": { "$ref": "#/$defs/integrity" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "resolution": {
+          "type": "array",
+          "prefixItems": [
+            { "type": "integer", "minimum": 1 },
+            { "type": "integer", "minimum": 1 }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "approvalStatus": { "enum": ["CANDIDATE", "REVIEW", "APPROVED", "REJECTED"] },
+        "pixelUsage": { "const": "concept-reference-only" },
+        "pixelsUsedAsTexture": { "const": false },
+        "generationEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["system"],
+          "properties": {
+            "system": { "enum": ["imagegen", "manual"] },
+            "executionId": { "type": "string", "minLength": 1 },
+            "manifestPath": { "$ref": "#/$defs/relativePath" },
+            "manifestConceptId": { "$ref": "#/$defs/identifier" }
+          },
+          "anyOf": [
+            { "required": ["executionId"] },
+            { "required": ["manifestPath", "manifestConceptId"] }
+          ]
+        }
+      }
+    },
+    "conceptScale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "reference"],
+      "properties": {
+        "class": {
+          "enum": ["capital-ship", "room-and-human", "battlefield-region", "human-full-body", "combat-unit", "structure-family", "navigation-prop", "planetary-landmark", "vfx-event"]
+        },
+        "reference": { "type": "string", "minLength": 1 }
+      }
+    },
+    "conceptLod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "requiredLevels", "budgetStatus"],
+      "properties": {
+        "profile": { "enum": ["ship-hub-static", "interior-modular", "terrain-material-kit", "world-modular-kit", "character-cinematic", "rts-instanced", "prop-standard", "planet-location", "vfx-tiered"] },
+        "requiredLevels": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "budgetStatus": { "type": "string", "minLength": 1 }
+      }
+    },
+    "characterConceptContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fullBody", "bindPose", "views", "presentation", "faceAnimationEnabled", "commanderIconSource"],
+      "properties": {
+        "fullBody": { "const": true },
+        "bindPose": { "const": "strict-t-pose" },
+        "views": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": { "enum": ["front", "left-side", "back", "three-quarter"] }
+        },
+        "presentation": { "enum": ["sealed-helmet", "opaque-mask", "visible-face", "open-helmet", "transparent-visor"] },
+        "faceAnimationEnabled": { "type": "boolean" },
+        "commanderIconSource": { "type": "boolean" }
+      }
+    },
+    "forceRelationshipRole": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["uga-institutional", "resident-playable", "faction-neutral", "hostile-ai"]
+      }
+    },
+    "canonicalDisposition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason"],
+      "properties": {
+        "status": { "const": "SUPERSEDED_REJECTED" },
+        "reason": { "type": "string", "minLength": 1 },
+        "replacementBriefId": { "$ref": "#/$defs/identifier" },
+        "replacementConceptId": { "$ref": "#/$defs/identifier" }
+      },
+      "oneOf": [
+        { "required": ["replacementBriefId"], "not": { "required": ["replacementConceptId"] } },
+        { "required": ["replacementConceptId"], "not": { "required": ["replacementBriefId"] } }
+      ]
+    },
+    "productionAxes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["biomeOrBiodome", "faction", "modelIntention"],
+      "properties": {
+        "biomeOrBiodome": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "ship-civic-biodome", "ship-research-industrial", "ship-expedition-staging",
+              "verdant", "arctic", "ashland", "vespera"
+            ]
+          }
+        },
+        "faction": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["uga", "nova", "dominion", "syndicate", "brood", "faction-neutral"] }
+        },
+        "modelIntention": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature",
+              "damage-state", "lod-silhouette", "environment-terrain"
+            ]
+          }
+        }
+      }
+    },
+    "productionCoverageCell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["biomeOrBiodome", "faction", "applicability", "requiredModelIntentions", "rationale"],
+      "properties": {
+        "biomeOrBiodome": {
+          "enum": [
+            "ship-civic-biodome", "ship-research-industrial", "ship-expedition-staging",
+            "verdant", "arctic", "ashland", "vespera"
+          ]
+        },
+        "faction": { "enum": ["uga", "nova", "dominion", "syndicate", "brood", "faction-neutral"] },
+        "applicability": { "enum": ["REQUIRED", "NOT_APPLICABLE"] },
+        "requiredModelIntentions": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "hero-landmark", "modular-kit", "infrastructure", "character", "vehicle-creature",
+              "damage-state", "lod-silhouette", "environment-terrain"
+            ]
+          }
+        },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+    "productionCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["matrixId", "reportPath", "coverageMeaning", "cells"],
+      "properties": {
+        "matrixId": { "const": "massfront-production-concept-coverage-v1" },
+        "reportPath": { "$ref": "#/$defs/relativePath" },
+        "coverageMeaning": { "type": "string", "minLength": 1 },
+        "cells": {
+          "type": "array",
+          "minItems": 42,
+          "maxItems": 42,
+          "items": { "$ref": "#/$defs/productionCoverageCell" }
+        }
+      }
+    },
+    "conceptRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "status", "contentCategory", "classification", "forceRelationshipRole", "coverageScope", "brief", "evidence", "camera", "scale", "lod", "runtimeConsumers", "modelTargets"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["CREATED_EXTERNAL_AWAITING_INGEST", "INGESTED", "APPROVED", "REJECTED"] },
+        "contentCategory": { "enum": ["world", "ship", "faction", "character", "interior", "prop", "planet-location", "vfx-presentation"] },
+        "contentSubtype": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z][a-z0-9-]*)+$" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "forceRelationshipRole": { "$ref": "#/$defs/forceRelationshipRole" },
+        "coverageScope": { "enum": ["production-matrix", "outside-production-matrix"] },
+        "productionAxes": { "$ref": "#/$defs/productionAxes" },
+        "canonicalDisposition": { "$ref": "#/$defs/canonicalDisposition" },
+        "brief": { "type": "string", "minLength": 1 },
+        "characterContract": { "$ref": "#/$defs/characterConceptContract" },
+        "evidence": { "$ref": "#/$defs/conceptSourceEvidence" },
+        "camera": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["orthographic-multi-view", "isometric-cutaway", "tactical-rts", "tilted-top-down-mobile-rts", "material-board", "character-turnaround", "portrait-three-quarter"] } },
+        "scale": { "$ref": "#/$defs/conceptScale" },
+        "lod": { "$ref": "#/$defs/conceptLod" },
+        "runtimeConsumers": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["main-rts", "space-exploration-module", "cinematic-pipeline", "commander-portrait", "content-authoring"] } },
+        "modelTargets": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "contentCategory": { "const": "character" } } },
+          "then": { "required": ["characterContract"] }
+        },
+        {
+          "if": { "properties": { "coverageScope": { "const": "production-matrix" } } },
+          "then": { "required": ["productionAxes"] },
+          "else": { "not": { "required": ["productionAxes"] } }
+        },
+        {
+          "if": { "properties": { "status": { "const": "REJECTED" } } },
+          "then": { "required": ["canonicalDisposition"] },
+          "else": { "not": { "required": ["canonicalDisposition"] } }
+        }
+      ]
+    },
+    "plannedConceptBrief": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "status", "contentCategory", "classification", "forceRelationshipRole", "coverageScope", "brief", "camera", "scale", "lod", "runtimeConsumers", "modelTargets"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "status": { "const": "PLANNED" },
+        "contentCategory": { "enum": ["world", "ship", "faction", "character", "interior", "prop", "planet-location", "vfx-presentation"] },
+        "classification": { "$ref": "#/$defs/classification" },
+        "forceRelationshipRole": { "$ref": "#/$defs/forceRelationshipRole" },
+        "coverageScope": { "enum": ["production-matrix", "outside-production-matrix"] },
+        "productionAxes": { "$ref": "#/$defs/productionAxes" },
+        "brief": { "type": "string", "minLength": 1 },
+        "camera": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["orthographic-multi-view", "isometric-cutaway", "tactical-rts", "tilted-top-down-mobile-rts", "material-board", "character-turnaround", "portrait-three-quarter"] } },
+        "scale": { "$ref": "#/$defs/conceptScale" },
+        "lod": { "$ref": "#/$defs/conceptLod" },
+        "runtimeConsumers": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["main-rts", "space-exploration-module", "cinematic-pipeline", "commander-portrait", "content-authoring"] } },
+        "modelTargets": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "coverageScope": { "const": "production-matrix" } } },
+          "then": { "required": ["productionAxes"] },
+          "else": { "not": { "required": ["productionAxes"] } }
+        }
+      ]
+    },
+    "conceptCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaRef", "schemaVersion", "catalogId", "vocabularySources", "controlledVocabulary", "productionCoverage", "concepts", "plannedBriefs"],
+      "properties": {
+        "schemaRef": { "const": "./assets.v1.schema.json#/$defs/conceptCatalog" },
+        "schemaVersion": { "const": 1 },
+        "catalogId": { "const": "massfront-concept-reference-library" },
+        "vocabularySources": { "type": "object" },
+        "controlledVocabulary": { "type": "object" },
+        "productionCoverage": { "$ref": "#/$defs/productionCoverage" },
+        "concepts": { "type": "array", "items": { "$ref": "#/$defs/conceptRecord" } },
+        "plannedBriefs": { "type": "array", "items": { "$ref": "#/$defs/plannedConceptBrief" } }
+      }
+    },
+    "textureMaterialRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "metersPerTile", "pixelsPerMeter", "plannedStem"],
+      "properties": {
+        "role": {
+          "enum": [
+            "terrain-ground", "terrain-soil-rock", "terrain-paving", "location-accent",
+            "architecture-facade", "architecture-roof", "architecture-contact",
+            "interior-floor", "interior-wall", "interior-machinery"
+          ]
+        },
+        "metersPerTile": { "type": "number", "exclusiveMinimum": 0 },
+        "pixelsPerMeter": { "type": "number", "exclusiveMinimum": 0 },
+        "plannedStem": { "$ref": "#/$defs/identifier" }
+      }
+    },
+    "texturePairedMaps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["albedo", "normalRoughness"],
+      "properties": {
+        "albedo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["colorSpace", "channels"],
+          "properties": {
+            "colorSpace": { "const": "sRGB" },
+            "channels": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["r", "g", "b", "a"],
+              "properties": {
+                "r": { "const": "base-color-r" },
+                "g": { "const": "base-color-g" },
+                "b": { "const": "base-color-b" },
+                "a": { "const": "opaque-one" }
+              }
+            }
+          }
+        },
+        "normalRoughness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["colorSpace", "tangentSpace", "channels"],
+          "properties": {
+            "colorSpace": { "const": "linear" },
+            "tangentSpace": { "const": true },
+            "channels": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["r", "g", "b", "a"],
+              "properties": {
+                "r": { "const": "normal-x" },
+                "g": { "const": "normal-y" },
+                "b": { "const": "normal-z" },
+                "a": { "const": "roughness" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "textureApprovedEvidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "albedo", "normalRoughness"],
+        "properties": {
+          "role": { "type": "string" },
+          "albedo": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "integrity"],
+            "properties": {
+              "path": { "$ref": "#/$defs/relativePath" },
+              "integrity": { "$ref": "#/$defs/integrity" }
+            }
+          },
+          "normalRoughness": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "integrity"],
+            "properties": {
+              "path": { "$ref": "#/$defs/relativePath" },
+              "integrity": { "$ref": "#/$defs/integrity" }
+            }
+          }
+        }
+      }
+    },
+    "textureThemePack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "title", "status", "domain", "coverageTargetIds", "materialRoles", "resolution",
+        "seamless", "tileable", "pairedMaps", "runtimeEncoding", "anisotropyBudget", "residencyBudget",
+        "conceptReference", "seamProof", "mobileCapture", "consumerIds", "plannedDirectory", "approvedEvidence"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["PLANNED", "APPROVED"] },
+        "domain": { "enum": ["MAP", "CITY", "SHIP_SECTION"] },
+        "coverageTargetIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "materialRoles": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/textureMaterialRole" } },
+        "resolution": {
+          "type": "array", "minItems": 2, "maxItems": 2,
+          "prefixItems": [{ "const": 2048 }, { "const": 2048 }]
+        },
+        "seamless": { "const": true },
+        "tileable": { "const": true },
+        "pairedMaps": { "$ref": "#/$defs/texturePairedMaps" },
+        "runtimeEncoding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["container", "transcodeClass", "mipmaps"],
+          "properties": {
+            "container": { "const": "KTX2" },
+            "transcodeClass": { "const": "BasisU-UASTC-or-equivalent" },
+            "mipmaps": { "const": true }
+          }
+        },
+        "anisotropyBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["class", "requestedMax", "sharedBudgetRequired"],
+          "properties": {
+            "class": { "enum": ["terrain-primary", "location-overlay", "world-architecture", "ship-interior"] },
+            "requestedMax": { "type": "integer", "minimum": 1, "maximum": 8 },
+            "sharedBudgetRequired": { "const": true }
+          }
+        },
+        "residencyBudget": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strategy", "maxResidentMaterialPairs", "targetCompressedGpuMiB", "evictOnContextSwitch"],
+          "properties": {
+            "strategy": { "enum": ["current-map-only", "current-location-overlay", "current-city-family-only", "current-ship-section-only"] },
+            "maxResidentMaterialPairs": { "type": "integer", "minimum": 1 },
+            "targetCompressedGpuMiB": { "type": "number", "exclusiveMinimum": 0 },
+            "evictOnContextSwitch": { "const": true }
+          }
+        },
+        "conceptReference": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "conceptIds", "pixelsUsedAsTexture", "cleanAuthoringRequired"],
+          "properties": {
+            "required": { "const": true },
+            "conceptIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+            "pixelsUsedAsTexture": { "const": false },
+            "cleanAuthoringRequired": { "const": true }
+          }
+        },
+        "seamProof": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "status", "method", "evidencePath"],
+          "properties": {
+            "required": { "const": true },
+            "status": { "enum": ["PENDING", "VERIFIED"] },
+            "method": { "const": "four-way-offset-plus-3x3-tile" },
+            "evidencePath": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/relativePath" }] }
+          }
+        },
+        "mobileCapture": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "status", "deviceClass", "viewports", "requirements", "evidencePaths"],
+          "properties": {
+            "required": { "const": true },
+            "status": { "enum": ["PENDING", "VERIFIED"] },
+            "deviceClass": { "const": "target-android-flagship" },
+            "viewports": {
+              "type": "array", "minItems": 2, "uniqueItems": true,
+              "items": { "enum": ["phone-portrait", "phone-landscape"] }
+            },
+            "requirements": {
+              "type": "array", "minItems": 1, "uniqueItems": true,
+              "items": { "enum": ["no-visible-seams", "no-distance-shimmer", "readable-texel-scale", "matched-before-after"] }
+            },
+            "evidencePaths": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/relativePath" } }
+          }
+        },
+        "consumerIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "plannedDirectory": { "$ref": "#/$defs/relativePath" },
+        "approvedEvidence": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/textureApprovedEvidence" }] }
+      }
+    },
+    "textureConsumerAudit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "domains", "sourcePath", "symbols", "finding"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "domains": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["MAP", "CITY", "SHIP_SECTION"] } },
+        "sourcePath": { "$ref": "#/$defs/relativePath" },
+        "symbols": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "finding": { "type": "string", "minLength": 1 }
+      }
+    },
+    "textureThemeTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "domain", "label", "themeIds", "locationIds", "factionIds", "sectionIds", "districtIds", "requiredMaterialRoles", "consumerIds", "requiredPackIds", "rationale"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "domain": { "enum": ["MAP", "CITY", "SHIP_SECTION"] },
+        "label": { "type": "string", "minLength": 1 },
+        "themeIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "locationIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "factionIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "sectionIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "districtIds": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "requiredMaterialRoles": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+        "consumerIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "requiredPackIds": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/identifier" } },
+        "rationale": { "type": "string", "minLength": 1 }
+      }
+    },
+    "textureThemeCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaRef", "schemaVersion", "catalogId", "reportPath", "coverageMeaning", "consumerAudit", "targets", "packs"],
+      "properties": {
+        "schemaRef": { "const": "./assets.v1.schema.json#/$defs/textureThemeCatalog" },
+        "schemaVersion": { "const": 1 },
+        "catalogId": { "const": "massfront-texture-theme-production-v1" },
+        "reportPath": { "$ref": "#/$defs/relativePath" },
+        "coverageMeaning": { "type": "string", "minLength": 1 },
+        "consumerAudit": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/textureConsumerAudit" } },
+        "targets": { "type": "array", "minItems": 30, "maxItems": 30, "items": { "$ref": "#/$defs/textureThemeTarget" } },
+        "packs": { "type": "array", "minItems": 30, "maxItems": 30, "items": { "$ref": "#/$defs/textureThemePack" } }
+      }
+    },
+    "asset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "assetType",
+        "representation",
+        "contentCategory",
+        "classification",
+        "styleProfile",
+        "lifecycle",
+        "source",
+        "geometry",
+        "capabilities",
+        "runtime",
+        "approval"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "assetType": { "enum": ["character", "environment", "prop", "vehicle", "vfx", "ui", "texture", "audio"] },
+        "representation": { "enum": ["3d-model", "concept-art", "texture-set", "vfx-source", "ui-source", "audio-source"] },
+        "contentCategory": {
+          "enum": ["world", "ship", "faction", "character", "interior", "prop", "planet-location", "vfx-presentation"]
+        },
+        "classification": { "$ref": "#/$defs/classification" },
+        "displayName": { "type": "string", "minLength": 1 },
+        "styleProfile": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+        },
+        "lifecycle": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["stage", "runtimeReady"],
+          "properties": {
+            "stage": { "enum": ["SOURCE", "DERIVED", "RUNTIME"] },
+            "runtimeReady": { "type": "boolean" }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "format", "provenance"],
+          "properties": {
+            "path": { "$ref": "#/$defs/relativePath" },
+            "format": { "enum": ["glb", "gltf", "blend", "fbx", "png", "jpg", "webp", "ktx2", "wav", "ogg"] },
+            "provenance": { "$ref": "#/$defs/provenance" }
+          }
+        },
+        "conceptEvidence": { "$ref": "#/$defs/conceptEvidence" },
+        "facePolicy": { "$ref": "#/$defs/facePolicy" },
+        "sourceDisposition": { "$ref": "#/$defs/sourceDisposition" },
+        "geometry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sourceTriangles"],
+          "properties": {
+            "sourceTriangles": { "type": "integer", "minimum": 0 },
+            "fullBody": { "type": "boolean" },
+            "bindPose": { "enum": ["strict-t-pose", "a-pose", "none", "unknown"] },
+            "coordinateSystem": { "enum": ["spline-y-up", "massfront-z-up", "unknown"] }
+          }
+        },
+        "capabilities": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rigged", "animationClips"],
+          "properties": {
+            "rigged": { "type": "boolean" },
+            "deformBones": { "type": "integer", "minimum": 0 },
+            "maxInfluencesObserved": { "type": "integer", "minimum": 0 },
+            "animationClips": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "runtime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["targetSurfaces", "lodTargets", "rigBudget", "runtimePath"],
+          "properties": {
+            "targetSurfaces": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["ship-cutscene", "ship-interior", "commander-portrait", "ground-rts", "menu"] }
+            },
+            "lodTargets": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["LOD0", "LOD1", "LOD2"],
+              "properties": {
+                "LOD0": { "$ref": "#/$defs/triangleRange" },
+                "LOD1": { "$ref": "#/$defs/triangleRange" },
+                "LOD2": { "$ref": "#/$defs/triangleRange" }
+              }
+            },
+            "rigBudget": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["maxDeformBones", "maxInfluencesPerVertex"],
+              "properties": {
+                "maxDeformBones": { "type": "integer", "minimum": 1 },
+                "maxInfluencesPerVertex": { "type": "integer", "minimum": 1, "maximum": 4 }
+              }
+            },
+            "runtimePath": {
+              "oneOf": [
+                { "type": "null" },
+                { "$ref": "#/$defs/relativePath" }
+              ]
+            }
+          }
+        },
+        "approval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "gates"],
+          "properties": {
+            "status": { "enum": ["CANDIDATE", "REVIEW", "APPROVED", "REJECTED"] },
+            "gates": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/gate" }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "assetType": { "const": "character" } } },
+          "then": {
+            "required": ["facePolicy"],
+            "properties": {
+              "geometry": { "required": ["sourceTriangles", "fullBody", "bindPose", "coordinateSystem"] }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "representation": { "const": "3d-model" } } },
+          "then": { "required": ["conceptEvidence"] }
+        },
+        {
+          "if": {
+            "properties": {
+              "sourceDisposition": { "properties": { "usage": { "const": "reference-only" } } }
+            },
+            "required": ["sourceDisposition"]
+          },
+          "then": {
+            "properties": {
+              "lifecycle": { "properties": { "runtimeReady": { "const": false } } },
+              "approval": { "properties": { "status": { "const": "REJECTED" } } },
+              "sourceDisposition": {
+                "properties": {
+                  "runtimeEligible": { "const": false },
+                  "automaticDecimationAllowed": { "const": false },
+                  "reason": { "const": "clean-rebuild-required" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "representation": { "const": "3d-model" },
+              "approval": { "properties": { "status": { "const": "APPROVED" } } }
+            }
+          },
+          "then": {
+            "properties": {
+              "conceptEvidence": {
+                "properties": {
+                  "sourcePath": { "$ref": "#/$defs/relativePath" },
+                  "integrity": {
+                    "properties": {
+                      "status": { "const": "verified" },
+                      "digest": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+                    }
+                  },
+                  "approvalStatus": { "const": "APPROVED" },
+                  "sourceOnly": { "const": true },
+                  "pixelUsage": { "const": "concept-reference-only" },
+                  "pixelsUsedAsTexture": { "const": false }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "lifecycle": { "properties": { "runtimeReady": { "const": true } } } } },
+          "then": {
+            "properties": {
+              "approval": { "properties": { "status": { "const": "APPROVED" } } },
+              "runtime": { "properties": { "runtimePath": { "$ref": "#/$defs/relativePath" } } }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

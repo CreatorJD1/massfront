@@ -1,0 +1,3099 @@
+{
+  "schema": "MassfrontHunyuanRoadCleanupV1",
+  "status": "SOURCE_AUTHORING_ONLY",
+  "runtimeAccepted": false,
+  "visualAccepted": false,
+  "source": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\huggingface\\world-kits\\mf-road-straight-hunyuan3d21-v1\\mf-road-straight-hunyuan3d21-v1.glb",
+    "sha256": "62EC702437FAC75D3651B0130BE094DD8A824FB559A97A46319B131F6225B166",
+    "bytes": 6300544
+  },
+  "sourceGenerationReport": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\huggingface\\world-kits\\mf-road-straight-hunyuan3d21-v1\\mf-road-straight-hunyuan3d21-v1.report.json",
+    "sha256": "3CD8837446FC36872DAB20FC41F478861BF179D4F110F94229A9AE2398D4FB3C",
+    "bytes": 1510
+  },
+  "sourceGenerator": {
+    "space": "tencent/Hunyuan3D-2.1",
+    "seed": 174021,
+    "steps": 30,
+    "octreeResolution": 256,
+    "targetFaces": 100000
+  },
+  "normalization": {
+    "targetEnvelopeM": {
+      "width": 20.0,
+      "length": 40.0
+    },
+    "originPolicy": "footprint-center at X/Y zero; contact floor at Z zero",
+    "before": {
+      "min": [
+        -0.361585,
+        -0.060017,
+        -0.997931
+      ],
+      "max": [
+        0.353697,
+        0.056365,
+        0.990018
+      ],
+      "dimensions": [
+        0.715282,
+        0.116382,
+        1.987949
+      ],
+      "center": [
+        -0.003944,
+        -0.001826,
+        -0.0039565
+      ]
+    },
+    "after": {
+      "min": [
+        -10.0,
+        0.0,
+        -20.0
+      ],
+      "max": [
+        10.0,
+        2.3417501,
+        20.0
+      ],
+      "dimensions": [
+        20.0,
+        2.3417501,
+        40.0
+      ],
+      "center": [
+        0.0,
+        1.1708751,
+        0.0
+      ]
+    },
+    "sharedIntakeResult": {
+      "fitMode": "exact",
+      "logicalScale": [
+        27.961,
+        20.1212405,
+        20.1212405
+      ],
+      "before": {
+        "min": [
+          -0.361585,
+          -0.060017,
+          -0.997931
+        ],
+        "max": [
+          0.353697,
+          0.056365,
+          0.990018
+        ],
+        "dimensions": [
+          0.715282,
+          0.116382,
+          1.987949
+        ],
+        "center": [
+          -0.003944,
+          -0.001826,
+          -0.0039565
+        ]
+      },
+      "after": {
+        "min": [
+          -10.0,
+          0.0,
+          -20.0
+        ],
+        "max": [
+          10.0,
+          2.3417501,
+          20.0
+        ],
+        "dimensions": [
+          20.0,
+          2.3417501,
+          40.0
+        ],
+        "center": [
+          0.0,
+          1.1708751,
+          0.0
+        ]
+      }
+    }
+  },
+  "sourceReference": {
+    "name": "MF_HF_ROAD_CLEAN_V1_REFERENCE_HIGH",
+    "triangles": 40000,
+    "retainedInBlend": true,
+    "hiddenByDefault": true,
+    "materials": [
+      {
+        "name": "PBR_Material",
+        "images": [
+          {
+            "name": "Image_0",
+            "width": 2048,
+            "height": 2048,
+            "source": "FILE"
+          },
+          {
+            "name": "Image_1",
+            "width": 2048,
+            "height": 2048,
+            "source": "FILE"
+          }
+        ]
+      }
+    ],
+    "knownTextureLimitations": [
+      "source PBR material is reference-only",
+      "embedded JPEG base color and PNG metallic-roughness are present",
+      "no verified normal map",
+      "no verified ambient-occlusion map",
+      "no verified emissive map",
+      "clean cyan channels use separate authored material and geometry"
+    ]
+  },
+  "connectedComponentCleanup": {
+    "policy": {
+      "maxTriangles": 3,
+      "maxDimensionM": 0.12,
+      "maxAreaM2": 0.002,
+      "boundaryProtectionEpsilonM": 0.002,
+      "faceWindingPreserved": true,
+      "globalNormalRecalculation": false
+    },
+    "before": {
+      "triangles": 40000,
+      "components": 762,
+      "bounds": {
+        "min": [
+          -10.0,
+          -20.0,
+          0.0
+        ],
+        "max": [
+          10.0,
+          20.0,
+          2.341750144958496
+        ],
+        "dimensions": [
+          20.0,
+          40.0,
+          2.341750144958496
+        ]
+      },
+      "exactDuplicateGroups": 0,
+      "exactDuplicateTrianglesRemoved": 0,
+      "degenerateTrianglesRemoved": 0
+    },
+    "removed": {
+      "components": 12,
+      "triangles": 12,
+      "areaM2": 0.00163312,
+      "records": [
+        {
+          "sourceRank": 744,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 0.00096333,
+          "dimensionsM": [
+            0.013254,
+            0.016459,
+            0.090586
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 748,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 0.00037401,
+          "dimensionsM": [
+            0.011687,
+            0.056019,
+            0.007103
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 750,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 6.297e-05,
+          "dimensionsM": [
+            0.020802,
+            0.004929,
+            0.003421
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 751,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 5.9e-05,
+          "dimensionsM": [
+            0.012834,
+            0.006258,
+            0.006056
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 752,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 4.924e-05,
+          "dimensionsM": [
+            0.002964,
+            0.032757,
+            0.000624
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 753,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 3.126e-05,
+          "dimensionsM": [
+            0.008444,
+            0.00493,
+            0.004769
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 754,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 2.993e-05,
+          "dimensionsM": [
+            0.008304,
+            0.004808,
+            0.004648
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 756,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 1.826e-05,
+          "dimensionsM": [
+            0.004277,
+            0.006299,
+            0.00324
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 757,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 1.75e-05,
+          "dimensionsM": [
+            0.004391,
+            0.004346,
+            0.004749
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 758,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 1.586e-05,
+          "dimensionsM": [
+            0.004082,
+            0.005513,
+            0.00326
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 759,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 9.5e-06,
+          "dimensionsM": [
+            0.001901,
+            0.000885,
+            0.009095
+          ],
+          "touchesEnvelope": false
+        },
+        {
+          "sourceRank": 760,
+          "triangles": 1,
+          "vertices": 3,
+          "areaM2": 2.26e-06,
+          "dimensionsM": [
+            0.001314,
+            0.000986,
+            0.002636
+          ],
+          "touchesEnvelope": false
+        }
+      ]
+    },
+    "protectedBoundaryMicroComponents": [],
+    "after": {
+      "triangles": 39988,
+      "components": 750,
+      "bounds": {
+        "min": [
+          -10.0,
+          -20.0,
+          0.0
+        ],
+        "max": [
+          10.0,
+          20.0,
+          2.341750144958496
+        ],
+        "dimensions": [
+          20.0,
+          40.0,
+          2.341750144958496
+        ]
+      }
+    }
+  },
+  "cleanBase": {
+    "name": "MF_HF_ROAD_CLEAN_V1_CLEAN_BASE",
+    "triangles": 39988,
+    "retainedInBlend": true,
+    "hiddenByDefault": true
+  },
+  "deckHeightEstimate": {
+    "z": 1.9162261486053467,
+    "sampleCount": 3705,
+    "sampleMin": 1.4334774017333984,
+    "sampleMax": 2.0262491703033447,
+    "estimator": "lane-zone-p90"
+  },
+  "surfacePlacementEvidence": [
+    {
+      "lod": 0,
+      "placements": 60,
+      "minimumClearanceM": 0.008,
+      "intersectionsFound": 0,
+      "coplanarPlacementsFound": 0,
+      "records": [
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            -4.25,
+            -18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 76,
+          "surfaceMaxZ": 1.9436113,
+          "bottomZ": 1.9516113,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            4.25,
+            -18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 1.9353817,
+          "bottomZ": 1.9433817,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            -4.25,
+            18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 73,
+          "surfaceMaxZ": 1.9230876,
+          "bottomZ": 1.9310876,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            4.25,
+            18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 57,
+          "surfaceMaxZ": 1.9204315,
+          "bottomZ": 1.9284315,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 82,
+          "surfaceMaxZ": 2.2829559,
+          "bottomZ": 2.2909559,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 3,
+          "surfaceMaxZ": 2.0774577,
+          "bottomZ": 2.3419559,
+          "clearanceM": 0.2644982,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 23,
+          "surfaceMaxZ": 1.8088191,
+          "bottomZ": 1.8168191,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9205925,
+          "bottomZ": 1.9285925,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 2.0333519,
+          "bottomZ": 2.0413519,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 2.0161281,
+          "bottomZ": 2.0923519,
+          "clearanceM": 0.0762238,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 16,
+          "surfaceMaxZ": 1.8109318,
+          "bottomZ": 1.8189318,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9165683,
+          "bottomZ": 1.9245683,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 81,
+          "surfaceMaxZ": 2.2888515,
+          "bottomZ": 2.2968515,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 7,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3478515,
+          "clearanceM": 0.1122408,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 39,
+          "surfaceMaxZ": 1.9193047,
+          "bottomZ": 1.9273047,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9170109,
+          "bottomZ": 1.9783047,
+          "clearanceM": 0.0612938,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 25,
+          "surfaceMaxZ": 1.8247952,
+          "bottomZ": 1.8327952,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9166086,
+          "bottomZ": 1.9246086,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.0211182,
+          "bottomZ": 2.0291182,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 2.0088644,
+          "bottomZ": 2.0801182,
+          "clearanceM": 0.0712538,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 20,
+          "surfaceMaxZ": 1.8078129,
+          "bottomZ": 1.8158129,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.919023,
+          "bottomZ": 1.927023,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.3079464,
+          "bottomZ": 2.3159464,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3669464,
+          "clearanceM": 0.1313357,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 79,
+          "surfaceMaxZ": 2.2855315,
+          "bottomZ": 2.2935315,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 8,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3445315,
+          "clearanceM": 0.1089208,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 26,
+          "surfaceMaxZ": 1.8068271,
+          "bottomZ": 1.8148271,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9116588,
+          "bottomZ": 1.9196588,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 2.0319636,
+          "bottomZ": 2.0399636,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 5,
+          "surfaceMaxZ": 2.0319636,
+          "bottomZ": 2.0909636,
+          "clearanceM": 0.059,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 20,
+          "surfaceMaxZ": 1.8091611,
+          "bottomZ": 1.8171611,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9069504,
+          "bottomZ": 1.9149504,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 78,
+          "surfaceMaxZ": 2.2992945,
+          "bottomZ": 2.3072945,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3582945,
+          "clearanceM": 0.1226837,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 46,
+          "surfaceMaxZ": 1.9193047,
+          "bottomZ": 1.9273047,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9053205,
+          "bottomZ": 1.9783047,
+          "clearanceM": 0.0729842,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 22,
+          "surfaceMaxZ": 1.8101269,
+          "bottomZ": 1.8181269,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9063668,
+          "bottomZ": 1.9143668,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 60,
+          "surfaceMaxZ": 2.0148606,
+          "bottomZ": 2.0228606,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 7,
+          "surfaceMaxZ": 2.0148606,
+          "bottomZ": 2.0738606,
+          "clearanceM": 0.059,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 21,
+          "surfaceMaxZ": 1.8078331,
+          "bottomZ": 1.8158331,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9146971,
+          "bottomZ": 1.9226971,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.3115282,
+          "bottomZ": 2.3195282,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 9,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3705282,
+          "clearanceM": 0.1349175,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            -16.0
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 2,
+          "surfaceMaxZ": 1.4864566,
+          "bottomZ": 1.4984566,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            -16.0
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 4,
+          "surfaceMaxZ": 1.7207686,
+          "bottomZ": 1.7327686,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            -11.7
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 2,
+          "surfaceMaxZ": 1.7148529,
+          "bottomZ": 1.7268529,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            -11.7
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 1.7155772,
+          "bottomZ": 1.7275772,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            -7.4
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 2,
+          "surfaceMaxZ": 1.7138066,
+          "bottomZ": 1.7258066,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            -7.4
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 1.7141083,
+          "bottomZ": 1.7261083,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            -3.1
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 4,
+          "surfaceMaxZ": 1.714873,
+          "bottomZ": 1.726873,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            -3.1
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 3,
+          "surfaceMaxZ": 1.7145108,
+          "bottomZ": 1.7265108,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            1.2
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 4,
+          "surfaceMaxZ": 1.7144505,
+          "bottomZ": 1.7264505,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            1.2
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 5,
+          "surfaceMaxZ": 1.7141688,
+          "bottomZ": 1.7261688,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            5.5
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 2,
+          "surfaceMaxZ": 1.7147522,
+          "bottomZ": 1.7267522,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            5.5
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 2,
+          "surfaceMaxZ": 1.7150943,
+          "bottomZ": 1.7270943,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            9.8
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 1.4839214,
+          "bottomZ": 1.4959214,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            9.8
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.7160199,
+          "bottomZ": 1.7280199,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            14.1
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 1.7185752,
+          "bottomZ": 1.7305752,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            14.1
+          ],
+          "footprintM": [
+            0.19,
+            2.25
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 1.4862152,
+          "bottomZ": 1.4982152,
+          "clearanceM": 0.012
+        }
+      ]
+    },
+    {
+      "lod": 1,
+      "placements": 54,
+      "minimumClearanceM": 0.008,
+      "intersectionsFound": 0,
+      "coplanarPlacementsFound": 0,
+      "records": [
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            -4.25,
+            -18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 76,
+          "surfaceMaxZ": 1.9436113,
+          "bottomZ": 1.9516113,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            4.25,
+            -18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 1.9353817,
+          "bottomZ": 1.9433817,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            -4.25,
+            18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 73,
+          "surfaceMaxZ": 1.9230876,
+          "bottomZ": 1.9310876,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            4.25,
+            18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 57,
+          "surfaceMaxZ": 1.9204315,
+          "bottomZ": 1.9284315,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 82,
+          "surfaceMaxZ": 2.2829559,
+          "bottomZ": 2.2909559,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 3,
+          "surfaceMaxZ": 2.0774577,
+          "bottomZ": 2.3419559,
+          "clearanceM": 0.2644982,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 23,
+          "surfaceMaxZ": 1.8088191,
+          "bottomZ": 1.8168191,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9205925,
+          "bottomZ": 1.9285925,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 2.0333519,
+          "bottomZ": 2.0413519,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 2.0161281,
+          "bottomZ": 2.0923519,
+          "clearanceM": 0.0762238,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 16,
+          "surfaceMaxZ": 1.8109318,
+          "bottomZ": 1.8189318,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9165683,
+          "bottomZ": 1.9245683,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 81,
+          "surfaceMaxZ": 2.2888515,
+          "bottomZ": 2.2968515,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 7,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3478515,
+          "clearanceM": 0.1122408,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 39,
+          "surfaceMaxZ": 1.9193047,
+          "bottomZ": 1.9273047,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9170109,
+          "bottomZ": 1.9783047,
+          "clearanceM": 0.0612938,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 25,
+          "surfaceMaxZ": 1.8247952,
+          "bottomZ": 1.8327952,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9166086,
+          "bottomZ": 1.9246086,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.0211182,
+          "bottomZ": 2.0291182,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 2.0088644,
+          "bottomZ": 2.0801182,
+          "clearanceM": 0.0712538,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 20,
+          "surfaceMaxZ": 1.8078129,
+          "bottomZ": 1.8158129,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.919023,
+          "bottomZ": 1.927023,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.3079464,
+          "bottomZ": 2.3159464,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3669464,
+          "clearanceM": 0.1313357,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 79,
+          "surfaceMaxZ": 2.2855315,
+          "bottomZ": 2.2935315,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 8,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3445315,
+          "clearanceM": 0.1089208,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 26,
+          "surfaceMaxZ": 1.8068271,
+          "bottomZ": 1.8148271,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9116588,
+          "bottomZ": 1.9196588,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 2.0319636,
+          "bottomZ": 2.0399636,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 5,
+          "surfaceMaxZ": 2.0319636,
+          "bottomZ": 2.0909636,
+          "clearanceM": 0.059,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 20,
+          "surfaceMaxZ": 1.8091611,
+          "bottomZ": 1.8171611,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9069504,
+          "bottomZ": 1.9149504,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 78,
+          "surfaceMaxZ": 2.2992945,
+          "bottomZ": 2.3072945,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3582945,
+          "clearanceM": 0.1226837,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 46,
+          "surfaceMaxZ": 1.9193047,
+          "bottomZ": 1.9273047,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9053205,
+          "bottomZ": 1.9783047,
+          "clearanceM": 0.0729842,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 22,
+          "surfaceMaxZ": 1.8101269,
+          "bottomZ": 1.8181269,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9063668,
+          "bottomZ": 1.9143668,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 60,
+          "surfaceMaxZ": 2.0148606,
+          "bottomZ": 2.0228606,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 7,
+          "surfaceMaxZ": 2.0148606,
+          "bottomZ": 2.0738606,
+          "clearanceM": 0.059,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 21,
+          "surfaceMaxZ": 1.8078331,
+          "bottomZ": 1.8158331,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9146971,
+          "bottomZ": 1.9226971,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.3115282,
+          "bottomZ": 2.3195282,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 9,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3705282,
+          "clearanceM": 0.1349175,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            -16.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 1.9028456,
+          "bottomZ": 1.9148456,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            -16.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 1.7611518,
+          "bottomZ": 1.7731518,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            -9.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 3,
+          "surfaceMaxZ": 1.7138066,
+          "bottomZ": 1.7258066,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            -9.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 4,
+          "surfaceMaxZ": 1.7157583,
+          "bottomZ": 1.7277583,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            -2.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 3,
+          "surfaceMaxZ": 1.714873,
+          "bottomZ": 1.726873,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            -2.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 1.7145108,
+          "bottomZ": 1.7265108,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            5.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 3,
+          "surfaceMaxZ": 1.7147522,
+          "bottomZ": 1.7267522,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            5.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 4,
+          "surfaceMaxZ": 1.7150943,
+          "bottomZ": 1.7270943,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            -4.15,
+            12.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 1.7147925,
+          "bottomZ": 1.7267925,
+          "clearanceM": 0.012
+        },
+        {
+          "role": "four_lane_marking",
+          "centerXY": [
+            4.15,
+            12.0
+          ],
+          "footprintM": [
+            0.19,
+            3.1
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.7179717,
+          "bottomZ": 1.7299717,
+          "clearanceM": 0.012
+        }
+      ]
+    },
+    {
+      "lod": 2,
+      "placements": 44,
+      "minimumClearanceM": 0.008,
+      "intersectionsFound": 0,
+      "coplanarPlacementsFound": 0,
+      "records": [
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            -4.25,
+            -18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 76,
+          "surfaceMaxZ": 1.9436113,
+          "bottomZ": 1.9516113,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            4.25,
+            -18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 1.9353817,
+          "bottomZ": 1.9433817,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            -4.25,
+            18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 73,
+          "surfaceMaxZ": 1.9230876,
+          "bottomZ": 1.9310876,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "transverse_tiling_joint_band",
+          "centerXY": [
+            4.25,
+            18.45
+          ],
+          "footprintM": [
+            5.8,
+            0.22
+          ],
+          "surfaceSamples": 57,
+          "surfaceMaxZ": 1.9204315,
+          "bottomZ": 1.9284315,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 82,
+          "surfaceMaxZ": 2.2829559,
+          "bottomZ": 2.2909559,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 3,
+          "surfaceMaxZ": 2.0774577,
+          "bottomZ": 2.3419559,
+          "clearanceM": 0.2644982,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 23,
+          "surfaceMaxZ": 1.8088191,
+          "bottomZ": 1.8168191,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9205925,
+          "bottomZ": 1.9285925,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 2.0333519,
+          "bottomZ": 2.0413519,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 2.0161281,
+          "bottomZ": 2.0923519,
+          "clearanceM": 0.0762238,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 16,
+          "surfaceMaxZ": 1.8109318,
+          "bottomZ": 1.8189318,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9165683,
+          "bottomZ": 1.9245683,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 81,
+          "surfaceMaxZ": 2.2888515,
+          "bottomZ": 2.2968515,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 7,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3478515,
+          "clearanceM": 0.1122408,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 39,
+          "surfaceMaxZ": 1.9193047,
+          "bottomZ": 1.9273047,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9170109,
+          "bottomZ": 1.9783047,
+          "clearanceM": 0.0612938,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 25,
+          "surfaceMaxZ": 1.8247952,
+          "bottomZ": 1.8327952,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9166086,
+          "bottomZ": 1.9246086,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.0211182,
+          "bottomZ": 2.0291182,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 1,
+          "surfaceMaxZ": 2.0088644,
+          "bottomZ": 2.0801182,
+          "clearanceM": 0.0712538,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 20,
+          "surfaceMaxZ": 1.8078129,
+          "bottomZ": 1.8158129,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.919023,
+          "bottomZ": 1.927023,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            -7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.3079464,
+          "bottomZ": 2.3159464,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            -7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3669464,
+          "clearanceM": 0.1313357,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 79,
+          "surfaceMaxZ": 2.2855315,
+          "bottomZ": 2.2935315,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 8,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3445315,
+          "clearanceM": 0.1089208,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 26,
+          "surfaceMaxZ": 1.8068271,
+          "bottomZ": 1.8148271,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9116588,
+          "bottomZ": 1.9196588,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 65,
+          "surfaceMaxZ": 2.0319636,
+          "bottomZ": 2.0399636,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 5,
+          "surfaceMaxZ": 2.0319636,
+          "bottomZ": 2.0909636,
+          "clearanceM": 0.059,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 20,
+          "surfaceMaxZ": 1.8091611,
+          "bottomZ": 1.8171611,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9069504,
+          "bottomZ": 1.9149504,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 78,
+          "surfaceMaxZ": 2.2992945,
+          "bottomZ": 2.3072945,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            -1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 6,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3582945,
+          "clearanceM": 0.1226837,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 46,
+          "surfaceMaxZ": 1.9193047,
+          "bottomZ": 1.9273047,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            1.834
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9053205,
+          "bottomZ": 1.9783047,
+          "clearanceM": 0.0729842,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 22,
+          "surfaceMaxZ": 1.8101269,
+          "bottomZ": 1.8181269,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            5.502
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9063668,
+          "bottomZ": 1.9143668,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 60,
+          "surfaceMaxZ": 2.0148606,
+          "bottomZ": 2.0228606,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            9.17
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 7,
+          "surfaceMaxZ": 2.0148606,
+          "bottomZ": 2.0738606,
+          "clearanceM": 0.059,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 21,
+          "surfaceMaxZ": 1.8078331,
+          "bottomZ": 1.8158331,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            12.838
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 24,
+          "surfaceMaxZ": 1.9146971,
+          "bottomZ": 1.9226971,
+          "clearanceM": 0.008,
+          "bedSeparationM": 0.006
+        },
+        {
+          "role": "service_channel_bed",
+          "centerXY": [
+            7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.32,
+            3.488
+          ],
+          "surfaceSamples": 66,
+          "surfaceMaxZ": 2.3115282,
+          "bottomZ": 2.3195282,
+          "clearanceM": 0.008
+        },
+        {
+          "role": "restrained_cyan_service_channel",
+          "centerXY": [
+            7.55,
+            16.506
+          ],
+          "footprintM": [
+            0.085,
+            3.408
+          ],
+          "surfaceSamples": 9,
+          "surfaceMaxZ": 2.2356107,
+          "bottomZ": 2.3705282,
+          "clearanceM": 0.1349175,
+          "bedSeparationM": 0.006
+        }
+      ]
+    }
+  ],
+  "lods": [
+    {
+      "name": "LOD0",
+      "targetTriangles": 40000,
+      "renderMeshTriangles": 39988,
+      "detailTriangles": 720,
+      "totalTriangles": 40708
+    },
+    {
+      "name": "LOD1",
+      "targetTriangles": 18000,
+      "renderMeshTriangles": 18000,
+      "detailTriangles": 648,
+      "totalTriangles": 18648
+    },
+    {
+      "name": "LOD2",
+      "targetTriangles": 6000,
+      "renderMeshTriangles": 5999,
+      "detailTriangles": 528,
+      "totalTriangles": 6527
+    }
+  ],
+  "collision": {
+    "name": "MF_HF_ROAD_CLEAN_V1_COLLISION",
+    "triangles": 12,
+    "dimensionsM": [
+      14.5,
+      40.0,
+      0.34
+    ]
+  },
+  "navProxy": {
+    "name": "MF_HF_ROAD_CLEAN_V1_NAV_PROXY",
+    "triangles": 12,
+    "laneCount": 4,
+    "clearanceWidthM": 14.5
+  },
+  "sockets": [
+    {
+      "name": "SOCKET_ROAD_N",
+      "direction": "N",
+      "position": [
+        0.0,
+        20.0,
+        1.916226
+      ]
+    },
+    {
+      "name": "SOCKET_ROAD_S",
+      "direction": "S",
+      "position": [
+        0.0,
+        -20.0,
+        1.916226
+      ]
+    }
+  ],
+  "authoredCleanup": [
+    "normalized high-detail reference retained",
+    "strict micro-component quarantine with exact-envelope protection",
+    "source face winding preserved without global disconnected-island normal recalculation",
+    "clean render LOD0/1/2 named and validated",
+    "locally surface-cleared transverse end-joint bands mask drive-deck tiling seams",
+    "four-lane divider markings",
+    "segmented restrained cyan emissive service channels with separate dark beds",
+    "separate simplified collision and navigation proxies",
+    "north/south 40 m modular sockets and clearance metadata"
+  ],
+  "exports": {
+    "reference": {
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-normalized-reference-review.glb",
+      "sha256": "63ACE22BBABE25B29A7E716453ABABC4F1168D0CF6231BB28871AEFD6CF5B235",
+      "bytes": 6073328
+    },
+    "lods": [
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-lod0-review.glb",
+        "sha256": "69D406836DB64BAF6154761332E04260DA8EF0A95C29FB006317834178EDC2F9",
+        "bytes": 6114376,
+        "lod": 0,
+        "triangles": 40708
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-lod1-review.glb",
+        "sha256": "47C30026409A8B298B8BE1AE331EBCCDD4C6229CEA06575045F727740A0C5475",
+        "bytes": 5599916,
+        "lod": 1,
+        "triangles": 18648
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-lod2-review.glb",
+        "sha256": "1E11A36B891F70573B3019E69C81F78D026817893863CFF7054890F7491E294C",
+        "bytes": 5258916,
+        "lod": 2,
+        "triangles": 6527
+      }
+    ],
+    "collision": {
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-collision-review.glb",
+      "sha256": "F07D38C8AF5891E05A89EA60CEA388AFA54931B84D3A4AD3718D91CB6F79C41F",
+      "bytes": 2160
+    },
+    "nav": {
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-nav-review.glb",
+      "sha256": "60DD3536707FDB93006D09F6486E6B11D7B108E688F8B987D2F53C257C9D7C33",
+      "bytes": 2804
+    }
+  },
+  "evidence": {
+    "resolution": [
+      1024,
+      1024
+    ],
+    "sameCameraPairs": true,
+    "renders": [
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-reference-iso-1024.png",
+        "sha256": "5EE6F9FAFDB654316D278D70375406AC19AD98C4AB8C26845A43C0E28E600EC1",
+        "bytes": 1116064,
+        "view": "iso",
+        "mode": "reference",
+        "width": 1024,
+        "height": 1024,
+        "camera": {
+          "location": [
+            47.704224,
+            -59.63028,
+            39.788147
+          ],
+          "rotationEuler": [
+            1.097397,
+            0.0,
+            0.674741
+          ],
+          "orthoScale": 52.0
+        }
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-clean-iso-1024.png",
+        "sha256": "C47199128CEB2DC5E20F4279C344D660EA07EE4BF627A59A43B0206358500711",
+        "bytes": 1131747,
+        "view": "iso",
+        "mode": "clean",
+        "width": 1024,
+        "height": 1024,
+        "camera": {
+          "location": [
+            47.704224,
+            -59.63028,
+            39.788147
+          ],
+          "rotationEuler": [
+            1.097397,
+            0.0,
+            0.674741
+          ],
+          "orthoScale": 52.0
+        }
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-reference-top-1024.png",
+        "sha256": "79E40F6F05DF36275B89B44BB2F7D8943DABE670A49FDCD11613208DA2F5E4F9",
+        "bytes": 1242067,
+        "view": "top",
+        "mode": "reference",
+        "width": 1024,
+        "height": 1024,
+        "camera": {
+          "location": [
+            0.0,
+            -0.0759,
+            76.570641
+          ],
+          "rotationEuler": [
+            0.000977,
+            -0.0,
+            0.0
+          ],
+          "orthoScale": 46.0
+        }
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-clean-top-1024.png",
+        "sha256": "AC82DF094931C337A727747A8BE5AB48009DAB363C8BADB323FC40EF3755386C",
+        "bytes": 1241338,
+        "view": "top",
+        "mode": "clean",
+        "width": 1024,
+        "height": 1024,
+        "camera": {
+          "location": [
+            0.0,
+            -0.0759,
+            76.570641
+          ],
+          "rotationEuler": [
+            0.000977,
+            -0.0,
+            0.0
+          ],
+          "orthoScale": 46.0
+        }
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-reference-low_entry-1024.png",
+        "sha256": "873E130325AE346DE7D95B32F751886B7BE0B6FDD7C3850A94EBBE262B63B11B",
+        "bytes": 1021711,
+        "view": "low_entry",
+        "mode": "reference",
+        "width": 1024,
+        "height": 1024,
+        "camera": {
+          "location": [
+            0.0,
+            -77.013069,
+            19.153816
+          ],
+          "rotationEuler": [
+            1.335251,
+            -0.0,
+            0.0
+          ],
+          "orthoScale": 48.0
+        }
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-clean-low_entry-1024.png",
+        "sha256": "DF1D20F065BE5FD492403D3BB86765160E57A5A43BC463434349DDF40A227488",
+        "bytes": 1023080,
+        "view": "low_entry",
+        "mode": "clean",
+        "width": 1024,
+        "height": 1024,
+        "camera": {
+          "location": [
+            0.0,
+            -77.013069,
+            19.153816
+          ],
+          "rotationEuler": [
+            1.335251,
+            -0.0,
+            0.0
+          ],
+          "orthoScale": 48.0
+        }
+      }
+    ]
+  },
+  "blend": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\mf-road-straight-hunyuan-clean-v1.blend",
+    "sha256": "DA90BE947C26623DE13926C78CB93D3E7C886CC0A476C38E07A4826D3A14A666",
+    "bytes": 9907428
+  },
+  "requiredNextSteps": [
+    "human review of strict micro-island removal against rail silhouette and decorative detail",
+    "author and verify normal, AO, and emissive texture inputs",
+    "phone tactical and command-zoom runtime evidence",
+    "explicit runtime acceptance decision before any manifest registration"
+  ]
+}

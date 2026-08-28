@@ -141,17 +141,23 @@ const AUD_DUCK = new Set(['alarm','boombig','carrier_deploy','deploy','level','n
    voices pass through distance/zoom muffling. */
 const AUD_CLEAR = new Set(['ui','confirm','radio','notify','level','reject','deny','vo_brood_call']);
 
-let audMaster = null, audSfxBus = null, audMusBus = null, audComp = null;
+let audMaster = null, audSfxBus = null, audAmbBus = null, audMusBus = null,
+    audVoiceBus = null, audComp = null;
 
 function audLevelSetting(key, fallback){
   const v=(typeof META!=='undefined'&&META.settings)?META.settings[key]:fallback;
   return [0.25,0.50,0.75,1.0][clamp(v|0,0,3)];
 }
 function audSfxLevel(){ return audLevelSetting('sfxVol',3); }
+function audAmbienceLevel(){ return audLevelSetting('ambVol',3); }
 function audMusicLevel(){ return audLevelSetting('musicVol',2); }
+function audVoiceLevel(){ return audLevelSetting('voiceVol',3); }
+function audIsVoiceSlot(name){ return typeof name==='string'&&name.lastIndexOf('vo_',0)===0; }
 function audApplyLevels(){
   if(!AC) return;
   if(audSfxBus) audSfxBus.gain.setTargetAtTime(audSfxLevel(),AC.currentTime,0.08);
+  if(audAmbBus) audAmbBus.gain.setTargetAtTime(audAmbienceLevel(),AC.currentTime,0.08);
+  if(audVoiceBus) audVoiceBus.gain.setTargetAtTime(audVoiceLevel(),AC.currentTime,0.08);
 }
 
 function audUnique(){
@@ -198,8 +204,11 @@ function audBuild(){
   audComp.ratio.value = 5; audComp.attack.value = 0.004; audComp.release.value = 0.18;
   audMaster = AC.createGain(); audMaster.gain.value = 0.9;
   audSfxBus = AC.createGain(); audSfxBus.gain.value = audSfxLevel();
+  audAmbBus = AC.createGain(); audAmbBus.gain.value = audAmbienceLevel();
   audMusBus = AC.createGain(); audMusBus.gain.value = 0.0;
-  audSfxBus.connect(audComp); audMusBus.connect(audComp);
+  audVoiceBus = AC.createGain(); audVoiceBus.gain.value = audVoiceLevel();
+  audSfxBus.connect(audComp); audAmbBus.connect(audComp);
+  audMusBus.connect(audComp); audVoiceBus.connect(audComp);
   audComp.connect(audMaster); audMaster.connect(AC.destination);
 }
 
@@ -232,8 +241,8 @@ async function audLoadSlots(){
 
 /* The rendered voice bank — four factions of unit radio plus KEEN, the training
    liaison. Each line becomes an ordinary AUD_MAP slot, so voice inherits the
-   whole existing pipeline for free: format selection, decoding, the sfx bus and
-   its volume slider, ducking, priority culling. AUD_CLEAR keeps them un-muffled
+   whole existing pipeline for free: format selection, decoding, the dedicated
+   voice bus and its volume slider, ducking, priority culling. AUD_CLEAR keeps them un-muffled
    by distance — a radio call arrives over the radio, not from wherever on the
    map the unit happens to be standing.
 
@@ -287,6 +296,11 @@ const VO_ACTION_ALIAS={retreat:'stop',underfire:'attack',victory:'ability',defea
 function voBankFac(fac){
   const raw=String(fac||'').toLowerCase();
   if(VO_BANK_ALIAS[raw]) return VO_BANK_ALIAS[raw];
+  /* Commander speaker keys are `cmdr_<commanderId>` and are self-mapping: adding
+     a commander must be a VOICE BANK data change, never an edit to this table.
+     Tested before facArt on purpose, so an id like `cmdr_nova_kai` cannot be
+     collapsed onto the shared `nova` unit-radio speaker. */
+  if(raw.lastIndexOf('cmdr_',0)===0 && /^cmdr_[a-z0-9_]+$/.test(raw)) return raw;
   if(typeof facArtKey==='function'){
     const a=facArtKey(fac);
     if(a&&VO_BANK_ALIAS[a]) return VO_BANK_ALIAS[a];
@@ -553,6 +567,106 @@ function voPrewarm(fac){
   for(const action in VOICE_BANK.lines[fac]) voReady(fac, action);
 }
 
+/* ============================================================================
+   COMMANDER VOICE — the PLAYBACK half of the commander dialogue system
+   ----------------------------------------------------------------------------
+   The event half (identity, priority, dedupe, deterministic ordering, subtitle
+   and portrait metadata) lives in src/game/commander.js. This file owns only
+   two things, and owns them because they are audio facts rather than narrative
+   ones:
+
+     1. Turning a cue into a spoken take, THROUGH THE EXISTING VOICE PIPELINE.
+        A commander line is an ordinary bank slot: speaker key `cmdr_<id>`,
+        action `<category>_<kind>`, slot `vo_cmdr_<id>_<category>_<kind>`. That
+        is the same shape audLoadVoiceBank() already walks, so a future voice
+        pack adds commander lines as DATA and this file does not change. There
+        is no second decoder, no second mixer path and no second cache.
+
+     2. Playback-level rate limiting: the minimum spacing between two spoken
+        commander lines, and yielding to the training narrator.
+
+   NO COMMANDER TAKES SHIP TODAY. The bank carries nine unit-radio actions per
+   faction plus KEEN, and nothing else — so every call below currently reports
+   `silent`, and the cue survives as a subtitle. That is deliberate: aliasing a
+   commander line onto a unit-radio take is exactly the bug the VO_ACTION_ALIAS
+   comment above describes (victory once said "Commander system armed"), and
+   fabricating audio is not on the table. Silence with a correct subtitle beats
+   a confident wrong sentence.
+   ============================================================================ */
+/* Minimum gap between two SPOKEN commander lines. Event-level cooldowns in
+   commander.js are much longer and per-category; this is the last-ditch mixer
+   guard that stops two independently-eligible cues from overlapping. */
+const COMMANDER_VO_GAP_MS=2600;
+const COMMANDER_VO={last:-1e9,spoke:0,gated:0,silent:0};
+function commanderVoiceReset(){ COMMANDER_VO.last=-1e9; COMMANDER_VO.spoke=0; COMMANDER_VO.gated=0; COMMANDER_VO.silent=0; }
+/* Speaker key for the bank. Kept as a function so callers never hand-build the
+   string and the prefix stays in one place. */
+function commanderVoiceBank(id){ return 'cmdr_'+String(id||'').toLowerCase(); }
+function commanderVoiceAction(category,kind){
+  return kind?String(category)+'_'+String(kind):String(category);
+}
+/* Does a RECORDING exist for this cue — decoded or not? Mirrors voHas(), and
+   returns the slot name so a probe can report exactly what a voice pack would
+   have to provide. */
+function commanderVoiceSlot(id,category,kind){
+  if(!id||!category) return null;
+  const slot='vo_'+commanderVoiceBank(id)+'_'+commanderVoiceAction(category,kind);
+  return audMapList(slot).length?slot:null;
+}
+/* TRAINING OWNS THE ROOM. KEEN is teaching; a commander talking over her is the
+   one overlap this system must never produce, and it is why the commander lane
+   is a gate rather than a second speech engine. Also refuses while another
+   commander line is still running. */
+function commanderVoiceBusy(){
+  if(typeof AUD==='undefined'||!AUD||!AUD.active) return false;
+  for(const v of AUD.active){
+    if(v.done) continue;
+    const ch=audVoiceChannel(v.name);
+    if(ch==='keen'||ch==='cmdr') return true;
+  }
+  return false;
+}
+/* Verdict only — never plays, never mutates. commander.js calls this to decide
+   whether a cue should be held, and the probe calls it to assert the gate. */
+function commanderVoiceGate(now){
+  const t=typeof now==='number'?now:(typeof performance!=='undefined'&&performance.now?performance.now():0);
+  if(commanderVoiceBusy()) return {ok:false,reason:'busy'};
+  if(t-COMMANDER_VO.last<COMMANDER_VO_GAP_MS) return {ok:false,reason:'spacing'};
+  return {ok:true,reason:'clear'};
+}
+/* Speak a cue. Returns one of:
+     'played' — a take exists and the pipeline accepted it
+     'gated'  — a take may exist but the mixer said not now (caller may retry)
+     'silent' — no take exists, or there is no audio at all; SUBTITLE ONLY
+   Never throws, never awaits, and never falls through to speechSynthesis: a
+   synthesised commander is worse than a quiet one. */
+function commanderVoiceSpeak(cue,now){
+  try{
+    if(!cue||!cue.commanderId) return 'silent';
+    const slot=commanderVoiceSlot(cue.commanderId,cue.category,cue.kind);
+    if(!slot) return 'silent';
+    if(typeof AC==='undefined'||!AC){ COMMANDER_VO.silent++; return 'silent'; }
+    const g=commanderVoiceGate(now);
+    if(!g.ok){ COMMANDER_VO.gated++; return 'gated'; }
+    const t=typeof now==='number'?now:(typeof performance!=='undefined'&&performance.now?performance.now():0);
+    const ok=voPlay(commanderVoiceBank(cue.commanderId),commanderVoiceAction(cue.category,cue.kind),
+      cue.wx,cue.wy,typeof cue.take==='number'?cue.take:0);
+    if(!ok){ COMMANDER_VO.silent++; return 'silent'; }
+    COMMANDER_VO.last=t; COMMANDER_VO.spoke++;
+    return 'played';
+  }catch(e){ return 'silent'; }
+}
+/* Match start. Mirrors voPrewarm for the player commander only — an opponent
+   commander the player never hears is not worth the decode. Harmless no-op
+   while no commander takes exist. */
+function commanderVoicePrewarm(id){
+  if(!id||!VOICE_BANK||!VOICE_BANK.lines) return 0;
+  const bank=commanderVoiceBank(id),lines=VOICE_BANK.lines[bank];
+  if(!lines) return 0;
+  let n=0; for(const action in lines){ voReady(bank,action); n++; }
+  return n;
+}
+
 async function initAudioSamples(){
   if(typeof AC === 'undefined' || !AC) return;
   if(AUD._samplesBusy) return;
@@ -627,6 +741,12 @@ function audMakeRoom(priority){
 }
 function audVoiceChannel(name){
   if(name.lastIndexOf('vo_',0)!==0) return null;
+  /* A COMMANDER is a third character on a third net, exactly as KEEN is a second
+     one. Folding commander lines onto `radio` would let any unit ack in a
+     formation drag silently eat a mission-outcome line — the same failure that
+     cost KEEN her narration before she got her own channel. No shipped slot
+     begins `vo_cmdr_`, so no existing line changes channel here. */
+  if(name.lastIndexOf('vo_cmdr_',0)===0) return 'cmdr';
   return name.lastIndexOf('vo_keen_',0)===0 ? 'keen' : 'radio';
 }
 /* TWO VOICE CHANNELS, each still capped at one.
@@ -791,7 +911,7 @@ function sfxSample(name, wx, wy, scale, pickIdx){
     p.pan.value = pan;
     node.connect(p); node = p;
   }
-  src.connect(g); node.connect(audSfxBus);
+  src.connect(g); node.connect(audIsVoiceSlot(name)?audVoiceBus:audSfxBus);
   AUD.lastWorld={name,world:spatial.world,gain:spatial.gain,cutoff:spatial.cutoff,
     pan:spatial.pan,zoom:spatial.zoom,distance:spatial.distance};
 
@@ -826,10 +946,14 @@ function audMusicTick(dt){
      and must also cover menu / War Table. */
   const scene=PLAY.scene||'menu';
   const inMatch=scene==='ambient'||scene==='action';
+  const inResult=scene==='result-victory'||scene==='result-defeat';
   const playlistDead=!PLAY.lists||PLAY.phase==='fallback';
-  const want = (!musicOn || muted || paused) ? null
-             : inMatch ? (scene==='action'?'mus_combat':'mus_ambient')
-             : (playlistDead ? 'mus_ambient' : null);
+  const intensity=(typeof musicInt==='number')?Math.max(0,Math.min(1,musicInt)):0;
+  const want = (!musicOn || muted || (paused&&!inResult)) ? null
+             : inMatch ? AUD_MUSIC_FOR(intensity)
+             : (playlistDead&&scene==='result-victory') ? 'mus_ambient'
+             : (playlistDead&&scene==='result-defeat') ? 'mus_tension'
+             : (playlistDead ? (scene==='wartable'?'mus_tension':'mus_ambient') : null);
 
   if(!want){
     if(audMusSrc) audStopMusicBeds();
@@ -857,6 +981,7 @@ function audMusicTick(dt){
     try{ s.start(0, Math.random() * 4); }catch(e){}
     g.gain.setTargetAtTime(1, AC.currentTime, 1.6);
     audMusSrc = s; audMusName = want;
+    audRenderNowPlaying();
   }
   /* Same duck arithmetic as audPlaylistTick: at tau = 0.8 s the bus travels only
      a fraction of the way to the ducked target before the duck expires, so the
@@ -968,7 +1093,7 @@ function initSampleAudio(){
     const baseEnd=endGame;
     endGame=function(win,reason){
       try{ if(typeof radioAck==='function') radioAck(win?'victory':'defeat',1); }catch(e){}
-      try{ audMusicLeaveMatch(); }catch(e){}
+      try{ audMusicEnterResult(!!win); }catch(e){}
       return baseEnd.apply(this,arguments);
     };
     endGame.__mfVoice=true;
@@ -1040,6 +1165,79 @@ const PLAY = { lists:null, ext:'m4a', formats:['m4a'], haveExtra:false, cur:null
                policy:{loop:false,seedRestMs:10000,fullRestMs:6500,
                        menuSeedRestMs:24000,crossfadeMs:4500} };
 
+/* The runtime must be able to describe what it is playing without inventing
+   ownership, composer, or licensing claims that are absent from the catalog.
+   These titles match source-media/audio-library/music-catalog.json; the source
+   label is deliberately functional (core fallback versus streamed cue). */
+const AUD_SCORE_META=Object.freeze({
+  mus_ambient:Object.freeze({title:'Generated Ambient Adaptive Bed',kind:'CORE ADAPTIVE FALLBACK'}),
+  mus_tension:Object.freeze({title:'Generated Tension Adaptive Bed',kind:'CORE ADAPTIVE FALLBACK'}),
+  mus_combat:Object.freeze({title:'Generated Combat Adaptive Bed',kind:'CORE ADAPTIVE BED'}),
+});
+function audMusicSceneLabel(scene){
+  if(scene==='result-victory') return 'MISSION VICTORY';
+  if(scene==='result-defeat') return 'MISSION DEFEAT';
+  if(scene==='wartable') return 'WAR TABLE';
+  if(scene==='ambient') return 'BATTLE · EXPLORE';
+  if(scene==='action') return 'BATTLE · COMBAT';
+  return 'COMMAND MENU';
+}
+function audMusicFallbackForScene(scene){
+  if(scene==='result-defeat'||scene==='wartable') return 'mus_tension';
+  if(scene==='action') return 'mus_combat';
+  return 'mus_ambient';
+}
+function audMusicCurrentTrack(){
+  /* idx belongs to the filtered playable pool, not the raw manifest list. A
+     missing optional pack can remove entries ahead of it, so indexing the raw
+     list would display metadata for a different song than the one playing. */
+  const list=PLAY.lists&&PLAY.cur?audPlayableTracks(PLAY.cur,audSceneFilter()):null;
+  return Array.isArray(list)&&PLAY.idx>=0?list[PLAY.idx]||null:null;
+}
+function audMusicPackStatus(){
+  let extra=0;
+  if(PLAY.lists) for(const list of Object.values(PLAY.lists||{}))
+    if(Array.isArray(list)) extra+=list.filter(track=>track&&track.bundled===false).length;
+  if(extra&&PLAY.haveExtra) return 'SOUNDTRACK PACK · INSTALLED';
+  if(extra) return 'SOUNDTRACK PACK · NOT INSTALLED';
+  return 'SOUNDTRACK PACK · NO TRACKS REGISTERED';
+}
+function audMusicStatus(){
+  const scene=PLAY.scene||'menu';
+  const enabled=(typeof musicOn==='undefined'||musicOn)&&
+    (typeof muted==='undefined'||!muted);
+  const track=audMusicCurrentTrack();
+  const streamed=!!(track&&PLAY.nowTitle&&PLAY.phase!=='fallback');
+  const bed=audMusName||audMusicFallbackForScene(scene);
+  const meta=AUD_SCORE_META[bed]||null;
+  let title='Tap to enable music',source='AUDIO PERMISSION REQUIRED';
+  if(!enabled){ title='Music disabled'; source='NO CUE PLAYING'; }
+  else if(streamed){
+    title=PLAY.nowTitle;
+    source=track.bundled===false?'DOWNLOADED SOUNDTRACK':'CORE SOUNDTRACK';
+  }else if(meta){
+    title=meta.title;
+    source=meta.kind+(audMusName?'':' · QUEUED');
+  }
+  return {scene,sceneLabel:audMusicSceneLabel(scene),title,source,
+          phase:enabled?(PLAY.phase||'locked'):'disabled',pack:audMusicPackStatus(),
+          cue:streamed?(track.file||''):bed,active:!!(streamed||audMusName)};
+}
+function audRenderNowPlaying(){
+  let host;
+  try{ host=document.getElementById('audNowPlaying'); }catch(e){ return; }
+  if(!host) return;
+  const status=audMusicStatus();
+  const put=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value||'';};
+  host.dataset.scene=status.scene;
+  host.dataset.phase=status.phase;
+  host.setAttribute('aria-label','Now playing: '+status.title+'. '+status.sceneLabel+'. '+status.pack+'.');
+  put('audNowScene',status.sceneLabel);
+  put('audNowTitle',status.title);
+  put('audNowSource',status.source+' · '+String(status.phase).toUpperCase());
+  put('audNowPack',status.pack);
+}
+
 /* Playback and combat intensity are deliberately separate state machines.
    `state` is the score's explore/tension/combat programme; `phase` is what the
    browser is actually doing. The latter is diagnostic as well as functional:
@@ -1049,6 +1247,7 @@ function audPlayState(phase,reason){
   PLAY.phase=phase;
   PLAY.reason=reason||'';
   PLAY.changedAt=Date.now();
+  audRenderNowPlaying();
 }
 /* Three consecutive HTMLAudio decode failures mean this browser cannot play the
    AAC playlist (open-source Chromium, a lying canPlayType, or a broken pack).
@@ -1183,7 +1382,8 @@ function audMediaSlot(i){
   return i;
 }
 
-/* Four-state score: menu | wartable | ambient | action.
+/* Six-state score: menu | wartable | ambient | action | result-victory |
+   result-defeat.
    `running` alone cannot own this — orbital drop sets running before deploy,
    War Table is !running with playerFaction already filled, and a leftover
    PLAY.cur='nova' plus `pick('menu')||pick('nova')` kept the battle bed on
@@ -1218,15 +1418,20 @@ function audStopMusicBeds(){
   if(old._g&&AC) try{ old._g.gain.setTargetAtTime(0.0001,AC.currentTime,0.4); }catch(e){}
   setTimeout(()=>{ try{ old.stop(); }catch(e){} },1600);
   audMusSrc=null; audMusName='';
+  audRenderNowPlaying();
 }
 function audHaltPlaylist(){
   /* Bump generation so an in-flight audPlaylistNext (await packURL) cannot
      start a battle cue after we have already left the match. */
   PLAY.generation=(PLAY.generation||0)+1;
   clearTimeout(PLAY.restT); PLAY.restT=0;
-  PLAY.cur=null; PLAY.idx=-1; PLAY.lastTrack=''; PLAY.nowTitle='';
+  /* lastTrack survives scene changes. Clearing it here let the same song play
+     on both sides of a menu/match/result transition, defeating no-repeat at
+     exactly the moment the scene change made repetition most obvious. */
+  PLAY.cur=null; PLAY.idx=-1; PLAY.nowTitle='';
   PLAY.forceNext=true;
   try{ PLAY.els.forEach(e=>{ try{ e.pause(); e.removeAttribute('src'); e.load(); }catch(x){} }); }catch(e){}
+  audRenderNowPlaying();
 }
 function audMusicLeaveMatch(){
   PLAY.lockedScene=true;
@@ -1235,6 +1440,7 @@ function audMusicLeaveMatch(){
   PLAY.scene='menu';
   audMusicResetCombat();
   audStopMusicBeds();
+  audMusSwap=0;
   try{ ambStop(); }catch(e){}
   try{ audWorldClear(); }catch(e){}
   audHaltPlaylist();
@@ -1247,13 +1453,39 @@ function audMusicEnterMatch(){
   PLAY.scene='ambient';
   audMusicResetCombat();
   audStopMusicBeds();
+  audMusSwap=0;
   audHaltPlaylist();
   if(AC&&PLAY.lists&&musicOn&&!muted) audPlaylistTick();
+}
+function audMusicEnterResult(win){
+  /* endGame is called while `running` is still true and the results panel is
+     assembled 1.4 seconds later. Locking the scene prevents the normal live-
+     match tick from immediately overwriting the terminal result cue. */
+  PLAY.lockedScene=true;
+  PLAY.expectMatch=false;
+  PLAY.wasLive=false;
+  PLAY.scene=win?'result-victory':'result-defeat';
+  audMusicResetCombat();
+  audStopMusicBeds();
+  /* Threshold swaps use an eight-second anti-thrash hold. A terminal result is
+     not threshold noise: it must replace the battle bed immediately, even if
+     combat music began one frame before the final kill. */
+  audMusSwap=0;
+  try{ ambStop(); }catch(e){}
+  try{ audWorldClear(); }catch(e){}
+  audHaltPlaylist();
+  const streamed=AC&&PLAY.lists&&musicOn&&!muted?audPlaylistTick():false;
+  if(!streamed) try{ audMusicTick(0); }catch(e){}
+  audRenderNowPlaying();
 }
 function audMusicEnterScreen(id){
   if(typeof running!=='undefined'&&running&&!PLAY.lockedScene) return;
   PLAY.expectMatch=false;
   const scene=(id==='warScr'||id==='setupScr')?'wartable':'menu';
+  /* Navigation is authored intent, not a noisy intensity threshold. Let the
+     next tick crossfade immediately when the player deliberately moves between
+     menu and War Table; the eight-second hold remains inside live combat. */
+  if(PLAY.scene!==scene) audMusSwap=0;
   if(PLAY.scene==='ambient'||PLAY.scene==='action'){
     audMusicResetCombat();
     audStopMusicBeds();
@@ -1267,7 +1499,8 @@ function audMusicEnterScreen(id){
 function audMusicDebug(){
   return {scene:PLAY.scene,cur:PLAY.cur,state:PLAY.state,phase:PLAY.phase,
           title:PLAY.nowTitle,bed:audMusName,amb:!!(typeof AMB!=='undefined'&&AMB.on),
-          locked:!!PLAY.lockedScene,running:!!(typeof running!=='undefined'&&running)};
+          locked:!!PLAY.lockedScene,running:!!(typeof running!=='undefined'&&running),
+          status:audMusicStatus()};
 }
 
 /* Which playlist the current context calls for. In a match it is the ENEMY's
@@ -1288,6 +1521,11 @@ function audPlaylistFor(){
      fallback is what left a battle cue on the title after a match. An empty
      menu list falls through to mus_ambient. */
   if(scene==='menu'||scene==='wartable') return pick('menu');
+  /* Result lists are explicit and never borrow a faction combat track. Empty
+     victory/defeat lists intentionally return null so the cataloged core beds
+     carry the result until dedicated owned masters are supplied. */
+  if(scene==='result-victory') return pick('victory');
+  if(scene==='result-defeat') return pick('defeat');
   let fac = null, enemy = null;
   try{
     if(typeof playerFaction!=='undefined'&&playerFaction) fac=playerFaction;
@@ -1520,7 +1758,7 @@ function audPlaylistTick(){
   if(want !== PLAY.cur || PLAY.forceNext){
     PLAY.forceNext=false;
     clearTimeout(PLAY.restT); PLAY.restT=0;
-    PLAY.cur = want; PLAY.idx = -1; PLAY.lastTrack='';
+    PLAY.cur = want; PLAY.idx = -1;
     audPlaylistNext();
   } else if(!PLAY.restT&&!PLAY.hidden&&
             (PLAY.phase==='locked'||PLAY.phase==='stalled')&&PLAY.els[PLAY.slot]){
@@ -1570,6 +1808,7 @@ function audAttachPack(){
   if(!PLAY.lists) { audLoadPlaylists().then(() => { PLAY.cur = null; audPlayState('locked','soundtrack pack ready'); }); return; }
   PLAY.cur = null;                     // force audPlaylistTick to re-pick
   audPlayState('locked','soundtrack pack ready');
+  audRenderNowPlaying();
 }
 
 /* ============================================================================
@@ -1716,7 +1955,7 @@ function ambStart(){
      compressor. This also protects future replacement beds from ear fatigue. */
   AMB.filter=AC.createBiquadFilter();
   AMB.filter.type='lowpass'; AMB.filter.frequency.value=2200; AMB.filter.Q.value=0.45;
-  AMB.bus.connect(AMB.filter); AMB.filter.connect(audSfxBus || audComp || AC.destination);
+  AMB.bus.connect(AMB.filter); AMB.filter.connect(audAmbBus || audSfxBus || audComp || AC.destination);
   for(const k of ['amb_low0','amb_high0']){
     const b = AUD.buf[k];
     if(!b) continue;

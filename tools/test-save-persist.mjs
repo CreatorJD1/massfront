@@ -33,7 +33,8 @@ function makeHarness(){
       settings: { sound:true, music:true, cine:true, fog:true, quality:'high' },
       owned: {}, campaign: { missions: {} }, inventory: { gear:{}, consumables:{}, equipped:{}, ready:[] },
     },
-    DEF_SETTINGS: { sound:true, music:true, cine:true, fog:true, quality:'high', sfxVol:3, musicVol:2 },
+    DEF_SETTINGS: { sound:true, music:true, cine:true, fog:true, quality:'high',
+      sfxVol:3, ambVol:3, musicVol:2, voiceVol:3 },
     PROFILES: { active:'p1', list:[{ id:'p1', name:'Local', emblem:'L', char:'', title:'', frame:'steel' }] },
     activeProf(){ return ctx.PROFILES.list[0]; },
     metaHarden(){
@@ -62,7 +63,8 @@ function makeHarness(){
     v:1, profile:{ name:'Restored', emblem:'R', char:'kai', title:'IRONSIDE', frame:'gold' },
     meta:{
       xp:900, matches:11, color:'violet', wcPref:2,
-      settings:{ sound:false, music:false, cine:false, fog:false, quality:'low', sfxVol:1, musicVol:0 },
+      settings:{ sound:false, music:false, cine:false, fog:false, quality:'low',
+        sfxVol:1, ambVol:2, musicVol:0, voiceVol:1 },
       owned:{ neural:1 },
     },
   };
@@ -70,6 +72,8 @@ function makeHarness(){
   assert(h.META.xp === 900, 'file load did not replace career XP');
   assert(h.META.settings.cine === false, 'file load did not restore cine=false');
   assert(h.META.settings.quality === 'low', 'file load did not restore quality');
+  assert(h.META.settings.ambVol === 2, 'file load did not restore ambience volume');
+  assert(h.META.settings.voiceVol === 1, 'file load did not restore voice volume');
   assert(h.__applied && h.__applied.cine === false, 'file load did not applySettings()');
   assert(h.__color === 'violet', 'file load did not applyColor()');
   const p = h.activeProf();

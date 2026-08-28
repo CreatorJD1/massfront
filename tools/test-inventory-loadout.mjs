@@ -1,5 +1,6 @@
 /* Focused <=2-minute mobile regression for Account Armory -> Session Loadout. */
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import {assertHardwareGpu} from './chrome-gpu.mjs';
 import {mkdir} from 'node:fs/promises';
 import {spawn} from 'node:child_process';
 import {join,resolve} from 'node:path';
@@ -22,14 +23,28 @@ const browser=await launchPwBrowser({headless:true,executablePath:chrome,
 try{
   const context=await browser.newContext({viewport:{width:393,height:852},deviceScaleFactor:2,
     hasTouch:true,isMobile:true,colorScheme:'dark'});
-  await context.addInitScript(()=>{try{if(!localStorage.getItem('mf_inv_test_init')){localStorage.clear();localStorage.setItem('mf_inv_test_init','1');}localStorage.setItem('mf_prealpha_cinematic_v2','test-seen');}catch(e){}});
+  await context.addInitScript(()=>{try{if(!localStorage.getItem('mf_inv_test_init')){localStorage.clear();localStorage.setItem('mf_inv_test_init','1');}localStorage.setItem('mf_prealpha_cinematic_v2','test-seen');localStorage.setItem('mf_offline','1');}catch(e){}});
   const page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  const gpu=await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof renderArmory==='function'&&typeof armSessionLoadoutHTML==='function'&&
     typeof showFrontScreen==='function'&&typeof stopAttract==='function'&&typeof PROFILES!=='undefined'&&!!PROFILES.active,null,{timeout:60000});
+  /* The classic-script functions exist before delayed boot/attract work is
+     finished. Settle and cover every gate before measuring the real panel. */
+  await page.waitForTimeout(800);
+  await page.waitForFunction(()=>document.body.classList.contains('mfIntroOpen')||document.body.classList.contains('mfIntroDone'),null,{timeout:30000});
+  const introSkip=page.locator('#mfIntroSkip');
+  if(await introSkip.count()&&await introSkip.isVisible())await introSkip.click();
+  await page.waitForFunction(()=>document.body.classList.contains('mfIntroDone'),null,{timeout:30000});
   await page.evaluate(()=>{
-    stopAttract();
+    try{if(typeof apGateSatisfied==='function')apGateSatisfied();}catch(e){}
+    try{if(typeof apClose==='function')apClose();}catch(e){}
+    document.body.classList.add('mfIntroDone');
+    for(const id of ['mfBootCover','apOverlay','apConfirmOverlay','loadScr','mfIntroSkip','mfIntroReplay']){
+      const el=document.getElementById(id);if(el)el.style.setProperty('display','none','important');
+    }
+    stopAttract();if(typeof attractOn!=='undefined')attractOn=false;
     META.inventory={
       gear:{w_rangefinder:1,a_phaseweave:1,u_toolkit:1,w_voidlens:1},
       consumables:{c_supply:3,c_nanites:2,c_overdrive:1},
@@ -42,27 +57,37 @@ try{
   await page.waitForTimeout(250);
 
   const initial=await page.evaluate(()=>({
+    screen:(()=>{const el=document.getElementById('armory'),r=el.getBoundingClientRect(),s=getComputedStyle(el);return {inline:el.style.display,display:s.display,visibility:s.visibility,w:r.width,h:r.height,body:document.body.className,front:document.body.dataset.frontScreen||''};})(),
     tabs:[...document.querySelectorAll('#armTabs .tabBtn')].map(x=>({key:x.dataset.k,text:x.textContent.trim(),h:x.getBoundingClientRect().height})),
     layers:[...document.querySelectorAll('.armInvLayerHead i')].map(x=>x.textContent.trim()),
     filters:[...document.querySelectorAll('.armInvFilter')].map(x=>({text:x.textContent.trim(),h:x.getBoundingClientRect().height})),
     preview:document.querySelector('.armInvPreview')?.textContent.replace(/\s+/g,' ').trim(),
-    cards:document.querySelectorAll('.armVaultItem').length
+    cards:document.querySelectorAll('.armVaultItem').length,
+    catalog:INV_GEAR.length+INV_CONSUMABLES.length
   }));
   assert(initial.tabs.some(x=>x.key==='inventory')&&initial.tabs.some(x=>x.key==='loadout'),
     'Account Armory and Session Loadout are not separate layers: '+JSON.stringify(initial.tabs));
   assert(initial.layers.includes('ACCOUNT LAYER'),'Account storage layer is not identified');
-  assert(initial.filters.length===5&&initial.filters.every(x=>x.h>=44),'item category targets are too small');
-  assert(initial.cards===20&&initial.preview.includes('EXACT EFFECT'),'collection/effect preview is incomplete');
+  assert(initial.filters.length===5&&initial.filters.every(x=>x.h>=44),'item category targets are too small: '+JSON.stringify(initial));
+  assert(initial.cards===initial.catalog&&initial.preview.includes('EXACT EFFECT'),'collection/effect preview is incomplete: '+JSON.stringify({cards:initial.cards,catalog:initial.catalog,preview:initial.preview}));
 
   await page.locator('[data-inv-id="a_phaseweave"]').tap();
+  await page.waitForTimeout(220);
   await page.locator('.armInvCommit').tap();
+  await page.waitForTimeout(220);
   assert(await page.evaluate(()=>invBag().equipped.armor)==='a_phaseweave','armor did not equip through preview action');
 
   await page.locator('#armTabs [data-k="loadout"]').tap();
+  await page.waitForTimeout(220);
   await page.locator('.armLoadSlot.supply.empty [data-pick-slot="supply"]').tap();
+  await page.waitForTimeout(220);
   assert(await page.evaluate(()=>armTab+':'+armInvFilter)==='inventory:supply','empty mission slot did not route to Account Armory supplies');
   await page.locator('[data-inv-id="c_nanites"]').tap();
+  await page.waitForTimeout(220);
+  await page.locator('[data-lock-ty]').first().tap();
+  await page.waitForTimeout(220);
   await page.locator('.armInvCommit').tap();
+  await page.waitForTimeout(220);
   assert((await page.evaluate(()=>invBag().ready.join(',')))==='c_supply,c_nanites','second mission supply did not occupy the open slot');
   await page.locator('#armTabs [data-k="loadout"]').tap();
   await page.waitForTimeout(250);
@@ -100,5 +125,5 @@ try{
   assert(persisted.bag.ready.join(',')==='c_supply,c_nanites'&&persisted.raw&&persisted.raw.gear&&persisted.raw.consumables&&persisted.raw.equipped,
     'legacy inventory fields were not preserved: '+JSON.stringify(persisted));
   assert(errors.length===0,'page errors:\n'+errors.join('\n'));
-  console.log(JSON.stringify({ok:true,initial:{tabs:initial.tabs.length,cards:initial.cards},loaded:{slots:loaded.slots,effects:loaded.effects,capacity:loaded.capacity},persisted:persisted.bag,screenshot:shot},null,2));
+  console.log(JSON.stringify({ok:true,gpu,initial:{tabs:initial.tabs.length,cards:initial.cards},loaded:{slots:loaded.slots,effects:loaded.effects,capacity:loaded.capacity},persisted:persisted.bag,screenshot:shot},null,2));
 }finally{await browser.close();if(server)server.kill();}

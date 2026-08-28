@@ -16,6 +16,7 @@
    materially more likely to reclaim both contexts. */
 let mfGalaxyReady=false,mfGalaxyStage='galaxy',mfGalaxyFrame=0,mfGalaxyLastDraw=0;
 let mfGalaxyYaw=.18,mfGalaxyPitch=-.22,mfGalaxyDragging=false,mfGalaxyDragX=0,mfGalaxyDragY=0,mfGalaxyDragTravel=0;
+let mfGalaxyDragStartX=0,mfGalaxyDragStartY=0,mfGalaxyDragPointer=-1;
 let mfGalaxyTargets=[],mfSystemTargets=[],mfGalaxySystemKey='sombrero',mfGalaxyOriginalPlanetRow=null,mfGalaxyOpenOriginal=null,mfGalaxyTransit=0;
 let mfQuickPlan='custom',mfQuickAssisted=false;
 let mfSystemLoreOpen=false,mfSystemGlobeOff=null,mfSystemGlobeCache={key:'',yaw:0,pitch:0};
@@ -23,6 +24,8 @@ let mfSystemLoreOpen=false,mfSystemGlobeOff=null,mfSystemGlobeCache={key:'',yaw:
    commits. A single tap was warping galaxy → system, planet → region, and
    site card → deploy while the finger was still aiming. */
 let mfPickArm={k:'',id:'',t:0};
+const MF_GALAXY_TAP_SLOP=12;
+let mfGalaxyFallbackCommit=-1e9;
 
 const MF_GALAXY_STAGES=['galaxy','system','planet','region','deploy'];
 const MF_GALAXY_SYSTEM_ORDER=['sombrero','andromeda','orion','helios'];
@@ -89,12 +92,27 @@ function mfGalaxyCss(){
   .mfGalaxyEyebrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:4px 2px 8px;color:#6cb7d8;
     font:800 8px/1 var(--fT);letter-spacing:.14em}.mfGalaxyLive{color:#76f7ad}.mfGalaxyLive:before{content:'';display:inline-block;
     width:6px;height:6px;margin-right:5px;border-radius:50%;background:#61eaa0;box-shadow:0 0 8px #61eaa0;vertical-align:1px}
-  .mfGalaxyViewport,.mfPlanetViewport{position:relative;overflow:hidden;border:1px solid rgba(99,193,234,.32);border-radius:16px;
+  .mfGalaxyViewport,.mfPlanetViewport{position:relative;isolation:isolate;overflow:hidden;border:1px solid rgba(99,193,234,.32);border-radius:16px;
     background:#020711;box-shadow:inset 0 0 42px rgba(0,0,0,.75),0 12px 30px rgba(0,0,0,.35)}
   .mfGalaxyViewport{height:clamp(370px,54dvh,500px);background:#010208}.mfPlanetViewport{height:clamp(290px,42dvh,370px)}
   .mfGalaxyViewport:after,.mfPlanetViewport:after{content:'';position:absolute;inset:0;pointer-events:none;background:
     linear-gradient(rgba(108,216,255,.025) 50%,transparent 50%) 0 0/100% 4px,
     radial-gradient(circle at center,transparent 52%,rgba(1,5,12,.64));mix-blend-mode:screen}
+  .mfCanvasSelection{position:absolute;z-index:3;left:10px;right:10px;bottom:10px;display:grid;grid-template-columns:36px minmax(0,1fr) auto;
+    gap:3px 9px;align-items:center;min-height:58px;padding:8px 10px;border:1px solid color-mix(in srgb,var(--sc,#63d9ff) 45%,transparent);
+    border-radius:11px;background:linear-gradient(100deg,rgba(4,13,24,.94),color-mix(in srgb,var(--sc,#63d9ff) 12%,rgba(5,14,25,.91)));
+    box-shadow:inset 3px 0 0 var(--sc,#63d9ff),0 8px 22px rgba(0,0,0,.42);pointer-events:none;box-sizing:border-box}
+  .mfSelectionOrb{grid-row:1/4;width:30px;height:30px;border-radius:50%;background:
+    radial-gradient(circle at 34% 30%,#fff 0 5%,var(--sc,#63d9ff) 14%,color-mix(in srgb,var(--sc,#63d9ff) 38%,#07101c) 52%,#02050a 76%);
+    box-shadow:0 0 13px color-mix(in srgb,var(--sc,#63d9ff) 48%,transparent),inset -5px -5px 8px rgba(0,0,0,.7)}
+  .mfCanvasSelection small,.mfCanvasSelection b,.mfCanvasSelection span,.mfCanvasSelection strong{display:block;min-width:0}
+  .mfCanvasSelection small{color:var(--sc,#63d9ff);font:850 9px/1 var(--fT);letter-spacing:.12em}
+  .mfCanvasSelection b{margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#f2fbff;font:900 13px/1 var(--fT);letter-spacing:.08em}
+  .mfCanvasSelection span{margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8fb5c9;font:750 9px/1.15 var(--fU)}
+  .mfCanvasSelection strong{grid-column:3;grid-row:1/3;align-self:center;color:#8fffc0;font:900 10px/1 var(--fT);letter-spacing:.08em}
+  .mfCanvasSelection i{grid-column:2/4;display:block;height:3px;margin-top:2px;border-radius:2px;background:#132d3d;overflow:hidden}
+  .mfCanvasSelection i:after{content:'';display:block;width:var(--progress,0%);height:100%;border-radius:inherit;background:var(--sc,#63d9ff);box-shadow:0 0 7px var(--sc,#63d9ff)}
+  .mfCanvasSelection.locked{filter:saturate(.45);border-style:dashed}.mfCanvasSelection.locked strong{color:#aab7c0}
   .mfSystemTheatre{position:relative;margin:0}
   .mfSystemViewport{position:relative;overflow:hidden;height:clamp(380px,56dvh,540px);border:1px solid rgba(90,220,255,.34);
     border-radius:16px;background:#010308;box-shadow:inset 0 0 80px rgba(40,10,60,.18),inset 0 0 70px rgba(0,0,0,.82),0 12px 30px rgba(0,0,0,.35)}
@@ -157,10 +175,11 @@ function mfGalaxyCss(){
   .mfGalaxyHelp{position:relative;left:auto;right:auto;bottom:auto;display:flex;justify-content:space-between;gap:8px;margin:6px 4px 0;pointer-events:none;
     color:#8ab8cc;font:800 7px/1.2 var(--fT);letter-spacing:.08em;text-shadow:0 1px 3px #000}.mfGalaxyHelp b{color:#dff8ff}
   .mfWorldStrip,.mfRegionStrip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px}
-  .mfWorldChip,.mfRegionChip{min-width:0;min-height:48px;padding:7px 4px;border-radius:9px;border:1px solid rgba(96,155,191,.22);
-    color:#789caf;background:rgba(7,17,30,.9);font:800 8px/1.1 var(--fT);letter-spacing:.04em}
+  .mfWorldChip,.mfRegionChip{position:relative;overflow:hidden;min-width:0;min-height:48px;padding:7px 8px 10px;border-radius:9px;border:1px solid rgba(96,155,191,.22);
+    color:#789caf;background:linear-gradient(145deg,rgba(10,25,40,.96),rgba(5,13,24,.94));font:800 8px/1.1 var(--fT);letter-spacing:.04em;text-align:left}
+  .mfWorldChip:after,.mfRegionChip:after{content:'';position:absolute;left:0;bottom:0;width:var(--prog,0%);height:3px;background:var(--pc,#77dcff);box-shadow:0 0 7px var(--pc,#77dcff);transition:width .25s ease}
   .mfWorldChip b,.mfWorldChip small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .mfRegionChip{padding:6px 3px;min-height:58px}
+  .mfRegionChip{padding:7px 8px 10px;min-height:58px}
   .mfRegionChip b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
     white-space:normal;word-break:break-word;font:800 7px/1.15 var(--fT);letter-spacing:.02em}
   .mfRegionChip small{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
@@ -216,6 +235,17 @@ function mfGalaxyCss(){
   .mfQuickTeam{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.mfTeamBtn{min-width:0;min-height:62px;padding:9px 10px;border:1px solid rgba(97,159,194,.22);border-radius:11px;background:rgba(7,18,31,.92);color:#789aaf;text-align:left}.mfTeamBtn b,.mfTeamBtn span{display:block}.mfTeamBtn b{color:#dcedf7;font:900 9px/1 var(--fT);letter-spacing:.08em}.mfTeamBtn span{margin-top:6px;font:650 8px/1.25 var(--fU)}.mfTeamBtn.on{border-color:#63dfff;background:linear-gradient(115deg,rgba(20,85,111,.82),rgba(7,20,34,.96));box-shadow:inset 3px 0 #63dfff}.mfTeamBtn.locked{opacity:.38;filter:saturate(.3)}
   .mfQuickCommanders{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.mfQuickCommander{min-width:0;padding:5px 5px 8px;border:1px solid rgba(99,160,195,.22);border-radius:11px;background:rgba(6,16,28,.94);color:#7495a9;text-align:left;overflow:hidden}.mfQuickCommander img{display:block;width:100%;aspect-ratio:1.45/1;object-fit:cover;object-position:center 22%;border-radius:7px;filter:saturate(.82) brightness(.82)}.mfQuickCommander b,.mfQuickCommander span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfQuickCommander b{margin-top:6px;color:#e7f6ff;font:900 7.5px/1 var(--fT);letter-spacing:.04em}.mfQuickCommander span{margin-top:3px;color:#65889e;font:750 6.5px/1 var(--fT)}.mfQuickCommander.on{border-color:#6be1ff;box-shadow:0 0 13px rgba(78,208,255,.2)}.mfQuickCommander.on img{filter:none}
   .mfQuickSummary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;padding:1px;border:1px solid rgba(98,163,199,.22);border-radius:10px;background:rgba(3,9,16,.8);overflow:hidden}.mfQuickSummary>div{min-width:0;padding:7px 4px;background:rgba(12,27,42,.84);text-align:center}.mfQuickSummary span,.mfQuickSummary b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mfQuickSummary span{color:#567b92;font:800 6px/1 var(--fT);letter-spacing:.08em}.mfQuickSummary b{margin-top:4px;color:#d9f4ff;font:900 8px/1 var(--fT)}
+  .mfLoadoutSummary{min-width:0;margin:9px 0 12px;padding:10px;border:1px solid rgba(107,213,255,.32);border-radius:14px;overflow:hidden;
+    background:linear-gradient(145deg,rgba(8,24,40,.97),rgba(4,12,22,.98));box-shadow:inset 3px 0 #65d9ff,0 9px 22px rgba(0,0,0,.24)}
+  .mfLoadoutSummary *{min-width:0;box-sizing:border-box}.mfLoadoutHead{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .mfLoadoutTitle span,.mfLoadoutTitle b{display:block}.mfLoadoutTitle span{color:#65d9ff;font:900 8px/1 var(--fT);letter-spacing:.15em}.mfLoadoutTitle b{margin-top:4px;color:#edfaff;font:900 12px/1.05 var(--fT);letter-spacing:.08em}
+  .mfLoadoutChips{display:flex;justify-content:flex-end;gap:4px;flex-wrap:wrap}.mfLoadoutChip{max-width:100%;padding:4px 6px;border:1px solid rgba(103,199,235,.28);border-radius:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#a8d8ea;background:rgba(5,16,28,.9);font:850 7px/1 var(--fT);letter-spacing:.06em}
+  .mfLoadoutCommand{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-bottom:6px}.mfLoadoutCommandCard{padding:8px;border:1px solid rgba(103,173,207,.2);border-radius:9px;background:rgba(11,29,45,.82)}
+  .mfLoadoutCommandCard>span,.mfLoadoutCommandCard>b,.mfLoadoutCommandCard>small{display:block;overflow-wrap:anywhere}.mfLoadoutCommandCard>span{color:#5c93aa;font:850 7px/1 var(--fT);letter-spacing:.11em}.mfLoadoutCommandCard>b{margin-top:4px;color:#e8f8ff;font:900 10px/1.2 var(--fT)}.mfLoadoutCommandCard>small{margin-top:4px;color:#89aebf;font:700 8.5px/1.3 var(--fU)}
+  .mfLoadoutGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}.mfLoadoutLane{padding:8px;border:1px solid rgba(92,151,184,.18);border-radius:9px;background:rgba(5,15,26,.76)}
+  .mfLoadoutLaneHead{display:flex;align-items:center;justify-content:space-between;gap:5px;margin-bottom:6px}.mfLoadoutLaneHead b{color:#cdebf8;font:900 8px/1.1 var(--fT);letter-spacing:.08em}.mfLoadoutLaneHead .mfOwnershipBadge{flex:0 0 auto;padding:3px 5px;font-size:6.5px;letter-spacing:.05em}
+  .mfLoadoutItem{padding:6px 0;border-top:1px solid rgba(93,148,176,.14)}.mfLoadoutItem:first-child{padding-top:0;border-top:0}.mfLoadoutItem:last-child{padding-bottom:0}.mfLoadoutItem>b,.mfLoadoutItem>span,.mfLoadoutItem>small{display:block;overflow-wrap:anywhere}.mfLoadoutItem>b{color:#e4f5fc;font:850 9px/1.2 var(--fT)}.mfLoadoutItem>span{margin-top:3px;color:#82a9ba;font:700 8px/1.25 var(--fU)}.mfLoadoutItem>small{margin-top:3px;color:#65cbe9;font:850 7px/1.2 var(--fT);letter-spacing:.035em}
+  .mfLoadoutEmpty{color:#668698;font:700 8px/1.35 var(--fU);overflow-wrap:anywhere}
   .mfAdvanced{margin-top:9px}.mfAdvanced .mfConfigBody{max-height:none;padding-top:0}.mfAdvanced[open] .mfConfigBody{padding-top:2px}.mfAdvanced .mfAdvancedSection{margin:5px 2px 0;color:#64badb;font:900 7px/1 var(--fT);letter-spacing:.13em}
   #mfStageDeploy>.mfConfigDrawer:not(.mfAdvanced),#mfStageDeploy>.mfLegacyConfig{display:none!important}
   #setupScr.galaxyWarp .mfStagePanel.on{animation:mfGalaxyWarp .62s cubic-bezier(.15,.75,.2,1)}
@@ -223,9 +253,11 @@ function mfGalaxyCss(){
   @media(max-width:480px){#setupScr.galaxyFlow .setupContext{display:none}.mfGalaxyHost{padding-left:calc(var(--sal) + 8px);padding-right:calc(var(--sar) + 8px)}
     .mfGalaxyViewport{height:clamp(340px,50dvh,430px)}.mfPlanetViewport{height:clamp(270px,39dvh,335px)}
     .mfSystemViewport{height:clamp(340px,52dvh,480px)}.mfSystemDossier{width:min(52%,188px);padding:7px}
+    .mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.mfWorldChip{min-height:62px}.mfRegionChip{min-height:76px}
     #setupScr.galaxyFlow #mapRow{display:flex!important;gap:8px!important;overflow-x:auto;padding-bottom:7px!important;scroll-snap-type:x mandatory;scrollbar-width:none}
     #setupScr.galaxyFlow #mapRow::-webkit-scrollbar{display:none}#setupScr.galaxyFlow #mapRow .mapCard{flex:0 0 86%;scroll-snap-align:center}
     .mfWorldChip{font-size:7px}.mfRegionChip{font-size:6.5px}.mfStageTitle{letter-spacing:.12em}.mfQuickPlan{min-height:98px;padding-left:6px;padding-right:6px}.mfQuickPlan span{font-size:7.5px}.mfQuickSummary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:380px){.mfLoadoutHead{display:block}.mfLoadoutChips{justify-content:flex-start;margin-top:7px}.mfLoadoutCommand,.mfLoadoutGrid{grid-template-columns:1fr}}
   @media(max-width:355px){.mfGalaxyStep{font-size:8.5px;letter-spacing:.03em}.mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(2,1fr)}.mfPlanetStats{grid-template-columns:1fr 1fr}}
 
   /* ── LEGIBILITY FLOOR ─────────────────────────────────────────────────────
@@ -280,6 +312,7 @@ function mfGalaxyCss(){
   .mfTeamBtn{min-height:68px}.mfTeamBtn b{font-size:10.5px}.mfTeamBtn span{font-size:9.5px}
   .mfQuickCommander b{font-size:9.5px}.mfQuickCommander span{font-size:9px}
   .mfQuickSummary span{font-size:9px}.mfQuickSummary b{font-size:10px}
+  .mfLoadoutTitle span{font-size:9px}.mfLoadoutLaneHead b{font-size:9px}.mfLoadoutLaneHead .mfOwnershipBadge{font-size:8px}.mfLoadoutItem>b{font-size:10px}.mfLoadoutItem>span{font-size:9.5px}.mfLoadoutItem>small{font-size:8.5px}.mfLoadoutEmpty{font-size:9.5px}
   .mfAdvanced .mfAdvancedSection{font-size:9.5px}
   .mfSystemDossier .mfBriefGate{font-size:9.5px}
   .mfMissionTags span{font-size:9px}
@@ -300,30 +333,89 @@ function mfGalaxyCss(){
      stylesheet; an equal-specificity override written over there loses the
      cascade no matter what media query guards it. */
   @media(orientation:landscape) and (max-height:560px){
-    .mfGalaxyViewport{height:clamp(150px,44dvh,240px)}
-    .mfPlanetViewport{height:clamp(140px,40dvh,220px)}
-    .mfSystemViewport{height:clamp(150px,44dvh,250px)}
+    /* A rotated phone has enough width for a map + command rail, but only
+       ~320px between the fixed header and dock. Stacking the portrait intro,
+       continue card and hologram put every spatial control below the dock.
+       Use the width: the live map stays fully visible on the left while the
+       selected context and four choices remain reachable on the right. */
+    #setupScr.galaxyFlow .setupHead{min-height:28px;padding:6px calc(var(--sar) + 14px) 5px calc(var(--sal) + 14px)}
+    #setupScr.galaxyFlow .setupHead h2{font-size:15px}.setupContext{font-size:9px}
+    #setupScr.galaxyFlow .setupScroll{min-height:0}
+    #setupScr.galaxyFlow .setupFoot{grid-auto-rows:44px;padding:5px calc(var(--sar) + 10px) max(calc(var(--sab) + 6px),10px) calc(var(--sal) + 10px)}
+    #setupScr.galaxyFlow .setupFoot .mbtn,#setupScr.galaxyFlow .setupFoot .mbtn.alt{height:44px;min-height:44px;max-height:44px;line-height:44px}
+    .mfGalaxyHost{width:min(100%,880px);padding:0 calc(var(--sar) + 10px) 7px calc(var(--sal) + 10px)}
+    .mfGalaxyStepper{padding:3px 2px 4px}.mfGalaxyStep{min-height:44px;padding-top:15px}
+    .mfModeContract{margin:0 0 5px;padding:5px 9px}.mfModeContract b{margin-top:2px}.mfModeContract small{display:none}
+    #mfStageGalaxy.on,#mfStagePlanet.on{display:grid;grid-template-columns:minmax(0,3fr) minmax(270px,2fr);grid-template-rows:auto auto auto auto 1fr auto;column-gap:10px;row-gap:3px;align-items:start}
+    #mfStageGalaxy>.mfGalaxyViewport,#mfStagePlanet>.mfPlanetViewport{grid-column:1;grid-row:1/6;height:194px;min-height:0}
+    /* The right rail already explains the gesture. A second help line below
+       the 194px canvas landed in the dock's fade and looked clipped even when
+       the canvas itself was fully reachable. */
+    #mfStageGalaxy>.mfGalaxyHelp,#mfStagePlanet>.mfGalaxyHelp,#mfStageSystem .mfGalaxyHelp{display:none}
+    #mfStageGalaxy>.mfGalaxyEyebrow,#mfStagePlanet>.mfGalaxyEyebrow{grid-column:2;grid-row:1;margin:2px 2px 1px}
+    #mfStageGalaxy>.mfStageTitle,#mfStagePlanet>.mfStageTitle{grid-column:2;grid-row:2;margin:1px 2px;font-size:17px;text-align:left}
+    #mfStageGalaxy>.mfStageSub,#mfStagePlanet>.mfStageSub{grid-column:2;grid-row:3;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;margin:0 2px 2px;font-size:10px;line-height:1.25;text-align:left}
+    #mfStageGalaxy>.mfConquestContinue{grid-column:2;grid-row:4;min-height:43px;margin:0;padding:6px 8px}
+    #mfStageGalaxy>.mfWorldStrip{grid-column:2;grid-row:5;margin:0}
+    #mfStagePlanet>.mfPlanetStats{grid-column:2;grid-row:4;gap:3px;margin:0}
+    #mfStagePlanet>.mfPlanetStats>div{padding:5px 3px}
+    #mfStagePlanet>.mfRegionStrip{grid-column:2;grid-row:5;margin:0}
+    /* Region selection has three square reconnaissance maps. Leaving their
+       portrait cards full-width made each card 449px tall in a 325px scroll
+       lane, and scrollIntoView then hid the region brief behind the sticky
+       stepper. Keep the maps square but use the available landscape width:
+       compact intel rail left, three fully visible site cards right. */
+    #mfStageRegion.on{display:grid;grid-template-columns:minmax(280px,4fr) minmax(0,6fr);gap:10px;align-items:start}
+    #mfStageRegion>.mfGalaxyEyebrow{display:none}
+    #mfStageRegion>.mfRegionHero{grid-column:1;height:204px;margin:0;padding:8px 10px;box-sizing:border-box}
+    #mfStageRegion>.mfRegionHero b{margin-top:3px;font-size:16px}
+    #mfStageRegion>.mfRegionHero>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;max-width:100%;margin-top:4px;font-size:9px;line-height:1.2}
+    #mfStageRegion .mfConquestBar{margin:4px 0;padding:5px 7px;font-size:8px}
+    #mfStageRegion .mfSiteIntelDossier{grid-template-columns:repeat(2,minmax(0,1fr));gap:3px;margin-top:4px;padding:4px}
+    #mfStageRegion .mfIntelChip{min-width:0;padding:3px 5px}
+    #mfStageRegion .mfIntelChip span{font-size:7px}#mfStageRegion .mfIntelChip b{font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #mfStageRegion>#mfRegionMapHost{grid-column:2;min-width:0}
+    #mfStageRegion #mapRow{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px!important;margin:0}
+    #mfStageRegion #mapRow .mapCard{height:204px;padding:3px;box-sizing:border-box}
+    #mfStageRegion #mapRow .mapCard canvas{width:100%;height:auto;aspect-ratio:1/1}
+    #mfStageRegion #mapRow .mSize{margin-top:2px;font-size:8px}
+    #mfStageRegion #mapRow .mNm{min-height:22px;margin-top:2px;font-size:9px;line-height:1.1}
+    #mfStageRegion #mapRow .mDs,#mfStageRegion #mapRow .mConquest,#mfStageRegion #mapRow .mReward,#mfStageRegion #mapRow .mHz{display:none}
+    .mfGalaxyViewport,.mfPlanetViewport{height:194px}
+    .mfSystemViewport{height:204px}
+    .mfCanvasSelection{left:6px;right:6px;bottom:6px;grid-template-columns:28px minmax(0,1fr) auto;min-height:40px;padding:5px 8px}
+    .mfSelectionOrb{width:22px;height:22px}.mfCanvasSelection small,.mfCanvasSelection span,.mfCanvasSelection i{display:none}
+    .mfCanvasSelection b{margin:0;font-size:10px}.mfCanvasSelection strong{grid-row:1;font-size:9px}
     .mfSystemDossier{width:min(34%,190px);padding:6px 8px 7px;max-height:88%;overflow:hidden}
-    .mfSystemDossier b{font-size:13px}.mfSystemDossier p{display:none}
-    .mfStageTitle{margin:7px 2px 2px;font-size:clamp(15px,3.2vw,20px)}
-    .mfStageSub{margin-bottom:6px}
-    .mfGalaxyHost{padding-bottom:8px}
-    .mfModeContract{margin:0 0 6px;padding:7px 10px}
-    #setupScr.galaxyFlow .setupHead{padding-bottom:5px}
-    .mfGalaxyStep{min-height:44px;padding-top:15px}
+    .mfSystemDossier small{font-size:8px}.mfSystemDossier b{margin-top:3px;font-size:13px}.mfSystemDossier p{display:none}
+    .mfSystemDossier .mfSysBadge{margin-top:4px;font-size:8px}.mfSysSchematic{margin:5px 0 1px}
+    .mfSysSurvey{margin:4px 0 1px}.mfSysSurvey>span{font-size:7px}
+    .mfSystemDossier .mfSysStat{margin-top:3px;font-size:8px;line-height:1.1}.mfSystemDossier .mfSysStat span{font-size:7px}
+    #mfStageSystem>.mfGalaxyEyebrow{margin:2px 2px 4px}#mfStageSystem>.mfSystemSub{display:none}
+    .mfWorldStrip,.mfRegionStrip{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}.mfWorldChip{min-height:52px;padding:5px;font-size:8.5px}.mfWorldChip small{font-size:7.5px}.mfRegionChip{min-height:60px;padding:5px 4px;font-size:8px}.mfRegionChip b,.mfRegionChip small{font-size:8px}
   }
-  /* Desktop landscape: the hologram host is already 680px, but header /
-     footer / MAP tabs live outside it and went full window — START BATTLE
-     became an 800px strip. Cap them to the same column. Taller planet box
-     so the globe is not a postage stamp after the aspect-correct resize.
+  /* Tablet/desktop landscape: use the width instead of stacking the briefing,
+     choice strip and hologram into a tall column. The previous 680px portrait
+     host left 1024x768 with only 74% of the galaxy canvas above the fixed dock.
      Phone-short landscape (max-height:560) keeps the tighter clamps above. */
   @media(orientation:landscape) and (min-width:900px) and (min-height:561px){
     #setupScr.galaxyFlow .setupHead,#setupScr.galaxyFlow .setupFoot,#setupScr .setupTabs,
     #setupScr.galaxyFlow.galaxyStage-deploy .opsBrief{
       width:min(100%,720px);margin-left:auto;margin-right:auto;box-sizing:border-box}
     #setupScr.galaxyFlow .setupFoot{grid-template-columns:minmax(0,340px) minmax(0,340px);justify-content:center;width:100%}
-    .mfPlanetViewport{height:min(52dvh,460px)}
-    .mfGalaxyViewport{height:min(56dvh,520px)}
+    .mfGalaxyHost{width:min(100%,1120px)}
+    #mfStageGalaxy.on,#mfStagePlanet.on{display:grid;grid-template-columns:minmax(0,3fr) minmax(310px,2fr);
+      grid-template-rows:auto auto auto auto 1fr auto;column-gap:14px;row-gap:5px;align-items:start}
+    #mfStageGalaxy>.mfGalaxyViewport{grid-column:1;grid-row:1/6;height:min(56dvh,520px);min-height:0}
+    #mfStagePlanet>.mfPlanetViewport{grid-column:1;grid-row:1/6;height:min(52dvh,460px);min-height:0}
+    #mfStageGalaxy>.mfGalaxyHelp,#mfStagePlanet>.mfGalaxyHelp{display:none}
+    #mfStageGalaxy>.mfGalaxyEyebrow,#mfStagePlanet>.mfGalaxyEyebrow{grid-column:2;grid-row:1;margin:4px 2px 1px}
+    #mfStageGalaxy>.mfStageTitle,#mfStagePlanet>.mfStageTitle{grid-column:2;grid-row:2;margin:2px;font-size:20px;text-align:left}
+    #mfStageGalaxy>.mfStageSub,#mfStagePlanet>.mfStageSub{grid-column:2;grid-row:3;margin:0 2px 3px;text-align:left}
+    #mfStageGalaxy>.mfConquestContinue{grid-column:2;grid-row:4;margin:0}
+    #mfStageGalaxy>.mfWorldStrip{grid-column:2;grid-row:5;margin:0}
+    #mfStagePlanet>.mfPlanetStats{grid-column:2;grid-row:4;margin:0}
+    #mfStagePlanet>.mfRegionStrip{grid-column:2;grid-row:5;margin:0}
     .mfSystemViewport{height:min(56dvh,540px)}
   }
   `;
@@ -425,7 +517,7 @@ function mfGalaxyRenderModeContract(){
   const el=$('mfModeContract');if(!el)return;
   const C=typeof modeRewardContract==='function'?modeRewardContract(activeWarMode):{nm:'STANDARD',xp:1,rule:'1 PLAYER - AI ALLIES OPTIONAL',accent:'#63d9ff',item:''};
   const item=C.item&&typeof INV_CONSUMABLES!=='undefined'?INV_CONSUMABLES.find(x=>x.id===C.item):null,boost=Math.round((C.xp-1)*100);
-  el.style.setProperty('--mode',C.accent||'#63d9ff');el.innerHTML='<div><span>MODE CONTRACT</span><b>'+mfGalaxyEsc(C.nm+' - '+C.rule)+'</b></div><strong>'+(boost?'+'+boost+'% XP':'BASE XP')+'</strong><small>'+(item?mfGalaxyEsc(item.em+' EXCLUSIVE VICTORY REWARD - '+item.nm):'NO EXCLUSIVE ITEM CONTRACT')+'</small>';
+  el.style.setProperty('--mode',C.accent||'#63d9ff');el.innerHTML='<div><span>MODE CONTRACT</span><b>'+mfGalaxyEsc(C.nm+' - '+C.rule)+'</b></div><strong>'+(boost?'+'+boost+'% XP':'BASE XP')+'</strong><small>'+(item?mfGalaxyEsc(item.em+' EXCLUSIVE VICTORY REWARD - '+item.nm+' · ONE MATCH'):'NO EXCLUSIVE ITEM CONTRACT')+'</small>';
   const go=$('mfConquestContinue');if(!go)return;
   if(activeWarMode==='standard'){
     const map=mfConquestNextMap(),L=mfConquestLocate(map),D=MAPDEFS[map]||{};go.disabled=false;
@@ -496,15 +588,17 @@ function mfGalaxyDrawWells(ctx,cx,cy,rx,ry,rot,t){
   ctx.setLineDash([]);ctx.restore();
 }
 function mfGalaxyCaptionUnder(ctx,x,y,r,title,sub,hi){
-  const ty=y+r+15;
+  /* Canvas backing stores run at up to 1.25 DPR. The old 10/7px labels
+     therefore landed below the HTML UI's 9px legibility floor on phones. */
+  const ui=clamp(Math.min(ctx.canvas.width,ctx.canvas.height)/420,1,1.25),ty=y+r+15*ui;
   ctx.textAlign='center';ctx.fillStyle=hi?'#f4fcff':'#d5eef8';
-  ctx.font='900 10px var(--fT,monospace)';
+  ctx.font='900 '+(11*ui)+'px var(--fT,monospace)';
   ctx.shadowColor='rgba(0,0,0,.8)';ctx.shadowBlur=5;ctx.fillText(title,x,ty);ctx.shadowBlur=0;
   ctx.strokeStyle='rgba(220,250,255,.5)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(x-24,ty+7);ctx.lineTo(x-5,ty+7);ctx.moveTo(x+5,ty+7);ctx.lineTo(x+24,ty+7);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x-24*ui,ty+7*ui);ctx.lineTo(x-5*ui,ty+7*ui);ctx.moveTo(x+5*ui,ty+7*ui);ctx.lineTo(x+24*ui,ty+7*ui);ctx.stroke();
   ctx.fillStyle=hi?'#7dff9a':'#9ec8dc';
-  ctx.beginPath();ctx.moveTo(x,ty+4);ctx.lineTo(x+3.4,ty+7.5);ctx.lineTo(x,ty+11);ctx.lineTo(x-3.4,ty+7.5);ctx.closePath();ctx.fill();
-  if(sub){ctx.fillStyle='#7ec8e0';ctx.font='800 7px var(--fT,monospace)';ctx.fillText(sub,x,ty+21);}
+  ctx.beginPath();ctx.moveTo(x,ty+4*ui);ctx.lineTo(x+3.4*ui,ty+7.5*ui);ctx.lineTo(x,ty+11*ui);ctx.lineTo(x-3.4*ui,ty+7.5*ui);ctx.closePath();ctx.fill();
+  if(sub){ctx.fillStyle='#7ec8e0';ctx.font='800 '+(8*ui)+'px var(--fT,monospace)';ctx.fillText(sub,x,ty+22*ui);}
 }
 function mfGalaxyDrawLockHex(ctx,x,y,r){
   /* Hex + lock only on a conquest-gated world. Unlocked homeworlds stay clean
@@ -539,7 +633,8 @@ function mfGalaxyDrawSystemMark(ctx,x,y,S,selected,W,H){
   /* Cluster nodes, not mini globes. Callout boxes are extra hit targets so a
      thumb on the name still enters the system. */
   const open=mfConquestPlanetOpen(S.home),done=mfConquestPlanetComplete(S.home);
-  const wins=mfConquestPlanetWins(S.home),col=S.color||'#5ad4ff',core=selected?10:7;
+  const wins=mfConquestPlanetWins(S.home),col=S.color||'#5ad4ff';
+  const ui=clamp(Math.min(W,H)/420,1,1.2),core=(selected?12:9)*ui;
   const glow=ctx.createRadialGradient(x,y,1,x,y,core*4.6);glow.addColorStop(0,col+(selected?'cc':'77'));glow.addColorStop(.32,col+'40');glow.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,core*4.6,0,TAU);ctx.fill();
   if(selected){
@@ -555,18 +650,21 @@ function mfGalaxyDrawSystemMark(ctx,x,y,S,selected,W,H){
   const sg=ctx.createRadialGradient(x-2,y-2,0,x,y,core);sg.addColorStop(0,'#fff8e8');sg.addColorStop(.42,col);sg.addColorStop(1,col+'00');
   ctx.fillStyle=sg;ctx.beginPath();ctx.arc(x,y,core,0,TAU);ctx.fill();
   if(!open){ctx.fillStyle='rgba(1,4,9,.55)';ctx.beginPath();ctx.arc(x,y,core*.85,0,TAU);ctx.fill();}
-  const left=x<W*.5,bw=114,bh=32;
-  let bx=left?x-18-bw:x+18,by=y-36;
-  if(bx<8)bx=8;if(bx+bw>W-8)bx=W-8-bw;if(by<26)by=y+14;if(by+bh>H-28)by=H-28-bh;
+  const left=x<W*.5,bw=136*ui,bh=42*ui;
+  let bx=left?x-21*ui-bw:x+21*ui,by=y-46*ui;
+  /* The bottom selection dossier occupies the last ~76 backing pixels. Keep
+     every named target above it while leaving the dossier pointer-transparent. */
+  const bottomSafe=(H<300?58:88)*ui;
+  if(bx<8)bx=8;if(bx+bw>W-8)bx=W-8-bw;if(by<26)by=y+17*ui;if(by+bh>H-bottomSafe)by=H-bottomSafe-bh;
   ctx.strokeStyle=col+'66';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(left?bx+bw:bx,by+bh*.5);ctx.stroke();
   ctx.fillStyle=selected?'rgba(6,16,28,.9)':'rgba(4,10,18,.78)';
   ctx.strokeStyle=selected?'rgba(230,255,255,.72)':col+'55';
   ctx.fillRect(bx,by,bw,bh);ctx.strokeRect(bx+.5,by+.5,bw-1,bh-1);
   ctx.textAlign=left?'right':'left';ctx.fillStyle=selected?'#f4fcff':'#d7ecf6';
-  ctx.font='800 8px var(--fT,monospace)';ctx.fillText(S.nm,left?bx+bw-7:bx+7,by+13);
-  ctx.fillStyle=open?(done?'#7dff9a':col):'#7a8490';ctx.font='800 6.5px var(--fT,monospace)';
-  ctx.fillText(open?(done?'SECURED':'OPEN · '+Math.round(wins/12*100)+'%'):'LOCKED',left?bx+bw-7:bx+7,by+24);
+  ctx.font='800 '+(12*ui)+'px var(--fT,monospace)';ctx.fillText(S.nm,left?bx+bw-9*ui:bx+9*ui,by+17*ui);
+  ctx.fillStyle=open?(done?'#7dff9a':col):'#7a8490';ctx.font='800 '+(9.5*ui)+'px var(--fT,monospace)';
+  ctx.fillText(open?(done?'SECURED':'OPEN · '+Math.round(wins/12*100)+'%'):'LOCKED',left?bx+bw-9*ui:bx+9*ui,by+33*ui);
   return {x:bx+bw*.5,y:by+bh*.5,r:Math.max(28,Math.hypot(bw,bh)*.55)};
 }
 
@@ -587,7 +685,8 @@ function mfGalaxyDraw(t){
   ctx.fillStyle=mid;ctx.fillRect(0,0,W,H);
   let seed=7331;const rn=()=>{seed=(Math.imul(seed,1664525)+1013904223)|0;return(seed>>>8)/16777216;};
   for(let i=0;i<260;i++){const x=rn()*W,y=rn()*H,z=rn(),tw=.3+.7*Math.sin((t||0)*.0014+i*2.7);ctx.fillStyle='rgba(210,235,255,'+(z*.58*tw)+')';ctx.beginPath();ctx.arc(x,y,.25+z*1.1,0,TAU);ctx.fill();}
-  const cx=W*.5,cy=H*.52,cosY=Math.cos(mfGalaxyYaw),sinY=Math.sin(mfGalaxyYaw),cosP=Math.cos(mfGalaxyPitch),sinP=Math.sin(mfGalaxyPitch);
+  /* Reserve the lower lane for the selected-system dossier. */
+  const cx=W*.5,cy=H*.46,cosY=Math.cos(mfGalaxyYaw),sinY=Math.sin(mfGalaxyYaw),cosP=Math.cos(mfGalaxyPitch),sinP=Math.sin(mfGalaxyPitch);
   ctx.save();ctx.translate(cx,cy);ctx.rotate(-.22+mfGalaxyYaw*.06);
   ctx.fillStyle='rgba(40,90,140,.07)';ctx.beginPath();ctx.ellipse(0,0,W*.44,H*.155,0,0,TAU);ctx.fill();
   ctx.strokeStyle='rgba(150,210,255,.16)';ctx.lineWidth=1;ctx.stroke();
@@ -614,7 +713,9 @@ function mfGalaxyDraw(t){
   const active=mfGalaxySystemId();
   for(const q of items){
     const lab=mfGalaxyDrawSystemMark(ctx,q.x,q.y,q.S,q.key===active,W,H);
-    mfGalaxyTargets.push({key:q.key,x:q.x,y:q.y,r:52});
+    /* 56 backing pixels remains at least a 44 CSS-pixel target at the
+       renderer's maximum 1.25 DPR. */
+    mfGalaxyTargets.push({key:q.key,x:q.x,y:q.y,r:56});
     if(lab)mfGalaxyTargets.push({key:q.key,x:lab.x,y:lab.y,r:lab.r});
   }
   /* No on-canvas LOCAL CLUSTER / 4 SYSTEMS chrome. The stage eyebrow already
@@ -731,7 +832,7 @@ function mfGalaxyDrawSystemView(t){
      little; it must not re-parent the camera to the planet. */
   const cx=W*.50,cy=H*.46,rot=-.18,rx=W*.36,ry=H*.15,sunR=Math.max(26,W*.048);
   const tSec=(t||0)*.001,ang=tSec*.15;
-  const pt=mfGalaxyOrbitPoint(cx,cy,rx,ry,rot,ang),pr=Math.max(12,14+pt.z*2);
+  const pt=mfGalaxyOrbitPoint(cx,cy,rx,ry,rot,ang),pr=Math.max(19,22+pt.z*3);
   mfGalaxyDrawWells(ctx,cx,cy,rx,ry,rot,t);
   mfGalaxyStrokeThinOrbit(ctx,cx,cy,rx*.46,ry*.46,rot,.22);
   mfGalaxyStrokeThinOrbit(ctx,cx,cy,rx*1.22,ry*1.22,rot,.16);
@@ -766,7 +867,8 @@ function mfGalaxyDrawSystemView(t){
   const home=bodies.find(B=>!B.lore);
   /* Do not stamp S.star on the sun. The eyebrow already prints it
      (DOMINION FURNACE / …); a second copy through the disc was the QA P3. */
-  if(home)mfSystemTargets=[{key:home.key,x:home.x,y:home.y,r:Math.max(28,home.r+16)}];
+  /* Same 44-CSS-pixel floor as galaxy targets at max DPR. */
+  if(home)mfSystemTargets=[{key:home.key,x:home.x,y:home.y,r:Math.max(56,home.r+24)}];
 }
 
 function mfGalaxyAnimate(ts){
@@ -803,6 +905,66 @@ function mfPickMark(sel){
       :null;
   }
   if(sel)sel.classList.add('confirm');
+}
+
+/* War Table choices live inside scrollable rows and drawers. Committing them
+   on pointer-down turned an intended drag into a plan/team/world change before
+   the browser had enough movement to identify the gesture. Use the project's
+   shared pointer-up contract (12px slop plus keyboard/AT click fallback), and
+   keep a matching local fallback for defensive load-order recovery. */
+function mfGalaxyBindChoice(el,fn){
+  if(!el||typeof fn!=='function'||el.dataset.mfGalaxyTapBound==='1')return;
+  el.dataset.mfGalaxyTapBound='1';
+  if(typeof mfBindTap==='function'){
+    /* mfBindTap rejects the pointer-up after a long move. Also suppress the
+       rare compatibility click a browser may still synthesize after that
+       rejected drag, so its keyboard fallback cannot misread it as Enter. */
+    let guard=null,suppressClick=false;
+    el.addEventListener('pointerdown',e=>{if(e.isPrimary!==false&&!(e.pointerType==='mouse'&&e.button!==0)){suppressClick=false;guard={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};}},{passive:true});
+    el.addEventListener('pointermove',e=>{if(guard&&e.pointerId===guard.id&&Math.hypot(e.clientX-guard.x,e.clientY-guard.y)>MF_GALAXY_TAP_SLOP)guard.moved=true;},{passive:true});
+    el.addEventListener('pointerup',e=>{if(guard&&e.pointerId===guard.id){suppressClick=guard.moved;guard=null;}},{passive:true});
+    el.addEventListener('pointercancel',e=>{if(guard&&e.pointerId===guard.id){suppressClick=guard.moved;guard=null;}},{passive:true});
+    el.addEventListener('keydown',()=>{suppressClick=false;},{passive:true});
+    el.addEventListener('click',e=>{if(suppressClick){suppressClick=false;e.preventDefault();e.stopImmediatePropagation();}},true);
+    mfBindTap(el,fn);return;
+  }
+  let press=null,pointerCommit=-1e9,suppressClick=false;
+  const now=()=>typeof performance!=='undefined'?performance.now():Date.now();
+  el.addEventListener('pointerdown',e=>{
+    if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;
+    mfGalaxyFallbackCommit=-1e9;suppressClick=false;
+    press={id:e.pointerId,x:e.clientX,y:e.clientY,moved:false};
+  },{passive:true});
+  el.addEventListener('pointermove',e=>{
+    if(!press||e.pointerId!==press.id)return;
+    if(Math.hypot(e.clientX-press.x,e.clientY-press.y)>MF_GALAXY_TAP_SLOP)press.moved=true;
+  },{passive:true});
+  el.addEventListener('pointercancel',e=>{if(press&&e.pointerId===press.id){suppressClick=press.moved;press=null;}},{passive:true});
+  el.addEventListener('pointerup',e=>{
+    if(!press||e.pointerId!==press.id)return;
+    const ok=!press.moved&&el.contains(e.target);suppressClick=press.moved;press=null;
+    if(!ok||el.disabled)return;
+    pointerCommit=mfGalaxyFallbackCommit=now();fn(e);
+  });
+  el.addEventListener('keydown',()=>{mfGalaxyFallbackCommit=-1e9;suppressClick=false;},{passive:true});
+  el.addEventListener('click',e=>{
+    if(suppressClick){suppressClick=false;e.preventDefault();e.stopImmediatePropagation();return;}
+    if(now()-pointerCommit<600||now()-mfGalaxyFallbackCommit<600){e.preventDefault();e.stopImmediatePropagation();return;}
+    if(!el.disabled)fn(e);
+  });
+}
+function mfGalaxyCommitChoice(el,e){
+  if(!el)return;if(e)e.preventDefault();const d=el.dataset;
+  if(d.mfPlan){mfQuickApplyPlan(d.mfPlan);return;}
+  if(d.mfTeam){mfQuickApplyTeam(d.mfTeam);return;}
+  if(d.mfCommander){playerCommanderId=d.mfCommander;if(typeof persistCommanderPick==='function')persistCommanderPick();if(typeof renderCommanderRow==='function')renderCommanderRow();mfQuickRender();mfGalaxySummary();sfx('confirm');return;}
+  if(d.mfSystem){mfPickConfirm('sys',d.mfSystem,()=>{mfGalaxySelectSystem(d.mfSystem,false);mfPickMark(el);},()=>mfGalaxySelectSystem(d.mfSystem,true));return;}
+  if(d.mfWorld){mfPickConfirm('world',d.mfWorld,()=>{mfGalaxySelectWorld(d.mfWorld,false);mfPickMark(el);},()=>mfGalaxySelectWorld(d.mfWorld,true));return;}
+  if(d.mfRegion)mfPickConfirm('region',d.mfRegion,()=>{mfGalaxySelectRegion(d.mfRegion,false);mfPickMark(el);},()=>mfGalaxySelectRegion(d.mfRegion,true));
+}
+function mfGalaxyBindChoices(root){
+  if(!root)return;
+  root.querySelectorAll('[data-mf-plan],[data-mf-team],[data-mf-commander],[data-mf-system],[data-mf-world],[data-mf-region]').forEach(el=>mfGalaxyBindChoice(el,e=>mfGalaxyCommitChoice(el,e)));
 }
 
 function mfGalaxySelectSystem(id,advance){
@@ -880,9 +1042,19 @@ function mfGalaxySetStage(stage){
 function mfGalaxyRenderWorldChips(){
   const strip=$('mfWorldStrip');if(!strip)return;const catalog=mfGalaxyCatalog(),active=mfGalaxySystemId();
   const openIds=MF_GALAXY_SYSTEM_ORDER.filter(id=>mfConquestPlanetOpen(catalog[id].home));
-  strip.innerHTML=MF_GALAXY_SYSTEM_ORDER.map(id=>{const S=catalog[id],open=mfConquestPlanetOpen(S.home),done=mfConquestPlanetComplete(S.home),wins=mfConquestPlanetWins(S.home);return '<button type="button" class="mfWorldChip '+(id===active?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-system="'+id+'" style="--pc:'+(S.color||'#5ad4ff')+'"><b>'+mfGalaxyEsc(S.nm)+'</b><small>'+(open?(done?'SECURED':wins+'/12 SECURED'):'SYSTEM LOCKED')+'</small></button>';}).join('');
+  strip.innerHTML=MF_GALAXY_SYSTEM_ORDER.map(id=>{const S=catalog[id],open=mfConquestPlanetOpen(S.home),done=mfConquestPlanetComplete(S.home),wins=mfConquestPlanetWins(S.home),sel=id===active;return '<button type="button" class="mfWorldChip '+(sel?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-system="'+id+'" aria-pressed="'+sel+'" aria-disabled="'+(!open)+'" style="--pc:'+(S.color||'#5ad4ff')+';--prog:'+Math.round(wins/12*100)+'%"><b>'+mfGalaxyEsc(S.nm)+'</b><small>'+(open?(done?'SECURED':wins+'/12 SECURED'):'SYSTEM LOCKED')+'</small></button>';}).join('');
+  mfGalaxyBindChoices(strip);
+  mfGalaxyRenderSystemSelection();
   const help=document.querySelector('#mfStageGalaxy .mfGalaxyHelp b');
   if(help)help.textContent=openIds.length===1?'TAP '+catalog[openIds[0]].nm+' AGAIN TO ENTER':'TAP A STAR, TAP AGAIN TO ENTER';
+}
+function mfGalaxyRenderSystemSelection(){
+  const el=$('mfGalaxySelection');if(!el)return;
+  const S=mfGalaxySystem(),P=PLANETS[S.home]||mfGalaxyPlanet(),open=mfConquestPlanetOpen(S.home),done=mfConquestPlanetComplete(S.home),wins=mfConquestPlanetWins(S.home);
+  const fac=typeof facDisplayName==='function'?facDisplayName(S.fac||(P&&P.fac)||'nova'):(S.fac||'NOVA');
+  el.classList.toggle('locked',!open);el.style.setProperty('--sc',S.color||'#63d9ff');el.style.setProperty('--progress',Math.round(wins/12*100)+'%');
+  el.innerHTML='<div class="mfSelectionOrb" aria-hidden="true"></div><div><small>'+mfGalaxyEsc(S.star||'SYSTEM CONTACT')+'</small><b>'+mfGalaxyEsc(S.nm)+'</b><span>'+mfGalaxyEsc((P&&P.nm?P.nm+' HOMEWORLD · ':'')+fac)+'</span></div><strong>'+(open?(done?'SECURED':wins+' / 12'):'LOCKED')+'</strong><i aria-hidden="true"></i>';
+  el.setAttribute('aria-label',S.nm+', '+(open?(done?'secured':wins+' of 12 sites secured'):'locked'));
 }
 function mfGalaxyRenderSystem(){
   const S=mfGalaxySystem(),key=S.home,P=PLANETS[key]||mfGalaxyPlanet(),box=$('mfStageSystem');if(!box)return;
@@ -913,10 +1085,11 @@ function mfGalaxyRenderSystem(){
     +'<div class="mfGalaxyHelp"><span>DRAG TO ORBIT</span><b>'+(open?'TAP HOMEWORLD, TAP AGAIN TO ENTER':'LOCKED')+'</b></div></div>';
   mfGalaxyDrawSystemView(performance.now());
   mfGalaxyStampSystemPicker();
-  const cv=$('mfSystemCanvas');if(!cv)return;let drag=0,lx=0,ly=0;
-  cv.onpointerdown=e=>{drag=0;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);};
-  cv.onpointermove=e=>{if(!cv.hasPointerCapture(e.pointerId))return;const dx=e.clientX-lx,dy=e.clientY-ly;drag+=Math.abs(dx)+Math.abs(dy);lx=e.clientX;ly=e.clientY;mfGalaxyYaw+=dx*.009;mfGalaxyPitch=clamp(mfGalaxyPitch+dy*.006,-.42,.42);mfGalaxyDrawSystemView(performance.now());};
-  cv.onpointerup=e=>{if(drag>9)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;let hit=null,best=1e9;for(const T of mfSystemTargets){const d=Math.hypot(x-T.x,y-T.y);if(d<T.r&&d<best){best=d;hit=T;}}if(hit)mfGalaxyPickSystemBody(hit);};
+  const cv=$('mfSystemCanvas');if(!cv)return;let drag=0,lx=0,ly=0,sx=0,sy=0,pointer=-1;
+  cv.onpointerdown=e=>{if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;drag=0;sx=lx=e.clientX;sy=ly=e.clientY;pointer=e.pointerId;cv.setPointerCapture(e.pointerId);};
+  cv.onpointermove=e=>{if(e.pointerId!==pointer||!cv.hasPointerCapture(e.pointerId))return;const dx=e.clientX-lx,dy=e.clientY-ly;drag=Math.max(drag,Math.hypot(e.clientX-sx,e.clientY-sy));lx=e.clientX;ly=e.clientY;mfGalaxyYaw+=dx*.009;mfGalaxyPitch=clamp(mfGalaxyPitch+dy*.006,-.42,.42);mfGalaxyDrawSystemView(performance.now());};
+  cv.onpointerup=e=>{if(e.pointerId!==pointer)return;pointer=-1;if(drag>MF_GALAXY_TAP_SLOP)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;let hit=null,best=1e9;for(const T of mfSystemTargets){const d=Math.hypot(x-T.x,y-T.y);if(d<T.r&&d<best){best=d;hit=T;}}if(hit)mfGalaxyPickSystemBody(hit);};
+  cv.onpointercancel=e=>{if(e.pointerId===pointer)pointer=-1;};
 }
 function mfGalaxyRenderPlanet(){
   const P=mfGalaxyPlanet(),key=mfGalaxyPlanetKey(),M=mfGalaxyLiveMeta(key),box=$('mfStagePlanet');if(!box)return;
@@ -926,14 +1099,16 @@ function mfGalaxyRenderPlanet(){
     +'<h3 class="mfStageTitle">'+mfGalaxyEsc(P.nm)+'</h3><p class="mfStageSub">'+mfGalaxyEsc(P.ds||'Rotate the world, then select one of its four operational regions.')+'</p>'
     +'<div class="mfPlanetStats"><div><span>HOMEWORLD</span><b>'+mfGalaxyEsc(facNm)+'</b></div><div><span>CLIMATE</span><b>'+mfGalaxyEsc(P.climate||'VARIED')+'</b></div><div><span>CONQUEST</span><b>'+wins+' / 12</b></div></div>'
     +'<div class="mfPlanetViewport"><canvas id="mfPlanetCanvas" width="560" height="360" aria-label="Rotatable '+mfGalaxyEsc(P.nm)+' region map"></canvas></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP REGION, TAP AGAIN TO DESCEND</b></div><div class="mfRegionStrip" id="mfRegionStrip"></div>';
-  const strip=$('mfRegionStrip');strip.innerHTML=P.regions.map(R=>{const open=mfConquestRegionOpen(key,R.id),done=mfConquestRegionComplete(R),n=mfConquestRegionWins(R);return '<button type="button" class="mfRegionChip '+(R.id===curRegionId?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-region="'+R.id+'" style="--pc:'+R.color+'"><b>'+mfGalaxyEsc(R.nm)+'</b><small>'+(open?(done?'LIBERATED':(R.poi?mfGalaxyEsc(R.poi):n+' / 3 SECURED')):'REGION LOCKED')+'</small></button>';}).join('');
-  const cv=$('mfPlanetCanvas');draw3DPlanetSphere(cv,key,planetYaw,planetPitch,curRegionId);let drag=0,lx=0,ly=0;
-  cv.onpointerdown=e=>{drag=0;lx=e.clientX;ly=e.clientY;cv.setPointerCapture(e.pointerId);};
-  cv.onpointermove=e=>{if(!cv.hasPointerCapture(e.pointerId))return;const dx=e.clientX-lx,dy=e.clientY-ly;drag+=Math.abs(dx)+Math.abs(dy);lx=e.clientX;ly=e.clientY;planetYaw+=dx*.01;planetPitch=clamp(planetPitch-dy*.01,-.8,.8);draw3DPlanetSphere(cv,key,planetYaw,planetPitch,curRegionId);};
-  cv.onpointerup=e=>{if(drag>8)return;const rect=cv.getBoundingClientRect(),mx=(e.clientX-rect.left)*cv.width/rect.width,my=(e.clientY-rect.top)*cv.height/rect.height;
+  const strip=$('mfRegionStrip');strip.innerHTML=P.regions.map(R=>{const open=mfConquestRegionOpen(key,R.id),done=mfConquestRegionComplete(R),n=mfConquestRegionWins(R),sel=R.id===curRegionId;return '<button type="button" class="mfRegionChip '+(sel?'on ':'')+(open?'':'locked ')+(done?'done':'')+'" data-mf-region="'+R.id+'" aria-pressed="'+sel+'" aria-disabled="'+(!open)+'" style="--pc:'+R.color+';--prog:'+Math.round(n/3*100)+'%"><b>'+mfGalaxyEsc(R.nm)+'</b><small>'+(open?(done?'LIBERATED':(R.poi?mfGalaxyEsc(R.poi):n+' / 3 SECURED')):'REGION LOCKED')+'</small></button>';}).join('');
+  mfGalaxyBindChoices(strip);
+  const cv=$('mfPlanetCanvas');draw3DPlanetSphere(cv,key,planetYaw,planetPitch,curRegionId);let drag=0,lx=0,ly=0,sx=0,sy=0,pointer=-1;
+  cv.onpointerdown=e=>{if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;drag=0;sx=lx=e.clientX;sy=ly=e.clientY;pointer=e.pointerId;cv.setPointerCapture(e.pointerId);};
+  cv.onpointermove=e=>{if(e.pointerId!==pointer||!cv.hasPointerCapture(e.pointerId))return;const dx=e.clientX-lx,dy=e.clientY-ly;drag=Math.max(drag,Math.hypot(e.clientX-sx,e.clientY-sy));lx=e.clientX;ly=e.clientY;planetYaw+=dx*.01;planetPitch=clamp(planetPitch-dy*.01,-.8,.8);draw3DPlanetSphere(cv,key,planetYaw,planetPitch,curRegionId);};
+  cv.onpointerup=e=>{if(e.pointerId!==pointer)return;pointer=-1;if(drag>MF_GALAXY_TAP_SLOP)return;const rect=cv.getBoundingClientRect(),mx=(e.clientX-rect.left)*cv.width/rect.width,my=(e.clientY-rect.top)*cv.height/rect.height;
     const R0=Math.min(cv.width,cv.height)*.32,cx=cv.width*.5,cy=cv.height*.53,cosP=Math.cos(planetPitch),sinP=Math.sin(planetPitch);
     for(const Rg of P.regions){const lat=Rg.lat,lon=Rg.lon+planetYaw,cLat=Math.cos(lat),sLat=Math.sin(lat),cLon=Math.cos(lon),sLon=Math.sin(lon),px=cx+R0*cLat*sLon,py=cy-R0*(sLat*cosP-cLat*cLon*sinP),pz=cLat*cLon*cosP+sLat*sinP;if(pz>-.15&&Math.hypot(mx-px,my-py)<Math.max(42,(Rg.rad||.38)*R0*1.2)){mfPickConfirm('region',Rg.id,()=>{mfGalaxySelectRegion(Rg.id,false);const chip=document.querySelector('[data-mf-region="'+Rg.id+'"]');mfPickMark(chip);},()=>mfGalaxySelectRegion(Rg.id,true));return;}}
   };
+  cv.onpointercancel=e=>{if(e.pointerId===pointer)pointer=-1;};
 }
 
 function getSiteIntel(mapId){
@@ -996,6 +1171,53 @@ function mfGalaxySummary(){
     +'<div class="mfMissionTags">'+(CQ?'<span>CONQUEST FRONT '+CQ.tier+'</span>':'')+'<span>'+mfGalaxyEsc(threat)+' THREAT</span><span>'+mfGalaxyEsc(scale.km||String(D.size||battlefieldPreset).toUpperCase())+'</span><span>'+mfGalaxyEsc(scale.dur||'LIVE')+'</span><span>'+mfGalaxyEsc(domain)+'</span><span>'+intel.hazard.icon+' '+mfGalaxyEsc(String(D.hazard||'CLEAR').toUpperCase())+'</span><span>'+mfGalaxyEsc(mods)+' MODIFIERS</span><span>'+mfGalaxyEsc(payout)+' PAYOUT</span><span>'+mfGalaxyEsc(C?C.name||C.nm:'COMMANDER')+'</span></div>'
     +'<div class="mfSiteIntelBar"><div class="mfSiteIntelCol"><small>ORBITAL TELEMETRY</small><b>'+mfGalaxyEsc(intel.resources.nodes)+'</b> · <span>'+mfGalaxyEsc(intel.resources.pace)+'</span></div><div class="mfSiteIntelCol"><small>TACTICAL FORECAST</small><b>'+intel.hazard.icon+' '+mfGalaxyEsc(intel.hazard.name)+'</b> · <span>'+mfGalaxyEsc(intel.hazard.desc)+'</span></div></div>';
   for(const d of document.querySelectorAll('.mfConfigDrawer')){const out=d.querySelector('.mfDrawerTx small');if(!out)continue;const k=d.dataset.drawer;if(k==='command')out.textContent=(C?(C.name||C.nm):'Commander')+' · '+activeAiSlots().length+' AI';else if(k==='mission')out.textContent=(goalDef().nm||goalSel)+' · '+(timeLimit?Math.round(timeLimit/60)+' MIN':'NO LIMIT');else if(k==='logistics')out.textContent=(resPace===1.6?'RICH':resPace<1?'LEAN':'NORMAL')+' RESOURCES';else out.textContent=mods+' ACTIVE · '+payout;}
+  mfGalaxyRenderLoadout();
+}
+
+function mfGalaxyLoadoutSnapshot(){
+  const owned=(typeof META!=='undefined'&&META&&META.owned)||{};
+  const perks=typeof STORE!=='undefined'?STORE.map(it=>{
+    const tier=Math.min(it.max,Math.max(0,+owned[it.id]||0));
+    return tier?{id:it.id,name:it.nm,detail:(typeof perkFx==='function'&&perkFx(it.id,tier))||it.ds,meta:'TIER '+tier+' / '+it.max}:null;
+  }).filter(Boolean):[];
+  const modInv=(typeof META!=='undefined'&&META&&META.mods)||{},equipped=typeof modEquipped==='function'?modEquipped():[];
+  const modules=typeof MODULES!=='undefined'?equipped.map(id=>{
+    const m=MODULES.find(x=>x.id===id);if(!m)return null;
+    const q=typeof modCraftQuote==='function'?modCraftQuote(m,modInv[id]):{current:Math.max(0,+modInv[id]||0),cap:m.dur*2};if(q.current<=0)return null;
+    const wear=typeof wearRate==='function'?wearRate():1,fmt=n=>typeof modWearDisplay==='function'?modWearDisplay(n):Math.round(n*10)/10;
+    return {id:m.id,name:m.nm,detail:m.ds,meta:fmt(q.current)+' / '+fmt(q.cap)+' DUR · -'+fmt(wear)+' / MATCH · ~'+Math.ceil(q.current/wear)+' LEFT'};
+  }).filter(Boolean):[];
+  const bag=typeof invBag==='function'?invBag():{gear:{},consumables:{},equipped:{},ready:[],readyTy:{}};
+  const gear=typeof INV_GEAR!=='undefined'?['weapon','armor','utility'].map(slot=>{
+    const id=bag.equipped[slot]||'',g=INV_GEAR.find(x=>x.id===id);if(!g||(bag.gear[id]||0)<=0)return null;
+    const fx=typeof armInvEffect==='function'?armInvEffect(id):null;
+    return {id:g.id,name:g.nm,detail:fx?fx.stat+' '+fx.value:g.ds,meta:slot.toUpperCase()+' · ACTIVE WHILE FITTED'};
+  }).filter(Boolean):[];
+  const supplies=typeof INV_CONSUMABLES!=='undefined'?(bag.ready||[]).map(id=>{
+    const c=INV_CONSUMABLES.find(x=>x.id===id),stock=bag.consumables[id]||0;if(!c||stock<=0)return null;
+    const ty=bag.readyTy&&bag.readyTy[id],lock=c.scope==='type'?(ty!=null&&typeof invLockName==='function'&&invLockName(ty)?'LOCKED · '+invLockName(ty):'NO CHASSIS LOCK · ARMY FALLBACK'):'ARMY-WIDE';
+    return {id:c.id,name:c.nm,detail:c.ds,meta:'STOCK '+stock+' · '+lock+' · CONSUMES 1'};
+  }).filter(Boolean):[];
+  const commander=typeof playerCommanderIdentity==='function'?playerCommanderIdentity():null;
+  const contract=typeof modeRewardContract==='function'?modeRewardContract(activeWarMode):{id:activeWarMode||'standard',nm:String(activeWarMode||'standard').toUpperCase(),xp:1,rule:'BATTLE CONTRACT'};
+  const planId=mfQuickDetectedPlan(),planButton=document.querySelector('[data-mf-plan="'+planId+'"] b');
+  return {perks,modules,gear,supplies,commander,contract,plan:{id:planId,name:planButton?planButton.textContent.trim():'CUSTOM PLAN'},team:activeAllySlots().length?'ALLIED STRIKE':'SOLO COMMAND'};
+}
+function mfGalaxyLoadoutList(items,kind,empty){
+  if(!items.length)return '<div class="mfLoadoutEmpty">'+mfGalaxyEsc(empty)+'</div>';
+  return items.map(it=>'<div class="mfLoadoutItem" data-loadout-kind="'+kind+'" data-item-id="'+mfGalaxyEsc(it.id)+'"><b>'+mfGalaxyEsc(it.name)+'</b><span>'+mfGalaxyEsc(it.detail)+'</span><small>'+mfGalaxyEsc(it.meta)+'</small></div>').join('');
+}
+function mfGalaxyRenderLoadout(){
+  const root=$('mfLoadoutSummary');if(!root)return;const L=mfGalaxyLoadoutSnapshot(),C=L.commander,K=L.contract;
+  const commanderName=C?[C.rank,C.name].filter(Boolean).join(' ')+' · “'+C.callsign+'”':'COMMANDER IDENTITY UNAVAILABLE';
+  const commanderDetail=C?[C.role,C.passive&&C.passive.label,C.signature&&('SIGNATURE · '+C.signature.label)].filter(Boolean).join(' · '):'Select a playable commander before launch.';
+  root.dataset.plan=L.plan.id;root.dataset.mode=K.id||activeWarMode;root.dataset.team=L.team;root.dataset.commander=C?C.id:'';
+  root.innerHTML='<div class="mfLoadoutHead"><div class="mfLoadoutTitle"><span>DEPLOYMENT LOADOUT</span><b>WHAT ENTERS THIS MATCH</b></div><div class="mfLoadoutChips"><span class="mfLoadoutChip" data-loadout-mode>'+mfGalaxyEsc(K.nm)+'</span><span class="mfLoadoutChip" data-loadout-plan>'+mfGalaxyEsc(L.plan.name)+'</span><span class="mfLoadoutChip" data-loadout-team>'+mfGalaxyEsc(L.team)+'</span></div></div>'
+    +'<div class="mfLoadoutCommand"><div class="mfLoadoutCommandCard" data-loadout-lane="commander"><span>BATTLE COMMANDER</span><b>'+mfGalaxyEsc(commanderName)+'</b><small>'+mfGalaxyEsc(commanderDetail)+'</small></div><div class="mfLoadoutCommandCard" data-loadout-lane="mode"><span>MODE CONTRACT</span><b>'+mfGalaxyEsc(K.nm)+' · '+mfGalaxyEsc(L.plan.name)+'</b><small>'+mfGalaxyEsc(K.rule)+' · ×'+(+K.xp||1).toFixed(2)+' XP</small></div></div>'
+    +'<div class="mfLoadoutGrid"><div class="mfLoadoutLane" data-loadout-lane="permanent"><div class="mfLoadoutLaneHead"><b>STORE PERKS</b>'+mfOwnershipBadgeHTML('permanent')+'</div>'+mfGalaxyLoadoutList(L.perks,'permanent','No permanent STORE perks retained.')+'</div>'
+    +'<div class="mfLoadoutLane" data-loadout-lane="modules"><div class="mfLoadoutLaneHead"><b>DEVELOPMENT MODULES</b>'+mfOwnershipBadgeHTML('crafted')+'</div>'+mfGalaxyLoadoutList(L.modules,'module','No wearing Development modules fitted.')+'</div>'
+    +'<div class="mfLoadoutLane" data-loadout-lane="gear"><div class="mfLoadoutLaneHead"><b>ACCOUNT GEAR</b>'+mfOwnershipBadgeHTML('equipped')+'</div>'+mfGalaxyLoadoutList(L.gear,'gear','No account gear fitted.')+'</div>'
+    +'<div class="mfLoadoutLane" data-loadout-lane="supplies"><div class="mfLoadoutLaneHead"><b>READIED SUPPLIES</b>'+mfOwnershipBadgeHTML('match')+'</div>'+mfGalaxyLoadoutList(L.supplies,'supply','No ONE MATCH supplies readied.')+'</div></div>';
 }
 
 function mfQuickDetectedPlan(){
@@ -1052,6 +1274,7 @@ function mfQuickRender(){
   const solo=activeAllySlots().length===0&&activeEnemySlots().length===1,ally=activeAllySlots().length>0;
   root.querySelectorAll('[data-mf-team]').forEach(b=>{b.classList.toggle('on',(b.dataset.mfTeam==='solo'&&solo)||(b.dataset.mfTeam==='ally'&&ally));b.classList.toggle('locked',b.dataset.mfTeam==='ally'&&battlefieldAiCap()<2);});
   const cr=$('mfQuickCommanders');if(cr)cr.innerHTML=mfQuickCommanderHTML();
+  if(cr)mfGalaxyBindChoices(cr);
   const D=MAPDEFS[curMap]||{},C=typeof commanderById==='function'?commanderById(playerCommanderId):null,S=$('mfQuickSummary');
   if(S)S.innerHTML='<div><span>WORLD</span><b>'+mfGalaxyEsc(mfGalaxyPlanet().nm)+'</b></div><div><span>BATTLEFIELD</span><b>'+mfGalaxyEsc(D.nm||curMap)+'</b></div><div><span>FORCE</span><b>1 + '+activeAllySlots().length+' ALLY</b></div><div><span>COMMANDER</span><b>'+mfGalaxyEsc(C?C.nm:'READY')+'</b></div>';
   const adv=$('mfAdvanced'),sm=adv&&adv.querySelector('.mfDrawerTx small');if(sm)sm.textContent=(goalDef().nm||goalSel)+' / '+(timeLimit?Math.round(timeLimit/60)+' MIN':'NO LIMIT')+' / '+activeAiSlots().length+' AI';
@@ -1125,7 +1348,7 @@ function mfGalaxyBack(){const i=MF_GALAXY_STAGES.indexOf(mfGalaxyStage);if(i>0)m
 
 function mfRenameFrontNav(){
   const start=$('startBtn');if(start){start.innerHTML='&#9654;&nbsp;DEPLOY';start.setAttribute('aria-label','Open deployment war table');}
-  const grid={opsBtn:['&#9876;','OPERATIONS'],devBtn:['&#9672;','RESEARCH'],armoryBtn:['&#11041;','ARSENAL'],dailyBtn:['&#10003;','CONTRACTS']};
+  const grid={opsBtn:['&#9876;','OPERATIONS'],devBtn:['&#9672;','DEVELOPMENT'],armoryBtn:['&#11041;','ARSENAL'],dailyBtn:['&#10003;','CONTRACTS']};
   for(const id of Object.keys(grid)){const b=$(id),v=grid[id];if(!b)continue;b.innerHTML='<span class="gEm">'+v[0]+'</span>'+v[1]+(id==='dailyBtn'?'<span class="gDot" id="dailyDot"></span>':'');}
   const strip={profileBtn:'CAREER',dossierBtn:'INTEL',settingsBtn:'SETTINGS'};
   for(const id of Object.keys(strip)){const b=$(id),s=b&&b.querySelector('span:last-child');if(s)s.textContent=strip[id];}
@@ -1144,11 +1367,11 @@ function mfGalaxyBuild(){
       <button type="button" class="mfGalaxyStep on" data-mf-stage="galaxy"><i></i>GALAXY</button><button type="button" class="mfGalaxyStep" data-mf-stage="system"><i></i>SYSTEM</button><button type="button" class="mfGalaxyStep" data-mf-stage="planet"><i></i>PLANET</button><button type="button" class="mfGalaxyStep" data-mf-stage="region"><i></i>REGION</button><button type="button" class="mfGalaxyStep" data-mf-stage="deploy"><i></i>DEPLOY</button>
     </nav>
     <div class="mfModeContract" id="mfModeContract"></div>
-    <section class="mfStagePanel on" data-stage="galaxy" id="mfStageGalaxy"><div class="mfGalaxyEyebrow"><span>FOUR-SYSTEM THEATRE</span><span class="mfGalaxyLive">WAR TABLE ONLINE</span></div><h3 class="mfStageTitle">CHOOSE A SYSTEM</h3><p class="mfStageSub">Sombrero, Andromeda, Orion and Helios are all on this cluster. Drag the hologram, then tap an unlocked star to enter its orbit.</p><button type="button" class="mfConquestContinue" id="mfConquestContinue"></button><div class="mfGalaxyViewport"><canvas id="mfGalaxyCanvas" width="600" height="520" aria-label="Interactive four-system galaxy map"></canvas></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP AN UNLOCKED STAR</b></div><div class="mfWorldStrip" id="mfWorldStrip"></div></section>
+    <section class="mfStagePanel on" data-stage="galaxy" id="mfStageGalaxy"><div class="mfGalaxyEyebrow"><span>FOUR-SYSTEM THEATRE</span><span class="mfGalaxyLive">WAR TABLE ONLINE</span></div><h3 class="mfStageTitle">CHOOSE A SYSTEM</h3><p class="mfStageSub">Sombrero, Andromeda, Orion and Helios are all on this cluster. Drag the hologram, then tap an unlocked star to enter its orbit.</p><button type="button" class="mfConquestContinue" id="mfConquestContinue"></button><div class="mfGalaxyViewport"><canvas id="mfGalaxyCanvas" width="600" height="520" aria-label="Interactive four-system galaxy map"></canvas><div class="mfCanvasSelection" id="mfGalaxySelection" role="status" aria-live="polite"></div></div><div class="mfGalaxyHelp"><span>DRAG TO ROTATE</span><b>TAP AN UNLOCKED STAR</b></div><div class="mfWorldStrip" id="mfWorldStrip"></div></section>
     <section class="mfStagePanel" data-stage="system" id="mfStageSystem"></section>
     <section class="mfStagePanel" data-stage="planet" id="mfStagePlanet"></section>
     <section class="mfStagePanel" data-stage="region" id="mfStageRegion"><div class="mfGalaxyEyebrow"><span>REGIONAL COMMAND</span><span>3 BATTLEFIELD SITES</span></div><div class="mfRegionHero" id="mfRegionHero"></div><div id="mfRegionMapHost"></div></section>
-    <section class="mfStagePanel" data-stage="deploy" id="mfStageDeploy"><div class="mfGalaxyEyebrow"><span>FINAL DEPLOYMENT PLAN</span><span class="mfGalaxyLive">DROP CORRIDOR READY</span></div><div class="mfMissionHero" id="mfMissionHero"></div>
+    <section class="mfStagePanel" data-stage="deploy" id="mfStageDeploy"><div class="mfGalaxyEyebrow"><span>FINAL DEPLOYMENT PLAN</span><span class="mfGalaxyLive">DROP CORRIDOR READY</span></div><div class="mfMissionHero" id="mfMissionHero"></div><section class="mfLoadoutSummary" id="mfLoadoutSummary" aria-label="Source-derived deployment loadout"></section>
       <div class="mfQuickSetup" id="mfQuickSetup"><div class="mfQuickLabel"><b>CHOOSE A BATTLE PLAN</b><small>ONE TAP · FULLY EDITABLE</small></div><div class="mfQuickPlans">
         <button type="button" class="mfQuickPlan" data-mf-plan="first" style="--qp:#6de4a3"><i>01</i><b>FIRST COMMAND</b><span>Supported opening, calm field and rich supply.</span><em>RECOMMENDED</em></button>
         <button type="button" class="mfQuickPlan" data-mf-plan="classic" style="--qp:#67d8ff"><i>02</i><b>CLASSIC WAR</b><span>Balanced economy, infestation and standard threat.</span><em>CORE RTS</em></button>
@@ -1167,22 +1390,22 @@ function mfGalaxyBuild(){
 
 function mfGalaxyWire(){
   const setup=$('setupScr'),cv=$('mfGalaxyCanvas');if(!setup||!cv)return;
+  /* The legacy setup controls stop pointer propagation at their own buttons.
+     Capture before that boundary, then render on the next frame after their
+     authoritative handlers have committed the new faction/rule/economy state. */
+  setup.addEventListener('pointerdown',e=>{if(e.target.closest&&e.target.closest('#mfAdvancedBody button'))requestAnimationFrame(()=>{mfQuickRender();mfGalaxySummary();});},true);
+  setup.addEventListener('change',e=>{if(e.target.closest&&e.target.closest('#mfAdvancedBody'))requestAnimationFrame(()=>{mfQuickRender();mfGalaxySummary();});},true);
   setup.addEventListener('pointerdown',e=>{
-    const plan=e.target.closest('[data-mf-plan]');if(plan){e.preventDefault();mfQuickApplyPlan(plan.dataset.mfPlan);return;}
-    const team=e.target.closest('[data-mf-team]');if(team){e.preventDefault();mfQuickApplyTeam(team.dataset.mfTeam);return;}
-    const commander=e.target.closest('[data-mf-commander]');if(commander){e.preventDefault();playerCommanderId=commander.dataset.mfCommander;if(typeof persistCommanderPick==='function')persistCommanderPick();if(typeof renderCommanderRow==='function')renderCommanderRow();mfQuickRender();mfGalaxySummary();sfx('confirm');return;}
     const cont=e.target.closest('#mfConquestContinue');if(cont&&!cont.disabled){e.preventDefault();mfGalaxyResumeConquest();return;}
-    const sys=e.target.closest('[data-mf-system]');if(sys){e.preventDefault();mfPickConfirm('sys',sys.dataset.mfSystem,()=>{mfGalaxySelectSystem(sys.dataset.mfSystem,false);mfPickMark(sys);},()=>mfGalaxySelectSystem(sys.dataset.mfSystem,true));return;}
     const enter=e.target.closest('[data-mf-sys-enter]');if(enter){e.preventDefault();if(!enter.disabled)mfGalaxyAdvance();return;}
     const sysBack=e.target.closest('[data-mf-sys-back]');if(sysBack){e.preventDefault();mfGalaxyBack();return;}
     const lore=e.target.closest('[data-mf-sys-lore]');if(lore){e.preventDefault();mfGalaxyToggleSystemLore();return;}
-    const world=e.target.closest('[data-mf-world]');if(world){e.preventDefault();mfPickConfirm('world',world.dataset.mfWorld,()=>{mfGalaxySelectWorld(world.dataset.mfWorld,false);mfPickMark(world);},()=>mfGalaxySelectWorld(world.dataset.mfWorld,true));return;}
-    const region=e.target.closest('[data-mf-region]');if(region){e.preventDefault();mfPickConfirm('region',region.dataset.mfRegion,()=>{mfGalaxySelectRegion(region.dataset.mfRegion,false);mfPickMark(region);},()=>mfGalaxySelectRegion(region.dataset.mfRegion,true));return;}
     const step=e.target.closest('[data-mf-stage]');if(step){e.preventDefault();const to=step.dataset.mfStage,ti=MF_GALAXY_STAGES.indexOf(to),ci=MF_GALAXY_STAGES.indexOf(mfGalaxyStage);if(ti<=ci)mfGalaxySetStage(to);return;}
   });
-  cv.onpointerdown=e=>{mfGalaxyDragging=true;mfGalaxyDragX=e.clientX;mfGalaxyDragY=e.clientY;mfGalaxyDragTravel=0;cv.setPointerCapture(e.pointerId);};
-  cv.onpointermove=e=>{if(!mfGalaxyDragging)return;const dx=e.clientX-mfGalaxyDragX,dy=e.clientY-mfGalaxyDragY;mfGalaxyDragX=e.clientX;mfGalaxyDragY=e.clientY;mfGalaxyDragTravel+=Math.abs(dx)+Math.abs(dy);mfGalaxyYaw+=dx*.009;mfGalaxyPitch=clamp(mfGalaxyPitch+dy*.006,-.42,.42);mfGalaxyDraw(performance.now());};
-  cv.onpointerup=e=>{mfGalaxyDragging=false;if(mfGalaxyDragTravel>9)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;let hit=null,best=1e9;for(const T of mfGalaxyTargets){const d=Math.hypot(x-T.x,y-T.y);if(d<T.r&&d<best){best=d;hit=T;}}if(hit)mfPickConfirm('sys',hit.key,()=>{mfGalaxySelectSystem(hit.key,false);mfPickMark(document.querySelector('[data-mf-system="'+hit.key+'"]'));},()=>mfGalaxySelectSystem(hit.key,true));};cv.onpointercancel=()=>{mfGalaxyDragging=false;};
+  mfGalaxyBindChoices(setup);
+  cv.onpointerdown=e=>{if(e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;mfGalaxyDragging=true;mfGalaxyDragStartX=mfGalaxyDragX=e.clientX;mfGalaxyDragStartY=mfGalaxyDragY=e.clientY;mfGalaxyDragTravel=0;mfGalaxyDragPointer=e.pointerId;cv.setPointerCapture(e.pointerId);};
+  cv.onpointermove=e=>{if(!mfGalaxyDragging||e.pointerId!==mfGalaxyDragPointer)return;const dx=e.clientX-mfGalaxyDragX,dy=e.clientY-mfGalaxyDragY;mfGalaxyDragX=e.clientX;mfGalaxyDragY=e.clientY;mfGalaxyDragTravel=Math.max(mfGalaxyDragTravel,Math.hypot(e.clientX-mfGalaxyDragStartX,e.clientY-mfGalaxyDragStartY));mfGalaxyYaw+=dx*.009;mfGalaxyPitch=clamp(mfGalaxyPitch+dy*.006,-.42,.42);mfGalaxyDraw(performance.now());};
+  cv.onpointerup=e=>{if(!mfGalaxyDragging||e.pointerId!==mfGalaxyDragPointer)return;mfGalaxyDragging=false;mfGalaxyDragPointer=-1;if(mfGalaxyDragTravel>MF_GALAXY_TAP_SLOP)return;const r=cv.getBoundingClientRect(),x=(e.clientX-r.left)*cv.width/r.width,y=(e.clientY-r.top)*cv.height/r.height;let hit=null,best=1e9;for(const T of mfGalaxyTargets){const d=Math.hypot(x-T.x,y-T.y);if(d<T.r&&d<best){best=d;hit=T;}}if(hit)mfPickConfirm('sys',hit.key,()=>{mfGalaxySelectSystem(hit.key,false);mfPickMark(document.querySelector('[data-mf-system="'+hit.key+'"]'));},()=>mfGalaxySelectSystem(hit.key,true));};cv.onpointercancel=e=>{if(e.pointerId===mfGalaxyDragPointer){mfGalaxyDragging=false;mfGalaxyDragPointer=-1;}};
   const map=$('mapRow');if(map)map.addEventListener('pointerup',e=>{
     const card=e.target.closest('.mapCard');if(!card||card.classList.contains('locked'))return;
     const key=card.dataset.map;if(!key)return;
@@ -1216,6 +1439,15 @@ function initGalaxyUI(){
   if(mfGalaxyReady) return;
   if(!$('setupScr')){ console.error('initGalaxyUI: #setupScr missing'); return; }
   if(typeof PLANETS==='undefined'){ console.error('initGalaxyUI: PLANETS undefined - src/engine/gl.js has not executed yet'); return; }
+  /* main.js starts an async boot() at script evaluation time. The manifest
+     loader can therefore reach this file before boot() has installed the
+     setup entry point even though main.js appears earlier in the list. Do not
+     capture an undefined "original" and mark the War Table ready: main's
+     own init list invokes us again after it installs openPlanetarySetup. */
+  if(typeof window.openPlanetarySetup!=='function'){
+    console.warn('initGalaxyUI deferred: openPlanetarySetup is not installed yet');
+    return;
+  }
   mfRenameFrontNav(); mfGalaxyCss();
   if(!mfGalaxyBuild()){ console.error('initGalaxyUI: mfGalaxyBuild failed - #setupScr .setupScroll missing'); return; }
   mfGalaxyReady=true;mfGalaxyOriginalPlanetRow=renderPlanetRow;mfConquestNormalizeSelection();

@@ -21,13 +21,17 @@
    ============================================================================ */
 (function(){
   var MANIFEST=[
-    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./src/engine/gl.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/volfx.js','./src/engine/organicfx.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/sitetemplates.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/modkit.js','./src/engine/physics.js','./src/game/sim.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/hazards.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js'
+    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./assets/data/planetart.js','./src/engine/gl.js','./src/engine/planetpreview.js','./src/engine/perf.js','./src/engine/noisegen.js','./src/engine/factionenergy.js','./src/engine/ordnancetrails.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/macrofx.js','./src/engine/shieldfx.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/volfx.js','./src/engine/shockwave.js','./src/engine/vfxlayers.js','./src/engine/organicfx.js','./assets/basis/basis_transcoder.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/sitetemplates.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/modkit.js','./src/engine/physics.js','./src/engine/cloudfx.js','./src/engine/cloudpostfx.js','./src/game/utilityjobs.js','./src/game/sim.js','./src/game/airwarfare.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/hazards.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/socialui.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js'
   ];
   /* Packaged scripts need a release key. WebViews and development browsers can
      otherwise reuse a stale source even after the installer or local preview
      has changed, which made new settings appear to be missing until cache was
      cleared manually. Patch bundles keep their content-addressed Blob URLs. */
-   var PACKAGED_REV='1.33.46';
+  var PACKAGED_REV='1.33.48';
+  /* Source-cache revision is deliberately independent from the user-facing
+     release number. Local/hotfix rebuilds of the same release must not reuse
+     an older gl.js merely because its ?v= version string is unchanged. */
+  var PACKAGED_SRC_REV=PACKAGED_REV+'-boot3';
   var DB='massfront-updates', STORE='bundles';
   var bootShield=null, bootShieldTimer=0, bootShieldWatchdog=0;
   var bootShieldEvents=['pointerdown','pointerup','touchstart','touchend','click'];
@@ -198,29 +202,59 @@
     var el=document.getElementById('mfBootPct');
     if(el) el.textContent=total?('LOADING  '+done+' / '+total):'LOADING';
   }
-  function injectScripts(makeSrc,total){
-    /* Append every tag now. async=false BEFORE src, plus document order, keeps
-       the one-scope contract. The old onload→next chain waited for each file
-       before requesting the next, so 77 scripts (unitsheet is 1.6 MB) left
-       #mfBootCover black for ~10s and looked like a failed launch. */
+  function rendererGateIndex(order){
+    for(var i=0;i<order.length;i++)
+      if(String(order[i]||'').replace(/^\.\//,'')==='src/engine/gl.js') return i;
+    /* A malformed legacy payload still gets a bounded first phase instead of
+       appending nothing. Completeness validation will reject it separately. */
+    return Math.min(3,Math.max(0,order.length-1));
+  }
+  function injectScripts(makeSrc,total,gate){
+    /* WebGL is the one hard boot dependency. Load through gl.js as a small
+       first phase, then append the remaining tags in parallel. If the browser
+       cannot allocate WebGL2, gl.js raises __MF_GL_BOOT_FAILED and owns a
+       usable retry panel; stopping here prevents 79 misleading missing-global
+       errors from obscuring the real graphics-session failure. The happy path
+       still requests the large remainder together and preserves classic-script
+       execution order through async=false. */
     var left=total;
-    function tick(src){
+    gate=Math.max(0,Math.min(total-1,gate|0));
+    var gateFailed=false, restStarted=false;
+    function tick(i,src){
       left--;
       bootProgress(total-left,total);
       if(src) console.error('boot: failed',src);
+      if(i===gate){
+        gateFailed=!!src||window.__MF_GL_BOOT_FAILED===true;
+        if(gateFailed){
+          console.warn('boot: renderer phase stopped after WebGL2 initialization failed');
+          clearBootShield();
+          /* OTA payloads add their own temporary input guard. Leave the real
+             WebGL retry control clickable immediately instead of waiting for
+             that guard's watchdog after the renderer has already failed. */
+          try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
+            window.__MASSFRONT_CLEAR_INPUT_GUARD();}catch(e){}
+        }else if(!restStarted){
+          restStarted=true;
+          appendRange(gate+1,total);
+        }
+      }
     }
-    bootProgress(0,total);
-    for(var i=0;i<total;i++){
+    function appendOne(i){
       var s=document.createElement('script');
       s.async=false;
       makeSrc(s,i);
-      s.onload=function(){ tick(); };
-      s.onerror=(function(src){ return function(){ tick(src); }; })(s.src||s.getAttribute('data-src')||'?');
+      s.onload=(function(n){ return function(){ tick(n); }; })(i);
+      s.onerror=(function(n,src){ return function(){ tick(n,src); }; })(i,s.src||s.getAttribute('data-src')||'?');
       document.body.appendChild(s);
     }
+    function appendRange(a,b){ for(var i=a;i<b;i++) appendOne(i); }
+    bootProgress(0,total);
+    appendRange(0,Math.min(total,gate+1));
   }
   function runPackaged(){
-    injectScripts(function(s,i){ s.src=MANIFEST[i]+'?v='+PACKAGED_REV; }, MANIFEST.length);
+    injectScripts(function(s,i){ s.src=MANIFEST[i]+'?v='+PACKAGED_SRC_REV; },
+                  MANIFEST.length,rendererGateIndex(MANIFEST));
   }
   function runBundle(b){
     /* Blob URLs rather than inline text: the browser keeps a real filename for
@@ -230,7 +264,7 @@
       var path=order[i], src=b.files[path];
       if(src==null) s.src=path;
       else s.src=URL.createObjectURL(new Blob([src+'\n//# sourceURL='+path],{type:'text/javascript'}));
-    }, order.length);
+    }, order.length,rendererGateIndex(order));
   }
 
   idb().then(function(db){
@@ -273,6 +307,13 @@
      marks a patch as good. Only now may the retryable download be deleted. */
   window.__bootOk=function(){
     releaseBootShield();
+    /* A packaged fallback can reach a frame after IndexedDB or the loader
+       failed before it selected `active`. It has NOT proved the stored patch
+       good, so it must not erase that patch's probation record. Leaving it in
+       place means the next healthy launch retries under the normal rollback
+       guard instead of running an unguarded payload. A recovered previous
+       patch is similarly only a fallback for a different failed version. */
+    if(!window.__MASSFRONT_PATCHED||window.__MASSFRONT_RECOVERED_PATCH) return;
     idb().then(function(db){
       return del(db,'probation')
         /* A packaged fallback also reaches a frame. It must not erase the
@@ -281,5 +322,40 @@
         .then(function(){ return window.__MASSFRONT_PATCHED&&!window.__MASSFRONT_RECOVERED_PATCH?del(db,'applyFailure'):null; })
         .then(function(){ return window.__MASSFRONT_PATCHED&&!window.__MASSFRONT_RECOVERED_PATCH?del(db,'pending'):null; });
     }).catch(function(){});
+  };
+})();
+
+/* PWA delivery is independent from OTA bundle selection. The worker is
+   network-first and explicitly bypasses updater manifests/configuration, so it
+   cannot pin an old release channel or interfere with IndexedDB probation. */
+(function(){
+  /* boot.js is also executed by the updater's deterministic VM harness. Keep
+     PWA delivery inert in non-browser runtimes instead of making OTA tests
+     provide a fake navigator solely for this optional integration. */
+  if(typeof navigator==='undefined'||!('serviceWorker' in navigator)) return;
+  var secure=location.protocol==='https:'||location.hostname==='127.0.0.1'||location.hostname==='localhost';
+  if(!secure) return;
+  window.__mfPwaDiag={supported:true,registered:false,controlled:!!navigator.serviceWorker.controller,error:null};
+  window.addEventListener('load',function(){
+    navigator.serviceWorker.register('./sw.js?v=1.33.48-shell1',{scope:'./',updateViaCache:'none'})
+      .then(function(reg){
+        window.__mfPwaDiag.registered=true;
+        window.__mfPwaDiag.scope=reg.scope;
+        window.__mfPwaDiag.controlled=!!navigator.serviceWorker.controller;
+        try{reg.update();}catch(e){}
+        if(navigator.storage&&typeof navigator.storage.persist==='function')
+          navigator.storage.persist().then(function(ok){window.__mfPwaDiag.storagePersisted=!!ok;}).catch(function(){});
+      }).catch(function(err){window.__mfPwaDiag.error=String(err&&err.message||err);});
+  },{once:true});
+  window.addEventListener('beforeinstallprompt',function(event){
+    event.preventDefault();
+    window.__mfPwaInstallEvent=event;
+    window.dispatchEvent(new CustomEvent('massfront-pwa-install-ready'));
+  });
+  window.mfRequestPwaInstall=function(){
+    var event=window.__mfPwaInstallEvent;
+    if(!event) return Promise.resolve({available:false});
+    window.__mfPwaInstallEvent=null;
+    return event.prompt().then(function(){return event.userChoice;});
   };
 })();

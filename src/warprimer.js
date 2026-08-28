@@ -49,7 +49,7 @@ var STAGES=[
  { id:'region', nm:'REGION',
    tx:'Three sites per region, in order: COMPACT (_small, 2.2 km), STANDARD (_medium, 2.6 km), LARGE (_large, 3.2 km). A Standard War Room drop lands on the medium theatre — that is the map the mode is balanced around. Pick STANDARD / medium unless you want the short Compact fight.' },
  { id:'deploy', nm:'DEPLOY',
-   tx:'The deployment plan: commander, objective, threat, modifiers and payout, all editable below. START BATTLE sends the carrier — you still pick landing ground, then DEPLOY BASE HERE. In the drop the HUD pop counter reads n/1K; 1K is this commander\'s cap.' }
+   tx:'The deployment plan: commander, objective, threat, modifiers and payout, all editable below. START BATTLE sends the carrier — you still pick landing ground, then DEPLOY BASE HERE. In the drop the HUD pop counter reads n/500; every allied commander shares that faction-wide cap.' }
 ];
 var CLOSER='That is the route. Twelve sites per system, and the next star opens when the last one falls.';
 /* The two facts a first Standard visit must still teach after Training or

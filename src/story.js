@@ -353,7 +353,8 @@ function renderInbox(){
   /* One network fill per open (45s window inside), never a poll, never awaited. */
   inboxFriendsRefresh(false);
   const m=document.getElementById('inboxMessages');
-  if(m) m.innerHTML='<div class="inboxEmpty">Direct messages arrive here once the friends update ships.</div>';
+  if(typeof mfSocialRenderInboxMessages==='function') mfSocialRenderInboxMessages();
+  else if(m) m.innerHTML='<div class="inboxEmpty">Open Social Command to check direct-chat availability.</div>';
   renderInboxUpdates();
   renderInboxNews();
   storyRefreshBadge();
@@ -908,10 +909,8 @@ function storyCampaignProgress(){
   return {states,current,done:states.filter(s=>s.done).length};
 }
 function storyCampaignEnsureOps(){
-  /* Campaign is advertised on the War Room but unimplemented. Injecting a
-     playable tab into Operations was a trap: Weekly is real, Campaign is not
-     a room players should enter. Leave the pane unbuilt. */
-  return;
+  /* Only the five-mission Prologue is live. The longer faction arcs remain
+     roadmap material in the Dossier and are never presented as playable. */
   const root=document.getElementById('opsScr'),tabs=document.getElementById('opsTabs');
   if(!root||!tabs) return;
   if(!document.getElementById('opsTab-campaign')){
@@ -1061,11 +1060,6 @@ function storyCampaignSyncSetup(){
 }
 let storyCampaignActiveId='',storyCampaignResultRecorded=false,storyCampaignRuntime=null;
 function storyCampaignOpenMission(missionId){
-  /* Modes are advertised but unimplemented; starting a prologue from here
-     walked the player into a stub that played like a campaign. */
-  if(typeof sfx==='function'){ try{ sfx('deny'); }catch(e){} }
-  if(typeof toast==='function') toast('CAMPAIGN is not available yet.');
-  return;
   const i=STORY_CAMPAIGN_PROLOGUE.findIndex(m=>m.id===missionId),m=STORY_CAMPAIGN_PROLOGUE[i];
   if(!m||!storyCampaignUnlocked(m,i)) return;
   if(m.goal==='training'){
@@ -1273,4 +1267,263 @@ renderOpsBrief=function(mode){
   set('opsBriefPayout','LIVE'); set('opsBriefState','PRE-ALPHA');
 };
 
+/* ============================================================================
+   COMMANDER LORE AND DIALOGUE COPY
+   ----------------------------------------------------------------------------
+   Narrative copy for the nine playable commanders, kept here with the rest of
+   the written game rather than beside the cooldown arithmetic in
+   src/game/commander.js. That file owns the identity DESCRIPTOR (who a
+   commander is, mechanically) and the dialogue EVENT system (when a line is
+   allowed to fire). This section owns what the line actually says.
 
+   Two products live here:
+
+     1. COMMANDER_LORE — biography, service record and epithet, addressed by the
+        descriptor's loreKey. storySpeakerVisual() above already treats the
+        commander portrait as a canonical command identity; this is the same
+        identity in prose.
+
+     2. Dialogue lines, resolved in three tiers by commanderDialogueLines():
+          commander override  -> COMMANDER_LORE[key].lines
+          faction doctrine    -> COMMANDER_DOCTRINE_LINES[faction]
+          neutral template    -> COMMANDER_DOCTRINE_LINES.default
+        A missing tier falls through rather than erroring, so a new commander
+        speaks in their faction's voice from the moment they exist and gains
+        personal lines later as they are written.
+
+   THIS IS TEXT ONLY. No audio is authored, generated or referenced here: the
+   subtitle is the deliverable, and a matching recording would be a voice-bank
+   data change (see the COMMANDER VOICE block in src/audio.js). Lines are
+   written to read correctly with no sound at all.
+
+   The cue builder in commander.js expands {cdr} to the commander's short name
+   and {fac} to the faction display name. This file stays pure data and does not
+   expand anything itself. */
+const COMMANDER_LORE={
+  nova_kai:{
+    epithet:'The Clean Landing',
+    service:'Federation Expeditionary Command / 4th Landing Group',
+    bio:'Kai took Sombrero-I with fewer losses than the plan allowed for and has been quietly '+
+        'resented for it ever since. She fires first only when the shot ends the argument.',
+    lines:{
+      sighting:{first:['Contact. Hold the line and let them come to us.']},
+      strategic:{launch:['Guns are laid. Everybody under cover, now.']},
+      outcome:{victory:['Held what we took, and took it clean. Log it.'],
+               defeat:['That is on the plan, not on you. Fall back and reform.']}
+    }
+  },
+  nova_holt:{
+    epithet:'Forward Works',
+    service:'Federation Corps of Engineers / Forward Works Detachment',
+    bio:'Holt builds the position before he argues about it. Three of his forward depots are '+
+        'still standing on worlds the Federation formally abandoned.',
+    lines:{
+      sighting:{first:['Contact on the perimeter. Get behind something I built.']},
+      strategic:{launch:['Firing solution away. Mind the blast radius, it is generous.']},
+      outcome:{victory:['Position holds. It was always going to hold.'],
+               defeat:['We lost the ground. We did not lose the drawings. Again.']}
+    }
+  },
+  nova_vale:{
+    epithet:'Long Sight',
+    service:'Federation Reconnaissance Doctrine Office',
+    bio:'Vale reads a battlefield an hour before it happens and is usually right about the '+
+        'part nobody wanted to hear. Her recon doctrine is now standard across the Group.',
+    lines:{
+      sighting:{first:['I had them ten minutes ago. Now you do too.']},
+      strategic:{launch:['Target painted. Watch the sector, not the sky.']},
+      outcome:{victory:['Predicted, executed, closed. Next theatre.'],
+               defeat:['I saw this. I could not stop it. Both go in the report.']}
+    }
+  },
+  legion_vex:{
+    epithet:'The Grading Hand',
+    service:'Red Ascendancy / First Wardens, self-appointed',
+    bio:'Federation-trained, resigned his commission, took a third of his division with him. '+
+        'Treats every engagement as an examination he is setting for someone.',
+    lines:{
+      sighting:{first:['They have arrived to be measured. Begin.']},
+      strategic:{launch:['Let the ground remember this.']},
+      outcome:{victory:['Adequate. Strength was honest today.'],
+               defeat:['We were weighed and found wanting. Correct it.']}
+    }
+  },
+  legion_korr:{
+    epithet:'Cadence',
+    service:'Red Ascendancy / Marshal of the Crimson Advance',
+    bio:'Korr keeps a battle line moving at a tempo that breaks formations no single push '+
+        'could. Her Wardens do not retreat and are not ordered to.',
+    lines:{
+      sighting:{first:['Enemy in the open. Do not slow down.']},
+      strategic:{launch:['Ordnance away. Advance behind it.']},
+      outcome:{victory:['Tempo held. Forward.'],
+               defeat:['We stopped moving. That is the whole answer.']}
+    }
+  },
+  legion_dravik:{
+    epithet:'The Iron Mandate',
+    service:'Red Ascendancy / Prefect of Fortifications',
+    bio:'Dravik fortifies ground the Ascendancy has no doctrinal interest in holding, and is '+
+        'never asked to explain why once the counterattack arrives.',
+    lines:{
+      sighting:{first:['Contact. The walls are already up. Get inside them.']},
+      strategic:{launch:['Bombardment committed. Brace.']},
+      outcome:{victory:['They broke on the wall. As designed.'],
+               defeat:['The wall fell. Build the next one further back.']}
+    }
+  },
+  syndicate_renn:{
+    epithet:'The Black Ledger',
+    service:'Syndicate Coalition / Accounts, Field Division',
+    bio:'Renn sells terrain telemetry to both sides of the same engagement and has never once '+
+        'been accused of inaccuracy. Adapt, profit, survive; she never said to whom.',
+    lines:{
+      sighting:{first:['Buyers on the field. Price them.']},
+      strategic:{launch:['Expensive. Worth it. Firing.']},
+      outcome:{victory:['Settled, and at a margin. Close the book.'],
+               defeat:['Written off. We will recover it somewhere warmer.']}
+    }
+  },
+  syndicate_nyx:{
+    epithet:'Ghost Optics',
+    service:'Syndicate Coalition / Infiltration, unlisted',
+    bio:'Calder appears in after-action reports as an equipment anomaly. Two Coalition '+
+        'auditors have tried to establish whether they are one person.',
+    lines:{
+      sighting:{first:['They do not know I am here. Keep it that way.']},
+      strategic:{launch:['Charge is placed. Look away.']},
+      outcome:{victory:['Done quietly. Nobody writes this one down.'],
+               defeat:['Compromised. Breaking contact.']}
+    }
+  },
+  syndicate_voss:{
+    epithet:'The Predictive Core',
+    service:'Syndicate Coalition / Directorate of Autonomous Systems',
+    bio:'Voss runs the engagement two seconds ahead of everyone standing in it, and considers '+
+        'the delay between his order and its execution a defect to be engineered out.',
+    lines:{
+      sighting:{first:['Contact resolved. The model already accounted for them.']},
+      strategic:{launch:['Solution committed. Do not deviate.']},
+      outcome:{victory:['Within tolerance. Archive the run.'],
+               defeat:['The model was wrong. I will find out where.']}
+    }
+  }
+};
+/* Faction doctrine tier. Every category and kind the dialogue API can emit is
+   covered here for all three playable factions, so no cue can reach a player
+   with no text at all. Two variants each: the selector in commander.js is
+   deterministic, so a second variant is what stops a repeated event reading as
+   a stuck string, not a random flourish. */
+const COMMANDER_DOCTRINE_LINES={
+  nova:{
+    objective:{assigned:['New objective on the board. Move when ready.','Orders updated. Take the marked position.'],
+               complete:['Objective secure. Consolidate.','That one is ours. Hold it.'],
+               failed:['Objective lost. Reassess and continue.','We did not hold it. Keep moving.']},
+    sighting:{first:['Contact. Hostiles on the field.','Enemy forces sighted. Report the count.'],
+              heavy:['Heavy armour inbound. Do not meet it head-on.','That is a siege element. Give it room.'],
+              air:['Air contact. Get the anti-air up.','Hostile aircraft overhead. Cover the line.']},
+    research:{complete:['Research cleared. It is in your hands now.','New systems certified. Use them.'],
+              started:['Lab is running. Give it time.','Research underway.']},
+    casualty:{unit:['We lost people out there.','Casualties taken. Pull the wounded back.'],
+              structure:['Structure down. Rebuild it or work around it.','We just lost a building.'],
+              commander:['Commander is down. Hold the line without them.','Command element hit. Regroup.']},
+    strategic:{ready:['Strategic weapon is charged and waiting.','Heavy ordnance available on your word.'],
+               launch:['Ordnance away. Clear the impact zone.','Firing. Everyone under cover.'],
+               incoming:['Strategic launch detected. Inbound on us.','Get out of the open. Something big is coming.']},
+    outcome:{victory:['Theatre secure. Good work.','That is the field. Stand down.'],
+             defeat:['We are done here. Pull out.','Position lost. Withdraw.'],
+             withdraw:['Breaking contact. Everyone out.','Disengage and fall back.']}
+  },
+  legion:{
+    objective:{assigned:['The objective is named. Take it.','Move. The ground is not going to volunteer.'],
+               complete:['Taken. As expected.','Objective held. Next.'],
+               failed:['We failed to take it. That is a fact about us.','Objective lost. Answer for it later.']},
+    sighting:{first:['Enemy in the field. Good.','They have come to us. Meet them.'],
+              heavy:['Armour. Break it.','Something heavy. Break it anyway.'],
+              air:['Air. Bring it down.','Hostiles above. Clear the sky.']},
+    research:{complete:['New doctrine approved. Apply it.','The forge has finished. Use what it made.'],
+              started:['Work has begun.','The forge is lit.']},
+    casualty:{unit:['They are replaced.','A loss. The line does not change.'],
+              structure:['A structure falls. Raise another.','We lost a work. Rebuild.'],
+              commander:['A commander has fallen. The advance continues.','Command is down. It changes nothing.']},
+    strategic:{ready:['The siege weapon is ready.','Heavy ordnance stands prepared.'],
+               launch:['Fire.','Let them see what we spend on them.'],
+               incoming:['Incoming strategic fire. Hold position.','They are firing something large. Endure it.']},
+    outcome:{victory:['The field is ours.','Strength was honest today.'],
+             defeat:['We are broken here. Withdraw.','This ground is lost.'],
+             withdraw:['Break off. Do not call it a rout.','Disengage in order.']}
+  },
+  syndicate:{
+    objective:{assigned:['New contract line. Take the marked asset.','Objective priced and posted. Go.'],
+               complete:['Asset acquired. Booked.','Objective closed at profit.'],
+               failed:['Written off. Move to the next line.','We did not collect. Adjust.']},
+    sighting:{first:['Hostile inventory detected.','Contact. Assess value before engaging.'],
+              heavy:['Heavy platform on the field. Expensive to kill.','Armour. Spend carefully.'],
+              air:['Air asset inbound. Deny the sky.','Hostile aircraft. Intercept.']},
+    research:{complete:['Research cleared for deployment.','New systems certified. Depreciating already.'],
+              started:['Development authorised.','Research funded and running.']},
+    casualty:{unit:['Losses recorded.','Attrition. Within projection.'],
+              structure:['Structure written off.','We just lost an asset.'],
+              commander:['Command element lost. Contingency active.','Commander down. Reassigning authority.']},
+    strategic:{ready:['Strategic system online and paid for.','Heavy ordnance available on request.'],
+               launch:['Committing the expensive option.','Firing. Do not be underneath it.'],
+               incoming:['Strategic launch detected. Disperse.','Inbound heavy ordnance. Scatter.']},
+    outcome:{victory:['Contract closed. Settle up.','Field secured, margin intact.'],
+             defeat:['Position is unprofitable. Withdraw.','Cutting losses. Everyone out.'],
+             withdraw:['Disengaging. Preserve the assets.','Break contact and recover what we can.']}
+  },
+  /* Last resort, deliberately faction-neutral and never funny. Reaching this
+     tier means a category or kind exists in code that nobody has written copy
+     for yet; the player still gets a correct, readable line. */
+  default:{
+    objective:{assigned:['New objective assigned.','Objective updated.'],
+               complete:['Objective complete.','Objective secure.'],
+               failed:['Objective failed.','Objective lost.']},
+    sighting:{first:['Enemy contact.','Hostiles sighted.'],
+              heavy:['Heavy enemy unit detected.','Armoured contact.'],
+              air:['Enemy aircraft detected.','Air contact.']},
+    research:{complete:['Research complete.','Technology available.'],
+              started:['Research started.','Development underway.']},
+    casualty:{unit:['Units lost.','Casualties taken.'],
+              structure:['Structure destroyed.','Building lost.'],
+              commander:['Commander down.','Command element lost.']},
+    strategic:{ready:['Strategic weapon ready.','Heavy ordnance charged.'],
+               launch:['Strategic weapon fired.','Ordnance away.'],
+               incoming:['Incoming strategic weapon.','Heavy ordnance inbound.']},
+    outcome:{victory:['Victory.','Theatre secure.'],
+             defeat:['Defeat.','Position lost.'],
+             withdraw:['Withdrawing.','Breaking contact.']}
+  }
+};
+/* Biography lookup by the descriptor's loreKey OR by raw commander id, so a
+   caller holding either can resolve one. Returns null rather than a stub: the
+   caller decides whether an absent biography is worth rendering. */
+function commanderLore(key){
+  if(!key) return null;
+  const k=String(key).replace(/^commander\./,'');
+  return COMMANDER_LORE[k]||null;
+}
+/* THE LINE RESOLVER, and the only supported way to read dialogue copy.
+   Returns an array of variants, never null and never empty. Resolution is pure:
+   same arguments, same array, no clock and no randomness anywhere. */
+function commanderDialogueLines(id,faction,category,kind){
+  const pick=src=>{
+    if(!src) return null;
+    const c=src[category]; if(!c) return null;
+    const v=c[kind]; return (v&&v.length)?v:null;
+  };
+  const L=commanderLore(id);
+  return pick(L&&L.lines)||
+         pick(COMMANDER_DOCTRINE_LINES[faction])||
+         pick(COMMANDER_DOCTRINE_LINES.default)||
+         ['Commander reporting.'];
+}
+/* Every (category, kind) pair the copy tables cover, in a stable order. The
+   probe uses this to prove that the event taxonomy in commander.js and the copy
+   in this file cannot drift apart silently. */
+function commanderDialogueKinds(){
+  const out=[],base=COMMANDER_DOCTRINE_LINES.default;
+  for(const category of Object.keys(base))
+    for(const kind of Object.keys(base[category])) out.push(category+'.'+kind);
+  return out;
+}

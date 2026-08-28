@@ -120,6 +120,22 @@ function fogExploredAt(wx,wy){
 function fogPointVisible(wx,wy){
   return !fogGameplayActive()||(typeof demoMode!=='undefined'&&demoMode)||!!covAt(wx,wy);
 }
+/* Large translucent FX cannot use centre-point visibility alone. A blast whose
+   origin sat on the last visible fog cell painted half of its billboard into
+   unexplored territory, which looked like fog was being drawn underneath the
+   effect. Macro fallbacks use this conservative whole-footprint gate; the
+   volume pass applies the same gate before its depth-aware composite. */
+function fogFxFootprintVisible(wx,wy,r){
+  if(!fogGameplayActive()||(typeof demoMode!=='undefined'&&demoMode)) return true;
+  if(!covAt(wx,wy)) return false;
+  r=Math.max(0,Number(r)||0)*0.62;
+  if(r<4) return true;
+  for(let k=0;k<8;k++){
+    const a=k*Math.PI*.25;
+    if(!covAt(wx+Math.cos(a)*r,wy+Math.sin(a)*r)) return false;
+  }
+  return true;
+}
 function fogEntityVisible(team,wx,wy){
   return team===0||fogPointVisible(wx,wy);
 }
@@ -645,12 +661,12 @@ function cycleSelectedModes(){
   updateSelInfo();
 }
 function hudPlayerPop(){
-  /* Player-slot wallet. Theatre size adds slots (2/3/4); each is still 1000.
-     Large's 4000 is the theatre total, not this chip. */
+  /* One faction-wide wallet. Allied commander seats contribute to this same
+     count and never multiply the 500-body admission cap. */
   if(typeof populationLedgerPlayer==='function') return populationLedgerPlayer();
-  const cap=typeof populationCapForCommander==='function'?populationCapForCommander(-1)
-    :(typeof FACTION_POP_CAP==='number'?FACTION_POP_CAP:1000);
-  const used=typeof populationUsedForCommander==='function'?populationUsedForCommander(-1)
+  const cap=typeof populationCapFor==='function'?populationCapFor(0)
+    :(typeof FACTION_POP_CAP==='number'?FACTION_POP_CAP:500);
+  const used=typeof populationUsedFor==='function'?populationUsedFor(0)
     :(teamCount[0]|0);
   return {used, cap};
 }
@@ -663,6 +679,13 @@ function hudTxt(el,t){ if(el&&el._mfT!==t){ el._mfT=t; el.textContent=t; } }
 function hudCol(el,c){ if(el&&el._mfC!==c){ el._mfC=c; el.style.color=c; } }
 function hudDisp(el,d){ if(el&&el.style.display!==d) el.style.display=d; }
 function updateHUD(fps){
+  /* The commander rail runs on EVERY frame, ahead of the 1-in-10 gate below.
+     Its state machine is measured in tenths of a second and its idle path is a
+     couple of comparisons; running it at 6Hz made the entry and exit visibly
+     step. Placement solving inside it is separately throttled to twice a
+     second, so this does not add a layout read per frame. */
+  if(typeof cmdrTxTick==='function') cmdrTxTick();
+  mfEnsureEconomyInspectors();
   if((hudFrame++)%10){ if(typeof showHazChip==='function') showHazChip(); return; }
   updateWaveWarning();
   const massV=$('massV'), enV=$('enV'), massR=$('massR'), enR=$('enR');
@@ -679,17 +702,19 @@ function updateHUD(fps){
   }
   hudTxt(enR,(eNet>=0?'+':'')+eNet.toFixed(0));
   hudCol(enR,eNet<0?'#ff8d7a':'');
+  const massBox=massV&&massV.closest('.res'),energyBox=enV&&enV.closest('.res');
+  if(massBox)massBox.title='Mass: '+Math.floor(resM[0])+' / '+Math.floor(RES_MCAP[0])+' · gross '+mRate.toFixed(1)+'/s · spend '+mSpend.toFixed(1)+'/s · tap for forecast';
+  if(energyBox)energyBox.title='Energy: '+Math.floor(resE[0])+' / '+Math.floor(RES_ECAP[0])+' · gross '+eRate.toFixed(1)+'/s · spend '+eSpend.toFixed(1)+'/s · tap for forecast';
   coachTick();
   if(typeof updateSelInfo==='function') updateSelInfo();
   const popL=hudPlayerPop(),popEl=$('unitV'),popBox=$('unitRes');
-  /* Chip is this commander's 1000. 1000 → 1K on the cap side always — never
-     print 4K here. Theatre total on Large is 4×1000; the player wallet is 1K. */
+  /* Chip is the whole player faction's 500, including allied commanders. */
   const popNowTxt=hudPopK(popL.used);
   const popCapTxt=popL.cap===1000?'1K':hudPopK(popL.cap);
   hudTxt(popEl, popNowTxt+' / '+popCapTxt);
   popBox.classList.toggle('popWarn',popL.used>=popL.cap*.9);
   popBox.classList.toggle('popFull',popL.used>=popL.cap);
-  const popTitle='Your population: '+popL.used+' of '+popL.cap+' — theatre size adds slots, not cap';
+  const popTitle='Faction population: '+popL.used+' of '+popL.cap+' — allied commanders share this cap';
   if(popBox.title!==popTitle) popBox.title=popTitle;
   hudTxt($('fps'), fps+' fps');
   if(heroIdx>=0){
@@ -816,12 +841,77 @@ function updateHUD(fps){
   showConsHud();
 }
 
+/* UI_CONTROL_SAFETY_HELPERS_BEGIN
+   Custom role=button widgets are not native <button>s: Tab needs tabindex,
+   and Enter/Space does not synthesize click. Route keys through one fn so a
+   pointer path cannot double-fire. */
+function mfHudEnterSpace(el,fn){
+  el.addEventListener('keydown',ev=>{
+    /* Interactive descendants (for example the About button inside a build
+       card) own their own keyboard action. Letting their keydown bubble into
+       the card used to queue the unit / start placement instead of opening
+       help. Only the element that received this binding may commit it. */
+    if(ev.target!==el||ev.repeat||(ev.key!=='Enter'&&ev.key!==' '))return;
+    ev.preventDefault();ev.stopPropagation();
+    fn(ev);
+  });
+}
+/* A queue plate is replaced synchronously after its second confirmed release.
+   The browser's synthetic click can then retarget the new plate, so a guard
+   stored on the old node cannot stop a second cancellation. Keep the release
+   guard at document scope; any fresh pointerdown clears it, preserving rapid
+   deliberate input while suppressing only the click generated by that release. */
+let mfHudQueueClickGuard=null,mfHudQueueClickGuardReady=false;
+function mfHudEnsureQueueClickGuard(){
+  if(mfHudQueueClickGuardReady)return;
+  mfHudQueueClickGuardReady=true;
+  document.addEventListener('pointerdown',()=>{mfHudQueueClickGuard=null;},true);
+  document.addEventListener('click',ev=>{
+    const g=mfHudQueueClickGuard,now=Date.now();
+    if(!g||now>g.until||ev.detail===0)return;
+    const q=ev.target&&ev.target.closest?ev.target.closest('.qPlate'):null;
+    const samePointer=Number.isFinite(ev.pointerId)&&ev.pointerId===g.pointerId;
+    const sameSpot=Math.hypot((ev.clientX||0)-g.x,(ev.clientY||0)-g.y)<=28;
+    if(!q&&!samePointer&&!sameSpot)return;
+    mfHudQueueClickGuard=null;
+    ev.preventDefault();ev.stopImmediatePropagation();
+  },true);
+}
+function mfHudBindQueueCancel(plate,requestCancel){
+  mfHudEnsureQueueClickGuard();
+  let press=null;
+  plate.addEventListener('pointerdown',ev=>{
+    ev.stopPropagation();
+    press={id:ev.pointerId,x:ev.clientX,y:ev.clientY,moved:false};
+  });
+  plate.addEventListener('pointermove',ev=>{
+    if(!press||press.id!==ev.pointerId)return;
+    if(Math.hypot(ev.clientX-press.x,ev.clientY-press.y)>10)press.moved=true;
+  });
+  const finish=ev=>{
+    if(!press||press.id!==ev.pointerId)return;
+    const p=press;press=null;
+    if(ev.type!=='pointerup')return;
+    mfHudQueueClickGuard={pointerId:ev.pointerId,x:ev.clientX,y:ev.clientY,until:Date.now()+650};
+    if(!p.moved)requestCancel(ev);
+  };
+  plate.addEventListener('pointerup',finish);
+  plate.addEventListener('pointercancel',finish);
+  /* detail===0 is keyboard/assistive activation. Physical clicks are consumed
+     by the document guard before this handler, including after DOM replacement. */
+  plate.addEventListener('click',requestCancel);
+}
+/* UI_CONTROL_SAFETY_HELPERS_END */
 /* ---------- WILDCARD ACTIVE BANNER (top bar during match) ---------- */
 let _mfWcBannerEl=null;
 function showWcBanner(){
   if(!_mfWcBannerEl){
     _mfWcBannerEl=document.createElement('div');
     _mfWcBannerEl.id='wcBanner';
+    _mfWcBannerEl.setAttribute('role','button');
+    _mfWcBannerEl.setAttribute('tabindex','0');
+    _mfWcBannerEl.setAttribute('aria-label','Active modifiers');
+    mfHudEnterSpace(_mfWcBannerEl,()=>_mfWcBannerEl.click());
     document.body.appendChild(_mfWcBannerEl);
   }
   if(!wcActive||!wcActive.length||!matchLive){ _mfWcBannerEl.style.display='none'; return; }
@@ -843,7 +933,9 @@ function showHazChip(){
     _mfHazChipEl=document.createElement('div');
     _mfHazChipEl.id='hazChip';
     _mfHazChipEl.setAttribute('role','button');
+    _mfHazChipEl.setAttribute('tabindex','0');
     _mfHazChipEl.setAttribute('aria-label','Map weather');
+    mfHudEnterSpace(_mfHazChipEl,()=>_mfHazChipEl.click());
     document.body.appendChild(_mfHazChipEl);
     if(!_mfHazChipWatch&&typeof mfFlowWatch!=='undefined'&&mfFlowWatch){
       mfFlowWatch.observe(_mfHazChipEl,{attributes:true,attributeFilter:['style','class']});
@@ -878,8 +970,8 @@ function showConsHud(){
   let h='';
   for(const c of _mfMatchCons){
     const stock=b.consumables[c.id]||0;
-    h+='<div class="conHudSlot" title="'+c.nm+': '+c.ds+'"><span class="conHudEm">'+c.em+'</span>'
-      +'<span class="conHudNm">'+c.nm+'</span><span class="conHudCt">'+stock+'</span></div>';
+    h+='<div class="conHudSlot" title="ONE MATCH · '+c.nm+': '+c.ds+'"><span class="conHudEm">'+c.em+'</span>'
+      +'<span class="conHudNm">'+c.nm+'</span><span class="conHudScope">ONE MATCH</span><span class="conHudCt">'+stock+'</span></div>';
   }
   if(_mfConsHudEl._h!==h){ _mfConsHudEl._h=h; _mfConsHudEl.innerHTML=h; }
   _mfConsHudEl.style.display='flex';
@@ -899,11 +991,11 @@ function showModSplash(){
     h+='<div class="msRow"><span class="msEm">'+w.em+'</span><span class="msNm">'+w.nm+'</span><span class="msTag">WILDCARD</span></div>';
   if(hasGear) for(const g of _mfMatchGear){
     const r=invRarity(g.rarity);
-    h+='<div class="msRow"><span class="msEm">'+g.em+'</span><span class="msNm">'+g.nm+'</span><span class="msTag" style="color:'+r.col+'">'+r.nm+'</span></div>';
+    h+='<div class="msRow"><span class="msEm">'+g.em+'</span><span class="msNm">'+g.nm+'</span><span class="msTag" style="color:'+r.col+'">EQUIPPED · '+r.nm+'</span></div>';
   }
   if(hasCons) for(const c of _mfMatchCons){
     const r=invRarity(c.rarity);
-    h+='<div class="msRow"><span class="msEm">'+c.em+'</span><span class="msNm">'+c.nm+'</span><span class="msTag" style="color:'+r.col+'">'+r.nm+'</span></div>';
+    h+='<div class="msRow"><span class="msEm">'+c.em+'</span><span class="msNm">'+c.nm+'</span><span class="msTag" style="color:'+r.col+'">ONE MATCH · '+r.nm+'</span></div>';
   }
   inner.innerHTML=h;
   el.appendChild(inner);
@@ -924,7 +1016,7 @@ function showModTooltip(it,kind,x,y){
   }
   const r=invRarity(it.rarity);
   const fx=typeof armInvEffect==='function'?armInvEffect(it.id):{value:'',stat:''};
-  const slot=kind==='wildcard'?'WILDCARD':kind==='gear'?it.slot.toUpperCase():'CONSUMABLE';
+  const slot=kind==='wildcard'?'WILDCARD':kind==='gear'?it.slot.toUpperCase()+' · EQUIPPED':'CONSUMABLE · ONE MATCH';
   let h='<div class="mtName" style="color:'+r.col+'">'+it.em+' '+it.nm+'</div>'
     +'<div class="mtRarity" style="color:'+r.col+'">'+r.nm+' · '+slot+'</div>'
     +'<div class="mtDesc">'+it.ds+'</div>';
@@ -1020,7 +1112,7 @@ const INTEL_BUILD_GUIDE={
   nav :{tag:'SEA CONTROL',use:'Launch fleets and coastal fire support from connected navigable water.',chain:'COAST → HARBOR → FLEET'},
   def :{tag:'DEFENCE LAYER',use:'Overlap ranges so one tower covers another tower’s weakness.',chain:'SCOUT → SCREEN → KILL ZONE'},
   wall:{tag:'PATH CONTROL',use:'Shape enemy movement without trapping your own reinforcements.',chain:'WALL → GATE → CROSS-FIRE'},
-  tech:{tag:'ACCOUNT RESEARCH',use:'Protect the lab network; completed studies persist beyond the match.',chain:'LAB → STUDY → ACCOUNT DATA'},
+  tech:{tag:'FIELD STUDIES',use:'Run match-only upgrades here; each completed study banks +3 ◆ Data for persistent Development at debrief.',chain:'LAB → FIELD STUDY → DEVELOPMENT DATA'},
   sup :{tag:'BATTLE NETWORK',use:'Extend territory, shielding, repairs, and targeting coverage.',chain:'UPLINK → COVERAGE → ADVANCE'},
   sup2:{tag:'STRATEGIC STRIKE',use:'Scout the target and force movement before committing the long cooldown.',chain:'VISION → LOCK → LAUNCH'}
 };
@@ -1089,6 +1181,142 @@ function intelBldPurpose(key){
 function intelBldMini(key){
   const T=BT[key], C=BCAT[T.bcat]||BCAT.sup, P=INTEL_BLD_WEAPONS[key];
   return C.em+' '+C.nm+(P?' · '+intelTarget(P)[0]+' '+intelTarget(P)[1]:'');
+}
+/* ---------- authoritative production / economy previews -----------------
+   These presenters deliberately read the same live values used by sim.js and
+   economy.js. They do not reserve resources or mutate queues; they explain the
+   consequence of the next tap before the player commits it. */
+const MF_PRODUCTION_QUEUE_CAP=30;
+function mfFmtSeconds(v){
+  v=Math.max(0,Number(v)||0);
+  if(v>=60) return Math.floor(v/60)+'m '+Math.ceil(v%60)+'s';
+  return (v>=10?Math.round(v):Math.round(v*10)/10)+'s';
+}
+function mfUnitSizeBand(T){
+  const d=Math.max(1,Math.round((T&&T.r||3)*2));
+  return {diameter:d,label:d>=28?'SUPERHEAVY':d>=18?'HEAVY':d>=11?'MEDIUM':'LIGHT'};
+}
+function mfFactorySpeed(B){
+  if(!B) return 1;
+  const team=B.team==null?0:B.team;
+  const tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1;
+  const doctrine=(typeof factionDoctrineBuildSpeedMul==='function')?factionDoctrineBuildSpeedMul(team):1;
+  const base=team===1?(typeof aiBuildMult==='number'?aiBuildMult:1)
+    :(typeof playerBuildMult==='number'?playerBuildMult:1);
+  const fort=(typeof fortOf==='function'&&fortOf(team))?fortOf(team).prod:1;
+  return Math.max(.01,base*doctrine*(1+.12*Math.min(2,B.adj||0))*fort*tractor);
+}
+function mfUnitProductionQuote(tIdx,B){
+  const T=TYPES[tIdx],team=B&&B.team!=null?B.team:0;
+  if(!T) return null;
+  const cost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,team):{m:T.cm,e:T.ce};
+  const size=mfUnitSizeBand(T),pop=hudPlayerPop(),q=B&&Array.isArray(B.queue)?B.queue.length:0;
+  const queueFull=q>=MF_PRODUCTION_QUEUE_CAP;
+  const facility=B&&BT[B.type]?BT[B.type].name:'compatible production facility';
+  const tier=B&&B.type==='fac'?' · TECH '+(B.tier||1):'';
+  return {
+    cost,baseSeconds:T.bt||0,effectiveSeconds:(T.bt||0)/mfFactorySpeed(B),size,
+    population:1,popUsed:pop.used,popCap:pop.cap,
+    queueUsed:q,queueCap:MF_PRODUCTION_QUEUE_CAP,queueFull,
+    queuePosition:queueFull?MF_PRODUCTION_QUEUE_CAP:q+1,
+    dependency:facility+tier
+  };
+}
+function mfStructureBuildSpeed(key){
+  const doctrine=(typeof defenseFocus!=='undefined'&&defenseFocus&&typeof DEFT!=='undefined'&&DEFT[key])?1.333:1;
+  const boost=typeof boostMul==='function'?boostMul('build'):1;
+  const research=typeof bldSpeedMult==='number'?bldSpeedMult:1;
+  return Math.max(.01,boost*research*doctrine);
+}
+function mfStructureEffect(key,T){
+  const effect={
+    mex:'+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield',
+    pgen:'+14 energy/s at Mk1',geo:'+30 energy/s from an active geothermal vent',
+    silo:'+600 mass and +2,000 energy storage',fab:'Converts up to 58 energy/s into 3.6 mass/s',
+    fac:'Adds a ground-unit production queue',airfield:'Adds an aircraft production queue',
+    harbor:'Adds a naval production queue on connected water',techlab:'Unlocks field studies and banks Development data',
+    uplink:'Extends HQ construction range and targeting coverage'
+  };
+  return effect[key]||T.desc||'Battlefield structure';
+}
+function mfStructureLockReasons(key){
+  const T=BT[key],out=[];if(!T)return out;
+  if(T.clvl&&typeof heroLvl==='number'&&heroLvl<T.clvl)out.push('Commander level '+T.clvl);
+  if(T.req&&typeof hasBld==='function'&&!hasBld(0,T.req))out.push(BT[T.req].name);
+  if(T.placement==='water'&&typeof battlefieldNavalEnabled==='function'&&!battlefieldNavalEnabled())out.push('Connected naval domain');
+  return out;
+}
+function mfStructureDependencies(key){
+  const T=BT[key],out=[];if(!T)return out;
+  if(T.clvl)out.push('Commander level '+T.clvl);
+  if(T.req)out.push(BT[T.req].name);
+  if(T.placement==='water')out.push('Connected naval domain');
+  if(key==='mex')out.push('Phase deposit at placement');
+  if(key==='geo')out.push('Geothermal vent at placement');
+  return out.length?out:['None'];
+}
+function mfStructureBuildQuote(key){
+  const T=BT[key];if(!T)return null;
+  const kit=typeof playerKitKey==='function'?playerKitKey():'nova';
+  /* bldFoot(type, faction) with no tier returns the largest authored family
+     footprint. New sites reserve that complete envelope through footTier, so
+     this is the space placement and later upgrades actually own. */
+  const foot=typeof bldFoot==='function'?bldFoot(key,kit):[T.size,T.size];
+  const escrow=typeof MF_BUILD_ESCROW_FRAC==='number'?MF_BUILD_ESCROW_FRAC:.02;
+  return {cost:{m:T.cm,e:T.ce},effectiveSeconds:T.bt/mfStructureBuildSpeed(key),footprint:foot,
+    placement:T.placement==='water'?'NAVAL':'LAND',effect:mfStructureEffect(key,T),dependencies:mfStructureDependencies(key),locks:mfStructureLockReasons(key),
+    escrow:{m:T.cm*escrow,e:T.ce*escrow},streamPercent:Math.round((1-escrow)*100)};
+}
+function mfEconomySnapshot(){
+  const m={stored:Math.floor(resM[0]),cap:Math.floor(RES_MCAP[0]),gross:+mRate||0,spend:+mSpend||0};
+  const e={stored:Math.floor(resE[0]),cap:Math.floor(RES_ECAP[0]),gross:+eRate||0,spend:+eSpend||0};
+  for(const x of [m,e]){
+    x.net=x.gross-x.spend;
+    x.forecast=x.stored>=x.cap-1&&x.net>.001?'FULL · INCOME WASTED'
+      :x.net<-.001?'EMPTY IN '+mfFmtSeconds(x.stored/-x.net)
+      :x.net>.001?'CAP IN '+mfFmtSeconds(Math.max(0,x.cap-x.stored)/x.net):'STEADY';
+  }
+  let bottleneck='NONE — both resource flows are stable';
+  if(stallM>0)bottleneck='MASS — active work is stalled';
+  else if(stallE>0)bottleneck='ENERGY — active work is stalled';
+  else if(m.net<0||e.net<0){
+    const mr=m.net<0?m.stored/-m.net:Infinity,er=e.net<0?e.stored/-e.net:Infinity;
+    bottleneck=mr<=er?'MASS — shortest projected runway':'ENERGY — shortest projected runway';
+  }else{
+    const massFull=m.stored>=m.cap-1,energyFull=e.stored>=e.cap-1;
+    if(massFull&&energyFull)bottleneck='MASS + ENERGY STORAGE FULL — income is being wasted';
+    else if(massFull)bottleneck='MASS STORAGE FULL — income is being wasted';
+    else if(energyFull)bottleneck='ENERGY STORAGE FULL — income is being wasted';
+  }
+  return {mass:m,energy:e,bottleneck};
+}
+function mfEconomyRow(label,x){
+  const sign=n=>(n>=0?'+':'')+n.toFixed(1);
+  return '<div class="econResource"><b>'+label+'</b><span>STORED <strong>'+x.stored+' / '+x.cap+'</strong></span>'
+    +'<span>GROSS <strong>'+sign(x.gross)+'/s</strong></span><span>SPEND <strong>-'+x.spend.toFixed(1)+'/s</strong></span>'
+    +'<span>NET <strong class="'+(x.net<0?'bad':'good')+'">'+sign(x.net)+'/s</strong></span>'
+    +'<span class="econForecast">FORECAST <strong>'+x.forecast+'</strong></span></div>';
+}
+function showEconomyIntel(){
+  const E=mfEconomySnapshot();
+  const h='<section id="economyIntel"><div class="ucHead"><span class="ucRoleIcon">⌁</span><div><b>RESOURCE FORECAST</b>'
+    +'<small>Live income, committed spending, storage and projected runway.</small></div><button type="button" class="ucClose" aria-label="Close resource forecast">×</button></div>'
+    +'<div class="econGrid">'+mfEconomyRow('◆ MASS',E.mass)+mfEconomyRow('⚡ ENERGY',E.energy)+'</div>'
+    +'<div class="econBottleneck"><span>BOTTLENECK</span><b>'+E.bottleneck+'</b></div></section>';
+  showIntelMarkup(h,true);
+}
+function mfEnsureEconomyInspectors(){
+  if(mfEnsureEconomyInspectors.ready)return;
+  const mass=$('massV'),energy=$('enV');
+  const nodes=[mass&&mass.closest('.res'),energy&&energy.closest('.res')].filter(Boolean);
+  if(nodes.length!==2)return;
+  mfEnsureEconomyInspectors.ready=true;
+  nodes.forEach((el,i)=>{
+    el.dataset.econ=i?'energy':'mass';el.setAttribute('role','button');el.setAttribute('tabindex','0');
+    el.setAttribute('aria-label',(i?'Energy':'Mass')+' economy details');
+    if(typeof mfBindTap==='function')mfBindTap(el,showEconomyIntel);else el.addEventListener('click',showEconomyIntel);
+    mfHudEnterSpace(el,()=>el.click());
+  });
 }
 function armorThreats(ai2){                        // which weapons punish this armor class
   const s=[];
@@ -1510,6 +1738,8 @@ function intelBldLine(id,kit){
 function showUnitTypeCard(tIdx,pinned,kit){
   const T=TYPES[tIdx]; if(!T) return;
   const C=UCAT[T.cat]||UCAT.veh, tg=intelTarget(T), ai2=ARM[tIdx]||0, ct=intelUnitCounters(T);
+  const factory=openBld>=0&&blds[openBld]&&blds[openBld].alive&&Array.isArray(blds[openBld].queue)?blds[openBld]:null;
+  const Q=mfUnitProductionQuote(tIdx,factory);
   const h='<div class="ucHead"><span class="ucRoleIcon">'+C.em+'</span><div><b>'+intelUnitName(tIdx,kit)+'</b>'
     +'<small>'+intelUnitLine(tIdx,kit)+'</small></div><button type="button" class="ucClose" aria-label="Close unit information">×</button></div>'
     +'<div class="ucChips">'+intelChip(C.em,C.nm)+intelChip(tg[0],tg[1])
@@ -1520,10 +1750,14 @@ function showUnitTypeCard(tIdx,pinned,kit){
     +'</div>'
     +'<div class="ucStats"><span>DMG <b>'+T.dmg+'</b></span><span>RANGE <b>'+T.rng+'</b></span><span>SPEED <b>'+T.spd+'</b></span>'
     +(T.aoe?'<span>SPLASH <b>'+T.aoe+'</b></span>':'')+'</div>'
+    +'<div class="ucStats productionQuote"><span>COST <b>'+Q.cost.m+'m · '+Q.cost.e+'e</b></span>'
+    +'<span>BUILD <b>'+mfFmtSeconds(Q.effectiveSeconds)+'</b></span><span>SIZE <b>'+Q.size.label+' · Ø'+Q.size.diameter+'m</b></span>'
+    +'<span>POPULATION <b>+1 · '+Q.popUsed+'/'+Q.popCap+'</b></span><span>QUEUE <b>'+Q.queuePosition+'/'+Q.queueCap+'</b></span></div>'
     +(T.wk==='n'?'<div class="ucCounter caution">⚠ UNARMED · ESCORT THIS UNIT</div>'
       :'<div class="ucMatchups" aria-label="Live combat matchup multipliers">'
        +intelWeaponMatchups(T.wk)+intelArmorThreatMatchups(ai2)+'</div>')
-    +'<div class="ucAmmo">AMMO · '+ammoName(T)+(T.minRng?' · MIN RANGE '+T.minRng:'')+'</div>';
+    +'<div class="ucAmmo">AMMO · '+ammoName(T)+(T.minRng?' · MIN RANGE '+T.minRng:'')+'</div>'
+    +'<div class="ucDependency">DEPENDENCY · '+Q.dependency+'</div>';
   showIntelMarkup(h,pinned);
   if(T.cat==='art'){
     const card=$('unitCard'),info=document.createElement('div');
@@ -1548,6 +1782,7 @@ function showUnitTypeCard(tIdx,pinned,kit){
 function showBuildingTypeCard(key,bIdx,pinned,kit){
   const T=BT[key]; if(!T) return;
   const B=bIdx>=0?blds[bIdx]:null, C=BCAT[T.bcat]||BCAT.sup, P=INTEL_BLD_WEAPONS[key], tg=P?intelTarget(P):null;
+  const Q=mfStructureBuildQuote(key);
   const W=B&&typeof bldWeaponSnapshot==='function'?bldWeaponSnapshot(B,B.lvl||1):null;
   const shownRange=W?Math.round(W.range):(P?P.rng():0);
   const bkit=B?((typeof factionTextKit==='function')?factionTextKit(B.team):undefined):kit;
@@ -1563,10 +1798,14 @@ function showBuildingTypeCard(key,bIdx,pinned,kit){
       +(W?'<span>DAMAGE <b>'+bldNum(W.damage)+'</b></span><span>RATE <b>'+bldNum(W.rate)+'/s</b></span>':'')
       +'<span>RANGE <b>'+shownRange+'</b></span>'
       +(P.min?'<span>MIN <b>'+P.min()+'</b></span>':'')+'</div>':'')
+    +'<div class="ucStats productionQuote"><span>COST <b>'+Q.cost.m+'m · '+Q.cost.e+'e</b></span>'
+    +'<span>BUILD <b>'+mfFmtSeconds(Q.effectiveSeconds)+'</b></span><span>FOOTPRINT <b>'+Math.round(Q.footprint[0])+'×'+Math.round(Q.footprint[1])+'m</b></span>'
+    +'<span>DOMAIN <b>'+Q.placement+'</b></span><span>PAYMENT <b>2% start · '+Q.streamPercent+'% streamed</b></span></div>'
+    +'<div class="ucDependency">OUTPUT · '+Q.effect+'</div>'
     +'<div class="ucMatchups" aria-label="Live structure matchup multipliers">'
     +(P?intelWeaponMatchups(P.wk):'')+intelStructureThreats()+'</div>'
     +'<div class="ucCounter"><span>✓ PURPOSE: '+(INTEL_BUILD_COPY[T.bcat]||T.desc)+'</span>'
-    +((T.req||T.clvl)?'<span class="caution">⌁ '+(T.req?'NEEDS '+BT[T.req].name.toUpperCase():'CDR LEVEL '+T.clvl)+'</span>':'')+'</div>';
+    +'<span class="caution">⌁ DEPENDENCIES · '+Q.dependencies.join(' · ').toUpperCase()+'</span></div>';
   showIntelMarkup(h,pinned);
   mfIntelAttachPreview('building',key,bkit);
 }
@@ -1576,7 +1815,18 @@ function showIntelMarkup(h,pinned){
   el.style.display='block';
   el.classList.toggle('pinned',!!pinned);
   const close=el.querySelector('.ucClose');
-  if(close) close.addEventListener('pointerdown',ev=>{ ev.stopPropagation(); clearTimeout(el._t); el.style.display='none'; });
+  if(close){
+    const dismiss=ev=>{
+      if(ev)ev.stopPropagation();
+      clearTimeout(el._t);el.style.display='none';
+      if(typeof mfUiQueueSync==='function')mfUiQueueSync();
+    };
+    /* Stop the battlefield press at its source, then commit on a completed tap
+       or native keyboard click. pointerdown-only made the visible 44px close
+       button impossible to operate with Enter/Space. */
+    close.addEventListener('pointerdown',ev=>ev.stopPropagation(),{passive:true});
+    if(typeof mfBindTap==='function')mfBindTap(close,dismiss);else close.addEventListener('click',dismiss);
+  }
   clearTimeout(el._t);
   if(!pinned) el._t=setTimeout(()=>el.style.display='none',6500);
 }
@@ -1602,16 +1852,24 @@ function addCardIntelButton(card,kind,id){
   const b=document.createElement('button');
   b.type='button'; b.className='cardIntel'; b.textContent='ⓘ';
   b.setAttribute('aria-label','About '+(kind==='unit'?TYPES[id].name:BT[id].name));
-  b.addEventListener('pointerdown',ev=>{
-    ev.preventDefault(); ev.stopPropagation();
+  const inspect=ev=>{
+    if(ev){ev.preventDefault();ev.stopPropagation();}
     if(kind==='unit') showUnitTypeCard(id,true); else showBuildingTypeCard(id,-1,true);
     sfx('ui');
-  });
+  };
+  /* Keep the parent card from arming on a press that began on About. The
+     shared tap contract supplies release/cancel safety and a real click path
+     for keyboard and assistive activation. */
+  b.addEventListener('pointerdown',ev=>ev.stopPropagation(),{passive:true});
+  if(typeof mfBindTap==='function')mfBindTap(b,inspect);else b.addEventListener('click',inspect);
   card.appendChild(b);
 }
 
 // ---------- menus ----------
 function closeMenus(){
+  const menuVisible=id=>{const el=$(id);return !!(el&&getComputedStyle(el).display!=='none');};
+  const hadOpen=menuVisible('buildMenu')||menuVisible('prodMenu')||menuVisible('bldMenu2');
+  if(hadOpen&&typeof mfUiMarkPanelDismiss==='function')mfUiMarkPanelDismiss();
   $('buildMenu').style.display='none';
   $('prodMenu').style.display='none';
   $('bldMenu2').style.display='none';
@@ -1759,14 +2017,16 @@ function renderResearchMenu(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld];
   renderProdNav(B);
+  $('prodNavName').textContent='FIELD STUDIES';
   const status=document.createElement('div');
   status.className='researchStatus';
   const carryN=Object.keys(researchCarry).filter(id=>!researched[id]&&researchCarry[id]>.5).length;
   const guard=B.guardT>0?('CONTAINMENT '+Math.ceil(B.guardT)+'s')
     :B.guardReady?'CONTAINMENT READY'
     :('REARM '+Math.min(99,Math.floor((B.guardCharge||0)/TECH_GUARD.rearm*100))+'%');
-  status.innerHTML='<b>FIELD NETWORK</b><span>'+Math.ceil(B.shield)+' / '+Math.ceil(B.shieldMax)+' SHIELD · '
-    +guard+' · '+resDone+' STUDIES'+(carryN?' · '+carryN+' RECOVERABLE':'')+'</span>';
+  status.innerHTML='<b>FIELD STUDIES · MATCH ONLY</b><span>'+Math.ceil(B.shield)+' / '+Math.ceil(B.shieldMax)+' SHIELD · '
+    +guard+' · '+resDone+' STUDIES'+(carryN?' · '+carryN+' RECOVERABLE':'')+'</span>'
+    +'<small>Effects end with this battle. Each completion banks +3 ◆ Data for persistent Development at debrief.</small>';
   g.appendChild(status);
   let shown=0;
   RESEARCH.forEach((R,idx)=>{
@@ -1783,14 +2043,14 @@ function renderResearchMenu(){ if(openBldGone()) return;
       +(recover?'<div class="researchRecover">◆ RECOVER '+recover+'%</div>':'');
     d.addEventListener('pointerdown',ev=>{
       ev.stopPropagation();
-      if(lockLvl){ toast('🔒 '+R.nm+' unlocks at Commander level '+R.clvl); return; }
+      if(lockLvl){ toast('🔒 Field Study '+R.nm+' unlocks at Commander level '+R.clvl); return; }
       /* Same corpse hazard as the production sheet, plus a hard throw: a lab
          destroyed while its card list was on screen left openBld pointing at a
          dead slot, and `Bb.res` on a cleared openBld (-1) is a TypeError that
          kills the whole pointerdown handler chain. */
       if(openBldGone()) return;
       const Bb=blds[openBld];
-      if(Bb.res>=0){ toast('Already researching '+RESEARCH[Bb.res].nm); return; }
+      if(Bb.res>=0){ toast('Already studying '+RESEARCH[Bb.res].nm); return; }
       Bb.res=idx; Bb.resT=Math.min(R.t-.01,researchResumeTime(R.id)); sfx('ui'); renderQueue();
       if(Bb.resT>0) toast('◆ '+R.nm+' recovered at '+Math.floor(Bb.resT/R.t*100)+'%');
     });
@@ -1922,6 +2182,19 @@ function bldIconEl(key,size,kit){
    building anti-air should not be dropped back on infantry every time they
    reopen the panel. */
 let prodTab='inf', bldTab='eco';
+function mfSyncProductionQueueCards(B){
+  const full=!!(B&&Array.isArray(B.queue)&&B.queue.length>=MF_PRODUCTION_QUEUE_CAP);
+  const cards=document.querySelectorAll('#prodGrid .bcard[data-queue-sensitive="1"]');
+  for(const card of cards){
+    const authored=card.dataset.authoredLock==='1';
+    card.classList.toggle('locked',authored||full);
+    card.classList.toggle('queueFull',full);
+    card.setAttribute('aria-disabled',authored||full?'true':'false');
+    const flag=card.querySelector('.cardQueueLock');if(flag)flag.hidden=!full;
+    const base=card.dataset.baseAria||card.getAttribute('aria-label')||'';
+    card.setAttribute('aria-label',(full?'Queue full. ':'')+base);
+  }
+}
 let baseFinderFilter='all',baseFinderCursor=0;
 function baseFinderGroup(B){
   const c=(BT[B.type]&&BT[B.type].bcat)||'sup';
@@ -2023,62 +2296,88 @@ function renderProdMenu(){ if(openBldGone()) return;
   tabList.forEach(tIdx=>{
     const T=TYPES[tIdx];
     const why=lockWhy[tIdx]||'';
-    const C=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,0):{m:T.cm,e:T.ce};
+    const Q=mfUnitProductionQuote(tIdx,B),C=Q.cost;
     const d=document.createElement('div');
-    d.className='bcard'+(why?' locked':'');
-    /* Build time was never shown anywhere on a unit card — only cost. It is the
-       one number that tells you whether a queue will arrive in time. */
-    const btTag=T.bt?('<span class="qEta"> · '+(T.bt>=10?Math.round(T.bt):(Math.round(T.bt*10)/10))+'s</span>'):'';
+    d.className='bcard'+((why||Q.queueFull)?' locked':'')+(Q.queueFull?' queueFull':'');
+    d.dataset.queueSensitive='1';d.dataset.authoredLock=why?'1':'0';
+    d.dataset.previewKind='unit';d.dataset.previewId=String(tIdx);
     d.innerHTML='<div class="nm">'+intelUnitName(tIdx)+'</div>'
-      +(why?'<div class="cost" style="color:#ffd257">'+why+'</div>'
-           :'<div class="cost">'+C.m+'m <span>'+C.e+'e</span>'+btTag+'</div>')
+      +'<div class="cost">'+C.m+'m <span>'+C.e+'e</span></div>'
+      +'<div class="cardMeta"><span>⏱ '+mfFmtSeconds(Q.effectiveSeconds)+'</span><span>'+Q.size.label+' · Ø'+Q.size.diameter+'m</span></div>'
+      +'<div class="cardMeta"><span>POP +1 · '+Q.popUsed+'/'+Q.popCap+'</span><span>'+(Q.queueFull?'QUEUE FULL':'QUEUE '+Q.queuePosition+'/'+Q.queueCap)+'</span></div>'
+      +'<div class="cardDependency">FACILITY · '+Q.dependency+'</div>'
+      +(why?'<div class="cardLocks">🔒 '+why+'</div>':'')
+      +'<div class="cardLocks cardQueueLock"'+(Q.queueFull?'':' hidden')+'>🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT</div>'
       +'<div class="wkTag">'+ammoName(T)+'</div><div class="cardPurpose">'+intelUnitLine(tIdx)+'</div>'
       +(why?'<span class="lockOv">🔒</span>':'');
     d.setAttribute('role','button');
-    d.setAttribute('aria-label','Build '+intelUnitName(tIdx)+'. '+intelUnitLine(tIdx));
+    d.setAttribute('tabindex','0');
+    d.dataset.baseAria='Build '+intelUnitName(tIdx)+'. Cost '+C.m+' mass and '+C.e+' energy. '+mfFmtSeconds(Q.effectiveSeconds)+'. '+Q.size.label+' size. Population plus one. Queue position '+Q.queuePosition+' of '+Q.queueCap+'. '+(why?'Locked: '+why+'. ':'')+intelUnitLine(tIdx);
+    d.setAttribute('aria-label',(Q.queueFull?'Queue full. ':'')+d.dataset.baseAria);
+    d.setAttribute('aria-disabled',(why||Q.queueFull)?'true':'false');
     const icw=document.createElement('div'); icw.className='icw';
     icw.appendChild(unitIconEl(tIdx,44));
     d.insertBefore(icw,d.firstChild);
-    d.addEventListener('pointerdown',ev=>{
-      ev.stopPropagation();
+    const queueUnit=(batch)=>{
       if(why){
         if(typeof sfx==='function') sfx('deny');
         toast(why==='TECH 2'
           ? '🔒 '+intelUnitName(tIdx)+' needs a TECH 2 factory — upgrade this factory to field it'
           : '🔒 '+intelUnitName(tIdx)+' is not fielded by your faction');
-        return;
+        return false;
       }
       /* The structure can die between opening the sheet and this tap. Without
          this the push lands in a corpse: sfx('ui') fires, the plate paints, and
          the unit is never built. */
-      if(openBldGone()) return;
+      if(openBldGone()) return false;
       const Bb=blds[openBld];
       const popSlot=typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(Bb):-1;
       if(!populationCanSpawn(tIdx,0,popSlot)){
-        /* Each slot is 1000. Theatre size only adds slots — recycle, do not
-           tell the player expanding the theatre would raise this wallet. */
-        const used=typeof populationUsedForCommander==='function'?populationUsedForCommander(popSlot):(teamCount[0]|0);
-        const cap=typeof populationCapForCommander==='function'?populationCapForCommander(popSlot):1000;
-        toast('⚠ UNIT CAP '+used+' / '+cap+' — recycle units to free population');
-        sfx('deny');return;
+        const used=typeof populationUsedFor==='function'?populationUsedFor(0):(teamCount[0]|0);
+        const cap=typeof populationCapFor==='function'?populationCapFor(0):500;
+        toast('⚠ FACTION CAP '+used+' / '+cap+' — recycle units to free population');
+        sfx('deny');return false;
       }
-      if(tIdx===8 && titanCount[0]+Bb.queue.filter(q=>q===8).length>=3){ toast('Max 3 TITANs'); return; }
+      if(tIdx===8 && titanCount[0]+Bb.queue.filter(q=>q===8).length>=3){ toast('Max 3 TITANs'); return false; }
       if((tIdx===UT_ENGINEER||tIdx===UT_MINER)&&supportUnitCount(0,true)>=supportUnitCap(0)){
-        toast('⚙ SUPPORT CAP '+supportUnitCap(0)+' — raise Commander level or operate a Research Lab');return;
+        toast('⚙ SUPPORT CAP '+supportUnitCap(0)+' — raise Commander level or operate a Research Lab');return false;
       }
-      if(Bb.queue.length<30){ Bb.queue.push(tIdx); sfx('ui'); renderQueue(); }
-      if(tIdx!==8){                              // hold to queue a batch of 5
-        const hold=setTimeout(()=>{
-          const B5=blds[openBld];
-          if(B5&&B5.alive&&B5.queue.length<26&&populationCanSpawn(tIdx,0,popSlot)){
-            for(let q=0;q<4;q++) B5.queue.push(tIdx);
-            renderQueue(); toast('▶ ×5 '+T.name+' queued (hold to batch)'); sfx('ui');
-          }
-        },430);
-        const clr=()=>{ clearTimeout(hold); d.removeEventListener('pointerup',clr); d.removeEventListener('pointercancel',clr); d.removeEventListener('pointerleave',clr); };
-        d.addEventListener('pointerup',clr); d.addEventListener('pointercancel',clr); d.addEventListener('pointerleave',clr);
+      const room=MF_PRODUCTION_QUEUE_CAP-Bb.queue.length;
+      if(room<=0){
+        toast('🔒 PRODUCTION QUEUE FULL · CANCEL OR COMPLETE A UNIT');sfx('deny');
+        mfSyncProductionQueueCards(Bb);return false;
       }
+      const n=Math.max(1,Math.min(batch||1,tIdx===8?1:5,room));
+      for(let q=0;q<n;q++)Bb.queue.push(tIdx);
+      if(n){renderQueue();sfx('ui');if(n>1)toast('▶ ×'+n+' '+T.name+' queued (hold to batch)');}
+      return !!n;
+    };
+    /* Commit on release, not pointerdown: scrolling the roster cannot queue a
+       unit. A stationary 430ms hold still queues the authored batch of five. */
+    let prodPress=null;
+    d.addEventListener('pointerdown',ev=>{
+      ev.stopPropagation();
+      prodPress={id:ev.pointerId,x:ev.clientX,y:ev.clientY,moved:false,batch:false,hold:0};
+      if(tIdx!==8)prodPress.hold=setTimeout(()=>{
+        if(prodPress&&!prodPress.moved){prodPress.batch=true;queueUnit(5);}
+      },430);
     });
+    d.addEventListener('pointermove',ev=>{
+      if(!prodPress||prodPress.id!==ev.pointerId)return;
+      if(Math.hypot(ev.clientX-prodPress.x,ev.clientY-prodPress.y)>10){prodPress.moved=true;clearTimeout(prodPress.hold);}
+    });
+    const finishProd=ev=>{
+      if(!prodPress||prodPress.id!==ev.pointerId)return;
+      const p=prodPress;prodPress=null;clearTimeout(p.hold);
+      if(ev.type==='pointerup'&&!p.moved&&!p.batch)queueUnit(1);
+    };
+    d.addEventListener('pointerup',finishProd);
+    d.addEventListener('pointercancel',finishProd);
+    d.addEventListener('pointerleave',ev=>{if(prodPress&&prodPress.id===ev.pointerId&&prodPress.moved)finishProd(ev);});
+    /* Pointer already commits on release. Enter/Space must not also synthesize
+       a click handler — production cards have none — so the key path queues
+       once, matching a completed tap. */
+    mfHudEnterSpace(d,()=>{if(!prodPress)queueUnit(1);});
     addCardIntelButton(d,'unit',tIdx);
     g.appendChild(d);
   });
@@ -2142,12 +2441,13 @@ function renderQueue(){ if(openBldGone()) return;
     el._mfQ='';
     el.classList.add('empty');
     const shield='SHIELD '+Math.ceil(B.shield)+'/'+Math.ceil(B.shieldMax);
-    const pending=resDone*3+' ◆ DATA PENDING';
-    el.textContent=(B.res>=0?('Researching '+RESEARCH[B.res].nm+' — '+Math.ceil(RESEARCH[B.res].t-B.resT)+'s'):'Pick a field study')
+    const pending=resDone*3+' ◆ DATA → DEVELOPMENT AT DEBRIEF';
+    el.textContent=(B.res>=0?('Studying '+RESEARCH[B.res].nm+' — '+Math.ceil(RESEARCH[B.res].t-B.resT)+'s'):'Choose a match-only Field Study')
       +' · '+shield+' · '+pending;
     return;
   }
   const q=B.queue||[];
+  mfSyncProductionQueueCards(B);
   const stacks=queueStacks(q);
   const sig=stacks.map(s=>s.t+':'+s.n+':'+s.i).join(',')+'|'+(B.adj||0);
   if(el._mfQ!==sig){
@@ -2173,12 +2473,25 @@ function renderQueue(){ if(openBldGone()) return;
         ct.textContent='×'+S.n;
         const bar=document.createElement('i'); bar.className='qBar';
         plate.appendChild(ic); plate.appendChild(nm); plate.appendChild(ct); plate.appendChild(bar);
-        plate.addEventListener('pointerdown',ev=>{
+        /* Same two-tap arm as recycle (bp_sell): first completed tap states the
+           cancel, second commits. pointerdown only records the press so a
+           horizontal queue-row pan cannot refund a unit. */
+        const requestCancel=ev=>{
           ev.stopPropagation();
           const Bb=openBld>=0?blds[openBld]:null;
           if(!Bb||!Bb.alive) return;
+          const now=Date.now();
+          if(!(plate._mfQCancelAt>now)){
+            plate._mfQCancelAt=now+3000;
+            plate.setAttribute('aria-label','Tap again to cancel one '+intelUnitName(S.t)+', '+S.n+' queued');
+            if(typeof toast==='function') toast('✕ CANCEL '+intelUnitName(S.t).toUpperCase()+' · TAP AGAIN TO CONFIRM');
+            if(typeof sfx==='function') sfx('ui');
+            return;
+          }
+          plate._mfQCancelAt=0;
           if(cancelQueuedUnit(Bb,S.i)){ if(typeof sfx==='function') sfx('ui'); renderQueue(); }
-        });
+        };
+        mfHudBindQueueCancel(plate,requestCancel);
         row.appendChild(plate);
       });
       el.appendChild(row);
@@ -2241,24 +2554,49 @@ function renderBuildMenu(){
     const lockLvl=T.clvl&&heroLvl<T.clvl;
     const lockReq=T.req&&!hasBld(0,T.req);
     const lockDomain=T.placement==='water'&&typeof battlefieldNavalEnabled==='function'&&!battlefieldNavalEnabled();
+    const Q=mfStructureBuildQuote(key),hardLocks=[];
+    if(lockLvl)hardLocks.push('COMMANDER LEVEL '+T.clvl);
+    if(lockReq)hardLocks.push('NEEDS '+BT[T.req].name.toUpperCase());
+    if(lockDomain)hardLocks.push('CONNECTED NAVAL DOMAIN');
     d.className='bcard'+((lockLvl||lockReq||lockDomain)?' locked':'');
+    d.dataset.previewKind='building';d.dataset.previewId=key;
+    d.dataset.footprint=Math.round(Q.footprint[0])+'x'+Math.round(Q.footprint[1]);
+    d.dataset.footprintPolicy='reserved-max-tier';
     d.innerHTML='<div class="nm">'+intelBldName(key)+'</div>'
-      +(lockLvl?'<div class="cost" style="color:#ffd257">CDR LV '+T.clvl+'</div>'
-        :lockReq?'<div class="cost" style="color:#ffd257">Needs '+BT[T.req].name+'</div>'
-        :'<div class="cost">'+T.cm+'m <span>'+T.ce+'e</span></div>')
+      +'<div class="cost">'+T.cm+'m <span>'+T.ce+'e</span></div>'
+      +'<div class="cardMeta"><span>⏱ '+mfFmtSeconds(Q.effectiveSeconds)+'</span><span>FOOT '+Math.round(Q.footprint[0])+'×'+Math.round(Q.footprint[1])+'m</span></div>'
+      +'<div class="cardMeta"><span>'+Q.placement+'</span><span>2% START · '+Q.streamPercent+'% STREAM</span></div>'
+      +'<div class="cardDependency">PREREQ · '+Q.dependencies.join(' · ')+'</div>'
+      +'<div class="cardEffect">'+Q.effect+'</div>'
+      +(hardLocks.length?'<div class="cardLocks">🔒 '+hardLocks.join(' · ')+'</div>':'')
       +'<div class="cardPurpose">'+intelBldMini(key)+'</div><div class="cardDesc">'+T.desc+'</div>'
       +((lockLvl||lockReq)?'<span class="lockOv">🔒</span>':lockDomain?'<span class="lockOv navalX">✕</span>':'');
     d.setAttribute('role','button');
-    d.setAttribute('aria-label','Build '+intelBldName(key)+'. '+intelBldLine(key));
+    d.setAttribute('tabindex','0');
+    d.setAttribute('aria-disabled',(lockLvl||lockReq||lockDomain)?'true':'false');
+    d.setAttribute('aria-label','Build '+intelBldName(key)+'. Cost '+T.cm+' mass and '+T.ce+' energy. '+mfFmtSeconds(Q.effectiveSeconds)+'. Footprint '+Math.round(Q.footprint[0])+' by '+Math.round(Q.footprint[1])+' meters. '+(hardLocks.length?'Locked: '+hardLocks.join(', ')+'. ':'')+Q.effect);
     const icw=document.createElement('div'); icw.className='icw';
     icw.appendChild(bldIconEl(key,46));
     d.insertBefore(icw,d.firstChild);
-    d.addEventListener('pointerdown',ev=>{
+    const chooseStructure=ev=>{
       ev.stopPropagation();
       if(T.clvl&&heroLvl<T.clvl){ toast('🔒 '+T.name+' unlocks at Commander level '+T.clvl); return; }
       if(T.req&&!hasBld(0,T.req)){ toast('🔒 Requires a '+BT[T.req].name); return; }
       if(lockDomain){ toast('✕ NAVAL UNAVAILABLE — this battlefield has no connected ocean or river domain'); sfx('reject'); return; }
       startPlacing(key); sfx('ui');
+    };
+    /* A build card lives inside a scrollable phone sheet. Committing on
+       pointerdown made an attempt to scroll into an immediate placement action,
+       which reads as an unrelated notification/ghost instead of a deliberate
+       choice. Use the shared tap contract when it is available; it commits only
+       a completed tap and keeps keyboard activation intact. */
+    if(typeof mfBindTap==='function') mfBindTap(d,chooseStructure);
+    else d.addEventListener('pointerdown',chooseStructure);
+    /* mfBindTap already owns click (keyboard + assistive tap). Enter/Space on a
+       div does not fire click, so synthesize one click — not a second choose. */
+    mfHudEnterSpace(d,ev=>{
+      if(typeof mfBindTap==='function') d.click();
+      else chooseStructure(ev);
     });
     addCardIntelButton(d,'building',key);
     g.appendChild(d);
@@ -2664,3 +3002,417 @@ function mscheduleStep(s,t0){
   }catch(e){}
 }
 
+
+/* ============================================================================
+   COMMANDER TRANSMISSION RAIL
+   ----------------------------------------------------------------------------
+   Presentation only. src/game/commander.js owns which cue happens, in what
+   order, and how often; src/story.js owns what it says; src/audio.js owns
+   whether it is spoken. This block owns one question: where the words go on
+   the screen without covering anything the player needs.
+
+   IT DOES NOT RE-IMPLEMENT ANY OF THAT. There is no local dedupe, no local
+   priority, no local queue and no replay buffer here — those all exist
+   upstream, and a second copy would drift. The rail is instead the PACING
+   CONSUMER: it calls commanderDialogueDrain() only while it is idle, so a cue
+   is pulled at the exact moment there is somewhere to put it, and anything that
+   goes stale while the rail is busy is dropped upstream by the rules that
+   already govern it. One cue on screen at a time, by construction.
+
+   ONE NODE, FOR THE WHOLE MATCH. #cmdrTx and its five children are authored in
+   index.html and reused; nothing here creates, clones or appends an element, so
+   a long match cannot grow the DOM by a single node.
+
+   PLACEMENT IS SOLVED, NOT AUTHORED. See cmdrTxSolve(). The short version: the
+   bottom cluster and the notice rail land in materially different places on a
+   412x915 phone, a 915x412 landscape phone, an 800x1280 tablet and a 1440x900
+   desktop, and no single authored anchor clears all four. The rail measures the
+   surfaces it must not cover and picks the first candidate box that intersects
+   none of them.
+
+   NOTHING HERE IS INTERACTIVE. No listener, no tabindex, no focus() call, and
+   pointer-events:none in CSS. The rail cannot take a tap, cannot be tabbed to,
+   and cannot swallow a gesture meant for the battlefield or the command dock.
+   ============================================================================ */
+/* Entry and exit are short enough to read as a cut rather than an animation;
+   the hold is what the player actually experiences. Reduced motion drops the
+   transition in CSS and leaves these timings alone, so the line is on screen
+   for the same duration either way. */
+const CMDRTX_ENTER_MS=170, CMDRTX_EXIT_MS=230;
+/* Reading time, not a fixed dwell: a three-word acknowledgement and a full
+   sentence should not sit on screen for the same length of time. Floor keeps a
+   short line from flashing; ceiling keeps a long one from outstaying an event
+   the player has already moved past. */
+const CMDRTX_HOLD_MIN=2600, CMDRTX_HOLD_MAX=6500, CMDRTX_HOLD_BASE=900, CMDRTX_HOLD_PER_CHAR=46;
+/* Re-solve cadence while a cue is on screen. The protected surfaces move during
+   a cue — a selection card opens, a wave banner drops in — and re-solving costs
+   one layout read of about a dozen rects. Twice a second is invisible to the
+   player and cheap next to the frame it rides on. */
+const CMDRTX_SOLVE_MS=500;
+const CMDRTX_PAD=8;
+/* Everything the rail must not cover, by id. Boxes are taken as RESERVED, not
+   as currently-painted: #toast sits at opacity 0 between notices but must keep
+   its lane, or the first warning of the match lands underneath a commander
+   line. Only display:none takes an element out of the set. */
+const CMDRTX_PROTECT=['topbar','heroBar','goalBar','toast','coach','unitCard','minimapWrap',
+  'selInfo','cmdbar','atkAlert','waveAlert','infMeter','wcRow','buildMenu','prodMenu','bldMenu2',
+  'placeUI','mfChips','mfLaneMore','wcBanner','consHud','hazChip','keelWrap','godBadge'];
+/* The bottom control cluster. Candidate A stacks above whichever of these is
+   highest, which is what keeps the rail off the minimap and the command dock
+   without hard-coding either one's size. */
+const CMDRTX_BOTTOM=['cmdbar','minimapWrap','selInfo','placeUI'];
+/* The top stack. Candidate C sits under whichever of these reaches lowest. */
+const CMDRTX_TOP=['topbar','goalBar','wcRow','infMeter','heroBar','godBadge','hazChip'];
+/* Narrower than this and the rail is a column of two-word lines. A candidate
+   that cannot reach this width in the gap it was offered is rejected outright
+   rather than squeezed. */
+const CMDRTX_MIN_W=220;
+const CMDRTX={el:null,img:null,initial:null,who:null,rank:null,tag:null,line:null,ready:false,missing:false,
+  bound:false,state:'idle',until:0,solveAt:0,cue:null,
+  shown:0,solved:0,placement:'',portraitFallbacks:0,lastKey:''};
+function cmdrTxEls(){
+  if(CMDRTX.ready) return true;
+  if(CMDRTX.missing) return false;
+  const el=document.getElementById('cmdrTx');
+  if(!el){
+    /* A shell without the container is an OTA skew, not a crash. Latch the miss
+       so this does not run a DOM query every frame for the rest of the match. */
+    CMDRTX.missing=true; return false;
+  }
+  CMDRTX.el=el;
+  CMDRTX.img=document.getElementById('cmdrTxImg');
+  CMDRTX.initial=document.getElementById('cmdrTxInitial');
+  CMDRTX.who=document.getElementById('cmdrTxWho');
+  CMDRTX.rank=document.getElementById('cmdrTxRank');
+  CMDRTX.tag=document.getElementById('cmdrTxTag');
+  CMDRTX.line=document.getElementById('cmdrTxLine');
+  if(!CMDRTX.img||!CMDRTX.who||!CMDRTX.rank||!CMDRTX.tag||!CMDRTX.line){ CMDRTX.missing=true; return false; }
+  /* The portrait chain is bound ONCE on the single reused <img>: commander
+     portrait, then the faction portrait the cue supplies, then the initial
+     chip. A per-cue handler on a reused node stacks listeners; a per-cue node
+     grows the DOM. This does neither. */
+  CMDRTX.img.addEventListener('error',()=>{
+    const stage=CMDRTX.el.dataset.portrait||'primary';
+    const fb=CMDRTX.cue&&CMDRTX.cue.portrait&&CMDRTX.cue.portrait.fallback;
+    CMDRTX.portraitFallbacks++;
+    if(stage==='primary'&&fb&&CMDRTX.img.getAttribute('src')!==fb){
+      CMDRTX.el.dataset.portrait='fallback'; CMDRTX.img.src=fb; return;
+    }
+    CMDRTX.el.dataset.portrait='initial';
+  });
+  CMDRTX.ready=true;
+  return true;
+}
+function cmdrTxHoldMs(text){
+  const n=String(text||'').length;
+  return Math.max(CMDRTX_HOLD_MIN,Math.min(CMDRTX_HOLD_MAX,CMDRTX_HOLD_BASE+n*CMDRTX_HOLD_PER_CHAR));
+}
+/* Reserved boxes of everything the rail must clear, plus the frame the safe
+   areas actually resolved to. #topbar is the reference for the top/left/right
+   insets rather than a second reading of env(safe-area-inset-*): it is already
+   positioned with all four variables, so borrowing its rect cannot disagree
+   with the rest of the HUD about where the usable screen starts. */
+function cmdrTxFrame(){
+  const vw=window.innerWidth||document.documentElement.clientWidth||0;
+  const vh=window.innerHeight||document.documentElement.clientHeight||0;
+  const rects=[];
+  let top=null,bottom=null;
+  for(const id of CMDRTX_PROTECT){
+    const el=document.getElementById(id);
+    if(!el) continue;
+    if(getComputedStyle(el).display==='none') continue;
+    const r=el.getBoundingClientRect();
+    if(r.width<=0||r.height<=0) continue;
+    rects.push({id:id,l:r.left,t:r.top,r:r.right,b:r.bottom});
+  }
+  const byId=id=>rects.find(x=>x.id===id)||null;
+  const bar=byId('topbar');
+  const sl=bar?Math.max(0,bar.l):CMDRTX_PAD;
+  const sr=bar?Math.max(0,vw-bar.r):CMDRTX_PAD;
+  for(const id of CMDRTX_TOP){ const x=byId(id); if(x&&(top===null||x.b>top)) top=x.b; }
+  for(const id of CMDRTX_BOTTOM){ const x=byId(id); if(x&&(bottom===null||x.t<bottom)) bottom=x.t; }
+  /* Bottom safe inset, for the case where every bottom-cluster surface is
+     hidden and there is nothing to stack above. #cmdbar is positioned at
+     `bottom:calc(var(--sab) + 6px)`, so its used `bottom` is that variable
+     already resolved to pixels — reading it is how this lane respects a home
+     indicator without re-deriving env(safe-area-inset-bottom) itself and
+     risking a different answer from the rest of the HUD. */
+  let sb=CMDRTX_PAD;
+  const dock=document.getElementById('cmdbar');
+  if(dock){ const v=parseFloat(getComputedStyle(dock).bottom); if(v>=0&&v<vh) sb=Math.max(CMDRTX_PAD,v); }
+  return {vw,vh,rects,sl,sr,sb,
+    topStack:top===null?CMDRTX_PAD:top,
+    bottomStack:bottom===null?vh-sb:bottom};
+}
+function cmdrTxOverlap(box,rects){
+  let area=0;
+  for(const r of rects){
+    const w=Math.min(box.l+box.w,r.r)-Math.max(box.l,r.l);
+    const h=Math.min(box.t+box.h,r.b)-Math.max(box.t,r.t);
+    if(w>0&&h>0) area+=w*h;
+  }
+  return area;
+}
+/* Fit a box of height `h` into one horizontal band, pushed against one edge.
+
+   This is what makes the difference between a rail that works on three
+   viewports and one that works on four. Landscape phone puts the minimap
+   (x 6..268) and the KEEL bubble (x 268..648) across the same rows the rail
+   wants, leaving a 267px gap against the right edge — so a fixed-width box
+   anchored right overlapped both, while a box allowed to SHRINK INTO THE GAP
+   clears them with room to spare.
+
+   Returns null when the band has no usable gap on that edge: an obstacle
+   straddling the anchor edge means there is nothing to shrink into, and a gap
+   under CMDRTX_MIN_W is not worth having. */
+function cmdrTxFit(F,top,h,natW,anchor){
+  const L=F.sl+CMDRTX_PAD, R=F.vw-F.sr-CMDRTX_PAD;
+  const bt=top, bb=top+h;
+  let lo=L, hi=R;
+  for(const r of F.rects){
+    if(r.b<=bt||r.t>=bb) continue;                 // not in this band at all
+    if(anchor==='right'){
+      if(r.l>=R) continue;
+      if(r.r>=R) return null;                      // straddles the right edge
+      if(r.r+CMDRTX_PAD>lo) lo=r.r+CMDRTX_PAD;
+    } else {
+      if(r.r<=L) continue;
+      if(r.l<=L) return null;                      // straddles the left edge
+      if(r.l-CMDRTX_PAD<hi) hi=r.l-CMDRTX_PAD;
+    }
+  }
+  const w=Math.min(natW,hi-lo);
+  if(w<CMDRTX_MIN_W) return null;
+  return {l:anchor==='right'?(hi-w):lo,t:top,w:w,h:h};
+}
+/* THE SOLVER.
+
+   Four candidate bands, tried in order, first one that fits wins. They are
+   ordered by how well the placement reads, not by how likely it is to fit:
+
+     A  above the bottom cluster, left aligned. The natural home — a comms panel
+        sitting over the tactical map. Wins on 412x915, 800x1280 and 1440x900.
+     B  above the bottom cluster, right aligned.
+     C  under the top stack, right aligned. This is what 915x412 lands on: the
+        landscape minimap owns the left edge from y=144 down to y=406, which
+        rules A and B out, and the gap C shrinks into is the 251px between the
+        KEEL bubble and the right margin.
+     D  under the top stack, left aligned. Last resort before giving up.
+
+   TWO PASSES, because width and height are not independent: shrinking the box
+   into a gap rewraps the subtitle and makes it taller, which can invalidate the
+   band the width was chosen for. Pass 1 picks at the CSS-natural width, applies
+   it, and pass 2 re-picks at the height that width actually produced. The
+   inline width is cleared first so the natural width is the CSS media-query
+   width and not whatever the last solve narrowed it to.
+
+   If no candidate fits, the least-bad box is used and CMDRTX.placement is
+   suffixed `!` — surfaced by cmdrTxDebug() and failed by
+   tools/probe-commander-hud.mjs, so a future HUD change that squeezes the rail
+   out is a test failure rather than a quiet overlap. */
+function cmdrTxPick(F,h,natW){
+  const bottomBand=F.bottomStack-CMDRTX_PAD-h;
+  const topBand=F.topStack+CMDRTX_PAD;
+  const tries=[['A',bottomBand,'left'],['B',bottomBand,'right'],
+               ['C',topBand,'right'],['D',topBand,'left']];
+  let best=null;
+  for(const [name,top,anchor] of tries){
+    const box=cmdrTxFit(F,top,h,natW,anchor);
+    if(!box) continue;
+    if(box.t<0||box.l<0||box.t+box.h>F.vh||box.l+box.w>F.vw) continue;
+    const over=cmdrTxOverlap(box,F.rects);
+    if(over===0) return {name:name,box:box,over:0};
+    if(!best||over<best.over) best={name:name,box:box,over:over};
+  }
+  if(best) return best;
+  /* Nothing fits anywhere. Clamp a natural-width box into the frame rather than
+     paint something half off the edge, and let the `!` mark the failure. */
+  const box={l:Math.max(0,Math.min(F.vw-natW,F.sl+CMDRTX_PAD)),
+             t:Math.max(0,Math.min(F.vh-h,bottomBand)),w:Math.min(natW,F.vw),h:h};
+  return {name:'A',box:box,over:cmdrTxOverlap(box,F.rects)};
+}
+function cmdrTxSolve(){
+  if(!cmdrTxEls()) return null;
+  const el=CMDRTX.el;
+  el.style.width='';                       // measure at the CSS-authored width
+  let natW=0,best=null,applied=-1;
+  for(let pass=0;pass<2;pass++){
+    const own=el.getBoundingClientRect();
+    if(!natW) natW=Math.max(1,own.width);
+    best=cmdrTxPick(cmdrTxFrame(),Math.max(1,own.height),natW);
+    el.style.left=Math.round(best.box.l)+'px';
+    el.style.top=Math.round(best.box.t)+'px';
+    el.style.width=Math.round(best.box.w)+'px';
+    if(applied===best.box.w) break;        // width settled; height cannot move again
+    applied=best.box.w;
+  }
+  CMDRTX.placement=best.name+(best.over>0?'!':'');
+  CMDRTX.solved++;
+  return {placement:CMDRTX.placement,overlap:best.over,box:best.box};
+}
+function cmdrTxShow(cue){
+  if(!cmdrTxEls()||!cue) return false;
+  const sub=cue.subtitle||{};
+  const por=cue.portrait||{};
+  const name=String(sub.speaker||sub.shortName||'COMMANDER');
+  const rank=sub.rank?String(sub.rank):'';
+  const call=sub.callsign?String(sub.callsign):'';
+  /* Three separate fields, deliberately. cue.subtitle.speaker is the authored
+     roster name and ALREADY carries a rank form — sometimes abbreviated, as in
+     "Cmdr. Sera Vale" — so prefixing the canonical rank rendered "Captain
+     Captain Elara Kai". The name stands alone; the canonical rank and the
+     callsign share the chip beside it; the tag says what kind of report this
+     is. All three are text nodes: cue strings are authored copy, but
+     textContent means they can never become markup. */
+  CMDRTX.who.textContent=name;
+  CMDRTX.rank.textContent=rank?(call?rank.toUpperCase()+' · '+call:rank.toUpperCase()):call;
+  /* The chip is the CATEGORY, not cue.subtitle.tag. Upstream builds that tag as
+     "<FACTION NAME> // <CATEGORY>", which is 36 characters for Nova — on the
+     915x412 rail, solved to 251px, it clipped at "TERRAN FRONTLINE COMMA" and
+     took the category, the one part this chip exists to show, off the screen
+     with it. The faction is already carried by the portrait and the speaker
+     name; the category is not carried anywhere else. */
+  CMDRTX.tag.textContent=String(cue.category||sub.tag||cue.key||'TRANSMISSION').toUpperCase();
+  CMDRTX.line.textContent=String(sub.text||'');
+  const initial=(sub.shortName||name).trim().charAt(0).toUpperCase()||'C';
+  CMDRTX.initial.textContent=initial;
+  const src=por.src||por.fallback||'';
+  if(src){
+    CMDRTX.el.dataset.portrait='primary';
+    if(CMDRTX.img.getAttribute('src')!==src) CMDRTX.img.setAttribute('src',src);
+  } else {
+    CMDRTX.el.dataset.portrait='initial';
+  }
+  CMDRTX.cue=cue;
+  CMDRTX.lastKey=String(cue.commanderId||'')+'|'+String(cue.key||'')+'#'+String(cue.seq);
+  /* enter BEFORE solving: the box has to be laid out at its real height before
+     its position can be chosen, and [data-state="idle"] is display:none. */
+  CMDRTX.el.dataset.state='enter';
+  cmdrTxSolve();
+  CMDRTX.shown++;
+  return true;
+}
+function cmdrTxReset(){
+  if(!cmdrTxEls()) return;
+  CMDRTX.state='idle'; CMDRTX.until=0; CMDRTX.cue=null; CMDRTX.solveAt=0;
+  CMDRTX.el.dataset.state='idle';
+}
+/* Subscribe ONCE, for the life of the page. commanderDialogueOn() is idempotent
+   per function reference, but the guard also stops a re-entrant HUD init from
+   ever attaching a second copy of the handler. */
+function cmdrTxBind(){
+  if(CMDRTX.bound) return true;
+  if(typeof commanderDialogueOn!=='function') return false;
+  CMDRTX.bound=true;
+  commanderDialogueOn(cue=>{
+    /* The rail only ever drains while idle, so a cue arriving here always has
+       somewhere to go. Guarded anyway: another consumer could pump the drain,
+       and dropping the newer cue is the correct outcome — replacing a line
+       mid-read would be the rail second-guessing upstream priority. */
+    if(CMDRTX.state!=='idle') return;
+    cmdrTxShow(cue);
+    CMDRTX.state='enter';
+    CMDRTX.until=cmdrTxNow()+CMDRTX_ENTER_MS;
+  });
+  return true;
+}
+function cmdrTxNow(){
+  return (typeof performance!=='undefined'&&performance&&performance.now)?performance.now():0;
+}
+/* Is the battlefield actually on screen? A cue must not be presented over the
+   menu, over a results screen or while the match is not live. CSS already hides
+   the rail under body.mfMenuOpen; this stops the STATE MACHINE too, so a cue
+   cannot burn its hold time invisibly behind a front screen. */
+function cmdrTxInMatch(){
+  if(typeof matchLive!=='undefined'&&!matchLive) return false;
+  if(typeof gameEnded!=='undefined'&&gameEnded) return false;
+  const b=document.body;
+  if(b&&b.classList&&(b.classList.contains('mfMenuOpen')||b.classList.contains('menuMode'))) return false;
+  return true;
+}
+/* Driven from updateHUD(). Cheap on the common path: while idle and with an
+   empty upstream queue this is two comparisons and one function call. */
+function cmdrTxTick(){
+  if(!cmdrTxEls()) return;
+  cmdrTxBind();
+  const now=cmdrTxNow();
+  if(!cmdrTxInMatch()){
+    if(CMDRTX.state!=='idle') cmdrTxReset();
+    return;
+  }
+  if(CMDRTX.state==='idle'){
+    /* PULL, do not push. Draining only from idle is what makes "one cue at a
+       time" a property of the system rather than a rule the rail enforces by
+       throwing cues away. */
+    if(typeof commanderDialogueDrain==='function'){
+      /* Gameplay producers use the fixed-step match clock so replays and
+         different refresh rates retain identical cue age/order. UI animation
+         still uses performance.now above; only the dialogue queue uses sim
+         time, preventing a long-lived browser tab from marking a new-match cue
+         stale the instant it is raised. */
+      const cueNow=typeof stats!=='undefined'&&stats&&Number.isFinite(stats.t)
+        ?Math.max(0,stats.t*1000):now;
+      try{ commanderDialogueDrain(cueNow); }catch(e){}
+    }
+    return;
+  }
+  if(now>=CMDRTX.until){
+    if(CMDRTX.state==='enter'){
+      CMDRTX.state='hold'; CMDRTX.el.dataset.state='hold';
+      CMDRTX.until=now+cmdrTxHoldMs(CMDRTX.line?CMDRTX.line.textContent:'');
+    } else if(CMDRTX.state==='hold'){
+      CMDRTX.state='exit'; CMDRTX.el.dataset.state='exit';
+      CMDRTX.until=now+CMDRTX_EXIT_MS;
+    } else {
+      cmdrTxReset();
+      return;
+    }
+  }
+  if(CMDRTX.state!=='exit'&&now>=CMDRTX.solveAt){
+    CMDRTX.solveAt=now+CMDRTX_SOLVE_MS;
+    cmdrTxSolve();
+  }
+}
+/* Read-only introspection for tools/probe-commander-hud.mjs and for a debug
+   overlay. Never mutates; safe to call at any time. */
+function cmdrTxDebug(){
+  const el=CMDRTX.el;
+  const r=el?el.getBoundingClientRect():null;
+  return {
+    ready:CMDRTX.ready,missing:CMDRTX.missing,bound:CMDRTX.bound,
+    state:CMDRTX.state,placement:CMDRTX.placement,
+    shown:CMDRTX.shown,solved:CMDRTX.solved,portraitFallbacks:CMDRTX.portraitFallbacks,
+    lastKey:CMDRTX.lastKey,
+    portraitStage:el?(el.dataset.portrait||''):'',
+    text:CMDRTX.line?CMDRTX.line.textContent:'',
+    who:CMDRTX.who?CMDRTX.who.textContent:'',
+    rank:CMDRTX.rank?CMDRTX.rank.textContent:'',
+    tag:CMDRTX.tag?CMDRTX.tag.textContent:'',
+    audio:CMDRTX.cue?CMDRTX.cue.audio:null,
+    rect:r?{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}:null,
+    overflow:CMDRTX.line?{scroll:CMDRTX.line.scrollHeight,client:CMDRTX.line.clientHeight}:null
+  };
+}
+/* A new match starts with an empty rail: a line left over from the last one is
+   worse than silence. Exposed rather than wired — src/main.js owns resetWorld()
+   and this lane does not touch it — and called defensively from cmdrTxTick()
+   through cmdrTxInMatch() in the meantime. */
+function cmdrTxMatchReset(){
+  cmdrTxReset();
+  CMDRTX.shown=0; CMDRTX.solved=0; CMDRTX.portraitFallbacks=0; CMDRTX.lastKey='';
+}
+/* ---------------------------------------------------------------------------
+   INTEGRATION POINTS still open after this lane:
+
+     src/main.js resetWorld()          -> cmdrTxMatchReset()
+       Not wired here: main.js is out of this lane. Until it is, the rail clears
+       itself the first tick after matchLive/gameEnded flips, which covers every
+       observed transition but leaves one frame of the old line on a same-frame
+       restart.
+
+     src/game/sim.js, src/game/ai.js, src/develop.js, src/endgame.js
+       -> commanderCue(...) at the sites named in src/game/commander.js.
+       Nothing raises a cue in normal play yet, so the rail is correct and inert
+       on a shipped build; tools/probe-commander-hud.mjs raises real cues
+       through the public API to exercise it.
+   -------------------------------------------------------------------------- */

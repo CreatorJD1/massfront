@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.46';
+const APP_VERSION = '1.33.48';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Hotfix: mass nodes no longer emit a white bloom disc during deploy; additive vein ribbons and standing glow pools are gone — terrain cracks and crystal meshes remain.";
+const APP_NOTES = "Hotfix: restores building production access and placement beneath friendly unit stacks, prevents completed OTA updates from rolling back on the next launch, and keeps WebGL recovery controls usable.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
@@ -245,7 +245,7 @@ function updValidManifest(m){
          a manifest that simply omitted both downloaded and APPLIED executable
          JavaScript with no verification at all - the integrity checks were
          opt-in by the very document an attacker would control. The publisher
-         always emits both (publish-hf-release.ps1) and the live 1.33.46
+         always emits both (publish-hf-release.ps1) and the live 1.33.47
          manifest carries them, so requiring them rejects nothing genuine. */
       typeof f.sha256==='string'&&/^[0-9a-f]{64}$/i.test(f.sha256)&&
       Number.isFinite(f.size)&&f.size>0)&&
@@ -565,7 +565,7 @@ async function updDownload(){
 
        (a) A fresh package install has NO `active` record at all - the packaged
            build lives in the APK, not in IndexedDB. Comparing only versions
-           made patchFrom==='1.33.46' match a fresh 1.33.46 device, so it
+           made patchFrom==='1.33.47' match a fresh 1.33.47 device, so it
            downloaded the whole delta and only then discovered there was
            nothing to merge onto. That is the MAJORITY cohort after any release.
 
@@ -1206,4 +1206,3 @@ async function initUpdater(){
      is also the better of the two: it re-tests netAllowed() when it FIRES,
      rather than reading it once at wiring time. */
 }
-

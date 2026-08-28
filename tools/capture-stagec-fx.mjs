@@ -112,7 +112,14 @@ try {
     }
     if (typeof applySettings === 'function') applySettings();
     dayT = 0.20;
+    /* Pin a city-bearing map: the menu's last selected map may legitimately
+       have no civic plots, which makes the destruction proof vacuous. */
+    curMap = 'vanguard';
+    if (typeof buildTerrain === 'function') buildTerrain(curTheme);
     resetWorld();
+    /* resetWorld clears match state; normal match launch calls setupRelics
+       later. The capture stops before launch, so perform that phase here. */
+    if (typeof setupRelics === 'function') setupRelics();
     playerFaction = 'nova';
     const cx = MAP * 0.5, cy = MAP * 0.5;
 
@@ -216,6 +223,48 @@ try {
   await page.screenshot({ path: join(outDir, '2-destroyed-structure.png') });
   say('shot 2: destroyed structure (carbonise check)');
 
+  /* ---- 2b. strategic blast in a city --------------------------------------
+     This is the contract ordinary explosion captures cannot prove: a size-64
+     strategic event on civic ground must bypass the small urban FX cap, level
+     multiple authored blocks through collapseBlock(), and retain both crater
+     and ember records. */
+  const cityBlast = await page.evaluate(() => {
+    if (typeof spawnExplosion !== 'function' || typeof relics === 'undefined')
+      return { error: 'city destruction globals unavailable' };
+    let pick = null, best = -1;
+    for (const C of relics) {
+      if (!C.alive || (typeof cityGroundAt === 'function' && cityGroundAt(C.x, C.y) < 1)) continue;
+      let n = 0;
+      for (const R of relics) if (R.alive && dist2(C.x, C.y, R.x, R.y) < 210 * 210) n++;
+      if (n > best) { best = n; pick = C; }
+    }
+    if (!pick) return { error: 'no civic block found' };
+    try { playerFaction = 'nova'; } catch (e) {}
+    const R = 210 * Math.sqrt(64 / 44);
+    const nearby = () => relics.filter(B => dist2(pick.x, pick.y, B.x, B.y) < R * R);
+    const before = nearby().filter(B => B.alive).length;
+    const crater0 = craters.length, burn0 = groundBurns.length;
+    const h0 = typeof terrainH === 'function' ? terrainH(pick.x, pick.y) : 0;
+    spawnExplosion(pick.x, pick.y, 64, 0);
+    const after = nearby().filter(B => B.alive).length;
+    const h1 = typeof terrainH === 'function' ? terrainH(pick.x, pick.y) : h0;
+    cam.x = pick.x; cam.y = pick.y; camPitch = pitchTarget = 1.02;
+    orthoSpan = distTarget = 360;
+    if (typeof camUpdateMatrices === 'function') camUpdateMatrices();
+    return { x: Math.round(pick.x), y: Math.round(pick.y), before, after,
+      levelled: before - after, craterDelta: craters.length - crater0,
+      burnDelta: groundBurns.length - burn0, depthDelta: +(h1 - h0).toFixed(4) };
+  });
+  say('city blast: ' + JSON.stringify(cityBlast));
+  await step(12);
+  await page.screenshot({ path: join(outDir, '2b-city-block-levelled.png') });
+  say('shot 2b: strategic city blast (detonation / block levelling)');
+  /* The detonation frame is deliberately white-hot. Let it clear so the proof
+     also records the readable gameplay aftermath, not only the flash. */
+  await step(120);
+  await page.screenshot({ path: join(outDir, '2c-city-aftermath.png') });
+  say('shot 2c: strategic city aftermath (smoke / embers / crater)');
+
   /* ---- 3. deep water ------------------------------------------------------ */
   const water = await page.evaluate(() => {
     /* Water is heightF < WATER_H. The previous run tested isWalkable, but
@@ -296,6 +345,8 @@ try {
   await writeFile(join(outDir, 'log.txt'), log.join('\n'), 'utf8');
 } finally {
   await closePwBrowser();
+  server.closeAllConnections();
   server.close();
 }
 console.log('output: ' + outDir);
+process.exit(0);

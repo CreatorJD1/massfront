@@ -25,7 +25,7 @@
 const GPFX_CAP=6144, GPFX_FLOATS=12;
 let gpfxA=null, gpfxB=null, gpfxVAO_A=null, gpfxVAO_B=null, gpfxTF=null;
 let gpfxProgU=null, gpfxProgR=null, gpfxHead=0, gpfxFlip=0, gpfxLive=0;
-let gpfxHi=0, gpfxAge=0, gpfxDrawN=0;
+let gpfxHi=0, gpfxAge=0, gpfxDrawN=0, gpfxFullWindow=false;
 let gpfxUup={}, gpfxUr={};
 let gpfxAttr=[0,0,0,0];      // set by the sim while a singularity is live
 /* WHICH GL CONTEXT THESE HANDLES BELONG TO, and whether the build already
@@ -151,32 +151,46 @@ function gpfxCtxCheck(){
 }
 function gpfxInit(){
   if(gpfxProgU||gpfxInitFailed||typeof gl==='undefined'||!gl) return;
-  const mk=(vs,fs,tf)=>{
+  /* TWO-PHASE BUILD. compileShader()/linkProgram() are asynchronous in the
+     driver; it is getShaderParameter(COMPILE_STATUS) / getProgramParameter(
+     LINK_STATUS) that block until that program is ready. Querying inside a
+     single mk() made the second program wait for the first to finish. Build
+     BOTH first, then read both statuses, so the driver can link them in
+     parallel (KHR_parallel_shader_compile). Same restructure as mkProg() in
+     mesh.js; measured ~240 ms recovered at load.
+     Verify with: node tools/probe-shader-compile.mjs */
+  const build=(vs,fs,tf)=>{
     const p=gl.createProgram();
-    /* Shaders are refcounted by the program once attached, so deleting them
-       here frees them with it instead of stranding them for the session — and
-       on the failure path below they are the objects that used to leak. */
     const shaders=[];
-    let ok=true;
     for(const [ty,src] of [[gl.VERTEX_SHADER,vs],[gl.FRAGMENT_SHADER,fs]]){
       const sh=gl.createShader(ty); gl.shaderSource(sh,src); gl.compileShader(sh);
       shaders.push(sh);
       gl.attachShader(p,sh);
+    }
+    /* Must precede linkProgram(), so it stays in the build phase. */
+    if(tf) gl.transformFeedbackVaryings(p,['tfP','tfV','tfC'],gl.INTERLEAVED_ATTRIBS);
+    gl.linkProgram(p);
+    return {p:p,shaders:shaders};
+  };
+  const finish=(built)=>{
+    let ok=true;
+    for(const sh of built.shaders){
       if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){
         console.error('gpufx shader',gl.getShaderInfoLog(sh)); ok=false; }
     }
-    if(ok){
-      if(tf) gl.transformFeedbackVaryings(p,['tfP','tfV','tfC'],gl.INTERLEAVED_ATTRIBS);
-      gl.linkProgram(p);
-      if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
-        console.error('gpufx link',gl.getProgramInfoLog(p)); ok=false; }
-    }
-    for(const sh of shaders) gl.deleteShader(sh);
-    if(!ok){ gl.deleteProgram(p); return null; }
-    return p;
+    if(!gl.getProgramParameter(built.p,gl.LINK_STATUS)){
+      console.error('gpufx link',gl.getProgramInfoLog(built.p)); ok=false; }
+    /* Shaders are refcounted by the program once attached, so deleting them
+       here frees them with it instead of stranding them for the session — and
+       on the failure path below they are the objects that used to leak. */
+    for(const sh of built.shaders) gl.deleteShader(sh);
+    if(!ok){ gl.deleteProgram(built.p); return null; }
+    return built.p;
   };
-  gpfxProgU=mk(GPFX_VSU,GPFX_FSU,true);
-  gpfxProgR=mk(GPFX_VSR,GPFX_FSR,false);
+  const builtU=build(GPFX_VSU,GPFX_FSU,true);
+  const builtR=build(GPFX_VSR,GPFX_FSR,false);
+  gpfxProgU=finish(builtU);
+  gpfxProgR=finish(builtR);
   if(!gpfxProgU||!gpfxProgR){
     /* One of the two may have linked. Release it rather than orphaning it, and
        latch so the next muzzle flash does not recompile the whole pair. */
@@ -195,9 +209,10 @@ function gpfxInit(){
   if(wasP) gl.useProgram(wasP);
   gpfxUr={vp:gl.getUniformLocation(gpfxProgR,'uVP'),px:gl.getUniformLocation(gpfxProgR,'uPx'),
            cap:gl.getUniformLocation(gpfxProgR,'uCap')};
-  /* DYNAMIC_COPY with a byte length leaves GPU memory uninitialized. HIGH/CINE
-     still draw GPFX_CAP once any particle is live, so garbage life/pos became
-     noisy specks and coloured streaks across the ground. */
+  /* DYNAMIC_COPY with a byte length leaves GPU memory uninitialized. The
+     High/Cinematic path returns to the full ring after it fills, so every
+     unused slot still must begin as a dead particle rather than a noisy speck
+     or coloured streak across the ground. */
   const zero=new Float32Array(GPFX_CAP*GPFX_FLOATS);
   const mkBuf=()=>{ const b=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,b);
     gl.bufferData(gl.ARRAY_BUFFER,zero,gl.DYNAMIC_COPY); return b; };
@@ -211,15 +226,15 @@ function gpfxInit(){
   gpfxVAO_A=mkVao(gpfxA); gpfxVAO_B=mkVao(gpfxB);
   gpfxTF=gl.createTransformFeedback();
 }
-function gpfxGLReset(){ gpfxProgU=gpfxProgR=gpfxA=gpfxB=gpfxVAO_A=gpfxVAO_B=gpfxTF=null; gpfxHead=0; gpfxLive=0; gpfxHi=0; gpfxAge=0; gpfxDrawN=0; }
+function gpfxGLReset(){ gpfxProgU=gpfxProgR=gpfxA=gpfxB=gpfxVAO_A=gpfxVAO_B=gpfxTF=null; gpfxHead=0; gpfxLive=0; gpfxHi=0; gpfxAge=0; gpfxDrawN=0; gpfxFullWindow=false; }
 
 /* Preset scale for DRAW-side FX. GFX.particles is 0.5/0.75/1/1.5.
    Do not multiply by perfScale — main.js already folds particles into it. */
 function mfVfxQ(){
   return (typeof GFX!=='undefined'&&GFX.particles!=null)?GFX.particles:1;
 }
-/* HIGH/CINE keep the 6144 window. MEDIUM/LOW only TF+draw the prefix they
-   can fill — mid-tier was paying 6144 verts for a handful of sparks. */
+/* HIGH/CINE own the 6144-slot ring, but can still use its populated prefix
+   before that ring wraps. MEDIUM/LOW use their smaller prefix throughout. */
 function gpfxWorkCap(){
   const p=mfVfxQ();
   if(p>=0.95) return GPFX_CAP;
@@ -277,7 +292,8 @@ function gpfxBurst(x,y,h,n,opts){
   const terr=(typeof terrainH==='function'?terrainH(x,y):0);
   h=Math.max(h==null?0:h, Math.max(0.4, terr+0.55));
   const sp=o.speed||90, up=o.up==null?0.55:o.up, life=o.life||1.1;
-  const col=o.col||[255,190,90], size=o.size||5.8, drag=o.drag==null?0.985:o.drag;
+  const col=o.col||(o.r!=null?[o.r,o.g!=null?o.g:o.r,o.b!=null?o.b:o.r]:[255,190,90]);
+  const size=o.size||5.8, drag=o.drag==null?0.985:o.drag;
   const dir=o.dir, spread=o.spread==null?0.30:o.spread;
   let dx=0,dz=0,hasDir=false;
   if(dir&&dir.length>=2){
@@ -324,6 +340,12 @@ function gpfxBurst(x,y,h,n,opts){
   gpfxHead=(gpfxHead+n)%work;
   gpfxLive=Math.min(work,gpfxLive+n);
   gpfxHi=wrapped?work:Math.max(gpfxHi,gpfxHead||work);
+  /* Until the full High/Cinematic ring has been filled/overwritten, every
+     slot above gpfxHi is the initialization zero and transforms into the same
+     zero. Skipping it changes no particle state or image. Once the full ring
+     is reached, retain the original all-capacity path: a later wrap can carry
+     live particles on both sides of the head. */
+  if(work===GPFX_CAP&&(wrapped||gpfxHi>=GPFX_CAP)) gpfxFullWindow=true;
   gpfxAge=0;
   gl.bindBuffer(gl.ARRAY_BUFFER,wasArr);
   gl.bindVertexArray(wasVao);
@@ -341,15 +363,17 @@ function gpfxFrame(dt,matVP,viewH){
      not a permanent 6144-point tax. */
   gpfxAge+=Math.min(dt>0?dt:0,0.05);
   if(gpfxAge>4.0){
-    gpfxLive=0; gpfxHead=0; gpfxHi=0; gpfxDrawN=0;
+    gpfxLive=0; gpfxHead=0; gpfxHi=0; gpfxDrawN=0; gpfxFullWindow=false;
     return;
   }
   const p=mfVfxQ();
   const work=gpfxWorkCap();
   if(gpfxHi>work) gpfxHi=work;
   if(gpfxLive>work) gpfxLive=work;
-  /* HIGH/CINE: full buffer. MEDIUM/LOW: live high-water only. */
-  const nDraw=p>=0.95?GPFX_CAP:Math.max(1,Math.min(work,gpfxHi||gpfxLive));
+  /* High/Cinematic preserve the historical all-capacity update after their
+     ring first fills/wraps. Before then, and at every lower preset, transform
+     feedback and the draw pass touch only the contiguous populated prefix. */
+  const nDraw=p>=0.95&&gpfxFullWindow?GPFX_CAP:Math.max(1,Math.min(work,gpfxHi||gpfxLive));
   gpfxDrawN=nDraw;
   const src=gpfxFlip?gpfxVAO_B:gpfxVAO_A, dst=gpfxFlip?gpfxA:gpfxB;
   /* Combat is the only caller. Leaving TF / RASTERIZER_DISCARD / ARRAY_BUFFER
@@ -420,21 +444,25 @@ function gpfxFrame(dt,matVP,viewH){
 
 /* Airframe smoke trail. Billboard puffs (addAirPuff) are the smoke; GPU
    motes are HIGH-only soot, not gpfxEnergyBlast. Additive mid-grey read as
-   a white energy ribbon on the first pass — do not put the trail on GPU. */
+   a white energy ribbon on the first pass — do not put the trail on GPU.
+   The crash recipe owns the eventual core/ring/debris group, so this lead-in
+   must not leave an extra amber coal stamp on the ground at impact. */
 function gpfxAirSmoke(x,y,h,vx,vy,opts){
   const o=opts||{}, p=mfVfxQ();
-  const sz=Math.max(4.2,(o.size||14)*0.40);
+  const sz=Math.max(o.contrail?2.4:4.2,(o.size||14)*(o.contrail?.24:o.crash?0.65:0.32));
   const backX=-(vx||0)*0.18, backY=-(vy||0)*0.18;
   if(typeof addAirPuff==='function'){
-    const n=p>=0.95?(o.rich||o.crash?3:2):p>=0.65?(o.rich||o.crash?2:1):1;
-    for(let k=0;k<n;k++){
-      const jx=(Math.random()*2-1)*2.4, jy=(Math.random()*2-1)*2.4;
-      addAirPuff(x+jx,y+jy,h, backX+(Math.random()*2-1)*2.2, backY-2-Math.random()*4,
-        p>=0.95?1.2:0.82, sz*(0.72+Math.random()*0.38), 54,50,46);
-    }
+    /* Trail shape is sampled on fixed simulation ticks. Use the air authority's
+       seeded lane hash when available so replayed contrails and damage smoke
+       do not depend on unrelated Math.random consumers. */
+    const owner=Number.isInteger(o.owner)?o.owner:0;
+    const rv=typeof mfAirCrashValue==='function'?(lane)=>mfAirCrashValue(owner,240+lane):
+      (lane)=>(((Math.imul((owner+1)^(lane*8191)^((typeof tick==='number'?tick:0)<<1),1103515245)+12345)>>>0)/4294967296);
+    const jitter=o.contrail?.22:(p>=.95?.9:.5),j0=rv(0)*2-1,j1=rv(1)*2-1,j2=rv(2),j3=rv(3);
+    addAirPuff(x+j0*jitter,y+j1*jitter,h,
+      backX+j1*(o.contrail?.18:.6),backY-(o.contrail?.35:2.2+j2*1.5),
+      o.contrail?(p>=.95?.62:.48):p>=.95?(o.crash?1.00:.88):.72,sz*(.9+j3*.14),
+      o.contrail?214:o.crash?42:54,o.contrail?222:o.crash?38:50,o.contrail?228:o.crash?34:46,o.owner);
   }
-  if(p>=0.95 && typeof gpfxBurst==='function')
-    gpfxBurst(x,y,h, o.crash?3:2, {speed:6,up:0.62,life:0.58,col:[58,52,46],
-      size:4.4,drag:0.974,jit:1.0,skipWater:1});
 }
 

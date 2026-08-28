@@ -1329,23 +1329,19 @@ const TFC_NOVA_BESPOKE_PACKS=Object.freeze({
    What was actually wrong, established from a real-GPU capture and not from
    reading the code: the Nova roster is NOT untextured. Every hull surface
    already carries an atlas tile with panel breaks, brushed grain, a derived
-   normal map and real gloss. But the live ORM is NOT the procedural one the
-   MAT_GLOSS / MAT_METAL tables in materials.js describe: materials.js prefers
-   a baked assets/textures/mat-orm.png, and a GPU read-back of matOrmTex matches
-   that PNG texel-for-texel (PLATE gloss 120 / TWR_GLOW emis 13 / PLASMA_JET
-   emis 0) while matching the procedural tables nowhere. Two facts fall out of
-   the shipped bake and they decide this entire pass:
-     - ITS ALPHA IS 255 EVERYWHERE, so metal = 1.0 on every surface in the
-       game and MAT_METAL is dead data. At metal 1.0 FS3D halves the diffuse
-       term (kd=(1-F)*mix(1,0.55,metal)) and sets f0 = albedo, so a surface IS
-       its own albedo seen through a GGX lobe. A 0.6-0.7 near-white albedo at
-       metal 1.0 is a flat pale mirror -- which is precisely what the roster
-       looked like. Deep navy at metal 1.0 is tinted gunmetal with a bright
-       specular edge, which is the reference.
-     - NOVA_COMPOSITE gloss 0.55 against MAT.TRIM 0.87: the trim edge every
-       MET_L highlight resolves to ALREADY carries a tight highlight. It was
-       invisible only because the plate beside it sat at the same value.
-   So the problem is VALUE. The palette this roster paints with —
+   normal map and real gloss. The first real-GPU audit also found a separate,
+   now-fixed packer defect: Canvas compositing had forced the old ORM alpha to
+   255 everywhere and crushed dielectric emissives. That historical read-back
+   explained the pale-mirror failure, but it is no longer the runtime contract.
+   materials.js now keeps ORM bytes raw, the mobile resize uses a framebuffer
+   blit, and the live PNG/KTX2 atlas is verified against MAT_GLOSS, MAT_METAL
+   and MAT_EMIS (including the dielectric lamps and plasma jet).
+
+   The palette correction remains necessary with those channels fixed.
+   NOVA_COMPOSITE gloss 0.58 against MAT.TRIM 0.90 already gives trim a tighter
+   highlight, but the near-white plate beside it still collapses that value
+   separation at command distance. So the remaining problem is VALUE. The
+   palette this roster paints with —
    MET (158,166,176), MET_L (206,214,222) — is near-white, and the tile it
    multiplies is #9cafc4, so FS3D's
 
@@ -1406,84 +1402,10 @@ function tfcNovaFinishPass(geo){
   return geo;
 }
 
-/* ---------------------------------------------------------------------------
-   THRUSTER PLUMES
-   ---------------------------------------------------------------------------
-   Nova's three aircraft had no exhaust efflux of any kind — a hollow bore, a
-   HOT ring inside it, and then nothing. Tail-on they read as a parked airframe.
-
-   WHERE THIS CAN AND CANNOT LIVE. A per-frame particle or additive-billboard
-   plume belongs in render3d.js / gpufx.js, which this pass does not own, and
-   would also be the wrong call for the target device: the owner's phone runs at
-   perfScale 0.4125 and the most common FX gate in this codebase is
-   `perfScale > 0.48`, i.e. ABOVE it — a gated plume is a plume that player
-   never sees. Mesh geometry has no gate at all. It is drawn by the same
-   instanced call as the hull, costs no new draw call, no particle budget and no
-   uniform, and is therefore identical at 0.4125 and at 1.0.
-
-   WHICH MATERIAL ACTUALLY GLOWS. The first build of this plume used
-   MAT.PLASMA_JET (74) on the strength of its procedural painter, which fills
-   a fully white emissive. The capture disagreed: the brightest plume pixel came
-   back (104,115,186), a mid slate blue, and a read of the SHIPPED ORM says why —
-   PLASMA_JET emissive is baked at 0. It is not an emissive material in the game
-   that ships; it is a blue tile, and the capture proves it: a strongly-cyan
-   pixel count over the whole frame was 0 before this pass AND 0 with the plume
-   on PLASMA_JET, against 11540 once it moved to a tile that actually emits.
-
-   AND THE TILE CENTRE IS THE WRONG NUMBER TO READ. Picking a material by its
-   centre texel gave CHARGE_STRIP (78) at 178/255 -- but its emissive is a band
-   across a fifth of the tile, so its MIP AVERAGE is 40/255, and the mip is what
-   an RTS camera samples. Ranked by tile-average emissive the shipped atlas is:
-     77 WEAPON_GLOW 217 | 75 ENGINE_VENT 87 | 61 LEGION_THERMITE 42
-     78 CHARGE_STRIP 40 | 71/72/73 26      | 22 TWR_GLOW 13 | 74 PLASMA_JET 0
-   WEAPON_GLOW is five times anything else and is the only tile in the game that
-   can carry a hot core. Its albedo is orange (255,102,0), which does not matter:
-   FS3D takes the emissive COLOUR from vCol (vCol*emis*1.45*1.18) and the albedo
-   only feeds the lit term, which at metal 1.0 is a fraction of the emissive. The
-   warm albedo actually helps -- it lifts the red channel that a pure cyan tile
-   cannot reach, so the core goes white-hot instead of staying cyan-starved.
-   THE FALLOFF IS THEREFORE A MATERIAL LADDER, not a vertex ramp:
-     segments 0-1  WEAPON_GLOW  emis 0.85  - the hot core
-     segment  2    CHARGE_STRIP emis 0.16  - still glowing, cyan albedo
-     segments 3-4  PLASMA_JET   emis 0.00  - lit only, spent gas
-   Three real surface changes fall off far more convincingly than five shades of
-   one material could, and cost exactly the same.
-   WITHIN each material the vertex colour is the only intensity control there is,
-   and MeshBuilder's colour is per primitive, so the taper has to be a STACK of
-   five short frusta rather than one cone: five segments, each dimmer and
-   narrower than the last and each LONGER, so the efflux is a white-hot core at
-   the nozzle falling through cyan to deep blue as it stretches and closes.
-   One flat cone at one colour is exactly the "paper dart" read this replaces.
-
-   All three ids are >18.5, so the vertex stage gives the efflux the
-   restrained 0.14 team wash rather than the full 0.46 hull wash: the efflux
-   stays cyan for both armies instead of turning red for the enemy, which is
-   correct -- an engine's exhaust is not livery.
-
-   NO GL PASS IS ADDED. This is ordinary mesh geometry inside the existing
-   instanced unit draw, so AGENTS.md Rule 4 (save/restore BLEND, CULL_FACE,
-   DEPTH_TEST, DEPTH_WRITEMASK and call begin3D(S_nA) afterwards) has nothing
-   to bind here: no program, no framebuffer and no texture unit is touched, and
-   in particular units 4/5/6 -- which carry the Material V2 assetMaps base/nre/
-   mask plus matTex during the model pass -- are never rebound.
-   --------------------------------------------------------------------------- */
-const TFC_PLUME_COL=[
-  C(214,246,255),   // core: WEAPON_GLOW carries it, vCol supplies the hue
-  C(148,222,255),
-  C(96,182,244),
-  C(70,132,232),
-  C(38,86,192)      // tail: lit-only PLASMA_JET, nearly spent
-];
-/* Registered by ARRAY IDENTITY, which is how COL_MAT works — the same object
-   has to reach the primitive call or matDetect falls through its heuristics and
-   a pale cyan face becomes CURTAIN_GLASS instead. */
-/* Core on the one material that is actually baked emissive; tail on the blue
-   tile, which is lit-only and therefore fades on its own. */
-COL_MAT.set(TFC_PLUME_COL[0],MAT.WEAPON_GLOW);
-COL_MAT.set(TFC_PLUME_COL[1],MAT.WEAPON_GLOW);
-COL_MAT.set(TFC_PLUME_COL[2],MAT.CHARGE_STRIP);
-COL_MAT.set(TFC_PLUME_COL[3],MAT.PLASMA_JET);
-COL_MAT.set(TFC_PLUME_COL[4],MAT.PLASMA_JET);
+/* Aircraft efflux is deliberately absent from the hull mesh. A static solid
+   cone cannot change with throttle, damage, fog or distance and reads as an
+   opaque spike from the RTS camera. render3d.js owns the translucent,
+   depth-aware propulsion ribbons; this pack contributes only hardware. */
 /* Restrained painted accent. BRASS is metal 0.92 / gloss 0.70 with a plain
    warm fill, so a 0.2wu strip of it reads as an anodised edge stripe that
    catches the same sun the hull now does. Deliberately not MAT.WARN: that tile
@@ -1491,24 +1413,6 @@ COL_MAT.set(TFC_PLUME_COL[4],MAT.PLASMA_JET);
    #e8bf3a sits at the bloom threshold this project has already been bitten by. */
 const TFC_ACCENT=C(152,118,46);
 COL_MAT.set(TFC_ACCENT,MAT.BRASS);
-/* Radii and lengths as fractions of (r0, len). Radius bulges 10% just off the
-   nozzle — a real efflux expands before it collapses — then closes to 9%.
-   Segment length GROWS downstream so the bright end is short and the faded end
-   is long, which is what makes a static mesh read as moving gas. */
-const TFC_PLUME_R=[1.00,1.12,0.94,0.68,0.38,0.10];
-const TFC_PLUME_L=[0.16,0.19,0.21,0.22,0.22];
-/* Efflux along -X (aft). cylX grows toward +X from its origin, so each segment
-   is emitted at its OWN aft end with the smaller radius first. */
-function tfcPlume(m,x,y,z,len,r0){
-  let ax=x;
-  for(let k=0;k<TFC_PLUME_L.length;k++){
-    const sl=len*TFC_PLUME_L[k];
-    cylX(m,ax-sl,y,z,sl,r0*TFC_PLUME_R[k+1],r0*TFC_PLUME_R[k],8,TFC_PLUME_COL[k],false);
-    ax-=sl;
-  }
-  return m;
-}
-
 /* ---------------------------------------------------------------------------
    AIRCRAFT DECORATION
    ---------------------------------------------------------------------------
@@ -1525,8 +1429,6 @@ function tfcPlume(m,x,y,z,len,r0){
    --------------------------------------------------------------------------- */
 function tfcDecorWasp(m){
   for(const sd of [-1,1]){
-    tfcPlume(m,-5.24,1.34,sd*3.75,5.80,0.60);
-    ringX(m,-5.20,1.34,sd*3.75,0.26,0.56,10,TFC_PLUME_COL[0]);   // lit nozzle lip
     m.box(-3.05,2.24,sd*3.75,0.34,0.16,1.05,TFC_ACCENT);         // squadron band ACROSS
     m.box(-3.66,2.24,sd*3.75,0.20,0.16,1.05,TFC_ACCENT);         // ...and its thin partner
     tfcSeam(m,-1.50,1.66,sd*6.00,2.90,0.30,MET_L,0);             // outer-wing panel break
@@ -1535,8 +1437,6 @@ function tfcDecorWasp(m){
 }
 function tfcDecorRaptor(m){
   for(const sd of [-1,1]){
-    tfcPlume(m,-5.80,1.62,sd*3.78,6.80,0.76);
-    ringX(m,-5.76,1.62,sd*3.78,0.32,0.72,12,TFC_PLUME_COL[0]);
     m.box(-3.60,2.80,sd*3.78,0.38,0.17,1.30,TFC_ACCENT);
     m.box(-4.32,2.80,sd*3.78,0.22,0.17,1.30,TFC_ACCENT);
     tfcSeam(m,-1.60,1.99,sd*5.00,3.10,0.32,MET_L,0);
@@ -1545,8 +1445,6 @@ function tfcDecorRaptor(m){
 }
 function tfcDecorKestrel(m){
   for(const sd of [-1,1]){
-    tfcPlume(m,-7.82,0.92,sd*1.14,4.60,0.34);
-    ringX(m,-7.78,0.92,sd*1.14,0.15,0.32,10,TFC_PLUME_COL[0]);
     m.box(-6.20,1.53,sd*1.14,0.24,0.12,0.62,TFC_ACCENT);
     m.box(-6.66,1.53,sd*1.14,0.14,0.12,0.62,TFC_ACCENT);
     tfcSeam(m,-1.90,1.26,sd*4.30,2.70,0.28,MET_L,0);

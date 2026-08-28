@@ -30,7 +30,7 @@
    refuses to report a single number.
 
    USAGE
-     node tools/capture-brood-translucency.mjs            after  (working tree + staged mesh patch)
+     node tools/capture-brood-translucency.mjs            after  (working tree, landed or staged mesh patch)
      node tools/capture-brood-translucency.mjs --stock    before (git HEAD, unpatched)
 
    `--stock` serves `git show HEAD:<path>` for the two model files this agent
@@ -45,7 +45,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join, resolve, extname } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const STOCK = process.argv.includes('--stock');
@@ -55,33 +55,30 @@ await mkdir(outDir, { recursive: true });
 
 const log = [];
 const say = m => { log.push(String(m)); console.log(String(m)); };
-say('mode: ' + MODE + (STOCK ? '  (git HEAD sources, stock mesh.js)' : '  (working tree + staged mesh.js SSS patch)'));
+say('mode: ' + MODE + (STOCK ? '  (git HEAD sources, stock mesh.js)' : '  (working tree with Brood SSS)'));
 
 /* ---- source overrides ----------------------------------------------------- */
 /* The two files this agent owns. In `before` mode they are served from HEAD. */
 const OWNED = ['src/engine/models-units-brood.js', 'src/engine/models-infestation.js'];
-/* mesh.js is owned by ANOTHER agent and must never be written. In `after` mode
-   the staged patch is applied to its text IN MEMORY, on the way out of the HTTP
-   server. The file on disk is not touched. */
-const PATCH_MODULE = process.env.BROOD_SSS_PATCH || join(
-  'C:', 'Users', 'Jason', 'AppData', 'Local', 'Temp', 'claude',
-  'C--Users-Jason-Documents-Codex-2026-08-01-massfront-rts-mobile-game-for-apple',
-  '76e5c47e-997e-454c-af14-483b8d27783e', 'scratchpad', 'patch-mesh-brood-sss.mjs');
+/* mesh.js is part of the authority source now. Never recover it from an agent
+   scratch directory: that can silently test stale code from another checkout. */
 
 const overrides = new Map();
 if (STOCK) {
-  for (const p of OWNED) {
+  for (const p of [...OWNED, 'src/engine/mesh.js']) {
     const txt = execFileSync('git', ['show', 'HEAD:' + p], { cwd: root, encoding: 'utf8', maxBuffer: 1 << 28 });
     overrides.set('/' + p, txt);
     say('  serving HEAD copy of ' + p + ' (' + txt.length + ' bytes)');
   }
 } else {
-  if (!existsSync(PATCH_MODULE)) { say('!! staged mesh patch not found at ' + PATCH_MODULE); process.exit(2); }
-  const { patchMeshSource } = await import(pathToFileURL(PATCH_MODULE).href);
   const meshSrc = await readFile(join(root, 'src', 'engine', 'mesh.js'), 'utf8');
-  const patched = patchMeshSource(meshSrc);
+  if (!meshSrc.includes('BRDMEM_CONST')) {
+    say('!! authority src/engine/mesh.js is missing BRDMEM_CONST; refusing stale scratch fallback');
+    process.exit(2);
+  }
+  const patched=meshSrc;
   overrides.set('/src/engine/mesh.js', patched);
-  say('  mesh.js patched in memory: ' + meshSrc.length + ' -> ' + patched.length + ' bytes'
+  say('  mesh.js ' + (patched===meshSrc?'already patched on disk':'patched in memory') + ': ' + meshSrc.length + ' -> ' + patched.length + ' bytes'
     + '  (+' + (patched.split('thinAuth').length - 1) + ' thinAuth, +'
     + (patched.split('deepFlesh').length - 1) + ' deepFlesh)');
 }
@@ -452,7 +449,7 @@ try {
   } else say('verdict unavailable: stingwing and/or gorger did not spawn, or their masks were too small to measure');
 
   say('');
-  say('overrides served: ' + servedOverrides + (STOCK ? ' (expect 2)' : ' (expect 1)'));
+  say('overrides served: ' + servedOverrides + (STOCK ? ' (expect 3)' : ' (expect 1)'));
   say('page errors: ' + (errs.length ? errs.slice(0, 5).join(' | ') : 'none'));
   await writeFile(join(outDir, 'metrics.json'), JSON.stringify({ mode: MODE, gpu, shader, results }, null, 2), 'utf8');
   await writeFile(join(outDir, 'log.txt'), log.join('\n'), 'utf8');

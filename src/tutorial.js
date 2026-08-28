@@ -104,8 +104,8 @@ var STEPS=[
    test:function(){ return hasPlayerBld('fac'); } },
 
  { id:'queue', icon:'▤',
-   say:'Tap the Factory on the map, then tap the Striker unit card. The queue line shows what is being built. Each unit also costs population — the HUD counter reads pop n/1K, and 1K is this commander\'s cap.',
-   done:'Striker queued. Production burns mass and energy over the build time. Pop n/1K is live headcount against the 1K seat cap — theatre size adds more seats, it does not raise yours.',
+   say:'Tap the Factory on the map, then tap the Striker unit card. The queue line shows what is being built. Each unit also costs population — the HUD counter reads pop n/500, shared by your combat faction.',
+   done:'Striker queued. Production burns mass and energy over the build time. Pop n/500 is live faction headcount — adding commanders does not multiply the cap.',
    test:function(){ return MATCH.sawQueue; } },
 
  { id:'train', icon:'⚔',
@@ -647,7 +647,10 @@ function speakVoiceFallback(text,faction){
     window.speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(String(text).replace(/[\u2192\u25c6\u26cf\ud83c\udfd7\ud83c\udfed\ud83d\udca5\u26a0\u2715]/g,''));
     var v={keen:[1.06,.94],nova:[1.02,.82],ascendancy:[.92,.66],syndicate:[1.10,1.03],horde:[.78,.52]}[faction]||[1.02,.82];
-    u.rate=v[0]; u.pitch=v[1]; u.volume=0.85;
+    u.rate=v[0]; u.pitch=v[1];
+    /* The last-resort OS voice cannot enter Web Audio, but it must still obey
+       the same Voice Volume setting as the rendered commander/tutorial bank. */
+    u.volume=0.85*(typeof audVoiceLevel==='function'?audVoiceLevel():1);
     var voices=window.speechSynthesis.getVoices?window.speechSynthesis.getVoices():[];
     if(voices.length&&faction){
       var prefer=faction==='ascendancy'?'male':(faction==='syndicate'||faction==='keen')?'female':faction==='horde'?'en':null;
@@ -1011,7 +1014,7 @@ function finishTrainingMission(){
   var M=tutMeta(),reward=(M.rewardedVersion|0)<GUIDE_VERSION?TRAINING_REWARD:0;
   M.done=true; M.skipped=false; M.version=GUIDE_VERSION;
   M.progress=STEPS.length;
-  if(reward){ META.cores=(META.cores||0)+reward; M.rewardedVersion=GUIDE_VERSION; }
+  if(reward){ metaGrantCores(reward,'training_reward','training:'+GUIDE_VERSION); M.rewardedVersion=GUIDE_VERSION; }
   TUT.trainingMode=false; trainingLaunched=false; TUT.active=false;
   document.body.classList.remove('trainingOperation');
   clearFocus(); restoreTrainingConfig();
@@ -1052,10 +1055,16 @@ function trainingUiState(){
 function updateTrainingEntry(){
   var S=trainingUiState();
   /* The training card's label and state line come from trainingUiState(), the
-     same source the Operations card reads, so the two can never disagree. If
-     the War Room is on screen, refresh it in place. */
-  var wr=document.getElementById('warScr');
-  if(wr&&wr.style.display&&wr.style.display!=='none'&&typeof renderWarRoom==='function') renderWarRoom();
+     same source the Operations card reads, so the two can never disagree. The
+     old 350 ms poll rebuilt `#warGrid` unconditionally; if that landed between
+     a card's pointerdown and pointerup, mfBindTap's press record disappeared
+     and the card silently did nothing. Refresh only when its rendered state
+     changed, preserving the live control and its accessibility semantics
+     through ordinary taps. */
+  var wr=document.getElementById('warScr'),grid=document.getElementById('warGrid');
+  var warSig=[S.done,S.active,S.interrupted,S.progress,S.rewarded,S.state,S.action].join(':');
+  if(wr&&wr.style.display&&wr.style.display!=='none'&&typeof renderWarRoom==='function'
+     &&(!grid||grid.dataset.mfTrainingSig!==warSig)) renderWarRoom();
   var op=document.getElementById('keelTrainingOp'),sig=[S.done,S.active,S.interrupted,S.progress,S.rewarded].join(':');
   if(op&&op.dataset.stateSig!==sig) appendTrainingOperation();
 }
@@ -1107,7 +1116,7 @@ function appendTrainingOperation(){
       +'<i>'+commander+' · KEEL tactical guidance</i>'
       +'<p>A protected live-fire drop. Skips the galaxy war table and lands on a fixed training map with no early enemy rush.</p></div></div>'
     +'<div class="ktoTeach" aria-label="Training topics"><span>◇ CAMERA</span><span>⬡ ECONOMY</span><span>▣ PRODUCTION</span>'
-      +'<span>➤ ORDERS</span><span>n/1K POP</span><span>⛨ DEFENCE</span><span>Ⅳ PLATOONS</span><span>⌾ SCOUTING</span>'
+      +'<span>➤ ORDERS</span><span>n/500 POP</span><span>⛨ DEFENCE</span><span>Ⅳ PLATOONS</span><span>⌾ SCOUTING</span>'
       +'<span>⌬ TECH</span><span>✦ POWERS</span><span>☁ SAVES</span></div>'
     +'<div class="ktoProgress"><div><span>OBJECTIVE PROGRESS</span><b>'+S.progress+' / '+STEPS.length+'</b></div>'
       +'<div class="ktoProgressTrack"><i style="width:'+progressPct+'%"></i></div>'
@@ -1239,12 +1248,14 @@ function initTutorial(){
   setInterval(tutTick,350);
 }
 window.initTutorial=initTutorial;
-/* Main-menu navigation owns the application-level exit transaction. Export
-   the training cleanup explicitly so returnToMainMenu() can actually call it;
-   this file is intentionally scoped in an IIFE, so a bare function declaration
-   was never global and the old typeof guard silently did nothing. */
+/* Main-menu and War Room navigation own application-level entry/exit
+   transactions. This file is intentionally scoped in an IIFE, so expose the
+   small public bridge explicitly: otherwise meta.js' defensive typeof checks
+   see no Training handlers at all and the card silently does nothing. */
 window.cancelTrainingMission=cancelTrainingMission;
 window.trainingMissionActive=function(){return !!(TUT.trainingMode||trainingPrev);};
+window.trainingUiState=trainingUiState;
+window.resumeTrainingMission=resumeTrainingMission;
 /* Inspection hook for automated verification — read-only, harmless to leave
    wired for real players (no different from any other console-reachable
    global in this codebase). */

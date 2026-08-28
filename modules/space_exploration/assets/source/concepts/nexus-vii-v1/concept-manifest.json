@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "nexus_vii_ship_and_command_complex_v1",
+  "status": "approved_for_first_modeling_pass",
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "modelingGate": {
+    "conceptRequiredBeforeGeometry": true,
+    "matchedCaptureRequiredAfterGeometry": true,
+    "mobilePortraitEvidenceRequired": true
+  },
+  "concepts": [
+    {
+      "id": "nexus_vii_master_concept_v1",
+      "file": "nexus-vii-master-concept-v1.png",
+      "sha256": "d34291dd94d39761d998195e59c76f185cc5956f5b1c7f2b1242865799e6abed",
+      "bytes": 2829930,
+      "resolution": [1536, 1024],
+      "biomeOrBiodome": ["uga_ship_multideck"],
+      "faction": ["uga"],
+      "intention": [
+        "hero_ship_landmark",
+        "radial_city_ship_topology",
+        "modular_interior_kit",
+        "lod_silhouette"
+      ],
+      "modelingTargets": [
+        "coherent_exterior_and_cutaway",
+        "radial_command_spine",
+        "three_connected_decks",
+        "glazed_transit_corridors",
+        "distinct_exterior_and_interior_materials"
+      ]
+    },
+    {
+      "id": "command_navigation_mission_ops_concept_v1",
+      "file": "command-navigation-mission-ops-concept-v1.png",
+      "sha256": "7936f0152be10c8b3fb4f19cd46bdeb7c5ef99cf4531a6557ccd9b3d640c7417",
+      "bytes": 3333694,
+      "resolution": [1024, 1536],
+      "biomeOrBiodome": ["uga_ship_command_core"],
+      "faction": ["uga"],
+      "intention": [
+        "command_and_navigation",
+        "mission_planning",
+        "modular_interior_kit",
+        "infrastructure_connector_kit"
+      ],
+      "modelingTargets": [
+        "command_strategy_dais",
+        "tiered_navigation_bridge",
+        "mission_briefing_amphitheater",
+        "pressure_corridor",
+        "civic_walkway",
+        "stairs_and_ramps",
+        "service_trench",
+        "bulkhead_door",
+        "lift_core",
+        "service_trunk",
+        "ceiling_light_rail"
+      ]
+    },
+    {
+      "id": "deck_c_biodome_civic_concept_v1",
+      "file": "deck-c-biodome-civic-concept-v1.png",
+      "sha256": "b972f4b35ebf196dc7a1f785d3e7ecaad44c909f7a6d636c2eaae601eab9a39b",
+      "bytes": 3293494,
+      "resolution": [1024, 1536],
+      "biomeOrBiodome": ["uga_ship_biodome"],
+      "faction": ["uga"],
+      "intention": [
+        "civic_exploration_space",
+        "habitat_and_medical",
+        "coalition_embassy",
+        "logistics_and_cargo",
+        "world_landmark",
+        "modular_interior_kit"
+      ],
+      "modelingTargets": [
+        "terraced_habitat_blocks",
+        "medical_complex",
+        "embassy_rotunda",
+        "cargo_depot",
+        "hydroponic_gardens",
+        "service_roads",
+        "glass_pressure_tunnels",
+        "lift_towers",
+        "utility_undercroft",
+        "daylight_simulation_roof"
+      ]
+    },
+    {
+      "id": "deck_b_research_fabrication_engineering_concept_v1",
+      "file": "deck-b-research-fabrication-engineering-concept-v1.png",
+      "sha256": "1727b8fe949bed148f4d5d9cbab381fc99a82faf19e6752662e11297da20425f",
+      "bytes": 3038915,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen",
+        "executionId": "exec-7ca9f9fb-8c8c-4db7-90b8-48436a4afe39"
+      },
+      "biomeOrBiodome": ["uga_ship_research_industrial"],
+      "faction": ["uga"],
+      "intention": [
+        "research_facility",
+        "fabrication_facility",
+        "engineering_facility",
+        "modular_interior_kit",
+        "construction_state_reference"
+      ],
+      "modelingTargets": [
+        "research_directorate",
+        "fabrication_and_armory",
+        "engineering_and_drive",
+        "multi_level_work_floors",
+        "fabrication_cells",
+        "power_and_service_trunks",
+        "district_specific_floor_wall_and_machine_materials",
+        "authored_build_plot_stages"
+      ]
+    },
+    {
+      "id": "survey_lab_concept_v1",
+      "file": "survey-lab-concept-v1.png",
+      "sha256": "3718c60d14b414b62b1cd7ec4a82fcca5e3e0d0dfe636b40c6bbdfcda14d85d5",
+      "bytes": 2901918,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen",
+        "executionId": "exec-28567425-65a0-487b-9295-a4e31aac0032"
+      },
+      "biomeOrBiodome": ["uga_ship_science_observatory"],
+      "faction": ["uga"],
+      "intention": [
+        "exploration_scanning",
+        "anomaly_analysis",
+        "probe_logistics",
+        "modular_interior_kit",
+        "interactive_station_reference"
+      ],
+      "modelingTargets": [
+        "planetary_scan_theater",
+        "anomaly_analysis_platform",
+        "probe_racks",
+        "sample_processing_stations",
+        "contained_anomaly_chamber",
+        "glass_transit_connector",
+        "human_scale_science_props",
+        "lod_readable_holographic_instruments"
+      ]
+    },
+    {
+      "id": "strike_expedition_bay_concept_v1",
+      "status": "SUPERSEDED_BY_SHARED_BASE_DEPLOYER_V2",
+      "file": "strike-expedition-bay-concept-v1.png",
+      "sha256": "c70ef578468a5e3146bd69b484c13fa46676c3641df64d902dbee43e7692254b",
+      "bytes": 2845298,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen",
+        "executionId": "exec-9bedd158-702a-4888-974d-4ca763658d77"
+      },
+      "biomeOrBiodome": ["uga_ship_expedition_staging"],
+      "faction": ["uga"],
+      "intention": [
+        "ground_operation_preparation",
+        "commander_and_specialist_mustering",
+        "deployment_manifest",
+        "vehicle_and_structure_staging",
+        "construction_state_reference",
+        "lod_silhouette"
+      ],
+      "modelingTargets": [
+        "xcom_style_mustering_floor",
+        "mission_manifest_table",
+        "sized_unit_and_structure_staging_pads",
+        "ground_lander_transport",
+        "support_equipment_and_cargo_racks",
+        "medevac_cradle",
+        "equipment_and_mod_lockers",
+        "glass_transit_tunnel",
+        "road_like_floor_lanes",
+        "lift_and_service_undercroft",
+        "tier_one_two_three_facility_variants",
+        "damage_and_maintenance_states"
+      ]
+    },
+    {
+      "id": "strike_expedition_bay_shared_base_deployer_concept_v2",
+      "status": "APPROVED",
+      "file": "strike-expedition-bay-shared-base-deployer-concept-v2.png",
+      "sha256": "76391c07c3570cd3216fcaf7ed7ad0450650edf2e8288aa727f8c5579ff18a2a",
+      "bytes": 3033755,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen-edit",
+        "executionId": "exec-98041eed-5570-4188-8762-9dc89d7baea4",
+        "sourceConceptId": "strike_expedition_bay_concept_v1"
+      },
+      "biomeOrBiodome": ["uga_ship_expedition_staging"],
+      "faction": ["uga", "nova", "dominion", "syndicate"],
+      "relationship": {
+        "uga": "institutional_host",
+        "nova": "resident_playable",
+        "dominion": "resident_playable",
+        "syndicate": "resident_playable",
+        "brood": "excluded_ai_only_galactic_enemy"
+      },
+      "intention": [
+        "ground_operation_preparation",
+        "commander_specialist_and_striker_mustering",
+        "base_deployer_air_unit_hangar",
+        "hq_transformation_service",
+        "deployment_manifest",
+        "vehicle_and_structure_staging",
+        "construction_state_reference",
+        "lod_silhouette"
+      ],
+      "modelingTargets": [
+        "single_integrated_hangar_volume",
+        "shared_base_deployer_and_striker_hangar_pad",
+        "transforming_orbital_base_deployer_air_unit",
+        "striker_company_muster_lanes",
+        "commander_and_specialist_ready_area",
+        "hq_transformation_service_rack",
+        "starting_structure_and_support_cargo",
+        "aircraft_ramp_lift_and_egress_clearance",
+        "medevac_and_equipment_lockers",
+        "glass_transit_tunnel",
+        "road_like_floor_lanes",
+        "lift_and_service_undercroft",
+        "tier_one_two_three_facility_variants",
+        "damage_and_maintenance_states"
+      ]
+    }
+  ],
+  "constraints": [
+    "no_space_weapons",
+    "no_detached_box_rooms",
+    "no_generic_runtime_cubes",
+    "brood_is_ai_only_non_playable_non_humanoid_galactic_enemy",
+    "brood_is_never_ship_resident_or_strike_team_roster",
+    "strikers_share_the_base_deployer_air_unit_hangar",
+    "consistent_human_scale",
+    "interior_surfaces_do_not_reuse_exterior_hull_material",
+    "readable_on_phone_portrait"
+  ]
+}

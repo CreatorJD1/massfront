@@ -7,6 +7,10 @@ param(
   [Parameter(Mandatory=$true)][string]$Version,
   [Parameter(Mandatory=$true)][string]$Notes,
   [switch]$DryRun,
+  # Build and verify every local release artifact, but stop before any remote
+  # mutation. This permits an immutable-first upload/verification pass before
+  # the live update manifest is activated.
+  [switch]$PrepareOnly,
   # A local manifest is written before uploads begin. If a build/upload process
   # is interrupted, explicit Resume rebuilds the exact version and activates
   # only after every artifact is uploaded again.
@@ -36,14 +40,25 @@ $Version=$Version.Trim()
 $Notes=$Notes.Trim()
 $Root=(Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Repo='CREATORJD/massfront-releases'
-$Hf='C:\Users\Jason\AppData\Roaming\Python\Python313\Scripts\hf.exe'
+$HfCandidates=@()
+if($env:HF_CLI){$HfCandidates+=$env:HF_CLI}
+$HfCandidates+='hf'
+if($env:APPDATA){
+  $HfCandidates+=@(Get-ChildItem (Join-Path $env:APPDATA 'Python\Python*\Scripts\hf.exe') -File -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | ForEach-Object FullName)
+}
+$HfCommand=$null
+foreach($candidate in $HfCandidates){
+  $resolved=Get-Command $candidate -ErrorAction SilentlyContinue
+  if($resolved){$HfCommand=$resolved;break}
+}
+$Hf=if($HfCommand){$HfCommand.Source}else{'hf'}
 Set-Location $Root
 
 function Need($condition,$message){ if(-not $condition){ throw $message } }
 function Run([string]$label,[scriptblock]$action){ Write-Host "`n== $label ==" -ForegroundColor Cyan; & $action; if($LASTEXITCODE -and $LASTEXITCODE -ne 0){ throw "$label failed with exit code $LASTEXITCODE" } }
 function WriteReleaseManifest([string]$path,[hashtable]$body){ [IO.File]::WriteAllText((Join-Path $Root $path), ($body | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding($false))) }
 
-Need (Test-Path $Hf) "Hugging Face CLI not found at $Hf. Run: hf auth login"
+Need ($null -ne $HfCommand) 'Hugging Face CLI was not found. Install it or set HF_CLI, then run: hf auth login'
 Need ($Version -match '^\d+\.\d+\.\d+$') "Version '$Version' must use major.minor.patch numbers, for example 1.32.86."
 $current=(Get-Content package.json -Raw -Encoding utf8 | ConvertFrom-Json).version
 $releaseManifestPath=Join-Path $Root 'update.json'
@@ -52,7 +67,8 @@ $publishedLocal=[string]$previousManifest.version
 $advancesSource=[version]$Version -gt [version]$current
 $resumesFailedRelease=([version]$Version -eq [version]$current) -and
   (([version]$Version -gt [version]$publishedLocal) -or $Resume)
-Need ($advancesSource -or $resumesFailedRelease) "Version $Version must be higher than source $current, or use -Resume for an interrupted publish of the current source version."
+$preparingCurrentCandidate=([version]$Version -eq [version]$current) -and $PrepareOnly
+Need ($advancesSource -or $resumesFailedRelease -or $preparingCurrentCandidate) "Version $Version must be higher than source $current, or use -Resume for an interrupted publish of the current source version."
 $code=([int]($Version.Split('.')[0])*10000)+([int]($Version.Split('.')[1])*100)+[int]$Version.Split('.')[2]
 $verb=if($resumesFailedRelease){'resuming failed publish after'}else{'replacing'}
 Write-Host "Preparing MASSFRONT v$Version (Android code $code), $verb v$publishedLocal."
@@ -245,26 +261,47 @@ if($PatchFrom){
 $manifest.full=@($fullFiles | ForEach-Object {
   [ordered]@{ path=$_.path; url=$_.url; size=$_.size; sha256=$_.sha256 }
 })
-WriteReleaseManifest 'update.json' $manifest
-WriteReleaseManifest 'releases/MASSFRONT-update.json' $manifest
-WriteReleaseManifest "releases/update-v$Version.json" $manifest
+if($PrepareOnly){
+  # A candidate proves the proposed bytes without mutating the checked-in/live
+  # activation manifest. Its URLs intentionally remain unpinned until the
+  # immutable HF commit has been uploaded and verified.
+  $candidate="releases/candidates/update-v$Version.candidate.json"
+  $candidateDir=Split-Path -Parent (Join-Path $Root $candidate)
+  New-Item -ItemType Directory -Path $candidateDir -Force | Out-Null
+  WriteReleaseManifest $candidate $manifest
+  Write-Host "Prepared candidate manifest: $candidate" -ForegroundColor Yellow
+} else {
+  WriteReleaseManifest 'update.json' $manifest
+  WriteReleaseManifest 'releases/MASSFRONT-update.json' $manifest
+  WriteReleaseManifest "releases/update-v$Version.json" $manifest
+}
 
 # Archive only canonical project material. Build caches and old releases are
 # intentionally excluded, so collaborators get the real source/assets quickly.
-$stage=Join-Path $env:TEMP "massfront-source-$Version"
+# Keep staging below the authority checkout: an interrupted publish must not
+# create another persistent MASSFRONT tree in the system temp directory.
+$stage=Join-Path $Root ".tmp\publish-hf-release\source-$Version"
 if(Test-Path $stage){ Remove-Item -LiteralPath $stage -Recurse -Force }
 New-Item -ItemType Directory -Path $stage | Out-Null
 $keep=@(
   'AGENTS.md','README.md','package.json','package-lock.json','index.html','boot.js',
   'capacitor.config.json','capacitor.config.ts','PUBLISH_HF_RELEASE.bat','update.json',
-  '.github','assets','src','tools','android','ios','cloudflare','docs','design','audit'
+  '.github','assets','src','tools','android','ios','cloudflare','docs','design','audit',
+  # These are development/source handoff material, not runtime payload. The
+  # optional Galactic module stays out of www/ and OTA, but must survive a
+  # full-source release archive together with its authoring references.
+  'modules','source-media'
 )
 foreach($name in $keep){
   $from=Join-Path $Root $name
   if(Test-Path $from){
     $to=Join-Path $stage $name
     if((Get-Item $from).PSIsContainer){
-      & robocopy $from $to /E /XD build .gradle node_modules /XF '*.apk' /NFL /NDL /NJH /NJS | Out-Null
+      # Keep authored module/source assets, but never archive regenerable build
+      # products, captured evidence, remote attachment mirrors, or downloaded
+      # toolchains. /XD applies recursively, so this also protects nested
+      # space-module worktrees without deleting any of those local materials.
+      & robocopy $from $to /E /XD build .gradle .gradle-mobile .kotlin node_modules tmp .tmp .cache .toolchains .codex-remote-attachments logs /XF '*.apk' '*.idsig' /NFL /NDL /NJH /NJS | Out-Null
       if($LASTEXITCODE -gt 7){ throw "Source archive copy failed for $name (robocopy $LASTEXITCODE)" }
     } else { Copy-Item -LiteralPath $from -Destination $to -Force }
   }
@@ -282,16 +319,29 @@ if(Test-Path $source){ Remove-Item -LiteralPath $source -Force }
 $archiveItems=@(Get-ChildItem -LiteralPath $stage -Force)
 Need ($archiveItems.Count -gt 0) "Source archive staging is empty; refusing to publish an unusable handoff."
 if($PatchFrom){
-  Write-Host "Hotfix: skipping the ~1 GB source archive. The previous release archive still stands." -ForegroundColor Yellow
+  if($PrepareOnly){
+    Write-Host "Prepare-only hotfix: source archive omitted because the prior immutable archive remains authoritative." -ForegroundColor Yellow
+  } else {
+    Write-Host "Hotfix: skipping the ~1 GB source archive. The previous release archive still stands." -ForegroundColor Yellow
+  }
 } else {
   Compress-Archive -Path $archiveItems.FullName -DestinationPath $source -CompressionLevel Optimal
 }
 if($PatchFrom){
-  Write-Host "Hotfix: no source archive was built, so its size assertion does not apply." -ForegroundColor Yellow
+  Write-Host "No source archive was built in this phase, so its size assertion does not apply." -ForegroundColor Yellow
 } else {
   Need ((Get-Item -LiteralPath $source).Length -gt 1048576) "Source archive is implausibly small; refusing to publish an unusable handoff."
 }
 Remove-Item -LiteralPath $stage -Recurse -Force
+
+if($PrepareOnly){
+  Write-Host "`nPrepared v$Version locally; no Hugging Face file was changed." -ForegroundColor Green
+  Write-Host "OTA: $otaStage"
+  Write-Host "APK: $apk"
+  Write-Host "Source candidate: $source"
+  Write-Host "NOTE: the local manifest is intentionally unpinned and is evidence only; pinning occurs after immutable artifacts are uploaded and verified."
+  exit 0
+}
 
 
 # Force the classic LFS upload path. With hf-xet installed the client defaults

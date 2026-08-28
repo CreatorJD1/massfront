@@ -34,7 +34,7 @@
    ============================================================================ */
 
 const SESS_KEY = 'mf_dropped_session_v1';
-const SESS_MAX_UNITS = 4000;      // DEBT: map-total snapshot slice, not a pop cap. Per-seat cap is FACTION_POP_CAP (1000).
+const SESS_MAX_UNITS = 4000;      // DEBT: map-total snapshot slice, not a pop cap. Each combat faction is capped by FACTION_POP_CAP (500).
 const SESS_TTL_MS = 45 * 60 * 1000;
 
 function sessCanSnapshot(){
@@ -222,7 +222,7 @@ function sessRestoreOrders(U,spawned,uMap,bMap,patrols){
       ufield[i]=-1;
       const T=TYPES[utype[i]];
       if(T&&!T.air&&(ustate[i]===1||ustate[i]===2||ustate[i]===5)&&typeof requestField==='function')
-        ufield[i]=requestField(utx[i],uty[i],!!T.naval);
+        ufield[i]=requestField(utx[i],uty[i],!!T.naval,mfNavUnitClearance(T));
     }
   }
   if(typeof patrolRoutes==='undefined') return;
@@ -528,4 +528,3 @@ function sessResume(){
     setTimeout(land,250);
   }catch(e){ sessClear(); sessRenderResume(); }
 }
-

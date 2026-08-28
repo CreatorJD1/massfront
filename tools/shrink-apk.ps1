@@ -49,14 +49,17 @@ try{
     if($LASTEXITCODE -ne 0){ throw "resources.arsc store pass failed ($LASTEXITCODE)" }
   }
 
-  & $zipalign -f -p 4 $repacked $aligned
+  # Android 15+ devices may use 16 KiB memory pages. Align every uncompressed
+  # native library to that boundary while retaining the normal 4-byte ZIP
+  # entry alignment for all other payloads.
+  & $zipalign -f -P 16 4 $repacked $aligned
   if($LASTEXITCODE -ne 0){ throw "zipalign failed ($LASTEXITCODE)" }
   & $signer sign --ks $key --ks-pass pass:android --key-pass pass:android `
     --ks-key-alias androiddebugkey --out $out $aligned
   if($LASTEXITCODE -ne 0){ throw "APK signing failed ($LASTEXITCODE)" }
   & $signer verify --verbose $out
   if($LASTEXITCODE -ne 0){ throw "APK signature verification failed ($LASTEXITCODE)" }
-  & $zipalign -c -p 4 $out
+  & $zipalign -c -P 16 4 $out
   if($LASTEXITCODE -ne 0){ throw "APK alignment verification failed ($LASTEXITCODE)" }
   Get-Item -LiteralPath $out | Select-Object FullName,Length,LastWriteTime
 } finally {

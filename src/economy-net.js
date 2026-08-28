@@ -27,14 +27,13 @@
    load order (see the big comment at the top of authportal.js). This file
    loads AFTER offline.js, game/meta.js, authportal.js and account.js (see
    boot.js MANIFEST / assets/data/manifest.json), so it can safely read
-   netAllowed(), META/metaSave(), and AP_SESSION — and it hooks into three of
-   their globals by WRAPPING, the same non-invasive pattern offline.js uses
-   on renderSettings, rather than editing those files:
+   netAllowed(), META/metaSave(), and AP_SESSION. Core grants arrive through
+   game/meta.js's observer; the two auth transitions are wrapped using the
+   same non-invasive pattern offline.js uses on renderSettings:
 
-     metaGrant        (game/meta.js)   -> after a match pays out cores/xp
-                                          locally, queue the same cores as a
-                                          server grant. This is the
-                                          "match reward" flow the task names.
+     metaGrantCores   (game/meta.js)   -> after any source pays cores locally,
+                                          queue that same grant for the server
+                                          without crediting locally again.
      apSetSessionFrom (authportal.js)  -> after a real sign-in/register,
                                           reconcile with the server.
      apClearSession   (authportal.js)  -> on sign-out, drop the confirmed
@@ -273,19 +272,15 @@ function initEconomyNet() {
   ecoLoadQueue();
   ecoResolveEndpoint();
 
-  /* Hook match rewards: wrap, don't edit, game/meta.js's metaGrant — see
-     file header. Guarded so a MANIFEST/order change that loads this file
-     before meta.js fails loud in the console instead of silently never
-     wiring up (metaGrant would just run unwrapped forever). */
-  if (typeof metaGrant === 'function') {
-    const _metaGrant0 = metaGrant;
-    metaGrant = function (win) {
-      const result = _metaGrant0(win);
-      if (result && result.cores) ecoGrant(result.cores, 'match_reward');
-      return result;
-    };
+  /* metaGrantCores already credited the active profile. Observe its durable
+     grant event only; queued pre-init grants drain here before reconciliation,
+     so a signed-in metaLoad migration cannot be overwritten and lost. */
+  if (typeof metaObserveCoreGrants === 'function') {
+    metaObserveCoreGrants(grant => {
+      ecoGrant(grant.amount, grant.reason, grant.idemKey ? { idemKey: grant.idemKey } : undefined);
+    });
   } else if (typeof console !== 'undefined') {
-    console.error('economy-net: metaGrant not found at init — check MANIFEST load order (economy-net.js must load after game/meta.js)');
+    console.error('economy-net: metaObserveCoreGrants not found at init — check MANIFEST load order (economy-net.js must load after game/meta.js)');
   }
 
   /* Hook sign-in / sign-out: wrap authportal.js's session setters the same
@@ -323,4 +318,3 @@ window.EconomyNet = {
   grant: ecoGrant, spend: ecoSpend, reconcile: ecoReconcile, flush: ecoFlush,
   getBalance: ecoGetBalance, getEntitlements: ecoGetEntitlements,
 };
-

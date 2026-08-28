@@ -371,7 +371,8 @@ function renderOps(){
   /* Modifiers */
   const mr=document.getElementById('opModRow');
   if(mr){
-    mr.innerHTML=OPMODS.map((k,mi)=>{ const u=opModUnlockState(k),active=opModActive(k.id),
+    mr.innerHTML='<div class="opScopeNote">'+mfOwnershipBadgeHTML('match')+'<span>Selected rules alter this operation only; they never become account upgrades.</span></div>'
+      +OPMODS.map((k,mi)=>{ const u=opModUnlockState(k),active=opModActive(k.id),
       /* The atlas is row-major 5x2. CSS percentage positions are relative to
          the remaining overflow, so five columns land at 0/25/50/75/100. */
       artX=(mi%5)*25,artY=mi<5?0:100; return '<div class="opMod'
@@ -426,6 +427,7 @@ function renderOps(){
         +'<div><span>EST. DURATION</span><b>'+(mins?'≈ '+mins+' MIN':'OPEN ENDED')+'</b></div>'
         +'<div><span>THREAT</span><b>T'+playThreat+(playThreat<wd.threat?' / T'+wd.threat:'')+'</b></div>'
         +'<div><span>ENVIRONMENT</span><b>'+haz.em+' '+haz.nm+'</b></div></div>'
+      +'<div class="wkModScope">'+mfOwnershipBadgeHTML('match')+'<span>Weekly rules apply to this operation only.</span></div>'
       +'<div class="wkModChips">'+modNames.map(n=>'<span>'+n+'</span>').join('')+'</div>'
       +'<div class="wkReward"><div><span>PROJECTED CORE RANGE</span><b>+'+forecast.min+'–'+forecast.max+'</b></div>'
         +'<small>×'+forecast.mult.toFixed(2)+' XP &amp; CORE PAYOUT<br>Performance determines final recovery</small></div>'
@@ -489,4 +491,3 @@ function initOps(){
      endgameRecord().msgs — main.js already prints those into #goRewards. */
   renderOps();
 }
-

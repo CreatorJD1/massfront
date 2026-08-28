@@ -1,0 +1,187 @@
+{
+  "$schema": "./assets.v1.schema.json",
+  "schemaVersion": 1,
+  "libraryId": "massfront-content-library",
+  "styleProfiles": [
+    {
+      "id": "anime-cell-v1",
+      "label": "Modern Anime Cel-Shaded V1",
+      "renderLanguage": "Low-triangle, clean silhouette, restrained cel bands, authored emissive accents, and readable faces at mobile ship-view distance.",
+      "notes": "Source quality and runtime readiness are independent; high-density generated meshes must be normalized, reduced, rigged, and visually approved before use."
+    },
+    {
+      "id": "commander-anime-flat-v1",
+      "label": "Commander Anime Flat V1",
+      "renderLanguage": "Human, cyborg, robot, and mech commanders use crisp continuous linework and solid semantic color fills with no cel bands, gradients, surface shading, AO, specular response, or material microtexture.",
+      "notes": "Commander-only authority. Portraits declare no more than 24 solid colors and remain readable at 48, 96, and 192 pixels; robotic battle representations require an unlit outlined path. Approval also requires provenance and visual evidence on bright and dark terrain."
+    }
+  ],
+  "assets": [
+    {
+      "id": "uga_anime_human_master_v1",
+      "assetType": "character",
+      "representation": "3d-model",
+      "contentCategory": "character",
+      "displayName": "UGA Anime Human Master V1",
+      "styleProfile": "commander-anime-flat-v1",
+      "classification": {
+        "biomeOrBiodome": ["uga_ship_interior"],
+        "faction": ["uga"],
+        "intention": ["cinematic-character", "ship-crew", "commander-icon-source"]
+      },
+      "tags": [
+        "full-body",
+        "human",
+        "commander-style-rebuild-required",
+        "reference-only",
+        "sealed-helmet",
+        "strict-t-pose",
+        "uga"
+      ],
+      "lifecycle": {
+        "stage": "SOURCE",
+        "runtimeReady": false
+      },
+      "source": {
+        "path": "modules/space_exploration/assets/source/spline/characters/uga-anime-human-master-v1/uga-anime-human-master-v1-source.glb",
+        "format": "glb",
+        "provenance": {
+          "originSystem": "spline",
+          "authorship": "original-ai-assisted-user-directed",
+          "sourceSceneUrl": "https://my.spline.design/untitled-vii8cSRLttVJvb6YWxjZIvw3/",
+          "sceneObjectId": "0d7eaa4c-4812-494c-9ea8-0909d4ab37a6",
+          "sourceImageGenerationId": "bc293e81-3df9-4ede-9a6e-db2e4290078b",
+          "sourceImageAssetId": "87331ac9-8391-49f4-a46d-7dff8f1c5e4c",
+          "copyrightedReferencePixelsUsed": false,
+          "notes": "Original generated full-body source retained as visual reference only. Blender inspection exposed stretched and sliced surface topology, so automatic decimation is prohibited and a clean model rebuild is required from the approved turnaround concept.",
+          "integrity": {
+            "algorithm": "sha256",
+            "status": "verified",
+            "digest": "1336d76bf02348209b9d62c4c0e852114cae75b0e51b8b2f80b0e69e00726d76"
+          }
+        }
+      },
+      "conceptEvidence": {
+        "conceptId": "concept_uga_expedition_specialist_turnaround_v1",
+        "sourceOnly": true,
+        "sourcePath": "modules/space_exploration/assets/source/concepts/characters/uga-anime-human-master-v1/uga-expedition-specialist-turnaround-v1.png",
+        "plannedPath": "modules/space_exploration/assets/source/concepts/characters/uga-anime-human-master-v1/uga-expedition-specialist-turnaround-v1.png",
+        "integrity": {
+          "algorithm": "sha256",
+          "status": "verified",
+          "digest": "ab31ed58d2132f42236840a5a33dff6a45b8c5f6841e523e6f304508b9edb75f"
+        },
+        "bytes": 1740217,
+        "resolution": [1632, 963],
+        "approvalStatus": "APPROVED",
+        "pixelUsage": "concept-reference-only",
+        "pixelsUsedAsTexture": false,
+        "generationEvidence": {
+          "system": "imagegen",
+          "executionId": "exec-3b28322a-c295-46fd-a9b2-7372dbcdd92a"
+        }
+      },
+      "facePolicy": {
+        "presentation": "sealed-helmet",
+        "faceAnimation": {
+          "enabled": false,
+          "facialRig": false,
+          "morphTargets": false,
+          "lipSync": false,
+          "expressions": false,
+          "closeUpQa": {
+            "status": "not-applicable",
+            "evidence": "Opaque sealed helmet is the required fallback while facial animation is disabled."
+          }
+        }
+      },
+      "geometry": {
+        "sourceTriangles": 375004,
+        "fullBody": true,
+        "bindPose": "strict-t-pose",
+        "coordinateSystem": "spline-y-up"
+      },
+      "capabilities": {
+        "rigged": false,
+        "deformBones": 0,
+        "maxInfluencesObserved": 0,
+        "animationClips": []
+      },
+      "sourceDisposition": {
+        "usage": "reference-only",
+        "runtimeEligible": false,
+        "automaticDecimationAllowed": false,
+        "reason": "clean-rebuild-required",
+        "topologyFinding": "stretched-sliced-surface-topology",
+        "evidence": "Blender import and reduction review exposed stretched and sliced surface topology; decimation cannot produce an animation-safe game mesh.",
+        "rebuildFromConceptId": "concept_uga_expedition_specialist_turnaround_v1"
+      },
+      "runtime": {
+        "targetSurfaces": [
+          "ship-cutscene",
+          "ship-interior",
+          "commander-portrait"
+        ],
+        "lodTargets": {
+          "LOD0": {
+            "min": 25000,
+            "max": 40000,
+            "use": "Cinematic close-up"
+          },
+          "LOD1": {
+            "min": 8000,
+            "max": 12000,
+            "use": "UGA ship interior"
+          },
+          "LOD2": {
+            "min": 2500,
+            "max": 3000,
+            "use": "Distant ship character"
+          }
+        },
+        "rigBudget": {
+          "maxDeformBones": 64,
+          "maxInfluencesPerVertex": 4
+        },
+        "runtimePath": null
+      },
+      "approval": {
+        "status": "REJECTED",
+        "gates": [
+          {
+            "id": "full-body-t-pose",
+            "status": "verified",
+            "evidence": "Spline scene object 0d7eaa4c-4812-494c-9ea8-0909d4ab37a6 visual review"
+          },
+          {
+            "id": "source-integrity",
+            "status": "verified",
+            "evidence": "SHA-256 1336d76bf02348209b9d62c4c0e852114cae75b0e51b8b2f80b0e69e00726d76; 12739372 bytes"
+          },
+          {
+            "id": "topology",
+            "status": "failed",
+            "evidence": "Blender inspection found stretched and sliced surface topology; automatic decimation rejected."
+          },
+          {
+            "id": "lods",
+            "status": "failed",
+            "evidence": "LOD derivation by automatic decimation is prohibited; author clean topology from the approved concept."
+          },
+          {
+            "id": "rig",
+            "status": "pending"
+          },
+          {
+            "id": "animations",
+            "status": "pending"
+          },
+          {
+            "id": "mobile-visual",
+            "status": "pending"
+          }
+        ]
+      }
+    }
+  ]
+}

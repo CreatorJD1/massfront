@@ -727,6 +727,45 @@ function mfAssetSkin(gl,mesh,name){
   return true;
 }
 
+/* Four architectural materials share one compact 2x2 PBR set. Unlike the
+   per-model skin above, this deliberately keeps the world-kit's face-stable
+   planar UVs: every WORLDKIT_* semantic id selects one 512px quadrant. Units
+   4/5/6 are already reserved for BaseAO/NRE/masks, so this adds neither a
+   sampler nor a draw call while restoring 4x the linear texel density of the
+   mobile 1408 atlas (512 versus 128 texels per material). */
+const MF_WORLDKIT_SKIN={meshes:[],recs:null,maps:null};
+function mfWorldKitSkin(gl,mesh){
+  if(!gl||!mesh) return false;
+  if(MF_WORLDKIT_SKIN.maps){
+    mesh.assetMaps=MF_WORLDKIT_SKIN.maps; mesh.assetMode=2; return true;
+  }
+  if(MF_WORLDKIT_SKIN.meshes.indexOf(mesh)<0) MF_WORLDKIT_SKIN.meshes.push(mesh);
+  if(!MF_WORLDKIT_SKIN.recs){
+    const base='assets/textures/materials/mf-worldkit-v4';
+    const urls=[base+'-baseao.png',base+'-nre.png',base+'-masks.png'].map(u=>
+      (typeof mf2AssetURL==='function')?mf2AssetURL(u):('./'+u));
+    MF_WORLDKIT_SKIN.recs=urls.map(u=>mfAssetTex(gl,u));
+    const finish=()=>{
+      const recs=MF_WORLDKIT_SKIN.recs;
+      if(!recs||recs.some(r=>!r.ready&&!r.failed)) return;
+      if(recs.some(r=>r.failed)) return; // atomic fallback to shared atlas
+      const maps={base:recs[0].tex,nre:recs[1].tex,mask:recs[2].tex};
+      MF_WORLDKIT_SKIN.maps=maps;
+      for(const M of MF_WORLDKIT_SKIN.meshes){ M.assetMaps=maps; M.assetMode=2; }
+    };
+    for(const r of MF_WORLDKIT_SKIN.recs){ if(!r.ready&&!r.failed) r.onready=finish; }
+    finish();
+  }
+  return true;
+}
+function mfWorldKitSkinReset(){
+  if(MF_WORLDKIT_SKIN.recs) for(const r of MF_WORLDKIT_SKIN.recs){
+    for(const k in MF_ASSET_TEX) if(MF_ASSET_TEX[k]===r) delete MF_ASSET_TEX[k];
+  }
+  MF_WORLDKIT_SKIN.meshes.length=0;
+  MF_WORLDKIT_SKIN.recs=null; MF_WORLDKIT_SKIN.maps=null;
+}
+
 /* The same grid unwrap applied to an ALREADY BUILT geometry, treating each
    index triple as a face. The builder method works on face spans, so it keeps
    quads whole and wastes fewer cells; this one exists so the injectivity
@@ -768,10 +807,13 @@ function mfUnwrapGeoUV(geo){
 
 /* ============================================================================
    INSTANCED MESH — one geometry, many placements, one draw call.
-   Per-instance stream: x,y,z, scale, yaw, r,g,b,a  (9 floats)
+   Per-instance stream: position/scale, yaw, tint, width, animation, surface
+   state, optional pitch, optional roll. Roll is local about model +X (forward)
+   and is applied before the existing pitch/yaw so aircraft bank on the
+   longitudinal axis instead of yaw-wobbling. Omit it and it stays 0.
    ============================================================================ */
 const VSTRIDE=VFLOATS*4;
-const INST_FLOATS=12, INST_STRIDE=INST_FLOATS*4;
+const INST_FLOATS=14, INST_STRIDE=INST_FLOATS*4;
 const MAX_INST=26000;
 /* Eight limbs of seven segments is 56, and the Sovereign's tendrils take it to
    68 — 64 was not enough and the overflow was silent, which is the worst kind.
@@ -782,6 +824,16 @@ class InstMesh{
   constructor(gl,geo,cap){
     this.gl=gl; this.count=geo.count; this.cap=cap||2400; this.n=0;
     this.data=new Float32Array(this.cap*INST_FLOATS);
+    /* bindShadow() and flush() consume the SAME instance stream. CSM runs
+       first, so uploading that unchanged stream again for colour doubled the
+       per-frame instance traffic of every shadow caster. The cache is keyed by
+       content revision, count, GL context and buffer identity: it can only
+       suppress the exact upload bindShadow already performed. */
+    this._instRevision=1;
+    this._instUploadedRevision=-1;
+    this._instUploadedN=-1;
+    this._instUploadedGL=null;
+    this._instUploadedBuffer=null;
     this.vao=gl.createVertexArray();
     gl.bindVertexArray(this.vao);
     const vb=gl.createBuffer();
@@ -846,9 +898,39 @@ class InstMesh{
        the live damage material. Existing callers omit it and remain pristine. */
     gl.enableVertexAttribArray(10); gl.vertexAttribPointer(10,1,gl.FLOAT,false,INST_STRIDE,44);
     gl.vertexAttribDivisor(10,1);
+    /* Optional local pitch. Zero for every legacy caller; articulated turret
+       assemblies opt in without another mesh stream or draw call. */
+    gl.enableVertexAttribArray(11); gl.vertexAttribPointer(11,1,gl.FLOAT,false,INST_STRIDE,48);
+    gl.vertexAttribDivisor(11,1);
+    /* Optional local roll about model +X. Aircraft consume uAirBank / uCroll
+       here; ground, FX and turret callers omit the argument and stay level. */
+    gl.enableVertexAttribArray(12); gl.vertexAttribPointer(12,1,gl.FLOAT,false,INST_STRIDE,52);
+    gl.vertexAttribDivisor(12,1);
     gl.bindVertexArray(null);
   }
-  clear(){ this.n=0; }
+  _instMutated(){ this._instRevision++; }
+  _instInvalidateUpload(){
+    this._instUploadedRevision=-1;
+    this._instUploadedN=-1;
+    this._instUploadedGL=null;
+    this._instUploadedBuffer=null;
+  }
+  _instUpload(gl){
+    /* Preserve the historical ARRAY_BUFFER bind even on a cache hit. Callers
+       use this as a state boundary; only bufferSubData is redundant. */
+    gl.bindBuffer(gl.ARRAY_BUFFER,this.ivb);
+    if(this._instUploadedRevision===this._instRevision&&
+       this._instUploadedN===this.n&&
+       this._instUploadedGL===gl&&
+       this._instUploadedBuffer===this.ivb) return false;
+    gl.bufferSubData(gl.ARRAY_BUFFER,0,this.data,0,this.n*INST_FLOATS);
+    this._instUploadedRevision=this._instRevision;
+    this._instUploadedN=this.n;
+    this._instUploadedGL=gl;
+    this._instUploadedBuffer=this.ivb;
+    return true;
+  }
+  clear(){ if(this.n){ this.n=0; this._instMutated(); } }
   /* Instance capacities are only a starting allocation. Large fortress maps
      can legitimately put hundreds of wall or turret instances into one mesh
      stream; silently dropping everything after `cap` made faction kits look
@@ -863,6 +945,10 @@ class InstMesh{
     const gl=this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER,this.ivb);
     gl.bufferData(gl.ARRAY_BUFFER,this.data.byteLength,gl.DYNAMIC_DRAW);
+    /* bufferData replaces the store even though the WebGLBuffer identity is
+       unchanged. No pre-grow upload is valid against the new allocation. */
+    this._instMutated();
+    this._instInvalidateUpload();
     return true;
   }
   /* Note x,y are SIM coordinates (ground plane) and h is height above ground —
@@ -871,7 +957,7 @@ class InstMesh{
      lines passes it undefined and gets uniform scaling; a line needs its
      length and its thickness to be separate numbers, or a long one comes out
      as a fat bar. */
-  add(x,y,h,scale,yaw,r,g,b,a,wide,anim,state){
+  add(x,y,h,scale,yaw,r,g,b,a,wide,anim,state,pitch,roll){
     if(this.n>=this.cap&&!this.grow()) return;
     const o=this.n*INST_FLOATS, d=this.data;
     d[o]=x; d[o+1]=h; d[o+2]=y; d[o+3]=scale;
@@ -884,7 +970,10 @@ class InstMesh{
        so commanders and landmark structures can graduate to their own authored
        map packs without splitting the main battle streams. */
     d[o+11]=clamp(state||0,0,7.999);
+    d[o+12]=Number.isFinite(pitch)?pitch:0;
+    d[o+13]=Number.isFinite(roll)?roll:0;
     this.n++;
+    this._instMutated();
   }
   /* Replace the vertex block in place. Layout, index buffer and instance
      attributes are untouched -- only lanes 9-10 differ. */
@@ -926,7 +1015,7 @@ class InstMesh{
         gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D,this.assetMaps.nre);
         gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D,this.assetMaps.mask);
         gl.activeTexture(gl.TEXTURE0);
-        gl.uniform1f(U3.uAssetOn,1.0); MF_ASSET_ON=true;
+        gl.uniform1f(U3.uAssetOn,this.assetMode||1.0); MF_ASSET_ON=true;
         boundAssets=true;
       } else if(MF_ASSET_ON){ gl.uniform1f(U3.uAssetOn,0.0); MF_ASSET_ON=false; }
     }
@@ -939,8 +1028,7 @@ class InstMesh{
         MF_BONES_ON=true;
       } else if(MF_BONES_ON){ gl.uniform1i(U3.uBoneN,0); MF_BONES_ON=false; }
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER,this.ivb);
-    gl.bufferSubData(gl.ARRAY_BUFFER,0,this.data,0,this.n*INST_FLOATS);
+    this._instUpload(gl);
     gl.drawElementsInstanced(gl.TRIANGLES,this.count,gl.UNSIGNED_SHORT,0,this.n);
     drawCalls++; triCount+=this.count/3*this.n;
     if(boundAssets&&typeof matTex!=='undefined'&&matTex){
@@ -950,14 +1038,14 @@ class InstMesh{
       gl.activeTexture(gl.TEXTURE0);
     }
     this.n=0;
+    this._instMutated();
   }
   /* Sun-depth only. Leaves n intact so the colour flush still owns the list.
      No samplers — cannot alias post 4/5/6 or the atlas on 0. */
   bindShadow(gl){
     if(!this.n) return false;
     gl.bindVertexArray(this.vao);
-    gl.bindBuffer(gl.ARRAY_BUFFER,this.ivb);
-    gl.bufferSubData(gl.ARRAY_BUFFER,0,this.data,0,this.n*INST_FLOATS);
+    this._instUpload(gl);
     return true;
   }
   drawShadow(gl){
@@ -986,6 +1074,8 @@ layout(location=7) in vec4 aTint;
 layout(location=8) in float aWide;
 layout(location=9) in float aAnim;
 layout(location=10) in float aState;
+layout(location=11) in float aPitch;
+layout(location=12) in float aRoll;
 
 /* ---- SKELETON -------------------------------------------------------------
    Rigid-body forward kinematics. Each limb segment is a solid that rotates
@@ -1089,10 +1179,18 @@ void main(){
     ap.y += bioBody*breath*max(0.0,aPos.y)*.32;
     ap.z *= 1.0+bioBody*breath;
   }
-  // yaw-only instance rotation: everything here stands on the ground
-  vec3 sp=vec3(ap.x*aInst.w, ap.y*aInst.w, ap.z*aWide);
+  /* Attitude is roll about local +X (forward), then the existing pitch about
+     +Z, then yaw about +Y. Bank-into-yaw was the decorative sine wobble;
+     aRoll=0 leaves the previous pitch-then-yaw pose unchanged. */
+  float cr=cos(aRoll),sr=sin(aRoll);
+  float cp=cos(aPitch),spit=sin(aPitch);
+  vec3 rolled=vec3(ap.x, ap.y*cr-ap.z*sr, ap.y*sr+ap.z*cr);
+  vec3 rolledN=vec3(aNrm.x, aNrm.y*cr-aNrm.z*sr, aNrm.y*sr+aNrm.z*cr);
+  vec3 pitched=vec3(rolled.x*cp-rolled.y*spit,rolled.x*spit+rolled.y*cp,rolled.z);
+  vec3 pitchedN=vec3(rolledN.x*cp-rolledN.y*spit,rolledN.x*spit+rolledN.y*cp,rolledN.z);
+  vec3 sp=vec3(pitched.x*aInst.w, pitched.y*aInst.w, pitched.z*aWide);
   vec3 p=vec3(sp.x*c - sp.z*s, sp.y, sp.x*s + sp.z*c) + aInst.xyz;
-  vec3 n=vec3(aNrm.x*c - aNrm.z*s, aNrm.y, aNrm.x*s + aNrm.z*c);
+  vec3 n=vec3(pitchedN.x*c - pitchedN.z*s, pitchedN.y, pitchedN.x*s + pitchedN.z*c);
   /* Negative material id = team livery panel: take the full team colour.
      Everything else keeps its own material colour with a light team wash, so
      detail survives instead of being flattened into one hue. */
@@ -1179,7 +1277,11 @@ uniform sampler2D uAssetNre;    // rg normal xy, b roughness, a emissive
 uniform sampler2D uAssetMask;   // r metal, g/b team masks, a edge wear
 uniform vec3 uHalf;         // normalize(sunDir + viewDir), constant under ortho
 uniform vec3 uEye;          // already uploaded every frame for VS3D; the rim term needs it here too
-out vec4 o;
+layout(location=0) out vec4 o;
+/* Optional selective-window MRT. The default framebuffer and the ordinary
+   single-target fallback simply discard location 1; aoBeginScene attaches the
+       R8 mask only when the complete post path is available. */
+layout(location=1) out vec4 oWindow;
 
 /* Map a tiling UV into one 256px cell of the 4x4 material atlas. fract() gives
    the repeat; the inset keeps bilinear taps and mipmaps from bleeding across
@@ -1190,18 +1292,55 @@ out vec4 o;
    direction until the whole roof dissolves into speckle. These materials get
    their UVs divided down so one panel covers a real architectural bay. */
 float matFreq(float idx){
-  if(idx>=BUILDLO_CONST && idx<=BUILDHI_CONST) return 0.34;
+  /* The old .34 put less than one authored cell across a 40-unit civic roof.
+     BUILD/ROOF cells 16/17 are broad square stamps, so that scale made the
+     whole structure read as one enlarged atlas thumbnail. A little over one
+     repeat across the same roof preserves architectural bay size without
+     returning to vehicle-frequency noise. */
+  if(idx>=BUILDLO_CONST && idx<=BUILDHI_CONST) return 0.58;
   if(idx>=WINLO_CONST && idx<=WINHI_CONST) return 0.11;
   if(idx>=TOWERLO_CONST && idx<=TOWERHI_CONST) return 0.48;
+  /* WORLD_KIT starts as normalised geometry, then worldsites.js converts it
+     to placed-world scale. Four repeats across a typical 30-unit template is
+     enough to describe bays; the former effective 9-10 repeats was the grey
+     checkerboard visible at command-camera distance. */
+  if(idx>=108.0 && idx<=111.0) return 0.42;
   return 1.0;
 }
 vec2 matUV(vec2 uv, float id){
   float idx=floor(id+0.5);
-  vec2 cell=vec2(mod(idx,MTILES_CONST), floor(idx/MTILES_CONST));
+  /* Keep BUILD/ROOF as semantic ids for facade filtering, roof lights and
+     damage profiles, but sample the quieter architectural sheets that already
+     ship in the authored building-v3 atlas. Cell 16 is a six-square facade
+     thumbnail and 17 is a four-square roof: magnifying either is the reported
+     placeholder grid. 111 is a restrained wall bay; 108 is a coherent dark
+     service deck. No extra texture or draw call is introduced. */
+  float cellIdx=idx;
+  if(abs(idx-BUILD_CONST)<0.5) cellIdx=111.0;
+  if(abs(idx-ROOF_CONST)<0.5) cellIdx=108.0;
+  vec2 cell=vec2(mod(cellIdx,MTILES_CONST), floor(cellIdx/MTILES_CONST));
   /* 0.004 was one texel at mip 0 and vanished by mip 2 — civic pads
      sampled the neighbouring pink/purple cell along every grout line. */
-  vec2 inset=vec2(idx>=BUILDLO_CONST&&idx<=BUILDHI_CONST?0.020:0.010);
-  return (cell + clamp(fract(uv*matFreq(idx)),inset,1.0-inset))*MSTEP_CONST;
+  /* World-kit v3 lives in atlas cells 108..111. Its UV frequency is authored
+     by worldsites.js, but it needs the same two-texel mip-safe gutter as the
+     established architectural range or oblique roofs borrow a neighbour. */
+  vec2 inset=vec2((idx>=BUILDLO_CONST&&idx<=BUILDHI_CONST)||(idx>=108.0&&idx<=111.0)?0.012:0.008);
+  /* clamp() held the first/last five source pixels constant on every repeat,
+     manufacturing a bright/dark border even when the source cell wrapped
+     exactly. Affine inset keeps taps inside their atlas cell while remaining
+     periodic: no plateau, no borrowed neighbour and no tiling regression. */
+  vec2 tiled=inset+fract(uv*matFreq(idx))*(1.0-2.0*inset);
+  return (cell+tiled)*MSTEP_CONST;
+}
+/* Dedicated 2x2 world-kit atlas. A 16px inset inside each 512px quadrant is
+   mip-safe at the oblique command camera; the source is exactly periodic, so
+   fract remains seamless instead of borrowing the neighbouring material. */
+vec2 worldKitUV(vec2 uv, float id){
+  float idx=clamp(floor(id+0.5)-108.0,0.0,3.0);
+  vec2 cell=vec2(mod(idx,2.0),floor(idx*0.5));
+  vec2 inset=vec2(0.03125);
+  vec2 tiled=inset+fract(uv*matFreq(floor(id+0.5)))*(1.0-2.0*inset);
+  return (cell+tiled)*0.5;
 }
 /* WebGL2 screen-space TBN. dFdx/dFdy are core ES 3.00 (WebGL1 needed
    OES_standard_derivatives). UV-Jacobian handedness + Gram-Schmidt keep the
@@ -1277,6 +1416,7 @@ void main(){
   float matOrig=vMat;
   matS=mix(matS, ROOF_CONST, (1.0-facade)*winTile);
   vec2 muv=matUV(vUV,matS);
+  float worldKitSurface=step(107.5,matS)*(1.0-step(111.5,matS));
   /* fract() inside the coordinate handed to texture() makes the derivative
      explode across every tile wrap, so the hardware picks the coarsest mip and
      draws a blurry grey line at each repeat — a visible seam on every unit and
@@ -1288,7 +1428,22 @@ void main(){
      geometry: perturbing the normal lights them exactly as if they were
      modelled, at a fraction of the vertex cost. */
   vec3 tex; vec3 nT; vec4 orm;
-  if(uAssetOn>0.5){
+  if(uAssetOn>1.5&&worldKitSurface>0.5){
+    /* Compact architectural PBR: same physical planar coordinate as the
+       shared atlas path, but one 512px material quadrant rather than a 128px
+       downsampled cell. Derivatives stay unwrapped so LOD selection cannot
+       blur every repeat boundary into a grey line. */
+    vec2 wuv=worldKitUV(vUV,matS);
+    float wf=matFreq(floor(matS+0.5))*0.46875;
+    vec2 dxw=dvx*wf, dyw=dvy*wf;
+    vec4 ba=textureGrad(uAssetBase,wuv,dxw,dyw);
+    vec4 nr=textureGrad(uAssetNre,wuv,dxw,dyw);
+    vec4 mk=textureGrad(uAssetMask,wuv,dxw,dyw);
+    vec2 nxy=nr.rg*2.0-1.0;
+    tex=ba.rgb;
+    nT=vec3(nxy,sqrt(max(0.02,1.0-dot(nxy,nxy))));
+    orm=vec4(ba.a,1.0-clamp(nr.b,0.055,1.0),nr.a,mk.r);
+  }else if(uAssetOn>0.5&&uAssetOn<1.5){
     /* Uniform branch: constant for the whole draw call, so it neither diverges
        nor invalidates the derivatives taken above. */
     vec2 dxa=mfUvGradClamp(dvx), dya=mfUvGradClamp(dvy);
@@ -1308,7 +1463,7 @@ void main(){
   float ao=orm.r, gloss=orm.g, emis=orm.b, metal=orm.a;
   /* Caps keep the un-remapped emissive channel so roof lamps read top-down.
      Wall panes still require a facade; downward interiors stay dark. */
-  if(winTile>0.5&&uAssetOn<0.5){
+  if(winTile>0.5&&(uAssetOn<0.5||uAssetOn>1.5)){
     vec2 muvE=matUV(vUV,matOrig);
     vec2 dxe=dvx*matFreq(floor(matOrig+0.5))*MSTEP_CONST;
     vec2 dye=dvy*matFreq(floor(matOrig+0.5))*MSTEP_CONST;
@@ -1325,6 +1480,7 @@ void main(){
   float commanderProfile=1.0-step(.5,abs(vProfile-1.0));
   float landmarkProfile=1.0-step(.5,abs(vProfile-2.0));
   float structureProfile=1.0-step(.5,abs(vProfile-3.0));
+  float airframeProfile=1.0-step(.5,abs(vProfile-4.0));
   /* PRODUCTION MATERIAL V2. The authored showcase uses a per-asset mask map;
      the large-army path uses the semantic material id already baked into
      every vertex plus one shared triplanar fracture tile. This preserves one
@@ -1339,7 +1495,16 @@ void main(){
      roughness variation at close range while mipmaps remove it at RTS distance. */
   float detailData=texture(uDetail,vObj.zy*.115).r*dw.x+
     texture(uDetail,vObj.xz*.115).r*dw.y+texture(uDetail,vObj.xy*.115).r*dw.z;
-  float surfaceOrganic=(vMat==CHITIN_CONST||vMat==BIOLEG_CONST)?1.0:0.0;
+  /* The Brood roster uses its own atlas band, not the legacy chitin/leaf ids.
+     Missing that band classed wings, sacs and flesh as machinery, applying
+     rubbed-metal wear and steel carbonisation while excluding membranes from
+     the translucency term. Material ids also provide authored per-part
+     thickness without consuming another vertex attribute. */
+  float broodBand=step(BRDLO_CONST-.5,vMat)*(1.0-step(BRDHI_CONST+.5,vMat));
+  float surfaceOrganic=max((vMat==CHITIN_CONST||vMat==BIOLEG_CONST)?1.0:0.0,broodBand);
+  float thinAuth=(vMat==CHITIN_CONST?0.16:0.0)+(vMat==BIOLEG_CONST?0.44:0.0)
+    +(vMat==BRDMEM_CONST?1.00:0.0)+(vMat==BRDCHI_CONST?0.12:0.0)
+    +(vMat==BRDSLM_CONST?0.80:0.0)+(vMat==BRDVEIN_CONST?0.60:0.0);
   float glassLike=1.0-step(.45,abs(vMat-GLASS_CONST));
   /* Battle damage is a BAND, not a tail. This was an open-ended >=SCORCH_METAL
      test, which was correct while damage held the last ids -- but it silently
@@ -1374,6 +1539,18 @@ void main(){
      the top few code values — the exposure curve was compressing the mistake,
      not fixing it. */
   vec3 alb=clamp(vCol*(0.42+tex*0.62), 0.0, 0.88);
+  if(uAssetOn>1.5&&worldKitSurface>0.5){
+    /* The imported kit originally baked its entire finish into vertex colour.
+       Treating the new 512px architectural sheet as another 0.62 modulation
+       left that legacy pale grey in charge and hid the authored panels. In the
+       compact path the PBR sheet is authoritative; retain only a restrained
+       vertex-colour hue wash so conversion identity survives without turning
+       blue gunmetal back into chalk concrete. */
+    float vcL=max(dot(vCol,vec3(0.2126,0.7152,0.0722)),0.08);
+    vec3 vcHue=clamp(vCol/vcL,vec3(0.72),vec3(1.28));
+    vec3 authored=pow(max(tex,vec3(0.0)),vec3(0.92))*(0.62+vcL*0.10);
+    alb=clamp(authored*mix(vec3(1.0),vcHue,0.10),0.0,0.76);
+  }
   if(vMat==CRYST_CONST) alb=clamp(vCol*vec3(0.36,0.58,0.82),0.0,0.62);
   /* Maintained vehicles still have sparse rubbed corners and service wear.
      Normal-map relief supplies the local edge cue; the shared tile breaks it
@@ -1405,7 +1582,15 @@ void main(){
      happens at all. Floor it: uniform carbonisation at critical damage,
      deepening along the cracks. */
   float carbon=critical*mix(0.62,1.0,smoothstep(.08,.46,damageData))*mechanical;
+  /* Critical aircraft expose scorched panels before they become wrecks. This
+     is profile-gated so tanks/buildings keep their established damage curve,
+     and mask-driven so it never becomes a whole-hull tint. */
+  float airPanelBurn=airframeProfile*smoothstep(.58,.94,state)*
+    mix(.42,.88,smoothstep(.12,.68,damageData))*mechanical;
+  carbon=max(carbon,airPanelBurn);
   float hotCrack=smoothstep(mix(.78,.38,structBurn),.985,state)*smoothstep(mix(.68,.48,structBurn),.86,damageData)*(1.0-smoothstep(.985,1.0,state));
+  hotCrack=max(hotCrack,airframeProfile*smoothstep(.70,.96,state)*
+    smoothstep(.40,.79,damageData)*(1.0-smoothstep(.985,1.0,state)));
   alb=mix(alb,vec3(.016,.013,.011),carbon*.94);
   gloss=mix(gloss,.025,carbon);metal=mix(metal,0.0,carbon*.96);
   /* Biological damage is wet tissue and dark wounds, never burnt steel. */
@@ -1456,13 +1641,26 @@ void main(){
   float sss=0.0;
   vec3 transC=vec3(0.0);
   if(organic>0.5){
-    float w=0.45;                                     // scatter width
+    /* Refine authored thickness per pixel: silhouettes are optically thinner,
+       while occluded creases have geometry stacked behind them. */
+    float edgeThin=1.0-abs(dot(n,V));
+    float aoThin=clamp(1.0-ao,0.0,1.0);
+    float thick=clamp(thinAuth*(0.68+0.32*aoThin)*(0.72+0.46*edgeThin),0.0,1.0);
+    /* Wrapped diffuse follows thickness, so membranes carry light past the
+       terminator while solid carapace keeps a firm lighting break. */
+    float w=mix(0.18,0.92,thick);
     float wrapD=max(0.0,(dot(n,uSun)+w)/(1.0+w));
-    ndl=mix(ndl,wrapD,0.85);
-    float thin=clamp(1.0-ao,0.0,1.0)*0.55+0.45;       // edges thin, creases thick
-    float back=pow(clamp(dot(V,-uSun)*0.5+0.5,0.0,1.0),3.2);
-    sss=back*thin*0.85;
-    transC=uSunC*vec3(1.12,0.80,0.52)*sss;            // warm: blue absorbs first
+    ndl=mix(ndl,wrapD,mix(0.42,0.95,thick));
+    /* Normal-aware back transmission follows the tissue geometry instead of
+       producing a camera-facing haze with the same strength on shell and wing. */
+    vec3 Ht=normalize(-uSun+n*0.32);
+    float back=pow(clamp(dot(V,Ht),0.0,1.0),mix(7.0,1.7,thick));
+    float atten=exp(-(1.0-thick)*3.6);
+    sss=back*atten*(0.35+0.65*thick);
+    vec3 deepFlesh=vec3(0.70,0.14,0.11);
+    vec3 thinFlesh=vec3(0.95,0.52,0.46);
+    vec3 scat=mix(deepFlesh,thinFlesh,thick);
+    transC=uSunC*mix(scat,scat*(0.45+1.10*alb),0.46)*sss*1.55;
   }
   /* Gloss is the atlas channel; the lab BRDF wants roughness. 1-gloss keeps
      every existing tile's authored polish instead of rebaking ORM. */
@@ -1477,7 +1675,11 @@ void main(){
   /* Lambert carries day/night. GGX+Blinn on an overhead roof (V and L both
      near +Y) made D explode and painted the whole deck one pale sheet —
      the carrier read unlit/bleached. Spec is edge-only and camera-faded. */
-  vec3 directLit=alb*metalLift*(amb*0.82 + uSunC*(ndl*0.92 + wrap*0.10*ao)) + alb*transC;
+  /* Transmitted light has already been filtered by tissue; multiplying it by
+     albedo again cancels the red/pink shift that makes the material read as
+     flesh. Inorganic pixels still collapse exactly to the old albedo mask. */
+  vec3 transMask=mix(alb,vec3(1.0),organic*0.88);
+  vec3 directLit=alb*metalLift*(amb*0.82 + uSunC*(ndl*0.92 + wrap*0.10*ao)) + transMask*transC;
   vec3 specSun=evalGGX(n,V,uSun,ndl,ndv,a2,k,alb,f0,metal,uSunC,0.0,0.0);
   float specAtten=mix(1.0,mix(0.16,0.07,landmarkProfile),smoothstep(0.60,0.94,ndv));
   float edge=smoothstep(0.10,0.50,abs(nT.x)+abs(nT.y));
@@ -1491,6 +1693,12 @@ void main(){
      creases it is supposed to leave dark. */
   float rim=pow(1.0-max(dot(n,V),0.0),3.5)*(0.30+0.55*hemi);
   directLit+=uAmbSky*alb*rim*0.85*ao;
+  /* Living tissue carries a fluid-film Fresnel sheen. The organic mask makes
+     this bit-identical to the prior shader for every mechanical surface. */
+  float wetF=pow(1.0-clamp(dot(n,V),0.0,1.0),4.2);
+  vec3 wetH=normalize(V+uSun);
+  float wetSpec=pow(max(dot(n,wetH),0.0),68.0);
+  directLit+=organic*ao*(uSunC*wetSpec*(0.20+0.55*wetF)+uAmbSky*wetF*0.34);
   /* LOCAL LIGHTS. Same GGX as the sun, still capped at 8 camera-relevant
      sources. The attenuation has a soft inner knee so a nearby building does
      not get a hard halo. Clustered 64-light deferred was rejected — this loop
@@ -1582,6 +1790,15 @@ void main(){
      linearized for the BRDF; the exposure curve already writes display
      values. A further pow(1/2.2) lifted charcoal into mid-grey and erased
      the sun term — hulls read unlit. Civic V2 uses the same filmic write. */
+  /* Window bloom is authored by the ORM emissive input, not inferred from
+     bright scene colour. All other opaque model pixels explicitly write zero,
+     so later foreground units/buildings erase a window behind them through the
+     same depth test. Damage, sensor shroud and aerial fog gate the mask before
+     the post pass ever sees it. */
+  float mfWindowSurface=winTile*max(facade,cap);
+  float mfWindowPower=clamp(emis*mfWindowSurface*(1.0-smoothstep(.12,.72,state)),0.0,1.0);
+  if(uDebugMode!=0) mfWindowPower=0.0;
+  oWindow=vec4(mfWindowPower*(1.0-fowA)*(1.0-vFog*.70),0.0,0.0,1.0);
   o=vec4(clamp(lit,vec3(0.0),vec3(1.0)),vAlpha);
 }`;
 /* Unlit additive program: muzzle flash, fire, energy, light shafts. Still real
@@ -1597,11 +1814,17 @@ layout(location=6) in float aYaw;
 layout(location=7) in vec4 aTint;
 layout(location=8) in float aWide;
 layout(location=9) in float aAnim;
+layout(location=11) in float aPitch;
+layout(location=12) in float aRoll;
 uniform mat4 uVP;
 out vec3 vCol; out float vA; out float vRim;
 void main(){
   float c=cos(aYaw), s=sin(aYaw);
-  vec3 sp=vec3(aPos.x*aInst.w, aPos.y*aInst.w, aPos.z*aWide);
+  float cr=cos(aRoll),sr=sin(aRoll);
+  float cp=cos(aPitch),spit=sin(aPitch);
+  vec3 rolled=vec3(aPos.x, aPos.y*cr-aPos.z*sr, aPos.y*sr+aPos.z*cr);
+  vec3 pp=vec3(rolled.x*cp-rolled.y*spit, rolled.x*spit+rolled.y*cp, rolled.z);
+  vec3 sp=vec3(pp.x*aInst.w, pp.y*aInst.w, pp.z*aWide);
   vec3 p=vec3(sp.x*c - sp.z*s, sp.y, sp.x*s + sp.z*c) + aInst.xyz;
   vCol=aCol*aTint.rgb; vA=aTint.a;
   vRim=1.0;
@@ -1610,8 +1833,9 @@ void main(){
 const FSG=`#version 300 es
 precision highp float;
 in vec3 vCol; in float vA;
-out vec4 o;
-void main(){ o=vec4(vCol*vA, vA); }`;
+layout(location=0) out vec4 o;
+layout(location=1) out vec4 oWindow;
+void main(){ oWindow=vec4(0.0);o=vec4(vCol*vA, vA); }`;
 
 /* Every shader failure this renderer has ever had was INVISIBLE: the compile
    error went to a console nobody reads on a phone, the broken program was
@@ -1620,36 +1844,133 @@ void main(){ o=vec4(vCol*vA, vA); }`;
    where the game can show them, and a program that did not link comes back as
    null so callers can fall back instead of drawing into the void. */
 const GL_PROG_ERRORS=[];
-function mkProg(vsSrc,fsSrc,name){
-  const p=gl.createProgram();
+/* World V2 is declared in the next classic-global source file, outside this
+   post subsystem. Patch only its known fragment contract at compile time so it
+   participates in the same optional MRT without adding a second geometry pass
+   or changing that module's public surface. If the source contract ever moves,
+   leave it untouched and record the miss: ordinary rendering remains valid and
+   the selective halo simply omits those panes. */
+function mfWindowPatchWorldFS(src,name){
+  if(typeof src!=='string'||src.indexOf('oWindow')>=0) return src;
+  const decl='out vec4 o;';
+  /* The opt-in material laboratory can draw during the opaque MRT phase. It
+     has no window semantics, so explicitly erase attachment 1; some ANGLE
+     drivers reject a draw when a linked fragment program lacks the enabled
+     second output rather than merely leaving it unwritten. */
+  if(name==='material-v2'){
+    const main='void main(){';
+    if(src.indexOf(decl)<0||src.indexOf(main)<0){
+      if(typeof window!=='undefined') window.__MF_WINDOW_BLOOM_PATCH_MISS=true;
+      return src;
+    }
+    return src.replace(decl,'layout(location=0) out vec4 o;\nlayout(location=1) out vec4 oWindow;')
+      .replace(main,main+'\n  oWindow=vec4(0.0);');
+  }
+  if(name!=='world-structures-v2') return src;
+  const write='  o=vec4(clamp(lit,vec3(0.0),vec3(1.0)),1.0);';
+  if(src.indexOf(decl)<0||src.indexOf(write)<0){
+    if(typeof window!=='undefined') window.__MF_WINDOW_BLOOM_PATCH_MISS=true;
+    return src;
+  }
+  src=src.replace(decl,'layout(location=0) out vec4 o;\nlayout(location=1) out vec4 oWindow;');
+  return src.replace(write,
+    '  float mfWindowAuth=(window*winPulse)*.30+emis*.42*on.x;\n'+
+    '  float mfWindowPower=clamp(mfWindowAuth*(1.0-smoothstep(.10,.58,vDamage)),0.0,1.0);\n'+
+    '  float mfWindowVis=(1.0-fowA)*(1.0-fowA)*(1.0-vFog*(1.0-fowA));\n'+
+    '  oWindow=vec4(mfWindowPower*mfWindowVis,0.0,0.0,1.0);\n'+write);
+}
+/* DEFERRED PROGRAM VALIDATION.
+
+   compileShader()/linkProgram() are asynchronous in the driver — measured at
+   0.3 ms for all 19 programs. What actually costs is asking for the RESULT:
+   getShaderParameter(COMPILE_STATUS) and getProgramParameter(LINK_STATUS) each
+   block until that program has finished, so querying inline serialises every
+   program behind the previous one. Measured on ANGLE/D3D11 that was 1,549 ms of
+   main-thread stall at match start — effectively 100% of shader setup cost, and
+   every driver worth having supports KHR_parallel_shader_compile.
+
+   So mkProg() now compiles, attaches and links WITHOUT querying, and the status
+   read happens once for the whole batch on the next frame, by which point the
+   driver has done the work in parallel.
+
+   Contract note: mkProg() used to return null on failure. Callers that branch
+   on that (the reversible Material-V2 -> legacy fallbacks) must ask explicitly
+   with mfProgOk(p), which validates just that program immediately. Callers that
+   never checked are unaffected: a failed program and a null program both draw
+   nothing, and GL_PROG_ERRORS is still populated either way.
+
+   Verify with: node tools/probe-shader-compile.mjs */
+const GL_PROG_PENDING=[];
+let glProgFlushQueued=false;
+
+function mfProgValidate(entry){
   let ok=true;
-  for(const [ty,src] of [[gl.VERTEX_SHADER,vsSrc],[gl.FRAGMENT_SHADER,fsSrc]]){
-    const sh=gl.createShader(ty);
-    gl.shaderSource(sh,src); gl.compileShader(sh);
+  for(const [sh,ty,src] of entry.shaders){
     if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)){
       ok=false;
       const log=(gl.getShaderInfoLog(sh)||'').trim().slice(0,240);
-      GL_PROG_ERRORS.push((name||'?')+' '+(ty===gl.VERTEX_SHADER?'VS':'FS')+': '+log);
-      console.error('shader',name,log,src.slice(0,200));
+      GL_PROG_ERRORS.push((entry.name||'?')+' '+(ty===gl.VERTEX_SHADER?'VS':'FS')+': '+log);
+      console.error('shader',entry.name,log,src.slice(0,200));
     }
+  }
+  if(!gl.getProgramParameter(entry.p,gl.LINK_STATUS)){
+    ok=false;
+    const log=(gl.getProgramInfoLog(entry.p)||'').trim().slice(0,240);
+    GL_PROG_ERRORS.push((entry.name||'?')+' LINK: '+log);
+    console.error('link',entry.name,log);
+  }
+  entry.validated=true; entry.ok=ok;
+  return ok;
+}
+/* Validates every program still waiting. Safe to call at any time. */
+function mfProgFlush(){
+  glProgFlushQueued=false;
+  /* A lost context invalidates every pending handle; querying them is both
+     meaningless and noisy. glrecover rebuilds and re-queues them. */
+  if(gl&&gl.isContextLost&&gl.isContextLost()){ GL_PROG_PENDING.length=0; return 0; }
+  let failures=0;
+  while(GL_PROG_PENDING.length){
+    const entry=GL_PROG_PENDING.shift();
+    if(!entry.validated&&!mfProgValidate(entry)) failures++;
+  }
+  return failures;
+}
+/* Immediate, single-program validation for callers that must branch on failure. */
+function mfProgOk(p){
+  if(!p) return false;
+  const i=GL_PROG_PENDING.findIndex(entry=>entry.p===p);
+  if(i<0) return true;                       // already validated by the batch flush
+  const [entry]=GL_PROG_PENDING.splice(i,1);
+  return mfProgValidate(entry);
+}
+
+function mkProg(vsSrc,fsSrc,name){
+  fsSrc=mfWindowPatchWorldFS(fsSrc,name);
+  const p=gl.createProgram();
+  const shaders=[];
+  for(const [ty,src] of [[gl.VERTEX_SHADER,vsSrc],[gl.FRAGMENT_SHADER,fsSrc]]){
+    const sh=gl.createShader(ty);
+    gl.shaderSource(sh,src); gl.compileShader(sh);
     gl.attachShader(p,sh);
+    shaders.push([sh,ty,src]);
   }
   gl.linkProgram(p);
-  if(!gl.getProgramParameter(p,gl.LINK_STATUS)){
-    ok=false;
-    const log=(gl.getProgramInfoLog(p)||'').trim().slice(0,240);
-    GL_PROG_ERRORS.push((name||'?')+' LINK: '+log);
-    console.error('link',name,log);
+  GL_PROG_PENDING.push({p,shaders,name,ok:true,validated:false});
+  if(!glProgFlushQueued){
+    glProgFlushQueued=true;
+    const later=(typeof requestAnimationFrame==='function')?requestAnimationFrame:(fn=>setTimeout(fn,0));
+    later(()=>{ try{ mfProgFlush(); }catch(e){ console.error('program flush',e); } });
   }
-  return ok?p:null;
+  return p;
 }
 /* The terrain gets its own program. Its surface look must come from the
    original hand-painted 2048px map canvas — biome blending, moss, cliff
    banding, kerbed highways, city aprons, battle scorch — because that art is
    what the game looked like and what the flat-shaded vertex-colour version
    threw away. The mesh supplies the relief; the canvas supplies the design.
-   A tiling detail texture is blended on top so it stays crisp when zoomed in
-   instead of turning into a blurry magnification of one big image. */
+   Four authored material sheets replace that macro colour at close range;
+   one neutral micro-normal prevents magnification without imposing the same
+   cracks or grain on grass, soil and hardscape. */
 const VST=`#version 300 es
 layout(location=0) in vec3 aPos;
 layout(location=1) in vec3 aNrm;
@@ -1707,26 +2028,32 @@ in vec3 vNrm; in vec2 vMapUV; in vec2 vDetUV; in float vFog; in float vBorder; i
 uniform sampler2D uMap;
 uniform sampler2D uDetail;
 uniform sampler2D uFogMap;
-uniform sampler2D uGroundT;  // seamless tileable ground art (rgb=albedo, a=height)
+uniform sampler2D uGroundT;  // seamless, lighting-neutral albedo
 uniform sampler2D uSoilT;    // companion soil/gravel sheet
 uniform sampler2D uPaveT;    // poured-panel hardscape sheet
 uniform sampler2D uGrassT;   // grass tuft sheet — vegetation is now real art too
-uniform sampler2D uGroundN;  // authored Sobel normal maps for the four sheets
+uniform sampler2D uGroundN;  // authored normal RGB, roughness A
 uniform sampler2D uSoilN;
 uniform sampler2D uPaveN;
 uniform sampler2D uGrassN;
 uniform sampler2D uGMask;    // white = street/pad hardscape (planner-authored)
 uniform sampler2D uHeight;   // global world-height sheet (R16F, deform-synced)
 uniform float uHexelW;       // world span of one central-difference step
-uniform float uRealTex;      // 1 once the image assets have decoded
+uniform float uRealTex;      // 1 only when the complete albedo+normal set is ready
+uniform float uGroundQ;      // 0 low, 1 medium, 2 high, 3 cinematic
+uniform float uGroundProfile;// 0 natural, 1 urban, 2 industrial, 3 derelict, 4 megacity
+uniform vec3 uGroundTint; uniform vec3 uSoilTint;
+uniform vec3 uPaveTint; uniform vec3 uGrassTint; uniform vec3 uLocationTint;
 uniform int uBurnN;          // live impact burns (explosive embers / kinetic churn)
 uniform vec4 uBurns[16];     // xy=world, z=radius, w=cool 0..1 (fresh->cold)
 uniform float uBurnKind[16]; // 1=explosive, 0=kinetic
 uniform float uFogActive;
+uniform vec3 uEye;
 uniform vec3 uSun; uniform vec3 uSunC;
 uniform vec3 uAmbSky; uniform vec3 uAmbGnd; uniform vec3 uFogC;
 uniform float uEdgeStyle; uniform float uEdgeTime; uniform vec3 uEdgeTint;
-out vec4 o;
+layout(location=0) out vec4 o;
+layout(location=1) out vec4 oWindow;
 /* Soft coal islands around an impact. Crack-aligned hash grain and floor()
    cells read as "embers in the grooves" / a lava QR-code. These are large
    irregular beds with a local flicker — real fire remnants, not shader noise. */
@@ -1748,50 +2075,92 @@ float mfCoalFlick(vec2 c){
   float h=fract(sin(dot(c,vec2(78.233,12.9898)))*23421.631);
   return 0.90+0.10*sin(uEdgeTime*(1.15+h*1.45)+h*6.2831853);
 }
-/* World-XZ hash / value noise. Close-up aggregate only — no hatch, no cell
-   outline, no tiled stamp. Cheap enough to run whenever a 2048 texel is
-   magnified; fades with hppx so command zoom stays the painted map. */
+/* Stable hash remains only for the irregular, event-local burn crust. It is
+   no longer layered across every unscarred terrain pixel. */
 float mfH21(vec2 p){
   return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123);
 }
-float mfVN(vec2 p){
-  vec2 i=floor(p), f=fract(p);
-  f=f*f*(3.0-2.0*f);
-  float a=mfH21(i), b=mfH21(i+vec2(1.0,0.0));
-  float c=mfH21(i+vec2(0.0,1.0)), d=mfH21(i+vec2(1.0,1.0));
-  return mix(mix(a,b,f.x), mix(c,d,f.x), f.y);
+/* AUTHORED-SHEET BAND-PASS. Two explicit-mip taps of a material sheet whose
+   lod window TRACKS the screen: tpx is this uv's texels-per-physical-pixel,
+   so the returned luminance difference always lives at ~5-20 on-screen
+   pixels regardless of zoom. That band is what a human reads as soil/rock
+   patchiness; content below it (single-pixel speckle) is exactly what the
+   acceptance's Laplacian budget forbids, and the +2.3 floor keeps it out.
+   Zero-mean by construction, so no theme brightens or darkens. */
+float mfSheetBand(sampler2D s, vec2 uv, float tpx){
+  float lo=clamp(log2(max(tpx,0.4))+2.3,0.0,6.5);
+  float a=dot(textureLod(s,uv,lo).rgb,vec3(0.299,0.587,0.114));
+  float b=dot(textureLod(s,uv,lo+2.5).rgb,vec3(0.299,0.587,0.114));
+  return a-b;
 }
 void main(){
-  vec3 n=normalize(vNrm);
-  vec3 base=texture(uMap,vMapUV).rgb;
-  // Packed micro height/normal/roughness detail raises the effective ground
-  // resolution at tactical zoom. Mips converge the normal channels to 0.5,
-  // so distant terrain automatically returns to its low-cost macro shape.
-  vec4 dt1=texture(uDetail,vDetUV),dt2=texture(uDetail,vDetUV*0.23);
-  float d1=dt1.r,d2=dt2.r;
-  /* ZOOM-ADAPTIVE GROUND RESOLUTION. fwidth(vDetUV) is detail texels per
-     screen pixel: small when the camera is close. Everything below only
-     spends work when the player can actually resolve it — at command zoom
-     closeG is 0 and this whole block reduces to the old two-octave path. */
-  vec2 dDx=dFdx(vDetUV), dDy=dFdy(vDetUV);
-  float ppx=length(abs(dDx)+abs(dDy))*512.0;
-  /* PER-LAYER RANGE GATES. The old 1.4–4.5 band was already 0 at SPAN_MIN
-     420 on a 412×900 phone (ppx≈7, retina≈3.5), so splat / crack tooth /
-     pave normals never ran in play. Gate stays fully on at tactical zoom
-     and dies by command altitude. */
-  float closeG=1.0-smoothstep(6.5,20.0,ppx);
+  vec3 geomN=normalize(vNrm);
+  vec3 n=geomN;
+  /* SHARPENED BILINEAR (texel-AA) for the 2048 macro paint. A bilinear edge
+     ramps across one full texel - 1.5625 world units, ~3.1 physical px at
+     span 420 - which is exactly the measured road-edge failure (3.131px vs
+     the <=2px gate). Tuning downstream smoothsteps cannot fix an albedo that
+     is itself soft. Remapping the fractional texel coordinate through a
+     narrowed ramp makes every painted boundary ~1.4px on screen when
+     magnified. The half-width mw is PIXEL-PROPORTIONAL (hppx = macro texels
+     per pixel), clamping to 0.5 at minification where the mapping becomes
+     the identity - distant terrain is bit-identical, so this cannot add pan
+     shimmer where that gate already passes. Derivatives are computed on the
+     UNMODIFIED vMapUV, and the remap stays within the texel, so mip
+     selection is unchanged. */
   vec2 dMx=dFdx(vMapUV), dMy=dFdy(vMapUV);
   float hppx=length(abs(dMx)+abs(dMy))*2048.0;
+  vec2 mtx=vMapUV*2048.0-0.5;
+  vec2 mfl=floor(mtx), mfr=fract(mtx);
+  /* SHORE EXEMPTION. Sharpening the shoreline's painted boundary raised the
+     max adjacent RGB step above the accepted band (131 baseline -> 146).
+     Water transitions are the one place a soft texel ramp is CORRECT, so the
+     reconstruction fades to identity (mw 0.5 = plain bilinear) within ~1.2 to
+     6 world-metres of the waterline. uHeight is world height, waterline 0. */
+  float shoreH=texture(uHeight,vMapUV).r;
+  float shoreKeep=smoothstep(1.2,6.0,shoreH);
+  float mw=mix(0.5, clamp(hppx*0.7,0.15,0.43), shoreKeep);
+  vec2 sfr=clamp((mfr-0.5)/(2.0*mw)+0.5,0.0,1.0);
+  sfr=sfr*sfr*(3.0-2.0*sfr);
+  vec3 base=texture(uMap,(mfl+0.5+sfr)/2048.0).rgb;
+  /* Quality is explicit; range is derivative-driven. This prevents distant
+     detail shimmer without tying material LOD to one screen resolution. */
+  vec2 dDx=dFdx(vDetUV), dDy=dFdy(vDetUV);
+  float ppx=length(abs(dDx)+abs(dDy))*512.0;
+  float qMed=step(0.5,uGroundQ), qHigh=step(1.5,uGroundQ);
+  /* Keep the 1024 authored sheets dominant through the complete span-420
+     close view. The former 7..22 gate had already fallen halfway back to the
+     2048 macro paint there, which is the broad cloud pattern visible in the
+     acceptance captures. It still reaches zero before strategic zoom. */
+  float closeG=1.0-smoothstep(12.0,40.0,ppx);
+  /* Measured screen scale at the acceptance spans: 420 -> ppx 12, 700 -> 20,
+     1500 -> 43. The former 8..24 normal gate was already 84% gone at span
+     700 — the whole mid-tactical band lit no authored relief at all, which
+     is most of the measured readable-gradient loss there. Mips+aniso own
+     minification aliasing; the gates only need to die before command zoom. */
+  float normalG=qMed*(1.0-smoothstep(14.0,40.0,ppx));
+  float secondG=qHigh*(1.0-smoothstep(10.0,28.0,ppx));
+  /* One neutral macro variation pair survives at every tier because border
+     scenery also consumes it. Neither sample contains the old crack cells. */
+  vec4 dt1=texture(uDetail,vDetUV*0.31);
+  vec4 dt2=texture(uDetail,(mat2(.86,-.51,.51,.86)*vDetUV)*0.17+vec2(.37,.61));
+  float d1=dt1.r,d2=dt2.r;
   /* ARTIFICIAL GROUND STANDS APART. The hardscape mask is read FIRST so that
-     every natural layer below — crack grain, mid-band plates, macro patching,
-     grass — can stand down inside a poured surface. A base platform is
+     every natural material below — soil, rock and grass — can stand down
+     inside a poured surface. A base platform is
      engineered: flat, uniform, its own material; nature stops at its edge. */
-  float mRaw=texture(uGMask,vMapUV).r;
+  /* Keep the semantic hardscape mask on its own unwarped coordinate. Reusing
+     the macro-albedo texel sharpening magnified individual mask texels into a
+     checker/stair-step fringe around roads and city yards; beneath aircraft
+     that fringe looked like a translucent grey fog sheet. textureGrad keeps
+     the authored road footprint, mip choice and smooth termination values,
+     while the derivative-aware threshold below still controls edge width. */
+  float mRaw=textureGrad(uGMask,vMapUV,dMx,dMy).r;
   /* A formed road edge is CRISP: the wide threshold band + strong noise that
      blended terminations also smeared every straight kerb into mush. The
      band tightens to ~1 texel and the noise bites at a third strength — ends
      still crumble, edges read poured. */
-  float edgeN=((d1-0.5)*0.07+(d2-0.5)*0.05)*(0.4+0.6*closeG);
+  float edgeN=((d1-0.5)*0.012+(d2-0.5)*0.008)*(0.40+0.22*closeG);
   /* ADAPTIVE EDGE BAND — the piece the last fix missed. A single tight
      threshold made sides crisp but ALSO squeezed a 46-unit end fade back
      into a 5-unit material flip: the ramp was in the mask, and the
@@ -1799,20 +2168,54 @@ void main(){
      steep formed sides keep the tight band, shallow end ramps get a wide
      one, so the material genuinely crossfades along the whole dissolve. */
   float mfw=fwidth(mRaw);
-  float steep=smoothstep(0.015,0.070,mfw);
-  float band=mix(0.40,0.06,steep);
-  float hm=smoothstep(0.5-band+edgeN,0.5+band+edgeN,mRaw);
+  float steep=smoothstep(0.018,0.075,mfw);
+  float band=mix(0.38,0.010,steep);
+  /* Wilderness-end noise remains, but a poured side is straight. Averaging
+     five noisy, laterally shifted transects widened one physical road edge to
+     2.713 px even though the opposite side measured 1.955 px. */
+  float edgeShift=edgeN*mix(1.0,0.05,steep);
+  float hm=smoothstep(0.5-band+edgeShift,0.5+band+edgeShift,mRaw);
+  hm=mix(hm,pow(hm,1.28),0.45*closeG);
   float nat=1.0-hm;
   float cityYard=smoothstep(0.16,0.40,mRaw);
   /* Kerb line: the pale formed rim living in the mask's transition band —
      exactly where a real kerb sits. The single strongest "engineered" cue in
      the reference roads. */
-  float kerb=smoothstep(0.30,0.44,mRaw)*(1.0-smoothstep(0.56,0.72,mRaw));
+  float kerb=smoothstep(0.37,0.46,mRaw)*(1.0-smoothstep(0.54,0.63,mRaw));
   /* A kerb exists only where the edge is FORMED. fwidth(mRaw) separates a
      poured side (steep transition) from a dissolving end (long shallow one),
      so the pale rim never halos a fade-out. */
   kerb*=smoothstep(0.030,0.085,fwidth(mRaw)*(0.5+0.5*closeG)+fwidth(mRaw));
+  /* ROAD-EDGE LUMINANCE CONTRAST. The painted albedo ramps ~1-1.7 world
+     units across a road side (stroke AA + the authored termination blur
+     bleeding onto sides), which projects wider than the 2-physical-px
+     acceptance gate at span 420. Interpolation sharpening cannot fix values;
+     this steepens the luminance ramp only where the mask says a FORMED road
+     edge lies (same fwidth discriminator as the kerb, so authored
+     terminations keep their long blend), in the mask transition band only.
+     Luminance-only: hue cannot shift, unlike the per-channel 2.05x unsharp
+     that once painted red halos around cyan deposits. */
+  /* Band widened to [0.031,0.969]: the 10% crossing of the measured ramp sits
+     NEAR THE LAND SIDE where mRaw is ~0.9, and the previous [0.11,0.89] band
+     zeroed the gate exactly at the tail the acceptance metric starts from. */
+  /* mfw floor lowered 0.030 -> 0.020: the side that carries the authored
+     termination blur has a shallower per-pixel mask slope, and the old floor
+     attenuated the contrast pass exactly on the softer of the two edges. A
+     dissolving road END is still far below 0.020 and stays fully blended. */
+  float edgeG=smoothstep(0.022,0.072,mfw)*smoothstep(0.035,0.16,mRaw*(1.0-mRaw))*closeG;
+  /* Hardscape interior: the edge->slab and slab->seam stroke boundaries are
+     canvas-AA value ramps the transition-band gate cannot reach (mRaw~=1
+     there). Engineered surfaces take crisp internal boundaries. */
+  edgeG=max(edgeG, smoothstep(0.60,0.85,mRaw)*closeG*0.8);
+  if(edgeG>0.02){
+    vec2 mt1=vec2(1.0/2048.0,0.0), mt2=vec2(0.0,1.0/2048.0);
+    float lC=dot(base,vec3(.2126,.7152,.0722));
+    float lB=dot(texture(uMap,vMapUV+mt1).rgb+texture(uMap,vMapUV-mt1).rgb
+               +texture(uMap,vMapUV+mt2).rgb+texture(uMap,vMapUV-mt2).rgb,vec3(.2126,.7152,.0722))*0.25;
+    base=max(base+vec3((lC-lB)*1.7*edgeG),vec3(0.0));
+  }
   vec2 wxz=vDetUV*(1.0/0.021);
+  float heightC=texture(uHeight,vMapUV).r;
   /* PER-PIXEL TERRAIN NORMALS. Vertex normals know the ground at mesh density
      (10 m); the height sheet knows it at 1.56 m. Central differences give an
      8x lighting-resolution jump — hillsides gain real shading structure and
@@ -1820,13 +2223,32 @@ void main(){
      deformation, so there are no chunk seams to leak. Faded out at command
      range where a screen pixel spans several height texels (no mips on R16F
      without EXT_color_buffer_float — the fade IS the anti-alias). */
-  float hnG=1.0-smoothstep(1.3,2.8,hppx);
+  /* Span 1500 measures hppx 2.55, so the old 1.3..2.8 fade had erased the
+     landform normals from the whole strategic-approach band. The adaptive
+     step below IS the anti-alias (it band-limits the slope field to ~3
+     screen px at any zoom), so the gate can survive to command altitude. */
+  float hnG=qMed*(1.0-smoothstep(2.6,5.2,hppx));
   if(hnG>0.02){
     vec2 he=1.0/vec2(textureSize(uHeight,0));
-    float hL=texture(uHeight,vMapUV-vec2(he.x,0.0)).r, hR=texture(uHeight,vMapUV+vec2(he.x,0.0)).r;
-    float hU=texture(uHeight,vMapUV-vec2(0.0,he.y)).r, hD=texture(uHeight,vMapUV+vec2(0.0,he.y)).r;
-    vec3 hn=normalize(vec3(hL-hR, uHexelW, hU-hD));
-    n=normalize(mix(n,hn,hnG*0.85));
+    /* DERIVATIVE-MATCHED STEP. A fixed one-texel central difference is a
+       different animal at every zoom: ~5 screen px at span 420 (smooth
+       landform shading) but ~1.4 px at span 1500 (pixel-scale flicker that
+       reads as noise, not relief). Widening the tap with hppx keeps the
+       reconstructed slope field at a near-constant SCREEN frequency, so the
+       same strength gives readable hillsides close up without minting
+       single-pixel busyness at strategic zoom. Slope stays physical: the
+       vertical term scales with the same step. */
+    float hs=max(1.0,hppx*2.2);
+    vec2 hev=he*hs;
+    float hL=texture(uHeight,vMapUV-vec2(hev.x,0.0)).r, hR=texture(uHeight,vMapUV+vec2(hev.x,0.0)).r;
+    float hU=texture(uHeight,vMapUV-vec2(0.0,hev.y)).r, hD=texture(uHeight,vMapUV+vec2(0.0,hev.y)).r;
+    vec3 hn=normalize(vec3(hL-hR, uHexelW*hs, hU-hD));
+    /* The height field carries landform. 0.28 flat had thrown away most of
+       the terrain's own shading structure — the close view lost its readable
+       relief along with the rejected turbulence. Strong where the step is
+       genuinely smooth on screen (close), restrained toward strategic zoom. */
+    float hnW=mix(0.72,0.38,smoothstep(0.60,2.60,hppx));
+    n=normalize(mix(n,hn,hnG*hnW));
   }
   /* The painted 2048 macro map is magnified ~3x at tactical zoom, and plain
      bilinear is what read as "blurry ground". A 4-tap unsharp against its own
@@ -1835,7 +2257,7 @@ void main(){
   /* hppx at SPAN_MIN on a 412 phone is ~0.5–1.0, but mid-tactical is 2–4
      and the old 0.9–1.8 gate was already 0 there — painted roads went
      bilinear-soft the moment the player backed off a few metres. */
-  float uGate=1.0-smoothstep(2.4,6.0,hppx);
+  float uGate=qMed*(1.0-smoothstep(1.8,4.2,hppx));
   if(uGate>0.03){
     vec2 texel=1.0/vec2(textureSize(uMap,0));
     vec3 blurM=(texture(uMap,vMapUV+vec2(texel.x,0.0)).rgb
@@ -1854,188 +2276,147 @@ void main(){
        exactly as intended and cannot shift hue. */
     float _lb=dot(blurM,vec3(.2126,.7152,.0722));
     float _lc=dot(base ,vec3(.2126,.7152,.0722));
-    base=max(base+vec3((_lc-_lb)*(0.85*uGate)),vec3(0.0));
+    /* Amount follows magnification. Close up a macro texel spans ~5 screen px,
+       so restoring its painted edge is a smooth, readable gradient; near
+       minification the same kick lands at ~1-texel screen scale and only
+       buys speckle, so it leans out there. */
+    float uAmt=mix(0.62,0.12,smoothstep(0.60,2.60,hppx));
+    base=max(base+vec3((_lc-_lb)*(uAmt*uGate)),vec3(0.0));
   }
-  /* Third, finer octave fades in with proximity: sub-metre gravel the 512
-     detail texture already carries but fixed weights never let through.
-     Normals strengthen with it so the tooth actually catches the sun. */
-  vec4 dt3=texture(uDetail,vDetUV*4.6);
-  float d3=dt3.r;
-  vec2 dn=((dt1.gb*2.0-1.0)*(0.105+0.34*closeG)
-         +(dt2.gb*2.0-1.0)*0.045
-         +(dt3.gb*2.0-1.0)*0.30*closeG)*max(nat,0.18);
-  n=normalize(n+vec3(dn.x,0.0,dn.y));
-  /* The painted macro design carries roads, resource corruption and biomes.
-     Detail is restrained to surface tooth; the previous 0.46-wide modulation
-     turned the whole map into cloud noise and fought every tactical shape. */
-  /* The detail sheet now carries CRACKS, not grain, so it earns real range:
-     grooves genuinely darken the ground and plates read at their own tone.
-     Restrained at distance so the tactical design stays legible. */
-  float crackTone=d1*0.62+d3*0.38;
-  /* Paved city used to skip this with nat=0, which is why civic streets
-     read as a flat grey fill even when the paint had grain. Let cracks
-     bite hardscape at reduced strength — hairline, not cartoon grooves. */
-  float paveTooth=max(nat,0.62);
-  float crackAmt=closeG*mix(0.48,0.18,max(hm,cityYard));
-  base*= (0.92 + (d1*0.10 + d2*0.05)*max(nat,0.50))
-       * mix(1.0, 0.74+crackTone*0.42, crackAmt*paveTooth);
-  /* MATERIAL SPLAT. The painted map supplies the world's TINT; the actual
-     surface a metre of ground is made of comes from the shared atlas — soil
-     or rock across the open field, real concrete inside the planner's mask.
-     One texel of mask + a smoothstep is what turns the smeared grey wash of
-     a street into a curb line, and the atlas mips fade the whole term back
-     to the macro map at command zoom on their own. */
-  /* MID-BAND PLATES. The crack sheet sampled at 1/8 frequency puts the SAME
-     network at reference scale: ~14-unit slabs of ground with metre-wide
-     grooves — readable from play zoom out to command view, which is exactly
-     the band every earlier pass left untouched. This is the layer that makes
-     "zoomed to mid" ground look designed rather than painted. */
-  vec4 dtM=texture(uDetail,vDetUV*0.13);
-  vec4 dtM2=texture(uDetail,(mat2(0.86,-0.51,0.51,0.86)*vDetUV)*0.071);
-  float mG=1.0-smoothstep(14.0,30.0,ppx);
-  float plateM=dtM.r*0.64+dtM2.r*0.36;
-  /* Mid-band Worley slabs are a mid-zoom read. At SPAN_MIN they become
-     metre-wide cartoon cells; fade them as close grain takes over. */
-  float plateAmt=mG*mix(1.0,0.28,closeG)*mix(0.38,0.85,nat);
-  base*=mix(1.0, 0.72+plateM*0.52, plateAmt);
-  n=normalize(n+vec3((dtM.g*2.0-1.0)*0.62+(dtM2.g*2.0-1.0)*0.38,0.0,
-                     (dtM.b*2.0-1.0)*0.62+(dtM2.b*2.0-1.0)*0.38)*0.17*plateAmt);
-  /* ---- GROUND FROM REAL TEXTURE INPUTS --------------------------------
-     The surface is authored, seamless, tileable image assets — an artist can
-     drop replacements into assets/terrain/ and the whole world reskins. Two
-     decorrelated octaves (second rotated ~31°) kill the repeat; the height
-     channel becomes a normal via two offset taps and darkens crevices. The
-     painted map remains the long-range TINT so tactical design survives. */
+  /* ---- AUTHORED GROUND MATERIALS --------------------------------------
+     The macro map owns roads, biomes and scars. Four authored sheets own the
+     close surface. Low uses one albedo octave; Medium adds its packed normal;
+     High/Cinematic add one lightly weighted decorrelated octave and a single
+     micro-normal. There is no universal crack or hash-grain stack. */
+  /* Preserve the deformation/height-field normal before authored grass,
+     paving and soil micro-normal are layered over it. Burn scars restore
+     this normal so the crater wall survives while grass blades do not. */
+  vec3 landformN=n;
+  float matRough=0.78;
   if(uRealTex>0.5){
-    /* Tighter world-scale tiling so SPAN_MIN sees real sheet grain instead
-       of one 90-unit blob per tile. Still two decorrelated octaves — not a
-       checker, not a toon clump. */
     vec2 uvA=wxz*0.018;
     vec2 uvB=(mat2(0.86,-0.51,0.51,0.86)*wxz)*0.041;
-    /* THREE-WAY NATURAL BLEND + SLOPE SCREE: grass holds
-       the wetter macro patches, bare soil the trafficked ones, cracked earth / scree
-       the parched remainder and steep cliff faces. Two decorrelated macro factors keep the borders
-       organic — grass dies out in ragged fingers, never a gradient band. */
-    float mA=texture(uDetail,vDetUV*0.043).r;
-    float mB=texture(uDetail,vDetUV*0.027+vec2(0.37,0.61)).r;
     float slopeW=clamp((1.0-n.y)*2.6-0.30,0.0,1.0);
-    float grassMix=smoothstep(0.44,0.58,mA*0.6+mB*0.4+(d1-0.5)*0.14)*(1.0-slopeW*0.92);
-    float soilMix=mix(smoothstep(0.38,0.62,mB)*(1.0-grassMix), 0.85, slopeW);
-    /* Painted city fill is grey compacted yard. Grass only survives where the
-       map albedo is actually greener than its red/blue — leftover biome lawn
-       inside a district must not win. Gated by uGMask so brown wilderness
-       soil is not snapped to concrete. Tight threshold: a 0.12 band still
-       treated mossy lots as "green enough" for the grass sheet. */
     float paintGreen=base.g-max(base.r,base.b);
+    float biomeVar=d1*0.62+d2*0.38;
+    /* Material identity follows the authored macro semantics, not a thresholded
+       noise field. The old biomeVar threshold alternated grass/rock in broad
+       pale blobs even across uniformly green ground; the soil threshold did
+       the same to every regional sheet. Noise now modulates only a few percent
+       while green paint selects grass and the regional SOIL sheet dominates
+       non-grass terrain. */
+    float greenSemantic=smoothstep(0.006,0.060,paintGreen);
+    float grassMix=greenSemantic*(0.94+0.06*biomeVar)*(1.0-slopeW*0.94);
+    float soilBase=0.70+(biomeVar-0.5)*0.08;
+    float soilMix=mix(soilBase,0.90,slopeW)*(1.0-grassMix);
     float yard=(1.0-smoothstep(0.012,0.055,paintGreen))*cityYard;
     grassMix*=1.0-yard;
     soilMix*=1.0-yard*0.70;
-    vec4 gA=mix(mix(texture(uGroundT,uvA),texture(uSoilT,uvA),soilMix),texture(uGrassT,uvA*1.9),grassMix);
-    vec4 gB=mix(mix(texture(uGroundT,uvB),texture(uSoilT,uvB),soilMix),texture(uGrassT,uvB*1.9),grassMix);
-    /* Pave octaves stay AXIS-ALIGNED and gently weighted: the rotated second
-       tap crossed the sheet's own joints into a diagonal lattice on every
-       road — the exact moire the C&C references never show. */
-    vec4 pA=texture(uPaveT,wxz*0.028), pB=texture(uPaveT,wxz*0.068);
-    float pFine=dot(texture(uPaveT,wxz*0.19).rgb,vec3(0.299,0.587,0.114));
-    /* Grey yards use pave too. hm alone missed plazas: district mask is
-       mid-grey, not street-white, so cityHard lifts them onto concrete. */
+    vec4 aGround=texture(uGroundT,uvA), aSoil=texture(uSoilT,uvA);
+    vec4 aGrass=texture(uGrassT,uvA*1.35), aPave=texture(uPaveT,wxz*0.030);
+    aGround.rgb*=uGroundTint; aSoil.rgb*=uSoilTint;
+    aGrass.rgb*=uGrassTint; aPave.rgb*=uPaveTint*uLocationTint;
+    vec4 natural=mix(mix(aGround,aSoil,soilMix),aGrass,grassMix);
     float cityHard=max(hm, yard*0.82);
-    vec4 mat=mix(gA*0.62+gB*0.38, pA*0.74+pB*0.26, cityHard);
-    mat.rgb*=1.0+(pFine-0.5)*0.10*cityHard*closeG;
-    /* AUTHORED NORMAL MAPS. The four sheets now carry baked Sobel normals —
-       full diagonal response, correct amplitude, one tap per layer instead of
-       the two-tap axis-biased bump this replaces. Decode in the geometric TBN
-       (WebGL2), not world XZ — hillsides otherwise bend the bump the wrong way. */
-    /* Derivatives hoisted above the hGate branch: dFdx/dFdy inside
-       non-uniform control flow is undefined per GLSL ES 3.0. */
+    vec4 mat=mix(natural,aPave,cityHard);
+    if(secondG>0.03){
+      vec4 bGround=texture(uGroundT,uvB), bSoil=texture(uSoilT,uvB);
+      vec4 bGrass=texture(uGrassT,uvB*1.35), bPave=texture(uPaveT,wxz*0.061);
+      bGround.rgb*=uGroundTint; bSoil.rgb*=uSoilTint;
+      bGrass.rgb*=uGrassTint; bPave.rgb*=uPaveTint*uLocationTint;
+      vec4 second=mix(mix(mix(bGround,bSoil,soilMix),bGrass,grassMix),bPave,cityHard);
+      mat=mix(mat,second,0.22*secondG);
+    }
+    /* Preserve macro value and theme while making the authored sheet the
+       dominant close-range signal. Hardscape keeps painted asphalt/plaza
+       values; the pave art contributes material variation, not one grey road. */
+    float texL=dot(mat.rgb,vec3(0.299,0.587,0.114));
+    /* MIP-FLATTENING COMPENSATION. At tactical spans the 1024 sheets sit
+       several mip levels down, and trilinear averaging has already washed
+       out most of their authored gravel/pebble value contrast before the
+       splat ever sees them. Re-expanding around the local mean restores the
+       art's own structure — it cannot invent detail the sheet never had.
+       Restrained on hardscape so painted asphalt keeps its value. */
+    mat.rgb=clamp(vec3(texL)+(mat.rgb-vec3(texL))*(1.0+1.05*closeG*(1.0-cityHard*0.5)),0.0,1.0);
+    /* Macro paint supplies restrained value variation only. Feeding all three
+       macro channels back at 0.88 preserved its broad cloud blobs and buried
+       the authored grass/soil/rock identity; biome tint already lives in the
+       material profiles above. */
+    float macroL=dot(base,vec3(0.2126,0.7152,0.0722));
+    vec3 naturalOut=mat.rgb*(0.90+macroL*0.10);
+    vec3 hardOut=base*(0.82+texL*0.30)+(mat.rgb-vec3(texL))*0.22;
+    float splat=closeG*(0.78+0.20*qMed);
+    base=mix(base,mix(naturalOut,hardOut,cityHard),clamp(splat,0.0,0.98));
+    /* MID/FAR AUTHORED RELIEF. Two band-passed octaves of the regional soil
+       sheet modulate ground value at a stable on-screen scale at EVERY span
+       (see mfSheetBand). This is the authored rock/soil patchiness the
+       close-gated splat cannot carry to span 700-1500 — structured relief,
+       not value-noise cloud, and none of it at the pixel scale that reads
+       as speckle. World-anchored, so panning translates it exactly. Quiet
+       on hardscape, silent across the shoreline band (shoreKeep) so the
+       accepted waterline blend is untouched, and leaning out on steep
+       ground where the landform normals already carry the read. */
+    float farFade=1.0-smoothstep(46.0,80.0,ppx);
+    float bandW=mix(0.40,1.0,nat)*shoreKeep*farFade*mix(1.0,0.5,slopeW);
+    float band1=mfSheetBand(uSoilT,wxz*0.0011,ppx*0.105);
+    float band2=mfSheetBand(uSoilT,wxz*0.0051,ppx*0.486);
+    base*=1.0+(band1*2.2+band2*1.5)*bandW;
+
+    /* Packed normal RGB + roughness A. Derivatives are evaluated before the
+       uniform branch, as required by GLSL ES for textureGrad. */
     vec2 dxA=dFdx(uvA), dyA=dFdy(uvA);
-    vec2 dxG=dFdx(uvA*1.9), dyG=dFdy(uvA*1.9);
-    vec2 dxP=dFdx(wxz*0.028), dyP=dFdy(wxz*0.028);
-    float hGate=max(closeG,0.45*mG);
-    if(hGate>0.03){
-      vec3 nA=mix(mix(textureGrad(uGroundN,uvA,dxA,dyA).rgb,textureGrad(uSoilN,uvA,dxA,dyA).rgb,soilMix),
-                  textureGrad(uGrassN,uvA*1.9,dxG,dyG).rgb,grassMix);
-      vec3 nP=textureGrad(uPaveN,wxz*0.028,dxP,dyP).rgb;
-      vec3 tn=mix(nA,nP,cityHard)*2.0-1.0;
+    vec2 dxG=dFdx(uvA*1.35), dyG=dFdy(uvA*1.35);
+    vec2 dxP=dFdx(wxz*0.030), dyP=dFdy(wxz*0.030);
+    vec2 dxB=dFdx(uvB),dyB=dFdy(uvB);
+    vec2 dxBG=dFdx(uvB*1.35),dyBG=dFdy(uvB*1.35);
+    vec2 dxBP=dFdx(wxz*0.061),dyBP=dFdy(wxz*0.061);
+    if(normalG>0.03){
+      vec4 nrA=mix(mix(textureGrad(uGroundN,uvA,dxA,dyA),textureGrad(uSoilN,uvA,dxA,dyA),soilMix),
+                   textureGrad(uGrassN,uvA*1.35,dxG,dyG),grassMix);
+      nrA=mix(nrA,textureGrad(uPaveN,wxz*0.030,dxP,dyP),cityHard);
+      if(secondG>0.03){
+        vec4 nrB=mix(mix(textureGrad(uGroundN,uvB,dxB,dyB),textureGrad(uSoilN,uvB,dxB,dyB),soilMix),
+                     textureGrad(uGrassN,uvB*1.35,dxBG,dyBG),grassMix);
+        nrB=mix(nrB,textureGrad(uPaveN,wxz*0.061,dxBP,dyBP),cityHard);
+        nrA=mix(nrA,nrB,0.22*secondG);
+      }
+      vec3 tn=nrA.rgb*2.0-1.0;
       vec3 gN=normalize(n);
       vec3 T=cross(gN,vec3(0.0,0.0,1.0));
       if(dot(T,T)<1e-4) T=cross(gN,vec3(1.0,0.0,0.0));
       T=normalize(T);
       vec3 Bn=cross(gN,T);
       vec3 nMapped=normalize(mat3(T,Bn,gN)*tn);
-      n=normalize(mix(gN,nMapped,clamp(hGate,0.0,0.92)));
+      /* One readable fine scale, subordinate to the mesh/landform normal.
+         0.55-0.78 at the old un-mipped response was visual static, but the
+         0.30-0.42 retreat erased the sheets' lighting structure entirely —
+         the measured close view kept only a third of its readable gradient
+         energy. The sheets are minified (mip-filtered) at tactical spans,
+         so their surviving relief is multi-pixel and smooth; a middle
+         strength lights it as gravel/soil relief, not speckle. */
+      float nStrength=mix(mix(0.62,0.74,soilMix),0.55,grassMix);
+      nStrength=mix(nStrength,mix(0.42,0.50,step(0.5,uGroundProfile)),cityHard);
+      n=normalize(mix(gN,nMapped,normalG*nStrength));
+      matRough=mix(matRough,clamp(nrA.a,0.34,0.96),normalG);
+      if(secondG>0.03){
+        vec2 fuv=vDetUV*2.8, fdx=dFdx(fuv), fdy=dFdy(fuv);
+        vec2 micro=textureGrad(uDetail,fuv,fdx,fdy).gb*2.0-1.0;
+        float microW=secondG*mix(mix(0.045,0.070,soilMix),0.032,grassMix);
+        microW=mix(microW,0.026*secondG,cityHard);
+        n=normalize(n+vec3(micro.x,0.0,micro.y)*microW);
+      }
     }
-    float texL=dot(mat.rgb,vec3(0.299,0.587,0.114));
-    /* Close: art owns the surface. Far: gentle modulation under the paint.
-       On city hardscape the pave sheet must add GRAIN, not replace value —
-       full splat turned dark asphalt and pale walks into one light-grey
-       ribbon (the 12:44 three-line road). */
-    /* Wilderness: art owns the surface at close. Hardscape: painted value
-       stays (dark asphalt / pale walk); the pave sheet only adds grain.
-       Full-color splat was the 12:44 light-grey ribbon. */
-    float splat=closeG*0.88+mG*0.12;
-    vec3 art=base*(0.28)+mat.rgb*(base*1.85+vec3(0.05));
-    vec3 grain=base*(0.90+(mat.rgb-vec3(texL))*1.10+vec3(texL)*0.20);
-    float hardW=max(hm, cityYard);
-    base=mix(mix(base*(0.84+texL*0.34), art, splat),
-             mix(base, grain, splat*0.86),
-             hardW);
-    /* Kill leftover grass hue only. A full grey snap erased oil stains,
-       slab seams and pave grain — the "vector placeholder" road. */
-    float leftoverG=max(0.0,base.g-max(base.r,base.b));
-    float gKill=leftoverG*max(smoothstep(0.15,0.75,hm),yard);
-    base.g-=gKill;
-    /* Killing only G on a blue-grey road leaves magenta (R and B sit above
-       the gutted green). Snap hardscape to warm asphalt, restoring G to the
-       red/blue mean so the degreen cannot hue-shift. */
-    float rbMean=0.5*(base.r+base.b);
-    float hard=clamp(gKill*10.0,0.0,1.0)*max(hm,yard);
-    base.g=mix(base.g,rbMean,hard);
-    float paveGrey=dot(base,vec3(0.333));
-    base=mix(base,vec3(paveGrey)*vec3(1.02,1.01,0.98),hard);
-    /* Light plaza tiles still read (141,137,144) after the leftover-G
-       kill — a cool RB cast the live civic pad called pink blotches.
-       Snap remaining chroma on hardscape only; biome dirt keeps hue. */
-    float rbChroma=abs(base.r-base.b)+abs(base.g-0.5*(base.r+base.b));
-    base=mix(base,vec3(paveGrey)*vec3(1.02,1.01,0.98),
-      max(hm,yard)*smoothstep(0.012,0.055,rbChroma));
-    base*=mix(1.0, 0.70+mat.a*0.40, closeG*0.55);        // crevice shading
-    base+=vec3(0.055,0.056,0.052)*kerb*(0.30+0.70*closeG);   // pale formed kerb
   }
-  /* CLOSE-UP MATERIAL GRAIN.
-     The 2048 albedo is 1.56 m/texel — at SPAN_MIN that is a few screen
-     pixels per texel, which is the blocky road. TS=4096 would duplicate
-     tens of MB (heightF + terrainCanvas + terrainBase). Hash/value noise
-     on world XZ plus the tighter splat above supply sub-metre aggregate
-     without a second heightfield.
-     Look lock: fine aggregate / compaction / oil sheen — never hatch,
-     cel outline, checker, or painted lane dashes. */
-  float grainG=1.0-smoothstep(0.40,4.50,hppx);
-  if(grainG>0.02){
-    float agg=mfH21(wxz*8.4)+mfH21(wxz*21.7+13.2);
-    float fine=mfH21(wxz*46.0+9.1);
-    float micro=mfH21(wxz*78.0+3.7);
-    float compact=mfVN(wxz*0.62)*0.58+mfVN(wxz*1.85+6.1)*0.42;
-    float dirt=mfVN(wxz*3.2+2.4);
-    float oil=mfVN(wxz*0.19+4.7);
-    float hard=max(hm,cityYard);
-    /* Asphalt: fine aggregate + faint oil pockets. Amplitude stays a multiply
-       around 1 so dark slab / pale walk values survive. */
-    float aN=(agg-1.0)*0.050+(fine-0.5)*0.055+(micro-0.5)*0.040+(oil-0.5)*0.030;
-    base*=1.0+aN*hard*grainG;
-    base+=vec3(0.014,0.013,0.011)*max(0.0,0.42-oil)*hard*grainG*closeG;
-    /* Soil: compaction patches + grit, not a spray of dots. */
-    float sN=(compact-0.5)*0.12+(dirt-0.5)*0.07+(agg-1.0)*0.022;
-    base*=1.0+sN*nat*grainG;
-    /* Formed carriageway is a hair darker down the crown — wear, not a stripe. */
-    base*=1.0-smoothstep(0.68,0.94,mRaw)*steep*0.045*grainG;
-  }
-  /* ---- MACRO GROUND VARIATION -----------------------------------------
-     Natural ground in the references is never one tone: it carries broad
-     damp/dry patches far larger than any tile. One very low-frequency tap of
-     the same sheet supplies that without another texture. */
-  float macro=texture(uDetail,vDetUV*0.043).r;
-  base*=mix(1.0, 0.82+macro*0.40, mix(0.22,0.85,1.0-hm));
+  base+=vec3(0.055,0.056,0.052)*kerb*(0.30+0.70*closeG);
+  /* One subtle anti-tiling signal replaces seven competing noise bands. */
+  float macroVar=(d1*0.62+d2*0.38)-0.5;
+  base*=1.0+macroVar*mix(0.018,0.050,nat)*closeG;
+  /* Damp land bridges the opaque ground and translucent water. It is a
+     material response above sea level, not a painted shoreline ring. */
+  float shoreWet=smoothstep(WATER_HEIGHT_CONST-0.002,WATER_HEIGHT_CONST+0.007,heightC)
+                *(1.0-smoothstep(WATER_HEIGHT_CONST+0.012,WATER_HEIGHT_CONST+0.060,heightC));
+  base=mix(base,base*vec3(0.75,0.80,0.83),shoreWet*0.30);
+  matRough=mix(matRough,0.26,shoreWet*0.72);
   /* ---- IMPACT BURNS ----------------------------------------------------
      An explosive hit chars the ground and leaves irregular coal beds —
      warm islands with a local flicker, not crack-aligned grain. Glow dies
@@ -2068,6 +2449,8 @@ void main(){
       float ashA=m*(1.0-cool*cool*0.9);
       base*=1.0-ashA*0.82;
       base*=mix(vec3(1.0),vec3(0.32,0.34,0.36),ashA*0.75);
+      n=normalize(mix(n,landformN,ashA*0.82));
+      matRough=mix(matRough,0.98,ashA*0.90);
     }else if(uBurnKind[bi]>1.5){
       /* VOID SCAR — singularity aftermath. The ground is vitrified, not
          burnt: darker char with a cold blue cast, and violet coal beds
@@ -2075,6 +2458,8 @@ void main(){
       float charA=m*(1.0-cool*cool*0.9);
       base*=1.0-charA*0.84;
       base*=mix(vec3(1.0),vec3(0.82,0.86,1.12),charA*0.5);
+      n=normalize(mix(n,landformN,charA*0.84));
+      matRough=mix(matRough,0.96,charA*0.88);
       float heatV=max(0.0,1.0-cool*1.3);
       float bedV=mfCoalBed(wxz,B)*m*heatV;
       float flickV=mfCoalFlick(B.xy);
@@ -2083,19 +2468,42 @@ void main(){
     }else if(uBurnKind[bi]>0.5){
       /* Thermal: dark char with soft coal beds, cooling to black ash.
          Crack-locked grain and cell-hash speck read as shader noise. */
-      float charA=m*(1.0-cool*cool*0.62);
-      vec3 emberAlb=vec3(0.52,0.14,0.03);
-      vec3 ash=vec3(0.034,0.034,0.036);
-      vec3 scar=mix(emberAlb,ash,smoothstep(0.18,0.86,cool));
-      base=mix(base,ash,charA*mix(0.78,0.96,cool));
+      /* The blast consumes the surface material. Preserve the deformed mesh
+         normal but remove grass/paving micro-normal response, destroy gloss,
+         and replace the albedo with stable clinker variation. This makes the
+         crater remain black after the airborne core has vanished instead of
+         revealing green grass through a weak translucent tint. */
+      float charA=clamp(m*(1.0-cool*cool*0.18),0.0,1.0);
+      vec3 emberAlb=vec3(0.46,0.075,0.008);
+      vec3 ash=vec3(0.012,0.011,0.010);
+      float clinker=clamp(crust*0.78+mfH21(wxz*0.19-B.xy*0.017)*0.34,0.0,1.0);
+      vec3 charTex=ash*mix(0.52,1.82,clinker);
+      vec3 scar=mix(emberAlb,charTex,smoothstep(0.12,0.72,cool));
+      base=mix(base,charTex,charA*mix(0.90,0.985,cool));
+      n=normalize(mix(n,landformN,charA*0.86));
+      matRough=mix(matRough,0.985,charA*0.94);
       float leftoverG=max(0.0,base.g-base.r);
       base.g-=leftoverG*charA;
-      float heat=max(0.0,1.0-cool*1.08);
-      base=mix(base,scar,charA*heat*0.34);
-      float bed=mfCoalBed(wxz,B)*m*heat;
+      /* Normal burns live 70 s, but visible heat should not. This maps their
+         normalized clock to a roughly 11-13 s ember window while the dark
+         textured scar persists for the full aftermath lifetime. */
+      float heat=max(0.0,1.0-cool*5.5);
+      /* Confine ember-red to the coal bed. Applying it across the whole disc
+         dragged the ash laid down above back toward red. */
+      float coal=clamp(mfCoalBed(wxz,B),0.0,1.0);
+      float bedHot=pow(coal,2.8)*m*heat;
+      base=mix(base,scar,charA*heat*bedHot*0.18);
+      /* Push the mask toward its peaks so glow reads as cracks between cooled
+         clinker instead of a soft wash over the burn. */
+      float bed=pow(coal,2.7)*m*heat;
+      float emberCore=pow(coal,6.0)*m*heat;
       float flick=mfCoalFlick(B.xy);
-      emberSum+=mix(vec3(0.92,0.28,0.04),vec3(0.16,0.04,0.01),cool)
-                *((0.24+bed*0.58)*flick);
+      /* No full-footprint emissive floor: that produced a flat orange disc
+         around every strategic blast. Only sparse peak coal beds glow; the
+         dominant aftermath is dark, irregular char. */
+      emberSum+=mix(vec3(1.08,0.20,0.018),vec3(0.24,0.035,0.003),cool)
+                *(bed*0.62*flick)
+                +vec3(1.28,0.42,0.028)*(emberCore*0.46*flick);
     }else{
       float st=m*(1.0-cool);
       base=mix(base,base*vec3(1.08,1.00,0.86)+vec3(0.045,0.035,0.02),st*0.55);
@@ -2106,7 +2514,12 @@ void main(){
   float wrap=(dot(n,uSun)*0.5+0.5);
   float hemi=n.y*0.5+0.5;
   vec3 amb=mix(uAmbGnd,uAmbSky,hemi);
-  vec3 lit=base*(amb + uSunC*(ndl*0.80+wrap*0.20));
+  float wrapW=mix(0.24,0.15,matRough);
+  vec3 lit=base*(amb + uSunC*(ndl*(1.0-wrapW)+wrap*wrapW));
+  vec3 viewDir=normalize(uEye-vec3(wxz.x,heightC,wxz.y));
+  float wetF=pow(1.0-max(dot(n,viewDir),0.0),4.5)*shoreWet*(1.0-matRough);
+  float wetSun=pow(max(dot(reflect(-uSun,n),viewDir),0.0),42.0)*shoreWet*(1.0-matRough);
+  lit+=uAmbSky*wetF*0.16+uSunC*wetSun*0.20;
   lit=vec3(1.0)-exp(-lit*1.55);       // same curve as the model shader
   lit+=emberSum;                       // embers glow regardless of sun
   /* Fog-of-war follows the terrain itself. A screen overlay could not survive
@@ -2179,6 +2592,7 @@ void main(){
      procedural band pattern in, which is what read as smeared stripes out
      there — six vertex rows cannot carry a 98-unit sinusoid honestly. */
   lit=mix(lit,zoneCol,zone*0.78*(1.0-fow)*(1.0-smoothstep(300.0,760.0,vOutside)));
+  oWindow=vec4(0.0);
   o=vec4(clamp(lit,vec3(0.0),vec3(1.0)),1.0);
 }`;
 /* ============================================================================
@@ -2208,9 +2622,21 @@ void main(){
 let aoFB1=null, aoFB2=null, aoColA=null, aoColB=null, aoDepth=null, aoW=0, aoH=0;
 let glowFB=null, glowTexA=null, glowTexB=null, glowW=0, glowH=0;
 let progBright=null, progBlur=null, UBR={}, UBL={};
+/* Window light has its own authoring mask and narrow convolution. It is not a
+   lower bright-pass threshold: daylight roofs, water and UI can never enter
+   this target because only the model/window shaders write COLOR_ATTACHMENT1. */
+let aoWindowMask=null, windowGlowFB=null, windowGlowTexA=null, windowGlowTexB=null;
+let windowGlowW=0,windowGlowH=0;
+let progWindowExtract=null, progWindowBlur=null, UWX={}, UWB={};
+let aoWindowReady=false, aoWindowActive=false, aoWindowSealed=false;
+let aoWindowAttachedFB=null, aoWindowGlowReady=false, aoWindowHDR=false;
+const aoWindowInvVP=new Float32Array(16);
+const MF_WINDOW_HALO_TEL={version:1,available:false,active:false,presentedFrames:0,
+  failures:0,mask:'none',target:'none',width:0,height:0,bytes:0,epoch:0,lastError:''};
+if(typeof window!=='undefined') window.MFWindowBloom=MF_WINDOW_HALO_TEL;
 let progAO=null, progCopy=null, UAO={}, UCP={}, aoVAO=null, aoOn=true, aoReady=false, aoFailN=0;
 let aoDoSSAO=true;   // FBO can stay up for bloom/FXAA when SSAO itself is skipped
-let aoEpoch=-1, aoGlowDiv=-1;
+let aoEpoch=-1, aoGlowDiv=-1, aoWindowAllocWanted=-1;
 function gfxTune(){
   const G=(typeof GFX!=='undefined')?GFX:{};
   const q=typeof mfGfxKey==='function'?mfGfxKey():'high';
@@ -2227,7 +2653,12 @@ function gfxTune(){
     /* MEDIUM/LOW: half-res scene+SSAO FBO. HIGH/CINEMATIC stay native canvas. */
     aoDiv:(q==='medium'||q==='low')?1:0,
     fxaa:q==='high'||q==='cinematic',
-    cineBloom:q==='cinematic'
+    sharp:q==='medium'?0.82:(q==='high'||q==='cinematic'?0.72:0),
+    cineBloom:q==='cinematic',
+    /* Faint and deliberately narrow. LOW has no selective post allocation;
+       Medium keeps it restrained, while the higher tiers only gain precision. */
+    windowAmt:q==='low'?0:(q==='medium'?0.13:(q==='cinematic'?0.19:0.16)),
+    windowGain:q==='medium'?1.18:(q==='cinematic'?1.42:1.30)
   };
 }
 const VSQ=`#version 300 es
@@ -2325,6 +2756,87 @@ void main(){
   c+=(texture(uCol,vUv+uDir*3.2308).rgb+texture(uCol,vUv-uDir*3.2308).rgb)*0.070270;
   o=vec4(c,1.0);
 }`;
+/* ---- SELECTIVE WINDOW HALO -------------------------------------------------
+   The R8 MRT is authoritative. Scene luminance never decides eligibility, so
+   this pass can lift a dim authored pane without blooming a white roof beside
+   it. RGB comes from the already fogged/damaged scene, preserving the authored
+   cyan/amber colour. Alpha carries the closest source depth through both blur
+   axes so foreground terrain and hulls stop the halo instead of being painted
+   over by a screen-space glow. */
+const FSWINDOWEXTRACT=`#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform sampler2D uCol;
+uniform sampler2D uMask;
+uniform sampler2D uDep;
+uniform vec2 uFootprint;
+uniform float uGain;
+out vec4 o;
+void main(){
+  vec3 cSum=vec3(0.0);float mSum=0.0,mMax=0.0,sd=1.0,n=0.0;
+  /* Fetch every source texel belonging to this output footprint. Mask, colour
+     and D24 depth use the SAME integer coordinate, so a facade-edge mask can
+     never borrow the nearer/background depth selected by a filtered neighbor.
+     ceil-sized 1/4 targets cap the rectangle at 5x5 even for odd dimensions. */
+  ivec2 srcN=textureSize(uMask,0),dst=ivec2(gl_FragCoord.xy);
+  ivec2 lo=clamp(ivec2(floor(vec2(dst)*uFootprint)),ivec2(0),srcN-1);
+  ivec2 hi=clamp(ivec2(ceil(vec2(dst+ivec2(1))*uFootprint)),lo+1,srcN);
+  for(int iy=0;iy<5;iy++)for(int ix=0;ix<5;ix++){
+    ivec2 p=lo+ivec2(ix,iy);
+    if(p.x>=hi.x||p.y>=hi.y)continue;
+    float m=texelFetch(uMask,p,0).r;n+=1.0;
+    mSum+=m;mMax=max(mMax,m);
+    if(m>.001){cSum+=texelFetch(uCol,p,0).rgb*m;sd=min(sd,texelFetch(uDep,p,0).r);}
+  }
+  /* Maximum coverage keeps one narrow pane alive; the bounded sum lets a row
+     of authored panes carry more energy without making a full facade bloom. */
+  float normSum=mSum*16.0/max(n,1.0);
+  float strength=clamp(mMax*.82+min(1.0,normSum*.13),0.0,1.0);
+  vec3 c=mSum>.0001?cSum/mSum*strength*uGain:vec3(0.0);
+  o=vec4(c,sd);
+}`;
+const FSWINDOWBLUR=`#version 300 es
+precision highp float;
+in vec2 vUv;
+uniform sampler2D uCol;
+uniform sampler2D uDep;
+uniform sampler2D uFogMap;
+uniform vec2 uDir;
+uniform mat4 uInvVP;
+uniform float uFowOn;
+uniform float uMapInv;
+uniform float uFinal;
+out vec4 o;
+float live(vec4 s){return step(0.00001,max(s.r,max(s.g,s.b)));}
+float visibleAt(vec4 s,float dz){
+  /* Normal WebGL depth: a smaller destination is nearer than the light. */
+  return live(s)*step(s.a-0.00008,dz);
+}
+float destinationVisible(float dz){
+  if(uFowOn<.5)return 1.0;
+  vec4 w=uInvVP*vec4(vUv*2.0-1.0,dz*2.0-1.0,1.0);
+  vec2 mapUV=clamp((w.xz/max(abs(w.w),1e-6))*uMapInv,vec2(0.0),vec2(1.0));
+  return 1.0-clamp(texture(uFogMap,mapUV).a*uFowOn,0.0,1.0);
+}
+void main(){
+  float dz=texture(uDep,vUv).r;
+  float fowVis=destinationVisible(dz);
+  vec4 s0=texture(uCol,vUv);
+  vec4 s1=texture(uCol,vUv+uDir),s2=texture(uCol,vUv-uDir);
+  vec4 s3=texture(uCol,vUv+uDir*2.0),s4=texture(uCol,vUv-uDir*2.0);
+  float g0=visibleAt(s0,dz),g1=visibleAt(s1,dz),g2=visibleAt(s2,dz);
+  float g3=visibleAt(s3,dz),g4=visibleAt(s4,dz);
+  vec3 c=(s0.rgb*(.36*g0)+(s1.rgb*g1+s2.rgb*g2)*.24+
+         (s3.rgb*g3+s4.rgb*g4)*.08)*fowVis;
+  float sd=1.0;
+  if(g0>0.0)sd=min(sd,s0.a);if(g1>0.0)sd=min(sd,s1.a);
+  if(g2>0.0)sd=min(sd,s2.a);if(g3>0.0)sd=min(sd,s3.a);
+  if(g4>0.0)sd=min(sd,s4.a);
+  /* Horizontal alpha remains precise source depth for the vertical rejection.
+     The final target no longer needs it, so carry destination visibility into
+     present and gate the bilinear upsample at the concealment boundary too. */
+  o=vec4(c,mix(sd,fowVis,uFinal));
+}`;
 /* ---- PRESENT: FXAA + bloom composite ---------------------------------------
    The frame already paid for a full-screen copy that did nothing but move
    bytes. The context is created without multisampling, so every roof edge and
@@ -2335,19 +2847,38 @@ precision highp float;
 in vec2 vUv;
 uniform sampler2D uCol;
 uniform sampler2D uBloom;
+uniform sampler2D uWindow;
+uniform sampler2D uDep;
+uniform sampler2D uFogMap;
 uniform vec2 uTexel;
 uniform float uBloomAmt;
+uniform float uWindowAmt;
 uniform float uFxaa;
+uniform float uSharp;
+uniform mat4 uInvVP;
+uniform float uFowOn;
+uniform float uMapInv;
 out vec4 o;
 float lum(vec3 c){ return dot(c,vec3(0.299,0.587,0.114)); }
+float windowDestinationVisible(){
+  if(uFowOn<.5)return 1.0;
+  float dz=texture(uDep,vUv).r;
+  vec4 w=uInvVP*vec4(vUv*2.0-1.0,dz*2.0-1.0,1.0);
+  vec2 mapUV=clamp((w.xz/max(abs(w.w),1e-6))*uMapInv,vec2(0.0),vec2(1.0));
+  return 1.0-clamp(texture(uFogMap,mapUV).a*uFowOn,0.0,1.0);
+}
 void main(){
   vec3 rgbM=texture(uCol,vUv).rgb;
   vec3 col=rgbM;
+  vec3 rgbNW=texture(uCol,vUv+vec2(-uTexel.x,-uTexel.y)).rgb;
+  vec3 rgbNE=texture(uCol,vUv+vec2( uTexel.x,-uTexel.y)).rgb;
+  vec3 rgbSW=texture(uCol,vUv+vec2(-uTexel.x, uTexel.y)).rgb;
+  vec3 rgbSE=texture(uCol,vUv+vec2( uTexel.x, uTexel.y)).rgb;
   if(uFxaa>0.5){
-  float lNW=lum(texture(uCol,vUv+vec2(-uTexel.x,-uTexel.y)).rgb);
-  float lNE=lum(texture(uCol,vUv+vec2( uTexel.x,-uTexel.y)).rgb);
-  float lSW=lum(texture(uCol,vUv+vec2(-uTexel.x, uTexel.y)).rgb);
-  float lSE=lum(texture(uCol,vUv+vec2( uTexel.x, uTexel.y)).rgb);
+  float lNW=lum(rgbNW);
+  float lNE=lum(rgbNE);
+  float lSW=lum(rgbSW);
+  float lSE=lum(rgbSE);
   float lM =lum(rgbM);
   float lMin=min(lM,min(min(lNW,lNE),min(lSW,lSE)));
   float lMax=max(lM,max(max(lNW,lNE),max(lSW,lSE)));
@@ -2363,12 +2894,30 @@ void main(){
     col=(lB<lMin||lB>lMax)?a:b;
   }
   }
+  /* Mild contrast-adaptive scene sharpening recovers material/road edges
+     softened by presentation scaling and FXAA. The signed correction is
+     clamped to a maximum 4% display-range correction, keeping halos below
+     the explicit 5% acceptance ceiling. */
+  if(uSharp>0.0){
+    vec3 avg=(rgbNW+rgbNE+rgbSW+rgbSE)*0.25;
+    float localRange=max(max(abs(lum(rgbNW)-lum(rgbM)),abs(lum(rgbNE)-lum(rgbM))),
+                         max(abs(lum(rgbSW)-lum(rgbM)),abs(lum(rgbSE)-lum(rgbM))));
+    float sg=smoothstep(0.025,0.18,localRange);
+    col+=clamp(col-avg,vec3(-0.055),vec3(0.055))*uSharp*sg;
+  }
   vec3 bloom=texture(uBloom,vUv).rgb*uBloomAmt;
   /* Already-white pixels (sky, foam, pale roofs) do not take a second full
      add — that was the HIGH noon haze. Tracers still get 32% so their halo
      survives after the 0.936 bright-pass. */
   float gate=1.0-smoothstep(0.88,1.05,lum(col));
   col+=bloom*mix(0.32,1.0,gate);
+  /* Authored-window-only halo. Its eligibility came from the R8 MRT, not this
+     colour buffer, so it remains independent of the global bright pass. Apply
+     FOW again at the native presentation pixel: gating only the low-resolution
+     blur target lets bilinear upsampling leak a fractional halo across a sharp
+     concealment boundary. */
+  vec4 windowHalo=texture(uWindow,vUv);
+  col+=windowHalo.rgb*uWindowAmt*windowHalo.a*windowDestinationVisible();
   o=vec4(col,1.0);
 }`;
 function aoAlloc(w,h){
@@ -2378,49 +2927,54 @@ function aoAlloc(w,h){
      happened to be on unit 0. That is the material atlas, which is exactly what
      "the whole screen turned into texture swatches" was. */
   if(w<=0||h<=0) return;
-  const glowDiv=gfxTune().glowDiv;
-  if(aoW===w&&aoH===h&&aoGlowDiv===glowDiv) return;
+  const tune=gfxTune(),glowDiv=tune.glowDiv;
+  const windowWanted=tune.bloom&&tune.windowAmt>0?1:0;
+  if(aoW===w&&aoH===h&&aoGlowDiv===glowDiv&&aoWindowAllocWanted===windowWanted) return;
+  MF_WINDOW_HALO_TEL.lastError='';
   /* Size is NOT committed here. It used to be, and that turned a one-frame
      allocation failure into a permanent outage: the guard above short-circuits
      on the committed size, so a failed alloc was never retried. Measured at 316
      consecutive frames with aoReady=false and no further attempts — AO, FXAA
      and bloom off for the rest of the session from a single bad resize. */
-  const mk=(fmt,ifmt,type,filter)=>{
+  const mkAt=(tw,th,fmt,ifmt,type,filter)=>{
     const t=gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D,t);
-    gl.texImage2D(gl.TEXTURE_2D,0,ifmt,w,h,0,fmt,type,null);
+    gl.texImage2D(gl.TEXTURE_2D,0,ifmt,tw,th,0,fmt,type,null);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,filter);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,filter);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     return t;
   };
+  const mk=(fmt,ifmt,type,filter)=>mkAt(w,h,fmt,ifmt,type,filter);
   /* Detach BEFORE deleting. A framebuffer attachment keeps a deleted texture
      alive at its old size, and an FBO left pointing at one silently fails
      dimension validation later against the new-size attachments. */
-  for(const [fb,att] of [[aoFB1,'COLOR_ATTACHMENT0'],[aoFB1,'DEPTH_ATTACHMENT'],
-                         [aoFB2,'COLOR_ATTACHMENT0'],[aoFB2,'DEPTH_ATTACHMENT'],
-                         [glowFB,'COLOR_ATTACHMENT0']]){
+  for(const [fb,att] of [[aoFB1,'COLOR_ATTACHMENT0'],[aoFB1,'COLOR_ATTACHMENT1'],[aoFB1,'DEPTH_ATTACHMENT'],
+                         [aoFB2,'COLOR_ATTACHMENT0'],[aoFB2,'COLOR_ATTACHMENT1'],[aoFB2,'DEPTH_ATTACHMENT'],
+                         [glowFB,'COLOR_ATTACHMENT0'],[windowGlowFB,'COLOR_ATTACHMENT0']]){
     if(!fb) continue;
     gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
+    if(fb===aoFB1||fb===aoFB2) gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
     gl.framebufferTexture2D(gl.FRAMEBUFFER,gl[att],gl.TEXTURE_2D,null,0);
   }
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
-  for(const t of [aoColA,aoColB,aoDepth]) if(t) gl.deleteTexture(t);
+  for(const t of [aoColA,aoColB,aoDepth,aoWindowMask,windowGlowTexA,windowGlowTexB])
+    if(t) gl.deleteTexture(t);
+  aoWindowMask=windowGlowTexA=windowGlowTexB=null;
+  aoWindowReady=aoWindowActive=aoWindowSealed=aoWindowGlowReady=false;
+  aoWindowAttachedFB=null;aoWindowHDR=false;
   aoColA=mk(gl.RGBA,gl.RGBA8,gl.UNSIGNED_BYTE,gl.LINEAR);
   aoColB=mk(gl.RGBA,gl.RGBA8,gl.UNSIGNED_BYTE,gl.LINEAR);
   aoDepth=mk(gl.DEPTH_COMPONENT,gl.DEPTH_COMPONENT24,gl.UNSIGNED_INT,gl.NEAREST);
   glowW=Math.max(1,w>>glowDiv); glowH=Math.max(1,h>>glowDiv);
-  const mkS=()=>{
-    const t=gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D,t);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,glowW,glowH,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-    return t;
-  };
+  /* The selective target never exceeds a 4x4 AO footprint. MEDIUM's ordinary
+     bloom is intentionally 1/8 AO resolution, but using that size for windows
+     made one NEAREST depth sample stand in for a paired mask sample at facade
+     silhouettes. A dedicated 1/4 target keeps every extraction tap aligned to
+     one AO texel and prevents distant panes from popping while panning. */
+  windowGlowW=Math.max(1,Math.ceil(w/4));windowGlowH=Math.max(1,Math.ceil(h/4));
+  const mkS=()=>mkAt(glowW,glowH,gl.RGBA,gl.RGBA8,gl.UNSIGNED_BYTE,gl.LINEAR);
   for(const t of [glowTexA,glowTexB]) if(t) gl.deleteTexture(t);
   glowTexA=mkS(); glowTexB=mkS();
   if(!glowFB) glowFB=gl.createFramebuffer();
@@ -2441,15 +2995,79 @@ function aoAlloc(w,h){
      current one on its next pass. */
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,null,0);
   const ok2=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+  /* Optional R8 scene mask. Prove it as a second render target against BOTH AO
+     targets now; the frame loop may select either depending on whether SSAO is
+     enabled. It is detached again so allocation failure cannot poison AO. */
+  let maskOk=false,windowTargetOk=false;
+  if(ok&&ok2&&windowWanted){
+    aoWindowMask=mk(gl.RED,gl.R8,gl.UNSIGNED_BYTE,gl.LINEAR);
+    maskOk=!!aoWindowMask;
+    for(const fb of [aoFB1,aoFB2]){
+      gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT1,gl.TEXTURE_2D,aoWindowMask,0);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0,gl.COLOR_ATTACHMENT1]);
+      maskOk=maskOk&&gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT1,gl.TEXTURE_2D,null,0);
+    }
+    if(!maskOk){
+      gl.deleteTexture(aoWindowMask);aoWindowMask=null;
+      MF_WINDOW_HALO_TEL.lastError='R8 MRT unavailable';
+    }
+  }
+  /* Keep the selective convolution independent of the established RGBA8
+     bright-pass pair. Alpha transports source D24 depth between blur axes, so
+     it MUST remain float32: RGBA8 quantises one step to ~59 world units and
+     RGBA16F still loses several units around mid-depth. If precise, linearly
+     filterable rendering is unavailable, the atomic fallback is NO HALO. */
+  if(maskOk){
+    if(!windowGlowFB) windowGlowFB=gl.createFramebuffer();
+    const makeWindowPair=(ifmt,type)=>{
+      gl.bindFramebuffer(gl.FRAMEBUFFER,windowGlowFB);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,null,0);
+      for(const t of [windowGlowTexA,windowGlowTexB]) if(t) gl.deleteTexture(t);
+      windowGlowTexA=mkAt(windowGlowW,windowGlowH,gl.RGBA,ifmt,type,gl.LINEAR);
+      windowGlowTexB=mkAt(windowGlowW,windowGlowH,gl.RGBA,ifmt,type,gl.LINEAR);
+      let pairOk=!!windowGlowTexA&&!!windowGlowTexB;
+      for(const t of [windowGlowTexA,windowGlowTexB]){
+        gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+        pairOk=pairOk&&gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+      }
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,
+        pairOk?windowGlowTexA:null,0);
+      return pairOk;
+    };
+    /* A renderable float texture is not necessarily LINEAR-filterable. */
+    const floatRT=!!gl.getExtension('EXT_color_buffer_float')&&
+      !!gl.getExtension('OES_texture_float_linear');
+    if(floatRT){ windowTargetOk=makeWindowPair(gl.RGBA32F,gl.FLOAT);aoWindowHDR=windowTargetOk; }
+    if(!windowTargetOk){
+      gl.bindFramebuffer(gl.FRAMEBUFFER,windowGlowFB);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,null,0);
+      for(const t of [windowGlowTexA,windowGlowTexB]) if(t) gl.deleteTexture(t);
+      windowGlowTexA=windowGlowTexB=null;
+      MF_WINDOW_HALO_TEL.lastError='precise window depth target unavailable; halo disabled';
+    }
+  }
+  if(maskOk&&!windowTargetOk){gl.deleteTexture(aoWindowMask);aoWindowMask=null;maskOk=false;}
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   aoReady=ok&&ok2&&!!aoColA&&!!aoColB&&!!aoDepth;
+  aoWindowReady=aoReady&&maskOk&&windowTargetOk;
+  MF_WINDOW_HALO_TEL.available=aoWindowReady&&!!progWindowExtract&&!!progWindowBlur;
+  MF_WINDOW_HALO_TEL.active=false;
+  MF_WINDOW_HALO_TEL.mask=maskOk?'R8':'none';
+  MF_WINDOW_HALO_TEL.target=windowTargetOk?'RGBA32F':'none';
+  MF_WINDOW_HALO_TEL.width=windowGlowW;MF_WINDOW_HALO_TEL.height=windowGlowH;
+  MF_WINDOW_HALO_TEL.bytes=maskOk?w*h+(windowTargetOk?windowGlowW*windowGlowH*32:0):0;
+  MF_WINDOW_HALO_TEL.epoch=glEpoch;
   /* Commit the size only once the allocation is known good. On failure the
      size stays uncommitted so the next frame retries — bounded, because an
      unbounded retry turns a permanent outage into a per-frame realloc storm,
      which is worse. After the budget is spent the size is committed anyway and
      AO stays off until something resizes again. */
-  if(aoReady){ aoW=w; aoH=h; aoGlowDiv=glowDiv; aoFailN=0; }
-  else if(++aoFailN>=4){ aoW=w; aoH=h; aoGlowDiv=glowDiv; }
+  if(aoReady){ aoW=w; aoH=h; aoGlowDiv=glowDiv;aoWindowAllocWanted=windowWanted;aoFailN=0; }
+  else if(++aoFailN>=4){ aoW=w; aoH=h; aoGlowDiv=glowDiv;aoWindowAllocWanted=windowWanted; }
 }
 function initAO(){
   /* Context restoration leaves every WebGL handle truthy but dead. aoAlloc()
@@ -2458,20 +3076,34 @@ function initAO(){
      disappeared while the HTML HUD survived. A new GL epoch owns an entirely
      new post chain. */
   if(aoEpoch!==glEpoch){
-    aoEpoch=glEpoch;aoW=aoH=glowW=glowH=0;aoGlowDiv=-1;aoReady=false;aoFailN=0;
-    aoColA=aoColB=aoDepth=glowTexA=glowTexB=null;
-    aoFB1=aoFB2=glowFB=aoVAO=null;
+    aoEpoch=glEpoch;aoW=aoH=glowW=glowH=windowGlowW=windowGlowH=0;aoGlowDiv=-1;aoWindowAllocWanted=-1;
+    aoReady=false;aoFailN=0;
+    aoColA=aoColB=aoDepth=glowTexA=glowTexB=aoWindowMask=null;
+    windowGlowTexA=windowGlowTexB=null;
+    aoFB1=aoFB2=glowFB=windowGlowFB=aoVAO=null;
+    aoWindowReady=aoWindowActive=aoWindowSealed=aoWindowGlowReady=aoWindowHDR=false;
+    aoWindowAttachedFB=null;
+    MF_WINDOW_HALO_TEL.available=false;MF_WINDOW_HALO_TEL.active=false;
+    MF_WINDOW_HALO_TEL.mask='none';MF_WINDOW_HALO_TEL.target='none';
+    MF_WINDOW_HALO_TEL.bytes=0;
+    MF_WINDOW_HALO_TEL.epoch=glEpoch;MF_WINDOW_HALO_TEL.lastError='';
   }
   progAO   =mkProg(VSQ,FSAO);
   progCopy =mkProg(VSQ,FSCOPY);
   progBright=mkProg(VSQ,FSBRIGHT);
   progBlur =mkProg(VSQ,FSBLUR);
+  progWindowExtract=mkProg(VSQ,FSWINDOWEXTRACT,'window-halo-extract');
+  progWindowBlur=mkProg(VSQ,FSWINDOWBLUR,'window-halo-blur');
   for(const k of ['uCol','uDep','uTexel','uRadius','uWorldPerZ','uRange','uTint','uAoAmt','uAoN'])
     UAO[k]=gl.getUniformLocation(progAO,k);
-  for(const k of ['uCol','uBloom','uTexel','uBloomAmt','uFxaa'])
+  for(const k of ['uCol','uBloom','uWindow','uDep','uFogMap','uTexel','uBloomAmt','uWindowAmt','uFxaa','uSharp','uInvVP','uFowOn','uMapInv'])
     UCP[k]=gl.getUniformLocation(progCopy,k);
   for(const k of ['uCol','uTexel','uThresh']) UBR[k]=gl.getUniformLocation(progBright,k);
   for(const k of ['uCol','uDir'])             UBL[k]=gl.getUniformLocation(progBlur,k);
+  if(progWindowExtract) for(const k of ['uCol','uMask','uDep','uFootprint','uGain'])
+    UWX[k]=gl.getUniformLocation(progWindowExtract,k);
+  if(progWindowBlur) for(const k of ['uCol','uDep','uFogMap','uDir','uInvVP','uFowOn','uMapInv','uFinal'])
+    UWB[k]=gl.getUniformLocation(progWindowBlur,k);
   aoVAO=gl.createVertexArray();
 }
 /* Bright-pass then optional separable blurs. Mid skips the extra fullscreen
@@ -2543,17 +3175,169 @@ function bloomPass(){
   gl.activeTexture(gl.TEXTURE0);
   return true;
 }
+const MF_WINDOW_ZERO4=new Float32Array([0,0,0,0]);
+/* gl.clear(COLOR_BUFFER_BIT) clears every enabled MRT to the fog clear colour.
+   The render hook calls this immediately afterwards so an untouched pixel can
+   never masquerade as a window source. */
+function aoWindowMaskClear(){
+  if(!aoWindowActive||!aoWindowMask||!aoWindowAttachedFB) return false;
+  const was=gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+  const wasScissor=gl.isEnabled(gl.SCISSOR_TEST),cm=gl.getParameter(gl.COLOR_WRITEMASK);
+  if(was!==aoWindowAttachedFB)gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,aoWindowAttachedFB);
+  if(wasScissor)gl.disable(gl.SCISSOR_TEST);
+  gl.colorMask(true,true,true,true);
+  gl.clearBufferfv(gl.COLOR,1,MF_WINDOW_ZERO4);
+  gl.colorMask(cm[0],cm[1],cm[2],cm[3]);
+  if(wasScissor)gl.enable(gl.SCISSOR_TEST);
+  if(was!==aoWindowAttachedFB)gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,was);
+  return true;
+}
+/* Stop writes after the last opaque mesh. The mask remains attached/readable
+   until extraction, but decals, shields and volumetrics cannot contaminate it. */
+function aoWindowMaskSeal(){
+  if(!aoWindowActive||!aoWindowAttachedFB) return false;
+  const was=gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+  if(was!==aoWindowAttachedFB) gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,aoWindowAttachedFB);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+  if(was!==aoWindowAttachedFB) gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,was);
+  aoWindowSealed=true;
+  return true;
+}
+function aoWindowDetachMask(){
+  if(!aoWindowAttachedFB) return;
+  const was=gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,aoWindowAttachedFB);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+  gl.framebufferTexture2D(gl.DRAW_FRAMEBUFFER,gl.COLOR_ATTACHMENT1,gl.TEXTURE_2D,null,0);
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,was);
+  aoWindowAttachedFB=null;aoWindowActive=false;aoWindowSealed=false;
+  MF_WINDOW_HALO_TEL.active=false;
+}
+/* Two-axis window-only convolution with exact state restoration. This pass is
+   optional: any missing shader/attachment or runtime failure returns false,
+   and present binds a harmless placeholder with uWindowAmt=0. */
+function windowBloomPass(){
+  const T=gfxTune();
+  if(!aoWindowReady||!aoWindowActive||!aoWindowSealed||!progWindowExtract||
+     !progWindowBlur||!windowGlowFB||!windowGlowTexA||!windowGlowTexB||
+     !aoWindowMask||!aoColB||!aoDepth||T.windowAmt<=0) return false;
+  const wasRead=gl.getParameter(gl.READ_FRAMEBUFFER_BINDING);
+  const wasDraw=gl.getParameter(gl.DRAW_FRAMEBUFFER_BINDING);
+  const wasViewport=gl.getParameter(gl.VIEWPORT);
+  const wasProgram=gl.getParameter(gl.CURRENT_PROGRAM);
+  const wasVAO=gl.getParameter(gl.VERTEX_ARRAY_BINDING);
+  const wasActive=gl.getParameter(gl.ACTIVE_TEXTURE);
+  const savedTex=[];
+  for(const unit of [4,5,6,7]){
+    gl.activeTexture(gl.TEXTURE0+unit);
+    savedTex.push(gl.getParameter(gl.TEXTURE_BINDING_2D));
+  }
+  const wasBlend=gl.isEnabled(gl.BLEND),wasCull=gl.isEnabled(gl.CULL_FACE);
+  const wasDepth=gl.isEnabled(gl.DEPTH_TEST),wasScissor=gl.isEnabled(gl.SCISSOR_TEST);
+  const wasMask=gl.getParameter(gl.DEPTH_WRITEMASK);
+  const wasColorMask=gl.getParameter(gl.COLOR_WRITEMASK);
+  const wasClear=gl.getParameter(gl.COLOR_CLEAR_VALUE);
+  const ph=matTex||aoColB,attach=tex=>{
+    /* Destination must not still be a sampler on any live texture unit. */
+    gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,ph);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+    return gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+  };
+  let ok=false;
+  try{
+    for(const unit of [4,5,6,7]){
+      gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,ph);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER,windowGlowFB);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+    gl.viewport(0,0,windowGlowW,windowGlowH);
+    gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.SCISSOR_TEST);gl.depthMask(false);gl.colorMask(true,true,true,true);
+    gl.bindVertexArray(aoVAO);gl.clearColor(0,0,0,1);
+    if(!attach(windowGlowTexA)) throw new Error('extract framebuffer incomplete');
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(progWindowExtract);
+    gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,aoColB);
+    gl.activeTexture(gl.TEXTURE5);gl.bindTexture(gl.TEXTURE_2D,aoWindowMask);
+    gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,aoDepth);
+    gl.uniform1i(UWX.uCol,6);gl.uniform1i(UWX.uMask,5);gl.uniform1i(UWX.uDep,4);
+    gl.uniform2f(UWX.uFootprint,aoW/windowGlowW,aoH/windowGlowH);
+    gl.uniform1f(UWX.uGain,T.windowGain);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    gl.useProgram(progWindowBlur);
+    gl.uniform1i(UWB.uCol,6);gl.uniform1i(UWB.uDep,4);gl.uniform1i(UWB.uFogMap,7);
+    m4invert(aoWindowInvVP,matVP);gl.uniformMatrix4fv(UWB.uInvVP,false,aoWindowInvVP);
+    const fowOn=typeof fogGameplayActive==='function'&&fogGameplayActive()&&
+      !(typeof demoMode!=='undefined'&&demoMode)&&typeof fogTex!=='undefined'&&fogTex?1:0;
+    gl.uniform1f(UWB.uFowOn,fowOn);gl.uniform1f(UWB.uMapInv,1/Math.max(1,MAP));
+    gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,aoDepth);
+    gl.activeTexture(gl.TEXTURE7);gl.bindTexture(gl.TEXTURE_2D,
+      (typeof fogTex!=='undefined'&&fogTex)||ph);
+    if(!attach(windowGlowTexB)) throw new Error('horizontal framebuffer incomplete');
+    gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,windowGlowTexA);
+    gl.uniform1f(UWB.uFinal,0);gl.uniform2f(UWB.uDir,1/windowGlowW,0);gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    if(!attach(windowGlowTexA)) throw new Error('vertical framebuffer incomplete');
+    gl.activeTexture(gl.TEXTURE6);gl.bindTexture(gl.TEXTURE_2D,windowGlowTexB);
+    gl.uniform1f(UWB.uFinal,1);gl.uniform2f(UWB.uDir,0,1/windowGlowH);gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLES,0,3);
+    ok=true;MF_WINDOW_HALO_TEL.lastError='';
+  }catch(e){
+    MF_WINDOW_HALO_TEL.failures++;
+    MF_WINDOW_HALO_TEL.lastError=String(e&&e.message||e);
+  }finally{
+    /* Restore framebuffer bindings before sampler bindings: a previous frame
+       may legitimately have windowGlowTexA on unit 4, and rebinding it while
+       windowGlowFB is the draw target would recreate a feedback loop. */
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER,wasRead);
+    gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,wasDraw);
+    for(let i=0;i<4;i++){
+      gl.activeTexture(gl.TEXTURE0+4+i);gl.bindTexture(gl.TEXTURE_2D,savedTex[i]);
+    }
+    gl.activeTexture(wasActive);gl.useProgram(wasProgram);gl.bindVertexArray(wasVAO);
+    gl.viewport(wasViewport[0],wasViewport[1],wasViewport[2],wasViewport[3]);
+    gl.clearColor(wasClear[0],wasClear[1],wasClear[2],wasClear[3]);
+    if(wasDepth)gl.enable(gl.DEPTH_TEST);else gl.disable(gl.DEPTH_TEST);
+    if(wasCull)gl.enable(gl.CULL_FACE);else gl.disable(gl.CULL_FACE);
+    if(wasBlend)gl.enable(gl.BLEND);else gl.disable(gl.BLEND);
+    if(wasScissor)gl.enable(gl.SCISSOR_TEST);else gl.disable(gl.SCISSOR_TEST);
+    gl.depthMask(wasMask);gl.colorMask(wasColorMask[0],wasColorMask[1],wasColorMask[2],wasColorMask[3]);
+  }
+  return ok;
+}
+/* Capture colour while the source still contains opaque lighting only. Global
+   bloom is intentionally extracted later so volumetric fire can enter it; the
+   selective window target must not borrow an explosion's colour merely because
+   that transparent effect crossed a pane on screen. */
+function aoExtractWindowBloom(){
+  aoWindowGlowReady=!!windowBloomPass();
+  aoWindowDetachMask();
+  return aoWindowGlowReady;
+}
 /* Bind the offscreen scene target. Returns false if AO is unavailable, in which
    case the caller just renders straight to the screen as before. */
 function aoBeginScene(){
   /* Whenever the offscreen path is off the scene must go straight to the
      canvas, so bind the default target explicitly rather than trusting that
      nothing left an offscreen one bound. */
-  const off=()=>{ gl.bindFramebuffer(gl.FRAMEBUFFER,null); aoDoSSAO=false; return false; };
+  const off=()=>{
+    aoWindowGlowReady=false;
+    if(aoWindowAttachedFB) aoWindowDetachMask();
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);aoDoSSAO=false;
+    MF_WINDOW_HALO_TEL.active=false;
+    return false;
+  };
   if(!progCopy||!progAO) return off();
   const demo=(typeof demoMode!=='undefined'&&demoMode);
   const gfxAO=aoOn&&((typeof GFX==='undefined')||GFX.ao!==false)&&!demo;
   const gfxBloom=((typeof GFX==='undefined')||GFX.bloom!==false)&&!demo;
+  /* Volumetric FX consume the same resolved scene colour/depth target, but are
+     not an AO or bloom feature. Advanced settings may disable both while a
+     Medium+/High/Cinematic preset still requests raymarched impacts. Keep the
+     offscreen path alive for that independent consumer so render3d cannot skip
+     the volume and reveal a giant camera-facing fallback card. */
+  const gfxVol=!demo&&((typeof volFxEnabled==='function'&&volFxEnabled())||
+    (typeof GFX!=='undefined'&&GFX&&GFX.volSteps>0));
   const pinned=(typeof GFX!=='undefined')&&GFX.fxFloor>0;
   const scaleOk=pinned||!(typeof perfScale!=='undefined'&&perfScale<0.5);
   /* SSAO is the expensive half. Bloom/FXAA share this FBO — if they ride
@@ -2561,7 +3345,7 @@ function aoBeginScene(){
      why live crystals read as stickers and buildings sat on the grass with
      no contact shadow. Keep the offscreen path up whenever bloom is on. */
   aoDoSSAO=gfxAO&&scaleOk;
-  if(!aoDoSSAO&&!gfxBloom){
+  if(!aoDoSSAO&&!gfxBloom&&!gfxVol){
     return off();
   }
   /* MEDIUM/LOW half-res the scene+SSAO target. HIGH/CINEMATIC keep canvas size.
@@ -2574,8 +3358,30 @@ function aoBeginScene(){
   /* SSAO needs A as the opaque target then resolves into B. Bloom-only
      draws opaques straight into B, the same buffer transparents use. */
   const fb=aoDoSSAO?aoFB1:aoFB2;
+  if(aoWindowAttachedFB) aoWindowDetachMask();
+  aoWindowActive=false;aoWindowSealed=false;aoWindowGlowReady=false;
   gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,aoDepth,0);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+  const patchOK=typeof window==='undefined'||!window.__MF_WINDOW_BLOOM_PATCH_MISS;
+  const windowCan=aoWindowReady&&!!progWindowExtract&&!!progWindowBlur&&patchOK&&
+    gfxTune().bloom&&gfxTune().windowAmt>0;
+  if(windowCan){
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT1,gl.TEXTURE_2D,aoWindowMask,0);
+    gl.drawBuffers([gl.COLOR_ATTACHMENT0,gl.COLOR_ATTACHMENT1]);
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE){
+      aoWindowAttachedFB=fb;aoWindowActive=true;
+    }else{
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT1,gl.TEXTURE_2D,null,0);
+      aoWindowReady=false;MF_WINDOW_HALO_TEL.failures++;
+      MF_WINDOW_HALO_TEL.lastError='scene MRT became incomplete';
+    }
+  }else if(!patchOK){
+    MF_WINDOW_HALO_TEL.lastError='world shader window-output contract changed';
+  }
+  MF_WINDOW_HALO_TEL.available=aoWindowReady&&!!progWindowExtract&&!!progWindowBlur&&patchOK;
+  MF_WINDOW_HALO_TEL.active=aoWindowActive;
   return true;
 }
 /* Composite opaque scene + AO into the second target, then hand the depth
@@ -2593,6 +3399,7 @@ function aoResolve(tint){
   const wasBlend=gl.getParameter(gl.BLEND), wasCull=gl.getParameter(gl.CULL_FACE);
   const wasDepth=gl.getParameter(gl.DEPTH_TEST), wasMask=gl.getParameter(gl.DEPTH_WRITEMASK);
   gl.bindFramebuffer(gl.FRAMEBUFFER,aoFB2);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,null,0);
   gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
   /* The post chain samples on HIGH texture units and never touches unit 0.
@@ -2630,44 +3437,71 @@ function aoResolve(tint){
 let aoGlowReady=false;
 function aoExtractBloom(){
   aoGlowReady=false;
-  if(!aoReady||!aoColB) return;
+  if(!aoReady||!aoColB){aoWindowDetachMask();return;}
   aoGlowReady=!!bloomPass();
+  if(!aoWindowGlowReady) aoWindowGlowReady=!!windowBloomPass();
+  aoWindowDetachMask();
   /* bloomPass restores the caller's FB but the glow pass rebound attachments.
      Transparents still need aoFB2 + the scene depth. */
   gl.bindFramebuffer(gl.FRAMEBUFFER,aoFB2);
+  gl.drawBuffers([gl.COLOR_ATTACHMENT0]);
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,aoColB,0);
   gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,aoDepth,0);
   gl.viewport(0,0,aoW,aoH);
 }
 /* Put the finished frame on the screen. */
 function aoPresent(){
-  if(!aoReady||!aoColB) return;
+  if(!aoReady||!aoColB){aoWindowDetachMask();return;}
   const wasBlend=gl.isEnabled(gl.BLEND), wasCull=gl.isEnabled(gl.CULL_FACE);
   const wasDepth=gl.isEnabled(gl.DEPTH_TEST), wasMask=gl.getParameter(gl.DEPTH_WRITEMASK);
+  const wasScissor=gl.isEnabled(gl.SCISSOR_TEST);
+  const wasActive=gl.getParameter(gl.ACTIVE_TEXTURE),savedEdgeTex=[];
+  for(const unit of [3,7]){
+    gl.activeTexture(gl.TEXTURE0+unit);savedEdgeTex.push(gl.getParameter(gl.TEXTURE_BINDING_2D));
+  }
   gl.disable(gl.DEPTH_TEST); gl.depthMask(false); gl.disable(gl.BLEND); gl.disable(gl.CULL_FACE);
   gl.disable(gl.SCISSOR_TEST);
   const glow=aoGlowReady?true:bloomPass();
   aoGlowReady=false;
+  const windowGlow=aoWindowGlowReady?true:windowBloomPass();
+  aoWindowGlowReady=false;
+  aoWindowDetachMask();
   gl.bindFramebuffer(gl.FRAMEBUFFER,null);
   gl.viewport(0,0,cv.width,cv.height);
   gl.useProgram(progCopy);
+  const ph=matTex||aoColB;
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D,aoColB);
   gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D,glow?glowTexA:aoColB);
-  gl.uniform1i(UCP.uCol,6); gl.uniform1i(UCP.uBloom,5);
+  gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D,windowGlow?windowGlowTexA:aoColB);
+  gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D,aoDepth);
+  gl.activeTexture(gl.TEXTURE7); gl.bindTexture(gl.TEXTURE_2D,
+    (typeof fogTex!=='undefined'&&fogTex)||ph);
+  gl.uniform1i(UCP.uCol,6); gl.uniform1i(UCP.uBloom,5);gl.uniform1i(UCP.uWindow,4);
+  gl.uniform1i(UCP.uDep,3);gl.uniform1i(UCP.uFogMap,7);
   gl.uniform2f(UCP.uTexel,1/aoW,1/aoH);
   { const T=gfxTune();
     gl.uniform1f(UCP.uBloomAmt,glow?T.bloomAmt:0.0);
-    if(UCP.uFxaa) gl.uniform1f(UCP.uFxaa,T.fxaa?1:0); }
+    gl.uniform1f(UCP.uWindowAmt,windowGlow?T.windowAmt:0.0);
+    if(UCP.uFxaa) gl.uniform1f(UCP.uFxaa,T.fxaa?1:0);
+    if(UCP.uSharp) gl.uniform1f(UCP.uSharp,T.sharp||0);
+    const fowOn=typeof fogGameplayActive==='function'&&fogGameplayActive()&&
+      !(typeof demoMode!=='undefined'&&demoMode)&&typeof fogTex!=='undefined'&&fogTex?1:0;
+    m4invert(aoWindowInvVP,matVP);gl.uniformMatrix4fv(UCP.uInvVP,false,aoWindowInvVP);
+    gl.uniform1f(UCP.uFowOn,fowOn);gl.uniform1f(UCP.uMapInv,1/Math.max(1,MAP)); }
   gl.bindVertexArray(aoVAO);
   gl.drawArrays(gl.TRIANGLES,0,3);
-  /* Drop FBO textures off 5/6 so the next frame cannot sample-while-write. */
-  const ph=matTex||aoColB;
+  if(windowGlow) MF_WINDOW_HALO_TEL.presentedFrames++;
+  /* Drop FBO textures off 4/5/6 so the next frame cannot sample-while-write. */
+  gl.activeTexture(gl.TEXTURE4); gl.bindTexture(gl.TEXTURE_2D,ph);
   gl.activeTexture(gl.TEXTURE5); gl.bindTexture(gl.TEXTURE_2D,ph);
   gl.activeTexture(gl.TEXTURE6); gl.bindTexture(gl.TEXTURE_2D,ph);
-  gl.activeTexture(gl.TEXTURE0);
+  gl.activeTexture(gl.TEXTURE3);gl.bindTexture(gl.TEXTURE_2D,savedEdgeTex[0]);
+  gl.activeTexture(gl.TEXTURE7);gl.bindTexture(gl.TEXTURE_2D,savedEdgeTex[1]);
+  gl.activeTexture(wasActive);
   if(wasDepth) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
   if(wasCull) gl.enable(gl.CULL_FACE); else gl.disable(gl.CULL_FACE);
   if(wasBlend) gl.enable(gl.BLEND); else gl.disable(gl.BLEND);
+  if(wasScissor) gl.enable(gl.SCISSOR_TEST); else gl.disable(gl.SCISSOR_TEST);
   gl.depthMask(wasMask);
 }
 
@@ -2707,6 +3541,8 @@ layout(location=5) in vec4 aInst;
 layout(location=6) in float aYaw;
 layout(location=8) in float aWide;
 layout(location=9) in float aAnim;
+layout(location=11) in float aPitch;
+layout(location=12) in float aRoll;
 uniform mat4 uVP;
 uniform int  uBoneN;
 uniform vec4 uJoint[80];
@@ -2755,7 +3591,11 @@ void main(){
     ap.y += bioBody*breath*max(0.0,aPos.y)*.32;
     ap.z *= 1.0+bioBody*breath;
   }
-  vec3 sp=vec3(ap.x*aInst.w,ap.y*aInst.w,ap.z*aWide);
+  float cr=cos(aRoll),sr=sin(aRoll);
+  float cp=cos(aPitch),spit=sin(aPitch);
+  vec3 rolled=vec3(ap.x, ap.y*cr-ap.z*sr, ap.y*sr+ap.z*cr);
+  vec3 pp=vec3(rolled.x*cp-rolled.y*spit,rolled.x*spit+rolled.y*cp,rolled.z);
+  vec3 sp=vec3(pp.x*aInst.w,pp.y*aInst.w,pp.z*aWide);
   vec3 p=vec3(sp.x*c-sp.z*s,sp.y,sp.x*s+sp.z*c)+aInst.xyz;
   gl_Position=uVP*vec4(p,1.0);
 }`;
@@ -3153,6 +3993,12 @@ function initGL3D(){
                 .replace(/GLASS_CONST/g,MAT.GLASS.toFixed(1))
                 .replace(/DAMAGELO_CONST/g,MAT.SCORCH_METAL.toFixed(1))
                 .replace(/DAMAGEHI_CONST/g,MAT.FALLOUT_GLOW.toFixed(1))
+                .replace(/BRDLO_CONST/g,MAT.BROOD_MEMBRANE.toFixed(1))
+                .replace(/BRDHI_CONST/g,MAT.BROOD_VEIN.toFixed(1))
+                .replace(/BRDMEM_CONST/g,MAT.BROOD_MEMBRANE.toFixed(1))
+                .replace(/BRDCHI_CONST/g,MAT.BROOD_CHITIN.toFixed(1))
+                .replace(/BRDSLM_CONST/g,MAT.BROOD_SLIME.toFixed(1))
+                .replace(/BRDVEIN_CONST/g,MAT.BROOD_VEIN.toFixed(1))
                 .replace(/CRYST_CONST/g,MAT.CRYST.toFixed(1));
   prog3D=mkProg(VSM,FSM,'model');
   progG =mkProg(VSG,FSG,'glow');
@@ -3189,7 +4035,8 @@ function initGL3D(){
      triplet and samples another model's skin through its own UVs. */
   if(U3.uAssetOn) gl.uniform1f(U3.uAssetOn,0.0);
   UG.uVP=gl.getUniformLocation(progG,'uVP');
-  progT=mkProg(VST.replace(/MAPSIZE_CONST/g,MAP.toFixed(1)).replace(/BFOG_CONST/g,'430.0'),FST,'terrain');
+  progT=mkProg(VST.replace(/MAPSIZE_CONST/g,MAP.toFixed(1)).replace(/BFOG_CONST/g,'430.0'),
+               FST.replace(/WATER_HEIGHT_CONST/g,WATER_H.toFixed(4)),'terrain');
   /* THE GROUND MUST DRAW. If the terrain's own program will not build on this
      GPU the map is simply absent — units, buildings and scenery all render
      through other programs and look fine, which is exactly the "everything but
@@ -3200,7 +4047,8 @@ function initGL3D(){
   terrainProgOK=!!progT;
   for(const k of ['uVP','uEye','uHazeQ','uSun','uSunC','uAmbSky','uAmbGnd','uFogC','uMap','uDetail','uFogMap','uFogActive',
                    'uPlayBounds','uEdgeStyle','uEdgeTime','uEdgeTint','uGroundT','uSoilT','uPaveT','uGMask',
-                   'uHeight','uHexelW','uRealTex','uBurnN','uGrassT','uGroundN','uSoilN','uPaveN','uGrassN'])
+                   'uHeight','uHexelW','uRealTex','uGroundQ','uGroundProfile','uGroundTint','uSoilTint','uPaveTint','uGrassTint','uLocationTint',
+                   'uBurnN','uGrassT','uGroundN','uSoilN','uPaveN','uGrassN'])
     UT[k]=gl.getUniformLocation(progT,k);
   UT.uBurns=gl.getUniformLocation(progT,'uBurns[0]');
   UT.uBurnKind=gl.getUniformLocation(progT,'uBurnKind[0]');
@@ -3209,12 +4057,62 @@ function initGL3D(){
   gl.uniform1i(UT.uSoilT,11); gl.uniform1i(UT.uPaveT,12); gl.uniform1i(UT.uGrassT,13);
   gl.uniform1i(UT.uGroundN,2); gl.uniform1i(UT.uSoilN,3); gl.uniform1i(UT.uPaveN,14); gl.uniform1i(UT.uGrassN,15);
   gl.uniform1f(UT.uHexelW,2*MAP/TS);
+  gl.uniform1f(UT.uGroundQ,2.0);
+  gl.uniform1f(UT.uGroundProfile,0.0);
+  gl.uniform3f(UT.uGroundTint,1,1,1); gl.uniform3f(UT.uSoilTint,1,1,1);
+  gl.uniform3f(UT.uPaveTint,1,1,1); gl.uniform3f(UT.uGrassTint,1,1,1);
+  gl.uniform3f(UT.uLocationTint,1,1,1);
   initAO();
   csmInit();
   gl.enable(gl.DEPTH_TEST);
   gl.depthFunc(gl.LEQUAL);
   gl.enable(gl.CULL_FACE);
   gl.cullFace(gl.BACK);
+  mfWarmKick();
+}
+
+/* SHADER WARM-UP.
+
+   Not every program is built here. volfx compiles its two programs on the
+   FIRST detonation (volfx.js volFxActive -> volFxInit), so the opening
+   explosion of a match pays the link cost as a frame hitch. Warming means
+   doing that during load instead.
+
+   This deliberately goes through volFxActive() rather than volFxInit(): that
+   is the function carrying the real gates (quality ceiling, gl, aoReady,
+   aoW/aoH, the failure latch), so warming can never compile something the
+   current quality tier would not have used anyway, and never bypasses the
+   latch. initAO() runs just above, but aoReady is not necessarily set on this
+   same tick, so retry across frames until the gates open. */
+let mfWarmDone=false, mfWarmTries=0;
+function mfWarmShaders(){
+  if(mfWarmDone) return true;
+  if(typeof gl==='undefined'||!gl||(gl.isContextLost&&gl.isContextLost())) return false;
+  let ready=true;
+  /* gpufx builds its two transform-feedback programs on the first muzzle flash
+     (gpufx.js gpfxBurst -> gpfxInit), i.e. during the opening exchange. It is
+     not quality-gated, so every match pays it. gpfxInit() is self-guarded and
+     idempotent (returns early once built or latched), so warming is safe. */
+  if(typeof gpfxInit==='function'){
+    try{ if(typeof gpfxCtxCheck==='function') gpfxCtxCheck(); gpfxInit(); }
+    catch(e){ console.error('gpufx warm',e); }
+  }
+  if(typeof volFxActive==='function'){
+    if(typeof aoReady!=='undefined'&&aoReady) volFxActive();
+    else ready=false;
+  }
+  /* Give the gates ~3 s of frames to open, then warm whatever is available and
+     stop: a tier that never sets aoReady must not retry forever. */
+  if(!ready&&++mfWarmTries<180) return false;
+  mfProgFlush();
+  mfWarmDone=true;
+  return true;
+}
+function mfWarmKick(){
+  mfWarmDone=false; mfWarmTries=0;   // a context rebuild re-warms
+  const later=(typeof requestAnimationFrame==='function')?requestAnimationFrame:(fn=>setTimeout(fn,16));
+  const step=()=>{ try{ if(!mfWarmShaders()) later(step); }catch(e){ console.error('shader warm-up',e); } };
+  later(step);
 }
 
 /* ============================================================================
@@ -3395,4 +4293,3 @@ function camTick(dt){
   camUpdateMatrices();
 }
 function zoomBy(f){ distTarget=clamp(distTarget/f,SPAN_MIN,SPAN_MAX); }
-

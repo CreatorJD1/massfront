@@ -22,8 +22,8 @@
    items of its own — it hosts the commander-colour row that used to sit
    under the list with nowhere in particular to live. */
 const ARM_CATS=[
-  {id:'operations', em:'💰', nm:'OPERATIONS',  ds:'Permanent economy and recovery advantages.', items:['cache','trade','salvage','droppod','reactor']},
-  {id:'battlefield',em:'⚔',  nm:'BATTLEFIELD', ds:'Permanent combat and fortification improvements.', items:['targeting','armor','bastion']},
+  {id:'operations', em:'💰', nm:'OPERATIONS',  ds:'Permanent economy and recovery advantages.', items:['cache','trade','droppod']},
+  {id:'battlefield',em:'⚔',  nm:'BATTLEFIELD', ds:'Permanent combat and fortification improvements.', items:['bastion']},
   {id:'commander',  em:'★',  nm:'COMMANDER',   ds:'Commander growth, abilities, and cooldowns.', items:['neural','capacitor','orbital']},
   {id:'inventory',  em:'▦',  nm:'ARMORY',      ds:'Account storage for every recovered gear item and mission supply.', items:[]},
   {id:'loadout',    em:'⬢',  nm:'LOADOUT',     ds:'Five limited deployment slots: three gear categories and two supplies.', items:[]},
@@ -33,7 +33,7 @@ const ARM_CATS=[
    tabs. The original array remains above as the catalog source; this mutable
    replacement changes presentation without duplicating any STORE pricing. */
 ARM_CATS.splice(0,ARM_CATS.length,
-  {id:'market',em:'⬡',nm:'MARKET',ds:'Permanent upgrades and daily requisitions.',items:['cache','trade','salvage','droppod','reactor','targeting','armor','bastion','neural','capacitor','orbital']},
+  {id:'market',em:'⬡',nm:'MARKET',ds:'Permanent upgrades and daily requisitions.',items:['cache','trade','droppod','bastion','neural','capacitor','orbital']},
   {id:'inventory',em:'◇',nm:'VAULT',ds:'Account storage for recovered gear and mission supplies.',items:[]},
   {id:'loadout',em:'⬢',nm:'LOADOUT',ds:'Three gear slots and two operation supplies.',items:[]},
   {id:'identity',em:'✦',nm:'STYLE',ds:'Unlock commander liveries with earned cores. Choose the one you wear in Profile → Identity.',items:[]});
@@ -41,15 +41,16 @@ let armTab='market',armMarketFilter='all',armCart=[],armCartOpen=false;
 let armInvFilter='all',armInvSelectedKind='',armInvSelectedId='';
 const ARM_MARKET_FILTERS=[
   {id:'all',nm:'ALL SYSTEMS',items:[]},
-  {id:'operations',nm:'ECONOMY',items:['cache','trade','salvage','droppod','reactor']},
-  {id:'battlefield',nm:'COMBAT',items:['targeting','armor','bastion']},
+  {id:'operations',nm:'ECONOMY',items:['cache','trade','droppod']},
+  {id:'battlefield',nm:'COMBAT',items:['bastion']},
   {id:'commander',nm:'COMMANDER',items:['neural','capacitor','orbital']}
 ];
-/* ---- daily deals + restock pricing -----------------------------------------
-   Deal discount and per-charge restock costs live here rather than on the
-   catalog rows so tuning a sale never means touching src/game/meta.js's STORE. */
+/* ---- daily deals -----------------------------------------------------------
+   The discount lives here rather than on the catalog rows so tuning a sale
+   never means touching src/game/meta.js's STORE. Mission supplies are recovered
+   through operations; letting Cores restock them made permanent and one-match
+   spending compete in the same currency lane. */
 const ARM_DEAL_PCT=0.25;
-const INV_RESTOCK={c_supply:120,c_power:160,c_nanites:280,c_overdrive:360,c_command:500};
 
 /* ---- concrete effect text -------------------------------------------------
    applyMetaPerks() in meta.js applies every one of these as a flat multiple
@@ -61,14 +62,10 @@ function perkFx(id,t){
   if(t<=0) return null;
   switch(id){
     case 'cache':     return '+300 mass, +1200 energy at match start';
-    case 'armor':     return '+'+(8*t)+'% unit HP';
-    case 'targeting': return '+'+(6*t)+'% unit damage';
     case 'trade':     return '+'+fmt1(1.5*t)+' mass/s, +'+(5*t)+' energy/s income';
     case 'neural':    return '+'+(15*t)+'% Commander XP';
     case 'capacitor': return '−'+(10*t)+'% ability cooldowns';
-    case 'salvage':   return '+'+(40*t)+'% salvage payout';
     case 'droppod':   return '+'+(25*t)+'% supply pod frequency';
-    case 'reactor':   return '+'+(12*t)+'% energy income';
     case 'bastion':   return '+'+(15*t)+'% structure HP';
     case 'orbital':   return 'ORBITAL LANCE ability unlocked';
     default:          return '';
@@ -85,12 +82,11 @@ function armSpent(){
 function armMaxedCount(){ return STORE.filter(it=>(META.owned[it.id]||0)>=it.max).length; }
 function armStatsHTML(){
   const b=invBag(), gear=INV_GEAR.filter(g=>(b.gear[g.id]||0)>0).length;
-  /* The wallet is the store's HUD: both spendable currencies stay pinned under
-     the title (see .armStickyHead) so a long inventory scroll never loses the
-     balance the prices in front of you are being compared against. */
+  /* The wallet is the store's HUD: only Arsenal Cores stay pinned under the
+     title (see .armStickyHead). Development Data has its own screen and showing
+     it here made the two progression systems look interchangeable. */
   return '<div class="armStats armWallet">'
     +'<div class="armStat cr"><b>'+META.cores+'</b><span>⬡ CORES</span></div>'
-    +'<div class="armStat rd"><b>'+(META.researchData||0)+'</b><span>◆ DATA</span></div>'
     +'<div class="armStat"><b>'+armSpent()+'</b><span>⬡ SPENT</span></div>'
     +'<div class="armStat"><b>'+gear+'/'+INV_GEAR.length+'</b><span>GEAR FOUND</span></div>'
     +'</div>';
@@ -112,7 +108,7 @@ function armItemHTML(it){
   const warn=(!maxed&&!afford)?'<div class="sWarn">Need '+(cost-META.cores)+' more ⬡</div>':'';
   return '<div class="sItem armIt'+(maxed?' owned':'')+(!maxed&&!afford?' cant':'')+'" data-id="'+it.id+'">'
     +'<div class="sEm">'+(typeof itemArt==='function'?itemArt('st_'+it.id,it.em,36):it.em)+'</div>'
-    +'<div class="sTx"><b>'+it.nm+' <span class="sTier">'+t+'/'+it.max+'</span></b>'
+    +'<div class="sTx">'+mfOwnershipBadgeHTML('permanent')+'<b>'+it.nm+' <span class="sTier">'+t+'/'+it.max+'</span></b>'
     +'<div class="sDs">'+it.ds+'</div>'
     +fx+warn+'</div>'
     +'<div class="sBuy'+(maxed?'':(afford?'':' cant'))+'">'+(maxed?'✓ MAX':'ADD<br>⬡ '+cost)+'</div></div>';
@@ -129,7 +125,7 @@ function armBodyHTML(){
     .sort((a,b)=>a.cost[0]-b.cost[0]);          // cheap-first = early-buy-first
   if(!items.length) return '<div class="devNone">Nothing in this category yet.</div>';
   const hero=items[0],heroTier=META.owned[hero.id]||0;
-  return '<section class="armMarketHero"><div>'+itemArt('st_'+hero.id,hero.em,66)+'</div><span><i>REQUISITION MARKET</i><b>'+hero.nm+'</b><small>'+(heroTier>=hero.max?'SYSTEM MAXED':perkFx(hero.id,Math.min(hero.max,heroTier+1)))+'</small></span></section>'+intro+filters+items.map(armItemHTML).join('');
+  return '<section class="armMarketHero"><div>'+itemArt('st_'+hero.id,hero.em,66)+'</div><span><i>REQUISITION MARKET</i>'+mfOwnershipBadgeHTML('permanent')+'<b>'+hero.nm+'</b><small>'+(heroTier>=hero.max?'SYSTEM MAXED':perkFx(hero.id,Math.min(hero.max,heroTier+1)))+'</small></span></section>'+intro+filters+items.map(armItemHTML).join('');
 }
 function invRarityLegend(){
   return '<div class="invLegend">'+INV_RARITIES.map(r=>
@@ -149,8 +145,8 @@ const ARM_INV_ART={
   w_rangefinder:'mod_optic',w_pulseoptic:'res_optics',w_gaussdir:'st_targeting',w_voidlens:'mod_range',w_relicscope:'res_relictech',
   a_fieldplate:'mod_plate',a_reinforced:'st_armor',a_phaseweave:'res_metallurgy',a_aegis:'st_bastion',a_starforged:'res_slot3',
   u_toolkit:'mod_tempo',u_fluxcell:'mod_core',u_salvage:'mod_recl',u_chronorig:'st_capacitor',u_commandcore:'res_ability',
-  c_supply:'st_cache',c_power:'bst_energy',c_nanites:'bst_build',c_overdrive:'st_targeting',c_command:'res_slot3',
-  c_standard_order:'st_cache',c_campaign_intel:'res_optics',c_warfront_beacon:'bst_energy',
+  c_supply:'st_cache',c_power:'bst_res',c_nanites:'bst_build',c_overdrive:'st_targeting',c_command:'res_slot3',
+  c_standard_order:'st_cache',c_campaign_intel:'res_optics',c_warfront_beacon:'bst_res',
 };
 const ARM_INV_EFFECTS={
   w_rangefinder:{stat:'UNIT DAMAGE',value:'+3%',score:3}, w_pulseoptic:{stat:'UNIT DAMAGE',value:'+5%',score:5},
@@ -170,7 +166,6 @@ const ARM_INV_EFFECTS={
   c_warfront_beacon:{stat:'STARTING MASS + ENERGY',value:'+400 / +1400',score:1800},
 };
 function armInvEffect(id){ return ARM_INV_EFFECTS[id]||{stat:'MISSION EFFECT',value:'ACTIVE',score:0}; }
-function armRestockCost(id){ return INV_RESTOCK[id]||150; }
 function armInvIcon(it,size){
   return typeof itemArt==='function'?itemArt(ARM_INV_ART[it.id]||('inv_'+it.id),it.em,size):'<span>'+it.em+'</span>';
 }
@@ -189,7 +184,7 @@ function armInvLayerStatsHTML(b,layer){
   const s=armInvStats(b);
   return '<div class="armInvLayerHead '+layer+'"><div><i>'+(layer==='account'?'ACCOUNT LAYER':'DEPLOYMENT LAYER')+'</i>'
     +'<b>'+(layer==='account'?'ACCOUNT ARMORY':'SESSION LOADOUT')+'</b>'
-    +'<span>'+(layer==='account'?'Items stay in this career after every operation.':'Only fitted gear and readied supplies enter the next operation.')+'</span></div>'
+    +'<span>'+(layer==='account'?'Owned gear stays in this career, but each effect requires a gear slot; supplies stay stored until readied.':'Only fitted gear and readied supplies enter the next operation.')+'</span></div>'
     +'<div class="armInvCapacity"><b>'+(layer==='account'?s.stored:(s.used+' / 5'))+'</b><span>'+(layer==='account'?'ITEMS STORED':'SLOT CAPACITY')+'</span></div></div>'
     +'<div class="armInvMeters"><div><b>'+s.found+' / '+s.total+'</b><span>DISCOVERED</span></div>'
     +'<div><b>'+s.gear+' / 3</b><span>GEAR SLOTS</span></div><div><b>'+s.supplies+' / 2</b><span>MISSION SLOTS</span></div></div>';
@@ -279,7 +274,7 @@ function armInvLockHTML(e,b){
 }
 function armInvPreviewHTML(e,b){
   if(!e) return '<div class="armInvEmpty"><b>NO ITEMS IN THIS CATEGORY</b><span>Complete operations to recover gear and mission supplies.</span></div>';
-  const it=e.it,n=armInvOwned(e,b),on=armInvEquipped(e,b),r=invRarity(it.rarity),fx=armInvEffect(it.id);
+  const it=e.it,n=armInvOwned(e,b),on=armInvEquipped(e,b),r=invRarity(it.rarity),fx=armInvEffect(it.id),scope=e.kind==='gear'?'equipped':'match';
   const full=e.kind==='supply'&&!on&&b.ready.length>=2;
   /* Blocked on a chassis, not on stock: say which. */
   const needLock=e.kind==='supply'&&!on&&invConsumableScope(it.id)==='type'&&armInvLockPick[it.id]==null;
@@ -289,23 +284,20 @@ function armInvPreviewHTML(e,b){
       :'READY FOR '+(invConsumableScope(it.id)==='type'?invLockName(armInvLockPick[it.id]).toUpperCase():'MISSION'));
   return '<section class="armInvPreview" style="--rar:'+r.col+'" aria-label="Selected item effect preview">'
     +'<div class="armInvPreviewArt">'+armInvIcon(it,54)+'</div><div class="armInvPreviewInfo"><i>'+r.nm+' · '+(e.kind==='gear'?it.slot.toUpperCase()+' GEAR':'MISSION CONSUMABLE')+'</i>'
-    +'<b>'+it.nm+'</b><span>ACCOUNT STOCK · '+n+'</span></div>'
+    +mfOwnershipBadgeHTML(scope)+'<b>'+it.nm+'</b><span>ACCOUNT STOCK · '+n+'</span></div>'
     +'<div class="armInvExact"><span>EXACT EFFECT</span><b>'+fx.value+'</b><i>'+fx.stat+'</i></div>'
     +'<p>'+it.ds+'</p><div class="armInvCompare">'+armInvComparison(e,b)+'</div>'
     +armInvLockHTML(e,b)
     +'<button type="button" class="armInvCommit'+((!n||full||needLock)?' disabled':'')+'" data-inv-action="'+e.kind+'" '+((!n||full||needLock)?'disabled':'')+'>'+action+'</button>'
-    +(e.kind==='supply'&&!it.mode
-      ?'<button type="button" class="armInvRestock" data-inv-restock="'+it.id+'">ADD RESTOCK TO BASKET · ⬡'+armRestockCost(it.id)+'</button>'
-      :'')
-    +'<small>'+(e.kind==='gear'?'Gear is never consumed. It remains fitted until you change this slot.'
+    +'<small>'+(e.kind==='gear'?'Account gear stays owned, but its EQUIPPED effect applies only while fitted in its gear slot.'
       :it.mode?'Exclusive reward · cannot be purchased or randomly recovered.'
-      :'Readied supplies remain in Account Armory until the operation begins, then consume one charge.')+'</small></section>';
+      :'ONE MATCH supply · recovered in operations · consumes one charge when the operation begins.')+'</small></section>';
 }
 function armInvItemHTML(e,b){
   const it=e.it,n=armInvOwned(e,b),on=armInvEquipped(e,b),sel=e.kind===armInvSelectedKind&&it.id===armInvSelectedId;
-  const r=invRarity(it.rarity),fx=armInvEffect(it.id),slot=e.kind==='gear'?it.slot.toUpperCase():'SUPPLY';
+  const r=invRarity(it.rarity),fx=armInvEffect(it.id),slot=e.kind==='gear'?it.slot.toUpperCase():'SUPPLY',scope=e.kind==='gear'?'equipped':'match';
   return '<button type="button" class="armVaultItem'+(sel?' selected':'')+(on?' equipped':'')+(n?'':' locked')+'" data-inv-kind="'+e.kind+'" data-inv-id="'+it.id+'" style="--rar:'+r.col+'" aria-pressed="'+(sel?'true':'false')+'">'
-    +'<span class="armVaultArt">'+armInvIcon(it,38)+'</span><span class="armVaultCopy"><i>'+r.nm+' · '+slot+'</i><b>'+it.nm+'</b><em>'+fx.value+' '+fx.stat+'</em>'
+    +'<span class="armVaultArt">'+armInvIcon(it,38)+'</span><span class="armVaultCopy"><i>'+r.nm+' · '+slot+'</i>'+mfOwnershipBadgeHTML(scope)+'<b>'+it.nm+'</b><em>'+fx.value+' '+fx.stat+'</em>'
     +(n?armInvDelta(e,b):'<em class="armVaultReq">'+armInvReq(e)+'</em>')+'</span>'
     +'<span class="armVaultState">'+(n?(on?'IN LOADOUT':'×'+n):'LOCKED')+'</span></button>';
 }
@@ -318,31 +310,32 @@ function armInventoryHTML(){
 function armLoadGearSlotHTML(slot,b){
   const g=INV_GEAR.find(x=>x.id===b.equipped[slot]);
   if(!g) return '<div class="armLoadSlot empty"><div class="armLoadSlotTop"><i>'+slot.toUpperCase()+'</i><span>GEAR SLOT</span></div>'
-    +'<b>EMPTY '+slot.toUpperCase()+'</b><small>No account gear is assigned.</small><button type="button" data-pick-slot="'+slot+'">CHOOSE '+slot.toUpperCase()+'</button></div>';
+    +mfOwnershipBadgeHTML('equipped')+'<b>EMPTY '+slot.toUpperCase()+'</b><small>Fit owned account gear to activate its EQUIPPED effect in this slot.</small><button type="button" data-pick-slot="'+slot+'">CHOOSE '+slot.toUpperCase()+'</button></div>';
   const r=invRarity(g.rarity),fx=armInvEffect(g.id);
   return '<div class="armLoadSlot filled" style="--rar:'+r.col+'"><div class="armLoadSlotTop"><i>'+slot.toUpperCase()+'</i><span>'+r.nm+'</span></div>'
-    +'<div class="armLoadEquipped"><span>'+armInvIcon(g,36)+'</span><div><b>'+g.nm+'</b><em>'+fx.value+' '+fx.stat+'</em></div></div>'
+    +mfOwnershipBadgeHTML('equipped')+'<div class="armLoadEquipped"><span>'+armInvIcon(g,36)+'</span><div><b>'+g.nm+'</b><em>'+fx.value+' '+fx.stat+'</em></div></div>'
+    +'<small>Effect active while this gear slot is filled.</small>'
     +'<button type="button" data-remove-gear="'+g.id+'">UNEQUIP</button></div>';
 }
 function armLoadSupplySlotHTML(n,b){
   const c=INV_CONSUMABLES.find(x=>x.id===b.ready[n]);
   if(!c) return '<div class="armLoadSlot supply empty"><div class="armLoadSlotTop"><i>MISSION '+(n+1)+'</i><span>CONSUMABLE</span></div>'
-    +'<b>EMPTY SUPPLY SLOT</b><small>Choose one charge from Account Armory.</small><button type="button" data-pick-slot="supply">CHOOSE SUPPLY</button></div>';
+    +mfOwnershipBadgeHTML('match')+'<b>EMPTY SUPPLY SLOT</b><small>Choose one ONE MATCH charge from Account Armory.</small><button type="button" data-pick-slot="supply">CHOOSE SUPPLY</button></div>';
   const r=invRarity(c.rarity),fx=armInvEffect(c.id),stock=b.consumables[c.id]||0;
   return '<div class="armLoadSlot supply filled" style="--rar:'+r.col+'"><div class="armLoadSlotTop"><i>MISSION '+(n+1)+'</i><span>'+r.nm+'</span></div>'
-    +'<div class="armLoadEquipped"><span>'+armInvIcon(c,36)+'</span><div><b>'+c.nm+'</b><em>'+fx.value+' '+fx.stat+'</em></div></div>'
+    +mfOwnershipBadgeHTML('match')+'<div class="armLoadEquipped"><span>'+armInvIcon(c,36)+'</span><div><b>'+c.nm+'</b><em>'+fx.value+' '+fx.stat+'</em></div></div>'
     +'<small>'+stock+' in Account Armory · consumes 1 at launch</small><button type="button" data-remove-cons="'+c.id+'">REMOVE</button></div>';
 }
 function armSessionEffectsHTML(b){
   const active=[];
   for(const s of ['weapon','armor','utility']){
-    const g=INV_GEAR.find(x=>x.id===b.equipped[s]); if(g) active.push({it:g,kind:'GEAR · '+s.toUpperCase()});
+    const g=INV_GEAR.find(x=>x.id===b.equipped[s]); if(g) active.push({it:g,kind:'GEAR · '+s.toUpperCase(),scope:'equipped'});
   }
-  for(const id of b.ready){ const c=INV_CONSUMABLES.find(x=>x.id===id); if(c) active.push({it:c,kind:'ONE-MISSION SUPPLY'}); }
+  for(const id of b.ready){ const c=INV_CONSUMABLES.find(x=>x.id===id); if(c) active.push({it:c,kind:'ONE MATCH SUPPLY',scope:'match'}); }
   return '<section class="armMissionPackage"><div class="armInvSectionLabel"><b>OPERATION EFFECT PACKAGE</b><span>'+active.length+' / 5 ACTIVE</span></div>'
-    +(active.length?active.map(e=>{const r=invRarity(e.it.rarity),fx=armInvEffect(e.it.id);return '<div class="armMissionFx" style="--rar:'+r.col+'"><i></i><div><b>'+e.it.nm+'</b><span>'+e.kind+'</span></div><strong>'+fx.value+' '+fx.stat+'</strong></div>';}).join('')
-      :'<div class="armInvEmpty"><b>BASELINE DEPLOYMENT</b><span>No account equipment or mission supplies selected.</span></div>')
-    +'<p>Gear effects persist every operation. Mission supplies apply once and are consumed only when deployment begins.</p></section>';
+    +(active.length?active.map(e=>{const r=invRarity(e.it.rarity),fx=armInvEffect(e.it.id);return '<div class="armMissionFx" style="--rar:'+r.col+'"><i></i><div><b>'+e.it.nm+'</b><span>'+e.kind+'</span>'+mfOwnershipBadgeHTML(e.scope)+'</div><strong>'+fx.value+' '+fx.stat+'</strong></div>';}).join('')
+      :'<div class="armInvEmpty"><b>BASELINE DEPLOYMENT</b><span>No EQUIPPED account gear or ONE MATCH supplies selected.</span></div>')
+    +'<p>Owned gear persists, but its EQUIPPED effect is active only while fitted in a gear slot. ONE MATCH supplies consume one charge at deployment.</p></section>';
 }
 function armSessionLoadoutHTML(){
   const b=invBag();
@@ -358,7 +351,7 @@ function armSessionLoadoutHTML(){
    category would also break the tab-count row above. Markup comes from
    meta.js's mfLiveryRowHTML so the two rows can never drift apart. */
 function armColorsHTML(){
-  return '<div class="sHead">COMMANDER LIVERY — UNLOCK</div>'
+  return '<div class="sHead armLiveryHead">COMMANDER LIVERY — UNLOCK '+mfOwnershipBadgeHTML('cosmetic')+'</div>'
     +mfLiveryRowHTML('colorRow')
     +'<div class="armCatIntro armLiveryNote"><span>Tap a locked colour to stage it in the earned-core basket. '
     +'Your active livery is chosen in <em>Profile → Identity</em>.</span></div>';
@@ -425,7 +418,7 @@ function armDealsHTML(){
       return '<button type="button" class="armDeal'+(claimed?' sold':'')+'" data-deal-id="'+it.id+'" aria-label="Daily deal: '+it.nm+'">'
         +'<span class="armDealArt">'+(typeof itemArt==='function'?itemArt('st_'+it.id,it.em,30):'<span>'+it.em+'</span>')+'</span>'
         +'<span class="armDealTx"><i>'+it.nm.toUpperCase()+'</i><b>'+(maxed?'MAXED':'TIER '+(t+1))+'</b>'
-        +(maxed?'':'<em>'+perkFx(it.id,t+1)+'</em>')+'</span>'
+        +mfOwnershipBadgeHTML('permanent')+(maxed?'':'<em>'+perkFx(it.id,t+1)+'</em>')+'</span>'
         +'<span class="armDealPrice">'+(claimed?'SOLD':maxed?'✓ MAX':'<s>⬡'+real+'</s><b>⬡'+price+'</b>')+'</span>'
         +'</button>';
     }).join('')+'</div></section>';
@@ -469,10 +462,6 @@ function armCartResolve(e){
     }
     return {price:it.cost[t],nm:it.nm,em:it.em,note:'TIER '+e.tier};
   }
-  if(e.kind==='restock'){
-    const it=INV_CONSUMABLES.find(x=>x.id===e.id);if(!it||it.mode)return null;
-    return {price:armRestockCost(it.id),nm:it.nm,em:it.em,note:'+1 MISSION CHARGE'};
-  }
   if(e.kind==='color'){
     const C=COLORS[e.id];if(!C||e.id==='azure'||META.owned['col_'+e.id])return null;
     return {price:C.cost,nm:C.nm+' COLOR',em:'✦',note:'PERMANENT STYLE'};
@@ -501,7 +490,7 @@ function armCartHTML(){
   const rows=armCartRows(),total=rows.reduce((n,x)=>n+x.item.price,0),C=armCommerceStatus(),confirmed=typeof ECO!=='undefined'&&ECO&&ECO.confirmed;
   let h='<section class="armCartBar"><div><span>EARNED-CORE BASKET</span><b>'+rows.length+' ITEM'+(rows.length===1?'':'S')+' · ⬡'+total+'</b></div><button type="button" data-cart-toggle="1">'+(armCartOpen?'CLOSE':'REVIEW')+'</button></section>';
   if(!armCartOpen)return h;
-  h+='<section class="armCartPanel"><div class="armCartRows">'+(rows.length?rows.map(x=>'<div class="armCartRow"><i>'+x.item.em+'</i><span><b>'+x.item.nm+'</b><small>'+x.item.note+'</small></span><strong>⬡'+x.item.price+'</strong><button type="button" data-cart-remove="'+armCartKey(x.entry)+'" aria-label="Remove '+x.item.nm+'">×</button></div>').join(''):'<div class="armCartEmpty">Your basket is empty. Tap an upgrade, deal, supply, or locked color to stage it here.</div>')+'</div>';
+  h+='<section class="armCartPanel"><div class="armCartRows">'+(rows.length?rows.map(x=>'<div class="armCartRow"><i>'+x.item.em+'</i><span><b>'+x.item.nm+'</b><small>'+x.item.note+'</small></span><strong>⬡'+x.item.price+'</strong><button type="button" data-cart-remove="'+armCartKey(x.entry)+'" aria-label="Remove '+x.item.nm+'">×</button></div>').join(''):'<div class="armCartEmpty">Your basket is empty. Tap a permanent upgrade, deal, or locked color to stage it here.</div>')+'</div>';
   h+='<div class="armCartTotal"><span>TOTAL</span><b>⬡ '+total+'</b></div><button type="button" class="armCartCheckout" data-cart-checkout="1" '+(!rows.length||META.cores<total||confirmed?'disabled':'')+'>'+(confirmed?'SERVER CART UPDATE REQUIRED':META.cores<total?'NEED '+(total-META.cores)+' MORE CORES':'CONFIRM EARNED-CORE PURCHASE')+'</button>';
   h+='<div class="armCommerceState '+(C.ready?'ready':'locked')+'"><b>'+C.platform+' · '+(C.ready?'BRIDGE DETECTED':'PAID CHECKOUT LOCKED')+'</b><span>'+C.note+'</span></div></section>';
   return h;
@@ -513,7 +502,6 @@ function armCartCheckout(){
   if(META.cores<total){toast('Not enough earned cores');sfx('alarm');return;}
   for(const x of rows){const e=x.entry;
     if(e.kind==='perk'||e.kind==='deal'){META.owned[e.id]=e.tier;if(e.kind==='deal')armDealState().claimed[e.id]=1;}
-    else if(e.kind==='restock'){const b=invBag();b.consumables[e.id]=(b.consumables[e.id]||0)+1;}
     else if(e.kind==='color'){META.owned['col_'+e.id]=1;META.color=e.id;}
   }
   META.cores-=total;armCart=[];armCartOpen=false;metaSave();applyColor();renderMetaHead();sfx('pickup');sfx('level');armBuyFlash('⬡','REQUISITION CONFIRMED');toast('Basket purchased · ⬡'+total);renderArmory();
@@ -530,7 +518,7 @@ renderArmory=function(){
      that precedes opening the Armory — any later render happens with it visible
      and must not replay the entrance. */
   const opening=(()=>{ const s=document.getElementById('armory'); return !!(s&&getComputedStyle(s).display==='none'); })();
-  list.innerHTML=armHeadHTML()+armCartHTML()+(armTab==='market'?armDealsHTML():'')+armBodyHTML();
+  list.innerHTML=armHeadHTML()+mfProgressionGuideHTML('arsenal')+armCartHTML()+(armTab==='market'?armDealsHTML():'')+armBodyHTML();
   const tabs=document.getElementById('armTabs');
   if(tabs){
     tabs.classList.toggle('fits',tabs.scrollWidth<=tabs.clientWidth+2);
@@ -633,12 +621,6 @@ renderArmory=function(){
     });
   });
 
-  list.querySelectorAll('[data-inv-restock]').forEach(el=>mfBindTap(el,ev=>{
-    ev.stopPropagation();
-    const c=INV_CONSUMABLES.find(x=>x.id===el.dataset.invRestock); if(!c) return;
-    armCartAdd('restock',c.id);
-  }));
-
   /* Locked swatch: stage it, exactly as before — this is still the only route
      to the col_* checkout. Owned swatch: applying it here is the same one-line
      state change Profile → Identity makes, so it keeps working rather than
@@ -679,4 +661,3 @@ function ensureStoreCss(){
 function initStoreUI(){
   ensureStoreCss();
 }
-

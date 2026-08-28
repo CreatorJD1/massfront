@@ -233,6 +233,53 @@ try {
   });
   if (!site) throw new Error('no open non-civic ground on this map');
   say('site: ' + site.x + ',' + site.y + '  bld idx=' + site.bi + ' alive=' + site.alive);
+
+  /* ============== deterministic/bounded presentation contracts ========== */
+  const contracts = await page.evaluate(() => {
+    const p = window.__mfSite, dt = 1 / 30;
+    const runSeeded = () => {
+      mfPhysClear(); MFPhys.seed(0x51c0ffee);
+      mfPhysCollapse(p[0] + 70, p[1], 52, { count: 99, ttl: 60 });
+      for (let k = 0; k < 12; k++) mfPhysStep(dt);
+      return MFPhys.probe();
+    };
+    const seededA = runSeeded(), seededB = runSeeded();
+
+    mfPhysClear(); MFPhys.seed(0x12345678);
+    mfPhysCollapse(p[0] + 70, p[1], 52, { count: 3, ttl: 60 });
+    const pauseHashA = MFPhys.stateHash();
+    paused = true;
+    for (let k = 0; k < 50; k++) mfPhysEmit();
+    const pauseHashB = MFPhys.stateHash(), pausedProbe = MFPhys.probe();
+    paused = false;
+
+    perfScale = 1; mfPhysClear();
+    for (let k = 0; k < 80; k++)
+      mfPhysSpawn(p[0] + (k % 10) * 2, p[1] + ((k / 10) | 0) * 2, terrainH(p[0], p[1]) + 30,
+        { hx: 1, hy: 1, hz: 1, ttl: 60, chunks: 1 });
+    const highBodies = mfPhysStats().bodies;
+    perfScale = 0.30; mfPhysStep(dt);
+    const trimmedProbe = MFPhys.probe();
+    perfScale = 0.4125; mfPhysClear();
+    return { seededA, seededB, pauseHashA, pauseHashB, pausedProbe, highBodies, trimmedProbe };
+  });
+  check('private seeded destruction is deterministic',
+    contracts.seededA.stateHash === contracts.seededB.stateHash,
+    contracts.seededA.stateHash + ' === ' + contracts.seededB.stateHash);
+  check('collapse requests are clamped to one 1-3 slab group',
+    contracts.seededA.layerBounded && contracts.seededA.maxGroup <= 3 && contracts.seededA.groupClamps > 0,
+    'maxGroup=' + contracts.seededA.maxGroup + ' clamps=' + contracts.seededA.groupClamps);
+  check('paused renders emit no rubble and preserve physics state',
+    contracts.pauseHashA === contracts.pauseHashB && contracts.pausedProbe.pausedEmitSkips === 50 &&
+      contracts.pausedProbe.emittedChunks === 0,
+    'hash ' + contracts.pauseHashA + ' -> ' + contracts.pauseHashB +
+      ', skips=' + contracts.pausedProbe.pausedEmitSkips + ', chunks=' + contracts.pausedProbe.emittedChunks);
+  check('quality downgrade trims an already-live pool to its new budget',
+    contracts.highBodies > contracts.trimmedProbe.budget && contracts.trimmedProbe.withinBudget &&
+      contracts.trimmedProbe.budgetTrims > 0,
+    contracts.highBodies + ' -> ' + contracts.trimmedProbe.bodies + '/' + contracts.trimmedProbe.budget +
+      ', trims=' + contracts.trimmedProbe.budgetTrims);
+
   await step(3);
   await page.screenshot({ path: join(outDir, '0-structure-intact.png') });
 
@@ -424,7 +471,13 @@ try {
   await writeFile(join(outDir, 'log.txt'), log.join('\n'), 'utf8');
 } finally {
   await closePwBrowser();
+  /* close() alone only stops NEW connections — Chrome's keep-alive sockets to
+     this server keep the event loop alive, so the process wrote every result
+     and then hung forever. Two runs had to be killed externally after they had
+     already passed. Destroy the live sockets, then exit explicitly: by this
+     point log.txt and every screenshot are already flushed to disk. */
+  server.closeAllConnections();
   server.close();
 }
 console.log('output: ' + outDir);
-process.exitCode = failures ? 1 : 0;
+process.exit(failures ? 1 : 0);

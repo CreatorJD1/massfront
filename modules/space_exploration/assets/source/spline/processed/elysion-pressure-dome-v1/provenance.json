@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "kind": "MassfrontModelKitProvenanceV1",
+  "createdAtUtc": "2026-08-26T09:31:10.729Z",
+  "kitId": "mf_elysion_cumulus_conservatory_pressure_dome_v1",
+  "candidateStatus": "SOURCE_CANDIDATE",
+  "buildArtifactSetSha256": "7c94ade352e1cf24e54421f1ae8f4c1bd01ca48bcda16f4a08a601f3e0c6e0f2",
+  "repository": {
+    "head": "c4090cc5785e6c30b342f58beca52d34585e9bfc",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true,
+    "dirtyFingerprint": "c8d728e7a7ba7044bebdb5e63be5927671e044a95efe72513a182f1989d1b1cb",
+    "fingerprintScope": "tracked-worktree-excluding-kit-root",
+    "excludedPaths": [
+      "modules/space_exploration/assets/source/spline/processed/elysion-pressure-dome-v1"
+    ]
+  },
+  "catalog": {
+    "status": "BOUND",
+    "path": "source-media/content-library/model-pack-catalog.v1.json",
+    "sha256": "b6110cfaff892809bdb826568d91773aa271fbaa5f2774201cef73d9e4ec964b",
+    "bytes": 11972
+  },
+  "source": {
+    "path": "source/mf-elysion-cumulus-conservatory-pressure-dome-source.glb",
+    "bytes": 14348536,
+    "sha256": "8514b00845b09bf764ece0ede56c4c29408360b905f79af109b8b1476ceb8f54",
+    "expectedSha256": "8514b00845b09bf764ece0ede56c4c29408360b905f79af109b8b1476ceb8f54"
+  },
+  "sceneDigest": {
+    "path": "evidence/scene-digest.json",
+    "bytes": 2049,
+    "sha256": "0aebf82ec63aae7debc52772d8d67773c3a73759803e2062be6f0cdc46ec7ffd",
+    "expectedSha256": null
+  },
+  "concept": {
+    "path": "concept/elysion-cumulus-conservatory-pressure-dome-concept-v1.png",
+    "bytes": 2294234,
+    "sha256": "47e2382f7d73e992bc10981512f64bf404c1cff9fe3f298928b6818a419a0ece",
+    "expectedSha256": "47e2382f7d73e992bc10981512f64bf404c1cff9fe3f298928b6818a419a0ece",
+    "pixelsUsedAsTexture": false
+  },
+  "splineIdentity": {
+    "publicSceneUrl": "https://massfront.invalid/evidence/unknown-spline-scene/",
+    "documentName": "MF_HY3D_ELYSION_PRESSURE_DOME_V1",
+    "documentId": null,
+    "rootObjectId": "aef453ab-baab-4473-a460-7f9063426b3a",
+    "meshObjectIds": [
+      "081b8c3c-28ba-4f54-93ad-5d6bb8aa5133"
+    ],
+    "meshNodeNames": [
+      "MF_ELYSION_CUMULUS_CONSERVATORY_PRESSURE_DOME_LOD0_SOURCE_MESH"
+    ],
+    "generation": {
+      "system": "spline-ai-3d",
+      "provider": "Hunyuan3D",
+      "generationId": "aef453ab-baab-4473-a460-7f9063426b3a",
+      "sourceImageGenerationId": "ca8ce03c-cc27-4380-9bb1-fba1a6ab4e79",
+      "identityStatus": "PARTIAL",
+      "publicSceneUrlStatus": "UNKNOWN"
+    }
+  },
+  "toolchain": {
+    "blender": {
+      "version": "5.2.0 LTS",
+      "versionTuple": [
+        5,
+        2,
+        0
+      ]
+    },
+    "node": "v26.7.0",
+    "files": [
+      {
+        "path": "modules/space_exploration/tools/model-kits/model-kit.mjs",
+        "bytes": 11172,
+        "sha256": "af47d5d876e0df0473ebca15bbce80b128d1cb277453d42a774c68ec7901e99a"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/process-model-kit.py",
+        "bytes": 38935,
+        "sha256": "bb6839dd942c035e4159c5a87b81f14fd2179a553f2894ba0a66e02dd78f31a2"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/verify-model-kit.mjs",
+        "bytes": 36351,
+        "sha256": "f16bb8ede5a70a64227d299bb7492cf303768492a3d6a172d4a36e200318ebb6"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/model-kit-core.mjs",
+        "bytes": 22100,
+        "sha256": "139912669b782507671ca7527225d543a25ddc01e9552a077e9c886dc416c0bb"
+      },
+      {
+        "path": "modules/space_exploration/tools/model-kits/model-kit.schema.json",
+        "bytes": 8419,
+        "sha256": "ba2ff160a6e38b9b7aa3bd11aa146766c2c7637e3e03f4733e93770fb8aa3759"
+      }
+    ]
+  },
+  "command": {
+    "executable": "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe",
+    "arguments": [
+      "--background",
+      "--factory-startup",
+      "--python",
+      "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\tools\\model-kits\\process-model-kit.py",
+      "--",
+      "--manifest",
+      "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\processed\\elysion-pressure-dome-v1\\kit.json"
+    ],
+    "cwd": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple"
+  }
+}

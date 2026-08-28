@@ -1,0 +1,115 @@
+{
+  "$schema": "https://massfront.invalid/schemas/model-kit-v1.json",
+  "schemaVersion": 1,
+  "kitId": "mf_elysion_cumulus_conservatory_pressure_dome_v1",
+  "displayName": "Elysion Cumulus Conservatory Pressure Dome V1",
+  "status": "SOURCE_CANDIDATE",
+  "classification": {
+    "packId": "hpk_elysion_pressure_dome_w1_v1",
+    "catalogEntryId": "hy3d_w1_elysion_pressure_dome",
+    "planetId": "elysion",
+    "siteId": "elysion_cumulus_conservatory",
+    "locationClass": "pressure_dome",
+    "category": "pressure_dome",
+    "runtimeReady": false,
+    "authoredEnvelopeSplineMeters": [64, 24, 64],
+    "authoredEnvelopeRuntimeMeters": [64, 64, 24]
+  },
+  "source": {
+    "glb": "source/mf-elysion-cumulus-conservatory-pressure-dome-source.glb",
+    "expectedSha256": "8514b00845b09bf764ece0ede56c4c29408360b905f79af109b8b1476ceb8f54",
+    "publicSceneUrl": "https://massfront.invalid/evidence/unknown-spline-scene/",
+    "documentName": "MF_HY3D_ELYSION_PRESSURE_DOME_V1",
+    "documentId": null,
+    "rootObjectId": "aef453ab-baab-4473-a460-7f9063426b3a",
+    "meshObjectIds": [
+      "081b8c3c-28ba-4f54-93ad-5d6bb8aa5133"
+    ],
+    "meshNodeNames": [
+      "MF_ELYSION_CUMULUS_CONSERVATORY_PRESSURE_DOME_LOD0_SOURCE_MESH"
+    ],
+    "generation": {
+      "system": "spline-ai-3d",
+      "provider": "Hunyuan3D",
+      "generationId": "aef453ab-baab-4473-a460-7f9063426b3a",
+      "sourceImageGenerationId": "ca8ce03c-cc27-4380-9bb1-fba1a6ab4e79",
+      "identityStatus": "PARTIAL",
+      "publicSceneUrlStatus": "UNKNOWN"
+    },
+    "sceneDigest": "evidence/scene-digest.json",
+    "expectedSceneDigestSha256": null
+  },
+  "concept": {
+    "image": "concept/elysion-cumulus-conservatory-pressure-dome-concept-v1.png",
+    "expectedSha256": "47e2382f7d73e992bc10981512f64bf404c1cff9fe3f298928b6818a419a0ece",
+    "pixelsUsedAsTexture": false,
+    "generation": {
+      "system": "spline-image-generation",
+      "generationId": "ca8ce03c-cc27-4380-9bb1-fba1a6ab4e79",
+      "role": "approved source image used to drive the Hunyuan pressure-dome generation"
+    }
+  },
+  "normalization": {
+    "sourceUp": "Z",
+    "runtimeUp": "Z",
+    "runtimeForward": "+Y",
+    "scaleMode": "height",
+    "targetMeters": 24,
+    "centerXY": true,
+    "groundOrigin": true,
+    "toleranceMeters": 0.02
+  },
+  "lods": [
+    {
+      "name": "LOD0",
+      "targetTriangles": 140000,
+      "maxTriangles": 150000,
+      "output": "derived/mf-elysion-cumulus-conservatory-pressure-dome-v1-lod0.glb"
+    },
+    {
+      "name": "LOD1",
+      "targetTriangles": 60000,
+      "maxTriangles": 65000,
+      "output": "derived/mf-elysion-cumulus-conservatory-pressure-dome-v1-lod1.glb"
+    },
+    {
+      "name": "LOD2",
+      "targetTriangles": 24000,
+      "maxTriangles": 28000,
+      "output": "derived/mf-elysion-cumulus-conservatory-pressure-dome-v1-lod2.glb"
+    }
+  ],
+  "collision": {
+    "mode": "convex-hull",
+    "maxTriangles": 256,
+    "output": "derived/mf-elysion-cumulus-conservatory-pressure-dome-v1-collision.glb"
+  },
+  "textures": {
+    "extract": true,
+    "requireEmbeddedSource": true,
+    "outputDirectory": "derived/textures",
+    "seamPolicy": "uv-atlas-not-tileable",
+    "maxBorderMeanDelta": 0.035,
+    "maxBorderP95Delta": 0.08
+  },
+  "evidence": {
+    "outputDirectory": "evidence",
+    "thumbnailSize": [640, 640],
+    "views": ["iso", "front", "side", "top"],
+    "contactSheet": "evidence/contact-sheet.png",
+    "buildReport": "evidence/build-report.json",
+    "verificationReport": "evidence/verification-report.json",
+    "artifactIndex": "evidence/artifact-index.json",
+    "sourceLock": "evidence/source-lock.json",
+    "provenance": "provenance.json",
+    "mobileEvidence": "evidence/mobile-evidence.json",
+    "requiredMobileViewports": ["phone-portrait", "phone-landscape"]
+  },
+  "budgets": {
+    "maxSourceBytes": 67108864,
+    "maxSourceTriangles": 500000,
+    "maxMaterials": 8,
+    "maxTextures": 8,
+    "maxTextureDimension": 2048
+  }
+}

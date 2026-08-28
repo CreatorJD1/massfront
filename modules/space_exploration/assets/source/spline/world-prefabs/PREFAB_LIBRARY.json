@@ -1,0 +1,453 @@
+{
+  "schemaVersion": 1,
+  "libraryId": "massfront_world_prefab_library_v1",
+  "createdDate": "2026-08-25",
+  "status": "EXPORTED - source GLB on disk for every prefab that had a named document",
+  "runtimeReady": false,
+  "authoringScale": {
+    "splineUnitMeters": 1
+  },
+  "unitOfAuthoring": "one Spline document per prefab",
+  "texturingMethod": "generateTexture \u2014 canvas-2D seamless tiles drawn locally. No image-service quota, no generation credits.",
+  "prefabs": [
+    {
+      "id": "MF_PROP_ROCK_01",
+      "kind": "rock",
+      "sizeMeters": [
+        8,
+        6.2,
+        7.4
+      ],
+      "textures": [
+        "Granite Stone"
+      ],
+      "verified": "screenshot",
+      "notes": "displaced sphere, flatShading faceting",
+      "sceneIsolationVerified": false,
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_ROCK_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_ROCK_01.glb",
+      "exportedBytes": 156632,
+      "exportedSha256": "a6af035cd260b048f8fa4a43ddbeb2b1d3319dde85eff988d8fd920130346a48",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_TREE_01",
+      "kind": "tree",
+      "sizeMeters": [
+        8,
+        12,
+        6
+      ],
+      "textures": [
+        "Tree Bark"
+      ],
+      "verified": "scene-graph",
+      "notes": "cylindrical bark trunk + 4 displaced canopy lobes",
+      "sceneIsolationVerified": false,
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_TREE_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_TREE_01.glb",
+      "exportedBytes": 138380,
+      "exportedSha256": "3e7f53d7c6cc4112515bb6483f23270db4a40acfde630d9663ddfc7f846cc226",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_RELIC_01",
+      "kind": "relic",
+      "sizeMeters": [
+        11,
+        8,
+        11
+      ],
+      "textures": [
+        "Weathered Sandstone"
+      ],
+      "verified": "screenshot",
+      "notes": "trilithon: 2 columns + spanning lintel, 4 broken stumps, rubble, octagonal plinth",
+      "sceneIsolationVerified": false,
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_RELIC_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_RELIC_01.glb",
+      "exportedBytes": 177940,
+      "exportedSha256": "e5ba9b6f08f3e87674b0cc2634b567cbbd4d72915aa67d2cda77c5301c380332",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_MOUNTAIN_01",
+      "kind": "mountain",
+      "sizeMeters": [
+        138,
+        104,
+        102
+      ],
+      "textures": [
+        "Mountain Strata"
+      ],
+      "verified": "screenshot",
+      "notes": "displaced peak + spur + separate snow-cap mesh",
+      "sceneIsolationVerified": false,
+      "method": "hand_built",
+      "exportedGlb": null
+    },
+    {
+      "id": "MF_STRUCT_CIVICBLOCK_01",
+      "kind": "structure",
+      "sizeMeters": [
+        20,
+        23,
+        16
+      ],
+      "textures": [
+        "Civic Concrete",
+        "Window Grid"
+      ],
+      "verified": "screenshot",
+      "notes": "podium, panelled core, roof plant, emissive glazing on N and E faces",
+      "sceneIsolationVerified": false,
+      "method": "hand_built",
+      "splineDocumentName": "MF_STRUCT_CIVICBLOCK_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CIVICBLOCK_01.glb",
+      "exportedBytes": 49956,
+      "exportedSha256": "b073cbf6c708ffb8c373237c05ea23f974ec8f79c1a7693394c46ecccc9111af",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_CRYSTAL_01",
+      "kind": "crystal",
+      "sizeMeters": [
+        11,
+        16,
+        10
+      ],
+      "textures": [
+        "Crystal Bed Rock"
+      ],
+      "verified": "screenshot",
+      "notes": "5 faceted transmission shards on a displaced rock bed",
+      "sceneIsolationVerified": false,
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_CRYSTAL_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_CRYSTAL_01.glb",
+      "exportedBytes": 198048,
+      "exportedSha256": "968d2ad7c43069d42b08b086cf74763dbf88787816e444e7c216ceb1c4665cea",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_WRECK_01",
+      "kind": "wreck",
+      "sizeMeters": [
+        21,
+        9,
+        15
+      ],
+      "textures": [
+        "Scorched Hull Plate"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "broken hull fore/aft, spine, fin, hull panels, 5 debris. Built in a confirmed-empty scene.",
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_WRECK_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_WRECK_01.glb",
+      "exportedBytes": 114412,
+      "exportedSha256": "84932eed48dbd0172b82e32228cabd69094f98ffdc34016ffe3516d2a727626c",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_STRUCT_CITYTOWER_01",
+      "kind": "structure",
+      "sizeMeters": [
+        24,
+        70,
+        22
+      ],
+      "textures": [
+        "Tower Concrete",
+        "Tower Glazing"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "podium, setback shaft, tiled lit window bands, crown, mast, beacon",
+      "method": "hand_built",
+      "splineDocumentName": "MF_STRUCT_CITYTOWER_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYTOWER_01.glb",
+      "exportedBytes": 66948,
+      "exportedSha256": "971dcbc622405b60166a7e73773bcee2dd58a69f8c9c4e02a001a5a779f8ded6",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_STRUCT_CITYDOME_01",
+      "kind": "structure",
+      "sizeMeters": [
+        55,
+        39,
+        62
+      ],
+      "textures": [
+        "Dome Panel",
+        "Dome Glazing"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "panelled ellipsoid shell, base ring, lit clerestory band, apex cap, airlock + hatch",
+      "method": "hand_built",
+      "splineDocumentName": "MF_STRUCT_CITYDOME_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYDOME_01.glb",
+      "exportedBytes": 140396,
+      "exportedSha256": "e2ce12ef66c4983e80da4d6cb04a48c7caab89f787935ec228938040c8d65d08",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_GEYSER_01",
+      "kind": "geyser",
+      "sizeMeters": [
+        19,
+        31,
+        19
+      ],
+      "textures": [
+        "Mineral Crust"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "5 stepped sinter terraces, emissive vent throat, 5-puff translucent steam plume",
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_GEYSER_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_GEYSER_01.glb",
+      "exportedBytes": 258556,
+      "exportedSha256": "7d6ce6cbda447392dc184e62c4f79ff3ff99b7c06fedee56ca7b65fc4eb79367",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_STRUCT_REFINERY_01",
+      "kind": "structure",
+      "sizeMeters": [
+        46,
+        33,
+        34
+      ],
+      "textures": [
+        "Refinery Steel"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "4 storage tanks with rims, 5-leg pipe rack + 4 pipe runs, flare stack with emissive tip, pump house, slab",
+      "method": "hand_built",
+      "splineDocumentName": "MF_STRUCT_REFINERY_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_REFINERY_01.glb",
+      "exportedBytes": 256276,
+      "exportedSha256": "59d29d3a9fc9e1e8d5484f02b041211126932f2706d71c0c178bb97da4358d4a",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_ROCKARCH_01",
+      "kind": "rock formation",
+      "sizeMeters": [
+        57,
+        52,
+        19
+      ],
+      "textures": [
+        "Arch Sandstone"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "2 displaced piers, 7-block arch span, 3 talus boulders",
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_ROCKARCH_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_ROCKARCH_01.glb",
+      "exportedBytes": 112276,
+      "exportedSha256": "1ba57079073e55b7128e0995dd58e21c148866d02a3a41eb5edb01048c9ef3e0",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_ICESPIRE_01",
+      "kind": "ice formation",
+      "sizeMeters": [
+        33,
+        26,
+        29
+      ],
+      "textures": [
+        "Packed Snow"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "5 translucent ice spires + 6 shards on a displaced snow drift; arctic biome",
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_ICESPIRE_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_ICESPIRE_01.glb",
+      "exportedBytes": 283684,
+      "exportedSha256": "bfb9342a45b308d369a498a071ebc0497f6c754fee8a429187df3eb3b12d8d40",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_CARGODEPOT_01",
+      "kind": "prop cluster",
+      "sizeMeters": [
+        34,
+        7,
+        26
+      ],
+      "textures": [
+        "Container Corrugate",
+        "Crate Panel",
+        "Depot Concrete"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "5 painted corrugated containers (one stacked), 7 timber crates, jointed concrete pad",
+      "method": "hand_built",
+      "splineDocumentName": "MF_PROP_CARGODEPOT_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_CARGODEPOT_01.glb",
+      "exportedBytes": 112292,
+      "exportedSha256": "2ae179a21bb0510bfbe083bf9eec082cab68f6c96e88bced2c4154835e865d88",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_STRUCT_COMMSRELAY_01",
+      "kind": "structure",
+      "sizeMeters": [
+        17,
+        31,
+        14
+      ],
+      "textures": [
+        "Relay Panel"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "parabolic dish + rim, 4-leg lattice mast with 12 braces, feed arm/horn, equipment shed, pad, beacon",
+      "method": "hand_built",
+      "splineDocumentName": "MF_STRUCT_COMMSRELAY_01",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_COMMSRELAY_01.glb",
+      "exportedBytes": 296824,
+      "exportedSha256": "031d63181729df1944a96b076321782f1db5d1720a688f246bd9ca4a82afb3aa",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_TREE_02",
+      "kind": "tree",
+      "sizeMeters": [
+        3.9,
+        18.8,
+        6.2
+      ],
+      "method": "ai_generated",
+      "textures": [
+        "baked (generated)"
+      ],
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "AI-generated alien conifer: buttressed fissured trunk, layered needle tiers, exposed roots. Scaled 0.086 from a 208.8-unit source to 18.8 m.",
+      "splineDocumentName": "MF_PROP_TREE_02",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_TREE_02.glb",
+      "exportedBytes": 13535516,
+      "exportedSha256": "3141855d9ad9964a087ea4d9fe9e4aabe1d50d02d4b91b369035b6023392df36",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_STRUCT_CITYTOWER_02",
+      "kind": "structure",
+      "method": "ai_generated",
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "AI-generated arcology tower: buttressed podium, fluted setback shaft, teal glazed plant deck, mast + red beacon. Located and named during tab cleanup.",
+      "splineDocumentName": "MF_STRUCT_CITYTOWER_02",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_STRUCT_CITYTOWER_02.glb",
+      "exportedBytes": 15037384,
+      "exportedSha256": "e089ef9a1c627cefea2f3511607990c42275d3c78969e1572443e9cf10a06d4a",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_MOUNTAIN_02",
+      "kind": "mountain",
+      "method": "ai_generated",
+      "verified": "screenshot",
+      "sceneIsolationVerified": true,
+      "notes": "AI-generated granite massif: fractured ridgelines, strata bands, eroded gullies, scree apron, snow traces. Scaled 0.643 from a 171-unit source to ~110 m.",
+      "sizeMeters": [
+        116,
+        110,
+        82
+      ],
+      "splineDocumentName": "MF_PROP_MOUNTAIN_02",
+      "tabClosed": true,
+      "exportedGlb": "modules/space_exploration/assets/source/spline/world-prefabs/exports/MF_PROP_MOUNTAIN_02.glb",
+      "exportedBytes": 13466460,
+      "exportedSha256": "e12bbbcbcd6bb1030412c71c7de366d2ca4f17e0c5a68f906c0852e3fc6b8c6b",
+      "exportedDate": "2026-08-28"
+    },
+    {
+      "id": "MF_PROP_RELICMONOLITH_01",
+      "kind": "relic",
+      "method": "ai_generated",
+      "verified": "NOT LOCATED",
+      "sceneIsolationVerified": false,
+      "notes": "Generated but NEVER located \u2014 no tab containing a monolith was found during cleanup. Treat this generation as lost.",
+      "exportedGlb": null
+    },
+    {
+      "id": "GSITE_AELOS_CALDRIS_HERO",
+      "kind": "ground site",
+      "method": "ai_generated",
+      "splineDocumentName": "GSITE_AELOS_CALDRIS_HERO",
+      "tabClosed": true,
+      "verified": "screenshot",
+      "sceneIsolationVerified": false,
+      "notes": "Caldris ring-ward hero mesh PLUS the MF_PLANET_AELOS anchor scaffold (9 ANCHOR_ nodes + label) share this document.",
+      "exportedGlb": null
+    }
+  ],
+  "authoringRecipe": {
+    "textureMustBePerObject": "layer('texture',\u2026) applied to a MULTI-selection silently no-ops. Select each object individually. This was the cause of the untextured relic.",
+    "displaceScaleIsFrequency": "feature span is roughly 1000/scale world units. An 8 m prop needs scale ~320, NOT ~26 (which gives 38 m features and leaves a smooth egg).",
+    "coneNeedsBothCornerRadii": "Cone spawns with cornerRadius 8 on BOTH ends; zeroing only cornerRadiusBottom leaves a rounded blob. Pass cornerRadiusTop AND cornerRadiusBottom.",
+    "bumpIntensity": "0.8-2. At 3+ hard texture bands throw specular highlights and rock reads as crumpled foil.",
+    "dustIsNormalBased": "the dust layer settles by surface normal, not altitude, so on a cone it covers everything. For a snow line use a separate cap mesh, not coverage.",
+    "planarProjectionIsWorldScale": "planar/triplanar map in world units, so on small props one tile spans more than the face. Cube faces take projection:'uv' cleanly.",
+    "glassNeedsContrast": "transmission over a dark background reads black. Keep attenuationDistance near the object's size (~11 for a 15 m shard); 60 bleaches it colourless.",
+    "repeatMustBeHigh": "triplanar/planar map in WORLD units, so a low repeat shows one flat fraction of the tile on a small prop. Use repeat 18-26 for 10-25 m objects, 30-40 for sub-5 m parts. This was why the wreck and civic block first read as untextured slabs.",
+    "textureDominatesBaseColor": "at texture alpha ~0.9 the tile's own tone controls the look \u2014 darkening color() barely shows. Redraw the tile to change value.",
+    "torusIgnoresParams": "mesh('Torus',{radius,tube}) ignores both \u2014 every torus spawns ~100 units across. Scale it, or use another primitive.",
+    "scaleMultiplies": "scale({...}) MULTIPLIES the current scale rather than setting it. Repeated calls compound (0.85*0.9*0.88=0.67). Set it once.",
+    "groupingRebasesChildren": "after group(), child position() values are LOCAL to the group origin, not world. Absolute values applied post-grouping shift parts badly \u2014 the geyser plume floated ~11 m off its vent this way. Read local positions back before repositioning children.",
+    "reservedHelperNames": "the DSL already defines rock(); a local function of the same name is shadowed and throws. Prefix helpers (mkRock).",
+    "glassIsBackgroundDependent": "a transmission/glass layer refracts whatever is BEHIND it, so on a dark backdrop ice/crystal renders near-black. For library assets viewed against unknown backgrounds prefer color + opacity + fresnel + depth; reserve glass for cases where you also control the backdrop.",
+    "paintNeedsLowTextureAlpha": "for painted surfaces keep the texture layer alpha ~0.45 so the base color reads; use the bump map for the corrugation instead of tone. At alpha 0.72 every container rendered grey regardless of its paint color.",
+    "generatedMeshOrientation": "a generated mesh's CHILD already carries the upright rotation (r=90). Rotating the parent Empty as well double-rotates it and lays the model on its side. Read the child's rotation before touching the parent.",
+    "generatedMeshScale": "reported size is the UNSCALED content bounds; world size = bounds * scale. Divide target metres by the largest bound to get the factor."
+  },
+  "knownBlocker": "The Spline MCP bridge is unreliable in two distinct ways. (1) Document targeting: create_file sometimes returns a previously-used document; gate every build by reading the scene first and requiring 1 object + the default #262626 background. (2) The private SCREENSHOT camera can render a DIFFERENT document than run_code is writing to \u2014 a relay edit was verified against the city dome's viewport. When a capture looks wrong, confirm with get_scene before 'fixing' anything; get_scene reflects where run_code actually is. (3) Generation jobs are tab-bound: get_generation reports 'unknown job' if the tab changes mid-run, but the mesh may still land in the scene \u2014 check before assuming the credit was lost.",
+  "sceneStateNote": "Confirmed clean at handoff: relic (deposit crystals removed), crystal, tree-02. Mountain scene repaired (group was hidden, stray wreck KEY_LIGHT removed). Two AI-generated meshes (tower, mountain-02) exist but their documents could not be re-addressed before stopping.",
+  "authoringMethods": {
+    "ai_generated": "generate_3d_model(prompt) -> mesh with BAKED generated textures. Highest quality; costs credits. Mesh lands with arbitrary facing/scale/pivot and must be measured and scaled.",
+    "ai_texture": "layer('texture',{style:'prompt'}) -> AI-generated photographic texture on geometry you build. Async; renders a checkerboard until it resolves.",
+    "hand_built": "primitives + generateTexture canvas tiles. Free and instant, but produces flat single-material props. Lower tier."
+  },
+  "saveAndClose": {
+    "saved": "Spline autosaves; all documents persisted.",
+    "renamed": "19 documents renamed from Untitled to their model IDs via the Spline UI (MCP has no rename verb).",
+    "closed": "All 19 model tabs closed. Remaining open: 'New tab' (launcher) and 'Sci Fi Colony City Block' (not mine \u2014 left untouched).",
+    "exported": "No GLB exported; Spline UI File > Export per document when needed."
+  },
+  "exportManifest": "modules/space_exploration/assets/source/spline/world-prefabs/SPLINE_EXPORT_MANIFEST.json",
+  "runtimeNote": "Geometry is exported and hashed. Runtime admission still needs the intake pipeline: target bounds per prefab, LOD0-2 and a collider. sizeMeters in each record is the authored envelope and is the input that pipeline needs."
+}

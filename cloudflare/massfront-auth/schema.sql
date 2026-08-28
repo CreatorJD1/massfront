@@ -1,15 +1,10 @@
 -- ============================================================================
 -- MASSFRONT accounts — D1 schema
 -- ----------------------------------------------------------------------------
--- Apply this to a database created with `wrangler d1 create massfront-accounts`
--- (see docs/ACCOUNTS.md for the full sequence). Safe to re-run: every
--- statement is IF NOT EXISTS, so applying it twice against the same database
--- is a no-op, not an error.
---
---   npx wrangler d1 execute massfront-accounts --file=schema.sql --remote
---
--- (drop --remote, or use --local, to apply it to the local dev database used
--- by `wrangler dev --local` instead of the real one.)
+-- This file is a synchronized snapshot of the current schema. It is useful for
+-- inspection and disposable local fixtures, but it is NOT the production
+-- deployment mechanism. Ordered changes live in migrations-ledger/ and are
+-- applied through Wrangler's migration ledger; see wrangler.toml.
 -- ============================================================================
 
 -- One row per registered player. The password is never stored — pass_hash is
@@ -27,7 +22,14 @@ CREATE TABLE IF NOT EXISTS users (
   created_at INTEGER NOT NULL,       -- unix ms
   username   TEXT,                   -- public handle for friends; NULL until claimed
   age_ok     INTEGER NOT NULL DEFAULT 0,  -- 13+ confirmed. The date of birth itself is NEVER stored.
-  age_checked_at INTEGER
+  age_checked_at INTEGER,
+  -- Added on production by legacy migrations-legacy/0001-social-columns.sql
+  -- (19 Aug) and reproduced inline by migrations-ledger/0001-production-baseline.
+  -- They live here too because this file is a SNAPSHOT of the current schema:
+  -- if it omitted them it would not describe any real database, which is what
+  -- test/migrations.test.mjs caught.
+  verified_at    INTEGER,
+  social_banned  INTEGER NOT NULL DEFAULT 0
 );
 /* Case-insensitive uniqueness: `Vex` and `vex` cannot both exist, but the
    display keeps whatever case was claimed. */
@@ -69,25 +71,17 @@ CREATE TABLE IF NOT EXISTS attempts (
 CREATE INDEX IF NOT EXISTS idx_attempts_lookup ON attempts(bucket, akey, created_at);
 
 -- ============================================================================
--- SOCIAL — verification, friends, blocking, reports          (added 2026-08)
+-- SOCIAL — verification, friends, blocks, reports, chat, presence (added 2026-08)
 -- ----------------------------------------------------------------------------
 -- Everything below is IF NOT EXISTS, exactly like the four tables above, so
 -- re-running this file is still a no-op. The four original tables are NOT
 -- touched by anything in this section.
 --
--- TWO COLUMNS ON `users` CANNOT LIVE HERE. SQLite (and therefore D1) has no
--- `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, so an ALTER in this file would
--- make the file throw on its second run and stop being idempotent. They live
--- in migrations/0001-social-columns.sql instead. MIGRATION ORDER:
---
---   1.  npx wrangler d1 execute massfront-accounts --file=schema.sql --remote
---   2.  npx wrangler d1 execute massfront-accounts \
---         --file=migrations/0001-social-columns.sql --remote      (ONCE, ever)
---
--- Step 2 is the only non-idempotent step in the project. Running it a second
--- time fails with `duplicate column name: verified_at`, which means "already
--- applied" and is safe to ignore — nothing is written in that case. Step 1 may
--- be re-run at any time. A fresh database needs both, in that order.
+-- The two legacy `users` columns are declared inline in this snapshot. On the
+-- Aug-19 production database they were originally added by the archived
+-- migrations-legacy/0001-social-columns.sql. Do not replay that ALTER file;
+-- migrations-ledger/0001-production-baseline.sql safely converges fresh and
+-- already-baselined databases before 0002/0003 are applied in order.
 -- ============================================================================
 
 -- A pending e-mail verification, one row per user (the row is REPLACED when a
@@ -170,12 +164,11 @@ CREATE TABLE IF NOT EXISTS reports (
 CREATE INDEX IF NOT EXISTS idx_reports_open ON reports(resolved, created_at);
 
 -- ----------------------------------------------------------------------------
--- NOT WIRED UP. There are no message routes in this release and none are
--- planned for it — direct messaging is a moderation surface that needs the
--- reporting flow above to already be live and load-bearing first. The table
--- shape is declared now only so the eventual migration is additive (routes,
--- not a schema change) and so the account-deletion purge in src/index.js can
--- already name it. Nothing reads or writes this table today.
+-- FRIEND CHAT FOUNDATION. Routes exist in the Worker, but the server reports
+-- chat unavailable and rejects every send/list call unless the operator sets
+-- SOCIAL_CHAT_ENABLED=1. The shipped wrangler.toml deliberately does not set
+-- that flag. This keeps the schema additive and testable without silently
+-- turning on a new user-generated-content surface.
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS messages (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -186,3 +179,46 @@ CREATE TABLE IF NOT EXISTS messages (
   read_at    INTEGER
 );
 CREATE INDEX IF NOT EXISTS idx_messages_inbox ON messages(to_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_messages_from ON messages(from_id, created_at, id);
+CREATE INDEX IF NOT EXISTS idx_messages_to_page ON messages(to_id, created_at, id);
+
+-- Ephemeral friend presence. `offline` is represented by no live row, so the
+-- database never becomes a long-term activity log. Reads join through the
+-- friendships table and filter blocks in both directions; there is no route
+-- that accepts an arbitrary username to probe.
+CREATE TABLE IF NOT EXISTS presence (
+  user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  state      TEXT NOT NULL CHECK (state IN ('online','away')),
+  updated_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_presence_expires ON presence(expires_at);
+
+-- Disabled-by-default authenticated staging lobbies. This is roster/invite
+-- coordination only; it does not claim a realtime deterministic match relay.
+CREATE TABLE IF NOT EXISTS multiplayer_lobbies (
+  id TEXT PRIMARY KEY, code TEXT NOT NULL UNIQUE,
+  host_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  state TEXT NOT NULL DEFAULT 'waiting' CHECK(state IN ('waiting','closed')),
+  revision INTEGER NOT NULL DEFAULT 1, rules_json TEXT NOT NULL,
+  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_multiplayer_lobbies_expiry ON multiplayer_lobbies(expires_at);
+CREATE TABLE IF NOT EXISTS multiplayer_lobby_members (
+  lobby_id TEXT NOT NULL REFERENCES multiplayer_lobbies(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ready INTEGER NOT NULL DEFAULT 0, joined_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+  PRIMARY KEY(lobby_id,user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_multiplayer_members_user ON multiplayer_lobby_members(user_id,updated_at);
+CREATE TABLE IF NOT EXISTS multiplayer_invites (
+  id TEXT PRIMARY KEY, lobby_id TEXT NOT NULL REFERENCES multiplayer_lobbies(id) ON DELETE CASCADE,
+  from_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  to_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','accepted','declined','revoked')),
+  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, responded_at INTEGER
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_multiplayer_invite_pending
+  ON multiplayer_invites(lobby_id,to_id) WHERE status='pending';
+CREATE INDEX IF NOT EXISTS idx_multiplayer_invite_inbox
+  ON multiplayer_invites(to_id,status,expires_at);

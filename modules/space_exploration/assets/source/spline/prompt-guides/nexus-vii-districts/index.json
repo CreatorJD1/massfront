@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "guideSetId": "nexus_vii_district_spline_prompt_guides_v1",
+  "shipId": "nexus_vii",
+  "status": "source_only_authoring_guides",
+  "runtimeBound": false,
+  "districtCount": 11,
+  "purpose": "Standalone production prompts for authoring the eleven connected NEXUS-VII interior districts in Spline, with deterministic construction variants and mobile-ready GLB delivery.",
+  "authoritativeSources": [
+    "../../../uga/interior-library/nexus-vii-material-decal-manifest.json",
+    "../../../concepts/nexus-vii-v1/concept-manifest.json",
+    "../../../../../src/domain/catalog.js",
+    "../../../../../src/domain/construction_catalog.js",
+    "../../../../../../../tmp/content-audit-pdf/NEXUS_VII_MATERIAL_DECAL_TAXONOMY_2026-08-25.md"
+  ],
+  "originalityPolicy": {
+    "referenceUse": "Genre references may inform hierarchy, readability, functional storytelling, combined-arms scale, and faction differentiation only.",
+    "forbidden": [
+      "copied geometry or layouts",
+      "copied logos, faction marks, or UI plates",
+      "derived copyrighted textures",
+      "recognizable character, vehicle, or building replicas"
+    ]
+  },
+  "commonModelingContract": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "forwardAxis": "+Z",
+    "floorPlane": "y=0",
+    "humanReferenceHeightM": 1.8,
+    "minimumPersonnelDoorM": [1.25, 2.4],
+    "minimumPublicCorridorWidthM": 2.4,
+    "guardrailHeightM": 1.1,
+    "maximumAccessibleRampSlope": "1:12",
+    "requiredUVSets": [
+      "UV0 authored for PBR bases, trim strips, and decals",
+      "UV1 non-overlapping when supported by the authoring/export path"
+    ],
+    "requiredGeometryData": [
+      "tangents",
+      "correct animation pivots",
+      "simple hidden collision proxies",
+      "LOD0",
+      "LOD1",
+      "LOD2"
+    ],
+    "requiredFacilityStages": [
+      "STAGE_empty",
+      "STAGE_foundation",
+      "STAGE_frame",
+      "STAGE_machinery",
+      "STAGE_complete",
+      "STAGE_retrofit_lockout"
+    ],
+    "constructionPresentation": {
+      "queued": "restrained holographic footprint using A05",
+      "foundation": "authored utility foundation, survey marks, barriers, and service feeds",
+      "frame": "district-specific structural frame, never generic cubes",
+      "machinery": "partial functional installation with temporary service route",
+      "complete": "clean commissioned facility with selected Tier identity",
+      "retrofit": "old facility visibly locked out in amber while replacement stages progress",
+      "powerPaused": "bounded A05 marker; progress geometry remains intact"
+    },
+    "export": {
+      "format": "GLB",
+      "include": [
+        "named district root",
+        "named Tier and facility roots",
+        "named build stages",
+        "shared material IDs",
+        "collision proxies",
+        "focus, entry, build, and animation anchors",
+        "manifest of triangle counts, dimensions, pivots, materials, and stage visibility"
+      ],
+      "exclude": [
+        "cameras",
+        "baked environment or skybox",
+        "runtime scripts",
+        "unsupported procedural-only materials",
+        "loose meshes outside the district root"
+      ]
+    }
+  },
+  "materialLibrary": {
+    "bases": {
+      "S01": "uga-structure-gunmetal",
+      "S02": "uga-pressure-bulkhead",
+      "S03": "uga-pressure-door-trim",
+      "S04": "uga-deck-access-clean",
+      "S05": "uga-deck-transit",
+      "S06": "uga-deck-heavy-duty",
+      "S07": "uga-service-grate",
+      "S08": "uga-machinery-toolsteel",
+      "S09": "uga-clean-ceramic",
+      "S10": "uga-civic-composite",
+      "S11": "uga-rubber-antislip",
+      "S12": "uga-cargo-polymer",
+      "S13": "uga-biophilic-resin",
+      "S14": "uga-containment-coating",
+      "S15": "uga-pressure-glazing",
+      "S16": "uga-transit-glazing",
+      "S17": "uga-display-glass",
+      "S18": "uga-upholstery-acoustic"
+    },
+    "trims": {
+      "T01": "uga-trim-structure",
+      "T02": "uga-trim-pressure-door",
+      "T03": "uga-trim-services",
+      "T04": "uga-trim-facility",
+      "T05": "uga-trim-console",
+      "T06": "uga-trim-transit",
+      "T07": "uga-trim-civic",
+      "T08": "uga-trim-industrial"
+    },
+    "atlases": {
+      "A00": "uga-decals-core",
+      "A01": "uga-decals-deck-a-command",
+      "A02": "uga-decals-deck-b-science-industry",
+      "A03": "uga-decals-deck-c-civil-operations",
+      "A04": "uga-decals-factions",
+      "A05": "uga-decals-construction-state",
+      "A06": "uga-decals-wear-story",
+      "A07": "uga-displays-static"
+    },
+    "hardRules": [
+      "Exterior uga-hull is exterior-only and forbidden on interior floors, walls, furniture, facilities, machinery, crowns, or glazing.",
+      "Floor, wall, transit, glazing, machinery, facility, display, and decal roles remain separable.",
+      "Emission is texture-driven and limited to physically luminous strips, screens, indicators, and faint occupied panes.",
+      "No halo geometry, painted bloom, giant luminous walls, or lighting baked into base color.",
+      "Wear is deterministic and causal; no universal grime layer.",
+      "Static decals are batched by atlas/material rather than one draw call per sticker."
+    ]
+  },
+  "mobileAcceptance": {
+    "primaryViewport": [430, 932],
+    "camera": "tilted top-down cutaway",
+    "requirements": [
+      "district purpose recognizable with UI hidden",
+      "hero silhouette, route mouths, Tier massing, and selected facility survive LOD2",
+      "room remains visible when the phone inspector is collapsed",
+      "no text-dependent facility differentiation",
+      "no clipped, floating, mirrored, stretched, or z-fighting decals",
+      "human, door, furniture, road, and machinery scale remain coherent"
+    ]
+  },
+  "globalRejectionConditions": [
+    "detached box room",
+    "generic runtime cubes",
+    "featureless flat floor",
+    "identical repeated building blocks",
+    "exterior hull material across interiors",
+    "facility alternatives that differ only by color or decal",
+    "billboard-only architecture",
+    "unbounded emissive surfaces",
+    "blocked or implausibly narrow circulation",
+    "Brood presented as a resident, playable, or humanoid faction",
+    "space-combat or ship-weapons content"
+  ],
+  "guides": [
+    {
+      "districtId": "command",
+      "name": "Command Core",
+      "deck": "A",
+      "file": "command-core.prompt.md",
+      "connections": ["navigation", "mission_ops", "deck_b_lift"],
+      "activeMaterialIds": ["S01", "S02", "S04", "S10", "S17"],
+      "activeTrimIds": ["T01", "T02", "T05"],
+      "activeAtlasIds": ["A00", "A01", "A05", "A07", "A06"],
+      "facilityIds": ["command_holotable", "command_archive", "command_terminal"]
+    },
+    {
+      "districtId": "navigation",
+      "name": "Navigation Bridge",
+      "deck": "A",
+      "file": "navigation-bridge.prompt.md",
+      "connections": ["command", "survey"],
+      "activeMaterialIds": ["S01", "S02", "S04", "S05", "S17"],
+      "activeTrimIds": ["T02", "T05", "T06"],
+      "activeAtlasIds": ["A00", "A01", "A05", "A07", "A06"],
+      "facilityIds": ["navigation_t2_efficient_routing", "navigation_t2_transit_coordination", "navigation_t3_fleet_lattice", "navigation_t3_continuity_scheduler"]
+    },
+    {
+      "districtId": "survey",
+      "name": "Survey Lab",
+      "deck": "A",
+      "file": "survey-lab.prompt.md",
+      "connections": ["navigation", "mission_ops", "research"],
+      "activeMaterialIds": ["S01", "S04", "S09", "S14", "S17"],
+      "activeTrimIds": ["T03", "T05"],
+      "activeAtlasIds": ["A00", "A01", "A05", "A07", "A06"],
+      "facilityIds": ["survey_t2_probe_telemetry", "survey_t2_anomaly_filter", "survey_t3_interstellar_observatory", "survey_t3_probe_reclaimer"]
+    },
+    {
+      "districtId": "mission_ops",
+      "name": "Mission Operations",
+      "deck": "A",
+      "file": "mission-operations.prompt.md",
+      "connections": ["command", "survey", "hangar"],
+      "activeMaterialIds": ["S01", "S04", "S05", "S17", "S18"],
+      "activeTrimIds": ["T05", "T06"],
+      "activeAtlasIds": ["A00", "A01", "A05", "A07", "A06"],
+      "facilityIds": ["mission_ops_t2_readiness_network", "mission_ops_t2_debrief_archive", "mission_ops_t3_coalition_planner", "mission_ops_t3_casualty_forecasting"]
+    },
+    {
+      "districtId": "research",
+      "name": "Research Directorate",
+      "deck": "B",
+      "file": "research-directorate.prompt.md",
+      "connections": ["survey", "fabricator", "engineering"],
+      "activeMaterialIds": ["S04", "S09", "S14", "S15", "S17"],
+      "activeTrimIds": ["T03", "T04", "T05"],
+      "activeAtlasIds": ["A00", "A02", "A05", "A07", "A06"],
+      "facilityIds": ["research_t2_gravitic_computation", "research_t2_xenology_directorate", "research_t3_frontier_institute", "research_t3_containment_institute"]
+    },
+    {
+      "districtId": "fabricator",
+      "name": "Fabrication & Armory",
+      "deck": "B",
+      "file": "fabrication-armory.prompt.md",
+      "connections": ["research", "engineering", "logistics"],
+      "activeMaterialIds": ["S06", "S08", "S11", "S12"],
+      "activeTrimIds": ["T03", "T08"],
+      "activeAtlasIds": ["A00", "A02", "A05", "A07", "A06"],
+      "facilityIds": ["fabricator_t2_precision_forge", "fabricator_t2_rapid_tooling", "fabricator_t3_megaship_yards", "fabricator_t3_reclamation_works"]
+    },
+    {
+      "districtId": "engineering",
+      "name": "Engineering & Drive",
+      "deck": "B",
+      "file": "engineering-drive.prompt.md",
+      "connections": ["fabricator", "research", "hangar"],
+      "activeMaterialIds": ["S01", "S06", "S08", "S11"],
+      "activeTrimIds": ["T03", "T08"],
+      "activeAtlasIds": ["A00", "A02", "A05", "A07", "A06"],
+      "facilityIds": ["engineering_t2_reactor_baffles", "engineering_t2_drive_tuner", "engineering_t3_civilization_grid", "engineering_t3_thermal_reclaimer"]
+    },
+    {
+      "districtId": "habitat",
+      "name": "Habitat & Medical",
+      "deck": "C",
+      "file": "habitat-medical.prompt.md",
+      "connections": ["factions", "logistics", "life_support"],
+      "activeMaterialIds": ["S04", "S05", "S09", "S10", "S13", "S18"],
+      "connectorMaterialIds": ["S15", "S16"],
+      "activeTrimIds": ["T06", "T07"],
+      "activeAtlasIds": ["A00", "A03", "A05", "A07", "A06"],
+      "facilityIds": ["habitat_t2_recovery_ward", "habitat_t2_civilian_works", "habitat_t3_trauma_institute", "habitat_t3_arcology_workforce"]
+    },
+    {
+      "districtId": "factions",
+      "name": "Coalition Embassy",
+      "deck": "C",
+      "file": "coalition-embassy.prompt.md",
+      "connections": ["habitat", "hangar"],
+      "activeMaterialIds": ["S04", "S05", "S10", "S15", "S16"],
+      "activeTrimIds": ["T07"],
+      "activeAtlasIds": ["A00", "A03", "A04", "A05", "A07", "A06"],
+      "facilityIds": ["factions_t2_diplomatic_forum", "factions_t2_readiness_office", "factions_t3_accord_council", "factions_t3_joint_command"]
+    },
+    {
+      "districtId": "hangar",
+      "name": "Strike & Expedition Bay",
+      "deck": "C",
+      "file": "strike-expedition-bay.prompt.md",
+      "connections": ["factions", "engineering", "logistics"],
+      "activeMaterialIds": ["S06", "S08", "S11", "S12", "S15"],
+      "activeTrimIds": ["T03", "T06", "T08"],
+      "activeAtlasIds": ["A00", "A03", "A04", "A05", "A07", "A06"],
+      "facilityIds": ["hangar_t2_support_bay", "hangar_t2_medevac_cradle", "hangar_t3_heavy_lift_complex", "hangar_t3_rapid_turnaround"]
+    },
+    {
+      "districtId": "logistics",
+      "name": "Logistics & Cargo",
+      "deck": "C",
+      "file": "logistics-cargo.prompt.md",
+      "connections": ["fabricator", "habitat", "hangar"],
+      "activeMaterialIds": ["S06", "S07", "S08", "S12"],
+      "activeTrimIds": ["T03", "T06", "T08"],
+      "activeAtlasIds": ["A00", "A03", "A05", "A07", "A06"],
+      "facilityIds": ["logistics_t2_salvage_sorting", "logistics_t2_probe_magazine", "logistics_t3_deep_stores", "logistics_t3_autonomous_resupply"]
+    }
+  ]
+}

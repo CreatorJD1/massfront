@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 2,
+  "tool": "MASSFRONT_SOURCE_MODEL_INTAKE",
+  "toolVersion": "1.1.0",
+  "status": "SOURCE_AUTHORING_ONLY",
+  "runtimeReady": false,
+  "runtimeEvidence": "UNKNOWN",
+  "createdAt": "2026-08-28T16:51:05.970Z",
+  "input": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\world-prefabs\\exports\\MF_PROP_ROCK_01.glb",
+    "bytes": 156632,
+    "sha256": "A6AF035CD260B048F8FA4A43DDBEB2B1D3319DDE85EFF988D8FD920130346A48"
+  },
+  "output": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\processed\\mf-prop-rock-01-v1\\source\\mf-prop-rock-01-source-v1.glb",
+    "bytes": 149148,
+    "sha256": "EEED40D86E0E3039EF6F35AB18D8D37252AD3D96EE85E4FF20EE3257EF592544"
+  },
+  "reportPath": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\spline\\processed\\mf-prop-rock-01-v1\\source\\mf-prop-rock-01-source-v1.intake.json",
+  "contract": {
+    "coordinateSystem": "GLTF_Y_UP",
+    "units": "meters",
+    "targetBoundsM": [
+      8,
+      6.2,
+      7.4
+    ],
+    "fitMode": "uniform",
+    "pivot": "FLOOR_CENTER"
+  },
+  "cleanup": {
+    "removeNames": [
+      "Ground Shadow Catcher"
+    ],
+    "removeRegex": [],
+    "removeTypes": [
+      "CAMERA",
+      "LIGHT"
+    ],
+    "removedObjects": [
+      {
+        "name": "Camera",
+        "type": "CAMERA",
+        "reason": "type:CAMERA"
+      },
+      {
+        "name": "Directional Light",
+        "type": "LIGHT",
+        "reason": "type:LIGHT"
+      },
+      {
+        "name": "KEY_LIGHT",
+        "type": "LIGHT",
+        "reason": "type:LIGHT"
+      }
+    ]
+  },
+  "imported": {
+    "meshCount": 1,
+    "meshNames": [
+      "MF_PROP_ROCK_01_LOD0"
+    ],
+    "vertices": 549,
+    "triangles": 952,
+    "materialCount": 1,
+    "materialNames": [
+      "Material_0"
+    ],
+    "imageCount": 1,
+    "bounds": {
+      "min": [
+        -0.042,
+        0.00124,
+        -0.03864
+      ],
+      "max": [
+        0.042,
+        0.06676,
+        0.03864
+      ],
+      "dimensions": [
+        0.084,
+        0.06552,
+        0.07728
+      ],
+      "center": [
+        0,
+        0.034,
+        0
+      ]
+    }
+  },
+  "normalized": {
+    "fitMode": "uniform",
+    "logicalScale": [
+      94.6275946,
+      94.6275946,
+      94.6275946
+    ],
+    "before": {
+      "min": [
+        -0.042,
+        0.00124,
+        -0.03864
+      ],
+      "max": [
+        0.042,
+        0.06676,
+        0.03864
+      ],
+      "dimensions": [
+        0.084,
+        0.06552,
+        0.07728
+      ],
+      "center": [
+        0,
+        0.034,
+        0
+      ]
+    },
+    "after": {
+      "min": [
+        -3.9743586,
+        0,
+        -3.6564102
+      ],
+      "max": [
+        3.9743586,
+        6.1999989,
+        3.6564102
+      ],
+      "dimensions": [
+        7.9487171,
+        6.1999989,
+        7.3128204
+      ],
+      "center": [
+        0,
+        3.0999994,
+        0
+      ]
+    }
+  },
+  "alphaSanitization": {
+    "policy": "BLEND_TO_OPAQUE_ONLY_WHEN_FACTOR_TEXTURE_VERTEX_EXTENSION_AND_BLENDER_GRAPH_EVIDENCE_PROVE_OPACITY",
+    "inputStagedSha256": "EEED40D86E0E3039EF6F35AB18D8D37252AD3D96EE85E4FF20EE3257EF592544",
+    "outputStagedSha256": "EEED40D86E0E3039EF6F35AB18D8D37252AD3D96EE85E4FF20EE3257EF592544",
+    "nonJsonChunkHashesBefore": [
+      "C0C023909E6E783BA8387E0E2DB80A7CDA43E24BB1D31830A65ABC62F553ACFC"
+    ],
+    "nonJsonChunkHashesAfter": [
+      "C0C023909E6E783BA8387E0E2DB80A7CDA43E24BB1D31830A65ABC62F553ACFC"
+    ],
+    "nonJsonChunksPreserved": true,
+    "jsonMatchesPlannedAlphaChanges": true,
+    "decisions": [
+      {
+        "materialIndex": 0,
+        "materialName": "Material_0",
+        "inputAlphaMode": "BLEND",
+        "baseColorFactorAlpha": 0.699999988079071,
+        "textureAlpha": {
+          "textureIndex": 0,
+          "imageIndex": 0,
+          "imageName": "Image_0",
+          "mimeType": "image/png",
+          "payloadSha256": "8C33239C48AE9D90E3BCD1F4D3D32AFA895B71E1A7DC500CFFC05E2DCDC86A04",
+          "payloadSource": "bufferView",
+          "width": 512,
+          "height": 512,
+          "bitDepth": 8,
+          "colorType": 6,
+          "interlace": 0,
+          "status": "CONFIRMED_OPAQUE",
+          "alphaMin": 255,
+          "alphaMax": 255,
+          "reason": "every decoded PNG alpha sample is 255"
+        },
+        "primitiveEvidence": {
+          "hasVertexAlpha": false,
+          "primitiveRefs": [
+            {
+              "meshIndex": 0,
+              "primitiveIndex": 0,
+              "colorAccessorIndex": null,
+              "colorAccessorType": null,
+              "vertexAlpha": false
+            }
+          ]
+        },
+        "transparencyExtensions": {
+          "hasTransmission": false,
+          "names": []
+        },
+        "unknownExtensions": [],
+        "blenderGraph": {
+          "materialName": "Material_0",
+          "surfaceRenderMethod": "BLENDED",
+          "alphaInputFound": true,
+          "alphaInputLinked": true,
+          "alphaDefault": 1,
+          "directImageAlpha": false,
+          "imageNames": [],
+          "vertexAlpha": false,
+          "proceduralOrUnknownAlpha": true,
+          "sourceNodes": [
+            {
+              "nodeName": "Math",
+              "nodeType": "ShaderNodeMath",
+              "socket": "Value"
+            }
+          ],
+          "reason": "alpha graph contains a procedural or unsupported source"
+        },
+        "action": "PRESERVE_BLEND_GENUINE_FACTOR_ALPHA",
+        "outputAlphaMode": "BLEND",
+        "proofStatus": "CONFIRMED_TRANSPARENCY"
+      }
+    ],
+    "summary": {
+      "blendMaterials": 1,
+      "rewrittenOpaque": 0,
+      "preservedBlendGenuine": 1,
+      "preservedBlendUnknownOrVertex": 0
+    }
+  },
+  "glb": {
+    "glbVersion": 2,
+    "generator": "Khronos glTF Blender I/O v5.2.39",
+    "bytes": 149148,
+    "scenes": 1,
+    "nodes": 1,
+    "meshes": 1,
+    "primitives": 1,
+    "vertices": 549,
+    "triangles": 952,
+    "materials": 1,
+    "materialNames": [
+      "Material_0"
+    ],
+    "materialAlphaModes": [
+      "BLEND"
+    ],
+    "textures": 1,
+    "images": 1,
+    "externalUris": [],
+    "bounds": {
+      "min": [
+        -3.974358558654785,
+        0,
+        -3.6564102172851562
+      ],
+      "max": [
+        3.974358558654785,
+        6.19999885559082,
+        3.6564102172851562
+      ],
+      "dimensions": [
+        7.94871711730957,
+        6.19999885559082,
+        7.3128204345703125
+      ]
+    }
+  },
+  "checks": {
+    "inputUnchanged": true,
+    "targetBounds": true,
+    "floorCenterPivot": true,
+    "selfContainedGlb": true,
+    "intendedMeshCountPreservedAfterCleanup": true,
+    "alphaDecisionsRecorded": true,
+    "alphaSanitizerPreservedGeometryAndTextureChunks": true,
+    "alphaSanitizerChangedOnlyPlannedMetadata": true,
+    "unknownTransparencyPreserved": true,
+    "genuineTransparencyPreserved": true
+  },
+  "blockers": [
+    "RUNTIME_ADMISSION_NOT_EVALUATED",
+    "LOD_TOPOLOGY_MATERIAL_COLLISION_NAV_AND_DEVICE_EVIDENCE_REQUIRED"
+  ]
+}

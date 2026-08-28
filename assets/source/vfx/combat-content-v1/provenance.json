@@ -1,0 +1,14 @@
+{
+  "generator": "OpenAI built-in image generation",
+  "date": "2026-08-19",
+  "license_note": "Original generated source art; no reference image pixels were used.",
+  "runtime_bake": "tools/bake-combat-content-fx-v1.py",
+  "sources": {
+    "missile-air-smoke-source.png": "Original 4x4 missile exhaust and damaged-aircraft smoke transition; one connected volume per frame.",
+    "energy-beam-terminus-source.png": "Original combined sheet: frames 0-7 coherent energy ribbons, frames 8-15 cohesive beam termini.",
+    "organic-ichor-source.png": "Original neutral pearlescent ichor impact-to-splat transition for runtime tinting.",
+    "air-destruction-source.png": "Original airborne vehicle ignition-to-soot destruction core; engine debris remains separate.",
+    "blast-flipbook-baked-v1.png": "Original authored 4x4 blast chronology retained as the v1 source.",
+    "blast-evolution-source.png": "Original generated 4x4 explosion evolution plate for v2: white-hot expansion, orange/soot fire body, sparse radial streak detail and smoke aftermath over a saturated magenta authoring field. The deterministic baker reconstructs straight alpha and removes the matte; shock annulus and rigid debris remain separate engine-owned layers."
+  }
+}

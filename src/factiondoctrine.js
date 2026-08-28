@@ -163,7 +163,7 @@ const mfFactionTechDevBuyBase=devBuy;
 devBuy=function(n,silent){
   if(n&&!mfFactionTechPurchasable(n.id)){
     if(!silent){
-      toast('AI DOSSIER — Brood evolution becomes researchable only when the faction is playable');
+      toast('AI DOSSIER — Brood unlocks become available in Development only when the faction is playable');
       if(typeof sfx==='function')sfx('ui');
     }
     return false;
@@ -384,4 +384,3 @@ mfAirliftPostTick=function(dt){
     }
   }
 };
-

@@ -1,10 +1,13 @@
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'node:url';
 import { spawnProjectChrome, PW_CDP_PORT } from './pw-browser.mjs';
 
-const wwwDir = path.resolve('www');
-const artifactDir = 'C:\\Users\\Jason\\.gemini\\antigravity\\brain\\c902b81e-2bc5-48ac-9392-b0068d1f28de';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const wwwDir = path.join(root, 'www');
+const artifactDir = path.join(root, '.tmp', 'agent-captures', 'antigravity', 'match-gameplay');
+fs.mkdirSync(artifactDir, { recursive: true });
 const outPath = path.join(artifactDir, 'ingame_gameplay_live.png');
 
 const server = http.createServer((req, res) => {

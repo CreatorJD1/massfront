@@ -555,7 +555,8 @@ uniform sampler2D uTex;
 uniform sampler2D uTex2;
 uniform float uBoost;
 uniform float uMix;
-out vec4 o;
+layout(location=0) out vec4 o;
+layout(location=1) out vec4 oWindow;
 void main(){
   // crossfade between two textures: when uMix==0 only uTex shows,
   // when uMix==1 only uTex2 shows. Both are self-lit screens —
@@ -564,6 +565,13 @@ void main(){
   vec3 b = texture(uTex2, vUV).rgb;
   vec3 c = mix(a, b, uMix) * uBoost;
   o = vec4(c, 1.0);
+  /* aoBeginScene enables the authored-window R8 MRT while opaque objects are
+     drawn. ANGLE requires every active draw buffer to have a linked fragment
+     output; omitting location 1 rejected every screen quad. Advertising
+     screens are genuinely emissive, so feed a restrained luminance mask into
+     the same narrow halo rather than writing zero or adding glow geometry. */
+  float screenLight=smoothstep(0.30,0.94,max(c.r,max(c.g,c.b)));
+  oWindow=vec4(screenLight*0.34,0.0,0.0,1.0);
 }`;
   adProg = mkProg(VS, FS);
   AD_U.uVP = gl.getUniformLocation(adProg, 'uVP');
@@ -1139,4 +1147,3 @@ function initAdBoards() {
   AD_PROVIDER.init();   // fire-and-forget; loadCreative() awaits it itself if it's still pending
 }
 initAdBoards();
-
