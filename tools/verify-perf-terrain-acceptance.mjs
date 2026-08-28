@@ -668,12 +668,23 @@ try{
   report.fatal=String(e&&e.stack||e);console.error(report.fatal);exitStatus=1;
 }finally{
   try{if(page)await page.evaluate(()=>{if(window.__mfBattleFeed)clearInterval(window.__mfBattleFeed);});}catch{}
+  if(networkIsolation){
+    try{report.networkIsolation=await networkIsolation.finalize('terrain/performance acceptance verifier');}
+    catch(e){
+      const message=String(e&&e.stack||e);
+      report.fatal=report.fatal?report.fatal+'\n'+message:message;exitStatus=1;
+      report.networkIsolation=networkIsolation.snapshot();
+    }
+  }else report.networkIsolation={installed:false,finalized:false,pageClosed:!!(page&&page.isClosed&&page.isClosed()),
+    offlineStorage:{verified:false},serviceWorkers:{bypassConfigured:false,verified:false},blockedRequests:[],blockedWebSockets:[]};
   try{await closePwBrowser();}catch{}
   try{server.closeAllConnections();server.close();}catch{}
   report.captureValidation=captureValidation;
-  report.networkIsolation=networkIsolation?networkIsolation.snapshot():{installed:false,blockedRequests:[],blockedWebSockets:[]};
   finalGate('offline mode blocks all non-loopback requests',!!networkIsolation&&
-    report.networkIsolation.blockedRequests.length===0&&report.networkIsolation.blockedWebSockets.length===0,
+    report.networkIsolation.finalized&&report.networkIsolation.pageClosed&&
+    report.networkIsolation.offlineStorage.verified&&report.networkIsolation.serviceWorkers.bypassConfigured&&
+    report.networkIsolation.serviceWorkers.verified&&report.networkIsolation.blockedRequests.length===0&&
+    report.networkIsolation.blockedWebSockets.length===0,
     report.networkIsolation);
   finalGate('no fatal verifier/runtime exception',!report.fatal,report.fatal||'none');
   finalGate('no page errors',report.pageErrors.length===0,report.pageErrors.length?report.pageErrors:'none');

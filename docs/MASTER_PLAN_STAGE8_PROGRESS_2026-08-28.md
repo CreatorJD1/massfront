@@ -48,6 +48,22 @@ collected.
   cloud pull distinguishes an empty account slot from
   a present but unreadable payload; corrupt or unsupported cloud data is shown
   as an error and is never silently overwritten by the device save.
+- Tactical team identification is now a persisted, default-off accessibility
+  mode. Enabling it applies a fixed friendly/hostile/unaligned palette to unit
+  presentation and health bars while preserving health as the bar-length cue;
+  disabling it restores faction-authored livery. The minimap adds batched
+  circles, triangles, and crosses so allegiance does not depend on color, keeps
+  its markers and outlines legible at the shipped 56/72/84 px phone sizes, and
+  does not disclose units outside the existing visual/radar gates. Brood combat
+  forces classify as hostile while ordinary wildlife remains unaligned.
+- The shared offline diagnostic boundary now fails closed across all 12 current
+  browser lanes. Before navigation it blocks non-loopback HTTP and WebSocket
+  traffic, bypasses service workers through Chromium CDP, blocks new service
+  workers where the lane owns its context, verifies both supported offline
+  storage keys by exact read-back, and rejects an active controller or any
+  registration. Finalization closes the page before checking late unload or
+  shutdown traffic, so an unfinalized run cannot claim network isolation. The
+  portable-save browser probe uses the same finalization contract.
 - `commander-anime-flat-v1` is the sole new-work authority for human and robotic
   commanders: solid fills, crisp linework, and no shading. The registered
   portraits and PBR-lit robotic battle chassis currently fail that new visual
@@ -72,6 +88,9 @@ Deterministic contracts:
 - `node tools/test-stage8-audio-buses.mjs`
 - `node tools/test-stage8-commander-entry-clock.mjs`
 - `node tools/test-stage8-save-transfer.mjs`
+- `node tools/test-stage8-team-identification.mjs`
+- `node tools/test-offline-network-isolation.mjs`
+- `node tools/test-stage8-offline-diagnostics.mjs`
 - `node tools/test-save-persist.mjs`
 - `node tools/test-stage7-armory-migration.mjs`
 - `node tools/test-faction-canonical-identity.mjs`
@@ -129,7 +148,9 @@ and only when its own report is `PASS` with matching start/end fingerprints.
   current four-seat runtime and must not be mislabeled as tested.
 - Current GL recovery, terrain comparison, color-vision/high-contrast,
   non-color/non-audio alarm, keyboard/focus, large-text, and native Android Back
-  acceptance.
+  acceptance. The deterministic team-identification contract is complete, but
+  its small-phone shapes, health bars, restored faction livery, and fog/radar
+  behavior still require current guarded browser visual inspection.
 - Actual Chromium download/re-selection and native Files/Share physical-device
   acceptance for `.mfsave` remains open. The deterministic contract now covers
   production encode/decode, a fresh-device decoded-file import, magic/schema/
@@ -146,19 +167,19 @@ and only when its own report is `PASS` with matching start/end fingerprints.
 - Interrupted local update download/cancel/retry coverage.
 - Current Android APK and iOS IPA install, lifecycle, interruption, offline,
   clean-install, upgrade, and new-game-to-result device runs.
-- Hardening performance/device/updater harnesses to set `mf_offline=1` and
-  reject every non-loopback request before they are allowed to run. No release,
-  upload, deployment, or production request is authorized by this stage slice.
+- No release, upload, deployment, or production request is authorized by this
+  stage slice.
 
 ## Next ordered local slices
 
 1. Complete the real Chromium save download/re-selection probe, then keep native
    Documents/Cache/Share behavior for Android/iOS device acceptance.
-2. Add the color-vision-safe tactical team-identification mode with non-color
-   minimap allegiance shapes; default faction identity must remain unchanged.
-3. Apply the shared fail-closed offline boundary to the remaining performance
-   diagnostics, then run current 1v1/1v2/1v3 evidence only after hard-surface
-   writers stop and source identity can remain stable for the whole capture.
+2. Guardedly inspect the tactical team-identification mode at the shipped phone
+   sizes, including fog/radar disclosure, minimap shapes, health bars, and exact
+   restoration of native faction identity after the mode is disabled.
+3. Run current 1v1/1v2/1v3 performance evidence through the shared offline
+   boundary only after hard-surface writers stop and source identity can remain
+   stable for the whole capture.
 
 ## Stage 7 human acceptance still required
 

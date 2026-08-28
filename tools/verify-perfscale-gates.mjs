@@ -91,8 +91,8 @@ await page.evaluate(() => {
 });
 await page.waitForTimeout(45000);
 const ps = await page.evaluate(() => { clearInterval(window.__load); return window.__ps; });
+const networkEvidence = await networkIsolation.finalize('perfScale threshold sweep');
 await browser.close(); server.close();
-const networkEvidence = networkIsolation.snapshot();
 
 const TH = [['lowFx', 0.32], ['walker dust', 0.35], ['rubble/sparks', 0.40],
   ['doctrine FX', 0.45], ['debris', 0.48], ['AMBIENT OCCLUSION', 0.50]];

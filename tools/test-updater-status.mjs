@@ -46,7 +46,6 @@ try{
   assert(states.touch.w>=44&&states.touch.h>=44,'update control is below the 44px touch floor');
   assert(errors.length===0,'page errors: '+errors.join(' | '));
   await page.screenshot({path:shot,fullPage:false,timeout:60000});
-  await page.close();
-  networkIsolation.assertNoExternalRequests('updater status regression');
-  console.log(JSON.stringify({ok:true,states,screenshot:shot,networkIsolation:networkIsolation.snapshot()},null,2));
+  const networkEvidence=await networkIsolation.finalize('updater status regression');
+  console.log(JSON.stringify({ok:true,states,screenshot:shot,networkIsolation:networkEvidence},null,2));
 }finally{await browser.close();}

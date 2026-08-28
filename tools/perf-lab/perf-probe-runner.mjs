@@ -770,8 +770,7 @@ async function main() {
             viewport: DEFAULT_VIEWPORT,
             url
           });
-          await page.close();
-          networkIsolation.assertNoExternalRequests(`performance scenario ${scenario.id}`);
+          result.networkIsolation = await networkIsolation.finalize(`performance scenario ${scenario.id}`);
           const outputPath = join(METRICS_DIR, `${scenario.id}_${unitsPerFaction}u_v3.json`);
           await writeFile(outputPath, JSON.stringify(result, null, 2), 'utf8');
           results.push(result);

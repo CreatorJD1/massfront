@@ -110,6 +110,7 @@ async function runtimeSnapshot(page){
 await mkdir(output,{recursive:true});
 const startedAt=new Date().toISOString(),assertions=[],diagnostics={pageErrors:[],consoleErrors:[],httpErrors:[]};
 let guard=null,server=null,browser=null,context=null,page=null,network=null,gpu=null,browserProvenance=null;
+let networkEvidence=null;
 let sourceBefore=null,sourceAfter=null,downloadInfo=null,corruptInfo=null,seedState=null,mutatedState=null;
 let quotaState=null,restoredState=null,corruptState=null,fatal=null,blocked=false;
 const cleanupFailures=[];
@@ -124,7 +125,7 @@ try{
   browser=await launchPwBrowser({ownershipMode:'isolated',headless:true});
   await assertPwBrowserOwnership(browser);
   context=await browser.newContext({viewport,hasTouch:true,isMobile:true,deviceScaleFactor:1,
-    colorScheme:'dark',acceptDownloads:true});
+    colorScheme:'dark',acceptDownloads:true,serviceWorkers:'block'});
   page=await context.newPage();
   page.on('pageerror',error=>diagnostics.pageErrors.push(errorText(error)));
   page.on('console',message=>{if(message.type()==='error')diagnostics.consoleErrors.push(message.text());});
@@ -243,7 +244,7 @@ try{
   await page.screenshot({path:screenshotPath,fullPage:false});
   assertions.push({id:'one-byte-corruption-rejected',status:'PASS',detail:corruptToasts.join(' | ')});
 
-  network.assertNoExternalRequests('Stage 8 save transfer probe');
+  networkEvidence=await network.finalize('Stage 8 save transfer probe');
   assert(diagnostics.pageErrors.length===0,'page errors: '+diagnostics.pageErrors.join(' | '));
   assertions.push({id:'offline-and-page-clean',status:'PASS',detail:'no external requests or page errors'});
   await guard.checkpoint('browser save-transfer complete');
@@ -268,7 +269,7 @@ finally{
   const report={schema:'MassfrontStage8SaveTransferProbeV1',status:blocked?'BLOCKED':failures.length?'FAIL':'PASS',startedAt,
     completedAt:new Date().toISOString(),origin:server?.origin||null,viewport,gpu,
     source:{before:sourceBefore,after:sourceAfter,stable:!!sourceBefore&&!!sourceAfter&&sameIdentity(sourceBefore,sourceAfter)},
-    browser:browserProvenance,network:network?.snapshot?.()||null,
+    browser:browserProvenance,network:networkEvidence||network?.snapshot?.()||null,
     fallbacks:{filePicker:'disabled',webShare:'disabled',nativeBridge:'disabled'},
     artifacts:{download:downloadInfo,corrupt:corruptInfo,screenshot},assertions,diagnostics,
     states:{seed:seedState,mutated:mutatedState,afterQuotaFailure:quotaState,afterRestore:restoredState,afterCorrupt:corruptState},

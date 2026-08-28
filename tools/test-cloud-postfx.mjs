@@ -21,11 +21,11 @@ let result=null;
 try{
   const page=await browser.newPage({
     viewport:{width:S25_VIEWPORT.width,height:S25_VIEWPORT.height},
-    deviceScaleFactor:S25_VIEWPORT.dpr,hasTouch:true,isMobile:true,userAgent:ANDROID_S25_USER_AGENT
+    deviceScaleFactor:S25_VIEWPORT.dpr,hasTouch:true,isMobile:true,userAgent:ANDROID_S25_USER_AGENT,serviceWorkers:'block'
   });
   page.on('pageerror',e=>errors.push('pageerror: '+e.message));
   page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text());});
-  await installTelemetryInit(page);
+  const networkIsolation=await installTelemetryInit(page);
   await page.goto(server.url+'?cloudpostprobe=1',{waitUntil:'domcontentloaded',timeout:90000});
   const gpu=await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof spawnUnit==='function'&&typeof MFCloudPost==='object',null,{timeout:90000});
@@ -88,7 +88,8 @@ try{
     contextLosses:window.__mfProbe&&window.__mfProbe.contextLossEvents,quality:typeof qualityKey==='function'?qualityKey():null,
     span:typeof orthoSpan==='number'?orthoSpan:null
   }));
-  result={gpu,mobile,deployment,controlledProbe:{perfScale:.85,fogForcedVisible:true},captures,cinematicLodProbe,highProbe,before,forced,after,runtime,errors};
+  const networkEvidence=await networkIsolation.finalize('cloud post-FX probe');
+  result={gpu,mobile,deployment,controlledProbe:{perfScale:.85,fogForcedVisible:true},captures,cinematicLodProbe,highProbe,before,forced,after,runtime,errors,networkIsolation:networkEvidence};
   await writeFile(join(OUT,'report.json'),JSON.stringify(result,null,2));
   const checks=[
     ['real match',deployment.matchLive===true],

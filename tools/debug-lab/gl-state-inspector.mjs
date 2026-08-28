@@ -42,8 +42,8 @@ async function main() {
   const browser = await launchPwBrowser({ headless: true });
 
   try {
-    const page = await browser.newPage({ viewport: { width: 412, height: 900 } });
-    await installTelemetryInit(page);
+    const page = await browser.newPage({ viewport: { width: 412, height: 900 }, serviceWorkers: 'block' });
+    const networkIsolation = await installTelemetryInit(page);
     await page.goto(server.url, { waitUntil: 'domcontentloaded' });
     await assertHardwareGpu(page);
     await page.waitForFunction(() => typeof gl !== 'undefined' && gl !== null, null, { timeout: 30000 });
@@ -84,6 +84,7 @@ async function main() {
         }
       };
     });
+    await networkIsolation.finalize('GL state inspector');
 
     console.log(JSON.stringify(glReport, null, 2));
     console.log('Deployment proof:', JSON.stringify(deployment));
@@ -93,7 +94,6 @@ async function main() {
     } else {
       console.log('✓ InstMesh stride verified: 48 bytes (12 floats).');
     }
-
   } finally {
     await closePwBrowser().catch(() => {});
     await server.close().catch(() => {});

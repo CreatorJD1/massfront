@@ -156,10 +156,11 @@ try {
     deviceScaleFactor: S25_VIEWPORT.dpr,
     hasTouch: true,
     isMobile: true,
-    userAgent: ANDROID_S25_USER_AGENT
+    userAgent: ANDROID_S25_USER_AGENT,
+    serviceWorkers: 'block'
   });
   await page.addInitScript(instrument);
-  await installTelemetryInit(page);
+  const networkIsolation = await installTelemetryInit(page);
   await page.goto(`${server.url}?mfperf=1`, { waitUntil: 'domcontentloaded', timeout: 90000 });
   const gpu = await assertHardwareGpu(page);
   // Let the engine finish booting before driving the menu, or the war-table
@@ -183,6 +184,7 @@ try {
   await page.waitForTimeout(6000);
 
   metrics = await page.evaluate(() => window.__MF_SHADER_PROBE__);
+  await networkIsolation.finalize('shader compile performance probe');
 
   console.log(`\nGPU: ${gpu.renderer}\n`);
   console.log('SHADER COMPILE / LINK COST (real match, hardware GPU)');

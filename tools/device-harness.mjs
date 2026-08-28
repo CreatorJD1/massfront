@@ -134,6 +134,9 @@ export async function runDeviceHarness(options = {}) {
     browser = await chromium.connectOverCDP(`http://127.0.0.1:${cdpPort}`);
     const context = browser.contexts()[0];
     if (!context) throw new Error('ANDROID_CDP_NO_CONTEXT: open Chrome on the connected device and enable remote debugging');
+    /* An attached physical Chrome context cannot be recreated with Playwright's
+       serviceWorkers:'block' option. installTelemetryInit configures CDP bypass
+       before navigation and finalization rejects any controller/registration. */
     page = await context.newPage();
     const issues = { pageErrors: [], consoleErrors: [] };
     page.on('pageerror', error => issues.pageErrors.push(error.message));
@@ -182,9 +185,8 @@ export async function runDeviceHarness(options = {}) {
       durationFrames: Number(options.frames || 240), sourceIdentity, gpu, issues, deploymentProof, preset,
       viewport, url
     });
-    await page.close();
+    result.networkIsolation = await networkIsolation.finalize(`physical-device scenario ${scenario.id}`);
     page = null;
-    networkIsolation.assertNoExternalRequests(`physical-device scenario ${scenario.id}`);
     result.device = {
       serial: pre.device.serial, state: pre.device.state, ...pre.info,
       userAgent: mobile.userAgent, mobileGpu: mobile.mobileGpu,

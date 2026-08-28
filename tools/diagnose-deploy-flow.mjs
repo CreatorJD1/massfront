@@ -99,13 +99,13 @@ const browser = await launchPwBrowser({ headless: true });
 try {
   const page = await browser.newPage({
     viewport: { width: S25_VIEWPORT.width, height: S25_VIEWPORT.height }, deviceScaleFactor: S25_VIEWPORT.dpr,
-    hasTouch: true, isMobile: true, userAgent: ANDROID_S25_USER_AGENT
+    hasTouch: true, isMobile: true, userAgent: ANDROID_S25_USER_AGENT, serviceWorkers: 'block'
   });
   const errors = [];
   page.on('pageerror', e => errors.push(`page: ${e.message}`));
   page.on('console', m => { if (m.type() === 'error') errors.push(`console: ${m.text()}`); });
 
-  await installTelemetryInit(page);
+  const networkIsolation = await installTelemetryInit(page);
   await page.goto(server.url, { waitUntil: 'domcontentloaded', timeout: 90000 });
   const gpu = await assertHardwareGpu(page);
   console.log(`GPU: ${gpu.renderer}`);
@@ -169,8 +169,9 @@ try {
     await snapshot(page, 'after base deployed');
   }
 
+  const networkEvidence = await networkIsolation.finalize('deployment-flow diagnostic');
   await writeFile(join(OUT, 'report.json'),
-    JSON.stringify({ gpu: gpu.renderer, errors, steps }, null, 2) + '\n');
+    JSON.stringify({ gpu: gpu.renderer, errors, steps, networkIsolation: networkEvidence }, null, 2) + '\n');
 
   console.log('\n=== RUNTIME ERRORS ===');
   console.log(errors.length ? errors.slice(0, 20).join('\n') : '  none');
