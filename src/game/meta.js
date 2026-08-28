@@ -164,7 +164,7 @@ function mfGuessMobile(){
 const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:true,dayNight:true,
                       haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
                       godMode:false,tutorialVoice:true,sfxVol:3,ambVol:3,musicVol:2,voiceVol:3,
-                      perf:'auto',menubg:'dim',healthBars:'select',
+                      perf:'auto',menubg:'dim',healthBars:'select',teamIdMode:false,
                      quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false,
                      /* EXPERIMENTAL, OFF BY DEFAULT AND NEVER DEFAULTED ON.
                         Gates the space-exploration module's menu entry. The
@@ -696,7 +696,76 @@ function liveryTooClose(a,b){
 function liveryContrast(c){
   return [Math.round(c[0]*0.46), Math.round(c[1]*0.40+18), Math.round(c[2]*0.52+92)];
 }
+/* Tactical Team Identification is an opt-in ALLEGIANCE layer, not a faction
+   repaint. The Okabe-Ito family stays separable under the common red/green
+   deficiencies; faction meshes, plates, crests and weapon palettes still own
+   identity. Arrays are copied into TEAMC/TEAMB so no consumer can mutate the
+   source palette through the shared renderer globals. */
+const MF_TEAM_ID_PALETTE=[
+  {c:[86,180,233], b:[0,114,178]},       // friendly: sky / blue
+  {c:[230,159,0], b:[213,94,0]},         // hostile: amber / vermilion
+  {c:[204,121,167], b:[204,121,167]},    // unaligned: reddish purple
+];
+let mfTeamIdApplied=false;
+function mfTeamIdEnabled(){ return !!(META&&META.settings&&META.settings.teamIdMode); }
+function mfTeamIdAllegiance(team){
+  if(team===0) return 0;
+  if(team===1||(team===2&&typeof broodIsEnemy==='function'&&broodIsEnemy())) return 1;
+  return 2;
+}
+function mfTeamIdColorClass(allegiance,bright){
+  const P=MF_TEAM_ID_PALETTE[clamp(allegiance|0,0,2)]||MF_TEAM_ID_PALETTE[2];
+  return bright?P.b:P.c;
+}
+function mfTeamIdColor(team,bright){ return mfTeamIdColorClass(mfTeamIdAllegiance(team),bright); }
+function mfTeamIdWrite(team,c,b){
+  TEAMC[team][0]=c[0]; TEAMC[team][1]=c[1]; TEAMC[team][2]=c[2];
+  TEAMB[team][0]=b[0]; TEAMB[team][1]=b[1]; TEAMB[team][2]=b[2];
+}
+function mfTeamIdNativeEnemy(){
+  const F=typeof FACTIONS!=='undefined'&&typeof AI!=='undefined'&&AI&&FACTIONS[AI.fac];
+  if(F&&F.col&&F.colB) return {c:F.col,b:F.colB};
+  return {c:[255,120,90],b:[255,93,67]};
+}
+function mfTeamIdNativeThird(){
+  const hostile=typeof broodIsEnemy==='function'&&broodIsEnemy();
+  const H=typeof FACTIONS!=='undefined'&&FACTIONS.horde;
+  if(hostile&&H&&H.col&&H.colB) return {c:H.col,b:H.colB};
+  const c=typeof WILD_C!=='undefined'?WILD_C:[235,235,220];
+  const b=typeof WILD_B!=='undefined'?WILD_B:[255,177,58];
+  return {c,b};
+}
+function mfTeamIdRestoreNative(){
+  const L=playerLivery(), E=mfTeamIdNativeEnemy(), N=mfTeamIdNativeThird();
+  mfTeamIdWrite(0,L.c,L.b); mfTeamIdWrite(1,E.c,E.b); mfTeamIdWrite(2,N.c,N.b);
+  if(liveryTooClose(TEAMC[0],TEAMC[1])){
+    const e=liveryContrast(TEAMC[1]), eb=liveryContrast(TEAMB[1]);
+    mfTeamIdWrite(1,e,eb);
+  }
+  mmPCol='rgb('+TEAMC[0][0]+','+TEAMC[0][1]+','+TEAMC[0][2]+')';
+  mmPColA='rgba('+TEAMC[0][0]+','+TEAMC[0][1]+','+TEAMC[0][2]+',.9)';
+  if(typeof mmECol!=='undefined'){
+    mmECol='rgb('+TEAMB[1][0]+','+TEAMB[1][1]+','+TEAMB[1][2]+')';
+    mmEColA='rgba('+TEAMB[1][0]+','+TEAMB[1][1]+','+TEAMB[1][2]+',.9)';
+  }
+}
 function applyColor(){
+  if(mfTeamIdEnabled()){
+    const P=MF_TEAM_ID_PALETTE[0], E=MF_TEAM_ID_PALETTE[1], N=MF_TEAM_ID_PALETTE[mfTeamIdAllegiance(2)];
+    mfTeamIdWrite(0,P.c,P.b); mfTeamIdWrite(1,E.c,E.b); mfTeamIdWrite(2,N.c,N.b);
+    mmPCol='rgb('+P.c[0]+','+P.c[1]+','+P.c[2]+')';
+    mmPColA='rgba('+P.c[0]+','+P.c[1]+','+P.c[2]+',.9)';
+    if(typeof mmECol!=='undefined'){
+      mmECol='rgb('+E.b[0]+','+E.b[1]+','+E.b[2]+')';
+      mmEColA='rgba('+E.b[0]+','+E.b[1]+','+E.b[2]+',.9)';
+    }
+    mfTeamIdApplied=true;
+    return;
+  }
+  /* The ordinary path below intentionally remains the old path. Only a mode
+     that was actually applied needs the full three-team restoration; this
+     keeps an untouched default career pixel-identical to the existing game. */
+  if(mfTeamIdApplied){ mfTeamIdRestoreNative(); mfTeamIdApplied=false; return; }
   const L=playerLivery();
   TEAMC[0][0]=L.c[0]; TEAMC[0][1]=L.c[1]; TEAMC[0][2]=L.c[2];
   TEAMB[0][0]=L.b[0]; TEAMB[0][1]=L.b[1]; TEAMB[0][2]=L.b[2];
@@ -1964,6 +2033,7 @@ function renderSettings(){
      +cyc('quality','Graphics Quality',QD[qk],QL[qk],qk!=='low')
      +tog('cine','Cinematic Lighting','In-engine sun wash and the #grade overlay. Not bloom — that is Advanced. Not the Screen Grade filter.')
      +cyc('screenGrade','Screen Grade',sgDef.ds,sgDef.label,sgk!=='neutral')
+     +tog('teamIdMode','Tactical Team Identification','Color-vision-safe allegiance palette. Minimap markers use friendly circles, hostile triangles, and unaligned crosses; faction silhouettes, crests, and weapon effects stay authored.')
      +tog('dayNight','Day / Night Cycle','Animated time of day. OFF locks battles to clear daylight and overrides night-only modifiers')
      +cyc('perf','Effects Budget','AUTO lets the live effect scaler follow frame rate. LOW pins it to 0.45 or below on every preset — a second cap on top of Graphics Quality, for older phones.',perf==='auto'?'AUTO':'LOW',perf==='auto')
      +tog('fps','FPS Counter','Show the live frame-rate diagnostic')
@@ -2054,6 +2124,10 @@ function renderSettings(){
       }
       else META.settings[k]=!META.settings[k];
       if(k==='fog'&&running&&!demoMode){ fogOn=META.settings.fog; if(fogOn) updateFog(); }
+      if(k==='teamIdMode'){
+        applyColor();
+        if(typeof mmFrame!=='undefined') mmFrame=0;
+      }
       metaSave(); applySettings(); sfx('ui'); renderSettings();
       if(keyActivation){
         const next=[...list.querySelectorAll('.setRow[data-set]')].find(row=>row.dataset.set===k);

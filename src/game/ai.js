@@ -222,11 +222,6 @@ function aiSetup(diff,bases,allies){
   TEAMB[1][0]=F.colB[0]; TEAMB[1][1]=F.colB[1]; TEAMB[1][2]=F.colB[2];
   mmECol='rgb('+F.colB[0]+','+F.colB[1]+','+F.colB[2]+')';
   mmEColA='rgba('+F.colB[0]+','+F.colB[1]+','+F.colB[2]+',.9)';
-  /* Re-run the player's livery now that the enemy's is known: the same-faction
-     matchup can only be resolved once both sides have been painted, and this
-     has to come AFTER the minimap colours or the contrast shift is overwritten
-     by the line that set them. */
-  if(typeof applyColor==='function') applyColor();
   /* THE SWARM WEARS THE BROOD'S COLOURS WHEN IT IS THE BROOD'S SWARM.
      Team 2 rendered a neutral off-white regardless, so fighting the Umbral
      Brood meant facing a violet army standing next to a beige one that was
@@ -238,6 +233,10 @@ function aiSetup(diff,bases,allies){
   const H=FACTIONS.horde;
   TEAMC[2][0]=brood?H.col[0]:WILD_C[0];  TEAMC[2][1]=brood?H.col[1]:WILD_C[1];  TEAMC[2][2]=brood?H.col[2]:WILD_C[2];
   TEAMB[2][0]=brood?H.colB[0]:WILD_B[0]; TEAMB[2][1]=brood?H.colB[1]:WILD_B[1]; TEAMB[2][2]=brood?H.colB[2]:WILD_B[2];
+  /* Re-run presentation only after ALL native teams and minimap colours are
+     known. Same-faction contrast needs team 1; Tactical Team Identification
+     also owns team 2, which the old ordering immediately overwrote. */
+  if(typeof applyColor==='function') applyColor();
   toast(F.em+' Enemy faction: '+F.nm+' — '+F.ds);
 }
 /* Shared-control allied AI. Allies use the player's team for real friendliness

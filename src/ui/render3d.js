@@ -3338,8 +3338,9 @@ function render(dtDraw){
   const hbPx=Math.max(.24,orthoSpan/Math.max(1,VH));
   const putHealthBar=(x,y,h,w,bh,frac,team)=>{
     frac=clamp(frac,0,1);
-    let er=78,eg=224,eb=132;
-    if(team===1){er=255;eg=76;eb=62;}else if(team===2){er=255;eg=144;eb=48;}
+    const teamIdC=typeof mfTeamIdEnabled==='function'&&mfTeamIdEnabled()?mfTeamIdColor(team,false):null;
+    let er=teamIdC?teamIdC[0]:78,eg=teamIdC?teamIdC[1]:224,eb=teamIdC?teamIdC[2]:132;
+    if(!teamIdC&&team===1){er=255;eg=76;eb=62;}else if(!teamIdC&&team===2){er=255;eg=144;eb=48;}
     /* Soft allegiance rim -> opaque frame -> fill -> one-pixel gloss. This is
        still one instanced batch; the added layers buy clarity without DOM,
        text, texture scaling or a draw call per entity. */
@@ -3348,7 +3349,8 @@ function render(dtDraw){
     if(frac<=0) return;
     const off=-w*(1-frac)*0.5;
     let r,g,b;
-    if(team===1){ r=255; g=52+50*frac; b=44; }               // enemy army - hard red
+    if(teamIdC){ r=teamIdC[0]; g=teamIdC[1]; b=teamIdC[2]; } // damage stays encoded by length
+    else if(team===1){ r=255; g=52+50*frac; b=44; }          // enemy army - hard red
     else if(team===2){ r=255; g=118+50*frac; b=34; }         // wildlife - hot ember
     else { r=frac>0.5?72:255; g=frac>0.5?235:frac>0.25?184:82; b=frac>0.5?112:62; }
     bbAlpha.addRect(sprites.px,

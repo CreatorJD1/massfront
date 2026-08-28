@@ -298,9 +298,73 @@ function mmBgIsLive(cv){
     return lit>=1;
   }catch(e){ return false; }
 }
-function mmFactionCrest(fac,x,y,size,stroke){
+/* The accessible command map batches one Path2D per allegiance/contact state:
+   at most six filled+outlined paths instead of up to 1,800 per-contact paints.
+   The backing store is always 256 px but the shipped tactical dock shrinks it
+   to 56 CSS px. Author the floor in CSS pixels at that WORST supported scale;
+   a 5 px backing-store pip is only 1.1 px there and every shape becomes a dot. */
+const MM_TEAM_ID_CANVAS=256, MM_TEAM_ID_MIN_CSS=56;
+function mmTeamIdBackingScale(cssWidth){
+  return MM_TEAM_ID_CANVAS/Math.max(MM_TEAM_ID_MIN_CSS,+cssWidth||MM_TEAM_ID_MIN_CSS);
+}
+function mmTeamIdCanvasScale(){
+  const C=typeof mm!=='undefined'&&mm&&mm.canvas;
+  return ((C&&C.width)||MM_TEAM_ID_CANVAS)/Math.max(MM_TEAM_ID_MIN_CSS,(C&&C.clientWidth)||MM_TEAM_ID_MIN_CSS);
+}
+function mmTeamIdMarkerSize(size,radar,scale){
+  return Math.max((radar?4:5)*(scale||mmTeamIdBackingScale()),size);
+}
+function mmTeamIdStrokeWidth(radar,scale){ return (radar?1.1:1)*(scale||mmTeamIdBackingScale()); }
+function mmTeamIdPath(path,x,y,size,allegiance){
+  const h=size*.5, w=Math.max(1,size*.22);
+  if(allegiance===0){ path.moveTo(x+h,y); path.arc(x,y,h,0,TAU); return; }
+  if(allegiance===1){
+    path.moveTo(x,y-h); path.lineTo(x+h*.92,y+h*.82); path.lineTo(x-h*.92,y+h*.82); path.closePath();
+    return;
+  }
+  /* A cross cannot be mistaken for square deposits or diamond supply crates. */
+  path.moveTo(x-w,y-h); path.lineTo(x+w,y-h); path.lineTo(x+w,y-w);
+  path.lineTo(x+h,y-w); path.lineTo(x+h,y+w); path.lineTo(x+w,y+w);
+  path.lineTo(x+w,y+h); path.lineTo(x-w,y+h); path.lineTo(x-w,y+w);
+  path.lineTo(x-h,y+w); path.lineTo(x-h,y-w); path.lineTo(x-w,y-w); path.closePath();
+}
+function mmTeamIdPaint(path,allegiance,radar,scale){
+  const c=mfTeamIdColorClass(allegiance,false), b=mfTeamIdColorClass(allegiance,true);
+  mm.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+(radar?.30:.96)+')';
+  mm.strokeStyle=radar?'rgba('+b[0]+','+b[1]+','+b[2]+',.92)':'rgba(3,10,18,.94)';
+  mm.lineWidth=mmTeamIdStrokeWidth(radar,scale);
+  if(path){ mm.fill(path); mm.stroke(path); } else { mm.fill(); mm.stroke(); }
+}
+function mmTeamIdBatch(){
+  return {paths:typeof Path2D==='function'?Array.from({length:6},()=>new Path2D()):null,
+    used:new Uint8Array(6),scale:mmTeamIdCanvasScale()};
+}
+function mmTeamIdQueue(batch,x,y,size,team,radar){
+  const allegiance=mfTeamIdAllegiance(team), at=allegiance+(radar?3:0);
+  size=mmTeamIdMarkerSize(size,radar,batch.scale);
+  if(batch.paths){ mmTeamIdPath(batch.paths[at],x,y,size,allegiance); batch.used[at]=1; return; }
+  /* Path2D predates every supported WebGL2 WebView, but retain a correct slow
+     fallback rather than reverting accessibility markers to colour-only. */
+  mm.save(); mm.beginPath(); mmTeamIdPath(mm,x,y,size,allegiance); mm.lineJoin='round';
+  mmTeamIdPaint(null,allegiance,radar,batch.scale); mm.restore();
+}
+function mmTeamIdFlush(batch){
+  if(!batch.paths) return;
+  mm.save(); mm.lineJoin='round';
+  for(let at=0;at<6;at++) if(batch.used[at]) mmTeamIdPaint(batch.paths[at],at%3,at>=3,batch.scale);
+  mm.restore();
+}
+function mmFactionCrest(fac,x,y,size,stroke,team){
   const I=typeof facIconCanvas==='function'?facIconCanvas(fac,()=>{mmFrame=0;}):null,s=size||12,h=s*.5;
-  mm.save();mm.beginPath();mm.arc(x,y,h+1.5,0,TAU);mm.fillStyle='rgba(3,10,18,.92)';mm.fill();
+  mm.save();
+  if(typeof mfTeamIdEnabled==='function'&&mfTeamIdEnabled()&&team!=null){
+    const allegiance=mfTeamIdAllegiance(team), P=typeof Path2D==='function'?new Path2D():null;
+    if(P) mmTeamIdPath(P,x,y,s+9,allegiance); else { mm.beginPath(); mmTeamIdPath(mm,x,y,s+9,allegiance); }
+    const c=mfTeamIdColorClass(allegiance,false);
+    mm.fillStyle='rgba(3,10,18,.94)';mm.strokeStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';mm.lineWidth=Math.max(2.4,mmTeamIdStrokeWidth(false,mmTeamIdCanvasScale()));mm.lineJoin='round';
+    if(P){mm.fill(P);mm.stroke(P);}else{mm.fill();mm.stroke();}
+  }
+  mm.beginPath();mm.arc(x,y,h+1.5,0,TAU);mm.fillStyle='rgba(3,10,18,.92)';mm.fill();
   mm.lineWidth=1.5;mm.strokeStyle=stroke||'#dff6ff';mm.stroke();
   if(I)mm.drawImage(I,x-h,y-h,s,s);
   else{mm.fillStyle=stroke||'#dff6ff';mm.font='900 '+Math.max(7,s*.65)+'px sans-serif';mm.textAlign='center';mm.textBaseline='middle';mm.fillText('\u25c8',x,y+.5);}
@@ -325,6 +389,8 @@ function renderMinimap(){
   }
   if(!mmBg) return;
   mm.drawImage(mmBg,0,0);
+  const teamId=typeof mfTeamIdEnabled==='function'&&mfTeamIdEnabled();
+  const teamMarks=teamId?mmTeamIdBatch():null;
   mm.fillStyle='#3dd68a';
   for(const d of deposits){
     const tier=depositTier(d);
@@ -339,7 +405,8 @@ function renderMinimap(){
     if(!visB&&!radarB) continue;
     mm.fillStyle=radarB?'rgba(255,109,94,.42)':(B.team===0?mmPCol:(B.team===1?mmECol:'#ffb13a'));
     const s=Math.max(radarB?3:5,B.r*k*(radarB?1.05:1.6));
-    mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);
+    if(teamId) mmTeamIdQueue(teamMarks,B.x*k,B.y*k,s,B.team,radarB);
+    else mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);
   }
   const total=teamCount[0]+teamCount[1]+teamCount[2];
   const step=total>3000? Math.ceil(total/1800):1;
@@ -352,8 +419,10 @@ function renderMinimap(){
     if(!visU&&!radarU) continue;
     mm.fillStyle=radarU?'rgba(255,109,94,.55)':(uteam[i]===0?mmPColA:(uteam[i]===1?mmEColA:'rgba(255,177,58,.9)'));
     const d=radarU?3:4;
-    mm.fillRect(ux[i]*k-d/2,uy[i]*k-d/2,d,d);
+    if(teamId) mmTeamIdQueue(teamMarks,ux[i]*k,uy[i]*k,d,uteam[i],radarU);
+    else mm.fillRect(ux[i]*k-d/2,uy[i]*k-d/2,d,d);
   }
+  if(teamId) mmTeamIdFlush(teamMarks);
   for(const C of crates){
     if(!C.seen&&!fogPointVisible(C.x,C.y)) continue;
     const cc=C.kind&&C.kind.col||[255,225,140];
@@ -394,15 +463,15 @@ function renderMinimap(){
      navigation anchors even when the unit dots merge into a large army. */
   const ownFac=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
   const ownHq=bldLive.find(B=>B.alive&&B.team===0&&B.type==='hq'&&B.allyAI==null);
-  if(ownHq)mmFactionCrest(ownFac,ownHq.x*k,ownHq.y*k,20,'#5de1ff');
+  if(ownHq)mmFactionCrest(ownFac,ownHq.x*k,ownHq.y*k,20,'#5de1ff',0);
   if(typeof AI!=='undefined'){
-    for(const A of AI.allies||[])mmFactionCrest(A.fac||ownFac,A.x*k,A.y*k,20,'#66e5a2');
+    for(const A of AI.allies||[])mmFactionCrest(A.fac||ownFac,A.x*k,A.y*k,20,'#66e5a2',0);
     for(const A of AI.bases||[]){
       const h=A.commander,visible=h>=0&&ualive[h]&&fogEntityVisible(uteam[h],ux[h],uy[h]);
-      if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,24,'#ff6d5e');
+      if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,24,'#ff6d5e',1);
     }
   }
-  if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(ownFac,ux[heroIdx]*k,uy[heroIdx]*k,26,'#ffd257');
+  if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(ownFac,ux[heroIdx]*k,uy[heroIdx]*k,26,'#ffd257',0);
   /* Ground quad the ortho camera actually sees — not camBounds(). That AABB
      is a cull pad (+60) and at yaw=0 assigns the pitched along-view span to
      world Y while the eye looks along +X, so a portrait view drew a tall
