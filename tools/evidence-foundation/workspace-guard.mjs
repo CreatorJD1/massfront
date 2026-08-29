@@ -206,6 +206,24 @@ export async function acquireVerificationFreeze({
     watcher.on('error',()=>{unknownScopes.add(`watch-error:${relative(workspace.root,scope).split(sep).join('/')||'.'}`);});
     watchers.push(watcher);
   }
+  async function attachInputTree(scope){
+    if(allowed.some(parent=>norm(scope)===norm(parent)))return;
+    const containsAllowed=allowed.some(parent=>inside(parent,scope));
+    if(!containsAllowed){attachWatcher(scope,true);return;}
+    /* Windows can report a recursive change with filename=null. If an allowed
+       cache is nested below that watcher, the anonymous parent event cannot be
+       proven safe and must abort. Carve allowed subtrees out of the watcher
+       topology instead: non-recursive ancestors still catch new siblings,
+       while recursive watchers protect every existing non-allowed child. */
+    attachWatcher(scope,false);
+    const entries=await readdir(scope,{withFileTypes:true});
+    for(const entry of entries){
+      if(!entry.isDirectory())continue;
+      const child=resolve(scope,entry.name);
+      if(allowed.some(parent=>inside(child,parent)))continue;
+      await attachInputTree(child);
+    }
+  }
 
   /* A single recursive watcher on the repository root also receives anonymous
      Windows notifications from the allowed .tmp browser-output tree. Watch the
@@ -219,7 +237,7 @@ export async function acquireVerificationFreeze({
       if(!entry.isDirectory())continue;
       const scope=resolve(workspace.root,entry.name);
       if(allowed.some(parent=>inside(scope,parent)))continue;
-      attachWatcher(scope,true);
+      await attachInputTree(scope);
     }
   }catch(error){
     closed=true;

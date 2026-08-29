@@ -27,12 +27,29 @@ try{
   const identity=await assertAuthorityWorkspace(root);
   if(identity.branch!=='cursor/strip-mass-node-bloom')throw new Error('authority identity mismatch');
 
-  const acquire=()=>acquireVerificationFreeze({root,label:'self-test',quietMs:80,allowShortQuiet:true});
+  const acquire=(options={})=>acquireVerificationFreeze({root,label:'self-test',quietMs:80,allowShortQuiet:true,...options});
   const expectGuardFailure=async(label,pattern)=>{
     let caught=false;
     try{await guard.checkpoint(label);}catch(error){caught=pattern.test(error.message);}
     if(!caught)throw new Error(`${label} escaped workspace guard`);
   };
+
+  const nestedAllowed=join(root,'modules','space','.codex-remote-attachments');
+  await mkdir(nestedAllowed,{recursive:true});
+  await mkdir(join(root,'modules','space','src'),{recursive:true});
+  await writeFile(join(root,'modules','space','src','nested.js'),'nested baseline\n');
+  /* Let directory-creation notifications drain before testing writes made
+     after watcher acquisition; the production guard has the same quiet gate. */
+  await new Promise(resolveDelay=>setTimeout(resolveDelay,1200));
+  guard=await acquire({allowedPaths:[nestedAllowed]});
+  await mkdir(join(nestedAllowed,'delivery','run'),{recursive:true});
+  await writeFile(join(nestedAllowed,'delivery','run','reference.png'),'allowed cache\n');
+  await guard.checkpoint('nested allowed cache output');
+  await writeFile(join(root,'modules','space','src','nested.js'),'nested source write\n');
+  await expectGuardFailure('allowed-cache nested sibling mutation',/SOURCE_WRITE_DURING_VERIFICATION/);
+  await writeFile(join(root,'modules','space','source.js'),'sibling source write\n');
+  await expectGuardFailure('allowed-cache sibling mutation',/SOURCE_WRITE_DURING_VERIFICATION/);
+  await guard.release();guard=null;
 
   guard=await acquire();
   let blocked=false;
@@ -83,7 +100,7 @@ try{
   let wrong=false;
   try{await assertAuthorityWorkspace(root);}catch(error){wrong=/NON_AUTHORITY_BRANCH/.test(error.message);}
   if(!wrong)throw new Error('non-authority branch was accepted');
-  console.log('PASS workspace guard: authority, freeze ownership, root/nested write detection, final checkpoint, cleanup, branch refusal');
+  console.log('PASS workspace guard: authority, nested allowlist isolation, freeze ownership, root/nested write detection, final checkpoint, cleanup, branch refusal');
 }finally{
   if(guard)await guard.release();
   await rm(root,{recursive:true,force:true});
