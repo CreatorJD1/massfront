@@ -96,6 +96,16 @@ small-unit envelope alongside infantry, small vehicles, and mechs; heavy
 vehicles, heavy mechs, artillery, aircraft, naval units, and titans remain
 forbidden.
 
+The six exploration planets also have source-only layout profiles. These copy
+only their exact exploration identity, parent system, biome label, renderer
+radius, ring flag, scan flag, and discovery-record IDs/types. They expose 12
+conditional XS/Small interior concepts, but zero Standard surface bindings:
+the exploration source does not yet provide playable surface topology. Only
+Caldris has enough explicit oceanic/pelagic wording for conditional sea-platform
+authoring, and even that requires the complete floating-platform engineering
+gate before any asset or runtime work. The other five remain deferred for
+sea-platform use.
+
 ## Implemented foundation
 
 `assets/data/battlefieldtopology-stage10.js` defines a separately versioned,
@@ -167,7 +177,8 @@ and explicit activation before runtime may consume it.
 | `node tools/verify-stage10-surface-topology-bindings.mjs` | **PASS 35/35**; all 16 plans, six `FULL_V1`, ten `PENDING_V0`, exact support modes, strict unknown-field rejection, and no model/generated-asset claims. |
 | `node tools/verify-stage10-interior-layout-bindings.mjs` | **PASS**; 24 pack/template combinations, 90 exact inventory members, 22 source-declared combinations, two source gaps, 12 authority-pending bindings, and 38 injected faults. |
 | `node tools/verify-stage10-orbital-layout-bindings.mjs` | **PASS 37/37**; all six contact identities, strict nested schema, forbidden model-like strings, and independent source-drift faults. |
-| `node tools/verify-stage10-layouts.mjs` | **PASS 9/9** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, and bundle. Report: `tmp/stage10-layouts/report.json`. |
+| `node tools/verify-stage10-exploration-planet-layout-profiles.mjs` | **PASS 22/22**; six exact exploration planets, two pending identity slots, 12 conditional restricted-unit interior concepts, zero unproven Standard bindings, and Caldris-only conditional sea-platform authoring. |
+| `node tools/verify-stage10-layouts.mjs` | **PASS 10/10** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, exploration-planet profiles, and bundle. Report: `tmp/stage10-layouts/report.json`. |
 | `node tools/bundle.mjs` | **PASS**; 103 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.42 MB. |
 
 The surface faults reject invalid arterial width, a `massive` size alias,

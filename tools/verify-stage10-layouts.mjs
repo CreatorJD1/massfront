@@ -14,6 +14,7 @@ const commands=[
   ['surface-bindings','node',['tools/verify-stage10-surface-topology-bindings.mjs']],
   ['interior-bindings','node',['tools/verify-stage10-interior-layout-bindings.mjs']],
   ['orbital-bindings','node',['tools/verify-stage10-orbital-layout-bindings.mjs']],
+  ['exploration-planet-profiles','node',['tools/verify-stage10-exploration-planet-layout-profiles.mjs']],
   ['bundle','node',['tools/bundle.mjs']]
 ];
 const results=[];
