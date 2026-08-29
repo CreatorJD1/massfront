@@ -34,6 +34,7 @@ const read = rel => readFileSync(join(ROOT, rel), 'utf8');
 
 const SOURCE_PATHS = [
   'assets/data/sitetemplates.js',
+  'assets/data/locationgrammar.js',
   'src/engine/worldsites.js',
   'src/game/sim.js',
   'boot.js',
@@ -201,7 +202,7 @@ try {
   });
 
   if (!boot.wrap) FAIL.push('planDistricts is not wrapped by siteStampInstall');
-  if (boot.stampVer !== 2) FAIL.push(`SITE_STAMP.ver is ${boot.stampVer}, expected 2`);
+  if (boot.stampVer !== 3) FAIL.push(`SITE_STAMP.ver is ${boot.stampVer}, expected 3`);
   if (boot.cityPin !== 'BRUTALIST PREFECTURE') FAIL.push(`FORCE pin failed: ${boot.cityPin}`);
   if (!boot.outpostWhilePinned) FAIL.push('SITE_TPL_FORCE still returns null for other classes (silent outpost drop)');
   if (!boot.forceIsNull) FAIL.push('SITE_TPL_FORCE was not restored to null after the selector snapshot');

@@ -7,10 +7,11 @@
 
      node tools/probe-exact-template-placement.mjs
 
-   Fail-closed on: HEAD baseline not reproducing the two crossing failures,
-   current templates failing any rotation, first required plot still bisected,
-   natural map/seed miss, non-deterministic repeat, missing SITE_STAMP wrap,
-   or roadClear constant drift in sim.js. */
+   Fail-closed on: current templates failing any rotation, first required plot
+   still bisected, natural map/seed miss, non-deterministic repeat, missing
+   SITE_STAMP wrap, or roadClear constant drift in sim.js. HEAD is retained as
+   a comparison fingerprint, not as a permanent fixture for a bug already
+   committed and therefore no longer reproducible from HEAD. */
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -97,7 +98,6 @@ const afterHash = digest(afterSweeps);
 if (beforeHash !== digest(before2)) FAIL.push('HEAD geometry sweep is not deterministic');
 if (afterHash !== digest(after2)) FAIL.push('current geometry sweep is not deterministic');
 
-const blockedBefore = ['city_brutalist_grid', 'dome_cluster'];
 const beforeCounts = {};
 const afterCounts = {};
 for (const id of ids) {
@@ -111,14 +111,10 @@ for (const id of ids) {
   }
 }
 
-for (const id of blockedBefore) {
-  if (!beforeSweeps[id]) { FAIL.push(`HEAD missing ${id}`); continue; }
-  if (beforeSweeps[id].pass !== 0)
-    FAIL.push(`${id} HEAD baseline did not reproduce the crossing failure (pass ${beforeSweeps[id].pass}/${beforeSweeps[id].total})`);
-  const sample = beforeSweeps[id].rows[0];
-  if (sample?.firstRequired?.reason !== 'plotRoad')
-    FAIL.push(`${id} HEAD first required reject was ${sample?.firstRequired?.reason}, expected plotRoad`);
-}
+if (beforeHash === afterHash)
+  note.push('HEAD and working-tree geometry match; historical crossing failures are no longer a valid HEAD fixture.');
+else
+  note.push('Working-tree geometry differs from HEAD; both fingerprints are retained while current geometry remains the acceptance target.');
 
 const natural = [];
 for (const map of maps) {
@@ -190,6 +186,7 @@ const report = {
   schema: 'MassfrontExactTemplatePlacementProbeV1',
   generatedAt: new Date().toString ? new Date().toISOString() : '',
   status: FAIL.length ? 'FAIL' : 'PASS',
+  baselineMode: beforeHash === afterHash ? 'HEAD_MATCHES_CURRENT' : 'HEAD_COMPARISON_ONLY',
   beforeCounts, afterCounts, beforeHash, afterHash,
   naturalMaps: natural.length, naturalPass: natural.filter(n => n.ok).length,
   aelosPrefecture: { maps: aelosPref.length, pass: aelosPref.filter(n => n.ok).length, ids: aelosPref.map(n => n.map) },

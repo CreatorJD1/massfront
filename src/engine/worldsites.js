@@ -349,7 +349,8 @@ initModels=function(){
    REQUIRED_PLOT_ROLLBACK (SITE_REJ.plots after a compatible template was
    selected). The wrap records requested-vs-realized after the planner. */
 const SITE_STAMP={
-  ver:2, map:'',
+  ver:3, map:'',
+  contracts:{worldLocationStyle:1,locationGrammar:1,planetAdaptation:1,factionOccupation:1,conditionVariant:1},
   requested:{city:0,outpost:0,relic:0,spaceport:0,dome:0},
   realized:{city:0,outpost:0,relic:0,spaceport:0,dome:0},
   zones:[], fails:[], rej:null, telem:null, ok:true, hash:''
@@ -363,7 +364,7 @@ function siteStampCopyTelem(){
   const src=(typeof SITE_TPL_QUERY==='object'&&SITE_TPL_QUERY&&SITE_TPL_QUERY.telem)||null;
   if(!src) return null;
   const keys=typeof siteTplKeys==='function'?siteTplKeys():['city','outpost','relic','spaceport','dome'];
-  const asks={},hits={},miss={},reason={},mismatch={};
+  const asks={},hits={},miss={},reason={},mismatch={},grammar={};
   for(let i=0;i<keys.length;i++){
     const k=keys[i];
     asks[k]=src.asks&&src.asks[k]|0;
@@ -371,13 +372,15 @@ function siteStampCopyTelem(){
     miss[k]=src.miss&&src.miss[k]|0;
     reason[k]=(src.reason&&src.reason[k])||'';
     mismatch[k]=(src.mismatch&&src.mismatch[k])||null;
+    grammar[k]=(src.grammar&&src.grammar[k])||null;
   }
-  return {asks:asks, hits:hits, miss:miss, reason:reason, mismatch:mismatch};
+  return {asks:asks, hits:hits, miss:miss, reason:reason, mismatch:mismatch, grammar:grammar};
 }
 function siteStampFailReason(id, telem, rej){
   const why=(telem&&telem.reason&&telem.reason[id])||'';
   if(why==='TEMPLATE_MISSING') return 'TEMPLATE_MISSING';
   if(why==='INCOMPATIBLE') return 'INCOMPATIBLE';
+  if(why.indexOf('LOCATION_')===0) return why;
   const plots=rej?rej.plots|0:0;
   const env=rej?((rej.arena|0)+(rej.spawn|0)+(rej.water|0)+(rej.res|0)+(rej.near|0)):0;
   const hits=telem&&telem.hits?telem.hits[id]|0:0;

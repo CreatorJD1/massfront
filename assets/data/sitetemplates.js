@@ -231,14 +231,14 @@ const SITE_TPL_RULES={
 const SITE_TPL_QUERY={
   context:null,
   force:null,
-  telem:{asks:{},hits:{},miss:{},reason:{},mismatch:{}}
+  telem:{asks:{},hits:{},miss:{},reason:{},mismatch:{},grammar:{}}
 };
 let SITE_TPL_FORCE=null;
 function siteTplWild(v){ return v==null||v===''||v==='any'; }
 function siteTplKeys(){ return ['city','outpost','relic','spaceport','dome']; }
 function siteTplTelemReset(){
   const t=SITE_TPL_QUERY.telem;
-  t.asks={}; t.hits={}; t.miss={}; t.reason={}; t.mismatch={};
+  t.asks={}; t.hits={}; t.miss={}; t.reason={}; t.mismatch={}; t.grammar={};
   for(let i=0,k=siteTplKeys();i<k.length;i++){
     t.asks[k[i]]=0; t.hits[k[i]]=0; t.miss[k[i]]=0; t.reason[k[i]]=''; t.mismatch[k[i]]=null;
   }
@@ -281,8 +281,44 @@ function siteTemplateCompat(T, ctx){
   if(!siteTplFieldOk(T.condition, ctx.condition)) miss.push('condition');
   return {ok:!miss.length, mismatch:miss};
 }
+function siteTemplateGrammarPool(cls,ctx){
+  /* Stage 9 activation is per authored request, not per whole map. A map does
+     not become V1 while its other site classes still need legacy coverage.
+     The activated row is exact and never falls through to the ordinary class
+     pool, so a catalog drift fails before RNG selection or geometry stamping. */
+  if(typeof mfLocationGrammarActivationV1!=='function') return null;
+  const map=(ctx&&ctx.map)||((typeof curMap!=='undefined'&&curMap)||'');
+  const active=mfLocationGrammarActivationV1(map,cls);
+  if(!active) return null;
+  if(active.invalid) return {ids:[],exists:true,context:ctx||null,mismatch:['activation'],
+    reason:active.code||'LOCATION_ACTIVATION_INVALID',grammar:{version:1,map:map,error:active}};
+  const id=active.template;
+  const T=SITE_TPL[id];
+  if(!T) return {ids:[],exists:false,context:ctx||null,
+    mismatch:['activation'],reason:'TEMPLATE_MISSING',grammar:{version:1,map:map,template:id}};
+  if(T.class!==cls) return {ids:[],exists:true,context:ctx||null,
+    mismatch:['class'],reason:'LOCATION_ACTIVATION_CLASS_MISMATCH',grammar:{version:1,map:map,template:id}};
+  const exact=['planet','biome','faction','purpose','era','condition'];
+  for(let i=0;i<exact.length;i++) if(siteTplWild(T[exact[i]]))
+    return {ids:[],exists:true,context:ctx||null,mismatch:[exact[i]],reason:'INCOMPATIBLE',
+      grammar:{version:1,map:map,template:id,error:'GENERIC_TEMPLATE'}};
+  if(typeof mfResolveWorldLocationStyleV1!=='function')
+    return {ids:[],exists:true,context:ctx||null,mismatch:['grammar'],reason:'LOCATION_GRAMMAR_UNAVAILABLE',
+      grammar:{version:1,map:map,template:id,error:'LOCATION_GRAMMAR_UNAVAILABLE'}};
+  const hit=mfResolveWorldLocationStyleV1(map,{purpose:active.purpose,era:active.era,condition:active.condition});
+  if(!hit.ok) return {ids:[],exists:true,context:ctx||null,mismatch:[hit.error.field||'context'],
+    reason:hit.error.code||'INCOMPATIBLE',grammar:{version:1,map:map,template:id,error:hit.error}};
+  const V=hit.value,strict={map:map,planet:V.planet,climate:V.biome,biome:V.biome,
+    region:V.region,geology:V.geology,faction:V.faction,purpose:V.purpose,era:V.era,
+    condition:V.condition,water:ctx&&ctx.water,theme:ctx&&ctx.theme,style:V};
+  const compat=siteTemplateCompat(T,strict);
+  return {ids:compat.ok?[id]:[],exists:true,context:strict,mismatch:compat.mismatch,
+    reason:compat.ok?'':'INCOMPATIBLE',grammar:{version:1,map:map,template:id,styleHash:V.hash}};
+}
 function siteTemplatePool(cls, ctx){
   ctx=ctx||siteTemplateContext();
+  const strict=siteTemplateGrammarPool(cls,ctx);
+  if(strict) return strict;
   const ids=[]; const missCount={}; let exists=false;
   for(const id in SITE_TPL){
     const T=SITE_TPL[id];
@@ -321,8 +357,9 @@ function siteTemplateFor(cls, pick){
     if(forced&&forced.class===cls){ siteTplNote(cls, true); return forced; }
   }
   const pool=siteTemplatePool(cls);
+  if(pool.grammar) SITE_TPL_QUERY.telem.grammar[cls]=pool.grammar;
   if(!pool.ids.length){
-    siteTplNote(cls, false, pool.exists?'INCOMPATIBLE':'TEMPLATE_MISSING',
+    siteTplNote(cls, false, pool.reason||(pool.exists?'INCOMPATIBLE':'TEMPLATE_MISSING'),
       pool.mismatch&&pool.mismatch.length?pool.mismatch:null);
     return null;
   }
