@@ -67,8 +67,13 @@ async function boot(){
   await page.goto(report.url,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>typeof showFrontScreen==='function'&&typeof renderSettings==='function'&&
     typeof mfGalaxyReady!=='undefined'&&mfGalaxyReady===true,null,{timeout:120000});
+  /* Close the launch reveal through its production control. Merely hiding its
+     DOM leaves the intro's capture-phase Escape handler logically open, which
+     consumes the first Back key even though no modal is visible. */
+  await page.waitForFunction(()=>typeof window.__mfIntroDebug==='function'&&window.__mfIntroDebug().open===true,null,{timeout:30000});
   await page.evaluate(()=>{
     try{if(typeof apClose==='function')apClose();}catch{}
+    const introSkip=document.getElementById('mfIntroSkip');if(introSkip)introSkip.click();
     document.body.classList.add('mfIntroDone');
     for(const id of ['mfBootCover','apOverlay','apConfirmOverlay','loadScr','mfIntroSkip','mfIntroReplay']){
       const el=document.getElementById(id);if(el)el.style.setProperty('display','none','important');

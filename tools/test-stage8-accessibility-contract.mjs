@@ -205,6 +205,8 @@ const mkdirAt=probe.indexOf('await mkdir(outDir');
 const cleanupAt=probe.indexOf('for(const name of outputFiles)await rm');
 assert.ok(freezeAt>=0&&mkdirAt>freezeAt&&cleanupAt>mkdirAt,'probe mutates its output before owning the workspace freeze');
 assert.match(probe,/const screenshotFiles=\[[^\]]+\]/,'probe has no bounded screenshot declaration');
+assert.match(probe,/window\.__mfIntroDebug\(\)\.open===true[\s\S]*?introSkip\.click\(\)/,
+  'probe hides the intro without closing its capture-phase Escape state');
 assert.match(probe,/const deployed=await enterDeployedMatch\(\)/,'probe does not enter a real deployed match for HUD scaling');
 assert.match(probe,/await page\.waitForTimeout\(700\);\s*await advance\.focus\(\);await advance\.press\('Enter'\)/,
   'final keyboard launch can be swallowed by the pointer duplicate-tap window');
