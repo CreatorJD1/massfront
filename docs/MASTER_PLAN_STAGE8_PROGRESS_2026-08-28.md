@@ -1,10 +1,11 @@
 # MASSFRONT master plan — Stage 8 progress · 2026-08-28
 
-Status: **IN PROGRESS — the local browser closure is implemented, while physical-
-device, commander-art, human-comprehension, and historical terrain-baseline
-acceptance remain open** on `cursor/strip-mass-node-bloom`. This slice started
-from local Main Source tip `2d882397`; the local checkout remains the sole
-integration authority and dated folders remain transfer inputs only.
+Status: **IN PROGRESS — local hardware-browser accessibility and WebGL context-
+recovery acceptance PASS; physical-device, commander-art, human-comprehension,
+historical terrain-baseline, and current performance acceptance remain open**
+on `cursor/strip-mass-node-bloom`. This slice started from local Main Source tip
+`2d882397`; the local checkout remains the sole integration authority and dated
+folders remain transfer inputs only.
 
 Stage 7 engineering is complete. Its remaining unfamiliar-player comprehension
 check is human acceptance, not an automation gap, and still blocks release
@@ -131,7 +132,10 @@ collected.
   front screens, Back navigation, Pause, and Resume explicitly preserve focus
   ownership. The guarded accessibility probe covers text scale, focus/Back
   hierarchy, contrast and forced-colors behavior, muted monochrome alarms,
-  offline isolation, source identity, and hardware-GPU rendering.
+  offline isolation, source identity, and hardware-GPU rendering. Guarded local
+  acceptance is `PASS` at `.tmp/stage8-accessibility/report.json` on the AMD
+  Radeon 610M through ANGLE D3D11, with exact scale ratios, no critical-plate
+  clipping or viewport escape, and no browser/runtime errors.
 - GL recovery acceptance now separates diagnostic lease/re-entrancy checks from
   the production test. The production page must traverse the real Standard-match
   UI through DEPLOY, prove an active unpaused match, lose and restore the actual
@@ -139,6 +143,11 @@ collected.
   held-then-advancing simulation time, automatic draw activity, fresh GL and
   terrain resources, and a non-empty readback. The report is invalid if the
   source, packaged runtime, branch, HEAD, or guarded completion state changes.
+  The guarded hardware-GPU run for code closure `19dfdf5` is `PASS` at
+  `.tmp/gl-probe-recovery/report.json`: the real Standard route reached DEPLOY,
+  actual context loss/restore produced no stale or post-restore GL errors, CPU
+  terrain state remained unchanged, GPU resources were recreated, simulation
+  resumed automatically, and readback remained non-empty.
 - New desktop performance evidence is isolated under `tmp/perf-lab/current/`;
   preserved legacy or rejected JSON cannot contaminate the current report.
   Scenario cleanup is bounded, unit counts are restricted to the declared test
@@ -237,8 +246,10 @@ and only when its own report is `PASS` with matching start/end fingerprints.
   baseline is supplied. The current probe must report `INCOMPLETE` without it.
   Tactical team-identification small-phone shapes, health bars, restored faction
   livery, and fog/radar behavior have completed guarded browser visual review;
-  the new GL-recovery and broader accessibility probes count only when their
-  final guarded reports are `PASS` on the stable closure commit.
+  the accepted local hardware-browser reports are
+  `.tmp/stage8-accessibility/report.json` and
+  `.tmp/gl-probe-recovery/report.json`. These do not replace the remaining
+  physical-device, performance, terrain-history, or commander-art gates.
 - Native Android Back acceptance remains a physical-device requirement even
   after the browser keyboard/focus/Back contract passes.
 - Native Files/Share physical-device acceptance for `.mfsave` remains open.

@@ -214,6 +214,14 @@ assert.match(probe,/const deploy=page\.locator\('#deployBtn'\)[\s\S]*?await depl
   'probe uses a full pointer click against the pointerdown-owned Deploy action');
 assert.match(probe,/Math\.abs\(ratios\[i\]-want\)<=\.01/,'probe accepts oversized text tiers instead of exact 100/125/150/200 ratios');
 assert.match(probe,/await shot\('deployed-hud-text-200\.png'\)/,'probe has no 200% deployed-HUD screenshot');
+assert.match(probe,/dataset\.mfA11yHudProbe='1'[\s\S]*?#infMeter\{display:flex!important\}/,
+  'probe does not keep the normally hidden neutral-threat plate visible during its real layout measurement');
+assert.match(probe,/delete document\.documentElement\.dataset\.mfA11yHudProbe;[\s\S]*?mfA11yHudProbeStyle[^\n]+remove\(\)/,
+  'probe leaves its temporary HUD measurement override installed');
+assert.match(probe,/check\(hudProbeClean,'temporary deployed-HUD measurement override was not removed'\)/,
+  'probe does not prove its temporary HUD measurement override was removed');
+assert.match(probe,/const mmBefore=new Set\(mmPings\),worldBefore=new Set\(worldAlertPings\)[\s\S]*?mmPings\.filter\(p=>!mmBefore\.has\(p\)\)/,
+  'alarm proof uses a flaky aggregate ping-count delta instead of tracking the newly emitted signals');
 assert.match(probe,/check\(!plate\.clipped,[^\n]+200%/,'probe does not reject clipped 200% HUD plates');
 assert.match(probe,/check\(plate\.contained,[^\n]+200%/,'probe does not reject out-of-viewport 200% HUD plates');
 assert.match(probe,/serviceWorkers:'block'/,'probe can be controlled by a service worker');

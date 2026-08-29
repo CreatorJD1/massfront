@@ -208,6 +208,14 @@ try{
   const hud200=await page.evaluate(async()=>{
     META.settings.textScale=200;META.settings.sound=false;metaSave();applySettings();
     const goal=document.getElementById('goalBar'),inf=document.getElementById('infMeter');
+    /* Nova's ordinary opening has neutral wildlife below the live-display
+       threshold, so updateHUD can legitimately hide this plate between RAFs.
+       Keep only its display state pinned while measuring the real shipped
+       layout; all size, flow, typography and viewport rules remain native. */
+    document.documentElement.dataset.mfA11yHudProbe='1';
+    const probeStyle=document.createElement('style');probeStyle.id='mfA11yHudProbeStyle';
+    probeStyle.textContent='html[data-mf-a11y-hud-probe="1"] #infMeter{display:flex!important}';
+    document.head.appendChild(probeStyle);
     goal.innerHTML='ELIMINATE ENEMY HEADQUARTERS <span class="clk">42:00</span>';
     inf.textContent='HIVE THREAT · CRITICAL MASS 100%';
     goal.style.setProperty('display','flex','important');inf.style.setProperty('display','flex','important');
@@ -231,12 +239,16 @@ try{
     check(!plate.clipped,`${plate.id} clipped its text at 200%`);
     check(plate.contained,`${plate.id} left the viewport at 200%`);
   }
-  await page.evaluate(()=>{
+  const hudProbeClean=await page.evaluate(()=>{
+    delete document.documentElement.dataset.mfA11yHudProbe;
+    document.getElementById('mfA11yHudProbeStyle')?.remove();
     for(const id of ['goalBar','infMeter'])document.getElementById(id).style.removeProperty('display');
     for(const id of ['atkAlert','waveAlert'])document.getElementById(id).style.setProperty('display','none');
     clearTimeout(showAlert._t);alertPos=null;if(typeof clearWaveWarning==='function')clearWaveWarning();
     META.settings.textScale=100;metaSave();applySettings();
+    return !document.documentElement.dataset.mfA11yHudProbe&&!document.getElementById('mfA11yHudProbeStyle');
   });
+  check(hudProbeClean,'temporary deployed-HUD measurement override was not removed');
 
   const pause=await page.evaluate(async()=>{
     const baselineInert=[...document.body.children].filter(el=>el.inert).map(el=>el.id||el.tagName);
@@ -334,14 +346,19 @@ try{
     if(typeof stopAttract==='function')stopAttract();hideFrontScreens();showHudDock(true);
     running=true;demoMode=false;paused=false;if(typeof mfFlowLayout==='function')mfFlowLayout();
     document.documentElement.style.filter='grayscale(1)';
-    stats.t=Math.max(10,stats.t||0);const mm0=mmPings.length,world0=worldAlertPings.length;
+    stats.t=Math.max(10,stats.t||0);
+    /* Render maintenance may prune several older pings during this RAF, so a
+       raw array-length delta can go negative even though showAlert added both
+       signals. Track the new object identities instead. */
+    const mmBefore=new Set(mmPings),worldBefore=new Set(worldAlertPings);
     showAlert(400,520,'attack');setWaveWarning(1200,520,400,520,24,3,12);
     await new Promise(requestAnimationFrame);
     const attack=document.getElementById('atkAlert'),wave=document.getElementById('waveAlert');
     return {soundEnabled:!!sfxOn,filter:getComputedStyle(document.documentElement).filter,
       attack:{display:getComputedStyle(attack).display,text:attack.textContent.trim(),shape:{border:attack.style.borderRadius||getComputedStyle(attack).borderRadius,borderLeft:getComputedStyle(attack).borderLeftWidth}},
       wave:{display:getComputedStyle(wave).display,text:wave.textContent.replace(/\s+/g,' ').trim(),aria:wave.getAttribute('aria-label')},
-      minimapPings:mmPings.length-mm0,worldPings:worldAlertPings.length-world0};
+      minimapPings:mmPings.filter(p=>!mmBefore.has(p)).length,
+      worldPings:worldAlertPings.filter(p=>!worldBefore.has(p)).length};
   });
   report.checks.mutedMonochromeAlarms=alarm;await shot('muted-monochrome-alarms.png');
   check(!alarm.soundEnabled,'alarm test did not actually mute sound');
