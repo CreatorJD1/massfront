@@ -11,6 +11,9 @@ const commands=[
   ['surface-topology','node',['tools/verify-stage10-battlefield-topology.mjs']],
   ['interior-topology','node',['tools/verify-stage10-interior-topology.mjs']],
   ['orbital-topology','node',['tools/verify-stage10-orbital-topology.mjs']],
+  ['surface-bindings','node',['tools/verify-stage10-surface-topology-bindings.mjs']],
+  ['interior-bindings','node',['tools/verify-stage10-interior-layout-bindings.mjs']],
+  ['orbital-bindings','node',['tools/verify-stage10-orbital-layout-bindings.mjs']],
   ['bundle','node',['tools/bundle.mjs']]
 ];
 const results=[];
@@ -25,7 +28,7 @@ for(const [id,exe,args] of commands){
   if(!result.ok) break;
 }
 const passed=results.filter(R=>R.ok).length,failed=results.filter(R=>!R.ok).length;
-const report={schema:'Stage10LayoutAggregateVerificationV1',generatedAt:new Date().toISOString(),
+const report={schema:'Stage10LayoutAggregateVerificationV2',generatedAt:new Date().toISOString(),
   passed,failed,complete:results.length===commands.length&&failed===0,results};
 const out=path.join(ROOT,'tmp','stage10-layouts','report.json');
 fs.mkdirSync(path.dirname(out),{recursive:true});

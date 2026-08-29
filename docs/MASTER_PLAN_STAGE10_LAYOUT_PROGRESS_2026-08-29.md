@@ -64,6 +64,38 @@ Archive Hulk KX-19 and the Karak Colony Spine. All six have deterministic
 spawns, insertion/extraction, hazards, two objectives, destructible state
 transitions, ordered recovery, and rollback to the last complete state.
 
+## Source-only realization bindings
+
+The topology candidates now have three fail-closed realization-binding lanes.
+These bindings describe what future geometry must prove; they do not claim that
+models, collision, navigation, LODs, or generated assets exist.
+
+- Surface: all 16 Standard Wave 1 plans are bound to the Stage 10 processing
+  manifest and their Stage 9 baseline status. Six retain `FULL_V1`; ten remain
+  `PENDING_V0`. The matrix records 90 terrain sites, three floating pontoons,
+  one semi-submersible, one fixed caisson, and one shoreline quay. Maritime
+  datums remain topology declarations, not geometry proof.
+- Interior: six 15-member source packs are checked across all four exact
+  topology families, producing 24 explicit combinations. Twenty-two are
+  source-declared; Nova multilevel and Dominion breach remain blocked source
+  gaps. The complete 90-member inventories, dimensions, sockets, archetype
+  contracts, collision, navigation, and LOD targets are hashed. The missing
+  authored `critical` destruction state remains blocked rather than synthesized.
+- Orbital: all six exploration-module contacts are bound to exact topology
+  source identities and required geometry/proxy families. Four remain
+  smallcraft route volumes and two remain infantry boarding graphs. Strict
+  schema and model-like-string gates prevent unproven asset references from
+  entering the source-only catalogue.
+
+Interior location authority is intentionally typed rather than guessed. Three
+of six pack planet declarations resolve exactly and three remain pending; 15 of
+18 location declarations resolve exactly, while the three NEXUS-VII ship IDs
+remain unresolved. This leaves 12 of 24 pack/template bindings
+`UNBOUND_PENDING_CANONICAL_MAPPING`. Support drones are now part of the
+small-unit envelope alongside infantry, small vehicles, and mechs; heavy
+vehicles, heavy mechs, artillery, aircraft, naval units, and titans remain
+forbidden.
+
 ## Implemented foundation
 
 `assets/data/battlefieldtopology-stage10.js` defines a separately versioned,
@@ -130,9 +162,12 @@ and explicit activation before runtime may consume it.
 |---|---|
 | `node tools/verify-stage10-battlefield-topology.mjs` | **PASS 24/24**; all 16 Standard candidates, 16 distinct profiles and topology hashes, six `FULL_V1` baselines, four floating sites, route and approach gates, and injected fail-closed faults. Report: `tmp/stage10-topology/report.json`. |
 | `node tools/verify-stage10-theatre-catalog.mjs` | **PASS 16/16**; eight target planet slots, the exploration-module authority, six source-matched identities, two reserved names, four source-matched interior templates, six inert interior packs, restricted unit envelopes, six source-matched orbital seeds, loader registration, and six injected faults. Report: `tmp/stage10-theatres/report.json`. |
-| `node tools/verify-stage10-interior-topology.mjs` | **PASS**; four exact templates and 18 injected fail-closed faults. Report: `tmp/stage10-interior-topology/verification.json`. |
+| `node tools/verify-stage10-interior-topology.mjs` | **PASS**; four exact templates and 19 injected fail-closed faults, including support-drone authority. Report: `tmp/stage10-interior-topology/verification.json`. |
 | `node tools/verify-stage10-orbital-topology.mjs` | **PASS 29/29**; six source-matched layouts, distinct stable hashes, zero random calls, recovery gates, loader registration, and 13 injected faults. Report: `tmp/stage10-orbital-topology/report.json`. |
-| `node tools/verify-stage10-layouts.mjs` | **PASS 6/6** aggregate gates: global scope, theatre catalogue, surface, interior, orbital, and bundle. Report: `tmp/stage10-layouts/report.json`. |
+| `node tools/verify-stage10-surface-topology-bindings.mjs` | **PASS 35/35**; all 16 plans, six `FULL_V1`, ten `PENDING_V0`, exact support modes, strict unknown-field rejection, and no model/generated-asset claims. |
+| `node tools/verify-stage10-interior-layout-bindings.mjs` | **PASS**; 24 pack/template combinations, 90 exact inventory members, 22 source-declared combinations, two source gaps, 12 authority-pending bindings, and 38 injected faults. |
+| `node tools/verify-stage10-orbital-layout-bindings.mjs` | **PASS 37/37**; all six contact identities, strict nested schema, forbidden model-like strings, and independent source-drift faults. |
+| `node tools/verify-stage10-layouts.mjs` | **PASS 9/9** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, and bundle. Report: `tmp/stage10-layouts/report.json`. |
 | `node tools/bundle.mjs` | **PASS**; 103 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.42 MB. |
 
 The surface faults reject invalid arterial width, a `massive` size alias,
@@ -158,15 +193,19 @@ topology hash without calling `Math.random()`.
 
 1. Add the two remaining planet identities as new exploration-module entries
    only after names, stable IDs, sovereignty, materials, and IP review are set.
-2. Bind the six planned interior packs to the four topology families through
-   source-only assembly requests, preserving per-location faction identity.
-3. Bind orbital geometry requests to the six source-matched topology seeds
-   without activating a runtime consumer.
+2. Resolve the three NEXUS-VII ship-location IDs and the three mixed-namespace
+   interior pack declarations through explicit canonical mapping contracts;
+   never infer aliases from similar names.
+3. Author the missing interior `critical` destruction variants and the Nova
+   multilevel / Dominion breach source declarations before promoting those
+   combinations.
 4. Add exact surface site requests/templates in bounded groups, preserving the six
    Stage 9 `FULL_V1` regression baselines.
-5. Add topology realization and traversal fixtures before connecting any plan
+5. Realize the six orbital geometry/proxy families from their exact
+   exploration-module contacts without activating a runtime consumer.
+6. Add topology realization and traversal fixtures before connecting any plan
    to terrain generation or cache identity.
-6. Integrate dynamic transitions, floating-platform destruction/wreck states,
+7. Integrate dynamic transitions, floating-platform destruction/wreck states,
    recovery, and performance only after those offline gates are green.
-7. Activate maps individually after matched command/tactical captures and
+8. Activate maps individually after matched command/tactical captures and
    explicit human visual approval.

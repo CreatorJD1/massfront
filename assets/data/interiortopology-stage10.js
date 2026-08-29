@@ -22,18 +22,18 @@ const Stage10InteriorTopologyV1 = {
   routeProfiles: {
     mixed: {
       width: 6.4,
-      mobility: ['infantry', 'small_vehicle', 'mech'],
+      mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'],
       portalProfile: 'interior_mixed_8x6'
     },
     infantry: {
       width: 3.2,
-      mobility: ['infantry'],
+      mobility: ['infantry', 'support_drone'],
       portalProfile: 'interior_personnel_4x4'
     }
   },
   restrictedUnitEnvelope: {
     id: 'small_unit_combined',
-    allowed: ['infantry', 'small_vehicle', 'mech'],
+    allowed: ['infantry', 'support_drone', 'small_vehicle', 'mech'],
     forbidden: ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan']
   },
   portalProfiles: {
@@ -90,7 +90,7 @@ const Stage10InteriorTopologyV1 = {
       floorElevations: [0],
       unitEnvelope: {
         id: 'small_unit_combined',
-        allowed: ['infantry', 'small_vehicle', 'mech'],
+        allowed: ['infantry', 'support_drone', 'small_vehicle', 'mech'],
         forbidden: ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan']
       },
       insertionNode: 'breach_insert',
@@ -104,17 +104,17 @@ const Stage10InteriorTopologyV1 = {
         { id: 'breach_extract', role: 'extraction', at: [36, 4, 0] }
       ],
       routes: [
-        { id: 'breach_m0', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'breach_insert', to: 'breach_west', points: [[4, 36, 0], [12, 28, 0]] },
-        { id: 'breach_m1', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'breach_west', to: 'breach_center', points: [[12, 28, 0], [20, 20, 0]] },
-        { id: 'breach_m2', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'breach_center', to: 'breach_objective', points: [[20, 20, 0], [28, 20, 0]] },
-        { id: 'breach_m3', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'breach_objective', to: 'breach_south', points: [[28, 20, 0], [28, 12, 0]] },
-        { id: 'breach_m4', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'breach_south', to: 'breach_extract', points: [[28, 12, 0], [36, 4, 0]] },
-        { id: 'breach_f0', kind: 'infantry', width: 3.2, mobility: ['infantry'], from: 'breach_west', to: 'breach_objective', points: [[12, 28, 0], [8, 20, 0], [16, 16, 0], [28, 20, 0]] }
+        { id: 'breach_m0', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'breach_insert', to: 'breach_west', points: [[4, 36, 0], [12, 28, 0]] },
+        { id: 'breach_m1', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'breach_west', to: 'breach_center', points: [[12, 28, 0], [20, 20, 0]] },
+        { id: 'breach_m2', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'breach_center', to: 'breach_objective', points: [[20, 20, 0], [28, 20, 0]] },
+        { id: 'breach_m3', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'breach_objective', to: 'breach_south', points: [[28, 20, 0], [28, 12, 0]] },
+        { id: 'breach_m4', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'breach_south', to: 'breach_extract', points: [[28, 12, 0], [36, 4, 0]] },
+        { id: 'breach_f0', kind: 'infantry', width: 3.2, mobility: ['infantry', 'support_drone'], from: 'breach_west', to: 'breach_objective', points: [[12, 28, 0], [8, 20, 0], [16, 16, 0], [28, 20, 0]] }
       ],
       objectives: [
         { id: 'breach_core', node: 'breach_objective', mixedApproaches: ['breach_m2', 'breach_m3'], interactionMobility: ['infantry'] }
       ],
-      extraction: { node: 'breach_extract', mobility: ['infantry', 'small_vehicle', 'mech'] },
+      extraction: { node: 'breach_extract', mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'] },
       turningPockets: [
         { id: 'breach_turn_center', node: 'breach_center', diameter: 9 },
         { id: 'breach_turn_objective', node: 'breach_objective', diameter: 9 }
@@ -156,7 +156,7 @@ const Stage10InteriorTopologyV1 = {
       floorElevations: [0],
       unitEnvelope: {
         id: 'small_unit_combined',
-        allowed: ['infantry', 'small_vehicle', 'mech'],
+        allowed: ['infantry', 'support_drone', 'small_vehicle', 'mech'],
         forbidden: ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan']
       },
       insertionNode: 'linear_insert',
@@ -169,17 +169,17 @@ const Stage10InteriorTopologyV1 = {
         { id: 'linear_extract', role: 'extraction', at: [44, 16, 0] }
       ],
       routes: [
-        { id: 'linear_m0', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'linear_insert', to: 'linear_west', points: [[4, 16, 0], [12, 16, 0]] },
-        { id: 'linear_m1', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'linear_west', to: 'linear_mid', points: [[12, 16, 0], [24, 16, 0]] },
-        { id: 'linear_m2', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'linear_mid', to: 'linear_objective', points: [[24, 16, 0], [36, 16, 0]] },
-        { id: 'linear_m3', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'linear_objective', to: 'linear_extract', points: [[36, 16, 0], [44, 16, 0]] },
-        { id: 'linear_f0', kind: 'infantry', width: 3.2, mobility: ['infantry'], from: 'linear_west', to: 'linear_objective', points: [[12, 16, 0], [12, 8, 0], [36, 8, 0], [36, 16, 0]] },
-        { id: 'linear_f1', kind: 'infantry', width: 3.2, mobility: ['infantry'], from: 'linear_mid', to: 'linear_extract', points: [[24, 16, 0], [24, 24, 0], [44, 24, 0], [44, 16, 0]] }
+        { id: 'linear_m0', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'linear_insert', to: 'linear_west', points: [[4, 16, 0], [12, 16, 0]] },
+        { id: 'linear_m1', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'linear_west', to: 'linear_mid', points: [[12, 16, 0], [24, 16, 0]] },
+        { id: 'linear_m2', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'linear_mid', to: 'linear_objective', points: [[24, 16, 0], [36, 16, 0]] },
+        { id: 'linear_m3', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'linear_objective', to: 'linear_extract', points: [[36, 16, 0], [44, 16, 0]] },
+        { id: 'linear_f0', kind: 'infantry', width: 3.2, mobility: ['infantry', 'support_drone'], from: 'linear_west', to: 'linear_objective', points: [[12, 16, 0], [12, 8, 0], [36, 8, 0], [36, 16, 0]] },
+        { id: 'linear_f1', kind: 'infantry', width: 3.2, mobility: ['infantry', 'support_drone'], from: 'linear_mid', to: 'linear_extract', points: [[24, 16, 0], [24, 24, 0], [44, 24, 0], [44, 16, 0]] }
       ],
       objectives: [
         { id: 'linear_landmark', node: 'linear_objective', mixedApproaches: ['linear_m2', 'linear_m3'], interactionMobility: ['infantry'] }
       ],
-      extraction: { node: 'linear_extract', mobility: ['infantry', 'small_vehicle', 'mech'] },
+      extraction: { node: 'linear_extract', mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'] },
       turningPockets: [
         { id: 'linear_turn_objective', node: 'linear_objective', diameter: 9 },
         { id: 'linear_turn_extract', node: 'linear_extract', diameter: 9 }
@@ -221,7 +221,7 @@ const Stage10InteriorTopologyV1 = {
       floorElevations: [0],
       unitEnvelope: {
         id: 'small_unit_combined',
-        allowed: ['infantry', 'small_vehicle', 'mech'],
+        allowed: ['infantry', 'support_drone', 'small_vehicle', 'mech'],
         forbidden: ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan']
       },
       insertionNode: 'loop_insert',
@@ -239,25 +239,25 @@ const Stage10InteriorTopologyV1 = {
         { id: 'loop_extract', role: 'extraction', at: [62, 32, 0] }
       ],
       routes: [
-        { id: 'loop_m_entry', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_insert', to: 'loop_west', points: [[2, 32, 0], [12, 32, 0]] },
-        { id: 'loop_m_w_nw', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_west', to: 'loop_nw', points: [[12, 32, 0], [12, 52, 0]] },
-        { id: 'loop_m_nw_on', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_nw', to: 'loop_objective_n', points: [[12, 52, 0], [32, 52, 0]] },
-        { id: 'loop_m_on_ne', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_objective_n', to: 'loop_ne', points: [[32, 52, 0], [52, 52, 0]] },
-        { id: 'loop_m_ne_e', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_ne', to: 'loop_east', points: [[52, 52, 0], [52, 32, 0]] },
-        { id: 'loop_m_e_se', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_east', to: 'loop_se', points: [[52, 32, 0], [52, 12, 0]] },
-        { id: 'loop_m_se_os', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_se', to: 'loop_objective_s', points: [[52, 12, 0], [32, 12, 0]] },
-        { id: 'loop_m_os_sw', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_objective_s', to: 'loop_sw', points: [[32, 12, 0], [12, 12, 0]] },
-        { id: 'loop_m_sw_w', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_sw', to: 'loop_west', points: [[12, 12, 0], [12, 32, 0]] },
-        { id: 'loop_m_exit', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'loop_east', to: 'loop_extract', points: [[52, 32, 0], [62, 32, 0]] },
-        { id: 'loop_f_ns', kind: 'infantry', width: 3.2, mobility: ['infantry'], from: 'loop_objective_n', to: 'loop_objective_s', points: [[32, 52, 0], [32, 32, 0], [32, 12, 0]] },
-        { id: 'loop_f_we', kind: 'infantry', width: 3.2, mobility: ['infantry'], from: 'loop_west', to: 'loop_east', points: [[12, 32, 0], [32, 32, 0], [52, 32, 0]] },
-        { id: 'loop_f_diag', kind: 'infantry', width: 3.2, mobility: ['infantry'], from: 'loop_nw', to: 'loop_se', points: [[12, 52, 0], [24, 40, 0], [40, 24, 0], [52, 12, 0]] }
+        { id: 'loop_m_entry', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_insert', to: 'loop_west', points: [[2, 32, 0], [12, 32, 0]] },
+        { id: 'loop_m_w_nw', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_west', to: 'loop_nw', points: [[12, 32, 0], [12, 52, 0]] },
+        { id: 'loop_m_nw_on', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_nw', to: 'loop_objective_n', points: [[12, 52, 0], [32, 52, 0]] },
+        { id: 'loop_m_on_ne', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_objective_n', to: 'loop_ne', points: [[32, 52, 0], [52, 52, 0]] },
+        { id: 'loop_m_ne_e', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_ne', to: 'loop_east', points: [[52, 52, 0], [52, 32, 0]] },
+        { id: 'loop_m_e_se', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_east', to: 'loop_se', points: [[52, 32, 0], [52, 12, 0]] },
+        { id: 'loop_m_se_os', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_se', to: 'loop_objective_s', points: [[52, 12, 0], [32, 12, 0]] },
+        { id: 'loop_m_os_sw', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_objective_s', to: 'loop_sw', points: [[32, 12, 0], [12, 12, 0]] },
+        { id: 'loop_m_sw_w', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_sw', to: 'loop_west', points: [[12, 12, 0], [12, 32, 0]] },
+        { id: 'loop_m_exit', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'loop_east', to: 'loop_extract', points: [[52, 32, 0], [62, 32, 0]] },
+        { id: 'loop_f_ns', kind: 'infantry', width: 3.2, mobility: ['infantry', 'support_drone'], from: 'loop_objective_n', to: 'loop_objective_s', points: [[32, 52, 0], [32, 32, 0], [32, 12, 0]] },
+        { id: 'loop_f_we', kind: 'infantry', width: 3.2, mobility: ['infantry', 'support_drone'], from: 'loop_west', to: 'loop_east', points: [[12, 32, 0], [32, 32, 0], [52, 32, 0]] },
+        { id: 'loop_f_diag', kind: 'infantry', width: 3.2, mobility: ['infantry', 'support_drone'], from: 'loop_nw', to: 'loop_se', points: [[12, 52, 0], [24, 40, 0], [40, 24, 0], [52, 12, 0]] }
       ],
       objectives: [
         { id: 'loop_north_room', node: 'loop_objective_n', mixedApproaches: ['loop_m_nw_on', 'loop_m_on_ne'], vehicleBypassRoutes: ['loop_m_sw_w', 'loop_m_e_se'], interactionMobility: ['infantry'] },
         { id: 'loop_south_room', node: 'loop_objective_s', mixedApproaches: ['loop_m_se_os', 'loop_m_os_sw'], vehicleBypassRoutes: ['loop_m_w_nw', 'loop_m_ne_e'], interactionMobility: ['infantry'] }
       ],
-      extraction: { node: 'loop_extract', mobility: ['infantry', 'small_vehicle', 'mech'] },
+      extraction: { node: 'loop_extract', mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'] },
       turningPockets: [
         { id: 'loop_turn_nw', node: 'loop_nw', diameter: 9 },
         { id: 'loop_turn_ne', node: 'loop_ne', diameter: 9 },
@@ -301,7 +301,7 @@ const Stage10InteriorTopologyV1 = {
       floorElevations: [0, 4],
       unitEnvelope: {
         id: 'small_unit_combined',
-        allowed: ['infantry', 'small_vehicle', 'mech'],
+        allowed: ['infantry', 'support_drone', 'small_vehicle', 'mech'],
         forbidden: ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan']
       },
       insertionNode: 'multi_insert',
@@ -319,22 +319,22 @@ const Stage10InteriorTopologyV1 = {
         { id: 'multi_lift_upper', role: 'vertical_junction', at: [16, 40, 4] }
       ],
       routes: [
-        { id: 'multi_m_entry', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_insert', to: 'multi_lower_junction', points: [[4, 52, 0], [16, 52, 0]] },
-        { id: 'multi_m_lower_ramp', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_lower_junction', to: 'multi_ramp_base', points: [[16, 52, 0], [28, 44, 0]] },
-        { id: 'multi_m_lower_objective', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_ramp_base', to: 'multi_lower_objective', points: [[28, 44, 0], [40, 48, 0], [48, 52, 0]] },
-        { id: 'multi_m_extract', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_lower_objective', to: 'multi_extract', points: [[48, 52, 0], [64, 52, 0], [76, 52, 0]] },
-        { id: 'multi_m_ramp', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_ramp_base', to: 'multi_ramp_top', points: [[28, 44, 0], [40, 38, 2], [52, 32, 4]], vertical: { mode: 'ramp', rise: 4, horizontalRun: 26.833, slopeDegrees: 8.478 } },
-        { id: 'multi_m_upper', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_ramp_top', to: 'multi_upper_junction', points: [[52, 32, 4], [60, 24, 4]] },
-        { id: 'multi_m_upper_objective', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_upper_junction', to: 'multi_upper_objective', points: [[60, 24, 4], [72, 16, 4]] },
-        { id: 'multi_m_lift_lower', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_lower_junction', to: 'multi_lift_lower', points: [[16, 52, 0], [16, 40, 0]] },
-        { id: 'multi_m_lift_upper', kind: 'mixed', width: 6.4, mobility: ['infantry', 'small_vehicle', 'mech'], from: 'multi_lift_upper', to: 'multi_upper_junction', points: [[16, 40, 4], [36, 32, 4], [48, 28, 4], [60, 24, 4]] },
-        { id: 'multi_f_lift', kind: 'infantry', width: 3.2, mobility: ['infantry'], from: 'multi_lift_lower', to: 'multi_lift_upper', points: [[16, 40, 0], [16, 40, 4]], vertical: { mode: 'personnel_lift', rise: 4, alternateTo: 'multi_m_ramp' } }
+        { id: 'multi_m_entry', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_insert', to: 'multi_lower_junction', points: [[4, 52, 0], [16, 52, 0]] },
+        { id: 'multi_m_lower_ramp', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_lower_junction', to: 'multi_ramp_base', points: [[16, 52, 0], [28, 44, 0]] },
+        { id: 'multi_m_lower_objective', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_ramp_base', to: 'multi_lower_objective', points: [[28, 44, 0], [40, 48, 0], [48, 52, 0]] },
+        { id: 'multi_m_extract', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_lower_objective', to: 'multi_extract', points: [[48, 52, 0], [64, 52, 0], [76, 52, 0]] },
+        { id: 'multi_m_ramp', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_ramp_base', to: 'multi_ramp_top', points: [[28, 44, 0], [40, 38, 2], [52, 32, 4]], vertical: { mode: 'ramp', rise: 4, horizontalRun: 26.833, slopeDegrees: 8.478 } },
+        { id: 'multi_m_upper', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_ramp_top', to: 'multi_upper_junction', points: [[52, 32, 4], [60, 24, 4]] },
+        { id: 'multi_m_upper_objective', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_upper_junction', to: 'multi_upper_objective', points: [[60, 24, 4], [72, 16, 4]] },
+        { id: 'multi_m_lift_lower', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_lower_junction', to: 'multi_lift_lower', points: [[16, 52, 0], [16, 40, 0]] },
+        { id: 'multi_m_lift_upper', kind: 'mixed', width: 6.4, mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'], from: 'multi_lift_upper', to: 'multi_upper_junction', points: [[16, 40, 4], [36, 32, 4], [48, 28, 4], [60, 24, 4]] },
+        { id: 'multi_f_lift', kind: 'infantry', width: 3.2, mobility: ['infantry', 'support_drone'], from: 'multi_lift_lower', to: 'multi_lift_upper', points: [[16, 40, 0], [16, 40, 4]], vertical: { mode: 'personnel_lift', rise: 4, alternateTo: 'multi_m_ramp' } }
       ],
       objectives: [
         { id: 'multi_lower_relay', node: 'multi_lower_objective', mixedApproaches: ['multi_m_lower_objective', 'multi_m_extract'], interactionMobility: ['infantry'] },
         { id: 'multi_upper_control', node: 'multi_upper_objective', mixedApproaches: ['multi_m_upper_objective'], alternateInfantryApproach: 'multi_f_lift', interactionMobility: ['infantry'] }
       ],
-      extraction: { node: 'multi_extract', mobility: ['infantry', 'small_vehicle', 'mech'] },
+      extraction: { node: 'multi_extract', mobility: ['infantry', 'support_drone', 'small_vehicle', 'mech'] },
       turningPockets: [
         { id: 'multi_turn_lower', node: 'multi_lower_junction', diameter: 9 },
         { id: 'multi_turn_ramp_base', node: 'multi_ramp_base', diameter: 9 },
@@ -416,10 +416,10 @@ function mfPreflightStage10InteriorTopologyV1(templateId) {
   if (!sizeLimit || template.bounds[0] > sizeLimit || template.bounds[1] > sizeLimit) {
     return fail('INTERIOR_TOPOLOGY_BOUNDS_INVALID', 'The topology exceeds the XS/SMALL authoring envelope.');
   }
-  const allowed = ['infantry', 'small_vehicle', 'mech'];
+  const allowed = ['infantry', 'support_drone', 'small_vehicle', 'mech'];
   const forbidden = ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan'];
   if (!template.unitEnvelope || template.unitEnvelope.id !== 'small_unit_combined' || !sameArray(template.unitEnvelope.allowed, allowed) || !sameArray(template.unitEnvelope.forbidden, forbidden) || template.unitEnvelope.allowed.some(unitClass => forbidden.includes(unitClass))) {
-    return fail('INTERIOR_TOPOLOGY_UNIT_ENVELOPE_INVALID', 'Only infantry, small vehicles, and mechs may enter these interiors.');
+    return fail('INTERIOR_TOPOLOGY_UNIT_ENVELOPE_INVALID', 'Only infantry, support drones, small vehicles, and light mechs may enter these interiors.');
   }
   if (!Array.isArray(template.nodes) || !template.nodes.length || !Array.isArray(template.routes) || !template.routes.length) {
     return fail('INTERIOR_TOPOLOGY_GRAPH_INVALID', 'Nodes and routes are required.');
@@ -458,7 +458,7 @@ function mfPreflightStage10InteriorTopologyV1(templateId) {
       mixedNodes[route.from] = true;
       mixedNodes[route.to] = true;
     } else if (route.kind === 'infantry') {
-      if (route.width !== 3.2 || !sameArray(route.mobility, ['infantry'])) return fail('INTERIOR_TOPOLOGY_INFANTRY_ROUTE_INVALID', 'Personnel branches must be 3.2 m and infantry-only.');
+      if (route.width !== 3.2 || !sameArray(route.mobility, ['infantry', 'support_drone'])) return fail('INTERIOR_TOPOLOGY_INFANTRY_ROUTE_INVALID', 'Personnel branches must be 3.2 m and use the theatre infantry/support-drone envelope.');
     } else {
       return fail('INTERIOR_TOPOLOGY_ROUTE_INVALID', 'Unknown route class.');
     }

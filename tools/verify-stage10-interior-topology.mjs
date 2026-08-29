@@ -9,13 +9,15 @@ import { fileURLToPath } from 'node:url';
 const toolDir = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(toolDir, '..');
 const dataPath = path.join(root, 'assets', 'data', 'interiortopology-stage10.js');
+const theatrePath = path.join(root, 'assets', 'data', 'theatreprofiles-stage10.js');
 const sourcePath = path.join(root, 'source-media', 'content-library', 'interior-tactical-model-packs.v1.json');
 const manifestPath = path.join(root, 'assets', 'data', 'manifest.json');
 const bootPath = path.join(root, 'boot.js');
 const reportPath = path.join(root, 'tmp', 'stage10-interior-topology', 'verification.json');
 
-const [dataSource, sourceText, manifestText, bootText] = await Promise.all([
+const [dataSource, theatreSource, sourceText, manifestText, bootText] = await Promise.all([
   fs.readFile(dataPath, 'utf8'),
+  fs.readFile(theatrePath, 'utf8'),
   fs.readFile(sourcePath, 'utf8'),
   fs.readFile(manifestPath, 'utf8'),
   fs.readFile(bootPath, 'utf8')
@@ -54,6 +56,7 @@ function createContext() {
     }
   }
   const context = vm.createContext({ Math: trackedMath, Date: TrackedDate });
+  new vm.Script(theatreSource, { filename: theatrePath }).runInContext(context);
   new vm.Script(dataSource, { filename: dataPath }).runInContext(context);
   return {
     context,
@@ -77,6 +80,8 @@ function loadCatalog(context) {
 
 const baselineRuntime = createContext();
 const catalog = loadCatalog(baselineRuntime.context);
+const theatreCatalog = evaluateJson(baselineRuntime.context, 'Stage10TheatreCatalogV1');
+const theatreEnvelope = theatreCatalog.unitEnvelopes.small_unit_combined;
 assert.deepEqual(baselineRuntime.nondeterminism(), { randomCalls: 0, dateCalls: 0 }, 'loading the catalog must be deterministic');
 assert.equal(catalog.schema, 'Stage10InteriorTopologyV1');
 assert.equal(catalog.status, 'AUTHORING_ONLY');
@@ -91,6 +96,8 @@ assert.equal(manifestText.includes('interiortopology-stage10.js'), true, 'inert 
 assert.equal(bootText.includes('interiortopology-stage10.js'), true, 'inert topology data must enter boot.js');
 assert.equal(JSON.stringify(catalog).includes('moduleId'), false, 'topology candidates may not claim unproven model module IDs');
 assert.equal(JSON.stringify(catalog).includes('modelPackId'), false, 'topology candidates may not claim a built model pack');
+assert.deepEqual(theatreEnvelope.allowed, ['infantry', 'support_drone', 'small_vehicle', 'mech']);
+assert.deepEqual(theatreEnvelope.forbidden, ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan']);
 
 assert.equal(sourceCatalog.schemaVersion, 1);
 assert.equal(sourceCatalog.status, 'PLANNED');
@@ -107,10 +114,10 @@ const expectedTemplateRules = {
   interior_small_multilevel_80x64: { minimumInfantryBranches: 1, floorElevations: [0, 4] }
 };
 const expectedHashes = {
-  interior_xs_breach_40x40: 'fnv1a32-11767a0a',
-  interior_xs_linear_48x32: 'fnv1a32-0eb4d76f',
-  interior_small_loop_64x64: 'fnv1a32-0c2d36a3',
-  interior_small_multilevel_80x64: 'fnv1a32-d7985277'
+  interior_xs_breach_40x40: 'fnv1a32-bd45798e',
+  interior_xs_linear_48x32: 'fnv1a32-29645d77',
+  interior_small_loop_64x64: 'fnv1a32-aeb3a075',
+  interior_small_multilevel_80x64: 'fnv1a32-6209c873'
 };
 const sourceTemplateIds = sourceCatalog.mapTemplates.map(template => template.templateId);
 assert.deepEqual(Object.keys(catalog.templates), sourceTemplateIds, 'candidate set must exactly match the four source templates and source order');
@@ -124,13 +131,16 @@ for (const sourceTemplate of sourceCatalog.mapTemplates) {
   assert.equal(template.sizeClass, sourceTemplate.sizeClass);
   assert.deepEqual(template.bounds, sourceTemplate.playableBoundsMeters);
   assert.deepEqual(template.floorElevations, expectedTemplateRules[templateId].floorElevations);
-  assert.deepEqual(template.unitEnvelope.allowed, sourceTemplate.requiredMobility);
-  assert.deepEqual(template.unitEnvelope.forbidden, ['heavy_vehicle', 'heavy_mech', 'artillery', 'air', 'naval', 'titan']);
+  assert.deepEqual(template.unitEnvelope.allowed, theatreEnvelope.allowed);
+  assert.deepEqual(template.unitEnvelope.allowed.filter(unit => unit !== 'support_drone'), sourceTemplate.requiredMobility,
+    'the exploration theatre adds support drones without dropping source-required unit classes');
+  assert.deepEqual(template.unitEnvelope.forbidden, theatreEnvelope.forbidden);
   assert.equal(contract.minimumMixedRouteWidth, sourceTemplate.minimumMixedRouteWidth);
   assert.equal(contract.minimumTurningPockets, sourceTemplate.minimumTurningPockets);
   assert.equal(contract.minimumInfantryBranches, expectedTemplateRules[templateId].minimumInfantryBranches);
   assert.ok(template.routes.filter(route => route.kind === 'mixed').every(route => route.width === 6.4));
-  assert.ok(template.routes.filter(route => route.kind === 'infantry').every(route => route.width === 3.2 && route.mobility.length === 1 && route.mobility[0] === 'infantry'));
+  assert.ok(template.routes.filter(route => route.kind === 'infantry').every(route => route.width === 3.2 &&
+    JSON.stringify(route.mobility) === JSON.stringify(['infantry', 'support_drone'])));
   assert.ok(template.portals.some(portal => portal.kind === 'door'));
   assert.ok(template.portals.some(portal => portal.kind === 'gate'));
   assert.equal(template.destructibles.length, template.portals.length);
@@ -169,6 +179,7 @@ const injectedFaults = [
   runFault('template-activation', 'interior_xs_breach_40x40', `Stage10InteriorTopologyV1.templates.interior_xs_breach_40x40.activation.runtime = true;`, 'INTERIOR_TOPOLOGY_TEMPLATE_INERTNESS_INVALID'),
   runFault('bounds-drift', 'interior_xs_breach_40x40', `Stage10InteriorTopologyV1.templates.interior_xs_breach_40x40.bounds[0] = 41;`, 'INTERIOR_TOPOLOGY_BOUNDS_INVALID'),
   runFault('heavy-unit-admission', 'interior_xs_breach_40x40', `Stage10InteriorTopologyV1.templates.interior_xs_breach_40x40.unitEnvelope.allowed.push('heavy_vehicle');`, 'INTERIOR_TOPOLOGY_UNIT_ENVELOPE_INVALID'),
+  runFault('support-drone-loss', 'interior_xs_breach_40x40', `Stage10InteriorTopologyV1.templates.interior_xs_breach_40x40.unitEnvelope.allowed = ['infantry', 'small_vehicle', 'mech'];`, 'INTERIOR_TOPOLOGY_UNIT_ENVELOPE_INVALID'),
   runFault('node-out-of-bounds', 'interior_xs_breach_40x40', `Stage10InteriorTopologyV1.templates.interior_xs_breach_40x40.nodes[0].at[0] = -1;`, 'INTERIOR_TOPOLOGY_NODE_INVALID'),
   runFault('route-endpoint-drift', 'interior_xs_breach_40x40', `Stage10InteriorTopologyV1.templates.interior_xs_breach_40x40.routes[0].points[0][0] = 5;`, 'INTERIOR_TOPOLOGY_ROUTE_INVALID'),
   runFault('mixed-width-loss', 'interior_xs_breach_40x40', `Stage10InteriorTopologyV1.templates.interior_xs_breach_40x40.routes[0].width = 6.39;`, 'INTERIOR_TOPOLOGY_MIXED_ROUTE_INVALID'),
@@ -200,8 +211,9 @@ const totals = Object.values(baselineResults).reduce((sum, result) => {
 }, {});
 const report = {
   status: 'PASS',
-  schema: 'Stage10InteriorTopologyVerificationV1',
+  schema: 'Stage10InteriorTopologyVerificationV2',
   sourceCatalog: path.relative(root, sourcePath).replaceAll('\\', '/'),
+  theatreCatalog: path.relative(root, theatrePath).replaceAll('\\', '/'),
   dataFile: path.relative(root, dataPath).replaceAll('\\', '/'),
   runtimeRegistered: false,
   templateCount: sourceTemplateIds.length,
