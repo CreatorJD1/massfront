@@ -322,6 +322,10 @@ function siteTemplatePool(cls, ctx){
   const ids=[]; const missCount={}; let exists=false;
   for(const id in SITE_TPL){
     const T=SITE_TPL[id];
+    /* Exact Stage 9 map records are compiled by LocationMapPlanV1. Letting
+       the legacy selector see them would leak a Caldera city across every
+       same-climate map before that map has full authored coverage. */
+    if(T.v1Only) continue;
     if(T.class!==cls) continue;
     exists=true;
     const hit=siteTemplateCompat(T, ctx);
@@ -354,7 +358,9 @@ function siteTemplateFor(cls, pick){
     ||'';
   if(pin){
     const forced=SITE_TPL[pin];
-    if(forced&&forced.class===cls){ siteTplNote(cls, true); return forced; }
+    /* V1 records belong to the atomic location planner. A stale probe pin
+       must not route one through legacy planDistricts before preflight. */
+    if(forced&&forced.class===cls&&!forced.v1Only){ siteTplNote(cls, true); return forced; }
   }
   const pool=siteTemplatePool(cls);
   if(pool.grammar) SITE_TPL_QUERY.telem.grammar[cls]=pool.grammar;

@@ -32,6 +32,8 @@
     "assets/data/worldkit.js",
     "assets/data/locationgrammar.js",
     "assets/data/sitetemplates.js",
+    "assets/data/sitetemplates-stage9.js",
+    "assets/data/locationplans.js",
     "src/engine/worldsites.js",
     "assets/data/meshes.js",
     "src/engine/models-legion.js",

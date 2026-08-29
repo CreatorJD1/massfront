@@ -35,6 +35,8 @@ const read = rel => readFileSync(join(ROOT, rel), 'utf8');
 const SOURCE_PATHS = [
   'assets/data/sitetemplates.js',
   'assets/data/locationgrammar.js',
+  'assets/data/sitetemplates-stage9.js',
+  'assets/data/locationplans.js',
   'src/engine/worldsites.js',
   'src/game/sim.js',
   'boot.js',
