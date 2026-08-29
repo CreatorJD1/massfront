@@ -1,6 +1,8 @@
 {
   "order": [
     "assets/data/theatreprofiles-stage10.js",
+    "assets/data/interiortopology-stage10.js",
+    "assets/data/orbitaltopology-stage10.js",
     "assets/data/unitrows.js",
     "assets/data/unitsheet.js",
     "assets/data/itemart.js",

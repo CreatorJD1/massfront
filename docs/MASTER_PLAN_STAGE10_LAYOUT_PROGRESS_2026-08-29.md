@@ -17,13 +17,19 @@ location catalogue.
 | Lane | Current Stage 10 contract | Unit envelope |
 |---|---|---|
 | Surface battlefield | Four-homeworld Standard Wave 1; 16 inactive topology candidates | Combined arms |
-| Planet catalogue | Eight approved planet slots; six identities match the authored exploration showcase and two remain deliberately unnamed | Defined by each location, never inferred globally |
+| Planet catalogue | Eight target slots using the exploration module as Stage 10 authority; six current showcase identities and two reserved module entries remain deliberately unnamed | Defined by each location, never inferred globally |
 | Interior tactical | Four source-matched XS/Small templates across six planned 15-piece location packs | Infantry-only branches or infantry + small vehicle + light-mech routes |
 | Orbital / outer-space locations | Six source-matched station, logistics-array, derelict, debris-field, and gate seeds | Infantry boarding or small craft only |
 
+Per creator direction, `SHOWCASE_SYSTEMS` is the Stage 10 planet authority.
+Its current set is Caldris, Ithara, Orison, Nacre, Meridian K-4, and Tethys
+Foundry. The remaining two slots must be added as new exploration-module
+entries with stable IDs and assets.
+
 The older `galaxy_data.js` prototype also contains eight planet records, but it
-is reference-only and is not identity authority. Stage 10 does not silently
-promote those old names. The two remaining approved planet identities stay
+is reference-only, contains franchise-contaminated placeholder material, and
+is not identity authority. Stage 10 does not silently promote those old names.
+The two remaining target planet identities stay
 `PENDING_CANON_NAME` until a canonical local source or explicit direction names
 them.
 
@@ -33,6 +39,30 @@ titans, or capital ships. Its XS bounds stop at 48 m and Small bounds stop at
 80 m. The existing source contract's 6.4 m mixed route supports infantry, one
 small vehicle, and light-mech-scale movement; narrower branches can be
 infantry-only.
+
+## Interior and orbital topology implementation
+
+`assets/data/interiortopology-stage10.js` defines four registered but inert
+navigation candidates matching the source interior templates exactly:
+
+- XS breach, 40 × 40 m;
+- XS linear, 48 × 32 m;
+- Small loop, 64 × 64 m; and
+- Small multilevel, 80 × 64 m.
+
+Together they contain 31 nodes, 28 mixed routes, seven infantry-only branches,
+six objectives, eight portals, eight deterministic destructibles, and twelve
+turning pockets. Mixed routes retain 6.4 m clearance; infantry branches are
+3.2 m. Every candidate preserves insertion-to-objective-to-extraction
+connectivity and rejects the heavy-unit classes listed above.
+
+`assets/data/orbitaltopology-stage10.js` defines six registered but inert
+exploration-location candidates. Four are bounded three-dimensional smallcraft
+route volumes for the Concord Spindle, Peregrine Logistics Array, Lifeboat
+Debris Field, and Veyra–Karak Phase Gate. Two are infantry boarding graphs for
+Archive Hulk KX-19 and the Karak Colony Spine. All six have deterministic
+spawns, insertion/extraction, hazards, two objectives, destructible state
+transitions, ordered recovery, and rollback to the last complete state.
 
 ## Implemented foundation
 
@@ -99,8 +129,11 @@ and explicit activation before runtime may consume it.
 | Command | Result |
 |---|---|
 | `node tools/verify-stage10-battlefield-topology.mjs` | **PASS 24/24**; all 16 Standard candidates, 16 distinct profiles and topology hashes, six `FULL_V1` baselines, four floating sites, route and approach gates, and injected fail-closed faults. Report: `tmp/stage10-topology/report.json`. |
-| `node tools/verify-stage10-theatre-catalog.mjs` | **PASS 16/16**; eight approved planet slots, six source-matched identities, two pending names, four source-matched interior templates, six inert interior packs, restricted unit envelopes, six source-matched orbital seeds, loader registration, and six injected faults. Report: `tmp/stage10-theatres/report.json`. |
-| `node tools/bundle.mjs` | **PASS**; 101 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.35 MB. |
+| `node tools/verify-stage10-theatre-catalog.mjs` | **PASS 16/16**; eight target planet slots, the exploration-module authority, six source-matched identities, two reserved names, four source-matched interior templates, six inert interior packs, restricted unit envelopes, six source-matched orbital seeds, loader registration, and six injected faults. Report: `tmp/stage10-theatres/report.json`. |
+| `node tools/verify-stage10-interior-topology.mjs` | **PASS**; four exact templates and 18 injected fail-closed faults. Report: `tmp/stage10-interior-topology/verification.json`. |
+| `node tools/verify-stage10-orbital-topology.mjs` | **PASS 29/29**; six source-matched layouts, distinct stable hashes, zero random calls, recovery gates, loader registration, and 13 injected faults. Report: `tmp/stage10-orbital-topology/report.json`. |
+| `node tools/verify-stage10-layouts.mjs` | **PASS 6/6** aggregate gates: global scope, theatre catalogue, surface, interior, orbital, and bundle. Report: `tmp/stage10-layouts/report.json`. |
+| `node tools/bundle.mjs` | **PASS**; 103 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.42 MB. |
 
 The surface faults reject invalid arterial width, a `massive` size alias,
 missing floating-platform draft, a major site with only one approach,
@@ -123,15 +156,17 @@ topology hash without calling `Math.random()`.
 
 ## Next safe Stage 10 sequence
 
-1. Confirm the two still-unnamed planet identities from canonical local source
-   or explicit direction; do not borrow names from the legacy prototype.
-2. Add exact site requests/templates in bounded groups, preserving the six
+1. Add the two remaining planet identities as new exploration-module entries
+   only after names, stable IDs, sovereignty, materials, and IP review are set.
+2. Bind the six planned interior packs to the four topology families through
+   source-only assembly requests, preserving per-location faction identity.
+3. Bind orbital geometry requests to the six source-matched topology seeds
+   without activating a runtime consumer.
+4. Add exact surface site requests/templates in bounded groups, preserving the six
    Stage 9 `FULL_V1` regression baselines.
-3. Author XS/Small interior and orbital location layouts against their explicit
-   unit envelope; never inherit the combined-arms surface roster.
-4. Add topology realization and traversal fixtures before connecting any plan
+5. Add topology realization and traversal fixtures before connecting any plan
    to terrain generation or cache identity.
-5. Integrate dynamic transitions, floating-platform destruction/wreck states,
+6. Integrate dynamic transitions, floating-platform destruction/wreck states,
    recovery, and performance only after those offline gates are green.
-6. Activate maps individually after matched command/tactical captures and
+7. Activate maps individually after matched command/tactical captures and
    explicit human visual approval.

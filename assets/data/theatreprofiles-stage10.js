@@ -3,10 +3,11 @@
    MASSFRONT world catalogue. This stays inert until separately approved. */
 const Stage10TheatreCatalogV1={
   schema:'Stage10TheatreCatalogV1',version:1,status:'AUTHORING_ONLY',runtimeReady:false,
-  approvedPlanetCount:8,
+  targetPlanetCount:8,
+  planetAuthority:'EXPLORATION_MODULE_SHOWCASE_SYSTEMS',
   sourceInventories:{
     surfaceHomeworlds:{count:4,authority:'CURRENT_RTS_RUNTIME',ids:['aelos','pyraeth','nordhall','vespera']},
-    authoredExplorationPlanets:{count:6,authority:'CURRENT_EXPLORATION_SHOWCASE',ids:[
+    authoredExplorationPlanets:{count:6,authority:'STAGE10_PLANET_AUTHORITY',ids:[
       'aelos_caldris','aelos_ithara','veyra_orison','veyra_nacre','karak_meridian','karak_tethys'
     ]},
     legacyGalaxyPrototype:{count:8,authority:'REFERENCE_ONLY_NOT_CANON_IDENTITY',source:'modules/space_exploration/src/systems/galaxy_data.js'}
@@ -87,8 +88,8 @@ function mfPreflightStage10TheatreCatalogV1(){
   const fail=(code,details)=>({ok:false,status:'REJECTED',error:{code:code,details:details||{}}});
   if(!C||C.schema!=='Stage10TheatreCatalogV1'||C.version!==1) return fail('THEATRE_SCHEMA_INVALID');
   if(C.status!=='AUTHORING_ONLY'||C.runtimeReady!==false||C.activation.runtime!==false) return fail('THEATRE_RUNTIME_ENABLED');
-  if(C.approvedPlanetCount!==8||!Array.isArray(C.planetSlots)||C.planetSlots.length!==8)
-    return fail('THEATRE_PLANET_SCOPE_INVALID',{approved:C.approvedPlanetCount,slots:C.planetSlots&&C.planetSlots.length||0});
+  if(C.targetPlanetCount!==8||!Array.isArray(C.planetSlots)||C.planetSlots.length!==8)
+    return fail('THEATRE_PLANET_SCOPE_INVALID',{target:C.targetPlanetCount,slots:C.planetSlots&&C.planetSlots.length||0});
   const slots=new Set(),sourceIds=new Set();
   for(let i=0;i<C.planetSlots.length;i++){
     const P=C.planetSlots[i];
@@ -136,8 +137,8 @@ function mfPreflightStage10TheatreCatalogV1(){
     orbitIds.add(L.id);
   }
   return {ok:true,status:C.status,summary:{
-    approvedPlanetCount:C.approvedPlanetCount,sourceMatchedPlanets:sourceIds.size,
-    pendingCanonPlanetNames:C.approvedPlanetCount-sourceIds.size,
+    targetPlanetCount:C.targetPlanetCount,sourceMatchedPlanets:sourceIds.size,
+    pendingCanonPlanetNames:C.targetPlanetCount-sourceIds.size,
     surfaceHomeworldCount:C.sourceInventories.surfaceHomeworlds.count,
     interiorTemplateCount:C.interiorTemplates.length,interiorPackCount:C.interiorLocationPacks.length,
     orbitalLocationSeedCount:C.orbitalLocationSeeds.length,runtimeActive:false

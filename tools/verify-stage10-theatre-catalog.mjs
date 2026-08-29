@@ -42,7 +42,9 @@ try{
   const theatre=normalized(REL.theatre);
 
   record('preflight.authoring-only',result.ok===true&&result.status==='AUTHORING_ONLY'&&result.summary.runtimeActive===false,result);
-  record('scope.eight-planets',catalog.approvedPlanetCount===8&&catalog.planetSlots.length===8&&
+  record('scope.eight-planets',catalog.targetPlanetCount===8&&catalog.planetSlots.length===8&&
+    catalog.planetAuthority==='EXPLORATION_MODULE_SHOWCASE_SYSTEMS'&&
+    catalog.sourceInventories.authoredExplorationPlanets.authority==='STAGE10_PLANET_AUTHORITY'&&
     result.summary.sourceMatchedPlanets===6&&result.summary.pendingCanonPlanetNames===2,result.summary);
   record('source.showcase-six-planets',authoredPlanets.length===6&&
     JSON.stringify(authoredPlanets)===JSON.stringify([...catalog.sourceInventories.authoredExplorationPlanets.ids].sort()),
@@ -79,7 +81,7 @@ try{
     manifest.indexOf(theatre)===boot.indexOf(theatre),{manifestIndex:manifest.indexOf(theatre),bootIndex:boot.indexOf(theatre)});
 
   const faults=[
-    ['planet-count','Stage10TheatreCatalogV1.approvedPlanetCount=4','THEATRE_PLANET_SCOPE_INVALID'],
+    ['planet-count','Stage10TheatreCatalogV1.targetPlanetCount=4','THEATRE_PLANET_SCOPE_INVALID'],
     ['runtime','Stage10TheatreCatalogV1.activation.runtime=true','THEATRE_RUNTIME_ENABLED'],
     ['heavy-interior',"Stage10TheatreCatalogV1.unitEnvelopes.small_unit_combined.allowed.push('heavy_vehicle')",'THEATRE_RESTRICTED_ENVELOPE_INVALID'],
     ['named-pending',"Stage10TheatreCatalogV1.planetSlots[6].name='Invented'",'THEATRE_PLANET_PENDING_SLOT_INVALID'],
