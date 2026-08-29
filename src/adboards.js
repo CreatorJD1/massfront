@@ -384,6 +384,7 @@ function adUpdateImpressions(dt) {
 const AD_CREATIVES = {};
 const AD_UPLOAD_MS = 1000 / 15;     // throttle GPU uploads to ~15fps, not 60
 let adFallbackTex = null;
+let adGlGeneration = 0;
 
 function adMakeTex(seedRGBA) {
   const t = gl.createTexture();
@@ -410,6 +411,17 @@ function adMakeTex(seedRGBA) {
   return t;
 }
 
+function adResetCreativeTextures(c, generation) {
+  const bg = c.bg || [16, 20, 26];
+  const seed = new Uint8Array([bg[0], bg[1], bg[2], 255]);
+  c.posterTex = adMakeTex(seed);
+  c.videoTex = adMakeTex(seed);
+  c.posterLoaded = false;
+  c.videoTexPrimed = false;
+  c.lastUpload = 0;
+  if (c.poster) adLoadPoster(c, generation);
+}
+
 function adRegisterCreative(desc) {
   if (!desc || !desc.id) return null;
   let c = AD_CREATIVES[desc.id];
@@ -417,28 +429,31 @@ function adRegisterCreative(desc) {
   const bg = desc.bg || [16, 20, 26];
   c = AD_CREATIVES[desc.id] = {
     id: desc.id, brand: desc.brand || desc.id, accent: desc.accent || [190, 220, 255],
-    poster: desc.poster || null, video: desc.video || null,
-    posterTex: adMakeTex(new Uint8Array([bg[0], bg[1], bg[2], 255])),
-    videoTex: adMakeTex(new Uint8Array([bg[0], bg[1], bg[2], 255])),
+    poster: desc.poster || null, video: desc.video || null, bg: [bg[0], bg[1], bg[2]],
+    posterTex: null, videoTex: null,
     posterLoaded: false, videoTexPrimed: false,
     videoEl: null, videoState: 'init', lastUpload: 0,
   };
-  if (c.poster) adLoadPoster(c);
+  adResetCreativeTextures(c, adGlGeneration);
   return c;
 }
 
-function adLoadPoster(c) {
+function adLoadPoster(c, generation) {
+  const posterTex = c.posterTex;
   const img = new Image();
   img.onload = () => {
+    /* A decode can finish after WEBGL_lose_context. Never upload that old
+       callback into a replacement texture or mark its new seed as loaded. */
+    if (generation !== adGlGeneration || posterTex !== c.posterTex) return;
     try {
       const was = gl.getParameter(gl.ACTIVE_TEXTURE);
       gl.activeTexture(gl.TEXTURE7);
       const prev = gl.getParameter(gl.TEXTURE_BINDING_2D);
-      gl.bindTexture(gl.TEXTURE_2D, c.posterTex);
+      gl.bindTexture(gl.TEXTURE_2D, posterTex);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, img);
       gl.bindTexture(gl.TEXTURE_2D, prev);
       gl.activeTexture(was);
-      c.posterLoaded = true;
+      if (generation === adGlGeneration && posterTex === c.posterTex) c.posterLoaded = true;
     } catch (e) { console.warn('adboards: poster upload failed', c.id, e); }
   };
   img.onerror = () => { console.warn('adboards: poster failed to load', c.id, c.poster); };
@@ -1122,6 +1137,23 @@ function adInstallHooks() {
   }
 }
 
+/* Advertising owns an independent shader, stream VAO/VBO, instanced frame,
+   and several texture caches. All are context-bound; rebuilding only the
+   central renderer left this permanent begin3D hook drawing dead objects. */
+function adGLReset() {
+  const generation = ++adGlGeneration;
+  adProg = null; AD_U = {}; adVAO = adVBO = null;
+  adFrameMesh = null; adFallbackTex = null;
+  for (const id in AD_CTX_TEX_CACHE) delete AD_CTX_TEX_CACHE[id];
+  adInitScreenProgram();
+  adFallbackTex = adMakeTex();
+  for (const id in AD_CREATIVES) adResetCreativeTextures(AD_CREATIVES[id], generation);
+  adFrameMesh = new InstMesh(gl, mdlAdBoard(), AD_MAX + 4);
+  _adDrawnFrame = -1;
+  _adLastTick = 0;
+  return true;
+}
+
 /* ============================================================================
    ENTRY POINT
    ----------------------------------------------------------------------------
@@ -1139,9 +1171,7 @@ function initAdBoards() {
   window.__adboardsInit = true;
   adStatsLoad();
   adInstallHooks();
-  adInitScreenProgram();
-  adFallbackTex = adMakeTex();
-  adFrameMesh = new InstMesh(gl, mdlAdBoard(), AD_MAX + 4);
+  adGLReset();
   adWireGestureRetry();
   document.addEventListener('visibilitychange', () => { if (document.hidden) adPauseAll(); });
   AD_PROVIDER.init();   // fire-and-forget; loadCreative() awaits it itself if it's still pending

@@ -4442,6 +4442,10 @@ function bldMeshFor(B){
    imported models are interchangeable per unit with no other change. */
 const MF_BLENDER_GEO={};
 function initModels(){
+  /* Alternate faction sets are lazy and otherwise survive a restored context
+     as truthy InstMeshes. Clear the registry before any core mesh can throw;
+     bldMeshFor() repopulates the active kit on its next normal submission. */
+  for(const fac in BLD_FACTION_MESH) delete BLD_FACTION_MESH[fac];
   for(let t=0;t<UNIT_MDL.length;t++){
     const ext=MF_BLENDER_GEO[t];
     const g=ext?{hull:ext,tur:null,s:1}:UNIT_MDL[t]();

@@ -77,6 +77,7 @@ function glrRebuildResources(){
      ring before any rebuilt pass can submit fresh work. */
   step('mfPerfGLReset', ()=>{ if(typeof mfPerfGLReset==='function') mfPerfGLReset(); });
   step('terrainGLReset',()=>{ if(typeof terrainGLReset==='function') terrainGLReset(); });
+  step('terrainTextureGLReset',()=>{ if(typeof terrainTextureGLReset==='function') terrainTextureGLReset(); });
   step('worldKitGLReset',()=>{ if(typeof worldKitGLReset==='function') worldKitGLReset(); });
   step('fogGLReset',    ()=>{ if(typeof fogGLReset==='function') fogGLReset(); });
   /* GPU particles. gpfxGLReset() shipped with NO caller anywhere in the tree,
@@ -98,24 +99,26 @@ function glrRebuildResources(){
   step('mfPlanetPreviewGLReset',()=>{ if(typeof mfPlanetPreviewGLReset==='function') mfPlanetPreviewGLReset(); });
   step('initGL3D',      ()=>initGL3D());
   step('shieldFxBoot',  ()=>{ if(typeof shieldFxBoot==='function') shieldFxBoot(); });
+  step('materialGLReset',()=>{ if(typeof materialGLReset==='function') materialGLReset(); });
   step('buildMatAtlas', ()=>buildMatAtlas());
   step('initMaterialV2',()=>{ if(typeof initMaterialV2==='function') initMaterialV2(); });
   step('initBillboards',()=>{ if(typeof initBillboards==='function') initBillboards(); });
   step('macroFxBoot',   ()=>{ if(typeof macroFxBoot==='function') macroFxBoot(); });
+  step('modAttachGLReset',()=>{ if(typeof modAttachGLReset==='function') modAttachGLReset(); });
   step('initModels',    ()=>initModels());
+  step('adGLReset',     ()=>{ if(typeof adGLReset==='function') adGLReset(); });
   step('buildAtlas',    ()=>{ if(typeof buildAtlas==='function') atlasTex=buildAtlas(); });
   step('mfIconInitGL',  ()=>{ if(typeof mfIconInitGL==='function') mfIconInitGL(); });
   /* unitTex belongs to the lost context; without this, shatter silently stops
      working for the rest of the session after a context restore. */
   step('loadUnitSheet', ()=>{ if(typeof loadUnitSheet==='function') loadUnitSheet(); });
   step('buildDetailTex',()=>{ if(typeof buildDetailTex==='function') buildDetailTex(); });
-  step('terrainTextures',()=>{ terrGroundTex=terrSoilTex=terrPaveTex=terrGrassTex=null;
-    terrGroundNrm=terrSoilNrm=terrPaveNrm=terrGrassNrm=null;
-    if(typeof loadTerrainTextures==='function') loadTerrainTextures(); });
+  step('terrainTextures',()=>{ if(typeof loadTerrainTextures==='function') loadTerrainTextures(); });
   step('initFloatText', ()=>{ if(typeof initFloatText==='function') initFloatText(); });
-  /* Terrain is deterministic from the map seed, so rebuilding its texture
-     reproduces the same ground rather than a new map. */
-  step('buildTerrain',  ()=>{ terrainTex=buildTerrain(); });
+  /* heightF, the painted canvas, paving mask and hydrology are live match
+     state. Re-upload them; never regenerate the world beneath surviving units. */
+  step('terrainGLRebuild',()=>{ if(typeof terrainGLRebuild!=='function'||!terrainGLRebuild())
+    throw new Error('terrain GPU rebuild failed'); });
   step('resize',        ()=>resize());
   /* The fog texture is GPU-side and would otherwise come back blank, hiding
      everything the player had already explored. */

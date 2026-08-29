@@ -1788,7 +1788,7 @@ function buildAtlas(){
     c.restore();
   });
 
-  const tex=gl.createTexture();
+  const tex=gl.createTexture(),atlasEpoch=typeof glEpoch==='number'?glEpoch:0;
   gl.bindTexture(gl.TEXTURE_2D,tex);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,atlasCanvas);
   gl.generateMipmap(gl.TEXTURE_2D);
@@ -1803,6 +1803,10 @@ function buildAtlas(){
      same cell became a hard black square. Recover alpha from emitted intensity
      before upload so every consumer sees one properly cut plume. */
   const fireImg=new Image();fireImg.onload=()=>{
+    /* buildAtlas can finish decoding after a context restore has already
+       installed a replacement atlas. Never upload into the captured handle
+       from the old generation. */
+    if(atlasEpoch!==(typeof glEpoch==='number'?glEpoch:0)||tex!==atlasTex)return;
     const uv=sprites.flame,cx=Math.floor(uv[0]*ATLAS_W/CELL)*CELL,cy=Math.floor(uv[1]*ATLAS_H/CELL)*CELL;
     const tile=document.createElement('canvas');tile.width=tile.height=CELL;
     const tc=tile.getContext('2d',{willReadFrequently:true});tc.clearRect(0,0,CELL,CELL);tc.drawImage(fireImg,0,0,CELL,CELL);
@@ -3656,6 +3660,23 @@ function authoredWaterTexel(tx,ty){
   return !!WATER_AUTH[clamp(ty,0,TS-1)*TS+clamp(tx,0,TS-1)];
 }
 
+/* Upload the already-authored live canvas only. Context recovery must retain
+   combat scars, poured pads and every other CPU-side terrain mutation; calling
+   buildTerrain() here would regenerate the world underneath the match. */
+function uploadTerrainCanvasTex(){
+  if(!terrainCanvas||typeof gl==='undefined'||!gl)return null;
+  const tex=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,terrainCanvas);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  mfTerrainAniso();
+  return tex;
+}
+
 function hAt(wx,wy){                    // height sample by world coords
   /* resetWorld → setupDoodads can run before applyTheme builds heightF
      (hard-refresh then newSkirmish). Indexing null threw and aborted the match. */
@@ -3877,20 +3898,11 @@ function buildTerrain(themeKey){
   stampHardscapeAlbedo();              // canvas albedo matches the 3D pave splat
   buildTerrainMesh(themeKey);          // the heightfield becomes REAL displaced geometry
   uploadHeightTex(null);               // full per-pixel-normal sheet for the new field
-  const tex=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,tex);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,terrainCanvas);
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   /* Same treatment the material atlas already gets. This is the single largest
      thing on screen and the camera is always tilted, so at command zoom the far
      half of the frame minifies hard and trilinear alone drops to a mip that
      erases the painted roads and kerbs the whole terrain design rests on. */
-  mfTerrainAniso();
-  return tex;
+  return uploadTerrainCanvasTex();
 }
 
 /* Burn the hardscape mask into the painted map so canvas consumers — tactical
@@ -4430,6 +4442,17 @@ let groundMaskTex=null, groundMaskCanvas=null;
 let terrGroundTex=null, terrSoilTex=null, terrPaveTex=null, terrGrassTex=null;
 let terrGroundNrm=null, terrSoilNrm=null, terrPaveNrm=null, terrGrassNrm=null;
 let terrNeutralNrm=null, terrTexSetReady=false, terrTexLoadEpoch=0, terrTexThemePending=null;
+/* Do not delete lost-context handles: WebGL correctly reports INVALID_OPERATION
+   for objects from the old generation. Invalidate in-flight image callbacks
+   and let the ordinary builders repopulate the new context from decoded art. */
+function terrainTextureGLReset(){
+  terrTexLoadEpoch++;
+  detailTex=groundMaskTex=terrainTex=null;
+  terrGroundTex=terrSoilTex=terrPaveTex=terrGrassTex=null;
+  terrGroundNrm=terrSoilNrm=terrPaveNrm=terrGrassNrm=null;
+  terrNeutralNrm=null;terrTexSetReady=false;terrTexThemePending=null;
+  terrTexSlotPending=null;
+}
 function mfTerrainMaterialsReady(){
   return !!(terrTexSetReady&&terrGroundTex&&terrSoilTex&&terrPaveTex&&terrGrassTex&&
             terrGroundNrm&&terrSoilNrm&&terrPaveNrm&&terrGrassNrm);
@@ -4581,6 +4604,7 @@ function loadTerrainTextures(){
   const surface=mfTerrainSurfaceSelection(), theme=surface.key;
   const profile=mfTerrainLocationProfile();
   const slot=profile.metal?'metal':'pave', epoch=++terrTexLoadEpoch;
+  const contextEpoch=typeof glEpoch==='number'?glEpoch:0;
   const priorReady=mfTerrainMaterialsReady()&&(!gl.isTexture||
     [terrGroundTex,terrSoilTex,terrPaveTex,terrGrassTex,terrGroundNrm,terrSoilNrm,terrPaveNrm,terrGrassNrm]
       .every(t=>gl.isTexture(t)));
@@ -4600,12 +4624,17 @@ function loadTerrainTextures(){
     ['ground','soil','pave','grass','groundN','soilN','paveN','grassN'];
   const used={};
   let left=keys.length, failed=false, abandoned=false;
+  const liveContext=()=>contextEpoch===(typeof glEpoch==='number'?glEpoch:0);
   const discard=()=>{
+    /* A restored WebGL wrapper rejects deletes for objects created before the
+       loss. Superseded loads in this same generation are safe to clean up;
+       cross-generation pending handles must simply be forgotten. */
+    if(!liveContext())return;
     for(const k of keys) if(pending[k]&&gl) try{ gl.deleteTexture(pending[k]); }catch(e){}
   };
   const finish=(key,t)=>{
     if(epoch!==terrTexLoadEpoch){
-      if(t&&gl) try{ gl.deleteTexture(t); }catch(e){}
+      if(t&&gl&&liveContext()) try{ gl.deleteTexture(t); }catch(e){}
       /* A superseded partial decode must not strand already-uploaded sheets.
          Later callbacks delete themselves one by one. */
       if(!abandoned){ abandoned=true; discard(); }
@@ -4636,6 +4665,13 @@ function loadTerrainTextures(){
     if(typeof mfApplyAnisoBudget==='function') mfApplyAnisoBudget();
   };
   const upload=(key,im,source)=>{ if(!gl) return;
+    /* Decode callbacks can arrive after either a newer theme request or an
+       actual context restore. Fence them before allocating in the new context,
+       while discard() abandons any captured pre-loss handles without deletes. */
+    if(epoch!==terrTexLoadEpoch||!liveContext()){
+      if(!abandoned){ abandoned=true; discard(); }
+      return;
+    }
     const t=gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D,t);
     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,im);
@@ -4722,6 +4758,22 @@ function reloadTerrainThemeTextures(){
   if((terrTexThemePending!==want||terrTexSlotPending!==wantSlot)&&typeof gl!=='undefined'&&gl)
     loadTerrainTextures();
 }
+function uploadGroundMaskTex(){
+  if(!groundMaskCanvas||typeof gl==='undefined'||!gl)return null;
+  groundMaskTex=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
+  /* R8 is the WebGL2 replacement for LUMINANCE (removed in ES 3.00). Shader
+     samples .r; the 2D mask is grayscale so red equals the old luminance. */
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,gl.RED,gl.UNSIGNED_BYTE,groundMaskCanvas);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  mfTerrainAniso();
+  gl.bindTexture(gl.TEXTURE_2D,atlasTex);
+  return groundMaskTex;
+}
 function buildGroundMask(){
   const S=TS;
   if(!groundMaskCanvas){ groundMaskCanvas=document.createElement('canvas');
@@ -4805,18 +4857,8 @@ function buildGroundMask(){
      Do not blur the completed mask: that isotropically widens every formed
      road side and was the remaining 2.317-physical-pixel acceptance failure. */
   if(groundMaskTex){ try{ gl.deleteTexture(groundMaskTex); }catch(e){} }
-  groundMaskTex=gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
-  /* R8 is the WebGL2 replacement for LUMINANCE (removed in ES 3.00). Shader
-     samples .r; the 2D mask is grayscale so red equals the old luminance. */
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,gl.RED,gl.UNSIGNED_BYTE,groundMaskCanvas);
-  gl.generateMipmap(gl.TEXTURE_2D);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  mfTerrainAniso();
-  gl.bindTexture(gl.TEXTURE_2D,atlasTex);
+  groundMaskTex=null;
+  uploadGroundMaskTex();
 }
 function buildDetailTex(){
   /* Neutral, band-limited micro relief. A universal Worley crack network was

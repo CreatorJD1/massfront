@@ -46,10 +46,10 @@ function mfNoiseSize(){
 }
 
 function mfNoiseGLReset(){
-  const glCtx=(typeof gl!=='undefined'&&gl&&gl.deleteTexture)?gl:null;
-  if(glCtx){
-    for(const t of MF_NG_TEX_CACHE.values()){ try{ glCtx.deleteTexture(t); }catch(_){} }
-  }
+  /* This boundary is context recovery, not live cache eviction. The cached
+     wrappers belong to the lost generation; deleting them through the
+     restored wrapper itself raises INVALID_OPERATION. Discard references and
+     let the deterministic generators repopulate the current context. */
   MF_NG_TEX_CACHE.clear();
   MF_NG_CACHE.clear();
   mfNgEpoch=-1;

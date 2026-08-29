@@ -682,10 +682,15 @@ function mfAssetSkinEnabled(){
 }
 function mfAssetTex(gl,url){
   if(MF_ASSET_TEX[url]) return MF_ASSET_TEX[url];
+  const epoch=typeof glEpoch==='number'?glEpoch:0;
   const t=gl.createTexture();
   const rec={tex:t,ready:false};
   const img=new Image();
   img.onload=()=>{
+    /* Image decode can outlive WEBGL_lose_context. A replacement request now
+       owns this URL; the detached callback must not upload through its dead
+       texture wrapper or notify the new generation's completion closure. */
+    if(epoch!==(typeof glEpoch==='number'?glEpoch:0)||MF_ASSET_TEX[url]!==rec) return;
     /* Same trap as tacticons.js: a valid PNG of the wrong size decodes and
        never hits onerror. The unwrap chart is authored at 1024 (2px gutters
        in mfUnwrapGeoUV), so a 512 sheet would stretch one island across four
@@ -702,7 +707,10 @@ function mfAssetTex(gl,url){
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     rec.ready=true; if(rec.onready) rec.onready();
   };
-  img.onerror=()=>{ rec.failed=true; if(rec.onready) rec.onready(); };
+  img.onerror=()=>{
+    if(epoch!==(typeof glEpoch==='number'?glEpoch:0)||MF_ASSET_TEX[url]!==rec) return;
+    rec.failed=true; if(rec.onready) rec.onready();
+  };
   img.src=url;
   MF_ASSET_TEX[url]=rec;
   return rec;
@@ -759,9 +767,10 @@ function mfWorldKitSkin(gl,mesh){
   return true;
 }
 function mfWorldKitSkinReset(){
-  if(MF_WORLDKIT_SKIN.recs) for(const r of MF_WORLDKIT_SKIN.recs){
-    for(const k in MF_ASSET_TEX) if(MF_ASSET_TEX[k]===r) delete MF_ASSET_TEX[k];
-  }
+  /* Core/faction meshes are rebuilt too, so every optional per-asset record
+     belongs to the lost context—not only the world-kit triplet. Clearing the
+     shared registry also detaches pending old-generation image callbacks. */
+  for(const k in MF_ASSET_TEX) delete MF_ASSET_TEX[k];
   MF_WORLDKIT_SKIN.meshes.length=0;
   MF_WORLDKIT_SKIN.recs=null; MF_WORLDKIT_SKIN.maps=null;
 }

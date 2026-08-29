@@ -9,8 +9,67 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT=resolve(fileURLToPath(new URL('..',import.meta.url)));
-const source=await readFile(resolve(ROOT,'tools','verify-gl-probe-recovery.mjs'),'utf8');
+const [source,recoverySource,materialSource,terrainTextureSource,meshSource,terrainSource,modelSource,modkitSource,adSource,noiseSource]=await Promise.all([
+  readFile(resolve(ROOT,'tools','verify-gl-probe-recovery.mjs'),'utf8'),
+  readFile(resolve(ROOT,'src','glrecover.js'),'utf8'),
+  readFile(resolve(ROOT,'src','engine','materials.js'),'utf8'),
+  readFile(resolve(ROOT,'src','engine','gl.js'),'utf8'),
+  readFile(resolve(ROOT,'src','engine','mesh.js'),'utf8'),
+  readFile(resolve(ROOT,'src','engine','terrain.js'),'utf8'),
+  readFile(resolve(ROOT,'src','engine','models.js'),'utf8'),
+  readFile(resolve(ROOT,'src','engine','modkit.js'),'utf8'),
+  readFile(resolve(ROOT,'src','adboards.js'),'utf8'),
+  readFile(resolve(ROOT,'src','engine','noisegen.js'),'utf8')
+]);
 const at=needle=>source.indexOf(needle);
+
+for(const required of [
+  "step('terrainTextureGLReset'", "step('materialGLReset'", "step('modAttachGLReset'",
+  "step('initModels'", "step('adGLReset'"
+]) assert.ok(recoverySource.includes(required),`ordered recovery lost GPU cache reset: ${required}`);
+assert.ok(recoverySource.indexOf("step('terrainTextureGLReset'")<recoverySource.indexOf("step('initGL3D'"),
+  'terrain texture handles must be discarded before any restored-context builder runs');
+assert.ok(recoverySource.indexOf("step('materialGLReset'")<recoverySource.indexOf("step('buildMatAtlas'"),
+  'material handles must be discarded before rebuilding the atlas');
+assert.ok(recoverySource.indexOf("step('modAttachGLReset'")<recoverySource.indexOf("step('initModels'")&&
+  recoverySource.indexOf("step('adGLReset'")>recoverySource.indexOf("step('initModels'"),
+  'lazy module caches reset before models and ad frame resources rebuild after models');
+assert.ok(recoverySource.includes("step('terrainGLRebuild'")&&!recoverySource.includes("step('buildTerrain'"),
+  'context recovery must re-upload live terrain state without regenerating the map');
+assert.match(materialSource,/function materialGLReset\(\)\{\s*matTex=matNrmTex=matOrmTex=matDamageTex=matDetailTex=null;/,
+  'all five material atlas handles must be invalidated together');
+for(const required of ['terrTexLoadEpoch++','detailTex=groundMaskTex=terrainTex=null','terrNeutralNrm=null','terrTexSetReady=false'])
+  assert.ok(terrainTextureSource.includes(required),`terrain texture reset lost invariant: ${required}`);
+for(const required of ['function uploadTerrainCanvasTex()','function uploadGroundMaskTex()','detailTex=groundMaskTex=terrainTex=null'])
+  assert.ok(terrainTextureSource.includes(required),`terrain GPU-only recovery lost upload seam: ${required}`);
+for(const required of ["const contextEpoch=typeof glEpoch==='number'?glEpoch:0",'const liveContext=()=>contextEpoch===',
+  'if(!liveContext())return','if(epoch!==terrTexLoadEpoch||!liveContext())'])
+  assert.ok(terrainTextureSource.includes(required),`terrain decode generation fence lost invariant: ${required}`);
+assert.ok(terrainTextureSource.indexOf('if(epoch!==terrTexLoadEpoch||!liveContext())')<
+  terrainTextureSource.indexOf('const t=gl.createTexture();',terrainTextureSource.indexOf('const upload=(key,im,source)')),
+  'late terrain decode callbacks must be fenced before allocating in a replacement context');
+assert.ok(terrainTextureSource.includes("atlasEpoch!==(typeof glEpoch==='number'?glEpoch:0)||tex!==atlasTex"),
+  'authored-fire decode must not upload into a replaced atlas generation');
+assert.match(modelSource,/function initModels\(\)\{[\s\S]{0,500}?for\(const fac in BLD_FACTION_MESH\) delete BLD_FACTION_MESH\[fac\];/,
+  'initModels must discard lazy non-Nova InstMeshes from the lost context');
+assert.match(terrainSource,
+  /function terrainGLRebuild\(\)[\s\S]{0,500}?buildTerrainMesh[\s\S]{0,500}?uploadHeightTex\(null\)[\s\S]{0,500}?uploadTerrainCanvasTex\(\)[\s\S]{0,500}?uploadGroundMaskTex\(\)/,
+  'terrain recovery must rebuild only GPU mesh, height, painted canvas and mask resources');
+assert.match(terrainSource,/function terrainGLRebuild\(\)[\s\S]{0,1000}?gl\.isTexture\(old\)[\s\S]{0,200}?gl\.deleteTexture\(old\)/,
+  'live-context terrain self-heal must release replaced canvas and mask textures');
+for(const required of ['function modAttachGLReset()','delete MOD_ATTACH_MESH[id]','modAttachLive=[]',"modAttachSig=''"])
+  assert.ok(modkitSource.includes(required),`module attachment recovery lost invariant: ${required}`);
+for(const required of ['function adGLReset()','delete AD_CTX_TEX_CACHE[id]','adInitScreenProgram()','adFallbackTex = adMakeTex()',
+  'adResetCreativeTextures(AD_CREATIVES[id], generation)','adFrameMesh = new InstMesh'])
+  assert.ok(adSource.includes(required),`ad-board recovery lost invariant: ${required}`);
+assert.ok(adSource.includes('generation !== adGlGeneration || posterTex !== c.posterTex'),
+  'poster decode callbacks must be fenced from a replacement GL generation');
+for(const required of ["const epoch=typeof glEpoch==='number'?glEpoch:0",'MF_ASSET_TEX[url]!==rec',
+  'for(const k in MF_ASSET_TEX) delete MF_ASSET_TEX[k]'])
+  assert.ok(meshSource.includes(required),`asset texture recovery lost async fence: ${required}`);
+const noiseReset=noiseSource.slice(noiseSource.indexOf('function mfNoiseGLReset()'),noiseSource.indexOf('function mfNoiseCtxCheck()'));
+assert.doesNotMatch(noiseReset,/gl\.deleteTexture|deleteTexture\(/,
+  'context recovery must discard old noise handles without deleting them through the restored wrapper');
 
 for(const required of [
   "import { collectEvidenceIdentity, sha256File } from './evidence-foundation/fingerprints.mjs'",
@@ -99,9 +158,20 @@ for(const required of [
   'gl.isBuffer(terrVBO)',
   'gl.isBuffer(terrIBO)',
   'gl.isTexture(terrainTex)',
+  'gl.isTexture(groundMaskTex)',
+  'gl.isTexture(heightTex)',
   'gl.isTexture(atlasTex)',
+  'gl.isTexture(matDamageTex)',
+  'gl.isTexture(matDetailTex)',
+  'gl.isProgram(adProg)',
+  'gl.isVertexArray(adVAO)',
+  'gl.isBuffer(adVBO)',
+  'gl.isTexture(adFallbackTex)',
+  'gl.isVertexArray(adFrameMesh.vao)',
   'state.refs.prog3D!==prog3D',
   'state.refs.terrVAO!==terrVAO',
+  'state.refs.groundMaskTex!==groundMaskTex',
+  'state.refs.heightTex!==heightTex',
   'gl.readPixels(',
   'actualRecovery.before.preErrors.length===0',
   'actualRecovery.after.render.staleErrors.length===0',
@@ -111,6 +181,10 @@ for(const required of [
   "await capture(page,'actual-context-restored.png')"
 ]) assert.ok(source.indexOf(required,realCycle)>=realCycle,
   `real WEBGL_lose_context cycle lost proof: ${required}`);
+for(const required of ['cpuSignature()', 'actualRecovery.after.cpuState',
+  'actualRecovery.after.cpuIdentityPreserved', 'Object.values(actualRecovery.after.cpuIdentityPreserved).every(Boolean)'])
+  assert.ok(source.indexOf(required,realCycle)>=realCycle,
+    `live CPU terrain preservation gate lost proof: ${required}`);
 
 const liveEntryFunction=at('async function enterLocalPlayerMatch(page)');
 assert.ok(liveEntryFunction>=0&&liveEntryFunction<realCycle,

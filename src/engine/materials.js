@@ -106,6 +106,13 @@ function matResolve(role,fallback){
 let matTex=null, matNrmTex=null, matOrmTex=null, matDamageTex=null, matDetailTex=null;
 let matImgAlbedo=null, matImgNormal=null, matImgOrm=null, matImgDamage=null, matImgDetail=null;
 
+/* Context restoration keeps the JavaScript wrappers truthy even though their
+   GPU objects are gone. Preserve decoded art/compressed descriptors, but make
+   every atlas role rebuild instead of returning a dead optional texture. */
+function materialGLReset(){
+  matTex=matNrmTex=matOrmTex=matDamageTex=matDetailTex=null;
+}
+
 /* ---- THE MATERIAL LAYERS ---------------------------------------------------
    Four separate images describe every surface in the game, and each one
    answers a different question the lighting needs to ask:

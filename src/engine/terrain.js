@@ -135,9 +135,24 @@ function terrainGLReset(){
   terrVAO=terrVBO=terrIBO=null;
   terrEdgeVAO=terrEdgeVBO=terrEdgeIBO=null;
   waterVAO=waterVBO=waterIBO=null;
-  waterLipReset();
-  mfShadePend=null;
-  if(typeof waterFxReset==='function') waterFxReset();
+  if(typeof waterFxGLReset==='function') waterFxGLReset();
+}
+function terrainGLRebuild(){
+  if(typeof gl==='undefined'||!gl||!heightF||!terrainCanvas)return false;
+  const oldTerrainTex=typeof terrainTex!=='undefined'?terrainTex:null;
+  const oldGroundMaskTex=typeof groundMaskTex!=='undefined'?groundMaskTex:null;
+  buildTerrainMesh(typeof curTheme!=='undefined'?curTheme:undefined);
+  uploadHeightTex(null);
+  if(typeof uploadTerrainCanvasTex!=='function'||typeof uploadGroundMaskTex!=='function')return false;
+  const nextTerrainTex=uploadTerrainCanvasTex();
+  const mask=uploadGroundMaskTex();
+  terrainTex=nextTerrainTex;
+  /* Self-heal can run without a context loss, leaving these two textures live.
+     Delete only objects the current generation still recognizes; restored-
+     context wrappers correctly report the pre-loss handles as non-textures. */
+  for(const old of [oldTerrainTex,oldGroundMaskTex]) if(old&&old!==terrainTex&&old!==mask&&
+    (!gl.isTexture||gl.isTexture(old))) try{ gl.deleteTexture(old); }catch(e){}
+  return !!(terrVAO&&terrVBO&&terrIBO&&heightTex&&terrainTex&&mask);
 }
 
 /* World height in world units. Bilinear so slopes are smooth and the camera
@@ -850,6 +865,10 @@ function waterFxReset(){
   wfxRipLife.fill(0); wfxCratLife.fill(0); wfxRipSlot=0; wfxFxEpoch=-1;
   if(typeof FX!=='undefined'){ FX.wake=null; FX.ripple=null; }
 }
+function waterFxGLReset(){
+  wfxFxEpoch=-1;
+  if(typeof FX!=='undefined'){ FX.wake=null; FX.ripple=null; }
+}
 function waterCraterPull(wx,wy){
   const now=(typeof performance!=='undefined'?performance.now():0)*0.001;
   let pull=0;
@@ -1519,17 +1538,7 @@ function terrainSelfHeal(){
     /* Drop the dead handles FIRST or buildTerrainMesh takes its update branch
        and pours vertices into buffers that no longer exist. */
     terrainGLReset();
-    buildTerrainMesh(typeof curTheme!=='undefined'?curTheme:undefined);
-    /* buildTerrainMesh owns the mesh and water VAO, but not the height sheet.
-       The regular buildTerrain path uploads it immediately afterwards. A
-       self-heal used to skip that one step, so drawWater silently sampled the
-       painted colour map as uHeight after a partial graphics recovery. That
-       turns the high-resolution shoreline clip into a coarse cyan sheet even
-       though the rebuilt terrain mesh itself is sound. Re-upload the unchanged
-       CPU heightfield before either pass can draw; no map or hydrology state is
-       regenerated here. */
-    uploadHeightTex(null);
-    if(terrVAO){
+    if(terrainGLRebuild()){
       terrEpoch=(typeof glEpoch!=='undefined')?glEpoch:0;
       console.warn('terrain: rebuilt after the mesh went stale'); terrHealTries=0; return true; }
   }catch(e){ console.warn('terrain: self-heal failed',e); }

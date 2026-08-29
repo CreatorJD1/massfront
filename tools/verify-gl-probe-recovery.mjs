@@ -272,12 +272,40 @@ async function runActualContextRecovery(page){
       for(let i=0;i<heightF.length;i+=step){hash^=(heightF[i]*1000000)|0;hash=Math.imul(hash,16777619)>>>0;}
       return hash.toString(16).padStart(8,'0');
     };
+    const arraySignature=value=>{
+      if(!value)return null;
+      let hash=2166136261>>>0;
+      const step=Math.max(1,(value.length/257)|0);
+      for(let i=0;i<value.length;i+=step){hash^=(Number(value[i])*1000000)|0;hash=Math.imul(hash,16777619)>>>0;}
+      return value.length+':'+hash.toString(16).padStart(8,'0');
+    };
+    const canvasSignature=value=>{
+      if(!value||!value.width||!value.height)return null;
+      const sample=document.createElement('canvas');sample.width=sample.height=32;
+      const ctx=sample.getContext('2d',{willReadFrequently:true});ctx.drawImage(value,0,0,32,32);
+      return arraySignature(ctx.getImageData(0,0,32,32).data);
+    };
+    const cpuSignature=()=>({
+      height:heightSignature(),pass:arraySignature(typeof PASS!=='undefined'?PASS:null),
+      roads:arraySignature(typeof ROADG!=='undefined'?ROADG:null),
+      waterAuth:arraySignature(typeof WATER_AUTH!=='undefined'?WATER_AUTH:null),
+      waterLip:arraySignature(typeof WATER_LIP!=='undefined'?WATER_LIP:null),
+      scorch:arraySignature(typeof SCORCH!=='undefined'?SCORCH:null),
+      terrainCanvas:canvasSignature(typeof terrainCanvas!=='undefined'?terrainCanvas:null),
+      groundMaskCanvas:canvasSignature(typeof groundMaskCanvas!=='undefined'?groundMaskCanvas:null),
+      terrainBase:canvasSignature(typeof terrainBase!=='undefined'?terrainBase:null)
+    });
     gl.finish();
     const preErrors=[];for(let i=0;i<16;i++){const value=gl.getError();if(value===gl.NO_ERROR)break;preErrors.push(value);}
-    const state={lostEvents:0,restoredEvents:0,ext,heightSignature,rafFrames:0,rafId:0,monitorActive:true,
+    const state={lostEvents:0,restoredEvents:0,ext,heightSignature,cpuSignature,rafFrames:0,rafId:0,monitorActive:true,
       lossObserved:null,restoreObserved:null,
-      refs:{prog3D,progT,terrVAO,terrVBO,terrIBO,terrainTex,atlasTex},
+      refs:{prog3D,progT,terrVAO,terrVBO,terrIBO,terrEdgeVAO,terrEdgeVBO,terrEdgeIBO,
+        waterVAO,waterVBO,waterIBO,terrainTex,groundMaskTex,heightTex,atlasTex,
+        matTex,matNrmTex,matOrmTex,matDamageTex,matDetailTex,
+        adProg,adVAO,adVBO,adFallbackTex,adFrameMesh,
+        heightF,terrainCanvas,groundMaskCanvas,PASS,ROADG,WATER_AUTH,WATER_LIP,SCORCH,terrainBase},
       before:{epoch:glEpoch,quality:quality(),heightSignature:heightSignature(),
+        cpuState:cpuSignature(),
         running,paused,matchLive,simTime:Number(stats.t),rafFrames:0,
         programErrors:typeof GL_PROG_ERRORS!=='undefined'?GL_PROG_ERRORS.length:null,
         resources:{modelProgram:gl.isProgram(prog3D),terrainProgram:gl.isProgram(progT),
@@ -359,16 +387,46 @@ async function runActualContextRecovery(page){
     return {lostEvents:state.lostEvents,restoredEvents:state.restoredEvents,
       contextLost:gl.isContextLost(),glrLost,glrRebuilding,glrGiveupQueued,
       epoch:glEpoch,quality:quality(),expectedQuality,heightSignature:state.heightSignature(),
+      cpuState:state.cpuSignature(),
       programErrorsAdded:typeof GL_PROG_ERRORS!=='undefined'&&state.before.programErrors!=null?
         GL_PROG_ERRORS.length-state.before.programErrors:null,
       resourceIdentityChanged:{modelProgram:state.refs.prog3D!==prog3D,terrainProgram:state.refs.progT!==progT,
         terrainVao:state.refs.terrVAO!==terrVAO,terrainVbo:state.refs.terrVBO!==terrVBO,
         terrainIbo:state.refs.terrIBO!==terrIBO,terrainTexture:state.refs.terrainTex!==terrainTex,
-        atlasTexture:state.refs.atlasTex!==atlasTex},
+        terrainEdgeVao:state.refs.terrEdgeVAO!==terrEdgeVAO,terrainEdgeVbo:state.refs.terrEdgeVBO!==terrEdgeVBO,
+        terrainEdgeIbo:state.refs.terrEdgeIBO!==terrEdgeIBO,
+        waterVao:!state.refs.waterVAO||state.refs.waterVAO!==waterVAO,
+        waterVbo:!state.refs.waterVBO||state.refs.waterVBO!==waterVBO,
+        waterIbo:!state.refs.waterIBO||state.refs.waterIBO!==waterIBO,
+        groundMaskTexture:state.refs.groundMaskTex!==groundMaskTex,
+        heightTexture:state.refs.heightTex!==heightTex,
+        atlasTexture:state.refs.atlasTex!==atlasTex,
+        materialAlbedo:state.refs.matTex!==matTex,materialNormal:state.refs.matNrmTex!==matNrmTex,
+        materialOrm:state.refs.matOrmTex!==matOrmTex,materialDamage:state.refs.matDamageTex!==matDamageTex,
+        materialDetail:state.refs.matDetailTex!==matDetailTex,
+        adProgram:state.refs.adProg!==adProg,adVao:state.refs.adVAO!==adVAO,
+        adVbo:state.refs.adVBO!==adVBO,adFallback:state.refs.adFallbackTex!==adFallbackTex,
+        adFrame:state.refs.adFrameMesh!==adFrameMesh},
+      cpuIdentityPreserved:{height:state.refs.heightF===heightF,terrainCanvas:state.refs.terrainCanvas===terrainCanvas,
+        groundMaskCanvas:state.refs.groundMaskCanvas===groundMaskCanvas,pass:state.refs.PASS===PASS,
+        roads:state.refs.ROADG===ROADG,waterAuth:state.refs.WATER_AUTH===WATER_AUTH,
+        waterLip:state.refs.WATER_LIP===WATER_LIP,scorch:state.refs.SCORCH===SCORCH,
+        terrainBase:state.refs.terrainBase===terrainBase},
       resources:{modelProgram:gl.isProgram(prog3D),terrainProgram:gl.isProgram(progT),
         modelLinked:!!gl.getProgramParameter(prog3D,gl.LINK_STATUS),terrainLinked:!!gl.getProgramParameter(progT,gl.LINK_STATUS),
         terrainVao:gl.isVertexArray(terrVAO),terrainVbo:gl.isBuffer(terrVBO),terrainIbo:gl.isBuffer(terrIBO),
-        terrainTexture:gl.isTexture(terrainTex),atlasTexture:gl.isTexture(atlasTex),
+        terrainEdgeVao:gl.isVertexArray(terrEdgeVAO),terrainEdgeVbo:gl.isBuffer(terrEdgeVBO),
+        terrainEdgeIbo:gl.isBuffer(terrEdgeIBO),
+        waterVao:!waterIdxCount||gl.isVertexArray(waterVAO),waterVbo:!waterIdxCount||gl.isBuffer(waterVBO),
+        waterIbo:!waterIdxCount||gl.isBuffer(waterIBO),terrainTexture:gl.isTexture(terrainTex),
+        groundMaskTexture:gl.isTexture(groundMaskTex),heightTexture:gl.isTexture(heightTex),atlasTexture:gl.isTexture(atlasTex),
+        materialAlbedo:gl.isTexture(matTex),materialNormal:gl.isTexture(matNrmTex),materialOrm:gl.isTexture(matOrmTex),
+        materialDamage:gl.isTexture(matDamageTex),materialDetail:gl.isTexture(matDetailTex),
+        adProgram:gl.isProgram(adProg),adVao:gl.isVertexArray(adVAO),adVbo:gl.isBuffer(adVBO),
+        adFallback:gl.isTexture(adFallbackTex),adFrameVao:gl.isVertexArray(adFrameMesh.vao),
+        adFrameVertex:gl.isBuffer(adFrameMesh.vb),adFrameInstances:gl.isBuffer(adFrameMesh.ivb),
+        adCreativeTextures:Object.values(AD_CREATIVES).every(c=>gl.isTexture(c.posterTex)&&gl.isTexture(c.videoTex)),
+        adContextualTextures:Object.values(AD_CTX_TEX_CACHE).every(c=>gl.isTexture(c.tex)),
         terrainFresh:typeof terrainStale==='function'?!terrainStale():null,
         terrainEpoch:typeof terrEpoch==='number'?terrEpoch:null,terrainHealTries:typeof terrHealTries==='number'?terrHealTries:null,
         currentProgramIsModel:gl.getParameter(gl.CURRENT_PROGRAM)===prog3D,
@@ -595,7 +653,12 @@ async function main(){
       actualRecovery.after.epoch===actualRecovery.before.epoch+1&&
       Object.values(actualRecovery.after.resourceIdentityChanged).every(Boolean)&&
       Object.entries(actualRecovery.after.resources).filter(([name])=>
-        ['modelProgram','terrainProgram','modelLinked','terrainLinked','terrainVao','terrainVbo','terrainIbo','terrainTexture','atlasTexture','terrainFresh'].includes(name))
+        ['modelProgram','terrainProgram','modelLinked','terrainLinked','terrainVao','terrainVbo','terrainIbo',
+          'terrainEdgeVao','terrainEdgeVbo','terrainEdgeIbo','waterVao','waterVbo','waterIbo',
+          'terrainTexture','groundMaskTexture','heightTexture','atlasTexture',
+          'materialAlbedo','materialNormal','materialOrm','materialDamage','materialDetail',
+          'adProgram','adVao','adVbo','adFallback','adFrameVao','adFrameVertex','adFrameInstances',
+          'adCreativeTextures','adContextualTextures','terrainFresh'].includes(name))
         .every(([,value])=>value===true)&&
       actualRecovery.after.resources.terrainEpoch===actualRecovery.after.epoch&&
       actualRecovery.after.resources.terrainHealTries===0,
@@ -611,9 +674,13 @@ async function main(){
       actualRecovery.after.automatic);
     check('real context restoration preserves CPU terrain and applies the designed one-step quality fallback',
       actualRecovery.after.heightSignature===actualRecovery.before.heightSignature&&
+      JSON.stringify(actualRecovery.after.cpuState)===JSON.stringify(actualRecovery.before.cpuState)&&
+      Object.values(actualRecovery.after.cpuIdentityPreserved).every(Boolean)&&
       actualRecovery.after.quality===actualRecovery.after.expectedQuality,
-      {before:{heightSignature:actualRecovery.before.heightSignature,quality:actualRecovery.before.quality},
-        after:{heightSignature:actualRecovery.after.heightSignature,quality:actualRecovery.after.quality,
+      {before:{heightSignature:actualRecovery.before.heightSignature,cpuState:actualRecovery.before.cpuState,
+          quality:actualRecovery.before.quality},
+        after:{heightSignature:actualRecovery.after.heightSignature,cpuState:actualRecovery.after.cpuState,
+          cpuIdentityPreserved:actualRecovery.after.cpuIdentityPreserved,quality:actualRecovery.after.quality,
           expectedQuality:actualRecovery.after.expectedQuality}});
     check('the restored renderer presents a non-empty error-free frame with the expected 3D program',
       actualRecovery.before.preErrors.length===0&&!actualRecovery.after.render.error&&
