@@ -99,7 +99,11 @@ async function enterDeployedMatch(){
      duplicate-tap guard or it will correctly suppress this keyboard click. */
   await page.waitForTimeout(700);
   await advance.focus();await advance.press('Enter');
-  const deploy=page.locator('#deployBtn');await deploy.waitFor({state:'visible',timeout:180_000});await deploy.click();
+  /* Deploy intentionally commits on pointerdown, so a synthetic full click
+     races its own disappearing button. Exercise the production native-key
+     binding instead; it preserves the same exactly-once activation contract. */
+  const deploy=page.locator('#deployBtn');await deploy.waitFor({state:'visible',timeout:180_000});
+  await deploy.focus();await deploy.press('Enter');
   await page.waitForFunction(()=>typeof matchLive!=='undefined'&&matchLive&&running&&document.body.classList.contains('hudTacticalDock'),null,{timeout:180_000});
   await page.waitForTimeout(800);
   return {route,state:await page.evaluate(()=>({matchLive,running,paused,hudTacticalDock:document.body.classList.contains('hudTacticalDock')}))};

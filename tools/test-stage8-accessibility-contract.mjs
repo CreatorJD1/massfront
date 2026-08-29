@@ -208,6 +208,8 @@ assert.match(probe,/const screenshotFiles=\[[^\]]+\]/,'probe has no bounded scre
 assert.match(probe,/const deployed=await enterDeployedMatch\(\)/,'probe does not enter a real deployed match for HUD scaling');
 assert.match(probe,/await page\.waitForTimeout\(700\);\s*await advance\.focus\(\);await advance\.press\('Enter'\)/,
   'final keyboard launch can be swallowed by the pointer duplicate-tap window');
+assert.match(probe,/const deploy=page\.locator\('#deployBtn'\)[\s\S]*?await deploy\.focus\(\);await deploy\.press\('Enter'\)/,
+  'probe uses a full pointer click against the pointerdown-owned Deploy action');
 assert.match(probe,/Math\.abs\(ratios\[i\]-want\)<=\.01/,'probe accepts oversized text tiers instead of exact 100/125/150/200 ratios');
 assert.match(probe,/await shot\('deployed-hud-text-200\.png'\)/,'probe has no 200% deployed-HUD screenshot');
 assert.match(probe,/check\(!plate\.clipped,[^\n]+200%/,'probe does not reject clipped 200% HUD plates');
