@@ -55,12 +55,20 @@ assert.ok(at("await guard.checkpoint('before completion source identity')")>brow
 const realCycle=at('async function runActualContextRecovery(page)');
 const realCycleEnd=at('async function main()');
 const manualCycle=at('const recovery=await recovered.evaluate');
+const recoveredBoot=at('const recoveredBoot=await waitForHardwareBoot(recovered)');
+const recoveredReady=at("await recovered.waitForFunction(()=>typeof bootConfirmed!=='undefined'");
 const liveEntry=at('productionMatch=await enterLocalPlayerMatch(normal)');
 const realCall=at('actualRecovery=await runActualContextRecovery(normal)');
 const normalFinalized=at('await finalizeNetworkPage(normalRow)');
 assert.ok(realCycle>=0&&realCycleEnd>realCycle&&manualCycle>realCycleEnd&&liveEntry>manualCycle&&
   realCall>liveEntry&&normalFinalized>realCall,
   'diagnostic simulations must stay separate and the real driver cycle must run inside the deployed normal page');
+assert.ok(recoveredBoot>=0&&recoveredReady>recoveredBoot&&manualCycle>recoveredReady,
+  'manual recovery harness must wait for the post-gl.js runtime before reading its bindings');
+for(const required of ['glrRebuildResources','glrQualityDown','glrOnLost','glrOnRestored','glrGiveUp',
+  'glrRecoveryURL','glrHide','mfPerfGLReset','running','paused','gameEnded'])
+  assert.ok(source.indexOf("typeof "+required,recoveredReady)>recoveredReady&&source.indexOf("typeof "+required,recoveredReady)<manualCycle,
+    `recovery runtime readiness lost binding: ${required}`);
 assert.ok(!source.includes('runActualContextRecovery(recovered)'),
   'the real driver cycle must not fall back to the diagnostic/menu probe');
 assert.doesNotMatch(source,/message\.type\(\)===['"]error['"]&&\//,
@@ -118,6 +126,9 @@ for(const required of [
 ]) assert.ok(source.indexOf(required,liveEntryFunction)>=liveEntryFunction&&
   source.indexOf(required,liveEntryFunction)<realCycle,
   `local-player deployment path lost UI proof: ${required}`);
+assert.ok(source.indexOf("pressVisible(page,'#setupStart','launch-battle'",liveEntryFunction)<realCycle&&
+  source.indexOf("pressVisible(page,'#deployBtn','deploy-local-player'",liveEntryFunction)<realCycle,
+  'disappearing launch/deploy controls must use their production keyboard path');
 for(const required of [
   "actualRecovery.lost.lossObserved.pauseOwned",
   "actualRecovery.lost.rafFramesAfterLoss>=3",

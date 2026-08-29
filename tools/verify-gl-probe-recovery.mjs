@@ -187,6 +187,13 @@ async function clickVisible(page,selector,label,timeout=30000){
   await page.waitForTimeout(700);
   return label;
 }
+async function pressVisible(page,selector,label,timeout=30000){
+  const control=page.locator(selector).first();
+  await control.waitFor({state:'visible',timeout});
+  await control.focus();await control.press('Enter');
+  await page.waitForTimeout(700);
+  return label;
+}
 async function enterLocalPlayerMatch(page){
   const route=[];
   await page.waitForFunction(()=>typeof bootConfirmed!=='undefined'&&bootConfirmed===true&&
@@ -217,13 +224,18 @@ async function enterLocalPlayerMatch(page){
     label:(document.getElementById('setupStart')?.textContent||'').trim()}));
   stages.push(deployStage);
   if(deployStage.stage!=='deploy')throw new Error('LOCAL_MATCH_DEPLOY_STAGE_MISSING: '+JSON.stringify(deployStage));
-  route.push(await clickVisible(page,'#setupStart','launch-battle',90000));
+  /* START BATTLE installs #loadScr during its activation; use the native
+     keyboard path so Playwright does not retry a pointer gesture whose first
+     attempt already replaced the target. */
+  route.push(await pressVisible(page,'#setupStart','launch-battle',90000));
   await page.waitForFunction(()=>typeof running!=='undefined'&&running===true,null,{timeout:180000});
   await page.locator('#deployBtn').first().waitFor({state:'visible',timeout:180000});
   const beforeDeploy=await page.evaluate(()=>({running,paused,matchLive,
     stage:typeof mfGalaxyStage!=='undefined'?mfGalaxyStage:null,
     label:(document.getElementById('deployBtn')?.textContent||'').trim()}));
-  route.push(await clickVisible(page,'#deployBtn','deploy-local-player',30000));
+  /* Deploy deliberately commits on pointerdown and hides itself immediately.
+     Its production keyboard binding is the stable exactly-once test path. */
+  route.push(await pressVisible(page,'#deployBtn','deploy-local-player',30000));
   await page.waitForFunction(()=>typeof matchLive!=='undefined'&&matchLive===true&&running===true&&paused===false&&
     typeof stats!=='undefined'&&Number(stats.t)>0&&document.body.classList.contains('hudTacticalDock'),null,{timeout:60000});
   const state=await page.evaluate(()=>({
@@ -439,6 +451,16 @@ async function main(){
     check('a probe can boot again after the active tab closes',
       recoveredBoot.info.webgl2&&recoveredBoot.info.software===false&&!recoveredBoot.bootFailed,recoveredBoot);
     await capture(recovered,'recovered-probe-hardware.png');
+    /* __MF_GL_INFO is published by the first-phase gl.js gate. The recovery
+       implementation and main state arrive roughly eighty classic scripts
+       later, so wait for every binding the internal harness touches instead
+       of racing the remainder of boot. */
+    await recovered.waitForFunction(()=>typeof bootConfirmed!=='undefined'&&bootConfirmed===true&&
+      typeof glrRebuildResources==='function'&&typeof glrQualityDown==='function'&&
+      typeof glrOnLost==='function'&&typeof glrOnRestored==='function'&&
+      typeof glrGiveUp==='function'&&typeof glrRecoveryURL==='function'&&typeof glrHide==='function'&&
+      typeof mfPerfGLReset==='function'&&typeof running!=='undefined'&&typeof paused!=='undefined'&&
+      typeof gameEnded!=='undefined',null,{timeout:180000});
 
     const recovery=await recovered.evaluate(()=>{
       const realRebuild=glrRebuildResources,realDown=glrQualityDown,realTimeout=window.setTimeout;
