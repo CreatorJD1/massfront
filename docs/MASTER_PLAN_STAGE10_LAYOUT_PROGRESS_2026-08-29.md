@@ -218,7 +218,8 @@ and explicit activation before runtime may consume it.
 | `node tools/verify-stage10-surface-site-requests.mjs` | **PASS 31/31**; exact 16-plan/96-site coverage, six `FULL_V1` maps preserved, ten `PENDING_V0` maps request-only, 16 template families, six maritime support contracts, and 24 injected fail-closed faults. No runtime or geometry result is claimed. |
 | `node tools/verify-stage10-interior-gap-resolution.mjs` | **PASS**; validates six packs, three proposed-not-canon NEXUS mappings, three typed non-promotions, two retained source gaps, six critical-variant requests, the exact unique 6×4 binding matrix, actual unregistered state, and 11 injected faults. A schema pass cannot approve a mapping or provide a missing model. |
 | `node tools/verify-stage10-traversal-fixtures.mjs` | **PASS 28/28**; validates exact 16/4/6 source coverage, all seven named authorities, nested policy integrity, and deterministic fixture definitions. Execution evidence remains `NOT_CAPTURED`; no traversal, browser, GPU, or visual pass is claimed. |
-| `node tools/verify-stage10-layouts.mjs` | **PASS 13/13** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, the three source-only request/gap/traversal gates, exploration-planet profiles, and bundle. Report: `tmp/stage10-layouts/report.json`. |
+| `node tools/verify-stage10-model-review-gallery.mjs` | **PASS 6,587 checks**; exact 328 report-authoritative world-kit modules, seven separately displayed repair locks, 31 separate road-QA exports, 22 manifest-hashed isolated Spline preview renders with one metadata-blocked model, three excluded stale aliases, source/evidence hashes, and zero runtime registration claims. Gallery: `tmp/stage10-model-review/index.html`. |
+| `node tools/verify-stage10-layouts.mjs` | **PASS 14/14** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, the three source-only request/gap/traversal gates, exploration-planet profiles, the model-review gallery, and bundle. Report: `tmp/stage10-layouts/report.json`. |
 | `node tools/bundle.mjs` | **PASS**; 103 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.42 MB. |
 
 The surface faults reject invalid arterial width, a `massive` size alias,
@@ -238,6 +239,8 @@ topology hash without calling `Math.random()`.
 - No runtime topology cache, terrain carving, land/naval mask, amphibious
   transition, session schema, or map catalogue was changed.
 - No world-kit or floating-platform model was promoted or registered.
+- The model-review gallery reads existing reports and evidence only; its output
+  stays below `tmp/` and every candidate remains runtime inactive.
 - No site-request, interior-gap, or traversal-fixture contract was interpreted
   as geometry, collision, navigation, destruction, LOD, or capture proof.
 - No NEXUS-VII proposal or mixed-namespace declaration was promoted to a
@@ -246,29 +249,32 @@ topology hash without calling `Math.random()`.
 
 ## Next safe Stage 10 sequence
 
-1. Keep the three new source-only contracts in the 13-gate aggregate while
+1. Keep the three source-only contracts and model-review gate in the 14-gate aggregate while
    realization proceeds; any authority, matrix, policy, registration, or
    evidence drift must fail before runtime work begins.
-2. Review the three NEXUS-VII proposals with a human. Only after approval,
+2. Use the generated model-admission board to review the 321 processing
+   candidates, repair-lock the exact seven known failures, and retain the 31
+   road-QA exports and 22 Spline exports outside production admission.
+3. Review the three NEXUS-VII proposals with a human. Only after approval,
    recorded canonical aliases, and source-catalog updates may those mappings
    replace `PROPOSED_NOT_CANON`. Preserve the three typed planet declarations
    as non-promotions unless their own canonical mappings are explicitly added.
-3. Author the six missing interior `critical` variants and add the Nova
+4. Author the six missing interior `critical` variants and add the Nova
    multilevel and Dominion breach source declarations. Re-run all 24
    pack/template bindings; do not use a fallback or synthesized substitute.
-4. Realize surface-site templates in bounded groups from the verified request
+5. Realize surface-site templates in bounded groups from the verified request
    sets, preserving all six `FULL_V1` regression baselines and separately
    proving floating, fixed-caisson, semi-submersible, and shoreline support.
-5. Realize the six orbital geometry/proxy families from their exact
+6. Realize the six orbital geometry/proxy families from their exact
    exploration-module contacts without activating a runtime consumer.
-6. Execute the 26 traversal fixtures against source-matched plan hashes using a
+7. Execute the 26 traversal fixtures against source-matched plan hashes using a
    real hardware GPU. Capture both command and tactical views, retain failures,
    and keep runtime false until traversal, collision, destruction, recovery,
    readability, and performance evidence is complete.
-7. Add the two remaining planet identities only as new exploration-module
+8. Add the two remaining planet identities only as new exploration-module
    entries after names, stable IDs, sovereignty, materials, and IP review are
    set. Until then, retain both slots as `PENDING_CANON_NAME`.
-8. Integrate dynamic transitions, floating-platform destruction/wreck states,
+9. Integrate dynamic transitions, floating-platform destruction/wreck states,
    recovery, and performance only after the offline authoring and capture gates
    are green. Activate locations individually only after explicit human visual
    approval.
