@@ -3,9 +3,12 @@
 Status: **IMPLEMENTATION FOUNDATION IN PROGRESS**. The preparation package is
 committed at `51329e9`. The first implementation package is committed at
 `56f9ca5`. This slice expands the source-bound `BattlefieldTopologyV2` surface
-wave and adds the separate `Stage10TheatreCatalogV1` contract for the complete
-eight-planet, interior, and orbital scope. It does not activate unfinished
-topology, register world-kit GLBs, change pathfinding, launch Blender, or touch
+wave and adds the separate `Stage10TheatreCatalogV1` contract for the target
+eight-slot planet, interior, and orbital scope. The current checkpoint also prepares
+source-only surface-site requests, an interior gap-resolution contract, and
+cross-theatre traversal fixtures. These additions are authoring and evidence
+contracts only: they do not activate unfinished topology, register world-kit
+GLBs, change pathfinding, launch Blender, capture runtime proof, or touch
 character/VRoid work.
 
 ## Corrected Stage 10 scope
@@ -106,6 +109,40 @@ authoring, and even that requires the complete floating-platform engineering
 gate before any asset or runtime work. The other five remain deferred for
 sea-platform use.
 
+### Current source-only authoring checkpoint
+
+Three further fail-closed contracts now define the next realization work
+without promoting models or runtime content:
+
+- Surface-site requests cover all 16 Standard Wave 1 topology plans, one
+  request set per canonical map. They preserve the six `FULL_V1` baselines and
+  keep the ten `PENDING_V0` maps pending. The requests specify site footprints,
+  route approaches, support proofs, collision/navigation boundaries,
+  destruction sections, LOD/HLOD expectations, and the 70/25/5 readability
+  budget. They are source-only requests under verification, not proof that any
+  requested geometry or asset exists.
+- Interior gap resolution covers all six 15-member packs. The three NEXUS-VII
+  location proposals map `ship_strike_expedition_bay` to `hangar`,
+  `ship_logistics_cargo` to `logistics`, and `ship_mission_operations` to
+  `mission_ops`, but every mapping remains `PROPOSED_NOT_CANON`, requires human
+  approval and a source-catalog update, and cannot bind at runtime. The three
+  mixed-namespace planet declarations remain typed non-promotions: `aelos` is
+  retained as a surface-homeworld declaration, while `veyra` and `karak` stay
+  pending canonical mapping; none is silently promoted to an exploration
+  planet ID. Nova multilevel and Dominion breach remain blocked source gaps
+  with no fallback or synthesis. Six missing `critical` destruction variants
+  are explicit authoring requests affecting the 24 pack/template bindings.
+- Traversal coverage defines 26 fixtures: 16 surface, four interior, and six
+  orbital. Each fixture is source-hash-bound and describes deterministic
+  command/tactical capture and domain-specific traversal checks. All execution
+  evidence remains `NOT_CAPTURED`, the passed-fixture and capture-path lists
+  remain empty, runtime activation is false, and no asset claim is made.
+
+These contracts do not change the planet authority. The exploration module
+still provides exactly Caldris, Ithara, Orison, Nacre, Meridian K-4, and Tethys
+Foundry. Target slots seven and eight remain `PENDING_CANON_NAME`; no legacy or
+similar-looking identifier may fill them implicitly.
+
 ## Implemented foundation
 
 `assets/data/battlefieldtopology-stage10.js` defines a separately versioned,
@@ -178,7 +215,10 @@ and explicit activation before runtime may consume it.
 | `node tools/verify-stage10-interior-layout-bindings.mjs` | **PASS**; 24 pack/template combinations, 90 exact inventory members, 22 source-declared combinations, two source gaps, 12 authority-pending bindings, and 38 injected faults. |
 | `node tools/verify-stage10-orbital-layout-bindings.mjs` | **PASS 37/37**; all six contact identities, strict nested schema, forbidden model-like strings, and independent source-drift faults. |
 | `node tools/verify-stage10-exploration-planet-layout-profiles.mjs` | **PASS 22/22**; six exact exploration planets, two pending identity slots, 12 conditional restricted-unit interior concepts, zero unproven Standard bindings, and Caldris-only conditional sea-platform authoring. |
-| `node tools/verify-stage10-layouts.mjs` | **PASS 10/10** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, exploration-planet profiles, and bundle. Report: `tmp/stage10-layouts/report.json`. |
+| `node tools/verify-stage10-surface-site-requests.mjs` | **PASS 31/31**; exact 16-plan/96-site coverage, six `FULL_V1` maps preserved, ten `PENDING_V0` maps request-only, 16 template families, six maritime support contracts, and 24 injected fail-closed faults. No runtime or geometry result is claimed. |
+| `node tools/verify-stage10-interior-gap-resolution.mjs` | **PASS**; validates six packs, three proposed-not-canon NEXUS mappings, three typed non-promotions, two retained source gaps, six critical-variant requests, the exact unique 6×4 binding matrix, actual unregistered state, and 11 injected faults. A schema pass cannot approve a mapping or provide a missing model. |
+| `node tools/verify-stage10-traversal-fixtures.mjs` | **PASS 28/28**; validates exact 16/4/6 source coverage, all seven named authorities, nested policy integrity, and deterministic fixture definitions. Execution evidence remains `NOT_CAPTURED`; no traversal, browser, GPU, or visual pass is claimed. |
+| `node tools/verify-stage10-layouts.mjs` | **PASS 13/13** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, the three source-only request/gap/traversal gates, exploration-planet profiles, and bundle. Report: `tmp/stage10-layouts/report.json`. |
 | `node tools/bundle.mjs` | **PASS**; 103 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.42 MB. |
 
 The surface faults reject invalid arterial width, a `massive` size alias,
@@ -198,25 +238,37 @@ topology hash without calling `Math.random()`.
 - No runtime topology cache, terrain carving, land/naval mask, amphibious
   transition, session schema, or map catalogue was changed.
 - No world-kit or floating-platform model was promoted or registered.
+- No site-request, interior-gap, or traversal-fixture contract was interpreted
+  as geometry, collision, navigation, destruction, LOD, or capture proof.
+- No NEXUS-VII proposal or mixed-namespace declaration was promoted to a
+  canonical exploration identity.
 - No upload, push, OTA, APK, IPA, browser, or Space activation was performed.
 
 ## Next safe Stage 10 sequence
 
-1. Add the two remaining planet identities as new exploration-module entries
-   only after names, stable IDs, sovereignty, materials, and IP review are set.
-2. Resolve the three NEXUS-VII ship-location IDs and the three mixed-namespace
-   interior pack declarations through explicit canonical mapping contracts;
-   never infer aliases from similar names.
-3. Author the missing interior `critical` destruction variants and the Nova
-   multilevel / Dominion breach source declarations before promoting those
-   combinations.
-4. Add exact surface site requests/templates in bounded groups, preserving the six
-   Stage 9 `FULL_V1` regression baselines.
+1. Keep the three new source-only contracts in the 13-gate aggregate while
+   realization proceeds; any authority, matrix, policy, registration, or
+   evidence drift must fail before runtime work begins.
+2. Review the three NEXUS-VII proposals with a human. Only after approval,
+   recorded canonical aliases, and source-catalog updates may those mappings
+   replace `PROPOSED_NOT_CANON`. Preserve the three typed planet declarations
+   as non-promotions unless their own canonical mappings are explicitly added.
+3. Author the six missing interior `critical` variants and add the Nova
+   multilevel and Dominion breach source declarations. Re-run all 24
+   pack/template bindings; do not use a fallback or synthesized substitute.
+4. Realize surface-site templates in bounded groups from the verified request
+   sets, preserving all six `FULL_V1` regression baselines and separately
+   proving floating, fixed-caisson, semi-submersible, and shoreline support.
 5. Realize the six orbital geometry/proxy families from their exact
    exploration-module contacts without activating a runtime consumer.
-6. Add topology realization and traversal fixtures before connecting any plan
-   to terrain generation or cache identity.
-7. Integrate dynamic transitions, floating-platform destruction/wreck states,
-   recovery, and performance only after those offline gates are green.
-8. Activate maps individually after matched command/tactical captures and
-   explicit human visual approval.
+6. Execute the 26 traversal fixtures against source-matched plan hashes using a
+   real hardware GPU. Capture both command and tactical views, retain failures,
+   and keep runtime false until traversal, collision, destruction, recovery,
+   readability, and performance evidence is complete.
+7. Add the two remaining planet identities only as new exploration-module
+   entries after names, stable IDs, sovereignty, materials, and IP review are
+   set. Until then, retain both slots as `PENDING_CANON_NAME`.
+8. Integrate dynamic transitions, floating-platform destruction/wreck states,
+   recovery, and performance only after the offline authoring and capture gates
+   are green. Activate locations individually only after explicit human visual
+   approval.

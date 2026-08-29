@@ -1,0 +1,309 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "massfront-stage10-interior-gap-resolution-v1",
+  "status": "RESOLUTION_CONTRACT_ONLY",
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "sourceRefs": [
+    {
+      "sourceId": "pack-catalog",
+      "path": "source-media/content-library/interior-tactical-model-packs.v1.json",
+      "sha256": "sha256-11f841d5bc57c52c6dd26a9e65b0f5e30bee77067f43dccc1780443b357221ba",
+      "role": "PACK_DECLARATION_AUTHORITY"
+    },
+    {
+      "sourceId": "binding-catalog",
+      "path": "source-media/content-library/stage10-interior-layout-bindings.v1.json",
+      "sha256": "sha256-f4da12ba38c405afcaf0c4c649ee715c316570d5688a3b0bcddbdb3b1f177b52",
+      "role": "BINDING_BLOCKER_AUTHORITY"
+    },
+    {
+      "sourceId": "theatre-catalog",
+      "path": "assets/data/theatreprofiles-stage10.js",
+      "sha256": "sha256-ba9b19e4032c687e3148e35c31d5e1e9e1a67831ce153b03ff9556863ee3d924",
+      "role": "STAGE10_TYPED_SCOPE_AUTHORITY"
+    },
+    {
+      "sourceId": "showcase-authority",
+      "path": "modules/space_exploration/src/systems/showcase_systems.js",
+      "sha256": "sha256-7f2c06ef7c2e7fa31241de78a1e31bf7da68ff306dda50ed3b697d7c6ebeb8c5",
+      "role": "EXACT_EXPLORATION_SYSTEM_AND_PLANET_AUTHORITY"
+    },
+    {
+      "sourceId": "nexus-district-authority",
+      "path": "modules/space_exploration/src/domain/catalog.js",
+      "sha256": "sha256-3e70aa69ad3a76fa43fd570230ff9c43dc0bd518b4124a53a66bfb20380b9cd6",
+      "role": "EXACT_SHIP_DISTRICT_AUTHORITY"
+    }
+  ],
+  "policy": {
+    "failClosed": true,
+    "aliasInferenceAllowed": false,
+    "humanApprovalRequiredForProposals": true,
+    "humanApprovalAloneActivatesMapping": false,
+    "canonicalSourceUpdateRequired": true,
+    "explorationPlanetPromotionAllowed": false,
+    "sourceGapFallbackAllowed": false,
+    "criticalFallbackAllowed": false,
+    "synthesizedCriticalAllowed": false,
+    "generatedMediaReferencesAllowed": false
+  },
+  "coverage": {
+    "packCount": 6,
+    "nexusParentDeclarationCount": 1,
+    "nexusLocationProposalCount": 3,
+    "mixedNamespaceDeclarationCount": 3,
+    "sourceDeclarationGapCount": 2,
+    "criticalVariantRequestCount": 6,
+    "affectedBindingCount": 24
+  },
+  "nexusLocationProposals": {
+    "sourcePackId": "interior_uga_nexus_vii_strike_logistics_v1",
+    "declaredParentId": "nexus_vii",
+    "parentResolutionStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+    "districtAuthority": "SHIP_DISTRICT_IDS",
+    "requiredDistrictIds": [
+      "hangar",
+      "logistics",
+      "mission_ops"
+    ],
+    "mappings": [
+      {
+        "sourceLocationId": "ship_strike_expedition_bay",
+        "sourceResolutionStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+        "proposedDistrictId": "hangar",
+        "proposalStatus": "PROPOSED_NOT_CANON",
+        "humanApprovalRequired": true,
+        "humanApprovalStatus": "PENDING",
+        "humanApprovalRecordId": null,
+        "aliasActive": false,
+        "runtimeBindingAllowed": false,
+        "sourceCatalogUpdateRequired": true
+      },
+      {
+        "sourceLocationId": "ship_logistics_cargo",
+        "sourceResolutionStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+        "proposedDistrictId": "logistics",
+        "proposalStatus": "PROPOSED_NOT_CANON",
+        "humanApprovalRequired": true,
+        "humanApprovalStatus": "PENDING",
+        "humanApprovalRecordId": null,
+        "aliasActive": false,
+        "runtimeBindingAllowed": false,
+        "sourceCatalogUpdateRequired": true
+      },
+      {
+        "sourceLocationId": "ship_mission_operations",
+        "sourceResolutionStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+        "proposedDistrictId": "mission_ops",
+        "proposalStatus": "PROPOSED_NOT_CANON",
+        "humanApprovalRequired": true,
+        "humanApprovalStatus": "PENDING",
+        "humanApprovalRecordId": null,
+        "aliasActive": false,
+        "runtimeBindingAllowed": false,
+        "sourceCatalogUpdateRequired": true
+      }
+    ]
+  },
+  "typedPlanetDeclarations": [
+    {
+      "packId": "interior_nova_aelos_caldris_customs_v1",
+      "sourceField": "planetIds[0]",
+      "declaredId": "aelos",
+      "typedNamespaceMatches": [
+        "SURFACE_HOMEWORLD",
+        "SHOWCASE_SYSTEM",
+        "DOMAIN_SYSTEM"
+      ],
+      "exactExplorationPlanetMatch": false,
+      "bindingDeclarationStatus": "BOUND_EXACT_TYPED_PLANET",
+      "resolutionStatus": "BOUND_AS_SURFACE_HOMEWORLD_NOT_EXPLORATION_PLANET",
+      "promotedExplorationPlanetId": null,
+      "explorationPlanetPromotionAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "packId": "interior_neutral_veyra_orison_derelict_v1",
+      "sourceField": "planetIds[0]",
+      "declaredId": "veyra",
+      "typedNamespaceMatches": [
+        "SHOWCASE_SYSTEM",
+        "DOMAIN_SYSTEM"
+      ],
+      "exactExplorationPlanetMatch": false,
+      "bindingDeclarationStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+      "resolutionStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+      "promotedExplorationPlanetId": null,
+      "explorationPlanetPromotionAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "packId": "interior_brood_karak_meridian_breach_v1",
+      "sourceField": "planetIds[0]",
+      "declaredId": "karak",
+      "typedNamespaceMatches": [
+        "SHOWCASE_SYSTEM",
+        "DOMAIN_SYSTEM"
+      ],
+      "exactExplorationPlanetMatch": false,
+      "bindingDeclarationStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+      "resolutionStatus": "UNBOUND_PENDING_CANONICAL_MAPPING",
+      "promotedExplorationPlanetId": null,
+      "explorationPlanetPromotionAllowed": false,
+      "runtimeBindingAllowed": false
+    }
+  ],
+  "sourceDeclarationGaps": [
+    {
+      "gapId": "nova-multilevel-source-declaration",
+      "packId": "interior_nova_aelos_caldris_customs_v1",
+      "templateId": "interior_small_multilevel_80x64",
+      "bindingId": "layout-binding__interior_nova_aelos_caldris_customs_v1__interior_small_multilevel_80x64",
+      "bindingSourceDeclaration": "MISSING_FROM_PACK_SOURCE",
+      "bindingStatus": "BLOCKED_SOURCE_DECLARATION",
+      "resolutionStatus": "SOURCE_DECLARATION_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesisAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "gapId": "dominion-breach-source-declaration",
+      "packId": "interior_dominion_pyraeth_mech_foundry_v1",
+      "templateId": "interior_xs_breach_40x40",
+      "bindingId": "layout-binding__interior_dominion_pyraeth_mech_foundry_v1__interior_xs_breach_40x40",
+      "bindingSourceDeclaration": "MISSING_FROM_PACK_SOURCE",
+      "bindingStatus": "BLOCKED_SOURCE_DECLARATION",
+      "resolutionStatus": "SOURCE_DECLARATION_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesisAllowed": false,
+      "runtimeBindingAllowed": false
+    }
+  ],
+  "criticalVariantRequests": [
+    {
+      "requestId": "critical-authoring__interior_uga_nexus_vii_strike_logistics_v1",
+      "packId": "interior_uga_nexus_vii_strike_logistics_v1",
+      "affectedBindingCount": 4,
+      "sourceArchetypeStates": [
+        "intact",
+        "damaged",
+        "destroyed"
+      ],
+      "requiredState": "critical",
+      "sourceVariantId": null,
+      "bindingCriticalStatus": "BLOCKED_MISSING_AUTHORED_VARIANT",
+      "resolutionStatus": "SOURCE_AUTHORING_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesizedVariantAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "requestId": "critical-authoring__interior_nova_aelos_caldris_customs_v1",
+      "packId": "interior_nova_aelos_caldris_customs_v1",
+      "affectedBindingCount": 4,
+      "sourceArchetypeStates": [
+        "intact",
+        "damaged",
+        "destroyed"
+      ],
+      "requiredState": "critical",
+      "sourceVariantId": null,
+      "bindingCriticalStatus": "BLOCKED_MISSING_AUTHORED_VARIANT",
+      "resolutionStatus": "SOURCE_AUTHORING_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesizedVariantAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "requestId": "critical-authoring__interior_dominion_pyraeth_mech_foundry_v1",
+      "packId": "interior_dominion_pyraeth_mech_foundry_v1",
+      "affectedBindingCount": 4,
+      "sourceArchetypeStates": [
+        "intact",
+        "damaged",
+        "destroyed"
+      ],
+      "requiredState": "critical",
+      "sourceVariantId": null,
+      "bindingCriticalStatus": "BLOCKED_MISSING_AUTHORED_VARIANT",
+      "resolutionStatus": "SOURCE_AUTHORING_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesizedVariantAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "requestId": "critical-authoring__interior_syndicate_nordhall_reactor_vault_v1",
+      "packId": "interior_syndicate_nordhall_reactor_vault_v1",
+      "affectedBindingCount": 4,
+      "sourceArchetypeStates": [
+        "intact",
+        "damaged",
+        "destroyed"
+      ],
+      "requiredState": "critical",
+      "sourceVariantId": null,
+      "bindingCriticalStatus": "BLOCKED_MISSING_AUTHORED_VARIANT",
+      "resolutionStatus": "SOURCE_AUTHORING_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesizedVariantAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "requestId": "critical-authoring__interior_neutral_veyra_orison_derelict_v1",
+      "packId": "interior_neutral_veyra_orison_derelict_v1",
+      "affectedBindingCount": 4,
+      "sourceArchetypeStates": [
+        "intact",
+        "damaged",
+        "destroyed"
+      ],
+      "requiredState": "critical",
+      "sourceVariantId": null,
+      "bindingCriticalStatus": "BLOCKED_MISSING_AUTHORED_VARIANT",
+      "resolutionStatus": "SOURCE_AUTHORING_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesizedVariantAllowed": false,
+      "runtimeBindingAllowed": false
+    },
+    {
+      "requestId": "critical-authoring__interior_brood_karak_meridian_breach_v1",
+      "packId": "interior_brood_karak_meridian_breach_v1",
+      "affectedBindingCount": 4,
+      "sourceArchetypeStates": [
+        "intact",
+        "damaged",
+        "destroyed"
+      ],
+      "requiredState": "critical",
+      "sourceVariantId": null,
+      "bindingCriticalStatus": "BLOCKED_MISSING_AUTHORED_VARIANT",
+      "resolutionStatus": "SOURCE_AUTHORING_REQUIRED",
+      "sourceAuthoringRequired": true,
+      "fallbackAllowed": false,
+      "synthesizedVariantAllowed": false,
+      "runtimeBindingAllowed": false
+    }
+  ],
+  "acceptance": {
+    "overallStatus": "BLOCKED_PENDING_SOURCE_AND_HUMAN_RESOLUTION",
+    "blockingConditionsRemain": true,
+    "humanApprovalRequired": true,
+    "sourceCatalogUpdatesRequired": true,
+    "authoredCriticalVariantsRequired": true,
+    "activationAllowed": false
+  },
+  "runtimeRegistration": {
+    "manifest": false,
+    "boot": false,
+    "loader": false,
+    "runtimeActivationAllowed": false
+  }
+}
