@@ -261,11 +261,6 @@ body.mfMenuOpen #hotSlots,body.menuMode #hotSlots{display:none!important}
 body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!important}
 @media (max-width:380px){.hotSlot{min-width:46px;padding:4px 5px}
   .hotSlot .hEm{font-size:15px}.hotSlot .hNm{font-size:9px;max-width:52px}}
-@media (max-width:380px) and (orientation:portrait){
-  body.hudTacticalDock #minimap{width:72px;height:72px}
-  body.hudTacticalDock #cmdbar .btnrow{padding-left:88px;gap:1px}
-  body.hudTacticalDock #cmdbar .cbtn{min-width:42px;width:42px}
-}
 
 /* ---------- FLOATING DAMAGE NUMBERS ---------- */
 .ftxt{position:absolute;left:0;top:0;z-index:8;pointer-events:none;font-family:var(--fT);font-weight:800;

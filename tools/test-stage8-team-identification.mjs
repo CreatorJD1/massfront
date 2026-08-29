@@ -9,10 +9,41 @@ import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
 const root=new URL('../',import.meta.url);
-const [metaSource,aiSource,hudSource,renderSource,simSource,tacticonSource,styleSource]=await Promise.all([
+const [metaSource,aiSource,hudSource,renderSource,simSource,tacticonSource,styleSource,indexSource,captureSource,hudflowSource]=await Promise.all([
   'src/game/meta.js','src/game/ai.js','src/ui/hud.js','src/ui/render3d.js',
-  'src/game/sim.js','src/engine/tacticons.js','src/styles/ui.css'
+  'src/game/sim.js','src/engine/tacticons.js','src/styles/ui.css','index.html',
+  'tools/capture-stage8-team-identification.mjs','src/ui/hudflow.js'
 ].map(path=>readFile(new URL(path,root),'utf8')));
+
+assert.ok(hudflowSource.includes("...((typeof FRONT_SCREEN_IDS!=='undefined'&&FRONT_SCREEN_IDS.length)?FRONT_SCREEN_IDS.concat('loadScr'):MF_FRONT_FALLBACK)")&&
+  hudflowSource.includes('for(const id of new Set(mfFlowWatchIds))'),
+  'front-screen visibility no longer invalidates the mfMenuOpen HUD state');
+
+/* The visual proof reuses one bounded directory and must release its freeze
+   even when setup, fingerprinting, browser cleanup, or report writing fails. */
+const captureGuard=captureSource.indexOf('workspaceGuard=await acquireVerificationFreeze');
+const capturePrepare=captureSource.indexOf('const outputPreparation=await prepareOutput()');
+assert.ok(captureGuard>=0&&capturePrepare>captureGuard,
+  'team-identification capture prepares shared output before owning the freeze');
+assert.ok(captureSource.includes("const DEFAULT_RUN_ID='stage8-team-identification'"),
+  'team-identification capture restored timestamped default output');
+assert.ok(captureSource.includes('allowedPaths:[outDir,remoteAttachmentDir]'),
+  'ignored Codex attachment delivery can invalidate or lock team-identification evidence');
+assert.ok(captureSource.includes('outputLease=await acquireOutputLease()')&&
+  captureSource.includes("await workspaceGuard.release({assertStable:true,"),
+  'team-identification capture can leak or race its output/workspace leases');
+const pendingWrite=captureSource.indexOf("report.machineOutcome='PENDING_FINAL_RELEASE'");
+const finalRelease=captureSource.indexOf("await workspaceGuard.release({assertStable:true,");
+const passWrite=captureSource.indexOf("report.machineOutcome=releaseSucceeded&&report.captureCompleted&&!failure?'PASS':'FAIL'");
+const outputCheckpoint=captureSource.indexOf('try{await outputLease.checkpoint();}');
+const finalReportWrite=captureSource.indexOf("if(outputOwned)try{await writeFile(reportPath");
+assert.ok(pendingWrite>=0&&finalRelease>pendingWrite&&passWrite>finalRelease
+  &&outputCheckpoint>passWrite&&finalReportWrite>outputCheckpoint,
+  'team-identification capture can persist PASS before the final stable release');
+assert.ok(captureSource.includes('expectedPngCount:EXPECTED_STATE_KEYS.length*2')&&
+  captureSource.includes("'exact unique state matrix'")&&
+  captureSource.includes("'exact unique PNG matrix'"),
+  'team-identification capture can false-pass an incomplete or duplicate matrix');
 
 function plain(value){ return JSON.parse(JSON.stringify(value)); }
 function sourceSlice(source,startNeedle,endNeedle,label){
@@ -267,15 +298,26 @@ assert.equal(batch.paths[1].ops.filter(op=>op[0]==='lineTo').length,2,
 assert.ok(batch.paths[2].ops.filter(op=>op[0]==='lineTo').length>=11,
   'unaligned minimap marker is not a cross');
 
-/* The canvas is downscaled from 256 backing pixels to 56, 72 or 84 CSS px in
-   shipped phone layouts. Pin projected size and outline width at every scale;
-   topology alone would accept three different one-pixel dots. */
-const shippedMinimapWidths=[...new Set([...styleSource.matchAll(/#minimap\{width:(\d+)px;height:\1px/g)]
-  .map(match=>Number(match[1])))].sort((a,b)=>a-b);
-assert.deepEqual(shippedMinimapWidths,[56,72,84],
-  'shipped phone minimap widths changed without updating the legibility contract');
-for(const cssWidth of shippedMinimapWidths){
-  const scale=cssWidth/256;
+/* Pin the reachable cascade, not every declaration: narrow tactical portrait
+   is 56 px, general portrait is 84 px, and other layouts retain the canvas's
+   intrinsic 256 px size. Declaration scraping once counted a dead 72 px rule
+   as shipped and let that stale override survive. */
+const minimapCanvas=/<canvas\s+id="minimap"\s+width="(\d+)"\s+height="(\d+)"/.exec(indexSource);
+assert.ok(minimapCanvas,'missing minimap canvas backing dimensions');
+const minimapBackingWidth=Number(minimapCanvas[1]);
+assert.equal(minimapBackingWidth,256,'minimap backing width changed without updating the legibility contract');
+assert.equal(Number(minimapCanvas[2]),minimapBackingWidth,'minimap backing store is no longer square');
+assert.ok(styleSource.includes('#minimap{width:84px;height:84px;transition:'),
+  'general portrait minimap size is no longer 84 px');
+assert.ok(styleSource.includes('body.hudTacticalDock #minimap{width:56px;height:56px}'),
+  'narrow tactical-dock minimap size is no longer 56 px');
+assert.ok(!styleSource.includes('body.hudTacticalDock #minimap{width:72px;height:72px}'),
+  'dead 72 px tactical-dock minimap override was restored');
+const reachableMinimapWidths=[56,84,minimapBackingWidth];
+assert.deepEqual(reachableMinimapWidths,[56,84,256],
+  'reachable minimap widths changed without updating the legibility contract');
+for(const cssWidth of reachableMinimapWidths){
+  const scale=cssWidth/minimapBackingWidth;
   const backingScale=minimap.mmTeamIdBackingScale(cssWidth);
   const visible=minimap.mmTeamIdMarkerSize(0,false,backingScale)*scale;
   const radar=minimap.mmTeamIdMarkerSize(0,true,backingScale)*scale;

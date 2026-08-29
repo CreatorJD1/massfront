@@ -911,11 +911,11 @@ async function initAccounts(){
   const $$=id=>document.getElementById(id);
   const get=$$('saveFileGet'), put=$$('saveFilePut'), input=$$('saveFileInput');
   /* Android WebView drops the compatibility click when the finger drifts a few
-     pixels inside the scrollable Transfer panel this button sits in, so a plain
-     click binding read as a dead button on real phones: no file, no share
-     sheet, no toast, because the handler never ran. Bind through mfBindTap
-     (pointer-up + slop — the same fix the tab rows already use) and keep click
-     as the fallback so keyboard/AT activation still works. */
+     pixels inside the scrollable Transfer panel this button sits in, so native
+     builds need mfBindTap's pointer-up + slop path. A browser download is the
+     opposite: Chromium accepts the Blob navigation only from the trusted click
+     path even while userActivation remains true after pointer-up. Split the
+     binding by runtime so both player paths retain their platform contract. */
   const doSaveFile=async e=>{
     if(e&&e.stopPropagation) e.stopPropagation();
     const label=get.textContent; get.disabled=true; get.textContent='PREPARING…';
@@ -924,7 +924,15 @@ async function initAccounts(){
     finally{ get.disabled=false; get.textContent=label; }
   };
   if(get){
-    if(typeof mfBindTap==='function') mfBindTap(get,doSaveFile);
+    let nativeTap=false;
+    try{
+      const cap=typeof window!=='undefined'&&window.Capacitor;
+      nativeTap=!!(cap&&(
+        (typeof cap.isNativePlatform==='function'&&cap.isNativePlatform())||
+        (typeof cap.getPlatform==='function'&&cap.getPlatform()!=='web')
+      ));
+    }catch(e){}
+    if(nativeTap&&typeof mfBindTap==='function') mfBindTap(get,doSaveFile);
     else get.addEventListener('click',doSaveFile);
   }
   if(put&&input) put.addEventListener('click',e=>{

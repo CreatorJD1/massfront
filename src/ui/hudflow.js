@@ -585,7 +585,13 @@ const mfFlowWatch=new MutationObserver(()=>{
   for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el) el._mfVisH=undefined; }
   if(!mfFlowMute) mfFlowQueueLayout();
 });
-for(const id of ['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','hazChip','heroBar','topbar','selInfo','cmdbar','tacRow','grpRow','hotSlots','primaryRow','hudDeckTabs','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory'] ){
+/* mfFlowFrontOpen() owns the authoritative menu predicate, so the same front
+   screens must trigger its observer. Settings-from-pause changes only the
+   screen's inline display; without this list mfMenuOpen stayed latched after
+   Resume and hid the complete tactical HUD until an unrelated mutation. */
+const mfFlowWatchIds=['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','hazChip','heroBar','topbar','selInfo','cmdbar','tacRow','grpRow','hotSlots','primaryRow','hudDeckTabs','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory',
+  ...((typeof FRONT_SCREEN_IDS!=='undefined'&&FRONT_SCREEN_IDS.length)?FRONT_SCREEN_IDS.concat('loadScr'):MF_FRONT_FALLBACK)];
+for(const id of new Set(mfFlowWatchIds)){
   const el=mfFlowEl(id); if(el) mfFlowWatch.observe(el,{attributes:true,attributeFilter:['style','class']});
 }
 document.body&&mfFlowWatch.observe(document.body,{attributes:true,attributeFilter:['class']});

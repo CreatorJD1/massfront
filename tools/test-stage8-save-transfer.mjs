@@ -12,6 +12,22 @@ const accountSource=await readFile(new URL('../src/account.js',import.meta.url),
 const metaSource=await readFile(new URL('../src/game/meta.js',import.meta.url),'utf8');
 const factionSource=await readFile(new URL('../src/faction-id.js',import.meta.url),'utf8');
 const economySource=await readFile(new URL('../src/economy-net.js',import.meta.url),'utf8');
+const probeSource=await readFile(new URL('./probe-stage8-save-transfer.mjs',import.meta.url),'utf8');
+
+/* The browser proof shares one canonical evidence directory. Ownership must be
+   established before cleanup, and a PASS must require every final artifact. */
+const probeGuard=probeSource.indexOf('guard=await acquireVerificationFreeze');
+const probePrepare=probeSource.indexOf('legacyArtifactsRemoved=await prepareEvidenceOutput()');
+assert.ok(probeGuard>=0&&probePrepare>probeGuard,
+  'save-transfer probe cleans shared evidence before acquiring the freeze');
+assert.ok(probeSource.includes("const downloadCaptureDir=join(output,'downloads-current')"),
+  'save-transfer probe restored timestamped scratch directories');
+assert.ok(probeSource.includes("verifyArtifact('download'")&&
+  probeSource.includes("verifyArtifact('corrupt save'")&&
+  probeSource.includes("verifyArtifact('screenshot'"),
+  'save-transfer probe can report PASS without all final artifacts');
+assert.ok(probeSource.includes('reportPath:null'),
+  'a blocked competing probe can overwrite the active shared report');
 
 function extractFunction(source,name){
   const start=source.indexOf('function '+name+'(');
@@ -98,7 +114,7 @@ const incoming={
   v:1,
   profile:{name:'Transferred',emblem:'T',char:'renn',title:'IRONSIDE',frame:'gold'},
   meta:{
-    xp:940,cores:18,researchData:12,matches:21,color:'violet',owned:{neural:1},
+    xp:940,cores:18,researchData:12,matches:21,color:'violet',owned:{neural:1,col_violet:1},
     facWins:{nova:5},mapWins:{aelos:3},campaign:{missions:{intro:{stars:3}}},
     settings:{sound:false,music:false,cine:false,fog:false,quality:'low'}
   }
@@ -126,6 +142,7 @@ function makeHarness(options={}){
       built:0,lost:0,structs:0,bestKills:0,fastestWin:0,favFac:'',facWins:{},mapWins:{},
       firstPlayed:0,lastPlayed:0,campaign:{missions:{}},settings:{}},
     DEF_SETTINGS:{sound:true,music:true,cine:true,fog:true,quality:'high'},
+    COLORS:{azure:{},emerald:{},gold:{},violet:{},frost:{}},
     APP_VERSION:'1.33.48-test',
     window:{addEventListener(){}},
     navigator:options.navigator||{},
@@ -151,6 +168,7 @@ function makeHarness(options={}){
     renderMetaHead(){},renderProfile(){},renderAccount(){},renderSettings(){},
     renderBoosts(){},storyRefreshBadge(){},applyColor(){},applySettings(){},
     netAllowed(){return false;},
+    mfGuessMobile(){return false;},mfGpuTier(){return null;},
     fetch(){ throw new Error('network is forbidden in save transfer acceptance'); },
     __networkCalls:0,
     __exportedFile:null
@@ -161,8 +179,8 @@ function makeHarness(options={}){
   vm.runInContext(
     'const PROF_KEY='+JSON.stringify(PROF_KEY)+';\n'+
     "function metaKey(){return 'massfront_meta_'+PROFILES.active;}\n"+
-    (options.productionMigration?productionMigration+'\n':'')+
-    productionMetaFresh+'\nlet metaSaveWarned=false;\n'+productionPersistence,
+    (options.productionMigration?productionMigration+'\n':productionCoreGrantId+'\n')+
+    productionMetaFresh+'\n'+productionMetaHarden+'\nlet metaSaveWarned=false;\n'+productionPersistence,
     ctx,{filename:'src/game/meta.js#stage8-save-persistence'});
   vm.runInContext(accountSource+`\n;globalThis.__stage8SaveTest={
     sync:function(){return JSON.parse(JSON.stringify(SYNC));},
@@ -214,6 +232,18 @@ function makeHarness(options={}){
 
   assert.deepEqual(plain(h.ctx.__stage8CoreGrants()),[],
     'same-session retry did not move the grant into the economy queue');
+}
+
+/* Imported careers retain supported commander colors and deliberately repair
+   unsupported historical/test values to the production default. */
+for(const [color,expected] of [['violet','violet'],['crimson','azure']]){
+  const colorCtx={META:{color,owned:{},facWins:{},mapWins:{},campaign:{missions:{}},coreGrantPending:[],
+    res:{},resQueue:[],mats:{alloy:0,circuit:0,isotope:0,relic:0},mods:{},equip:[],settings:{gfxOver:{}}},
+    DEF_SETTINGS:{},COLORS:{azure:{},emerald:{},gold:{},violet:{},frost:{}},
+    mfGuessMobile:()=>false,mfGpuTier:()=>null,Math,Date};
+  vm.createContext(colorCtx);
+  vm.runInContext(productionCoreGrantId+'\n'+productionMetaHarden+'\nmetaHarden();',colorCtx);
+  assert.equal(colorCtx.META.color,expected,'production hardening returned the wrong commander color for '+color);
 }
 
 /* Hardening imported/legacy careers may repair missing ids, but it may never
@@ -315,6 +345,27 @@ let decodedTransfer=null;
   assert.equal(downloads.length,0,'cancelled picker fell through to download');
 }
 
+/* Web downloads must start from Chromium's trusted click path, while a native
+   WebView keeps the drift-tolerant pointer-up contract used on real phones. */
+for(const native of [false,true]){
+  const h=makeHarness(),listeners=[],taps=[];
+  const button={textContent:'↓ SAVE FILE',disabled:false,
+    addEventListener(type,handler){listeners.push({type,handler});}};
+  h.ctx.document.getElementById=id=>id==='saveFileGet'?button:null;
+  h.ctx.mfBindTap=(element,handler)=>taps.push({element,handler});
+  if(native)h.ctx.window.Capacitor={isNativePlatform:()=>true};
+  await h.ctx.initAccounts();
+  if(native){
+    assert.equal(taps.length,1,'native save control did not use mfBindTap');
+    assert.equal(listeners.filter(item=>item.type==='click').length,0,
+      'native save control also installed a duplicate click handler');
+  }else{
+    assert.equal(taps.length,0,'web save control incorrectly used pointer-up binding');
+    assert.equal(listeners.filter(item=>item.type==='click').length,1,
+      'web save control did not use the trusted click path');
+  }
+}
+
 function assertRolledBack(h,label){
   assert.deepEqual(plain(h.ctx.META),h.priorMeta,label+' did not restore live career');
   assert.deepEqual(plain(h.ctx.PROFILES),h.priorProfiles,label+' did not restore live identity');
@@ -388,7 +439,7 @@ for(const [label,key,save] of [
 {
   const advanced=plain(oldMeta);advanced.xp=9000;advanced.matches=90;
   const legacy={v:1,profile:plain(incoming.profile),meta:{
-    xp:10,cores:5,researchData:0,matches:1,color:'crimson',owned:{armor:2,trade:1},
+    xp:10,cores:5,researchData:0,matches:1,color:'azure',owned:{armor:2,trade:1},
     facWins:{dominion:2,brood:1},mapWins:{},campaign:{missions:{}},
     setup:{pf:'dominion',f:'brood'},settings:plain(oldMeta.settings)
   }};
@@ -463,10 +514,10 @@ for(const [label,key,save] of [
 console.log(JSON.stringify({
   ok:true,
   codec:['round-trip','integrity','truncation','magic','schema','size-ceiling'],
-  export:['download-fallback','picker-cancel','url-revoke'],
+  export:['download-fallback','picker-cancel','url-revoke','platform-input-binding'],
   transaction:['decoded-file-import','career-quota-rollback','profile-quota-rollback',
     'readback-rollback','retry-once','absent-record-rollback','outage-warning',
     'replacement-defaults','faction-migration-grant-boundary','grant-storage-retry',
     'grant-restart-replay','stale-reconcile-rejection',
-    'cloud-failure-state','cloud-decode-preservation','success']
+    'color-hardening','cloud-failure-state','cloud-decode-preservation','success']
 },null,2));

@@ -1,8 +1,9 @@
 # MASSFRONT master plan — Stage 8 progress · 2026-08-28
 
-Status: **IN PROGRESS** on `cursor/strip-mass-node-bloom`. This slice started
-from local Main Source tip `2d882397`; the local checkout remains the sole
-integration authority and dated folders remain transfer inputs only.
+Status: **IN PROGRESS — browser accessibility and save-transfer acceptance
+complete** on `cursor/strip-mass-node-bloom`. This slice started from local Main
+Source tip `2d882397`; the local checkout remains the sole integration authority
+and dated folders remain transfer inputs only.
 
 Stage 7 engineering is complete. Its remaining unfamiliar-player comprehension
 check is human acceptance, not an automation gap, and still blocks release
@@ -57,6 +58,16 @@ collected.
   keep the session open rather than claiming the disk copy is safe. Cloud pull,
   forced file replacement, and the Auth Portal now honor that result and never
   mark a failed import synced or pulled.
+- The guarded Chromium player path now completes the portable-save round trip
+  at a 412×900 touch viewport on the AMD/D3D11 hardware renderer: the visible
+  button creates a real browser download, the same bytes are reselected through
+  the hidden file input, a forced quota failure leaves live and stored state
+  unchanged, a valid retry restores the exact career and profile, and a one-
+  byte corruption is rejected before confirmation. Web/PWA builds bind export
+  to Chromium's trusted click contract; native Capacitor builds retain the
+  drift-tolerant pointer-up handler needed by Android WebView. The probe uses
+  one bounded evidence directory and fixed artifact names so retries no longer
+  accumulate timestamped folders or attach stale screenshots.
 - Legacy Armory-refund grant signals are held until the imported career is
   durable. Rollback discards the non-durable signal, preventing a rejected old
   save from queuing a phantom Core refund. The canonical-faction takeover also
@@ -75,9 +86,17 @@ collected.
   presentation and health bars while preserving health as the bar-length cue;
   disabling it restores faction-authored livery. The minimap adds batched
   circles, triangles, and crosses so allegiance does not depend on color, keeps
-  its markers and outlines legible at the shipped 56/72/84 px phone sizes, and
+  its markers and outlines legible at the reachable 56/84 px portrait and
+  intrinsic 256 px landscape, tablet, and desktop sizes, and
   does not disclose units outside the existing visual/radar gates. Brood combat
   forces classify as hostile while ordinary wildlife remains unaligned.
+- Its guarded hardware-GPU player-path capture passes 193 assertions across 20
+  tactical states and 40 full/minimap PNGs at the reachable 56, 84, and 256 px
+  minimap sizes. The set covers native and accessible close/strategic/radar-only/
+  hidden states, exact native-livery restoration, and Brood hostile identity.
+  The project owner visually reviewed and approved the captured set on
+  2026-08-28; `.tmp/stage8-team-identification/report.json` is the bounded local
+  machine-evidence report.
 - The shared offline diagnostic boundary now fails closed across all 12 current
   browser lanes. Before navigation it blocks non-loopback HTTP and WebSocket
   traffic, bypasses service workers through Chromium CDP, blocks new service
@@ -170,24 +189,24 @@ and only when its own report is `PASS` with matching start/end fingerprints.
 - A current, accepted 1v1/1v2/1v3 performance set and minimum physical-device
   sustained-battle result. The five-seat 1v4 target is unsupported by the
   current four-seat runtime and must not be mislabeled as tested.
-- Current GL recovery, terrain comparison, color-vision/high-contrast,
+- Current GL recovery, terrain comparison, broader high-contrast,
   non-color/non-audio alarm, keyboard/focus, large-text, and native Android Back
-  acceptance. The deterministic team-identification contract is complete, but
-  its small-phone shapes, health bars, restored faction livery, and fog/radar
-  behavior still require current guarded browser visual inspection.
-- Actual Chromium download/re-selection and native Files/Share physical-device
-  acceptance for `.mfsave` remains open. The deterministic contract now covers
+  acceptance. Tactical team-identification small-phone shapes, health bars,
+  restored faction livery, and fog/radar behavior have completed their guarded
+  browser visual inspection.
+- Native Files/Share physical-device acceptance for `.mfsave` remains open.
+  Actual Chromium download/re-selection is accepted by
+  `tools/probe-stage8-save-transfer.mjs`; its current PASS report is
+  `.tmp/stage8-save-transfer/report.json`, with isolated-browser ownership,
+  hardware GPU, offline/network isolation, stable source identity, all five
+  player-path assertions, hashed files, and a visually inspected screenshot.
+  The deterministic contract covers
   production encode/decode, a fresh-device decoded-file import, magic/schema/
   hash/truncation/size rejection, download fallback/cancel, both quota keys,
   retry-once, read-back mismatch, absent prior records, mid-transaction outage
   disclosure, faction canonicalization, legacy-refund side effects, recovered
   grant-queue persistence/restart replay, stale-balance rejection, and corrupt-
-  cloud preservation. The guarded real-
-  browser probe is implemented at `tools/probe-stage8-save-transfer.mjs`. Its
-  2026-08-28 attempt remains `UNKNOWN`: Claude's hard-surface process changed
-  source during the guarded run and the launcher could not prove ownership of
-  the Playwright browser session. Those are evidence-identity blockers, not a
-  browser pass or product failure; rerun after those writers stop.
+  cloud preservation and supported/unsupported commander-color hardening.
 - Physical WebView/background/OS-kill acceptance for local update download,
   cancel, retry, staging, Apply, automatic failed-start recovery, and Rollback.
   Deterministic production-source coverage for those interruption state
@@ -199,14 +218,14 @@ and only when its own report is `PASS` with matching start/end fingerprints.
 
 ## Next ordered local slices
 
-1. Complete the real Chromium save download/re-selection probe, then keep native
-   Documents/Cache/Share behavior for Android/iOS device acceptance.
-2. Guardedly inspect the tactical team-identification mode at the shipped phone
-   sizes, including fog/radar disclosure, minimap shapes, health bars, and exact
-   restoration of native faction identity after the mode is disabled.
-3. Run current 1v1/1v2/1v3 performance evidence through the shared offline
+1. Complete native Documents/Cache/Share behavior on Android/iOS physical
+   devices; the real Chromium download/re-selection path is accepted.
+2. Run current 1v1/1v2/1v3 performance evidence through the shared offline
    boundary only after hard-surface writers stop and source identity can remain
    stable for the whole capture.
+3. Replace the registered commander portraits and shared robotic battle chassis
+   that fail `commander-anime-flat-v1`, then visually approve the replacements
+   before registration or release.
 
 ## Stage 7 human acceptance still required
 

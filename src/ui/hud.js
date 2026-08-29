@@ -373,7 +373,8 @@ function mmFactionCrest(fac,x,y,size,stroke,team){
 function renderMinimap(){
   if((mmFrame++)%5) return;
   /* 256 backing store: a 5x5 civic cell is ~10 px, so lots/streets survive
-     the command-map read. CSS still paints 72-84 px; the canvas is the map. */
+     the command-map read. CSS paints 56/84 px in portrait and uses the
+     intrinsic 256 px canvas in landscape, tablet and desktop layouts. */
   const S=256, k=S/MAP;
   const mmEl=mm.canvas;
   if(mmEl.width!==S){ mmEl.width=S; mmEl.height=S; }
