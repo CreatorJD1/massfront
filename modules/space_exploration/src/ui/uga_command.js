@@ -362,7 +362,7 @@ function ensureStylesheet() {
   if (document.querySelector('link[data-uga-command-style]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = new URL('./uga_command.css?v=20260823-transit1', import.meta.url).href;
+  link.href = new URL('./uga_command.css?v=20260828-stage9ops2', import.meta.url).href;
   link.dataset.ugaCommandStyle = 'true';
   document.head.appendChild(link);
 }
@@ -1074,6 +1074,37 @@ export function createUgaCommand(options = {}) {
       .filter(Boolean) : [];
   }
 
+  function debriefRewardSummary(result) {
+    const rewards = Object.entries(result?.rewards || {}).filter(([, value]) => Number(value) !== 0)
+      .map(([key, value]) => `+${formatValue(value)} ${prettyToken(key)}`);
+    return rewards.length ? rewards.join(' // ') : 'No material rewards';
+  }
+
+  function debriefArchive(state, catalog) {
+    const history = Array.isArray(state.operations?.history)
+      ? state.operations.history.filter(entry => entry?.operation && entry?.result?.resultId)
+      : [];
+    const visible = [...history].reverse().slice(0, 8);
+    const missions = asArray(catalog.missions || catalog.MISSION_CATALOG);
+    const factions = asArray(catalog.factions || catalog.FACTION_CATALOG);
+    const resultIds = visible.map(entry => entry.result.resultId);
+    return `<section class="uga-debrief-archive" data-debrief-archive data-archive-count="${history.length}" data-archive-visible-count="${visible.length}" data-archive-result-ids="${escapeHtml(resultIds.join(','))}">
+      <header><div><small>EXPERIMENTAL PREVIEW // SOLO LOCAL CAREER</small><h3>Debrief Archive</h3></div><b>${history.length} RESULT${history.length === 1 ? '' : 'S'}</b></header>
+      <p>This archive is stored only in this experimental local career. It does not transfer to a cloud account.</p>
+      <div class="uga-debrief-list">${visible.length ? visible.map(entry => {
+        const operation = entry.operation;
+        const result = entry.result;
+        const mission = missions.find(item => item.id === (result.missionId || operation.missionId));
+        const proxy = factions.find(item => item.id === (result.proxyFactionId || operation.proxyFactionId));
+        return `<article class="uga-debrief-record is-${escapeHtml(result.outcome || 'unknown')}" data-result-id="${escapeHtml(result.resultId)}" data-outcome="${escapeHtml(result.outcome || 'unknown')}">
+          <div><small>${escapeHtml(result.resultId)}</small><strong>${escapeHtml(mission?.name || mission?.title || prettyToken(result.missionId || operation.missionId))}</strong></div>
+          <dl><div><dt>PROXY</dt><dd>${escapeHtml(proxy?.name || prettyToken(result.proxyFactionId || operation.proxyFactionId))}</dd></div><div><dt>OUTCOME</dt><dd>${escapeHtml(prettyToken(result.outcome || 'unknown'))}</dd></div><div><dt>SCORE</dt><dd>${formatValue(result.score || 0)} / 100</dd></div></dl>
+          <p>${escapeHtml(debriefRewardSummary(result))}</p>
+        </article>`;
+      }).join('') : '<div class="uga-empty-state">Completed ground operations will appear here after their exactly-once result is acknowledged.</div>'}</div>
+    </section>`;
+  }
+
   function contractsPanel() {
     const catalog = getCatalog();
     const state = getState();
@@ -1097,6 +1128,7 @@ export function createUgaCommand(options = {}) {
           ${locks.length ? `<ul>${locks.map(lock => `<li>${icon('lock')}${escapeHtml(lock)}</li>`).join('')}</ul>` : `<span class="uga-mission-ready">${icon('check')} READY FOR PLANNING</span>`}
         </button>`;
       }).join('') : '<div class="uga-empty-state">No operation packages are currently available.</div>'}</div>
+      ${debriefArchive(state, catalog)}
     </div>`;
   }
 

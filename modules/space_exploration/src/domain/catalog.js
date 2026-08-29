@@ -1,6 +1,6 @@
 import { deepFreeze } from './deterministic.js';
 
-export const CATALOG_VERSION = 5;
+export const CATALOG_VERSION = 6;
 
 export const RESOURCE_KEYS = deepFreeze([
   'credits',
@@ -573,10 +573,10 @@ export const DOCTRINE_CATALOG = deepFreeze({
 });
 
 export const SUPPORT_CATALOG = deepFreeze({
-  survey_drones: { id: 'survey_drones', name: 'Survey Drone Net', minimumHangarLevel: 1, cost: { probes: 1, fuel: 2 } },
-  field_lab: { id: 'field_lab', name: 'Mobile Field Laboratory', minimumHangarLevel: 1, cost: { components: 8, fuel: 2 } },
-  medevac: { id: 'medevac', name: 'Medevac Flight', minimumHangarLevel: 2, cost: { credits: 200, fuel: 3 } },
-  heavy_lift: { id: 'heavy_lift', name: 'Heavy Lift Package', minimumHangarLevel: 2, cost: { alloys: 10, fuel: 4 } }
+  survey_drones: { id: 'survey_drones', name: 'Survey Drone Net', minimumHangarLevel: 1, scoreModifier: 4, cost: { probes: 1, fuel: 2 } },
+  field_lab: { id: 'field_lab', name: 'Mobile Field Laboratory', minimumHangarLevel: 1, scoreModifier: 2, cost: { components: 8, fuel: 2 } },
+  medevac: { id: 'medevac', name: 'Medevac Flight', minimumHangarLevel: 2, scoreModifier: 1, cost: { credits: 200, fuel: 3 } },
+  heavy_lift: { id: 'heavy_lift', name: 'Heavy Lift Package', minimumHangarLevel: 2, scoreModifier: 5, cost: { alloys: 10, fuel: 4 } }
 });
 
 // These are deployment slots for planetary RTS missions, not space-combat
@@ -598,7 +598,7 @@ export const DEPLOYMENT_STRUCTURE_CATALOG = deepFreeze({
 
 export const OPERATION_MOD_CATALOG = deepFreeze({
   survey_link: { id: 'survey_link', name: 'Survey Link', slotCost: 1, effect: 'Reveal nearby hazards at deployment.' },
-  repair_nanites: { id: 'repair_nanites', name: 'Repair Nanites', slotCost: 1, effect: 'Starting mechanical forces recover minor damage.' },
+  repair_nanites: { id: 'repair_nanites', name: 'Repair Nanites', slotCost: 1, effect: 'Starting forces carry a finite reserve that repairs up to 20% maximum health.' },
   medical_cache: { id: 'medical_cache', name: 'Medical Cache', slotCost: 1, effect: 'Reduces post-operation injury severity.' }
 });
 

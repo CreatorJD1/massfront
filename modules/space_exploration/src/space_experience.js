@@ -11,7 +11,7 @@ import { FlightPhysics } from './core/flight_physics.js';
 import { UgaCommandScene } from './core/uga_command_scene.js?v=20260823-transit1';
 import { GalaxyMapEngine } from './galaxy/galaxy_map_engine.js';
 import { SpaceHud } from './ui/space_hud.js';
-import { createUgaCommand } from './ui/uga_command.js?v=20260823-transit1';
+import { createUgaCommand } from './ui/uga_command.js?v=20260828-stage9ops2';
 import { createUgaDeploymentArena } from './ui/uga_scene.js?v=20260827-stage6-hq-carrier';
 import { PlanetarySurvey } from './systems/planetary_survey.js';
 import { SHOWCASE_LAYOUT, SHOWCASE_SYSTEMS } from './systems/showcase_systems.js';
@@ -40,6 +40,7 @@ import {
   LocalDomainStore,
   advanceRecoveryCycles,
   cancelConstruction,
+  cancelGroundOperation,
   applyGroundResult,
   assignSpecialistToDistrict,
   beginGroundOperation,
@@ -209,6 +210,7 @@ export function createSpaceExperience(container, options = {}) {
   let startupTimedOut = false;
   let ugaLoadPromise = null;
   let operationKind = 'ground';
+  let operationBridgeNonce = null;
   const removers = [];
   const pointer = { active: false, x: 0, y: 0, lastX: 0, lastY: 0, moved: false };
   const camState = { yaw: 0, pitch: 0.3, dist: 1 };
@@ -513,7 +515,8 @@ export function createSpaceExperience(container, options = {}) {
     if (sceneMode === 'survey') refreshSurvey();
     if (sceneMode === 'galaxy') selectSystemInGalaxy(selectedGalaxyId);
     try {
-      host.saveCampaignSnapshot(state);
+      const saving = host.saveCampaignSnapshot(state);
+      if (saving && typeof saving.catch === 'function') saving.catch(() => {});
     } catch (_) {
       // LocalDomainStore remains authoritative if an optional future host fails.
     }
@@ -1011,6 +1014,10 @@ export function createSpaceExperience(container, options = {}) {
     return host.kind === 'LocalSandboxHostV1' && host.productionIntegrated === false;
   }
 
+  function isIntegratedGroundHost() {
+    return host.productionIntegrated === true;
+  }
+
   function groundOperationRequest(payload) {
     return {
       missionId: payload.missionId,
@@ -1028,30 +1035,106 @@ export function createSpaceExperience(container, options = {}) {
     return createGroundOperation(state, groundOperationRequest(payload));
   }
 
+  function snapshotCarriesPendingOperation(snapshot, operation) {
+    const pending = snapshot?.operations?.pending;
+    return Boolean(pending && operation &&
+      pending.operationId === operation.operationId &&
+      pending.returnToken === operation.returnToken &&
+      pending.missionId === operation.missionId &&
+      snapshot.profileId === state.profileId);
+  }
+
+  async function persistHostSnapshotAndReadBack(snapshot, expectedOperation = null) {
+    await Promise.resolve(host.saveCampaignSnapshot(snapshot));
+    const restored = await Promise.resolve(host.loadCampaignSnapshot());
+    const matches = expectedOperation
+      ? snapshotCarriesPendingOperation(restored, expectedOperation)
+      : restored?.profileId === snapshot.profileId && restored?.operations?.pending === null;
+    if (!matches) {
+      throw new Error(expectedOperation
+        ? 'Launch stopped: the host could not prove the matching pending operation was saved.'
+        : 'Abandonment stopped: the host could not prove the refunded operation state was saved.');
+    }
+    return restored;
+  }
+
   async function launchOperation(payload) {
     const request = groundOperationRequest(payload);
+    let started = null;
+    let prepared = null;
     try {
-      const started = beginGroundOperation(state, request);
-      const prepared = await host.prepareGroundOperation(started.operation);
-      if (!prepared?.accepted) throw new Error('The local ExplorationHostV1 rejected the operation package.');
+      started = beginGroundOperation(state, request);
+      prepared = await host.prepareGroundOperation(started.operation);
+      if (!prepared?.accepted || !prepared.adapter) throw new Error('ExplorationHostV1 rejected the operation package or omitted its adapter identity.');
       commit(started.state, `operation:${started.operation.operationId}`);
+      await persistHostSnapshotAndReadBack(state, started.operation);
+      operationBridgeNonce = prepared.nonce || host.pendingNonce || null;
+      if (isIntegratedGroundHost()) {
+        if (prepared.productionIntegrated !== true || !prepared.launchUrl) throw new Error('Launch stopped: the integrated host did not provide a production ground-operation destination.');
+        if (typeof host.openGroundOperation !== 'function') throw new Error('Launch stopped: the integrated host cannot open the prepared ground operation.');
+        await Promise.resolve(host.openGroundOperation(prepared));
+        return;
+      }
       showOperation(started.operation, prepared);
     } catch (error) {
+      const pendingSavedInMemory = started && snapshotCarriesPendingOperation(state, started.operation);
+      if (prepared?.nonce && isIntegratedGroundHost() && !pendingSavedInMemory && typeof host.abandonGroundOperation === 'function') {
+        try {
+          await Promise.resolve(host.abandonGroundOperation(prepared.nonce));
+        } catch (_) {
+          // The launch error remains authoritative. A later host restore can
+          // still find and abandon a durable mirror if best-effort cleanup fails.
+        }
+      }
+      if (pendingSavedInMemory && isIntegratedGroundHost()) {
+        showOperation(started.operation, prepared, { restored: true, error: issueText(error) });
+      }
       showToast(issueText(error), true);
     }
   }
 
-  function showOperation(operation, prepared = null) {
+  function setOperationModalState(mode, result = null) {
+    const modal = $('operationModal');
+    modal.dataset.operationState = mode;
+    modal.dataset.debriefState = mode === 'debrief' ? 'ready' : 'none';
+    modal.dataset.tacticalRejection = mode === 'launch-rejected' ? 'true' : 'false';
+    if (result?.resultId) modal.dataset.resultId = result.resultId;
+    else delete modal.dataset.resultId;
+    if (result?.outcome) modal.dataset.outcome = result.outcome;
+    else delete modal.dataset.outcome;
+    modal.dataset.exactlyOnce = mode === 'debrief' ? 'true' : 'false';
+  }
+
+  function showOperation(operation, prepared = null, optionsArg = {}) {
     operationKind = 'ground';
     const mission = MISSION_CATALOG[operation.missionId];
     const localSimulator = isLocalGroundSimulator();
-    $('operationModal').classList.add('active');
-    $('operationModal').setAttribute('aria-hidden', 'false');
-    $('operationTitle').textContent = mission.title;
-    $('operationSummary').textContent = localSimulator
+    const integrated = isIntegratedGroundHost();
+    const restored = optionsArg.restored === true || (!prepared && integrated);
+    const rejected = optionsArg.rejected === true;
+    const modal = $('operationModal');
+    operationBridgeNonce = prepared?.nonce || operationBridgeNonce || host.pendingNonce || null;
+    setOperationModalState(rejected ? 'launch-rejected' : integrated ? 'awaiting-result' : 'simulator');
+    modal.querySelector('.eyebrow').textContent = rejected
+      ? 'GALACTIC OPERATIONS // TACTICAL RECOVERY'
+      : integrated ? 'GALACTIC OPERATIONS // RECOVERY' : 'LOCAL GROUND-OPERATION ADAPTER';
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    $('operationTitle').textContent = rejected ? `${mission.title} · LAUNCH REJECTED` : mission.title;
+    $('operationSummary').textContent = optionsArg.error
+      ? `${optionsArg.error} The operation remains safely pending; abandon it below to refund the deployment cost.`
+      : rejected
+        ? 'TACTICAL LAUNCH REJECTED OR EXPIRED. No result was accepted. Use ABANDON & REFUND to restore the deployment cost and return to Mission Operations.'
+      : localSimulator
       ? `${FACTION_CATALOG[operation.proxyFactionId].name} deploys under UGA authority against ${FACTION_CATALOG[operation.opponentFactionId].name}. This is an explicitly local result simulator; its versioned package is stored behind an opaque nonce and never launches production MASSFRONT.`
-      : `${FACTION_CATALOG[operation.proxyFactionId].name} deploys under UGA authority against ${FACTION_CATALOG[operation.opponentFactionId].name}. The package remains unresolved until a validated unique result is applied.`;
-    $('operationPayload').textContent = JSON.stringify({
+      : restored
+        ? `${FACTION_CATALOG[operation.proxyFactionId].name} has a saved operation with no accepted result. Abandon and refund this pending package to continue mission planning.`
+        : `${FACTION_CATALOG[operation.proxyFactionId].name} deploys under UGA authority against ${FACTION_CATALOG[operation.opponentFactionId].name}. The package remains unresolved until a validated unique result is applied.`;
+    const payload = $('operationPayload');
+    delete payload.dataset.debriefResultId;
+    delete payload.dataset.debriefOutcome;
+    delete payload.dataset.debriefApplied;
+    payload.textContent = JSON.stringify({
       operationId: operation.operationId,
       sponsor: operation.sponsorId,
       proxyFaction: operation.proxyFactionId,
@@ -1073,7 +1156,87 @@ export function createSpaceExperience(container, options = {}) {
     }, null, 2);
     $('btnSimVictory').hidden = !localSimulator;
     $('btnSimSetback').hidden = !localSimulator;
-    setButtonLabel($('btnCancelOperation'), 'LEAVE UNRESOLVED');
+    $('btnCancelOperation').disabled = false;
+    setButtonLabel($('btnCancelOperation'), integrated ? 'ABANDON & REFUND' : 'LEAVE UNRESOLVED');
+  }
+
+  function appendDebriefSection(target, title, rows) {
+    const section = document.createElement('section');
+    section.className = 'operation-debrief-section';
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    section.appendChild(heading);
+    const list = document.createElement('dl');
+    for (const [label, value] of rows) {
+      const group = document.createElement('div');
+      const term = document.createElement('dt');
+      const detail = document.createElement('dd');
+      term.textContent = label;
+      detail.textContent = value;
+      group.append(term, detail);
+      list.appendChild(group);
+    }
+    section.appendChild(list);
+    target.appendChild(section);
+  }
+
+  function personnelDebriefRows(result) {
+    const deltas = [result.personnelDelta?.commander, ...(result.personnelDelta?.specialists || [])].filter(Boolean);
+    const rows = deltas.filter(delta => delta.injury).map(delta => {
+      const definition = COMMANDER_CATALOG[delta.id] || SPECIALIST_CATALOG[delta.id];
+      return [definition?.name || delta.id, `${String(delta.injury.severity).toUpperCase()} // ${delta.injury.recoveryCycles} RECOVERY CYCLE${delta.injury.recoveryCycles === 1 ? '' : 'S'}`];
+    });
+    if (!rows.length) rows.push(['Personnel', 'NO RECOVERY INJURIES']);
+    rows.push(['Faction recovery', `${result.factionDelta?.recoveryCycles || 0} CYCLES`]);
+    return rows;
+  }
+
+  function showDebrief(result, applied) {
+    operationKind = 'debrief';
+    operationBridgeNonce = null;
+    const historyEntry = [...(state.operations?.history || [])].reverse().find(entry => entry?.result?.resultId === result.resultId);
+    const operation = historyEntry?.operation;
+    const mission = MISSION_CATALOG[result.missionId];
+    const modal = $('operationModal');
+    const payload = $('operationPayload');
+    setOperationModalState('debrief', result);
+    modal.querySelector('.eyebrow').textContent = 'UGA MISSION OPERATIONS // DEBRIEF';
+    modal.classList.add('active');
+    modal.setAttribute('aria-hidden', 'false');
+    $('operationTitle').textContent = `${mission?.title || result.missionId} · DEBRIEF`;
+    $('operationSummary').textContent = `${FACTION_CATALOG[result.proxyFactionId]?.name || result.proxyFactionId} returned from ${operation?.battlefield?.siteName || operation?.siteId || 'the operation area'} with a ${String(result.outcome).toUpperCase()} result.`;
+    payload.replaceChildren();
+    payload.dataset.debriefResultId = result.resultId;
+    payload.dataset.debriefOutcome = result.outcome;
+    payload.dataset.debriefApplied = applied ? 'applied' : 'duplicate-ignored';
+    const grid = document.createElement('div');
+    grid.className = 'operation-debrief-grid';
+    appendDebriefSection(grid, 'MISSION RESULT', [
+      ['Outcome', String(result.outcome).toUpperCase()],
+      ['Score', `${result.score} / 100`],
+      ['Primary objective', result.primaryObjectiveComplete ? 'COMPLETE' : 'FAILED'],
+      ['Secondary objectives', `${result.secondaryObjectivesComplete} / 3`]
+    ]);
+    const rewardRows = Object.entries(result.rewards || {}).filter(([, value]) => Number(value) !== 0)
+      .map(([key, value]) => [key.replaceAll(/([A-Z])/g, ' $1').replaceAll('_', ' ').toUpperCase(), `+${Number(value).toLocaleString()}`]);
+    rewardRows.push(['Faction reputation', `${result.factionDelta?.reputation >= 0 ? '+' : ''}${result.factionDelta?.reputation || 0}`]);
+    appendDebriefSection(grid, 'REWARDS', rewardRows);
+    appendDebriefSection(grid, 'INJURIES & RECOVERY', personnelDebriefRows(result));
+    const world = result.worldDelta || {};
+    appendDebriefSection(grid, 'WORLD EFFECT', [
+      ['Infestation severity', world.infestationSeverity ? `${world.infestationSeverity > 0 ? '+' : ''}${world.infestationSeverity}` : 'NO CHANGE'],
+      ['Hive targets purged', `${(world.hiveTargetsPurged || []).length}`],
+      ['Infestation cleared', world.infestationCleared ? 'YES' : 'NO']
+    ]);
+    appendDebriefSection(grid, 'EXACTLY-ONCE LEDGER', [
+      ['Result ID', result.resultId],
+      ['Status', applied ? 'APPLIED EXACTLY ONCE' : 'DUPLICATE IGNORED // ORIGINAL REMAINS APPLIED ONCE']
+    ]);
+    payload.appendChild(grid);
+    $('btnSimVictory').hidden = true;
+    $('btnSimSetback').hidden = true;
+    $('btnCancelOperation').disabled = false;
+    setButtonLabel($('btnCancelOperation'), 'ACKNOWLEDGE DEBRIEF');
   }
 
   function launchClassicSimulation(modeId, setup = {}) {
@@ -1085,13 +1248,21 @@ export function createSpaceExperience(container, options = {}) {
       returnRoute: { scene: 'uga', systemId: state.route.systemId, districtId: 'command' }
     }), `classic:${modeId}`)) return;
     operationKind = 'classic';
+    operationBridgeNonce = null;
+    setOperationModalState('classic');
     $('operationModal').classList.add('active');
     $('operationModal').setAttribute('aria-hidden', 'false');
+    $('operationModal').querySelector('.eyebrow').textContent = 'COMMAND CORE // ISOLATED SIMULATION';
     $('operationTitle').textContent = `${modeId.replaceAll('_', ' ').toUpperCase()} · SIMULATED LAUNCH`;
     $('operationSummary').textContent = 'Command Core sandbox only. This interactive setup does not open the production game or modify exploration rewards.';
-    $('operationPayload').textContent = JSON.stringify(state.classicModes.lastSimulation, null, 2);
+    const payload = $('operationPayload');
+    delete payload.dataset.debriefResultId;
+    delete payload.dataset.debriefOutcome;
+    delete payload.dataset.debriefApplied;
+    payload.textContent = JSON.stringify(state.classicModes.lastSimulation, null, 2);
     $('btnSimVictory').hidden = true;
     $('btnSimSetback').hidden = true;
+    $('btnCancelOperation').disabled = false;
     setButtonLabel($('btnCancelOperation'), 'RETURN TO COMMAND CORE');
   }
 
@@ -1125,14 +1296,78 @@ export function createSpaceExperience(container, options = {}) {
     try {
       const applied = applyGroundResult(state, result);
       if (applied.applied) commit(applied.state, `result:${result.resultId}`);
-      $('operationModal').classList.remove('active');
-      $('operationModal').setAttribute('aria-hidden', 'true');
+      showDebrief(result, applied.applied);
       showToast(applied.applied ? `${result.outcome.toUpperCase()} · RESULT APPLIED ONCE` : 'DUPLICATE RESULT IGNORED');
-      if (applied.state.route.scene === 'uga') openUga('hangar');
-      else openSystem();
     } catch (error) {
       showToast(issueText(error), true);
+      // The host receipt may already be durable. Propagate application failure
+      // so its recovery path can re-emit only while this campaign is pending.
+      throw error;
     }
+  }
+
+  function closeOperationModal() {
+    $('operationModal').classList.remove('active');
+    $('operationModal').setAttribute('aria-hidden', 'true');
+  }
+
+  async function openMissionOperations() {
+    await openUga();
+    ugaUi.openView('contracts');
+  }
+
+  async function abandonIntegratedOperation() {
+    const pending = state.operations.pending;
+    if (!pending) {
+      showToast('NO PENDING OPERATION TO ABANDON', true);
+      return;
+    }
+    const button = $('btnCancelOperation');
+    button.disabled = true;
+    try {
+      const cancelled = cancelGroundOperation(state, pending.operationId);
+      await persistHostSnapshotAndReadBack(cancelled);
+      commit(cancelled, `operation-abandon:${pending.operationId}`);
+      let cleanupError = null;
+      if (typeof host.abandonGroundOperation === 'function') {
+        try {
+          await Promise.resolve(host.abandonGroundOperation(operationBridgeNonce || undefined));
+        } catch (error) {
+          cleanupError = error;
+        }
+      }
+      operationBridgeNonce = null;
+      closeOperationModal();
+      await openMissionOperations();
+      showToast(cleanupError
+        ? `DEPLOYMENT REFUNDED · BRIDGE CLEANUP WARNING: ${issueText(cleanupError)}`
+        : 'OPERATION ABANDONED · DEPLOYMENT COST REFUNDED', Boolean(cleanupError));
+    } catch (error) {
+      button.disabled = false;
+      showToast(issueText(error), true);
+    }
+  }
+
+  async function handleOperationModalAction() {
+    if (operationKind === 'debrief') {
+      closeOperationModal();
+      await openMissionOperations();
+      return;
+    }
+    if (operationKind === 'ground' && isIntegratedGroundHost()) {
+      await abandonIntegratedOperation();
+      return;
+    }
+    closeOperationModal();
+    showToast(operationKind === 'ground' ? 'OPERATION REMAINS PENDING' : 'CLASSIC SIMULATION CLOSED');
+  }
+
+  function recoverGroundOperation(error) {
+    const pending = state.operations?.pending;
+    if (!pending || !isIntegratedGroundHost()) return false;
+    showOperation(pending, null, { restored: true, rejected: true, error: issueText(error) });
+    showToast('TACTICAL RESULT REJECTED · OPERATION REMAINS PENDING · REFUND AVAILABLE', true);
+    return true;
   }
 
   if (typeof host.subscribeResult === 'function') {
@@ -1188,11 +1423,7 @@ export function createSpaceExperience(container, options = {}) {
     });
     listen($('btnSimVictory'), 'click', () => resolvePending('victory'));
     listen($('btnSimSetback'), 'click', () => resolvePending('setback'));
-    listen($('btnCancelOperation'), 'click', () => {
-      $('operationModal').classList.remove('active');
-      $('operationModal').setAttribute('aria-hidden', 'true');
-      showToast(operationKind === 'ground' ? 'OPERATION REMAINS PENDING' : 'CLASSIC SIMULATION CLOSED');
-    });
+    listen($('btnCancelOperation'), 'click', () => handleOperationModalAction());
 
     const canvas = engine.renderer.domElement;
     listen(canvas, 'pointerdown', event => {
@@ -1371,8 +1602,13 @@ export function createSpaceExperience(container, options = {}) {
     setScene('system', { persist: false });
     if (!contextRecovering) setRenderVeil(frame, 'ready');
     if (state.operations.pending) {
-      showOperation(state.operations.pending);
-      showToast('UNRESOLVED OPERATION RESTORED');
+      const rejectedNonce = isIntegratedGroundHost()
+        ? new URLSearchParams(window.location.search).get('groundRejected')
+        : null;
+      const rejected = /^[A-Za-z0-9_-]{16,128}$/.test(rejectedNonce || '') &&
+        (!host.pendingNonce || host.pendingNonce === rejectedNonce);
+      showOperation(state.operations.pending, null, { restored: true, rejected });
+      showToast(rejected ? 'TACTICAL LAUNCH REJECTED OR EXPIRED · REFUND AVAILABLE' : 'UNRESOLVED OPERATION RESTORED', rejected);
     }
     return api;
   }).catch(error => {
@@ -1402,6 +1638,7 @@ export function createSpaceExperience(container, options = {}) {
     get commandScene() { return commandScene; },
     get deploymentArena() { return deploymentArena; },
     previewGroundOperation,
+    recoverGroundOperation,
     get galaxyMap() { return galaxyMap; },
     openUga,
     openGalaxy,

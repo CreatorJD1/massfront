@@ -4,6 +4,7 @@ import {
   CONSTRUCTION_FACILITY_CATALOG,
   DEPLOYMENT_STRUCTURE_CATALOG,
   DEPLOYMENT_UNIT_CATALOG,
+  DOCTRINE_CATALOG,
   DOMAIN_STATE_SCHEMA_VERSION,
   DomainValidationError,
   FACTION_CATALOG,
@@ -15,6 +16,7 @@ import {
   SITE_CATALOG,
   SPECIALIST_CATALOG,
   SYSTEM_CATALOG,
+  SUPPORT_CATALOG,
   advanceRecoveryCycles,
   advanceExpeditionCycles,
   applyGroundResult,
@@ -337,6 +339,13 @@ function verifyAccountProfileIsolation() {
 }
 
 function verifyPendingPersistenceAndResults(progressionState) {
+  assert.equal(DOCTRINE_CATALOG.containment.scoreModifier, 8);
+  assert.deepEqual(Object.fromEntries(Object.entries(SUPPORT_CATALOG).map(([id, entry]) => [id, entry.scoreModifier])), {
+    survey_drones: 4,
+    field_lab: 2,
+    medevac: 1,
+    heavy_lift: 5
+  });
   const returnRoute = structuredClone(progressionState.route);
   const resourcesBeforeLaunch = structuredClone(progressionState.resources);
   const launchA = beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom' });
@@ -393,6 +402,40 @@ function verifyPendingPersistenceAndResults(progressionState) {
     injuredPersonnelIds: [injuredSpecialistId]
   });
   assert.equal(validateGroundResult(operation, result).ok, true);
+
+  const medicalOperation = beginGroundOperation(progressionState, {
+    missionId: 'uga_pale_bloom',
+    supportId: 'survey_drones',
+    deploymentManifest: { modIds: ['medical_cache'] }
+  }).operation;
+  const medicalResult = createGroundResult(medicalOperation, {
+    outcome: 'setback',
+    score: 32,
+    primaryObjectiveComplete: false,
+    secondaryObjectivesComplete: 0,
+    injuryBand: 'severe',
+    injuredPersonnelIds: [medicalOperation.specialistIds[0]]
+  });
+  assert.equal(medicalResult.personnelDelta.specialists[0].injury.severity, 'moderate', 'medical cache must reduce canonical injury severity by one band');
+  assert.equal(medicalResult.personnelDelta.specialists[0].injury.recoveryCycles, 2);
+
+  const medevacReadyState = structuredClone(progressionState);
+  medevacReadyState.ship.districts.hangar.level = 2;
+  const medicalMedevacOperation = beginGroundOperation(medevacReadyState, {
+    missionId: 'uga_pale_bloom',
+    supportId: 'medevac',
+    deploymentManifest: { modIds: ['medical_cache'] }
+  }).operation;
+  const medicalMedevacResult = createGroundResult(medicalMedevacOperation, {
+    outcome: 'setback',
+    score: 32,
+    primaryObjectiveComplete: false,
+    secondaryObjectivesComplete: 0,
+    injuryBand: 'severe',
+    injuredPersonnelIds: [medicalMedevacOperation.specialistIds[0]]
+  });
+  assert.equal(medicalMedevacResult.personnelDelta.specialists[0].injury.severity, 'moderate');
+  assert.equal(medicalMedevacResult.personnelDelta.specialists[0].injury.recoveryCycles, 1, 'medevac must stack after medical-cache severity reduction');
   expectDomainIssue(() => createGroundResult(operation, {
     outcome: 'victory',
     score: 88,

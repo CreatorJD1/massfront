@@ -458,6 +458,38 @@
 .uga-mission-card li .uga-svg, .uga-mission-ready .uga-svg { width: 10px; height: 10px; }
 .uga-mission-ready { margin-top: 8px; display: flex; align-items: center; gap: 5px; color: var(--uga-green); font: 6px/1 Consolas, monospace; }
 
+.uga-debrief-archive { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(114, 229, 178, .24); }
+.uga-debrief-archive > header { display: flex; align-items: end; justify-content: space-between; gap: 8px; }
+.uga-debrief-archive > header small { display: block; color: var(--uga-green); font: 5px/1 Consolas, monospace; letter-spacing: .13em; }
+.uga-debrief-archive > header h3 { margin: 4px 0 0; color: #d8edf4; font-size: 11px; letter-spacing: .07em; }
+.uga-debrief-archive > header > b { padding: 4px 6px; color: var(--uga-green); border: 1px solid rgba(114, 229, 178, .3); font: 5px/1 Consolas, monospace; white-space: nowrap; }
+.uga-debrief-archive > p { margin: 7px 0 0; color: #7996a5; font-size: 7px; line-height: 1.45; }
+.uga-debrief-list { display: grid; gap: 6px; margin-top: 8px; }
+.uga-debrief-record { padding: 8px; border: 1px solid rgba(92, 196, 232, .16); border-left: 2px solid #6d8998; background: rgba(7, 27, 39, .46); }
+.uga-debrief-record.is-victory { border-left-color: var(--uga-green); }
+.uga-debrief-record.is-partial { border-left-color: var(--uga-amber); }
+.uga-debrief-record.is-setback { border-left-color: #ff6d72; }
+.uga-debrief-record > div:first-child { min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.uga-debrief-record > div:first-child small { max-width: 54%; overflow: hidden; color: #628696; font: 5px/1 Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.uga-debrief-record > div:first-child strong { min-width: 0; overflow: hidden; color: #cbe6ef; font-size: 8px; letter-spacing: .04em; text-overflow: ellipsis; white-space: nowrap; }
+.uga-debrief-record dl { margin: 7px 0 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.uga-debrief-record dl div { min-width: 0; padding: 5px; border: 1px solid rgba(92, 196, 232, .1); background: rgba(1, 13, 20, .36); }
+.uga-debrief-record dt { color: #58798a; font: 5px/1 Consolas, monospace; }
+.uga-debrief-record dd { margin: 3px 0 0; overflow: hidden; color: #b8d3dd; font: 6px/1.2 Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.uga-debrief-record > p { margin: 7px 0 0; color: #88a998; font: 5px/1.4 Consolas, monospace; }
+
+.operation-modal[data-operation-state="debrief"] .operation-card { border-top-color: var(--uga-green); }
+.operation-modal[data-operation-state="debrief"] .operation-payload { white-space: normal; }
+.operation-modal[data-operation-state="launch-rejected"] .operation-card { border-top-color: #ff6d72; }
+.operation-debrief-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.operation-debrief-section { min-width: 0; padding: 8px; border: 1px solid rgba(92, 196, 232, .14); background: rgba(8, 27, 38, .42); }
+.operation-debrief-section:last-child { grid-column: 1 / -1; border-color: rgba(114, 229, 178, .3); }
+.operation-debrief-section h3 { margin: 0 0 6px; color: var(--uga-cyan); font: 7px/1 Consolas, monospace; letter-spacing: .12em; }
+.operation-debrief-section dl { margin: 0; display: grid; gap: 4px; }
+.operation-debrief-section dl div { min-width: 0; display: grid; grid-template-columns: minmax(90px, .8fr) minmax(0, 1.2fr); gap: 6px; }
+.operation-debrief-section dt { color: #628292; }
+.operation-debrief-section dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: #c1dbe5; text-align: right; }
+
 .uga-deployment-planner { margin-top: 12px; padding: 11px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid rgba(255, 181, 74, .25); background: rgba(55, 36, 12, .15); }
 .uga-deployment-planner.is-invalid { border-color: rgba(255, 94, 98, .68); box-shadow: inset 0 0 24px rgba(255, 94, 98, .08); }
 .uga-deployment-planner header { grid-column: 1 / -1; }
@@ -1358,6 +1390,9 @@
   .uga-job-controls button.is-danger { grid-column: auto; }
   .uga-construction-queue > header,
   .uga-district-plots > header { align-items: flex-start; }
+  .operation-debrief-grid { grid-template-columns: 1fr; }
+  .operation-debrief-section:last-child { grid-column: 1; }
+  .operation-debrief-section dl div { grid-template-columns: minmax(84px, .85fr) minmax(0, 1.15fr); }
 }
 
 @media (max-width: 760px) and (orientation: portrait) {

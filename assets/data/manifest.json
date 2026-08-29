@@ -94,6 +94,7 @@
     "src/warprimer.js",
     "src/uistack.js",
     "src/ui/hudflow.js",
-    "src/ui/hotslots.js"
+    "src/ui/hotslots.js",
+    "src/galactic-operations.js"
   ]
 }

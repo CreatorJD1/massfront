@@ -2409,6 +2409,25 @@ function wire(){
       try{ const r=await fetch(URL_,{method:'HEAD',cache:'no-store'}); present=r.ok; }
       catch(e){}
       if(!present){ if(typeof toast==='function') toast('Galactic preview is not installed in this build'); return false; }
+      /* The isolated module returns through an opaque operation nonce.
+         Bind that future request to the profile which actually opened it before
+         leaving this document; a URL alone must never be enough to start an RTS
+         match. sessionStorage is shared by the two same-origin documents but is
+         not portable-save data, so the bridge cannot alter the career schema. */
+      const now=Date.now(),profileId=PROFILES&&PROFILES.active;
+      const ticket={schemaVersion:1,kind:'MassfrontGalacticEntryV1',profileId,
+                    issuedAt:now,expiresAt:now+7*24*60*60*1000,source:'massfront-base'};
+      let ticketReady=false;
+      try{
+        const key='massfront.galactic.entry.v1',text=JSON.stringify(ticket);
+        sessionStorage.setItem(key,text);
+        const stored=JSON.parse(sessionStorage.getItem(key)||'null');
+        ticketReady=!!(profileId&&stored&&stored.schemaVersion===1
+          &&stored.kind==='MassfrontGalacticEntryV1'&&stored.profileId===profileId
+          &&stored.issuedAt===ticket.issuedAt&&stored.expiresAt===ticket.expiresAt
+          &&stored.source==='massfront-base');
+      }catch(e){}
+      if(!ticketReady){ if(typeof toast==='function') toast('Galactic link could not be secured on this device'); return false; }
       /* Same tab: the ship and RTS renderers must never compete for WebGL. */
       try{ location.href=URL_; return true; }
       catch(e){ if(typeof toast==='function') toast('Galactic preview could not be opened'); return false; }

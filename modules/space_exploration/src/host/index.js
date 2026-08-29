@@ -8,6 +8,22 @@ export {
 } from './local_sandbox_host.js';
 
 export {
+  MASSFRONT_GALACTIC_ENTRY_TICKET_KEY,
+  MASSFRONT_GALACTIC_REQUEST_MIRROR_PREFIX,
+  MASSFRONT_GALACTIC_RESULT_MIRROR_PREFIX,
+  MASSFRONT_SOLO_HOST_KIND,
+  MassfrontSoloHost,
+  createMassfrontGalacticEntryTicket,
+  createMassfrontGalacticTacticalReportV1,
+  createMassfrontSoloHost,
+  massfrontGalacticTacticalReportChecksum,
+  massfrontSoloStorageNamespace,
+  readMassfrontGalacticEntryTicket,
+  sanitizeMassfrontProfileId,
+  validateMassfrontGalacticEntryTicket
+} from './massfront_solo_host.js';
+
+export {
   EXPLORATION_HOST_DATABASE_NAME,
   EXPLORATION_HOST_DATABASE_VERSION,
   FakeIndexedDbHostDatabase,

@@ -1,4 +1,4 @@
-import { MISSION_CATALOG, RESOURCE_KEYS } from './catalog.js';
+import { DOCTRINE_CATALOG, MISSION_CATALOG, RESOURCE_KEYS, SUPPORT_CATALOG } from './catalog.js';
 import { clamp, deepClone, deepFreeze, deterministicUnit, hash32, stableStringify } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 import { validateGroundOperation } from './ground_operation.js';
@@ -76,8 +76,9 @@ function buildRewards(operation, report) {
 function effectiveInjuryBand(operation, report, personnelId = null) {
   const effects = operation.configuration?.facilityEffects || {};
   const globalReduction = Math.abs(Math.min(0, effects.injurySeverityBands || 0));
+  const medicalCacheReduction = operation.deploymentManifest?.modIds?.includes('medical_cache') ? 1 : 0;
   const forecastReduction = personnelId && personnelId === report.injuredPersonnelIds[0] ? (effects.casualtyForecast || 0) : 0;
-  const index = Math.max(0, INJURY_BAND_ORDER.indexOf(report.injuryBand) - globalReduction - forecastReduction);
+  const index = Math.max(0, INJURY_BAND_ORDER.indexOf(report.injuryBand) - medicalCacheReduction - globalReduction - forecastReduction);
   return INJURY_BAND_ORDER[index];
 }
 
@@ -199,14 +200,8 @@ export function simulateGroundResult(operation) {
   score += Math.floor(commander.loyalty / 25);
   score += specialistRating;
   score += Math.floor(averageSpecialistReadiness / 25);
-  if (operation.doctrineId === 'methodical') score += 7;
-  else if (operation.doctrineId === 'rapid') score += 2;
-  else if (operation.doctrineId === 'containment') score += operation.missionType === 'uga_brood_purge' ? 9 : 3;
-  else if (operation.doctrineId === 'covert') score += 6;
-  if (operation.supportId === 'survey_drones') score += 4;
-  else if (operation.supportId === 'field_lab') score += 2;
-  else if (operation.supportId === 'heavy_lift') score += 5;
-  else if (operation.supportId === 'medevac') score += 1;
+  score += DOCTRINE_CATALOG[operation.doctrineId]?.scoreModifier || 0;
+  score += SUPPORT_CATALOG[operation.supportId]?.scoreModifier || 0;
   score -= Math.round(operation.battlefield.threat * 0.09);
   score += Math.floor((deterministicUnit(operation.resultSeed, 'performance') - 0.5) * 31);
   score = clamp(Math.round(score), 0, 100);
