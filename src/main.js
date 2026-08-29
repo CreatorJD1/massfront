@@ -364,6 +364,14 @@ function skirmishSpawnPoints(){
   }
   return out;
 }
+/* Terrain sites and opening economy both consult the active spawn seats. Map
+   and theme alone are therefore not a complete cache identity. Difficulty,
+   faction and behavior do not change geometry and intentionally stay out. */
+function mfWorldTopologyKey(){
+  const theatre=typeof battlefieldPresetKey==='function'?battlefieldPresetKey(battlefieldPreset):String(battlefieldPreset||'standard');
+  const seats=activeAiSlots().map(A=>A.slot+':'+(A.ally?'ally':'enemy')+':'+A.zone).join(',');
+  return theatre+'|player:'+playerStartZone+'|ai:'+seats;
+}
 function farFromStartZones(x,y,d){
   for(const S of skirmishSpawnPoints()) if(dist2(x,y,S.x,S.y)<d*d) return false;
   return true;
@@ -930,9 +938,21 @@ function deployCarrier(){
      that came back identically, not trying to persist the battlefield itself. */
   if(typeof sessPending!=='undefined'&&sessPending){
     const snap=sessPending; sessPending=null;
-    if(typeof sessRestoreInto==='function'&&sessRestoreInto(snap)){
+    window.__mfSessionFallback=null;
+    const restored=typeof sessRestoreInto==='function'&&sessRestoreInto(snap);
+    if(restored){
       toast('◈ SESSION RECOVERED — '+Math.round((snap.t||0)/60)+' minutes restored');
       if(typeof sfx==='function') sfx('deploy');
+    }else{
+      /* The restore owns a destructive replay after its preflight. If an
+         unexpected replay invariant still fails, regenerate immediately and
+         return before this abandoned landing emits effects into the clean
+         world. The rejected snapshot was already cleared by session.js. */
+      const code=window.__mfSessionReject||'SESSION_RESTORE_FAILED';
+      if(typeof newSkirmish==='function')newSkirmish();
+      window.__mfSessionFallback={code,fresh:true};
+      toast('◈ SESSION COULD NOT BE RECOVERED · FRESH DEPLOYMENT READY');
+      return;
     }
   }
   shake=Math.max(shake,16); flashScreen();
@@ -1588,28 +1608,72 @@ function mfCpuBindFx(){
 }
 
 // ---------- UI wiring ----------
-let builtTheme='verdant', builtMap='aelos_north_medium';
+let builtTheme='verdant', builtMap='aelos_north_medium', builtTopology='';
 function applyTheme(){
-  window.__reclaimTip=0;
-  /* Swap the ground albedo variant set the moment the destination planet is
-     known — a no-op when the theme is unchanged, an async re-decode when a
-     drop moves between AELOS, NORDHALL, PYRAETH and VESPERA. */
-  if(typeof reloadTerrainThemeTextures==='function') reloadTerrainThemeTextures();
+  /* setupDeposits and spawn normalization happen before buildTerrain reaches
+     its exact-plan gate. Keep the previous live world by identity so a rejected
+     destination cannot leave fresh economy or selector state attached to the
+     prior terrain texture. buildTerrain owns the matching CPU-terrain rollback. */
+  const own=k=>Object.prototype.hasOwnProperty.call(window,k);
+  const prop=k=>({had:own(k),value:window[k]});
+  const before={
+    aiRefs:aiSlots.slice(),aiRows:aiSlots.map(A=>({...A})),playerStartZone,spawnPick,
+    deposits:deposits.slice(),geysers:geysers.slice(),seed:_seed,
+    civicKitSeq:typeof civicKitSeq==='number'?civicKitSeq:null,
+    depPts:prop('__depPts'),relocation:prop('__mfResourceRelocation'),
+    cityAt:prop('__cityAt'),reclaimTip:prop('__reclaimTip')
+  };
+  const restoreProp=(key,S)=>{if(S.had)window[key]=S.value;else delete window[key];};
+  const restoreSetup=()=>{
+    aiSlots.length=0;for(const A of before.aiRefs)aiSlots.push(A);
+    for(let i=0;i<aiSlots.length;i++){
+      for(const k in aiSlots[i])delete aiSlots[i][k];
+      Object.assign(aiSlots[i],before.aiRows[i]);
+    }
+    playerStartZone=before.playerStartZone;spawnPick=before.spawnPick;
+    deposits.length=0;for(const D of before.deposits)deposits.push(D);
+    geysers.length=0;for(const G of before.geysers)geysers.push(G);
+    _seed=before.seed;if(before.civicKitSeq!=null)civicKitSeq=before.civicKitSeq;
+    restoreProp('__depPts',before.depPts);restoreProp('__mfResourceRelocation',before.relocation);
+    restoreProp('__cityAt',before.cityAt);restoreProp('__reclaimTip',before.reclaimTip);
+  };
+  let locationPreview=null,topology='',cacheHit=false;
+  try{
+    /* Generation rejects sites against spawn seats, so normalize those seats at
+       the generation boundary rather than later inside newSkirmish. Preflight
+       follows normalization so its topology is the topology that is built. */
+    if(typeof normalizeAiSlotsForBattlefield==='function')normalizeAiSlotsForBattlefield();
+    locationPreview=typeof mfPreflightLocationPlanV1==='function'?mfPreflightLocationPlanV1(curMap):null;
+    if(locationPreview&&(!locationPreview.ok||locationPreview.status==='HYBRID_V1')){
+      const code=!locationPreview.ok?(locationPreview.error&&locationPreview.error.code||'LOCATION_PREFLIGHT_FAILED'):
+        'LOCATION_HYBRID_UNSUPPORTED';
+      const e=new Error(code);e.code=code;e.locationPlan=locationPreview;throw e;
+    }
+    topology=typeof mfWorldTopologyKey==='function'?mfWorldTopologyKey():'';
+    window.__reclaimTip=0;
   /* Theme/map equality is not proof that terrain exists. On a cold boot those
      defaults already match before the attract scene has produced heightF;
      launching Training or Standard immediately then called setupDoodads()
      against null terrain. The cache is reusable only when every CPU/GPU side
      needed by simulation is present. */
-  if(heightF&&PASS&&terrainTex&&curTheme===builtTheme&&curMap===builtMap&&!mmDirty) return;   // rebuild also when scarred by battle
-  setupDeposits();                                 // node layout follows the map seed
-  terrainTex=buildTerrain(curTheme);
+    cacheHit=!!(heightF&&PASS&&terrainTex&&curTheme===builtTheme&&curMap===builtMap&&topology===builtTopology&&!mmDirty);
+    if(!cacheHit){
+      setupDeposits();                             // node layout follows the map seed
+      terrainTex=buildTerrain(curTheme,locationPreview);
+    }
+  }catch(error){restoreSetup();throw error;}
+  /* Swap the ground albedo variant only after the destination passed its exact
+     plan gate. The async decoder may finish later; a rejected map never starts
+     replacing the prior world's detail pair. */
+  if(typeof reloadTerrainThemeTextures==='function') reloadTerrainThemeTextures();
+  if(cacheHit)return;                              // rebuild also when scarred by battle
   /* Settlements are part of the world: generated right after the ground exists
      so a rebuilt map (context loss, theme change) grows the same places back. */
   if(typeof worldSitesGenerate==='function'){
     try{ const ns=worldSitesGenerate(); if(ns) console.log('world sites:',ns); }
     catch(e){ console.warn('worldsites:',e&&e.message); }
   }
-  builtTheme=curTheme; builtMap=curMap;
+  builtTheme=curTheme; builtMap=curMap; builtTopology=topology;
   mmBg=null; mmDirty=false; mipDirty=false; mipUrgent=false;
   if(typeof mmBgGen==='number') mmBgGen++;
 }
@@ -2972,7 +3036,7 @@ async function boot(){
   const dfh=$('defFocusHint'); if(dfh) dfh.textContent=defenseFocus
     ?'Tower defence: +20% defence HP, +15% damage, +10% range, 25% faster construction — enemy waves arrive 18% faster.'
     :'Classic RTS balance between mobile armies and static defences.';
-  builtTheme=curTheme; builtMap=curMap;
+  builtTheme=curTheme; builtMap=curMap; builtTopology=mfWorldTopologyKey();
   renderMetaHead();
   resize();
   await preloadMatAtlases();     // load premade PBR atlases if present

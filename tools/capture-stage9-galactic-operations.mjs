@@ -356,9 +356,16 @@ async function dismissBaseEntry(page){
     ||document.getElementById('mfIntroSkip'),null,{timeout:180_000});
   const bootSkip=page.locator('#mfIntroSkip');
   if(await bootSkip.isVisible().catch(()=>false)){
-    await bootSkip.tap({timeout:30_000});
-    await page.waitForFunction(()=>!document.getElementById('mfBootCover'),null,{timeout:30_000});
+    try{await bootSkip.tap({timeout:30_000});}catch(error){
+      const skipVisible=await bootSkip.isVisible().catch(()=>false),
+        coverVisible=await page.locator('#mfBootCover').isVisible().catch(()=>false);
+      if(skipVisible||coverVisible)throw error;
+    }
   }
+  /* The skip can complete while Playwright is still retrying the tap. Treat
+     that disappearance as success, but never continue through a cover that is
+     merely missing its control or failed to dismiss. */
+  await page.waitForFunction(()=>!document.getElementById('mfBootCover'),null,{timeout:30_000});
   await page.waitForFunction(()=>{
     const visible=el=>{if(!el)return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();
       return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0&&r.height>0;};
@@ -452,10 +459,22 @@ async function runFlow(browser,report,url){
     hasTouch:true,isMobile:true,userAgent:PHONE_UA,colorScheme:'dark',serviceWorkers:'block'
   });
   const runtimeErrors=[];
+  const moduleProbeUrl=new URL('modules/space_exploration/index.html',url).href;
+  let moduleProbeAbortArmed=false;
   const pushError=(type,message,urlValue='')=>runtimeErrors.push({type,message:String(message||''),url:urlValue||''});
   page.on('pageerror',error=>pushError('pageerror',error.message));
   page.on('console',message=>{if(message.type()==='error')pushError('console',message.text());});
-  page.on('requestfailed',request=>pushError('requestfailed',request.failure()?.errorText||'failed',request.url()));
+  page.on('requestfailed',request=>{
+    const message=request.failure()?.errorText||'failed';
+    /* mfOpenExploration's successful HEAD probe can be canceled as its page
+       immediately commits the same-tab GET. Ignore that one armed probe only;
+       a failed document navigation, another URL/method, or a second abort is
+       still production signal. */
+    if(moduleProbeAbortArmed&&message==='net::ERR_ABORTED'
+      &&request.method()==='HEAD'&&request.resourceType()==='fetch'
+      &&request.url()===moduleProbeUrl){moduleProbeAbortArmed=false;return;}
+    pushError('requestfailed',message,request.url());
+  });
   page.on('response',response=>{if(response.status()>=400)pushError('http','HTTP '+response.status(),response.url());});
   await page.addInitScript(()=>{
     const marker='__mfStage9CaptureInitializedV1';
@@ -524,8 +543,12 @@ async function runFlow(browser,report,url){
     droppedSessionBefore=await page.evaluate(()=>{
       if(typeof SESS_KEY==='undefined'||SESS_KEY!=='mf_dropped_session_v1')
         throw new Error('Unexpected dropped-session key');
+      /* Keep this as a legacy-v1 sentinel, but bind it to a real LEGACY_V0
+         battlefield. Session loading now rejects unknown map ids before the
+         Galactic isolation pass can prove that these bytes stay untouched. */
       const value=JSON.stringify({v:1,at:Date.now(),reason:'stage9-verifier-sentinel',
-        map:'stage9-verifier',t:1,units:{tm:[0]}});
+        map:'vanguard',t:1,units:{t:[4],tm:[0],x:[100],y:[100],hp:[1],ang:[0],
+          st:[0],tx:[100],ty:[100],hold:[0],mode:[0]},blds:[]});
       localStorage.setItem(SESS_KEY,value);
       const restored=localStorage.getItem(SESS_KEY);
       if(restored!==value||typeof sessHas!=='function'||!sessHas())
@@ -550,10 +573,13 @@ async function runFlow(browser,report,url){
     report.adStats.before={key:adStatsBefore.key,bytes:Buffer.byteLength(adStatsBefore.value),
       sha256:sha256(adStatsBefore.value)};
 
-    await Promise.all([
-      page.waitForURL(/\/modules\/space_exploration\/index\.html(?:[?#].*)?$/,{timeout:60_000}),
-      openControl.tap({timeout:30_000})
-    ]);
+    moduleProbeAbortArmed=true;
+    try{
+      await Promise.all([
+        page.waitForURL(/\/modules\/space_exploration\/index\.html(?:[?#].*)?$/,{timeout:60_000}),
+        openControl.tap({timeout:30_000})
+      ]);
+    }finally{moduleProbeAbortArmed=false;}
     let moduleReady=await waitForModuleReady(page);
     assertion(report,'module-entry','OPEN selected the integrated profile host',
       moduleReady.productionIntegrated&&moduleReady.hostKind==='MassfrontSoloHostV1'

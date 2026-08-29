@@ -349,12 +349,18 @@ initModels=function(){
    REQUIRED_PLOT_ROLLBACK (SITE_REJ.plots after a compatible template was
    selected). The wrap records requested-vs-realized after the planner. */
 const SITE_STAMP={
-  ver:3, map:'',
+  ver:4, map:'',
   contracts:{worldLocationStyle:1,locationGrammar:1,planetAdaptation:1,factionOccupation:1,conditionVariant:1},
-  requested:{city:0,outpost:0,relic:0,spaceport:0,dome:0},
-  realized:{city:0,outpost:0,relic:0,spaceport:0,dome:0},
-  zones:[], fails:[], rej:null, telem:null, ok:true, hash:''
+  requested:{city:0,colony:0,outpost:0,base:0,refinery:0,relic:0,ruin:0,spaceport:0,derelict:0,brood:0,dome:0},
+  realized:{city:0,colony:0,outpost:0,base:0,refinery:0,relic:0,ruin:0,spaceport:0,derelict:0,brood:0,dome:0},
+  plan:null,zones:[],fails:[],rej:null,telem:null,ok:true,hash:'',realizationHash:''
 };
+function siteStampKeys(){
+  return ['city','colony','outpost','base','refinery','relic','ruin','spaceport','derelict','brood','dome'];
+}
+function siteStampCounts(){
+  const out={},keys=siteStampKeys();for(let i=0;i<keys.length;i++)out[keys[i]]=0;return out;
+}
 function siteStampClassKey(cls){
   if(cls==='city'||cls==='towns') return 'city';
   if(cls==='dome'||cls==='domes') return 'dome';
@@ -389,27 +395,42 @@ function siteStampFailReason(id, telem, rej){
   if(hits===0) return 'TEMPLATE_MISSING';
   return 'ENVIRONMENTAL_EXHAUSTION';
 }
-function siteStampBegin(){
+function siteStampBegin(preflight){
   /* Production always derives compatibility from the live map. A leftover
      SITE_TPL_QUERY.context from a fixture must not leak into planDistricts. */
-  if(typeof SITE_TPL_QUERY==='object'&&SITE_TPL_QUERY){
+  const full=preflight&&preflight.status==='FULL_V1';
+  if(!full&&typeof SITE_TPL_QUERY==='object'&&SITE_TPL_QUERY){
     SITE_TPL_QUERY.context=null;
     SITE_TPL_QUERY.force=null;
   }
-  if(typeof siteTplTelemReset==='function') siteTplTelemReset();
+  if(!full&&typeof siteTplTelemReset==='function') siteTplTelemReset();
   SITE_STAMP.map=(typeof curMap!=='undefined'?String(curMap):'');
   const def=(typeof MAPDEFS!=='undefined'&&MAPDEFS[SITE_STAMP.map])||{};
-  SITE_STAMP.requested={
-    city:def.towns|0, outpost:def.outpost|0, relic:def.relic|0,
-    spaceport:def.spaceport|0, dome:def.domes|0
-  };
-  SITE_STAMP.realized={city:0,outpost:0,relic:0,spaceport:0,dome:0};
+  SITE_STAMP.requested=siteStampCounts();
+  if(full){
+    for(let i=0;i<preflight.requests.length;i++){
+      const key=siteStampClassKey(preflight.requests[i].siteClass);
+      if(SITE_STAMP.requested[key]!=null)SITE_STAMP.requested[key]++;
+    }
+  }else{
+    SITE_STAMP.requested.city=def.towns|0;SITE_STAMP.requested.outpost=def.outpost|0;
+    SITE_STAMP.requested.relic=def.relic|0;SITE_STAMP.requested.spaceport=def.spaceport|0;
+    SITE_STAMP.requested.dome=def.domes|0;
+  }
+  SITE_STAMP.realized=siteStampCounts();
+  SITE_STAMP.plan={schema:'LocationPlanExecutionV1',version:1,status:preflight&&preflight.status||'LEGACY_V0',
+    planHash:preflight&&preflight.planHash||'',topologyKey:typeof mfWorldTopologyKey==='function'?mfWorldTopologyKey():'',
+    failure:null,realizationHash:'',
+    requests:(preflight&&preflight.requests||[]).map(R=>({id:R.id,requestId:R.requestId,instance:R.instance,
+      siteClass:R.siteClass,template:R.template,purpose:R.purpose,era:R.era,condition:R.condition,
+      semanticSignature:R.semanticSignature,layoutSignature:R.layoutSignature}))};
   SITE_STAMP.zones=[]; SITE_STAMP.fails=[]; SITE_STAMP.rej=null; SITE_STAMP.telem=null;
-  SITE_STAMP.ok=true; SITE_STAMP.hash='';
+  SITE_STAMP.ok=true; SITE_STAMP.hash='';SITE_STAMP.realizationHash='';
 }
-function siteStampEnd(){
-  const names=[];
-  if(typeof cityZones!=='undefined'){
+function siteStampEnd(executionError){
+  const names=[],realization=[];
+  const errorDetail=executionError&&executionError.locationPlan||{};
+  if(!executionError&&typeof cityZones!=='undefined'){
     for(let i=0;i<cityZones.length;i++){
       const Z=cityZones[i]; if(!Z||!Z.tpl) continue;
       const key=siteStampClassKey(Z.site);
@@ -418,33 +439,58 @@ function siteStampEnd(){
       if(typeof cityPlan!=='undefined'){
         for(let p=0;p<cityPlan.length;p++){
           const P=cityPlan[p]; if(!P||P.zone!==i) continue;
-          plots.push({kind:P.kind,role:P.role||null});
+          plots.push({id:P.siteObjectId||'',templatePlot:P.templatePlot==null?null:P.templatePlot,
+            x:P.x,y:P.y,w:P.w,h:P.h,a:P.a,kind:P.kind,role:P.role||null});
         }
       }
-      SITE_STAMP.zones.push({i,name:Z.name||'',site:Z.site||'',r:Z.r|0,plots});
+      const streets=[];
+      if(typeof cityStreets!=='undefined')for(let s=0;s<cityStreets.length;s++){
+        const S=cityStreets[s];if(S&&S[5]===i)streets.push(S.slice(0,5));
+      }
+      const props=[];
+      if(typeof sitePropPlan!=='undefined')for(let p=0;p<sitePropPlan.length;p++){
+        const R=sitePropPlan[p];if(R&&R.zone===i)props.push({id:R.id||'',templateProp:R.templateProp==null?null:R.templateProp,
+          kind:R.kind,x:R.x,y:R.y,s:R.s});
+      }
+      const row={i:i,name:Z.name||'',site:Z.site||'',siteId:Z.siteId||'',requestId:Z.requestId||'',instance:Z.instance||0,
+        template:Z.template||'',purpose:Z.purpose||'',era:Z.era||'',condition:Z.condition||'',
+        x:Z.x,y:Z.y,r:Z.r,span:Z.span||Z.r,plots:plots,streets:streets,props:props};
+      SITE_STAMP.zones.push(row);realization.push(row);
       names.push(Z.name||'');
     }
   }
-  SITE_STAMP.rej=(typeof SITE_REJ!=='undefined')?{
-    arena:SITE_REJ.arena|0, spawn:SITE_REJ.spawn|0, water:SITE_REJ.water|0,
-    res:SITE_REJ.res|0, near:SITE_REJ.near|0, plots:SITE_REJ.plots|0, ok:SITE_REJ.ok|0
-  }:null;
-  SITE_STAMP.telem=siteStampCopyTelem();
+  /* A failed FULL_V1 attempt ran against scratch counters. The live SITE_REJ
+     still describes the previous successful world and must never leak into
+     this failure record. The thrown detail carries the current request delta. */
+  const rejected=executionError?(errorDetail.rejected||{}):(typeof SITE_REJ!=='undefined'?SITE_REJ:{});
+  SITE_STAMP.rej={arena:rejected.arena|0,spawn:rejected.spawn|0,water:rejected.water|0,
+    res:rejected.res|0,near:rejected.near|0,plots:rejected.plots|0,ok:rejected.ok|0};
+  SITE_STAMP.telem=SITE_STAMP.plan&&SITE_STAMP.plan.status==='FULL_V1'?null:siteStampCopyTelem();
   const req=SITE_STAMP.requested, got=SITE_STAMP.realized, telem=SITE_STAMP.telem;
-  const keys=['city','outpost','relic','spaceport','dome'];
-  for(let k=0;k<keys.length;k++){
-    const id=keys[k];
-    if((got[id]|0)<(req[id]|0)){
-      const reason=siteStampFailReason(id, telem, SITE_STAMP.rej);
-      SITE_STAMP.fails.push({
-        class:id, requested:req[id]|0, realized:got[id]|0,
-        plots:SITE_STAMP.rej?SITE_STAMP.rej.plots:0,
-        asks:telem&&telem.asks?telem.asks[id]|0:0,
-        hits:telem&&telem.hits?telem.hits[id]|0:0,
-        miss:telem&&telem.miss?telem.miss[id]|0:0,
-        mismatch:(telem&&telem.mismatch&&telem.mismatch[id])||null,
-        reason:reason
-      });
+  if(executionError){
+    const detail=errorDetail,reason=executionError.code||'LOCATION_PLAN_EXECUTION_FAILED';
+    SITE_STAMP.plan.failure={code:reason,requestId:detail.requestId||'',instance:detail.instance||0,
+      siteClass:detail.siteClass||'',template:detail.template||'',rejected:detail.rejected||null,
+      moved:detail.moved|0,failed:detail.failed|0};
+    SITE_STAMP.fails.push({class:detail.siteClass||'plan',requested:1,realized:0,plots:0,
+      asks:0,hits:0,miss:0,mismatch:null,reason:reason,requestId:detail.requestId||'',
+      instance:detail.instance||0,template:detail.template||''});
+  }else{
+    const keys=siteStampKeys();
+    for(let k=0;k<keys.length;k++){
+      const id=keys[k];
+      if((got[id]|0)<(req[id]|0)){
+        const reason=siteStampFailReason(id, telem, SITE_STAMP.rej);
+        SITE_STAMP.fails.push({
+          class:id, requested:req[id]|0, realized:got[id]|0,
+          plots:SITE_STAMP.rej?SITE_STAMP.rej.plots:0,
+          asks:telem&&telem.asks?telem.asks[id]|0:0,
+          hits:telem&&telem.hits?telem.hits[id]|0:0,
+          miss:telem&&telem.miss?telem.miss[id]|0:0,
+          mismatch:(telem&&telem.mismatch&&telem.mismatch[id])||null,
+          reason:reason
+        });
+      }
     }
   }
   SITE_STAMP.ok=!SITE_STAMP.fails.length;
@@ -452,17 +498,45 @@ function siteStampEnd(){
      Typed miss reasons are part of the fingerprint so INCOMPATIBLE cannot
      collide with ENVIRONMENTAL_EXHAUSTION or REQUIRED_PLOT_ROLLBACK. */
   let h=2166136261;
+  let rh=2166136261;
+  const relocation=executionError?null:(typeof window!=='undefined'&&window.__mfResourceRelocation||null);
+  const resources={
+    topologyKey:typeof mfWorldTopologyKey==='function'?mfWorldTopologyKey():'',
+    mass:!executionError&&typeof deposits!=='undefined'?deposits.map(D=>[D.x,D.y,D.rich?1:0,D.starter||'']):[],
+    energy:!executionError&&typeof geysers!=='undefined'?geysers.map(G=>[G.x,G.y,G.starter||'']):[]
+  };
+  const realizationSig=JSON.stringify({zones:realization,relocation:relocation,resources:resources});
+  for(let i=0;i<realizationSig.length;i++){rh^=realizationSig.charCodeAt(i);rh=Math.imul(rh,16777619);}
+  SITE_STAMP.realizationHash=(rh>>>0).toString(16);
+  SITE_STAMP.plan.realizationHash=SITE_STAMP.realizationHash;
   const failSig=SITE_STAMP.fails.map(function(f){ return f.class+':'+f.reason; }).join(',');
   const telemSig=telem?JSON.stringify(telem.reason):'';
-  const s=SITE_STAMP.map+'|'+JSON.stringify(req)+'|'+JSON.stringify(got)+'|'+names.join(',')+'|'+failSig+'|'+telemSig;
+  const s=SITE_STAMP.map+'|'+SITE_STAMP.plan.status+'|'+SITE_STAMP.plan.planHash+'|'+
+    JSON.stringify(req)+'|'+JSON.stringify(got)+'|'+names.join(',')+'|'+failSig+'|'+telemSig+'|'+SITE_STAMP.realizationHash;
   for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
   SITE_STAMP.hash=(h>>>0).toString(16);
 }
+function siteStampPreflight(){
+  if(typeof mfPreflightLocationPlanV1==='function')return mfPreflightLocationPlanV1(curMap);
+  const authored=typeof LocationMapPlanV1==='object'&&LocationMapPlanV1&&LocationMapPlanV1.plans&&
+    Object.prototype.hasOwnProperty.call(LocationMapPlanV1.plans,curMap);
+  return authored?{ok:false,status:'FAIL',map:curMap,planHash:'',requests:[],
+    error:{code:'LOCATION_PREFLIGHT_UNAVAILABLE'}}:
+    {ok:true,status:'LEGACY_V0',map:curMap,planHash:'',requests:[]};
+}
 function siteStampWrapPlan(){
-  siteStampBegin();
-  const r=siteStampWrapPlan.base.apply(this, arguments);
-  siteStampEnd();
-  return r;
+  const preflight=siteStampPreflight();
+  if(!preflight.ok||preflight.status==='HYBRID_V1'){
+    const code=!preflight.ok?(preflight.error&&preflight.error.code||'LOCATION_PREFLIGHT_FAILED'):
+      'LOCATION_HYBRID_UNSUPPORTED';
+    const e=new Error(code);e.code=code;e.locationPlan=preflight;throw e;
+  }
+  siteStampBegin(preflight);
+  try{
+    const args=[preflight];for(let i=0;i<arguments.length;i++)args.push(arguments[i]);
+    const r=siteStampWrapPlan.base.apply(this,args);
+    siteStampEnd(null);return r;
+  }catch(error){siteStampEnd(error);throw error;}
 }
 function siteStampInstall(){
   if(typeof planDistricts!=='function'||planDistricts.__mfSiteStampWrap) return 0;

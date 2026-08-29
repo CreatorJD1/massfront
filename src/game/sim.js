@@ -1669,6 +1669,11 @@ function computeField(tx,ty,naval,clearance){
     for(let k=0;k<8;k++){
       const nx2=cx+DIRX[k], ny2=cy+DIRY[k];
       if(nx2<0||ny2<0||nx2>=PGS||ny2>=PGS) continue;
+      /* The distance flood rejects diagonal corner cuts above. Direction
+         extraction must enforce the same edge rule: a diagonally adjacent
+         cell can have a lower distance through some other route while the
+         direct step from this cell still clips a live blocker. */
+      if((k&1)&&(!pass(cy*PGS+nx2)||!pass(ny2*PGS+cx))) continue;
       const dn=dist[ny2*PGS+nx2];
       if(dn<bd2){ bd2=dn; bk=k; }
     }
@@ -2337,7 +2342,7 @@ function findEnemyBld(x,y,team,rad){
   }
   return best;
 }
-function addBld(type,team,x,y,instant,rot){
+function addBld(type,team,x,y,instant,rot,suppressPackageGrant){
   const T=BT[type];
   /* Team colour is not a faction. The old player branch always stamped Nova
      here, so choosing the Brood still built human concrete buildings despite
@@ -2360,7 +2365,7 @@ function addBld(type,team,x,y,instant,rot){
   }
   if(type==='geo') for(let gi=0;gi<geysers.length;gi++){
     const G=geysers[gi];
-    if(dist2(G.x,G.y,x,y)<9){b.geo=gi;break;}
+    if(dist2(G.x,G.y,x,y)<9){b.geo=gi;G.taken=true;break;}
   }
   if(type==='nova') b.cool=NOVA.cd*0.6;          // first charge after construction
   blds.push(b); rebuildBGrid();
@@ -2372,7 +2377,11 @@ function addBld(type,team,x,y,instant,rot){
     if(fac==='horde'&&typeof makeOrganicFoundation==='function') makeOrganicFoundation(b);
     else if(T.placement!=='water') makeFoundation(b);
   }
-  if(type==='mex'&&instant) deployExtractorMiner(b);
+  /* Session restore replays the captured unit roster after structures. Its
+     instant Extractors must not issue a second package Prospector (or revive
+     one that died before the snapshot); the restored completed building is
+     marked as having spent the grant by session.js. */
+  if(type==='mex'&&instant&&!suppressPackageGrant) deployExtractorMiner(b);
   return b;
 }
 /* BASE UNDER ATTACK.
@@ -2504,6 +2513,10 @@ function repairBld(B,amt){
 // Procedurally seeded per map — every battlefield has its own economy layout,
 // always point-mirrored so both commanders get a fair start.
 const deposits=[], geysers=[];
+/* FULL_V1 may move economy fields only after every exact POI span is known.
+   Cache-hit resets regenerate the base fields without rerunning terrain, so
+   retain the source-bound final coordinates and reapply them in setup. */
+const siteResourcePlan={map:'',seed:0,planHash:'',topologyKey:'',mass:[],energy:[],moved:0};
 const DEPOSIT_BAND=1000;
 const DEPOSIT_YIELD=[0,1,1.48,2.12];
 /* Planning clearance covers the complete authored ground treatment, not only
@@ -2589,6 +2602,27 @@ function mfResourceClearOfHighways(x,y,nodeR){
   }
   return true;
 }
+function applySiteResourcePlan(){
+  const D=MAPDEFS[curMap];
+  const topology=typeof mfWorldTopologyKey==='function'?mfWorldTopologyKey():'';
+  if(!D||siteResourcePlan.map!==curMap||siteResourcePlan.seed!==D.seed||siteResourcePlan.topologyKey!==topology||
+     siteResourcePlan.mass.length!==deposits.length||siteResourcePlan.energy.length!==geysers.length)
+    return false;
+  if(typeof mfPreflightLocationPlanV1!=='function')return false;
+  const hit=mfPreflightLocationPlanV1(curMap);
+  if(!hit.ok||hit.status!=='FULL_V1'||hit.planHash!==siteResourcePlan.planHash)return false;
+  for(let i=0;i<deposits.length;i++){
+    deposits[i].x=siteResourcePlan.mass[i][0];deposits[i].y=siteResourcePlan.mass[i][1];
+  }
+  for(let i=0;i<geysers.length;i++){
+    geysers[i].x=siteResourcePlan.energy[i][0];geysers[i].y=siteResourcePlan.energy[i][1];
+  }
+  window.__depPts=deposits.map(D2=>[D2.x,D2.y,D2.rich?1:0,D2.starter||''])
+    .concat(geysers.map(G=>[G.x,G.y,null,G.starter||'']));
+  window.__mfResourceRelocation={moved:siteResourcePlan.moved,failed:0,
+    margin:RESOURCE_POI_MARGIN,restored:true};
+  return true;
+}
 function setupDeposits(){
   deposits.length=0; geysers.length=0;
   const def=MAPDEFS[curMap]||MAPDEFS.vanguard;
@@ -2657,9 +2691,9 @@ function setupDeposits(){
       let clear=true; for(const p of all) if(dist2(x,y,p[0],p[1])<(145*spread)**2){clear=false;break;}
       if(clear) addNode(gall,x,y,null,190*spread);
     }
-    window.__depPts=all.concat(gall);
     for(const p of all) deposits.push(makeDeposit(p[0],p[1],!!p[2],p[3]||''));
     for(const p of gall) geysers.push(makeGeyser(p[0],p[1],p[3]||''));
+    if(!applySiteResourcePlan())window.__depPts=all.concat(gall);
     return;
   }
   const pts=[];                              // [x,y,rich]
@@ -2711,9 +2745,9 @@ function setupDeposits(){
   const all=[], gall=[];
   for(const p of pts){ all.push(p); all.push([MAP-p[0],MAP-p[1],p[2]]); }
   for(const p of gp){ gall.push(p); gall.push([MAP-p[0],MAP-p[1]]); }
-  window.__depPts=all.concat(gall);          // terrain raises land under all nodes
   for(const p of all) deposits.push(makeDeposit(p[0],p[1],!!p[2],''));
   for(const p of gall) geysers.push(makeGeyser(p[0],p[1],''));
+  if(!applySiteResourcePlan())window.__depPts=all.concat(gall); // terrain raises land under all nodes
 }
 function geyserAt(x,y,rad){
   for(let g=0;g<geysers.length;g++){
@@ -3372,7 +3406,8 @@ const cityStreets=[];    // [x0,y0,x1,y1,w,zone] — authored first so plots can
 /* Props an authored template asked for. planDistricts runs before the height
    field exists and before tanks/crates are built, so the stamp records intent
    and setupRelics() spawns it once the land search is safe to call. */
-const sitePropQueue=[];  // {kind:'tank'|'crate', x, y, s}
+const sitePropPlan=[];   // persistent authored props; deterministic across same-map resets
+const sitePropQueue=[];  // transient copy drained by setupRelics()
 /* Why authored sites failed to place. A silent 0-of-2 is indistinguishable
    from the feature being off, and this placement has six independent ways to
    reject a candidate. */
@@ -3413,13 +3448,13 @@ function mfCivicAmount(wx,wy){
   if(cityGroundAt(wx,wy+r)>=1) s++;
   return s/5;
 }
-function rebuildCityGroundMask(){
-  CITYG=new Uint8Array(PGS*PGS);
+function buildCityGroundMask(cityPlanSrc,cityStreetsSrc,cityZonesSrc){
+  const mask=new Uint8Array(PGS*PGS);
   const cell=MAP/PGS;
-  const stamp=(gx,gy,v)=>{if(gx>=0&&gy>=0&&gx<PGS&&gy<PGS){const i=gy*PGS+gx;if(v>CITYG[i])CITYG[i]=v;}};
+  const stamp=(gx,gy,v)=>{if(gx>=0&&gy>=0&&gx<PGS&&gy<PGS){const i=gy*PGS+gx;if(v>mask[i])mask[i]=v;}};
   /* Keep the authored district clear of wilderness clutter, including plazas
      that do not happen to contain a live building. */
-  for(const Z of cityZones){
+  for(const Z of cityZonesSrc){
     const r=(Z.span||Z.r)*1.04,x0=clamp((Z.x-r)/cell|0,0,PGS-1),x1=clamp(Math.ceil((Z.x+r)/cell),0,PGS-1);
     const y0=clamp((Z.y-r)/cell|0,0,PGS-1),y1=clamp(Math.ceil((Z.y+r)/cell),0,PGS-1),r2=r*r;
     for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){
@@ -3427,7 +3462,7 @@ function rebuildCityGroundMask(){
       if(dist2(wx,wy,Z.x,Z.y)<=r2)stamp(gx,gy,1);
     }
   }
-  for(const S of cityStreets){
+  for(const S of cityStreetsSrc){
     const ax=S[0],ay=S[1],bx=S[2],by=S[3],dx=bx-ax,dy=by-ay,L2=dx*dx+dy*dy||1,pad=S[4]*.75+24;
     const x0=clamp((Math.min(ax,bx)-pad)/cell|0,0,PGS-1),x1=clamp(Math.ceil((Math.max(ax,bx)+pad)/cell),0,PGS-1);
     const y0=clamp((Math.min(ay,by)-pad)/cell|0,0,PGS-1),y1=clamp(Math.ceil((Math.max(ay,by)+pad)/cell),0,PGS-1);
@@ -3436,7 +3471,7 @@ function rebuildCityGroundMask(){
       if(dist2(wx,wy,ax+dx*t,ay+dy*t)<=pad*pad)stamp(gx,gy,2);
     }
   }
-  for(const P of cityPlan){
+  for(const P of cityPlanSrc){
     const pad=26,rad=Math.hypot(P.w,P.h)*.62+pad,ca=Math.cos(P.a),sa=Math.sin(P.a);
     const x0=clamp((P.x-rad)/cell|0,0,PGS-1),x1=clamp(Math.ceil((P.x+rad)/cell),0,PGS-1);
     const y0=clamp((P.y-rad)/cell|0,0,PGS-1),y1=clamp(Math.ceil((P.y+rad)/cell),0,PGS-1);
@@ -3445,6 +3480,10 @@ function rebuildCityGroundMask(){
       if(Math.abs(lx)<=P.w*.61+pad&&Math.abs(ly)<=P.h*.61+pad)stamp(gx,gy,3);
     }
   }
+  return mask;
+}
+function rebuildCityGroundMask(){
+  CITYG=buildCityGroundMask(cityPlan,cityStreets,cityZones);
 }
 
 /* Planning is separated from instantiation because the streets have to be
@@ -3478,15 +3517,62 @@ function obbOverlap(b1, b2, margin){
   return true;
 }
 
-function planDistricts(){
+function planDistricts(locationPreflight){
+  /* This is the transaction boundary. V1 catalog drift must fail before the
+     live map, selector state, or seeded stream changes. The installed
+     SITE_STAMP wrapper may supply the same pure result to avoid resolving it
+     twice; direct callers still receive the identical fail-closed behavior. */
+  const planningError=(code,details)=>{
+    const e=new Error(code+(details&&details.requestId?' '+details.requestId:''));
+    e.code=code;e.locationPlan=details||null;return e;
+  };
+  let preflight=locationPreflight&&locationPreflight.map===curMap?locationPreflight:null;
+  if(!preflight&&typeof mfPreflightLocationPlanV1==='function')
+    preflight=mfPreflightLocationPlanV1(curMap);
+  if(!preflight){
+    const authored=typeof LocationMapPlanV1==='object'&&LocationMapPlanV1&&
+      LocationMapPlanV1.plans&&Object.prototype.hasOwnProperty.call(LocationMapPlanV1.plans,curMap);
+    if(authored) throw planningError('LOCATION_PREFLIGHT_UNAVAILABLE',{map:curMap});
+    preflight={ok:true,status:'LEGACY_V0',map:curMap,planHash:'',requests:[]};
+  }
+  if(!preflight.ok) throw planningError(preflight.error&&preflight.error.code||'LOCATION_PREFLIGHT_FAILED',preflight);
+  if(preflight.status==='HYBRID_V1')
+    throw planningError('LOCATION_HYBRID_UNSUPPORTED',preflight);
+  const fullV1=preflight.status==='FULL_V1';
+  if(!fullV1&&preflight.status!=='LEGACY_V0'&&preflight.status!=='PENDING_V0')
+    throw planningError('LOCATION_PLAN_STATUS_INVALID',preflight);
+  const topologyKey=fullV1&&typeof mfWorldTopologyKey==='function'?mfWorldTopologyKey():'';
+
+  const live={plan:cityPlan,streets:cityStreets,zones:cityZones,propPlan:sitePropPlan,
+    propQueue:sitePropQueue,rej:SITE_REJ,deposits:deposits,geysers:geysers};
+  const stage=fullV1?{plan:[],streets:[],zones:[],propPlan:[],propQueue:[],rej:{},
+    deposits:deposits.map(D=>Object.assign({},D)),geysers:geysers.map(G=>Object.assign({},G))}:live;
+  if(fullV1) for(const k in SITE_REJ) stage.rej[k]=0;
+  const seedBefore=_seed;
+  const civicKitSeqBefore=typeof civicKitSeq==='number'?civicKitSeq:null;
+  const rollbackPlannerState=()=>{
+    if(!fullV1)return;
+    _seed=seedBefore;
+    /* civicKitSeq is the only selector cursor the planner resets. A rejected
+       exact world must not change which legacy civic kit a later map receives. */
+    if(civicKitSeqBefore!=null)civicKitSeq=civicKitSeqBefore;
+  };
+  let result;
+  try{
+    result=(function(cityPlan,cityStreets,cityZones,sitePropPlan,sitePropQueue,SITE_REJ,deposits,geysers){
   cityPlan.length=0; cityStreets.length=0; cityZones.length=0;
-  sitePropQueue.length=0;
+  sitePropPlan.length=0; sitePropQueue.length=0;
   /* Per-generation, not cumulative: planDistricts runs more than once per
      session (menu backdrop, then the match), and totals that span both describe
      no world in particular. */
   for(const k in SITE_REJ) SITE_REJ[k]=0;
   const def=MAPDEFS[curMap]||MAPDEFS.vanguard;
   srand((def.seed^0x7ACE1)|1);
+  /* Template variety is map-local, just like the seeded random stream above.
+     Leaving the catalog cursor live across menu/match rebuilds changed a few
+     civic lots, their district span, and ultimately nearby resource placement
+     on the second generation of an otherwise identical battlefield. */
+  if(typeof civicKitSeq!=='undefined') civicKitSeq=0;
   const spawnA=[MAP*SP_LO,MAP*SP_HI], spawnB=[MAP*SP_HI,MAP*SP_LO];
   const farFromSpawns=(x,y,d)=> typeof farFromStartZones==='function'?farFromStartZones(x,y,d)
     :dist2(x,y,spawnA[0],spawnA[1])>d*d&&dist2(x,y,spawnB[0],spawnB[1])>d*d;
@@ -3560,17 +3646,22 @@ function planDistricts(){
     }
     return true;
   };
-  const plot=(x,y,w,h,a,kind,zone)=>{
+  const plot=(x,y,w,h,a,kind,zone,identity)=>{
     const F=streetFrontage(x,y,w,h,zone);
     const pad=Math.max(58,Math.hypot(w,h)*.55);
     const fronts=F?[F,F.alt]:[{x,y,a}];
     for(const V of fronts){
       const candidate={x:V.x,y:V.y,w,h,a:V.a,kind,zone};
+      if(identity){candidate.siteObjectId=identity.id;candidate.templatePlot=identity.templatePlot;}
       if(F){candidate.street=V.street;candidate.roadX=V.roadX;candidate.roadY=V.roadY;
         candidate.frontX=V.frontX;candidate.frontY=V.frontY;}
       if(typeof battlefieldContains==='function'&&!battlefieldContains(candidate.x,candidate.y,pad))continue;
       if(!dryFootprint(candidate.x,candidate.y,w,h,candidate.a))continue;
-      if(!clearOfResourceSites(candidate.x,candidate.y,pad)||!roadClear(candidate))continue;
+      /* FULL_V1 sites own the placement decision and move conflicting economy
+         fields only after every exact span is known. Letting a provisional or
+         previously restored resource recipe veto individual plots made the
+         same map realize differently on its second build. */
+      if((!fullV1&&!clearOfResourceSites(candidate.x,candidate.y,pad))||!roadClear(candidate))continue;
       let blocked=false;
       for(let i=0;i<cityPlan.length;i++)if(obbOverlap(candidate,cityPlan[i],12)){blocked=true;break;}
       if(blocked)continue;
@@ -3613,24 +3704,34 @@ function planDistricts(){
      frontage search, dry-footprint test and battlefield clamp that procedural
      plots get. A template that cannot legally place its required plots is
      rolled back whole — a half-built outpost reads as a bug, not as ruins. */
-  const stampSite=(T,cx2,cy2,cls)=>{
+  const stampSite=(T,cx2,cy2,cls,request)=>{
     if(!T) return false;
     const zi=cityZones.length;
     const s0=cityStreets.length, p0=cityPlan.length;
     const ga=T.rotation==='random'?rr(0,TAU):(+T.rotation||0);
     const ca=Math.cos(ga), sa=Math.sin(ga);
     const L2W=(lx,ly)=>[cx2+lx*ca-ly*sa, cy2+lx*sa+ly*ca];
-    cityZones.push({x:cx2,y:cy2,r:T.radius||200,ind:T.ind?1:0,total:0,razed:0,claimed:0,
-                    name:T.name||'SITE',tpl:1,grade:T.grade||'plane',site:cls||T.id||'site'});
+    const zone={x:cx2,y:cy2,r:T.radius||200,ind:T.ind?1:0,total:0,razed:0,claimed:0,
+      name:T.name||'SITE',tpl:1,grade:T.grade||'plane',site:cls||T.id||'site'};
+    if(request){
+      zone.siteId=request.id;zone.requestId=request.requestId;zone.instance=request.instance;
+      zone.template=request.template;zone.purpose=request.purpose;zone.era=request.era;
+      zone.condition=request.condition;zone.styleHash=request.styleHash;
+      zone.semanticSignature=request.semanticSignature;zone.layoutSignature=request.layoutSignature;
+    }
+    cityZones.push(zone);
     for(const S of (T.streets||[])){
       const a2=L2W(S[0],S[1]), b2=L2W(S[2],S[3]);
       cityStreets.push([a2[0],a2[1],b2[0],b2[1],S[4],zi]);
     }
     let ok=true;
-    for(const P of (T.plots||[])){
+    const templatePlots=T.plots||[];
+    for(let pi=0;pi<templatePlots.length;pi++){
+      const P=templatePlots[pi];
       if(P.optional!==undefined && rnd()>P.optional) continue;
       const W=L2W(P.x,P.y);
-      const placed=plot(W[0],W[1],P.w,P.h,(P.a||0)+ga,P.kind,zi);
+      const placed=plot(W[0],W[1],P.w,P.h,(P.a||0)+ga,P.kind,zi,
+        request?{id:request.id+'/plot/'+pi,templatePlot:pi}:null);
       /* plot() appends on success, so the role rides on the entry it just made.
          The sim treats 6/7 generically; only the render pass reads role. */
       if(placed&&P.role&&cityPlan.length) cityPlan[cityPlan.length-1].role=P.role;
@@ -3644,9 +3745,12 @@ function planDistricts(){
        well before setupRelics() builds tanks and crates and before the height
        field the land search needs exists — spawning here would either throw or
        drop props into water. setupRelics drains the queue once it is safe. */
-    for(const R of (T.props||[])){
+    const templateProps=T.props||[];
+    for(let ri=0;ri<templateProps.length;ri++){
+      const R=templateProps[ri];
       const W=L2W(R.x,R.y);
-      sitePropQueue.push({kind:R.kind,x:W[0],y:W[1],s:R.s||0});
+      sitePropPlan.push({id:request?request.id+'/prop/'+ri:'',templateProp:ri,
+        kind:R.kind,x:W[0],y:W[1],s:R.s||0,zone:zi});
     }
     return true;
   };
@@ -3814,25 +3918,38 @@ function planDistricts(){
   /* Authored sites carry their own clearance — an outpost is a quarter the
      size of a district. Pairwise span still wins over a single minD so a
      town cannot sit inside a prefecture's grid. */
-  const tryStamp=(cls)=>{
-    if(typeof siteTemplateFor!=='function') return false;
-    for(let a=0;a<100;a++){
-      const T=siteTemplateFor(cls,rnd);
+  const tryStamp=(cls,exact,request)=>{
+    if(!exact&&typeof siteTemplateFor!=='function') return false;
+    let seq=def.seed|0;
+    const sig=request&&request.id||cls;
+    for(let i=0;i<sig.length;i++)seq=Math.imul(seq^sig.charCodeAt(i),16777619);
+    const grid=25,total=grid*grid,start=(seq>>>0)%total,maxAttempts=exact?total:100;
+    for(let a=0;a<maxAttempts;a++){
+      /* FULL_V1 binds a concrete template during pure preflight. It must not
+         consume selector RNG or pass through either legacy force hook. */
+      const T=exact||siteTemplateFor(cls,rnd);
       if(!T) return false;
-      const x=rr(MAP*0.18,MAP*0.82), y=rr(MAP*0.18,MAP*0.82);
+      let x,y;
+      if(exact){
+        /* A seeded permutation of the whole tactical area guarantees broad
+           coverage. One hundred random throws repeatedly hit starts and
+           resource fields, leaving valid authored sites undiscovered. */
+        const cell=MAP*.84/grid,idx=(start+a*137)%total;
+        x=MAP*.08+((idx%grid)+.5)*cell;y=MAP*.08+(((idx/grid)|0)+.5)*cell;
+      }else{x=rr(MAP*0.18,MAP*0.82);y=rr(MAP*0.18,MAP*0.82);}
       const clear=T.minClearRadius||220;
       const guess=Math.max(T.radius||200, clear*0.72);
       if(typeof battlefieldContains==='function'&&!battlefieldContains(x,y,clear)){SITE_REJ.arena++;continue;}
       if(!farFromSpawns(x,y,T.minSpawnDist||800)){SITE_REJ.spawn++;continue;}
       if(!isWalkable(x,y)){SITE_REJ.water++;continue;}
-      if(!clearOfResourceSites(x,y,clear)){SITE_REJ.res++;continue;}
+      if(!fullV1&&!clearOfResourceSites(x,y,clear)){SITE_REJ.res++;continue;}
       if(clashes(x,y,guess)){SITE_REJ.near++;continue;}
-      const zi=cityZones.length, s0=cityStreets.length, p0=cityPlan.length, q0=sitePropQueue.length;
-      if(!stampSite(T,x,y,cls)){SITE_REJ.plots++;continue;}
+      const zi=cityZones.length, s0=cityStreets.length, p0=cityPlan.length, q0=sitePropPlan.length;
+      if(!stampSite(T,x,y,cls,request)){SITE_REJ.plots++;continue;}
       const r=zoneSpanOf(zi);
-      const resourceClash=!clearOfResourceSites(x,y,r*1.04);
+      const resourceClash=!fullV1&&!clearOfResourceSites(x,y,r*1.04);
       if(clashes(x,y,r)||resourceClash){
-        cityStreets.length=s0; cityPlan.length=p0; cityZones.length=zi; sitePropQueue.length=q0;
+        cityStreets.length=s0; cityPlan.length=p0; cityZones.length=zi; sitePropPlan.length=q0;
         if(resourceClash)SITE_REJ.res++;else SITE_REJ.near++;
         continue;
       }
@@ -3840,16 +3957,33 @@ function planDistricts(){
     }
     return false;
   };
-  /* Authored kit towns/outposts first. Aelos Standard asks for 4 procedural
-     districts AND a brutalist prefecture; if the 5x5 grids claim the map
-     first the catalog layouts lose every stamp and WORLD_KIT stays unused. */
-  for(let c2=0;c2<(def.towns||0);c2++)   tryStamp('city');
-  for(let c2=0;c2<(def.outpost||0);c2++) tryStamp('outpost');
-  for(let c2=0;c2<(def.relic||0);c2++)   tryStamp('relic');
-  for(let c2=0;c2<(def.spaceport||0);c2++) tryStamp('spaceport');
-  for(let c2=0;c2<(def.domes||0);c2++)     tryStamp('dome');
-  for(let c2=0;c2<(def.city||0);c2++) if(!tryPlace(0)) SITE_REJ.near++;
-  for(let c2=0;c2<(def.indus||0);c2++) if(!tryPlace(1)) SITE_REJ.near++;
+  if(fullV1){
+    for(let i=0;i<preflight.requests.length;i++){
+      const R=preflight.requests[i],T=SITE_TPL[R.template];
+      const before={arena:SITE_REJ.arena|0,spawn:SITE_REJ.spawn|0,water:SITE_REJ.water|0,
+        res:SITE_REJ.res|0,near:SITE_REJ.near|0,plots:SITE_REJ.plots|0};
+      if(!T||!tryStamp(R.siteClass,T,R)){
+        const plotDelta=(SITE_REJ.plots|0)-before.plots;
+        return {ok:false,failure:{code:!T?'LOCATION_TEMPLATE_MISSING':
+          (plotDelta>0?'LOCATION_REQUIRED_PLOT_ROLLBACK':'LOCATION_ENVIRONMENTAL_EXHAUSTION'),
+          map:curMap,requestId:R.requestId,instance:R.instance,siteClass:R.siteClass,template:R.template,
+          rejected:{arena:(SITE_REJ.arena|0)-before.arena,spawn:(SITE_REJ.spawn|0)-before.spawn,
+            water:(SITE_REJ.water|0)-before.water,res:(SITE_REJ.res|0)-before.res,
+            near:(SITE_REJ.near|0)-before.near,plots:plotDelta}}};
+      }
+    }
+  }else{
+    /* Authored kit towns/outposts first. Aelos Standard asks for 4 procedural
+       districts AND a brutalist prefecture; if the 5x5 grids claim the map
+       first the catalog layouts lose every stamp and WORLD_KIT stays unused. */
+    for(let c2=0;c2<(def.towns||0);c2++)   tryStamp('city');
+    for(let c2=0;c2<(def.outpost||0);c2++) tryStamp('outpost');
+    for(let c2=0;c2<(def.relic||0);c2++)   tryStamp('relic');
+    for(let c2=0;c2<(def.spaceport||0);c2++) tryStamp('spaceport');
+    for(let c2=0;c2<(def.domes||0);c2++)     tryStamp('dome');
+    for(let c2=0;c2<(def.city||0);c2++) if(!tryPlace(0)) SITE_REJ.near++;
+    for(let c2=0;c2<(def.indus||0);c2++) if(!tryPlace(1)) SITE_REJ.near++;
+  }
   /* Z.r is the authored disc. Corner lots of a 5x5 / 3x3 grid sit outside
      that circle, which left biome grass in the blocks players read as city.
      span covers every street and plot so CITYG and the grey fill match. */
@@ -3913,13 +4047,49 @@ function planDistricts(){
     const needed=!outsidePOIs(geysers[i].x,geysers[i].y,RESOURCE_CLEAR_ENERGY);
     if(needed){if(relocateResource(geysers[i],RESOURCE_CLEAR_ENERGY,'energy',i))moved++;else failed++;}
   }
-  if(moved){
-    window.__depPts=deposits.map(D=>[D.x,D.y,D.rich?1:0,D.starter||''])
-      .concat(geysers.map(G=>[G.x,G.y,null,G.starter||'']));
+  /* Relocation is part of the atomic result. A failed move leaves economy
+     inside a POI halo, so FULL_V1 rejects the whole scratch world. */
+  if(fullV1&&failed) return {ok:false,failure:{code:'LOCATION_RESOURCE_RELOCATION_FAILED',
+    map:curMap,moved:moved,failed:failed}};
+  const canonicalMoved=fullV1&&siteResourcePlan.map===curMap&&siteResourcePlan.seed===def.seed&&
+    siteResourcePlan.topologyKey===topologyKey&&siteResourcePlan.planHash===preflight.planHash?
+    siteResourcePlan.moved:moved;
+  for(const R of sitePropPlan) sitePropQueue.push({id:R.id,templateProp:R.templateProp,
+    kind:R.kind,x:R.x,y:R.y,s:R.s,zone:R.zone});
+  return {ok:true,
+    depPts:(moved||fullV1)?deposits.map(D=>[D.x,D.y,D.rich?1:0,D.starter||''])
+      .concat(geysers.map(G=>[G.x,G.y,null,G.starter||''])):null,
+    resourceRelocation:{moved:canonicalMoved,failed:failed,margin:RESOURCE_POI_MARGIN},
+    cityGround:buildCityGroundMask(cityPlan,cityStreets,cityZones),cityAt:placed.length?placed[0]:null};
+    })(stage.plan,stage.streets,stage.zones,stage.propPlan,stage.propQueue,stage.rej,
+      stage.deposits,stage.geysers);
+  }catch(error){
+    rollbackPlannerState();
+    throw error;
   }
-  window.__mfResourceRelocation={moved,failed,margin:RESOURCE_POI_MARGIN};
-  rebuildCityGroundMask();
-  if(placed.length) window.__cityAt=placed[0];
+  if(!result||!result.ok){
+    rollbackPlannerState();
+    throw planningError(result&&result.failure&&result.failure.code||'LOCATION_PLAN_EXECUTION_FAILED',
+      result&&result.failure||preflight);
+  }
+  if(fullV1){
+    const replace=(dst,src)=>{dst.length=0;for(let i=0;i<src.length;i++)dst.push(src[i]);};
+    replace(live.plan,stage.plan);replace(live.streets,stage.streets);replace(live.zones,stage.zones);
+    replace(live.propPlan,stage.propPlan);replace(live.propQueue,stage.propQueue);
+    for(const k in live.rej) live.rej[k]=stage.rej[k]|0;
+    for(let i=0;i<live.deposits.length;i++){live.deposits[i].x=stage.deposits[i].x;live.deposits[i].y=stage.deposits[i].y;}
+    for(let i=0;i<live.geysers.length;i++){live.geysers[i].x=stage.geysers[i].x;live.geysers[i].y=stage.geysers[i].y;}
+    siteResourcePlan.map=curMap;siteResourcePlan.seed=MAPDEFS[curMap].seed;
+    siteResourcePlan.topologyKey=topologyKey;
+    siteResourcePlan.planHash=preflight.planHash;siteResourcePlan.moved=result.resourceRelocation.moved;
+    siteResourcePlan.mass=stage.deposits.map(D=>[D.x,D.y]);
+    siteResourcePlan.energy=stage.geysers.map(G=>[G.x,G.y]);
+  }
+  CITYG=result.cityGround;
+  if(result.depPts)window.__depPts=result.depPts;
+  window.__mfResourceRelocation=result.resourceRelocation;
+  if(result.cityAt)window.__cityAt=result.cityAt;
+  return {ok:true,status:preflight.status,map:curMap,planHash:preflight.planHash||'',requests:preflight.requests||[]};
 }
 
 /* SuperCom bases sit on graded pads. The old pass pulled 34% toward a tilted
@@ -4084,6 +4254,12 @@ function setupRelics(){
   for(const Z of cityZones){ Z.razed=0; Z.claimed=0; }
   const def=MAPDEFS[curMap]||MAPDEFS.vanguard;
   srand((def.seed^0x51EF)|1);
+  /* setupRelics drains the queue, while cached terrain deliberately keeps the
+     site plan. Rearm from the persistent authoring record on every reset so
+     a second match does not lose its tanks, crates, rocks, and flora. */
+  if(!sitePropQueue.length&&sitePropPlan.length)
+    for(const R of sitePropPlan) sitePropQueue.push({id:R.id,templateProp:R.templateProp,
+      kind:R.kind,x:R.x,y:R.y,s:R.s,zone:R.zone});
   for(const P of cityPlan){
     const s=Math.max(P.w,P.h), k=P.kind;
     /* A 330-unit skyscraper cannot share a low block's health bar. It is the
@@ -4092,7 +4268,7 @@ function setupRelics(){
     /* Kit structures are built, not derelict: tougher than a tank farm, well
    short of a tower block. Towers are small and come down fast. */
     const hp=k===5?4200 : k===2?1500 : k===0?1150 : k===6?640 : k===3?520 : k===7?380 : 780;
-    relics.push({x:P.x,y:P.y,w:P.w,h:P.h,s,a:P.a,kind:k,zone:P.zone,role:P.role,
+    relics.push({id:P.siteObjectId||'',templatePlot:P.templatePlot,x:P.x,y:P.y,w:P.w,h:P.h,s,a:P.a,kind:k,zone:P.zone,role:P.role,
       hp,hpm:hp,alive:true,
       salv:Math.round(s*(k===5?4.2 : k===2?2.4 : k===0?1.7 : k===6?1.5 : k===3?1.2 : k===7?0.9 : 1.25)),
       salvE:Math.round(s*(k===5?3.0 : k===2?2.0 : k===3?2.6 : 0.5)),
@@ -4103,15 +4279,16 @@ function setupRelics(){
     const a=rnd()*TAU, d=rr(60,250);
     let L=findLand(clamp(Z.x+Math.cos(a)*d,80,MAP-80), clamp(Z.y+Math.sin(a)*d,80,MAP-80));
     if(typeof battlefieldClampPoint==='function')L=battlefieldClampPoint(L[0],L[1],70);
-    spawnCrate(L[0],L[1]);
-    if(crates.length) crates[crates.length-1].alt=0;
+    const C=spawnCrate(L[0],L[1]);
+    if(Z.siteId)C.id=Z.siteId+'/loot/'+k;
+    C.alt=0;
   }
   // industrial belts are ringed with volatile tanks — dangerous ground to fight over
   for(const Z of cityZones) if(Z.ind) for(let k=0;k<5;k++){
     const a=rnd()*TAU, d=rr(190,310);
     let L=findLand(clamp(Z.x+Math.cos(a)*d,80,MAP-80), clamp(Z.y+Math.sin(a)*d,80,MAP-80));
     if(typeof battlefieldClampPoint==='function')L=battlefieldClampPoint(L[0],L[1],70);
-    tanks.push({x:L[0],y:L[1],s:rr(30,42),hp:260,alive:true,fuse:0});
+    tanks.push({id:Z.siteId?Z.siteId+'/ring-tank/'+k:'',x:L[0],y:L[1],s:rr(30,42),hp:260,alive:true,fuse:0});
   }
   /* Authored template props, now that findLand and the prop arrays are live.
      Same shapes as the procedural spawns above -- a tank missing hp/alive/fuse
@@ -4119,14 +4296,14 @@ function setupRelics(){
   for(const R of sitePropQueue){
     let L=findLand(clamp(R.x,80,MAP-80), clamp(R.y,80,MAP-80));
     if(typeof battlefieldClampPoint==='function')L=battlefieldClampPoint(L[0],L[1],70);
-    if(R.kind==='tank') tanks.push({x:L[0],y:L[1],s:R.s||rr(30,42),hp:260,alive:true,fuse:0});
-    else if(R.kind==='crate'){ spawnCrate(L[0],L[1]); if(crates.length) crates[crates.length-1].alt=0; }
+    if(R.kind==='tank') tanks.push({id:R.id||'',templateProp:R.templateProp,x:L[0],y:L[1],s:R.s||rr(30,42),hp:260,alive:true,fuse:0});
+    else if(R.kind==='crate'){ const C=spawnCrate(L[0],L[1]);C.id=R.id||'';C.templateProp=R.templateProp;C.alt=0; }
     else if(R.kind==='rock'){
       const BK=typeof biomeKit==='function'?biomeKit():null;
-      rocks.push({x:L[0],y:L[1],s:R.s||rr(18,36),a:rr(0,TAU),k:(BK&&BK.rockKind)||'stone'});
+      rocks.push({id:R.id||'',templateProp:R.templateProp,x:L[0],y:L[1],s:R.s||rr(18,36),a:rr(0,TAU),k:(BK&&BK.rockKind)||'stone'});
     }else if(R.kind==='flora'){
       const BK=typeof biomeKit==='function'?biomeKit():null;
-      trees.push({x:L[0],y:L[1],s:R.s||rr(16,28),a:rr(0,TAU),
+      trees.push({id:R.id||'',templateProp:R.templateProp,x:L[0],y:L[1],s:R.s||rr(16,28),a:rr(0,TAU),
         k:typeof floraKind==='function'?floraKind(BK,rnd):(BK&&BK.flora)||'broad'});
     }
   }
@@ -4273,7 +4450,8 @@ function collapseBlock(R,byTeam){
   const Z=cityZones[R.zone];
   if(Z){
     Z.razed++;
-    if(Z.razed===Z.total&&Z.total>0&&byTeam===0){
+    if(Z.razed===Z.total&&Z.total>0&&!Z.claimed&&byTeam===0){
+      Z.claimed=1;
       /* Clearing an entire district is a milestone worth chasing: a lump
          bonus, XP, and open ground you can now build on. */
       credit(0,340,900);

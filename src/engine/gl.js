@@ -2994,6 +2994,18 @@ function mfCityPadPath(c,hx,hy,extra){
   c.lineTo(x,y-ch);c.lineTo(x-ch,y);c.lineTo(-x+ch,y);
   c.lineTo(-x,y-ch);c.lineTo(-x,-y+ch);c.closePath();
 }
+/* These three wet/coastal Stage 9 pads sit inside a 58-unit graded berm. The
+   generic 12-ring civic apron reaches 158 units and leaves its hardscape mask
+   above the albedo snap threshold for roughly 91, turning the surrounding
+   verdant biome into an oversized grey plate. Scope the shorter visual feather
+   to the exact authored templates; occupancy, grading and the pad itself stay
+   identical, and legacy/V1 sites that already read correctly keep their rim. */
+function mfSoftAelosPadFeather(Z){
+  const id=Z&&Z.template||'';
+  return id==='colony_aelos_basin_canal_v1'||
+         id==='refinery_aelos_basin_quay_v1'||
+         id==='base_aelos_coast_admiralty_v1';
+}
 /* Spoil dirt on the graded rim. Blobs follow the grid rectangle so they
    sit on scraped berms, not on a circular mask. Streets (CITYG>=2) stay clear. */
 function paintSiteBermSpoil(c,mask){
@@ -3070,11 +3082,12 @@ function paintCityGround(c){
     mfCityPadPath(c,hx,hy);c.fill();
     const dirt=curTheme==='ashland'?[62,52,44]:curTheme==='arctic'?[92,90,86]:
                curTheme==='vespera'?[78,62,48]:[72,82,48];
+    const soft=mfSoftAelosPadFeather(Z), featherN=soft?6:12;
     c.lineJoin='round';
-    for(let i=0;i<12;i++){
-      const o=(8+i*11)*k, al=0.40*(1-i/12)*(1-i/12);
+    for(let i=0;i<featherN;i++){
+      const o=(soft?4+i*6:8+i*11)*k, al=0.40*(1-i/featherN)*(1-i/featherN);
       c.strokeStyle='rgba('+dirt[0]+','+dirt[1]+','+dirt[2]+','+al+')';
-      c.lineWidth=(14+i*4)*k;
+      c.lineWidth=(soft?8+i*3:14+i*4)*k;
       mfCityPadPath(c,hx,hy,o);c.stroke();
     }
     /* Industrial pad suggestion on the lots themselves. The radial wash left
@@ -3742,7 +3755,47 @@ function buildNavalMask(){
   }
 }
 
-function buildTerrain(themeKey){
+function buildTerrain(themeKey,locationPreflight){
+  const locationPreview=locationPreflight&&locationPreflight.map===curMap?locationPreflight:
+    (typeof mfPreflightLocationPlanV1==='function'?mfPreflightLocationPlanV1(curMap):null);
+  if(locationPreview&&(!locationPreview.ok||locationPreview.status==='HYBRID_V1')){
+    const code=!locationPreview.ok?(locationPreview.error&&locationPreview.error.code||'LOCATION_PREFLIGHT_FAILED'):
+      'LOCATION_HYBRID_UNSUPPORTED';
+    const e=new Error(code);e.code=code;e.locationPlan=locationPreview;throw e;
+  }
+  const fullLocationPlan=locationPreview&&locationPreview.status==='FULL_V1';
+  /* planDistricts is the last fail-closed gate before terrain painting and GPU
+     upload. It plans against scratch world arrays, but the height/passability
+     builders above it necessarily use globals. Preserve the previous CPU world
+     so an exact-plan exception cannot pair a half-built heightfield with the
+     still-live texture from the prior map. SITE_STAMP is telemetry and is
+     deliberately not part of this checkpoint: its typed failure must survive. */
+  const prePlanTerrain={
+    terrainCanvas,heightF,PASS,PASS_WATER,PSLOPE,PCELLH,PREPAIR,
+    pslopeData:PSLOPE?PSLOPE.slice():null,
+    pcellData:PCELLH?PCELLH.slice():null,
+    prepairData:PREPAIR?PREPAIR.slice():null,
+    seed:_seed,
+    terraStats:typeof terraLastStats!=='undefined'?terraLastStats:null,
+    roadGradeHad:Object.prototype.hasOwnProperty.call(window,'__mfRoadGradeStats'),
+    roadGrade:window.__mfRoadGradeStats
+  };
+  const restorePrePlanTerrain=()=>{
+    terrainCanvas=prePlanTerrain.terrainCanvas;heightF=prePlanTerrain.heightF;
+    PASS=prePlanTerrain.PASS;PASS_WATER=prePlanTerrain.PASS_WATER;
+    PSLOPE=prePlanTerrain.PSLOPE;PCELLH=prePlanTerrain.PCELLH;PREPAIR=prePlanTerrain.PREPAIR;
+    /* These three arrays are reused in place on ordinary rebuilds. Restore
+       their bytes as well as their identities. */
+    if(PSLOPE&&prePlanTerrain.pslopeData)PSLOPE.set(prePlanTerrain.pslopeData);
+    if(PCELLH&&prePlanTerrain.pcellData)PCELLH.set(prePlanTerrain.pcellData);
+    if(PREPAIR&&prePlanTerrain.prepairData)PREPAIR.set(prePlanTerrain.prepairData);
+    _seed=prePlanTerrain.seed;
+    if(typeof terraLastStats!=='undefined')terraLastStats=prePlanTerrain.terraStats;
+    if(prePlanTerrain.roadGradeHad)window.__mfRoadGradeStats=prePlanTerrain.roadGrade;
+    else delete window.__mfRoadGradeStats;
+  };
+  let locationPlanCommitted=false;
+  try{
   const TH=THEMES[themeKey||curTheme]||THEMES.verdant;
   const LP=(a,b,t)=>[a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
   terrainCanvas=document.createElement('canvas'); terrainCanvas.width=TS; terrainCanvas.height=TS;
@@ -3809,7 +3862,11 @@ function buildTerrain(themeKey){
   }
   // ---- deposits sit on land ----
   // (deposits defined in sim; raise land under each in setupDeposits via depositBumps)
-  if(window.__depPts) for(const p of window.__depPts){
+  /* FULL_V1 chooses sites before economy relocation. Letting the provisional
+     resource pads raise land here changed which exact grid candidate passed
+     between the first build and a cache-hit rebuild. Final fields are raised
+     after the atomic plan commits below. */
+  if(!fullLocationPlan&&window.__depPts) for(const p of window.__depPts){
     const r=120;
     const x0=clamp((p[0]-r)/MAP*TS|0,0,TS-1), x1=clamp((p[0]+r)/MAP*TS|0,0,TS-1);
     const y0=clamp((p[1]-r)/MAP*TS|0,0,TS-1), y1=clamp((p[1]+r)/MAP*TS|0,0,TS-1);
@@ -3826,7 +3883,8 @@ function buildTerrain(themeKey){
      degrade to the old smooth terrain, never to a black screen. */
   try{
     if(typeof terraShape==='function')
-      terraLastStats=terraShape(heightF,TS,MD,bumps,[corridor,crossCorridor],window.__depPts);
+      terraLastStats=terraShape(heightF,TS,MD,bumps,[corridor,crossCorridor],
+        fullLocationPlan?null:window.__depPts);
   }catch(e){ console.warn('terragen: skipped —',e&&e.message); }
   const mfRoadSpec=MD.roads?mfRoadNetworkSpec():[];
   if(mfRoadSpec.length)mfGradeRoadNetwork(mfRoadSpec);
@@ -3848,19 +3906,21 @@ function buildTerrain(themeKey){
      road that still looks continuous. */
   PASS_WATER=PASS.slice();
   passApplySlopeGate();
+  planDistricts();
+  locationPlanCommitted=true;
   /* The authored world kit ships seven meshes, is registered in both manifests
      and already has an unconditional flush in render3d, but its only initialiser
      lives below the WORLDSITES_ENABLED early-out in worldsites.js -- so the
      geometry was decoded-able and never decoded. Site templates draw from it, so
-     build it here. WORLDSITES_ENABLED itself stays off: that flag gates the
+     build it here after their plan commits. A rejected world must not initialise
+     render caches. WORLDSITES_ENABLED itself stays off: that flag gates the
      procedural site scatter that was reverted, which this does not revive. */
   if(typeof initWorldKit==='function') initWorldKit();
-  planDistricts();
   /* planDistricts may relocate a resource beyond a POI halo once the complete
      civic span is known. Guarantee land under the final coordinates before
      grading/shading; stale pre-plan bumps are harmless and are flattened when
      they fall inside the district grade. */
-  if(window.__mfResourceRelocation&&window.__mfResourceRelocation.moved&&window.__depPts){
+  if((fullLocationPlan||(window.__mfResourceRelocation&&window.__mfResourceRelocation.moved))&&window.__depPts){
     for(const p of window.__depPts){
       const r=120,x0=clamp((p[0]-r)/MAP*TS|0,0,TS-1),x1=clamp((p[0]+r)/MAP*TS|0,0,TS-1);
       const y0=clamp((p[1]-r)/MAP*TS|0,0,TS-1),y1=clamp((p[1]+r)/MAP*TS|0,0,TS-1);
@@ -3903,6 +3963,10 @@ function buildTerrain(themeKey){
      half of the frame minifies hard and trilinear alone drops to a mip that
      erases the painted roads and kerbs the whole terrain design rests on. */
   return uploadTerrainCanvasTex();
+  }catch(error){
+    if(!locationPlanCommitted)restorePrePlanTerrain();
+    throw error;
+  }
 }
 
 /* Burn the hardscape mask into the painted map so canvas consumers — tactical
@@ -4797,11 +4861,13 @@ function buildGroundMask(){
     mfCityPadPath(c,hx,hy);c.fill();
     /* Rim falls toward black so the grass/soil sheets win. A solid 12-gon
        kept a die-cut pave disc around every site. */
+    const soft=mfSoftAelosPadFeather(Z), featherN=soft?6:12;
     c.lineJoin='round';
-    for(let i=0;i<12;i++){
-      const o=(8+i*11)*k, g=Math.max(8,(90-i*7)|0);
+    for(let i=0;i<featherN;i++){
+      const o=(soft?4+i*6:8+i*11)*k,
+            g=soft?Math.max(8,62-i*10):Math.max(8,(90-i*7)|0);
       c.strokeStyle='rgb('+g+','+g+','+g+')';
-      c.lineWidth=(14+i*4)*k;
+      c.lineWidth=(soft?8+i*3:14+i*4)*k;
       mfCityPadPath(c,hx,hy,o);c.stroke();
     }
     c.restore();
