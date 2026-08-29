@@ -48,7 +48,7 @@ const entryOnly = process.argv.includes('--entry-only');
 const OWNED = ['src/ui/hud.js', 'src/styles/ui.css', 'index.html', 'tools/probe-commander-hud.mjs'];
 /* Read for context, not owned. The rail is meaningless without the upstream
    API, so the report records exactly which revision of it was exercised. */
-const UPSTREAM = ['src/game/commander.js', 'src/story.js', 'src/audio.js', 'src/main.js'];
+const UPSTREAM = ['src/game/commander.js', 'src/story.js', 'src/audio.js', 'src/main.js', 'src/ui/hudflow.js'];
 
 const VIEWPORTS = [
   { w: 412, h: 915, name: 'phone-portrait', touch: true },
