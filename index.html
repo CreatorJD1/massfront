@@ -168,7 +168,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
   <div id="accDlgTxt"></div>
   <div class="accDlgBtns"><button class="accBtn ghost" id="accDlgN">CANCEL</button><button class="accBtn" id="accDlgY">CONFIRM</button></div>
 </div></div>
-<div id="atkAlert" style="display:none">⚠ BASE UNDER ATTACK</div>
+<button type="button" id="atkAlert" style="display:none" aria-label="Jump to base under attack">⚠ BASE UNDER ATTACK</button>
 <button type="button" id="waveAlert" style="display:none" aria-label="Jump to predicted enemy approach"></button>
 <div id="buildMenu"><div class="tabRow" id="buildTabs"></div><div class="grid" id="buildGrid"></div></div>
 <div id="prodMenu"><div id="prodNav" aria-label="Selected production structure"><button id="prodPrev" aria-label="Previous structure">‹</button><b id="prodNavName">PRODUCTION</b><span id="prodNavCount">1 / 1</span><button id="prodNext" aria-label="Next structure">›</button></div><div class="tabRow" id="prodTabs"></div><div class="grid" id="prodGrid"></div><div class="queue" id="prodQueue"></div><button id="upBtn" style="display:none">⬆ UPGRADE</button><button id="rallyBtn">⚑ SET RALLY POINT</button><button id="repeatBtn">REPEAT: OFF</button></div>
@@ -705,8 +705,8 @@ body:not(.mfIntroDone) .overlay{display:none!important}
   <div class="cardRow" id="luCards"></div>
 </div>
 
-<div class="overlay" id="pauseOverlay">
-  <div class="title" style="font-size:34px">PAUSED</div>
+<div class="overlay" id="pauseOverlay" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+  <div class="title" id="pauseTitle" style="font-size:34px">PAUSED</div>
   <button class="mbtn" id="resumeBtn">▶ &nbsp;RESUME</button>
   <button class="mbtn alt" id="pauseSettings">⚙ &nbsp;SETTINGS</button>
   <button class="mbtn alt" id="quitBtn">✦ &nbsp;ABANDON MATCH</button>

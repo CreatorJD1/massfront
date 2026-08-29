@@ -34,6 +34,7 @@ function backContext(){
     disarmRally(){rallyCancels++;ctx.armRally=-1;},
     cancelPatrolDraft(){},toast(){toasts++;},sfx(){sounds++;},apClose(){portalCloses++;}
   };
+  ctx.mfOpenPause=()=>{ctx.paused=true;el('pauseOverlay').style.display='flex';};
   ctx.document.activeElement=ctx.document.body;
   vm.runInNewContext(backSrc,ctx,{filename:'main-native-back-section.js'});
   return {ctx,el,get queueCancels(){return queueCancels;},get rallyCancels(){return rallyCancels;},get portalCloses(){return portalCloses;},get toasts(){return toasts;},get sounds(){return sounds;}};

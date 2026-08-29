@@ -161,10 +161,21 @@ function mfGuessMobile(){
   }catch(e){}
   return false;
 }
+const MF_TEXT_SCALE_STEPS=[100,125,150,200];
+function mfTextScaleValue(value){
+  const n=Number(value);
+  return MF_TEXT_SCALE_STEPS.includes(n)?n:100;
+}
+function mfApplyTextScale(value){
+  const pct=mfTextScaleValue(value);
+  if(typeof document!=='undefined'&&document.documentElement)
+    document.documentElement.dataset.mfTextScale=String(pct);
+  return pct;
+}
 const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:true,dayNight:true,
                       haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
                       godMode:false,tutorialVoice:true,sfxVol:3,ambVol:3,musicVol:2,voiceVol:3,
-                      perf:'auto',menubg:'dim',healthBars:'select',teamIdMode:false,
+                      perf:'auto',menubg:'dim',healthBars:'select',teamIdMode:false,textScale:100,
                      quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false,
                      /* EXPERIMENTAL, OFF BY DEFAULT AND NEVER DEFAULTED ON.
                         Gates the space-exploration module's menu entry. The
@@ -328,6 +339,7 @@ function metaHarden(){
   const migrateExploration=!Object.prototype.hasOwnProperty.call(priorSettings,'experimentalExploration')
     &&Object.prototype.hasOwnProperty.call(priorSettings,'expExploration');
   META.settings={...DEF_SETTINGS,...priorSettings};
+  META.settings.textScale=mfTextScaleValue(META.settings.textScale);
   /* Compatibility adapter for the short-lived preview key. Preserve an
      explicit opt-in from an existing local career, then remove the legacy key
      so every subsequent save has one authoritative setting. New careers still
@@ -571,6 +583,7 @@ function applyQualityPreset(){
 }
 function applySettings(){
   const s=META.settings;
+  mfApplyTextScale(s.textScale);
   /* GRAPHICS QUALITY — one dial, plus Advanced overrides underneath.
      A preset sets every renderer knob coherently; gfxOver then wins per key
      so a mid-tier phone can keep MEDIUM's DPR cap and still turn bloom off.
@@ -1667,6 +1680,36 @@ function mfBindTap(el,fn){
     if(!el.disabled) fn(e);
   });
 }
+/* Native buttons already synthesize click for Enter/Space and assistive
+   technology, but the battle HUD predates that contract and deliberately owns
+   pointerdown (or, for release-safe controls, pointerup). Preserve the exact
+   pointer timing while adding one guarded keyboard path. Preventing the key's
+   native click and suppressing a same-turn synthetic click avoids the classic
+   double activation without making screen-reader click depend on key events. */
+function mfBindNativePress(el,fn,pointerEvent){
+  if(!el||typeof fn!=='function'||(el.dataset&&el.dataset.mfNativePress==='1')) return;
+  if(el.dataset) el.dataset.mfNativePress='1';
+  const now=typeof mfTapNow==='function'?mfTapNow:()=>performance.now();
+  let pointerCommit=-1e9,keyCommit=-1e9;
+  el.addEventListener(pointerEvent||'pointerdown',ev=>{
+    if(el.disabled)return;
+    pointerCommit=now(); fn(ev);
+  });
+  el.addEventListener('keydown',ev=>{
+    if(el.disabled||ev.target!==el||ev.isComposing||ev.repeat||(ev.key!=='Enter'&&ev.key!==' ')) return;
+    ev.preventDefault();ev.stopPropagation();
+    keyCommit=now(); fn(ev);
+  });
+  el.addEventListener('click',ev=>{
+    /* Physical clicks have detail>0 and already committed through the pointer
+       listener. detail===0 is the browser/AT activation path. */
+    if(ev.detail!==0||el.disabled) return;
+    if(now()-pointerCommit<600||now()-keyCommit<600){
+      ev.preventDefault();ev.stopImmediatePropagation();return;
+    }
+    fn(ev);
+  });
+}
 /* Settings rows are divs because their two-column visual treatment predates
    the tabbed screen. Give those existing controls the keyboard contract of a
    button without disturbing the pointer-up/slop path used by phones. The
@@ -1942,6 +1985,7 @@ function renderSettings(){
              select:'Bars appear above selected units and the opened structure',
              off:'All battlefield health bars are hidden'};
   const explorationOn=!!META.settings.experimentalExploration;
+  const textScale=mfTextScaleValue(META.settings.textScale);
   const explorationOpen=explorationOn
     ?'<div class="sItem setRow" data-set="openExperimentalExploration" role="button" tabindex="0"><div class="sTx"><b>Open Galactic Campaign Preview</b>'
       +'<div class="sDs">Launch the isolated converted menu, War Table, ship hub, and campaign systems in this tab.</div></div>'
@@ -2044,7 +2088,9 @@ function renderSettings(){
       tog('formationPreview','Formation Preview','Outline where the platoon will end up, on every move order, before it commits')
      +tog('orderPaths','Route Arrows & Patrol Cues','Flashing arrows along the real pathfinding route, plus numbered waypoints and committed patrol loops'));
   h+='<section class="setGroup mfTabPanel" id="setExtras" role="tabpanel" aria-labelledby="setTab-system" data-mf-panel="system"><div class="setGroupHd">SERVICES & ACCESSIBILITY</div>'
-    +'<div class="setGroupDs">Tutorial, offline, connectivity, and optional world systems.</div><div id="setExtraRows"></div><div class="setEmpty">No additional services are configured.</div></section>';
+    +'<div class="setGroupDs">Tutorial, offline, connectivity, and optional world systems.</div><div id="setExtraRows">'
+    +cyc('textScale','Interface Text Size','Scales menu copy and critical battlefield status text without changing camera zoom or touch geometry.',textScale+'%',textScale>100)
+    +'</div><div class="setEmpty">No additional services are configured.</div></section>';
   list.innerHTML=h;
   if(typeof audRenderNowPlaying==='function') audRenderNowPlaying();
   mfBindTabs(list,'audio');
@@ -2094,6 +2140,10 @@ function renderSettings(){
       else if(k==='healthBars'){
         const o=['always','select','off'];
         META.settings.healthBars=o[(o.indexOf(META.settings.healthBars||'select')+1)%3];
+      }
+      else if(k==='textScale'){
+        const o=[100,125,150,200],cur=mfTextScaleValue(META.settings.textScale);
+        META.settings.textScale=o[(o.indexOf(cur)+1)%o.length];
       }
       else if(k==='gfxShadows') gfxOverCycle('shadowQ',[0,1,2]);
       else if(k==='gfxSSAO') gfxOverToggle('ao');

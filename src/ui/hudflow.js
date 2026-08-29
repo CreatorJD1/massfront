@@ -318,8 +318,8 @@ function mfNoticeHistoryShell(){
   el.innerHTML='<header><div><small>BATTLEFIELD COMMS</small><b>EVENT FEED</b></div><button type="button" aria-label="Close event feed">×</button></header>'+ 
     '<nav><button data-f="all" class="on">ALL</button><button data-f="alert">ALERTS</button><button data-f="command">ORDERS</button><button data-f="radio">RADIO</button><button data-f="pickup">LOOT</button></nav><div class="mfNoticeList"></div>';
   document.body.appendChild(el);
-  el.querySelector('header button').addEventListener('pointerdown',e=>{e.stopPropagation();mfNoticeHistoryClose();});
-  el.querySelectorAll('nav button').forEach(b=>b.addEventListener('pointerdown',e=>{e.stopPropagation();mfNHistoryFilter=b.dataset.f;mfNoticeHistoryRender();}));
+  mfBindNativePress(el.querySelector('header button'),e=>{e.stopPropagation();mfNoticeHistoryClose();});
+  el.querySelectorAll('nav button').forEach(b=>mfBindNativePress(b,e=>{e.stopPropagation();mfNHistoryFilter=b.dataset.f;mfNoticeHistoryRender();}));
   return el;
 }
 function mfNoticeHistoryRender(){
@@ -420,7 +420,7 @@ function mfFlowChipSync(){
     const c=mfFlowChips[id];
     const b=document.createElement('button');
     b.type='button'; b.className='mfChip'; b.textContent=c.label;
-    b.addEventListener('pointerdown',ev=>{ ev.preventDefault(); ev.stopPropagation();
+    mfBindNativePress(b,ev=>{ ev.preventDefault(); ev.stopPropagation();
       if(typeof sfx==='function') sfx('ui'); c.fn(); });
     r.appendChild(b);
   }
@@ -580,7 +580,7 @@ if(typeof orderHold==='function'){
 }
 
 mfFlowTickT=setInterval(mfFlowTick,220);
-const mfNoticeLogBtn=mfFlowEl('noticeLogBtn');if(mfNoticeLogBtn)mfNoticeLogBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();const n=mfFlowEl('mfNoticeHistory');if(n&&n.style.display!=='none')mfNoticeHistoryClose();else mfNoticeHistoryOpen();});
+const mfNoticeLogBtn=mfFlowEl('noticeLogBtn');if(mfNoticeLogBtn)mfBindNativePress(mfNoticeLogBtn,e=>{e.preventDefault();e.stopPropagation();const n=mfFlowEl('mfNoticeHistory');if(n&&n.style.display!=='none')mfNoticeHistoryClose();else mfNoticeHistoryOpen();});
 const mfFlowWatch=new MutationObserver(()=>{
   for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el) el._mfVisH=undefined; }
   if(!mfFlowMute) mfFlowQueueLayout();

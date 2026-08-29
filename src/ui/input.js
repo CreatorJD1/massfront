@@ -744,7 +744,7 @@ function ensureQueueBtn(){
   b.innerHTML='<span class="em">⇢</span><span class="lbl">QUEUE</span>';
   /* Before CLEAR so cancelling the selection stays the last thing in the row. */
   row.insertBefore(b,document.getElementById('clearBtn')||null);
-  b.addEventListener('pointerdown',ev=>{ ev.preventDefault(); toggleQueuePlanner(); });
+  mfBindNativePress(b,ev=>{ ev.preventDefault(); toggleQueuePlanner(); });
   return b;
 }
 function beginQueueDraft(){

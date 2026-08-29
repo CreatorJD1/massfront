@@ -1,5 +1,5 @@
-/* Small process-level fixtures for CI: accepted=0, UNKNOWN=1,
-   explicitly unsupported topology=2. */
+/* Small process-level fixtures for CI: scenario frame-budget pass=0,
+   rejected/over-budget=1, diagnostic or unsupported=2. */
 
 import { validatePerfEvidence } from './evidence-contract.mjs';
 import { validEvidenceFixture, cloneFixture } from './fixtures/evidence-fixtures.mjs';
@@ -7,18 +7,22 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const PERF_FIXTURE_CASES = Object.freeze([
-  'valid', 'auth', 'menu', 'nonbattle', 'visible-reconciliation', 'zero-timing',
+  'valid', 'diagnostic-ladder', 'over-budget',
+  'auth', 'menu', 'nonbattle', 'console-error', 'visible-reconciliation', 'zero-timing',
   'missing-source', 'missing-package', 'missing-gpu', 'source-drift',
   'missing-wall-ratio', 'missing-backlog', 'unsupported-1v4'
 ]);
 
 export function evidenceFixtureCase(name) {
-  const record = cloneFixture(validEvidenceFixture());
+  let record = cloneFixture(validEvidenceFixture());
   switch (name) {
     case 'valid': break;
+    case 'diagnostic-ladder': record = validEvidenceFixture({ unitsPerFaction: 250 }); break;
+    case 'over-budget': record = validEvidenceFixture({ frameSamples: [16, 20, 48] }); break;
     case 'auth': record.runtimeGate.authUiVisible = true; break;
     case 'menu': record.runtimeGate.menuUiVisible = true; break;
     case 'nonbattle': record.runtimeGate.matchLive = false; break;
+    case 'console-error': record.runtimeGate.consoleErrors.push('WebGL shader compilation failed'); break;
     case 'visible-reconciliation': record.metrics.visibility.reconciliation[0].visible = 1001; break;
     case 'zero-timing': {
       record.metrics.simPhaseMs = {
@@ -60,7 +64,10 @@ export function evidenceFixtureCase(name) {
 
 export function verifyFixtureCase(name) {
   const validation = validatePerfEvidence(evidenceFixtureCase(name));
-  const status = validation.valid ? 'ACCEPTED' : validation.status === 'unsupported' ? 'UNSUPPORTED' : 'UNKNOWN';
+  const status = validation.status === 'accepted' ? 'SCENARIO_PASS'
+    : validation.status === 'diagnostic' ? 'DIAGNOSTIC/INCOMPLETE'
+    : validation.status === 'failed' ? 'FAILED'
+    : validation.status === 'unsupported' ? 'UNSUPPORTED' : 'UNKNOWN';
   return { name, status, validation };
 }
 
@@ -72,5 +79,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
     reasons: result.validation.errors,
     unsupportedReason: result.validation.unsupportedReason || null
   }));
-  process.exitCode = result.status === 'ACCEPTED' ? 0 : result.status === 'UNSUPPORTED' ? 2 : 1;
+  process.exitCode = result.status === 'SCENARIO_PASS' ? 0
+    : ['DIAGNOSTIC/INCOMPLETE', 'UNSUPPORTED'].includes(result.status) ? 2 : 1;
 }

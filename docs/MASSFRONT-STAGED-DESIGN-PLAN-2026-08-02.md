@@ -355,13 +355,16 @@ Exit gate:
 
 ### Stage 8 — polish, performance, accessibility, and release
 
-Status update (2026-08-28): **IN PROGRESS**. The adaptive effects-budget
-contract and independent effects/ambience/music/voice mixer are implemented.
-The final quiescent shipping gate and interface matrix must be rerun after this
-source freeze. Physical-device performance, current Android/iOS packages,
-save/update interruption, lifecycle, and minimum-device acceptance remain
-open; earlier evidence must not be treated as current when its fingerprint
-differs.
+Status update (2026-08-28): **IN PROGRESS**. The adaptive effects-budget,
+independent effects/ambience/music/voice mixer, portable-save browser path,
+team-identification mode, large-text and keyboard/focus contracts, guarded GL
+recovery, and bounded desktop stress tooling are implemented in Main Source.
+Machine evidence counts only when its final report passes on the current stable
+HEAD; terrain history remains `INCOMPLETE` without an owner-approved compatible
+baseline. Physical-device performance, current Android/iOS packages, native
+save/update interruption, lifecycle, commander-art approval, and minimum-device
+acceptance remain open; earlier evidence must not be treated as current when its
+fingerprint differs.
 
 Goal: ship reliably on actual Android and iOS hardware.
 

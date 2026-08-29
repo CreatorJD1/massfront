@@ -694,7 +694,7 @@ function updateSelInfo(){
   if(el._mfH!==h){
     el._mfH=h; el.innerHTML=h;
     const ib=el.querySelector('.selIntelBtn');
-    if(ib) ib.addEventListener('pointerdown',ev=>{
+    if(ib) mfBindNativePress(ib,ev=>{
       ev.stopPropagation();
       if(intelPrimaryUnit>=0&&ualive[intelPrimaryUnit]){ showUnitCard(intelPrimaryUnit,-1,true); sfx('ui'); }
     });
@@ -1752,7 +1752,7 @@ function renderMenuRoleBrief(kind,key,ids){
   const kit=mfIntelKit();
   visual.appendChild(mfIntelPreviewWindow(isUnit?'unit':'building',first,'TACTICAL PREVIEW',kit));
   const inspect=host.querySelector('.menuRoleInspect');
-  inspect.addEventListener('pointerdown',ev=>{
+  mfBindNativePress(inspect,ev=>{
     ev.preventDefault();ev.stopPropagation();
     if(isUnit)showUnitTypeCard(first,true,kit);else showBuildingTypeCard(first,-1,true,kit);
     sfx('ui');
@@ -1995,8 +1995,8 @@ function prodNavShell(){
      APK install, while the same OTA patch worked on an older shell. */
   if(nav.dataset.bound!=='1'){
     nav.dataset.bound='1';
-    nav.querySelector('#prodPrev').addEventListener('pointerdown',ev=>{ev.stopPropagation();cycleProdBuilding(-1);});
-    nav.querySelector('#prodNext').addEventListener('pointerdown',ev=>{ev.stopPropagation();cycleProdBuilding(1);});
+    mfBindNativePress(nav.querySelector('#prodPrev'),ev=>{ev.stopPropagation();cycleProdBuilding(-1);});
+    mfBindNativePress(nav.querySelector('#prodNext'),ev=>{ev.stopPropagation();cycleProdBuilding(1);});
   }
   return nav;
 }
@@ -2285,8 +2285,8 @@ function renderBaseFinder(){
   p.innerHTML='<header><b>⌖ BASE FINDER</b><button type="button" aria-label="Close base finder">×</button></header>'
     +'<div class="baseFindTabs">'+groups.map(g=>'<button data-f="'+g+'" class="'+(g===baseFinderFilter?'on':'')+'">'+g.toUpperCase()+'</button>').join('')+'</div>'
     +'<p>'+list.length+' owned structures · tap a category to cycle and focus its next structure.</p>';
-  p.querySelector('header button').addEventListener('pointerdown',()=>{p.style.display='none';});
-  p.querySelectorAll('[data-f]').forEach(btn=>btn.addEventListener('pointerdown',ev=>{
+  mfBindNativePress(p.querySelector('header button'),()=>{p.style.display='none';});
+  p.querySelectorAll('[data-f]').forEach(btn=>mfBindNativePress(btn,ev=>{
     ev.stopPropagation();const f=btn.dataset.f;if(f!==baseFinderFilter){baseFinderFilter=f;baseFinderCursor=0;}
     const now=all.filter(B=>baseFinderFilter==='all'||baseFinderGroup(B)===baseFinderFilter);
     if(!now.length){toast('NO '+baseFinderFilter.toUpperCase()+' STRUCTURES');renderBaseFinder();return;}
@@ -2358,7 +2358,7 @@ function renderProdMenu(){ if(openBldGone()) return;
     const b=document.createElement('button');
     b.className='tabBtn'+(c===prodTab?' on':'');
     b.innerHTML='<span class="tEm">'+C.em+'</span>'+C.nm;
-    b.addEventListener('pointerdown',ev=>{ ev.stopPropagation(); prodTab=c; sfx('ui'); renderProdMenu(); });
+    mfBindNativePress(b,ev=>{ ev.stopPropagation(); prodTab=c; sfx('ui'); renderProdMenu(); });
     tr.appendChild(b);
   }
   renderMenuRoleBrief('unit',prodTab,groups[prodTab]||[]);
@@ -2614,7 +2614,7 @@ function renderBuildMenu(){
     const b=document.createElement('button');
     b.className='tabBtn'+(c===bldTab?' on':'');
     b.innerHTML='<span class="tEm">'+C.em+'</span>'+C.nm;
-    b.addEventListener('pointerdown',ev=>{ ev.stopPropagation(); bldTab=c; sfx('ui'); renderBuildMenu(); });
+    mfBindNativePress(b,ev=>{ ev.stopPropagation(); bldTab=c; sfx('ui'); renderBuildMenu(); });
     tr.appendChild(b);
   }
   renderMenuRoleBrief('building',bldTab,grp[bldTab]||[]);

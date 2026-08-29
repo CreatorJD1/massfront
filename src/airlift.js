@@ -440,7 +440,7 @@ renderProdMenu=function(){
   b.innerHTML='<span class="tEm">⇩</span>AIRLIFT';b.setAttribute('aria-label','Air transport production');
   if(wants)for(const x of tr.querySelectorAll('.tabBtn'))x.classList.remove('on');
   if(wants)b.classList.add('on');
-  b.addEventListener('pointerdown',ev=>{ev.stopPropagation();prodTab='transport';sfx('ui');renderProdMenu();});
+  mfBindNativePress(b,ev=>{ev.stopPropagation();prodTab='transport';sfx('ui');renderProdMenu();});
   tr.appendChild(b);
   if(wants){prodTab='transport';mfAirliftRenderCard();}
   /* The transport also belongs in AIRCRAFT. A dedicated tab is discoverable
@@ -500,7 +500,7 @@ function mfAirliftInitUI(){
   const row=$('tacRow');if(!row||$('mfUnloadBtn'))return;
   const b=document.createElement('button');b.type='button';b.className='cbtn mfAirliftOrder';b.id='mfUnloadBtn';
   b.style.display='none';b.innerHTML='<span class="em">⇩</span><span class="lbl">UNLOAD</span>';
-  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const i=mfAirliftSelected();if(i>=0)mfAirliftArmUnload(i);});
+  mfBindNativePress(b,ev=>{ev.preventDefault();ev.stopPropagation();const i=mfAirliftSelected();if(i>=0)mfAirliftArmUnload(i);});
   row.insertBefore(b,$('clearBtn'));
   const st=document.createElement('style');st.textContent='\n'
     +'.mfAirliftIcon{filter:drop-shadow(0 0 7px rgba(90,220,255,.42)) drop-shadow(0 4px 4px rgba(0,0,0,.65))}.mfAirliftIcon svg{width:100%;height:100%;display:block}'
@@ -917,7 +917,7 @@ renderProdMenu=function(){
   const tr=$('prodTabs');tr.style.display='flex';const b=document.createElement('button');b.className='tabBtn'+(wants?' on':'');
   b.innerHTML='<span class="tEm">♒</span>MASSFLESH';b.setAttribute('aria-label','Brood living transport production');
   if(wants)for(const x of tr.querySelectorAll('.tabBtn'))x.classList.remove('on');
-  b.addEventListener('pointerdown',ev=>{ev.stopPropagation();prodTab='biomass';sfx('ui');renderProdMenu();});
+  mfBindNativePress(b,ev=>{ev.stopPropagation();prodTab='biomass';sfx('ui');renderProdMenu();});
   /* A faction-defining organism must not be hidden beyond the phone-width tab
      scroller.  Keep it first for Brood factories while leaving Terran clean. */
   tr.insertBefore(b,tr.firstChild);
@@ -967,10 +967,10 @@ function mfMassInitUI(){
   const row=$('tacRow');if(!row||$('mfMassActionBtn'))return;
   const b=document.createElement('button');b.type='button';b.id='mfMassActionBtn';b.className='cbtn mfMassAction';b.style.display='none';
   b.innerHTML='<span class="em">♒</span><span class="lbl">TAKE FLIGHT</span>';
-  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();mfMassArmSelected();});
+  mfBindNativePress(b,ev=>{ev.preventDefault();ev.stopPropagation();mfMassArmSelected();});
   row.insertBefore(b,$('clearBtn'));
   const a=document.createElement('button');a.type='button';a.id='mfMassAlert';a.style.display='none';a.setAttribute('aria-label','Track inbound Massflesh breakthrough carrier');
-  a.addEventListener('pointerdown',()=>{const i=mfMassAlertUnit;if(i>=0&&ualive[i]){cam.x=ux[i];cam.y=uy[i];camFollow=i;clampCam();camUpdateMatrices();sfx('ui');}});document.body.appendChild(a);
+  mfBindNativePress(a,()=>{const i=mfMassAlertUnit;if(i>=0&&ualive[i]){cam.x=ux[i];cam.y=uy[i];camFollow=i;clampCam();camUpdateMatrices();sfx('ui');}});document.body.appendChild(a);
   const st=document.createElement('style');st.textContent='\n'
     +'.mfMassIcon{filter:drop-shadow(0 0 8px rgba(184,102,255,.5))}.mfMassIcon svg{width:100%;height:100%;display:block}'
     +'.mfMassCard{width:156px!important;min-height:176px}.mfMassBadges{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;margin:3px 0}.mfMassBadges b{padding:3px 5px;border:1px solid rgba(185,112,255,.48);border-radius:4px;background:rgba(72,28,92,.42);color:#d9aaff;font:700 7px/1 var(--fT)}'

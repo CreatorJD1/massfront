@@ -108,7 +108,7 @@ function commanderWeaponButton(slot){
   b=document.createElement('button');b.type='button';b.className='cbtn abtn';b.id=id;
   b.innerHTML='<span class="em"></span><span class="wnm"></span><div class="cdring"></div>';
   const before=document.getElementById('abCommander')||row.firstChild;row.insertBefore(b,before);
-  b.addEventListener('pointerdown',e=>{e.stopPropagation();tryCommanderWeapon(slot);});
+  mfBindNativePress(b,e=>{e.stopPropagation();tryCommanderWeapon(slot);});
   return b;
 }
 function commanderWeaponRefresh(reset){
@@ -188,7 +188,7 @@ function commanderActiveButton(){
   b=document.createElement('button');b.type='button';b.className='cbtn abtn';b.id='abCommander';
   b.innerHTML='<span class="em" id="cmdAbEm">✦</span><span id="cmdAbNm">SIGNATURE</span><div class="cdring"></div>';
   const jump=document.getElementById('abJump');row.insertBefore(b,jump||row.firstChild);
-  b.addEventListener('pointerdown',e=>{e.stopPropagation();tryCommanderActive();});
+  mfBindNativePress(b,e=>{e.stopPropagation();tryCommanderActive();});
   return b;
 }
 function commanderActiveRefresh(reset){

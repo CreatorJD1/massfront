@@ -8,6 +8,19 @@ export const PERF_CAPTURE_STAGES = Object.freeze(['start', 'mid', 'end']);
 export const PERF_CURRENT_MAX_SEATS = 4;
 export const PERF_CURRENT_MAX_AI_SLOT = 2;
 export const PERF_ACCEPTANCE_UNITS_PER_FACTION = 500;
+export const PERF_FRAME_P99_BUDGET_MS = 33.3;
+export const PERF_GATE_SCHEMA = 'massfront-stage8-short-frame-gate-v1';
+export const PERF_STAGE8_SCENARIO_TOTALS = Object.freeze({
+  '1v1_duel_verdant': 1000,
+  '1v1_duel_megacity': 1000,
+  '1v2_flank_arctic': 1500,
+  '1v3_crossfire_ashland': 2000
+});
+export const PERF_STAGE8_DESKTOP_REQUIRED_SCENARIOS = Object.freeze([
+  '1v1_duel_verdant',
+  '1v2_flank_arctic',
+  '1v3_crossfire_ashland'
+]);
 
 const STAT_KEYS = Object.freeze(['p50', 'p95', 'p99', 'mean', 'max', 'min']);
 const SHA256_RE = /^[a-f0-9]{64}$/i;
@@ -43,6 +56,74 @@ export function telemetryStats(values, { supported = true, source = null } = {})
 
 export function nullTelemetry(source = null) {
   return telemetryStats([], { supported: false, source });
+}
+
+export function deriveStage8PerformanceGate({
+  scenarioId,
+  unitsPerFaction,
+  expectedSeats,
+  expectedTotal,
+  acceptanceTotal,
+  frameTimeMs,
+  scope = 'desktop-short-run'
+} = {}) {
+  const seats = Array.isArray(expectedSeats) ? expectedSeats : [];
+  const seatTotal = seats.reduce((total, seat) => total + (Number.isInteger(seat?.count) ? seat.count : 0), 0);
+  const scenarioAcceptanceTotal = PERF_STAGE8_SCENARIO_TOTALS[scenarioId] ?? null;
+  const acceptancePopulationEligible = unitsPerFaction === PERF_ACCEPTANCE_UNITS_PER_FACTION &&
+    Number.isInteger(scenarioAcceptanceTotal) && acceptanceTotal === scenarioAcceptanceTotal &&
+    expectedTotal === scenarioAcceptanceTotal && seatTotal === scenarioAcceptanceTotal &&
+    seats.length === scenarioAcceptanceTotal / PERF_ACCEPTANCE_UNITS_PER_FACTION &&
+    seats.length > 0 && seats.every(seat => seat?.count === PERF_ACCEPTANCE_UNITS_PER_FACTION);
+  const frameP95Ms = Number.isFinite(frameTimeMs?.p95) ? frameTimeMs.p95 : null;
+  const frameP99Ms = Number.isFinite(frameTimeMs?.p99) ? frameTimeMs.p99 : null;
+  const thresholdPassed = frameP99Ms != null && frameP99Ms <= PERF_FRAME_P99_BUDGET_MS;
+  const outcome = !acceptancePopulationEligible ? 'DIAGNOSTIC/INCOMPLETE' : thresholdPassed ? 'PASS' : 'FAIL';
+  const evidenceStatus = outcome === 'PASS' ? 'accepted' : outcome === 'FAIL' ? 'failed' : 'diagnostic';
+  const evidenceClass = outcome === 'PASS' ? 'stage8-scenario-pass'
+    : outcome === 'FAIL' ? 'stage8-over-budget' : 'diagnostic-incomplete';
+  return {
+    schema: PERF_GATE_SCHEMA,
+    scope,
+    claim: 'short-run-frame-budget-only',
+    metric: 'metrics.frameTimeMs.p99',
+    thresholdMs: PERF_FRAME_P99_BUDGET_MS,
+    frameP95Ms,
+    frameP99Ms,
+    acceptanceUnitsPerFaction: PERF_ACCEPTANCE_UNITS_PER_FACTION,
+    expectedAcceptanceTotal: scenarioAcceptanceTotal,
+    observedRequestedTotal: Number.isInteger(expectedTotal) ? expectedTotal : null,
+    acceptancePopulationEligible,
+    thresholdPassed,
+    outcome,
+    evidenceStatus,
+    evidenceClass,
+    physicalSustainedDevicePass: false
+  };
+}
+
+export function validateStage8DesktopMatrix(records = []) {
+  const requiredScenarioIds = [...PERF_STAGE8_DESKTOP_REQUIRED_SCENARIOS];
+  const acceptedScenarioIds = records.map(record => record?.scenarioId).filter(Boolean);
+  const counts = new Map();
+  for (const scenarioId of acceptedScenarioIds) counts.set(scenarioId, (counts.get(scenarioId) || 0) + 1);
+  const missingScenarioIds = requiredScenarioIds.filter(scenarioId => !counts.has(scenarioId));
+  const duplicateScenarioIds = [...counts].filter(([, count]) => count > 1).map(([scenarioId]) => scenarioId).sort();
+  const unexpectedScenarioIds = [...counts.keys()].filter(scenarioId => !requiredScenarioIds.includes(scenarioId)).sort();
+  const errors = [];
+  if (missingScenarioIds.length) errors.push(`missing required scenarios: ${missingScenarioIds.join(', ')}`);
+  if (duplicateScenarioIds.length) errors.push(`duplicate scenario rows: ${duplicateScenarioIds.join(', ')}`);
+  if (unexpectedScenarioIds.length) errors.push(`unexpected substitute scenarios: ${unexpectedScenarioIds.join(', ')}`);
+  return {
+    schema: 'massfront-stage8-desktop-matrix-v1',
+    requiredScenarioIds,
+    acceptedScenarioIds,
+    missingScenarioIds,
+    duplicateScenarioIds,
+    unexpectedScenarioIds,
+    valid: errors.length === 0 && acceptedScenarioIds.length === requiredScenarioIds.length,
+    errors
+  };
 }
 
 function addError(errors, condition, message) {
@@ -139,7 +220,6 @@ export function validatePerfEvidence(record) {
     return { valid: false, status: 'unsupported', errors, warnings, unsupportedReason: topology.reason };
   }
   addError(errors, record?.schema === PERF_EVIDENCE_SCHEMA, `schema must be ${PERF_EVIDENCE_SCHEMA}`);
-  addError(errors, record?.evidenceStatus === 'accepted', 'evidenceStatus must be accepted');
   addError(errors, record?.executionPath === PERF_EXECUTION_PATH, `executionPath must be ${PERF_EXECUTION_PATH}`);
 
   const gate = record?.runtimeGate;
@@ -159,11 +239,17 @@ export function validatePerfEvidence(record) {
   addError(errors, typeof gate?.gpuValidation?.vendor === 'string' && gate.gpuValidation.vendor.length > 0,
     'GPU validation vendor is missing');
   addError(errors, Array.isArray(gate?.pageErrors) && gate.pageErrors.length === 0, 'page errors were recorded');
+  addError(errors, Array.isArray(gate?.consoleErrors) && gate.consoleErrors.length === 0, 'console errors were recorded');
   addError(errors, Number.isInteger(gate?.contextLossCount) && gate.contextLossCount === 0, 'WebGL context loss was recorded');
 
   const expected = expectedPopulationMaps(record?.population, errors);
   if (expected) {
-    addError(errors, record.population.requestedPerFaction > 0, 'requestedPerFaction must be positive');
+    addError(errors, Number.isInteger(record.population.requestedPerFaction) && record.population.requestedPerFaction > 0,
+      'requestedPerFaction must be a positive integer');
+    addError(errors, record?.unitsPerFaction === record.population.requestedPerFaction,
+      'unitsPerFaction does not match population.requestedPerFaction');
+    addError(errors, expected.seats.every(seat => seat.count === record.population.requestedPerFaction),
+      'expected seat populations do not exactly match requestedPerFaction');
     validatePopulationSnapshot(record.population.attempted, expected, 'attempted', errors);
     validatePopulationSnapshot(record.population.accepted, expected, 'accepted', errors);
     validatePopulationSnapshot(record.population.postSettle, expected, 'postSettle', errors);
@@ -236,6 +322,8 @@ export function validatePerfEvidence(record) {
       if (!capture) continue;
       addError(errors, typeof capture.file === 'string' && capture.file.length > 0, `${stage} capture path is missing`);
       addError(errors, SHA256_RE.test(capture.sha256 || ''), `${stage} capture SHA-256 is missing`);
+      addError(errors, Number.isInteger(capture.width) && capture.width > 0, `${stage} capture width is missing`);
+      addError(errors, Number.isInteger(capture.height) && capture.height > 0, `${stage} capture height is missing`);
       addError(errors, capture.hudVisible === true, `${stage} capture lacks battle HUD proof`);
       addError(errors, Number.isInteger(capture.authoritativeTotal) && capture.authoritativeTotal >= 0,
         `${stage} capture authoritative count is missing`);
@@ -280,34 +368,79 @@ export function validatePerfEvidence(record) {
   addError(errors, Number.isFinite(metrics?.fpsEstimated) && metrics.fpsEstimated > 0, 'fpsEstimated requires sampled frame telemetry');
   addError(errors, Number.isInteger(metrics?.contextLossCount) && metrics.contextLossCount === 0, 'metrics report a context loss');
 
+  const expectedGate = deriveStage8PerformanceGate({
+    scenarioId: record?.scenarioId,
+    unitsPerFaction: record?.unitsPerFaction,
+    expectedSeats: expected?.seats,
+    expectedTotal: expected?.total,
+    acceptanceTotal: record?.topology?.acceptanceTotal,
+    frameTimeMs: metrics.frameTimeMs,
+    scope: record?.performanceGate?.scope
+  });
+  const performanceGate = record?.performanceGate;
+  addError(errors, performanceGate && typeof performanceGate === 'object', 'performanceGate is missing');
+  addError(errors, performanceGate?.schema === PERF_GATE_SCHEMA, `performanceGate.schema must be ${PERF_GATE_SCHEMA}`);
+  addError(errors, ['desktop-short-run', 'physical-device-short-run'].includes(performanceGate?.scope),
+    'performanceGate.scope must identify a short desktop or physical-device run');
+  addError(errors, performanceGate?.claim === expectedGate.claim, 'performanceGate must be labeled short-run only');
+  addError(errors, performanceGate?.metric === expectedGate.metric, 'performanceGate metric must be frame-time p99');
+  addError(errors, performanceGate?.thresholdMs === PERF_FRAME_P99_BUDGET_MS,
+    `performanceGate threshold must be ${PERF_FRAME_P99_BUDGET_MS} ms`);
+  for (const key of [
+    'frameP95Ms', 'frameP99Ms', 'acceptanceUnitsPerFaction', 'expectedAcceptanceTotal',
+    'observedRequestedTotal', 'acceptancePopulationEligible', 'thresholdPassed', 'outcome',
+    'evidenceStatus', 'evidenceClass', 'physicalSustainedDevicePass'
+  ]) {
+    addError(errors, performanceGate?.[key] === expectedGate[key], `performanceGate.${key} does not match measured evidence`);
+  }
+  addError(errors, record?.evidenceStatus === expectedGate.evidenceStatus,
+    `evidenceStatus must be ${expectedGate.evidenceStatus} for ${expectedGate.outcome}`);
+  addError(errors, record?.evidenceClass === expectedGate.evidenceClass,
+    `evidenceClass must be ${expectedGate.evidenceClass} for ${expectedGate.outcome}`);
+
   if (record?.provenance?.gitDirty) warnings.push('The tested worktree was dirty; use worktreeFingerprint for exact identity.');
-  return { valid: errors.length === 0, status: errors.length ? 'unknown' : 'accepted', errors, warnings };
+  const status = errors.length ? 'unknown' : expectedGate.outcome === 'PASS' ? 'accepted'
+    : expectedGate.outcome === 'FAIL' ? 'failed' : 'diagnostic';
+  return { valid: errors.length === 0, status, errors, warnings, performanceGate: expectedGate };
 }
 
 /** Reject batches that silently combine different source/runtime/device runs. */
 export function validateEvidenceBatch(records) {
   const decisions = records.map((record, index) => ({ index, record, ...validatePerfEvidence(record) }));
-  const accepted = decisions.filter(item => item.valid);
+  const contractValid = decisions.filter(item => item.valid);
+  const accepted = contractValid.filter(item => item.status === 'accepted');
+  const diagnostic = contractValid.filter(item => item.status === 'diagnostic');
+  const failed = contractValid.filter(item => item.status === 'failed');
   const unsupported = decisions.filter(item => item.status === 'unsupported');
   const rejected = decisions.filter(item => !item.valid && item.status !== 'unsupported');
+  const matrixGate = validateStage8DesktopMatrix(accepted.map(item => item.record));
   const mixedErrors = [];
-  if (accepted.length > 1) {
+  if (contractValid.length > 1) {
     const keys = [
       ['worktreeFingerprint', r => r.provenance.worktreeFingerprint],
       ['runtimeFingerprint', r => r.provenance.runtimeFingerprint],
       ['testedPackageSha256', r => r.provenance.testedPackageSha256],
       ['preset', r => r.provenance.preset],
       ['viewport/DPR', r => `${r.provenance.viewport.width}x${r.provenance.viewport.height}@${r.provenance.viewport.dpr}`],
+      ['evidence scope', r => r.performanceGate.scope],
       ['renderer/backend', r => `${r.provenance.renderer}|${r.provenance.backend}`]
     ];
     for (const [label, getter] of keys) {
-      const values = new Set(accepted.map(item => getter(item.record)));
+      const values = new Set(contractValid.map(item => getter(item.record)));
       if (values.size > 1) mixedErrors.push(`mixed ${label}: ${[...values].join(' vs ')}`);
     }
   }
   return {
-    valid: accepted.length > 0 && rejected.length === 0 && mixedErrors.length === 0,
+    valid: matrixGate.valid && diagnostic.length === 0 && failed.length === 0 &&
+      rejected.length === 0 && mixedErrors.length === 0,
+    contractValidBatch: contractValid.length > 0 && rejected.length === 0 && mixedErrors.length === 0,
+    stage8Pass: matrixGate.valid && diagnostic.length === 0 && failed.length === 0 &&
+      rejected.length === 0 && mixedErrors.length === 0,
+    matrixGate,
+    contractValid: mixedErrors.length ? [] : contractValid,
     accepted: mixedErrors.length ? [] : accepted,
+    diagnostic: mixedErrors.length ? [] : diagnostic,
+    failed: mixedErrors.length ? [] : failed,
     rejected,
     unsupported,
     mixedErrors

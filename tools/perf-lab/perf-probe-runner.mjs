@@ -5,9 +5,11 @@
 import { launchPwBrowser, closePwBrowser } from '../pw-browser.mjs';
 import { assertHardwareGpu } from '../chrome-gpu.mjs';
 import { installOfflineNetworkIsolation } from '../offline-network-isolation.mjs';
+import { acquireVerificationFreeze } from '../evidence-foundation/workspace-guard.mjs';
+import { inspectPng } from '../evidence-foundation/png-evidence.mjs';
 import { createServer } from 'node:http';
 import { createHash } from 'node:crypto';
-import { readFile, mkdir, writeFile, stat } from 'node:fs/promises';
+import { readFile, readdir, mkdir, rm, writeFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve, extname, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +28,7 @@ import {
 import {
   PERF_EVIDENCE_SCHEMA,
   PERF_EXECUTION_PATH,
+  deriveStage8PerformanceGate,
   telemetryStats,
   validatePerfEvidence
 } from './evidence-contract.mjs';
@@ -33,8 +36,11 @@ import { ANDROID_S25_USER_AGENT, S25_VIEWPORT, assertMobileGpuBranch } from '../
 
 const execFileAsync = promisify(execFile);
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
-const METRICS_DIR = join(ROOT, 'tmp/perf-lab/metrics');
-const CAPTURES_DIR = join(ROOT, 'tmp/perf-lab/captures');
+const LEGACY_PERF_ROOT = join(ROOT, 'tmp/perf-lab');
+const CURRENT_PERF_ROOT = join(LEGACY_PERF_ROOT, 'current');
+const METRICS_DIR = join(CURRENT_PERF_ROOT, 'metrics');
+const CAPTURES_DIR = join(CURRENT_PERF_ROOT, 'captures');
+const LEGACY_CAPTURES_DIR = join(LEGACY_PERF_ROOT, 'captures');
 const DEFAULT_VIEWPORT = S25_VIEWPORT;
 
 function sha256(value) {
@@ -43,6 +49,112 @@ function sha256(value) {
 
 async function fileSha256(path) {
   return sha256(await readFile(path));
+}
+
+function sameSourceIdentity(a, b) {
+  return ['gitHead', 'worktreeFingerprint', 'runtimeFingerprint', 'testedEntrySha256', 'testedPackageSha256']
+    .every(key => a?.[key] === b?.[key]);
+}
+
+function scenarioStem(scenarioId, unitsPerFaction) {
+  if (!/^[a-z0-9_]+$/.test(scenarioId) || !Number.isInteger(unitsPerFaction) || unitsPerFaction < 1) {
+    throw new Error(`Unsafe performance-output identity: ${scenarioId}/${unitsPerFaction}`);
+  }
+  return `${scenarioId}_${unitsPerFaction}u`;
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function valueAfter(args, flag) {
+  const index = args.indexOf(flag);
+  return index >= 0 ? args[index + 1] : null;
+}
+
+export function parsePerformancePopulations(args = []) {
+  const unitFlag = args.indexOf('--units');
+  const rawUnits = unitFlag >= 0 ? args[unitFlag + 1] : null;
+  if (unitFlag >= 0 && (!rawUnits || rawUnits.startsWith('--') || !/^\d+$/.test(rawUnits))) {
+    throw new Error(`--units must be one of: ${POPULATION_LADDERS.join(', ')}`);
+  }
+  const units = rawUnits == null ? 500 : Number(rawUnits);
+  if (!POPULATION_LADDERS.includes(units)) {
+    throw new Error(`--units must be one of: ${POPULATION_LADDERS.join(', ')}`);
+  }
+  return args.includes('--ladder') ? [...POPULATION_LADDERS] : [units];
+}
+
+async function prepareScenarioOutput(scenarioId, unitsPerFaction, metricsDir, capturesDir) {
+  const stem = scenarioStem(scenarioId, unitsPerFaction);
+  const removed = [];
+  const metric = join(metricsDir, `${stem}_v3.json`);
+  if (existsSync(metric)) { await rm(metric, { force: true }); removed.push(relative(ROOT, metric).replace(/\\/g, '/')); }
+  const oldCapture = new RegExp(`^${escapeRegExp(stem)}_(?:[a-f0-9]{12}_\\d+|desktop-v3)_(?:start|mid|end)\\.png(?:\\.partial-\\d+)?$`);
+  for (const file of await readdir(capturesDir)) {
+    if (!oldCapture.test(file)) continue;
+    const path = join(capturesDir, file);
+    await rm(path, { force: true });
+    removed.push(relative(ROOT, path).replace(/\\/g, '/'));
+  }
+  return { mode: 'bounded-current', removed };
+}
+
+export async function prepareCurrentPerfOutput({
+  scenarios,
+  populations,
+  currentRoot = CURRENT_PERF_ROOT
+} = {}) {
+  if (!Array.isArray(scenarios) || !scenarios.length) throw new Error('Current performance output requires scenarios');
+  if (!Array.isArray(populations) || !populations.length ||
+      populations.some(value => !POPULATION_LADDERS.includes(value))) {
+    throw new Error(`Current performance output populations must be one of: ${POPULATION_LADDERS.join(', ')}`);
+  }
+  const metricsDir = join(currentRoot, 'metrics');
+  const capturesDir = join(currentRoot, 'captures');
+  const reportsDir = join(currentRoot, 'reports');
+  await Promise.all([
+    mkdir(metricsDir, { recursive: true }),
+    mkdir(capturesDir, { recursive: true }),
+    mkdir(reportsDir, { recursive: true })
+  ]);
+  const removed = [];
+  for (const scenario of scenarios) {
+    const support = benchmarkScenarioSupport(scenario);
+    if (support.status === 'supported') {
+      for (const unitsPerFaction of populations) {
+        removed.push(...(await prepareScenarioOutput(
+          scenario.id, unitsPerFaction, metricsDir, capturesDir
+        )).removed);
+      }
+      continue;
+    }
+    const unsupportedPath = join(metricsDir, `${scenario.id}_unsupported_v3.json`);
+    if (existsSync(unsupportedPath)) {
+      await rm(unsupportedPath, { force: true });
+      removed.push(relative(ROOT, unsupportedPath).replace(/\\/g, '/'));
+    }
+  }
+  for (const file of await readdir(metricsDir)) {
+    if (!/^summary_matrix_[a-f0-9]{12}_v3\.json$/.test(file)) continue;
+    const path = join(metricsDir, file);
+    await rm(path, { force: true });
+    removed.push(relative(ROOT, path).replace(/\\/g, '/'));
+  }
+  for (const file of ['EVIDENCE_REJECTION_LEDGER.json', 'BENCHMARK_MATRIX_REPORT.md', 'benchmark_matrix.csv']) {
+    const path = join(reportsDir, file);
+    if (!existsSync(path)) continue;
+    await rm(path, { force: true });
+    removed.push(relative(ROOT, path).replace(/\\/g, '/'));
+  }
+  return {
+    mode: 'bounded-current',
+    root: currentRoot,
+    metricsDir,
+    capturesDir,
+    reportsDir,
+    removed
+  };
 }
 
 async function gitOutput(args) {
@@ -468,7 +580,10 @@ function appendProbe(target, source) {
   for (const key of Object.keys(target)) target[key].push(...(source[key] || []));
 }
 
-async function captureBattlefield(page, scenario, unitsPerFaction, stage, runTag, authoritative) {
+async function captureBattlefield(page, scenario, unitsPerFaction, stage, captureLane, authoritative, capturesDir) {
+  if (!/^[a-z0-9-]+$/.test(captureLane) || !['start', 'mid', 'end'].includes(stage)) {
+    throw new Error(`Unsafe performance-capture identity: ${captureLane}/${stage}`);
+  }
   const state = await runtimeState(page);
   assertRuntimeState(state, `${stage} capture`);
   await page.evaluate(({ label, counts }) => {
@@ -485,13 +600,16 @@ async function captureBattlefield(page, scenario, unitsPerFaction, stage, runTag
     }
     overlay.textContent = `${label}\nAUTHORITATIVE ${counts.total}\nFACTIONS ${JSON.stringify(counts.byFaction)}\nTEAMS ${JSON.stringify(counts.byTeam)}`;
   }, { label: `${scenario.id} ${unitsPerFaction}/FACTION ${stage.toUpperCase()}`, counts: authoritative });
-  const file = `${scenario.id}_${unitsPerFaction}u_${runTag}_${stage}.png`;
-  const path = join(CAPTURES_DIR, file);
+  const file = `${scenarioStem(scenario.id, unitsPerFaction)}_${captureLane}_${stage}.png`;
+  const path = join(capturesDir, file);
   await page.screenshot({ path });
+  const png = await inspectPng(path);
   return {
     stage,
     file,
     sha256: await fileSha256(path),
+    width: png.width,
+    height: png.height,
     hudVisible: state.battleHudVisible,
     authoritativeTotal: authoritative.total,
     byFaction: authoritative.byFaction,
@@ -517,7 +635,11 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
     deploymentProof,
     preset,
     viewport,
-    url
+    url,
+    captureLane = 'device-v3',
+    capturesDir = LEGACY_CAPTURES_DIR,
+    evidenceScope = 'physical-device-short-run',
+    checkpoint = async () => {}
   } = options;
   const topology = benchmarkScenarioSupport(scenario);
   if (topology.status !== 'supported') {
@@ -526,6 +648,8 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
     throw error;
   }
   if (issues.pageErrors.length) throw new Error(`Pre-sample page errors: ${issues.pageErrors.join(' | ')}`);
+  if (issues.consoleErrors.length) throw new Error(`Pre-sample console errors: ${issues.consoleErrors.join(' | ')}`);
+  await checkpoint('before deterministic load');
   const preState = await runtimeState(page);
   assertRuntimeState(preState, 'pre-load');
   const setup = await setupDeterministicScenario(page, scenario, unitsPerFaction);
@@ -539,12 +663,15 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
     throw new Error(`Population gate failed: attempted=${setup.attempted.total}, accepted=${setup.accepted.total}, ` +
       `postSettle=${postSettle.total}, unmatched=${postSettle.unmatched}, requested=${expectedTotal}`);
   }
+  await checkpoint('after population settle');
 
   const sampleStartState = await runtimeState(page);
   assertRuntimeState(sampleStartState, 'post-settle');
-  const runTag = `${sourceIdentity.runtimeFingerprint.slice(0, 12)}_${Date.now()}`;
   const captures = [];
-  captures.push(await captureBattlefield(page, scenario, unitsPerFaction, 'start', runTag, postSettle));
+  captures.push(await captureBattlefield(
+    page, scenario, unitsPerFaction, 'start', captureLane, postSettle, capturesDir
+  ));
+  await checkpoint('after start capture');
   await injectCombatDirective(page, 'advance_to_center');
   const nativeCheckpoints = [await takePerfCheckpoint(page, 'start')];
   const samples = {
@@ -557,38 +684,52 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
   appendProbe(samples, await sampleFrames(page, firstFrames));
   nativeCheckpoints.push(await takePerfCheckpoint(page, 'mid'));
   const midPopulation = await collectAuthoritativePopulation(page, scenario);
-  captures.push(await captureBattlefield(page, scenario, unitsPerFaction, 'mid', runTag, midPopulation));
+  captures.push(await captureBattlefield(
+    page, scenario, unitsPerFaction, 'mid', captureLane, midPopulation, capturesDir
+  ));
+  await checkpoint('after mid capture');
   appendProbe(samples, await sampleFrames(page, Math.max(1, durationFrames - firstFrames)));
   const wallDurationMs = performance.now() - wallStart;
   nativeCheckpoints.push(await takePerfCheckpoint(page, 'end'));
   const endPopulation = await collectAuthoritativePopulation(page, scenario);
-  captures.push(await captureBattlefield(page, scenario, unitsPerFaction, 'end', runTag, endPopulation));
+  captures.push(await captureBattlefield(
+    page, scenario, unitsPerFaction, 'end', captureLane, endPopulation, capturesDir
+  ));
+  await checkpoint('after end capture');
 
   const endState = await runtimeState(page);
   assertRuntimeState(endState, 'post-sample');
   if (issues.pageErrors.length) throw new Error(`Page errors during benchmark: ${issues.pageErrors.join(' | ')}`);
+  if (issues.consoleErrors.length) throw new Error(`Console errors during benchmark: ${issues.consoleErrors.join(' | ')}`);
   const endSourceIdentity = await collectSourceIdentity();
-  const sourceStable = sourceIdentity.gitHead === endSourceIdentity.gitHead &&
-    sourceIdentity.worktreeFingerprint === endSourceIdentity.worktreeFingerprint &&
-    sourceIdentity.runtimeFingerprint === endSourceIdentity.runtimeFingerprint &&
-    sourceIdentity.testedEntrySha256 === endSourceIdentity.testedEntrySha256 &&
-    sourceIdentity.testedPackageSha256 === endSourceIdentity.testedPackageSha256;
+  const sourceStable = sameSourceIdentity(sourceIdentity, endSourceIdentity);
+  await checkpoint('after end source identity');
   const frameTimeMs = telemetryStats(samples.frameDts, { supported: true, source: 'requestAnimationFrame' });
   const simulatedDurationSec = endState.simTimeSec - sampleStartState.simTimeSec;
   const wallTimeRatio = simulatedDurationSec / (wallDurationMs / 1000);
   const maxBacklogSteps = samples.simBacklogSteps.length ? Math.max(...samples.simBacklogSteps) : null;
+  const performanceGate = deriveStage8PerformanceGate({
+    scenarioId: scenario.id,
+    unitsPerFaction,
+    expectedSeats: setup.expected.seats,
+    expectedTotal,
+    acceptanceTotal: topology.acceptanceTotal,
+    frameTimeMs,
+    scope: evidenceScope
+  });
   const result = {
     schema: PERF_EVIDENCE_SCHEMA,
-    evidenceStatus: 'accepted',
+    evidenceStatus: performanceGate.evidenceStatus,
     executionPath: PERF_EXECUTION_PATH,
     scenarioId: scenario.id,
     scenarioName: scenario.name,
     theatre: scenario.theatre,
     unitsPerFaction,
     factionsCount: scenario.factions.length,
-    evidenceClass: unitsPerFaction === topology.acceptanceUnitsPerFaction ? 'acceptance' : 'diagnostic',
+    evidenceClass: performanceGate.evidenceClass,
     topology: { ...topology, seatCount: scenario.factions.length },
     timestamp: new Date().toISOString(),
+    performanceGate,
     runtimeGate: {
       ...deploymentProof,
       authUiVisible: endState.authUiVisible,
@@ -682,113 +823,197 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
 }
 
 async function main() {
-  await mkdir(METRICS_DIR, { recursive: true });
-  await mkdir(CAPTURES_DIR, { recursive: true });
   const args = process.argv.slice(2);
   const runAll = args.includes('--all');
   const runLadder = args.includes('--ladder');
-  const valueAfter = flag => {
-    const index = args.indexOf(flag);
-    return index >= 0 ? args[index + 1] : null;
-  };
-  const scenarioKey = valueAfter('--scenario') || '1v1_duel_verdant';
-  const unitValue = Number.parseInt(valueAfter('--units') || '', 10);
-  const preset = valueAfter('--preset') || 'high';
-  const frameValue = Number.parseInt(valueAfter('--frames') || '240', 10);
+  const scenarioKey = valueAfter(args, '--scenario') || '1v1_duel_verdant';
+  const preset = valueAfter(args, '--preset') || 'high';
+  const frameValue = Number.parseInt(valueAfter(args, '--frames') || '240', 10);
   if (!Number.isInteger(frameValue) || frameValue < 3) throw new Error('--frames must be an integer >= 3');
   const scenarios = runAll ? Object.values(BENCHMARK_SCENARIOS) : [BENCHMARK_SCENARIOS[scenarioKey]];
   if (scenarios.some(value => !value)) throw new Error(`Unknown scenario: ${scenarioKey}`);
-  const populations = runLadder ? POPULATION_LADDERS : [Number.isInteger(unitValue) ? unitValue : 500];
-  if (populations.some(value => !Number.isInteger(value) || value <= 0)) throw new Error('Population must be a positive integer');
+  const populations = parsePerformancePopulations(args);
+  const unsupportedUnits = runLadder ? 500 : populations[0];
 
-  const sourceIdentity = await collectSourceIdentity();
-  console.log(`MASSFRONT perf evidence ${sourceIdentity.gitHead} dirty=${sourceIdentity.gitDirty}`);
-  console.log(`worktree=${sourceIdentity.worktreeFingerprint} runtime=${sourceIdentity.runtimeFingerprint}`);
   const unsupported = scenarios.filter(scenario => benchmarkScenarioSupport(scenario).status === 'unsupported');
   const supportedScenarios = scenarios.filter(scenario => benchmarkScenarioSupport(scenario).status === 'supported');
+  const queuedOutputs = [];
   const unsupportedResults = [];
-  for (const scenario of unsupported) {
-    const topology = benchmarkScenarioSupport(scenario);
-    const result = {
-      schema: PERF_EVIDENCE_SCHEMA,
-      evidenceStatus: 'unsupported',
-      scenarioId: scenario.id,
-      scenarioName: scenario.name,
-      unitsPerFaction: Number.isInteger(unitValue) ? unitValue : 500,
-      factionsCount: scenario.factions.length,
-      topology: { ...topology, seatCount: scenario.factions.length },
-      timestamp: new Date().toISOString()
-    };
-    unsupportedResults.push(result);
-    await writeFile(join(METRICS_DIR, `${scenario.id}_unsupported_v3.json`), JSON.stringify(result, null, 2), 'utf8');
-    console.log(`UNSUPPORTED ${scenario.id}: ${topology.reason}`);
-  }
-  if (!supportedScenarios.length) {
-    const summary = join(METRICS_DIR, `summary_matrix_${sourceIdentity.runtimeFingerprint.slice(0, 12)}_v3.json`);
-    await writeFile(summary, JSON.stringify(unsupportedResults, null, 2), 'utf8');
-    process.exitCode = 2;
-    return;
-  }
-  const server = await startStaticServer();
-  const browser = await launchPwBrowser({ headless: true });
   const results = [];
+  const outcomeLines = [];
+  let hasDiagnostic = unsupported.length > 0;
+  let hasPerformanceFailure = false;
+  let sourceIdentity = null;
+  let workspaceGuard = null;
+  let server = null;
+  let browser = null;
+  let failure = null;
   try {
-    for (const scenario of supportedScenarios) {
-      for (const unitsPerFaction of populations) {
-        const page = await browser.newPage({
-          viewport: { width: DEFAULT_VIEWPORT.width, height: DEFAULT_VIEWPORT.height },
-          deviceScaleFactor: DEFAULT_VIEWPORT.dpr,
-          hasTouch: true,
-          isMobile: true,
-          serviceWorkers: 'block',
-          userAgent: ANDROID_S25_USER_AGENT
-        });
-        const issues = { pageErrors: [], consoleErrors: [] };
-        page.on('pageerror', error => issues.pageErrors.push(error.message));
-        page.on('console', message => { if (message.type() === 'error') issues.consoleErrors.push(message.text()); });
-        try {
-          const networkIsolation = await installTelemetryInit(page);
-          const url = `${server.url}?mfperf=1&perfEvidence=1`;
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-          const gpu = await assertHardwareGpu(page);
-          await page.waitForFunction(() => typeof spawnUnit === 'function' && typeof resetWorld === 'function', null, { timeout: 90000 });
-          const mobileProof = await page.evaluate(() => ({
-            userAgent: navigator.userAgent,
-            mobileGpu: typeof MF_MOBILE_GPU === 'boolean' ? MF_MOBILE_GPU : null
-          }));
-          assertMobileGpuBranch(mobileProof.mobileGpu, mobileProof.userAgent, 'perf-probe-runner');
-          const livePreset = await applyPreset(page, preset);
-          const deploymentProof = await enterRealBattle(page);
-          await enableRuntimeTelemetry(page);
-          const result = await runScenarioBenchmark(page, scenario, unitsPerFaction, {
-            durationFrames: frameValue,
-            sourceIdentity,
-            gpu,
-            issues,
-            deploymentProof,
-            preset: livePreset,
-            viewport: DEFAULT_VIEWPORT,
-            url
+    workspaceGuard = await acquireVerificationFreeze({
+      root: ROOT,
+      label: 'Stage 8 performance evidence matrix',
+      quietMs: Number(process.env.MF_QUIET_PREFLIGHT_MS || 15000),
+      allowedPaths: [CURRENT_PERF_ROOT]
+    });
+    await workspaceGuard.checkpoint('before bounded performance-output preparation');
+    await prepareCurrentPerfOutput({ scenarios, populations });
+    await workspaceGuard.checkpoint('after bounded performance-output preparation');
+
+    sourceIdentity = await collectSourceIdentity();
+    await workspaceGuard.checkpoint('after initial performance source identity');
+    console.log(`MASSFRONT perf evidence ${sourceIdentity.gitHead} dirty=${sourceIdentity.gitDirty}`);
+    console.log(`worktree=${sourceIdentity.worktreeFingerprint} runtime=${sourceIdentity.runtimeFingerprint}`);
+
+    for (const scenario of unsupported) {
+      const topology = benchmarkScenarioSupport(scenario);
+      const result = {
+        schema: PERF_EVIDENCE_SCHEMA,
+        evidenceStatus: 'unsupported',
+        scenarioId: scenario.id,
+        scenarioName: scenario.name,
+        unitsPerFaction: unsupportedUnits,
+        factionsCount: scenario.factions.length,
+        topology: { ...topology, seatCount: scenario.factions.length },
+        timestamp: new Date().toISOString()
+      };
+      unsupportedResults.push(result);
+      queuedOutputs.push({ path: join(METRICS_DIR, `${scenario.id}_unsupported_v3.json`), record: result });
+    }
+
+    if (supportedScenarios.length) {
+      server = await startStaticServer();
+      browser = await launchPwBrowser({ headless: true });
+      for (const scenario of supportedScenarios) {
+        for (const unitsPerFaction of populations) {
+          const runLabel = `${scenario.id} ${unitsPerFaction}/faction`;
+          await workspaceGuard.checkpoint(`before performance scenario ${runLabel}`);
+          const page = await browser.newPage({
+            viewport: { width: DEFAULT_VIEWPORT.width, height: DEFAULT_VIEWPORT.height },
+            deviceScaleFactor: DEFAULT_VIEWPORT.dpr,
+            hasTouch: true,
+            isMobile: true,
+            serviceWorkers: 'block',
+            userAgent: ANDROID_S25_USER_AGENT
           });
-          result.networkIsolation = await networkIsolation.finalize(`performance scenario ${scenario.id}`);
-          const outputPath = join(METRICS_DIR, `${scenario.id}_${unitsPerFaction}u_v3.json`);
-          await writeFile(outputPath, JSON.stringify(result, null, 2), 'utf8');
-          results.push(result);
-          if (result.evidenceStatus !== 'accepted') {
-            throw new Error(`Evidence rejected: ${result.rejectionReasons.join('; ')}`);
+          const issues = { pageErrors: [], consoleErrors: [] };
+          page.on('pageerror', error => issues.pageErrors.push(error.message));
+          page.on('console', message => { if (message.type() === 'error') issues.consoleErrors.push(message.text()); });
+          try {
+            const networkIsolation = await installTelemetryInit(page);
+            const url = `${server.url}?mfperf=1&perfEvidence=1`;
+            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+            const gpu = await assertHardwareGpu(page);
+            await page.waitForFunction(() => typeof spawnUnit === 'function' && typeof resetWorld === 'function', null, { timeout: 90000 });
+            const mobileProof = await page.evaluate(() => ({
+              userAgent: navigator.userAgent,
+              mobileGpu: typeof MF_MOBILE_GPU === 'boolean' ? MF_MOBILE_GPU : null
+            }));
+            assertMobileGpuBranch(mobileProof.mobileGpu, mobileProof.userAgent, 'perf-probe-runner');
+            const livePreset = await applyPreset(page, preset);
+            const deploymentProof = await enterRealBattle(page);
+            await workspaceGuard.checkpoint(`after real deployment ${runLabel}`);
+            await enableRuntimeTelemetry(page);
+            const result = await runScenarioBenchmark(page, scenario, unitsPerFaction, {
+              durationFrames: frameValue,
+              sourceIdentity,
+              gpu,
+              issues,
+              deploymentProof,
+              preset: livePreset,
+              viewport: DEFAULT_VIEWPORT,
+              url,
+              captureLane: 'desktop-v3',
+              capturesDir: CAPTURES_DIR,
+              evidenceScope: 'desktop-short-run',
+              checkpoint: name => workspaceGuard.checkpoint(`${runLabel}: ${name}`)
+            });
+            result.networkIsolation = await networkIsolation.finalize(`performance scenario ${scenario.id}`);
+            result.runtimeGate.pageErrors = [...issues.pageErrors];
+            result.runtimeGate.consoleErrors = [...issues.consoleErrors];
+            await workspaceGuard.checkpoint(`after offline isolation ${runLabel}`);
+
+            const scenarioEndIdentity = await collectSourceIdentity();
+            result.provenance.sourceStable = sameSourceIdentity(sourceIdentity, scenarioEndIdentity);
+            result.provenance.endWorktreeFingerprint = scenarioEndIdentity.worktreeFingerprint;
+            result.provenance.endRuntimeFingerprint = scenarioEndIdentity.runtimeFingerprint;
+            await workspaceGuard.checkpoint(`after final source identity ${runLabel}`);
+            const validation = validatePerfEvidence(result);
+            if (!validation.valid) {
+              result.evidenceStatus = 'rejected';
+              result.rejectionReasons = validation.errors;
+              throw new Error(`Evidence rejected: ${validation.errors.join('; ')}`);
+            }
+            delete result.rejectionReasons;
+            results.push(result);
+            queuedOutputs.push({
+              path: join(METRICS_DIR, `${scenarioStem(scenario.id, unitsPerFaction)}_v3.json`),
+              record: result
+            });
+            const gate = result.performanceGate;
+            if (validation.status === 'accepted') {
+              outcomeLines.push(`SCENARIO DESKTOP PASS ${runLabel} p95=${gate.frameP95Ms}ms p99=${gate.frameP99Ms}ms <= ${gate.thresholdMs}ms`);
+            } else if (validation.status === 'diagnostic') {
+              hasDiagnostic = true;
+              outcomeLines.push(`DIAGNOSTIC/INCOMPLETE ${runLabel} p95=${gate.frameP95Ms}ms p99=${gate.frameP99Ms}ms; acceptance requires exactly 500/faction`);
+            } else {
+              hasPerformanceFailure = true;
+              outcomeLines.push(`SCENARIO DESKTOP FAIL ${runLabel} p95=${gate.frameP95Ms}ms p99=${gate.frameP99Ms}ms > ${gate.thresholdMs}ms`);
+            }
+          } finally {
+            await page.close().catch(() => {});
           }
-          console.log(`PASS ${scenario.id} ${unitsPerFaction}/faction p95=${result.metrics.frameTimeMs.p95}ms`);
-        } finally {
-          await page.close().catch(() => {});
+          await workspaceGuard.checkpoint(`after performance scenario ${runLabel}`);
         }
       }
     }
-    const summary = join(METRICS_DIR, `summary_matrix_${sourceIdentity.runtimeFingerprint.slice(0, 12)}_v3.json`);
-    await writeFile(summary, JSON.stringify([...results, ...unsupportedResults], null, 2), 'utf8');
+
+    if (browser) {
+      await closePwBrowser();
+      browser = null;
+    }
+    if (server) {
+      await server.close();
+      server = null;
+    }
+    const finalSourceIdentity = await collectSourceIdentity();
+    if (!sameSourceIdentity(sourceIdentity, finalSourceIdentity)) {
+      throw new Error('Performance matrix source identity changed before final evidence release');
+    }
+    await workspaceGuard.checkpoint('performance matrix completion');
+    queuedOutputs.push({
+      path: join(METRICS_DIR, `summary_matrix_${sourceIdentity.runtimeFingerprint.slice(0, 12)}_v3.json`),
+      record: [...results, ...unsupportedResults]
+    });
+  } catch (error) {
+    failure = error;
   } finally {
-    await closePwBrowser().catch(() => {});
-    await server.close().catch(() => {});
+    if (browser) await closePwBrowser().catch(error => { failure ??= error; });
+    if (server) await server.close().catch(error => { failure ??= error; });
+    if (workspaceGuard) {
+      try {
+        await workspaceGuard.release({ assertStable: true, name: 'performance evidence final release' });
+      } catch (error) {
+        failure ??= error;
+      }
+      workspaceGuard = null;
+    }
   }
+
+  if (failure) throw failure;
+  try {
+    for (const output of queuedOutputs) {
+      await writeFile(output.path, `${JSON.stringify(output.record, null, 2)}\n`, 'utf8');
+    }
+  } catch (error) {
+    await Promise.all(queuedOutputs.map(output => rm(output.path, { force: true }).catch(() => {})));
+    throw new Error(`Performance evidence publication failed: ${error.message}`, { cause: error });
+  }
+  for (const scenario of unsupported) {
+    console.log(`UNSUPPORTED ${scenario.id}: ${benchmarkScenarioSupport(scenario).reason}`);
+  }
+  for (const line of outcomeLines) console.log(line);
+  if (hasPerformanceFailure) process.exitCode = 1;
+  else if (hasDiagnostic || !supportedScenarios.length) process.exitCode = 2;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

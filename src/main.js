@@ -1879,6 +1879,137 @@ function renderMapRow(){
 let settingsFrom='menu';
 let inboxFromMatch=false;
 const FRONT_SCREEN_IDS=['startScreen','warScr','setupScr','devScr','opsScr','dailyScr','dossierScr','inboxScr','socialScr','updScr','profileScr','settingsScr','armory'];
+/* STAGE8_FRONT_FOCUS_BEGIN
+   Front screens replace one another instead of using browser navigation, so
+   the browser cannot infer either the new reading start or where Back should
+   return focus. Keep a tiny route stack: opening records the focused trigger;
+   returning to an existing route restores that trigger. Modal focus traps stay
+   authoritative and block delayed front-screen focus from stealing it. */
+const mfFrontFocusPath=[];
+const mfFrontFocusOrigins=new Map();
+const MF_PAUSE_MODAL_EXEMPT=new Set(['pauseOverlay','accDlg','apConfirmOverlay','apOverlay','dispatch']);
+const mfPauseInertRestore=[];
+let mfFrontFocusTicket=0,mfPauseFocusOrigin=null,mfPauseModalActive=false;
+function mfFrontElementVisible(el){
+  if(!el||el.isConnected===false)return false;
+  try{const s=getComputedStyle(el);return s.display!=='none'&&s.visibility!=='hidden';}catch(e){return true;}
+}
+function mfFrontFocusBlocked(){
+  for(const id of ['apConfirmOverlay','apOverlay','accDlg','dispatch','pauseOverlay']){
+    const el=$(id);if(mfFrontElementVisible(el))return true;
+  }
+  return false;
+}
+function mfFrontFocusCandidate(el){
+  if(!el)return null;
+  if(el.id==='startScreen')return $('startBtn')||el;
+  const explicit=el.querySelector&&el.querySelector('[data-front-focus]');if(explicit)return explicit;
+  const heading=el.querySelector&&el.querySelector('h1,h2,[role="heading"]');
+  if(heading){heading.tabIndex=-1;return heading;}
+  return el.querySelector&&el.querySelector('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')||el;
+}
+function mfFrontFocusLater(el,preferred){
+  const ticket=++mfFrontFocusTicket;
+  requestAnimationFrame(()=>{
+    if(ticket!==mfFrontFocusTicket||!el||document.body.dataset.frontScreen!==el.id||!mfFrontElementVisible(el)||mfFrontFocusBlocked())return;
+    let target=preferred;
+    if(!target||target.isConnected===false||!el.contains(target)||!mfFrontElementVisible(target))target=mfFrontFocusCandidate(el);
+    if(!target||typeof target.focus!=='function')return;
+    try{target.focus({preventScroll:true});}catch(e){target.focus();}
+  });
+}
+function mfFrontFocusRoute(from,id,el){
+  if(!mfFrontFocusPath.length&&from)mfFrontFocusPath.push(from);
+  const active=document.activeElement,backAt=mfFrontFocusPath.lastIndexOf(id);
+  let preferred=null;
+  if(from&&from!==id&&backAt>=0){
+    preferred=mfFrontFocusOrigins.get(from)||null;
+    for(let i=mfFrontFocusPath.length-1;i>backAt;i--)mfFrontFocusOrigins.delete(mfFrontFocusPath[i]);
+    mfFrontFocusPath.length=backAt+1;
+  }else if(from!==id){
+    const source=from&&$(from);
+    if(active&&active!==document.body&&active.isConnected!==false&&(!source||source.contains(active)))
+      mfFrontFocusOrigins.set(id,active);
+    if(backAt>=0)mfFrontFocusPath.length=backAt+1;else mfFrontFocusPath.push(id);
+  }else if(!mfFrontFocusPath.length)mfFrontFocusPath.push(id);
+  mfFrontFocusLater(el,preferred);
+}
+function mfFrontFocusRestore(id,fallback){
+  const target=mfFrontFocusOrigins.get(id)||fallback;
+  mfFrontFocusOrigins.delete(id);
+  if(mfFrontFocusPath[mfFrontFocusPath.length-1]===id)mfFrontFocusPath.pop();
+  const ticket=++mfFrontFocusTicket;
+  requestAnimationFrame(()=>{
+    if(ticket!==mfFrontFocusTicket||!mfFrontElementVisible(target)||typeof target.focus!=='function')return;
+    try{target.focus({preventScroll:true});}catch(e){target.focus();}
+  });
+}
+function mfFrontFocusReset(){
+  ++mfFrontFocusTicket;mfFrontFocusPath.length=0;mfFrontFocusOrigins.clear();
+}
+function mfPauseSetModal(active){
+  const overlay=$('pauseOverlay');if(!overlay)return;
+  if(active){
+    if(mfPauseModalActive)return;
+    mfPauseModalActive=true;mfPauseInertRestore.length=0;
+    for(const node of Array.from(document.body.children||[])){
+      if(node===overlay||MF_PAUSE_MODAL_EXEMPT.has(node.id)||node.tagName==='SCRIPT')continue;
+      mfPauseInertRestore.push({node,property:!!node.inert,attribute:node.hasAttribute&&node.hasAttribute('inert')});
+      node.inert=true;if(node.setAttribute)node.setAttribute('inert','');
+    }
+  }else{
+    if(!mfPauseModalActive)return;
+    mfPauseModalActive=false;
+    for(const prior of mfPauseInertRestore){
+      if(!prior.node||prior.node.isConnected===false)continue;
+      prior.node.inert=prior.property;
+      if(prior.attribute){if(prior.node.setAttribute)prior.node.setAttribute('inert','');}
+      else if(prior.node.removeAttribute)prior.node.removeAttribute('inert');
+    }
+    mfPauseInertRestore.length=0;
+  }
+}
+function mfPauseHigherModalVisible(){
+  for(const id of ['accDlg','apConfirmOverlay','apOverlay','dispatch'])if(mfFrontElementVisible($(id)))return true;
+  return false;
+}
+function mfPauseFocusable(){
+  const overlay=$('pauseOverlay');if(!overlay||!overlay.querySelectorAll)return [];
+  return Array.from(overlay.querySelectorAll('button:not(:disabled),[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])'))
+    .filter(mfFrontElementVisible);
+}
+function mfPauseTrapKeydown(ev){
+  const overlay=$('pauseOverlay');
+  if(!paused||!mfFrontElementVisible(overlay)||mfPauseHigherModalVisible())return;
+  const controls=mfPauseFocusable();if(!controls.length)return;
+  if((ev.key==='Enter'||ev.key===' ')&&!overlay.contains(ev.target)){
+    ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();
+    controls[0].focus({preventScroll:true});return;
+  }
+  if(ev.key!=='Tab')return;
+  const first=controls[0],last=controls[controls.length-1],active=document.activeElement;
+  if(ev.shiftKey&&(active===first||!overlay.contains(active))){
+    ev.preventDefault();ev.stopPropagation();last.focus({preventScroll:true});
+  }else if(!ev.shiftKey&&(active===last||!overlay.contains(active))){
+    ev.preventDefault();ev.stopPropagation();first.focus({preventScroll:true});
+  }
+}
+function mfOpenPause(){
+  if(!running)return;
+  const active=document.activeElement;
+  if(active&&active!==document.body&&active.isConnected!==false)mfPauseFocusOrigin=active;
+  paused=true;$('pauseOverlay').style.display='flex';
+  mfPauseSetModal(true);
+  const target=$('resumeBtn');requestAnimationFrame(()=>{if(mfFrontElementVisible($('pauseOverlay'))&&target)target.focus({preventScroll:true});});
+}
+function mfClosePause(){
+  paused=false;mfPauseSetModal(false);$('pauseOverlay').style.display='none';
+  let target=mfPauseFocusOrigin;
+  if(!target||target.isConnected===false||!mfFrontElementVisible(target))target=$('menuBtn');
+  mfPauseFocusOrigin=null;
+  requestAnimationFrame(()=>{if(mfFrontElementVisible(target)&&target)target.focus({preventScroll:true});});
+}
+/* STAGE8_FRONT_FOCUS_END */
 /* THE DIORAMA IS THE MENU'S BACKGROUND, AND NOTHING ELSE'S.
    Every other front screen — War Room, Development, Operations, Armory, the
    Dossier, the store, Settings — is an opaque full-screen panel. Behind them
@@ -1906,6 +2037,8 @@ function hideFrontScreens(except){
   const ap=$('apOverlay'); if(ap) ap.style.display='none';
   const apc=$('apConfirmOverlay'); if(apc) apc.style.display='none';
   if(except===undefined){
+    mfFrontFocusReset();
+    mfPauseSetModal(false);
     attractVisible=false;   // bare call = dropping into a match
     if(document.body&&document.body.dataset){
       document.body.dataset.frontScreen='';
@@ -1916,6 +2049,7 @@ function hideFrontScreens(except){
 }
 function showFrontScreen(id){
   const el=frontRouteTarget(id);if(!el)return false;
+  const from=document.body.dataset.frontScreen||'';
   hideFrontScreens(id);
   el.style.display='flex';
   document.body.dataset.frontScreen=id;
@@ -1926,6 +2060,7 @@ function showFrontScreen(id){
      player lands back here — which is the moment they are looking for it. */
   if(id==='startScreen'&&typeof sessRenderResume==='function') sessRenderResume();
   if(typeof audMusicEnterScreen==='function') audMusicEnterScreen(id);
+  mfFrontFocusRoute(from,id,el);
   return true;
 }
 /* Match overlays are not front screens: opening one must keep match music and
@@ -1948,7 +2083,7 @@ function closeMatchPopup(id){
 function openSettings(from){
   settingsFrom=from;
   renderSettings();
-  if(from==='pause') $('pauseOverlay').style.display='none';
+  if(from==='pause'){mfPauseSetModal(false);$('pauseOverlay').style.display='none';}
   showFrontScreen('settingsScr');
 }
 let nativeBackExitAt=0;
@@ -2005,7 +2140,7 @@ function handleNativeBack(AppPlugin){
     const f=$('formBtn');if(f)f.classList.remove('on');toast('Formation placement cancelled');sfx('ui');return;
   }
   if(typeof boxMode!=='undefined'&&boxMode){boxMode=false;const b=$('boxBtn');if(b)b.classList.remove('on');sfx('ui');return;}
-  if(running){paused=true;$('pauseOverlay').style.display='flex';sfx('ui');return;}
+  if(running){mfOpenPause();sfx('ui');return;}
   const now=performance.now();
   if(now-nativeBackExitAt<1800){if(AppPlugin&&AppPlugin.exitApp)AppPlugin.exitApp();return;}
   nativeBackExitAt=now;toast('Press Back again to exit MASSFRONT');
@@ -2045,7 +2180,7 @@ function returnToMainMenu(){
   }
   /* Same contract for an authored campaign mission's modifier set. */
   if(typeof storyCampaignRestoreMods==='function') storyCampaignRestoreMods();
-  paused=false; running=false; matchLive=false;
+  paused=false;mfPauseSetModal(false);mfPauseFocusOrigin=null;running=false;matchLive=false;
   if(typeof audMusicLeaveMatch==='function') audMusicLeaveMatch();
   if(typeof resetInputState==='function') resetInputState();
   /* Do not leave an old front-end screen in the DOM hit-test stack. All menu
@@ -2146,6 +2281,10 @@ function mfLoadScreenFill(){
   setT('loadSub',subs[(Math.random()*subs.length)|0]);
 }
 function wire(){
+  if(typeof window!=='undefined'&&!window.__mfPauseFocusTrapReady){
+    window.__mfPauseFocusTrapReady=true;
+    window.addEventListener('keydown',mfPauseTrapKeydown,true);
+  }
   document.querySelectorAll('.hudDeckBtn').forEach(b=>mfBindTap(b,e=>{
     e.preventDefault(); setHudDeck(b.dataset.deck);
   }));
@@ -2393,7 +2532,7 @@ function wire(){
       if(typeof mfFlowLayout==='function') mfFlowLayout();
     }));
   });
-  $('spdBtn').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('spdBtn'),()=>{
     gameSpeed=gameSpeed===1?1.5:gameSpeed===1.5?2:1;
     $('spdBtn').textContent=gameSpeed+'×';
     toast('⏩ Game speed '+gameSpeed+'×'); sfx('ui');
@@ -2417,8 +2556,8 @@ function wire(){
       else if(typeof continueToNextMap==='function') continueToNextMap();
     });
   }
-  mfBindTap($('menuBtn'),()=>{ if(!running) return; paused=true; $('pauseOverlay').style.display='flex'; });
-  mfBindTap($('resumeBtn'),()=>{ paused=false; $('pauseOverlay').style.display='none'; });
+  mfBindTap($('menuBtn'),mfOpenPause);
+  mfBindTap($('resumeBtn'),mfClosePause);
   mfBindTap($('quitBtn'),()=>{
     const go=()=>returnToMainMenu();
     if(typeof accConfirm==='function') accConfirm('Abandon this operation? The unfinished match grants no mission payout.',go);
@@ -2427,7 +2566,12 @@ function wire(){
   mfBindTap($('pauseSettings'),()=>{ openSettings('pause'); });
   mfBindTap($('setBack'),()=>{
     $('settingsScr').style.display='none'; sfx('ui');
-    if(settingsFrom==='pause') $('pauseOverlay').style.display='flex';
+    if(settingsFrom==='pause'){
+      $('pauseOverlay').style.display='flex';
+      mfPauseSetModal(true);
+      delete document.body.dataset.frontScreen;
+      mfFrontFocusRestore('settingsScr',$('pauseSettings')||$('resumeBtn'));
+    }
     else showFrontScreen('startScreen');
   });
   // ---- profile (account) screen ----
@@ -2485,7 +2629,7 @@ function wire(){
   };
   $('profName').addEventListener('change',profNameCommit);
   $('profName').addEventListener('blur',profNameCommit);
-  $('profNew').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('profNew'),()=>{
     if(PROFILES.list.length>=6){ toast('Profile limit reached (6)'); return; }
     const id='p'+(++PROFILES.seq);
     PROFILES.list.push({id,name:'Commander '+PROFILES.seq,emblem:EMBLEMS[PROFILES.list.length%EMBLEMS.length]});
@@ -2515,13 +2659,13 @@ function wire(){
     profSave(); switchProfile(PROFILES.list[0].id); renderProfile(); sfx('ui');
     toast('Profile deleted');
   });
-  $('upBtn').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('upBtn'),()=>{
     if(openBld<0) return;
     const err=startUpgrade(openBld);
     if(err) toast(err); else sfx('ui');
     renderProdMenu();
   });
-  $('bp_fire').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('bp_fire'),()=>{
     if(openBld<0) return;
     const B=blds[openBld];
     if(B.type!=='nova'||B.cool>0) return;
@@ -2530,14 +2674,14 @@ function wire(){
     toast('☄ NOVA ARMED — tap anywhere on the map (or minimap-jump first)');
     sfx('alarm');
   });
-  $('bp_prio').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('bp_prio'),()=>{
     if(openBld<0) return;
     const B=blds[openBld];
     B.prio=((B.prio||0)+1)%3;
     renderBldPanel(); sfx('ui');
     toast('🎯 '+BT[B.type].name+' targeting: '+['nearest enemy','air first','strongest first'][B.prio]);
   });
-  $('bp_up').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('bp_up'),()=>{
     if(openBld<0) return;
     const err=startUpgrade(openBld);
     if(err) toast(err); else sfx('ui');
@@ -2577,16 +2721,16 @@ function wire(){
     toast('♻ '+BT[B.type].name+' recycled · +'+refund+' mass');
     closeMenus(); sfx('ui');
   });
-  $('armyBtn').addEventListener('pointerdown',()=>{ selectArmy(); });
-  if($('idleBuilderBtn')) $('idleBuilderBtn').addEventListener('pointerdown',()=>{ selectIdleBuilders(); });
+  mfBindNativePress($('armyBtn'),()=>{ selectArmy(); });
+  if($('idleBuilderBtn')) mfBindNativePress($('idleBuilderBtn'),()=>{ selectIdleBuilders(); });
   // ---- tactics bar: patrol / hold / formation ----
-  $('patrolBtn').addEventListener('pointerdown',()=>{togglePatrolPlanner();});
+  mfBindNativePress($('patrolBtn'),()=>{togglePatrolPlanner();});
   /* Keep the control alive until finger-up. Hiding it on pointerdown exposed
      the platoon row underneath to the same release, producing a ghost P1/P2
      recall toast immediately after an otherwise successful deployment. */
-  $('deployBtn').addEventListener('pointerup',ev=>{ ev.stopPropagation(); deployCarrier(); });
-  $('rotL').addEventListener('pointerdown',()=>{ yawTarget-=Math.PI/4; sfx('ui'); });
-  $('rotR').addEventListener('pointerdown',()=>{ yawTarget+=Math.PI/4; sfx('ui'); });
+  mfBindNativePress($('deployBtn'),ev=>{ ev.stopPropagation(); deployCarrier(); },'pointerup');
+  mfBindNativePress($('rotL'),()=>{ yawTarget-=Math.PI/4; sfx('ui'); });
+  mfBindNativePress($('rotR'),()=>{ yawTarget+=Math.PI/4; sfx('ui'); });
   /* OTA patches can run against an older installed HTML shell.  Create the
      new camera controls when that shell predates them instead of crashing the
      entire input binding pass on a missing element. */
@@ -2598,13 +2742,13 @@ function wire(){
   };
   const zoomInControl=ensureCamControl('zoomIn','＋','Near','tiltBtn');
   const zoomOutControl=ensureCamControl('zoomOut','−','Far','rotR');
-  zoomInControl.addEventListener('pointerdown',()=>{
+  mfBindNativePress(zoomInControl,()=>{
     camFollow=-1;if(typeof camUser==='function')camUser();zoomBy(1.28);toast('CAMERA · ZOOM IN');sfx('ui');
   });
-  zoomOutControl.addEventListener('pointerdown',()=>{
+  mfBindNativePress(zoomOutControl,()=>{
     camFollow=-1;if(typeof camUser==='function')camUser();zoomBy(.78);toast('CAMERA · ZOOM OUT');sfx('ui');
   });
-  $('tiltBtn').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('tiltBtn'),()=>{
     /* Four framing presets: overhead for reading a base layout, through to a
        low chase angle for watching a battle line. */
     pitchIdx=(pitchIdx+1)%4;
@@ -2614,7 +2758,7 @@ function wire(){
     toast(['⛰ View: straight down','⛰ View: high','⛰ View: standard','⛰ View: low'][pitchIdx]);
     sfx('ui');
   });
-  $('holdBtn').addEventListener('pointerdown',()=>{ orderHold(); });
+  mfBindNativePress($('holdBtn'),()=>{ orderHold(); });
   // control groups: tap = recall, hold = save
   for(let n=0;n<4;n++){
     const btn=$('grpBtn'+(n+1)); if(!btn) continue;
@@ -2628,27 +2772,27 @@ function wire(){
       if(!saved&&running){const now=performance.now(),focus=now-lastTap<430;lastTap=now;recallGroup(n,focus);}
       saved=false;
     };
-    btn.addEventListener('pointerup',fin);
+    mfBindNativePress(btn,fin,'pointerup');
     btn.addEventListener('pointercancel',()=>clearTimeout(saveT));
   }
-  $('formBtn').addEventListener('pointerdown',()=>{armFormationOrder();});
-  $('rallyBtn').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('formBtn'),()=>{armFormationOrder();});
+  mfBindNativePress($('rallyBtn'),()=>{
     if(openBld<0) return;
     armRally=openBld;
     closeMenus();
     toast('⚑ Tap the map to place the rally flag');
     sfx('ui');
   });
-  $('boxBtn').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('boxBtn'),()=>{
     boxMode=!boxMode; $('boxBtn').classList.toggle('on',boxMode);
     if(boxMode) toast('⬚ Drag on the map to box-select your units');
   });
-  $('stopBtn').addEventListener('pointerdown',()=>{ stopSelected(); });
-  $('atkAlert').addEventListener('pointerdown',()=>{ jumpToAlert(); });
-  $('waveAlert').addEventListener('pointerdown',()=>{ jumpToWaveWarning(); });
-  $('moveBtn').addEventListener('pointerdown',()=>{ toggleMoveMode(); });
-  $('clearBtn').addEventListener('pointerdown',()=>{ clearSel(); updateSelInfo(); sfx('ui'); });
-  $('buildBtn').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('stopBtn'),()=>{ stopSelected(); });
+  mfBindNativePress($('atkAlert'),()=>{ jumpToAlert(); });
+  mfBindNativePress($('waveAlert'),()=>{ jumpToWaveWarning(); });
+  mfBindNativePress($('moveBtn'),()=>{ toggleMoveMode(); });
+  mfBindNativePress($('clearBtn'),()=>{ clearSel(); updateSelInfo(); sfx('ui'); });
+  mfBindNativePress($('buildBtn'),()=>{
     if(placing) cancelPlace();                 // never overlap menu with placement mode
     const bm=$('buildMenu');
     if(bm.style.display==='block'){ bm.style.display='none'; }
@@ -2658,27 +2802,27 @@ function wire(){
     }
     sfx('ui');
   });
-  $('placeOk').addEventListener('pointerdown',confirmPlace);
-  $('placeNo').addEventListener('pointerdown',()=>{ cancelPlace(); sfx('ui'); });
-  $('modeBtn').addEventListener('pointerdown',e=>{ e.preventDefault(); cycleSelectedModes(); });
-  $('placeRotL').addEventListener('pointerdown',e=>{ e.preventDefault(); rotatePlacement(-1); });
-  $('placeRotR').addEventListener('pointerdown',e=>{ e.preventDefault(); rotatePlacement(1); });
-  $('repeatBtn').addEventListener('pointerdown',()=>{
+  mfBindNativePress($('placeOk'),confirmPlace);
+  mfBindNativePress($('placeNo'),()=>{ cancelPlace(); sfx('ui'); });
+  mfBindNativePress($('modeBtn'),e=>{ e.preventDefault(); cycleSelectedModes(); });
+  mfBindNativePress($('placeRotL'),e=>{ e.preventDefault(); rotatePlacement(-1); });
+  mfBindNativePress($('placeRotR'),e=>{ e.preventDefault(); rotatePlacement(1); });
+  mfBindNativePress($('repeatBtn'),()=>{
     if(openBld<0) return;
     const B=blds[openBld]; B.repeat=!B.repeat;
     $('repeatBtn').textContent='REPEAT: '+(B.repeat?'ON':'OFF');
     $('repeatBtn').classList.toggle('on',B.repeat); sfx('ui');
   });
-  $('abOver').addEventListener('pointerdown',()=>{ if(aiming===0){aiming=-1;return;} tryAbility(0); });
-  $('abHeal').addEventListener('pointerdown',()=>tryAbility(1));
-  $('abRage').addEventListener('pointerdown',()=>tryAbility(2));
-  $('abLance').addEventListener('pointerdown',()=>tryAbility(3));
-  if($('abEmp')) $('abEmp').addEventListener('pointerdown',()=>tryAbility(4));
-  if($('abJump')) $('abJump').addEventListener('pointerdown',()=>tryCommanderJump());
-  $('abBarrage').addEventListener('pointerdown',()=>tryArtilleryBarrage());
-  if($('abClass')) $('abClass').addEventListener('pointerdown',()=>tryClassAbility());
-  $('abHero').addEventListener('pointerdown',()=>selectHero());
-  if($('baseFindBtn')) $('baseFindBtn').addEventListener('pointerdown',()=>toggleBaseFinder());
+  mfBindNativePress($('abOver'),()=>{ if(aiming===0){aiming=-1;return;} tryAbility(0); });
+  mfBindNativePress($('abHeal'),()=>tryAbility(1));
+  mfBindNativePress($('abRage'),()=>tryAbility(2));
+  mfBindNativePress($('abLance'),()=>tryAbility(3));
+  if($('abEmp')) mfBindNativePress($('abEmp'),()=>tryAbility(4));
+  if($('abJump')) mfBindNativePress($('abJump'),()=>tryCommanderJump());
+  mfBindNativePress($('abBarrage'),()=>tryArtilleryBarrage());
+  if($('abClass')) mfBindNativePress($('abClass'),()=>tryClassAbility());
+  mfBindNativePress($('abHero'),()=>selectHero());
+  if($('baseFindBtn')) mfBindNativePress($('baseFindBtn'),()=>toggleBaseFinder());
   mfBindTap($('heroBar'),()=>{
     selectHero();
     if(heroIdx>=0) toast('★ COMMANDER — selected and centered');

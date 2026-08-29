@@ -41,9 +41,12 @@
   --fU:'Rajdhani','Segoe UI',Roboto,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
-html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html{font-size:15px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html[data-mf-text-scale="125"]{font-size:18.75px}
+html[data-mf-text-scale="150"]{font-size:22.5px}
+html[data-mf-text-scale="200"]{font-size:30px}
 html,body{width:100%;height:100%;height:100dvh;min-height:100dvh;overflow:hidden;background:var(--bg);font-family:var(--fU);color:#cfe8ff;
-  position:fixed;inset:0;overscroll-behavior:none;touch-action:none;font-size:15px}
+  position:fixed;inset:0;overscroll-behavior:none;touch-action:none;font-size:1rem}
 /* No filter on the canvas here, on purpose. The grade is owned by
    applySettings() (SCREEN_GRADES in src/game/meta.js) and defaults to none.
    A baked-in contrast(1.17) saturate(1.20) was a second grade stacked on the
@@ -1047,7 +1050,7 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
   padding:9px 16px;border-radius:12px;font-size:13px;font-weight:800;letter-spacing:.4px;
   background:linear-gradient(180deg,#5c1414,#3a0d0d);color:#ffd9d0;
   border:1px solid #ff6a55;box-shadow:0 4px 18px rgba(0,0,0,.55),0 0 22px rgba(255,80,60,.35);
-  animation:atkPulse 1.1s ease-in-out infinite;pointer-events:auto}
+  animation:atkPulse 1.1s ease-in-out infinite;pointer-events:auto;appearance:none;font-family:var(--fU);cursor:pointer}
 #waveAlert{position:fixed;left:50%;transform:translateX(-50%);top:calc(var(--sat) + 108px);z-index:59;
   min-width:min(82vw,310px);min-height:34px;padding:5px 11px;border:1px solid #ffb64b;border-radius:10px;
   background:linear-gradient(180deg,rgba(80,45,10,.97),rgba(40,21,6,.98));color:#fff3c5;
@@ -3135,3 +3138,71 @@ body.mfMenuOpen #cmdrTx,body.menuMode #cmdrTx{display:none!important}
   .cMilestone{grid-template-columns:92px minmax(0,1fr);padding:7px}.cMilestoneRank i{font-size:16px}
   .devProgress{align-items:flex-start;flex-wrap:wrap}.devProgress>span:last-child{flex:1 1 150px}
 }
+
+/* ---------- ACCESSIBLE INTERFACE TEXT SCALE -------------------------------
+   This is deliberately typography-only. Browser/page zoom changes canvas and
+   pointer geometry; these rem values leave the battlefield camera and every
+   authored 44/48px touch target alone while scaling menu copy and status text.
+   At larger steps the dense rails wrap or scroll instead of clipping. */
+.mbtn{font-size:1.0667rem}.gbtn{font-size:.9rem}.gbtn .gEm{font-size:1.1333rem}
+.sbtn{font-size:.6667rem}.settingsNav .screenTabBtn,.setupTabBtn,.hudDeckBtn{font-size:.6rem}
+.sbtn .sEmj{font-size:1.1333rem}.screenTabBtn .tabGlyph{font-size:.9333rem}
+.dbtn{font-size:.9333rem}.tabBtn{font-size:.6667rem}
+.subtitle{font-size:.8rem}
+.sTx{min-width:0}.sTx b{font-size:.9333rem}.sTier,.sDs{font-size:.7667rem}.sBuy{font-size:.8667rem}
+.sHead{font-size:.6667rem}.setGroupHd{font-size:.7rem}.setGroupDs,.secHint{font-size:.7667rem}
+.subMenuHead h2,.setupHead h2{font-size:clamp(1.0667rem,4.7vw,1.3333rem)}.subMenuHead span{font-size:.6667rem}
+.setupContext{font-size:.6667rem}
+#armory h2{font-size:1.3333rem}#armory .armorySub{font-size:.8667rem}
+
+/* Critical battlefield readouts scale, but the dense command-deck labels do
+   not: enlarging those would reduce rather than improve target usability. */
+#topbar{font-size:clamp(.8rem,1.6vmin,1.0667rem)}
+.res b{font-size:clamp(.8667rem,1.8vmin,1.2rem)}.res .rate{font-size:.7333rem}
+#toast{font-size:.9333rem}#toast.pickupReward b{font-size:.8rem}#toast.pickupReward span{font-size:.8333rem}
+#toast.noticeBox{font-size:.7rem}#toast.noticeBox::before{font-size:.6rem}
+#toast.noticeBox.radioNotice b{font-size:.6rem}#toast.noticeBox.radioNotice span{font-size:.7333rem}
+#goalBar{font-size:.7667rem}#infMeter{font-size:.7333rem}
+#hazChip{font-size:.6667rem}#hazChip .hazEm{font-size:.8667rem}
+#atkAlert{font-size:.8667rem}#waveAlert b{font-size:.7rem}#waveAlert span{font-size:.6rem}
+#selInfo{font-size:.8667rem}#selInfo .selIntelCopy b{font-size:.6rem}
+#heroRankEm{font-size:.9333rem}#heroLvlTxt{font-size:.7333rem}
+#cmdrTxWho{font-size:.6667rem}#cmdrTxRank,#cmdrTxTag{font-size:.5667rem}#cmdrTxLine{font-size:.8333rem}
+
+.overlay h1:focus-visible,.overlay h2:focus-visible{outline:2px solid #ffe08a;outline-offset:5px}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .sItem{align-items:flex-start;flex-wrap:wrap}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .sBuy{margin-left:auto}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;touch-action:pan-x}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav .screenTabBtn{flex:0 0 4.2667rem;min-width:4.2667rem}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #topbar{overflow-x:auto;scrollbar-width:none;touch-action:pan-x}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #topbar::-webkit-scrollbar,
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav::-webkit-scrollbar{display:none}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .res{flex:0 0 auto}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #goalBar{width:max-content;max-width:calc(100vw - var(--sal) - var(--sar) - 20px);min-height:30px;max-height:none;height:auto;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;justify-content:center;text-align:center}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #infMeter,
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #hazChip{width:max-content;max-width:min(56vw,18rem);min-height:32px;max-height:none;height:auto;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.2}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #hazChip .hazNm{overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #toast,
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #toast.noticeBox,
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mfCombatHot #toast.noticeBox,
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.uiPlacing #toast.noticeBox{max-height:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #atkAlert,
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #waveAlert{max-width:calc(100vw - var(--sal) - var(--sar) - 20px);max-height:none;height:auto;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #waveAlert b,
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #waveAlert span{display:block;margin-left:0}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #selInfo{max-width:92%}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #selInfo .selIntelCopy span{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) .setupHead{align-items:flex-start;flex-wrap:wrap}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) .setupContext{max-width:100%;white-space:normal;text-align:left;overflow:visible;text-overflow:clip}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) .optGrid{grid-template-columns:1fr}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #wcRow,
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #infMeter,
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #hazChip,
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #heroBar{top:calc(var(--sat) + 126px)}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #atkAlert,
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #waveAlert{top:calc(var(--sat) + 196px)}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #waveAlert.withAttack{top:calc(var(--sat) + 260px)}
+html[data-mf-text-scale="200"] .menuGrid,
+html[data-mf-text-scale="200"] .commanderGrid{grid-template-columns:1fr}
+html[data-mf-text-scale="200"] .menuStrip{grid-template-columns:repeat(2,1fr)}

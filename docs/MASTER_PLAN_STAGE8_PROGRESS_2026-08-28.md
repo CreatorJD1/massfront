@@ -1,9 +1,10 @@
 # MASSFRONT master plan — Stage 8 progress · 2026-08-28
 
-Status: **IN PROGRESS — browser accessibility and save-transfer acceptance
-complete** on `cursor/strip-mass-node-bloom`. This slice started from local Main
-Source tip `2d882397`; the local checkout remains the sole integration authority
-and dated folders remain transfer inputs only.
+Status: **IN PROGRESS — the local browser closure is implemented, while physical-
+device, commander-art, human-comprehension, and historical terrain-baseline
+acceptance remain open** on `cursor/strip-mass-node-bloom`. This slice started
+from local Main Source tip `2d882397`; the local checkout remains the sole
+integration authority and dated folders remain transfer inputs only.
 
 Stage 7 engineering is complete. Its remaining unfamiliar-player comprehension
 check is human acceptance, not an automation gap, and still blocks release
@@ -97,7 +98,7 @@ collected.
   The project owner visually reviewed and approved the captured set on
   2026-08-28; `.tmp/stage8-team-identification/report.json` is the bounded local
   machine-evidence report.
-- The shared offline diagnostic boundary now fails closed across all 12 current
+- The shared offline diagnostic boundary now fails closed across all 13 current
   browser lanes. Before navigation it blocks non-loopback HTTP and WebSocket
   traffic, bypasses service workers through Chromium CDP, blocks new service
   workers where the lane owns its context, verifies both supported offline
@@ -122,6 +123,37 @@ collected.
   final-release detection, and cleanup pass in the temporary-repository test.
   Interrupted same-host leases have a PID-verified `clear-stale` path instead
   of being deleted or stolen.
+- Interface Text Size now persists independently at 100%, 125%, 150%, or 200%.
+  Menus and critical HUD labels scale through rem-based layout without browser
+  zoom or enlarged tactical hit geometry. Native battle controls provide
+  exactly-once Enter/Space activation while retaining pointer timing, disabled
+  controls cannot activate through assistive-technology click fallback, and
+  front screens, Back navigation, Pause, and Resume explicitly preserve focus
+  ownership. The guarded accessibility probe covers text scale, focus/Back
+  hierarchy, contrast and forced-colors behavior, muted monochrome alarms,
+  offline isolation, source identity, and hardware-GPU rendering.
+- GL recovery acceptance now separates diagnostic lease/re-entrancy checks from
+  the production test. The production page must traverse the real Standard-match
+  UI through DEPLOY, prove an active unpaused match, lose and restore the actual
+  WebGL context, and demonstrate owned pause/release, continued RAF service,
+  held-then-advancing simulation time, automatic draw activity, fresh GL and
+  terrain resources, and a non-empty readback. The report is invalid if the
+  source, packaged runtime, branch, HEAD, or guarded completion state changes.
+- New desktop performance evidence is isolated under `tmp/perf-lab/current/`;
+  preserved legacy or rejected JSON cannot contaminate the current report.
+  Scenario cleanup is bounded, unit counts are restricted to the declared test
+  matrix, and console errors fail before, during, and after sampling. The current
+  runtime supports four seats, so the valid stress set is 1v1, 1v2, and 1v3 at
+  500 units per faction; a five-seat 1v4 result must not be invented.
+  Contract-valid capture is distinct from performance success: the local desktop
+  budget is frame-time p99 at or below 33.3 ms, while minimum-device sustained
+  acceptance remains a separate physical-device gate.
+- Terrain acceptance now records source/runtime fingerprints, fixed artifact
+  hashes, checkpoints, and the exact baseline-file hash. It rejects a baseline
+  inside its own bounded output directory. Without a valid historical baseline,
+  it may capture current absolute sharpness and shoreline evidence but must exit
+  as `INCOMPLETE`; it cannot claim the historical 30–50% high-frequency or
+  shoreline-reduction comparisons passed.
 
 Deterministic contracts:
 
@@ -130,6 +162,11 @@ Deterministic contracts:
 - `node tools/test-stage8-commander-entry-clock.mjs`
 - `node tools/test-stage8-save-transfer.mjs`
 - `node tools/test-stage8-team-identification.mjs`
+- `node tools/test-stage8-accessibility-contract.mjs`
+- `node tools/test-stage7-input-navigation.mjs`
+- `node tools/test-gl-probe-recovery-contract.mjs`
+- `node tools/test-perf-terrain-evidence-contract.mjs`
+- `node tools/perf-lab/perf-lab-self-test.mjs`
 - `node tools/test-offline-network-isolation.mjs`
 - `node tools/test-stage8-offline-diagnostics.mjs`
 - `node tools/test-save-persist.mjs`
@@ -163,10 +200,16 @@ representative modules are visually inspected.
 The final result for this slice is the last run after all source and document
 writers stop:
 
-1. `npm run gate`
-2. `node tools/probe-commander-hud.mjs --json`
-3. `node tools/capture-interface-matrix.mjs stage8-audio-accessibility-20260828-quiescent-v4`
-4. `node tools/interface-audit/audit-interface-matrix.mjs .tmp/stage8-audio-accessibility-20260828-quiescent-v4/report.json`
+1. Commit the complete local closure so every evidence report binds one stable
+   branch and HEAD; do not edit tracked files during or after the capture.
+2. `npm run gate`
+3. `node tools/probe-stage8-accessibility.mjs`
+4. `node tools/verify-gl-probe-recovery.mjs`
+5. `node tools/verify-perf-terrain-acceptance.mjs` — expected `INCOMPLETE` until
+   an owner-approved historical baseline exists; current absolute evidence is
+   still useful and must not be relabeled `PASS`.
+6. Run the isolated 1v1, 1v2, and 1v3 desktop performance probes sequentially
+   at 500 units per faction, then generate the current-lane report.
 
 Evidence counts only when the report binds the current HEAD, dirty-content
 fingerprint, source runtime, hardware GPU, and unchanged completion state.
@@ -188,12 +231,16 @@ and only when its own report is `PASS` with matching start/end fingerprints.
   None may be promoted by reusing the shaded legacy profile.
 - A current, accepted 1v1/1v2/1v3 performance set and minimum physical-device
   sustained-battle result. The five-seat 1v4 target is unsupported by the
-  current four-seat runtime and must not be mislabeled as tested.
-- Current GL recovery, terrain comparison, broader high-contrast,
-  non-color/non-audio alarm, keyboard/focus, large-text, and native Android Back
-  acceptance. Tactical team-identification small-phone shapes, health bars,
-  restored faction livery, and fog/radar behavior have completed their guarded
-  browser visual inspection.
+  current four-seat runtime and must not be mislabeled as tested. Desktop
+  evidence does not substitute for the physical-device sustained result.
+- Historical terrain-comparison acceptance remains open until an owner-approved
+  baseline is supplied. The current probe must report `INCOMPLETE` without it.
+  Tactical team-identification small-phone shapes, health bars, restored faction
+  livery, and fog/radar behavior have completed guarded browser visual review;
+  the new GL-recovery and broader accessibility probes count only when their
+  final guarded reports are `PASS` on the stable closure commit.
+- Native Android Back acceptance remains a physical-device requirement even
+  after the browser keyboard/focus/Back contract passes.
 - Native Files/Share physical-device acceptance for `.mfsave` remains open.
   Actual Chromium download/re-selection is accepted by
   `tools/probe-stage8-save-transfer.mjs`; its current PASS report is

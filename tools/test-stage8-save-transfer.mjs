@@ -64,6 +64,10 @@ const productionPersistence=[
 const productionMetaFresh=extractFunction(metaSource,'metaFresh');
 const productionMetaHarden=extractFunction(metaSource,'metaHarden');
 const productionCoreGrantId=extractFunction(metaSource,'metaCoreGrantId');
+const textScaleStart=metaSource.indexOf('const MF_TEXT_SCALE_STEPS=');
+const textScaleEnd=metaSource.indexOf('const DEF_SETTINGS=',textScaleStart);
+assert.ok(textScaleStart>=0&&textScaleEnd>textScaleStart,'missing production text-scale hardening block');
+const productionTextScale=metaSource.slice(textScaleStart,textScaleEnd);
 const migrationStart=metaSource.indexOf('const ARMORY_RETIRED_OVERLAPS');
 const migrationEnd=metaSource.indexOf('const META_DEF',migrationStart);
 assert.ok(migrationStart>=0&&migrationEnd>migrationStart,'missing production Armory migration block');
@@ -180,7 +184,7 @@ function makeHarness(options={}){
     'const PROF_KEY='+JSON.stringify(PROF_KEY)+';\n'+
     "function metaKey(){return 'massfront_meta_'+PROFILES.active;}\n"+
     (options.productionMigration?productionMigration+'\n':productionCoreGrantId+'\n')+
-    productionMetaFresh+'\n'+productionMetaHarden+'\nlet metaSaveWarned=false;\n'+productionPersistence,
+    productionTextScale+'\n'+productionMetaFresh+'\n'+productionMetaHarden+'\nlet metaSaveWarned=false;\n'+productionPersistence,
     ctx,{filename:'src/game/meta.js#stage8-save-persistence'});
   vm.runInContext(accountSource+`\n;globalThis.__stage8SaveTest={
     sync:function(){return JSON.parse(JSON.stringify(SYNC));},
@@ -242,7 +246,7 @@ for(const [color,expected] of [['violet','violet'],['crimson','azure']]){
     DEF_SETTINGS:{},COLORS:{azure:{},emerald:{},gold:{},violet:{},frost:{}},
     mfGuessMobile:()=>false,mfGpuTier:()=>null,Math,Date};
   vm.createContext(colorCtx);
-  vm.runInContext(productionCoreGrantId+'\n'+productionMetaHarden+'\nmetaHarden();',colorCtx);
+  vm.runInContext(productionTextScale+'\n'+productionCoreGrantId+'\n'+productionMetaHarden+'\nmetaHarden();',colorCtx);
   assert.equal(colorCtx.META.color,expected,'production hardening returned the wrong commander color for '+color);
 }
 
@@ -255,7 +259,7 @@ for(const [color,expected] of [['violet','violet'],['crimson','azure']]){
     settings:{gfxOver:{},gfxPhoneMed:1,gfxGpuTier:1}},DEF_SETTINGS:{},
     mfGuessMobile:()=>false,mfGpuTier:()=>null,Math,Date};
   vm.createContext(hardenCtx);
-  vm.runInContext(productionCoreGrantId+'\n'+productionMetaHarden+'\nmetaHarden();',hardenCtx);
+  vm.runInContext(productionTextScale+'\n'+productionCoreGrantId+'\n'+productionMetaHarden+'\nmetaHarden();',hardenCtx);
   const repaired=plain(hardenCtx.META.coreGrantPending);
   assert.equal(repaired.length,80,'career hardening discarded valid pending grants');
   assert.equal(new Set(repaired.map(grant=>grant.idemKey)).size,80,'repaired pending grants did not receive stable unique ids');

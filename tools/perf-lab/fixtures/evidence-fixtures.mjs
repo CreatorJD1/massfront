@@ -1,33 +1,105 @@
-import { PERF_EVIDENCE_SCHEMA, PERF_EXECUTION_PATH, telemetryStats } from '../evidence-contract.mjs';
+import {
+  PERF_EVIDENCE_SCHEMA,
+  PERF_EXECUTION_PATH,
+  deriveStage8PerformanceGate,
+  telemetryStats
+} from '../evidence-contract.mjs';
 
 const HASH_A = 'a'.repeat(64);
 const HASH_B = 'b'.repeat(64);
 const HEAD = 'c'.repeat(40);
+const FIXTURE_SCENARIOS = Object.freeze({
+  '1v1_duel_verdant': {
+    name: '1v1 Frontier Duel (fixture)',
+    seats: [
+      { faction: 'nova', team: 0, slot: -1 },
+      { faction: 'legion', team: 1, slot: 0 }
+    ]
+  },
+  '1v1_duel_megacity': {
+    name: '1v1 Urban Warfare (fixture)',
+    seats: [
+      { faction: 'nova', team: 0, slot: -1 },
+      { faction: 'syndicate', team: 1, slot: 0 }
+    ]
+  },
+  '1v2_flank_arctic': {
+    name: '1v2 Glacial Containment (fixture)',
+    seats: [
+      { faction: 'nova', team: 0, slot: -1 },
+      { faction: 'legion', team: 1, slot: 0 },
+      { faction: 'syndicate', team: 1, slot: 1 }
+    ]
+  },
+  '1v3_crossfire_ashland': {
+    name: '1v3 Ashland Crossfire (fixture)',
+    seats: [
+      { faction: 'nova', team: 0, slot: -1 },
+      { faction: 'legion', team: 1, slot: 0 },
+      { faction: 'syndicate', team: 1, slot: 1 },
+      { faction: 'horde', team: 2, slot: 2 }
+    ]
+  }
+});
 
-export function validEvidenceFixture({ captureSha256 = HASH_A, runtimeFingerprint = HASH_A } = {}) {
-  const seatA = { key: 'nova|team:0|slot:-1|seat:0', faction: 'nova', team: 0, slot: -1, count: 500 };
-  const seatB = { key: 'legion|team:1|slot:0|seat:1', faction: 'legion', team: 1, slot: 0, count: 500 };
+export function validEvidenceFixture({
+  captureSha256 = HASH_A,
+  captureWidth = 2,
+  captureHeight = 2,
+  runtimeFingerprint = HASH_A,
+  scenarioId = '1v1_duel_verdant',
+  unitsPerFaction = 500,
+  frameSamples = [16, 17, 16],
+  scope = 'desktop-short-run'
+} = {}) {
+  const scenario = FIXTURE_SCENARIOS[scenarioId];
+  if (!scenario) throw new Error(`Unknown evidence fixture scenario: ${scenarioId}`);
+  const seats = scenario.seats.map((seat, index) => ({
+    ...seat,
+    key: `${seat.faction}|team:${seat.team}|slot:${seat.slot}|seat:${index}`,
+    count: unitsPerFaction
+  }));
+  const total = unitsPerFaction * seats.length;
+  const bySeat = {}, byFaction = {}, byTeam = {};
+  for (const seat of seats) {
+    bySeat[seat.key] = unitsPerFaction;
+    byFaction[seat.faction] = (byFaction[seat.faction] || 0) + unitsPerFaction;
+    byTeam[String(seat.team)] = (byTeam[String(seat.team)] || 0) + unitsPerFaction;
+  }
   const snapshot = {
-    total: 1000,
-    bySeat: { [seatA.key]: 500, [seatB.key]: 500 },
-    byFaction: { nova: 500, legion: 500 },
-    byTeam: { 0: 500, 1: 500 }
+    total,
+    bySeat,
+    byFaction,
+    byTeam
   };
+  const frameTimeMs = telemetryStats(frameSamples, { source: 'fixture' });
+  const visibleStart = Math.floor(total * 0.90);
+  const visibleEnd = Math.floor(total * 0.85);
+  const performanceGate = deriveStage8PerformanceGate({
+    scenarioId,
+    unitsPerFaction,
+    expectedSeats: seats,
+    expectedTotal: total,
+    acceptanceTotal: seats.length * 500,
+    frameTimeMs,
+    scope
+  });
   return {
     schema: PERF_EVIDENCE_SCHEMA,
-    evidenceStatus: 'accepted',
+    evidenceStatus: performanceGate.evidenceStatus,
     executionPath: PERF_EXECUTION_PATH,
-    scenarioId: 'fixture_1v1',
-    scenarioName: 'Fixture 1v1',
+    scenarioId,
+    scenarioName: scenario.name,
     theatre: 'fixture',
-    unitsPerFaction: 500,
-    factionsCount: 2,
-    evidenceClass: 'acceptance',
+    unitsPerFaction,
+    factionsCount: seats.length,
+    evidenceClass: performanceGate.evidenceClass,
     topology: {
-      status: 'supported', reason: null, seats: 2, seatCount: 2,
-      acceptanceUnitsPerFaction: 500, acceptanceTotal: 1000
+      status: 'supported', reason: null, seats: seats.length, seatCount: seats.length,
+      acceptanceUnitsPerFaction: 500, acceptanceTotal: seats.length * 500
     },
     timestamp: '2026-08-24T00:00:00.000Z',
+    performanceGate,
     runtimeGate: {
       deployedViaUi: true,
       playOfflineUsed: true,
@@ -44,8 +116,8 @@ export function validEvidenceFixture({ captureSha256 = HASH_A, runtimeFingerprin
       contextLossCount: 0
     },
     population: {
-      requestedPerFaction: 500,
-      expected: { seats: [seatA, seatB], total: 1000 },
+      requestedPerFaction: unitsPerFaction,
+      expected: { seats, total },
       attempted: structuredClone(snapshot),
       accepted: structuredClone(snapshot),
       postSettle: { ...structuredClone(snapshot), supported: true, unmatched: 0 }
@@ -82,26 +154,28 @@ export function validEvidenceFixture({ captureSha256 = HASH_A, runtimeFingerprin
       stage,
       file: `${stage}.png`,
       sha256: captureSha256,
+      width: captureWidth,
+      height: captureHeight,
       hudVisible: true,
-      authoritativeTotal: 1000,
-      byFaction: { nova: 500, legion: 500 },
-      byTeam: { 0: 500, 1: 500 }
+      authoritativeTotal: total,
+      byFaction: structuredClone(byFaction),
+      byTeam: structuredClone(byTeam)
     })),
     metrics: {
-      fpsEstimated: 60,
-      frameTimeMs: telemetryStats([16, 17, 16], { source: 'fixture' }),
+      fpsEstimated: Math.round((1000 / frameTimeMs.mean) * 10) / 10,
+      frameTimeMs,
       simPhaseMs: telemetryStats([2, 2.2], { source: 'fixture' }),
       renderCpuMs: telemetryStats([4, 4.2], { source: 'fixture' }),
       gpuTimeMs: telemetryStats([], { supported: false, source: 'fixture unsupported' }),
       drawCalls: telemetryStats([40, 41], { source: 'fixture' }),
       triangles: telemetryStats([1000, 1050], { source: 'fixture' }),
       visibility: {
-        total: telemetryStats([1000, 1000], { source: 'fixture counter' }),
-        visible: telemetryStats([900, 850], { source: 'fixture bounded scan' }),
-        culled: telemetryStats([100, 150], { source: 'fixture bounded scan' }),
+        total: telemetryStats([total, total], { source: 'fixture counter' }),
+        visible: telemetryStats([visibleStart, visibleEnd], { source: 'fixture bounded scan' }),
+        culled: telemetryStats([total - visibleStart, total - visibleEnd], { source: 'fixture bounded scan' }),
         reconciliation: [
-          { frame: 0, counterTotal: 1000, scannedTotal: 1000, visible: 900, culled: 100, hasCameraBounds: true },
-          { frame: 30, counterTotal: 1000, scannedTotal: 1000, visible: 850, culled: 150, hasCameraBounds: true }
+          { frame: 0, counterTotal: total, scannedTotal: total, visible: visibleStart, culled: total - visibleStart, hasCameraBounds: true },
+          { frame: 30, counterTotal: total, scannedTotal: total, visible: visibleEnd, culled: total - visibleEnd, hasCameraBounds: true }
         ]
       },
       simBacklogSteps: telemetryStats([0.3, 0.6], { source: 'fixture accumulator' }),

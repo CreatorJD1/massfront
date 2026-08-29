@@ -16,7 +16,8 @@
 
    Usage:
      node tools/verify-perf-terrain-acceptance.mjs
-     node tools/verify-perf-terrain-acceptance.mjs --baseline path/to/report.json
+     node tools/verify-perf-terrain-acceptance.mjs --baseline path/to/report.json \
+       --baseline-approval path/to/owner-approval.json
 
    Output:
      .tmp/perf-terrain-acceptance-2026-08-19/report.json
@@ -24,10 +25,18 @@
 */
 import { createServer } from 'node:http';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, extname, join, resolve } from 'node:path';
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
+import { dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { installOfflineNetworkIsolation } from './offline-network-isolation.mjs';
+import { acquireVerificationFreeze } from './evidence-foundation/workspace-guard.mjs';
+import { inspectPng } from './evidence-foundation/png-evidence.mjs';
+import { ANDROID_S25_USER_AGENT, S25_VIEWPORT, assertMobileGpuBranch } from './mobile-device-profile.mjs';
+import {
+  readRepositoryFingerprint,
+  readRuntimeFingerprint,
+  sha256
+} from './interface-audit/verify-interface-matrix.mjs';
 
 /* Other agents can be capturing at the same time.  A dedicated endpoint also
    makes an interrupted run identifiable to the shared Playwright helper. */
@@ -37,13 +46,117 @@ const { assertHardwareGpu } = await import('./chrome-gpu.mjs');
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const outDir=join(root,'.tmp','perf-terrain-acceptance-2026-08-19');
-await mkdir(outDir,{recursive:true});
+const baselineCaptureNames=['verdant','arctic','ashland','vespera'].flatMap(theme=>
+  [420,700,1500].map(span=>`terrain-${theme}-span${span}.png`));
+const captureNames=[...baselineCaptureNames,'terrain-road-close-span420.png','terrain-shore-close-span420.png',
+  'terrain-pan-a-span420.png','terrain-pan-b-span420.png'];
+const captureProfile={profileKey:'android-s25-emulation',viewport:{width:S25_VIEWPORT.width,height:S25_VIEWPORT.height,
+  dpr:S25_VIEWPORT.dpr},userAgent:ANDROID_S25_USER_AGENT,runtimeMode:'source-root',mobileGpuBranch:true,
+  rendererMode:'host-hardware-angle-d3d11'};
+function inside(base,target){const rel=relative(base,target);return rel===''||(!rel.startsWith('..')&&!isAbsolute(rel));}
 const baselineArg=process.argv.indexOf('--baseline');
 const baselinePath=baselineArg>=0&&process.argv[baselineArg+1]?resolve(process.argv[baselineArg+1]):null;
-let baseline=null;
-if(baselinePath){
-  try{ baseline=JSON.parse(await readFile(baselinePath,'utf8')); }
-  catch(e){ throw new Error('baseline report could not be read: '+baselinePath+' — '+e.message); }
+const approvalArg=process.argv.indexOf('--baseline-approval');
+const baselineApprovalPath=approvalArg>=0&&process.argv[approvalArg+1]?resolve(process.argv[approvalArg+1]):null;
+let baseline=null,baselineDescriptor={available:false,requested:!!(baselinePath||baselineApprovalPath),
+  reason:'No owner-approved immutable same-profile baseline report and PNG set supplied; comparisons remain incomplete.'};
+function sameCaptureProfile(value){
+  return value?.profileKey===captureProfile.profileKey&&value?.runtimeMode===captureProfile.runtimeMode&&
+    value?.rendererMode===captureProfile.rendererMode&&value?.mobileGpuBranch===true&&
+    value?.userAgent===captureProfile.userAgent&&value?.viewport?.width===captureProfile.viewport.width&&
+    value?.viewport?.height===captureProfile.viewport.height&&value?.viewport?.dpr===captureProfile.viewport.dpr;
+}
+if(baselinePath||baselineApprovalPath){
+  try{
+    if(!baselinePath||!baselineApprovalPath)throw new Error('both --baseline and --baseline-approval are required');
+    if(inside(outDir,baselinePath)||inside(outDir,baselineApprovalPath))
+      throw new Error('baseline report and approval must be immutable inputs outside the verifier output directory');
+    const [bytes,approvalBytes]=await Promise.all([readFile(baselinePath),readFile(baselineApprovalPath)]);
+    const candidate=JSON.parse(bytes.toString('utf8')),approval=JSON.parse(approvalBytes.toString('utf8'));
+    const reportSha256=sha256(bytes);
+    if(approval.schema!=='MassfrontTerrainBaselineApprovalV1'||approval.ownerApproved!==true||approval.immutable!==true||
+      approval.baselineReportSha256!==reportSha256||typeof approval.approvedBy!=='string'||!approval.approvedBy.trim()||
+      !Number.isFinite(Date.parse(approval.approvedAt)))
+      throw new Error('owner approval is absent, malformed, or does not bind this exact baseline report hash');
+    if(candidate.schema!=='MassfrontPerfTerrainAcceptanceV3'||candidate.sourceStable!==true||candidate.runtimeStable!==true||
+      !/^[a-f0-9]{40}$/.test(String(candidate.source?.head||''))||
+      !/^[a-f0-9]{64}$/.test(String(candidate.source?.dirtyFingerprint||''))||
+      !/^[a-f0-9]{64}$/.test(String(candidate.runtime?.fingerprint||''))||candidate.summary?.failed!==0)
+      throw new Error('baseline report is not a complete source-bound V3 acceptance report');
+    if(!sameCaptureProfile(candidate.captureProfile)||candidate.runtime?.mode!==captureProfile.runtimeMode)
+      throw new Error('baseline capture profile, viewport, user agent, or runtime mode is incompatible');
+    const sharp=candidate?.terrain?.currentAbsoluteSharpness||{};
+    const missingSharp=baselineCaptureNames.filter(name=>!Number.isFinite(sharp[name]?.laplacianEnergy)||
+      !Number.isFinite(sharp[name]?.sobelEnergy));
+    if(missingSharp.length||!Number.isFinite(candidate?.terrain?.shore?.maxAdjacentRgbL1))
+      throw new Error('baseline terrain comparison metrics are incomplete: '+JSON.stringify({missingSharp,
+        shore:candidate?.terrain?.shore?.maxAdjacentRgbL1}));
+    const rows=Array.isArray(candidate.artifacts)?candidate.artifacts:[];
+    const names=rows.map(row=>row?.name),unique=[...new Set(names)];
+    if(rows.length!==captureNames.length||unique.length!==captureNames.length||
+      captureNames.some(name=>!unique.includes(name))||unique.some(name=>!captureNames.includes(name)))
+      throw new Error('baseline artifact manifest is not the exact fixed terrain PNG set');
+    const artifactRoot=resolve(dirname(baselineApprovalPath),approval.artifactRoot||dirname(baselinePath));
+    if(inside(outDir,artifactRoot))throw new Error('baseline artifact root must be immutable input outside current output');
+    const verifiedArtifacts=[];
+    for(const row of rows){
+      if(typeof row.path!=='string'||isAbsolute(row.path))throw new Error('baseline artifact path must be relative: '+row.name);
+      const path=resolve(artifactRoot,row.path);
+      if(!inside(artifactRoot,path))throw new Error('baseline artifact escapes approved root: '+row.name);
+      if(inside(outDir,path))throw new Error('baseline artifact must be immutable input outside current output: '+row.name);
+      const png=await inspectPng(path);
+      if(png.sha256!==row.sha256||png.bytes!==row.bytes||png.width!==row.width||png.height!==row.height||
+        png.width!==captureProfile.viewport.width*captureProfile.viewport.dpr||
+        png.height!==captureProfile.viewport.height*captureProfile.viewport.dpr||
+        !(row.variance>4)||!(row.max-row.min>8))
+        throw new Error('baseline artifact bytes/hash/profile do not match report: '+row.name);
+      verifiedArtifacts.push({name:row.name,path,sha256:png.sha256,bytes:png.bytes,width:png.width,height:png.height});
+    }
+    baseline=candidate;
+    baselineDescriptor={available:true,path:baselinePath,sha256:reportSha256,schema:candidate.schema,
+      generatedAt:candidate.generatedAt,source:candidate.source,runtime:{schema:candidate.runtime?.schema,
+        mode:candidate.runtime?.mode,fingerprint:candidate.runtime?.fingerprint},captureProfile:candidate.captureProfile,
+      approval:{path:baselineApprovalPath,sha256:sha256(approvalBytes),schema:approval.schema,
+        approvedBy:approval.approvedBy,approvedAt:approval.approvedAt,immutable:true},verifiedArtifacts};
+  }catch(error){
+    baseline=null;baselineDescriptor={available:false,requested:true,path:baselinePath,approvalPath:baselineApprovalPath,
+      reason:'Baseline is not owner-approved, immutable, hash-verified, and capture-compatible: '+error.message};
+  }
+}
+async function revalidateBaselineInputs(){
+  if(!baseline||!baselineDescriptor.available)return {pass:false,covered:false,reason:baselineDescriptor.reason};
+  const errors=[];
+  try{
+    const [reportBytes,approvalBytes]=await Promise.all([readFile(baselineDescriptor.path),
+      readFile(baselineDescriptor.approval.path)]);
+    if(sha256(reportBytes)!==baselineDescriptor.sha256)errors.push('BASELINE_REPORT_CHANGED');
+    if(sha256(approvalBytes)!==baselineDescriptor.approval.sha256)errors.push('BASELINE_APPROVAL_CHANGED');
+    for(const row of baselineDescriptor.verifiedArtifacts){
+      try{
+        const png=await inspectPng(row.path);
+        if(png.sha256!==row.sha256||png.bytes!==row.bytes||png.width!==row.width||png.height!==row.height)
+          errors.push('BASELINE_ARTIFACT_CHANGED: '+row.name);
+      }catch(error){errors.push('BASELINE_ARTIFACT_UNREADABLE: '+row.name+' — '+String(error&&error.message||error));}
+    }
+  }catch(error){errors.push('BASELINE_INPUT_UNREADABLE: '+String(error&&error.message||error));}
+  return {pass:errors.length===0,covered:true,errors,reportSha256:baselineDescriptor.sha256,
+    approvalSha256:baselineDescriptor.approval.sha256,artifactCount:baselineDescriptor.verifiedArtifacts.length};
+}
+
+/* This verifier writes a fixed evidence product. The repository freeze is
+   also its output lease: retries replace the bounded directory only after a
+   quiet source preflight, and any source writer makes the run fail closed. */
+let workspaceGuard=null,sourceBefore=null,runtimeBefore=null;
+try{
+  workspaceGuard=await acquireVerificationFreeze({root,label:'terrain/performance acceptance verifier',
+    quietMs:Number(process.env.MF_QUIET_PREFLIGHT_MS||5000),allowedPaths:[outDir]});
+  await mkdir(outDir,{recursive:true});
+  for(const name of await readdir(outDir))await rm(join(outDir,name),{recursive:true,force:true});
+  sourceBefore=await readRepositoryFingerprint(root);
+  runtimeBefore=await readRuntimeFingerprint(root);
+}catch(error){
+  if(workspaceGuard)await workspaceGuard.release();
+  throw error;
 }
 
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css',
@@ -51,14 +164,20 @@ const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript'
   '.svg':'image/svg+xml','.ogg':'audio/ogg','.m4a':'audio/mp4','.mp3':'audio/mpeg',
   '.wav':'audio/wav','.glb':'model/gltf-binary','.gltf':'model/gltf+json',
   '.webmanifest':'application/manifest+json','.wasm':'application/wasm'};
-const server=createServer(async(req,res)=>{try{
-  let p=decodeURIComponent((req.url||'/').split('?')[0]);if(p==='/')p='/index.html';
-  const f=resolve(join(root,p));
-  if(!f.startsWith(root)||!existsSync(f)){res.writeHead(404);res.end('nf');return;}
-  res.writeHead(200,{'Content-Type':MIME[extname(f).toLowerCase()]||'application/octet-stream','Cache-Control':'no-store'});
-  res.end(await readFile(f));
-}catch{res.writeHead(404);res.end('nf');}});
-await new Promise(r=>server.listen(0,'127.0.0.1',r));
+let server=null;
+try{
+  server=createServer(async(req,res)=>{try{
+    let p=decodeURIComponent((req.url||'/').split('?')[0]);if(p==='/')p='/index.html';
+    const f=resolve(join(root,p));
+    if(!f.startsWith(root)||!existsSync(f)){res.writeHead(404);res.end('nf');return;}
+    res.writeHead(200,{'Content-Type':MIME[extname(f).toLowerCase()]||'application/octet-stream','Cache-Control':'no-store'});
+    res.end(await readFile(f));
+  }catch{res.writeHead(404);res.end('nf');}});
+  await new Promise((accept,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',accept);});
+}catch(error){
+  if(workspaceGuard)await workspaceGuard.release();
+  throw error;
+}
 const url=`http://127.0.0.1:${server.address().port}/?perfTerrainAcceptance=1`;
 
 const checks=[];
@@ -121,6 +240,8 @@ async function decodePngStats(page,png){
 const captureValidation=[];
 const captureBuffers=new Map();
 async function capture(page,name){
+  if(!captureNames.includes(name))throw new Error('REFUSED_UNDECLARED_TERRAIN_CAPTURE: '+name);
+  if(captureValidation.some(row=>row.name===name))throw new Error('REFUSED_DUPLICATE_TERRAIN_CAPTURE: '+name);
   await page.evaluate(()=>{if(typeof render==='function')render(0);});
   const png=await page.screenshot({type:'png',animations:'disabled'});
   const decoded=await decodePngStats(page,png);
@@ -129,8 +250,37 @@ async function capture(page,name){
   const final=join(outDir,name),partial=final+`.partial-${process.pid}`;
   await writeFile(partial,png);
   try{await rename(partial,final);}catch{await rm(final,{force:true});await rename(partial,final);}
-  const row={name,path:final,bytes:png.length,signature:'89504e470d0a1a0a',...decoded};
+  const row={name,path:relative(root,final).replace(/\\/g,'/'),bytes:png.length,sha256:sha256(png),
+    signature:'89504e470d0a1a0a',...decoded};
   captureValidation.push(row);captureBuffers.set(name,png);return row;
+}
+async function revalidateCaptureArtifacts(page){
+  const expected=[...captureNames].sort(),disk=(await readdir(outDir,{withFileTypes:true}))
+    .filter(entry=>entry.isFile()&&entry.name.toLowerCase().endsWith('.png')).map(entry=>entry.name).sort();
+  const initialNames=captureValidation.map(row=>row.name).sort();
+  const exactSet=JSON.stringify(disk)===JSON.stringify(expected)&&JSON.stringify(initialNames)===JSON.stringify(expected)&&
+    new Set(initialNames).size===captureNames.length;
+  const errors=[];
+  if(!exactSet)errors.push('CAPTURE_SET_MISMATCH: '+JSON.stringify({expected,disk,initialNames}));
+  const initial=new Map(captureValidation.map(row=>[row.name,row])),rows=[];
+  for(const name of captureNames){
+    const path=join(outDir,name),prior=initial.get(name)||null;
+    try{
+      const bytes=await readFile(path),structure=await inspectPng(path),decoded=await decodePngStats(page,bytes);
+      const valid=!!prior&&structure.sha256===prior.sha256&&structure.bytes===prior.bytes&&
+        structure.width===prior.width&&structure.height===prior.height&&
+        structure.width===captureProfile.viewport.width*captureProfile.viewport.dpr&&
+        structure.height===captureProfile.viewport.height*captureProfile.viewport.dpr&&
+        decoded.width===structure.width&&decoded.height===structure.height&&decoded.variance>4&&decoded.max-decoded.min>8;
+      const row={name,path:relative(root,path).replace(/\\/g,'/'),reportPath:name,bytes:structure.bytes,
+        sha256:structure.sha256,signature:bytes.subarray(0,8).toString('hex'),...decoded,valid};
+      rows.push(row);if(!valid)errors.push('CAPTURE_FINAL_VALIDATION_FAILED: '+name);
+    }catch(error){
+      rows.push({name,path:relative(root,path).replace(/\\/g,'/'),reportPath:name,valid:false,error:String(error&&error.message||error)});
+      errors.push('CAPTURE_FINAL_VALIDATION_FAILED: '+name+' — '+String(error&&error.message||error));
+    }
+  }
+  return {expectedNames:[...captureNames],diskNames:disk,exactSet,rows,errors,pass:exactSet&&errors.length===0&&rows.length===captureNames.length};
 }
 
 async function installGpuTimerSupport(page){
@@ -428,18 +578,26 @@ async function stagedDecodeProbe(page){
   });
 }
 
-const report={generatedAt:new Date().toISOString(),url,baseline:baseline?{path:baselinePath,available:true}:{available:false,
-  reason:'No true same-site pre-pass capture/report supplied; reduction percentages are intentionally not inferred.'},
+const report={schema:'MassfrontPerfTerrainAcceptanceV3',generatedAt:new Date().toISOString(),url,machineOutcome:'PENDING',
+  source:sourceBefore,sourceAtCompletion:null,runtime:runtimeBefore,runtimeAtCompletion:null,
+  sourceStable:false,runtimeStable:false,workspaceGuard:{label:'terrain/performance acceptance verifier',
+    quietMs:workspaceGuard.quietMs,branch:workspaceGuard.branch,head:workspaceGuard.head},
+  boundedOutput:{directory:relative(root,outDir).replace(/\\/g,'/'),policy:'replace-on-run'},artifacts:[],
+  captureProfile,baseline:baselineDescriptor,
   gpu:null,device:null,presets:null,volumetric:{},lowMediumAB:{},battle:null,atomicDecode:null,terrain:{captures:[],themes:{},road:null,shore:null,pan:null,
     comparisonLimitations:[]},captureValidation,checks,startup:{},pageErrors:[],consoleErrors:[]};
 
 let browser=null,page=null,networkIsolation=null,exitStatus=0;
 try{
   browser=await launchPwBrowser({headless:true});
-  page=await browser.newPage({viewport:{width:915,height:515},deviceScaleFactor:1.5,hasTouch:true,isMobile:true,colorScheme:'dark',serviceWorkers:'block'});
+  page=await browser.newPage({viewport:{width:S25_VIEWPORT.width,height:S25_VIEWPORT.height},
+    deviceScaleFactor:S25_VIEWPORT.dpr,hasTouch:true,isMobile:true,userAgent:ANDROID_S25_USER_AGENT,
+    colorScheme:'dark',serviceWorkers:'block'});
   networkIsolation=await installOfflineNetworkIsolation(page);
   page.on('pageerror',e=>report.pageErrors.push(String(e&&e.message||e).slice(0,500)));
-  page.on('console',m=>{const t=m.text();if(/shader\s+(?:compile|link).*(?:fail|error)|INVALID_OPERATION|WebGL.*(?:error|lost)/i.test(t))report.consoleErrors.push(t.slice(0,500));});
+  page.on('console',m=>{if(m.type()!=='error')return;const location=m.location();report.consoleErrors.push({
+    text:m.text().slice(0,500),location:{url:String(location.url||'').slice(0,300),lineNumber:location.lineNumber,
+      columnNumber:location.columnNumber}});});
   await page.addInitScript(()=>{try{
     localStorage.setItem('mf_ap_gate_closed','1');localStorage.setItem('mf_ap_dismissed','1');
     localStorage.setItem('mf_offline','1');localStorage.setItem('mf_prealpha_cinematic_v2','test-seen');
@@ -481,6 +639,7 @@ try{
   gate('real AMD ANGLE/D3D11 adapter',/ANGLE.*(?:AMD|ATI|Radeon).*Direct3D11|ANGLE.*Direct3D11.*(?:AMD|ATI|Radeon)/i.test(report.gpu.renderer)&&
     !/swiftshader|software|llvmpipe|microsoft basic/i.test(report.gpu.renderer),report.gpu.renderer);
   await installGpuTimerSupport(page);
+  await workspaceGuard.checkpoint('runtime boot and GPU validation');
 
   await stageMap(page,'aelos_north_small','verdant');
   await page.evaluate(()=>{dayT=.08;perfScale=1;fogOn=false;paused=true;cam.x=MAP*.5;cam.y=MAP*.5;camFollow=-1;
@@ -488,7 +647,13 @@ try{
   const presetRows={};for(const q of ['low','medium','high','cinematic'])presetRows[q]=await applyPreset(page,q);
   report.presets=presetRows;
   report.device=await page.evaluate(()=>({userAgent:navigator.userAgent,viewport:[innerWidth,innerHeight],devicePixelRatio,
-    canvas:[cv.width,cv.height],engineDpr:typeof DPR==='number'?DPR:null}));
+    canvas:[cv.width,cv.height],engineDpr:typeof DPR==='number'?DPR:null,
+    mobileGpu:typeof MF_MOBILE_GPU==='boolean'?MF_MOBILE_GPU:null}));
+  assertMobileGpuBranch(report.device.mobileGpu,report.device.userAgent,'terrain/performance acceptance verifier');
+  gate('Android S25 profile reaches the production mobile GPU branch',report.device.mobileGpu===true&&
+    report.device.userAgent===ANDROID_S25_USER_AGENT&&report.device.viewport[0]===S25_VIEWPORT.width&&
+    report.device.viewport[1]===S25_VIEWPORT.height&&report.device.devicePixelRatio===S25_VIEWPORT.dpr,
+    {captureProfile,device:report.device});
   const expected={low:[0,0],medium:[0,1],high:[24,2],cinematic:[32,3]};
   for(const q of Object.keys(expected))gate(q+' preset volSteps/groundQ contract',presetRows[q].volSteps===expected[q][0]&&
     presetRows[q].groundQ===expected[q][1]&&presetRows[q].groundUniform===expected[q][1],
@@ -497,6 +662,7 @@ try{
   /* Three distinct kinds prevent the coalescer from folding the representative
      strategic/explosive/collapse workload into fewer proxy volumes. */
   for(const q of ['high','cinematic']){
+    await workspaceGuard.checkpoint('before '+q+' volumetric measurement');
     await applyPreset(page,q);
     const armed=await page.evaluate(()=>{
       paused=true;fogOn=false;perfScale=1;volFxClear();const x=cam.x,y=cam.y,h=terrainH(x,y);
@@ -524,6 +690,7 @@ try{
   /* Same-build paired A/B.  This is defensible for incremental current-system
      cost, but it is explicitly not described as a historical regression. */
   for(const q of ['low','medium']){
+    await workspaceGuard.checkpoint('before '+q+' paired measurement');
     const preset=await applyPreset(page,q);
     await page.evaluate(()=>{paused=true;fogOn=false;volFxClear();macroFxReset();for(let i=0;i<4;i++)render(0);});
     const armed=await page.evaluate(()=>{macroFxReset();const x=cam.x,y=cam.y,h=terrainH(x,y);
@@ -568,30 +735,64 @@ try{
     resetWorld();fogOn=false;paused=false;running=true;matchLive=true;gameEnded=false;demoMode=false;perfScale=1;
     const names=['Rhino','Striker','Longbow','Lancer','Raptor'];let types=names.map(n=>TYPES.findIndex(T=>T&&T.name===n)).filter(i=>i>=0);
     if(types.length<3)types=[];if(!types.length)for(let i=0;i<TYPES.length&&types.length<5;i++)if(TYPES[i]&&TYPES[i].bt===0&&TYPES[i].cost>0)types.push(i);
-    const x=MAP*.5,y=MAP*.5,A=[],B=[];
-    for(let k=0;k<48;k++)for(const team of [0,1]){const row=(k/12)|0,col=k%12,px=x+(team?105:-105)+(team?1:-1)*row*14,py=y-132+col*24;
+    const requestedPerTeam=48,x=MAP*.5,y=MAP*.5,A=[],B=[];
+    for(let k=0;k<requestedPerTeam;k++)for(const team of [0,1]){const row=(k/12)|0,col=k%12,px=x+(team?105:-105)+(team?1:-1)*row*14,py=y-132+col*24;
       const i=spawnUnit(types[k%types.length],team,px,py);if(i>=0){uhp[i]=uhpm[i]*6;ucool[i]=0;(team?B:A).push(i);}}
     const aim=(bag,other)=>bag.forEach((i,k)=>{const j=other[k%other.length];utgt[i]=j;utgtg[i]=ugen[j];ucool[i]=0;ustate[i]=0;});aim(A,B);aim(B,A);
     cam.x=x;cam.y=y;camFollow=-1;camYaw=yawTarget=.28;camPitch=pitchTarget=1.12;orthoSpan=distTarget=560;clampCam();camUpdateMatrices();
-    const volley=()=>{for(let k=0;k<Math.min(20,A.length,B.length);k++){const i=A[k],j=B[(k*7)%B.length];if(!ualive[i]||!ualive[j])continue;
-        const p=fireProj(k%4===0?7:1,0,ux[i],uy[i],ux[j],uy[j],k%4===0?155:340,22,k%4===0?18:0,j);if(p>=0){pwk[p]=k%4===0?'e':'p';projectileFireFX(p,ux[i],uy[i],ux[j]-ux[i],uy[j]-uy[i]);}}
-      if(A[0]>=0&&B[0]>=0)addBeam(ux[A[0]],uy[A[0]],ux[B[0]],uy[B[0]],2.8,82,210,255,.42,'laser',0);};
+    window.__mfBattleActivity={volleys:0,projectileAttempts:0,projectilesFired:0,projectileFxCalls:0,beamsAdded:0};
+    const volley=()=>{window.__mfBattleActivity.volleys++;for(let k=0;k<Math.min(20,A.length,B.length);k++){
+        const i=A[k],j=B[(k*7)%B.length];if(!ualive[i]||!ualive[j])continue;window.__mfBattleActivity.projectileAttempts++;
+        const p=fireProj(k%4===0?7:1,0,ux[i],uy[i],ux[j],uy[j],k%4===0?155:340,22,k%4===0?18:0,j);
+        if(p>=0){window.__mfBattleActivity.projectilesFired++;pwk[p]=k%4===0?'e':'p';
+          projectileFireFX(p,ux[i],uy[i],ux[j]-ux[i],uy[j]-uy[i]);window.__mfBattleActivity.projectileFxCalls++;}}
+      if(A[0]>=0&&B[0]>=0&&ualive[A[0]]&&ualive[B[0]]){
+        addBeam(ux[A[0]],uy[A[0]],ux[B[0]],uy[B[0]],2.8,82,210,255,.42,'laser',0);window.__mfBattleActivity.beamsAdded++;}};
     volley();window.__mfBattleFeed=setInterval(volley,420);
-    return{types:types.map(i=>TYPES[i].name),team0:A.length,team1:B.length,map:curMap,theme:curTheme,quality:qualityKey(),gfx:{...GFX}};
+    const alive=[0,0];for(let i=0;i<unitHigh;i++)if(ualive[i]&&(uteam[i]===0||uteam[i]===1))alive[uteam[i]]++;
+    return{requestedPerTeam,types:types.map(i=>TYPES[i].name),spawned:[A.length,B.length],
+      authoritative:{teamCount:[teamCount[0],teamCount[1]],alive},activity:{...window.__mfBattleActivity},
+      map:curMap,theme:curTheme,quality:qualityKey(),gfx:{...GFX}};
   });
-  await page.waitForTimeout(1200);
+  const populationReady=battleSetup.requestedPerTeam===48&&battleSetup.spawned[0]===48&&battleSetup.spawned[1]===48&&
+    battleSetup.authoritative.teamCount[0]===48&&battleSetup.authoritative.teamCount[1]===48&&
+    battleSetup.authoritative.alive[0]===48&&battleSetup.authoritative.alive[1]===48;
+  gate('reference battle has exactly 48 authoritative live units per team before timing',populationReady,battleSetup);
+  if(!populationReady)throw new Error('REFERENCE_BATTLE_POPULATION_INVALID: '+JSON.stringify(battleSetup));
+  await page.waitForFunction(()=>window.__mfBattleActivity?.volleys>=3&&window.__mfBattleActivity.projectilesFired>=30&&
+    window.__mfBattleActivity.projectileFxCalls>=30&&window.__mfBattleActivity.beamsAdded>=3,null,{timeout:10000});
+  const battleWarm=await page.evaluate(()=>{
+    let projectiles=0;for(let i=0;i<pHigh;i++)if(palive[i])projectiles++;
+    const alive=[0,0];for(let i=0;i<unitHigh;i++)if(ualive[i]&&(uteam[i]===0||uteam[i]===1))alive[uteam[i]]++;
+    const live={authoritative:{teamCount:[teamCount[0],teamCount[1]],alive},projectiles,beams:beams.length,particles:fCount,gpfxLive,
+      macro:typeof macroFxTelemetry==='function'?{...macroFxTelemetry()}:null,
+      volumes:typeof volFxTelemetry==='function'?{...volFxTelemetry()}:null};
+    return{activity:{...window.__mfBattleActivity},live};
+  });
+  const timingPopulationReady=battleWarm.live.authoritative.teamCount[0]===48&&
+    battleWarm.live.authoritative.teamCount[1]===48&&battleWarm.live.authoritative.alive[0]===48&&
+    battleWarm.live.authoritative.alive[1]===48;
+  gate('reference battle retains exactly 48 authoritative live units per team at timing boundary',timingPopulationReady,battleWarm.live.authoritative);
+  if(!timingPopulationReady)throw new Error('REFERENCE_BATTLE_TIMING_POPULATION_INVALID: '+JSON.stringify(battleWarm));
+  const combatReady=battleWarm.activity.volleys>=3&&battleWarm.activity.projectilesFired>=30&&
+    battleWarm.activity.projectileFxCalls>=30&&battleWarm.activity.beamsAdded>=3&&
+    (battleWarm.live.projectiles>0||battleWarm.live.beams>0||battleWarm.live.particles>0||battleWarm.live.gpfxLive>0||
+      battleWarm.live.macro?.lastDrawn>0||battleWarm.live.volumes?.drawn>0);
+  gate('reference battle proves meaningful live projectile/beam/VFX activity before timing',combatReady,battleWarm);
+  if(!combatReady)throw new Error('REFERENCE_BATTLE_ACTIVITY_INVALID: '+JSON.stringify(battleWarm));
   const battleFrames=await page.evaluate(async()=>{
     const samples=[];let last=null;for(let i=0;i<220;i++){const now=await new Promise(r=>requestAnimationFrame(r));if(last!=null)samples.push(now-last);last=now;}
     const live=()=>{let units=0,projectiles=0;for(let i=0;i<unitHigh;i++)if(ualive[i])units++;for(let i=0;i<pHigh;i++)if(palive[i])projectiles++;
       return{units,projectiles,beams:beams.length,particles:fCount,gpfxLive,macro:typeof macroFxTelemetry==='function'?{...macroFxTelemetry()}:null,
         volumes:typeof volFxTelemetry==='function'?{...volFxTelemetry()}:null};};
-    return{samples,live:live(),canvas:[cv.width,cv.height],dpr:DPR,quality:qualityKey()};
+    return{samples,live:live(),activity:{...window.__mfBattleActivity},canvas:[cv.width,cv.height],dpr:DPR,quality:qualityKey()};
   });
   await page.evaluate(()=>{clearInterval(window.__mfBattleFeed);window.__mfBattleFeed=0;paused=true;});
   const frameStats=stats(battleFrames.samples),fps=frameStats.mean?1000/frameStats.mean:null;
-  report.battle={definition:battleSetup,frames:{...frameStats,fps:round(fps,2)},live:battleFrames.live,canvas:battleFrames.canvas,dpr:battleFrames.dpr,
+  report.battle={definition:battleSetup,warm:battleWarm,activityAtCompletion:battleFrames.activity,
+    frames:{...frameStats,fps:round(fps,2),thresholdP99Ms:33.3},live:battleFrames.live,canvas:battleFrames.canvas,dpr:battleFrames.dpr,
     devicePixelRatio:report.device.devicePixelRatio};
-  gate('full reference battle RAF p95 <= 33.3 ms',frameStats.n>=180&&frameStats.p95<=33.3,report.battle);
+  gate('full reference battle RAF p99 <= 33.3 ms',frameStats.n>=180&&frameStats.p99<=33.3,report.battle);
 
   report.atomicDecode=await stagedDecodeProbe(page);
   gate('terrain staged decode keeps a complete old pair with no neutral-normal flash',report.atomicDecode.pass,report.atomicDecode);
@@ -604,6 +805,7 @@ try{
   ];
   let verdantSite=null;
   for(const T of themes){
+    await workspaceGuard.checkpoint('before '+T.key+' terrain captures');
     await applyPreset(page,'cinematic');const ready=await stageMap(page,T.map,T.theme),site=await findRoadSite(page);if(T.key==='verdant')verdantSite=site;
     const rows=[];for(const span of [420,700,1500]){await aim(page,site,span,1.12,.55);const row=await capture(page,`terrain-${T.key}-span${span}.png`);rows.push(row);report.terrain.captures.push(row.name);}
     report.terrain.themes[T.key]={ready,site,captures:rows.map(r=>r.name)};
@@ -659,15 +861,25 @@ try{
     gate('shoreline RGB discontinuity reduction',false,report.terrain.comparisonLimitations.at(-1),false);
   }
 
-  gate('all required terrain PNGs have valid signature, decode and nonzero variance',captureValidation.length>=16&&
+  gate('all required terrain PNGs have valid signature, decode and nonzero variance',captureValidation.length===captureNames.length&&
+    new Set(captureValidation.map(row=>row.name)).size===captureNames.length&&
+    captureNames.every(name=>captureValidation.some(row=>row.name===name))&&
     captureValidation.every(r=>r.signature==='89504e470d0a1a0a'&&r.variance>4&&r.max-r.min>8),
     captureValidation.map(r=>({name:r.name,bytes:r.bytes,size:[r.width,r.height],variance:round(r.variance)})));
   gate('no page errors',report.pageErrors.length===0,report.pageErrors.length?report.pageErrors:'none');
-  gate('no shader/GL console errors',report.consoleErrors.length===0,report.consoleErrors.length?report.consoleErrors:'none');
+  gate('no console.error diagnostics',report.consoleErrors.length===0,report.consoleErrors.length?report.consoleErrors:'none');
 }catch(e){
   report.fatal=String(e&&e.stack||e);console.error(report.fatal);exitStatus=1;
 }finally{
   try{if(page)await page.evaluate(()=>{if(window.__mfBattleFeed)clearInterval(window.__mfBattleFeed);});}catch{}
+  let finalCaptureArtifacts={expectedNames:[...captureNames],diskNames:[],exactSet:false,rows:[],errors:['final revalidation did not run'],pass:false};
+  try{
+    await workspaceGuard.checkpoint('before final terrain PNG revalidation');
+    if(!page||page.isClosed())throw new Error('capture page closed before final PNG decode');
+    finalCaptureArtifacts=await revalidateCaptureArtifacts(page);
+  }catch(error){
+    finalCaptureArtifacts.errors.push(String(error&&error.stack||error));exitStatus=1;
+  }
   if(networkIsolation){
     try{report.networkIsolation=await networkIsolation.finalize('terrain/performance acceptance verifier');}
     catch(e){
@@ -679,7 +891,36 @@ try{
     offlineStorage:{verified:false},serviceWorkers:{bypassConfigured:false,verified:false},blockedRequests:[],blockedWebSockets:[]};
   try{await closePwBrowser();}catch{}
   try{server.closeAllConnections();server.close();}catch{}
-  report.captureValidation=captureValidation;
+  report.captureInitialValidation=captureValidation;
+  report.captureValidation=finalCaptureArtifacts.rows;
+  report.captureFinalization={expectedNames:finalCaptureArtifacts.expectedNames,diskNames:finalCaptureArtifacts.diskNames,
+    exactSet:finalCaptureArtifacts.exactSet,errors:finalCaptureArtifacts.errors,pass:finalCaptureArtifacts.pass};
+  try{await workspaceGuard.checkpoint('before completion fingerprints');}
+  catch(error){report.fatal=report.fatal?report.fatal+'\n'+String(error&&error.stack||error):String(error&&error.stack||error);exitStatus=1;}
+  try{
+    report.sourceAtCompletion=await readRepositoryFingerprint(root);
+    report.runtimeAtCompletion=await readRuntimeFingerprint(root);
+    report.sourceStable=report.source.head===report.sourceAtCompletion.head&&
+      report.source.dirtyFingerprint===report.sourceAtCompletion.dirtyFingerprint;
+    report.runtimeStable=report.runtime.fingerprint===report.runtimeAtCompletion.fingerprint;
+  }catch(error){
+    report.fatal=report.fatal?report.fatal+'\n'+String(error&&error.stack||error):String(error&&error.stack||error);exitStatus=1;
+  }
+  try{await workspaceGuard.checkpoint('after completion fingerprints');}
+  catch(error){report.fatal=report.fatal?report.fatal+'\n'+String(error&&error.stack||error):String(error&&error.stack||error);exitStatus=1;}
+  finalGate('source identity remains stable for the full capture',report.sourceStable,
+    {before:report.source,after:report.sourceAtCompletion});
+  finalGate('runtime identity remains stable for the full capture',report.runtimeStable,
+    {before:report.runtime?.fingerprint,after:report.runtimeAtCompletion?.fingerprint});
+  finalGate('all required terrain PNGs have valid signature, decode and nonzero variance',finalCaptureArtifacts.pass,
+    {expectedNames:finalCaptureArtifacts.expectedNames,diskNames:finalCaptureArtifacts.diskNames,
+      errors:finalCaptureArtifacts.errors,rows:finalCaptureArtifacts.rows.map(row=>({name:row.name,valid:row.valid,
+        bytes:row.bytes,sha256:row.sha256,size:[row.width,row.height],variance:round(row.variance)}))});
+  report.artifacts=finalCaptureArtifacts.rows.map(row=>({name:row.name,path:row.reportPath||row.name,bytes:row.bytes,
+    sha256:row.sha256,width:row.width,height:row.height,variance:row.variance,min:row.min,max:row.max}));
+  report.baselineFinalization=await revalidateBaselineInputs();
+  gate('owner-approved baseline report and PNG inputs remain immutable and hash-valid through comparison',
+    report.baselineFinalization.pass,report.baselineFinalization,report.baselineFinalization.covered);
   finalGate('offline mode blocks all non-loopback requests',!!networkIsolation&&
     report.networkIsolation.finalized&&report.networkIsolation.pageClosed&&
     report.networkIsolation.offlineStorage.verified&&report.networkIsolation.serviceWorkers.bypassConfigured&&
@@ -688,15 +929,30 @@ try{
     report.networkIsolation);
   finalGate('no fatal verifier/runtime exception',!report.fatal,report.fatal||'none');
   finalGate('no page errors',report.pageErrors.length===0,report.pageErrors.length?report.pageErrors:'none');
-  finalGate('no shader/GL console errors',report.consoleErrors.length===0,report.consoleErrors.length?report.consoleErrors:'none');
-  const failed=checks.filter(c=>c.covered&&c.pass===false);
+  finalGate('no console.error diagnostics',report.consoleErrors.length===0,report.consoleErrors.length?report.consoleErrors:'none');
+  const failed=checks.filter(c=>c.covered&&c.pass===false),notCovered=checks.filter(c=>!c.covered);
   report.summary={covered:checks.filter(c=>c.covered).length,passed:checks.filter(c=>c.covered&&c.pass).length,
-    failed:failed.length,notCovered:checks.filter(c=>!c.covered).length,failedNames:failed.map(c=>c.name)};
+    failed:failed.length,notCovered:notCovered.length,failedNames:failed.map(c=>c.name),
+    notCoveredNames:notCovered.map(c=>c.name)};
+  report.machineOutcome=failed.length?'FAIL':notCovered.length?'INCOMPLETE':'PASS';
   const partial=join(outDir,`report.json.partial-${process.pid}`),final=join(outDir,'report.json');
-  await writeFile(partial,JSON.stringify(report,null,2));
-  try{await rename(partial,final);}catch{await rm(final,{force:true});await rename(partial,final);}
-  console.log('EVIDENCE '+outDir);console.log('SUMMARY '+JSON.stringify(report.summary));
-  if(failed.length)exitStatus=1;
+  /* A report is publishable only after the freeze proves stable through its
+     final release. A competing verifier cannot clean this bounded directory
+     immediately afterward because its own production quiet preflight must
+     complete before output preparation. */
+  try{await workspaceGuard.release({assertStable:true,name:'final terrain evidence release'});workspaceGuard=null;}
+  catch(error){
+    console.error('FINAL_EVIDENCE_RELEASE_FAILED '+String(error&&error.stack||error));
+    process.exit(1);
+  }
+  try{
+    await writeFile(partial,JSON.stringify(report,null,2));
+    try{await rename(partial,final);}catch{await rm(final,{force:true});await rename(partial,final);}
+  }catch(error){
+    console.error('REPORT_WRITE_FAILED '+String(error&&error.stack||error));process.exit(1);
+  }
+  console.log('EVIDENCE '+outDir);console.log('OUTCOME '+report.machineOutcome);console.log('SUMMARY '+JSON.stringify(report.summary));
+  if(failed.length)exitStatus=1;else if(notCovered.length)exitStatus=2;
 }
 
 // The Playwright launcher owns a detached browser process and can leave a

@@ -48,6 +48,38 @@ for (const [label, relative, createsContext] of contracts) {
   }
 }
 
+/* The GL recovery gate intentionally owns four pages in one same-origin
+   context. Its shared helper installs the boundary before any caller is able
+   to navigate, and the finalizer closes every page before evidence is judged. */
+{
+  const label = 'GL probe/recovery acceptance verifier';
+  const source = await readFile(resolve(ROOT, 'tools/verify-gl-probe-recovery.mjs'), 'utf8');
+  const helper = source.indexOf('async function isolatedPage(context,label)');
+  const installed = source.indexOf('row.networkIsolation=await installOfflineNetworkIsolation(page)', helper);
+  const firstNavigation = source.indexOf('await first.goto(', installed);
+  const lastBrowserActivity = Math.max(source.lastIndexOf('await normal.goto('),
+    source.lastIndexOf("await capture(normal,'normal-after-probe.png')"));
+  const finalized = source.lastIndexOf('await finalizeAllNetworkPages()');
+  assert.ok(helper >= 0 && installed > helper,
+    `${label} does not install the shared offline boundary in its page factory`);
+  assert.ok(firstNavigation > installed,
+    `${label} does not install the boundary before its first navigation`);
+  assert.match(source, /newContext\s*\(\s*\{[\s\S]{0,650}?serviceWorkers\s*:\s*['"]block['"]/,
+    `${label} does not block service workers when creating its browser context`);
+  const labels = [...source.matchAll(/isolatedPage\(context,'([^']+)'\)/g)].map(match => match[1]);
+  assert.deepEqual(labels, ['first-probe', 'blocked-probe', 'recovered-probe', 'normal-after-probe'],
+    `${label} must isolate exactly its four declared pages`);
+  assert.ok(finalized > lastBrowserActivity,
+    `${label} does not finalize every boundary after browser activity`);
+  for (const field of ['finalized===true', 'pageClosed===true', 'offlineStorage?.verified===true',
+    'serviceWorkers?.bypassConfigured===true', 'serviceWorkers?.verified===true',
+    'blockedRequests?.length===0', 'blockedWebSockets?.length===0']) {
+    assert.ok(source.includes(field), `${label} final gate omits ${field}`);
+  }
+  assert.match(source, /networkEvidence\.length===4&&networkEvidence\.every\(/,
+    `${label} does not fail closed unless all four pages finalize cleanly`);
+}
+
 /* The terrain verifier records a report even when the network gate fails, so
    it must retain the failed finalization snapshot and reject the report. */
 {
@@ -83,4 +115,4 @@ const assertAt = helper.indexOf('guard.assertNoExternalRequests(label', closeAt)
 assert.ok(closeAt >= 0 && assertAt > closeAt,
   'shared offline helper must assert network attempts after page shutdown');
 
-console.log(`PASS Stage 8 offline diagnostic source contract (${contracts.length} current browser lanes)`);
+console.log(`PASS Stage 8 offline diagnostic source contract (${contracts.length + 1} current browser lanes)`);

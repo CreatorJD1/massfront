@@ -84,6 +84,7 @@ function assertOrdered(source,firstNeedle,secondNeedle,message){
 /* The persisted default is deliberately OFF. Evaluate the real object instead
    of accepting a textual match that could sit in a comment or dead copy. */
 const settingsSource=sourceSlice(metaSource,'const DEF_SETTINGS=','/* CAREER RECORD','settings');
+const textScaleSource=sourceSlice(metaSource,'const MF_TEXT_SCALE_STEPS=','const DEF_SETTINGS=','text scale');
 {
   const ctx={};vm.createContext(ctx);
   vm.runInContext('function mfGuessMobile(){return false;}\n'+settingsSource+
@@ -116,7 +117,7 @@ const settingsSource=sourceSlice(metaSource,'const DEF_SETTINGS=','/* CAREER REC
   vm.runInContext(
     'const PROF_KEY='+JSON.stringify(profKey[1])+';\n'+
     "let PROFILES={active:'p1',seq:3,list:[{id:'p1'},{id:'p2'},{id:'p3'}]};\n"+
-    settingsSource+'\n'+metaDefaults+'\n'+extractFunction(metaSource,'metaFresh')+
+    textScaleSource+'\n'+settingsSource+'\n'+metaDefaults+'\n'+extractFunction(metaSource,'metaFresh')+
     '\nlet META=metaFresh();\n'+extractFunction(metaSource,'metaKey')+'\n'+
     extractFunction(metaSource,'metaHarden')+'\n'+extractFunction(metaSource,'metaLoad')+
     '\nlet metaSaveWarned=false;\n'+extractFunction(metaSource,'metaSave')+'\n'+
