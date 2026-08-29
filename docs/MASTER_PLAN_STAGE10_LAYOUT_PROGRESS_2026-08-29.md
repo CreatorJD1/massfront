@@ -1,10 +1,38 @@
 # MASSFRONT master plan — Stage 10 layout implementation progress · 2026-08-29
 
 Status: **IMPLEMENTATION FOUNDATION IN PROGRESS**. The preparation package is
-committed at `51329e9`. This slice adds the first source-bound
-`BattlefieldTopologyV2` authoring candidate and its fail-closed verifier. It
-does not activate an unfinished topology, register world-kit GLBs, change
-pathfinding, launch Blender, or touch character/VRoid work.
+committed at `51329e9`. The first implementation package is committed at
+`56f9ca5`. This slice expands the source-bound `BattlefieldTopologyV2` surface
+wave and adds the separate `Stage10TheatreCatalogV1` contract for the complete
+eight-planet, interior, and orbital scope. It does not activate unfinished
+topology, register world-kit GLBs, change pathfinding, launch Blender, or touch
+character/VRoid work.
+
+## Corrected Stage 10 scope
+
+The four current RTS homeworlds and their sixteen Standard maps are only the
+first surface-battlefield lane. They are not the complete MASSFRONT world or
+location catalogue.
+
+| Lane | Current Stage 10 contract | Unit envelope |
+|---|---|---|
+| Surface battlefield | Four-homeworld Standard Wave 1; 16 inactive topology candidates | Combined arms |
+| Planet catalogue | Eight approved planet slots; six identities match the authored exploration showcase and two remain deliberately unnamed | Defined by each location, never inferred globally |
+| Interior tactical | Four source-matched XS/Small templates across six planned 15-piece location packs | Infantry-only branches or infantry + small vehicle + light-mech routes |
+| Orbital / outer-space locations | Six source-matched station, logistics-array, derelict, debris-field, and gate seeds | Infantry boarding or small craft only |
+
+The older `galaxy_data.js` prototype also contains eight planet records, but it
+is reference-only and is not identity authority. Stage 10 does not silently
+promote those old names. The two remaining approved planet identities stay
+`PENDING_CANON_NAME` until a canonical local source or explicit direction names
+them.
+
+`assets/data/theatreprofiles-stage10.js` fails closed if a restricted interior
+profile admits heavy vehicles, heavy mechs, artillery, aircraft, naval units,
+titans, or capital ships. Its XS bounds stop at 48 m and Small bounds stop at
+80 m. The existing source contract's 6.4 m mixed route supports infantry, one
+small vehicle, and light-mech-scale movement; narrower branches can be
+infantry-only.
 
 ## Implemented foundation
 
@@ -31,10 +59,17 @@ The contract validates:
   stable deck-navigation proxy for floating platforms; and
 - the approved 70/25/5 strategic-camera detail budget.
 
-## First standard-map authoring candidate
+## Four-homeworld surface Wave 1
 
-`aelos_north_medium` establishes the first Wave 1 topology foundation for the
-2.6 km Civic Grid theatre:
+All sixteen canonical Standard maps now have distinct inactive topology
+foundations with their own layout profile, region hazard, water mode, route
+transform, site mix, landmark, and Stage 9 baseline status. Six preserve an
+existing `FULL_V1` exact-location baseline. Four floating sites use explicit
+pontoon or semi-submersible contracts; fixed caissons and shoreline quays are
+not mislabeled as floating structures.
+
+`aelos_north_medium` remains the fully expanded reference plan for the 2.6 km
+Civic Grid theatre:
 
 | Layer | Authored candidate |
 |---|---:|
@@ -63,14 +98,18 @@ and explicit activation before runtime may consume it.
 
 | Command | Result |
 |---|---|
-| `node tools/verify-stage10-battlefield-topology.mjs` | **PASS 19/19**; deterministic topology hash, catalogue/loader order, route hierarchy, floating-platform contract, inert pending maps, and six injected fail-closed faults. Report: `tmp/stage10-topology/report.json`. |
-| `node tools/bundle.mjs` | **PASS**; 100 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.32 MB. |
+| `node tools/verify-stage10-battlefield-topology.mjs` | **PASS 24/24**; all 16 Standard candidates, 16 distinct profiles and topology hashes, six `FULL_V1` baselines, four floating sites, route and approach gates, and injected fail-closed faults. Report: `tmp/stage10-topology/report.json`. |
+| `node tools/verify-stage10-theatre-catalog.mjs` | **PASS 16/16**; eight approved planet slots, six source-matched identities, two pending names, four source-matched interior templates, six inert interior packs, restricted unit envelopes, six source-matched orbital seeds, loader registration, and six injected faults. Report: `tmp/stage10-theatres/report.json`. |
+| `node tools/bundle.mjs` | **PASS**; 101 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.35 MB. |
 
-The injected faults reject invalid arterial width, a `massive` size alias,
-missing floating-platform draft, a major site with only one approach, water-mode
-drift, and runtime activation of an authoring candidate. A one-coordinate
-semantic change also produces a different deterministic topology hash without
-calling `Math.random()`.
+The surface faults reject invalid arterial width, a `massive` size alias,
+missing floating-platform draft, a major site with only one approach,
+water-mode drift, baseline drift, and runtime activation of an authoring
+candidate. The cross-theatre faults reject a four-planet regression, runtime
+activation, a heavy unit in an interior envelope, an invented name in a pending
+slot, an oversized XS interior, and a surface army envelope on an orbital seed.
+A one-coordinate surface change also produces a different deterministic
+topology hash without calling `Math.random()`.
 
 ## Untouched boundaries
 
@@ -84,13 +123,15 @@ calling `Math.random()`.
 
 ## Next safe Stage 10 sequence
 
-1. Author and preflight the remaining fifteen Wave 1 standard-map topology
-   candidates using each region's water, hazard, elevation, and faction rules.
+1. Confirm the two still-unnamed planet identities from canonical local source
+   or explicit direction; do not borrow names from the legacy prototype.
 2. Add exact site requests/templates in bounded groups, preserving the six
    Stage 9 `FULL_V1` regression baselines.
-3. Add topology realization and traversal fixtures before connecting any plan
+3. Author XS/Small interior and orbital location layouts against their explicit
+   unit envelope; never inherit the combined-arms surface roster.
+4. Add topology realization and traversal fixtures before connecting any plan
    to terrain generation or cache identity.
-4. Integrate dynamic transitions, floating-platform destruction/wreck states,
+5. Integrate dynamic transitions, floating-platform destruction/wreck states,
    recovery, and performance only after those offline gates are green.
-5. Activate maps individually after matched command/tactical captures and
+6. Activate maps individually after matched command/tactical captures and
    explicit human visual approval.

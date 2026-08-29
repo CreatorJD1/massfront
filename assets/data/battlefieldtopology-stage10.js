@@ -24,6 +24,8 @@ const BattlefieldTopologyV2={
     aelos_north_medium:{
       schema:'BattlefieldTopologyV2',version:2,status:'AUTHORING_CANDIDATE',
       map:'aelos_north_medium',region:'aelos_north',size:'standard',
+      layoutProfile:'civic-ring',landmark:'Prefecture Plaza',
+      locationBaseline:{status:'PENDING_V0'},
       extent:{width:2600,height:2600},
       water:{mode:'river',depthBands:[
         {id:'river_shallow',minDepth:0,maxDepth:8,clearance:['amphibious','light-naval']},
@@ -115,6 +117,157 @@ const BattlefieldTopologyV2={
   }
 };
 
+/* The remaining standard-map entries use one deterministic authoring helper,
+   but their descriptors are map-specific. Transforming a known-connected
+   graph keeps the candidate layer reviewable while region profile, hazard,
+   water axis, site roles, landmark, support mode, and baseline remain explicit.
+   These are topology foundations, not permission to density-scale one city. */
+(function(){
+  const E=2600,C=1300,clamp=v=>Math.max(0,Math.min(E,Math.round(v)));
+  const rows=[
+    {map:'aelos_basin_medium',region:'aelos_basin',profile:'canal-terraces',landmark:'Quay Assembly',
+      water:'river',navalAxis:'horizontal',hazard:'storm',turn:1,mirror:false,offset:[-30,20],bend:65,
+      classes:['colony','refinery','city','outpost','colony','refinery'],fullV1:true,support:'shoreline_quay'},
+    {map:'aelos_coast_medium',region:'aelos_coast',profile:'admiralty-causeway',landmark:'Port Admiralty',
+      water:'ocean',navalAxis:'diagonal',hazard:'storm',turn:3,mirror:true,offset:[30,-20],bend:-55,
+      classes:['base','spaceport','city','refinery','colony','base'],fullV1:true,support:'floating_pontoon'},
+    {map:'aelos_ridge_medium',region:'aelos_ridge',profile:'rampart-terraces',landmark:'Rampart Tier',
+      water:'none',hazard:'collapse',turn:2,mirror:false,offset:[20,30],bend:80,
+      classes:['city','refinery','colony','city','refinery','colony'],fullV1:false},
+    {map:'pyraeth_crater_medium',region:'pyraeth_crater',profile:'underforge-radial',landmark:'Vault Foundry',
+      water:'none',hazard:'pulse',turn:0,mirror:true,offset:[-20,-30],bend:-90,
+      classes:['city','refinery','outpost','base','refinery','city'],fullV1:false},
+    {map:'pyraeth_belt_medium',region:'pyraeth_belt',profile:'furnace-trenches',landmark:'Furnace Trench',
+      water:'none',hazard:'heat',turn:1,mirror:true,offset:[35,10],bend:100,
+      classes:['refinery','city','outpost','base','refinery','outpost'],fullV1:false},
+    {map:'pyraeth_caldera_medium',region:'pyraeth_caldera',profile:'crucible-domes',landmark:'Crucible Domes',
+      water:'none',hazard:'heat',turn:3,mirror:false,offset:[-35,-10],bend:-75,
+      classes:['city','refinery','outpost','base','city','refinery'],fullV1:true},
+    {map:'pyraeth_flats_medium',region:'pyraeth_flats',profile:'blackwind-aprons',landmark:'Hub Delta Pads',
+      water:'none',hazard:'dust',turn:2,mirror:true,offset:[10,-35],bend:45,
+      classes:['spaceport','derelict','city','refinery','base','outpost'],fullV1:true},
+    {map:'nordhall_isles_medium',region:'nordhall_isles',profile:'rimewater-chain',landmark:'Boreal Relay Net',
+      water:'ocean',navalAxis:'horizontal',hazard:'whiteout',turn:0,mirror:false,offset:[-15,35],bend:90,
+      classes:['city','refinery','outpost','city','refinery','outpost'],fullV1:false,support:'semi_submersible'},
+    {map:'nordhall_cliff_medium',region:'nordhall_cliff',profile:'arcology-steps',landmark:'Terrace Vault Steps',
+      water:'ocean',navalAxis:'vertical',hazard:'collapse',turn:1,mirror:false,offset:[15,-35],bend:-100,
+      classes:['ruin','derelict','city','refinery','outpost','ruin'],fullV1:false,support:'fixed_caisson'},
+    {map:'nordhall_frost_medium',region:'nordhall_frost',profile:'glacier-fault',landmark:'Faultline Bridge',
+      water:'river',navalAxis:'diagonal',hazard:'collapse',turn:2,mirror:false,offset:[-40,0],bend:70,
+      classes:['outpost','relic','city','refinery','outpost','city'],fullV1:true,support:'floating_pontoon'},
+    {map:'nordhall_peaks_medium',region:'nordhall_peaks',profile:'skyshield-plateaus',landmark:'Skyshield Array',
+      water:'none',hazard:'meteor',turn:3,mirror:true,offset:[40,0],bend:-60,
+      classes:['outpost','city','refinery','outpost','city','refinery'],fullV1:false},
+    {map:'vespera_spire_medium',region:'vespera_spire',profile:'hive-spire-radial',landmark:'Great Hive Spire',
+      water:'none',hazard:'eruption',turn:0,mirror:false,offset:[0,40],bend:110,
+      classes:['brood','ruin','derelict','brood','ruin','brood'],fullV1:false},
+    {map:'vespera_dunes_medium',region:'vespera_dunes',profile:'buried-bloom-branches',landmark:'Bloom Escarpment',
+      water:'none',hazard:'spores',turn:1,mirror:true,offset:[0,-40],bend:-110,
+      classes:['brood','derelict','brood','derelict','brood','derelict'],fullV1:false},
+    {map:'vespera_refinery_medium',region:'vespera_refinery',profile:'consumed-foundry',landmark:'Brood Matrix Core',
+      water:'none',hazard:'pulse',turn:2,mirror:false,offset:[25,25],bend:85,
+      classes:['brood','ruin','derelict','refinery','brood','ruin'],fullV1:true},
+    {map:'vespera_plateau_medium',region:'vespera_plateau',profile:'gloam-mesa-gates',landmark:'Gloam Keep Gate',
+      water:'none',hazard:'spores',turn:3,mirror:false,offset:[-25,-25],bend:-85,
+      classes:['brood','ruin','derelict','brood','ruin','derelict'],fullV1:false}
+  ];
+  const make=cfg=>{
+    const tx=p=>{
+      let x=p[0]-C,y=p[1]-C;
+      if(cfg.mirror)x=-x;
+      for(let i=0;i<cfg.turn;i++){const q=x;x=-y;y=q;}
+      return [clamp(x+C+cfg.offset[0]),clamp(y+C+cfg.offset[1])];
+    };
+    const pts=(rows,bend=0)=>rows.map((p,i)=>tx([p[0]+(i>0&&i<rows.length-1?bend:0),p[1]]));
+    const routes=[
+      {id:'primary_sw',class:'primary',width:42,points:pts([[260,2340],[650,1990],[980,1640],[1300,1300]],cfg.bend)},
+      {id:'primary_ne',class:'primary',width:42,points:pts([[2340,260],[1990,620],[1630,970],[1300,1300]],-cfg.bend)},
+      {id:'primary_nw',class:'primary',width:36,points:pts([[180,420],[610,690],[940,1000],[1300,1300]],cfg.bend*.5)},
+      {id:'primary_se',class:'primary',width:36,points:pts([[2420,2180],[1990,1920],[1650,1600],[1300,1300]],-cfg.bend*.5)},
+      {id:'primary_cross',class:'primary',width:46,points:pts([[80,1300],[650,1300],[1300,1300],[1950,1300],[2520,1300]],cfg.bend*.25)},
+      {id:'primary_spine',class:'primary',width:46,points:pts([[1300,80],[1300,650],[1300,1300],[1300,1950],[1300,2520]],-cfg.bend*.25)},
+      {id:'secondary_north_ring',class:'secondary',width:22,points:pts([[650,760],[980,560],[1300,510],[1620,560],[1950,760]],cfg.bend*.4)},
+      {id:'secondary_south_ring',class:'secondary',width:22,points:pts([[650,1840],[980,2040],[1300,2090],[1620,2040],[1950,1840]],-cfg.bend*.4)},
+      {id:'secondary_west_ring',class:'secondary',width:20,points:pts([[650,760],[520,1040],[510,1300],[520,1560],[650,1840]],cfg.bend*.2)},
+      {id:'secondary_east_ring',class:'secondary',width:20,points:pts([[1950,760],[2080,1040],[2090,1300],[2080,1560],[1950,1840]],-cfg.bend*.2)},
+      {id:'flank_west',class:'flank',width:12,points:pts([[260,2340],[120,1900],[120,1300],[120,700],[180,420]],cfg.bend*.15)},
+      {id:'flank_east',class:'flank',width:12,points:pts([[2340,260],[2480,700],[2480,1300],[2480,1900],[2420,2180]],-cfg.bend*.15)},
+      {id:'service_west',class:'service',width:14,points:pts([[520,1300],[690,1450],[760,1650],[650,1840]],cfg.bend*.3)},
+      {id:'service_east',class:'service',width:14,points:pts([[2080,1300],[1910,1150],[1840,950],[1950,760]],-cfg.bend*.3)}
+    ];
+    if(cfg.water!=='none'){
+      const naval=cfg.navalAxis==='horizontal'?[[0,1160],[520,1200],[980,1260],[1620,1340],[2080,1400],[2600,1440]]:
+        cfg.navalAxis==='diagonal'?[[80,120],[520,560],[980,1040],[1620,1560],[2080,2040],[2520,2480]]:
+        [[1160,0],[1200,520],[1260,980],[1340,1620],[1400,2080],[1440,2600]];
+      routes.push({id:'naval_route',class:'naval',width:cfg.water==='ocean'?160:110,points:pts(naval,cfg.bend*.1)});
+    }
+    const wet=cfg.water!=='none',transitionStates=['open','damaged','destroyed','recovered'];
+    const transitions=wet?[
+      {id:'transition_north',kind:'bridge',at:tx([1280,620]),connects:['secondary_north_ring','naval_route'],states:transitionStates},
+      {id:'transition_center',kind:'bridge',at:tx([1300,1300]),connects:['primary_cross','naval_route'],states:transitionStates},
+      {id:'transition_south',kind:'bridge',at:tx([1360,1980]),connects:['secondary_south_ring','naval_route'],states:transitionStates},
+      {id:'transition_special',kind:cfg.support==='floating_pontoon'||cfg.support==='semi_submersible'?'gangway':'shore',
+        at:tx([1390,720]),connects:['secondary_north_ring','naval_route'],states:transitionStates}
+    ]:[
+      {id:'transition_north',kind:'tunnel',at:tx([980,720]),connects:['primary_nw','secondary_north_ring'],states:transitionStates},
+      {id:'transition_center',kind:'rail',at:tx([1300,1300]),connects:['primary_cross','primary_spine'],states:transitionStates},
+      {id:'transition_south',kind:'vehicle-ramp',at:tx([1620,1880]),connects:['primary_se','secondary_south_ring'],states:transitionStates}
+    ];
+    const roles=['landmark','industry','defense','logistics','expansion','special'];
+    const positions=[[1300,1300],[650,1500],[1950,1100],[850,700],[1750,1900],[1390,720]];
+    const approachSets=[
+      ['primary_sw','primary_ne','primary_cross','primary_spine'],
+      ['primary_cross','secondary_west_ring','service_west'],
+      ['primary_cross','secondary_east_ring','service_east'],
+      ['primary_nw','secondary_north_ring','secondary_west_ring'],
+      ['primary_se','secondary_south_ring','secondary_east_ring'],
+      wet?['naval_route','secondary_north_ring']:['primary_spine','secondary_north_ring']
+    ];
+    const sites=roles.map((role,i)=>({
+      id:cfg.map+'_'+role,siteClass:cfg.classes[i],role:role,domain:'land',supportMode:'terrain',
+      center:tx(positions[i]),radius:i===0?220:(i===5?105:150),major:i<5,approaches:approachSets[i]
+    }));
+    if(wet){
+      const S=sites[5];S.domain='maritime';S.supportMode=cfg.support;
+      if(cfg.support==='floating_pontoon'||cfg.support==='semi_submersible'){
+        S.waterline=0;S.draft=cfg.support==='semi_submersible'?24:12;S.freeboard=cfg.support==='semi_submersible'?9:6;
+        S.stabilization=cfg.support==='semi_submersible'?'ballast-columns-and-spread-mooring':'four-point-catenary-mooring';
+        S.deckNav='stable-proxy';
+      }
+    }
+    return {
+      schema:'BattlefieldTopologyV2',version:2,status:'AUTHORING_CANDIDATE',map:cfg.map,region:cfg.region,size:'standard',
+      layoutProfile:cfg.profile,landmark:cfg.landmark,locationBaseline:{status:cfg.fullV1?'FULL_V1':'PENDING_V0'},
+      extent:{width:E,height:E},water:{mode:cfg.water,depthBands:wet?[
+        {id:cfg.water+'_shallow',minDepth:0,maxDepth:8,clearance:['amphibious','light-naval']},
+        {id:cfg.water+'_channel',minDepth:8,maxDepth:cfg.water==='ocean'?64:42,clearance:['naval']}
+      ]:[]},
+      spawnZones:[
+        {id:'spawn_alpha',side:'alpha',center:tx([260,2340]),radius:180,approaches:['primary_sw','flank_west']},
+        {id:'spawn_bravo',side:'bravo',center:tx([2340,260]),radius:180,approaches:['primary_ne','flank_east']}
+      ],routes:routes,transitions:transitions,sites:sites,
+      resources:[
+        {id:'resource_west',kind:'mass',center:tx([380,1040]),route:'secondary_west_ring'},
+        {id:'resource_east',kind:'mass',center:tx([2220,1560]),route:'secondary_east_ring'},
+        {id:'resource_north',kind:'energy',center:tx([1050,360]),route:'primary_spine'},
+        {id:'resource_south',kind:'energy',center:tx([1550,2240]),route:'primary_spine'}
+      ],
+      objectives:[
+        {id:'objective_landmark',site:sites[0].id,kind:'strategic-landmark'},
+        {id:'objective_special',site:sites[5].id,kind:wet?'cross-domain-logistics':'regional-control'}
+      ],
+      hazards:cfg.hazard==='calm'?[]:[{id:'hazard_primary',kind:cfg.hazard,center:tx([1300,980]),radius:260,
+        timing:{period:90,active:24},affectedRoutes:['primary_spine','secondary_north_ring']}],
+      destructibles:[
+        {id:'destructible_north',transition:'transition_north',states:['intact','damaged','critical','destroyed','recovered']},
+        {id:'destructible_south',transition:'transition_south',states:['intact','damaged','critical','destroyed','recovered']}
+      ],visualBudget:{large:70,secondary:25,micro:5},
+      activation:{runtime:false,reason:'AUTHORING_ONLY_REQUIRES_TRAVERSAL_VISUAL_PERFORMANCE_AND_RECOVERY_GATES'}
+    };
+  };
+  for(let i=0;i<rows.length;i++) BattlefieldTopologyV2.plans[rows[i].map]=make(rows[i]);
+})();
+
 function mfPreflightBattlefieldTopologyV2(mapId){
   const id=typeof mapId==='string'?mapId:'';
   const own=(o,k)=>!!o&&Object.prototype.hasOwnProperty.call(o,k);
@@ -162,6 +315,12 @@ function mfPreflightBattlefieldTopologyV2(mapId){
     return fail('TOPOLOGY_CANDIDATE_RUNTIME_ENABLED');
   if(T.map!==id) return fail('TOPOLOGY_MAP_MISMATCH',{actual:T.map||''});
   if(T.region!==D.region) return fail('TOPOLOGY_REGION_MISMATCH',{expected:D.region,actual:T.region||''});
+  const hasExact=typeof LocationMapPlanV1!=='undefined'&&LocationMapPlanV1&&LocationMapPlanV1.plans&&
+    own(LocationMapPlanV1.plans,id);
+  if(!T.locationBaseline||(T.locationBaseline.status!=='FULL_V1'&&T.locationBaseline.status!=='PENDING_V0')||
+    (T.locationBaseline.status==='FULL_V1')!==!!hasExact)
+    return fail('TOPOLOGY_LOCATION_BASELINE_MISMATCH',
+      {declared:T.locationBaseline&&T.locationBaseline.status||'',hasExact:!!hasExact});
   if(T.size==='massive'||!own(BattlefieldTopologyV2.extentBySize,T.size))
     return fail('TOPOLOGY_SIZE_UNSUPPORTED',{size:T.size||''});
   if(T.size!==D.size) return fail('TOPOLOGY_SIZE_MISMATCH',{expected:D.size,actual:T.size||''});
@@ -172,6 +331,8 @@ function mfPreflightBattlefieldTopologyV2(mapId){
   if(!T.water||T.water.mode!==(D.waterMode||'none'))
     return fail('TOPOLOGY_WATER_MODE_MISMATCH',{expected:D.waterMode||'none',actual:T.water&&T.water.mode||''});
   if(!Array.isArray(T.water.depthBands)) return fail('TOPOLOGY_DEPTH_BANDS_INVALID');
+  if((T.water.mode==='none'&&T.water.depthBands.length)||(T.water.mode!=='none'&&!T.water.depthBands.length))
+    return fail('TOPOLOGY_DEPTH_BANDS_MODE_MISMATCH',{mode:T.water.mode,count:T.water.depthBands.length});
   let lastDepth=-Infinity;
   for(let i=0;i<T.water.depthBands.length;i++){
     const B=T.water.depthBands[i];
@@ -231,6 +392,12 @@ function mfPreflightBattlefieldTopologyV2(mapId){
     if(S.major&&S.approaches.length<2)
       return fail('TOPOLOGY_SITE_APPROACHES_INSUFFICIENT',{site:S.id,count:S.approaches.length});
     const floating=S.supportMode==='floating_pontoon'||S.supportMode==='semi_submersible';
+    const maritime=S.supportMode!=='terrain';
+    if((maritime&&(S.domain!=='maritime'||!D.navalEnabled))||(!maritime&&S.domain!=='land'))
+      return fail('TOPOLOGY_SITE_DOMAIN_MISMATCH',{site:S.id,domain:S.domain||'',supportMode:S.supportMode});
+    if(maritime&&(!S.approaches.some(r=>routeIds[r].class==='naval')||
+      !S.approaches.some(r=>routeIds[r].class!=='naval')))
+      return fail('TOPOLOGY_MARITIME_APPROACHES_INVALID',{site:S.id});
     if(floating&&(!finite(S.waterline)||!finite(S.draft)||S.draft<=0||!finite(S.freeboard)||S.freeboard<=0||
       typeof S.stabilization!=='string'||!S.stabilization||S.deckNav!=='stable-proxy'||S.domain!=='maritime'))
       return fail('TOPOLOGY_FLOATING_PLATFORM_CONTRACT_INVALID',{site:S.id});
@@ -263,6 +430,17 @@ function mfPreflightBattlefieldTopologyV2(mapId){
     }
   }
   if(!Array.isArray(T.hazards)) return fail('TOPOLOGY_HAZARDS_INVALID');
+  const expectedHazard=D.hazard||'calm';
+  if((expectedHazard==='calm'&&T.hazards.length)||(expectedHazard!=='calm'&&T.hazards.length!==1))
+    return fail('TOPOLOGY_HAZARD_COUNT_MISMATCH',{expected:expectedHazard,count:T.hazards.length});
+  for(let i=0;i<T.hazards.length;i++){
+    const H=T.hazards[i];
+    if(!H||typeof H.id!=='string'||!H.id||H.kind!==expectedHazard||!point(H.center,w,h)||
+      !finite(H.radius)||H.radius<=0||!H.timing||!finite(H.timing.period)||H.timing.period<=0||
+      !finite(H.timing.active)||H.timing.active<=0||H.timing.active>=H.timing.period||
+      !Array.isArray(H.affectedRoutes)||!H.affectedRoutes.length||H.affectedRoutes.some(r=>!own(routeIds,r)))
+      return fail('TOPOLOGY_HAZARD_INVALID',{index:i});
+  }
   if(!T.visualBudget||T.visualBudget.large!==70||T.visualBudget.secondary!==25||T.visualBudget.micro!==5)
     return fail('TOPOLOGY_VISUAL_BUDGET_INVALID');
 
@@ -274,6 +452,7 @@ function mfPreflightBattlefieldTopologyV2(mapId){
     extent:expectedExtent,routeCounts:routeCounts,siteCount:T.sites.length,siteClasses:siteClasses,
     spawnCount:T.spawnZones.length,transitionCount:T.transitions.length,
     floatingSiteCount:T.sites.filter(S=>S.supportMode==='floating_pontoon'||S.supportMode==='semi_submersible').length,
+    locationBaseline:T.locationBaseline.status,hazardCount:T.hazards.length,
     runtimeActive:T.status==='ACTIVE_V2'&&T.activation.runtime===true
   }};
 }

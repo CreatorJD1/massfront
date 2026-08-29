@@ -12,6 +12,7 @@ import {fileURLToPath} from 'node:url';
 const ROOT=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const REL={
   gl:'src/engine/gl.js',topology:'assets/data/battlefieldtopology-stage10.js',
+  locationPlans:'assets/data/locationplans.js',
   manifest:'assets/data/manifest.json',boot:'boot.js',tool:'tools/verify-stage10-battlefield-topology.mjs'
 };
 const TARGET='aelos_north_medium';
@@ -69,6 +70,7 @@ function makeContext(mutation=''){
   sandbox.Math.random=()=>{sandbox.__stage10RandomCalls++;return .5;};
   const context=vm.createContext(sandbox);
   vm.runInContext(catalogSource,context,{filename:REL.gl+'#catalog-slices',timeout:10000});
+  vm.runInContext(sourceText[REL.locationPlans],context,{filename:REL.locationPlans,timeout:10000});
   vm.runInContext(sourceText[REL.topology],context,{filename:REL.topology,timeout:10000});
   if(mutation) vm.runInContext(mutation,context,{filename:'stage10-topology-fault.js',timeout:10000});
   return context;
@@ -88,6 +90,8 @@ try{
   const base=preflight(context);
   const catalog=readJson(context,'BattlefieldTopologyV2');
   const canonical=readJson(context,'Object.values(PLANETS).flatMap(P=>P.regions.flatMap(R=>R.maps))');
+  const standardMaps=canonical.filter(id=>id.endsWith('_medium')).sort();
+  const planMaps=Object.keys(catalog.plans).sort();
   const manifestOrder=JSON.parse(sourceText[REL.manifest]).order.map(normalizedScript);
   const bootOrder=bootManifest(sourceText[REL.boot]);
   const topologyPath=normalizedScript(REL.topology),topologyAt=manifestOrder.indexOf(topologyPath);
@@ -104,8 +108,24 @@ try{
     {count:canonical.length,unique:new Set(canonical).size});
   record('catalog.schema',catalog.schema==='BattlefieldTopologyV2'&&catalog.version===2,
     {schema:catalog.schema,version:catalog.version});
-  record('catalog.first-wave-foundation',Object.keys(catalog.plans).length===1&&
-    Object.prototype.hasOwnProperty.call(catalog.plans,TARGET),{plans:Object.keys(catalog.plans)});
+  record('catalog.wave1-standard-coverage',planMaps.length===16&&sameList(planMaps,standardMaps),
+    {count:planMaps.length,plans:planMaps});
+
+  const wave=planMaps.map(map=>({map,result:preflight(context,map),plan:catalog.plans[map]}));
+  const fullV1=wave.filter(row=>row.result.summary&&row.result.summary.locationBaseline==='FULL_V1');
+  const floating=wave.reduce((sum,row)=>sum+(row.result.summary?row.result.summary.floatingSiteCount:0),0);
+  record('catalog.wave1-all-candidates',wave.every(row=>row.result.ok===true&&
+    row.result.status==='AUTHORING_CANDIDATE'&&row.result.summary.runtimeActive===false),
+  {passed:wave.filter(row=>row.result.ok===true).length,total:wave.length});
+  record('catalog.wave1-distinct-profiles-and-hashes',new Set(wave.map(row=>row.plan.layoutProfile)).size===16&&
+    new Set(wave.map(row=>row.result.topologyHash)).size===16,
+  {profiles:new Set(wave.map(row=>row.plan.layoutProfile)).size,hashes:new Set(wave.map(row=>row.result.topologyHash)).size});
+  record('catalog.wave1-baselines-and-floating',fullV1.length===6&&floating===4,
+    {fullV1:fullV1.map(row=>row.map),floatingSiteCount:floating});
+  record('catalog.wave1-route-and-approach-gates',wave.every(row=>{
+    const S=row.result.summary;
+    return S.routeCounts.primary>=6&&S.routeCounts.primary<=8&&S.spawnCount===2&&S.siteCount===6;
+  }),{maps:wave.length});
 
   record('preflight.authoring-candidate',base.ok===true&&base.status==='AUTHORING_CANDIDATE'&&
     typeof base.topologyHash==='string'&&base.topologyHash.length===8&&base.summary.runtimeActive===false,
@@ -150,10 +170,12 @@ try{
     ['water-mode',"BattlefieldTopologyV2.plans.aelos_north_medium.water.mode='none'",
       'TOPOLOGY_WATER_MODE_MISMATCH'],
     ['runtime-activation',"BattlefieldTopologyV2.plans.aelos_north_medium.activation.runtime=true",
-      'TOPOLOGY_CANDIDATE_RUNTIME_ENABLED']
+      'TOPOLOGY_CANDIDATE_RUNTIME_ENABLED'],
+    ['baseline-drift',"BattlefieldTopologyV2.plans.aelos_basin_medium.locationBaseline.status='PENDING_V0'",
+      'TOPOLOGY_LOCATION_BASELINE_MISMATCH','aelos_basin_medium']
   ];
-  for(const [name,mutation,code] of faults){
-    const result=preflight(makeContext(mutation));
+  for(const [name,mutation,code,map] of faults){
+    const result=preflight(makeContext(mutation),map||TARGET);
     record('fault.'+name,result.ok===false&&result.error&&result.error.code===code,
       {expected:code,actual:result.error&&result.error.code});
   }
