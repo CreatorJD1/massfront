@@ -94,7 +94,10 @@ async function enterDeployedMatch(){
   route.push({step:4,label:(await advance.textContent()||'').trim()});
   /* START BATTLE replaces its own pointer target with #loadScr during
      pointerup. Keyboard activation is the real native-button path and avoids
-     Playwright retrying a click whose successful first attempt removed it. */
+     Playwright retrying a click whose successful first attempt removed it.
+     Let the preceding pointer commit age past the game's 650 ms global
+     duplicate-tap guard or it will correctly suppress this keyboard click. */
+  await page.waitForTimeout(700);
   await advance.focus();await advance.press('Enter');
   const deploy=page.locator('#deployBtn');await deploy.waitFor({state:'visible',timeout:180_000});await deploy.click();
   await page.waitForFunction(()=>typeof matchLive!=='undefined'&&matchLive&&running&&document.body.classList.contains('hudTacticalDock'),null,{timeout:180_000});
