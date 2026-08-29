@@ -97,29 +97,103 @@
       r.onerror=function(){ rej(r.error); };
     });
   }
-  function get(db,key){
-    return new Promise(function(res){
-      try{
-        var tx=db.transaction(STORE,'readonly'), q=tx.objectStore(STORE).get(key);
-        q.onsuccess=function(){ res(q.result); }; q.onerror=function(){ res(null); };
-      }catch(e){ res(null); }
-    });
+  function patchChannel(rec){ return String(rec&&rec.channel||'stable'); }
+  function bundleMeta(rec){
+    if(!rec) return null;
+    return {version:rec.version,channel:rec.channel||'stable',at:rec.at,
+      notes:rec.notes||'',severity:rec.severity||'recommended',
+      kind:rec.kind||'full',patchedFrom:rec.patchedFrom||''};
   }
-  function del(db,key){
-    return new Promise(function(res){
-      try{
-        var tx=db.transaction(STORE,'readwrite');
-        tx.objectStore(STORE).delete(key);
-        tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); };
-      }catch(e){ res(); }
-    });
+  function sameBundle(a,b){
+    if(!a||!b||String(a.version)!==String(b.version)||
+       patchChannel(a)!==patchChannel(b)) return false;
+    if(a.at!=null||b.at!=null) return String(a.at||'')===String(b.at||'');
+    return true;
   }
-  function put(db,key,val){
+  function sameBundleExact(a,b){
+    /* Mirrors updater's persisted identity contract: a legacy pair whose two
+       timestamps are both absent still matches, while one absent/one present
+       or any differing value does not. */
+    return !!(a&&b&&sameBundle(a,b));
+  }
+  function previousSlot(key){
+    key=String(key||'');
+    return key==='previousA'||key==='previousB'?key:null;
+  }
+  function previousSelection(records){
+    var ref=records.previousRef,key=previousSlot(ref&&ref.key);
+    var meta=key&&records[key+'Meta'];
+    return key&&sameBundleExact(ref,meta)
+      ?{key:key,meta:meta,ref:ref,slotted:true}
+      :{key:'previous',meta:records.previousMeta,ref:null,slotted:false};
+  }
+  function clearPreviousRecords(store){
+    store.delete('previousRef');
+    store.delete('previousA'); store.delete('previousAMeta');
+    store.delete('previousB'); store.delete('previousBMeta');
+    store.delete('previous'); store.delete('previousMeta');
+  }
+  function liveApplyOperation(op){
+    var age=op&&typeof op.at==='number'?Date.now()-op.at:-1;
+    return !!(op&&op.kind==='apply'&&op.token&&age>=0&&age<5*60*1000);
+  }
+  function probationMatchesBundle(prob,bundle){
+    if(!prob||!bundle||String(prob.version)!==String(bundle.version)||
+       patchChannel(prob)!==patchChannel(bundle)) return false;
+    return prob.pendingAt==null||String(prob.pendingAt)===String(bundle.at||'');
+  }
+  function probationOwnsMetaExact(prob,meta){
+    return !!(prob&&meta&&prob.pendingAt!=null&&meta.at!=null&&
+      String(prob.version)===String(meta.version)&&
+      patchChannel(prob)===patchChannel(meta)&&
+      String(prob.pendingAt)===String(meta.at));
+  }
+  function pendingMatchesFailure(pending,prob,bundle,version){
+    if(!pending||String(pending.version)!==String(version)) return false;
+    var owner=prob||bundle;
+    if(owner&&patchChannel(pending)!==patchChannel(owner)) return false;
+    var token=prob&&prob.pendingAt!=null?prob.pendingAt:
+      (bundle&&bundle.at!=null?bundle.at:null);
+    /* Old records without an attempt token cannot be distinguished from a
+       freshly downloaded rebuild carrying the same version. Retaining one
+       ambiguous payload is safer than deleting new verified bytes. */
+    return token!=null&&String(pending.at||'')===String(token);
+  }
+  /* Confirm exactly the patch represented by probation in one transaction.
+     The old three independent deletes left a cross-window gap: a newly staged
+     pending payload could land after probation was cleared and then be erased
+     by the final unconditional delete. Serialized conditional cleanup means a
+     concurrent stage either sees probation and stops, or commits after this
+     transaction and survives for its own install. */
+  function confirmPatch(db,identity){
     return new Promise(function(res){
       try{
-        var tx=db.transaction(STORE,'readwrite');
-        tx.objectStore(STORE).put(val,key);
-        tx.oncomplete=function(){ res(); }; tx.onerror=function(){ res(); };
+        var tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+        var probation=store.get('probation'),pending=store.get('pendingMeta');
+        var failure=store.get('applyFailure'),active=store.get('activeMeta');
+        var operation=store.get('operation'),ready=0;
+        function inspect(){
+          if(++ready<5) return;
+          var prob=probation.result,pend=pending.result,fail=failure.result;
+          var running=active.result,op=operation.result;
+          if(!sameBundle(running,identity)||!probationMatchesBundle(prob,running)) return;
+          store.delete('probation');
+          if(fail&&String(fail.version)===String(running.version)) store.delete('applyFailure');
+          if(pendingMatchesFailure(pend,prob,running,running.version)){
+            store.delete('pending'); store.delete('pendingMeta');
+          }
+          /* A killed Apply document can leave its lease after the atomic
+             active/probation commit. Only the first proven frame of that exact
+             target owns the orphan; an unrelated or still-uncommitted Apply
+             remains visible to updater recovery. */
+          if(op&&op.kind==='apply'&&sameBundle(op.target,running))
+            store.delete('operation');
+        }
+        probation.onsuccess=inspect; pending.onsuccess=inspect;
+        failure.onsuccess=inspect; active.onsuccess=inspect;
+        operation.onsuccess=inspect;
+        tx.oncomplete=function(){ res(); };
+        tx.onerror=function(){ res(); }; tx.onabort=function(){ res(); };
       }catch(e){ res(); }
     });
   }
@@ -132,70 +206,243 @@
     }
     return false;
   }
-  function failed(db,version,reason){
-    version=version||'?';
-    return get(db,'applyFailure').then(function(prev){
-      var count=prev&&prev.version===version?(prev.count|0)+1:1;
-      var rec={version:version,at:Date.now(),reason:reason,count:count,
-               quarantined:count>=2};
-      return put(db,'applyFailure',rec).then(function(){ return rec; });
-    });
-  }
-  function dropPendingVersion(db,version){
-    return get(db,'pending').then(function(p){
-      return p&&p.version===version?del(db,'pending'):null;
-    });
-  }
   function validBundle(b){
     if(!b||!b.files||!verNewer(b.version,PACKAGED_REV)) return false;
     var order=b.order&&b.order.length?b.order:MANIFEST;
     for(var i=0;i<order.length;i++) if(typeof b.files[order[i]]!=='string') return false;
     return true;
   }
-  function restorePreviousOrPackaged(db,failedVersion){
-    return get(db,'previous').then(function(prev){
-      if(!validBundle(prev)||String(prev.version)===String(failedVersion)){
-        return del(db,'previous').then(function(){ runPackaged(); });
-      }
-      /* This record was captured only while its exact version was running after
-         probation. Consume it once: a broken update must never bounce between
-         two patches. Keep the failed pending payload so the Update screen can
-         offer one controlled retry and explain what happened. */
-      return put(db,'active',prev).then(function(){ return del(db,'previous'); })
-        .then(function(){
-          window.__MASSFRONT_PATCHED=prev.version||'?';
-          window.__MASSFRONT_RECOVERED_PATCH=failedVersion||'?';
-          console.warn('boot: restored validated patch '+prev.version+
-                       ' after '+failedVersion+' failed');
-          runBundle(prev);
-        });
-    });
-  }
-  function rejectPatch(db,version,reason){
-    return failed(db,version,reason).then(function(rec){
-      if(rec.quarantined)
-        console.warn('boot: patch '+version+' failed twice and was quarantined');
-      return del(db,'active')
-        .then(function(){ return del(db,'probation'); })
-        .then(function(){ return rec.quarantined?dropPendingVersion(db,version):null; })
-        .then(function(){ return restorePreviousOrPackaged(db,version); });
-    });
-  }
   function evictSuperseded(db){
-    var keys=['active','pending','probation','previous'];
-    return Promise.all(keys.map(function(key){ return get(db,key); }))
-      .then(function(records){
-        var work=[];
-        for(var i=0;i<keys.length;i++){
-          var rec=records[i];
-          if(rec&&!verNewer(rec.version,PACKAGED_REV)){
-            console.info('boot: discarding '+keys[i]+' patch '+(rec.version||'?')+
-                         '; packaged build is '+PACKAGED_REV);
-            work.push(del(db,keys[i]));
+    var keys=['activeMeta','pendingMeta','probation','previousRef',
+              'previousAMeta','previousBMeta','previousMeta','operation'];
+    return new Promise(function(res,rej){
+      try{
+        var tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+        var requests=[],records={},ready=0,evicted=[];
+        function discard(metaKey,payload,label,rec){
+          store.delete(payload);
+          if(metaKey!==payload) store.delete(metaKey);
+          evicted.push({key:label,version:rec.version||'?'});
+        }
+        function inspect(){
+          if(++ready<keys.length) return;
+          for(var i=0;i<keys.length;i++) records[keys[i]]=requests[i].result;
+          var simple=[
+            {meta:'activeMeta',payload:'active',label:'active'},
+            {meta:'pendingMeta',payload:'pending',label:'pending'},
+            {meta:'probation',payload:'probation',label:'probation'},
+            {meta:'previousMeta',payload:'previous',label:'previous'}
+          ];
+          for(var j=0;j<simple.length;j++){
+            var entry=simple[j],rec=records[entry.meta];
+            if(rec&&!verNewer(rec.version,PACKAGED_REV))
+              discard(entry.meta,entry.payload,entry.label,rec);
+          }
+
+          var ref=records.previousRef,refKey=previousSlot(ref&&ref.key);
+          var refMeta=refKey&&records[refKey+'Meta'];
+          var refValid=refKey&&sameBundleExact(ref,refMeta);
+          if(ref&&!refValid) store.delete('previousRef');
+
+          /* Apply prepares the opposite slot before atomically swinging the
+             pointer. A concurrent boot may discard an obsolete referenced
+             rollback, but must not erase that exact inactive copy from under
+             the still-live Apply transaction. Superseded spare slots without
+             that current owner are safe to retire. */
+          var inactive=refKey==='previousA'?'previousB':'previousA';
+          var inactiveMeta=records[inactive+'Meta'];
+          var protectedSlot=liveApplyOperation(records.operation)&&
+            sameBundleExact(inactiveMeta,records.activeMeta)?inactive:null;
+          var referencedSlot=refValid?refKey:null;
+          var slots=['previousA','previousB'];
+          for(var k=0;k<slots.length;k++){
+            var slot=slots[k],slotMeta=records[slot+'Meta'];
+            if(slot===protectedSlot) continue;
+            /* The pointer is the sole durable owner. Any other slot is either
+               a completed preparation whose pointer swing never committed or
+               debris from an older owner, so reclaim it even when its version
+               is newer than the packaged shell. Slot writers are protected
+               above only while their exact Apply lease remains live. */
+            if(slot!==referencedSlot){
+              store.delete(slot); store.delete(slot+'Meta');
+              if(slotMeta) evicted.push({key:slot,version:slotMeta.version||'?',orphan:true});
+              continue;
+            }
+            if(slotMeta&&!verNewer(slotMeta.version,PACKAGED_REV)){
+              discard(slot+'Meta',slot,slot,slotMeta);
+              store.delete('previousRef');
+            }
           }
         }
-        return Promise.all(work);
-      });
+        for(var i=0;i<keys.length;i++){
+          requests[i]=store.get(keys[i]);
+          requests[i].onsuccess=inspect;
+        }
+        tx.oncomplete=function(){
+          for(var j=0;j<evicted.length;j++){
+            var item=evicted[j];
+            console.info(item.orphan
+              ?'boot: discarding unreferenced '+item.key+' rollback patch '+item.version
+              :'boot: discarding '+item.key+' patch '+item.version+
+               '; packaged build is '+PACKAGED_REV);
+          }
+          res();
+        };
+        tx.onerror=function(){ rej(tx.error||new Error('boot supersession failed')); };
+        tx.onabort=function(){ rej(tx.error||new Error('boot supersession aborted')); };
+      }catch(e){ rej(e); }
+    });
+  }
+
+  /* Select, claim, reject and recover in one readwrite transaction. IndexedDB
+     serializes this scope against updater Apply/Rollback transactions, so the
+     decision can never combine probation from one payload with active bytes
+     from another. The caller starts scripts only after tx.oncomplete. */
+  function prepareBoot(db){
+    var keys=['probation','activeMeta','pendingMeta','previousRef',
+              'previousAMeta','previousBMeta','previousMeta',
+              'applyFailure','operation'];
+    return new Promise(function(res,rej){
+      try{
+        var tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);
+        var requests=[],records={},ready=0,decision={kind:'packaged'};
+        function clearFinishedRollback(nextActive){
+          var op=records.operation;
+          /* Rollback's target is the active identity it set out to remove. If
+             durable active has moved (including to packaged), its commit won
+             and only the releasing document was lost. A rollback which has not
+             committed still sees its target and keeps exclusive ownership. */
+          if(op&&op.kind==='rollback'&&op.target&&!sameBundle(op.target,nextActive))
+            store.delete('operation');
+        }
+        function fail(version,reason,prob,bundle){
+          version=version||'?';
+          var prior=records.applyFailure;
+          var count=prior&&String(prior.version)===String(version)?(prior.count|0)+1:1;
+          var failure={version:version,at:Date.now(),reason:reason,count:count,
+                       quarantined:count>=2};
+          store.put(failure,'applyFailure');
+          store.delete('probation');
+          /* Recovered builds deliberately skip __bootOk confirmation. Retire
+             the Apply lease here only when probation, failed active identity,
+             and lease target all name the same exact committed payload. */
+          var op=records.operation;
+          if(op&&op.kind==='apply'&&probationOwnsMetaExact(prob,bundle)&&
+             sameBundleExact(op.target,bundle)) store.delete('operation');
+          if(failure.quarantined&&
+             pendingMatchesFailure(records.pendingMeta,prob,bundle,version)){
+            store.delete('pending'); store.delete('pendingMeta');
+          }
+          /* Rollback payloads are about 85 MB. Resolve the small atomic pointer
+             first and queue exactly one payload read only after failure is
+             certain. A torn/mismatched slot pointer falls back to the legacy
+             key without ever deserialising the unowned slot. */
+          var selected=previousSelection(records);
+          var previous=store.get(selected.key);
+          previous.onsuccess=function(){
+            var value=previous.result,meta=selected.meta;
+            var good=validBundle(value)&&String(value.version)!==String(version)&&
+              (selected.slotted
+                ?sameBundleExact(meta,value)&&sameBundleExact(selected.ref,value)
+                :(!meta||sameBundle(meta,value)));
+            if(good){
+              store.put(value,'active'); store.put(bundleMeta(value),'activeMeta');
+              clearPreviousRecords(store);
+              clearFinishedRollback(value);
+              decision={kind:'recovered',bundle:value,failedVersion:version,
+                        failure:failure};
+            }else{
+              store.delete('active'); store.delete('activeMeta');
+              clearPreviousRecords(store);
+              clearFinishedRollback(null);
+              decision={kind:'packaged',failedVersion:version,failure:failure};
+            }
+          };
+        }
+        function inspectActive(bundle){
+          var prob=records.probation,meta=records.activeMeta;
+          /* Metadata-backed supersession was already handled without touching
+             payloads. This is the one compatibility read required for a
+             pre-metadata active record. */
+          if(bundle&&!verNewer(bundle.version,PACKAGED_REV)){
+            store.delete('active'); store.delete('activeMeta');
+            if(prob&&probationMatchesBundle(prob,bundle)) store.delete('probation');
+            clearFinishedRollback(null);
+            decision={kind:'packaged'};
+            return;
+          }
+          if(bundle&&!validBundle(bundle)){
+            fail(bundle.version,'The downloaded update was incomplete at restart.',prob,bundle);
+            return;
+          }
+          if(bundle&&meta&&!sameBundle(meta,bundle)){
+            fail(bundle.version,'The installed update metadata did not match its payload.',prob,bundle);
+            return;
+          }
+          if(!bundle&&meta){
+            fail(meta.version,'The downloaded update was not available at restart.',prob,meta);
+            return;
+          }
+          if(prob&&!bundle){
+            fail(prob.version,'The downloaded update was not available at restart.',prob,null);
+            return;
+          }
+          if(bundle&&!meta){
+            /* One-time migration for installs written before lightweight
+               metadata existed. Confirmation can now stay off the payload. */
+            store.put(bundleMeta(bundle),'activeMeta');
+          }
+          if(bundle&&prob&&probationMatchesBundle(prob,bundle)){
+            if((prob.tries|0)>=1){
+              fail(prob.version,'The downloaded update did not finish starting.',prob,bundle);
+              return;
+            }
+            var claimed={version:bundle.version,channel:bundle.channel||prob.channel,
+              pendingAt:bundle.at!=null?bundle.at:prob.pendingAt,
+              at:prob.at||Date.now(),tries:(prob.tries|0)+1};
+            store.put(claimed,'probation');
+            clearFinishedRollback(bundle);
+            decision={kind:'run',bundle:bundle,claimed:true};
+            return;
+          }
+          if(bundle&&prob){
+            /* A mismatched legacy/torn guard must never be used to validate a
+               different active record. Replace it with an exact first claim. */
+            store.put({version:bundle.version,channel:bundle.channel||'stable',
+              pendingAt:bundle.at,at:Date.now(),tries:1},'probation');
+            clearFinishedRollback(bundle);
+            decision={kind:'run',bundle:bundle,claimed:true,repaired:true};
+            return;
+          }
+          if(bundle){
+            clearFinishedRollback(bundle);
+            decision={kind:'run',bundle:bundle,claimed:false};
+          }else clearFinishedRollback(null);
+        }
+        function inspect(){
+          if(++ready<keys.length) return;
+          for(var i=0;i<keys.length;i++) records[keys[i]]=requests[i].result;
+          var prob=records.probation,meta=records.activeMeta;
+          /* Once a current probation attempt and active metadata name the same
+             exact bytes, tries>=1 already proves those bytes started and never
+             confirmed. Reject them without deserialising the failed 85 MiB
+             active payload; recovery needs only the one previous payload. */
+          if(prob&&(prob.tries|0)>=1&&probationOwnsMetaExact(prob,meta)){
+            fail(prob.version,'The downloaded update did not finish starting.',prob,meta);
+            return;
+          }
+          var active=store.get('active');
+          active.onsuccess=function(){ records.active=active.result; inspectActive(active.result); };
+        }
+        for(var i=0;i<keys.length;i++){
+          requests[i]=store.get(keys[i]);
+          requests[i].onsuccess=inspect;
+        }
+        tx.oncomplete=function(){ res(decision); };
+        tx.onerror=function(){ rej(tx.error||new Error('boot selection failed')); };
+        tx.onabort=function(){ rej(tx.error||new Error('boot selection aborted')); };
+      }catch(e){ rej(e); }
+    });
   }
 
   function bootProgress(done,total){
@@ -272,34 +519,30 @@
        remain above a newer packaged APK merely because it was active before
        the installer ran. Pending and probation records follow the same rule. */
     return evictSuperseded(db).then(function(){
-      return get(db,'probation').then(function(prob){
-      /* Probation counts ATTEMPTS, not intent. The updater writes it at zero
-         before reloading; this loader claims it by incrementing. Seeing a
-         record that has already been claimed means the previous launch ran the
-         patch and never reached a frame — so it is bad, and out it goes.
-         Counting rather than merely existing is the difference between "we are
-         about to try" and "we tried and it died". */
-      if(prob && (prob.tries|0)>=1){
-        console.warn('boot: rolling back a patch that failed to start');
-        return rejectPatch(db,prob.version,'The downloaded update did not finish starting.');
+      return prepareBoot(db);
+    }).then(function(decision){
+      if(decision.failure&&decision.failure.quarantined)
+        console.warn('boot: patch '+decision.failedVersion+' failed twice and was quarantined');
+      if(decision.kind==='recovered'){
+        window.__MASSFRONT_PATCHED=decision.bundle.version||'?';
+        window.__MASSFRONT_PATCH_AT=decision.bundle.at;
+        window.__MASSFRONT_PATCH_CHANNEL=decision.bundle.channel||'stable';
+        window.__MASSFRONT_RECOVERED_PATCH=decision.failedVersion||'?';
+        console.warn('boot: restored validated patch '+decision.bundle.version+
+                     ' after '+decision.failedVersion+' failed');
+        runBundle(decision.bundle);
+        return;
       }
-      return get(db,'active').then(function(b){
-        if(!b||!b.files){
-          if(!prob) return runPackaged();
-          return rejectPatch(db,prob.version,'The downloaded update was not available at restart.');
-        }
-        if(!validBundle(b)){
-          console.warn('boot: patched bundle incomplete or superseded, using a validated fallback');
-          return rejectPatch(db,b.version,'The downloaded update was incomplete at restart.');
-        }
-        window.__MASSFRONT_PATCHED=b.version||'?';
-        if(prob){
-          var tx=db.transaction(STORE,'readwrite');
-          tx.objectStore(STORE).put({version:prob.version,at:prob.at,tries:(prob.tries|0)+1},'probation');
-        }
-        runBundle(b);
-      });
-      });
+      if(decision.kind==='run'){
+        window.__MASSFRONT_PATCHED=decision.bundle.version||'?';
+        window.__MASSFRONT_PATCH_AT=decision.bundle.at;
+        window.__MASSFRONT_PATCH_CHANNEL=decision.bundle.channel||'stable';
+        runBundle(decision.bundle);
+        return;
+      }
+      if(decision.failedVersion)
+        console.warn('boot: patch '+decision.failedVersion+' rejected, using packaged build');
+      runPackaged();
     });
   }).catch(runPackaged);
 
@@ -315,12 +558,9 @@
        patch is similarly only a fallback for a different failed version. */
     if(!window.__MASSFRONT_PATCHED||window.__MASSFRONT_RECOVERED_PATCH) return;
     idb().then(function(db){
-      return del(db,'probation')
-        /* A packaged fallback also reaches a frame. It must not erase the
-           failure that explains why the patch did not start; only a confirmed
-           patched frame has earned the right to clear recovery state. */
-        .then(function(){ return window.__MASSFRONT_PATCHED&&!window.__MASSFRONT_RECOVERED_PATCH?del(db,'applyFailure'):null; })
-        .then(function(){ return window.__MASSFRONT_PATCHED&&!window.__MASSFRONT_RECOVERED_PATCH?del(db,'pending'):null; });
+      return confirmPatch(db,{version:window.__MASSFRONT_PATCHED,
+        channel:window.__MASSFRONT_PATCH_CHANNEL||'stable',
+        at:window.__MASSFRONT_PATCH_AT});
     }).catch(function(){});
   };
 })();

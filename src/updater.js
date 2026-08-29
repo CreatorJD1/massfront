@@ -99,23 +99,44 @@ function updChannel(){
   catch(e){ return 'stable'; }
 }
 async function updSetChannel(channel){
+  /* A transfer owns the manifest it captured at its first byte. Switching the
+     global channel underneath it used to let that old transfer finish and
+     stage the wrong channel after the player had selected a new one. Keep the
+     control inert through every state that owns asynchronous update work; the
+     player can cancel a download first, then switch once cancellation settles. */
+  if(updOperationBusy()) return false;
   const next=updChannelName(channel);
-  try{ localStorage.setItem(UPD_CHANNEL_KEY,next); }catch(e){}
-  updResolved=false; UPDATE_URL=null;
-  /* Drop the STATE together with the manifest. Nulling UPD.manifest while
-     UPD.state was still 'available' (or 'ready') made the renderUpdatePanel
-     call at the end of this function dereference m.version on a null, which
-     threw out of this async function before the caller's updSet('idle') and
-     updCheck(true) could run. Symptom: tapping PREVIEW/STABLE while an update
-     was on offer highlighted the new button, froze the panel on the OLD
-     channel's offer, and turned DOWNLOAD into a dead control — updDownload
-     returns immediately on a null manifest — with no way back short of
-     restarting the app. */
-  UPD.manifest=null; UPD.checkedVersion=null; UPD.source=null; UPD.err=null;
-  UPD.state='idle'; UPD.channel=next;
-  await updResolveEndpoint(true);
-  if(typeof renderUpdatePanel==='function') renderUpdatePanel();
-  return UPDATE_URL;
+  updSet('channeling',{offerBytes:null,offerKind:null,offerFallback:false,
+                       transferKind:null,retryDownload:false,readyIdentity:null});
+  let lease=null;
+  try{
+    /* localStorage is shared but has no compare-and-swap. Serialize its write
+       through the updater's IndexedDB lease so Apply/Rollback and final staging
+       observe one unambiguous before-or-after channel choice across windows. */
+    lease=await updAcquireSharedOperation('channel');
+    try{ localStorage.setItem(UPD_CHANNEL_KEY,next); }catch(e){}
+    updResolved=false; UPDATE_URL=null;
+    /* Drop the STATE together with the manifest. Nulling UPD.manifest while
+       UPD.state was still 'available' (or 'ready') made the renderUpdatePanel
+       call at the end of this function dereference m.version on a null, which
+       threw out of this async function before the caller's updSet('idle') and
+       updCheck(true) could run. Symptom: tapping PREVIEW/STABLE while an update
+       was on offer highlighted the new button, froze the panel on the OLD
+       channel's offer, and turned DOWNLOAD into a dead control — updDownload
+       returns immediately on a null manifest — with no way back short of
+       restarting the app. */
+    UPD.manifest=null; UPD.checkedVersion=null; UPD.source=null; UPD.err=null;
+    UPD.channel=next;
+    await updResolveEndpoint(true);
+    updSet('idle');
+    return UPDATE_URL;
+  }catch(e){
+    updSet('error',{err:e&&e.code==='MF_UPDATE_OPERATION_BUSY'?e.message:
+      'Could not switch update channel — try again',retryDownload:false});
+    return false;
+  }finally{
+    if(lease){ try{ await updReleaseSharedOperation(lease); }catch(e){} }
+  }
 }
 
 function updPackagedHost(){
@@ -317,6 +338,8 @@ async function updLoadManifest(){
 }
 
 const UPD_DB='massfront-updates', UPD_STORE='bundles';
+const UPD_OPERATION_KEY='operation', UPD_OPERATION_STALE_MS=5*60*1000;
+const UPD_PREVIOUS_SLOTS=['previousA','previousB'];
 
 function updIdb(){
   return new Promise((res,rej)=>{
@@ -326,13 +349,15 @@ function updIdb(){
     r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
   });
 }
-async function updPut(key,val){
-  const db=await updIdb();
-  return new Promise((res,rej)=>{
-    const tx=db.transaction(UPD_STORE,'readwrite');
-    tx.objectStore(UPD_STORE).put(val,key);
-    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
-  });
+function updBundleMeta(value){
+  if(!value) return null;
+  return {version:value.version,channel:value.channel||'stable',at:value.at,
+    notes:value.notes||'',severity:value.severity||'recommended',
+    kind:value.kind||'full',patchedFrom:value.patchedFrom||''};
+}
+function updMetaKey(key){ return key+'Meta'; }
+function updPreviousSlot(key){
+  return UPD_PREVIOUS_SLOTS.includes(String(key||''))?String(key):null;
 }
 async function updGet(key){
   const db=await updIdb();
@@ -342,12 +367,516 @@ async function updGet(key){
     q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error);
   });
 }
-async function updDel(key){
+async function updGetBundleMeta(key){
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    let result=null;
+    const meta=store.get(updMetaKey(key));
+    meta.onsuccess=()=>{
+      if(meta.result){ result=meta.result; return; }
+      /* Pre-metadata installs pay for one payload read, then persist the small
+         identity so later menus and boots never deserialize it just for a
+         version label. Keep the backfill in this transaction so two windows
+         cannot publish metadata for different payload snapshots. */
+      const legacy=store.get(key);
+      legacy.onsuccess=()=>{
+        result=updBundleMeta(legacy.result);
+        if(result) store.put(result,updMetaKey(key));
+      };
+      legacy.onerror=()=>rej(legacy.error||new Error('could not inspect legacy bundle'));
+    };
+    meta.onerror=()=>rej(meta.error||new Error('could not inspect bundle metadata'));
+    tx.oncomplete=()=>res(result);
+    tx.onerror=()=>rej(tx.error||new Error('could not migrate bundle metadata'));
+    tx.onabort=()=>rej(tx.error||new Error('bundle metadata migration aborted'));
+  });
+}
+async function updGetRollbackMeta(){
+  const db=await updIdb();
+  const records=await new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readonly'),store=tx.objectStore(UPD_STORE);
+    const keys=['previousRef','previousAMeta','previousBMeta','previousMeta'];
+    const requests=keys.map(key=>store.get(key));
+    let ready=0;
+    const inspect=()=>{
+      if(++ready<keys.length) return;
+      const result={};
+      keys.forEach((key,index)=>{ result[key]=requests[index].result; });
+      res(result);
+    };
+    requests.forEach(request=>{
+      request.onsuccess=inspect;
+      request.onerror=()=>rej(request.error||new Error('could not inspect rollback metadata'));
+    });
+    tx.onerror=()=>rej(tx.error||new Error('could not inspect rollback metadata'));
+    tx.onabort=()=>rej(tx.error||new Error('rollback metadata inspection aborted'));
+  });
+  const slot=updPreviousSlot(records.previousRef&&records.previousRef.key);
+  const meta=slot&&records[updMetaKey(slot)];
+  if(meta&&updSamePending(records.previousRef,meta)) return meta;
+  if(records.previousMeta) return records.previousMeta;
+  /* Only legacy installs without metadata pay for the old full-payload read.
+     Slot records are always written with metadata in the same transaction. */
+  return updGetBundleMeta('previous');
+}
+function updOperationLive(operation){
+  const age=operation&&Number.isFinite(operation.at)?Date.now()-operation.at:-1;
+  return !!(operation&&operation.token&&age>=0&&age<UPD_OPERATION_STALE_MS);
+}
+/* Apply and Rollback are short, destructive storage operations. A durable IDB
+   lease serializes them across tabs/WebViews; the five-minute expiry recovers
+   a document killed mid-operation without leaving updates disabled forever. */
+async function updAcquireSharedOperation(kind,target){
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    const lease={kind:String(kind),at:Date.now(),target:updPendingIdentity(target),
+      token:String(kind)+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)};
+    let conflict=null;
+    const current=store.get(UPD_OPERATION_KEY);
+    current.onsuccess=()=>{
+      if(updOperationLive(current.result)){
+        conflict=new Error('Another update window is already busy');
+        conflict.code='MF_UPDATE_OPERATION_BUSY';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      store.put(lease,UPD_OPERATION_KEY);
+    };
+    current.onerror=()=>rej(current.error||new Error('could not inspect update operation'));
+    tx.oncomplete=()=>res(lease);
+    tx.onerror=()=>rej(conflict||tx.error||new Error('could not lock update operation'));
+    tx.onabort=()=>rej(conflict||tx.error||new Error('update operation lock aborted'));
+  });
+}
+async function updRefreshSharedOperation(lease){
+  if(!lease||!lease.token) throw new Error('Missing update operation ownership');
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    let conflict=null,refreshed=null;
+    const current=store.get(UPD_OPERATION_KEY);
+    current.onsuccess=()=>{
+      if(!current.result||current.result.token!==lease.token){
+        conflict=new Error('Update operation ownership changed');
+        conflict.code='MF_UPDATE_OPERATION_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      refreshed=Object.assign({},current.result,{at:Date.now()});
+      store.put(refreshed,UPD_OPERATION_KEY);
+    };
+    current.onerror=()=>rej(current.error||new Error('could not refresh update operation'));
+    tx.oncomplete=()=>{ Object.assign(lease,refreshed||{}); res(lease); };
+    tx.onerror=()=>rej(conflict||tx.error||new Error('could not refresh update operation'));
+    tx.onabort=()=>rej(conflict||tx.error||new Error('update operation refresh aborted'));
+  });
+}
+async function updReleaseSharedOperation(lease){
+  if(!lease||!lease.token) return;
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    const current=store.get(UPD_OPERATION_KEY);
+    current.onsuccess=()=>{
+      if(current.result&&current.result.token===lease.token) store.delete(UPD_OPERATION_KEY);
+    };
+    current.onerror=()=>rej(current.error||new Error('could not inspect update operation'));
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error||new Error('could not release update operation'));
+    tx.onabort=()=>rej(tx.error||new Error('update operation release aborted'));
+  });
+}
+async function updPreparePrevious(expected,lease){
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    let conflict=null,result=null,ready=0;
+    const operation=store.get(UPD_OPERATION_KEY);
+    const meta=store.get('activeMeta');
+    const previousRef=store.get('previousRef');
+    const inspect=()=>{
+      if(++ready<3) return;
+      if(!lease||!operation.result||operation.result.token!==lease.token){
+        conflict=new Error('Update operation ownership changed');
+        conflict.code='MF_UPDATE_OPERATION_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      if(meta.result&&!updSamePending(meta.result,expected)){
+        conflict=new Error('The installed update changed before rollback preservation');
+        conflict.code='MF_UPDATE_ACTIVE_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      /* Read the one known-good active payload BEFORE pending is materialized.
+         This keeps an OTA-to-OTA Apply at one large JS value at a time instead
+         of cloning active plus pending twice in the promotion transaction. */
+      const active=store.get('active');
+      active.onsuccess=()=>{
+        if(!updSamePending(active.result,expected)){
+          conflict=new Error('The installed update changed before rollback preservation');
+          conflict.code='MF_UPDATE_ACTIVE_CHANGED';
+          try{ tx.abort(); }catch(e){ rej(conflict); }
+          return;
+        }
+        /* The currently referenced rollback remains untouched until promotion
+           succeeds. A failed/quota-aborted Apply can therefore discard only
+           its inactive preparation slot, never the last validated recovery. */
+        const current=updPreviousSlot(previousRef.result&&previousRef.result.key);
+        const key=current==='previousA'?'previousB':'previousA';
+        const activeMeta=updBundleMeta(active.result);
+        result=Object.assign({key},updPendingIdentity(activeMeta));
+        store.put(Object.assign({},operation.result,{at:Date.now()}),UPD_OPERATION_KEY);
+        store.put(active.result,key);
+        store.put(activeMeta,updMetaKey(key));
+        if(!meta.result) store.put(activeMeta,'activeMeta');
+      };
+      active.onerror=()=>rej(active.error||new Error('could not inspect installed rollback copy'));
+    };
+    operation.onsuccess=inspect; meta.onsuccess=inspect; previousRef.onsuccess=inspect;
+    operation.onerror=()=>rej(operation.error||new Error('could not verify rollback-copy ownership'));
+    meta.onerror=()=>rej(meta.error||new Error('could not inspect installed update metadata'));
+    previousRef.onerror=()=>rej(previousRef.error||new Error('could not inspect rollback pointer'));
+    tx.oncomplete=()=>res(result);
+    tx.onerror=()=>rej(conflict||tx.error||new Error('could not save rollback copy'));
+    tx.onabort=()=>rej(conflict||tx.error||new Error('rollback-copy write aborted'));
+  });
+}
+async function updClearPreviousOwned(prepared,lease){
+  const key=prepared&&updPreviousSlot(prepared.key);
+  if(!key) return false;
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    let conflict=null,ready=0,cleared=false;
+    const operation=store.get(UPD_OPERATION_KEY);
+    const meta=store.get(updMetaKey(key));
+    const inspect=()=>{
+      if(++ready<2) return;
+      if(!lease||!operation.result||operation.result.token!==lease.token){
+        conflict=new Error('Update operation ownership changed');
+        conflict.code='MF_UPDATE_OPERATION_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      /* A later owner may reuse the inactive slot. Exact identity plus the
+         operation token prevents an older finally block deleting its bytes. */
+      if(updSamePending(meta.result,prepared)){
+        cleared=true;
+        store.delete(key); store.delete(updMetaKey(key));
+      }
+    };
+    operation.onsuccess=inspect; meta.onsuccess=inspect;
+    operation.onerror=()=>rej(operation.error||new Error('could not verify rollback-copy cleanup'));
+    meta.onerror=()=>rej(meta.error||new Error('could not inspect rollback-copy cleanup'));
+    tx.oncomplete=()=>res(cleared);
+    tx.onerror=()=>rej(conflict||tx.error||new Error('could not clear rollback copy'));
+    tx.onabort=()=>rej(conflict||tx.error||new Error('rollback-copy cleanup aborted'));
+  });
+}
+
+/* Commit the verified payload and retire a prior failed-start marker in ONE
+   transaction. Separate writes allowed the first to succeed and the second to
+   fail, leaving a newly staged payload behind after updDownload reported a
+   failure. IndexedDB transactions are atomic across both keys. */
+async function updCommitPending(value){
   const db=await updIdb();
   return new Promise((res,rej)=>{
     const tx=db.transaction(UPD_STORE,'readwrite');
-    tx.objectStore(UPD_STORE).delete(key);
-    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error);
+    const store=tx.objectStore(UPD_STORE);
+    let conflict=null;
+    const existing=store.get('pendingMeta');
+    const probation=store.get('probation');
+    const operation=store.get(UPD_OPERATION_KEY);
+    let ready=0,prior=null,legacy=null,committed=false;
+    const abortConflict=(message,code)=>{
+      conflict=new Error(message); conflict.code=code;
+      try{ tx.abort(); }catch(e){ rej(conflict); }
+    };
+    const commit=()=>{
+      if(committed) return;
+      committed=true;
+      if(updOperationLive(operation.result)){
+        abortConflict('Another update operation is already in progress',
+                      'MF_UPDATE_OPERATION_BUSY');
+        return;
+      }
+      if(operation.result) store.delete(UPD_OPERATION_KEY);
+      if(probation.result){
+        abortConflict('Another update is already being installed','MF_UPDATE_INSTALL_ACTIVE');
+        return;
+      }
+      /* localStorage is shared between same-origin documents. Recheck channel
+         intent inside the serialized transaction so an old Preview tab cannot
+         stage after another tab has selected Stable (or vice versa). */
+      if(!updPendingForChannel(value)){
+        abortConflict('The update channel changed during download','MF_UPDATE_CHANNEL_CHANGED');
+        return;
+      }
+      const newer=prior&&prior.version&&verNewer(prior.version,value.version);
+      const sameVersion=prior&&String(prior.version)===String(value.version);
+      const sameChannel=prior&&updChannelName(prior.channel||'stable')===
+        updChannelName(value.channel||'stable');
+      if(sameChannel&&(newer||sameVersion)){
+        abortConflict(newer?'A newer update is already staged'
+                           :'This update version is already staged',
+                      'MF_UPDATE_PENDING_SUPERSEDED');
+        return;
+      }
+      store.put(value,'pending');
+      store.put(updBundleMeta(value),'pendingMeta');
+      store.delete('applyFailure');
+    };
+    const inspect=()=>{
+      if(++ready<3) return;
+      if(existing.result){ prior=existing.result; commit(); return; }
+      /* A pre-metadata pending record is read only once for arbitration. The
+         incoming verified payload replaces it on success; a conflicting legacy
+         record stays untouched, and initUpdater's metadata migration handles
+         its future lightweight reads. */
+      legacy=store.get('pending');
+      legacy.onsuccess=()=>{ prior=updBundleMeta(legacy.result); commit(); };
+      legacy.onerror=()=>rej(legacy.error||new Error('could not inspect legacy staged update'));
+    };
+    existing.onsuccess=inspect;
+    probation.onsuccess=inspect;
+    operation.onsuccess=inspect;
+    existing.onerror=()=>rej(existing.error||new Error('could not inspect staged update metadata'));
+    probation.onerror=()=>rej(probation.error||new Error('could not inspect update installation'));
+    operation.onerror=()=>rej(operation.error||new Error('could not inspect update operation'));
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(conflict||tx.error||new Error('update staging failed'));
+    tx.onabort=()=>rej(conflict||tx.error||new Error('update staging aborted'));
+  });
+}
+
+function updSamePending(a,b){
+  return !!(a&&b&&String(a.version)===String(b.version)&&
+    updChannelName(a.channel||'stable')===updChannelName(b.channel||'stable')&&
+    String(a.at==null?'':a.at)===String(b.at==null?'':b.at));
+}
+function updPendingIdentity(value){
+  return value?{version:value.version,channel:value.channel||'stable',at:value.at}:null;
+}
+function updRunningIdentity(){
+  if(typeof window==='undefined'||!window.__MASSFRONT_PATCHED) return null;
+  return {version:String(window.__MASSFRONT_PATCHED),
+    channel:window.__MASSFRONT_PATCH_CHANNEL||'stable',
+    at:window.__MASSFRONT_PATCH_AT};
+}
+function updProbationOwns(probation,bundle){
+  return !!(probation&&bundle&&String(probation.version)===String(bundle.version)&&
+    updChannelName(probation.channel||'stable')===updChannelName(bundle.channel||'stable')&&
+    (probation.pendingAt==null||
+     String(probation.pendingAt)===String(bundle.at==null?'':bundle.at)));
+}
+/* Validate pending and promote it under the SAME transaction. This closes the
+   cross-document gap where another tab could replace pending after Apply read
+   it, causing the old snapshot to become active and the new one to be deleted
+   by boot confirmation. A probation record also blocks later staging. */
+async function updCommitApply(value,lease,expected,running,prepared){
+  const preparedSlot=prepared&&updPreviousSlot(prepared.key);
+  if(prepared&&(!preparedSlot||!running||!updSamePending(prepared,running))){
+    const conflict=new Error('The prepared rollback copy changed before installation');
+    conflict.code='MF_UPDATE_PREVIOUS_CHANGED';
+    throw conflict;
+  }
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite');
+    const store=tx.objectStore(UPD_STORE);
+    const pending=store.get('pendingMeta'),active=store.get('activeMeta');
+    const probation=store.get('probation');
+    const operation=store.get(UPD_OPERATION_KEY);
+    const previousRef=store.get('previousRef');
+    const preparedMeta=preparedSlot?store.get(updMetaKey(preparedSlot)):null;
+    let pendingReady=false,activeReady=false,probationReady=false;
+    let operationReady=false,previousReady=false,preparedReady=!preparedSlot,conflict=null;
+    const promote=()=>{
+      if(!pendingReady||!activeReady||!probationReady||!operationReady||
+         !previousReady||!preparedReady) return;
+      if(!lease||!operation.result||operation.result.token!==lease.token){
+        conflict=new Error('Update installation ownership changed');
+        conflict.code='MF_UPDATE_OPERATION_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      if(probation.result){
+        conflict=new Error('Another update is already being installed');
+        conflict.code='MF_UPDATE_INSTALL_ACTIVE';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      if(!updPendingForChannel(value)){
+        conflict=new Error('The update channel changed before installation');
+        conflict.code='MF_UPDATE_CHANNEL_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      if(!updSamePending(pending.result,value)||
+         (expected&&!updSamePending(pending.result,expected))){
+        conflict=new Error('The downloaded update changed before installation');
+        conflict.code='MF_UPDATE_PENDING_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      if(running&&!updSamePending(active.result,running)){
+        conflict=new Error('The installed update changed before installation');
+        conflict.code='MF_UPDATE_ACTIVE_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      if(preparedSlot&&!updSamePending(preparedMeta.result,prepared)){
+        conflict=new Error('The prepared rollback copy changed before installation');
+        conflict.code='MF_UPDATE_PREVIOUS_CHANGED';
+        try{ tx.abort(); }catch(e){ rej(conflict); }
+        return;
+      }
+      store.put({version:value.version,channel:value.channel||'stable',
+                 pendingAt:value.at,at:Date.now(),tries:0},'probation');
+      store.put(value,'active');
+      store.put(updBundleMeta(value),'activeMeta');
+      if(preparedSlot){
+        const oldSlot=updPreviousSlot(previousRef.result&&previousRef.result.key);
+        store.put(Object.assign({key:preparedSlot},updPendingIdentity(prepared)),
+                  'previousRef');
+        if(oldSlot&&oldSlot!==preparedSlot){
+          store.delete(oldSlot); store.delete(updMetaKey(oldSlot));
+        }
+        store.delete('previous'); store.delete('previousMeta');
+      }else if(!running||!updSamePending(running,value)){
+        /* If the best-effort copy did not fit, a successful promotion must not
+           leave Rollback pointing two releases behind. Retire the old pointer
+           only here, atomically with the new active payload; an Apply which
+           fails before promotion still keeps its validated recovery intact. */
+        store.delete('previousRef');
+        for(const key of UPD_PREVIOUS_SLOTS){
+          store.delete(key); store.delete(updMetaKey(key));
+        }
+        store.delete('previous'); store.delete('previousMeta');
+      }
+    };
+    pending.onsuccess=()=>{ pendingReady=true; promote(); };
+    active.onsuccess=()=>{ activeReady=true; promote(); };
+    probation.onsuccess=()=>{ probationReady=true; promote(); };
+    operation.onsuccess=()=>{ operationReady=true; promote(); };
+    previousRef.onsuccess=()=>{ previousReady=true; promote(); };
+    if(preparedMeta) preparedMeta.onsuccess=()=>{ preparedReady=true; promote(); };
+    pending.onerror=()=>rej(pending.error||new Error('could not recheck download metadata'));
+    active.onerror=()=>rej(active.error||new Error('could not inspect installed update metadata'));
+    probation.onerror=()=>rej(probation.error||new Error('could not inspect update installation'));
+    operation.onerror=()=>rej(operation.error||new Error('could not recheck update operation'));
+    previousRef.onerror=()=>rej(previousRef.error||new Error('could not inspect rollback pointer'));
+    if(preparedMeta) preparedMeta.onerror=()=>rej(preparedMeta.error||new Error('could not inspect prepared rollback copy'));
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(conflict||tx.error||new Error('could not prepare update'));
+    tx.onabort=()=>rej(conflict||tx.error||new Error('update preparation aborted'));
+  });
+}
+
+/* Rollback is one durable state transition. The former sequence used up to
+   five separate transactions, so process death could expose a restored active
+   bundle without probation or destroy only half of the recovery records. */
+async function updCommitRollback(lease,expected){
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    const keys=['activeMeta','pendingMeta','probation',UPD_OPERATION_KEY,
+      'previousRef','previousAMeta','previousBMeta','previousMeta'];
+    const requests=keys.map(key=>store.get(key)),records={};
+    let ready=0,legacyLeft=0,activeLegacy=null,pendingLegacy=null;
+    let conflict=null,result=null,committed=false;
+    const abort=(message,code)=>{
+      conflict=new Error(message); conflict.code=code;
+      try{ tx.abort(); }catch(e){ rej(conflict); }
+    };
+    const clearPrevious=()=>{
+      store.delete('previousRef'); store.delete('previous'); store.delete('previousMeta');
+      for(const key of UPD_PREVIOUS_SLOTS){
+        store.delete(key); store.delete(updMetaKey(key));
+      }
+    };
+    const commit=(prior,selected)=>{
+      if(committed) return;
+      committed=true;
+      const operation=records[UPD_OPERATION_KEY];
+      if(!lease||!operation||operation.token!==lease.token){
+        abort('Update rollback ownership changed','MF_UPDATE_OPERATION_CHANGED');
+        return;
+      }
+      const current=records.activeMeta||(activeLegacy&&activeLegacy.result)||null;
+      const pending=records.pendingMeta||(pendingLegacy&&pendingLegacy.result)||null;
+      if(expected&&!updSamePending(current,expected)){
+        abort('The installed update changed before rollback','MF_UPDATE_ACTIVE_CHANGED');
+        return;
+      }
+      if(records.probation&&!updProbationOwns(records.probation,current)){
+        abort('Update recovery state changed before rollback','MF_UPDATE_ACTIVE_CHANGED');
+        return;
+      }
+      const good=prior&&prior.files&&verNewer(prior.version,APP_VERSION)&&
+        Array.isArray(prior.order)&&prior.order.every(p=>typeof prior.files[p]==='string')&&
+        (!selected.meta||updSamePending(selected.meta,prior))&&
+        (!selected.ref||updSamePending(selected.ref,prior));
+      if(good){
+        result={version:prior.version,recovered:true};
+        store.put(prior,'active'); store.put(updBundleMeta(prior),'activeMeta');
+        clearPrevious();
+        store.put({version:prior.version,channel:prior.channel||'stable',
+                   pendingAt:prior.at,at:Date.now(),tries:0},'probation');
+      }else{
+        result={version:'',recovered:false};
+        store.delete('active'); store.delete('activeMeta');
+        clearPrevious();
+        store.delete('probation');
+      }
+      /* `pending` may be a different candidate downloaded in another window.
+         Reverting the installed build must not silently discard that consent. */
+      if(pending&&current&&updSamePending(pending,current)){
+        store.delete('pending'); store.delete('pendingMeta');
+      }
+    };
+    const loadPrevious=()=>{
+      const ref=records.previousRef;
+      const slot=updPreviousSlot(ref&&ref.key);
+      const slotMeta=slot&&records[updMetaKey(slot)];
+      const selected=slot&&slotMeta&&updSamePending(ref,slotMeta)
+        ?{key:slot,meta:slotMeta,ref}
+        :{key:'previous',meta:records.previousMeta,ref:null};
+      const previous=store.get(selected.key);
+      previous.onsuccess=()=>commit(previous.result,selected);
+      previous.onerror=()=>rej(previous.error||new Error('could not inspect rollback copy'));
+    };
+    const legacyDone=()=>{ if(--legacyLeft===0) loadPrevious(); };
+    const inspect=()=>{
+      if(++ready<keys.length) return;
+      keys.forEach((key,index)=>{ records[key]=requests[index].result; });
+      const operation=records[UPD_OPERATION_KEY];
+      if(!lease||!operation||operation.token!==lease.token){
+        abort('Update rollback ownership changed','MF_UPDATE_OPERATION_CHANGED');
+        return;
+      }
+      if(!records.activeMeta){
+        legacyLeft++; activeLegacy=store.get('active');
+        activeLegacy.onsuccess=legacyDone;
+        activeLegacy.onerror=()=>rej(activeLegacy.error||new Error('could not inspect installed update'));
+      }
+      if(!records.pendingMeta){
+        legacyLeft++; pendingLegacy=store.get('pending');
+        pendingLegacy.onsuccess=legacyDone;
+        pendingLegacy.onerror=()=>rej(pendingLegacy.error||new Error('could not inspect downloaded update'));
+      }
+      if(!legacyLeft) loadPrevious();
+    };
+    requests.forEach(request=>{
+      request.onsuccess=inspect;
+      request.onerror=()=>rej(request.error||new Error('could not inspect update rollback state'));
+    });
+    tx.oncomplete=()=>res(result);
+    tx.onerror=()=>rej(conflict||tx.error||new Error('could not commit rollback'));
+    tx.onabort=()=>rej(conflict||tx.error||new Error('update rollback aborted'));
   });
 }
 
@@ -359,8 +888,8 @@ async function updDel(key){
 
    * The notes are staged in localStorage at DOWNLOAD time, not read back out
      of the bundle at install time. They travel with the bundle in the IndexedDB
-     `pending` record, but that record holds the whole payload — the live
-     channel ships one 26.7 MB source string — and deserialising 26 MB on the
+     `pending` record, but that record holds the whole payload — the current
+     full release is about 85 MB — and deserialising it on the
      boot path to recover 1 KB of text is not something a 360px phone should be
      asked to do. localStorage survives the location.replace() that restarts the
      document, which is the only thing the install path actually needs.
@@ -456,24 +985,50 @@ function fmtBytes(n){
 function updHex(buf){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-async function updVerifyHash(bytes,want,path){
+function updDownloadAbort(){
+  const e=new Error('Download cancelled'); e.name='AbortError'; return e;
+}
+/* Every awaited boundary verifies BOTH cancellation and ownership. The signal
+   handles an ordinary CANCEL; the run id prevents an older promise from
+   painting or committing after a newer attempt has taken ownership. */
+function updAssertDownload(run,ac){
+  if(UPD.downloadRun!==run||(ac&&ac.signal&&ac.signal.aborted))
+    throw updDownloadAbort();
+}
+async function updVerifyHash(bytes,want,path,run,ac){
   if(!want) return;
   if(typeof crypto==='undefined'||!crypto.subtle) throw new Error(path+': integrity checks unavailable');
   /* Keep the verifier safe for both streamed downloads (Uint8Array) and any
      future non-streaming/native bridge that hands us a Blob. Web Crypto only
      accepts an ArrayBuffer or a view, never a Blob object itself. */
-  if(bytes&&typeof bytes.arrayBuffer==='function') bytes=await bytes.arrayBuffer();
-  const got=updHex(await crypto.subtle.digest('SHA-256',bytes));
+  if(bytes&&typeof bytes.arrayBuffer==='function'){
+    bytes=await bytes.arrayBuffer();
+    updAssertDownload(run,ac);
+  }
+  const digest=await crypto.subtle.digest('SHA-256',bytes);
+  updAssertDownload(run,ac);
+  const got=updHex(digest);
   if(got.toLowerCase()!==String(want).toLowerCase()) throw new Error(path+': integrity check failed');
 }
 
 const UPD={ state:'idle', manifest:null, pct:0, got:0, total:0, rate:0, err:null,
-            abort:null, lastCheck:0, checkedVersion:null, source:null, channel:'stable',
+             abort:null, lastCheck:0, checkedVersion:null, source:null, channel:'stable',
+             downloadSeq:0,downloadRun:0,retryDownload:false,
+             offerBytes:null,offerKind:null,offerFallback:false,transferKind:null,
+             readyIdentity:null,
             /* Per-file feed. The download loop has always walked m.files, but only
                aggregate bytes were ever surfaced, so a multi-file patch looked
                identical to one big blob and a stall gave no clue which object was
                stuck. feed[] carries one row per file: name, size, and state. */
             feed:[], fileIdx:-1 };
+
+/* One synchronous lock for every updater operation that owns async state.
+   Without it, each function acquired its visible state after a different
+   first await, leaving small but reachable channel/apply/rollback races. */
+function updOperationBusy(){
+  return !!UPD.downloadRun||
+    ['channeling','checking','downloading','staging','applying','rollingBack'].includes(UPD.state);
+}
 
 function updSet(st,extra){
   UPD.state=st;
@@ -483,7 +1038,7 @@ function updSet(st,extra){
 
 /* ---- CHECK ---------------------------------------------------------------- */
 async function updCheck(manual){
-  if(UPD.state==='downloading'||UPD.state==='checking') return;
+  if(updOperationBusy()) return;
   /* Offline is a normal state, not a failure. Say so and stop — do not attempt
      a request that cannot succeed and then report an error for it. */
   if(typeof netAllowed==='function' && !netAllowed()){
@@ -492,6 +1047,12 @@ async function updCheck(manual){
       toast('✈ Offline mode — turn it off in Settings to check for updates');
     return;
   }
+  /* Claim the check before endpoint resolution, which itself awaits local
+     configuration. Otherwise a second check or channel tap can interleave
+     before the old implementation ever reached its `checking` state. */
+  const t0=(typeof performance!=='undefined'?performance.now():Date.now());
+  updSet('checking',{err:null,channel:updChannel(),retryDownload:false,readyIdentity:null});
+
   /* Re-read the packaged channel on an explicit check. It costs one tiny local
      file read and repairs an endpoint that was temporarily unresolved at boot. */
   if(!updResolved||manual) await updResolveEndpoint(!!manual);
@@ -509,8 +1070,6 @@ async function updCheck(manual){
      against a nearby server can finish in 30ms, and a panel that flickers
      through "checking" too fast to read is indistinguishable from one that
      ignored the tap — which is what "doesn't work" actually meant. */
-  const t0=(typeof performance!=='undefined'?performance.now():Date.now());
-  updSet('checking',{err:null,channel:updChannel()});
   let next='current', extra={};
   try{
     const found=await updLoadManifest();
@@ -528,6 +1087,17 @@ async function updCheck(manual){
        honest instead of saying UP TO DATE when the publisher is behind. */
     next = verNewer(m.version,updVerShown) ? 'available'
          : verNewer(updVerShown,m.version) ? 'stale' : 'current';
+    if(next==='available'){
+      const plan=await updTransferPlan(m);
+      if(plan.error){ next='error'; extra={err:plan.error}; }
+      else{
+        UPD.offerBytes=plan.files.reduce((sum,f)=>sum+(f.size||0),0);
+        UPD.offerKind=updKindForFiles(plan.files);
+        UPD.offerFallback=plan.fallback;
+      }
+    } else {
+      UPD.offerBytes=null; UPD.offerKind=null; UPD.offerFallback=false;
+    }
   }catch(e){
     next='error';
     extra={err: manual ? ((e&&e.message&&/HTTP/.test(e.message))
@@ -538,74 +1108,76 @@ async function updCheck(manual){
   const el=(typeof performance!=='undefined'?performance.now():Date.now())-t0;
   if(el<520) await new Promise(res=>setTimeout(res,520-el));
   UPD.lastCheck=Date.now();
-  updSet(next,extra);
+  updSet(next,Object.assign({retryDownload:false},extra));
   if(manual&&next==='current'&&typeof toast==='function') toast('✓ You are on the latest build (v'+updVerShown+')');
   if(manual&&next==='stale'&&typeof toast==='function')
     toast('Update channel is behind this build (server v'+UPD.manifest.version+', installed v'+updVerShown+')');
 }
 
 /* ---- DOWNLOAD ------------------------------------------------------------- */
+/* Resolve the payload shape before consent as well as before transfer. Patch
+   manifests carry a tiny delta and an optional full fallback; showing only the
+   delta size to a fresh packaged client concealed the actual mobile-data cost. */
+async function updTransferPlan(m){
+  const files=Array.isArray(m&&m.files)?m.files:[];
+  if(!updIsPatch(m)) return {files,patching:false,priorRec:null,fallback:false};
+  let priorRec;
+  try{ priorRec=await updGet('active'); }
+  catch(e){ return {files:[],patching:false,priorRec:null,fallback:false,
+                    error:'Could not inspect the installed update'}; }
+  const priorFiles=(priorRec&&priorRec.files)||null;
+  const sameBase=!!priorRec&&String(priorRec.version)===String(m.patchFrom);
+  const shapeOK=!!priorFiles&&files.every(f=>
+    Object.prototype.hasOwnProperty.call(priorFiles,f.path));
+  if(sameBase&&shapeOK) return {files,patching:true,priorRec,fallback:false};
+  const full=updFullEntry(m);
+  if(full) return {files:full,patching:false,priorRec,fallback:true};
+  const why=!priorRec ? 'there is no installed update to patch'
+            : !sameBase ? ('it patches '+m.patchFrom+' and you have '+priorRec.version)
+            : 'it patches files your installed build does not contain';
+  return {files:[],patching:false,priorRec,fallback:false,
+          error:'This update cannot be applied because '+why+
+                ', and no full payload was published'};
+}
+
 /* Streamed so the bar reflects bytes actually on the device rather than
    jumping from 0 to 100 when the request settles. Files are fetched one at a
    time: on a phone that is kinder to memory than a dozen parallel sockets, and
    it makes per-file progress honest. */
 async function updDownload(){
   const m=UPD.manifest;
-  if(!m||UPD.state==='downloading') return;
-  const base=m.base||'';
-  /* Decide UP FRONT whether this is a delta we can actually apply. Getting
-     this wrong after the bytes are on disk would mean either a broken merge
-     or a wasted download. */
-  const installedNow=await updInstalledVersion();
-  let patching=false, files=m.files, priorRec=null;
-  if(updIsPatch(m)){
-    /* Test against the RECORD WE WOULD MERGE ONTO, not merely against the
-       running version string. Two holes closed here, both of which shipped in
-       the first cut of this feature and both of which a critic caught:
-
-       (a) A fresh package install has NO `active` record at all - the packaged
-           build lives in the APK, not in IndexedDB. Comparing only versions
-           made patchFrom==='1.33.47' match a fresh 1.33.47 device, so it
-           downloaded the whole delta and only then discovered there was
-           nothing to merge onto. That is the MAJORITY cohort after any release.
-
-       (b) A device that previously took the `full` fallback holds a payload of
-           a different SHAPE (one concatenated blob) while carrying the new
-           version number. Version alone therefore said "yes" to a per-file
-           patch, which would merge source files on top of a build that already
-           contains them - every top-level const redeclared, a hard boot
-           failure. Requiring every patched path to ALREADY EXIST in the base
-           is what actually distinguishes the two payload shapes, and it is the
-           honest question anyway: you can only overwrite what is there. */
-    priorRec=await updGet('active');
-    const priorFiles=(priorRec&&priorRec.files)||null;
-    const sameBase=!!priorRec&&String(priorRec.version)===String(m.patchFrom);
-    const shapeOK=!!priorFiles&&m.files.every(f=>Object.prototype.hasOwnProperty.call(priorFiles,f.path));
-    if(sameBase&&shapeOK) patching=true;
-    else{
-      const full=updFullEntry(m);
-      if(!full){
-        const why=!priorRec ? 'there is no installed update to patch'
-                : !sameBase ? ('it patches '+m.patchFrom+' and you have '+priorRec.version)
-                : 'it patches files your installed build does not contain';
-        updSet('error',{err:'This update cannot be applied because '+why+
-                            ', and no full payload was published'});
-        return;
-      }
-      files=full;   // not our base, or not our payload shape: take a complete build
-    }
-  }
-  const total=files.reduce((s,f)=>s+(f.size||0),0)||1;
-  const ac=new AbortController();
-  updSet('downloading',{pct:0,got:0,total,rate:0,err:null,abort:ac});
-  const t0=performance.now();
-  const out={};
-  /* Build the feed up front so every file is visible as PENDING before the
-     first byte lands — a 900MB object that has not started yet is exactly the
-     case where silence looks like a hang. */
+  if(!m||updOperationBusy()) return;
+  /* Claim the attempt before the first await. Patch-base discovery touches
+     IndexedDB and can be slow under quota pressure; without this synchronous
+     latch a second activation could start another full mobile-data transfer. */
+  const run=++UPD.downloadSeq, ac=new AbortController();
+  UPD.downloadRun=run;
+  let patching=false, files=Array.isArray(m.files)?m.files:[], priorRec=null;
+  const initialTotal=files.reduce((s,f)=>s+(f.size||0),0)||1;
   UPD.feed=files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
   UPD.fileIdx=-1;
+  updSet('downloading',{pct:0,got:0,total:initialTotal,rate:0,err:null,abort:ac,
+                        retryDownload:false,readyIdentity:null});
+  const base=m.base||'';
+  const t0=performance.now();
+  const out={};
   try{
+    const plan=await updTransferPlan(m);
+    updAssertDownload(run,ac);
+    if(plan.error){
+      UPD.feed=[];
+      updSet('error',{err:plan.error,abort:null,retryDownload:false});
+      return;
+    }
+    files=plan.files; patching=plan.patching; priorRec=plan.priorRec;
+    const total=files.reduce((s,f)=>s+(f.size||0),0)||1;
+    UPD.total=total;
+    UPD.transferKind=updKindForFiles(files);
+    /* Rebuild after patch-base selection so a full fallback never inherits the
+       delta's rows. Every retry also receives new row objects and counters. */
+    UPD.feed=files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
+    UPD.fileIdx=-1;
+    if(typeof renderUpdatePanel==='function') renderUpdatePanel();
     let got=0;
     for(let fi=0;fi<files.length;fi++){
       const f=files[fi];
@@ -614,6 +1186,7 @@ async function updDownload(){
       const src=f.url||base+f.path;
       const r=await fetch(src+(src.includes('?')?'&':'?')+'v='+encodeURIComponent(m.version),
                           {cache:'no-store',signal:ac.signal});
+      updAssertDownload(run,ac);
       if(!r.ok) throw new Error(f.path+': HTTP '+r.status);
       const contentType=String(r.headers&&r.headers.get?r.headers.get('content-type')||'':'').toLowerCase();
       const chunks=[]; let n=0;
@@ -621,6 +1194,7 @@ async function updDownload(){
         const rd=r.body.getReader();
         for(;;){
           const {done,value}=await rd.read();
+          updAssertDownload(run,ac);
           if(done) break;
           chunks.push(value); n+=value.length; got+=value.length;
           if(UPD.feed[fi]) UPD.feed[fi].got=n;
@@ -631,6 +1205,7 @@ async function updDownload(){
         }
       } else {                                  // no streaming body: still works
         const buf=new Uint8Array(await r.arrayBuffer());
+        updAssertDownload(run,ac);
         chunks.push(buf); n=buf.length; got+=n;
         UPD.got=got; UPD.pct=Math.min(99,got/total*100);
         if(typeof renderUpdatePanel==='function') renderUpdatePanel();
@@ -650,7 +1225,8 @@ async function updDownload(){
       }
       const bytes=new Uint8Array(n); let at=0;
       for(const c of chunks){ bytes.set(c,at); at+=c.length; }
-      await updVerifyHash(bytes,f.sha256,f.path);
+      await updVerifyHash(bytes,f.sha256,f.path,run,ac);
+      updAssertDownload(run,ac);
       /* Only after BOTH the size check and the sha256 — a green row must mean
          verified, not merely received. */
       if(UPD.feed[fi]){ UPD.feed[fi].state='ok'; UPD.feed[fi].got=n; }
@@ -666,14 +1242,17 @@ async function updDownload(){
       /* Already fetched and validated in the decision block above, so this
          cannot be null here - but re-read defensively rather than trusting a
          value captured before a multi-megabyte download. */
-      const prior=priorRec||await updGet('active');
+      let prior=priorRec;
+      if(!prior){ prior=await updGet('active'); updAssertDownload(run,ac); }
+      else updAssertDownload(run,ac);
       const priorFiles=(prior&&prior.files)||null;
       if(!priorFiles){
         /* abort:null, or this bail-out leaves UPD.abort holding the controller
            of a download that has already finished. updCancel() would then fire
            at a dead request, and the handle keeps the whole response pipeline
            reachable for the life of the document. */
-        updSet('error',{err:'The patch base is missing — reinstall the full update',abort:null});
+        updSet('error',{err:'The patch base is missing — reinstall the full update',abort:null,
+                        retryDownload:false});
         return;
       }
       commitFiles=Object.assign({},priorFiles,out);
@@ -682,77 +1261,130 @@ async function updDownload(){
       for(const path of commitOrder) if(priorOrder.indexOf(path)<0) priorOrder.push(path);
       commitOrder=priorOrder;
     }
-    await updPut('pending',{version:m.version, notes:m.notes||'', at:Date.now(),
-                            schema:m.schema||1,channel:m.channel||'stable',
-                            severity:m.severity||'recommended',
-                            kind:updIsPatch(m)?'patch':(m.kind||'full'),
-                            patchedFrom:patching?String(m.patchFrom):'',
-                            order:commitOrder, files:commitFiles});
+    updAssertDownload(run,ac);
+    const pending={version:m.version, notes:m.notes||'', at:Date.now(),
+                   schema:m.schema||1,channel:m.channel||'stable',
+                   severity:m.severity||'recommended',
+                   kind:plan.fallback?'full':(updIsPatch(m)?'patch':(m.kind||'full')),
+                   patchedFrom:patching?String(m.patchFrom):'',
+                   order:commitOrder, files:commitFiles};
+    /* This is the explicit cancellation boundary. All network and integrity
+       work is complete. From here the tiny atomic IDB transaction must finish
+       as one unit, so CANCEL disappears and channel changes remain locked. */
+    updSet('staging',{pct:100,abort:null,retryDownload:false});
+    await updCommitPending(pending);
+    updAssertDownload(run,ac);
     /* Stage the notes where the NEXT document can read them without touching
-       the megabytes of source sitting in the record above. */
+       the megabytes of source sitting in the record above. This is deliberately
+       after the atomic IDB commit, so a failed transaction cannot alter notes. */
     updStageNotes(m.version,m.notes);
-    await updDel('applyFailure');
-    updSet('ready',{pct:100,abort:null});
+    updSet('ready',{pct:100,abort:null,retryDownload:false,
+                    readyIdentity:updPendingIdentity(pending)});
   }catch(e){
+    /* A stale attempt belongs to a newer owner now. It must not repaint that
+       owner's state, feed, controller, or error. */
+    if(UPD.downloadRun!==run) return;
     if(UPD.fileIdx>=0&&UPD.feed[UPD.fileIdx]&&UPD.feed[UPD.fileIdx].state==='downloading')
       UPD.feed[UPD.fileIdx].state='fail';
-    if(e&&e.name==='AbortError'){ updSet('available',{pct:0,got:0,abort:null}); return; }
-    updSet('error',{err:(e&&e.message)||'Download failed',abort:null});
+    /* IndexedDB may also report AbortError when a staging transaction fails.
+       Only this attempt's own aborted signal means the player pressed Cancel. */
+    if(ac.signal&&ac.signal.aborted){
+      updSet('available',{pct:0,got:0,rate:0,abort:null,retryDownload:false});
+      return;
+    }
+    const superseded=e&&['MF_UPDATE_PENDING_SUPERSEDED','MF_UPDATE_CHANNEL_CHANGED',
+      'MF_UPDATE_INSTALL_ACTIVE','MF_UPDATE_OPERATION_BUSY'].includes(e.code);
+    updSet('error',{err:(e&&e.message)||'Download failed',abort:null,
+                    retryDownload:!superseded});
+  }finally{
+    if(UPD.downloadRun===run){
+      UPD.downloadRun=0;
+      if(typeof renderUpdatePanel==='function') renderUpdatePanel();
+    }
   }
 }
-function updCancel(){ if(UPD.abort) UPD.abort.abort(); }
+function updCancel(){ if(UPD.state==='downloading'&&UPD.abort) UPD.abort.abort(); }
 
 /* ---- APPLY / ROLLBACK ------------------------------------------------------ */
 async function updApply(){
-  const p=await updGet('pending');
-  if(!p){ updSet('applyError',{err:'The downloaded update is missing — download it again'}); return; }
+  if(updOperationBusy()) return;
+  const expected=UPD.readyIdentity;
+  const running=updRunningIdentity();
+  /* Applying owns storage from its first read onward. Acquiring this state
+     after `updGet('pending')` allowed a channel tap to clear the manifest while
+     the old channel's payload was already on its way to `active`. */
+  updSet('applying',{err:null,pct:100});
+  let lease=null,reload=false,preparedPrevious=null,promoted=false;
   try{
+    lease=await updAcquireSharedOperation('apply',expected);
+    const offered=await updGet('pendingMeta');
+    if(!expected||!updSamePending(offered,expected)){
+      updSet('error',{err:'The downloaded update changed — review it before installing',
+                      retryDownload:false});
+      return;
+    }
+    /* Preserve the known-good active payload before pending is materialized.
+       The copy is best-effort and lease-owned: quota failure cannot block the
+       install, while lost ownership cannot delete a newer window's copy. */
+    if(running&&!updSamePending(running,expected)){
+      try{ preparedPrevious=await updPreparePrevious(running,lease); }
+      catch(e){
+        if(e&&['MF_UPDATE_OPERATION_CHANGED','MF_UPDATE_ACTIVE_CHANGED'].includes(e.code))
+          throw e;
+      }
+    }
+    const p=await updGet('pending');
+    if(!p){
+      updSet('error',{err:'The downloaded update is missing — download it again',
+                      retryDownload:false});
+      return;
+    }
+    if(!updSamePending(p,expected)){
+      updSet('error',{err:'The downloaded update changed — review it before installing',
+                      retryDownload:false});
+      return;
+    }
+    if(!updPendingForChannel(p)){
+      updSet('error',{err:'The downloaded update belongs to a different channel',
+                      retryDownload:false});
+      return;
+    }
     /* This is a two-phase install. Keep `pending` until the patched build has
        rendered its first frame; otherwise a failed start destroys the only
        retryable copy and collapses the panel back to GAME VERSION. */
-    updSet('applying',{err:null,pct:100});
-    const current=await updGet('active');
-    const running=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
-    /* Only the bundle this document is demonstrably running is known-good.
-       Preserve that exact copy so rollback returns one release, not all the
-       way to an old APK payload. */
-    const keepPrev=!!(current&&current.files&&running&&String(current.version)===running&&
-                      String(current.version)!==String(p.version));
-    /* THE ORDER OF THESE THREE WRITES IS THE SAFETY PROPERTY.
+    await updRefreshSharedOperation(lease);
+    await updCommitApply(p,lease,expected,running,preparedPrevious);
+    promoted=true;
+    /* `probation` and `active` were committed atomically above. Probation is
+       the record that arms automatic rollback, so there can no longer be a
+       process-death gap with new active bytes and no failed-start detector.
 
-       `probation` FIRST. It is the only record that tells boot.js a patch was
-       started, and it is what arms the automatic rollback. Writing `active`
-       first meant that if the sequence died in the gap - a quota rejection, a
-       killed transaction, the document torn down - the next launch found a new
-       bundle with NO probation record: an unguarded patch, run with the
-       failed-start detector disarmed. The opposite gap is harmless; probation
-       standing over the OLD active just costs one counted attempt, which
-       __bootOk() clears on the first frame.
-
-       `previous` LAST, and best-effort. It is a THIRD full copy of the payload
-       - `pending`, `active` and `previous` are ~27 MB each on the live channel,
-       ~80 MB in flight - and it is the one write the install does not need.
-       Going first, a storage rejection on it failed the ENTIRE install, and
-       failed it identically on every retry, because neither `current` nor `p`
-       changes between attempts: a permanent "Could not prepare the update" on
-       exactly the devices least able to afford one. Losing the rollback copy
-       costs a revert path. Losing the install costs the update. */
-    await updPut('probation',{version:p.version,at:Date.now(),tries:0});
-    await updPut('active',p);
-    if(keepPrev){
-      /* And if it will not fit, drop it rather than leave a stale record
-         claiming to be the build we just replaced. */
-      try{ await updPut('previous',current); }
-      catch(e){ try{ await updDel('previous'); }catch(e2){} }
-    }
+       The referenced rollback slot remains best-effort. It is a THIRD full
+       copy - `pending`, `active` and rollback are about 85 MB each on the current
+       full channel, roughly 255 MB of durable capacity - but active is copied
+       before pending is read, so Apply never holds all three payload objects in
+       JavaScript. Losing the optional rollback copy costs a revert path; it
+       never costs the install. */
     /* Preserve a prior failed-start count when retrying the same bytes. The
        boot loader quarantines the patch after two failures; clearing the count
        here previously made every attempt look like the first one forever. A
        fresh verified download resets the record in updDownload instead. */
-    setTimeout(updHardReload,120);       // let RESTARTING paint before navigation
+    reload=true;
   }catch(e){
-    updSet('applyError',{err:'Could not prepare the update — retry install'});
+    const changed=e&&['MF_UPDATE_OPERATION_BUSY','MF_UPDATE_OPERATION_CHANGED',
+      'MF_UPDATE_PENDING_CHANGED','MF_UPDATE_CHANNEL_CHANGED',
+      'MF_UPDATE_INSTALL_ACTIVE','MF_UPDATE_ACTIVE_CHANGED',
+      'MF_UPDATE_PREVIOUS_CHANGED'].includes(e.code);
+    if(changed)
+      updSet('error',{err:(e&&e.message)||'The downloaded update changed — check again',
+                      retryDownload:false});
+    else updSet('applyError',{err:'Could not prepare the update — retry install'});
+  }finally{
+    if(preparedPrevious&&!promoted)
+      try{ await updClearPreviousOwned(preparedPrevious,lease); }catch(e){}
+    if(lease){ try{ await updReleaseSharedOperation(lease); }catch(e){} }
   }
+  if(reload) setTimeout(updHardReload,120); // let RESTARTING paint before navigation
 }
 function updHardReload(){
   /* A cache-busted replace is a document restart inside the WebView. It does
@@ -764,24 +1396,30 @@ function updHardReload(){
   }catch(e){ location.reload(); }
 }
 async function updRollback(){
-  /* Mark the entry BEFORE the records are destroyed: one reload from now
-     __MASSFRONT_PATCHED is gone and nothing can tell which version was
-     reverted. The entry is not removed — the player really did run that build
-     on this device — it just stops implying it is still installed. */
-  const v=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
-  if(v) updLogMark(v,{rolledBack:true});
-  const previous=await updGet('previous');
-  const good=previous&&previous.files&&verNewer(previous.version,APP_VERSION)&&
-    Array.isArray(previous.order)&&previous.order.every(p=>typeof previous.files[p]==='string');
-  if(good){
-    await updPut('active',previous);
-    await updDel('previous');
-    await updPut('probation',{version:previous.version,at:Date.now(),tries:0});
-  } else {
-    await updDel('active'); await updDel('previous'); await updDel('probation');
+  if(updOperationBusy()) return;
+  /* Rollback deletes pending and rewrites active. Lock it before the first IDB
+     read so it cannot race a download's atomic pending transaction or Apply. */
+  updSet('rollingBack',{err:null,pct:100});
+  let lease=null,reload=false;
+  try{
+    const running=updRunningIdentity();
+    lease=await updAcquireSharedOperation('rollback',running);
+    await updRefreshSharedOperation(lease);
+    await updCommitRollback(lease,running);
+    /* Mark only after the durable rollback commits. The captured running
+       version survives the record transition, while a failed transaction must
+       not leave history claiming the player reverted a build they still run. */
+    if(running) updLogMark(running.version,{rolledBack:true});
+    reload=true;
+  }catch(e){
+    const changed=e&&['MF_UPDATE_OPERATION_BUSY','MF_UPDATE_OPERATION_CHANGED',
+      'MF_UPDATE_ACTIVE_CHANGED'].includes(e.code);
+    updSet('error',{err:changed?e.message:'Could not revert the update — try again',
+                    retryDownload:false});
+  }finally{
+    if(lease){ try{ await updReleaseSharedOperation(lease); }catch(e){} }
   }
-  await updDel('pending');
-  updHardReload();
+  if(reload) updHardReload();
 }
 /* ---- PATCH MANIFESTS ------------------------------------------------------
    A `kind:'patch'` manifest lists ONLY the source files that changed. It
@@ -833,6 +1471,11 @@ function updFullEntry(m){
   if(Array.isArray(f)) return (f.length&&f.every(updValidFullFile))?f.slice():null;
   return updValidFullFile(f)?[f]:null;
 }
+function updPendingForChannel(p){
+  if(!p) return false;
+  const channel=updChannelName(p.channel||'stable');
+  return channel===updChannel()||(updPreviewFellBack&&channel==='stable');
+}
 async function updInstalledVersion(){
   const running=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
   /* An IndexedDB `active` record is only an intention. It may have failed,
@@ -855,19 +1498,23 @@ let updVerShown=APP_VERSION, updOpen=false;
 const UPD_KINDS={hotfix:{nm:'HOTFIX',ds:'Small fix — installs in seconds'},
                  content:{nm:'CONTENT PATCH',ds:'New content and fixes'},
                  overhaul:{nm:'OVERHAUL',ds:'Full rebuild — large download'}};
-function updKind(m){
-  if(!m) return null;
-  const declared=String(m.kind||'').toLowerCase();
-  if(UPD_KINDS[declared]) return declared;
-  const bytes=(m.files||[]).reduce((a,f)=>a+(f.size||0),0);
+function updKindForFiles(files){
+  const bytes=(files||[]).reduce((a,f)=>a+(f.size||0),0);
   if(bytes<=2*1024*1024) return 'hotfix';
   if(bytes<=20*1024*1024) return 'content';
   return 'overhaul';
 }
+function updKind(m){
+  if(!m) return null;
+  const declared=String(m.kind||'').toLowerCase();
+  if(UPD_KINDS[declared]) return declared;
+  return updKindForFiles(m.files||[]);
+}
 function updKindLabel(m){ const k=updKind(m); return k?UPD_KINDS[k]:null; }
 function updWants(){
-  return UPD.state==='available'||UPD.state==='downloading'||
-         UPD.state==='ready'||UPD.state==='applying'||UPD.state==='applyError'||
+  return UPD.state==='channeling'||UPD.state==='available'||UPD.state==='downloading'||
+         UPD.state==='staging'||UPD.state==='ready'||UPD.state==='applying'||
+         UPD.state==='rollingBack'||UPD.state==='applyError'||
          UPD.state==='installed'||UPD.state==='error'||UPD.state==='stale';
 }
 function updEnsureChannelControl(){
@@ -886,9 +1533,10 @@ function updEnsureChannelControl(){
         'background:rgba(7,18,31,.82);color:#9cc7e2;font:700 10px var(--fT);letter-spacing:.08em';
       const go=async e=>{
         e.stopPropagation();
+        if(updOperationBusy()) return;
         if(b.dataset.channel===updChannel()) return;
         if(typeof sfx==='function') sfx('ui');
-        await updSetChannel(b.dataset.channel);
+        if(await updSetChannel(b.dataset.channel)===false) return;
         updSet('idle',{checkedVersion:null,source:null,err:null,channel:updChannel()});
         updCheck(true);
       };
@@ -900,6 +1548,7 @@ function updEnsureChannelControl(){
   /* Driven by configuration, not hardcoded: the moment update-config.json
      carries a channels.preview endpoint, this button stops apologising. */
   const previewLive=!!(updChannelUrls&&updChannelUrls.preview);
+  const locked=updOperationBusy();
   for(const b of row.querySelectorAll('button')){
     if(b.dataset.channel==='preview'){
       b.textContent=previewLive?'PREVIEW':'PREVIEW · SOON';
@@ -909,6 +1558,8 @@ function updEnsureChannelControl(){
         :'Preview channel: no preview build has been published; you will stay on stable');
     }
     const on=b.dataset.channel===updChannel();
+    b.disabled=locked;
+    b.setAttribute('aria-disabled',locked?'true':'false');
     b.setAttribute('aria-pressed',on?'true':'false');
     b.style.background=on?'linear-gradient(180deg,rgba(30,105,146,.95),rgba(12,49,76,.98))':'rgba(7,18,31,.82)';
     b.style.color=on?'#fff':'#9cc7e2';
@@ -925,9 +1576,12 @@ function updEnsureChannelControl(){
 const UPD_DOT_STATE={
   idle:['', 'Tap to check for updates'],
   unset:['', 'No update server configured'],
+  channeling:['busy','Switching update channel…'],
   checking:['busy','Checking for updates…'],
   available:['warn','Update available'],
   downloading:['busy','Downloading update…'],
+  staging:['busy','Saving verified update…'],
+  rollingBack:['busy','Reverting update…'],
   ready:['warn','Update ready to install'],
   installed:['ok','Up to date'],
   current:['ok','Up to date'],
@@ -958,6 +1612,7 @@ function renderUpdatePanel(){
   const sub=document.getElementById('updSub');
   const btn=document.getElementById('updBtn');
   const cancel=document.getElementById('updCancel');
+  const roll=document.getElementById('updRoll');
   const notes=document.getElementById('updNotes');
   /* Every one of these was dereferenced unguarded. One missing node — which is
      exactly what a menu rewrite produces — threw inside initUpdater and took
@@ -970,32 +1625,52 @@ function renderUpdatePanel(){
      out of the renderer takes every caller down with it. */
   const st=(!m&&(UPD.state==='available'||UPD.state==='ready'))?'idle':UPD.state;
   const channel=(m&&m.channel)||UPD.channel||updChannel();
-  if(cancel) cancel.style.display=UPD.state==='downloading'?'block':'none';
+  if(cancel) cancel.style.display=UPD.state==='downloading'&&UPD.abort?'block':'none';
   if(notes){
     notes.style.display=(UPD.state==='available'||UPD.state==='ready')&&m&&m.notes?'block':'none';
     if(m&&m.notes) notes.textContent=m.notes;
   }
-  el.classList.toggle('busy',UPD.state==='downloading'||UPD.state==='applying');
+  const operationBusy=updOperationBusy();
+  if(roll){
+    roll.disabled=operationBusy;
+    roll.setAttribute('aria-disabled',operationBusy?'true':'false');
+  }
+  el.classList.toggle('busy',operationBusy);
   el.classList.toggle('good',UPD.state==='ready'||UPD.state==='installed');
   el.classList.toggle('mini',!(updOpen||updWants()));
   if(channelRow) channelRow.style.display=el.classList.contains('mini')?'none':'grid';
   switch(st){
+    case 'channeling':
+      txt.textContent='SWITCHING UPDATE CHANNEL';
+      sub.textContent='Resolving the selected local channel';
+      bar.style.width='8%'; btn.textContent='…'; btn.disabled=true; break;
     case 'checking':
       txt.textContent='CHECKING FOR UPDATES';
       sub.textContent='v'+updVerShown;
       bar.style.width='12%'; btn.textContent='…'; btn.disabled=true; break;
     case 'available':{
-      const K=updKindLabel(m);
+      const K=UPD.offerKind?UPD_KINDS[UPD.offerKind]:updKindLabel(m);
+      const bytes=Number.isFinite(UPD.offerBytes)?UPD.offerBytes:
+        m.files.reduce((s,f)=>s+(f.size||0),0);
       txt.textContent=K?('UPDATE AVAILABLE  ·  '+K.nm):'UPDATE AVAILABLE';
-      sub.textContent='v'+updVerShown+'  →  v'+m.version+'   ·   '+fmtBytes(m.files.reduce((s,f)=>s+(f.size||0),0))+
+      sub.textContent='v'+updVerShown+'  →  v'+m.version+'   ·   '+
+        (UPD.offerFallback?'FULL FALLBACK · ':'')+fmtBytes(bytes)+
         '   ·   '+String(channel).toUpperCase()+(m.severity?' / '+String(m.severity).toUpperCase():'');
       bar.style.width='0%'; btn.textContent='DOWNLOAD'; btn.disabled=false; break; }
     case 'downloading':{
-      const KD=updKindLabel(m);
+      const KD=UPD.transferKind?UPD_KINDS[UPD.transferKind]:updKindLabel(m);
       txt.textContent='DOWNLOADING  '+UPD.pct.toFixed(0)+'%'+(KD?('  ·  '+KD.nm):'');
       const sp=UPD.rate? '  ·  '+fmtBytes(UPD.rate)+'/s' : '';
       sub.textContent=fmtBytes(UPD.got)+' of '+fmtBytes(UPD.total)+sp;
       bar.style.width=UPD.pct.toFixed(1)+'%'; btn.textContent='…'; btn.disabled=true; break; }
+    case 'staging':
+      txt.textContent='SAVING VERIFIED UPDATE';
+      sub.textContent='Finishing one safe on-device transaction';
+      bar.style.width='100%'; btn.textContent='…'; btn.disabled=true; break;
+    case 'rollingBack':
+      txt.textContent='REVERTING UPDATE';
+      sub.textContent='Restoring the last validated local build';
+      bar.style.width='100%'; btn.textContent='…'; btn.disabled=true; break;
     case 'ready':
       txt.textContent='READY TO INSTALL';
       sub.textContent='v'+m.version+' downloaded — restart to apply';
@@ -1015,7 +1690,7 @@ function renderUpdatePanel(){
     case 'error':
       txt.textContent='UPDATE FAILED';
       sub.textContent=UPD.err||'Try again later';
-      bar.style.width='0%'; btn.textContent='RETRY'; btn.disabled=false; break;
+      bar.style.width='0%'; btn.textContent=UPD.retryDownload?'RETRY DOWNLOAD':'RETRY'; btn.disabled=false; break;
     case 'current':
       txt.textContent='UP TO DATE';
       sub.textContent='Installed v'+updVerShown+'  ·  '+String(channel).toUpperCase()+
@@ -1071,6 +1746,7 @@ function updButton(){
      should never be in, and updDownload() silently returns on one, so route it
      to a fresh check instead of giving the player a button that does nothing. */
   if(UPD.state==='available'&&UPD.manifest) updDownload();
+  else if(UPD.state==='error'&&UPD.retryDownload&&UPD.manifest) updDownload();
   else if(UPD.state==='ready'||UPD.state==='applyError') updApply();
   else updCheck(true);
 }
@@ -1084,9 +1760,10 @@ async function initUpdater(){
   /* Running a patch: offer the way back. Hidden on a packaged build, because a
      revert button that reverts to what you already have is just confusing. */
   if(window.__MASSFRONT_PATCHED) document.body.classList.add('patched');
-  const pend=await updGet('pending');
-  const previous=await updGet('previous');
+  const pend=await updGetBundleMeta('pending');
+  const previous=await updGetRollbackMeta();
   const fail=await updGet('applyFailure');
+  const pendingHere=updPendingForChannel(pend);
   const roll=document.getElementById('updRoll');
   if(roll&&window.__MASSFRONT_PATCHED)
     roll.textContent=previous&&previous.version&&verNewer(previous.version,APP_VERSION)
@@ -1113,14 +1790,15 @@ async function initUpdater(){
     updSet('installed');
   } else if(fail&&fail.quarantined&&verNewer(fail.version,updVerShown)){
     updSet('error',{err:'v'+fail.version+' failed to start twice and was removed - check again to download a fresh copy'});
-  } else if(pend&&fail&&fail.version===pend.version&&verNewer(pend.version,updVerShown)){
+  } else if(pendingHere&&fail&&fail.version===pend.version&&verNewer(pend.version,updVerShown)){
     UPD.manifest={version:pend.version,notes:pend.notes,files:[],
                   channel:pend.channel||'stable',severity:pend.severity||'recommended'};
-    updSet('applyError',{err:fail.reason||'Downloaded update kept safely — retry install'});
-  } else if(pend&&verNewer(pend.version,updVerShown)){
+    updSet('applyError',{err:fail.reason||'Downloaded update kept safely — retry install',
+                         readyIdentity:updPendingIdentity(pend)});
+  } else if(pendingHere&&verNewer(pend.version,updVerShown)){
     UPD.manifest={version:pend.version,notes:pend.notes,files:[],
                   channel:pend.channel||'stable',severity:pend.severity||'recommended'};
-    updSet('ready');
+    updSet('ready',{readyIdentity:updPendingIdentity(pend)});
   } else if(!UPDATE_URL) updSet('unset');
   else renderUpdatePanel();
 

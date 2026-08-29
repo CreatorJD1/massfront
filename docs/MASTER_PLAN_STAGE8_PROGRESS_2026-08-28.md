@@ -27,6 +27,28 @@ collected.
   `.tmp/commander-hud/runs/2026-08-28T17-00-32-793Z/report.json`.
 - The updater retry regression discovers `gl.js` by manifest identity instead
   of a historical fixed index, preserving the same check as data scripts move.
+- Local update transfer and installation are now transactional across
+  interruption boundaries. Check, channel switch, download, final staging,
+  Apply, and Rollback claim synchronous UI ownership; cancellation is honored
+  after every network/hash await but ends before the verified IndexedDB commit;
+  retries start from file zero with a fresh controller and progress feed. Patch
+  offers disclose the actual full-fallback bytes before consent. Atomic pending
+  writes, exact displayed-payload identity, channel rechecks, probation guards,
+  and a payload-bound shared IndexedDB lease prevent another tab/WebView from
+  replacing, applying, or deleting a payload mid-operation. Boot selection,
+  failed-start recovery, confirmation, and supersession are serialized and
+  exact-identity guarded. Rollback uses two bounded payload slots plus one
+  atomic exact-identity pointer: a failed or quota-aborted Apply cannot overwrite
+  the currently validated recovery, successful promotion alone swings the
+  pointer, and promotion without room for a new copy retires the older pointer
+  instead of exposing a two-releases-behind rollback. Boot also clears only an
+  exact committed-operation orphan and reclaims unreferenced slots after their
+  Apply owner expires. Lightweight bundle metadata keeps the healthy path to
+  one active-payload read: the 85 MiB
+  logical-memory regression records zero reads of pending and rollback payloads;
+  failed-start recovery reads exactly one rollback payload and no active or
+  pending payload. Legacy installs backfill metadata once instead of repeatedly
+  deserializing full releases.
 - Portable `.mfsave` imports now have a guarded two-record transaction. Profile
   and career writes retry once, require byte-exact read-back, and report strict
   success/failure instead of swallowing quota errors. A failed import restores
@@ -94,7 +116,9 @@ Deterministic contracts:
 - `node tools/test-save-persist.mjs`
 - `node tools/test-stage7-armory-migration.mjs`
 - `node tools/test-faction-canonical-identity.mjs`
+- `node tools/test-stage8-updater-interruption.mjs`
 - `node tools/test-updater-boot-retry.mjs`
+- `node tools/test-updater-two-launch.mjs`
 - `node tools/probe-commander-voice.mjs --json`
 - `node tools/evidence-foundation/workspace-guard-self-test.mjs`
 
@@ -159,12 +183,15 @@ and only when its own report is `PASS` with matching start/end fingerprints.
   disclosure, faction canonicalization, legacy-refund side effects, recovered
   grant-queue persistence/restart replay, stale-balance rejection, and corrupt-
   cloud preservation. The guarded real-
-  browser probe is implemented at `tools/probe-stage8-save-transfer.mjs`, but
-  its 2026-08-28 attempt was blocked before browser launch because Claude's
-  hard-surface process was still writing cityforms GLBs. That is a source-
-  identity blocker, not a browser pass or product failure; rerun after those
-  writers stop.
-- Interrupted local update download/cancel/retry coverage.
+  browser probe is implemented at `tools/probe-stage8-save-transfer.mjs`. Its
+  2026-08-28 attempt remains `UNKNOWN`: Claude's hard-surface process changed
+  source during the guarded run and the launcher could not prove ownership of
+  the Playwright browser session. Those are evidence-identity blockers, not a
+  browser pass or product failure; rerun after those writers stop.
+- Physical WebView/background/OS-kill acceptance for local update download,
+  cancel, retry, staging, Apply, automatic failed-start recovery, and Rollback.
+  Deterministic production-source coverage for those interruption state
+  transitions and cross-document storage races is complete.
 - Current Android APK and iOS IPA install, lifecycle, interruption, offline,
   clean-install, upgrade, and new-game-to-result device runs.
 - No release, upload, deployment, or production request is authorized by this
