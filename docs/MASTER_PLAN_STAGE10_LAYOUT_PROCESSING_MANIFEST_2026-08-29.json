@@ -1,0 +1,5600 @@
+{
+  "schema": "MassfrontStage10RoleAwareProcessingManifestV2",
+  "version": 4,
+  "generatedOn": "2026-08-29",
+  "status": "PREPARATION_ONLY_NO_RUNTIME_OR_ASSET_REGISTRATION",
+  "toolLibraryPurpose": {
+    "directAssetDump": false,
+    "runtimeRegistrationAuthorized": false,
+    "characterOrVroidWorkAuthorized": false,
+    "excludedPaths": [
+      "modules/space_exploration/assets/source/blender/characters/"
+    ],
+    "roleDomains": {
+      "world_poi_layout": {
+        "primaryRole": "world_poi_layout_kit",
+        "secondaryRoles": [
+          "world_poi_surface_marking"
+        ],
+        "countBasis": "module",
+        "consumerDomains": [
+          "planet",
+          "region",
+          "battlefield_map",
+          "colony",
+          "city",
+          "district",
+          "outpost",
+          "industrial_site",
+          "derelict_poi"
+        ],
+        "intent": "Use the ten report-backed world-kit families as a constrained construction vocabulary for generators that compose believable POIs and battlefield layouts; do not scatter or register the source pieces as a direct asset dump.",
+        "generationTargets": [
+          "modular kit grammar with compatible sockets, scale, style, and condition rules",
+          "macro-to-micro composition rules for settlements, industry, outposts, derelicts, and landmarks",
+          "connected road, service, pedestrian, assault, naval, amphibious, and resource-access networks",
+          "planet- and region-specific POI identity rather than generic repeated settlements",
+          "seeded structural variation and believable world dressing without blocking gameplay"
+        ],
+        "requiredGeneratorOutputs": [
+          "hierarchical POI plans with stable IDs and exact site-class intent",
+          "validated access graphs connecting entrances, roads, services, resources, and tactical routes",
+          "district and parcel composition before decorative placement",
+          "bounded deterministic variation that avoids repetition and preserves regional identity",
+          "world dressing constrained by traversal, buildability, sightlines, hazards, and economy clearance"
+        ],
+        "forbiddenTargets": [
+          "uga_ship_exterior",
+          "uga_ship_interior",
+          "ship_identity_decal_atlas"
+        ],
+        "promotionBoundary": "World-kit grammar and generated layouts remain offline candidates until numeric, visual, traversal, deterministic, recovery, phone, and explicit runtime-registration gates pass."
+      },
+      "world_maritime_seaplatform": {
+        "primaryRole": "world_maritime_seaplatform",
+        "secondaryRoles": [
+          "world_poi_layout_kit",
+          "world_poi_surface_marking",
+          "naval_logistics_node"
+        ],
+        "countBasis": "role_specific_module_or_runtime_type",
+        "declaredByUser": true,
+        "sourceMappingComplete": false,
+        "includedInWorldKitModuleCount": "The 18 proven fixed-caisson superstructure modules are already included in the 334 world-kit total. Runtime harbor/seafort types and any future mapped floating candidates are separate and must not be added or double-counted as world-kit modules.",
+        "taxonomy": [
+          "sea_platform.fixed_caisson",
+          "sea_platform.floating_pontoon",
+          "sea_platform.semi_submersible",
+          "shore_interface.quay",
+          "sea_link.causeway",
+          "sea_link.gangway",
+          "sea_link.bridge",
+          "sea_wreck.afloat",
+          "sea_wreck.sunk"
+        ],
+        "knownCurrentMappings": {
+          "fixedCaissonWorldKit": {
+            "family": "mf-superstructure-v1",
+            "moduleCount": 18,
+            "archetypes": [
+              "platform_deck",
+              "platform_rig",
+              "platform_causeway",
+              "platform_ramp",
+              "platform_disc",
+              "platform_spoke"
+            ],
+            "styles": [
+              "colonial",
+              "brutalist",
+              "ruined"
+            ],
+            "supportMode": "fixed_caisson_to_seabed",
+            "runtimeReady": false
+          },
+          "floatingProceduralRuntimeBuildings": {
+            "typeKeys": [
+              "harbor",
+              "seafort"
+            ],
+            "placement": "water",
+            "sourceKind": "live_procedural_RTS_building_system_not_Blender_world_kit_modules"
+          },
+          "shorelineQuayWorldKit": {
+            "family": "mf-transit-kit-v1",
+            "moduleCount": 3,
+            "archetype": "edge_dock",
+            "supportMode": "shoreline_quay_or_revetment_not_floating"
+          },
+          "ordinaryPlatformWorldKit": {
+            "family": "mf-platform-hs-v1",
+            "supportMode": "terrain_backed_solid",
+            "floatingContract": false
+          },
+          "semiSubmersible": {
+            "status": "PROMPT_CONCEPT_ONLY_NO_SHIPPED_WORLD_KIT_MODULE"
+          }
+        },
+        "consumerDomains": [
+          "floating_city_platform",
+          "offshore_industrial_site",
+          "sea_colony_or_outpost",
+          "naval_logistics_node",
+          "ocean_defense_platform",
+          "archipelago_battlefield_poi"
+        ],
+        "candidateMappingGap": "Exact source IDs and hashes for any additional user-provided floating-platform model-pack pieces are not yet mapped. Do not invent an mf-seaplatform-v1 family or reinterpret prompt-site IDs as shipped modules.",
+        "forbiddenTargets": [
+          "SHIP_SECTION",
+          "uga_ship_exterior",
+          "free_bobbing_visual_transform_with_static_collision",
+          "unmapped_direct_runtime_registration"
+        ],
+        "status": "DECLARED_ROLE_EXACT_SOURCE_MAPPING_AND_ACCEPTANCE_PENDING"
+      },
+      "uga_ship_exterior": {
+        "primaryRole": "uga_ship_exterior_hull_design",
+        "countBasis": "meshObject",
+        "authoritativeSource": "modules/space_exploration/assets/source/blender/nexus-vii-civilization-ship.blend",
+        "reportedMeshObjects": 94,
+        "reportedTriangles": 14396,
+        "reportedMaterials": 6,
+        "consumerDomains": [
+          "uga_player_ship_exterior"
+        ],
+        "forbiddenTargets": [
+          "battlefield_building_scatter",
+          "world_poi_module_count",
+          "ship_interior_decal_binding"
+        ],
+        "status": "SOURCE_CANDIDATE_RUNTIME_MODEL_EXISTS_NO_STAGE10_PROMOTION"
+      },
+      "uga_ship_sections": {
+        "primaryRole": "uga_ship_interior_section_design",
+        "countBasis": "meshObject",
+        "authoritativeSource": "modules/space_exploration/assets/source/blender/uga-command-cutaway.blend",
+        "reportedMeshObjects": 911,
+        "reportedTriangles": 39912,
+        "reportedMaterials": 34,
+        "reportedDistricts": 11,
+        "consumerDomains": [
+          "uga_command_ship_cutaway",
+          "uga_ship_districts",
+          "uga_ship_decks",
+          "uga_ship_corridors"
+        ],
+        "forbiddenTargets": [
+          "world_poi_module_count",
+          "reusable_room_kit_claim_without_separate_evidence"
+        ],
+        "status": "AUTHORING_SOURCE_AND_RUNTIME_SCENE_NO_STAGE10_PROMOTION"
+      },
+      "uga_ship_interior_decals": {
+        "primaryRole": "uga_ship_interior_decal_marking",
+        "countBasis": "atlas",
+        "authoritativeSource": "modules/space_exploration/assets/source/uga/interior-library/nexus-vii-material-decal-manifest.json",
+        "plannedPhysicalBases": 18,
+        "plannedTrimSheets": 8,
+        "plannedDecalAtlases": 8,
+        "districts": 11,
+        "consumerDomains": [
+          "uga_ship_interior_identity",
+          "deck_identity",
+          "faction_identity",
+          "construction_state",
+          "wear_story",
+          "static_displays"
+        ],
+        "forbiddenTargets": [
+          "uga-hull",
+          "exterior_hull",
+          "world_poi_surface_marking"
+        ],
+        "status": "PLANNED_UNPRODUCED_SOURCE_ONLY_UNBOUND"
+      },
+      "legacy_ship_reference": {
+        "primaryRole": "legacy_or_reference_only",
+        "countBasis": "meshObject",
+        "source": "modules/space_exploration/assets/source/blender/uga-civilization-ark.blend",
+        "reportedMeshObjects": 76,
+        "reportedTriangles": 8828,
+        "reportedMaterials": 4,
+        "status": "QUARANTINED_STALE_UNREFERENCED",
+        "runtimeReady": false
+      }
+    },
+    "mapFieldContract": "Every maps[].processingAssetFamilies value resolves only against worldKitFamilies and grants world-layout study eligibility only; it never authorizes ship, section, decal, character, runtime, export, or registration work.",
+    "crossDomainRule": "Shared vocabulary requires an explicit secondary role and consumer binding. A similar panel, marking, hull, platform, or corridor term is not permission to move an asset between world and ship domains."
+  },
+  "ugaShipProcessingGate": {
+    "canonicalShipId": "nexus-vii",
+    "runtimeProducts": [
+      "modules/space_exploration/assets/models/nexus-vii-civilization-ship.glb",
+      "modules/space_exploration/assets/models/uga-command-cutaway.glb"
+    ],
+    "assemblyRule": "Accepted modular ship work is assembled and baked into the canonical exterior or cutaway GLB. Source pieces are not registered individually as buildings, POIs, SITE_TPL entries, WORLD_KIT entries, or loose runtime ship modules.",
+    "intakeFields": [
+      "domain_SHIP_SECTION",
+      "canonicalShipId",
+      "deckId",
+      "districtIds",
+      "version",
+      "sourceUriLicenseAndSha256",
+      "authoringAxisAndMeters",
+      "semanticNodeExtras"
+    ],
+    "geometryGates": [
+      "unique typed socket IDs and deterministic assembly order",
+      "socket mate allowlists and pressure/open/sealed state",
+      "hull and room clearance envelopes",
+      "no unmatched or overlapping sockets",
+      "no proof or internal contaminant geometry",
+      "manifold geometry without degenerate or coplanar faces",
+      "applied transforms without negative scale",
+      "correct winding, normals, UV0, tangents, and material roles",
+      "separate simplified collision and selection proxies",
+      "LOD0, LOD1, LOD2, strategic LOD or impostor budgets"
+    ],
+    "runtimeIdentityGates": [
+      "deterministic rebuild hash",
+      "GLB parse and exact canonical root/node/extras checks",
+      "exterior and cutaway axis agreement",
+      "all eleven DISTRICT and FOCUS roots retained",
+      "engine, habitat, context-prefix, and cutaway root names retained",
+      "no fallback primitive or placeholder nodes",
+      "exterior orbit and every district focus captured on hardware GPU and phone"
+    ],
+    "interiorDecalGates": [
+      "pass the existing A00-A07 interior-library validator",
+      "original provenance, license, and source hashes",
+      "canonical faction IDs and explicit Brood ownership exclusion",
+      "color-opacity in sRGB and normal/ORM in linear space",
+      "neutral normal and black emissive outside coverage",
+      "gutter, dilation, mip, alpha, mirrored-text, and z-fighting proof",
+      "no baked authoritative dynamic values"
+    ],
+    "exteriorLiveryRule": "Create a separate versioned nexus-vii exterior-livery source contract with explicit target nodes/material slots and a state-to-material binding implementation. Never bind the interior A00-A07 library to uga-hull.",
+    "knownGaps": [
+      "no operational authored-GLB decal or livery renderer",
+      "persisted nightglass livery state has no renderer consumer",
+      "all-room real-phone capture remains unproven",
+      "quality-matched compression and optional-pack byte budgets remain unproven"
+    ]
+  },
+  "correction": {
+    "statement": "The six FULL_V1 maps are included. The prior six-map exclusion interpretation was incorrect.",
+    "canonicalMapsExcluded": [],
+    "fullV1BaselineMaps": [
+      "pyraeth_caldera_medium",
+      "nordhall_frost_medium",
+      "pyraeth_flats_medium",
+      "aelos_basin_medium",
+      "aelos_coast_medium",
+      "vespera_refinery_medium"
+    ],
+    "quarantinedModules": [
+      "colonial_gatehouse",
+      "colonial_depot_shed",
+      "colonial_industrial_hall",
+      "brutalist_tank_farm",
+      "ruined_depot_shed",
+      "ruined_tower_slab",
+      "ruined_tower_spire"
+    ],
+    "rationale": "These are the seven historically failing mf-building-hs-v1 module IDs named by the user. Their generator repair now passes 971/971 checks under the same edge-class-aware footprint checker that produced the 7/971 baseline failures, but they remain excluded from all processing until human visual review and explicit quarantine release."
+  },
+  "generatedFromGitHead": "9a9220f76e8190ba7e16db6bb00ca528ded615a4",
+  "sourceState": "shared dirty Local checkout; hashes bind this inventory to the files actually read",
+  "scope": {
+    "canonicalCampaignMaps": 48,
+    "processingMaps": 48,
+    "canonicalMapsExcluded": 0,
+    "fullV1BaselineMaps": 6,
+    "legacyCompatibilityMapsOutOfScope": 8,
+    "planets": 4,
+    "regions": 16,
+    "sizeCounts": {
+      "compact": 16,
+      "large": 16,
+      "standard": 16
+    },
+    "planetCounts": {
+      "aelos": 12,
+      "nordhall": 12,
+      "pyraeth": 12,
+      "vespera": 12
+    },
+    "processingWaveCounts": {
+      "wave-1-standard": 16,
+      "wave-2-compact": 16,
+      "wave-3-large": 16
+    },
+    "declaredWorldKitModules": 334,
+    "worldLayoutEligibleModules": 327,
+    "quarantinedWorldKitModules": 7,
+    "runtimeReadyWorldKitModules": 0,
+    "candidateSiteClassMapCoverage": {
+      "city": 30,
+      "colony": 10,
+      "outpost": 24,
+      "base": 11,
+      "refinery": 39,
+      "relic": 1,
+      "ruin": 11,
+      "spaceport": 7,
+      "derelict": 14,
+      "brood": 12
+    }
+  },
+  "compatibilityOnlyMapsOutOfScope": {
+    "maps": [
+      "vanguard",
+      "highland",
+      "isles",
+      "crater",
+      "oasis",
+      "ruins_reach",
+      "frost_reach",
+      "ash_ridge"
+    ],
+    "rule": "These eight MAPDEFS rows remain save/training compatibility records and are not among the advertised 48 campaign battlefields."
+  },
+  "derivationNotes": [
+    "All 48 canonical campaign maps are Stage 10 preparation targets. The six existing FULL_V1 maps are baseline-preserving improvement targets, not exclusions.",
+    "The 334-module report-backed world-kit subset is a tools/generator library: its 327 eligible pieces form modular grammar and composition inputs for believable POI and world layouts, not a direct asset dump.",
+    "candidateSiteClasses are planning recommendations derived from MAPDEFS signals plus explicit region role and any existing FULL_V1 requests; they are not new runtime counts.",
+    "maps[].processingAssetFamilies refers only to worldKitFamilies and means source-level world-layout study and candidate preparation. It does not grant ship, section, decal, character, export, registration, or runtime authority.",
+    "Exactly seven mf-building-hs-v1 module IDs are quarantined from processing; the other 29 family modules remain eligible as source candidates.",
+    "Brood maps require an organic conversion asset family that is not present in the hard-surface pack; ruined hard-surface modules are substrate only.",
+    "Pyraeth and Nordhall can use neutral/brutalist modules as structural proxies, but faction-specific pressure/heat and machine/glacial treatments remain authoring gaps.",
+    "Current world-kit reports are dirty local evidence. The 2026-08-28 handoff records the pre-repair failure state; the current building report was rebuilt after the numeric repair. Re-hash and re-run gates before promotion.",
+    "UGA exterior, ship-section, and interior-decal sources are separate role domains with mesh-object or atlas count bases. Their counts are never added to the 334 world-kit module total.",
+    "The UGA interior decal contract explicitly forbids exterior-hull binding. Exterior hull livery remains a separate unapproved authoring lane."
+  ],
+  "topologyReferenceContract": {
+    "sourceKind": "user_provided_conversational_reference_sheets",
+    "topologyOnly": true,
+    "assetDerivationAuthorized": false,
+    "remoteAttachmentHandling": "read_only_not_copied_or_committed",
+    "portableEvidence": false,
+    "canonicalScopeEffect": "None. The references guide future exact-plan and generator work; they do not add maps, replace canonical art, or automatically expand the current 48-map campaign catalogue.",
+    "scaleLadder": [
+      {
+        "id": "small",
+        "referencePlayers": "1v1_or_2v2",
+        "referenceSpanKm": 1.6,
+        "designRule": "One dominant objective, short rotations, two readable primary approaches, and a limited flank or amphibious bypass."
+      },
+      {
+        "id": "medium",
+        "referencePlayers": "2v2_or_3v3",
+        "referenceSpanKm": 2.2,
+        "designRule": "Multiple crossings and resource pockets, a contested center, and at least one route whose risk changes with the biome hazard."
+      },
+      {
+        "id": "large",
+        "referencePlayers": "3v3_or_4v4",
+        "referenceSpanKm": 2.4,
+        "designRule": "Several fronts, distributed colonies or derelicts, layered primary/flank/water routes, and two strategic anchors where appropriate."
+      },
+      {
+        "id": "massive",
+        "referencePlayers": "6v6_or_8v8",
+        "referenceSpanKm": 3.0,
+        "designRule": "Long-duration team warfare with route tiers, regional logistics, multiple objectives, protected and exposed resource bands, and no single mandatory choke."
+      }
+    ],
+    "commonLegend": [
+      "spawn_or_base",
+      "primary_lane",
+      "flank_or_secondary_lane",
+      "naval_or_water_route",
+      "amphibious_landing",
+      "bridge_or_crossing",
+      "resource_cluster",
+      "active_colony",
+      "derelict_city_or_district",
+      "strategic_objective",
+      "destructible",
+      "hazard"
+    ],
+    "requiredTopologyLayers": [
+      "spawn fairness and safe first expansion",
+      "primary, flank, naval, amphibious, service, and evacuation connectivity",
+      "bridge, causeway, gate, tunnel, rail, and destructible-route state",
+      "objective, colony, derelict, resource, and hazard hierarchy",
+      "elevation, visibility, buildability, traversal, and economy clearance",
+      "deterministic hazard timing and route-state recovery"
+    ],
+    "biomeProfiles": {
+      "volcanic_caldera": {
+        "grammar": [
+          "lava fissures and seas divide fronts",
+          "bridges, forge passes, coolant or geothermal routes, and elevated crowns control rotation",
+          "eruption, vent, ash, and magma events alter route risk without hiding required connectivity"
+        ]
+      },
+      "archipelago_and_ice": {
+        "grammar": [
+          "islands, mainland shelves, naval lanes, and amphibious landings create cross-domain fronts",
+          "bridges and causeways are logistics gates rather than decorative links",
+          "meltable ice crossings require explicit open, weakened, destroyed, and recovered traversal states"
+        ]
+      },
+      "mycelis_veil_brood": {
+        "grammar": [
+          "toxic channels and living terrain split land movement while supporting amphibious bypasses",
+          "spore weather changes visibility and exposure, and fungus canopies create ambush or elevation pockets",
+          "colony-growth hubs, hive cores, and heartroot objectives spread influence through the route graph",
+          "Brood treatment consumes and infests structural substrate; it does not become a selectable civic building style"
+        ]
+      },
+      "crystal_highlands": {
+        "grammar": [
+          "crystal ridges and elevated plateaus create vision and artillery control",
+          "destructible crystal barriers open alternate paths",
+          "luminous water routes, bridges, colonies, and a central citadel or crown create layered contests"
+        ]
+      },
+      "storm_coast": {
+        "grammar": [
+          "storm cycles change visibility, sea state, landing safety, and route exposure",
+          "ports, sea gates, headlands, islands, and coastal fortifications connect naval logistics to land fronts",
+          "tides and amphibious landings create timed bypasses without invalidating spawn access"
+        ]
+      },
+      "mangrove_delta": {
+        "grammar": [
+          "river confluences, shallow channels, boardwalks, and bridge networks define movement",
+          "mangrove canopy and reeds reduce sightlines while marsh attrition, bog gas, deep mud, and sinkholes punish overextension",
+          "colonies and resources need redundant supply access across water and land"
+        ]
+      },
+      "abyssal_shelf": {
+        "grammar": [
+          "pressure domes, drowned colonies, reefs, escarpments, and broken causeways create protected and exposed shelves",
+          "hydrothermal vent cycles, deep trenches, and drop-offs create timed hazard zones",
+          "water routes and amphibious drops must connect across vertical plateaus without bypassing every choke"
+        ]
+      },
+      "karst_underworld": {
+        "grammar": [
+          "pillars, cave bridges, chasms, sinkholes, and unstable ledges make vertical control part of the route graph",
+          "underground rivers support naval and amphibious flanks while tunnels enable stealth rotation",
+          "subterranean rail and logistics links connect arcologies, mining complexes, colonies, and objectives"
+        ]
+      }
+    }
+  },
+  "battlefieldTopologyImplementationBoundary": {
+    "currentRuntime": {
+      "campaignRegions": 16,
+      "supportedSizeVariants": [
+        "small",
+        "medium",
+        "large"
+      ],
+      "presetPlayableExtentMeters": {
+        "compact": 2200,
+        "standard": 2600,
+        "large": 3200
+      },
+      "massivePresetSupported": false,
+      "existingMapHooks": [
+        "seed",
+        "size",
+        "relief",
+        "crater",
+        "city",
+        "industry",
+        "roads",
+        "seabed",
+        "bridge",
+        "hazard",
+        "poi",
+        "region",
+        "theme",
+        "waterMode",
+        "navalEnabled"
+      ],
+      "existingNavigationDomains": [
+        "land",
+        "naval"
+      ],
+      "knownLimitations": [
+        "roads-enabled maps currently share one hard-coded two-route network",
+        "bridge-enabled maps currently stamp two fixed diagonal land bridges",
+        "no first-class amphibious route domain",
+        "no underwater depth-layer navigation",
+        "no cavern or underworld layer/portal navigation and line-of-sight graph",
+        "no authored primary, secondary, and flank route graph",
+        "no objective-anchor graph",
+        "no map-scale destructible route-state transition system",
+        "world topology cache identity does not yet include a topology schema version and content hash"
+      ]
+    },
+    "futureContract": {
+      "schema": "BattlefieldTopologyV2_PROPOSED",
+      "keyedBy": "stableMapId",
+      "hashRequired": true,
+      "requiredFields": [
+        "schemaVersion",
+        "stableMapId",
+        "playableExtent",
+        "spawnZones",
+        "typedRouteGraph",
+        "routeWidthAndUnitClearance",
+        "bridgeFordShoreTunnelPortalAndRailTransitions",
+        "waterBodiesAndDepthBands",
+        "resourceAnchors",
+        "siteAnchors",
+        "objectiveAnchors",
+        "hazardVolumesAndTiming",
+        "deterministicDestructibleTopologyStates"
+      ],
+      "routeTypes": [
+        "primary",
+        "secondary",
+        "flank",
+        "naval",
+        "amphibious",
+        "service",
+        "evacuation"
+      ],
+      "buildOrder": "Validate scale, spawn zones, route and transition graph, water/depth/layer semantics, objectives, hazards, resources, and named district/site plots before placing structures or dressing.",
+      "cacheIdentityRule": "Include topology schema version and semantic/layout hash in the world-topology cache key before any new route domain or dynamic topology state is enabled."
+    },
+    "massiveReferenceRule": "The 6v6/8v8 massive sheets are topology references only. Supporting them requires a deliberately versioned preset, world allocation, navigation, cache, performance, and packaged-runtime change; massive must never alias the current large preset."
+  },
+  "maritimeSeaplatformProcessingGate": {
+    "classificationRule": "A sea platform is a world/maritime POI with stable gameplay deck and water-space contracts. It is neither an ordinary terrain-backed building nor a SHIP_SECTION asset.",
+    "supportModes": {
+      "fixed_caisson": "Support geometry reaches the declared seabed datum and remains static.",
+      "floating_pontoon": "Visible flotation and mooring carry the platform at the declared waterline.",
+      "semi_submersible": "Authored ballast states control draft and freeboard without changing route identity implicitly.",
+      "shoreline_quay": "A fixed shore interface or revetment, not a floating structure.",
+      "sea_link": "Causeway, gangway, or bridge joining declared deck, shore, or platform sockets.",
+      "sea_wreck": "Afloat or sunk destroyed state with explicit naval and deck-navigation effects."
+    },
+    "mappingRule": "Record exact source IDs, source hashes, and exactly one primary support mode for each candidate. Do not infer floating eligibility from platform, dock, deck, hull, or landing-deck names and do not double-count a module already present in a world-kit family.",
+    "requiredDatums": [
+      "waterline",
+      "draft",
+      "freeboard",
+      "stable deck elevation",
+      "center of footprint",
+      "mooring, anchoring, seabed-support, or authored stabilization model"
+    ],
+    "accessContracts": [
+      "naval clearance envelope around hull and supports",
+      "amphibious landing or dock interfaces",
+      "vehicle-capable ramps, bridges, elevators, or causeways where required",
+      "pedestrian and service access",
+      "at least two viable approaches for major combat platforms",
+      "no support column, decoration, or mooring line may silently block a declared route"
+    ],
+    "navigationAndCollision": [
+      "stable deck nav/build proxy independent from render mesh",
+      "simple water-domain hull obstacle and support collision",
+      "separate land, naval, amphibious, and transition-node semantics",
+      "wave animation must not move gameplay collision or route anchors",
+      "no false walkable overhangs, submerged obstacles, or visual gaps that disagree with clearance"
+    ],
+    "environmentGates": [
+      "tide and wave visual range",
+      "storm exposure and visibility",
+      "waterline clipping and reflection/refraction behavior",
+      "shore, causeway, dock, and bridge connection tolerances",
+      "seabed depth or anchor feasibility where relevant"
+    ],
+    "supportModeGate": "A fixed platform must visibly and geometrically reach its seabed supports. A floating platform must visibly demonstrate flotation and mooring. A semi-submersible must declare deterministic ballast states. A shoreline quay must connect to a valid shore datum.",
+    "destructionStates": [
+      "intact",
+      "damaged",
+      "flooding_or_power_loss",
+      "critical",
+      "sunk_collapsed_or_wrecked"
+    ],
+    "destructionRule": "Every stage has a deterministic deck, naval-clearance, access, objective, and collision transition. Sinking or collapse uses a bounded wreck/rubble footprint and may not strand units or create an unplanned total route lock.",
+    "currentRuntimeGaps": [
+      "water buildings render at a fixed water-plane height and have no structural buoyancy or wave response",
+      "building destruction currently uses generic collapse, crater, deformation, rubble, and wreck behavior without a water-specific sinking branch"
+    ],
+    "performanceGates": [
+      "LOD0 through strategic LOD or HLOD",
+      "shared maritime materials and trim sheets",
+      "bounded draw calls and water-effect cost",
+      "occlusion and distance culling",
+      "hardware-GPU phone captures at tactical and strategic zoom"
+    ],
+    "promotionBoundary": "No sea-platform candidate is runtime-ready until exact source mapping, human visual review, route-domain validation, destruction-state validation, phone performance, and explicit registration pass."
+  },
+  "brutalistMegacity3DGenerationContract": {
+    "status": "USER_APPROVED_STAGE10_AUTHORING_CONTRACT",
+    "roleBinding": "world_poi_layout",
+    "purpose": "Generate a modular, optimized, fully playable brutalist science-fiction military-industrial RTS district rather than a dense cinematic city or generic skyscraper field.",
+    "referencePlayableAreaMeters": {
+      "width": 4000,
+      "depth": 4000,
+      "canonicalMapDimensionOverride": false
+    },
+    "macroBudget": {
+      "centralMegastructures": 1,
+      "majorDistrictLandmarksMin": 4,
+      "majorDistrictLandmarksMax": 6,
+      "largeStructuresMin": 20,
+      "largeStructuresMax": 30,
+      "mediumStructuresMin": 40,
+      "mediumStructuresMax": 80,
+      "openCombatSpaceRequired": true,
+      "fillEveryAvailableSpace": false
+    },
+    "macroHierarchy": [
+      "central command citadel or fortress anchor",
+      "inner governmental, military, and industrial ring",
+      "middle factory, barracks, reactor, depot, logistics, and worker districts",
+      "outer defense, wall, yard, storage, ruin, and infrastructure districts",
+      "fortified perimeter with several controlled entrances"
+    ],
+    "assemblyHierarchy": {
+      "rule": "Do not scale a site assembler into a megacity by increasing asset density.",
+      "order": [
+        "author region and district graph",
+        "reserve primary, secondary, flank, naval, service, objective, hazard, and destruction-transition corridors",
+        "allocate named district plots",
+        "instantiate bounded deterministic site blueprints inside those plots",
+        "place gameplay collision and traversal proxies",
+        "apply constrained dressing last"
+      ],
+      "existingSiteBlueprintEnvelopeMeters": {
+        "min": 160,
+        "max": 320
+      },
+      "scaleChanges": [
+        "district count",
+        "route hierarchy",
+        "objective distribution",
+        "resource travel time",
+        "logistics redundancy"
+      ],
+      "arbitraryModelDensityIncreaseForbidden": true
+    },
+    "navigation": {
+      "gameplayPriorityOverArchitecturalRealism": true,
+      "primaryArterials": {
+        "countMin": 6,
+        "countMax": 8,
+        "widthMetersMin": 30,
+        "widthMetersMax": 50,
+        "supportsSeveralHeavyVehiclesAbreast": true
+      },
+      "secondaryRoutes": {
+        "widthMetersMin": 15,
+        "widthMetersMax": 25
+      },
+      "tertiaryServiceRoutes": {
+        "widthMetersMin": 8,
+        "widthMetersMax": 15,
+        "intendedUsers": [
+          "infantry",
+          "small_vehicles"
+        ]
+      },
+      "importantLocationApproachesMin": 2,
+      "importantLocationApproachesPreferred": 3,
+      "accidentalDeadEndsForbidden": true,
+      "falseTraversableGapsForbidden": true,
+      "requiredReadabilityStates": [
+        "traversable",
+        "blocked",
+        "high_ground",
+        "low_ground",
+        "chokepoint",
+        "destructible_shortcut"
+      ]
+    },
+    "combatSpaceArchetypes": [
+      "industrial plaza",
+      "reactor ring",
+      "military courtyard",
+      "transport interchange",
+      "collapsed district",
+      "fortress approach boulevard",
+      "bounded industrial grid with multiple vehicle lanes"
+    ],
+    "chokepointRule": "Use intentional fortress gates, bridges, industrial corridors, tunnels, wall breaches, elevated causeways, and reactor passages. Every major choke needs a nearby alternate route or destructible state so a front cannot become permanently blocked.",
+    "elevation": {
+      "bands": [
+        "level_0_industrial_ground",
+        "level_1_raised_roads_platforms_and_defense_terraces",
+        "level_2_fortress_platforms_and_strategic_high_ground"
+      ],
+      "vehicleAccessUsesLargeRamps": true,
+      "vehicleAccessViaStairsForbidden": true,
+      "disconnectedHighGroundForbidden": true
+    },
+    "centralMegastructure": {
+      "diameterMetersMin": 300,
+      "diameterMetersMax": 500,
+      "requiredElements": [
+        "command tower",
+        "reactor core",
+        "multiple defensive rings",
+        "large vehicle entrances",
+        "raised weapon platforms",
+        "communications towers",
+        "armored walls",
+        "large ramps",
+        "internal courtyards",
+        "multiple entrances"
+      ],
+      "strategicCameraSilhouetteRequired": true
+    },
+    "districtIdentities": {
+      "command": "monumental vertical anchor architecture",
+      "industrial": "factories, furnaces, pipelines, and storage",
+      "military": "barracks, hangars, and defensive installations",
+      "energy": "reactors, transformers, and power conduits",
+      "logistics": "vehicle depots, warehouses, and transport infrastructure",
+      "ruined": "damaged buildings and collapsed infrastructure with controlled traversal states"
+    },
+    "modularFamilies": [
+      "walls and corners",
+      "fortress gates",
+      "roads and intersections",
+      "bridges and ramps",
+      "foundations",
+      "industrial and military buildings",
+      "towers",
+      "pipes and power conduits",
+      "platforms and barricades",
+      "turrets",
+      "hangars and factories"
+    ],
+    "footprints": {
+      "sizeClasses": [
+        "small",
+        "medium",
+        "large",
+        "megastructure"
+      ],
+      "preferredGroundShapes": [
+        "rectangular",
+        "square",
+        "hexagonal",
+        "octagonal",
+        "circular"
+      ],
+      "complexDecorationAboveNavigationLevel": true,
+      "cleanGameplayFootprintRequired": true
+    },
+    "destruction": {
+      "states": [
+        "intact",
+        "damaged",
+        "critical",
+        "destroyed"
+      ],
+      "logicalSections": [
+        "roof equipment",
+        "weapon systems",
+        "external armor",
+        "building body",
+        "foundation",
+        "bridges",
+        "walls",
+        "industrial equipment"
+      ],
+      "predictableRubbleFootprintsRequired": true,
+      "allowedTopologyEffects": [
+        "new shortcut",
+        "collapsed bridge",
+        "blocked road",
+        "new firing position"
+      ],
+      "uncontrolledNavigationDebrisForbidden": true
+    },
+    "visualReadability": {
+      "formDetailRatioPercent": {
+        "largeStructuralForms": 70,
+        "secondaryForms": 25,
+        "microDetail": 5
+      },
+      "majorRoadsVisibleFromStrategicCamera": true,
+      "distinctBuildingSilhouettesRequired": true,
+      "districtBoundariesReadable": true,
+      "excessiveRooftopClutterForbidden": true,
+      "controlledEmissives": true,
+      "avoid": [
+        "generic cyberpunk skyscrapers",
+        "glass office towers",
+        "random building spam",
+        "thin fragile architecture",
+        "unrealistic density",
+        "maze-like streets",
+        "visual noise"
+      ]
+    },
+    "materials": {
+      "primary": [
+        "dark armored steel",
+        "gunmetal",
+        "charcoal concrete",
+        "reinforced industrial concrete",
+        "burned metal",
+        "ceramic armor"
+      ],
+      "secondary": [
+        "warning markings",
+        "exposed machinery",
+        "pipes",
+        "vents",
+        "grates"
+      ],
+      "factionAccentLighting": [
+        "red",
+        "orange",
+        "green",
+        "purple"
+      ]
+    },
+    "performance": {
+      "requiredTechniques": [
+        "modular geometry",
+        "GPU instancing",
+        "texture atlases",
+        "trim sheets",
+        "shared materials",
+        "distance culling",
+        "occlusion culling",
+        "simplified collision"
+      ],
+      "lodChain": [
+        "LOD0_close",
+        "LOD1_medium",
+        "LOD2_normal_RTS",
+        "LOD3_strategic",
+        "impostor_or_HLOD_extreme_distance"
+      ],
+      "invisibleInteriorGeometryForbidden": true,
+      "microMechanicalGeometryShouldUseTextures": true
+    },
+    "collision": {
+      "separateGameplayCollisionRequired": true,
+      "buildings": "simple box or convex footprints",
+      "walls": "continuous simple collision",
+      "decorativePipes": "no collision unless strategically relevant",
+      "smallProps": "no unit collision by default",
+      "roadsideDecorationMayBlockArmyMovement": false
+    },
+    "acceptanceSummary": [
+      "dense but readable",
+      "massive but navigable",
+      "detailed but optimized",
+      "vertical but accessible",
+      "fortified but attackable",
+      "visually impressive but gameplay-first"
+    ]
+  },
+  "siteClassVocabulary": [
+    "city",
+    "colony",
+    "outpost",
+    "base",
+    "refinery",
+    "relic",
+    "ruin",
+    "spaceport",
+    "derelict",
+    "brood"
+  ],
+  "laneDefinitions": {
+    "modular-kit-grammar": "Define compatible module sockets, scale bands, style and condition transitions, repetition limits, and legal adjacency so generators assemble structures and terrain intentionally.",
+    "poi-composition-rules": "Generate settlement, industrial, derelict, outpost, and landmark POIs from hierarchical district, parcel, frontage, service, defense, and landmark rules rather than loose asset scattering.",
+    "road-access-connectivity": "Build and validate connected road, pedestrian, service, assault, resource, and evacuation graphs from each POI entrance to the wider battlefield.",
+    "world-dressing-variation": "Apply deterministic regional variation, occupancy history, wear, utility props, vegetation or infestation, and restrained clutter while preserving traversal, buildability, sightlines, and economy clearance.",
+    "planet-region-identity": "Drive generator palette, composition, skyline, infrastructure, condition, and dressing rules from planet, faction, and region identity so each region is visually and tactically distinct.",
+    "macro-map-composition": "Generate terrain masses, landmark silhouettes, safe build basins, POI hierarchy, and approach structure before parcel, module, or dressing placement.",
+    "traversal-and-chokes": "Design primary, secondary, and flanking routes for infantry, small vehicles, and mechs; validate corner cuts, water crossings, and their connection to the road/access graph.",
+    "resource-expansion-spacing": "Place economy expansions against travel time, defensibility, sightlines, and site footprints rather than decorative symmetry.",
+    "colony-city-districts": "Separate colony/city neighborhoods into civic, residential, industrial, defense, and service districts with readable streets.",
+    "industrial-logistics": "Connect refineries, foundries, yards, tanks, gantries, and service corridors without blocking tactical routes.",
+    "bases-outposts-defense": "Give bases and outposts perimeter logic, gates, fallback positions, patrol lanes, and clear assault approaches.",
+    "derelict-ruin-relic": "Use intact-to-ruined states, salvage paths, and landmark relics to tell occupation history without contaminating navigation.",
+    "spaceport-aprons": "Reserve broad landing/apron clearances, approach corridors, cargo staging, and defensible service edges.",
+    "pressure-dome-subsurface": "Link domes and buried facilities through pressure-safe passages, exposed service trenches, and above/below-ground landmarks.",
+    "waterfront-naval": "Coordinate shorelines, sea walls, docks, bridges, naval lanes, and land-to-water economy transitions.",
+    "hazard-legibility": "Make hazard sources, affected routes, shelters, and recovery areas readable at command and tactical zoom.",
+    "brood-conversion": "Treat hard-surface assets only as consumed substrate; add organic route conversion, cocoons, buttresses, hatcheries, and nest channels.",
+    "compact-map-legibility": "Limit landmark count and route branching so the compact theatre remains readable and spawn-safe.",
+    "large-map-landmark-hierarchy": "Use regional anchors and route tiers so large theatres do not become repeated modules or empty travel.",
+    "full-v1-regression-preservation": "Improve the map only with the existing exact requests, stable IDs, topology, determinism, traversal, recovery, and visual baseline preserved or deliberately versioned."
+  },
+  "worldKitFamilyContract": {
+    "primaryRole": "world_poi_layout_kit",
+    "secondaryRoles": [
+      "world_poi_surface_marking"
+    ],
+    "countBasis": "module",
+    "allowedTargets": [
+      "offline_world_layout_grammar",
+      "offline_poi_composition",
+      "offline_route_and_surface_studies"
+    ],
+    "forbiddenTargets": [
+      "uga_ship_exterior",
+      "uga_ship_interior",
+      "ship_identity_decal_atlas",
+      "character_or_vroid",
+      "direct_runtime_registration"
+    ],
+    "eligibilitySemantics": "Each family's eligibleModules and processingEligible fields apply only to its world/POI role. Similar vocabulary does not grant cross-domain ship use.",
+    "lifecycleFields": [
+      "status",
+      "processingEligible",
+      "runtimeReady"
+    ]
+  },
+  "worldKitFamilies": [
+    {
+      "id": "mf-ground-kit-v1",
+      "declaredModules": 36,
+      "eligibleModules": 36,
+      "status": "SOURCE_CANDIDATE",
+      "styles": [
+        "colonial",
+        "brutalist",
+        "ruined"
+      ],
+      "uses": [
+        "plazas",
+        "roads",
+        "landing pads",
+        "ramps",
+        "service trenches"
+      ],
+      "gate": "numeric recheck, per-module visual review, runtime/phone acceptance",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-cityforms-kit-v1",
+      "declaredModules": 72,
+      "eligibleModules": 72,
+      "status": "SOURCE_CANDIDATE",
+      "styles": [
+        "colonial",
+        "brutalist",
+        "ruined"
+      ],
+      "uses": [
+        "city forms",
+        "industrial yards",
+        "district landmarks"
+      ],
+      "gate": "numeric recheck, per-module visual review, runtime/phone acceptance",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-modular-building-v1",
+      "declaredModules": 36,
+      "eligibleModules": 36,
+      "status": "SOURCE_CANDIDATE",
+      "styles": [
+        "colonial",
+        "brutalist",
+        "ruined"
+      ],
+      "uses": [
+        "colonies",
+        "cities",
+        "outposts",
+        "industrial blocks"
+      ],
+      "gate": "numeric recheck, per-module visual review, runtime/phone acceptance",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-platform-hs-v1",
+      "declaredModules": 30,
+      "eligibleModules": 30,
+      "status": "SOURCE_CANDIDATE",
+      "styles": [
+        "colonial",
+        "brutalist",
+        "ruined"
+      ],
+      "uses": [
+        "walkable decks",
+        "build pads",
+        "ramps",
+        "bridges",
+        "landing decks"
+      ],
+      "gate": "numeric recheck, traversal/buildability review, per-module visual review, runtime/phone acceptance",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-superstructure-v1",
+      "declaredModules": 57,
+      "eligibleModules": 57,
+      "status": "SOURCE_CANDIDATE",
+      "styles": [
+        "colonial",
+        "brutalist",
+        "ruined"
+      ],
+      "uses": [
+        "walls",
+        "gates",
+        "towers",
+        "spires",
+        "platform networks"
+      ],
+      "gate": "numeric recheck, skyline/seam visual review, runtime/phone acceptance",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-transit-kit-v1",
+      "declaredModules": 54,
+      "eligibleModules": 54,
+      "status": "SOURCE_CANDIDATE",
+      "styles": [
+        "colonial",
+        "brutalist",
+        "ruined"
+      ],
+      "uses": [
+        "flyovers",
+        "skyways",
+        "waterfront edges",
+        "city boundaries"
+      ],
+      "gate": "numeric recheck, traversal/seam visual review, runtime/phone acceptance",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-building-hs-v1",
+      "declaredModules": 36,
+      "eligibleModules": 29,
+      "status": "SOURCE_CANDIDATE_WITH_SEVEN_VISUAL_QUARANTINE",
+      "styles": [
+        "colonial",
+        "brutalist",
+        "ruined"
+      ],
+      "uses": [
+        "hard-surface colonies",
+        "cities",
+        "outposts",
+        "industrial blocks"
+      ],
+      "quarantinedModules": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "gate": "generator repair reports 971/971 checks passing under the same edge-class-aware footprint checker that produced the 7/971 baseline failures; the seven remain quarantined pending human visual review and explicit release, while the other 29 remain source-processing candidates",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-modular-road-v1",
+      "declaredModules": 7,
+      "eligibleModules": 7,
+      "status": "PENDING_REGENERATION_AND_VISUAL_REVIEW",
+      "styles": [
+        "concept road family"
+      ],
+      "uses": [
+        "road-layout prototypes"
+      ],
+      "gate": "Blender regeneration, visual review, traversal/seam evidence, explicit promotion",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-road-straight-hunyuan-clean-v1",
+      "declaredModules": 1,
+      "eligibleModules": 1,
+      "status": "SOURCE_AUTHORING_ONLY",
+      "styles": [
+        "Hunyuan cleaned straight"
+      ],
+      "uses": [
+        "road-straight layout prototypes"
+      ],
+      "gate": "human micro-island/silhouette review, textures, tactical/command evidence, explicit promotion",
+      "processingEligible": true,
+      "runtimeReady": false
+    },
+    {
+      "id": "mf-road-junctions-v1",
+      "declaredModules": 5,
+      "eligibleModules": 5,
+      "status": "SOURCE_AUTHORING_ONLY",
+      "styles": [
+        "Hunyuan-derived junctions"
+      ],
+      "uses": [
+        "corner, T/cross-junction, and merge layout prototypes"
+      ],
+      "gate": "human render review, PBR authoring, planner sockets/traversal, phone evidence, explicit promotion",
+      "processingEligible": true,
+      "runtimeReady": false
+    }
+  ],
+  "regions": [
+    {
+      "id": "aelos_north",
+      "planet": "aelos",
+      "faction": "nova",
+      "biome": "civic",
+      "geology": "metamorphic-civic-bedrock",
+      "adaptation": "temperate_civic",
+      "focus": "living capital districts, parade/service grids, and command-defense rings",
+      "processingMaps": [
+        "aelos_north_small",
+        "aelos_north_medium",
+        "aelos_north_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "aelos_basin",
+      "planet": "aelos",
+      "faction": "nova",
+      "biome": "civic",
+      "geology": "alluvial-river-basin",
+      "adaptation": "jungle_wetland",
+      "focus": "garden-industry terraces, drainage, foundry logistics, and wetland pylons",
+      "processingMaps": [
+        "aelos_basin_small",
+        "aelos_basin_medium",
+        "aelos_basin_large"
+      ],
+      "fullV1BaselineMaps": [
+        "aelos_basin_medium"
+      ]
+    },
+    {
+      "id": "aelos_coast",
+      "planet": "aelos",
+      "faction": "nova",
+      "biome": "civic",
+      "geology": "littoral-shelf-stone",
+      "adaptation": "oceanic",
+      "focus": "working harbor defenses, sea walls, causeways, and port/spaceport aprons",
+      "processingMaps": [
+        "aelos_coast_small",
+        "aelos_coast_medium",
+        "aelos_coast_large"
+      ],
+      "fullV1BaselineMaps": [
+        "aelos_coast_medium"
+      ]
+    },
+    {
+      "id": "aelos_ridge",
+      "planet": "aelos",
+      "faction": "nova",
+      "biome": "alpine",
+      "geology": "glaciated-granite-ridge",
+      "adaptation": "glacial",
+      "focus": "garrisoned high-shelf districts, retaining walls, and fracture bridges",
+      "processingMaps": [
+        "aelos_ridge_small",
+        "aelos_ridge_medium",
+        "aelos_ridge_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "pyraeth_crater",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "biome": "dusk",
+      "geology": "impact-basalt-caldera",
+      "adaptation": "volcanic",
+      "focus": "pressure-dome courts, buried foundries, siege lanes, and crater traversal",
+      "processingMaps": [
+        "pyraeth_crater_small",
+        "pyraeth_crater_medium",
+        "pyraeth_crater_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "pyraeth_belt",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "biome": "dusk",
+      "geology": "ironstone-dust-belt",
+      "adaptation": "desert",
+      "focus": "mech-foundry trenches, armored logistics, and factory choke hierarchies",
+      "processingMaps": [
+        "pyraeth_belt_small",
+        "pyraeth_belt_medium",
+        "pyraeth_belt_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "pyraeth_caldera",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "biome": "dusk",
+      "geology": "active-basalt-caldera",
+      "adaptation": "volcanic",
+      "focus": "linked dome settlements, refractory bridges, and heat-safe districts",
+      "processingMaps": [
+        "pyraeth_caldera_small",
+        "pyraeth_caldera_medium",
+        "pyraeth_caldera_large"
+      ],
+      "fullV1BaselineMaps": [
+        "pyraeth_caldera_medium"
+      ]
+    },
+    {
+      "id": "pyraeth_flats",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "biome": "dusk",
+      "geology": "wind-scoured-slag-flat",
+      "adaptation": "desert",
+      "focus": "orbital aprons, exposed fortress islands, and wind-protected service routes",
+      "processingMaps": [
+        "pyraeth_flats_small",
+        "pyraeth_flats_medium",
+        "pyraeth_flats_large"
+      ],
+      "fullV1BaselineMaps": [
+        "pyraeth_flats_medium"
+      ]
+    },
+    {
+      "id": "nordhall_isles",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "biome": "ice",
+      "geology": "sea-ice-archipelago",
+      "adaptation": "glacial",
+      "focus": "automated naval yards, ice bridges, drone rails, and island connectivity",
+      "processingMaps": [
+        "nordhall_isles_small",
+        "nordhall_isles_medium",
+        "nordhall_isles_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "nordhall_cliff",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "biome": "ice",
+      "geology": "permafrost-cliff-scar",
+      "adaptation": "glacial",
+      "focus": "machine ruins, scarred terraces, ravine crossings, and defensive shelves",
+      "processingMaps": [
+        "nordhall_cliff_small",
+        "nordhall_cliff_medium",
+        "nordhall_cliff_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "nordhall_frost",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "biome": "ice",
+      "geology": "fractured-glacier-rift",
+      "adaptation": "glacial",
+      "focus": "reactor farms, thermal corridors, fracture bridges, and separated fronts",
+      "processingMaps": [
+        "nordhall_frost_small",
+        "nordhall_frost_medium",
+        "nordhall_frost_large"
+      ],
+      "fullV1BaselineMaps": [
+        "nordhall_frost_medium"
+      ]
+    },
+    {
+      "id": "nordhall_peaks",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "biome": "ice",
+      "geology": "polar-ice-peak",
+      "adaptation": "glacial",
+      "focus": "sensor arrays, orbital-weather shelters, plateau links, and long-range landmarks",
+      "processingMaps": [
+        "nordhall_peaks_small",
+        "nordhall_peaks_medium",
+        "nordhall_peaks_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "vespera_spire",
+      "planet": "vespera",
+      "faction": "horde",
+      "biome": "hive",
+      "geology": "hive-basalt-caldera",
+      "adaptation": "volcanic",
+      "focus": "hive-spire silhouettes, magma approach lanes, and consumed hard-surface remnants",
+      "processingMaps": [
+        "vespera_spire_small",
+        "vespera_spire_medium",
+        "vespera_spire_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "vespera_dunes",
+      "planet": "vespera",
+      "faction": "horde",
+      "biome": "hive",
+      "geology": "ichor-dust-escarpment",
+      "adaptation": "desert",
+      "focus": "infestation field channels, buried causeways, and branching canyon routes",
+      "processingMaps": [
+        "vespera_dunes_small",
+        "vespera_dunes_medium",
+        "vespera_dunes_large"
+      ],
+      "fullV1BaselineMaps": []
+    },
+    {
+      "id": "vespera_refinery",
+      "planet": "vespera",
+      "faction": "horde",
+      "biome": "hive",
+      "geology": "magma-foundry-bedrock",
+      "adaptation": "volcanic",
+      "focus": "foundry substrate conversion, hatchery logistics, and industrial ruin hierarchy",
+      "processingMaps": [
+        "vespera_refinery_small",
+        "vespera_refinery_medium",
+        "vespera_refinery_large"
+      ],
+      "fullV1BaselineMaps": [
+        "vespera_refinery_medium"
+      ]
+    },
+    {
+      "id": "vespera_plateau",
+      "planet": "vespera",
+      "faction": "horde",
+      "biome": "hive",
+      "geology": "overgrown-basalt-mesa",
+      "adaptation": "jungle_wetland",
+      "focus": "biomass-drowned fortifications, mesa crossings, and day/night terrain identity",
+      "processingMaps": [
+        "vespera_plateau_small",
+        "vespera_plateau_medium",
+        "vespera_plateau_large"
+      ],
+      "fullV1BaselineMaps": []
+    }
+  ],
+  "maps": [
+    {
+      "id": "aelos_north_small",
+      "name": "Parade Circumference",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_north",
+      "size": "compact",
+      "theme": "verdant",
+      "adaptation": "temperate_civic",
+      "hazard": "calm",
+      "poi": "Command Circumference",
+      "terrain": {
+        "relief": 0.88,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 3,
+        "industry": 1,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_north_medium",
+      "name": "Civic Grid",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_north",
+      "size": "standard",
+      "theme": "verdant",
+      "adaptation": "temperate_civic",
+      "hazard": "calm",
+      "poi": "Prefecture Plaza",
+      "terrain": {
+        "relief": 0.96,
+        "crater": false,
+        "waterMode": "river",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 4,
+        "industry": 1,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_north_large",
+      "name": "Frontline Capital",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_north",
+      "size": "large",
+      "theme": "verdant",
+      "adaptation": "temperate_civic",
+      "hazard": "storm",
+      "poi": "Titan Civic Spire",
+      "terrain": {
+        "relief": 1.02,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 4,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 2,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_basin_small",
+      "name": "Greenbelt Works",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_basin",
+      "size": "compact",
+      "theme": "verdant",
+      "adaptation": "jungle_wetland",
+      "hazard": "calm",
+      "poi": "Arsenal Gardens",
+      "terrain": {
+        "relief": 0.9,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 2,
+        "industry": 2,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_basin_medium",
+      "name": "Canal Prefecture",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_basin",
+      "size": "standard",
+      "theme": "verdant",
+      "adaptation": "jungle_wetland",
+      "hazard": "storm",
+      "poi": "Quay Assembly",
+      "terrain": {
+        "relief": 0.94,
+        "crater": false,
+        "waterMode": "river",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 3,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": {
+        "status": "FULL_V1",
+        "policy": "baseline-preserving-improvement",
+        "siteCount": 4,
+        "requests": [
+          {
+            "id": "aelos_basin_medium_colony",
+            "siteClass": "colony",
+            "count": 2,
+            "template": "colony_aelos_basin_canal_v1",
+            "era": "frontier",
+            "condition": "operational"
+          },
+          {
+            "id": "aelos_basin_medium_refinery",
+            "siteClass": "refinery",
+            "count": 2,
+            "template": "refinery_aelos_basin_quay_v1",
+            "era": "occupied",
+            "condition": "operational"
+          }
+        ]
+      },
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval",
+        "hazard-legibility",
+        "full-v1-regression-preservation"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "extend-without-breaking-full-v1-contract",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_basin_large",
+      "name": "Heartland Yards",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_basin",
+      "size": "large",
+      "theme": "verdant",
+      "adaptation": "jungle_wetland",
+      "hazard": "calm",
+      "poi": "Heartland Foundry",
+      "terrain": {
+        "relief": 1,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 4,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_coast_small",
+      "name": "Harbor Battery",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_coast",
+      "size": "compact",
+      "theme": "verdant",
+      "adaptation": "oceanic",
+      "hazard": "storm",
+      "poi": "Seawall Command",
+      "terrain": {
+        "relief": 0.9,
+        "crater": false,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 2,
+        "industry": 1,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "garrisoned"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_coast_medium",
+      "name": "Admiralty Causeway",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_coast",
+      "size": "standard",
+      "theme": "verdant",
+      "adaptation": "oceanic",
+      "hazard": "storm",
+      "poi": "Port Admiralty",
+      "terrain": {
+        "relief": 0.94,
+        "crater": false,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 3,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 1,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": {
+        "status": "FULL_V1",
+        "policy": "baseline-preserving-improvement",
+        "siteCount": 2,
+        "requests": [
+          {
+            "id": "aelos_coast_medium_base",
+            "siteClass": "base",
+            "count": 2,
+            "template": "base_aelos_coast_admiralty_v1",
+            "era": "occupied",
+            "condition": "garrisoned"
+          }
+        ]
+      },
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "base",
+        "spaceport"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "spaceport-aprons",
+        "waterfront-naval",
+        "hazard-legibility",
+        "full-v1-regression-preservation"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "extend-without-breaking-full-v1-contract",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_coast_large",
+      "name": "Pelagic Ring",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_coast",
+      "size": "large",
+      "theme": "verdant",
+      "adaptation": "oceanic",
+      "hazard": "storm",
+      "poi": "Deepwater Anchor",
+      "terrain": {
+        "relief": 1,
+        "crater": false,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 3,
+        "industry": 2,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 1,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "spaceport"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "spaceport-aprons",
+        "waterfront-naval",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_ridge_small",
+      "name": "High Shelf Fort",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_ridge",
+      "size": "compact",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "calm",
+      "poi": "Overlook Bastion",
+      "terrain": {
+        "relief": 1.22,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 2,
+        "industry": 1,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "garrisoned"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_ridge_medium",
+      "name": "Stone Rampart",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_ridge",
+      "size": "standard",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "collapse",
+      "poi": "Rampart Tier",
+      "terrain": {
+        "relief": 1.32,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 3,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "hazard-legibility"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "aelos_ridge_large",
+      "name": "Divide Gate",
+      "planet": "aelos",
+      "faction": "nova",
+      "region": "aelos_ridge",
+      "size": "large",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "storm",
+      "poi": "Great Divide Gate",
+      "terrain": {
+        "relief": 1.28,
+        "crater": false,
+        "waterMode": "river",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 3,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 1,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "intact"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "colony",
+        "refinery",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist",
+        "secondary": "colonial",
+        "gap": null
+      }
+    },
+    {
+      "id": "pyraeth_crater_small",
+      "name": "Crown Pit",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_crater",
+      "size": "compact",
+      "theme": "vespera",
+      "adaptation": "volcanic",
+      "hazard": "storm",
+      "poi": "Sub-Crater Vault",
+      "terrain": {
+        "relief": 1.1,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 1,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "pressurized"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "pressure-dome-subsurface",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_crater_medium",
+      "name": "Underforge",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_crater",
+      "size": "standard",
+      "theme": "vespera",
+      "adaptation": "volcanic",
+      "hazard": "pulse",
+      "poi": "Vault Foundry",
+      "terrain": {
+        "relief": 1.2,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 1,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "pressurized"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "pressure-dome-subsurface",
+        "hazard-legibility"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_crater_large",
+      "name": "Buried Court",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_crater",
+      "size": "large",
+      "theme": "ashland",
+      "adaptation": "volcanic",
+      "hazard": "storm",
+      "poi": "Court of Iron",
+      "terrain": {
+        "relief": 1.32,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 2,
+        "industry": 3,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 2,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "pressurized"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "pressure-dome-subsurface",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_belt_small",
+      "name": "Mech Gate",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_belt",
+      "size": "compact",
+      "theme": "vespera",
+      "adaptation": "desert",
+      "hazard": "storm",
+      "poi": "Choke Array",
+      "terrain": {
+        "relief": 1.04,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "refinery",
+        "outpost",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_belt_medium",
+      "name": "Iron Pyre Yards",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_belt",
+      "size": "standard",
+      "theme": "vespera",
+      "adaptation": "desert",
+      "hazard": "heat",
+      "poi": "Furnace Trench",
+      "terrain": {
+        "relief": 1.14,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 4,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "hazard-legibility"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_belt_large",
+      "name": "Dominion Works",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_belt",
+      "size": "large",
+      "theme": "vespera",
+      "adaptation": "desert",
+      "hazard": "storm",
+      "poi": "Promethean Mega-Grid",
+      "terrain": {
+        "relief": 1.18,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 4,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 1,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "base",
+        "spaceport"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "spaceport-aprons",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_caldera_small",
+      "name": "Dome Crown",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_caldera",
+      "size": "compact",
+      "theme": "vespera",
+      "adaptation": "volcanic",
+      "hazard": "storm",
+      "poi": "Cinder Dome Spire",
+      "terrain": {
+        "relief": 1.2,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 2,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "pressurized"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "pressure-dome-subsurface",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_caldera_medium",
+      "name": "Arcology Crucible",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_caldera",
+      "size": "standard",
+      "theme": "vespera",
+      "adaptation": "volcanic",
+      "hazard": "heat",
+      "poi": "Crucible Domes",
+      "terrain": {
+        "relief": 1.3,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 2,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 2,
+        "infestation": 0
+      },
+      "fullV1Baseline": {
+        "status": "FULL_V1",
+        "policy": "baseline-preserving-improvement",
+        "siteCount": 2,
+        "requests": [
+          {
+            "id": "pyraeth_caldera_medium_city",
+            "siteClass": "city",
+            "count": 2,
+            "template": "city_pyraeth_caldera_crucible_v1",
+            "era": "occupied",
+            "condition": "pressurized"
+          }
+        ]
+      },
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "pressurized"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "base"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "pressure-dome-subsurface",
+        "hazard-legibility",
+        "full-v1-regression-preservation"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "extend-without-breaking-full-v1-contract",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_caldera_large",
+      "name": "Red Expanse",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_caldera",
+      "size": "large",
+      "theme": "vespera",
+      "adaptation": "volcanic",
+      "hazard": "storm",
+      "poi": "Ignis Dome Court",
+      "terrain": {
+        "relief": 1.34,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 2,
+        "industry": 3,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 1,
+        "domes": 2,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "pressurized"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "spaceport"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "spaceport-aprons",
+        "pressure-dome-subsurface",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_flats_small",
+      "name": "Apron Mile",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_flats",
+      "size": "compact",
+      "theme": "vespera",
+      "adaptation": "desert",
+      "hazard": "storm",
+      "poi": "Vitrus Pad",
+      "terrain": {
+        "relief": 0.86,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 2,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 1,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "refinery",
+        "spaceport"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "spaceport-aprons",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_flats_medium",
+      "name": "Blackwind Ports",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_flats",
+      "size": "standard",
+      "theme": "vespera",
+      "adaptation": "desert",
+      "hazard": "dust",
+      "poi": "Hub Delta Pads",
+      "terrain": {
+        "relief": 0.96,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 2,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": {
+        "status": "FULL_V1",
+        "policy": "baseline-preserving-improvement",
+        "siteCount": 3,
+        "requests": [
+          {
+            "id": "pyraeth_flats_medium_spaceport",
+            "siteClass": "spaceport",
+            "count": 2,
+            "template": "spaceport_pyraeth_flats_blackwind_v1",
+            "era": "occupied",
+            "condition": "exposed"
+          },
+          {
+            "id": "pyraeth_flats_medium_derelict",
+            "siteClass": "derelict",
+            "count": 1,
+            "template": "derelict_pyraeth_flats_buried_logistics_v1",
+            "era": "abandoned",
+            "condition": "derelict"
+          }
+        ]
+      },
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "base",
+        "spaceport",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "derelict-ruin-relic",
+        "spaceport-aprons",
+        "hazard-legibility",
+        "full-v1-regression-preservation"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "extend-without-breaking-full-v1-contract",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "pyraeth_flats_large",
+      "name": "Cinder March",
+      "planet": "pyraeth",
+      "faction": "legion",
+      "region": "pyraeth_flats",
+      "size": "large",
+      "theme": "vespera",
+      "adaptation": "desert",
+      "hazard": "storm",
+      "poi": "Slag Fortress Keep",
+      "terrain": {
+        "relief": 1.02,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 2,
+        "domes": 1,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "pressurized"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "spaceport"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "spaceport-aprons",
+        "pressure-dome-subsurface",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-damage-only",
+        "gap": "Dominion pressure-dome, heat-shield, and fortress-industry treatment is not authored by these neutral/Nova kits."
+      }
+    },
+    {
+      "id": "nordhall_isles_small",
+      "name": "Frostwake Docks",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_isles",
+      "size": "compact",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "whiteout",
+      "poi": "Sub-Zero Dock Grid",
+      "terrain": {
+        "relief": 0.92,
+        "crater": false,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_isles_medium",
+      "name": "Rimewater Chain",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_isles",
+      "size": "standard",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "whiteout",
+      "poi": "Boreal Relay Net",
+      "terrain": {
+        "relief": 0.98,
+        "crater": false,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval",
+        "hazard-legibility"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_isles_large",
+      "name": "Boreal Grid",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_isles",
+      "size": "large",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "squall",
+      "poi": "Archipelago Core Vault",
+      "terrain": {
+        "relief": 1.06,
+        "crater": false,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 2,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_cliff_small",
+      "name": "Scar Approach",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_cliff",
+      "size": "compact",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "collapse",
+      "poi": "Cryo Rampart",
+      "terrain": {
+        "relief": 1.28,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "ruin",
+        "condition": "derelict"
+      },
+      "candidateSiteClasses": [
+        "refinery",
+        "outpost",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_cliff_medium",
+      "name": "Arcology Steps",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_cliff",
+      "size": "standard",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "collapse",
+      "poi": "Terrace Vault Steps",
+      "terrain": {
+        "relief": 1.4,
+        "crater": true,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "ruin",
+        "condition": "derelict"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "derelict-ruin-relic",
+        "waterfront-naval",
+        "hazard-legibility"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_cliff_large",
+      "name": "Citadel Shelf",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_cliff",
+      "size": "large",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "whiteout",
+      "poi": "Citadel Command Pinnacle",
+      "terrain": {
+        "relief": 1.46,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 2,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "ruin",
+        "condition": "derelict"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_frost_small",
+      "name": "Cryo Rift",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_frost",
+      "size": "compact",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "whiteout",
+      "poi": "Reactor Thermal Well",
+      "terrain": {
+        "relief": 1.16,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_frost_medium",
+      "name": "Glacier Fault",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_frost",
+      "size": "standard",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "collapse",
+      "poi": "Faultline Bridge",
+      "terrain": {
+        "relief": 1.28,
+        "crater": false,
+        "waterMode": "river",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": {
+        "status": "FULL_V1",
+        "policy": "baseline-preserving-improvement",
+        "siteCount": 2,
+        "requests": [
+          {
+            "id": "nordhall_frost_medium_outpost",
+            "siteClass": "outpost",
+            "count": 1,
+            "template": "outpost_nordhall_frost_fault_gate_v1",
+            "era": "frontier",
+            "condition": "operational"
+          },
+          {
+            "id": "nordhall_frost_medium_relic",
+            "siteClass": "relic",
+            "count": 1,
+            "template": "relic_nordhall_frost_thermal_well_v1",
+            "era": "legacy",
+            "condition": "derelict"
+          }
+        ]
+      },
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost",
+        "relic"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "derelict-ruin-relic",
+        "waterfront-naval",
+        "hazard-legibility",
+        "full-v1-regression-preservation"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "extend-without-breaking-full-v1-contract",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_frost_large",
+      "name": "Pale Chasm",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_frost",
+      "size": "large",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "whiteout",
+      "poi": "Pale Trench Reactor",
+      "terrain": {
+        "relief": 1.36,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 2,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_peaks_small",
+      "name": "Valkyrie Spur",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_peaks",
+      "size": "compact",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "meteor",
+      "poi": "Valkyrie Listening Post",
+      "terrain": {
+        "relief": 1.38,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 2,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "hazard-legibility",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_peaks_medium",
+      "name": "Skyshield Range",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_peaks",
+      "size": "standard",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "meteor",
+      "poi": "Skyshield Array",
+      "terrain": {
+        "relief": 1.48,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 1,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "hazard-legibility"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "nordhall_peaks_large",
+      "name": "Crown of Winter",
+      "planet": "nordhall",
+      "faction": "syndicate",
+      "region": "nordhall_peaks",
+      "size": "large",
+      "theme": "arctic",
+      "adaptation": "glacial",
+      "hazard": "whiteout",
+      "poi": "Winter Pinnacle Throne",
+      "terrain": {
+        "relief": 1.54,
+        "crater": false,
+        "waterMode": "ocean",
+        "navalEnabled": true
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 2,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 0
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "occupied",
+        "condition": "operational"
+      },
+      "candidateSiteClasses": [
+        "city",
+        "refinery",
+        "outpost"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "bases-outposts-defense",
+        "waterfront-naval",
+        "hazard-legibility",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "brutalist-structural-proxy",
+        "secondary": "ruined-for-frontline-scars",
+        "gap": "Syndicate machine-vault, sensor-pylon, and glacial enclosure treatment remains to be authored."
+      }
+    },
+    {
+      "id": "vespera_spire_small",
+      "name": "Hatch Pit",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_spire",
+      "size": "compact",
+      "theme": "ashland",
+      "adaptation": "volcanic",
+      "hazard": "spores",
+      "poi": "Spore Vent Node",
+      "terrain": {
+        "relief": 1.08,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 1.8
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "infested"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_spire_medium",
+      "name": "Spire Brood",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_spire",
+      "size": "standard",
+      "theme": "ashland",
+      "adaptation": "volcanic",
+      "hazard": "eruption",
+      "poi": "Great Hive Spire",
+      "terrain": {
+        "relief": 1.18,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 1.9
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "infested"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_spire_large",
+      "name": "Sol Nest Crown",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_spire",
+      "size": "large",
+      "theme": "ashland",
+      "adaptation": "volcanic",
+      "hazard": "eruption",
+      "poi": "Caldera Nest Crown",
+      "terrain": {
+        "relief": 1.26,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 2,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 2.1
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "consumed"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_dunes_small",
+      "name": "Ichor Narrows",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_dunes",
+      "size": "compact",
+      "theme": "ashland",
+      "adaptation": "desert",
+      "hazard": "spores",
+      "poi": "Ichor Passage",
+      "terrain": {
+        "relief": 1.14,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 0,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 2
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "consumed"
+      },
+      "candidateSiteClasses": [
+        "brood"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_dunes_medium",
+      "name": "Sable Bloom",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_dunes",
+      "size": "standard",
+      "theme": "ashland",
+      "adaptation": "desert",
+      "hazard": "spores",
+      "poi": "Bloom Escarpment",
+      "terrain": {
+        "relief": 1.28,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 2.1
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "consumed"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_dunes_large",
+      "name": "Eventide Tide",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_dunes",
+      "size": "large",
+      "theme": "ashland",
+      "adaptation": "desert",
+      "hazard": "eruption",
+      "poi": "Tide Relay Net",
+      "terrain": {
+        "relief": 1.34,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 2.2
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "consumed"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_refinery_small",
+      "name": "Magma Crypt",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_refinery",
+      "size": "compact",
+      "theme": "ashland",
+      "adaptation": "volcanic",
+      "hazard": "eruption",
+      "poi": "Hatchery Crypt",
+      "terrain": {
+        "relief": 1.06,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 0,
+        "industry": 2,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 1.8
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "infested"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "derelict",
+        "refinery"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_refinery_medium",
+      "name": "Derelict Brood",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_refinery",
+      "size": "standard",
+      "theme": "ashland",
+      "adaptation": "volcanic",
+      "hazard": "pulse",
+      "poi": "Brood Matrix Core",
+      "terrain": {
+        "relief": 1.16,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 2,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 1.9
+      },
+      "fullV1Baseline": {
+        "status": "FULL_V1",
+        "policy": "baseline-preserving-improvement",
+        "siteCount": 3,
+        "requests": [
+          {
+            "id": "vespera_refinery_medium_ruin",
+            "siteClass": "ruin",
+            "count": 1,
+            "template": "ruin_vespera_refinery_megaforge_v1",
+            "era": "ruin",
+            "condition": "infested"
+          },
+          {
+            "id": "vespera_refinery_medium_brood",
+            "siteClass": "brood",
+            "count": 2,
+            "template": "brood_vespera_refinery_matrix_core_v1",
+            "era": "conversion",
+            "condition": "consumed"
+          }
+        ]
+      },
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "infested"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin",
+        "derelict",
+        "refinery"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "full-v1-regression-preservation"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "extend-without-breaking-full-v1-contract",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_refinery_large",
+      "name": "Silent Megaforge",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_refinery",
+      "size": "large",
+      "theme": "ashland",
+      "adaptation": "volcanic",
+      "hazard": "eruption",
+      "poi": "Megaforge Spine",
+      "terrain": {
+        "relief": 1.22,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 3,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 2.2
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "consumed"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin",
+        "derelict",
+        "refinery"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_plateau_small",
+      "name": "Twilight Mesa",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_plateau",
+      "size": "compact",
+      "theme": "verdant",
+      "adaptation": "jungle_wetland",
+      "hazard": "spores",
+      "poi": "Twilight Nest 4",
+      "terrain": {
+        "relief": 1.2,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 0,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 1.6
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "infested"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "compact-map-legibility"
+      ],
+      "processingWave": "wave-2-compact",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_plateau_medium",
+      "name": "Gloam Ramparts",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_plateau",
+      "size": "standard",
+      "theme": "verdant",
+      "adaptation": "jungle_wetland",
+      "hazard": "spores",
+      "poi": "Gloam Keep Gate",
+      "terrain": {
+        "relief": 1.32,
+        "crater": false,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 1,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 1.7
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "infested"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion"
+      ],
+      "processingWave": "wave-1-standard",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    },
+    {
+      "id": "vespera_plateau_large",
+      "name": "Terminator Front",
+      "planet": "vespera",
+      "faction": "horde",
+      "region": "vespera_plateau",
+      "size": "large",
+      "theme": "ashland",
+      "adaptation": "jungle_wetland",
+      "hazard": "eruption",
+      "poi": "Terminator Hive Spire",
+      "terrain": {
+        "relief": 1.38,
+        "crater": true,
+        "waterMode": "none",
+        "navalEnabled": false
+      },
+      "authoredSignals": {
+        "city": 2,
+        "industry": 1,
+        "outpost": 0,
+        "relic": 0,
+        "towns": 0,
+        "spaceport": 0,
+        "domes": 0,
+        "infestation": 2
+      },
+      "fullV1Baseline": null,
+      "recommendedDominantContext": {
+        "era": "conversion",
+        "condition": "consumed"
+      },
+      "candidateSiteClasses": [
+        "brood",
+        "ruin",
+        "derelict"
+      ],
+      "improvementLanes": [
+        "modular-kit-grammar",
+        "poi-composition-rules",
+        "road-access-connectivity",
+        "world-dressing-variation",
+        "planet-region-identity",
+        "macro-map-composition",
+        "traversal-and-chokes",
+        "resource-expansion-spacing",
+        "colony-city-districts",
+        "industrial-logistics",
+        "derelict-ruin-relic",
+        "hazard-legibility",
+        "brood-conversion",
+        "large-map-landmark-hierarchy"
+      ],
+      "processingWave": "wave-3-large",
+      "processingPolicy": "author-exact-plan-and-templates",
+      "processingAssetFamilies": [
+        "mf-ground-kit-v1",
+        "mf-modular-building-v1",
+        "mf-cityforms-kit-v1",
+        "mf-building-hs-v1",
+        "mf-superstructure-v1",
+        "mf-platform-hs-v1",
+        "mf-transit-kit-v1",
+        "mf-modular-road-v1",
+        "mf-road-straight-hunyuan-clean-v1",
+        "mf-road-junctions-v1"
+      ],
+      "moduleQuarantineApplies": [
+        "colonial_gatehouse",
+        "colonial_depot_shed",
+        "colonial_industrial_hall",
+        "brutalist_tank_farm",
+        "ruined_depot_shed",
+        "ruined_tower_slab",
+        "ruined_tower_spire"
+      ],
+      "assetStyleTreatment": {
+        "primary": "ruined-hard-surface-substrate",
+        "secondary": null,
+        "gap": "Hard-surface kits do not supply organic Brood membranes, cocoons, veins, nests, or infestation silhouettes."
+      }
+    }
+  ],
+  "sources": [
+    {
+      "path": "src/engine/gl.js",
+      "sha256": "cf9c397bebad5f3feef5db35e624ae7ed80f4493c86fefb37f82808fa3598699",
+      "role": "authoritative 48-map campaign catalogue, planets, regions, map metadata"
+    },
+    {
+      "path": "assets/data/locationgrammar.js",
+      "sha256": "733c253c078bd07ea3fc0879662358e7060e9846d23a29013435c388c93a05ec",
+      "role": "site-class vocabulary and planet/region/faction/adaptation contracts"
+    },
+    {
+      "path": "assets/data/locationplans.js",
+      "sha256": "6e9434957499557026b7dc1cde0155b8257cc992ac04ad5db55ac2ff4b8fa1c4",
+      "role": "six existing FULL_V1 Stage 9 map plans used as regression baselines"
+    },
+    {
+      "path": "assets/data/sitetemplates-stage9.js",
+      "sha256": "45be5c291228370e166a44b91d575fab4fdaac1c3e312a384a9df9597e1793fd",
+      "role": "exact-template coverage for the six FULL_V1 baselines"
+    },
+    {
+      "path": "docs/HANDOFF_CODEX_2026-08-28_HARDSURFACE.md",
+      "sha256": "ec4a0e8b438fc21c29d4c7bbcf40e1685226670596f4beee9fc2200c6fc398c5",
+      "role": "pre-repair seven-module defect diagnosis and non-registration boundary"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/mf-ground-kit-v1-report.json",
+      "sha256": "215d49adaf30b901bf85fe13df17536cb7c712e9a5d6b0007caa97f36fb378ae",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/mf-cityforms-kit-v1-report.json",
+      "sha256": "d5bc3dc8ff0f321255a16f10ebd03e4cdcbf7860588d944debc2be82e8a0d18f",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/mf-modular-building-v1-report.json",
+      "sha256": "a4d14a8c36642bc0cc888c28d115cb2cad758df832e7c1cdb6b810b276e0bc3d",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-platform-hs-v1/mf-platform-hs-v1-report.json",
+      "sha256": "5b82212ca60b8c83f03acab7b647d4ceb5e556580e7ad0de865381e7765bf891",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/mf-superstructure-v1-report.json",
+      "sha256": "668bf9711977a747225e4267e8c220b50f9d3ba900fa71c51e38ad5c6dcdd9c7",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/mf-transit-kit-v1-report.json",
+      "sha256": "64acf688d3ff4aad543b728009499f386dea569316a5d56f8eb75cbbd2943920",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/mf-building-hs-v1-report.json",
+      "sha256": "70e225c9953cf2112de75beac6d8220ae8a7fc553b41f7ad921e7d1199c5ab93",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "tools/blender/test_mf_kits.py",
+      "sha256": "1d3722a3fc10033db20e07f75b79f989a6118eeeea66301031043dcda24d09fc",
+      "role": "edge-class-aware numeric checker used for both the 7/971 baseline and 971/971 repaired result"
+    },
+    {
+      "path": "tools/blender/build-mf-building-hs.py",
+      "sha256": "98b345d786e45f722f93ba143d79ecd4bf5f65f969470ed1aaf9019b6fafd543",
+      "role": "repaired mf-building-hs-v1 generator bound to the final numeric evidence"
+    },
+    {
+      "path": "tmp/hardsurface-pack-final/test-mf-kits-final.log",
+      "sha256": "974f1133839650035defbdcb9f8e754c4483aed3b0278eef7067b87b260ba05a",
+      "role": "local-only Blender 5.2 numeric evidence: PASSED all 971 checks, no Traceback",
+      "tracking": "ignored-local-evidence-not-portable-do-not-force-add"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/mf-modular-road-v1-report.json",
+      "sha256": "90178ac41530aa9150b3148e0bca4c402aa89caa65d992c9580ee8da0a72c3f6",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/mf-road-straight-hunyuan-clean-v1.provenance.json",
+      "sha256": "cf1f1b821e09a0f4eb36458592668f5ef6ada5ae92849883446fcfb8509d210a",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/mf-road-junctions-v1.provenance.json",
+      "sha256": "80605354530e1c1d8c72f3379c77ffb66961ef16734c4cf29471e6cdc280ea4c",
+      "role": "current local source-candidate family report/provenance"
+    },
+    {
+      "path": "tools/blender/blend-inventory.json",
+      "sha256": "313bb0f1e7d938f908840808071d22c1245a273c5b80fbf456c682f7c1a0dec1",
+      "role": "role-specific mesh-object, triangle, and material inventory for UGA exterior, command cutaway, and legacy ark sources"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/nexus-vii-civilization-ship.blend",
+      "sha256": "abfbf3683c555b4bc026f58e414f8f3d6f84a24d74713e5e40a5d9f5cdf90402",
+      "role": "authoritative UGA civilization-ship exterior source; separate from world-kit module counts"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/uga-command-cutaway.blend",
+      "sha256": "441460baa7188b95e1bff45df3e8a748dc1d2c203c1610615cdb26d24b877484",
+      "role": "authoritative eleven-district UGA command-ship cutaway/section source; one scene, not a proven reusable room kit"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/blender/uga-civilization-ark.blend",
+      "sha256": "71af7d0ed03c6ecd2b94d1481475a7edf21ef7d25834dcdbe1ab6c9f5aa787e8",
+      "role": "stale unreferenced legacy ship candidate retained as quarantined reference only"
+    },
+    {
+      "path": "modules/space_exploration/tools/blender/build_uga_assets.py",
+      "sha256": "bbeff04b09b0d9357cffd81572a6918af4b2f77efd096504438c4d12ebcacbeb",
+      "role": "authoring source for current UGA exterior, cutaway sections, district compartments, and nested markings"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/concepts/nexus-vii-v1/concept-manifest.json",
+      "sha256": "7fb6ee5fe63ab5c2bb56c376e08b037da16f89145749c2b0e34a33b26a701af0",
+      "role": "approved first-pass Nexus VII exterior and cutaway concept contract"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/spline/prompt-guides/nexus-vii-districts/index.json",
+      "sha256": "b279a29b6bcc9bfabffdf1c44c6f8518461c2f887c14f846c1aa8ec435094a6a",
+      "role": "source-only eleven-district ship-section prompt-guide index; runtimeBound=false"
+    },
+    {
+      "path": "modules/space_exploration/assets/source/uga/interior-library/nexus-vii-material-decal-manifest.json",
+      "sha256": "ada210705091a25376565b25eba24f56d747b7f092a554b009a94e6c33df21fe",
+      "role": "planned source-only UGA interior material, trim, identity, construction, wear, and display decal contract; exterior hull binding forbidden"
+    },
+    {
+      "path": "modules/space_exploration/src/ship/uga_blender_assets.js",
+      "sha256": "cba7b6599069db43cb6add89d0ed093c2407fa2cc7c9b1002ce99857ba07785c",
+      "role": "current runtime loader evidence for the Nexus VII exterior GLB"
+    },
+    {
+      "path": "modules/space_exploration/src/core/uga_command_scene.js",
+      "sha256": "00a6c30b14ca8e832e1dd852e8355d6d861fa6386317142c4804e40c94450a00",
+      "role": "current command-scene and ship-district topology consumer evidence"
+    },
+    {
+      "path": "src/main.js",
+      "sha256": "eb23e8a3196e38135d4b2f5fef33fccc36e3549789987851b669b6260f3b79e2",
+      "role": "current compact, standard, and large preset extents plus world-topology cache identity"
+    },
+    {
+      "path": "src/hazards.js",
+      "sha256": "9e3a0dee6d602d2b67ba9a4385f13789bb18f396c3653b3a9b3123504dfb731d",
+      "role": "current profile-keyed deterministic battlefield hazard hooks"
+    },
+    {
+      "path": "src/game/sim.js",
+      "sha256": "22255fdf8a6201aa699357b330d54a2612dfc4792898f906d5659a73f07baf15",
+      "role": "current land and naval pathing-domain boundary"
+    },
+    {
+      "path": "source-media/content-library/city-outpost-modular-layout-blueprints.v1.json",
+      "sha256": "2c7cca4216e010e4bc1461ec155a1d4ed1064c7009b667d88c06d86b89f17d32",
+      "role": "site-scale deterministic road-first named-plot assembler used inside, not instead of, the future megacity district graph"
+    },
+    {
+      "path": "src/game/economy.js",
+      "sha256": "867d19e968182e2826bccc610d6227a292ec2c3f979a83240f2073d72f6ebdc1",
+      "role": "current connected-water, full-footprint, and Harbor shore-access placement gates"
+    },
+    {
+      "path": "src/engine/models.js",
+      "sha256": "3bb34f4ca7bd15e5ff9d9790ddb1b9e124b0c5e4c8ae9f7444dc9b054c2423a1",
+      "role": "current procedural Sea Bastion hull and pontoon geometry evidence"
+    },
+    {
+      "path": "src/engine/models-machine.js",
+      "sha256": "4a434fdc9d1f2c73474678f97ee5be2bd5016eebe83ac063c7cf6f26a7a22808",
+      "role": "current procedural Syndicate hex-pontoon and air-gap geometry evidence"
+    },
+    {
+      "path": "src/ui/render3d.js",
+      "sha256": "5583a4241e6facfd9a0acf3f328dc58a5dafffaa2880d32df5da8c1f110a7d1d",
+      "role": "current fixed water-plane building render-height boundary; no structural buoyancy response"
+    },
+    {
+      "path": "tools/blender/build-mf-superstructure-kit.py",
+      "sha256": "6030c1857867a4b59b451aa6fcfc9f517c6e6f563755f822c9b17a885a9f8603",
+      "role": "fixed-caisson ocean platform authoring contract for 18 existing world-kit modules"
+    },
+    {
+      "path": "tools/blender/build-mf-transit-kit.py",
+      "sha256": "649aa862db22d035f2622cd1e69012422b6fda3c7d8c57d34326eb47015ea5d7",
+      "role": "shoreline edge_dock quay and revetment authoring evidence; not floating"
+    },
+    {
+      "path": "tools/blender/build-mf-platform-hs.py",
+      "sha256": "15bceb206503dd702f3c22c0132f0cccdd23acd889811a778d5a98c59efe2fa9",
+      "role": "terrain-backed solid navigable platform authoring evidence without buoyancy or mooring contract"
+    }
+  ]
+}
