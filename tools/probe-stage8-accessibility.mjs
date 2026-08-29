@@ -92,7 +92,10 @@ async function enterDeployedMatch(){
     await advance.click();await page.waitForTimeout(500);
   }
   route.push({step:4,label:(await advance.textContent()||'').trim()});
-  await advance.click();
+  /* START BATTLE replaces its own pointer target with #loadScr during
+     pointerup. Keyboard activation is the real native-button path and avoids
+     Playwright retrying a click whose successful first attempt removed it. */
+  await advance.focus();await advance.press('Enter');
   const deploy=page.locator('#deployBtn');await deploy.waitFor({state:'visible',timeout:180_000});await deploy.click();
   await page.waitForFunction(()=>typeof matchLive!=='undefined'&&matchLive&&running&&document.body.classList.contains('hudTacticalDock'),null,{timeout:180_000});
   await page.waitForTimeout(800);
@@ -144,10 +147,12 @@ try{
   }
   report.checks.textScale={samples:scales};
   for(const [i,pct] of [100,125,150,200].entries())check(scales[i].root===String(pct),`root text scale did not apply ${pct}%`);
+  report.checks.textScale.ratios={};
   for(const key of ['primary','setting','critical']){
-    check(scales[1][key]>=scales[0][key]*1.2,`${key} text did not reach 125%`);
-    check(scales[2][key]>=scales[0][key]*1.45,`${key} text did not reach 150%`);
-    check(scales[3][key]>=scales[0][key]*1.9,`${key} text did not reach 200%`);
+    const ratios=scales.map(sample=>sample[key]/scales[0][key]);
+    report.checks.textScale.ratios[key]=ratios;
+    for(const [i,want] of [1,1.25,1.5,2].entries())
+      check(Math.abs(ratios[i]-want)<=.01,`${key} text ratio ${ratios[i].toFixed(3)} did not equal ${want.toFixed(2)}`);
   }
   check(scales.every(s=>s.horizontalOverflow<=1),'text scaling created whole-screen horizontal overflow');
 

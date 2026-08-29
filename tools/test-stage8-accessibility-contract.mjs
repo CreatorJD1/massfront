@@ -91,7 +91,7 @@ assert.equal(releaseCount,2,'release-safe action did not fire exactly once from 
 class FocusNode{
   constructor(id,tagName='DIV'){
     this.id=id;this.tagName=tagName;this.style={display:'flex'};this.isConnected=true;this.tabIndex=0;
-    this.members=new Set();this.attributes=new Set();this.inert=false;this.children=[];
+    this.dataset={};this.members=new Set();this.attributes=new Set();this.inert=false;this.children=[];
   }
   add(...nodes){for(const node of nodes)this.members.add(node);return this;}
   contains(node){return node===this||this.members.has(node);}
@@ -103,12 +103,17 @@ class FocusNode{
     if(sel==='h1,h2,[role="heading"]')return this.heading||null;
     return this.firstControl||null;
   }
-  querySelectorAll(){return [...this.members].filter(node=>node.tagName==='BUTTON');}
+  querySelectorAll(sel=''){
+    const data=/^\[data-([a-z]+)\]$/.exec(sel),members=[...this.members];
+    if(data)return members.filter(node=>node.dataset&&node.dataset[data[1]]!=null);
+    return members.filter(node=>node.tagName==='BUTTON');
+  }
   focus(){focusDoc.activeElement=this;this.focuses=(this.focuses||0)+1;}
 }
 const body=new FocusNode('body');body.dataset={frontScreen:''};
 const start=new FocusNode('startScreen'),war=new FocusNode('warScr'),setup=new FocusNode('setupScr');
 const startBtn=new FocusNode('startBtn','BUTTON'),warHead=new FocusNode('warHead','H2'),warCard=new FocusNode('warCard'),setupHead=new FocusNode('setupHead','H2');
+warCard.dataset.mode='standard';
 start.add(startBtn);start.firstControl=startBtn;war.add(warHead,warCard);war.heading=warHead;setup.add(setupHead);setup.heading=setupHead;
 const hidden=['apConfirmOverlay','apOverlay','accDlg','dispatch','pauseOverlay'].map(id=>{const n=new FocusNode(id);n.style.display='none';return n;});
 const resumeBtn=new FocusNode('resumeBtn','BUTTON'),menuBtn=new FocusNode('menuBtn','BUTTON');
@@ -129,8 +134,10 @@ focusDoc.activeElement=startBtn;body.dataset.frontScreen='warScr';focusCtx.mfFro
 assert.equal(focusDoc.activeElement,warHead,'forward route did not focus its heading');
 focusDoc.activeElement=warCard;body.dataset.frontScreen='setupScr';focusCtx.mfFrontFocusRoute('warScr','setupScr',setup);
 assert.equal(focusDoc.activeElement,setupHead,'nested route did not focus its heading');
+war.members.delete(warCard);warCard.isConnected=false;
+const replacementWarCard=new FocusNode('replacementWarCard','BUTTON');replacementWarCard.dataset.mode='standard';war.add(replacementWarCard);
 body.dataset.frontScreen='warScr';focusCtx.mfFrontFocusRoute('setupScr','warScr',war);
-assert.equal(focusDoc.activeElement,warCard,'Back did not restore the War Room trigger');
+assert.equal(focusDoc.activeElement,replacementWarCard,'Back did not restore the re-rendered War Room trigger');
 body.dataset.frontScreen='startScreen';focusCtx.mfFrontFocusRoute('warScr','startScreen',start);
 assert.equal(focusDoc.activeElement,startBtn,'Back did not restore the home trigger');
 focusDoc.activeElement=menuBtn;focusCtx.mfOpenPause();
@@ -174,9 +181,13 @@ assert.match(index,/<div class="overlay" id="pauseOverlay" role="dialog" aria-mo
 assert.match(main,/window\.addEventListener\('keydown',mfPauseTrapKeydown,true\)/,
   'Pause focus confinement is not installed in the keyboard capture phase');
 
-for(const pct of ['125','150','200'])assert.match(css,new RegExp('html\\[data-mf-text-scale="'+pct+'"\\]\\{font-size:'),pct+'% CSS tier is missing');
-assert.match(css,/\.mbtn\{font-size:1\.0667rem\}/,'primary menu text is not tied to text scale');
-assert.match(css,/#goalBar\{font-size:\.7667rem\}/,'critical objective text is not tied to text scale');
+assert.match(css,/html\{font-size:16px/,'100% text root is not the exact scaling baseline');
+for(const [pct,size] of [['125','20px'],['150','24px'],['200','32px']])
+  assert.match(css,new RegExp('html\\[data-mf-text-scale="'+pct+'"\\]\\{font-size:'+size.replace('.','\\.')),pct+'% CSS tier is not exact');
+assert.match(css,/\.mbtn\{font-size:1rem\}/,'primary menu text is not tied to text scale');
+assert.match(css,/\.setupFoot \.mbtn\{font-size:\.875rem!important\}/,'setup footer specificity blocks exact primary-text scaling');
+assert.match(css,/\.setRow \.sTx b\{font-size:\.84375rem\}/,'settings-row specificity blocks exact label scaling');
+assert.match(css,/#goalBar\{font-size:\.71875rem\}/,'critical objective text is not tied to text scale');
 assert.match(css,/\.settingsNav\{overflow-x:auto/,'scaled settings tabs have no overflow strategy');
 assert.match(css,/#toast\.noticeBox[\s\S]*max-height:none/,'scaled alerts can still clip vertically');
 assert.match(css,/#goalBar\{width:max-content;[^}]*max-height:none;[^}]*overflow:visible/,
@@ -195,6 +206,7 @@ const cleanupAt=probe.indexOf('for(const name of outputFiles)await rm');
 assert.ok(freezeAt>=0&&mkdirAt>freezeAt&&cleanupAt>mkdirAt,'probe mutates its output before owning the workspace freeze');
 assert.match(probe,/const screenshotFiles=\[[^\]]+\]/,'probe has no bounded screenshot declaration');
 assert.match(probe,/const deployed=await enterDeployedMatch\(\)/,'probe does not enter a real deployed match for HUD scaling');
+assert.match(probe,/Math\.abs\(ratios\[i\]-want\)<=\.01/,'probe accepts oversized text tiers instead of exact 100/125/150/200 ratios');
 assert.match(probe,/await shot\('deployed-hud-text-200\.png'\)/,'probe has no 200% deployed-HUD screenshot');
 assert.match(probe,/check\(!plate\.clipped,[^\n]+200%/,'probe does not reject clipped 200% HUD plates');
 assert.match(probe,/check\(plate\.contained,[^\n]+200%/,'probe does not reject out-of-viewport 200% HUD plates');

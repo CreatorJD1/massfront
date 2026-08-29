@@ -1908,12 +1908,31 @@ function mfFrontFocusCandidate(el){
   if(heading){heading.tabIndex=-1;return heading;}
   return el.querySelector&&el.querySelector('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')||el;
 }
+function mfFrontFocusRebind(target,root){
+  if(!target||!root)return null;
+  if(target.isConnected!==false&&root.contains(target))return target;
+  /* Several front screens rebuild their cards with innerHTML before Back.
+     Preserve the control's semantic identity so focus lands on the replacement
+     instead of falling back to the screen heading. */
+  if(target.id){
+    const current=$(target.id);
+    if(current&&current.isConnected!==false&&root.contains(current))return current;
+  }
+  const data=target.dataset||{};
+  for(const key of ['mode','set','tab','deck','map','fac','char']){
+    if(data[key]==null||!root.querySelectorAll)continue;
+    for(const current of root.querySelectorAll('[data-'+key+']')){
+      if(current.dataset&&current.dataset[key]===data[key])return current;
+    }
+  }
+  return null;
+}
 function mfFrontFocusLater(el,preferred){
   const ticket=++mfFrontFocusTicket;
   requestAnimationFrame(()=>{
     if(ticket!==mfFrontFocusTicket||!el||document.body.dataset.frontScreen!==el.id||!mfFrontElementVisible(el)||mfFrontFocusBlocked())return;
-    let target=preferred;
-    if(!target||target.isConnected===false||!el.contains(target)||!mfFrontElementVisible(target))target=mfFrontFocusCandidate(el);
+    let target=mfFrontFocusRebind(preferred,el);
+    if(!target||!mfFrontElementVisible(target))target=mfFrontFocusCandidate(el);
     if(!target||typeof target.focus!=='function')return;
     try{target.focus({preventScroll:true});}catch(e){target.focus();}
   });

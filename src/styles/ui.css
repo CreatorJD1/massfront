@@ -41,12 +41,13 @@
   --fU:'Rajdhani','Segoe UI',Roboto,sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
-html{font-size:15px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-html[data-mf-text-scale="125"]{font-size:18.75px}
-html[data-mf-text-scale="150"]{font-size:22.5px}
-html[data-mf-text-scale="200"]{font-size:30px}
+html{font-size:16px;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+html[data-mf-text-scale="125"]{font-size:20px}
+html[data-mf-text-scale="150"]{font-size:24px}
+html[data-mf-text-scale="200"]{font-size:32px}
 html,body{width:100%;height:100%;height:100dvh;min-height:100dvh;overflow:hidden;background:var(--bg);font-family:var(--fU);color:#cfe8ff;
-  position:fixed;inset:0;overscroll-behavior:none;touch-action:none;font-size:1rem}
+  position:fixed;inset:0;overscroll-behavior:none;touch-action:none}
+body{font-size:15px}
 /* No filter on the canvas here, on purpose. The grade is owned by
    applySettings() (SCREEN_GRADES in src/game/meta.js) and defaults to none.
    A baked-in contrast(1.17) saturate(1.20) was a second grade stacked on the
@@ -3144,43 +3145,47 @@ body.mfMenuOpen #cmdrTx,body.menuMode #cmdrTx{display:none!important}
    pointer geometry; these rem values leave the battlefield camera and every
    authored 44/48px touch target alone while scaling menu copy and status text.
    At larger steps the dense rails wrap or scroll instead of clipping. */
-.mbtn{font-size:1.0667rem}.gbtn{font-size:.9rem}.gbtn .gEm{font-size:1.1333rem}
-.sbtn{font-size:.6667rem}.settingsNav .screenTabBtn,.setupTabBtn,.hudDeckBtn{font-size:.6rem}
-.sbtn .sEmj{font-size:1.1333rem}.screenTabBtn .tabGlyph{font-size:.9333rem}
-.dbtn{font-size:.9333rem}.tabBtn{font-size:.6667rem}
-.subtitle{font-size:.8rem}
-.sTx{min-width:0}.sTx b{font-size:.9333rem}.sTier,.sDs{font-size:.7667rem}.sBuy{font-size:.8667rem}
-.sHead{font-size:.6667rem}.setGroupHd{font-size:.7rem}.setGroupDs,.secHint{font-size:.7667rem}
-.subMenuHead h2,.setupHead h2{font-size:clamp(1.0667rem,4.7vw,1.3333rem)}.subMenuHead span{font-size:.6667rem}
-.setupContext{font-size:.6667rem}
-#armory h2{font-size:1.3333rem}#armory .armorySub{font-size:.8667rem}
+.mbtn{font-size:1rem}.mbtn.alt{font-size:.84375rem}.setupFoot .mbtn{font-size:.875rem!important}
+.gbtn{font-size:.84375rem}.gbtn .gEm{font-size:1.0625rem}
+.sbtn{font-size:.625rem}.settingsNav .screenTabBtn,.setupTabBtn,.hudDeckBtn{font-size:.5625rem}
+.sbtn .sEmj{font-size:1.0625rem}.screenTabBtn .tabGlyph{font-size:.875rem}
+.dbtn{font-size:.875rem}.tabBtn{font-size:.625rem}
+.subtitle{font-size:.75rem}
+.sTx{min-width:0}.sTx b{font-size:.875rem}.setRow .sTx b{font-size:.84375rem}.sTier,.sDs{font-size:.71875rem}.sBuy{font-size:.8125rem}
+.sHead{font-size:.625rem}.setGroupHd{font-size:.65625rem}.setGroupDs,.secHint{font-size:.71875rem}
+.subMenuHead h2,.setupHead h2{font-size:clamp(1rem,4.7vw,1.25rem)}.subMenuHead span{font-size:.625rem}
+.setupContext{font-size:.625rem}
+#armory h2{font-size:1.25rem}#armory .armorySub{font-size:.8125rem}
+@media(max-width:430px){
+  .mbtn{font-size:.875rem}.mbtn.alt{font-size:.78125rem}.setupFoot .mbtn{font-size:.875rem!important}
+}
 
 /* Critical battlefield readouts scale, but the dense command-deck labels do
    not: enlarging those would reduce rather than improve target usability. */
-#topbar{font-size:clamp(.8rem,1.6vmin,1.0667rem)}
-.res b{font-size:clamp(.8667rem,1.8vmin,1.2rem)}.res .rate{font-size:.7333rem}
-#toast{font-size:.9333rem}#toast.pickupReward b{font-size:.8rem}#toast.pickupReward span{font-size:.8333rem}
-#toast.noticeBox{font-size:.7rem}#toast.noticeBox::before{font-size:.6rem}
-#toast.noticeBox.radioNotice b{font-size:.6rem}#toast.noticeBox.radioNotice span{font-size:.7333rem}
-#goalBar{font-size:.7667rem}#infMeter{font-size:.7333rem}
-#hazChip{font-size:.6667rem}#hazChip .hazEm{font-size:.8667rem}
-#atkAlert{font-size:.8667rem}#waveAlert b{font-size:.7rem}#waveAlert span{font-size:.6rem}
-#selInfo{font-size:.8667rem}#selInfo .selIntelCopy b{font-size:.6rem}
-#heroRankEm{font-size:.9333rem}#heroLvlTxt{font-size:.7333rem}
-#cmdrTxWho{font-size:.6667rem}#cmdrTxRank,#cmdrTxTag{font-size:.5667rem}#cmdrTxLine{font-size:.8333rem}
+#topbar{font-size:clamp(.75rem,1.6vmin,1rem)}
+.res b{font-size:clamp(.8125rem,1.8vmin,1.125rem)}.res .rate{font-size:.6875rem}
+#toast{font-size:.875rem}#toast.pickupReward b{font-size:.75rem}#toast.pickupReward span{font-size:.78125rem}
+#toast.noticeBox{font-size:.65625rem}#toast.noticeBox::before{font-size:.5625rem}
+#toast.noticeBox.radioNotice b{font-size:.5625rem}#toast.noticeBox.radioNotice span{font-size:.6875rem}
+#goalBar{font-size:.71875rem}#infMeter{font-size:.6875rem}
+#hazChip{font-size:.625rem}#hazChip .hazEm{font-size:.8125rem}
+#atkAlert{font-size:.8125rem}#waveAlert b{font-size:.65625rem}#waveAlert span{font-size:.5625rem}
+#selInfo{font-size:.8125rem}#selInfo .selIntelCopy b{font-size:.5625rem}
+#heroRankEm{font-size:.875rem}#heroLvlTxt{font-size:.6875rem}
+#cmdrTxWho{font-size:.625rem}#cmdrTxRank,#cmdrTxTag{font-size:.53125rem}#cmdrTxLine{font-size:.78125rem}
 
 .overlay h1:focus-visible,.overlay h2:focus-visible{outline:2px solid #ffe08a;outline-offset:5px}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .sItem{align-items:flex-start;flex-wrap:wrap}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .sBuy{margin-left:auto}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav{overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;touch-action:pan-x}
-html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav .screenTabBtn{flex:0 0 4.2667rem;min-width:4.2667rem}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav .screenTabBtn{flex:0 0 4rem;min-width:4rem}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #topbar{overflow-x:auto;scrollbar-width:none;touch-action:pan-x}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #topbar::-webkit-scrollbar,
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .settingsNav::-webkit-scrollbar{display:none}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) .res{flex:0 0 auto}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #goalBar{width:max-content;max-width:calc(100vw - var(--sal) - var(--sar) - 20px);min-height:30px;max-height:none;height:auto;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;justify-content:center;text-align:center}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #infMeter,
-html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #hazChip{width:max-content;max-width:min(56vw,18rem);min-height:32px;max-height:none;height:auto;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.2}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #hazChip{width:max-content;max-width:min(56vw,16.875rem);min-height:32px;max-height:none;height:auto;white-space:normal;overflow:visible;text-overflow:clip;line-height:1.2}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #hazChip .hazNm{overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #toast,
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #toast.noticeBox,
