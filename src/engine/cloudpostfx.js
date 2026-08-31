@@ -103,9 +103,9 @@ precision highp sampler2D;
 in vec2 vUV;out vec4 outColor;
 uniform sampler2D uDepth,uNoise;
 uniform mat4 uInvVP;
-uniform vec3 uCenter,uRadii,uSunDir,uTint;
+uniform vec3 uCenter,uRadii,uSunDir,uTint,uLobeA,uLobeB;
 uniform vec2 uActiveSize;
-uniform float uRotation,uTime,uOpacity,uShadowAlpha;
+uniform float uRotation,uTime,uOpacity,uShadowAlpha,uClose,uExtinct;
 uniform vec3 uShadowCenter;
 uniform float uShadowRadius;
 uniform int uSteps;
@@ -115,6 +115,28 @@ float noise3(vec3 q){
   float b=texture(uNoise,q.xy*.31+vec2(-uTime*.0013,uTime*.0017)+.37).a;
   float c=texture(uNoise,q.zy*.24+vec2(uTime*.0007,-uTime*.0011)+.71).a;
   return a*.52+b*.30+c*.18;
+}
+float puff(vec3 p,vec3 c,vec3 s){
+  /* Compact heads. A unit-filling lobe plus any leftover density became the
+     white wash / cyan AABB rim in 01–04. Most of the ellipsoid must be air. */
+  vec3 q=(p-c)/s;
+  return smoothstep(1.0,0.20,dot(q,q));
+}
+float density(vec3 p){
+  float n1=noise3(p*1.70+vec3(uTime*.0025,0.11,uTime*.0013));
+  float n2=noise3(p*4.05+vec3(0.39,-uTime*.0009,0.61));
+  float n3=noise3(p*8.80+vec3(0.74,0.17,-uTime*.0019));
+  vec3 c3=vec3(-uLobeB.x*0.82,0.16,-uLobeA.z*0.68);
+  float heads=max(puff(p,vec3(0.0,-0.10,0.0),vec3(0.34,0.26,0.30)),
+              max(puff(p,uLobeA,vec3(0.30,0.26,0.28))*0.96,
+              max(puff(p,uLobeB,vec3(0.24,0.34,0.22))*0.90,
+                  puff(p,c3,vec3(0.26,0.22,0.24))*0.84)));
+  heads*=smoothstep(0.14,0.58,n1*0.70+n2*0.30);
+  float wisp=smoothstep(0.08,0.44,heads)*smoothstep(0.26,0.70,n3)*mix(0.16,0.52,uClose);
+  float den=heads*mix(0.62,1.28,n1)+wisp;
+  den*=1.0-smoothstep(0.48,0.92,n3)*mix(0.08,0.28,1.0-heads);
+  den*=smoothstep(0.98,0.58,length(p.xz)+abs(p.y)*0.42);
+  return max(0.0,den);
 }
 void main(){
   vec2 uv=gl_FragCoord.xy/uActiveSize;
@@ -127,7 +149,7 @@ void main(){
   mat2 R=mat2(cr,-sr,sr,cr);
   vec3 O=ro-uCenter;O.xz=R*O.xz;vec3 D=rd;D.xz=R*D.xz;
   O/=uRadii;D/=uRadii;
-  float A=dot(D,D),B=2.0*dot(O,D),C=dot(O,O)-1.0;
+  float A=dot(D,D),B=2.0*dot(O,D),C=dot(O,O)-1.02;
   float disc=B*B-4.0*A*C;
   vec3 acc=vec3(0.0);float alpha=0.0;
   if(disc>0.0){
@@ -137,34 +159,29 @@ void main(){
       float count=float(max(uSteps,1)),stepLen=(leave-enter)/count;
       float jitter=texture(uNoise,uv*3.7+uTime*.0003).a;
       float t=enter+stepLen*(.18+.64*jitter);
-      for(int i=0;i<12;i++){
+      for(int i=0;i<24;i++){
         if(i>=uSteps)break;
         vec3 wp=ro+rd*t,qp=wp-uCenter;qp.xz=R*qp.xz;qp/=uRadii;
-        float edge=max(0.0,1.0-dot(qp,qp));
-        float billow=noise3(qp*1.9);
-        float den=smoothstep(.28,.69,billow+edge*.34)*smoothstep(.01,.42,edge);
-        den*=mix(.64,1.12,clamp(qp.y*.5+.5,0.0,1.0));
-        float sa=(1.0-exp(-den*stepLen*.025))*uOpacity;
-        float silver=pow(clamp(edge,0.0,1.0),.24);
+        float den=density(qp);
+        float sa=(1.0-exp(-den*stepLen*uExtinct))*uOpacity;
         float top=clamp(qp.y*.5+.5,0.0,1.0);
-        float sun=max(.12,uSunDir.y*.72+.22);
-        vec3 shade=uTint*mix(.42,1.02,top)*mix(.72,1.12,sun);
-        shade+=vec3(.13,.16,.19)*silver*(1.0-top)*.32;
+        float powder=1.0-exp(-den*2.2);
+        float sun=max(.16,uSunDir.y*.68+.26);
+        /* Dark belly / bright crown is how a pitched ortho reads volume.
+           A flat pale tint stacked through a tall slab is just milk. */
+        vec3 shade=mix(vec3(.68,.72,.78),vec3(.96,.97,.99),clamp(top*0.55+powder*0.50,0.0,1.0));
+        shade*=mix(uTint,vec3(1.0),0.35);
+        shade*=mix(.78,1.10,sun);
         acc+=(1.0-alpha)*shade*sa;alpha+=(1.0-alpha)*sa;
-        if(alpha>.965)break;t+=stepLen;
+        if(alpha>.88)break;t+=stepLen;
       }
     }
   }
 
-  vec2 sq=(scene.xz-uShadowCenter.xz)/max(1.0,uShadowRadius);
-  sq=R*sq;
-  float sr2=dot(sq*vec2(1.0,1.42),sq*vec2(1.0,1.42));
-  float sn=texture(uNoise,sq*.34+vec2(.21,.73)+uTime*.00025).a;
-  float sha=smoothstep(1.0,.08,sr2)*mix(.42,1.0,sn)*uShadowAlpha;
-  vec3 shCol=vec3(.045,.058,.075);
-  acc+=shCol*sha*(1.0-alpha);alpha+=sha*(1.0-alpha);
-  /* Weather may veil the battle but must not turn a command camera opaque. */
-  if(alpha>.50){acc*=.50/alpha;alpha=.50;}
+  /* Ground contact is the body shadow billboard on the fallback path.
+     A second noisy disc here painted a purple smudge with a cyan rim
+     across the whole AABB (01 cellular dirt, 03 teal cutout). */
+  if(alpha>.48){acc*=.48/alpha;alpha=.48;}
   outColor=vec4(acc,alpha);
 }`;
 
@@ -173,22 +190,21 @@ precision highp float;
 precision highp sampler2D;
 in vec2 vUV;out vec4 outColor;
 uniform sampler2D uCloud,uDepth;
-uniform vec2 uTexSize,uActiveSize;
-vec4 tap(vec2 uv,vec2 off,float centerDepth,out float w){
-  vec2 fullUV=clamp(uv+off/uActiveSize,vec2(0.0),vec2(1.0));
-  vec2 scale=uActiveSize/uTexSize;
-  vec2 cuv=clamp(fullUV*scale,vec2(.5)/uTexSize,(uActiveSize-.5)/uTexSize);
+uniform vec2 uSceneSize,uTexSize,uTexScale;
+vec4 tap(vec2 sceneUV,vec2 off,float centerDepth,out float w){
+  vec2 fullUV=clamp(sceneUV+off/uSceneSize,vec2(0.0),vec2(1.0));
+  vec2 cuv=clamp(fullUV*uTexScale,vec2(.5)/uTexSize,uTexScale-vec2(.5)/uTexSize);
   float d=texture(uDepth,fullUV).r;
   w=exp(-abs(d-centerDepth)*3500.0);
   return texture(uCloud,cuv);
 }
 void main(){
-  vec2 uv=gl_FragCoord.xy/uActiveSize;
-  float d=texture(uDepth,uv).r;
+  vec2 sceneUV=gl_FragCoord.xy/uSceneSize;
+  float d=texture(uDepth,sceneUV).r;
   float w0,w1,w2,w3,w4;
-  vec4 c=tap(uv,vec2(0),d,w0)*w0*2.0;
-  c+=tap(uv,vec2(1,0),d,w1)*w1+tap(uv,vec2(-1,0),d,w2)*w2;
-  c+=tap(uv,vec2(0,1),d,w3)*w3+tap(uv,vec2(0,-1),d,w4)*w4;
+  vec4 c=tap(sceneUV,vec2(0),d,w0)*w0*2.0;
+  c+=tap(sceneUV,vec2(1,0),d,w1)*w1+tap(sceneUV,vec2(-1,0),d,w2)*w2;
+  c+=tap(sceneUV,vec2(0,1),d,w3)*w3+tap(sceneUV,vec2(0,-1),d,w4)*w4;
   outColor=c/max(1e-4,w0*2.0+w1+w2+w3+w4);
 }`;
 
@@ -206,8 +222,8 @@ function mfcpEnsurePrograms(){
       mfcpProg=mkProg(MFCP_VS,MFCP_FS,'cloudpost-volume');
       mfcpProgUp=mkProg(MFCP_VS,MFCP_UP_FS,'cloudpost-upsample');
       mfcpVAO=gl.createVertexArray();
-      mfcpU=mfcpUniforms(mfcpProg,['uDepth','uNoise','uInvVP','uCenter','uRadii','uSunDir','uTint','uActiveSize','uRotation','uTime','uOpacity','uShadowAlpha','uShadowCenter','uShadowRadius','uSteps']);
-      mfcpUup=mfcpUniforms(mfcpProgUp,['uCloud','uDepth','uTexSize','uActiveSize']);
+      mfcpU=mfcpUniforms(mfcpProg,['uDepth','uNoise','uInvVP','uCenter','uRadii','uSunDir','uTint','uLobeA','uLobeB','uActiveSize','uRotation','uTime','uOpacity','uShadowAlpha','uClose','uExtinct','uShadowCenter','uShadowRadius','uSteps']);
+      mfcpUup=mfcpUniforms(mfcpProgUp,['uCloud','uDepth','uTexSize','uSceneSize','uTexScale']);
     }catch(e){MFCP_TEL.shaderFailures++;MFCP_TEL.lastError='init: '+String(e&&e.message||e);return false;}
   }
   if(!mfcpProgChecked){
@@ -245,10 +261,27 @@ function mfcpProject(x,y,z){
   return [((matVP[0]*x+matVP[4]*y+matVP[8]*z+matVP[12])/w*.5+.5)*aoW,
           ((matVP[1]*x+matVP[5]*y+matVP[9]*z+matVP[13])/w*.5+.5)*aoH];
 }
+function mfcpSpan(){
+  return (typeof orthoSpan==='number'&&Number.isFinite(orthoSpan)&&orthoSpan>0)?orthoSpan:1500;
+}
+function mfcpCloseK(span){
+  return Math.max(0,Math.min(1,(1100-span)/680));
+}
+function mfcpYRadius(size,span){
+  /* Thickness is a puff stack, not a 3000-unit camera column. Parallel
+     ortho rays through a 300–520 slab just integrated into milk. */
+  const close=mfcpCloseK(span);
+  return Math.max(72,Math.min(168,size*(0.16+0.08*close)));
+}
+function mfcpBodyY(B,ry){
+  /* Keep the ellipsoid centre in the air so half the volume is not dirt. */
+  return Math.max(B.z,ry*0.48+36);
+}
 function mfcpBounds(P){
-  let x0=aoW,y0=aoH,x1=0,y1=0,hit=0;const B=P.body,rx=B.size*.50,ry=Math.max(28,B.size*.105),rz=B.size*.34;
+  const span=mfcpSpan(),B=P.body,rx=B.size*.52,ry=mfcpYRadius(B.size,span),rz=B.size*.40,cy=mfcpBodyY(B,ry);
+  let x0=aoW,y0=aoH,x1=0,y1=0,hit=0;
   for(let ix=-1;ix<=1;ix+=2)for(let iy=-1;iy<=1;iy+=2)for(let iz=-1;iz<=1;iz+=2){
-    const p=mfcpProject(B.x+ix*rx,B.z+iy*ry,B.y+iz*rz);if(!p)continue;
+    const p=mfcpProject(B.x+ix*rx,cy+iy*ry,B.y+iz*rz);if(!p)continue;
     x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);hit++;
   }
   if(P.hasShadow){const S=P.shadow,r=S.size*.55;for(const q of [[-r,0],[r,0],[0,-r],[0,r]]){
@@ -261,8 +294,10 @@ function mfcpBounds(P){
 function mfCloudPostDrawPending(Sun){
   if(!mfcpPending)return false;
   if(typeof gl==='undefined'||!gl||typeof aoW!=='number'||typeof aoH!=='number'||!aoFB2||!aoDepth||!matVP||typeof m4invert!=='function')return false;
-  const lod=mfcpLod,div=lod===0?2:4,maxN=lod===0?2:(lod===1?3:5);
-  const steps=mfcpQuality==='cinematic'?(lod===0?12:(lod===1?8:6)):(lod===0?8:(lod===1?6:4));
+  /* Quarter-res mid-span (div=4) smeared two huge proxies into one veil.
+     Keep half-res through command zoom; only orbital drops further. */
+  const lod=mfcpLod,div=lod===2?4:2,maxN=lod===0?3:(lod===1?4:5);
+  const steps=mfcpQuality==='cinematic'?(lod===0?24:(lod===1?20:14)):(lod===0?20:(lod===1?14:10));
   const activeW=Math.max(1,Math.ceil(aoW/div)),activeH=Math.max(1,Math.ceil(aoH/div));
   const texW=Math.max(1,Math.ceil(aoW/2)),texH=Math.max(1,Math.ceil(aoH/2));
   MFCP_TEL.lastLod=lod===0?'tactical':(lod===1?'high':'orbital');MFCP_TEL.lastSteps=steps;
@@ -287,24 +322,39 @@ function mfCloudPostDrawPending(Sun){
     gl.useProgram(mfcpProg);gl.bindVertexArray(mfcpVAO);
     gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,aoDepth);gl.uniform1i(mfcpU.uDepth,4);
     gl.activeTexture(gl.TEXTURE12);gl.bindTexture(gl.TEXTURE_2D,mfcpNoise);gl.uniform1i(mfcpU.uNoise,12);
+    const span=mfcpSpan(),closeK=mfcpCloseK(span);
     gl.uniformMatrix4fv(mfcpU.uInvVP,false,MFCP_INV_VP);gl.uniform2f(mfcpU.uActiveSize,activeW,activeH);gl.uniform1f(mfcpU.uTime,mfcpTime);gl.uniform1i(mfcpU.uSteps,steps);
+    gl.uniform1f(mfcpU.uClose,closeK);
     const sd=Sun&&Sun.dir?Sun.dir:[.42,.78,.30];gl.uniform3f(mfcpU.uSunDir,sd[0],sd[1],sd[2]);
     for(let i=0;i<Math.min(mfcpProxyN,maxN);i++){
       const P=MFCP_PROXY[i],B=P.body,S=P.hasShadow?P.shadow:B,bd=mfcpBounds(P);if(!bd||bd[2]<=bd[0]||bd[3]<=bd[1])continue;
       compX0=Math.min(compX0,bd[0]);compY0=Math.min(compY0,bd[1]);compX1=Math.max(compX1,bd[2]);compY1=Math.max(compY1,bd[3]);
       const sx=Math.max(0,Math.floor(bd[0]/div)-2),sy=Math.max(0,Math.floor(bd[1]/div)-2),ex=Math.min(activeW,Math.ceil(bd[2]/div)+2),ey=Math.min(activeH,Math.ceil(bd[3]/div)+2);
       if(ex<=sx||ey<=sy)continue;gl.enable(gl.SCISSOR_TEST);gl.scissor(sx,sy,ex-sx,ey-sy);
-      gl.uniform3f(mfcpU.uCenter,B.x,B.z,B.y);gl.uniform3f(mfcpU.uRadii,B.size*.50,Math.max(28,B.size*.105),B.size*.34);
-      gl.uniform1f(mfcpU.uRotation,-B.rotation);gl.uniform3f(mfcpU.uTint,Math.min(.88,B.r/255*.92),Math.min(.91,B.g/255*.92),Math.min(.96,B.b/255*.94));
+      const ry=mfcpYRadius(B.size,span),cy=mfcpBodyY(B,ry),id=(B.cloudId|0)+1,rot=B.rotation||0;
+      gl.uniform3f(mfcpU.uCenter,B.x,cy,B.y);
+      gl.uniform3f(mfcpU.uRadii,B.size*.52,ry,B.size*.40);
+      /* Sparse puffs + modest extinction: a filled slab at 1.85/ry flashed
+         opaque, then the 0.64 cap turned the leftover into a white veil. */
+      gl.uniform1f(mfcpU.uExtinct,2.2/Math.max(90,ry*3.4));
+      gl.uniform3f(mfcpU.uLobeA,Math.cos(rot)*0.52,0.08+0.10*(id%3),Math.sin(rot)*0.46);
+      gl.uniform3f(mfcpU.uLobeB,Math.cos(rot+2.15)*-0.46,0.22+0.12*((id*3)%2),Math.sin(rot+1.05)*0.40);
+      gl.uniform1f(mfcpU.uRotation,-B.rotation);
+      gl.uniform3f(mfcpU.uTint,Math.min(.94,0.58+B.r/255*.38),Math.min(.95,0.60+B.g/255*.36),Math.min(.97,0.64+B.b/255*.34));
       /* The recipe's authored alpha still owns daylight/quality intensity;
          the post path only translates that descriptor into optical density. */
-      gl.uniform1f(mfcpU.uOpacity,(mfcpQuality==='cinematic'?.43:.36)*Math.max(.35,Math.min(1.1,B.a/29)));
-      gl.uniform3f(mfcpU.uShadowCenter,S.x,S.z,S.y);gl.uniform1f(mfcpU.uShadowRadius,P.hasShadow?S.size*.53:1);
-      gl.uniform1f(mfcpU.uShadowAlpha,P.hasShadow?Math.min(.18,S.a/255*1.22):0);
+      gl.uniform1f(mfcpU.uOpacity,(mfcpQuality==='cinematic'?.72:.64)*Math.max(.50,Math.min(1.15,B.a/40)));
+      gl.uniform3f(mfcpU.uShadowCenter,S.x,S.z,S.y);gl.uniform1f(mfcpU.uShadowRadius,1);
+      gl.uniform1f(mfcpU.uShadowAlpha,0);
       gl.drawArrays(gl.TRIANGLES,0,3);draws++;
     }
     if(draws<=0||compX1<=compX0||compY1<=compY0)throw new Error('no visible cloud proxy');
     if(mfcpFailMode==='composite')return false;
+    /* Composite viewport is full aoW×aoH; march target is a lower-res slice.
+       uSceneSize must match the bound framebuffer, and uTexScale maps scene UV
+       into the marched cloud texture. Using the march viewport size here made
+       depth-aware upsample sample empty texels and reject every tap — clouds
+       vanished on HIGH/CINEMATIC while telemetry still counted a present. */
     gl.bindFramebuffer(gl.FRAMEBUFFER,aoFB2);gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,null,0);depthDetached=true;
     if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)throw new Error('scene target incomplete after depth detach');
     gl.viewport(0,0,aoW,aoH);gl.enable(gl.SCISSOR_TEST);
@@ -313,7 +363,9 @@ function mfCloudPostDrawPending(Sun){
     gl.blendEquation(gl.FUNC_ADD);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.useProgram(mfcpProgUp);gl.bindVertexArray(mfcpVAO);
     gl.activeTexture(gl.TEXTURE13);gl.bindTexture(gl.TEXTURE_2D,mfcpTex);gl.uniform1i(mfcpUup.uCloud,13);
     gl.activeTexture(gl.TEXTURE4);gl.bindTexture(gl.TEXTURE_2D,aoDepth);gl.uniform1i(mfcpUup.uDepth,4);
-    gl.uniform2f(mfcpUup.uTexSize,texW,texH);gl.uniform2f(mfcpUup.uActiveSize,activeW,activeH);
+    gl.uniform2f(mfcpUup.uSceneSize,aoW,aoH);
+    gl.uniform2f(mfcpUup.uTexSize,texW,texH);
+    gl.uniform2f(mfcpUup.uTexScale,activeW/texW,activeH/texH);
     gl.drawArrays(gl.TRIANGLES,0,3);
     gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.TEXTURE_2D,aoDepth,0);depthDetached=false;
     ok=!!mfcpProg&&!!mfcpProgUp&&!!mfcpVAO&&!!mfcpNoise&&!!mfcpTex&&!!mfcpFB&&gl.getError()===gl.NO_ERROR;

@@ -146,12 +146,12 @@ let audMaster = null, audSfxBus = null, audAmbBus = null, audMusBus = null,
 
 function audLevelSetting(key, fallback){
   const v=(typeof META!=='undefined'&&META.settings)?META.settings[key]:fallback;
-  return [0.25,0.50,0.75,1.0][clamp(v|0,0,3)];
+  return [0,0.25,0.50,0.75,1.0][clamp(v|0,0,4)];
 }
-function audSfxLevel(){ return audLevelSetting('sfxVol',3); }
-function audAmbienceLevel(){ return audLevelSetting('ambVol',3); }
-function audMusicLevel(){ return audLevelSetting('musicVol',2); }
-function audVoiceLevel(){ return audLevelSetting('voiceVol',3); }
+function audSfxLevel(){ return audLevelSetting('sfxVol',4); }
+function audAmbienceLevel(){ return audLevelSetting('ambVol',4); }
+function audMusicLevel(){ return audLevelSetting('musicVol',3); }
+function audVoiceLevel(){ return audLevelSetting('voiceVol',4); }
 function audIsVoiceSlot(name){ return typeof name==='string'&&name.lastIndexOf('vo_',0)===0; }
 function audApplyLevels(){
   if(!AC) return;
@@ -870,7 +870,13 @@ function artilleryWorldAudio(kind,wx,wy,team,scale){
 
 /* The replacement for hud.js's sfx(). Same signature, same call sites. */
 function sfxSample(name, wx, wy, scale, pickIdx){
-  if(!AC || muted || (typeof sfxOn!=='undefined'&&!sfxOn) || !AUD.ready) return false;
+  /* Voice is a real independent bus. Turning Effects off must not silence a
+     commander or KEEL; their own Voice level and the global master mute remain
+     authoritative. This check used to happen before the slot was classified,
+     which made every vo_* take depend on the Effects toggle despite routing to
+     audVoiceBus below. */
+  const mfStage13VoiceSlot=audIsVoiceSlot(name);
+  if(!AC || muted || (!mfStage13VoiceSlot&&typeof sfxOn!=='undefined'&&!sfxOn) || !AUD.ready) return false;
   const buf = audPick(name, pickIdx);
   if(!buf) return false;
 
@@ -1127,6 +1133,46 @@ function initSampleAudio(){
     };
     speakVoiceFallback.__mfVoice=true;
   }
+
+  /* Shared surface contract. Galactic Exploration runs in a separate document
+     so it cannot retain this AudioContext across navigation, but both runtimes
+     expose the same four-bus API and read the same profile settings. This base
+     implementation stays authoritative whenever a surface is hosted in the
+     main game document. KEEL maps to the existing legacy `keen` bank only at
+     this private adapter boundary; player-facing identity remains KEEL / UGA. */
+  window.__MASSFRONT_AUDIO_BRIDGE__={
+    version:1,
+    init(){ if(typeof initAudio==='function')initAudio(); audBuild(); audApplyLevels(); return !!AC; },
+    applyLevels:audApplyLevels,
+    levels(){ return {sfx:audSfxLevel(),ambience:audAmbienceLevel(),music:audMusicLevel(),voice:audVoiceLevel()}; },
+    playSfx(name,options){
+      const o=options||{};
+      if(typeof initAudio==='function')initAudio();
+      return sfxSample(name,o.x,o.y,o.scale,o.index);
+    },
+    playVoice(speaker,action,options){
+      const id=String(speaker||'').toLowerCase()==='keel'?'keen':speaker;
+      const o=options||{};
+      if(typeof initAudio==='function')initAudio();
+      if(!VOICE_BANK){
+        audLoadVoiceBank().then(()=>voPlay(id,action,o.x,o.y,o.index,o.onMiss));
+        return true;
+      }
+      return voPlay(id,action,o.x,o.y,o.index,o.onMiss);
+    },
+    duck(durationMs){
+      const hold=clamp(Number(durationMs)||0,0,60000);
+      AUD.duckUntil=Math.max(AUD.duckUntil,performance.now()+hold);
+      return AUD.duckUntil;
+    },
+    setScene(scene){
+      if(scene==='galactic'||scene==='rooms'||scene==='story'){
+        PLAY.expectMatch=false; PLAY.scene='menu'; audMusSwap=0;
+        if(AC&&PLAY.lists&&musicOn&&!muted)audPlaylistTick();
+      }
+      return PLAY.scene;
+    }
+  };
 
   /* Decoding needs a live AudioContext, which only exists after the first user
      gesture on mobile. initAudio() is called from every entry point, so poll

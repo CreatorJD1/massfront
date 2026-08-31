@@ -3455,24 +3455,36 @@ function render(dtDraw){
      (1.05–1.50 rad) a camera-facing sprite at ground height reads as a
      ground shadow, which is exactly how the 2D version read. */
   let mfCloudPostArmed=false;
-  if(sprites.cloud&&typeof mfCloudFxEmit==='function'){
+  if(typeof mfCloudFxEmit==='function'){
     const cloudDef=typeof MAPDEFS!=='undefined'&&MAPDEFS&&MAPDEFS[curMap];
+    const cloudQ=typeof qualityKey==='function'?qualityKey():'high';
     const cloudCtx={
       time:stats.t,
       paused:typeof paused!=='undefined'&&paused,
-      quality:typeof qualityKey==='function'?qualityKey():'high',
+      quality:cloudQ,
       perfScale:perfScale,
       mapSize:MAP,
       mapId:curMap,
       seed:cloudDef&&cloudDef.seed,
       daylight:1-Math.min(1,S_nA*1.6),
       ground:gh,
-      visible:vis
+      focusX:cam.x,
+      focusY:cam.y,
+      viewSpan:typeof orthoSpan==='number'?orthoSpan:1500,
+      /* High/Cinematic post needs the recipe even when the body is just off
+         the tight vis AABB. Camera-lane pick already keeps nearby systems;
+         frustum culling here emptied the sky over a start-zone HQ. */
+      visible:(cloudQ==='high'||cloudQ==='cinematic')?null:vis
     };
-    const cloudFallback=L=>bbAlpha.add(sprites.cloud,L.x,L.y,L.z,L.size,L.rotation,L.r,L.g,L.b,L.a);
+  /* HIGH/CINEMATIC post clouds do not sample sprites.cloud; only the legacy
+     billboard fallback needs the atlas cell. Do not gate the whole weather
+     path on the sprite existing — that silently killed post clouds on builds
+     where the atlas was late or the cell was missing. */
+    const cloudSpr=sprites&&(sprites.cloud||sprites.smoke||sprites.glow);
+    const cloudFallback=cloudSpr?L=>bbAlpha.add(cloudSpr,L.x,L.y,L.z,L.size,L.rotation,L.r,L.g,L.b,L.a):null;
     if(typeof mfCloudPostQueue==='function')
       mfCloudPostArmed=!!mfCloudPostQueue(cloudCtx,!!aoActive,cloudFallback,orthoSpan);
-    else mfCloudFxEmit(cloudCtx,cloudFallback);
+    else if(cloudFallback) mfCloudFxEmit(cloudCtx,cloudFallback);
   }
   if(perfScale>0.4){
     if(sprites.bird&&S_nA<0.75) for(const F of birds){
@@ -3495,17 +3507,14 @@ function render(dtDraw){
      the health bars so a chevron stays readable at tactical zoom. */
   const rkPx=Math.max(.24,orthoSpan/Math.max(1,VH));
   const putRankMark=(x,y,h,n)=>{
-    n=n|0; if(n<=0) return;
-    /* Chevrons, not 4px diamonds: at tactical zoom a diamond mip-filtered
-       into a speck. Two bars read as a rank mark from command altitude. */
-    const s=clamp(12*rkPx,8.2,18);
-    const lift=h+16*rkPx;
+    n=Math.min(3,n|0); if(n<=0||!sprites||!sprites.px) return;
+    const s=clamp(7.2*rkPx,5.4,10.5);
+    const lift=h+11*rkPx;
     for(let k=0;k<n;k++){
-      const yo=k*s*0.78;
-      bbAlpha.addOrientedRect(sprites.px,x,y,lift+yo,s*2.05,s*0.46,-0.64,255,214,90,250);
-      bbAlpha.addOrientedRect(sprites.px,x,y,lift+yo,s*2.05,s*0.46,0.64,255,214,90,250);
+      const yo=k*s*0.62;
+      bbAlpha.addOrientedRect(sprites.px,x,y,lift+yo,s*1.15,s*0.28,-0.64,168,196,214,150);
+      bbAlpha.addOrientedRect(sprites.px,x,y,lift+yo,s*1.15,s*0.28,0.64,168,196,214,150);
     }
-    bbAdd.add(sprites.glow,x,y,lift+(n-1)*s*0.4,18+n*5,0,255,210,87,78);
   };
   if(orthoSpan<1700){
     for(let bi=0;bi<blds.length;bi++){
@@ -3566,8 +3575,9 @@ function render(dtDraw){
   if(mfCloudPostArmed){
     let cloudPostPresented=false;
     try{if(typeof mfCloudPostDrawPending==='function')cloudPostPresented=!!mfCloudPostDrawPending(Sun);}catch(e){cloudPostPresented=false;}
-    if(!cloudPostPresented&&typeof mfCloudPostEmitFallback==='function'){
-      const fallbackN=mfCloudPostEmitFallback(L=>bbAlpha.add(sprites.cloud,L.x,L.y,L.z,L.size,L.rotation,L.r,L.g,L.b,L.a));
+    if(!cloudPostPresented&&typeof mfCloudPostEmitFallback==='function'&&(sprites.cloud||sprites.smoke||sprites.glow)){
+      const cloudSpr=sprites.cloud||sprites.smoke||sprites.glow;
+      const fallbackN=mfCloudPostEmitFallback(L=>bbAlpha.add(cloudSpr,L.x,L.y,L.z,L.size,L.rotation,L.r,L.g,L.b,L.a));
       if(fallbackN>0){
         gl.enable(gl.BLEND);gl.enable(gl.DEPTH_TEST);gl.depthMask(false);gl.disable(gl.CULL_FACE);
         beginBB();gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);bbAlpha.flush(gl);

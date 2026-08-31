@@ -187,7 +187,8 @@ function clearSel(){
 }
 function selectArmy(){
   clearSel(); let n=0;
-  for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===0&&i!==heroIdx){ usel[i]=1; n++; }
+  const localHero=typeof mfLocalCommander==='function'?mfLocalCommander():heroIdx;
+  for(let i=0;i<unitHigh;i++) if(ualive[i]&&(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0)&&i!==localHero){ usel[i]=1; n++; }
   toast(n?('⚔ Army selected — '+n+' units'):'No army yet — build a Factory');
   updateSelInfo(); if(n)uiCommandAck('select',n);else sfx('ui');
 }
@@ -196,7 +197,7 @@ function selectArmy(){
    working engineer off a repair or construction order. */
 function selectIdleBuilders(){
   clearSel(); let n=0,fx=0,fy=0;
-  for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===0&&TYPES[utype[i]].builder&&ustate[i]===0){
+  for(let i=0;i<unitHigh;i++) if(ualive[i]&&(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0)&&TYPES[utype[i]].builder&&ustate[i]===0){
     usel[i]=1; n++; fx+=ux[i]; fy+=uy[i];
   }
   if(!n){ toast('No idle Constructors — build one or finish current orders'); sfx('reject'); return; }
@@ -204,10 +205,11 @@ function selectIdleBuilders(){
   updateSelInfo(); toast('🔧 '+n+' idle Constructor'+(n===1?'':'s')+' selected'); uiCommandAck('select',n,cam.x,cam.y);
 }
 function selectHero(){
-  if(heroIdx<0){ toast('Commander is down'); return; }
-  clearSel(); usel[heroIdx]=1;
-  cam.x=ux[heroIdx]; cam.y=uy[heroIdx]; clampCam();
-  updateSelInfo(); uiCommandAck('select',1,ux[heroIdx],uy[heroIdx]);
+  const h=typeof mfLocalCommander==='function'?mfLocalCommander():heroIdx;
+  if(h<0){ toast('Commander is down'); return; }
+  clearSel(); usel[h]=1;
+  cam.x=ux[h]; cam.y=uy[h]; clampCam();
+  updateSelInfo(); uiCommandAck('select',1,ux[h],uy[h]);
 }
 /* HUD-only: Stop and Hold both write uhold=1 (idle must not chase). The
    selection line still has to say STOP vs HOLD. Lives here — next to the
@@ -521,7 +523,7 @@ function domainOrderPoint(i,P){
    sparse, lopsided route; adopting a recycled slot is worse. */
 function refreshPatrolRoute(ri,force){
   const R=patrolRoutes[ri];if(!R)return false;
-  const live=(R.members||[]).filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0&&uPatrolRoute[e[0]]===ri);
+  const live=(R.members||[]).filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(e[0]):uteam[e[0]]===0)&&uPatrolRoute[e[0]]===ri);
   if(!live.length){patrolRoutes[ri]=null;return false;}
   if(force||live.length!==R.members.length){
     const sel=live.map(e=>e[0]);R.members=live;R.targets=patrolTargetRows(sel,R.pts,R.form);
@@ -579,7 +581,7 @@ function commitPatrolDraft(){
   if(!patrolDraft||patrolDraft.pts.length<2){cancelPatrolDraft(false);return false;}
   const sel=[],refs=[];
   for(const e of patrolDraft.members){
-    if(ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0){sel.push(e[0]);refs.push(e);}
+    if(ualive[e[0]]&&ugen[e[0]]===e[1]&&(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(e[0]):uteam[e[0]]===0)){sel.push(e[0]);refs.push(e);}
   }
   if(!sel.length){cancelPatrolDraft(false);return false;}
   const pts=patrolDraft.pts.slice(),targets=patrolTargetRows(sel,pts,patrolDraft.form);
@@ -607,7 +609,7 @@ function togglePatrolPlanner(){
    stranger that replaced it. */
 const ctrlGroups=[[],[],[],[]],groupForms=[0,0,0,0];
 let activePlatoon=-1;
-const groupLive=g=>g.filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0);
+const groupLive=g=>g.filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(e[0]):uteam[e[0]]===0));
 function saveGroup(n){
   const g=[];
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]) g.push([i,ugen[i]]);
@@ -831,7 +833,7 @@ function commitQueueDraft(){
   const D=queueDraft;
   if(!D||!D.steps.length){ cancelQueueDraft(false); return false; }
   const sel=[];
-  for(const e of D.members) if(ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0) sel.push(e[0]);
+  for(const e of D.members) if(ualive[e[0]]&&ugen[e[0]]===e[1]&&(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(e[0]):uteam[e[0]]===0)) sel.push(e[0]);
   if(!sel.length){ cancelQueueDraft(false); return false; }
   let cx=0,cy=0;
   for(const i of sel){ cx+=ux[i]; cy+=uy[i]; }
@@ -913,7 +915,7 @@ function pickUnit(wx,wy){
   let best=-1,bd=pickR*pickR, bestEnemy=-1,bde=pickR*pickR;
   forUnitsIn(wx,wy,pickR,j=>{
     const d=dist2(wx,wy,ux[j],uy[j]);
-    if(uteam[j]===0){ if(d<bd){bd=d;best=j;} }
+    if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0){ if(d<bd){bd=d;best=j;} }
     else if(fogEntityVisible(uteam[j],ux[j],uy[j])){ if(d<bde){bde=d;bestEnemy=j;} }
   });
   if(typeof mfIconStackPick==='function'){
@@ -1007,15 +1009,15 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
   /* Broad only: the result cannot be accepted until its projected hull hits. */
   const broad=maxSpan+allow*wp+48;
   let own=-1,enemy=-1,om=Infinity,em=Infinity;
-  const stackTeams=new Set([0]);
+  const stackTeams=new Set([typeof mfLocalTeam==='function'?mfLocalTeam():0]);
   const take=(j,m)=>{
     if(!isFinite(m)) return;
-    if(uteam[j]===0){ if(m<om-1e-9||(Math.abs(m-om)<=1e-9&&(own<0||j<own))){om=m;own=j;} }
+    if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0){ if(m<om-1e-9||(Math.abs(m-om)<=1e-9&&(own<0||j<own))){om=m;own=j;} }
     else if(fogEntityVisible(uteam[j],ux[j],uy[j])&&(m<em-1e-9||(Math.abs(m-em)<=1e-9&&(enemy<0||j<enemy)))){em=m;enemy=j;}
   };
   forUnitsIn(wx,wy,broad,j=>{
     stackTeams.add(uteam[j]);
-    if(uteam[j]!==0&&!fogEntityVisible(uteam[j],ux[j],uy[j])) return;
+    if(!(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0)&&!fogEntityVisible(uteam[j],ux[j],uy[j])) return;
     if(typeof mfIconStackSkip==='function'&&mfIconStackSkip(j)) return;
     take(j,mfPointerUnitMetric(j,sx,sy,allow));
   });
@@ -1032,7 +1034,7 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
    unit remains attackable over a structure when a force is selected. */
 function pickPointerEntities(wx,wy,sx,sy,pointerType){
   const pk=pickUnitPointer(wx,wy,sx,sy,pointerType),b=pickBld(wx,wy,sx,sy);
-  if(b>=0&&blds[b]&&blds[b].team===0) pk.own=-1;
+  if(b>=0&&blds[b]&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[b]):blds[b].team===0)) pk.own=-1;
   pk.bld=b;
   return pk;
 }
@@ -1208,7 +1210,7 @@ function onTap(sx,sy,pointerType){
      the production building directly under the finger was unreachable. Armed
      queue/patrol modes still own the tap above, while an ordinary direct hit on
      one of our structures now opens its real menu. */
-  if(b>=0&&blds[b].team===0){
+  if(b>=0&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[b]):blds[b].team===0)){
     lastGroundT=0;
     clearSel();openBldMenu(b);return;
   }
@@ -1231,7 +1233,7 @@ function onTap(sx,sy,pointerType){
       const b2=camBounds(); let n2=0;
       clearSel();
       for(let i=0;i<unitHigh;i++)
-        if(ualive[i]&&uteam[i]===0&&utype[i]===lastSelType
+        if(ualive[i]&&(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0)&&utype[i]===lastSelType
            &&ux[i]>=b2.x0&&ux[i]<=b2.x1&&uy[i]>=b2.y0&&uy[i]<=b2.y1){ usel[i]=1; n2++; }
       toast('⚔ '+n2+'× '+TYPES[lastSelType].name+' selected — camera locked on');
       lastSelT=0;
@@ -1251,7 +1253,7 @@ function onTap(sx,sy,pointerType){
   if(b>=0){
     lastGroundT=0;
     const B=blds[b];
-    if(B.team===0){ clearSel(); openBldMenu(b); return; }
+    if(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(B):B.team===0){ clearSel(); openBldMenu(b); return; }
     else if(haveSel){ orderAttack(-2-b); return; }
   }
   // ground → move/attack-move; double-tap empty ground = retreat (C&C3 / SupCom2)
@@ -1333,7 +1335,7 @@ cv.addEventListener('pointerdown',e=>{
          of the selection, so the intel card keeps every other long press:
          nothing selected, an enemy, neutral ground, or a unit you already hold.
          "Press something of mine while holding a force" has no other meaning. */
-      const ownBld=bi2>=0&&blds[bi2]&&blds[bi2].team===0;
+      const ownBld=bi2>=0&&blds[bi2]&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[bi2]):blds[bi2].team===0);
       const ownUnit=pk2.own>=0&&!usel[pk2.own];
       if(selCount()&&(ownUnit||ownBld)&&!armQueue&&!armPatrol&&!placing){
         p.held=true;
@@ -1518,7 +1520,7 @@ function endPtr(e){
          the army-select cost. Stage 1 should query a spatial hash for the
          world AABB of the box instead of testing unitHigh. */
       for(let i=0;i<unitHigh;i++){
-        if(!ualive[i]||uteam[i]!==0) continue;
+        if(!ualive[i]||!(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0)) continue;
         const sp=w2s(ux[i],uy[i],terrainH(ux[i],uy[i])+TYPES[utype[i]].size*0.5);
         if(sp[0]>=sx0&&sp[0]<=sx1&&sp[1]>=sy0&&sp[1]<=sy1){ if(!usel[i]) n++; usel[i]=1; }
       }

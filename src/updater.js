@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.48';
+const APP_VERSION = '1.33.51';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Hotfix: restores building production access and placement beneath friendly unit stacks, prevents completed OTA updates from rolling back on the next launch, and keeps WebGL recovery controls usable.";
+const APP_NOTES = "Hotfix: High/Cinematic clouds are separate puffs instead of a white veil, commander minimap voice, minimap dock and intel layout, softer rank marks, and map-edge camera clamp.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
@@ -1476,6 +1476,130 @@ function updPendingForChannel(p){
   const channel=updChannelName(p.channel||'stable');
   return channel===updChannel()||(updPreviewFellBack&&channel==='stable');
 }
+
+/* ---- MATCH RUNTIME COMPATIBILITY -----------------------------------------
+   Multiplayer may only compare the bytes this document is actually running.
+   APP_VERSION, a Git revision, or the source manifest can all agree while the
+   packaged/OTA executable bytes differ, so none of those are hash fallbacks.
+   Success is deliberately the exact public triplet accepted by matchmaking;
+   every provenance or validation failure rejects with a stable error code. */
+const MF_RUNTIME_COMPAT_PATH='./assets/data/runtime-compatibility.json';
+const MF_RUNTIME_COMPAT_SCHEMA='massfront.runtime-compatibility';
+const MF_RUNTIME_COMPAT_VERSION_RE=/^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(?:-[a-z0-9](?:[a-z0-9.-]{0,30}[a-z0-9])?)?$/i;
+const MF_RUNTIME_COMPAT_HASH_RE=/^[a-f0-9]{64}$/;
+const MF_RUNTIME_COMPAT_CACHE=new Map();
+
+function mfRuntimeCompatibilityFailure(code,message,source){
+  const e=new Error(message);
+  e.name='MassfrontRuntimeCompatibilityError';
+  e.code=code;
+  e.source=source||'runtime';
+  return e;
+}
+function mfRuntimeCompatibilityVersionNewer(a,b){
+  const parse=value=>{
+    const text=String(value),dash=text.indexOf('-');
+    return {core:(dash<0?text:text.slice(0,dash)).split('.').map(Number),
+      pre:dash<0?null:text.slice(dash+1).split('.')};
+  };
+  const x=parse(a),y=parse(b);
+  for(let i=0;i<3;i++) if(x.core[i]!==y.core[i]) return x.core[i]>y.core[i];
+  if(x.pre===null||y.pre===null) return x.pre===null&&y.pre!==null;
+  for(let i=0;i<Math.max(x.pre.length,y.pre.length);i++){
+    if(x.pre[i]===y.pre[i]) continue;
+    if(x.pre[i]==null||y.pre[i]==null) return y.pre[i]==null;
+    const xn=/^[0-9]+$/.test(x.pre[i]),yn=/^[0-9]+$/.test(y.pre[i]);
+    if(xn&&yn) return Number(x.pre[i])>Number(y.pre[i]);
+    if(xn!==yn) return !xn;
+    return x.pre[i]>y.pre[i];
+  }
+  return false;
+}
+function mfRuntimeCompatibilityState(){
+  const w=typeof window!=='undefined'?window:null;
+  const raw=w&&w.__MASSFRONT_PATCHED;
+  if(raw!=null&&String(raw)!==''){
+    const version=String(raw);
+    if(!MF_RUNTIME_COMPAT_VERSION_RE.test(version)||
+       !mfRuntimeCompatibilityVersionNewer(version,APP_VERSION))
+      return {kind:'invalid',version,key:'invalid:'+version};
+    return {kind:'ota',version,key:'ota:'+version+':'+String(w.__MASSFRONT_PATCH_AT||'')+
+      ':'+String(w.__MASSFRONT_PATCH_CHANNEL||'stable')};
+  }
+  return {kind:'packaged',version:APP_VERSION,key:'packaged:'+APP_VERSION};
+}
+function mfRuntimeCompatibilityValidate(raw,state){
+  const source=state.kind;
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)||
+     raw.schema!==MF_RUNTIME_COMPAT_SCHEMA||raw.schemaVersion!==1)
+    throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_MALFORMED',
+      'Runtime compatibility metadata has an unsupported schema.',source);
+  if(typeof raw.buildVersion!=='string'||
+     !MF_RUNTIME_COMPAT_VERSION_RE.test(raw.buildVersion))
+    throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_MALFORMED',
+      'Runtime compatibility metadata has an invalid build version.',source);
+  if(raw.buildVersion!==state.version)
+    throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_STALE',
+      'Runtime compatibility metadata does not describe the executing build.',source);
+  if(typeof raw.manifestHash!=='string'||
+     !MF_RUNTIME_COMPAT_HASH_RE.test(raw.manifestHash)||
+     typeof raw.balanceHash!=='string'||
+     !MF_RUNTIME_COMPAT_HASH_RE.test(raw.balanceHash))
+    throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_MALFORMED',
+      'Runtime compatibility metadata requires lowercase SHA-256 roots.',source);
+  return Object.freeze({buildVersion:raw.buildVersion,
+    manifestHash:raw.manifestHash,balanceHash:raw.balanceHash});
+}
+async function mfRuntimeCompatibilityLoad(state){
+  let raw;
+  if(state.kind==='ota'){
+    raw=typeof window!=='undefined'?window.__MASSFRONT_RUNTIME_COMPATIBILITY:null;
+    if(raw==null)
+      throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_UNAVAILABLE',
+        'The executing OTA did not provide runtime compatibility metadata.','ota');
+  }else{
+    let response;
+    try{ response=await fetch(MF_RUNTIME_COMPAT_PATH,{cache:'no-store'}); }
+    catch(e){
+      throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_UNAVAILABLE',
+        'Packaged runtime compatibility metadata could not be loaded.','packaged');
+    }
+    if(!response||!response.ok)
+      throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_UNAVAILABLE',
+        'Packaged runtime compatibility metadata is missing.','packaged');
+    try{ raw=await response.json(); }
+    catch(e){
+      throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_MALFORMED',
+        'Packaged runtime compatibility metadata is not valid JSON.','packaged');
+    }
+  }
+  return mfRuntimeCompatibilityValidate(raw,state);
+}
+async function mfRuntimeCompatibility(){
+  const state=mfRuntimeCompatibilityState();
+  if(state.kind==='invalid')
+    throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_PATCH_STATE_INVALID',
+      'The active patch identity is invalid or not newer than the packaged build.','ota');
+  let pending=MF_RUNTIME_COMPAT_CACHE.get(state.key);
+  if(!pending){
+    pending=mfRuntimeCompatibilityLoad(state);
+    MF_RUNTIME_COMPAT_CACHE.set(state.key,pending);
+    while(MF_RUNTIME_COMPAT_CACHE.size>2)
+      MF_RUNTIME_COMPAT_CACHE.delete(MF_RUNTIME_COMPAT_CACHE.keys().next().value);
+    pending.catch(()=>{
+      if(MF_RUNTIME_COMPAT_CACHE.get(state.key)===pending)
+        MF_RUNTIME_COMPAT_CACHE.delete(state.key);
+    });
+  }
+  const value=await pending;
+  if(mfRuntimeCompatibilityState().key!==state.key)
+    throw mfRuntimeCompatibilityFailure('MF_RUNTIME_COMPATIBILITY_RUNTIME_CHANGED',
+      'The executing runtime changed while compatibility was being read.',state.kind);
+  return value;
+}
+if(typeof window!=='undefined') window.mfRuntimeCompatibility=mfRuntimeCompatibility;
+/* ---- END MATCH RUNTIME COMPATIBILITY ------------------------------------- */
+
 async function updInstalledVersion(){
   const running=typeof window!=='undefined'?String(window.__MASSFRONT_PATCHED||''):'';
   /* An IndexedDB `active` record is only an intention. It may have failed,

@@ -3,6 +3,7 @@
     "assets/data/theatreprofiles-stage10.js",
     "assets/data/interiortopology-stage10.js",
     "assets/data/orbitaltopology-stage10.js",
+    "src/game/determinism.js",
     "assets/data/unitrows.js",
     "assets/data/unitsheet.js",
     "assets/data/itemart.js",
@@ -75,6 +76,7 @@
     "src/audio.js",
     "src/assetpack.js",
     "src/hazards.js",
+    "src/game/statehash.js",
     "src/authportal.js",
     "src/tutorial.js",
     "src/adboards.js",
@@ -85,6 +87,7 @@
     "src/endgame.js",
     "src/story.js",
     "src/socialui.js",
+    "src/game/matchconsumer.js",
     "src/daily.js",
     "src/account.js",
     "src/economy-net.js",
@@ -102,6 +105,8 @@
     "src/uistack.js",
     "src/ui/hudflow.js",
     "src/ui/hotslots.js",
-    "src/galactic-operations.js"
+    "src/galactic-operations.js",
+    "src/onboarding.js",
+    "src/career-faction-gate.js"
   ]
 }

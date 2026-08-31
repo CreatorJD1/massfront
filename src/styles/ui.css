@@ -20,6 +20,15 @@
      never below 40px touch target, never a lost-in-the-corner 44px on a
      1440p monitor. Media queries below only need to move this one knob. */
   --hudBtn:clamp(44px,5.8vmin,56px);
+  --hudIntelH:clamp(26px,7vmin,32px);
+  /* Resource row + intel strip + gaps. Side chips (LV / weather) start
+     below this so a taller top plate cannot sit under them when the
+     viewport ratio changes before hudflow measures. */
+  --hudTopStack:calc(var(--hudBtn) + var(--hudIntelH) + 16px);
+  --hudSideRow:38px;
+  --mmSize:min(84px,22vw,24vmin);
+  --mmBay:calc(var(--mmSize) + 6px);
+  --mmDockPad:max(calc(var(--sab) + 6px),38px);
   --satRaw:var(--safe-area-inset-top,env(safe-area-inset-top,0px));
   /* Android WebView reports env(safe-area-inset-top) as 0px unless the activity
      opts into cutout mode, so relying on it alone painted the OS status bar —
@@ -74,7 +83,7 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;height:100dvh;min-height
 .sic{background-repeat:no-repeat;pointer-events:none;filter:drop-shadow(0 3px 3px rgba(0,0,0,.55))}
 
 /* ---------- TOP BAR ---------- */
-#topbar{position:absolute;top:var(--sat);left:var(--sal);right:var(--sar);display:flex;gap:6px;align-items:center;
+#topbar{position:absolute;top:var(--sat);left:var(--sal);right:var(--sar);display:flex;flex-wrap:wrap;gap:6px;align-items:center;
   padding:5px 8px;z-index:10;pointer-events:none;font-size:clamp(12px,1.6vmin,16px)}
 .res{display:flex;align-items:center;gap:5px;padding:3px 10px 3px 6px;border-radius:9px;
   border:1px solid transparent;background:var(--panelG) padding-box,var(--steelB) border-box;
@@ -101,7 +110,10 @@ canvas#gl{position:fixed;inset:0;width:100%;height:100%;height:100dvh;min-height
 #unitRes.popWarn b{color:#ffd66d}
 #unitRes.popFull{border-color:rgba(255,91,72,.88);box-shadow:inset 0 0 14px rgba(255,70,52,.18)}
 #unitRes.popFull b{color:#ff816e}
-#fps{position:fixed;top:calc(var(--sat) + 54px);right:calc(var(--sar) + 12px);margin:0;padding:0;
+/* Parked off the resource rail. sat+54 sat on the mail button and the
+   mission chip — the leftover "60 FPS" tile people still see on patched
+   OTAs. Bottom-right is diagnostic; the phone dock hides it entirely. */
+#fps{position:fixed;top:auto;bottom:calc(var(--sab) + 8px);right:calc(var(--sar) + 10px);margin:0;padding:0;
   width:auto!important;min-width:0!important;height:auto!important;min-height:0!important;font:700 8px/1.2 var(--fU);opacity:.58;
   border:0!important;background:none!important;border-radius:0;box-shadow:none!important;pointer-events:none;color:#a6bed0}
 #fps::after{content:' FPS';font-size:7px;letter-spacing:.04em}
@@ -160,8 +172,10 @@ body.mfCombatHot #toast.noticeBox.radioNotice b::after,body.uiPlacing #toast.not
 
 /* A command acknowledgement is persistent just long enough to connect a tap
    to the units' response, but never blocks the battlefield or accepts input. */
+/* Orders speak through the notice rail now. Keep this leftover plate out of
+   the top stack — a second acknowledgement was the overlapping "ghost chip". */
 #radioAck{display:none!important;--ra:var(--cy);position:fixed;top:calc(var(--sat) + 126px);right:calc(var(--sar) + 9px);z-index:18;
-  width:min(318px,84vw);min-height:48px;display:grid;grid-template-columns:5px 35px 1fr auto;align-items:center;
+  width:min(318px,84vw);min-height:48px;grid-template-columns:5px 35px 1fr auto;align-items:center;
   gap:8px;padding:6px 10px 6px 6px;border:1px solid color-mix(in srgb,var(--ra) 52%,#43576b);
   border-radius:9px;background:linear-gradient(100deg,rgba(5,13,23,.97),rgba(15,30,45,.94));
   box-shadow:0 7px 20px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.08);
@@ -365,6 +379,21 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
   background:var(--panelG) padding-box,var(--steelB) border-box;
   border-radius:9px;padding:3px 11px;font-size:11.5px;font-weight:700;font-family:var(--fT);
   letter-spacing:.06em;pointer-events:auto;box-shadow:0 2px 8px rgba(0,0,0,.5);white-space:nowrap}
+/* Live match: the plate is a second row of #topbar, not a floating chip
+   guessing sat+36. Sibling #goalBar (safe-row fixture / old shells) keeps
+   the absolute fallback above. */
+#topbar #goalBar{flex:1 1 100%;position:relative;top:auto;left:auto;transform:none;z-index:auto;
+  width:auto;max-width:none;margin:1px 0 0;box-sizing:border-box;
+  min-height:var(--hudIntelH);max-height:none;justify-content:center;gap:6px;padding:3px 8px;
+  white-space:nowrap;overflow:hidden;
+  background:rgba(4,10,18,.4) padding-box,var(--steelB) border-box;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+#goalBar .hudIntelChip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:7px;
+  border:1px solid rgba(120,170,205,.22);background:rgba(6,14,24,.42);letter-spacing:.05em}
+#goalBar .hudIntelChip.contact{color:#8fffc0;border-color:rgba(80,255,180,.28);
+  text-shadow:0 0 10px rgba(80,255,180,.28)}
+#goalBar .hudIntelChip.goal{color:#d7ebff}
+#goalBar .hudIntelChip.time{color:#ffe9ad;font-variant-numeric:tabular-nums}
 #goalBar .clk{color:#ffe9ad;font-variant-numeric:tabular-nums}
 #goalBar .clk.low{color:#ff8d7a;animation:infPulse 1s ease-in-out infinite}
 
@@ -437,8 +466,10 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
 #modSplashInner .msTag{font-size:9px;font-weight:700;color:#ffe9ad;letter-spacing:.08em}
 
 /* ---------- MINIMAP ---------- */
-#minimapWrap{position:absolute;left:6px;bottom:calc(var(--sab) + 6px);z-index:10;border-radius:8px;overflow:hidden;
-  border:1px solid transparent;background:#000 padding-box,var(--steelB) border-box;padding:2px;
+/* position:fixed so a wrap that lives inside #cmdbar still sits on the
+   screen corner on desktop — absolute would pin it to the right-hand plate. */
+#minimapWrap{position:fixed;left:6px;bottom:calc(var(--sab) + 6px);z-index:10;border-radius:8px;overflow:hidden;isolation:isolate;
+  pointer-events:auto;border:1px solid transparent;background:#000 padding-box,var(--steelB) border-box;padding:2px;
   box-shadow:0 3px 14px rgba(0,0,0,.65)}
 #minimapWrap::after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:8px;
   background:
@@ -447,7 +478,12 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
    linear-gradient(var(--gold),var(--gold)) 100% 100%/14px 2px,
    linear-gradient(var(--gold),var(--gold)) 100% 100%/2px 14px;
   background-repeat:no-repeat;opacity:.85}
-#minimap{display:block;touch-action:none;border-radius:6px;image-rendering:crisp-edges}
+#minimap{display:block;touch-action:none;border-radius:6px;image-rendering:crisp-edges;transition:opacity .18s ease,filter .18s ease}
+/* Global clamp. The canvas attributes are 256×256; without an authored
+   CSS size a landscape / zoomed-out viewport painted that bitmap 1:1 and
+   the well ate a third of the screen. Portrait media used to own this
+   rule, so ratio changes escaped it. */
+#minimap{width:84px;height:84px;transition:width .18s ease,height .18s ease}
 
 /* ---------- BOTTOM COMMAND BAR ---------- */
 #cmdbar{position:absolute;right:6px;bottom:calc(var(--sab) + 6px);z-index:10;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
@@ -1591,6 +1627,7 @@ body.menuMode #wcBanner,body.menuMode #consHud,body.menuMode #hazChip{display:no
    toggle appeared dead rather than merely wrong. */
 body:not(.fpsOn) #fps{display:none!important}
 body.fpsOn:not(.menuMode) #fps{display:block}
+body.hudTacticalDock #fps,body.hudTacticalDock.fpsOn #fps{display:none!important}
 
 /* The wordmark is a clipped gradient, so it has no fill of its own to lean on.
    Over a bright battlefield its darker stops fell to roughly the value of sunlit
@@ -2176,25 +2213,45 @@ body.godMode #godBadge{display:flex}
   /* Seven controls cannot share a six-column grid: the pause button wrapped
      below the resources and pushed every secondary HUD row down. A flex rail
      gives resources the remaining width and keeps all controls on one line. */
-  #topbar{left:var(--sal);right:var(--sar);min-height:50px;display:flex;flex-wrap:nowrap;
-    gap:4px;padding:3px 4px;font-size:11px}
+  /* top:0 + sat in padding — the default top:sat AND padding-top:sat stacked
+     two status-bar offsets and shoved the intel chip into LV / weather. */
+  #topbar{top:0;left:var(--sal);right:var(--sar);min-height:0;display:flex;flex-wrap:wrap;
+    gap:4px;padding:max(var(--sat),8px) 6px 6px;font-size:11px;
+    background:linear-gradient(180deg,rgba(5,12,21,.78),rgba(5,11,20,.52) 70%,rgba(5,11,20,.2));
+    border-bottom:1px solid rgba(112,170,208,.2);box-shadow:0 8px 18px rgba(0,0,0,.28);
+    backdrop-filter:blur(8px)}
   #topbar .res{flex:1 1 0;min-width:0;min-height:44px;gap:3px;padding:2px 4px;border-radius:8px;overflow:hidden}
   #topbar .res b{min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:13px;white-space:nowrap}
   #topbar .res .rate{flex:0 0 auto;font-size:9px}.res .ic{width:19px;height:19px}
-  :root{--hudBtn:44px}
+  :root{
+    --hudBtn:44px;
+    /* One shared dock plate. The map used to be a second absolute card at
+       bottom:12px while #cmdbar sat on max(sab+6,38px) home-indicator pad —
+       that is why it hung below ARMY and painted over ORDERS. --mmDockPad is
+       the same inset the command plate uses; --mmBay is the reserved square
+       (canvas + frame) so tabs and action rows share one column. */
+    --mmDockPad:max(calc(var(--sab) + 6px),38px);
+    --mmSize:min(84px,22vw,24vmin);
+    --mmBay:calc(var(--mmSize) + 6px);
+  }
   #menuBtn{font-size:19px}
   /* God Mode is configured and labelled in Settings; repeating it in the
      phone battle rail costs an entire wrapped HUD row on narrow devices. */
   body.godMode #godBadge{display:none!important}
 
-  #cmdbar{left:0;right:0;bottom:0;width:auto;min-height:181px;box-sizing:border-box;gap:3px;align-items:flex-end;
-    padding:4px calc(var(--sar) + 6px) max(calc(var(--sab) + 6px),38px) calc(var(--sal) + 6px);
+  #cmdbar{left:0;right:0;bottom:0;width:auto;min-height:0;box-sizing:border-box;gap:3px;align-items:flex-end;
+    padding:4px calc(var(--sar) + 6px) var(--mmDockPad) calc(var(--sal) + 6px);
     border-top:1px solid rgba(112,170,208,.25);
     background:linear-gradient(180deg,rgba(5,12,21,.34),rgba(5,11,20,.88) 18%,rgba(4,9,17,.96));
     box-shadow:0 -8px 24px rgba(0,0,0,.34);backdrop-filter:blur(7px)}
+  /* Live battle: the map is a grid cell in the command plate, not a second
+     absolute card. Column 1 is the steel well; tabs and actions share column 2
+     so ORDERS can never paint under the canvas when the ratio changes. */
   #hudDeckTabs{width:100%;gap:3px;overflow-x:auto;scrollbar-width:none}
   #hudDeckTabs::-webkit-scrollbar{display:none}
-  .hudDeckBtn{flex:1 1 0;min-width:0;min-height:38px;padding:5px 4px;font-size:8px}
+  .hudDeckBtn{flex:1 1 0;min-width:0;min-height:38px;padding:5px 3px;font-size:8px;
+    overflow:hidden;white-space:nowrap;letter-spacing:.04em}
+  .hudDeckBtn span{font-size:11px;flex:0 0 auto}
   #cmdbar .btnrow{width:100%;justify-content:flex-end;gap:3px}
   #cmdbar #primaryRow{margin-top:auto}
   #cmdbar #heroRow{justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
@@ -2210,16 +2267,25 @@ body.godMode #godBadge{display:flex}
   #cmdbar #modeBtn{min-width:52px}
   #cmdbar #deployBtn{margin:0 0 1px;padding:8px 12px;font-size:10px}
 
-  #minimapWrap{left:calc(var(--sal) + 7px);bottom:max(calc(var(--sab) + 158px),198px);padding:2px;
-    transition:bottom .18s ease,transform .18s ease,box-shadow .18s ease}
-  /* The right-aligned command rows leave a deliberate lower-left bay. Dock the
-     map there once battle controls are live, reclaiming dead chrome instead of
-     covering the battlefield or the selected-unit action strip. */
-  body.hudTacticalDock #minimapWrap{bottom:max(calc(var(--sab) + 6px),38px);z-index:11;
-    box-shadow:0 4px 18px rgba(0,0,0,.72),0 0 0 1px rgba(96,198,241,.18)}
-  body.hudTacticalDock #cmdbar .btnrow{box-sizing:border-box;padding-left:108px}
-  #minimap{width:84px;height:84px;transition:width .18s ease,height .18s ease}
-  body.hudViewDeck #minimapWrap{box-shadow:0 5px 22px rgba(0,0,0,.78),0 0 16px rgba(69,190,240,.22)}
+  #minimapWrap{position:fixed;left:calc(var(--sal) + 10px);bottom:max(calc(var(--sab) + 158px),198px);padding:4px;
+    transition:bottom .18s ease,left .18s ease,width .18s ease,height .18s ease,box-shadow .18s ease}
+  body.hudTacticalDock #cmdbar{display:grid;grid-template-columns:var(--mmBay) minmax(0,1fr);
+    grid-template-rows:auto auto;align-items:end;column-gap:4px;row-gap:3px;padding-top:6px}
+  body.hudTacticalDock #cmdbar>*{grid-column:2;width:100%;min-width:0}
+  body.hudTacticalDock #minimapWrap{position:relative;left:auto;right:auto;top:auto;bottom:auto;
+    grid-column:1;grid-row:1/-1;justify-self:stretch;align-self:end;
+    width:var(--mmBay);height:var(--mmBay);max-width:100%;
+    box-sizing:border-box;z-index:11;margin:0;padding:4px;border-radius:11px;
+    background:#04080e padding-box,var(--steelB) border-box;
+    box-shadow:inset 0 2px 10px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.08);
+    clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)}
+  body.hudTacticalDock #minimapWrap::after{content:none}
+  body.hudTacticalDock #cmdbar .btnrow,
+  body.hudTacticalDock #hudDeckTabs{box-sizing:border-box;padding-left:0}
+  body.hudTacticalDock #selInfo{left:calc(var(--sal) + 8px);right:calc(var(--sar) + 8px);
+    bottom:max(calc(var(--sab) + 176px),216px)}
+  body.hudTacticalDock #minimap{width:var(--mmSize);height:var(--mmSize)}
+  body.hudTacticalDock.hudViewDeck #minimapWrap{box-shadow:inset 0 0 0 1px rgba(69,190,240,.42)}
   #selInfo{left:calc(var(--sal) + 112px);right:calc(var(--sar) + 8px);bottom:max(calc(var(--sab) + 158px),198px);
     transform:none;max-width:none;min-height:44px;padding:2px 2px 2px 9px;text-align:left;font-size:10px;line-height:1.25}
   #unitCard{top:calc(var(--sat) + 126px);width:calc(100vw - var(--sal) - var(--sar) - 16px);max-height:46vh}
@@ -2229,21 +2295,23 @@ body.godMode #godBadge{display:flex}
   #placeRotL,#placeRotR{width:46px!important;height:46px!important}
   #goalBar{top:calc(var(--sat) + 58px);min-height:30px;max-height:30px;
     max-width:calc(100vw - var(--sal) - var(--sar) - 16px);overflow:hidden;text-overflow:ellipsis}
-  /* Modifier icons and live threat status share a reserved split row. Fixed
-     columns plus local overflow mean neither panel can cover its neighbour. */
-  #wcRow{top:calc(var(--sat) + 92px);left:calc(var(--sal) + 8px);right:auto;
+  #topbar #goalBar{top:auto;min-height:var(--hudIntelH);max-height:var(--hudIntelH);
+    max-width:none;overflow:hidden}
+  /* Side chips sit under the two-row top plate, not under a guessed sat+92
+     that collides once the intel strip is inside the bar. */
+  #wcRow{top:calc(var(--sat) + var(--hudTopStack));left:calc(var(--sal) + 8px);right:auto;
     width:calc(58vw - var(--sal) - 12px);min-height:32px;max-height:32px;padding:2px 5px;
     overflow-x:auto;overflow-y:hidden;white-space:nowrap;scrollbar-width:none}
   #wcRow::-webkit-scrollbar{display:none}
-  #infMeter{top:calc(var(--sat) + 92px);left:auto;right:calc(var(--sar) + 8px);
+  #infMeter{top:calc(var(--sat) + var(--hudTopStack));left:auto;right:calc(var(--sar) + 8px);
     width:calc(42vw - var(--sar) - 12px);min-height:32px;max-height:32px;justify-content:center;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:3px 6px}
-  #hazChip{top:calc(var(--sat) + 92px);left:auto;right:calc(var(--sar) + 8px);
+  #hazChip{top:calc(var(--sat) + var(--hudTopStack));left:auto;right:calc(var(--sar) + 8px);
     max-width:calc(42vw - var(--sar) - 12px);min-height:44px;max-height:44px;padding:2px 6px;font-size:9px}
-  #heroBar{top:calc(var(--sat) + 92px);left:calc(var(--sal) + 8px);right:auto;
+  #heroBar{top:calc(var(--sat) + var(--hudTopStack) + var(--hudSideRow));left:calc(var(--sal) + 8px);right:auto;
     width:auto;max-width:44vw;min-height:0}
   /* One compact status chip replaces the old full-width icon strip. */
-  #wcBanner{top:calc(var(--sat) + 50px);font-size:9px;padding:2px 7px;gap:4px}
+  #wcBanner{top:calc(var(--sat) + var(--hudTopStack));font-size:9px;padding:2px 7px;gap:4px}
   #wcBanner .wcBIcon{display:none}
   #wcBanner .wcBCount{margin:0;padding:0;background:none;font-size:9px}
   #consHud{bottom:calc(var(--sab) + 68px);left:calc(var(--sal) + 6px)}
@@ -2252,8 +2320,8 @@ body.godMode #godBadge{display:flex}
   /* Transient panels begin below the complete live-HUD stack. Their base rules
      predate the split-row layout and used to open on top of modifiers, threat,
      and the Commander bars even though the resting HUD looked correct. */
-  #toast,#radioAck{top:calc(var(--sat) + 176px)}
-  #unitCard{top:calc(var(--sat) + 176px)}
+  #toast,#radioAck{top:calc(var(--sat) + var(--hudTopStack) + var(--hudSideRow) + 72px)}
+  #unitCard{top:calc(var(--sat) + var(--hudTopStack) + var(--hudSideRow) + 72px)}
   #abBarrage .cdring,#abClass .cdring{font-size:10px;letter-spacing:0}
   #abBarrage>span:not(.em):not(.lvl),#abClass>span:not(.em):not(.lvl){font-size:9px;letter-spacing:0}
   #atkAlert,#waveAlert{max-width:calc(100vw - var(--sal) - var(--sar) - 20px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2270,8 +2338,19 @@ body.godMode #godBadge{display:flex}
   body.uiPrimaryOpen #infMeter,
   body.uiPrimaryOpen #wcBanner,
   body.uiPrimaryOpen #consHud{display:none!important}
+  /* A primary sheet normally removes the minimap, but an active UGA voice
+     profile explicitly owns that same location. Keep the receiver visible for
+     the short transmission, then let the ordinary primary-sheet rule hide the
+     minimap again as soon as the signal exits. The phone command row already
+     leaves its authored lower-left map bay clear. */
+  body.uiPrimaryOpen #minimapWrap[data-transmission="enter"],
+  body.uiPrimaryOpen #minimapWrap[data-transmission="hold"],
+  body.uiPrimaryOpen #minimapWrap[data-transmission="exit"]{display:block!important}
   body.uiPrimaryOpen #cmdbar{gap:0;padding-top:5px;min-height:0;
     background:linear-gradient(180deg,rgba(5,12,21,0),rgba(4,9,17,.95) 42%);box-shadow:none}
+  body.uiPrimaryOpen.hudTacticalDock #cmdbar{grid-template-columns:1fr}
+  body.uiPrimaryOpen.hudTacticalDock #cmdbar:has(#minimapWrap[data-transmission]){
+    grid-template-columns:var(--mmBay) minmax(0,1fr)}
   body.uiPrimaryOpen.hudTacticalDock #cmdbar .btnrow{padding-left:0}
   body.uiPrimaryOpen #buildMenu,body.uiPrimaryOpen #prodMenu,body.uiPrimaryOpen #bldMenu2{
     bottom:max(calc(var(--sab) + 70px),110px);max-height:min(54vh,500px);clip-path:none}
@@ -2316,8 +2395,10 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
    primary actions below 44 px: 60 px map bay + six 44 px actions + five 1 px
    gaps. This must live after the broader portrait block or its defaults win. */
 @media (max-width:380px) and (orientation:portrait){
+  :root{--mmSize:56px}
   body.hudTacticalDock #minimap{width:56px;height:56px}
-  body.hudTacticalDock #cmdbar .btnrow{padding-left:60px;gap:1px}
+  body.hudTacticalDock #cmdbar .btnrow,
+  body.hudTacticalDock #hudDeckTabs{padding-left:0;gap:1px}
   body.hudTacticalDock #cmdbar .cbtn{min-width:44px;width:44px}
 }
 .subMenuHead,.setupHead{letter-spacing:.01em}
@@ -2709,6 +2790,7 @@ body.menuMode #inboxHudBtn{display:none}
 .deployPkgRow .pkgbtn b{font:800 12px var(--fT);letter-spacing:.08em}
 .deployPkgRow .pkgbtn span{font-size:9px;letter-spacing:.06em;color:#9fc6e0;text-align:left}
 #goalBar .firstContact{color:#8fffc0;text-shadow:0 0 10px rgba(80,255,180,.38);white-space:nowrap}
+@media (max-width:380px){#goalBar .hudIntelChip.contact .hudIntelFull{display:none}}
 
 
 /* ==========================================================================
@@ -2990,114 +3072,77 @@ body.menuMode #inboxHudBtn{display:none}
   max-width:110px;
 }
 
-/* ---------- COMMANDER TRANSMISSION RAIL (src/ui/hud.js) ----------------------
-   The in-match presentation surface for commander dialogue cues. One node,
-   reused for every cue for the whole match.
-
-   WHY IT HAS NO AUTHORED POSITION. Every other HUD surface owns a corner. This
-   one cannot: the four target viewports put the bottom cluster in four
-   different places (on 412x915 #cmdbar starts at y=734 and the minimap at 787;
-   on 915x412 the minimap is 262px tall down the whole left edge and #cmdbar is
-   bottom-right at y=303), and a single authored anchor overlapped the notice
-   rail or the minimap on at least one of them every time it was tried. So
-   `left`/`top`/`width` are SOLVED from live rects by cmdrTxSolve() in hud.js
-   and written inline; this block owns everything else. The rail is invisible
-   until that solve has run, which is why the idle state is opacity:0.
-
-   POINTER-EVENTS:NONE IS LOAD-BEARING. The rail floats over the battlefield and
-   over the edges of the command dock. It has no interactive children, no
-   tabindex and never calls focus(), so there is nothing here to tap through to
-   — the canvas keeps every gesture, and the 44/48px control minimums in
-   assets/ui.css and the #cmdbar rules are untouched by it. */
+/* ---------- COMMANDER / KEEL MINIMAP RECEIVER (src/ui/hud.js) ---------------
+   The minimap is the in-battle transmission surface. Its existing canvas stays
+   mounted underneath one reused receiver, but signal-flickers out while a
+   commander or KEEL animation/profile is active and returns after the line.
+   Pointer events remain disabled so a transition can never steal an RTS tap. */
 #cmdrTx{
-  position:fixed;left:0;top:0;width:min(420px,calc(100vw - 16px));
-  z-index:18;                      /* under #toast(19) and #unitCard(21): a warning or a
-                                      selection card is never covered by commander flavour */
-  display:flex;align-items:flex-start;gap:9px;
-  padding:8px 11px 9px;border:1px solid transparent;border-radius:11px;
-  background:var(--panelG) padding-box,var(--steelB) border-box;
-  border-left:3px solid var(--cy);
-  box-shadow:0 6px 20px rgba(0,0,0,.62);
-  pointer-events:none;                 /* never a tap target, never tap-through */
-  opacity:0;transform:translateY(6px);
-  transition:opacity .16s ease-out,transform .16s ease-out;
-  contain:layout paint;                /* the rail cannot reflow the rest of the HUD */
-  will-change:opacity,transform;
+  position:absolute;inset:2px;z-index:3;display:flex;align-items:flex-end;
+  padding:0;border:0;border-radius:6px;overflow:hidden;
+  background:#030c14;box-shadow:inset 0 0 24px rgba(30,191,235,.2);
+  pointer-events:none;opacity:0;transform:none;
+  transition:opacity .16s ease-out;contain:layout paint;will-change:opacity;
 }
-#cmdrTx[data-state="enter"],#cmdrTx[data-state="hold"]{opacity:1;transform:translateY(0)}
-#cmdrTx[data-state="exit"]{opacity:0;transform:translateY(-4px);transition-duration:.22s}
-/* Idle is display:none rather than opacity:0 alone, so an idle rail contributes
-   no hit area, no paint and no accessibility node between cues. */
+#cmdrTx::before{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.34;
+  background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(105,226,255,.16) 4px,transparent 5px),linear-gradient(90deg,rgba(0,208,255,.13),transparent 36%,rgba(255,191,70,.08));
+  mix-blend-mode:screen;animation:mfReceiverScan .8s steps(6,end) infinite}
+#cmdrTx::after{content:'UGA COMMS';position:absolute;right:5px;top:4px;z-index:4;color:#8eeaff;
+  font:900 6px/1 var(--fT);letter-spacing:.14em;text-shadow:0 0 6px #16bce8}
+#cmdrTx[data-state="enter"],#cmdrTx[data-state="hold"]{opacity:1}
+#cmdrTx[data-state="exit"]{opacity:0;transition-duration:.22s}
 #cmdrTx[data-state="idle"]{display:none}
-
 #cmdrTxPortrait{
-  position:relative;flex:0 0 auto;width:44px;height:44px;border-radius:8px;overflow:hidden;
-  background:linear-gradient(180deg,#1a2a3c,#0a121d);
-  border:1px solid rgba(120,180,220,.34);
+  position:absolute;inset:0;overflow:hidden;background:linear-gradient(180deg,#142b3b,#050b12);
   display:flex;align-items:center;justify-content:center;
 }
-#cmdrTxImg{width:100%;height:100%;object-fit:cover;object-position:50% 18%;display:block}
+#cmdrTxVideo,#cmdrTxImg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 18%;display:block}
+#cmdrTxVideo{display:none}
+#cmdrTx[data-animation="video"] #cmdrTxVideo{display:block}
+#cmdrTx[data-animation="video"] #cmdrTxImg{display:none}
 /* The initial chip is the LAST fallback, shown only after both the commander
    portrait and the faction portrait fail to load. hud.js toggles these two. */
 #cmdrTxInitial{
-  display:none;font:900 17px/1 var(--fT);color:var(--cyL);letter-spacing:.04em;font-style:normal;
+  display:none;font:900 clamp(24px,5vw,46px)/1 var(--fT);color:var(--cyL);letter-spacing:.04em;font-style:normal;
 }
 #cmdrTx[data-portrait="initial"] #cmdrTxImg{display:none}
 #cmdrTx[data-portrait="initial"] #cmdrTxInitial{display:block}
-
-#cmdrTxBody{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 auto}
-/* The head wraps rather than clips. #cmdrTx sets `contain:layout paint`, which
-   keeps the rail from disturbing HUD layout but also means anything too wide is
-   cut off in silence — so every child here is allowed to wrap or ellipsize, and
-   the probe asserts no child overflows. */
-#cmdrTxHead{display:flex;align-items:baseline;gap:7px;min-width:0;max-width:100%;flex-wrap:wrap;overflow:hidden}
+#cmdrTxBody{position:relative;z-index:3;display:flex;flex-direction:column;gap:2px;width:100%;min-width:0;
+  padding:21px 6px 6px;background:linear-gradient(180deg,transparent,rgba(2,8,14,.93) 44%)}
+#cmdrTxHead{display:flex;align-items:baseline;gap:5px;min-width:0;max-width:100%;flex-wrap:wrap;overflow:hidden}
 #cmdrTxWho{
-  font:800 10px/1.2 var(--fT);letter-spacing:.1em;color:var(--cyL);
+  font:900 8px/1.15 var(--fT);letter-spacing:.1em;color:var(--cyL);
   overflow-wrap:anywhere;min-width:0;max-width:100%;
 }
-/* Rank and callsign are their own chip rather than a prefix on the name. The
-   authored roster names already carry a rank form, and some of them abbreviate
-   it ("Cmdr. Sera Vale"), so prefixing the canonical rank produced "Captain
-   Captain Elara Kai". Split, both read once and the abbreviation is resolved. */
 #cmdrTxRank{
-  font:700 8.5px/1.2 var(--fT);letter-spacing:.12em;color:#b9d6ea;white-space:nowrap;
+  font:700 6px/1.15 var(--fT);letter-spacing:.1em;color:#b9d6ea;white-space:nowrap;
   min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;
 }
 #cmdrTxTag{
-  font:700 8.5px/1.2 var(--fT);letter-spacing:.13em;color:#8fb4cd;
-  padding:1px 5px;border-radius:4px;background:rgba(90,150,190,.16);white-space:nowrap;
+  font:800 6px/1.15 var(--fT);letter-spacing:.1em;color:#9ed9ec;
+  padding:1px 3px;border-radius:3px;background:rgba(18,117,150,.38);white-space:nowrap;
   min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;
 }
-/* Wrapping, not clipping. Authored subtitle copy is short, but a longer line
-   must reflow rather than be cut off — the four-line cap only stops a runaway
-   string from growing the rail into the controls it is supposed to avoid, and
-   the probe fails on any real overflow. */
 #cmdrTxLine{
-  font:600 12.5px/1.32 var(--fU);color:#e8f5ff;
+  font:700 8px/1.25 var(--fU);color:#eefaff;text-shadow:0 1px 3px #000;
   overflow-wrap:anywhere;word-break:normal;
-  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;
 }
-/* Phone portrait is the primary target and the tightest: trim the portrait and
-   type so the rail stays a strip rather than a panel. */
-@media (max-width:430px){
-  #cmdrTx{width:min(380px,calc(100vw - 16px));padding:7px 10px 8px;gap:8px}
-  #cmdrTxPortrait{width:40px;height:40px}
-  #cmdrTxLine{font-size:12px;-webkit-line-clamp:3}
-}
-/* Short viewports (landscape phone) get a shorter rail so the solved placement
-   still fits between the top stack and the command dock. */
-@media (max-height:460px){
-  #cmdrTx{width:min(340px,calc(100vw - 16px));padding:6px 9px 7px;gap:8px}
-  #cmdrTxPortrait{width:38px;height:38px}
-  #cmdrTxLine{font-size:11.5px;-webkit-line-clamp:2}
+@keyframes mfReceiverScan{0%,100%{transform:translateY(-1px);opacity:.25}48%{transform:translateY(1px);opacity:.42}50%{transform:translateX(2px);opacity:.65}}
+@keyframes mfMinimapSignal{0%,100%{opacity:.14;filter:grayscale(1) contrast(1.8)}15%{opacity:.03;filter:hue-rotate(70deg) contrast(2.2)}19%{opacity:.2}58%{opacity:.05}61%{opacity:.17}}
+#minimapWrap[data-transmission="enter"] #minimap,#minimapWrap[data-transmission="hold"] #minimap{
+  animation:mfMinimapSignal .62s steps(5,end) infinite}
+#minimapWrap[data-transmission="exit"] #minimap{opacity:.55;filter:grayscale(.5) contrast(1.35)}
+@media (max-width:430px),(max-height:460px){
+  #cmdrTxBody{padding:17px 5px 4px}
+  #cmdrTxRank,#cmdrTxTag{display:none}
+  #cmdrTxWho{font-size:7px}
+  #cmdrTxLine{font-size:7px;-webkit-line-clamp:2}
 }
 @media (prefers-reduced-motion:reduce){
-  #cmdrTx{transition:none;transform:none}
-  #cmdrTx[data-state="enter"],#cmdrTx[data-state="hold"],#cmdrTx[data-state="exit"]{transform:none}
+  #cmdrTx{transition:none}#cmdrTx::before,#minimapWrap[data-transmission] #minimap{animation:none}
+  #minimapWrap[data-transmission] #minimap{opacity:.08;filter:grayscale(1)}
 }
-/* NO SESSION UI IN THE MENU, EVER — same rule the block above applies to every
-   other battlefield surface. Written as its own selector rather than appended
-   to that list so this lane cannot disturb it. */
 body.mfMenuOpen #cmdrTx,body.menuMode #cmdrTx{display:none!important}
 
 /* ---------- SHARED PROGRESSION SCOPE ---------------------------------------

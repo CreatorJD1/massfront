@@ -107,23 +107,23 @@ foreach($rel in $plain){
   if(-not $text.Contains($Version)){
     Need ($text.Contains($current)) "Neither target version $Version nor current source version $current was found in $rel. Stop and update this publisher's bump list."
     $text=$text.Replace($current,$Version)
+    [IO.File]::WriteAllText($file,$text,(New-Object Text.UTF8Encoding($false)))
   }
-  [IO.File]::WriteAllText($file,$text,(New-Object Text.UTF8Encoding($false)))
 }
 # package-lock.json had remained on 1.32.2 because it was never in the explicit
 # bump list. It is collaborator metadata, not runtime state, but leaving its two
 # root package versions stale makes every source archive internally ambiguous.
 $lockPath=Join-Path $Root 'package-lock.json'
 $lock=Get-Content $lockPath -Raw -Encoding utf8
-$lock=[regex]::Replace($lock,'("name"\s*:\s*"massfront"\s*,\s*"version"\s*:\s*")[^"]+',{
+$lock2=[regex]::Replace($lock,'("name"\s*:\s*"massfront"\s*,\s*"version"\s*:\s*")[^"]+',{
   param($match) $match.Groups[1].Value+$Version
 })
-[IO.File]::WriteAllText($lockPath,$lock,(New-Object Text.UTF8Encoding($false)))
+if($lock2 -ne $lock){ [IO.File]::WriteAllText($lockPath,$lock2,(New-Object Text.UTF8Encoding($false))) }
 $gradle=Join-Path $Root 'android/app/build.gradle'
 $g=Get-Content $gradle -Raw -Encoding utf8
-$g=[regex]::Replace($g,'versionCode\s+\d+','versionCode '+$code)
-$g=[regex]::Replace($g,'versionName\s+"[^"]+"','versionName "'+$Version+'"')
-[IO.File]::WriteAllText($gradle,$g,(New-Object Text.UTF8Encoding($false)))
+$g2=[regex]::Replace($g,'versionCode\s+\d+','versionCode '+$code)
+$g2=[regex]::Replace($g2,'versionName\s+"[^"]+"','versionName "'+$Version+'"')
+if($g2 -ne $g){ [IO.File]::WriteAllText($gradle,$g2,(New-Object Text.UTF8Encoding($false))) }
 
 Run 'Bundle syntax gate' { node tools/bundle.mjs }
 Run 'Stage web build' { node tools/pack-www.mjs }
@@ -286,7 +286,10 @@ New-Item -ItemType Directory -Path $stage | Out-Null
 $keep=@(
   'AGENTS.md','README.md','package.json','package-lock.json','index.html','boot.js',
   'capacitor.config.json','capacitor.config.ts','PUBLISH_HF_RELEASE.bat','update.json',
-  '.github','assets','src','tools','android','ios','cloudflare','docs','design','audit',
+  '.github','assets','src','tools','android','ios','cloudflare','docs','design',
+  # audit/ is local verification evidence only. Including it bloated 1.33.49 to
+  # 5.68 GiB and broke the HF LFS upload; evidence stays in the checkout, not
+  # the collaborator handoff archive (same class as tmp/ and .tmp/).
   # These are development/source handoff material, not runtime payload. The
   # optional Galactic module stays out of www/ and OTA, but must survive a
   # full-source release archive together with its authoring references.
@@ -301,7 +304,7 @@ foreach($name in $keep){
       # products, captured evidence, remote attachment mirrors, or downloaded
       # toolchains. /XD applies recursively, so this also protects nested
       # space-module worktrees without deleting any of those local materials.
-      & robocopy $from $to /E /XD build .gradle .gradle-mobile .kotlin node_modules tmp .tmp .cache .toolchains .codex-remote-attachments logs /XF '*.apk' '*.idsig' /NFL /NDL /NJH /NJS | Out-Null
+      & robocopy $from $to /E /XD build .gradle .gradle-mobile .kotlin node_modules tmp .tmp .cache .toolchains .codex-remote-attachments logs audit /XF '*.apk' '*.idsig' /NFL /NDL /NJH /NJS | Out-Null
       if($LASTEXITCODE -gt 7){ throw "Source archive copy failed for $name (robocopy $LASTEXITCODE)" }
     } else { Copy-Item -LiteralPath $from -Destination $to -Force }
   }

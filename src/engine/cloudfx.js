@@ -36,7 +36,9 @@
      high       4 clouds x (1 shadow + 1 aerial body) =  8 layers
      cinematic  5 clouds x (1 shadow + 2 aerial body) = 15 layers
 
-   Live perfScale can reduce cloud count but can never raise a preset ceiling.
+   Live perfScale can reduce Low/Medium cloud count but can never raise a
+   preset ceiling. High/Cinematic keep profile.clouds even under pressure —
+   the 0.4125 target-device band used to hide those skies entirely.
    ============================================================================ */
 
 const MF_CLOUD_MAX_CLOUDS=5;
@@ -48,10 +50,10 @@ const MF_CLOUD_PROFILES={
        sizeMin:610,sizeMax:790,altMin:92,altMax:124},
   medium:{clouds:2,bodyLayers:1,shadowAlpha:29,bodyAlpha:25,speedMin:5.0,speedMax:8.0,
           sizeMin:540,sizeMax:820,altMin:100,altMax:142},
-  high:{clouds:4,bodyLayers:1,shadowAlpha:34,bodyAlpha:29,speedMin:4.5,speedMax:9.5,
-        sizeMin:500,sizeMax:880,altMin:108,altMax:158},
-  cinematic:{clouds:5,bodyLayers:2,shadowAlpha:36,bodyAlpha:31,speedMin:4.2,speedMax:10.5,
-             sizeMin:480,sizeMax:920,altMin:112,altMax:172}
+  high:{clouds:4,bodyLayers:1,shadowAlpha:42,bodyAlpha:48,speedMin:4.5,speedMax:9.5,
+        sizeMin:720,sizeMax:1180,altMin:108,altMax:158},
+  cinematic:{clouds:5,bodyLayers:2,shadowAlpha:46,bodyAlpha:54,speedMin:4.2,speedMax:10.5,
+             sizeMin:760,sizeMax:1280,altMin:112,altMax:172}
 };
 
 const _mfcLayer={
@@ -95,10 +97,37 @@ function mfcQuality(q){
 }
 function mfCloudFxProfile(q){ return MF_CLOUD_PROFILES[mfcQuality(q)]; }
 
-/* Dynamic pressure cap. At the measured target perfScale (0.4125), two cloud
-   systems remain; below 0.34 combat owns the whole alpha budget. */
+/* The eye is a fixed ~3000-unit rig; zoom only shrinks the ortho frustum.
+   XY footprint still tracks span so one system does not eat a company view.
+   Altitude must stay in the air column: scaling the authored 100–170 slab
+   by t parked close-zoom bodies at 32–44 (ground fog) and left wide-zoom
+   as a paper-thin sticker. Default 1500 keeps probes on the mid band. */
+function mfcViewAdapt(P,ctx){
+  const span=ctx&&Number.isFinite(+ctx.viewSpan)?+ctx.viewSpan:1500;
+  const t=mfcClamp(span/1400,0.40,1.70);
+  const close=t<0.85?(1.45-t):1;
+  /* A 350–570 body in a 680 span covered the phone. Cap XY to ~30% of the
+     current view so High shows several heads, not one screen-filling veil. */
+  const viewFit=span*0.42;
+  return {
+    sizeMin:Math.min(P.sizeMin*t,viewFit*0.82),
+    sizeMax:Math.min(P.sizeMax*t,viewFit*1.18),
+    altMin:Math.max(110,88+P.altMin*0.55*t),
+    altMax:Math.max(190,140+P.altMax*0.70*t),
+    bodyAlpha:Math.min(72,Math.round(P.bodyAlpha*Math.min(1,0.68+close*0.14))),
+    shadowAlpha:Math.min(40,Math.round(P.shadowAlpha*0.70))
+  };
+}
+
+/* Dynamic pressure cap. Low/Medium still yield at the measured 0.4125 band
+   (two systems) and drop to zero below 0.34 so combat owns the alpha budget.
+   High/Cinematic keep profile.clouds even at perf<=0.50 — the old cap hid
+   those skies on the device they were meant for. Quality comes from the
+   profile emit already chose from ctx.quality, not a live global. */
 function mfcCloudBudget(profile,perf){
   if(!Number.isFinite(perf)) return profile.clouds;
+  const hi=profile===MF_CLOUD_PROFILES.high||profile===MF_CLOUD_PROFILES.cinematic;
+  if(hi) return profile.clouds;
   if(perf<=0.34) return 0;
   if(perf<=0.50) return Math.min(profile.clouds,2);
   if(perf<=0.70) return Math.min(profile.clouds,3);
@@ -116,6 +145,40 @@ function mfcHashLayer(h,L){
   h=mfcHashFloat(h,L.size); h=mfcHashFloat(h,L.rotation);
   h=mfcMix(h,L.r); h=mfcMix(h,L.g); h=mfcMix(h,L.b); h=mfcMix(h,L.a);
   return h;
+}
+
+function mfcGridDim(n){
+  if(n<=1) return {cols:1,rows:1};
+  if(n<=3) return {cols:n,rows:1};
+  const cols=Math.ceil(Math.sqrt(n));
+  return {cols,rows:Math.ceil(n/cols)};
+}
+/* Even lanes first so a start-zone camera cannot miss every system.
+   Random phase used to park all four clouds on the far side of a 3 km
+   theatre; High then spent the opening with a culled, empty sky. */
+function mfcLanePos(seed,i,n,map){
+  const G=mfcGridDim(n),col=i%G.cols,row=(i/G.cols)|0;
+  const cellW=map/G.cols,cellH=map/G.rows;
+  return {
+    x:(col+0.5)*cellW+(mfcRand(seed,i,3)-0.5)*cellW*0.28,
+    y:(row+0.5)*cellH+(mfcRand(seed,i,4)-0.5)*cellH*0.28
+  };
+}
+function mfcSelectLanes(seed,clouds,map,ctx){
+  const focusX=ctx&&Number.isFinite(+ctx.focusX)?+ctx.focusX:NaN;
+  const focusY=ctx&&Number.isFinite(+ctx.focusY)?+ctx.focusY:NaN;
+  if(!Number.isFinite(focusX)||!Number.isFinite(focusY)||clouds<=0){
+    const out=[];
+    for(let i=0;i<clouds;i++) out.push(mfcLanePos(seed,i,clouds,map));
+    return out;
+  }
+  const pool=Math.max(clouds,9),scored=[];
+  for(let i=0;i<pool;i++){
+    const p=mfcLanePos(seed,i,pool,map);
+    scored.push({x:p.x,y:p.y,d:(p.x-focusX)*(p.x-focusX)+(p.y-focusY)*(p.y-focusY)});
+  }
+  scored.sort((a,b)=>a.d-b.d);
+  return scored.slice(0,clouds);
 }
 
 function mfcPutLayer(ctx,emit,L,frame){
@@ -153,10 +216,11 @@ function mfCloudFxEmit(ctx,emit){
     return 0;
   }
 
-  const q=mfcQuality(ctx.quality), P=MF_CLOUD_PROFILES[q];
+  const q=mfcQuality(ctx.quality), P0=MF_CLOUD_PROFILES[q], V=mfcViewAdapt(P0,ctx);
+  const P=Object.assign({},P0,V);
   const map=Math.max(256,Number.isFinite(+ctx.mapSize)?+ctx.mapSize:3200);
   const seed=mfcWorldSeed(ctx);
-  const clouds=mfcCloudBudget(P,+ctx.perfScale);
+  const clouds=mfcCloudBudget(P0,+ctx.perfScale);
   const worldKey=mfcMix(seed,Math.round(map));
   if(_mfcTelemetry.lastWorld===worldKey&&_mfcTelemetry.lastTime>=0){
     if(time<_mfcTelemetry.lastTime-1e-6) _mfcTelemetry.timeRegressions++;
@@ -178,13 +242,14 @@ function mfCloudFxEmit(ctx,emit){
   const margin=Math.max(520,Math.min(880,map*0.24));
   const span=map+margin*2;
   const frame={generated:0,emitted:0,culled:0,shadows:0,bodies:0,hash:2166136261>>>0};
+  const lanes=mfcSelectLanes(seed,clouds,map,ctx);
 
   for(let i=0;i<clouds;i++){
     const speed=P.speedMin+(P.speedMax-P.speedMin)*mfcRand(seed,i,0);
     const size=P.sizeMin+(P.sizeMax-P.sizeMin)*mfcRand(seed,i,1);
     const altitude=P.altMin+(P.altMax-P.altMin)*mfcRand(seed,i,2);
-    const phaseX=mfcRand(seed,i,3)*span-margin;
-    const phaseY=mfcRand(seed,i,4)*span-margin;
+    const lane0=lanes[i]||mfcLanePos(seed,i,clouds,map);
+    const phaseX=lane0.x, phaseY=lane0.y;
     const lane=(mfcRand(seed,i,5)-0.5)*0.18;
     const cs=Math.cos(lane), sn=Math.sin(lane);
     const dx=windX*cs-windY*sn, dy=windX*sn+windY*cs;

@@ -4282,7 +4282,7 @@ function clampCam(){
      The bound is now independent of both yaw and zoom, so panning is stable at
      every zoom level. Overhang shrinks as you zoom out, because a wide view
      already shows the whole map and does not need to leave it. */
-  const OVER=60+180*(1-clamp(orthoSpan/SPAN_MAX,0,1));
+  const OVER=20+48*(1-clamp(orthoSpan/SPAN_MAX,0,1));
   cam.x=clamp(cam.x, -OVER, MAP+OVER);
   cam.y=clamp(cam.y, -OVER, MAP+OVER);
   cam.z=1400/orthoSpan;                     // legacy zoom proxy for old UI code

@@ -748,6 +748,9 @@ let hudFrame=0;
 function hudTxt(el,t){ if(el&&el._mfT!==t){ el._mfT=t; el.textContent=t; } }
 function hudCol(el,c){ if(el&&el._mfC!==c){ el._mfC=c; el.style.color=c; } }
 function hudDisp(el,d){ if(el&&el.style.display!==d) el.style.display=d; }
+function hudIntelChip(kind,inner){
+  return '<span class="hudIntelChip '+kind+'">'+inner+'</span>';
+}
 function updateHUD(fps){
   /* The commander rail runs on EVERY frame, ahead of the 1-in-10 gate below.
      Its state machine is measured in tenths of a second and its idle path is a
@@ -759,13 +762,14 @@ function updateHUD(fps){
   if((hudFrame++)%10){ if(typeof showHazChip==='function') showHazChip(); return; }
   updateWaveWarning();
   const massV=$('massV'), enV=$('enV'), massR=$('massR'), enR=$('enR');
-  hudTxt(massV, String(Math.floor(resM[0])));
-  hudTxt(enV, String(Math.floor(resE[0])));
-  hudCol(massV, stallM>0?'#ff8d7a':(resM[0]>=RES_MCAP[0]-1?'#ffd257':''));
+  const localBank=typeof mfLocalBank==='function'?mfLocalBank():{mass:resM[0],energy:resE[0],massCap:RES_MCAP[0],energyCap:RES_ECAP[0]};
+  hudTxt(massV, String(Math.floor(localBank.mass)));
+  hudTxt(enV, String(Math.floor(localBank.energy)));
+  hudCol(massV, stallM>0?'#ff8d7a':(localBank.mass>=localBank.massCap-1?'#ffd257':''));
   hudCol(enV, stallE>0?'#ff8d7a':'');
   // net rate = income − measured spending, so the economy reads honestly
   const mNet=mRate-mSpend, eNet=eRate-eSpend;
-  if(resM[0]>=RES_MCAP[0]-1){ hudTxt(massR,'FULL'); hudCol(massR,'#ffd257'); }
+  if(localBank.mass>=localBank.massCap-1){ hudTxt(massR,'FULL'); hudCol(massR,'#ffd257'); }
   else {
     hudTxt(massR,(mNet>=0?'+':'')+mNet.toFixed(1));
     hudCol(massR,mNet<0?'#ff8d7a':'');
@@ -773,8 +777,8 @@ function updateHUD(fps){
   hudTxt(enR,(eNet>=0?'+':'')+eNet.toFixed(0));
   hudCol(enR,eNet<0?'#ff8d7a':'');
   const massBox=massV&&massV.closest('.res'),energyBox=enV&&enV.closest('.res');
-  if(massBox)massBox.title='Mass: '+Math.floor(resM[0])+' / '+Math.floor(RES_MCAP[0])+' · gross '+mRate.toFixed(1)+'/s · spend '+mSpend.toFixed(1)+'/s · tap for forecast';
-  if(energyBox)energyBox.title='Energy: '+Math.floor(resE[0])+' / '+Math.floor(RES_ECAP[0])+' · gross '+eRate.toFixed(1)+'/s · spend '+eSpend.toFixed(1)+'/s · tap for forecast';
+  if(massBox)massBox.title='Mass: '+Math.floor(localBank.mass)+' / '+Math.floor(localBank.massCap)+' · gross '+mRate.toFixed(1)+'/s · spend '+mSpend.toFixed(1)+'/s · tap for forecast';
+  if(energyBox)energyBox.title='Energy: '+Math.floor(localBank.energy)+' / '+Math.floor(localBank.energyCap)+' · gross '+eRate.toFixed(1)+'/s · spend '+eSpend.toFixed(1)+'/s · tap for forecast';
   coachTick();
   if(typeof updateSelInfo==='function') updateSelInfo();
   const popL=hudPlayerPop(),popEl=$('unitV'),popBox=$('unitRes');
@@ -853,15 +857,26 @@ function updateHUD(fps){
         if(live===0&&seats>0&&(typeof stats==='undefined'||(stats.t|0)<12))
           h='\u2620 enemy commanders inbound: '+seats;
       }
+      /* Compact chips for the top-plate strip only. goalStatus() still
+         feeds the tap toast — do not rewrite that string here. */
       const contact=typeof openingContactRemaining==='function'?openingContactRemaining():0;
+      let bar='';
       if(contact>0){
         const cs=Math.ceil(contact),cm=(cs/60)|0,cr=cs%60;
-        h='<span class="firstContact">\u25c8 FIRST CONTACT '+cm+':'+(cr<10?'0':'')+cr+'</span> '+h;
+        bar+=hudIntelChip('contact','\u25c8 <span class="hudIntelFull">FIRST CONTACT </span>'+cm+':'+(cr<10?'0':'')+cr);
       }
+      const leftCmd=/enemy commanders left: (\d+)/.exec(h);
+      const inboundCmd=/enemy commanders inbound: (\d+)/.exec(h);
+      const hivesLeft=/hives left: (\d+)/.exec(h);
+      if(leftCmd) bar+=hudIntelChip('goal','\u2620 '+leftCmd[1]+' left');
+      else if(inboundCmd) bar+=hudIntelChip('goal','\u2620 inbound '+inboundCmd[1]);
+      else if(hivesLeft) bar+=hudIntelChip('goal','🐛 '+hivesLeft[1]);
+      else if(h) bar+=hudIntelChip('goal',h);
       if(timeLimit>0){
         const m2=(matchClock/60)|0, s2=(matchClock%60)|0;
-        h+=' <span class="clk'+(matchClock<60?' low':'')+'">'+m2+':'+(s2<10?'0':'')+s2+'</span>';
+        bar+=hudIntelChip('time','<span class="clk'+(matchClock<60?' low':'')+'">'+m2+':'+(s2<10?'0':'')+s2+'</span>');
       }
+      h=bar;
       /* updateHUD runs ~6x a second but this string only changes once a second
          (the clock) — so five of every six assignments reparsed identical HTML
          and invalidated layout for nothing, inside the frame loop. The handler
@@ -2002,7 +2017,8 @@ function prodNavShell(){
 }
 function prodBuildingPeers(B){
   if(!B)return [];
-  return blds.map((Q,i)=>({Q,i})).filter(o=>o.Q&&o.Q.alive&&o.Q.team===0&&o.Q.type===B.type);
+  return blds.map((Q,i)=>({Q,i})).filter(o=>o.Q&&o.Q.alive&&
+    (typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(o.Q):o.Q.team===0)&&o.Q.type===B.type);
 }
 function cycleProdBuilding(dir){
   if(openBld<0||!blds[openBld]||!blds[openBld].alive)return;
@@ -2121,6 +2137,10 @@ function renderResearchMenu(){ if(openBldGone()) return;
       if(openBldGone()) return;
       const Bb=blds[openBld];
       if(Bb.res>=0){ toast('Already studying '+RESEARCH[Bb.res].nm); return; }
+      if(window.MFMatchCommandConsumer&&typeof MFMatchCommandConsumer.takeover==='function'&&
+         MFMatchCommandConsumer.takeover({type:'research',building:{id:openBld,type:Bb.type},study:R.id})){
+        toast('◆ '+R.nm+' order transmitted');return;
+      }
       Bb.res=idx; Bb.resT=Math.min(R.t-.01,researchResumeTime(R.id)); sfx('ui'); renderQueue();
       if(Bb.resT>0) toast('◆ '+R.nm+' recovered at '+Math.floor(Bb.resT/R.t*100)+'%');
     });
@@ -2418,6 +2438,10 @@ function renderProdMenu(){ if(openBldGone()) return;
         mfSyncProductionQueueCards(Bb);return false;
       }
       const n=Math.max(1,Math.min(batch||1,tIdx===8?1:5,room));
+      if(window.MFMatchCommandConsumer&&typeof MFMatchCommandConsumer.takeover==='function'&&
+         MFMatchCommandConsumer.takeover({type:'produce',building:{id:openBld,type:Bb.type},unit:tIdx,count:n})){
+        toast('▶ '+T.name+' order transmitted');return true;
+      }
       for(let q=0;q<n;q++)Bb.queue.push(tIdx);
       if(n){renderQueue();sfx('ui');if(n>1)toast('▶ ×'+n+' '+T.name+' queued (hold to batch)');}
       return !!n;
@@ -3074,31 +3098,30 @@ function mscheduleStep(s,t0){
 
 
 /* ============================================================================
-   COMMANDER TRANSMISSION RAIL
+   COMMANDER / KEEL MINIMAP RECEIVER
    ----------------------------------------------------------------------------
    Presentation only. src/game/commander.js owns which cue happens, in what
    order, and how often; src/story.js owns what it says; src/audio.js owns
-   whether it is spoken. This block owns one question: where the words go on
-   the screen without covering anything the player needs.
+   whether it is spoken. This block owns the single in-battle presentation
+   surface requested for both profiles: the minimap temporarily becomes the
+   receiver, signal-flickers during the line, then returns to tactical use.
 
    IT DOES NOT RE-IMPLEMENT ANY OF THAT. There is no local dedupe, no local
    priority, no local queue and no replay buffer here — those all exist
-   upstream, and a second copy would drift. The rail is instead the PACING
+   upstream, and a second copy would drift. The receiver is instead the PACING
    CONSUMER: it calls commanderDialogueDrain() only while it is idle, so a cue
-   is pulled at the exact moment there is somewhere to put it, and anything that
-   goes stale while the rail is busy is dropped upstream by the rules that
+   is pulled at the exact moment the receiver is free, and anything that goes
+   stale while it is busy is dropped upstream by the rules that
    already govern it. One cue on screen at a time, by construction.
 
-   ONE NODE, FOR THE WHOLE MATCH. #cmdrTx and its five children are authored in
+   ONE NODE, FOR THE WHOLE MATCH. #cmdrTx and its children are authored in
    index.html and reused; nothing here creates, clones or appends an element, so
    a long match cannot grow the DOM by a single node.
 
-   PLACEMENT IS SOLVED, NOT AUTHORED. See cmdrTxSolve(). The short version: the
-   bottom cluster and the notice rail land in materially different places on a
-   412x915 phone, a 915x412 landscape phone, an 800x1280 tablet and a 1440x900
-   desktop, and no single authored anchor clears all four. The rail measures the
-   surfaces it must not cover and picks the first candidate box that intersects
-   none of them.
+   PLACEMENT IS DELIBERATE. #cmdrTx is a child of #minimapWrap and fills its
+   inner canvas area at every responsive HUD size. It is not allowed to float
+   elsewhere, because commander dialogue should read as an intercepted tactical
+   transmission rather than another unrelated HUD card.
 
    NOTHING HERE IS INTERACTIVE. No listener, no tabindex, no focus() call, and
    pointer-events:none in CSS. The rail cannot take a tap, cannot be tabbed to,
@@ -3114,30 +3137,10 @@ const CMDRTX_ENTER_MS=170, CMDRTX_EXIT_MS=230;
    short line from flashing; ceiling keeps a long one from outstaying an event
    the player has already moved past. */
 const CMDRTX_HOLD_MIN=2600, CMDRTX_HOLD_MAX=6500, CMDRTX_HOLD_BASE=900, CMDRTX_HOLD_PER_CHAR=46;
-/* Re-solve cadence while a cue is on screen. The protected surfaces move during
-   a cue — a selection card opens, a wave banner drops in — and re-solving costs
-   one layout read of about a dozen rects. Twice a second is invisible to the
-   player and cheap next to the frame it rides on. */
+/* Recheck while a cue is visible so responsive HUD changes and device rotation
+   cannot leave a legacy inline size on the fixed minimap receiver. */
 const CMDRTX_SOLVE_MS=500;
-const CMDRTX_PAD=8;
-/* Everything the rail must not cover, by id. Boxes are taken as RESERVED, not
-   as currently-painted: #toast sits at opacity 0 between notices but must keep
-   its lane, or the first warning of the match lands underneath a commander
-   line. Only display:none takes an element out of the set. */
-const CMDRTX_PROTECT=['topbar','heroBar','goalBar','toast','coach','unitCard','minimapWrap',
-  'selInfo','cmdbar','atkAlert','waveAlert','infMeter','wcRow','buildMenu','prodMenu','bldMenu2',
-  'placeUI','mfChips','mfLaneMore','wcBanner','consHud','hazChip','keelWrap','godBadge'];
-/* The bottom control cluster. Candidate A stacks above whichever of these is
-   highest, which is what keeps the rail off the minimap and the command dock
-   without hard-coding either one's size. */
-const CMDRTX_BOTTOM=['cmdbar','minimapWrap','selInfo','placeUI'];
-/* The top stack. Candidate C sits under whichever of these reaches lowest. */
-const CMDRTX_TOP=['topbar','goalBar','wcRow','infMeter','heroBar','godBadge','hazChip'];
-/* Narrower than this and the rail is a column of two-word lines. A candidate
-   that cannot reach this width in the gap it was offered is rejected outright
-   rather than squeezed. */
-const CMDRTX_MIN_W=220;
-const CMDRTX={el:null,img:null,initial:null,who:null,rank:null,tag:null,line:null,ready:false,missing:false,
+const CMDRTX={el:null,wrap:null,video:null,img:null,initial:null,who:null,rank:null,tag:null,line:null,ready:false,missing:false,
   bound:false,state:'idle',until:0,solveAt:0,cue:null,
   shown:0,solved:0,placement:'',portraitFallbacks:0,lastKey:''};
 function cmdrTxEls(){
@@ -3150,13 +3153,15 @@ function cmdrTxEls(){
     CMDRTX.missing=true; return false;
   }
   CMDRTX.el=el;
+  CMDRTX.wrap=document.getElementById('minimapWrap');
+  CMDRTX.video=document.getElementById('cmdrTxVideo');
   CMDRTX.img=document.getElementById('cmdrTxImg');
   CMDRTX.initial=document.getElementById('cmdrTxInitial');
   CMDRTX.who=document.getElementById('cmdrTxWho');
   CMDRTX.rank=document.getElementById('cmdrTxRank');
   CMDRTX.tag=document.getElementById('cmdrTxTag');
   CMDRTX.line=document.getElementById('cmdrTxLine');
-  if(!CMDRTX.img||!CMDRTX.who||!CMDRTX.rank||!CMDRTX.tag||!CMDRTX.line){ CMDRTX.missing=true; return false; }
+  if(!CMDRTX.wrap||!CMDRTX.video||!CMDRTX.img||!CMDRTX.who||!CMDRTX.rank||!CMDRTX.tag||!CMDRTX.line){ CMDRTX.missing=true; return false; }
   /* The portrait chain is bound ONCE on the single reused <img>: commander
      portrait, then the faction portrait the cue supplies, then the initial
      chip. A per-cue handler on a reused node stacks listeners; a per-cue node
@@ -3173,152 +3178,30 @@ function cmdrTxEls(){
   CMDRTX.ready=true;
   return true;
 }
-function cmdrTxHoldMs(text){
+function cmdrTxHoldMs(text,cue){
+  const authored=cue&&Number(cue.durationMs);
+  if(Number.isFinite(authored)) return Math.max(1000,Math.min(12000,authored));
   const n=String(text||'').length;
   return Math.max(CMDRTX_HOLD_MIN,Math.min(CMDRTX_HOLD_MAX,CMDRTX_HOLD_BASE+n*CMDRTX_HOLD_PER_CHAR));
 }
-/* Reserved boxes of everything the rail must clear, plus the frame the safe
-   areas actually resolved to. #topbar is the reference for the top/left/right
-   insets rather than a second reading of env(safe-area-inset-*): it is already
-   positioned with all four variables, so borrowing its rect cannot disagree
-   with the rest of the HUD about where the usable screen starts. */
-function cmdrTxFrame(){
-  const vw=window.innerWidth||document.documentElement.clientWidth||0;
-  const vh=window.innerHeight||document.documentElement.clientHeight||0;
-  const rects=[];
-  let top=null,bottom=null;
-  for(const id of CMDRTX_PROTECT){
-    const el=document.getElementById(id);
-    if(!el) continue;
-    if(getComputedStyle(el).display==='none') continue;
-    const r=el.getBoundingClientRect();
-    if(r.width<=0||r.height<=0) continue;
-    rects.push({id:id,l:r.left,t:r.top,r:r.right,b:r.bottom});
-  }
-  const byId=id=>rects.find(x=>x.id===id)||null;
-  const bar=byId('topbar');
-  const sl=bar?Math.max(0,bar.l):CMDRTX_PAD;
-  const sr=bar?Math.max(0,vw-bar.r):CMDRTX_PAD;
-  for(const id of CMDRTX_TOP){ const x=byId(id); if(x&&(top===null||x.b>top)) top=x.b; }
-  for(const id of CMDRTX_BOTTOM){ const x=byId(id); if(x&&(bottom===null||x.t<bottom)) bottom=x.t; }
-  /* Bottom safe inset, for the case where every bottom-cluster surface is
-     hidden and there is nothing to stack above. #cmdbar is positioned at
-     `bottom:calc(var(--sab) + 6px)`, so its used `bottom` is that variable
-     already resolved to pixels — reading it is how this lane respects a home
-     indicator without re-deriving env(safe-area-inset-bottom) itself and
-     risking a different answer from the rest of the HUD. */
-  let sb=CMDRTX_PAD;
-  const dock=document.getElementById('cmdbar');
-  if(dock){ const v=parseFloat(getComputedStyle(dock).bottom); if(v>=0&&v<vh) sb=Math.max(CMDRTX_PAD,v); }
-  return {vw,vh,rects,sl,sr,sb,
-    topStack:top===null?CMDRTX_PAD:top,
-    bottomStack:bottom===null?vh-sb:bottom};
-}
-function cmdrTxOverlap(box,rects){
-  let area=0;
-  for(const r of rects){
-    const w=Math.min(box.l+box.w,r.r)-Math.max(box.l,r.l);
-    const h=Math.min(box.t+box.h,r.b)-Math.max(box.t,r.t);
-    if(w>0&&h>0) area+=w*h;
-  }
-  return area;
-}
-/* Fit a box of height `h` into one horizontal band, pushed against one edge.
-
-   This is what makes the difference between a rail that works on three
-   viewports and one that works on four. Landscape phone puts the minimap
-   (x 6..268) and the KEEL bubble (x 268..648) across the same rows the rail
-   wants, leaving a 267px gap against the right edge — so a fixed-width box
-   anchored right overlapped both, while a box allowed to SHRINK INTO THE GAP
-   clears them with room to spare.
-
-   Returns null when the band has no usable gap on that edge: an obstacle
-   straddling the anchor edge means there is nothing to shrink into, and a gap
-   under CMDRTX_MIN_W is not worth having. */
-function cmdrTxFit(F,top,h,natW,anchor){
-  const L=F.sl+CMDRTX_PAD, R=F.vw-F.sr-CMDRTX_PAD;
-  const bt=top, bb=top+h;
-  let lo=L, hi=R;
-  for(const r of F.rects){
-    if(r.b<=bt||r.t>=bb) continue;                 // not in this band at all
-    if(anchor==='right'){
-      if(r.l>=R) continue;
-      if(r.r>=R) return null;                      // straddles the right edge
-      if(r.r+CMDRTX_PAD>lo) lo=r.r+CMDRTX_PAD;
-    } else {
-      if(r.r<=L) continue;
-      if(r.l<=L) return null;                      // straddles the left edge
-      if(r.l-CMDRTX_PAD<hi) hi=r.l-CMDRTX_PAD;
-    }
-  }
-  const w=Math.min(natW,hi-lo);
-  if(w<CMDRTX_MIN_W) return null;
-  return {l:anchor==='right'?(hi-w):lo,t:top,w:w,h:h};
-}
-/* THE SOLVER.
-
-   Four candidate bands, tried in order, first one that fits wins. They are
-   ordered by how well the placement reads, not by how likely it is to fit:
-
-     A  above the bottom cluster, left aligned. The natural home — a comms panel
-        sitting over the tactical map. Wins on 412x915, 800x1280 and 1440x900.
-     B  above the bottom cluster, right aligned.
-     C  under the top stack, right aligned. This is what 915x412 lands on: the
-        landscape minimap owns the left edge from y=144 down to y=406, which
-        rules A and B out, and the gap C shrinks into is the 251px between the
-        KEEL bubble and the right margin.
-     D  under the top stack, left aligned. Last resort before giving up.
-
-   TWO PASSES, because width and height are not independent: shrinking the box
-   into a gap rewraps the subtitle and makes it taller, which can invalidate the
-   band the width was chosen for. Pass 1 picks at the CSS-natural width, applies
-   it, and pass 2 re-picks at the height that width actually produced. The
-   inline width is cleared first so the natural width is the CSS media-query
-   width and not whatever the last solve narrowed it to.
-
-   If no candidate fits, the least-bad box is used and CMDRTX.placement is
-   suffixed `!` — surfaced by cmdrTxDebug() and failed by
-   tools/probe-commander-hud.mjs, so a future HUD change that squeezes the rail
-   out is a test failure rather than a quiet overlap. */
-function cmdrTxPick(F,h,natW){
-  const bottomBand=F.bottomStack-CMDRTX_PAD-h;
-  const topBand=F.topStack+CMDRTX_PAD;
-  const tries=[['A',bottomBand,'left'],['B',bottomBand,'right'],
-               ['C',topBand,'right'],['D',topBand,'left']];
-  let best=null;
-  for(const [name,top,anchor] of tries){
-    const box=cmdrTxFit(F,top,h,natW,anchor);
-    if(!box) continue;
-    if(box.t<0||box.l<0||box.t+box.h>F.vh||box.l+box.w>F.vw) continue;
-    const over=cmdrTxOverlap(box,F.rects);
-    if(over===0) return {name:name,box:box,over:0};
-    if(!best||over<best.over) best={name:name,box:box,over:over};
-  }
-  if(best) return best;
-  /* Nothing fits anywhere. Clamp a natural-width box into the frame rather than
-     paint something half off the edge, and let the `!` mark the failure. */
-  const box={l:Math.max(0,Math.min(F.vw-natW,F.sl+CMDRTX_PAD)),
-             t:Math.max(0,Math.min(F.vh-h,bottomBand)),w:Math.min(natW,F.vw),h:h};
-  return {name:'A',box:box,over:cmdrTxOverlap(box,F.rects)};
-}
+/* This is intentionally not a placement search. CSS anchors the receiver to
+   the minimap; this check only clears pre-migration inline dimensions and
+   reports whether the receiver remains inside that authored surface. */
 function cmdrTxSolve(){
   if(!cmdrTxEls()) return null;
-  const el=CMDRTX.el;
-  el.style.width='';                       // measure at the CSS-authored width
-  let natW=0,best=null,applied=-1;
-  for(let pass=0;pass<2;pass++){
-    const own=el.getBoundingClientRect();
-    if(!natW) natW=Math.max(1,own.width);
-    best=cmdrTxPick(cmdrTxFrame(),Math.max(1,own.height),natW);
-    el.style.left=Math.round(best.box.l)+'px';
-    el.style.top=Math.round(best.box.t)+'px';
-    el.style.width=Math.round(best.box.w)+'px';
-    if(applied===best.box.w) break;        // width settled; height cannot move again
-    applied=best.box.w;
-  }
-  CMDRTX.placement=best.name+(best.over>0?'!':'');
+  /* CSS owns the inset. Clearing legacy inline placement is important for an
+     OTA shell that previously solved the receiver as a floating rail. */
+  CMDRTX.el.style.left='';
+  CMDRTX.el.style.top='';
+  CMDRTX.el.style.width='';
+  const own=CMDRTX.el.getBoundingClientRect();
+  const wrap=CMDRTX.wrap.getBoundingClientRect();
+  const box={l:own.left,t:own.top,w:own.width,h:own.height};
+  const overlap=Math.max(0,wrap.left-own.left)+Math.max(0,own.right-wrap.right)
+    +Math.max(0,wrap.top-own.top)+Math.max(0,own.bottom-wrap.bottom);
+  CMDRTX.placement=overlap?'minimap!':'minimap';
   CMDRTX.solved++;
-  return {placement:CMDRTX.placement,overlap:best.over,box:best.box};
+  return {placement:CMDRTX.placement,overlap,box};
 }
 function cmdrTxShow(cue){
   if(!cmdrTxEls()||!cue) return false;
@@ -3347,6 +3230,16 @@ function cmdrTxShow(cue){
   const initial=(sub.shortName||name).trim().charAt(0).toUpperCase()||'C';
   CMDRTX.initial.textContent=initial;
   const src=por.src||por.fallback||'';
+  const animationSrc=String(cue.animationSrc||(cue.animation&&cue.animation.src)||por.animationSrc||'');
+  if(animationSrc){
+    if(CMDRTX.video.getAttribute('src')!==animationSrc) CMDRTX.video.setAttribute('src',animationSrc);
+    CMDRTX.el.dataset.animation='video';
+    try{ CMDRTX.video.currentTime=0; CMDRTX.video.play().catch(()=>{}); }catch(e){}
+  } else {
+    CMDRTX.el.dataset.animation='portrait';
+    CMDRTX.video.removeAttribute('src');
+    try{ CMDRTX.video.load(); }catch(e){}
+  }
   if(src){
     CMDRTX.el.dataset.portrait='primary';
     if(CMDRTX.img.getAttribute('src')!==src) CMDRTX.img.setAttribute('src',src);
@@ -3354,10 +3247,11 @@ function cmdrTxShow(cue){
     CMDRTX.el.dataset.portrait='initial';
   }
   CMDRTX.cue=cue;
-  CMDRTX.lastKey=String(cue.commanderId||'')+'|'+String(cue.key||'')+'#'+String(cue.seq);
+  CMDRTX.lastKey=String(cue.speakerId||cue.commanderId||'')+'|'+String(cue.key||'')+'#'+String(cue.seq);
   /* enter BEFORE solving: the box has to be laid out at its real height before
      its position can be chosen, and [data-state="idle"] is display:none. */
   CMDRTX.el.dataset.state='enter';
+  CMDRTX.wrap.dataset.transmission='enter';
   cmdrTxSolve();
   CMDRTX.shown++;
   return true;
@@ -3366,15 +3260,20 @@ function cmdrTxReset(){
   if(!cmdrTxEls()) return;
   CMDRTX.state='idle'; CMDRTX.until=0; CMDRTX.cue=null; CMDRTX.solveAt=0;
   CMDRTX.el.dataset.state='idle';
+  if(CMDRTX.wrap) delete CMDRTX.wrap.dataset.transmission;
+  if(CMDRTX.video){
+    try{ CMDRTX.video.pause(); }catch(e){}
+    CMDRTX.video.removeAttribute('src');
+    try{ CMDRTX.video.load(); }catch(e){}
+  }
 }
 /* Subscribe ONCE, for the life of the page. commanderDialogueOn() is idempotent
    per function reference, but the guard also stops a re-entrant HUD init from
    ever attaching a second copy of the handler. */
 function cmdrTxBind(){
   if(CMDRTX.bound) return true;
-  if(typeof commanderDialogueOn!=='function') return false;
   CMDRTX.bound=true;
-  commanderDialogueOn(cue=>{
+  if(typeof commanderDialogueOn==='function') commanderDialogueOn(cue=>{
     /* The rail only ever drains while idle, so a cue arriving here always has
        somewhere to go. Guarded anyway: another consumer could pump the drain,
        and dropping the newer cue is the correct outcome — replacing a line
@@ -3383,6 +3282,25 @@ function cmdrTxBind(){
     cmdrTxShow(cue);
     CMDRTX.state='enter';
     CMDRTX.until=cmdrTxNow()+CMDRTX_ENTER_MS;
+  });
+  /* Onboarding and future KEEL systems use one cancelable presenter event.
+     Mark it handled only when the battlefield receiver truly accepted it; if
+     a commander line is already active, onboarding retains its existing KEEL
+     bubble/toast fallback instead of silently losing guidance. */
+  window.addEventListener('massfront:keel-hint',ev=>{
+    const d=ev&&ev.detail;
+    if(!d||d.surface!=='battle-minimap'||CMDRTX.state!=='idle'||!cmdrTxInMatch()) return;
+    /* This event is KEEL's UGA contract, not a generic commander skin. Even a
+       stale or malformed caller cannot recast her as Nova (or any faction). */
+    const ugaMedia=d.affiliation==='uga'&&d.profileId==='uga-keel-expedition-guide';
+    const cue={speakerId:'keel',profileId:'uga-keel-expedition-guide',key:d.hintId||d.context||'keel-hint',seq:d.issuedAt||Date.now(),
+      category:'UGA GUIDANCE',durationMs:d.durationMs,animationSrc:ugaMedia?(d.animationSrc||''):'',
+      subtitle:{speaker:'KEEL',shortName:'KEEL',rank:'UGA SHIP LIAISON',text:d.text||''},
+      portrait:{src:ugaMedia?(d.portraitSrc||''):'',fallback:ugaMedia?(d.fallbackPortraitSrc||''):''}};
+    if(!cmdrTxShow(cue)) return;
+    CMDRTX.state='enter'; CMDRTX.until=cmdrTxNow()+CMDRTX_ENTER_MS;
+    d.handled=true; d.presenter='battle-minimap';
+    if(ev.cancelable) ev.preventDefault();
   });
   return true;
 }
@@ -3429,9 +3347,11 @@ function cmdrTxTick(){
   if(now>=CMDRTX.until){
     if(CMDRTX.state==='enter'){
       CMDRTX.state='hold'; CMDRTX.el.dataset.state='hold';
-      CMDRTX.until=now+cmdrTxHoldMs(CMDRTX.line?CMDRTX.line.textContent:'');
+      if(CMDRTX.wrap) CMDRTX.wrap.dataset.transmission='hold';
+      CMDRTX.until=now+cmdrTxHoldMs(CMDRTX.line?CMDRTX.line.textContent:'',CMDRTX.cue);
     } else if(CMDRTX.state==='hold'){
       CMDRTX.state='exit'; CMDRTX.el.dataset.state='exit';
+      if(CMDRTX.wrap) CMDRTX.wrap.dataset.transmission='exit';
       CMDRTX.until=now+CMDRTX_EXIT_MS;
     } else {
       cmdrTxReset();
@@ -3459,6 +3379,8 @@ function cmdrTxDebug(){
     rank:CMDRTX.rank?CMDRTX.rank.textContent:'',
     tag:CMDRTX.tag?CMDRTX.tag.textContent:'',
     audio:CMDRTX.cue?CMDRTX.cue.audio:null,
+    receiver:CMDRTX.wrap&&CMDRTX.wrap.dataset.transmission||'',
+    animation:el?(el.dataset.animation||''):'',
     rect:r?{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}:null,
     overflow:CMDRTX.line?{scroll:CMDRTX.line.scrollHeight,client:CMDRTX.line.clientHeight}:null
   };

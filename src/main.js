@@ -9,8 +9,9 @@ let difficulty=1;
 let defenseFocus=0;             // 0 combined arms, 1 fortress / tower-defence cadence
 let infestationOn=true;         // neutral map nests, guards, spread, eruptions and tides
 let deploymentPackage='prepared'; // supported opening for newcomers; classic start remains selectable
-/* Settings owns the isolated Galactic preview while it is experimental. This
-   callback is assigned during UI wiring and never mutates the main menu. */
+/* The isolated Galactic strategic layer is optional while experimental. This
+   callback is assigned during UI wiring; the home menu stays in this document
+   and its primary action may hand the War Table off to the module. */
 let mfOpenExploration=null;
 let hudDeck='orders';           // one secondary command row at a time on phones
 /* Phone command dock is platoon-first (4 groups, deck tabs). Army/box/rings
@@ -54,7 +55,7 @@ function setHudDeck(deck,quiet){
   }
   const rowId={orders:'tacRow',platoons:'grpRow',abilities:'hotSlots',view:'camRow'}[hudDeck];
   const row=$(rowId);
-  if(row&&hudDeck!=='orders') row.style.display=hudDeck==='abilities'?(row.children.length?'flex':'none'):'flex';
+  if(row) row.style.display=hudDeck==='abilities'?(row.children.length?'flex':'none'):'flex';
   if(hudDeck==='abilities'&&typeof hotSlotSync==='function') hotSlotSync(true);
   if(typeof updateSelInfo==='function') updateSelInfo();
   if(typeof hotSlotPlace==='function') requestAnimationFrame(hotSlotPlace);
@@ -68,14 +69,15 @@ function showHudDock(on,deck){
   else for(const id of ['tacRow','grpRow','hotSlots']){const row=$(id);if(row)row.style.display='none';}
 }
 
-/* Eight authored deployment plateaus.  They are deliberately inset rather
+/* Nine authored deployment plateaus. They are deliberately inset rather
    than sitting on the border: the camera can frame them, builders have room to
    expand, and every zone can be raised to dry land by the terrain generator. */
 const START_ZONES=[
   {id:'nw',n:'1',x:.18,y:.18},{id:'n', n:'2',x:.50,y:.15},
   {id:'ne',n:'3',x:.82,y:.18},{id:'e', n:'4',x:.85,y:.50},
   {id:'se',n:'5',x:.82,y:.82},{id:'s', n:'6',x:.50,y:.85},
-  {id:'sw',n:'7',x:.18,y:.82},{id:'w', n:'8',x:.15,y:.50}
+  {id:'sw',n:'7',x:.18,y:.82},{id:'w', n:'8',x:.15,y:.50},
+  {id:'c', n:'9',x:.50,y:.50}
 ];
 /* MAP is baked into terrain, pathfinding, fog and shaders. Resizing that buffer
    at runtime would desynchronise all four, so map size defines a playable
@@ -231,9 +233,11 @@ clampCam=function(){
      it — pan stuck and HQ follow yanked back to centre every frame. Haze
      already hides overhang. */
   const B=battlefieldPlayBounds(0);
-  const over=80+160*(1-clamp(orthoSpan/Math.max(1,mx),0,1));
-  cam.x=clamp(cam.x,B.lo-over,B.hi+over);
-  cam.y=clamp(cam.y,B.lo-over,B.hi+over);
+  /* Look-at stays inside the theatre. Positive overhang plus a portrait
+     hull is the gray triangle at the map edge; HQ follow still works
+     because start zones sit inside these bounds. */
+  cam.x=clamp(cam.x,B.lo,B.hi);
+  cam.y=clamp(cam.y,B.lo,B.hi);
 };
 zoomBy=function(f){ distTarget=clamp(distTarget/f,spanMinNow(),spanMaxNow()); };
 const _mfCamTickMesh=camTick;
@@ -259,20 +263,22 @@ let playerStartZone='sw', spawnPick='player';
 let aiSlots=[
   {on:true, diff:1,zone:'ne',ally:false,behavior:'balanced'},
   {on:false,diff:1,zone:'nw',ally:false,behavior:'balanced'},
-  {on:false,diff:1,zone:'se',ally:false,behavior:'balanced'}
+  {on:false,diff:1,zone:'se',ally:false,behavior:'balanced'},
+  {on:false,diff:1,zone:'c', ally:false,behavior:'balanced'}
 ];
-/* Theatre size owns participant density while every combat faction shares one
-   hard 500-unit admission cap across its commander seats. Rows stay visible
-   but MAP-locked so a larger war table expands the match without multiplying
-   FACTION_POP_CAP. Authored seats: Compact
-   duel SW–NE; second enemy SE never NW; ally NW; Large 1v3 four corners.
-   Adjacent cardinals (~1028 m) are crush — never a default. */
-const BATTLEFIELD_FACTION_CAP={compact:2,standard:3,large:4};
+/* Theatre size owns participant density while every participant owns one hard
+   500-unit Commander-seat cap. Authored seats: Compact duel SW–NE; second
+   enemy SE never NW; ally NW; Large 1v3 uses four corners and Large 1v4 adds
+   center. Center-to-corner is ~1448 m; adjacent cardinals (~1028 m) remain
+   crush and are never a default. */
+const BATTLEFIELD_FACTION_CAP={compact:2,standard:3,large:5};
 const SPAWN_CORNERS=['nw','ne','se','sw'];
+const SPAWN_LARGE_FIFTH='c';
 const SPAWN_FAIR_MIN_M=1400;
 function battlefieldFactionCap(){return BATTLEFIELD_FACTION_CAP[populationTheatre()]||3;}
 function battlefieldAiCap(){return Math.max(1,battlefieldFactionCap()-1);}
 function spawnZoneIsCorner(id){ return SPAWN_CORNERS.indexOf(id)>=0; }
+function spawnZoneAllowed(id){return spawnZoneIsCorner(id)||(populationTheatre()==='large'&&id===SPAWN_LARGE_FIFTH);}
 function normalizeAiSlotsForBattlefield(){
   const max=battlefieldAiCap();
   for(const A of aiSlots)A.behavior=typeof aiBehaviorKey==='function'?aiBehaviorKey(A.behavior):'balanced';
@@ -292,8 +298,9 @@ function reseatSpawnPlanner(max){
   /* Stage 0 MAP contract. Compact is a SW–NE duel; extras are already off.
      On Standard/Large, allies claim NW, the second enemy is SE (never NW —
      that is the ally chair / west-edge crush vs player SW), and a third enemy
-     takes the leftover corner so Large 1v3 is four corners. Cardinals snap
-     off because SW–W is ~1028 m. */
+     takes the leftover corner so Large 1v3 is four corners. A fourth enemy
+     takes center, whose four corner distances remain above 1400 m. Cardinals
+     snap off because SW–W is ~1028 m. */
   if(max==null) max=battlefieldAiCap();
   if((typeof populationTheatre==='function'?populationTheatre():'standard')==='compact'){
     playerStartZone='sw';
@@ -316,14 +323,14 @@ function reseatSpawnPlanner(max){
   for(let i=0;i<aiSlots.length;i++) if(i<max&&aiSlots[i].on&&!aiSlots[i].ally) enemyIdx.push(i);
   const nE=enemyIdx.length;
   /* 1v1/1v2 omit NW so the second enemy cannot sit on the ally chair. 1v3
-     puts NW last so AI 2 (index 1) still prefers SE. */
-  const prefer=nE>=3?['ne','se','nw','sw']:['ne','se','sw'];
+     puts NW last; 1v4 adds the fair center seat after all corners. */
+  const prefer=nE>=4?['ne','se','nw','c','sw']:(nE>=3?['ne','se','nw','sw']:['ne','se','sw']);
   for(const i of enemyIdx){
     const A=aiSlots[i];
     const nwBanned=A.zone==='nw'&&(i===1||nE<3);
-    const ok=spawnZoneIsCorner(A.zone)&&!taken.has(A.zone)&&!nwBanned;
+    const ok=spawnZoneAllowed(A.zone)&&!taken.has(A.zone)&&!nwBanned;
     if(!ok){
-      const pick=prefer.find(z=>!taken.has(z)&&!(i===1&&z==='nw'))||SPAWN_CORNERS.find(z=>!taken.has(z));
+      const pick=prefer.find(z=>!taken.has(z)&&!(i===1&&z==='nw'))||SPAWN_CORNERS.concat(SPAWN_LARGE_FIFTH).find(z=>spawnZoneAllowed(z)&&!taken.has(z));
       if(pick) A.zone=pick;
     }
     taken.add(A.zone);
@@ -393,8 +400,8 @@ function spawnEnemyNwBanned(key,zone){
   return n<3;
 }
 function setSpawnTargetZone(key,zone){
-  if(!spawnZoneIsCorner(zone)){
-    toast('CARDINAL STARTS ARE CRUSH — use a corner');
+  if(!spawnZoneAllowed(zone)){
+    toast('CARDINAL STARTS ARE CRUSH — use a corner'+(populationTheatre()==='large'?' or center':''));
     return false;
   }
   if((typeof populationTheatre==='function'?populationTheatre():'standard')==='compact'&&zone!=='sw'&&zone!=='ne'){
@@ -532,7 +539,7 @@ function renderSpawnPlanner(){
     fair.style.background=crush?'rgba(90,18,22,.55)':'';
     fair.style.borderColor=crush?'rgba(255,93,67,.45)':'';
     fair.innerHTML=crush
-      ?'<b style="color:#ff6d55">\u26A0 CRUSH '+Math.round(md)+'m</b><span style="color:#ffb3a6">Nearest commanders under '+SPAWN_FAIR_MIN_M+'m — corners only (SW–NE duel, SE second enemy, NW ally)</span>'
+      ?'<b style="color:#ff6d55">\u26A0 CRUSH '+Math.round(md)+'m</b><span style="color:#ffb3a6">Nearest commanders under '+SPAWN_FAIR_MIN_M+'m — use separated corners or the Large center seat</span>'
       :'<b>\u2713 1 PLAYER · '+activeAllySlots().length+' AI ALLY · '+activeEnemySlots().length+' ENEMY</b><span>3 mass + 1 energy site each · nearest commanders '+Math.round(md)+'m apart</span>';
   }
   drawSpawnPlanner();
@@ -737,7 +744,7 @@ function newSkirmish(){
   }
   if(typeof applyCommanderChoice==='function')applyCommanderChoice();
   if(typeof applyFactionDoctrineChoice==='function')applyFactionDoctrineChoice();
-  if(WC.meteor||(typeof mapHazardKey==='function'&&mapHazardKey(curMap)==='meteor')) stormTimer=40+Math.random()*30;
+  if(WC.meteor||(typeof mapHazardKey==='function'&&mapHazardKey(curMap)==='meteor')) stormTimer=40+mfSimRandom()*30;
   renderWcRow();
   /* ---- orbital drop ----------------------------------------------------
      Spawns are inset from the map corners. The camera clamps its VIEW to the
@@ -812,7 +819,7 @@ function newSkirmish(){
     const guard=[1,3,5][S.diff];
     for(let k=0;k<guard;k++){
       const ty=S.diff>=2&&k>2?1:0;
-      const u=spawnUnit(ty,team,egx+fx*(210+rr(-30,45))+rx*rr(-100,100),egy+fy*(210+rr(-30,45))+ry*rr(-100,100),S.slot);
+      const u=spawnUnit(ty,team,egx+fx*(210+mfSimRange(-30,45))+rx*mfSimRange(-100,100),egy+fy*(210+mfSimRange(-30,45))+ry*mfSimRange(-100,100),S.slot);
       if(u>=0){ustate[u]=1;utx[u]=egx;uty[u]=egy;if(ally)uAllyBase[u]=S.slot;}
     }
     let bd=1e12,bi=-1;
@@ -1019,7 +1026,7 @@ function newDemo(){
       const a=(k-10.5)*.105, d=280+(k%4)*28;
       const ty=[0,1,2,4,9,20,21,23][k%8];
       let i=spawnUnit(ty,1,cx+Math.sin(a)*d,cy-190-Math.cos(a)*d*.35);
-      if(i>=0){ ustate[i]=2; utx[i]=cx+rr(-90,90); uty[i]=cy+40; }
+      if(i>=0){ ustate[i]=2; utx[i]=cx+mfSimRange(-90,90); uty[i]=cy+40; }
     }
     for(let k=0;k<12;k++){
       const ty=[0,1,2,9,11,19][k%6];
@@ -1067,9 +1074,9 @@ function newDemo(){
             : k%23===0?2 : k%9===0?1 : k%37===0?3 : 0;
     const nearY=cannonLab?0.525:0.72, farY=cannonLab?0.475:0.28;
     // team 0 bottom half marching up
-    let i=spawnUnit(t,0, MAP/2+(col-cols/2)*22+rr(-6,6), MAP*nearY+row*16+rr(-5,5));
+    let i=spawnUnit(t,0, MAP/2+(col-cols/2)*22+mfSimRange(-6,6), MAP*nearY+row*16+mfSimRange(-5,5));
     if(i>=0){ ustate[i]=2; utx[i]=ux[i]; uty[i]=MAP*farY; }
-    i=spawnUnit(t,1, MAP/2+(col-cols/2)*22+rr(-6,6), MAP*farY-row*16+rr(-5,5));
+    i=spawnUnit(t,1, MAP/2+(col-cols/2)*22+mfSimRange(-6,6), MAP*farY-row*16+mfSimRange(-5,5));
     if(i>=0){ ustate[i]=2; utx[i]=ux[i]; uty[i]=MAP*nearY; }
   }
   cam.x=MAP/2; cam.y=MAP/2; orthoSpan=distTarget=cannonLab?720:3200; clampCam(); camUpdateMatrices();
@@ -2454,48 +2461,92 @@ function wire(){
       if(typeof renderOps==='function') renderOps();
     });
   });
-  /* EXPERIMENTAL SPACE EXPLORATION — Settings-only, with two gates.
+  /* EXPERIMENTAL SPACE EXPLORATION — same-tab strategic layer, with two gates.
      The module is a separate document with its own three.js and its own WebGL
      canvas, so it is opened as a document rather than imported: two contexts
      fighting over one canvas is the failure this avoids, and a crash in an
      unfinished module then cannot take the RTS down with it.
      Gate 1 is the player's setting. Gate 2 is a launch-time HEAD probe, because
-     the module is NOT in the installer. Nothing is inserted into the base main
-     menu or War Table; the module performs those conversions inside its own
-     isolated shell. Nothing here runs during a match or touches saves. */
+     the module is NOT in the installer. The existing home remains the home;
+     START enters live space for the world introduction, whose skippable choice
+     continues either to protected planetary Training or the Galactic War Table.
+     Nothing here runs during a match or touches saves. */
   (function mfWireExploration(){
     const URL_='./modules/space_exploration/index.html';
-    mfOpenExploration=async function(){
+    mfOpenExploration=async function(entryView){
       const enabled=!!(typeof META!=='undefined'&&META.settings&&META.settings.experimentalExploration);
       if(!enabled){ if(typeof toast==='function') toast('Enable Experimental: Galactic Campaign first'); return false; }
+      entryView=entryView==='system'?'system':'campaign_hub';
       initAudio(); sfx('ui');
-      let present=false;
+      let present=false,packUrl=URL_;
       try{ const r=await fetch(URL_,{method:'HEAD',cache:'no-store'}); present=r.ok; }
       catch(e){}
-      if(!present){ if(typeof toast==='function') toast('Galactic preview is not installed in this build'); return false; }
+      if(!present){
+        const packed=typeof mfInstallExplorationPack==='function'&&await mfInstallExplorationPack();
+        if(!packed||!packed.ok){ if(typeof toast==='function') toast('Galactic preview is not installed in this build'); return false; }
+        /* blob: index.html is a different origin than this ticket; do not navigate. */
+        if(packed.openUrl) packUrl=packed.openUrl;
+        else { if(typeof toast==='function') toast('Galactic pack downloaded — War Room stays available in this build'); return false; }
+      }
       /* The isolated module returns through an opaque operation nonce.
          Bind that future request to the profile which actually opened it before
          leaving this document; a URL alone must never be enough to start an RTS
          match. sessionStorage is shared by the two same-origin documents but is
          not portable-save data, so the bridge cannot alter the career schema. */
       const now=Date.now(),profileId=PROFILES&&PROFILES.active;
-      const ticket={schemaVersion:1,kind:'MassfrontGalacticEntryV1',profileId,
-                    issuedAt:now,expiresAt:now+7*24*60*60*1000,source:'massfront-base'};
+      const gate=window.MFNewCareerFactionGate;
+      let gateState=null;
+      try{gateState=gate&&typeof gate.state==='function'?gate.state():null;}catch(e){}
       let ticketReady=false;
       try{
+        if(typeof profileId!=='string'||!profileId)throw new Error('Profile unavailable');
+        if(typeof commanderRosterSnapshotV1!=='function')throw new Error('Commander roster unavailable');
+        const roster=commanderRosterSnapshotV1();
+        if(!roster||roster.fingerprint!=='fnv1a32:0aadcd2d'
+          ||!roster.commander1ByCampaignFaction||!Array.isArray(roster.commanders))throw new Error('Commander roster stale');
+        /* Only the resolved commissioning workflow may put an assignment on
+           the bridge. A pass-through profile can still contain the historical
+           META Nova quick-pick; treating that default as a choice recreated
+           the hidden preselection this ticket boundary is designed to remove. */
+        const commissioning={factionId:null,commanderId:null};
+        let commissionedReady=false;
+        if(gateState&&gateState.armed===true&&gateState.phase==='ready'
+          &&gateState.pending===false&&gateState.canEnterSpaceCareer===true){
+          const factionId=gateState.factionId,commanderId=gateState.starterCommanderId;
+          const row=roster.commanders.find(c=>c&&c.id===commanderId);
+          if(!factionId||!commanderId||roster.commander1ByCampaignFaction[factionId]!==commanderId
+            ||!row||row.campaignFactionId!==factionId)throw new Error('Commissioning authority mismatch');
+          commissioning.factionId=factionId;commissioning.commanderId=commanderId;
+          commissionedReady=true;
+        }
+        const ticket={schemaVersion:2,kind:'MassfrontGalacticEntryV2',profileId,
+                      issuedAt:now,expiresAt:now+7*24*60*60*1000,source:'massfront-base',entryView,
+                      introRequired:entryView==='system'&&!commissionedReady,
+                      commanderRosterSnapshot:roster,commanderRosterFingerprint:roster.fingerprint,
+                      commissioning};
         const key='massfront.galactic.entry.v1',text=JSON.stringify(ticket);
         sessionStorage.setItem(key,text);
-        const stored=JSON.parse(sessionStorage.getItem(key)||'null');
-        ticketReady=!!(profileId&&stored&&stored.schemaVersion===1
-          &&stored.kind==='MassfrontGalacticEntryV1'&&stored.profileId===profileId
+        const restoredText=sessionStorage.getItem(key),stored=JSON.parse(restoredText||'null');
+        ticketReady=!!(profileId&&restoredText===text&&stored&&stored.schemaVersion===2
+          &&stored.kind==='MassfrontGalacticEntryV2'&&stored.profileId===profileId
           &&stored.issuedAt===ticket.issuedAt&&stored.expiresAt===ticket.expiresAt
-          &&stored.source==='massfront-base');
+          &&stored.source==='massfront-base'&&stored.entryView===entryView
+          &&stored.introRequired===ticket.introRequired
+          &&stored.commanderRosterFingerprint==='fnv1a32:0aadcd2d'
+          &&stored.commanderRosterSnapshot&&stored.commanderRosterSnapshot.fingerprint===stored.commanderRosterFingerprint
+          &&stored.commissioning&&stored.commissioning.factionId===commissioning.factionId
+          &&stored.commissioning.commanderId===commissioning.commanderId);
       }catch(e){}
       if(!ticketReady){ if(typeof toast==='function') toast('Galactic link could not be secured on this device'); return false; }
       /* Same tab: the ship and RTS renderers must never compete for WebGL. */
-      try{ location.href=URL_; return true; }
+      try{ location.href=packUrl; return true; }
       catch(e){ if(typeof toast==='function') toast('Galactic preview could not be opened'); return false; }
     };
+    /* boot() is asynchronous while the tail manifest scripts continue loading.
+       If the career takeover mounted before wire(), this readiness handshake
+       gives it the exact moment the base opener becomes wrappable. If it loads
+       later, its ordinary init path sees the function directly. */
+    try{window.dispatchEvent(new CustomEvent('massfront:exploration-ready'));}catch(e){}
   })();
 
   mfBindTap($('armoryBtn'),()=>{
@@ -2556,7 +2607,7 @@ function wire(){
     if(typeof renderOps==='function') renderOps();
     showFrontScreen('setupScr'); };
   window.openSkirmishSetup=()=>window.openPlanetarySetup('standard');
-  mfBindTap($('startBtn'),()=>{ initAudio(); sfx('ui');
+  const openLegacyWarRoom=()=>{
     /* Very old installs predate the War Room shell entirely (#warScr does not
        exist in their APK), so opening it would dead-end. Fall back to Battle
        Setup — where the planet/region picker lives — and the button works on
@@ -2565,6 +2616,12 @@ function wire(){
       if(typeof renderWarRoom==='function') renderWarRoom();
       showFrontScreen('warScr');
     } else if(typeof openSkirmishSetup==='function') openSkirmishSetup();
+  };
+  mfBindTap($('startBtn'),()=>{ initAudio(); sfx('ui');
+    /* Experimental Galactic is a Settings side door. START always keeps the
+       installed home → War Room → Standard table. Hijacking this button made
+       the experiment look like it had replaced the menu. */
+    openLegacyWarRoom();
   });
   mfBindTap($('warBack'),()=>{ sfx('ui');
     renderMetaHead(); showFrontScreen('startScreen'); });
@@ -2590,7 +2647,15 @@ function wire(){
        Training already, but an older OTA shell or a deep-linked setup screen can
        bypass that entry point. Do the inexpensive idempotent cleanup again here
        so KEEL objectives and Training's borrowed rules can never ride into a
-       Standard battle. */
+       Standard battle. needsTraining does NOT auto-start on this path — that
+       would replace FIRST CONTACT with KEEL. Only an explicit onboarding
+       Training choice may divert START BATTLE into startTrainingMission. */
+    const choseTraining=typeof META!=='undefined'&&META.onboarding&&META.onboarding.choice==='training';
+    const needTrain=typeof needsTraining==='function'&&needsTraining();
+    if(activeWarMode==='standard'&&choseTraining&&needTrain&&typeof resumeTrainingMission==='function'){
+      resumeTrainingMission();
+      return;
+    }
     if(activeWarMode==='standard'&&typeof cancelTrainingMission==='function') cancelTrainingMission();
     /* Training restore rewinds live globals. The buttons still show the plan
        the player just set — copy them back before META.setup is written. */
