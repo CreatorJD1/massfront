@@ -1,0 +1,75 @@
+/* Authored War Table planet materials.
+   Save-stable world keys stay owned by PLANETS in gl.js; this file contains
+   presentation only and can therefore fall back without touching campaign or
+   replay state.  Every family follows the exploration renderer's aligned
+   basecolor/normal/ORM/height/emissive/cloud contract. */
+const MF_PLANET_ART_V1=Object.freeze({
+  schema:'MFPlanetArtV1',
+  version:1,
+  worlds:Object.freeze({
+    aelos:Object.freeze({
+      semantic:'temperate-civic-capital',
+      atmosphere:[0.24,0.72,1.0],
+      cloudTint:[0.92,0.98,1.0],
+      cloudOpacity:0.58,
+      emissive:1.10,
+      physicalRings:false,
+      channels:Object.freeze({
+        basecolor:'assets/textures/planets/war-table/aelos-basecolor-v1.png',
+        normal:'assets/textures/planets/war-table/aelos-normal-v1.png',
+        orm:'assets/textures/planets/war-table/aelos-orm-v1.png',
+        height:'assets/textures/planets/war-table/aelos-height-v1.png',
+        emissive:'assets/textures/planets/war-table/aelos-emissive-v1.png',
+        clouds:'assets/textures/planets/war-table/aelos-clouds-v1.png'
+      })
+    }),
+    pyraeth:Object.freeze({
+      semantic:'dusk-storm-foundry',
+      atmosphere:[1.0,0.28,0.16],
+      cloudTint:[0.70,0.43,0.34],
+      cloudOpacity:0.66,
+      emissive:1.45,
+      physicalRings:false,
+      channels:Object.freeze({
+        basecolor:'assets/textures/planets/war-table/pyraeth-basecolor-v1.png',
+        normal:'assets/textures/planets/war-table/pyraeth-normal-v1.png',
+        orm:'assets/textures/planets/war-table/pyraeth-orm-v1.png',
+        height:'assets/textures/planets/war-table/pyraeth-height-v1.png',
+        emissive:'assets/textures/planets/war-table/pyraeth-emissive-v1.png',
+        clouds:'assets/textures/planets/war-table/pyraeth-clouds-v1.png'
+      })
+    }),
+    nordhall:Object.freeze({
+      semantic:'glacial-machine-vault',
+      atmosphere:[0.30,0.90,0.72],
+      cloudTint:[0.86,0.94,1.0],
+      cloudOpacity:0.42,
+      emissive:1.30,
+      physicalRings:false,
+      channels:Object.freeze({
+        basecolor:'assets/textures/planets/war-table/nordhall-basecolor-v1.png',
+        normal:'assets/textures/planets/war-table/nordhall-normal-v1.png',
+        orm:'assets/textures/planets/war-table/nordhall-orm-v1.png',
+        height:'assets/textures/planets/war-table/nordhall-height-v1.png',
+        emissive:'assets/textures/planets/war-table/nordhall-emissive-v1.png',
+        clouds:'assets/textures/planets/war-table/nordhall-clouds-v1.png'
+      })
+    }),
+    vespera:Object.freeze({
+      semantic:'brood-volcanic-hive',
+      atmosphere:[0.78,0.20,1.0],
+      cloudTint:[0.44,0.23,0.30],
+      cloudOpacity:0.38,
+      emissive:1.70,
+      physicalRings:false,
+      channels:Object.freeze({
+        basecolor:'assets/textures/planets/war-table/vespera-basecolor-v1.png',
+        normal:'assets/textures/planets/war-table/vespera-normal-v1.png',
+        orm:'assets/textures/planets/war-table/vespera-orm-v1.png',
+        height:'assets/textures/planets/war-table/vespera-height-v1.png',
+        emissive:'assets/textures/planets/war-table/vespera-emissive-v1.png',
+        clouds:'assets/textures/planets/war-table/vespera-clouds-v1.png'
+      })
+    })
+  })
+});

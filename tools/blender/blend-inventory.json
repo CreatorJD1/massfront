@@ -1,0 +1,779 @@
+[
+  {
+    "file": "modules/space_exploration/assets/source/blender/massfront-showcase-contacts.blend",
+    "sizeMB": 7.2,
+    "meshObjects": 457,
+    "modules": 0,
+    "triangles": 102854,
+    "byKind": {
+      "other-mesh": {
+        "objects": 457,
+        "tris": 102854,
+        "examples": [
+          "LOD0_aelos_embassy_spindle__axial_habitat",
+          "LOD0_aelos_embassy_spindle__civic_ring",
+          "LOD0_aelos_embassy_spindle__embassy_wing_1"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 209,
+    "materials": 10
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/nexus-vii-civilization-ship.blend",
+    "sizeMB": 5.6,
+    "meshObjects": 94,
+    "modules": 0,
+    "triangles": 14396,
+    "byKind": {
+      "other-mesh": {
+        "objects": 94,
+        "tris": 14396,
+        "examples": [
+          "NexusVII_ArmoredProw",
+          "NexusVII_ArmorRail_1",
+          "NexusVII_ArmorRail_2"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 11,
+    "materials": 6
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/uga-civilization-ark.blend",
+    "sizeMB": 5.5,
+    "meshObjects": 76,
+    "modules": 0,
+    "triangles": 8828,
+    "byKind": {
+      "other-mesh": {
+        "objects": 76,
+        "tris": 8828,
+        "examples": [
+          "Ark_ArmoredProw",
+          "Ark_ArmorRail_1",
+          "Ark_ArmorRail_2"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 7,
+    "materials": 4
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/uga-command-cutaway.blend",
+    "sizeMB": 25.4,
+    "meshObjects": 911,
+    "modules": 0,
+    "triangles": 39912,
+    "byKind": {
+      "other-mesh": {
+        "objects": 820,
+        "tris": 35228,
+        "examples": [
+          "BUILD_engineering_tier1_Foundation",
+          "BUILD_engineering_tier1_Frame_1",
+          "BUILD_engineering_tier1_Frame_2"
+        ]
+      },
+      "nav-proxy": {
+        "objects": 86,
+        "tris": 4516,
+        "examples": [
+          "BUILD_navigation_tier1_Foundation",
+          "BUILD_navigation_tier1_Frame_1",
+          "BUILD_navigation_tier1_Frame_2"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 5,
+        "tris": 168,
+        "examples": [
+          "command_GlazedConnectorFloor",
+          "factions_AccordTunnelFloor",
+          "hangar_GlazedConnectorFloor"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 788,
+    "materials": 34
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/mf-building-hs-v1.blend",
+    "sizeMB": 14.0,
+    "meshObjects": 144,
+    "modules": 36,
+    "triangles": 520301,
+    "byKind": {
+      "collision": {
+        "objects": 36,
+        "tris": 12956,
+        "examples": [
+          "MF_BLD_HS_brutalist_arcology_stack_COL",
+          "MF_BLD_HS_brutalist_civic_hall_COL",
+          "MF_BLD_HS_brutalist_corner_infill_COL"
+        ]
+      },
+      "model-lod0": {
+        "objects": 36,
+        "tris": 326860,
+        "examples": [
+          "MF_BLD_HS_brutalist_arcology_stack_LOD0",
+          "MF_BLD_HS_brutalist_civic_hall_LOD0",
+          "MF_BLD_HS_brutalist_corner_infill_LOD0"
+        ]
+      },
+      "lod-tier": {
+        "objects": 72,
+        "tris": 180485,
+        "examples": [
+          "MF_BLD_HS_brutalist_arcology_stack_LOD1",
+          "MF_BLD_HS_brutalist_arcology_stack_LOD2",
+          "MF_BLD_HS_brutalist_civic_hall_LOD1"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 24
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/mf-cityforms-kit-v1.blend",
+    "sizeMB": 8.5,
+    "meshObjects": 466,
+    "modules": 72,
+    "triangles": 496516,
+    "byKind": {
+      "collision": {
+        "objects": 72,
+        "tris": 864,
+        "examples": [
+          "MF_FORMS_V1_BRUTALIST_ANTENNA_FARM_COLLISION",
+          "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_COLLISION",
+          "MF_FORMS_V1_BRUTALIST_BRIDGE_BLOCK_COLLISION"
+        ]
+      },
+      "model-lod0": {
+        "objects": 72,
+        "tris": 334022,
+        "examples": [
+          "MF_FORMS_V1_brutalist_antenna_farm_LOD0",
+          "MF_FORMS_V1_brutalist_blade_tower_LOD0",
+          "MF_FORMS_V1_brutalist_bridge_block_LOD0"
+        ]
+      },
+      "proof-tiling": {
+        "objects": 177,
+        "tris": 103536,
+        "examples": [
+          "MF_FORMS_V1_brutalist_antenna_farm_LOD0_BASE_BLOCK.001",
+          "MF_FORMS_V1_brutalist_antenna_farm_LOD0_DISH.001",
+          "MF_FORMS_V1_brutalist_antenna_farm_LOD0_DISH_MAST.001"
+        ]
+      },
+      "lod-tier": {
+        "objects": 144,
+        "tris": 58092,
+        "examples": [
+          "MF_FORMS_V1_brutalist_antenna_farm_LOD1",
+          "MF_FORMS_V1_brutalist_antenna_farm_LOD2",
+          "MF_FORMS_V1_brutalist_blade_tower_LOD1"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 2,
+        "examples": [
+          "MF_FORMS_V1_EVIDENCE_FLOOR"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 25
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-ground-kit-v1/mf-ground-kit-v1.blend",
+    "sizeMB": 0.7,
+    "meshObjects": 374,
+    "modules": 36,
+    "triangles": 40958,
+    "byKind": {
+      "collision": {
+        "objects": 36,
+        "tris": 432,
+        "examples": [
+          "MF_GROUND_V1_BRUTALIST_LANDING_PAD_COLLISION",
+          "MF_GROUND_V1_BRUTALIST_PLAZA_CORNER_COLLISION",
+          "MF_GROUND_V1_BRUTALIST_PLAZA_DECK_COLLISION"
+        ]
+      },
+      "model-lod0": {
+        "objects": 36,
+        "tris": 16704,
+        "examples": [
+          "MF_GROUND_V1_brutalist_landing_pad_LOD0",
+          "MF_GROUND_V1_brutalist_plaza_corner_LOD0",
+          "MF_GROUND_V1_brutalist_plaza_deck_LOD0"
+        ]
+      },
+      "proof-tiling": {
+        "objects": 229,
+        "tris": 15180,
+        "examples": [
+          "MF_GROUND_V1_brutalist_landing_pad_LOD0_APPROACH_LIGHT.001",
+          "MF_GROUND_V1_brutalist_landing_pad_LOD0_PAD_MARKING.002",
+          "MF_GROUND_V1_brutalist_landing_pad_LOD0_PAD_MARKING.003"
+        ]
+      },
+      "lod-tier": {
+        "objects": 72,
+        "tris": 8640,
+        "examples": [
+          "MF_GROUND_V1_brutalist_landing_pad_LOD1",
+          "MF_GROUND_V1_brutalist_landing_pad_LOD2",
+          "MF_GROUND_V1_brutalist_plaza_corner_LOD1"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 2,
+        "examples": [
+          "MF_GROUND_V1_EVIDENCE_FLOOR"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 22
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/mf-modular-building-v1.blend",
+    "sizeMB": 5.8,
+    "meshObjects": 532,
+    "modules": 36,
+    "triangles": 328048,
+    "byKind": {
+      "collision": {
+        "objects": 36,
+        "tris": 576,
+        "examples": [
+          "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_COLLISION",
+          "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_COLLISION",
+          "MF_MODBLD_V1_BRUTALIST_CORNER_INFILL_COLLISION"
+        ]
+      },
+      "model-lod0": {
+        "objects": 36,
+        "tris": 199762,
+        "examples": [
+          "MF_MODBLD_V1_brutalist_arcology_stack_LOD0",
+          "MF_MODBLD_V1_brutalist_civic_hall_LOD0",
+          "MF_MODBLD_V1_brutalist_corner_infill_LOD0"
+        ]
+      },
+      "lod-tier": {
+        "objects": 72,
+        "tris": 36728,
+        "examples": [
+          "MF_MODBLD_V1_brutalist_arcology_stack_LOD1",
+          "MF_MODBLD_V1_brutalist_arcology_stack_LOD2",
+          "MF_MODBLD_V1_brutalist_civic_hall_LOD1"
+        ]
+      },
+      "proof-tiling": {
+        "objects": 387,
+        "tris": 90980,
+        "examples": [
+          "MF_MODBLD_V1_brutalist_civic_hall_LOD0_ARMOUR_PLATE.001",
+          "MF_MODBLD_V1_brutalist_civic_hall_LOD0_BASE_BLOCK.001",
+          "MF_MODBLD_V1_brutalist_civic_hall_LOD0_COLONNADE.001"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 2,
+        "examples": [
+          "MF_MODBLD_V1_EVIDENCE_FLOOR"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 23
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/mf-modular-road-v1.blend",
+    "sizeMB": 0.8,
+    "meshObjects": 29,
+    "modules": 7,
+    "triangles": 51214,
+    "byKind": {
+      "collision": {
+        "objects": 7,
+        "tris": 212,
+        "examples": [
+          "COLLISION_CORNER",
+          "COLLISION_ENDCAP",
+          "COLLISION_GATE"
+        ]
+      },
+      "model-lod0": {
+        "objects": 7,
+        "tris": 35412,
+        "examples": [
+          "MF_MODROAD_V1_corner_LOD0",
+          "MF_MODROAD_V1_endcap_LOD0",
+          "MF_MODROAD_V1_gate_LOD0"
+        ]
+      },
+      "lod-tier": {
+        "objects": 14,
+        "tris": 15588,
+        "examples": [
+          "MF_MODROAD_V1_corner_LOD1",
+          "MF_MODROAD_V1_corner_LOD2",
+          "MF_MODROAD_V1_endcap_LOD1"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 2,
+        "examples": [
+          "MF_MODROAD_V1_EVIDENCE_FLOOR"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 10
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-platform-hs-v1/mf-platform-hs-v1.blend",
+    "sizeMB": 4.3,
+    "meshObjects": 183,
+    "modules": 30,
+    "triangles": 156290,
+    "byKind": {
+      "collision": {
+        "objects": 30,
+        "tris": 11932,
+        "examples": [
+          "MF_PLAT_HS_brutalist_bridge_deck_COL",
+          "MF_PLAT_HS_brutalist_build_platform_COL",
+          "MF_PLAT_HS_brutalist_bunker_base_COL"
+        ]
+      },
+      "model-lod0": {
+        "objects": 30,
+        "tris": 97128,
+        "examples": [
+          "MF_PLAT_HS_brutalist_bridge_deck_LOD0",
+          "MF_PLAT_HS_brutalist_build_platform_LOD0",
+          "MF_PLAT_HS_brutalist_bunker_base_LOD0"
+        ]
+      },
+      "lod-tier": {
+        "objects": 60,
+        "tris": 47104,
+        "examples": [
+          "MF_PLAT_HS_brutalist_bridge_deck_LOD1",
+          "MF_PLAT_HS_brutalist_bridge_deck_LOD2",
+          "MF_PLAT_HS_brutalist_build_platform_LOD1"
+        ]
+      },
+      "nav-proxy": {
+        "objects": 63,
+        "tris": 126,
+        "examples": [
+          "MF_PLAT_HS_brutalist_bridge_deck_NAV0",
+          "MF_PLAT_HS_brutalist_build_platform_NAV0",
+          "MF_PLAT_HS_brutalist_bunker_base_NAV0"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 24
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-road-junctions-v1/mf-road-junctions-v1.blend",
+    "sizeMB": 6.9,
+    "meshObjects": 1321,
+    "modules": 7,
+    "triangles": 215988,
+    "byKind": {
+      "factory-leftover": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "Cube"
+        ]
+      },
+      "collision": {
+        "objects": 5,
+        "tris": 180,
+        "examples": [
+          "MF_HF_JUNCTION_V1_CORNER_90_COLLISION",
+          "MF_HF_JUNCTION_V1_PRIMARY_LOCAL_ADAPTER_COLLISION",
+          "MF_HF_JUNCTION_V1_STRAIGHT_ENDCAP_COLLISION"
+        ]
+      },
+      "model-lod0": {
+        "objects": 639,
+        "tris": 159996,
+        "examples": [
+          "MF_HF_JUNCTION_V1_CORNER_90_LOD0_CLOSED_N_FRAME",
+          "MF_HF_JUNCTION_V1_CORNER_90_LOD0_CLOSED_N_GUIDE_00",
+          "MF_HF_JUNCTION_V1_CORNER_90_LOD0_CLOSED_N_GUIDE_01"
+        ]
+      },
+      "lod-tier": {
+        "objects": 670,
+        "tris": 55608,
+        "examples": [
+          "MF_HF_JUNCTION_V1_CORNER_90_LOD1_CLOSED_N_FRAME",
+          "MF_HF_JUNCTION_V1_CORNER_90_LOD1_CLOSED_N_GUIDE_00",
+          "MF_HF_JUNCTION_V1_CORNER_90_LOD1_CLOSED_N_GUIDE_01"
+        ]
+      },
+      "nav-proxy": {
+        "objects": 5,
+        "tris": 180,
+        "examples": [
+          "MF_HF_JUNCTION_V1_CORNER_90_NAV",
+          "MF_HF_JUNCTION_V1_PRIMARY_LOCAL_ADAPTER_NAV",
+          "MF_HF_JUNCTION_V1_STRAIGHT_ENDCAP_NAV"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "MF_HF_JUNCTION_V1_EVIDENCE_FLOOR"
+        ]
+      }
+    },
+    "renderableWithoutUV": 1308,
+    "renderableFlatShaded": 1308,
+    "materials": 20
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/mf-road-straight-hunyuan-clean-v1.blend",
+    "sizeMB": 9.4,
+    "meshObjects": 20,
+    "modules": 2,
+    "triangles": 145919,
+    "byKind": {
+      "factory-leftover": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "Cube"
+        ]
+      },
+      "other-mesh": {
+        "objects": 2,
+        "tris": 79988,
+        "examples": [
+          "MF_HF_ROAD_CLEAN_V1_CLEAN_BASE",
+          "MF_HF_ROAD_CLEAN_V1_REFERENCE_HIGH"
+        ]
+      },
+      "collision": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "MF_HF_ROAD_CLEAN_V1_COLLISION"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "MF_HF_ROAD_CLEAN_V1_EVIDENCE_FLOOR"
+        ]
+      },
+      "model-lod0": {
+        "objects": 5,
+        "tris": 40708,
+        "examples": [
+          "MF_HF_ROAD_CLEAN_V1_LOD0_CYAN_CHANNELS",
+          "MF_HF_ROAD_CLEAN_V1_LOD0_FOUR_LANE_MARKINGS",
+          "MF_HF_ROAD_CLEAN_V1_LOD0_JOINT_BANDS"
+        ]
+      },
+      "lod-tier": {
+        "objects": 9,
+        "tris": 25175,
+        "examples": [
+          "MF_HF_ROAD_CLEAN_V1_LOD1_CYAN_CHANNELS",
+          "MF_HF_ROAD_CLEAN_V1_LOD1_FOUR_LANE_MARKINGS",
+          "MF_HF_ROAD_CLEAN_V1_LOD1_JOINT_BANDS"
+        ]
+      },
+      "nav-proxy": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "MF_HF_ROAD_CLEAN_V1_NAV_PROXY"
+        ]
+      }
+    },
+    "renderableWithoutUV": 11,
+    "renderableFlatShaded": 11,
+    "materials": 9
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/mf-superstructure-v1.blend",
+    "sizeMB": 8.5,
+    "meshObjects": 601,
+    "modules": 57,
+    "triangles": 520941,
+    "byKind": {
+      "collision": {
+        "objects": 57,
+        "tris": 1656,
+        "examples": [
+          "MF_SUPER_V1_BRUTALIST_ARCOLOGY_PYLON_COLLISION",
+          "MF_SUPER_V1_BRUTALIST_PLATFORM_CAUSEWAY_COLLISION",
+          "MF_SUPER_V1_BRUTALIST_PLATFORM_DECK_COLLISION"
+        ]
+      },
+      "model-lod0": {
+        "objects": 57,
+        "tris": 343029,
+        "examples": [
+          "MF_SUPER_V1_brutalist_arcology_pylon_LOD0",
+          "MF_SUPER_V1_brutalist_platform_causeway_LOD0",
+          "MF_SUPER_V1_brutalist_platform_deck_LOD0"
+        ]
+      },
+      "proof-tiling": {
+        "objects": 370,
+        "tris": 123896,
+        "examples": [
+          "MF_SUPER_V1_brutalist_arcology_pylon_LOD0_BUTTRESS_LEG.001",
+          "MF_SUPER_V1_brutalist_arcology_pylon_LOD0_COPING.001",
+          "MF_SUPER_V1_brutalist_arcology_pylon_LOD0_CORNICE_REVEAL.001"
+        ]
+      },
+      "lod-tier": {
+        "objects": 114,
+        "tris": 52354,
+        "examples": [
+          "MF_SUPER_V1_brutalist_arcology_pylon_LOD1",
+          "MF_SUPER_V1_brutalist_arcology_pylon_LOD2",
+          "MF_SUPER_V1_brutalist_platform_causeway_LOD1"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 3,
+        "tris": 6,
+        "examples": [
+          "MF_SUPER_V1_EVIDENCE_LAND",
+          "MF_SUPER_V1_EVIDENCE_SEABED",
+          "MF_SUPER_V1_EVIDENCE_WATER"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 28
+  },
+  {
+    "file": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/mf-transit-kit-v1.blend",
+    "sizeMB": 3.1,
+    "meshObjects": 344,
+    "modules": 54,
+    "triangles": 170551,
+    "byKind": {
+      "collision": {
+        "objects": 54,
+        "tris": 1296,
+        "examples": [
+          "MF_TRANSIT_V1_BRUTALIST_EDGE_BUTTRESS_COLLISION",
+          "MF_TRANSIT_V1_BRUTALIST_EDGE_CORNER_COLLISION",
+          "MF_TRANSIT_V1_BRUTALIST_EDGE_DOCK_COLLISION"
+        ]
+      },
+      "model-lod0": {
+        "objects": 54,
+        "tris": 107677,
+        "examples": [
+          "MF_TRANSIT_V1_brutalist_edge_buttress_LOD0",
+          "MF_TRANSIT_V1_brutalist_edge_corner_LOD0",
+          "MF_TRANSIT_V1_brutalist_edge_dock_LOD0"
+        ]
+      },
+      "lod-tier": {
+        "objects": 108,
+        "tris": 25360,
+        "examples": [
+          "MF_TRANSIT_V1_brutalist_edge_buttress_LOD1",
+          "MF_TRANSIT_V1_brutalist_edge_buttress_LOD2",
+          "MF_TRANSIT_V1_brutalist_edge_corner_LOD1"
+        ]
+      },
+      "proof-tiling": {
+        "objects": 127,
+        "tris": 36216,
+        "examples": [
+          "MF_TRANSIT_V1_brutalist_flyover_interchange_LOD0_LANE_MARKING.001",
+          "MF_TRANSIT_V1_brutalist_flyover_interchange_LOD0_PYLON.001",
+          "MF_TRANSIT_V1_brutalist_flyover_interchange_LOD0_PYLON_HEAD.001"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 2,
+        "examples": [
+          "MF_TRANSIT_V1_EVIDENCE_FLOOR"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 0,
+    "materials": 23
+  },
+  {
+    "file": "source-media/material-v2/nova-factory-v2/nova-factory-v2-baked.blend",
+    "sizeMB": 3.0,
+    "meshObjects": 98,
+    "modules": 0,
+    "triangles": 11424,
+    "byKind": {
+      "other-mesh": {
+        "objects": 97,
+        "tris": 11412,
+        "examples": [
+          "anchor_-27_-20",
+          "anchor_-27_20",
+          "anchor_27_-20"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "assembly_floor"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 75,
+    "materials": 24
+  },
+  {
+    "file": "source-media/material-v2/nova-factory-v2/nova-factory-v2.blend",
+    "sizeMB": 1.7,
+    "meshObjects": 97,
+    "modules": 0,
+    "triangles": 2030,
+    "byKind": {
+      "other-mesh": {
+        "objects": 96,
+        "tris": 2018,
+        "examples": [
+          "anchor_-27_-20",
+          "anchor_-27_20",
+          "anchor_27_-20"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 1,
+        "tris": 12,
+        "examples": [
+          "assembly_floor"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 75,
+    "materials": 14
+  },
+  {
+    "file": "source-media/material-v2/nova-heavy-tank-v2/nova-heavy-tank-v2-baked.blend",
+    "sizeMB": 3.9,
+    "meshObjects": 218,
+    "modules": 0,
+    "triangles": 15386,
+    "byKind": {
+      "other-mesh": {
+        "objects": 218,
+        "tris": 15386,
+        "examples": [
+          "barrel_collar_-1_0",
+          "barrel_collar_-1_1",
+          "barrel_collar_-1_2"
+        ]
+      }
+    },
+    "renderableWithoutUV": 3,
+    "renderableFlatShaded": 128,
+    "materials": 24
+  },
+  {
+    "file": "source-media/material-v2/nova-heavy-tank-v2/nova-heavy-tank-v2.blend",
+    "sizeMB": 2.4,
+    "meshObjects": 217,
+    "modules": 0,
+    "triangles": 6132,
+    "byKind": {
+      "other-mesh": {
+        "objects": 217,
+        "tris": 6132,
+        "examples": [
+          "barrel_collar_-1_0",
+          "barrel_collar_-1_1",
+          "barrel_collar_-1_2"
+        ]
+      }
+    },
+    "renderableWithoutUV": 3,
+    "renderableFlatShaded": 128,
+    "materials": 14
+  },
+  {
+    "file": "tmp/material-art/uga-deck-floor-v3/blender-source/uga-command-cutaway.blend",
+    "sizeMB": 34.7,
+    "meshObjects": 911,
+    "modules": 0,
+    "triangles": 39912,
+    "byKind": {
+      "other-mesh": {
+        "objects": 820,
+        "tris": 35228,
+        "examples": [
+          "BUILD_engineering_tier1_Foundation",
+          "BUILD_engineering_tier1_Frame_1",
+          "BUILD_engineering_tier1_Frame_2"
+        ]
+      },
+      "nav-proxy": {
+        "objects": 86,
+        "tris": 4516,
+        "examples": [
+          "BUILD_navigation_tier1_Foundation",
+          "BUILD_navigation_tier1_Frame_1",
+          "BUILD_navigation_tier1_Frame_2"
+        ]
+      },
+      "evidence-rig": {
+        "objects": 5,
+        "tris": 168,
+        "examples": [
+          "command_GlazedConnectorFloor",
+          "factions_AccordTunnelFloor",
+          "hangar_GlazedConnectorFloor"
+        ]
+      }
+    },
+    "renderableWithoutUV": 0,
+    "renderableFlatShaded": 788,
+    "materials": 34
+  }
+]

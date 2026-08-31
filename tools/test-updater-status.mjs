@@ -1,6 +1,7 @@
 /* Focused regression for the two update-channel version directions.
    Usage: node tools/test-updater-status.mjs [local URL] */
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import {installOfflineNetworkIsolation} from './offline-network-isolation.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -16,7 +17,8 @@ await mkdir(outDir,{recursive:true});
 const browser=await launchPwBrowser({headless:true,executablePath:chrome,
   args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']});
 try{
-  const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
+  const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark',serviceWorkers:'block'});
+  const networkIsolation=await installOfflineNetworkIsolation(page);
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>typeof renderUpdatePanel==='function'&&typeof updSet==='function',null,{timeout:60000});
@@ -44,5 +46,6 @@ try{
   assert(states.touch.w>=44&&states.touch.h>=44,'update control is below the 44px touch floor');
   assert(errors.length===0,'page errors: '+errors.join(' | '));
   await page.screenshot({path:shot,fullPage:false,timeout:60000});
-  console.log(JSON.stringify({ok:true,states,screenshot:shot},null,2));
+  const networkEvidence=await networkIsolation.finalize('updater status regression');
+  console.log(JSON.stringify({ok:true,states,screenshot:shot,networkIsolation:networkEvidence},null,2));
 }finally{await browser.close();}

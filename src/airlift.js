@@ -401,6 +401,17 @@ showUnitCard=function(uIdx,bIdx,pinned){
   if(chip)chip.innerHTML='<i>▦</i>'+H.used+' / '+H.capacity+' SLOTS';
 };
 
+/* Extension production cards must obey the same release/drag contract as the
+   core roster. Mark them locally safe only after mfBindTap owns the gesture;
+   the pointerdown fallback stays unmarked so input.js guards and replays it on
+   a completed release instead of trusting an unsafe caller. */
+function mfAirliftBindReleaseCard(d,fn){
+  if(typeof mfBindTap==='function'){
+    d.dataset.mfReleaseSafe='1';
+    mfBindTap(d,fn);
+  }else d.addEventListener('pointerdown',fn);
+}
+
 function mfAirliftRenderCard(){
   const g=$('prodGrid'),T=TYPES[MF_UT_AIRLIFT];g.innerHTML='';
   renderMenuRoleBrief('unit','transport',[MF_UT_AIRLIFT]);
@@ -410,7 +421,7 @@ function mfAirliftRenderCard(){
     +'<div class="cardPurpose">INFANTRY · CONSTRUCTORS · LIGHT VEHICLES</div>';
   d.setAttribute('role','button');d.setAttribute('aria-label','Build Atlas Skycrane heavy air transport, capacity 12 slots');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_AIRLIFT,48));d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{
+  mfAirliftBindReleaseCard(d,ev=>{
     ev.stopPropagation();if(openBld<0)return;const B=blds[openBld];
     if(B&&B.alive&&B.queue.length<30){B.queue.push(MF_UT_AIRLIFT);sfx('ui');renderQueue();}
   });
@@ -429,7 +440,7 @@ renderProdMenu=function(){
   b.innerHTML='<span class="tEm">⇩</span>AIRLIFT';b.setAttribute('aria-label','Air transport production');
   if(wants)for(const x of tr.querySelectorAll('.tabBtn'))x.classList.remove('on');
   if(wants)b.classList.add('on');
-  b.addEventListener('pointerdown',ev=>{ev.stopPropagation();prodTab='transport';sfx('ui');renderProdMenu();});
+  mfBindNativePress(b,ev=>{ev.stopPropagation();prodTab='transport';sfx('ui');renderProdMenu();});
   tr.appendChild(b);
   if(wants){prodTab='transport';mfAirliftRenderCard();}
   /* The transport also belongs in AIRCRAFT. A dedicated tab is discoverable
@@ -452,7 +463,7 @@ function mfAirliftAppendCard(g){
   d.setAttribute('aria-label','Build Atlas Skycrane heavy air transport, capacity '+T.transportCap+' slots');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_AIRLIFT,48));
   d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{
+  mfAirliftBindReleaseCard(d,ev=>{
     ev.stopPropagation();if(openBld<0)return;const B=blds[openBld];
     if(B&&B.alive&&B.queue.length<30){B.queue.push(MF_UT_AIRLIFT);sfx('ui');renderQueue();}
   });
@@ -489,7 +500,7 @@ function mfAirliftInitUI(){
   const row=$('tacRow');if(!row||$('mfUnloadBtn'))return;
   const b=document.createElement('button');b.type='button';b.className='cbtn mfAirliftOrder';b.id='mfUnloadBtn';
   b.style.display='none';b.innerHTML='<span class="em">⇩</span><span class="lbl">UNLOAD</span>';
-  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();const i=mfAirliftSelected();if(i>=0)mfAirliftArmUnload(i);});
+  mfBindNativePress(b,ev=>{ev.preventDefault();ev.stopPropagation();const i=mfAirliftSelected();if(i>=0)mfAirliftArmUnload(i);});
   row.insertBefore(b,$('clearBtn'));
   const st=document.createElement('style');st.textContent='\n'
     +'.mfAirliftIcon{filter:drop-shadow(0 0 7px rgba(90,220,255,.42)) drop-shadow(0 4px 4px rgba(0,0,0,.65))}.mfAirliftIcon svg{width:100%;height:100%;display:block}'
@@ -896,7 +907,7 @@ function mfMassRenderCard(){
     +'<div class="cardPurpose">MERGE · ASCEND · BIRTH BEHIND DEFENSES</div>';
   d.setAttribute('role','button');d.setAttribute('aria-label','Grow Massflesh Brood breakthrough carrier');
   const icw=document.createElement('div');icw.className='icw';icw.appendChild(unitIconEl(MF_UT_MASSFLESH,48));d.insertBefore(icw,d.firstChild);
-  d.addEventListener('pointerdown',ev=>{ev.stopPropagation();const B=openBld>=0?blds[openBld]:null;if(B&&bldFactionKey(B)==='horde'&&B.queue.length<30){B.queue.push(MF_UT_MASSFLESH);sfx('ui');renderQueue();}});
+  mfAirliftBindReleaseCard(d,ev=>{ev.stopPropagation();const B=openBld>=0?blds[openBld]:null;if(B&&bldFactionKey(B)==='horde'&&B.queue.length<30){B.queue.push(MF_UT_MASSFLESH);sfx('ui');renderQueue();}});
   addCardIntelButton(d,'unit',MF_UT_MASSFLESH);g.appendChild(d);
 }
 const mfMassRenderProdBase=renderProdMenu;
@@ -906,7 +917,7 @@ renderProdMenu=function(){
   const tr=$('prodTabs');tr.style.display='flex';const b=document.createElement('button');b.className='tabBtn'+(wants?' on':'');
   b.innerHTML='<span class="tEm">♒</span>MASSFLESH';b.setAttribute('aria-label','Brood living transport production');
   if(wants)for(const x of tr.querySelectorAll('.tabBtn'))x.classList.remove('on');
-  b.addEventListener('pointerdown',ev=>{ev.stopPropagation();prodTab='biomass';sfx('ui');renderProdMenu();});
+  mfBindNativePress(b,ev=>{ev.stopPropagation();prodTab='biomass';sfx('ui');renderProdMenu();});
   /* A faction-defining organism must not be hidden beyond the phone-width tab
      scroller.  Keep it first for Brood factories while leaving Terran clean. */
   tr.insertBefore(b,tr.firstChild);
@@ -956,10 +967,10 @@ function mfMassInitUI(){
   const row=$('tacRow');if(!row||$('mfMassActionBtn'))return;
   const b=document.createElement('button');b.type='button';b.id='mfMassActionBtn';b.className='cbtn mfMassAction';b.style.display='none';
   b.innerHTML='<span class="em">♒</span><span class="lbl">TAKE FLIGHT</span>';
-  b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();mfMassArmSelected();});
+  mfBindNativePress(b,ev=>{ev.preventDefault();ev.stopPropagation();mfMassArmSelected();});
   row.insertBefore(b,$('clearBtn'));
   const a=document.createElement('button');a.type='button';a.id='mfMassAlert';a.style.display='none';a.setAttribute('aria-label','Track inbound Massflesh breakthrough carrier');
-  a.addEventListener('pointerdown',()=>{const i=mfMassAlertUnit;if(i>=0&&ualive[i]){cam.x=ux[i];cam.y=uy[i];camFollow=i;clampCam();camUpdateMatrices();sfx('ui');}});document.body.appendChild(a);
+  mfBindNativePress(a,()=>{const i=mfMassAlertUnit;if(i>=0&&ualive[i]){cam.x=ux[i];cam.y=uy[i];camFollow=i;clampCam();camUpdateMatrices();sfx('ui');}});document.body.appendChild(a);
   const st=document.createElement('style');st.textContent='\n'
     +'.mfMassIcon{filter:drop-shadow(0 0 8px rgba(184,102,255,.5))}.mfMassIcon svg{width:100%;height:100%;display:block}'
     +'.mfMassCard{width:156px!important;min-height:176px}.mfMassBadges{display:flex;flex-wrap:wrap;justify-content:center;gap:3px;margin:3px 0}.mfMassBadges b{padding:3px 5px;border:1px solid rgba(185,112,255,.48);border-radius:4px;background:rgba(72,28,92,.42);color:#d9aaff;font:700 7px/1 var(--fT)}'
@@ -1018,5 +1029,3 @@ function mfAirliftAiTick(dt){
 }
 const mfAirliftAiTickBase=aiTick;
 aiTick=function(dt){ mfAirliftAiTick(dt); return mfAirliftAiTickBase(dt); };
-
-

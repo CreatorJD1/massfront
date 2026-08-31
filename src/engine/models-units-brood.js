@@ -54,6 +54,29 @@ function brdLimb(m){ return m.mat(MAT.LEAF).team(0); }
    Without a few of these patches a creature renders untinted and the player
    cannot tell whose army just walked over the ridge. */
 function brdLivery(m){ return m.mat(MAT.CHITIN).team(1); }
+/* ---- THE TWO THIN SURFACES ------------------------------------------------
+   The material id is not only the animation rig, it is also the only per-vertex
+   THICKNESS channel this engine has. VFLOATS is 12 and all twelve are spoken
+   for — position(3), normal(3), colour(3), uv(2), material(1) — and even the
+   material float's FRACTIONAL part is already the bone index. There is no
+   thirteenth attribute to add without paying for it on every wall, tank and
+   tree in the game, and mesh.js says so at length in its own note.
+
+   So thickness is AUTHORED HERE, by choosing the id: a wing is BROOD_MEMBRANE
+   and a carapace is CHITIN, and the fragment stage reads that as "light passes
+   through this / light does not". Which means the two helpers below are not
+   cosmetic tile choices — they are the difference between a wing that glows
+   when the sun is behind it and one that does not.
+
+   Unlike brdShell/brdLimb/brdLivery these deliberately DO NOT touch team():
+   they are called from inside brdFin/brdWing/brdBulb, which sit in the middle
+   of a caller's brdLivery(...)/m.team(0) bracket. Setting team here would
+   quietly strip the faction tint off every sac in the roster. */
+/* Membrane: wings, dorsal vanes, fins. Thin enough to see daylight through. */
+function brdMembrane(m){ return m.mat(MAT.BROOD_MEMBRANE); }
+/* Organ: sacs, bulbs, gravid abdomens — wet, thick-walled but still
+   translucent, the read a backlit egg sac has. */
+function brdOrgan(m){ return m.mat(MAT.BROOD_SLIME); }
 
 /* Local palette. Being absent from COL_MAT does NOT keep the primitive patch
    off the material we just declared: matDetect() consults COL_MAT first and
@@ -197,6 +220,15 @@ function brdScythe(m,x,y,z,side,reach,th,phase){
    --------------------------------------------------------------------------- */
 function brdBulb(m,x,y,z,r,lobes,col,seed){
   const nz=brdNoise(seed||29);
+  /* WET ORGAN, DECLARED. sculpt() is one of the UNPATCHED builders, so until
+     this line the sac inherited whatever material the last primitive left on
+     the builder — which happens to be CHITIN at all eight call sites today,
+     purely because every one of them is bracketed by brdLivery(). That made a
+     gravid abdomen exactly as optically thick as the armour plate over it, and
+     it was one refactor away from being something else entirely. Declaring it
+     costs one call and buys the sac its own thickness. team() is deliberately
+     untouched: the caller's brdLivery(...)/m.team(0) bracket owns the tint. */
+  brdOrgan(m);
   m.sculpt(x,y,z,12,9,(u,v)=>{
     const th=u*TAU, ph=v*Math.PI, st=Math.sin(ph), ct=Math.cos(ph);
     /* Lobes fade out at both poles so the surface stays closed and smooth
@@ -654,6 +686,14 @@ function brdFin(m,x,y,z,len,rise,th,rake,col,seam,seed){
   const nz=brdNoise(seed||71), lo=seam||BRD_SEAM;
   const CM=(typeof COL_MAT!=='undefined'&&COL_MAT.get(col));
   if(CM!=null) m.mat(CM);
+  /* MEMBRANE, DECLARED — not inferred from the paint colour. The COL_MAT
+     lookup two lines up reads `col`, which resolves BIO_MEM to BROOD_MEMBRANE
+     and is right for the Emberthroat's fan — and silently WRONG for the
+     Razorfinn, whose dorsal vane is authored CHITIN. That fin was carrying the
+     carapace's thickness and so could never light through, which is precisely
+     the failure this whole pass exists to remove. A fin is a membrane by
+     construction, so the surface says so instead of hoping the colour does. */
+  brdMembrane(m);
   m.sculpt(x,y,z,9,6,(u,v)=>{
     const ang=u*TAU, ph=v*Math.PI, st=Math.sin(ph), ct=Math.cos(ph);
     const ex=Math.cos(ang)*st, ey=(1-ct)*0.5, ez=Math.sin(ang)*st;
@@ -717,6 +757,9 @@ function brdWing(m,x,y,z,side,span,chord,th,sweep,col,seam,seed){
   const nz=brdNoise(seed||41), lo=seam||BRD_SEAM, S=side;
   const CM=(typeof COL_MAT!=='undefined'&&COL_MAT.get(col));
   if(CM!=null) m.mat(CM);
+  /* Same declaration as brdFin: a wing lobe is a membrane whatever it is
+     painted, and the id is the only per-vertex thickness channel there is. */
+  brdMembrane(m);
   m.sculpt(x,y,z,14,10,(u,v)=>{
     const ang=u*TAU, ph=v*Math.PI, st=Math.sin(ph), ct=Math.cos(ph);
     const ex=Math.cos(ang)*st, ez=Math.abs(Math.sin(ang)*st);

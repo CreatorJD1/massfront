@@ -1,0 +1,446 @@
+{
+  "schemaVersion": 1,
+  "libraryId": "nexus-vii-interior-material-decal-library-v1",
+  "shipId": "nexus-vii",
+  "status": "source_authoring_contract",
+  "authoredOn": "2026-08-25",
+  "scope": {
+    "sourceOnly": true,
+    "runtimeIntegrationAuthorized": false,
+    "authoringResolutionPx": [2048, 2048],
+    "bindingDomain": "interior",
+    "forbiddenMaterialIds": ["uga-hull"],
+    "forbiddenRoleNames": ["exterior_hull"],
+    "requiredDistrictCount": 11,
+    "requiredPhysicalBaseCount": 18,
+    "requiredTrimSheetCount": 8,
+    "requiredDecalAtlasCount": 8
+  },
+  "sourceEvidence": [
+    {
+      "path": "tmp/content-audit-pdf/NEXUS_VII_MATERIAL_DECAL_TAXONOMY_2026-08-25.md",
+      "sha256": "af05e406843cc574ea9ed1aa5ca6c0f092601da23e9006516f2b3bc1b8699cf8",
+      "role": "authoritative_taxonomy"
+    },
+    {
+      "path": "modules/space_exploration/src/domain/catalog.js",
+      "sha256": "0abdeb4a03541c6aae32831a2744e5bf31d56e2c19d3f44bd55e3637a1156059",
+      "role": "district_names_and_progression"
+    },
+    {
+      "path": "modules/space_exploration/src/domain/construction_catalog.js",
+      "sha256": "92af4b06ba9176b790a4beda9986fbac712d6c7698f265686a73ed110571b8d6",
+      "role": "facility_ids_and_specializations"
+    },
+    {
+      "path": "modules/space_exploration/assets/models/uga-command-cutaway.glb",
+      "sha256": "00c25f0021054597b006f90dde9bd0289c99b33bf8d783a40463bbc42fb9e87f",
+      "bytes": 81372160,
+      "role": "audited_runtime_baseline_only"
+    }
+  ],
+  "authoringPolicy": {
+    "intendedTool": "Spline.design MCP",
+    "origin": "original_project_authored",
+    "licenseRecordRequiredBeforeRuntime": true,
+    "sourceUriRequiredBeforeRuntime": true,
+    "sourceSha256RequiredBeforeRuntime": true,
+    "referenceUse": "genre_language_only",
+    "prohibitedReferenceUse": [
+      "copied logos",
+      "copied readable UI plates",
+      "copied warning graphics",
+      "production textures derived from protected game art"
+    ],
+    "comparativeReferences": [
+      { "title": "Command & Conquer 3: Tiberium Wars", "use": "industrial readability, civic-versus-military contrast, and bounded infestation storytelling" },
+      { "title": "Supreme Commander 2", "use": "RTS-scale silhouette hierarchy and modular fabrication language" },
+      { "title": "XCOM 2", "use": "functional ship-room identity, readable construction state, and human-scale props" },
+      { "title": "StarCraft", "use": "faction legibility and organic-containment contrast without copying assets or marks" }
+    ]
+  },
+  "channelProfiles": {
+    "base_trim_pbr_v1": {
+      "basecolor": { "suffix": "-basecolor.png", "colorSpace": "sRGB", "components": "RGB", "packing": { "RGB": "lighting_neutral_base_color" } },
+      "normal-height": { "suffix": "-normal-height.png", "colorSpace": "linear", "components": "RGBA", "packing": { "RGB": "gltf_opengl_tangent_normal", "A": "subtle_height" } },
+      "orm": { "suffix": "-orm.png", "colorSpace": "linear", "components": "RGB", "packing": { "R": "ambient_occlusion", "G": "roughness", "B": "metallic" } },
+      "emissive": { "suffix": "-emissive.png", "colorSpace": "sRGB", "components": "RGB", "packing": { "RGB": "physically_luminous_only_no_baked_halo" } },
+      "mask": { "suffix": "-mask.png", "colorSpace": "linear", "components": "RGBA", "packing": { "R": "district_tint", "G": "grime_receptivity", "B": "edge_wear_receptivity", "A": "wet_or_heat_response" }, "optional": true }
+    },
+    "decal_display_atlas_v1": {
+      "color-opacity": { "suffix": "-color-opacity.png", "colorSpace": "sRGB", "components": "RGBA", "packing": { "RGB": "decal_color", "A": "coverage" } },
+      "normal": { "suffix": "-normal.png", "colorSpace": "linear", "components": "RGB", "packing": { "RGB": "gltf_opengl_tangent_normal_flat_neutral_outside_coverage" } },
+      "orm": { "suffix": "-orm.png", "colorSpace": "linear", "components": "RGB", "packing": { "R": "ambient_occlusion", "G": "roughness", "B": "metallic" } },
+      "emissive": { "suffix": "-emissive.png", "colorSpace": "sRGB", "components": "RGB", "packing": { "RGB": "emission_black_for_non_emissive_marks" } }
+    }
+  },
+  "atlasLayoutContract": {
+    "dimensionsPx": [2048, 2048],
+    "gridColumns": 8,
+    "gridRows": 8,
+    "logicalCellPx": [252, 252],
+    "outerGutterPx": 16,
+    "edgeDilationPx": 8,
+    "allowedCellSpans": [[1, 1], [2, 1], [2, 2], [4, 1]],
+    "hardLabelBlendMode": "alpha_test",
+    "softOverlayBlendMode": "transparent",
+    "batching": "one_mesh_batch_per_atlas_material_per_deck_or_district"
+  },
+  "facilityMarkContract": {
+    "iconCellSizePx": [64, 128],
+    "requiredVariants": ["icon", "equipment_badge"],
+    "optionalVariants": ["illuminated_status_strip"],
+    "targetNodePattern": "FACILITY_<facility_id>"
+  },
+  "roleNames": {
+    "physicalBase": [
+      "interior_structure",
+      "pressure_bulkhead",
+      "pressure_door_hardware",
+      "clean_access_deck",
+      "transit_deck",
+      "heavy_duty_deck",
+      "service_grate",
+      "machinery_body",
+      "clean_ceramic",
+      "civic_composite",
+      "rubber_antislip",
+      "cargo_polymer",
+      "biophilic_resin",
+      "containment_coating",
+      "pressure_glazing",
+      "transit_glazing",
+      "display_glass",
+      "upholstery_acoustic"
+    ],
+    "trimSheet": [
+      "structure_trim",
+      "pressure_door_trim",
+      "services_trim",
+      "facility_trim",
+      "console_trim",
+      "transit_trim",
+      "civic_trim",
+      "industrial_trim"
+    ],
+    "decalAtlas": [
+      "universal_core_decals",
+      "deck_a_identity_decals",
+      "deck_b_identity_decals",
+      "deck_c_identity_decals",
+      "faction_identity_decals",
+      "construction_state_decals",
+      "wear_story_decals",
+      "static_display_plates"
+    ]
+  },
+  "physicalBases": [
+    { "id": "S01", "master": "uga-structure-gunmetal", "roleName": "interior_structure", "purpose": "Load-bearing frames, ribs, columns, and facility skeletons.", "predecessor": "refine uga-interior", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S02", "master": "uga-pressure-bulkhead", "roleName": "pressure_bulkhead", "purpose": "Wall cladding, sealed partitions, and pressure-door surrounds.", "predecessor": "upgrade uga-pressure-wall", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S03", "master": "uga-pressure-door-trim", "roleName": "pressure_door_hardware", "purpose": "Jambs, seals, threshold hardware, and access panels.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S04", "master": "uga-deck-access-clean", "roleName": "clean_access_deck", "purpose": "Low- and medium-traffic access floor panels.", "predecessor": "upgrade uga-deck-floor", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S05", "master": "uga-deck-transit", "roleName": "transit_deck", "purpose": "Concourses, branch lanes, and room circulation.", "predecessor": "upgrade uga-interior-transit", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S06", "master": "uga-deck-heavy-duty", "roleName": "heavy_duty_deck", "purpose": "Hangar, cargo, engineering, and foundry high-load slabs.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S07", "master": "uga-service-grate", "roleName": "service_grate", "purpose": "Trenches, drain runs, undercroft, and maintenance catwalks.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S08", "master": "uga-machinery-toolsteel", "roleName": "machinery_body", "purpose": "Consoles, cranes, reactors, racks, and forge bodies.", "predecessor": "replace flat Console Machinery", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S09", "master": "uga-clean-ceramic", "roleName": "clean_ceramic", "purpose": "Labs, medical spaces, clean instruments, and containment shells.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S10", "master": "uga-civic-composite", "roleName": "civic_composite", "purpose": "Habitat, embassy, and public-facing walls and furniture.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S11", "master": "uga-rubber-antislip", "roleName": "rubber_antislip", "purpose": "Landing pads, foot zones, stair treads, and equipment mats.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S12", "master": "uga-cargo-polymer", "roleName": "cargo_polymer", "purpose": "Containers, protective cases, probe racks, and lockers.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S13", "master": "uga-biophilic-resin", "roleName": "biophilic_resin", "purpose": "Habitat planters, hydroponic edges, and warm translucent insets.", "predecessor": "derive from civic-medical direction", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S14", "master": "uga-containment-coating", "roleName": "containment_coating", "purpose": "Sealed Brood or sample lab zones and decontamination rooms.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S15", "master": "uga-pressure-glazing", "roleName": "pressure_glazing", "purpose": "Pressure windows and facility window ribbons with three occupancy variants.", "predecessor": "retain and extend uga-window-glazing", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S16", "master": "uga-transit-glazing", "roleName": "transit_glazing", "purpose": "Glass tunnels and pressure connectors with a dedicated roughness and opacity preset.", "predecessor": "share S15 masks", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S17", "master": "uga-display-glass", "roleName": "display_glass", "purpose": "Holotables, consoles, and route or survey displays.", "predecessor": "upgrade Tactical Display Glass", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "S18", "master": "uga-upholstery-acoustic", "roleName": "upholstery_acoustic", "purpose": "Seating, civic panels, and medical or privacy panels.", "predecessor": "new", "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } }
+  ],
+  "trimSheets": [
+    { "id": "T01", "master": "uga-trim-structure", "roleName": "structure_trim", "content": ["beams", "reinforced corners", "riveted seams", "hatch rims", "column feet"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "T02", "master": "uga-trim-pressure-door", "roleName": "pressure_door_trim", "content": ["door seals", "lock teeth", "pressure indicators", "jamb lights", "bulkhead frames"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "T03", "master": "uga-trim-services", "roleName": "services_trim", "content": ["coolant", "air", "power", "data", "drainage", "cable trays", "vents", "inspection ports"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "T04", "master": "uga-trim-facility", "roleName": "facility_trim", "content": ["windows", "facade bands", "roof and crown caps", "equipment plinths", "balcony edges"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "T05", "master": "uga-trim-console", "roleName": "console_trim", "content": ["screen bezels", "key rails", "hand controls", "status bars", "instrument vents"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "T06", "master": "uga-trim-transit", "roleName": "transit_trim", "content": ["curb edges", "handrails", "stair noses", "lift thresholds", "glass-tunnel frames"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "T07", "master": "uga-trim-civic", "roleName": "civic_trim", "content": ["warm wall reveals", "acoustic strips", "planter rims", "consular bronze accents"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } },
+    { "id": "T08", "master": "uga-trim-industrial", "roleName": "industrial_trim", "content": ["crane rails", "heat shields", "forge lips", "high-current bus bars", "service gantries"], "dimensionsPx": [2048, 2048], "channelProfile": "base_trim_pbr_v1", "uvMode": "authored_strips", "cubeProjectionAllowed": false, "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null } }
+  ],
+  "decalAtlases": [
+    {
+      "id": "A00",
+      "master": "uga-decals-core",
+      "roleName": "universal_core_decals",
+      "content": ["UGA crest", "NEXUS-VII wordmark and silhouette", "deck A/B/C identifiers", "district-zone numbers", "pressure-door numbers", "hatch and service IDs", "evacuation bands", "accessibility route", "fire suppression", "oxygen and pressure warning", "electrical/data/coolant/air/greywater conduit labels", "inspection dates", "maintenance lockout", "no-step and no-load zones", "handhold markers", "floor lane dashes", "directional chevrons", "lift thresholds", "stair-edge strips", "emergency equipment outlines", "generic camera and sensor notice", "restrained wear patches"],
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    },
+    {
+      "id": "A01",
+      "master": "uga-decals-deck-a-command",
+      "roleName": "deck_a_identity_decals",
+      "contentByDistrict": {
+        "command": ["command-authority seal", "strategic theater sectors", "holotable radial coordinates", "executive station IDs", "continuity-vault seal", "alert-readiness bands", "Classic Modes terminal mark"],
+        "navigation": ["orbit rings", "route-node lattice", "approach corridor", "fuel-estimate ticks", "hazard-route bands", "helm station IDs", "emergency-return vector", "astrometric grid"],
+        "survey": ["sensor calibration circles", "spectral wavelength bands", "probe rack IDs", "scan-volume arcs", "anomaly quarantine marker", "sample intake labels", "telescope alignment reticle"],
+        "mission_ops": ["deployment grid", "landing-zone boxes", "operation readiness chevrons", "mission package IDs", "casualty and medevac routing", "debrief archive index", "theater-seat numbers"]
+      },
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    },
+    {
+      "id": "A02",
+      "master": "uga-decals-deck-b-science-industry",
+      "roleName": "deck_b_identity_decals",
+      "contentByDistrict": {
+        "research": ["clean-zone threshold", "biohazard and containment", "specimen IDs", "xenology sample seal", "gravitic calibration grid", "decon direction", "restricted Brood-containment warning", "project-bay numbers"],
+        "fabricator": ["forge-cell numbers", "hot-surface", "laser exclusion", "robotic-sweep envelope", "crane load limit", "alloy feed direction", "armory and rack IDs", "welding and repair patch marks"],
+        "engineering": ["high voltage", "reactor exclusion", "coolant flow", "magnetic-field hazard", "radiation caution", "pressure relief direction", "drive-harmonic calibration", "thermal ceiling", "breaker and panel IDs"]
+      },
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    },
+    {
+      "id": "A03",
+      "master": "uga-decals-deck-c-civil-operations",
+      "roleName": "deck_c_identity_decals",
+      "contentByDistrict": {
+        "habitat": ["residential block numbers", "pedestrian route", "clinic and triage", "recovery ward", "botanical zone", "potable water", "sanitation", "life-support access", "quiet zone", "emergency muster"],
+        "factions": ["Accord seal", "consular and security threshold", "delegation tower numbers", "trade promenade", "public and restricted route", "reception", "council chamber", "diplomatic archive"],
+        "hangar": ["landing-pad perimeter", "taxi centerline", "deck grid", "tie-down points", "no-step arcs", "intake and blast boundary", "Base Deployer silhouette and alignment", "Striker muster grid", "commander and specialist ready boxes", "medevac zone", "cargo mass and clearance limits"],
+        "logistics": ["freight-lane arrows", "cargo bay IDs", "pallet grid", "mass limits", "cryogenic warning", "probe/fuel/sample symbols", "automated sorting route", "forklift and drone exclusion", "container ownership and status bands"]
+      },
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    },
+    {
+      "id": "A04",
+      "master": "uga-decals-factions",
+      "roleName": "faction_identity_decals",
+      "contentByFaction": {
+        "uga": ["large crest", "small equipment mark", "lane stripe", "personnel muster icon", "embassy banner", "cargo ownership band"],
+        "nova": ["large crest", "small equipment mark", "lane stripe", "personnel muster icon", "embassy banner", "cargo ownership band"],
+        "dominion": ["large crest", "small equipment mark", "lane stripe", "personnel muster icon", "embassy banner", "cargo ownership band"],
+        "syndicate": ["large crest", "small equipment mark", "lane stripe", "personnel muster icon", "embassy banner", "cargo ownership band"]
+      },
+      "excludedOwnershipFactions": ["brood"],
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    },
+    {
+      "id": "A05",
+      "master": "uga-decals-construction-state",
+      "roleName": "construction_state_decals",
+      "content": ["queued hologram footprint", "foundation survey", "frame assembly", "machinery-install zone", "commissioning approval", "amber retrofit lockout", "power-paused marker", "capacity-blocked marker", "safety barrier", "temporary cable route", "unfinished-edge stripe", "inspection passed", "inspection failed", "salvage staging", "sealed-out-of-service panel"],
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    },
+    {
+      "id": "A06",
+      "master": "uga-decals-wear-story",
+      "roleName": "wear_story_decals",
+      "content": ["boot scuffs", "wheel and trolley tracks", "cargo scrape", "tie-down wear", "hydraulic and oil trace", "heat tint", "soot at exhaust and forge only", "coolant mineral stain", "clean repair patch", "rubbed handrail", "medical disinfected patch", "planter moisture edge", "glass cleaning streak"],
+      "rules": ["no universal grime layer", "no damage on newly commissioned surfaces", "apply only where traffic or function supports it"],
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    },
+    {
+      "id": "A07",
+      "master": "uga-displays-static",
+      "roleName": "static_display_plates",
+      "contentByDistrict": {
+        "command": ["command situation board"],
+        "navigation": ["navigation route chart"],
+        "survey": ["survey spectrogram"],
+        "mission_ops": ["mission deployment plan"],
+        "research": ["research sample readout"],
+        "fabricator": ["fabrication queue"],
+        "engineering": ["engineering reactor schematic"],
+        "habitat": ["habitat census and medical status"],
+        "factions": ["embassy standing board"],
+        "hangar": ["Strike Team manifest"],
+        "logistics": ["cargo inventory board"]
+      },
+      "authoritativeDynamicTextAllowed": false,
+      "dimensionsPx": [2048, 2048], "channelProfile": "decal_display_atlas_v1", "layout": "atlasLayoutContract", "provenance": { "status": "planned_unproduced", "origin": "original", "tool": "Spline.design MCP", "source": null, "sha256": null }, "runtime": { "status": "source_only_unbound", "domain": "interior", "asset": null }
+    }
+  ],
+  "districts": [
+    {
+      "id": "command", "name": "Command Core", "deck": "A", "fixed": true,
+      "materialIds": ["S04", "S02", "S01", "S10", "S17"], "trimIds": ["T01", "T02", "T05"], "requiredAtlasIds": ["A00", "A01", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["authority seal", "radial strategy grid", "theater sectors", "station IDs", "continuity-vault signage", "Classic terminal signage"],
+      "tierMarks": [
+        { "id": "district_command_t2_strategic_nexus", "tier": 2, "label": "Strategic Nexus", "atlasId": "A01", "slotId": "tier.command.t2", "targetNodeName": "DISTRICT_command" },
+        { "id": "district_command_t3_civilization_command", "tier": 3, "label": "Civilization Command", "atlasId": "A01", "slotId": "tier.command.t3", "targetNodeName": "DISTRICT_command" }
+      ],
+      "moduleMarks": [
+        { "id": "command_holotable", "label": "Strategic Holography Vault", "atlasId": "A01", "slotId": "module.command_holotable", "targetNodeName": "MODULE_command_holotable" },
+        { "id": "command_archive", "label": "Continuity Archive", "atlasId": "A01", "slotId": "module.command_archive", "targetNodeName": "MODULE_command_archive" },
+        { "id": "command_terminal", "label": "Classic Modes Terminal", "atlasId": "A01", "slotId": "module.command_terminal", "targetNodeName": "MODULE_command_terminal" }
+      ],
+      "facilityMarks": [], "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "navigation", "name": "Navigation Bridge", "deck": "A", "fixed": false,
+      "materialIds": ["S04", "S05", "S02", "S01", "S17"], "trimIds": ["T02", "T05", "T06"], "requiredAtlasIds": ["A00", "A01", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["route lattice", "orbit rings", "helm numbering", "hazard lanes", "emergency-return vector"],
+      "tierMarks": [
+        { "id": "district_navigation_t2_expedition_astrogation", "tier": 2, "label": "Expedition Astrogation", "atlasId": "A01", "slotId": "tier.navigation.t2", "targetNodeName": "DISTRICT_navigation" },
+        { "id": "district_navigation_t3_continuity_navigation", "tier": 3, "label": "Continuity Navigation", "atlasId": "A01", "slotId": "tier.navigation.t3", "targetNodeName": "DISTRICT_navigation" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "navigation_t2_efficient_routing", "tier": 2, "label": "Efficient Routing", "atlasId": "A01", "slotId": "facility.navigation_t2_efficient_routing", "targetNodeName": "FACILITY_navigation_t2_efficient_routing" },
+        { "id": "navigation_t2_transit_coordination", "tier": 2, "label": "Transit Coordination", "atlasId": "A01", "slotId": "facility.navigation_t2_transit_coordination", "targetNodeName": "FACILITY_navigation_t2_transit_coordination" },
+        { "id": "navigation_t3_fleet_lattice", "tier": 3, "label": "Fleet Route Lattice", "atlasId": "A01", "slotId": "facility.navigation_t3_fleet_lattice", "targetNodeName": "FACILITY_navigation_t3_fleet_lattice" },
+        { "id": "navigation_t3_continuity_scheduler", "tier": 3, "label": "Continuity Scheduler", "atlasId": "A01", "slotId": "facility.navigation_t3_continuity_scheduler", "targetNodeName": "FACILITY_navigation_t3_continuity_scheduler" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "survey", "name": "Survey Lab", "deck": "A", "fixed": false,
+      "materialIds": ["S04", "S09", "S01", "S14", "S17"], "trimIds": ["T03", "T05"], "requiredAtlasIds": ["A00", "A01", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["scan arcs", "spectral scales", "probe bays", "sensor calibration", "anomaly quarantine"],
+      "tierMarks": [
+        { "id": "district_survey_t2_deep_space_cartography", "tier": 2, "label": "Deep-Space Cartography", "atlasId": "A01", "slotId": "tier.survey.t2", "targetNodeName": "DISTRICT_survey" },
+        { "id": "district_survey_t3_interstellar_observatory", "tier": 3, "label": "Interstellar Observatory", "atlasId": "A01", "slotId": "tier.survey.t3", "targetNodeName": "DISTRICT_survey" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "survey_t2_probe_telemetry", "tier": 2, "label": "Probe Telemetry", "atlasId": "A01", "slotId": "facility.survey_t2_probe_telemetry", "targetNodeName": "FACILITY_survey_t2_probe_telemetry" },
+        { "id": "survey_t2_anomaly_filter", "tier": 2, "label": "Anomaly Filter", "atlasId": "A01", "slotId": "facility.survey_t2_anomaly_filter", "targetNodeName": "FACILITY_survey_t2_anomaly_filter" },
+        { "id": "survey_t3_interstellar_observatory", "tier": 3, "label": "Interstellar Observatory", "atlasId": "A01", "slotId": "facility.survey_t3_interstellar_observatory", "targetNodeName": "FACILITY_survey_t3_interstellar_observatory" },
+        { "id": "survey_t3_probe_reclaimer", "tier": 3, "label": "Probe Reclaimer", "atlasId": "A01", "slotId": "facility.survey_t3_probe_reclaimer", "targetNodeName": "FACILITY_survey_t3_probe_reclaimer" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "mission_ops", "name": "Mission Operations", "deck": "A", "fixed": false,
+      "materialIds": ["S04", "S05", "S01", "S17", "S18"], "trimIds": ["T05", "T06"], "requiredAtlasIds": ["A00", "A01", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["deployment grid", "landing zones", "readiness bands", "debrief archive", "medevac route"],
+      "tierMarks": [
+        { "id": "district_mission_ops_t2_expedition_mission_control", "tier": 2, "label": "Expedition Mission Control", "atlasId": "A01", "slotId": "tier.mission_ops.t2", "targetNodeName": "DISTRICT_mission_ops" },
+        { "id": "district_mission_ops_t3_coalition_operations_center", "tier": 3, "label": "Coalition Operations Center", "atlasId": "A01", "slotId": "tier.mission_ops.t3", "targetNodeName": "DISTRICT_mission_ops" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "mission_ops_t2_readiness_network", "tier": 2, "label": "Readiness Network", "atlasId": "A01", "slotId": "facility.mission_ops_t2_readiness_network", "targetNodeName": "FACILITY_mission_ops_t2_readiness_network" },
+        { "id": "mission_ops_t2_debrief_archive", "tier": 2, "label": "Debrief Archive", "atlasId": "A01", "slotId": "facility.mission_ops_t2_debrief_archive", "targetNodeName": "FACILITY_mission_ops_t2_debrief_archive" },
+        { "id": "mission_ops_t3_coalition_planner", "tier": 3, "label": "Coalition Planner", "atlasId": "A01", "slotId": "facility.mission_ops_t3_coalition_planner", "targetNodeName": "FACILITY_mission_ops_t3_coalition_planner" },
+        { "id": "mission_ops_t3_casualty_forecasting", "tier": 3, "label": "Casualty Forecasting", "atlasId": "A01", "slotId": "facility.mission_ops_t3_casualty_forecasting", "targetNodeName": "FACILITY_mission_ops_t3_casualty_forecasting" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "research", "name": "Research Directorate", "deck": "B", "fixed": false,
+      "materialIds": ["S04", "S09", "S14", "S15", "S17"], "trimIds": ["T03", "T04", "T05"], "requiredAtlasIds": ["A00", "A02", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["clean-zone thresholds", "specimen IDs", "xenology and containment", "decon route", "project bays"],
+      "tierMarks": [
+        { "id": "district_research_t2_specialist_directorate", "tier": 2, "label": "Specialist Directorate", "atlasId": "A02", "slotId": "tier.research.t2", "targetNodeName": "DISTRICT_research" },
+        { "id": "district_research_t3_frontier_institute", "tier": 3, "label": "Frontier Institute", "atlasId": "A02", "slotId": "tier.research.t3", "targetNodeName": "DISTRICT_research" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "research_t2_gravitic_computation", "tier": 2, "label": "Gravitic Computation", "atlasId": "A02", "slotId": "facility.research_t2_gravitic_computation", "targetNodeName": "FACILITY_research_t2_gravitic_computation" },
+        { "id": "research_t2_xenology_directorate", "tier": 2, "label": "Xenology Directorate", "atlasId": "A02", "slotId": "facility.research_t2_xenology_directorate", "targetNodeName": "FACILITY_research_t2_xenology_directorate" },
+        { "id": "research_t3_frontier_institute", "tier": 3, "label": "Frontier Institute", "atlasId": "A02", "slotId": "facility.research_t3_frontier_institute", "targetNodeName": "FACILITY_research_t3_frontier_institute" },
+        { "id": "research_t3_containment_institute", "tier": 3, "label": "Containment Institute", "atlasId": "A02", "slotId": "facility.research_t3_containment_institute", "targetNodeName": "FACILITY_research_t3_containment_institute" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "fabricator", "name": "Fabrication & Armory", "deck": "B", "fixed": false,
+      "materialIds": ["S06", "S08", "S11", "S12"], "trimIds": ["T03", "T08"], "requiredAtlasIds": ["A00", "A02", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["forge cells", "hot and laser zones", "robot envelope", "crane limits", "alloy feed", "armory racks"],
+      "tierMarks": [
+        { "id": "district_fabricator_t2_autonomous_foundry", "tier": 2, "label": "Autonomous Foundry", "atlasId": "A02", "slotId": "tier.fabricator.t2", "targetNodeName": "DISTRICT_fabricator" },
+        { "id": "district_fabricator_t3_megaship_arsenal_works", "tier": 3, "label": "Megaship Arsenal Works", "atlasId": "A02", "slotId": "tier.fabricator.t3", "targetNodeName": "DISTRICT_fabricator" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "fabricator_t2_precision_forge", "tier": 2, "label": "Precision Forge", "atlasId": "A02", "slotId": "facility.fabricator_t2_precision_forge", "targetNodeName": "FACILITY_fabricator_t2_precision_forge" },
+        { "id": "fabricator_t2_rapid_tooling", "tier": 2, "label": "Rapid Tooling", "atlasId": "A02", "slotId": "facility.fabricator_t2_rapid_tooling", "targetNodeName": "FACILITY_fabricator_t2_rapid_tooling" },
+        { "id": "fabricator_t3_megaship_yards", "tier": 3, "label": "Megaship Yards", "atlasId": "A02", "slotId": "facility.fabricator_t3_megaship_yards", "targetNodeName": "FACILITY_fabricator_t3_megaship_yards" },
+        { "id": "fabricator_t3_reclamation_works", "tier": 3, "label": "Reclamation Works", "atlasId": "A02", "slotId": "facility.fabricator_t3_reclamation_works", "targetNodeName": "FACILITY_fabricator_t3_reclamation_works" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "engineering", "name": "Engineering & Drive", "deck": "B", "fixed": false,
+      "materialIds": ["S06", "S08", "S01", "S11"], "trimIds": ["T03", "T08"], "requiredAtlasIds": ["A00", "A02", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["high voltage", "reactor and magnetic exclusion", "coolant flow", "drive calibration", "thermal limits"],
+      "tierMarks": [
+        { "id": "district_engineering_t2_fold_harmonics", "tier": 2, "label": "Fold Harmonics", "atlasId": "A02", "slotId": "tier.engineering.t2", "targetNodeName": "DISTRICT_engineering" },
+        { "id": "district_engineering_t3_expedition_propulsion", "tier": 3, "label": "Expedition Propulsion", "atlasId": "A02", "slotId": "tier.engineering.t3", "targetNodeName": "DISTRICT_engineering" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "engineering_t2_reactor_baffles", "tier": 2, "label": "Reactor Baffles", "atlasId": "A02", "slotId": "facility.engineering_t2_reactor_baffles", "targetNodeName": "FACILITY_engineering_t2_reactor_baffles" },
+        { "id": "engineering_t2_drive_tuner", "tier": 2, "label": "Drive Tuner", "atlasId": "A02", "slotId": "facility.engineering_t2_drive_tuner", "targetNodeName": "FACILITY_engineering_t2_drive_tuner" },
+        { "id": "engineering_t3_civilization_grid", "tier": 3, "label": "Civilization Grid", "atlasId": "A02", "slotId": "facility.engineering_t3_civilization_grid", "targetNodeName": "FACILITY_engineering_t3_civilization_grid" },
+        { "id": "engineering_t3_thermal_reclaimer", "tier": 3, "label": "Thermal Reclaimer", "atlasId": "A02", "slotId": "facility.engineering_t3_thermal_reclaimer", "targetNodeName": "FACILITY_engineering_t3_thermal_reclaimer" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "habitat", "name": "Habitat & Medical", "deck": "C", "fixed": false,
+      "materialIds": ["S04", "S05", "S10", "S13", "S09", "S18"], "trimIds": ["T06", "T07"], "requiredAtlasIds": ["A00", "A03", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["residence blocks", "clinic and triage", "recovery wards", "gardens", "life support", "public routes"],
+      "tierMarks": [
+        { "id": "district_habitat_t2_arcology_ring", "tier": 2, "label": "Arcology Ring", "atlasId": "A03", "slotId": "tier.habitat.t2", "targetNodeName": "DISTRICT_habitat" },
+        { "id": "district_habitat_t3_civilization_habitat", "tier": 3, "label": "Civilization Habitat", "atlasId": "A03", "slotId": "tier.habitat.t3", "targetNodeName": "DISTRICT_habitat" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "habitat_t2_recovery_ward", "tier": 2, "label": "Recovery Ward", "atlasId": "A03", "slotId": "facility.habitat_t2_recovery_ward", "targetNodeName": "FACILITY_habitat_t2_recovery_ward" },
+        { "id": "habitat_t2_civilian_works", "tier": 2, "label": "Civilian Works", "atlasId": "A03", "slotId": "facility.habitat_t2_civilian_works", "targetNodeName": "FACILITY_habitat_t2_civilian_works" },
+        { "id": "habitat_t3_trauma_institute", "tier": 3, "label": "Trauma Institute", "atlasId": "A03", "slotId": "facility.habitat_t3_trauma_institute", "targetNodeName": "FACILITY_habitat_t3_trauma_institute" },
+        { "id": "habitat_t3_arcology_workforce", "tier": 3, "label": "Arcology Workforce", "atlasId": "A03", "slotId": "facility.habitat_t3_arcology_workforce", "targetNodeName": "FACILITY_habitat_t3_arcology_workforce" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "factions", "name": "Coalition Embassy", "deck": "C", "fixed": false,
+      "materialIds": ["S04", "S05", "S10", "S15", "S16"], "trimIds": ["T07"], "trimVariants": [{ "trimId": "T07", "variant": "bronze" }], "requiredAtlasIds": ["A00", "A03", "A04", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["Accord seal", "delegation IDs", "consular and security lines", "trade promenade", "council route"],
+      "tierMarks": [
+        { "id": "district_factions_t2_accord_concourse", "tier": 2, "label": "Accord Concourse", "atlasId": "A03", "slotId": "tier.factions.t2", "targetNodeName": "DISTRICT_factions" },
+        { "id": "district_factions_t3_coalition_forum", "tier": 3, "label": "Coalition Forum", "atlasId": "A03", "slotId": "tier.factions.t3", "targetNodeName": "DISTRICT_factions" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "factions_t2_diplomatic_forum", "tier": 2, "label": "Diplomatic Forum", "atlasId": "A03", "slotId": "facility.factions_t2_diplomatic_forum", "targetNodeName": "FACILITY_factions_t2_diplomatic_forum" },
+        { "id": "factions_t2_readiness_office", "tier": 2, "label": "Readiness Office", "atlasId": "A03", "slotId": "facility.factions_t2_readiness_office", "targetNodeName": "FACILITY_factions_t2_readiness_office" },
+        { "id": "factions_t3_accord_council", "tier": 3, "label": "Accord Council", "atlasId": "A03", "slotId": "facility.factions_t3_accord_council", "targetNodeName": "FACILITY_factions_t3_accord_council" },
+        { "id": "factions_t3_joint_command", "tier": 3, "label": "Joint Command", "atlasId": "A03", "slotId": "facility.factions_t3_joint_command", "targetNodeName": "FACILITY_factions_t3_joint_command" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "hangar", "name": "Strike & Expedition Bay", "deck": "C", "fixed": false,
+      "materialIds": ["S06", "S08", "S11", "S12", "S15"], "trimIds": ["T03", "T06", "T08"], "requiredAtlasIds": ["A00", "A03", "A04", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["pad, taxi, and tie-down grid", "Base Deployer alignment", "muster and ready areas", "medevac", "clearance and mass limits"],
+      "tierMarks": [
+        { "id": "district_hangar_t2_operations_deck", "tier": 2, "label": "Operations Deck", "atlasId": "A03", "slotId": "tier.hangar.t2", "targetNodeName": "DISTRICT_hangar" },
+        { "id": "district_hangar_t3_coalition_deployment_hub", "tier": 3, "label": "Coalition Deployment Hub", "atlasId": "A03", "slotId": "tier.hangar.t3", "targetNodeName": "DISTRICT_hangar" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "hangar_t2_support_bay", "tier": 2, "label": "Support Bay", "atlasId": "A03", "slotId": "facility.hangar_t2_support_bay", "targetNodeName": "FACILITY_hangar_t2_support_bay" },
+        { "id": "hangar_t2_medevac_cradle", "tier": 2, "label": "Medevac Cradle", "atlasId": "A03", "slotId": "facility.hangar_t2_medevac_cradle", "targetNodeName": "FACILITY_hangar_t2_medevac_cradle" },
+        { "id": "hangar_t3_heavy_lift_complex", "tier": 3, "label": "Heavy-Lift Complex", "atlasId": "A03", "slotId": "facility.hangar_t3_heavy_lift_complex", "targetNodeName": "FACILITY_hangar_t3_heavy_lift_complex" },
+        { "id": "hangar_t3_rapid_turnaround", "tier": 3, "label": "Rapid Turnaround", "atlasId": "A03", "slotId": "facility.hangar_t3_rapid_turnaround", "targetNodeName": "FACILITY_hangar_t3_rapid_turnaround" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    },
+    {
+      "id": "logistics", "name": "Logistics & Cargo", "deck": "C", "fixed": false,
+      "materialIds": ["S06", "S07", "S08", "S12"], "trimIds": ["T03", "T06", "T08"], "requiredAtlasIds": ["A00", "A03", "A05", "A07"], "conditionalAtlasIds": ["A06"],
+      "requiredIdentityOverlays": ["freight routes", "cargo IDs", "mass limits", "cryo, probe, fuel, and sample markings", "sorter and drone lanes"],
+      "tierMarks": [
+        { "id": "district_logistics_t2_orbital_freight_hub", "tier": 2, "label": "Orbital Freight Hub", "atlasId": "A03", "slotId": "tier.logistics.t2", "targetNodeName": "DISTRICT_logistics" },
+        { "id": "district_logistics_t3_civilization_supply_network", "tier": 3, "label": "Civilization Supply Network", "atlasId": "A03", "slotId": "tier.logistics.t3", "targetNodeName": "DISTRICT_logistics" }
+      ],
+      "moduleMarks": [],
+      "facilityMarks": [
+        { "id": "logistics_t2_salvage_sorting", "tier": 2, "label": "Salvage Sorting", "atlasId": "A03", "slotId": "facility.logistics_t2_salvage_sorting", "targetNodeName": "FACILITY_logistics_t2_salvage_sorting" },
+        { "id": "logistics_t2_probe_magazine", "tier": 2, "label": "Probe Magazine", "atlasId": "A03", "slotId": "facility.logistics_t2_probe_magazine", "targetNodeName": "FACILITY_logistics_t2_probe_magazine" },
+        { "id": "logistics_t3_deep_stores", "tier": 3, "label": "Deep Stores", "atlasId": "A03", "slotId": "facility.logistics_t3_deep_stores", "targetNodeName": "FACILITY_logistics_t3_deep_stores" },
+        { "id": "logistics_t3_autonomous_resupply", "tier": 3, "label": "Autonomous Resupply", "atlasId": "A03", "slotId": "facility.logistics_t3_autonomous_resupply", "targetNodeName": "FACILITY_logistics_t3_autonomous_resupply" }
+      ],
+      "provenance": { "status": "taxonomy_mapped" }, "runtime": { "status": "recipe_only_unbound", "domain": "interior" }
+    }
+  ]
+}

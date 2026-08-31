@@ -1,30 +1,87 @@
 # MASSFRONT accounts server — registration, sign-in, sessions, cloud saves.
 #
-# The D1 database does NOT exist yet — creating one needs a token permission
-# this project's Cloudflare API token does not have. You (a human, with
-# dashboard or a fuller-scoped token) need to create it once:
-#
-#   cd cloudflare/massfront-auth
-#   npx wrangler d1 create massfront-accounts
-#
-# That prints a `database_id` (a UUID). Paste it over the placeholder in
-# [[d1_databases]] below, then load the schema and deploy:
-#
-#   npx wrangler d1 execute massfront-accounts --file=schema.sql --remote
-#   npx wrangler deploy
-#
-# See docs/ACCOUNTS.md for the full walkthrough, including local testing with
-# `npx wrangler dev --local` (which needs none of the above — it creates its
-# own throwaway local D1 file automatically).
+# The production D1 binding is configured below. schema.sql is a synchronized
+# snapshot for inspection and fresh local fixtures; it is NOT the deployment
+# mechanism. All schema changes go through migrations-ledger/. Inspect locally
+# with `npm run db:migrations:list`; production adoption is guarded by
+# `node scripts/migrate-production.mjs --confirm-production` and must not run
+# until the release owner explicitly authorizes remote database work.
 
 name = "massfront-auth"
 main = "src/index.js"
 compatibility_date = "2026-01-01"
 
+# Ledgered migrations. `wrangler d1 migrations apply` keeps a d1_migrations
+# table in the database and applies only what is missing, in order. The legacy
+# hand-run files live in migrations-legacy/ and are NEVER applied by the ledger:
+# 0001-social-columns.sql already ran on production on 19 August, and re-running
+# it fails on `duplicate column name`. migrations-ledger/0001-production-baseline
+# is the no-op photograph of that same Aug-19 state, which is what lets an
+# already-migrated production database adopt the ledger without replaying it.
+
 [[d1_databases]]
 binding       = "DB"
 database_name = "massfront-accounts"
 database_id = "e3c74e0d-59b8-427e-92b8-ea8a3bbd6573"
+# migrations_dir belongs to the DATABASE binding, not the top level — wrangler
+# silently falls back to ./migrations and reports "No migrations folder found"
+# if it is put anywhere else.
+migrations_dir = "migrations-ledger"
+
+# ---- e-mail verification -----------------------------------------------------
+# DEV_ECHO_CODE=1 makes POST /verify/request return the six-digit code in its own
+# response body. It exists so the verification path can be driven end to end
+# before a mail provider is wired up — see sendVerificationEmail() in
+# src/index.js and test/social.test.mjs. It is deliberately NOT set here:
+# setting it on a deployed worker turns "prove you own this inbox" into "ask
+# nicely", which is the entire value of verification. Use it only locally:
+#
+#   npx wrangler dev --local --var DEV_ECHO_CODE:1
+#
+# Native Cloudflare Email Service contract (INTENTIONALLY COMMENTED OUT):
+# the account currently has no onboarded Email Sending domain and no Email
+# Routing zone. The owner must first onboard a sender domain, then choose the
+# actual address. Only then add the exact binding + non-secret var below.
+# `allowed_sender_addresses` should match MAIL_FROM so a code path can never
+# send as another address. `remote = true` makes `wrangler dev` send REAL mail;
+# omit it for Wrangler's local simulated delivery.
+#
+# [[send_email]]
+# name = "EMAIL"
+# allowed_sender_addresses = [ "verify@example.com" ]
+# remote = true
+#
+# [vars]
+# MAIL_FROM = "verify@example.com"
+#
+# Runtime contract: env.EMAIL exposes async send(MessageBuilder), and
+# env.MAIL_FROM is a syntactically valid address on the onboarded domain. If
+# either is absent/invalid or Email Service rejects the send, /verify/request
+# keeps its existing non-throwing `sent:false` response. No code/token is
+# logged. Do not add the binding or MAIL_FROM until the domain owner approves.
+#
+# ---- disabled social communication foundation -------------------------------
+# Chat and presence routes are compiled and locally tested, but capability
+# discovery reports both false unless the operator explicitly adds these to a
+# [vars] table (merge them with MAIL_FROM if that table is enabled):
+#
+# SOCIAL_CHAT_ENABLED = "1"
+# SOCIAL_PRESENCE_ENABLED = "1"
+# MULTIPLAYER_LOBBIES_ENABLED = "1"
+# MULTIPLAYER_INVITES_ENABLED = "1"
+#
+# Do not set these for a release until migration 0002, moderation operations,
+# store review, and live privacy/load checks are complete.
+#
+# ---- migrations ----------------------------------------------------------------
+# schema.sql is now only a SYNCHRONISED SNAPSHOT of the current schema. It is
+# kept in step with the ledger and that agreement is asserted by
+# test/migrations.test.mjs. It is no longer the deployment mechanism — the
+# ledger is. Use:
+#
+#   npm run db:migrations:list           # what would apply, and where
+#   npm run db:migrations:apply:local    # disposable local D1
+#   node scripts/migrate-production.mjs --confirm-production   # guarded, remote
 
 [observability]
 enabled = true

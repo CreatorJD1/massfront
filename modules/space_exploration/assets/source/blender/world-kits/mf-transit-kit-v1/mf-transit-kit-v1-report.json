@@ -1,0 +1,4839 @@
+{
+  "format": "MassfrontTransitKitV1",
+  "version": 1,
+  "units": "metres",
+  "deterministic": true,
+  "generator": "tools/blender/build-mf-transit-kit.py",
+  "sharesVocabularyWith": [
+    "tools/blender/build-mf-superstructure-kit.py",
+    "tools/blender/build-mf-modular-building-kit.py"
+  ],
+  "blenderVersion": "5.2.0 LTS",
+  "datums": {
+    "gradeZ": 0.0,
+    "flyoverZ": 18.0,
+    "skywayZ": 42.0,
+    "edgeDropM": 22.0,
+    "carriagewayWidthM": 20.0,
+    "railWidthM": 8.4
+  },
+  "contract": {
+    "placementGridM": 32.0,
+    "notes": [
+      "Skyway and flyover run at two separate heights so the systems can cross without a bespoke piece.",
+      "Carriageway is 20 m, matching the ground kit and every gate in the building and superstructure kits.",
+      "Every socket declares mf_edge_z and mf_carries, so a placer cannot join a skyway to a flyover or a city plate to the low side of an edge."
+    ]
+  },
+  "styles": {
+    "colonial": {
+      "label": "Neutral colonial",
+      "modules": 18
+    },
+    "brutalist": {
+      "label": "Nova brutalist",
+      "modules": 18
+    },
+    "ruined": {
+      "label": "Derelict",
+      "modules": 18
+    }
+  },
+  "classes": [
+    "edge",
+    "flyover",
+    "skyway"
+  ],
+  "moduleCount": 54,
+  "triangleSummary": {
+    "lod0Total": 101748,
+    "lod0Min": 372,
+    "lod0Max": 7032,
+    "lod0Mean": 1884.2,
+    "lod1Total": 21844,
+    "lod2Total": 3516
+  },
+  "tilingProof": [
+    {
+      "id": "skyway_run",
+      "style": "brutalist",
+      "items": [
+        "skyway_station",
+        "skyway_straight",
+        "skyway_junction",
+        "skyway_curve"
+      ]
+    },
+    {
+      "id": "flyover_run",
+      "style": "brutalist",
+      "items": [
+        "flyover_ramp",
+        "flyover_straight",
+        "flyover_interchange",
+        "flyover_merge"
+      ]
+    },
+    {
+      "id": "city_edge",
+      "style": "colonial",
+      "items": [
+        "edge_corner",
+        "edge_megawall",
+        "edge_tunnel",
+        "edge_buttress",
+        "edge_terrace"
+      ]
+    },
+    {
+      "id": "waterfront",
+      "style": "colonial",
+      "items": [
+        "edge_dock",
+        "edge_outfall",
+        "edge_ramp"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": "colonial_skyway_straight",
+      "archetype": "skyway_straight",
+      "style": "colonial",
+      "transitClass": "skyway",
+      "form": "sky_straight",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1494
+        },
+        {
+          "lod": 1,
+          "triangles": 360
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "rail_beam": 108,
+        "rail_channel": 12,
+        "rail_light": 12,
+        "rail_rail": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1494,
+        "lod1": 360,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 477,
+        "lod1": 172,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_skyway_curve",
+      "archetype": "skyway_curve",
+      "style": "colonial",
+      "transitClass": "skyway",
+      "form": "sky_curve",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_CURVE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_CURVE_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_CURVE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_CURVE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2146
+        },
+        {
+          "lod": 1,
+          "triangles": 444
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "rail_beam": 756,
+        "rail_channel": 24,
+        "rail_light": 24,
+        "rail_rail": 48
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2146,
+        "lod1": 444,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 743,
+        "lod1": 214,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_skyway_junction",
+      "archetype": "skyway_junction",
+      "style": "colonial",
+      "transitClass": "skyway",
+      "form": "sky_junction",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_JUNCTION_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_JUNCTION_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_JUNCTION_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_JUNCTION_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1697
+        },
+        {
+          "lod": 1,
+          "triangles": 436
+        },
+        {
+          "lod": 2,
+          "triangles": 52
+        }
+      ],
+      "geometryRoleTriangles": {
+        "junction_node": 220,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "rail_beam": 216,
+        "rail_channel": 24,
+        "rail_light": 24,
+        "rail_rail": 48
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1697,
+        "lod1": 436,
+        "lod2": 52
+      },
+      "polys": {
+        "lod0": 591,
+        "lod1": 206,
+        "lod2": 22
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_skyway_station",
+      "archetype": "skyway_station",
+      "style": "colonial",
+      "transitClass": "skyway",
+      "form": "sky_station",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 50.6,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STATION_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STATION_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STATION_SOCKET_S",
+          "direction": "S",
+          "type": "street",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_STATION_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 8248
+        },
+        {
+          "lod": 1,
+          "triangles": 1264
+        },
+        {
+          "lod": 2,
+          "triangles": 80
+        }
+      ],
+      "geometryRoleTriangles": {
+        "canopy": 108,
+        "canopy_col": 864,
+        "deck_groove": 96,
+        "deck_panel": 36,
+        "handrail": 264,
+        "lamp_head": 168,
+        "lamp_post": 120,
+        "platform": 108,
+        "pylon": 440,
+        "pylon_head": 440,
+        "pylon_ring": 1536,
+        "rail_beam": 108,
+        "rail_channel": 12,
+        "rail_light": 12,
+        "rail_rail": 24,
+        "spandrel": 1320,
+        "window_drum": 1100,
+        "window_emissive": 36,
+        "window_glass": 120
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 8248,
+        "lod1": 1264,
+        "lod2": 80
+      },
+      "polys": {
+        "lod0": 2827,
+        "lod1": 588,
+        "lod2": 32
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_skyway_pylon",
+      "archetype": "skyway_pylon",
+      "style": "colonial",
+      "transitClass": "skyway",
+      "form": "sky_pylon",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.0,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_PYLON_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_PYLON_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_PYLON_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_SKYWAY_PYLON_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1622
+        },
+        {
+          "lod": 1,
+          "triangles": 484
+        },
+        {
+          "lod": 2,
+          "triangles": 28
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 220,
+        "pylon_arm": 216,
+        "pylon_head": 220,
+        "pylon_ring": 1152,
+        "warning_light": 20
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1622,
+        "lod1": 484,
+        "lod2": 28
+      },
+      "polys": {
+        "lod0": 535,
+        "lod1": 232,
+        "lod2": 10
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_flyover_straight",
+      "archetype": "flyover_straight",
+      "style": "colonial",
+      "transitClass": "flyover",
+      "form": "fly_straight",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1968
+        },
+        {
+          "lod": 1,
+          "triangles": 348
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 36,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "road_barrier": 216,
+        "road_deck": 108
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1968,
+        "lod1": 348,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 704,
+        "lod1": 166,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_flyover_curve",
+      "archetype": "flyover_curve",
+      "style": "colonial",
+      "transitClass": "flyover",
+      "form": "fly_curve",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_CURVE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_CURVE_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_CURVE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_CURVE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2648
+        },
+        {
+          "lod": 1,
+          "triangles": 420
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 48,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "road_barrier": 432,
+        "road_deck": 864
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2648,
+        "lod1": 420,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 998,
+        "lod1": 202,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_flyover_merge",
+      "archetype": "flyover_merge",
+      "style": "colonial",
+      "transitClass": "flyover",
+      "form": "fly_merge",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_MERGE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_MERGE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_MERGE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_MERGE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2508
+        },
+        {
+          "lod": 1,
+          "triangles": 420
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 60,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "road_barrier": 432,
+        "road_deck": 864
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2508,
+        "lod1": 420,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 949,
+        "lod1": 202,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_flyover_ramp",
+      "archetype": "flyover_ramp",
+      "style": "colonial",
+      "transitClass": "flyover",
+      "form": "fly_ramp",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 19.9,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_RAMP_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_RAMP_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_RAMP_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_RAMP_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3210
+        },
+        {
+          "lod": 1,
+          "triangles": 660
+        },
+        {
+          "lod": 2,
+          "triangles": 92
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 96,
+        "pylon": 440,
+        "pylon_head": 440,
+        "pylon_ring": 1536,
+        "road_barrier": 216,
+        "road_deck": 108
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 3210,
+        "lod1": 660,
+        "lod2": 92
+      },
+      "polys": {
+        "lod0": 1090,
+        "lod1": 314,
+        "lod2": 38
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_flyover_interchange",
+      "archetype": "flyover_interchange",
+      "style": "colonial",
+      "transitClass": "flyover",
+      "form": "fly_interchange",
+      "cells": [
+        2,
+        2
+      ],
+      "topZ": 29.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_INTERCHANGE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_INTERCHANGE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_INTERCHANGE_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_FLYOVER_INTERCHANGE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 7392
+        },
+        {
+          "lod": 1,
+          "triangles": 1080
+        },
+        {
+          "lod": 2,
+          "triangles": 108
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 168,
+        "pylon": 660,
+        "pylon_head": 660,
+        "pylon_ring": 2304,
+        "road_barrier": 432,
+        "road_deck": 2808
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 7392,
+        "lod1": 1080,
+        "lod2": 108
+      },
+      "polys": {
+        "lod0": 2834,
+        "lod1": 516,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_megawall",
+      "archetype": "edge_megawall",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_wall",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_MEGAWALL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_MEGAWALL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_MEGAWALL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_MEGAWALL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 279
+        },
+        {
+          "lod": 1,
+          "triangles": 76
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "panel_detail": 192,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "service_ladder": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 279,
+        "lod1": 76,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 103,
+        "lod1": 34,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_corner",
+      "archetype": "edge_corner",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_corner",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_CORNER_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_CORNER_SOCKET_E",
+          "direction": "E",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_CORNER_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_CORNER_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 459
+        },
+        {
+          "lod": 1,
+          "triangles": 92
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 24,
+        "deck_panel": 36,
+        "revetment": 440,
+        "revetment_cap": 216
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 459,
+        "lod1": 92,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 162,
+        "lod1": 38,
+        "lod2": 26
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_buttress",
+      "archetype": "edge_buttress",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_buttress",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_BUTTRESS_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_BUTTRESS_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_BUTTRESS_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_BUTTRESS_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 575
+        },
+        {
+          "lod": 1,
+          "triangles": 136
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "buttress": 660,
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "revetment": 220,
+        "revetment_cap": 108
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 575,
+        "lod1": 136,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 232,
+        "lod1": 52,
+        "lod2": 26
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_terrace",
+      "archetype": "edge_terrace",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_terrace",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TERRACE_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TERRACE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TERRACE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TERRACE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1522
+        },
+        {
+          "lod": 1,
+          "triangles": 92
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "terrace_cap": 432,
+        "terrace_step": 880
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1522,
+        "lod1": 92,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 678,
+        "lod1": 38,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_tunnel",
+      "archetype": "edge_tunnel",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_tunnel",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TUNNEL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TUNNEL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TUNNEL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_TUNNEL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1188
+        },
+        {
+          "lod": 1,
+          "triangles": 168
+        },
+        {
+          "lod": 2,
+          "triangles": 96
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "portal_frame": 324,
+        "portal_void": 12,
+        "revetment": 660,
+        "window_emissive": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1188,
+        "lod1": 168,
+        "lod2": 96
+      },
+      "polys": {
+        "lod0": 460,
+        "lod1": 72,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_outfall",
+      "archetype": "edge_outfall",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_outfall",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_OUTFALL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_OUTFALL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_OUTFALL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_OUTFALL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 274
+        },
+        {
+          "lod": 1,
+          "triangles": 292
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "outfall_mouth": 660,
+        "outfall_pipe": 108,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "service_ladder": 12,
+        "stain": 36
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 274,
+        "lod1": 292,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 102,
+        "lod1": 112,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_dock",
+      "archetype": "edge_dock",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_dock",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 2.2,
+      "bottomZ": -20.64,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_DOCK_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_DOCK_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_DOCK_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -20.64,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_DOCK_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2628
+        },
+        {
+          "lod": 1,
+          "triangles": 384
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard": 1100,
+        "city_plate": 108,
+        "deck_groove": 84,
+        "deck_panel": 36,
+        "fender": 36,
+        "handrail": 132,
+        "lamp_head": 84,
+        "lamp_post": 60,
+        "quay_edge": 108,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "water_plane": 12
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2628,
+        "lod1": 384,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 863,
+        "lod1": 168,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_edge_ramp",
+      "archetype": "edge_ramp",
+      "style": "colonial",
+      "transitClass": "edge",
+      "form": "edge_ramp",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_RAMP_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_RAMP_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_RAMP_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_COLONIAL_EDGE_RAMP_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1370
+        },
+        {
+          "lod": 1,
+          "triangles": 144
+        },
+        {
+          "lod": 2,
+          "triangles": 76
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 84,
+        "deck_panel": 36,
+        "pylon": 440,
+        "ramp_deck": 108,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "road_barrier": 216
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1370,
+        "lod1": 144,
+        "lod2": 76
+      },
+      "polys": {
+        "lod0": 572,
+        "lod1": 60,
+        "lod2": 34
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_skyway_straight",
+      "archetype": "skyway_straight",
+      "style": "brutalist",
+      "transitClass": "skyway",
+      "form": "sky_straight",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1370
+        },
+        {
+          "lod": 1,
+          "triangles": 360
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "rail_beam": 108,
+        "rail_channel": 12,
+        "rail_light": 12,
+        "rail_rail": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1370,
+        "lod1": 360,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 434,
+        "lod1": 172,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_skyway_curve",
+      "archetype": "skyway_curve",
+      "style": "brutalist",
+      "transitClass": "skyway",
+      "form": "sky_curve",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_CURVE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_CURVE_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_CURVE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_CURVE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2162
+        },
+        {
+          "lod": 1,
+          "triangles": 444
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "rail_beam": 756,
+        "rail_channel": 24,
+        "rail_light": 24,
+        "rail_rail": 48
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2162,
+        "lod1": 444,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 754,
+        "lod1": 214,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_skyway_junction",
+      "archetype": "skyway_junction",
+      "style": "brutalist",
+      "transitClass": "skyway",
+      "form": "sky_junction",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_JUNCTION_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_JUNCTION_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_JUNCTION_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_JUNCTION_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1910
+        },
+        {
+          "lod": 1,
+          "triangles": 436
+        },
+        {
+          "lod": 2,
+          "triangles": 52
+        }
+      ],
+      "geometryRoleTriangles": {
+        "junction_node": 220,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "rail_beam": 216,
+        "rail_channel": 24,
+        "rail_light": 24,
+        "rail_rail": 48
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1910,
+        "lod1": 436,
+        "lod2": 52
+      },
+      "polys": {
+        "lod0": 644,
+        "lod1": 206,
+        "lod2": 22
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_skyway_station",
+      "archetype": "skyway_station",
+      "style": "brutalist",
+      "transitClass": "skyway",
+      "form": "sky_station",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 50.6,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STATION_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STATION_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STATION_SOCKET_S",
+          "direction": "S",
+          "type": "street",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_STATION_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 8478
+        },
+        {
+          "lod": 1,
+          "triangles": 1264
+        },
+        {
+          "lod": 2,
+          "triangles": 80
+        }
+      ],
+      "geometryRoleTriangles": {
+        "canopy": 108,
+        "canopy_col": 864,
+        "deck_groove": 96,
+        "deck_panel": 36,
+        "handrail": 264,
+        "lamp_head": 168,
+        "lamp_post": 120,
+        "platform": 108,
+        "pylon": 440,
+        "pylon_head": 440,
+        "pylon_ring": 1536,
+        "rail_beam": 108,
+        "rail_channel": 12,
+        "rail_light": 12,
+        "rail_rail": 24,
+        "spandrel": 1320,
+        "window_drum": 1100,
+        "window_emissive": 36,
+        "window_glass": 120
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 8478,
+        "lod1": 1264,
+        "lod2": 80
+      },
+      "polys": {
+        "lod0": 2906,
+        "lod1": 588,
+        "lod2": 32
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_skyway_pylon",
+      "archetype": "skyway_pylon",
+      "style": "brutalist",
+      "transitClass": "skyway",
+      "form": "sky_pylon",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.0,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_PYLON_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_PYLON_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_PYLON_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_SKYWAY_PYLON_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1858
+        },
+        {
+          "lod": 1,
+          "triangles": 484
+        },
+        {
+          "lod": 2,
+          "triangles": 28
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 220,
+        "pylon_arm": 216,
+        "pylon_head": 220,
+        "pylon_ring": 1152,
+        "warning_light": 20
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1858,
+        "lod1": 484,
+        "lod2": 28
+      },
+      "polys": {
+        "lod0": 624,
+        "lod1": 232,
+        "lod2": 10
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_flyover_straight",
+      "archetype": "flyover_straight",
+      "style": "brutalist",
+      "transitClass": "flyover",
+      "form": "fly_straight",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1992
+        },
+        {
+          "lod": 1,
+          "triangles": 348
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 36,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "road_barrier": 216,
+        "road_deck": 108
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1992,
+        "lod1": 348,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 710,
+        "lod1": 166,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_flyover_curve",
+      "archetype": "flyover_curve",
+      "style": "brutalist",
+      "transitClass": "flyover",
+      "form": "fly_curve",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_CURVE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_CURVE_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_CURVE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_CURVE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2690
+        },
+        {
+          "lod": 1,
+          "triangles": 420
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 48,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "road_barrier": 432,
+        "road_deck": 864
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2690,
+        "lod1": 420,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 1012,
+        "lod1": 202,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_flyover_merge",
+      "archetype": "flyover_merge",
+      "style": "brutalist",
+      "transitClass": "flyover",
+      "form": "fly_merge",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_MERGE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_MERGE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_MERGE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_MERGE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2702
+        },
+        {
+          "lod": 1,
+          "triangles": 420
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 60,
+        "pylon": 220,
+        "pylon_head": 220,
+        "pylon_ring": 768,
+        "road_barrier": 432,
+        "road_deck": 864
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2702,
+        "lod1": 420,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 1010,
+        "lod1": 202,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_flyover_ramp",
+      "archetype": "flyover_ramp",
+      "style": "brutalist",
+      "transitClass": "flyover",
+      "form": "fly_ramp",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 19.9,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_RAMP_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_RAMP_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_RAMP_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_RAMP_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3180
+        },
+        {
+          "lod": 1,
+          "triangles": 660
+        },
+        {
+          "lod": 2,
+          "triangles": 92
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 96,
+        "pylon": 440,
+        "pylon_head": 440,
+        "pylon_ring": 1536,
+        "road_barrier": 216,
+        "road_deck": 108
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 3180,
+        "lod1": 660,
+        "lod2": 92
+      },
+      "polys": {
+        "lod0": 1107,
+        "lod1": 314,
+        "lod2": 38
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_flyover_interchange",
+      "archetype": "flyover_interchange",
+      "style": "brutalist",
+      "transitClass": "flyover",
+      "form": "fly_interchange",
+      "cells": [
+        2,
+        2
+      ],
+      "topZ": 29.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_INTERCHANGE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_INTERCHANGE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_INTERCHANGE_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_FLYOVER_INTERCHANGE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 7266
+        },
+        {
+          "lod": 1,
+          "triangles": 1080
+        },
+        {
+          "lod": 2,
+          "triangles": 108
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 168,
+        "pylon": 660,
+        "pylon_head": 660,
+        "pylon_ring": 2304,
+        "road_barrier": 432,
+        "road_deck": 2808
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 7266,
+        "lod1": 1080,
+        "lod2": 108
+      },
+      "polys": {
+        "lod0": 2828,
+        "lod1": 516,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_megawall",
+      "archetype": "edge_megawall",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_wall",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_MEGAWALL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_MEGAWALL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_MEGAWALL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_MEGAWALL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 298
+        },
+        {
+          "lod": 1,
+          "triangles": 76
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "panel_detail": 96,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "service_ladder": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 298,
+        "lod1": 76,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 103,
+        "lod1": 34,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_corner",
+      "archetype": "edge_corner",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_corner",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_CORNER_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_CORNER_SOCKET_E",
+          "direction": "E",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_CORNER_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_CORNER_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 469
+        },
+        {
+          "lod": 1,
+          "triangles": 92
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 24,
+        "deck_panel": 36,
+        "revetment": 440,
+        "revetment_cap": 216
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 469,
+        "lod1": 92,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 163,
+        "lod1": 38,
+        "lod2": 26
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_buttress",
+      "archetype": "edge_buttress",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_buttress",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_BUTTRESS_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_BUTTRESS_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_BUTTRESS_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_BUTTRESS_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 567
+        },
+        {
+          "lod": 1,
+          "triangles": 136
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "buttress": 660,
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "revetment": 220,
+        "revetment_cap": 108
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 567,
+        "lod1": 136,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 225,
+        "lod1": 52,
+        "lod2": 26
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_terrace",
+      "archetype": "edge_terrace",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_terrace",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TERRACE_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TERRACE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TERRACE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TERRACE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1410
+        },
+        {
+          "lod": 1,
+          "triangles": 92
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "terrace_cap": 432,
+        "terrace_step": 880
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1410,
+        "lod1": 92,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 626,
+        "lod1": 38,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_tunnel",
+      "archetype": "edge_tunnel",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_tunnel",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TUNNEL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TUNNEL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TUNNEL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_TUNNEL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1190
+        },
+        {
+          "lod": 1,
+          "triangles": 168
+        },
+        {
+          "lod": 2,
+          "triangles": 96
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "portal_frame": 324,
+        "portal_void": 12,
+        "revetment": 660,
+        "window_emissive": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1190,
+        "lod1": 168,
+        "lod2": 96
+      },
+      "polys": {
+        "lod0": 454,
+        "lod1": 72,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_outfall",
+      "archetype": "edge_outfall",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_outfall",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_OUTFALL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_OUTFALL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_OUTFALL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_OUTFALL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 301
+        },
+        {
+          "lod": 1,
+          "triangles": 292
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "outfall_mouth": 660,
+        "outfall_pipe": 108,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "service_ladder": 12,
+        "stain": 36
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 301,
+        "lod1": 292,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 104,
+        "lod1": 112,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_dock",
+      "archetype": "edge_dock",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_dock",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 2.2,
+      "bottomZ": -20.64,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_DOCK_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_DOCK_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_DOCK_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -20.64,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_DOCK_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2680
+        },
+        {
+          "lod": 1,
+          "triangles": 384
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard": 1100,
+        "city_plate": 108,
+        "deck_groove": 84,
+        "deck_panel": 36,
+        "fender": 36,
+        "handrail": 132,
+        "lamp_head": 84,
+        "lamp_post": 60,
+        "quay_edge": 108,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "water_plane": 12
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2680,
+        "lod1": 384,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 866,
+        "lod1": 168,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_edge_ramp",
+      "archetype": "edge_ramp",
+      "style": "brutalist",
+      "transitClass": "edge",
+      "form": "edge_ramp",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_RAMP_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_RAMP_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_RAMP_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_BRUTALIST_EDGE_RAMP_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1364
+        },
+        {
+          "lod": 1,
+          "triangles": 144
+        },
+        {
+          "lod": 2,
+          "triangles": 76
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 108,
+        "deck_groove": 84,
+        "deck_panel": 36,
+        "pylon": 440,
+        "ramp_deck": 108,
+        "revetment": 220,
+        "revetment_cap": 108,
+        "road_barrier": 216
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1364,
+        "lod1": 144,
+        "lod2": 76
+      },
+      "polys": {
+        "lod0": 568,
+        "lod1": 60,
+        "lod2": 34
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_skyway_straight",
+      "archetype": "skyway_straight",
+      "style": "ruined",
+      "transitClass": "skyway",
+      "form": "sky_straight",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1056
+        },
+        {
+          "lod": 1,
+          "triangles": 360
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 92,
+        "pylon_head": 92,
+        "pylon_ring": 512,
+        "rail_beam": 44,
+        "rail_channel": 12,
+        "rail_rail": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1056,
+        "lod1": 360,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 353,
+        "lod1": 172,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_skyway_curve",
+      "archetype": "skyway_curve",
+      "style": "ruined",
+      "transitClass": "skyway",
+      "form": "sky_curve",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_CURVE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_CURVE_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_CURVE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_CURVE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1394
+        },
+        {
+          "lod": 1,
+          "triangles": 444
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 92,
+        "pylon_head": 92,
+        "pylon_ring": 512,
+        "rail_beam": 308,
+        "rail_channel": 24,
+        "rail_rail": 48
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1394,
+        "lod1": 444,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 467,
+        "lod1": 214,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_skyway_junction",
+      "archetype": "skyway_junction",
+      "style": "ruined",
+      "transitClass": "skyway",
+      "form": "sky_junction",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.4,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_JUNCTION_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_JUNCTION_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_JUNCTION_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_JUNCTION_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1182
+        },
+        {
+          "lod": 1,
+          "triangles": 436
+        },
+        {
+          "lod": 2,
+          "triangles": 52
+        }
+      ],
+      "geometryRoleTriangles": {
+        "junction_node": 92,
+        "pylon": 92,
+        "pylon_head": 92,
+        "pylon_ring": 512,
+        "rail_beam": 88,
+        "rail_channel": 24,
+        "rail_rail": 48
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1182,
+        "lod1": 436,
+        "lod2": 52
+      },
+      "polys": {
+        "lod0": 414,
+        "lod1": 206,
+        "lod2": 22
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_skyway_station",
+      "archetype": "skyway_station",
+      "style": "ruined",
+      "transitClass": "skyway",
+      "form": "sky_station",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 50.6,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STATION_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STATION_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STATION_SOCKET_S",
+          "direction": "S",
+          "type": "street",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_STATION_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5202
+        },
+        {
+          "lod": 1,
+          "triangles": 1252
+        },
+        {
+          "lod": 2,
+          "triangles": 80
+        }
+      ],
+      "geometryRoleTriangles": {
+        "canopy": 44,
+        "canopy_col": 352,
+        "deck_groove": 96,
+        "deck_panel": 36,
+        "handrail": 264,
+        "platform": 44,
+        "pylon": 184,
+        "pylon_head": 184,
+        "pylon_ring": 1024,
+        "rail_beam": 44,
+        "rail_channel": 12,
+        "rail_rail": 24,
+        "spandrel": 552,
+        "window_drum": 460,
+        "window_glass": 120
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 5202,
+        "lod1": 1252,
+        "lod2": 80
+      },
+      "polys": {
+        "lod0": 1712,
+        "lod1": 582,
+        "lod2": 32
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_skyway_pylon",
+      "archetype": "skyway_pylon",
+      "style": "ruined",
+      "transitClass": "skyway",
+      "form": "sky_pylon",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 44.0,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_PYLON_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_PYLON_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_PYLON_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_SKYWAY_PYLON_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 42.0,
+          "carries": "skyway"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1526
+        },
+        {
+          "lod": 1,
+          "triangles": 464
+        },
+        {
+          "lod": 2,
+          "triangles": 28
+        }
+      ],
+      "geometryRoleTriangles": {
+        "pylon": 92,
+        "pylon_arm": 88,
+        "pylon_head": 92,
+        "pylon_ring": 768
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1526,
+        "lod1": 464,
+        "lod2": 28
+      },
+      "polys": {
+        "lod0": 466,
+        "lod1": 224,
+        "lod2": 10
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_flyover_straight",
+      "archetype": "flyover_straight",
+      "style": "ruined",
+      "transitClass": "flyover",
+      "form": "fly_straight",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_STRAIGHT_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_STRAIGHT_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_STRAIGHT_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_STRAIGHT_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 855
+        },
+        {
+          "lod": 1,
+          "triangles": 348
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 36,
+        "pylon": 92,
+        "pylon_head": 92,
+        "pylon_ring": 512,
+        "road_barrier": 88,
+        "road_deck": 44
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 855,
+        "lod1": 348,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 308,
+        "lod1": 166,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_flyover_curve",
+      "archetype": "flyover_curve",
+      "style": "ruined",
+      "transitClass": "flyover",
+      "form": "fly_curve",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_CURVE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_CURVE_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_CURVE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_CURVE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1255
+        },
+        {
+          "lod": 1,
+          "triangles": 420
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 48,
+        "pylon": 92,
+        "pylon_head": 92,
+        "pylon_ring": 512,
+        "road_barrier": 176,
+        "road_deck": 352
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1255,
+        "lod1": 420,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 479,
+        "lod1": 202,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_flyover_merge",
+      "archetype": "flyover_merge",
+      "style": "ruined",
+      "transitClass": "flyover",
+      "form": "fly_merge",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 19.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_MERGE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_MERGE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_MERGE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_MERGE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1087
+        },
+        {
+          "lod": 1,
+          "triangles": 420
+        },
+        {
+          "lod": 2,
+          "triangles": 88
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 60,
+        "pylon": 92,
+        "pylon_head": 92,
+        "pylon_ring": 512,
+        "road_barrier": 176,
+        "road_deck": 352
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1087,
+        "lod1": 420,
+        "lod2": 88
+      },
+      "polys": {
+        "lod0": 427,
+        "lod1": 202,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_flyover_ramp",
+      "archetype": "flyover_ramp",
+      "style": "ruined",
+      "transitClass": "flyover",
+      "form": "fly_ramp",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 19.9,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_RAMP_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_RAMP_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_RAMP_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_RAMP_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2384
+        },
+        {
+          "lod": 1,
+          "triangles": 660
+        },
+        {
+          "lod": 2,
+          "triangles": 92
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 96,
+        "pylon": 184,
+        "pylon_head": 184,
+        "pylon_ring": 1024,
+        "road_barrier": 88,
+        "road_deck": 44
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 2384,
+        "lod1": 660,
+        "lod2": 92
+      },
+      "polys": {
+        "lod0": 741,
+        "lod1": 314,
+        "lod2": 38
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_flyover_interchange",
+      "archetype": "flyover_interchange",
+      "style": "ruined",
+      "transitClass": "flyover",
+      "form": "fly_interchange",
+      "cells": [
+        2,
+        2
+      ],
+      "topZ": 29.8,
+      "bottomZ": 0.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_INTERCHANGE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_INTERCHANGE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_INTERCHANGE_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_FLYOVER_INTERCHANGE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 18.0,
+          "carries": "flyover"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 4568
+        },
+        {
+          "lod": 1,
+          "triangles": 1080
+        },
+        {
+          "lod": 2,
+          "triangles": 108
+        }
+      ],
+      "geometryRoleTriangles": {
+        "lane_marking": 168,
+        "pylon": 276,
+        "pylon_head": 276,
+        "pylon_ring": 1536,
+        "road_barrier": 176,
+        "road_deck": 1144
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 4568,
+        "lod1": 1080,
+        "lod2": 108
+      },
+      "polys": {
+        "lod0": 1654,
+        "lod1": 516,
+        "lod2": 42
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_megawall",
+      "archetype": "edge_megawall",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_wall",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_MEGAWALL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_MEGAWALL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_MEGAWALL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_MEGAWALL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 184
+        },
+        {
+          "lod": 1,
+          "triangles": 76
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 44,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "panel_detail": 96,
+        "revetment": 92,
+        "revetment_cap": 44,
+        "service_ladder": 24
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 184,
+        "lod1": 76,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 82,
+        "lod1": 34,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_corner",
+      "archetype": "edge_corner",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_corner",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_CORNER_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_CORNER_SOCKET_E",
+          "direction": "E",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_CORNER_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_CORNER_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 307
+        },
+        {
+          "lod": 1,
+          "triangles": 92
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 44,
+        "deck_groove": 24,
+        "deck_panel": 36,
+        "revetment": 184,
+        "revetment_cap": 88
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 307,
+        "lod1": 92,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 131,
+        "lod1": 38,
+        "lod2": 26
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_buttress",
+      "archetype": "edge_buttress",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_buttress",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_BUTTRESS_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_BUTTRESS_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_BUTTRESS_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_BUTTRESS_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 372
+        },
+        {
+          "lod": 1,
+          "triangles": 136
+        },
+        {
+          "lod": 2,
+          "triangles": 68
+        }
+      ],
+      "geometryRoleTriangles": {
+        "buttress": 276,
+        "city_plate": 44,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "revetment": 92,
+        "revetment_cap": 44
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 372,
+        "lod1": 136,
+        "lod2": 68
+      },
+      "polys": {
+        "lod0": 173,
+        "lod1": 52,
+        "lod2": 26
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_terrace",
+      "archetype": "edge_terrace",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_terrace",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TERRACE_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TERRACE_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TERRACE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TERRACE_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 588
+        },
+        {
+          "lod": 1,
+          "triangles": 92
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 44,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "terrace_cap": 176,
+        "terrace_step": 368
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 588,
+        "lod1": 92,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 295,
+        "lod1": 38,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_tunnel",
+      "archetype": "edge_tunnel",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_tunnel",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TUNNEL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TUNNEL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TUNNEL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_TUNNEL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 544
+        },
+        {
+          "lod": 1,
+          "triangles": 144
+        },
+        {
+          "lod": 2,
+          "triangles": 96
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 44,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "portal_frame": 132,
+        "portal_void": 12,
+        "revetment": 276
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 544,
+        "lod1": 144,
+        "lod2": 96
+      },
+      "polys": {
+        "lod0": 225,
+        "lod1": 60,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_outfall",
+      "archetype": "edge_outfall",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_outfall",
+      "cells": [
+        1,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_OUTFALL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_OUTFALL_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_OUTFALL_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_OUTFALL_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 178
+        },
+        {
+          "lod": 1,
+          "triangles": 292
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 44,
+        "deck_groove": 36,
+        "deck_panel": 36,
+        "outfall_mouth": 276,
+        "outfall_pipe": 108,
+        "revetment": 92,
+        "revetment_cap": 44,
+        "service_ladder": 12,
+        "stain": 36
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 178,
+        "lod1": 292,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 82,
+        "lod1": 112,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_dock",
+      "archetype": "edge_dock",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_dock",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 2.2,
+      "bottomZ": -20.64,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_DOCK_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_DOCK_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_DOCK_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -20.64,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_DOCK_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1246
+        },
+        {
+          "lod": 1,
+          "triangles": 384
+        },
+        {
+          "lod": 2,
+          "triangles": 40
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard": 460,
+        "city_plate": 44,
+        "deck_groove": 84,
+        "deck_panel": 36,
+        "fender": 36,
+        "handrail": 132,
+        "quay_edge": 44,
+        "revetment": 92,
+        "revetment_cap": 44,
+        "water_plane": 12
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 1246,
+        "lod1": 384,
+        "lod2": 40
+      },
+      "polys": {
+        "lod0": 491,
+        "lod1": 168,
+        "lod2": 16
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_edge_ramp",
+      "archetype": "edge_ramp",
+      "style": "ruined",
+      "transitClass": "edge",
+      "form": "edge_ramp",
+      "cells": [
+        2,
+        1
+      ],
+      "topZ": 0.0,
+      "bottomZ": -22.0,
+      "sockets": [
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_RAMP_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_RAMP_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_RAMP_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "edgeZ": -22.0,
+          "carries": "edge"
+        },
+        {
+          "name": "MF_TRANSIT_V1_RUINED_EDGE_RAMP_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "edgeZ": 0.0,
+          "carries": "edge"
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 634
+        },
+        {
+          "lod": 1,
+          "triangles": 144
+        },
+        {
+          "lod": 2,
+          "triangles": 76
+        }
+      ],
+      "geometryRoleTriangles": {
+        "city_plate": 44,
+        "deck_groove": 84,
+        "deck_panel": 36,
+        "pylon": 184,
+        "ramp_deck": 44,
+        "revetment": 92,
+        "revetment_cap": 44,
+        "road_barrier": 88
+      },
+      "collision": {
+        "triangles": 24
+      },
+      "tris": {
+        "lod0": 634,
+        "lod1": 144,
+        "lod2": 76
+      },
+      "polys": {
+        "lod0": 286,
+        "lod1": 60,
+        "lod2": 34
+      },
+      "objectsPerModule": 3
+    }
+  ],
+  "exports": [
+    {
+      "module": "colonial_skyway_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-skyway-straight.glb"
+    },
+    {
+      "module": "colonial_skyway_curve",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-skyway-curve.glb"
+    },
+    {
+      "module": "colonial_skyway_junction",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-skyway-junction.glb"
+    },
+    {
+      "module": "colonial_skyway_station",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-skyway-station.glb"
+    },
+    {
+      "module": "colonial_skyway_pylon",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-skyway-pylon.glb"
+    },
+    {
+      "module": "colonial_flyover_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-flyover-straight.glb"
+    },
+    {
+      "module": "colonial_flyover_curve",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-flyover-curve.glb"
+    },
+    {
+      "module": "colonial_flyover_merge",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-flyover-merge.glb"
+    },
+    {
+      "module": "colonial_flyover_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-flyover-ramp.glb"
+    },
+    {
+      "module": "colonial_flyover_interchange",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-flyover-interchange.glb"
+    },
+    {
+      "module": "colonial_edge_megawall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-megawall.glb"
+    },
+    {
+      "module": "colonial_edge_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-corner.glb"
+    },
+    {
+      "module": "colonial_edge_buttress",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-buttress.glb"
+    },
+    {
+      "module": "colonial_edge_terrace",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-terrace.glb"
+    },
+    {
+      "module": "colonial_edge_tunnel",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-tunnel.glb"
+    },
+    {
+      "module": "colonial_edge_outfall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-outfall.glb"
+    },
+    {
+      "module": "colonial_edge_dock",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-dock.glb"
+    },
+    {
+      "module": "colonial_edge_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-colonial-edge-ramp.glb"
+    },
+    {
+      "module": "brutalist_skyway_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-skyway-straight.glb"
+    },
+    {
+      "module": "brutalist_skyway_curve",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-skyway-curve.glb"
+    },
+    {
+      "module": "brutalist_skyway_junction",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-skyway-junction.glb"
+    },
+    {
+      "module": "brutalist_skyway_station",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-skyway-station.glb"
+    },
+    {
+      "module": "brutalist_skyway_pylon",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-skyway-pylon.glb"
+    },
+    {
+      "module": "brutalist_flyover_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-flyover-straight.glb"
+    },
+    {
+      "module": "brutalist_flyover_curve",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-flyover-curve.glb"
+    },
+    {
+      "module": "brutalist_flyover_merge",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-flyover-merge.glb"
+    },
+    {
+      "module": "brutalist_flyover_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-flyover-ramp.glb"
+    },
+    {
+      "module": "brutalist_flyover_interchange",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-flyover-interchange.glb"
+    },
+    {
+      "module": "brutalist_edge_megawall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-megawall.glb"
+    },
+    {
+      "module": "brutalist_edge_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-corner.glb"
+    },
+    {
+      "module": "brutalist_edge_buttress",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-buttress.glb"
+    },
+    {
+      "module": "brutalist_edge_terrace",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-terrace.glb"
+    },
+    {
+      "module": "brutalist_edge_tunnel",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-tunnel.glb"
+    },
+    {
+      "module": "brutalist_edge_outfall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-outfall.glb"
+    },
+    {
+      "module": "brutalist_edge_dock",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-dock.glb"
+    },
+    {
+      "module": "brutalist_edge_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-brutalist-edge-ramp.glb"
+    },
+    {
+      "module": "ruined_skyway_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-skyway-straight.glb"
+    },
+    {
+      "module": "ruined_skyway_curve",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-skyway-curve.glb"
+    },
+    {
+      "module": "ruined_skyway_junction",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-skyway-junction.glb"
+    },
+    {
+      "module": "ruined_skyway_station",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-skyway-station.glb"
+    },
+    {
+      "module": "ruined_skyway_pylon",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-skyway-pylon.glb"
+    },
+    {
+      "module": "ruined_flyover_straight",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-flyover-straight.glb"
+    },
+    {
+      "module": "ruined_flyover_curve",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-flyover-curve.glb"
+    },
+    {
+      "module": "ruined_flyover_merge",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-flyover-merge.glb"
+    },
+    {
+      "module": "ruined_flyover_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-flyover-ramp.glb"
+    },
+    {
+      "module": "ruined_flyover_interchange",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-flyover-interchange.glb"
+    },
+    {
+      "module": "ruined_edge_megawall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-megawall.glb"
+    },
+    {
+      "module": "ruined_edge_corner",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-corner.glb"
+    },
+    {
+      "module": "ruined_edge_buttress",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-buttress.glb"
+    },
+    {
+      "module": "ruined_edge_terrace",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-terrace.glb"
+    },
+    {
+      "module": "ruined_edge_tunnel",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-tunnel.glb"
+    },
+    {
+      "module": "ruined_edge_outfall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-outfall.glb"
+    },
+    {
+      "module": "ruined_edge_dock",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-dock.glb"
+    },
+    {
+      "module": "ruined_edge_ramp",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/exports/mf-trn-ruined-edge-ramp.glb"
+    }
+  ],
+  "evidenceRenders": [
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-transit-kit-v1-overview-colonial.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-transit-kit-v1-overview-brutalist.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-transit-kit-v1-overview-ruined.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-curve-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-curve-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-curve-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-junction-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-junction-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-junction-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-station-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-station-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-station-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-pylon-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-pylon-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-skyway-pylon-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-curve-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-curve-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-curve-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-merge-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-merge-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-merge-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-interchange-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-interchange-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-flyover-interchange-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-megawall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-megawall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-megawall-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-buttress-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-buttress-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-buttress-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-terrace-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-terrace-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-terrace-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-tunnel-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-tunnel-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-tunnel-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-outfall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-outfall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-outfall-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-dock-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-dock-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-dock-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-colonial-edge-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-curve-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-curve-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-curve-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-junction-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-junction-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-junction-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-station-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-station-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-station-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-pylon-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-pylon-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-skyway-pylon-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-curve-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-curve-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-curve-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-merge-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-merge-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-merge-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-interchange-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-interchange-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-flyover-interchange-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-megawall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-megawall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-megawall-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-buttress-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-buttress-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-buttress-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-terrace-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-terrace-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-terrace-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-tunnel-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-tunnel-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-tunnel-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-outfall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-outfall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-outfall-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-dock-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-dock-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-dock-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-brutalist-edge-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-curve-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-curve-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-curve-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-junction-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-junction-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-junction-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-station-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-station-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-station-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-pylon-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-pylon-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-skyway-pylon-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-straight-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-curve-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-curve-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-curve-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-merge-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-merge-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-merge-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-interchange-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-interchange-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-flyover-interchange-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-megawall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-megawall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-megawall-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-corner-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-buttress-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-buttress-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-buttress-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-terrace-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-terrace-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-terrace-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-tunnel-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-tunnel-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-tunnel-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-outfall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-outfall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-outfall-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-dock-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-dock-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-dock-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-ramp-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-ramp-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-trn-ruined-edge-ramp-edge.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-skyway-run-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-skyway-run-elevation.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-flyover-run-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-flyover-run-elevation.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-city-edge-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-city-edge-elevation.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-waterfront-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/evidence/mf-tiling-waterfront-elevation.png"
+  ],
+  "blend": "modules/space_exploration/assets/source/blender/world-kits/mf-transit-kit-v1/mf-transit-kit-v1.blend",
+  "runtimeIntegration": {
+    "state": "SOURCE_CANDIDATE",
+    "note": "Nothing registered in boot.js or manifest.json."
+  },
+  "consolidated": {
+    "tool": "tools/blender/consolidate-mf-kits.py",
+    "oneObjectPerModulePerLod": true,
+    "modulesRefreshed": 54
+  }
+}

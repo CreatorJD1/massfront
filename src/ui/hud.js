@@ -120,6 +120,22 @@ function fogExploredAt(wx,wy){
 function fogPointVisible(wx,wy){
   return !fogGameplayActive()||(typeof demoMode!=='undefined'&&demoMode)||!!covAt(wx,wy);
 }
+/* Large translucent FX cannot use centre-point visibility alone. A blast whose
+   origin sat on the last visible fog cell painted half of its billboard into
+   unexplored territory, which looked like fog was being drawn underneath the
+   effect. Macro fallbacks use this conservative whole-footprint gate; the
+   volume pass applies the same gate before its depth-aware composite. */
+function fogFxFootprintVisible(wx,wy,r){
+  if(!fogGameplayActive()||(typeof demoMode!=='undefined'&&demoMode)) return true;
+  if(!covAt(wx,wy)) return false;
+  r=Math.max(0,Number(r)||0)*0.62;
+  if(r<4) return true;
+  for(let k=0;k<8;k++){
+    const a=k*Math.PI*.25;
+    if(!covAt(wx+Math.cos(a)*r,wy+Math.sin(a)*r)) return false;
+  }
+  return true;
+}
 function fogEntityVisible(team,wx,wy){
   return team===0||fogPointVisible(wx,wy);
 }
@@ -249,1238 +265,20 @@ function updateFog(){
 }
 
 // ---------- main render ----------
-function renderLegacySprites(dtDraw){
-  gl.clearColor(0.012,0.02,0.045,1);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.enable(gl.BLEND);
-  let camx=cam.x, camy=cam.y;
-  if(shake>0){ camx+=rr(-shake,shake)*shakeMult/cam.z; camy+=rr(-shake,shake)*shakeMult/cam.z; shake*=0.86; if(shake<0.3) shake=0; }
-  gl.uniform2f(uCam,camx,camy);
-  gl.uniform2f(uSc,2*cam.z/VW,2*cam.z/VH);
-  gl.uniform2f(uYawL,Math.cos(camYaw),Math.sin(camYaw));
-  gl.uniform1f(uPitchL,camPitch);
-  BILLBOARD=0;                       // ground layers first: terrain, water, decals
-  const B=camBounds(), m=60;
-  const x0=B.x0-m,y0=B.y0-m,x1=B.x1+m,y1=B.y1+m;
-  const FULLUV=[0,0,1,1];
-  const zoomedIn=cam.z>0.32;
-  const t=performance.now()/1000;
-  const use3D=unitTexReady;
-  const S3D=2.05, S3B=2.15;          // baked frame scale: units / buildings
-  const nAmt=nightAmt();             // 0 noon → 1 midnight
-
-  // ---- terrain ----
-  gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-  gl.bindTexture(gl.TEXTURE_2D,terrainTex);
-  batT.add(FULLUV,MAP/2,MAP/2,MAP,MAP,0,255,255,255,255);
-  batT.flush();
-  // tiling ground-detail grain — crisp texture at close zoom, mip-fades at distance
-  if(detailTex&&zoomedIn){
-    gl.bindTexture(gl.TEXTURE_2D,detailTex);
-    const rep=MAP/168;
-    // detail strengthens as you zoom in — keeps ground grain crisp under magnification
-    batT.add([0,0,rep,rep],MAP/2,MAP/2,MAP,MAP,0,255,255,255,clamp(66+cam.z*74,66,168));
-    if(cam.z>0.75){                               // second finer octave for extreme close-ups
-      const rep2=MAP/52;
-      batT.add([0,0,rep2,rep2],MAP/2,MAP/2,MAP,MAP,0,255,255,255,clamp((cam.z-0.75)*135,0,86));
-    }
-    batT.flush();
-  }
-  // ---- water: sharp static surface + additive animated caustics ----
-  if(waterBaseTex){
-    gl.bindTexture(gl.TEXTURE_2D,waterBaseTex);
-    batT.add(FULLUV,MAP/2,MAP/2,MAP,MAP,0,255,255,255,255);
-    batT.flush();
-    if(waterCaustTex.length){
-      waterPhase+=dtDraw*4.2;
-      const wf=(waterPhase|0)%waterCaustTex.length;
-      const nf=(wf+1)%waterCaustTex.length;
-      const bl=waterPhase-(waterPhase|0);          // cross-fade keeps the motion fluid
-      gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
-      gl.bindTexture(gl.TEXTURE_2D,waterCaustTex[wf]);
-      batT.add(FULLUV,MAP/2,MAP/2,MAP,MAP,0,255,255,255,((1-bl)*205)|0);
-      batT.flush();
-      gl.bindTexture(gl.TEXTURE_2D,waterCaustTex[nf]);
-      batT.add(FULLUV,MAP/2,MAP/2,MAP,MAP,0,255,255,255,(bl*205)|0);
-      batT.flush();
-      gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-    }
-  }
-  gl.bindTexture(gl.TEXTURE_2D,atlasTex);
-  // ambient life: drifting theme motes near the camera (leaves / embers / snow)
-  if(perfScale>0.5&&zoomedIn&&running){
-    for(let k2=0;k2<2;k2++) if(Math.random()<0.4){
-      const mx2=rr(x0,x1), my2=rr(y0,y1);
-      if(curTheme==='ashland') addParticle(0,mx2,my2,rr(-5,5),rr(-18,-9),1.5,2.6, 255,150,60);
-      else if(curTheme==='arctic') addParticle(9,mx2,my2-30,rr(-8,8),rr(9,17),2.4,2.6, 240,248,255);
-      else addParticle(9,mx2,my2-20,rr(-11,11),rr(5,12),2.6,3.0, 96,150,62);
-    }
-  }
-
-  // ---- decals ----
-  const sCrater=sprites.crater, sWreck=sprites.wreck, sRock=sprites.rock, sDep=sprites.dep,
-        sTree=sprites.tree, sCry=sprites.crystal, sPx=sprites.px, sCloud=sprites.cloud;
-  const selRing=sprites.ring, glow=sprites.glow;
-  for(const c of craters){ if(c.x<x0||c.x>x1||c.y<y0||c.y>y1) continue;
-    const civic=typeof cityGroundAt==='function' && cityGroundAt(c.x,c.y)>=1;
-    if(civic){
-      /* 3D civic scars live in the terrain paint (noisy burnt concrete).
-         The atlas crater is a square cell with a circular dirt gradient —
-         drawing it here cut a grass-tinted box into CITYG pavement. */
-      if(use3D) continue;
-      const hot=clamp(1-Math.max(0,(stats&&stats.t||0)-(c.ts||0))/42,0,1);
-      batN.add(sCrater,c.x,c.y,c.s,c.s,c.a,(32+hot*70)|0,(32+hot*22)|0,(34-hot*8)|0,220);
-      if(hot>0.14) batA.add(glow,c.x,c.y,c.s*0.72,c.s*0.72,0,255,110,36,(hot*78)|0);
-    } else batN.add(sCrater,c.x,c.y,c.s,c.s,c.a,255,255,255,200); }
-  for(const w of wrecks){ if(w.x<x0||w.x>x1||w.y<y0||w.y>y1) continue;
-    /* A destroyed machine stains the ground beneath it before the salvage
-       disappears. This is tactical history, not another particle pile: the
-       scar cools from blast slag to soot using an existing batched decal. */
-    const age=Math.max(0,(stats&&stats.t||0)-(w.ts||0)), hot=clamp(1-age/24,0,1);
-    if(w.kind!==5) batN.add(sCrater,w.x,w.y,w.s*1.65,w.s*1.18,w.a,
-      (42+hot*58)|0,(42+hot*22)|0,(46+hot*10)|0,92);
-    if(hot>0.12&&w.kind!==5) batA.add(glow,w.x,w.y,w.s*1.25,w.s*1.25,0,255,92,34,(hot*34)|0);
-    if(use3D) batU.add(UNIT_UV.wreck3[angFrame(w.a)%8],w.x,w.y,w.s*1.9,w.s*1.9,0,255,255,255,240);
-    else batN.add(sWreck,w.x,w.y,w.s,w.s,w.a,255,255,255,235); }
-  for(const rb of rubbles){ if(rb.x<x0||rb.x>x1||rb.y<y0||rb.y>y1) continue;
-    const age=Math.max(0,(stats&&stats.t||0)-(rb.ts||0)), hot=clamp(1-age/18,0,1);
-    batN.add(sCrater,rb.x,rb.y,rb.s*2.25,rb.s*1.55,rb.a,42,38,34,74);
-    if(hot>0.12) batA.add(glow,rb.x,rb.y,rb.s*1.2,rb.s*1.2,0,255,95,34,(hot*28)|0);
-    if(use3D) batU.add(UNIT_UV.rubble[0],rb.x,rb.y,rb.s*2.1,rb.s*2.1,rb.a,255,255,255,250);
-    else batN.add(sWreck,rb.x,rb.y,rb.s,rb.s,rb.a,255,255,255,235); }
-  // cloud shadows drift over ground
-  for(let k=0;k<4;k++){
-    const sp=[7,10,5,12][k], sz=[720,560,880,480][k];
-    const cxx=((t*sp+k*730)%(MAP+1600))-800;
-    const cyy=(k*690+t*sp*0.35)%MAP;
-    if(cxx>x0-sz&&cxx<x1+sz&&cyy>y0-sz&&cyy<y1+sz)
-      batN.add(sCloud,cxx,cyy,sz,sz*0.72,k*1.3,0,0,0,52);
-  }
-  for(const r of rocks){ if(r.x<x0||r.x>x1||r.y<y0||r.y>y1) continue;
-    batN.add(sRock,r.x,r.y,r.s,r.s,r.a,255,255,255,255); }
-  for(const d of deposits){
-    if(d.x<x0||d.x>x1||d.y<y0||d.y>y1) continue;
-    const tier=depositTier(d);
-    const col=tier===3?[188,82,255]:tier===2?[58,225,150]:tier===1?[58,190,255]:[72,76,88];
-    const fieldR=46+(d.initialTier||1)*8;
-    /* 3D owns veins (terrain bake) and shards. 2D glow rects under every
-       free node were the white disc + cyan rays on DEPLOY BASE. */
-    if(!use3D){
-      const pulse=.82+.18*Math.sin(t*2.1+(d.pulse||0));
-      const seed=(d.pulse||0)+d.x*0.017+d.y*0.013;
-      for(let k=0;k<5;k++){
-        const a=seed+k*1.047;
-        const len=fieldR*(0.52+((k*17)%9)*0.03)*pulse;
-        batN.add(sPx,d.x+Math.cos(a)*len*0.5,d.y+Math.sin(a)*len*0.5,
-          2.2,len,a,col[0],col[1],col[2],d.taken?(tier?70:28):(tier?110:48));
-      }
-      if(tier>0&&!d.taken){
-        if(tier===3) batN.add(sprites.depR,d.x,d.y,51,51,0,col[0],col[1],col[2],255);
-        else batN.add(sDep,d.x,d.y,42+tier*4,42+tier*4,0,col[0],col[1],col[2],255);
-      }
-    }
-    if(tier>0&&perfScale>.45&&Math.random()<.018*tier)
-      addParticle(0,d.x+rr(-fieldR*.55,fieldR*.55),d.y+rr(-fieldR*.42,fieldR*.42),rr(-3,3),rr(-12,-4),.55,3.5,col[0],col[1],col[2]);
-  }
-  for(const gz of geysers){
-    if(gz.x<x0||gz.x>x1||gz.y<y0||gz.y>y1) continue;
-    const gc=gz.taken?[95,118,125]:[105,235,255];
-    if(!use3D){
-      batN.add(glow,gz.x,gz.y,88,88,0,gc[0],gc[1],gc[2],gz.taken?28:86);
-      batN.add(selRing,gz.x,gz.y,82,82,t*.26,gc[0],gc[1],gc[2],gz.taken?35:140);
-      /* sprites.geyser is the metal iris (dark ellipses + 5 rim arcs + cyan
-         hole). That stamp is the phone-shot hatch. 3D draws the vent. */
-      batN.add(sprites.geyser,gz.x,gz.y,52,52,0,gc[0],gc[1],gc[2],255);
-    }
-    if(perfScale>0.4&&Math.random()<0.06)
-      addParticle(1,gz.x+rr(-5,5),gz.y+rr(-4,4),rr(-2,2),rr(-17,-10),1.3,9, 165,225,250);
-  }
-  for(const cst of crystals){ if(cst.x<x0||cst.x>x1||cst.y<y0||cst.y>y1) continue;
-    if(use3D) continue;
-    const D=deposits[cst.dep],tier=depositTier(D);if(!D||cst.band>tier||D.taken)continue;
-    const bandFill=clamp((D.remaining-(tier-1)*DEPOSIT_BAND)/DEPOSIT_BAND,0,1);
-    const edge=cst.band===tier?(.42+.58*bandFill):1,pulse=.94+.08*Math.sin(t*1.45+(cst.phase||0));
-    const s=cst.s*edge*pulse*(cst.core?1.42:1.18),col=cst.band===3?[220,112,255]:cst.band===2?[78,255,170]:[78,225,255];
-    batN.add(glow,cst.x,cst.y,s*1.8,s*1.8,0,col[0],col[1],col[2],cst.core?78:55);
-    batN.add(sCry,cst.x,cst.y,s,s*1.22,cst.a+Math.sin(t*.24+(cst.phase||0))*.035,col[0],col[1],col[2],255);
-  }
-  // ---- contact shadows for standing relief (drawn flat, on the ground) ----
-  for(const M of relief){
-    if(M.x<x0-60||M.x>x1+60||M.y<y0-60||M.y>y1+60) continue;
-    batN.add(sprites.glow,M.x+M.lift*0.16,M.y+M.lift*0.20,M.w*2.6,M.w*1.6,0,0,0,0,66);
-  }
-
-  /* ---- structure pads -------------------------------------------------
-     Every building sits on a poured slab: an oriented rectangle of hardstand
-     with a drop shadow. This is what welds a structure to the terrain (rather
-     than letting it hover), and it's the only place a building's FACING is
-     visible from directly overhead, since the bodies themselves billboard. */
-  for(const Bp of blds){
-    if(!Bp.alive) continue;
-    if(Bp.x<x0-90||Bp.x>x1+90||Bp.y<y0-90||Bp.y>y1+90) continue;
-    if(!fogEntityVisible(Bp.team,Bp.x,Bp.y)) continue;
-    const f=bldFoot(Bp), rt=Bp.rot||0, pad=1.22;
-    const pw=f[0]*pad, ph=f[1]*pad;
-    const tb=TEAMB[Bp.team]||TEAMB[2];
-    batN.add(sPx,Bp.x+7,Bp.y+9,pw*1.04,ph*1.04,rt, 0,0,0, 90);      // cast shadow
-    batN.add(sPx,Bp.x,Bp.y,pw,ph,rt, 74,76,80, 190);                 // concrete slab
-    batN.add(sPx,Bp.x,Bp.y,pw*0.88,ph*0.88,rt, 92,95,100, 150);      // inner apron
-    // team-coloured kerb edging, brighter while under construction
-    const ka=Bp.prog<1? 90+Math.sin(t*7)*50 : 62;
-    const kc=Math.cos(rt), ks=Math.sin(rt), hw=pw/2, hh=ph/2;
-    const kerb=(ex,ey,w,h)=>batN.add(sPx,Bp.x+ex*kc-ey*ks,Bp.y+ex*ks+ey*kc,w,h,rt,tb[0],tb[1],tb[2],ka);
-    kerb(0,-hh,pw,2.0); kerb(0,hh,pw,2.0); kerb(-hw,0,2.0,ph); kerb(hw,0,2.0,ph);
-  }
-
-  /* ---- curtain walls --------------------------------------------------
-     The span between two linked barricades is drawn as its own piece of
-     wall, so a run of segments becomes one continuous rampart instead of a
-     dotted line of separate blocks. This is the visible payoff for laying
-     walls in a line, and it's what makes the perimeter readable at a glance. */
-  for(let wi=0;wi<blds.length;wi++){
-    const W=blds[wi];
-    if(!W.alive||(W.type!=='wall'&&W.type!=='gate')||!W.linkA||!W.linkA.length) continue;
-    if(W.x<x0-90||W.x>x1+90||W.y<y0-90||W.y>y1+90) continue;
-    if(!fogEntityVisible(W.team,W.x,W.y)) continue;
-    const tb=TEAMB[W.team]||TEAMB[2];
-    const hpf=W.hp/W.hpm;
-    for(const la of W.linkA){
-      if(Math.cos(la)<0 || (Math.abs(Math.cos(la))<1e-6 && Math.sin(la)<0)) continue;  // draw each span once
-      const span=WALL_LINK*0.62;
-      const mx2=W.x+Math.cos(la)*span*0.5, my2=W.y+Math.sin(la)*span*0.5;
-      batN.add(sPx,mx2+4,my2+6,span,20,la, 0,0,0,80);                    // shadow
-      batN.add(sPx,mx2,my2,span,16,la, 96,99,104, 235);                  // rampart body
-      batN.add(sPx,mx2,my2,span,7,la, 128,132,138, 210);                 // top walkway
-      batN.add(sPx,mx2,my2,span,2.4,la, tb[0]*hpf|0,tb[1]*hpf|0,tb[2]*hpf|0, 130);  // team stripe
-    }
-  }
-  // ---- volatile fuel tanks ----
-  for(const T of tanks){
-    if(!T.alive||T.x<x0-60||T.x>x1+60||T.y<y0-60||T.y>y1+60) continue;
-    batN.add(sprites.tankF,T.x,T.y,T.s,T.s,0,255,255,255,255);
-    if(T.fuse>0){                                  // priming: blinking warning
-      const bl=(Math.sin(t*26)*0.5+0.5);
-      batA.add(sprites.glow,T.x,T.y,T.s*(1.4+bl*0.7),T.s*(1.4+bl*0.7),0,255,120,50,120+bl*120);
-      batA.add(sprites.warn,T.x,T.y,T.s*2.4,T.s*2.4,t*2,255,90,60,150*bl);
-    }
-  }
-  // ---- supply crates ----
-  for(const C of crates){
-    if(C.x<x0-70||C.x>x1+70||C.y<y0-70||C.y>y1+70) continue;
-    if(!fogPointVisible(C.x,C.y)&&!C.seen) continue;
-    const al=C.alt;
-    const cc=C.kind&&C.kind.col||[255,225,140];
-    batN.add(sprites.glow,C.x,C.y,44*(1+al/500),30*(1+al/500),0,0,0,0,Math.max(30,110-al*0.16));
-    if(al>0){                                      // parachute-less pod: retro burn
-      batA.add(sprites.glow,C.x,C.y-al*0.5+22,22,40,0,255,190,110,170);
-    } else {
-      const bob=Math.sin(t*2.4+C.x)*2;
-      batA.add(sprites.glow,C.x,C.y+bob,74+Math.sin(t*3)*8,74+Math.sin(t*3)*8,0,cc[0],cc[1],cc[2],62);
-      batA.add(selRing,C.x,C.y+bob,64+(C.kind&&C.kind.rarity||0)*5,64+(C.kind&&C.kind.rarity||0)*5,t*0.7,cc[0],cc[1],cc[2],145);
-      const mark=C.kind&&C.kind.spr&&sprites[C.kind.spr];
-      if(mark) batA.add(mark,C.x,C.y-31+bob,22,22,-t*.8,cc[0],cc[1],cc[2],235);
-    }
-    batN.add(sprites.crate,C.x,C.y-al*0.5+(al>0?0:Math.sin(t*2.4+C.x)*2),
-      40+(C.kind&&C.kind.rarity||0)*3,40+(C.kind&&C.kind.rarity||0)*3,
-      al>0?t*2.4:0,cc[0],cc[1],cc[2],255);
-  }
-  const tt=(typeof biomeKit==='function'&&biomeKit().treeTint)||THEMES[curTheme].treeTint;
-  for(const tr of trees){ if(tr.x<x0||tr.x>x1||tr.y<y0||tr.y>y1) continue;
-    batN.add(sTree,tr.x,tr.y,tr.s,tr.s,tr.a,tt[0],tt[1],tt[2],255); }
-
-  batN.flush();                        // ground decals under structures
-  BILLBOARD=1;                         // everything from here stands up in the world
-
-  /* ---- standing relief -------------------------------------------------
-     Berms and spoil heaps carry a `lift`, so they physically rise out of the
-     ground plane. Tilt the camera and a crater now has a rim you look over
-     rather than a ring of darker paint.                                   */
-  {
-    const gt=THEMES[curTheme].g2||[120,116,104];
-    for(const M of relief){
-      if(M.x<x0-60||M.x>x1+60||M.y<y0-60||M.y>y1+60) continue;
-      const tn=M.tone;
-      batN.add(sprites.rock, M.x, M.y, M.w*2, M.h, M.a,
-        Math.min(255,gt[0]*tn*1.12)|0, Math.min(255,gt[1]*tn*1.06)|0, Math.min(255,gt[2]*tn)|0,
-        255, M.lift);
-    }
-  }
-
-  /* ---- derelict districts ----------------------------------------------
-     Blocks are oriented rectangles standing on the ground, so a district
-     reads as a laid-out city seen from above rather than scattered props.
-     Damage leans them, fires them, and finally drops them into salvage.  */
-  /* Kind 4 (intact civic block) has no sprite of its own in the 2D fallback
-     path; the low-block art is the right shape for it. Without the entry the
-     `||` below silently drew it as a tower. */
-  const RSPR=['relicT','relicD','relicI','relicK','relicD'];
-  for(let ri=0;ri<relics.length;ri++){
-    const R=relics[ri];
-    /* 3D owns civic hulls and wreck fire. The 2D relicT sprite is a flat
-       red card, and the dead path used sprites.fireball at plot scale —
-       that was the clean-pop / vehicle mushroom on a tower. */
-    if(use3D) continue;
-    if(!R.alive) continue;
-    if(R.x<x0-110||R.x>x1+110||R.y<y0-110||R.y>y1+110) continue;
-    const dmgT=R.hp/R.hpm;
-    const sw=Math.max(R.w,R.h)*1.28;
-    const lift=(R.kind===0?R.s*0.95 : R.kind===2?R.s*0.5 : R.s*0.38);
-    const lean=(R.lean||0)*(R.kind===0?1:0.4);
-    const flick=R.hitT>0?1.6:1;
-    const tint=224+31*dmgT;                       // intact concrete is pale, damage darkens it
-    batN.add(sprites[RSPR[R.kind]||'relicT'], R.x, R.y, sw, sw, lean,
-      Math.min(255,tint*flick)|0, Math.min(255,(tint-8)*flick)|0, Math.min(255,(tint-18))|0, 255, lift);
-    // damaged blocks smoulder; heavily damaged ones burn openly
-    if(R.burn>0.18){
-      const fa=R.burn*(0.6+Math.sin(t*3.1+ri)*0.4);
-      batA.add(sprites.glow, R.x+Math.sin(t*0.7+ri)*4, R.y-R.s*0.34, R.s*0.5, R.s*0.6, 0,
-        255, 150, 70, 90*fa);
-      if(perfScale>0.5 && (tick+ri)%26===0)
-        addParticle(1, R.x+rr(-R.w*0.3,R.w*0.3), R.y-R.s*0.2, rr(-4,4), rr(-16,-8), 1.6, R.s*0.22, 54,50,46);
-    }
-  }
-  /* Dead civic blocks still burn on the 2D path — same reason as 3D. */
-  for(let ri=0;ri<relics.length;ri++){
-    const R=relics[ri];
-    if(use3D) continue;
-    if(R.alive) continue;
-    const age=stats.t-(R.fallT||0);
-    if(age>52||!(R.burn>0.18)) continue;
-    if(R.x<x0-110||R.x>x1+110||R.y<y0-110||R.y>y1+110) continue;
-    const heat=clamp(1-age/52,0,1)*R.burn;
-    const fa=heat*(0.55+Math.sin(t*4.2+ri)*0.45);
-    batA.add(sprites.flame||sprites.fireball||sprites.glow, R.x, R.y-R.s*0.12, R.s*0.7, R.s*0.9, -t*.5,
-      255, 190, 90, 200*fa);
-    batA.add(sprites.glow, R.x, R.y, R.s*1.1, R.s*1.1, 0, 255, 110, 40, 70*heat);
-  }
-  // ---- buildings ----
-  const drawBld=(spr,x,y,sz,r,g,b,a)=>{
-    const lift=sz*0.5;                 // structures rise out of the ground when tilted
-    if(use3D&&UNIT_UV[spr]) batU.add(UNIT_UV[spr][0],x,y,sz*S3B,sz*S3B,0,r,g,b,a,lift);
-    else batN.add(sprites[spr],x,y,sz,sz,0,r,g,b,a,lift);
-  };
-  for(let b=0;b<blds.length;b++){
-    const Bd=blds[b]; if(!Bd.alive) continue;
-    if(Bd.x<x0-50||Bd.x>x1+50||Bd.y<y0-50||Bd.y>y1+50) continue;
-    if(!fogEntityVisible(Bd.team,Bd.x,Bd.y)) continue;
-    const BTt=BT[Bd.type], tc=TEAMC[Bd.team];
-    const sz=BTt.size;
-    if(Bd.prog<1){
-      drawBld(BTt.spr,Bd.x,Bd.y,sz,tc[0],tc[1],tc[2],90+Bd.prog*120);
-      const sy=Bd.y+sz/2-Bd.prog*sz;
-      batA.add(sPx,Bd.x,sy,sz,1.6,0,120,230,255,190);
-      batN.add(sPx,Bd.x,Bd.y+sz*0.62,sz*0.9,3,0,10,14,18,220);
-      batN.add(sPx,Bd.x-sz*0.45*(1-Bd.prog),Bd.y+sz*0.62,sz*0.9*Bd.prog,3,0,120,230,255,255);
-    } else {
-      /* ---- living structures ------------------------------------------
-         Nothing in a working base should be a static decal. Each building
-         moves in the way its JOB implies: extractors piston, reactors pulse,
-         factories throb harder while producing, radar sweeps, silos vent,
-         fabricators burn. It's a small per-frame cost and it's the single
-         biggest thing separating "placed sprite" from "running machine". */
-      const an=t*1.6+Bd.anim;
-      let bob=0, sq=1, tint=1;
-      switch(Bd.type){
-        case 'mex':  bob=Math.sin(an*2.6)*sz*0.045; sq=1+Math.sin(an*2.6)*0.035; break;  // pumpjack stroke
-        case 'pgen': case 'geo': sq=1+Math.sin(an*1.7)*0.022; tint=1+Math.sin(an*1.7)*0.07; break;
-        case 'fac': case 'tgate': case 'airfield': case 'harbor':
-          { const busy=Bd.queue.length?1:0.35;
-            bob=Math.sin(an*(3.4*busy+1))*sz*0.028*busy; sq=1+Math.sin(an*4.2)*0.02*busy; } break;
-        case 'techlab': sq=1+Math.sin(an*2.2)*0.03; tint=1+Math.sin(an*3.1)*0.05; break;
-        case 'fab':  sq=1+Math.abs(Math.sin(an*5.2))*0.05; tint=1.06+Math.sin(an*5.2)*0.09; break;
-        case 'silo': bob=Math.sin(an*1.1)*sz*0.016; break;
-        case 'sgen': sq=1+Math.sin(an*2.0)*0.05; break;
-        case 'nova': sq=1+Math.sin(an*0.9)*0.02; break;
-        case 'nest': bob=Math.sin(an*1.9)*sz*0.05; sq=1+Math.sin(an*3.7)*0.06; break;   // it breathes
-        case 'hq':   bob=Math.sin(an*0.8)*sz*0.012; break;
-      }
-      if(Bd.hitT>0){ tint=1.5; bob+=Math.sin(t*60)*2.2; }        // flinch on impact
-      const asz=sz*sq;
-      drawBld(BTt.spr,Bd.x,Bd.y+bob,asz,
-        Math.min(255,tc[0]*tint)|0, Math.min(255,tc[1]*tint)|0, Math.min(255,tc[2]*tint)|0, 255);
-      // ---- purpose-specific moving parts ----
-      if(Bd.type==='mex'){                       // drill head rising and falling
-        const st=(Math.sin(an*2.6)*0.5+0.5);
-        batN.add(sPx,Bd.x,Bd.y-sz*0.30-st*sz*0.16,sz*0.14,sz*0.34,0, 150,156,164,255, sz*0.62);
-        if((tick+b)%34===0) addParticle(1,Bd.x,Bd.y-sz*0.1,rr(-3,3),rr(-9,-4),.7,3.2, 96,88,78);
-      }
-      if(Bd.type==='pgen'||Bd.type==='geo'){     // coolant vent, on a slow beat
-        const v=(Math.sin(an*1.7)*0.5+0.5);
-        batA.add(glow,Bd.x,Bd.y-sz*0.42,sz*(0.22+v*0.2),sz*(0.3+v*0.34),0,
-          Bd.type==='geo'?90:180, Bd.type==='geo'?230:210, 255, 40+v*60);
-      }
-      if(Bd.type==='techlab'){                   // radar dish sweeping the sky
-        const sw=an*0.9;
-        batA.add(sprites.beam,Bd.x+Math.cos(sw)*sz*0.5,Bd.y+Math.sin(sw)*sz*0.5*0.5,
-          2.2,sz*1.0,sw+Math.PI/2, 120,210,255, 70);
-      }
-      if(Bd.type==='fab'){                       // burner flare, irregular like real flame
-        const fl=0.55+Math.abs(Math.sin(an*5.2))*0.45+Math.random()*0.1;
-        batA.add(glow,Bd.x+sz*0.02,Bd.y-sz*0.5,sz*0.26*fl,sz*0.5*fl,0,255,170,70,150*fl);
-        if((tick+b)%12===0) addParticle(1,Bd.x,Bd.y-sz*0.55,rr(-3,3),rr(-22,-12),.9,4, 70,64,58);
-      }
-      if((Bd.type==='fac'||Bd.type==='tgate'||Bd.type==='airfield')&&Bd.queue.length){
-        const dr=(Math.sin(an*3.4)*0.5+0.5);     // bay door cycling open and shut
-        batA.add(sPx,Bd.x,Bd.y+sz*0.34,sz*0.56,sz*0.09*(0.3+dr),0, 255,190,90, 110+dr*90);
-      }
-      if(Bd.type==='silo'){                      // pressure relief puff
-        if((tick+b)%70===0) addParticle(2,Bd.x+sz*0.2,Bd.y-sz*0.34,rr(-4,4),rr(-14,-8),.8,7, 190,200,210);
-      }
-      if(Bd.type==='aatower'||Bd.type==='hellstorm'){   // idle scan sweep
-        const sw=Math.sin(an*0.7)*0.9;
-        batA.add(sPx,Bd.x,Bd.y-sz*0.2,1.6,sz*0.5,sw, 255,220,150, 46);
-      }
-      // visual upgrade add-ons (baked 3D parts, not tints)
-      if(use3D){
-        if(Bd.type==='mex'&&Bd.lvl>=2) batU.add(UNIT_UV.mexUp[0],Bd.x,Bd.y,sz*S3B,sz*S3B,0,tc[0],tc[1],tc[2],255);
-        if(Bd.type==='pgen'&&Bd.lvl>=2) batU.add(UNIT_UV.pgenUp[0],Bd.x,Bd.y,sz*S3B,sz*S3B,0,tc[0],tc[1],tc[2],255);
-        if(Bd.type==='fac'&&Bd.tier===2) batU.add(UNIT_UV.facUp[0],Bd.x,Bd.y,sz*S3B,sz*S3B,0,tc[0],tc[1],tc[2],255);
-        if(Bd.type==='aatower'&&Bd.lvl>=2) batU.add(UNIT_UV.aaUp[0],Bd.x,Bd.y,sz*S3B,sz*S3B,0,tc[0],tc[1],tc[2],255);
-      }
-      if(Bd.type==='turret'){
-        if(use3D){
-          const gunUV=Bd.lvl>=3?UNIT_UV.turTg3:Bd.lvl===2?UNIT_UV.turTg2:UNIT_UV.turTg;
-          batU.add(gunUV[angFrame(Bd.tang+camYaw)],Bd.x,Bd.y,sz*S3B,sz*S3B,0,tc[0],tc[1],tc[2],255);
-        }
-        else batN.add(sprites.turT,Bd.x,Bd.y,sz,sz,Bd.tang,tc[0],tc[1],tc[2],255);
-      }
-      if(Bd.type==='bastion'&&use3D){
-        const rec=Math.max(0,Bd.cool/BASTION.cool-0.75)/0.25 * sz*0.1;
-        const ba=Bd.tang-Math.PI/2;
-        batU.add(UNIT_UV.towerT[angFrame(Bd.tang+camYaw)],Bd.x-Math.cos(ba)*rec,Bd.y-Math.sin(ba)*rec,sz*S3B,sz*S3B,0,tc[0],tc[1],tc[2],255);
-      }
-      if(Bd.type==='fac'&&Bd.tier===2) batA.add(sPx,Bd.x,Bd.y-sz*0.46,sz*0.94,2.6,0,255,210,87,210);
-      if(Bd.lvl>1) for(let L=0;L<Bd.lvl-1;L++)
-        batA.add(sprites.glow,Bd.x+sz*0.42-L*7,Bd.y-sz*0.42,6,6,0,255,210,87,220);   // Mk pips
-      if(Bd.upT>0){
-        const pr=1-Bd.upT/(Bd.upMax||1);
-        batN.add(sPx,Bd.x,Bd.y+sz*0.62,sz*0.9,3,0,10,14,18,220);
-        batN.add(sPx,Bd.x-sz*0.45*(1-pr),Bd.y+sz*0.62,sz*0.9*pr,3,0,255,210,87,255);
-      }
-      if(Bd.type==='geo')                    // geothermal: cyan vent glow distinguishes from Reactor
-        batA.add(sprites.glow,Bd.x,Bd.y,sz*0.85+Math.sin(t*3.2+b)*5,sz*0.85,0,80,220,255,64);
-      if(Bd.type==='nova'){                  // superweapon charge state
-        if(Bd.cool<=0){
-          batA.add(sprites.glow,Bd.x,Bd.y,sz*(0.9+Math.sin(t*4)*0.12),sz*(0.9+Math.sin(t*4)*0.12),0,255,210,90,110);
-          batA.add(selRing,Bd.x,Bd.y,sz*1.5,sz*1.5,t*0.5,255,210,90,70);
-        } else {
-          const pr2=1-Bd.cool/NOVA.cd;
-          batN.add(sPx,Bd.x,Bd.y+sz*0.62,sz*0.9,3,0,10,14,18,220);
-          batN.add(sPx,Bd.x-sz*0.45*(1-pr2),Bd.y+sz*0.62,sz*0.9*pr2,3,0,255,210,87,255);
-        }
-      }
-      if(Bd.type==='arc'&&(tick&15)<3)       // idle coil crackle
-        batA.add(sprites.glow,Bd.x,Bd.y-sz*0.32,9,9,0,150,230,255,150);
-      if(Bd.type==='gate'){                  // energy gate stripe: friendly-pass indicator
-        const tb2=TEAMB[Bd.team];
-        batA.add(sPx,Bd.x,Bd.y,sz*0.86,3.4,0,tb2[0],tb2[1],tb2[2],120+Math.sin(t*5+b)*60);
-      }
-      if(zoomedIn&&Bd.adjL&&Bd.adjL.length&&Bd.team===0){  // adjacency feed lines
-        for(const o2 of Bd.adjL){
-          const O=blds[o2]; if(!O||!O.alive) continue;
-          batA.add(sprites.beam,(Bd.x+O.x)/2,(Bd.y+O.y)/2,1.8,Math.hypot(O.x-Bd.x,O.y-Bd.y)*0.82,
-            Math.atan2(O.y-Bd.y,O.x-Bd.x)+Math.PI/2,255,220,110,34+Math.sin(t*4+o2)*14);
-        }
-      }
-      if(Bd.type==='techlab'){
-        batA.add(sprites.glow,Bd.x,Bd.y-sz*0.1,sz*0.5+Math.sin(t*2.6+b)*4,sz*0.5,0,120,200,255,36);
-        if(Bd.res>=0){
-          const pr=Bd.resT/RESEARCH[Bd.res].t;
-          batN.add(sPx,Bd.x,Bd.y+sz*0.62,sz*0.9,3,0,10,14,18,220);
-          batN.add(sPx,Bd.x-sz*0.45*(1-pr),Bd.y+sz*0.62,sz*0.9*pr,3,0,120,210,255,255);
-        }
-      }
-      if(Bd.type==='uplink'){
-        batA.add(sprites.ring,Bd.x,Bd.y,UPLINK_R*2,UPLINK_R*2,t*0.3,90,200,255,20);
-        batA.add(sprites.glow,Bd.x,Bd.y-sz*0.55,8+Math.sin(t*5+b)*3,8,0,120,220,255,160);
-        // energy links to boosted towers
-        for(const T2 of blds){
-          if(!T2.alive||T2.team!==Bd.team||!(T2.boost>0)) continue;
-          if(dist2(Bd.x,Bd.y,T2.x,T2.y)>UPLINK_R*UPLINK_R) continue;
-          const mx2=(Bd.x+T2.x)/2, my2=(Bd.y+T2.y)/2;
-          const len=Math.sqrt(dist2(Bd.x,Bd.y,T2.x,T2.y));
-          batA.add(sPx,mx2,my2,1.4,len,Math.atan2(T2.y-Bd.y,T2.x-Bd.x)+Math.PI/2,90,200,255,60+Math.sin(t*6)*30);
-        }
-      }
-      if(Bd.boost>0) batA.add(sprites.glow,Bd.x,Bd.y-sz*0.5,7,7,0,90,200,255,150);
-      if(nAmt>0.25&&Bd.team!==2){
-        const fl=(t*3+b)%1>0.9?0.4:1;                                            // occasional flicker
-        batA.add(sprites.glow,Bd.x+sz*0.3,Bd.y-sz*0.18,9,9,0,255,220,150,200*nAmt*fl);
-        batA.add(sprites.glow,Bd.x-sz*0.26,Bd.y+sz*0.2,7,7,0,170,215,255,170*nAmt);
-        /* Area work-light (sz*2.1 warm pool) retired with the 3D night
-           billboard — it read as an orange orb on HQ/factory. Window and
-           pad-lamp points above stay. */
-      }
-      if((Bd.type==='fac'||Bd.type==='tgate')&&Bd.queue.length){
-        batN.add(sPx,Bd.x,Bd.y+sz*0.62,sz*0.9,3,0,10,14,18,220);
-        const pr=Bd.prodT/TYPES[Bd.queue[0]].bt;
-        batN.add(sPx,Bd.x-sz*0.45*(1-pr),Bd.y+sz*0.62,sz*0.9*pr,3,0,93,255,154,255);
-      }
-      /* Health is permanent battlefield information, not a damage alert.
-         These bars stay in the existing batched sprite pass so showing every
-         visible structure does not add a draw call per object. */
-      const bFrac=clamp(Bd.hp/Bd.hpm,0,1);
-      batN.add(sPx,Bd.x,Bd.y-sz*0.66,sz*0.9,3.4,0,10,14,18,220);
-       batN.add(sPx,Bd.x-sz*0.45*(1-bFrac),Bd.y-sz*0.66,sz*0.9*bFrac,3.4,0,
-         bFrac>0.5?93:255, bFrac>0.5?255:120, bFrac>0.25?90:60, 255);
-       /* Structure rank uses tiny gold diamonds instead of another text label.
-          It remains readable at command zoom, identifies a hardened Mk2/Mk3
-          tower at a glance, and costs only two or three batched quads. */
-       const bLvl=Bd.type==='fac'?(Bd.tier===2?2:1):(Bd.lvl||1);
-       if(bLvl>1){
-         const ry=Bd.y-sz*0.92, pips=bLvl;
-         for(let rp=0;rp<pips;rp++){
-           const rx=Bd.x+(rp-(pips-1)*.5)*5.4;
-           batN.add(sPx,rx,ry,4.2,4.2,Math.PI*.25,255,210,87,235);
-         }
-         batA.add(sprites.glow,Bd.x,ry,9+pips*3,7,0,255,210,87,46);
-       }
-       // animated working parts
-      if(Bd.type==='mex'&&!use3D) batN.add(sprites.rotor,Bd.x,Bd.y-sz*0.09,sz*0.5,sz*0.5,t*2.4+b,255,255,255,235);
-      if(Bd.type==='pgen') batA.add(sprites.glow,Bd.x,Bd.y-sz*0.04,sz*0.7+Math.sin(t*3.2+b)*4,sz*0.7+Math.sin(t*3.2+b)*4,0,255,205,90,44);
-      if(Bd.type==='sgen'){
-        batA.add(sprites.ring,Bd.x,Bd.y,240,240,t*0.4,80,220,160,26);
-        batN.add(sprites.dish,Bd.x,Bd.y-sz*0.14,sz*0.62,sz*0.62,t*0.9+b,tc[0],tc[1],tc[2],255);
-      }
-      if(Bd.type==='fac'){
-        const blink=(t*2+b)%1>0.5?200:60;
-        batA.add(sprites.glow,Bd.x-sz*0.36,Bd.y-sz*0.1,5,5,0,120,230,255,blink);
-        batA.add(sprites.glow,Bd.x+sz*0.36,Bd.y-sz*0.1,5,5,0,120,230,255,260-blink);
-      }
-      if(Bd.type==='nest') batA.add(sprites.glow,Bd.x,Bd.y+sz*0.05,sz*0.5+Math.sin(t*2+b)*5,sz*0.4,0,255,150,60,40);
-      if(Bd.type==='tgate') batA.add(sprites.glow,Bd.x,Bd.y,sz*1.2,sz*1.2,0,90,180,255,30+Math.sin(t*3)*14);
-    }
-    if(openBld===b) batA.add(sprites.ring,Bd.x,Bd.y,sz*1.5,sz*1.5,0,120,230,255,150);
-  }
-  // ---- units ----  (bodies → batU; bars/overlays stay in batN, flushed above)
-  let nAir=0;
-  const FAC_LOOK=(typeof FACTIONS!=='undefined'&&AI&&FACTIONS[AI.fac])?FACTIONS[AI.fac]:null;
-  for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]) continue;
-    const X=ux[i], Y=uy[i];
-    if(X<x0||X>x1||Y<y0||Y>y1) continue;
-    if(!fogEntityVisible(uteam[i],X,Y)) continue;
-    const T=TYPES[utype[i]];
-    if(T.air){ if(nAir<12000) airTmp[nAir++]=i; continue; }
-    const tc=TEAMC[uteam[i]];
-    if(usel[i]) batA.add(selRing,X,Y,T.size*1.6,T.size*1.6,0,60,220,140,170);
-    if(ubuff[i]>0) batA.add(glow,X,Y,T.size*1.9,T.size*1.9,0,255,210,60,40);
-    if(typeof uclassBuffT!=='undefined'&&uclassBuffT[i]>0){
-      const cc=uclassBuff[i]===1?[255,112,54]:uclassBuff[i]===2?[75,225,255]:[82,255,164];
-      batA.add(selRing,X,Y,T.size*2.05,T.size*2.05,t*(uclassBuff[i]===2?1.8:.65),cc[0],cc[1],cc[2],120);
-      batA.add(glow,X,Y,T.size*1.65,T.size*1.65,0,cc[0],cc[1],cc[2],34);
-    }
-    if(typeof ubroodLed!=='undefined'&&ubroodLed[i]>0){
-      batA.add(selRing,X,Y,T.size*1.65,T.size*1.65,t*.72+i*.17,176,92,255,T.caster?155:54);
-      if(T.caster){
-        batA.add(selRing,X,Y,T.size*2.75,T.size*2.75,-t*.38,116,255,105,128);
-        batA.add(glow,X,Y-T.size*.24,T.size*2.25,T.size*2.25,0,178,82,255,64+Math.sin(t*4+i)*24);
-      }
-    }
-    // organic sway for walkers & beasts
-    let bodyRot=uang[i];
-    if(T.wk==='m'||utype[i]===0||utype[i]===8||utype[i]===11) bodyRot+=Math.sin(t*8+i*1.7)*0.045;
-    const rec=T.tur? Math.max(0,(ucool[i]/T.cool)-0.7)/0.3 * T.size*0.09 : 0;
-    const ta2=uturr[i]-Math.PI/2;
-    // --- silhouette shaping: factions read differently at a glance ---
-    let sw=T.size*S3D, sh=T.size*S3D;
-    if(uteam[i]===1&&FAC_LOOK){
-      sw*=FAC_LOOK.scale*(FAC_LOOK.squash>1?1/FAC_LOOK.squash:1);
-      sh*=FAC_LOOK.scale*(FAC_LOOK.squash>1?FAC_LOOK.squash:1);
-      if(FAC_LOOK.tilt) bodyRot+=FAC_LOOK.tilt;
-      if(FAC_LOOK.glowA&&(i&1)===0)
-        batA.add(glow,X,Y,T.size*2.0,T.size*2.0,0,FAC_LOOK.glow[0],FAC_LOOK.glow[1],FAC_LOOK.glow[2],FAC_LOOK.glowA);
-    }
-    else if(uteam[i]===2){
-      // --- ALIEN BIOLOGY: nothing about a bug should look machined ---
-      const ph=i*2.399;                                   // per-creature phase
-      const breathe=1+Math.sin(t*6.2+ph)*0.11;            // thorax expansion
-      const scuttle=umov[i]?Math.sin(t*17+ph)*0.16:Math.sin(t*2.4+ph)*0.045;
-      const lurch=umov[i]?Math.abs(Math.sin(t*8.5+ph))*0.13:0;
-      sw*=breathe*(1+lurch*0.4)*BUG_SIZE[i%8];
-      sh*=(2-breathe)*(1+lurch)*BUG_SIZE[(i>>3)%8];
-      bodyRot+=scuttle;
-    }
-    // GHOST stance: silent running renders the hull as a shimmer, not a solid
-    const bodyA = umode[i]===4 ? (uteam[i]===0?96:60) : 255;
-    if(use3D&&UNIT_UV[T.spr]){
-      // baked walk cycle: alternate stride frames while moving
-      let uvBody=UNIT_UV[T.spr];
-      if(umov[i]){
-        if(utype[i]===0){ if(((t*5.5+i*0.37)|0)&1) uvBody=UNIT_UV.botW||uvBody; }
-        else if(utype[i]===12||utype[i]===13){ if(((t*6.5+i*0.37)|0)&1) uvBody=UNIT_UV.ravW||uvBody; }
-      }
-      batU.add(uvBody[angFrame(bodyRot+camYaw)],X,Y,sw,sh,bodyRot-uang[i],tc[0],tc[1],tc[2],bodyA,T.size*0.35);
-      if(T.tur) batU.add(UNIT_UV[T.tur][angFrame(uturr[i]+camYaw)],X-Math.cos(ta2)*rec,Y-Math.sin(ta2)*rec,sw,sh,0,tc[0],tc[1],tc[2],bodyA,T.size*0.45);
-    } else {
-      batN.add(sprites[T.spr],X,Y,T.size,T.size,bodyRot,tc[0],tc[1],tc[2],bodyA);
-      if(T.tur) batN.add(sprites[T.tur],X-Math.cos(ta2)*rec,Y-Math.sin(ta2)*rec,T.size,T.size,uturr[i],tc[0],tc[1],tc[2],bodyA);
-    }
-    if(uteam[i]===2&&zoomedIn&&(i&3)===0)                 // wet chitin sheen
-      batA.add(glow,X,Y-T.size*0.2,T.size*0.9,T.size*0.7,0,150,220,110,26);
-    if(utype[i]===11){  // Bulwark shield dome
-      batA.add(sprites.bubble,X,Y,SHIELD_R*2,SHIELD_R*2,t*0.5,120,215,255,55);
-    }
-    if(nAmt>0.25&&umov[i]&&!T.naval&&(i&1)===0&&perfScale>0.5&&uteam[i]!==2){
-      const ha=uang[i]-Math.PI/2;
-      batA.add(glow,X+Math.cos(ha)*T.size*1.05,Y+Math.sin(ha)*T.size*1.05,T.size*2.2,T.size*2.2,0,255,240,190,42*nAmt);
-    }
-    if(i===heroIdx||isEnemyCommander(i)||utype[i]===8){
-      batA.add(glow,X,Y,T.size*2.1,T.size*2.1,0,
-        uteam[i]?255:90, uteam[i]?120:200, uteam[i]?80:255, 34);
-    }
-    const uFrac=clamp(uhp[i]/uhpm[i],0,1), uBarW=T.size*1.15;
-    batN.add(sPx,X,Y-T.size*0.85,uBarW,2.6,0,8,12,16,200);
-    batN.add(sPx,X-uBarW/2*(1-uFrac),Y-T.size*0.85,uBarW*uFrac,2.6,0,
-      uFrac>0.5?93:255, uFrac>0.5?255:130, uFrac>0.25?90:60, 255);
-    /* VETERAN BADGE. A gold star floats over the hull rather than a text label:
-       levels add spike length, not count, so a three-star vet stays legible at
-       command zoom. Drawn as five radiating slivers because there is no star
-       sprite in the sheet and a synthetic glyph is one batN batch line each. */
-    if(uvet[i]>0){
-      const sy=Y-T.size*1.06, sp2=3.2+uvet[i]*0.9, pulse=1+Math.sin(t*6+i)*0.14;
-      for(let k2=0;k2<5;k2++){
-        const a2=-Math.PI/2+k2*TAU/5;
-        batN.add(sPx,X+Math.cos(a2)*sp2*pulse,sy+Math.sin(a2)*sp2*pulse,2.6,sp2*2.2*pulse,a2,255,210,87,225);
-      }
-      batA.add(glow,X,sy,9+uvet[i]*2.5,9+uvet[i]*2.5,0,255,210,87,80);
-    }
-    /* ---- stance tells -------------------------------------------------
-       A mode has to be legible from across the battlefield without reading
-       any UI: siege drops ground anchors, guard raises a plated dome,
-       overdrive glows hot, ghost goes translucent, suppress throws muzzle
-       haze. You should be able to tell what a line is doing at a glance. */
-    const mo=umode[i];
-    if(mo){
-      const dep=umodeT[i]>0 ? 1-umodeT[i]/MODE_SWITCH : 1;    // animate the transition in
-      if(mo===1){                                             // SIEGE: braced spades
-        const sp=T.size*(0.8+dep*0.5);
-        batN.add(sPx,X,Y,sp*2.1,sp*0.5,uang[i], 92,96,102, 200*dep);
-        batN.add(sPx,X,Y,sp*0.5,sp*2.1,uang[i], 92,96,102, 200*dep);
-        batA.add(selRing,X,Y,T.size*2.5,T.size*2.5,0, 255,200,110, 60*dep);
-      } else if(mo===2){                                      // GUARD: plated shell
-        batA.add(glow,X,Y-T.size*0.1,T.size*1.9*dep,T.size*1.6*dep,0, 130,190,255, 60*dep);
-        batA.add(selRing,X,Y,T.size*2.0*dep,T.size*2.0*dep,t*0.4, 150,205,255, 110*dep);
-      } else if(mo===3){                                      // OVERDRIVE: running hot
-        batA.add(glow,X,Y,T.size*1.6,T.size*1.6,0, 255,120,50, (70+Math.sin(t*11+i)*38)*dep);
-      } else if(mo===5){                                      // SUPPRESS: muzzle haze
-        const ha=(T.tur?uturr[i]:uang[i])-Math.PI/2;
-        batA.add(glow,X+Math.cos(ha)*T.size*0.8,Y+Math.sin(ha)*T.size*0.8,
-          T.size*1.3,T.size*1.3,0, 255,190,110, 54*dep);
-      } else if(mo===6){                                      // ASSIST: logistics lock
-        batA.add(selRing,X,Y,T.size*2.1,T.size*2.1,t*.7,72,225,255,120*dep);
-      } else if(mo===7){                                      // SURVEY: scanning wave
-        const scan=1+((t*.55+i*.13)%1)*1.8;
-        batA.add(selRing,X,Y,T.size*scan,T.size*scan,-t*.35,100,255,185,(125/scan)*dep);
-      }
-    }
-  }
-  // air pass
-  for(let k=0;k<nAir;k++){
-    const i=airTmp[k], T=TYPES[utype[i]], tc=TEAMC[uteam[i]];
-    const bob=Math.sin(t*3+i)*1.5;
-    if(usel[i]) batA.add(selRing,ux[i],uy[i],T.size*1.6,T.size*1.6,0,60,220,140,170);
-    if(typeof uclassBuffT!=='undefined'&&uclassBuffT[i]>0){
-      const cc=uclassBuff[i]===2?[75,225,255]:[255,112,54];
-      batA.add(selRing,ux[i],uy[i],T.size*2.25,T.size*2.25,t*1.8,cc[0],cc[1],cc[2],135);
-    }
-    if(use3D&&UNIT_UV[T.spr]){
-      batU.add(UNIT_UV[T.spr][angFrame(uang[i]+camYaw)],ux[i],uy[i]-7+bob,T.size*S3D,T.size*S3D,0,tc[0],tc[1],tc[2],255,52);
-    } else {
-      batN.add(sprites.px,ux[i]+4,uy[i]+9,T.size*0.7,T.size*0.35,uang[i],0,0,0,60);
-      batN.add(sprites[T.spr],ux[i],uy[i]-7+bob,T.size,T.size,uang[i],tc[0],tc[1],tc[2],255);
-    }
-    batA.add(glow,ux[i]-Math.sin(uang[i])*T.size*0.5,uy[i]-7+bob+Math.cos(uang[i])*T.size*0.5,5,5,0,140,220,255,120);
-    const aFrac=clamp(uhp[i]/uhpm[i],0,1), aBarW=T.size*1.15;
-    batN.add(sPx,ux[i],uy[i]-T.size*1.1,aBarW,2.6,0,8,12,16,200);
-    batN.add(sPx,ux[i]-aBarW/2*(1-aFrac),uy[i]-T.size*1.1,aBarW*aFrac,2.6,0,
-      aFrac>0.5?93:255,aFrac>0.5?255:130,aFrac>0.25?90:60,255);
-  }
-
-  // ---- rally flags (player production buildings) ----
-  for(const Bd of blds){
-    if(!Bd.alive||Bd.team!==0||!Bd.rally) continue;
-    const R2=Bd.rally;
-    if(R2.x<x0-30||R2.x>x1+30||R2.y<y0-30||R2.y>y1+30) continue;
-    batN.add(sPx,R2.x,R2.y-10,2,20,0,235,242,250,225);                       // pole
-    const wave=Math.sin(t*5+R2.x)*1.5;
-    batN.add(sPx,R2.x+6,R2.y-15+wave*0.3,10,6,wave*0.05,TEAMC[0][0],TEAMC[0][1],TEAMC[0][2],240);  // pennant
-    batA.add(sprites.glow,R2.x,R2.y,16,8,0,120,255,170,60+Math.sin(t*4)*25);
-    if(openBld>=0&&blds[openBld]===Bd)                                       // path hint while menu open
-      batA.add(sprites.beam,(Bd.x+R2.x)/2,(Bd.y+R2.y)/2,3,Math.hypot(R2.x-Bd.x,R2.y-Bd.y),
-        Math.atan2(R2.y-Bd.y,R2.x-Bd.x)+Math.PI/2,120,255,170,46);
-  }
-  // ---- formation hologram + multi-waypoint patrol routes ----
-  const showOrderPaths=!(META&&META.settings&&META.settings.orderPaths===false);
-  const drawTacRoute=(pts,closed,draft,activeStep)=>{
-    if(!pts||pts.length<2)return;
-    const cr=draft?[90,225,255]:[105,255,175], segs=closed?pts.length:pts.length-1;
-    for(let j=0;j<segs;j++){
-      const A=pts[j],B=pts[(j+1)%pts.length],dx=B.x-A.x,dy=B.y-A.y,len=Math.hypot(dx,dy);
-      if(len<4)continue;
-      const active=activeStep!=null&&(j+1)%pts.length===activeStep;
-      const lc=active?[255,205,90]:cr;
-      /* Animated dashes, not a solid beam. The phase marches the gaps along the
-         route at a constant world speed (independent of zoom or frame rate), so
-         which way the platoon is walking reads even when the camera is far out.
-         The active leg is drawn solid so "where the platoon is going next" and
-         "where it has been" are distinguishable at a glance. */
-      if(active){
-        batA.add(sprites.beam,(A.x+B.x)/2,(A.y+B.y)/2,4.2,len,
-          Math.atan2(dy,dx)+Math.PI/2,lc[0],lc[1],lc[2],105);
-      } else {
-        const step=draft?22:20, dashLen=draft?15:13, ang=Math.atan2(dy,dx)+Math.PI/2;
-        const off=(t*30)%step;
-        for(let d=off-step;d<len;d+=step){
-          const d0=Math.max(0,d),d1=Math.min(len,d+dashLen);
-          if(d1-d0<2)continue;
-          batA.add(sprites.beam,A.x+dx*((d0+d1)/2)/len,A.y+dy*((d0+d1)/2)/len,
-            draft?3.1:2.4,d1-d0,ang,lc[0],lc[1],lc[2],draft?74:50);
-        }
-      }
-      /* Three moving light packets make route direction readable even when the
-         camera is too far out to distinguish a tiny arrowhead. */
-      for(let q=0;q<3;q++){
-        const f=(t*.32+q/3+j*.11)%1;
-        const sz=active?11:(draft?9:7);
-        batA.add(sprites.glow,A.x+dx*f,A.y+dy*f,sz,sz,0,lc[0],lc[1],lc[2],active?210:(draft?180:125));
-      }
-    }
-    for(let j=0;j<pts.length;j++){
-      const P=pts[j],active=j===activeStep,pulse=(active?25:18)+Math.sin(t*4+j)*(active?5:3),pc=active?[255,205,90]:cr;
-      batA.add(selRing,P.x,P.y,pulse,pulse,t*.35,pc[0],pc[1],pc[2],active?230:(draft?180:125));
-      batA.add(sprites.glow,P.x,P.y,active?17:11,active?17:11,0,pc[0],pc[1],pc[2],active?220:150);
-      /* Small rank pips identify waypoint order without screen-space text. */
-      const marks=Math.min(5,Math.max(1,j));
-      for(let q=0;q<marks;q++)batN.add(sPx,P.x+(q-(marks-1)/2)*4.5,P.y-9,2.4,5,0,225,250,255,220);
-    }
-  };
-  if(showOrderPaths){
-    const seen={};
-    for(let i=0;i<unitHigh;i++){
-      if(!ualive[i]||!usel[i]||ustate[i]!==5)continue;
-      const ri=uPatrolRoute[i],R=ri>=0?patrolRoutes[ri]:null;
-      if(R&&R.pts&&!seen[ri]){
-        seen[ri]=1;drawTacRoute(R.pts,true,false,R.step);
-        /* Preview the active formation row in-world. Sampling caps the draw
-           cost for huge platoons while keeping the spacing/turn intent clear. */
-        const row=R.targets&&R.targets[R.step];
-        if(row){
-          const stride=Math.max(1,Math.ceil(row.length/36));
-          for(let k=0;k<row.length;k+=stride){
-            const P=row[k],sz=12+Math.sin(t*4+k*.2)*1.5;
-            batA.add(selRing,P.x,P.y,sz,sz,t*.45+k*.07,255,210,100,145);
-          }
-        }
-        continue;
-      }
-      if(ri>=0)continue;
-      const dx2=upx2[i]-upx1[i],dy2=upy2[i]-upy1[i],len=Math.hypot(dx2,dy2);
-      if(len>=10)drawTacRoute([{x:upx1[i],y:upy1[i]},{x:upx2[i],y:upy2[i]}],true,false);
-    }
-    if(patrolDraft)drawTacRoute(patrolDraft.pts,patrolDraft.pts.length>2,true);
-  }
-  const confirmLive=orderConfirm&&performance.now()<orderConfirm.until;
-  if(orderConfirm&&!confirmLive)orderConfirm=null;
-  const formationDisplay=orderPreview||(confirmLive?orderConfirm:null);
-  if(formationDisplay&&!(META&&META.settings&&META.settings.formationPreview===false)){
-    const fade=orderPreview?1:clamp((formationDisplay.until-performance.now())/950,0,1);
-    const members=formationDisplay.members,F=FORMS[formationDisplay.form]||FORMS[0];
-    /* Same 36-ghost cap as patrol. Do not call formationTargets on the full
-       selection here — that rebuilt 1000 stands every sprite frame. */
-    const slots=typeof formationPreviewSlots==='function'
-      ?formationPreviewSlots(formationDisplay,members,F.id)
-      :[];
-    const n=members.length, stride=Math.max(1,Math.ceil(n/36));
-    let cx2=0,cy2=0,cn=0;
-    for(let k=0;k<n;k+=stride){
-      const i=members[k]; if(!(ualive[i]&&usel[i])) continue;
-      cx2+=ux[i]; cy2+=uy[i]; cn++;
-    }
-    if(cn){cx2/=cn;cy2/=cn;}
-    const fa=Math.atan2(formationDisplay.y-cy2,formationDisplay.x-cx2);
-    /* noLine: tap-move confirms route through orderfx's traced path; a straight
-       beam here would disagree with it whenever the field bends. */
-    if(!formationDisplay.noLine)
-      batA.add(sprites.beam,(cx2+formationDisplay.x)/2,(cy2+formationDisplay.y)/2,2.4,
-        Math.hypot(formationDisplay.x-cx2,formationDisplay.y-cy2),fa+Math.PI/2,90,225,255,46*fade);
-    batA.add(selRing,formationDisplay.x,formationDisplay.y,34,34,t*.8,100,235,255,190*fade);
-    for(let k=0;k<slots.length;k++){
-      const P=slots[k],i=members[Math.min(k*stride,n-1)],T=TYPES[utype[i]]||TYPES[0],sz=Math.max(12,T.size*.82);
-      batA.add(selRing,P.x,P.y,sz*1.35,sz*1.35,t*.45+k*.1,95,240,255,185*fade);
-      batA.add(sprites.glow,P.x,P.y,sz,sz,0,65,215,255,72*fade);
-      const uv=UNIT_UV[T.spr];
-      if(uv)batU.add(uv[angFrame(fa+Math.PI/2+camYaw)%uv.length],P.x,P.y,sz*S3D,sz*S3D,0,115,245,255,115*fade,T.air?18:2);
-      else if(sprites[T.spr])batN.add(sprites[T.spr],P.x,P.y,sz,sz,fa+Math.PI/2,115,245,255,105*fade);
-    }
-  }
-
-  // Charged Barrage targeting is a world-space fire plan, not a text prompt.
-  const abDraw=(aiming===5&&artBarrageAim)?artBarrageAim:artBarrageCharge;
-  if(abDraw){
-    const pts=abDraw.pattern||artBarragePattern(abDraw.x,abDraw.y);
-    const prog=artBarrageCharge?clamp(artBarrageCharge.t/artBarrageCharge.total,0,1):0;
-    batA.add(selRing,abDraw.x,abDraw.y,(ART_BARRAGE.spread+ART_BARRAGE.aoe)*2,
-      (ART_BARRAGE.spread+ART_BARRAGE.aoe)*2,t*.34,255,174,68,130+prog*70);
-    for(let k=0;k<pts.length;k++){
-      const P=pts[k],pulse=ART_BARRAGE.aoe*2+Math.sin(t*5+k)*5;
-      batA.add(selRing,P.x,P.y,pulse,pulse,-t*.6+k*.25,255,210,95,165+prog*65);
-      batA.add(sprites.glow,P.x,P.y,9+prog*8,9+prog*8,0,255,135,45,95+prog*90);
-    }
-    const src=artBarrageCharge?artBarrageCharge.members.map(m=>m.i):artBarrageSelected();
-    for(const i of src){
-      if(!ualive[i]||ugen[i]===undefined)continue;
-      const len=Math.hypot(abDraw.x-ux[i],abDraw.y-uy[i]);
-      batA.add(selRing,ux[i],uy[i],ART_BARRAGE.range*2,ART_BARRAGE.range*2,0,255,185,70,aiming===5?22:10);
-      batA.add(sprites.beam,(ux[i]+abDraw.x)/2,(uy[i]+abDraw.y)/2,2.4+prog*2.4,len,
-        Math.atan2(abDraw.y-uy[i],abDraw.x-ux[i])+Math.PI/2,255,182,70,38+prog*80);
-      batA.add(selRing,ux[i],uy[i],TYPES[utype[i]].size*(2.1+prog),TYPES[utype[i]].size*(2.1+prog),
-        t*(1+prog),255,195,82,150+prog*90);
-    }
-  }
-
-  // ---- placement ghost + BUILD ZONE rings (no darkening overlay) ----
-  if(placing){
-    const T=BT[placing.type], ok=placementValid();
-    const freeNode=(placing.type==='mex'||placing.type==='geo');
-    // construction zone: a SQUARE footprint per structure, with corner brackets
-    if(!freeNode){
-      for(const Bz of blds){
-        if(!Bz.alive||Bz.team!==0) continue;
-        const br=buildRadius(Bz), sd=br*2;
-        if(Bz.x<x0-br||Bz.x>x1+br||Bz.y<y0-br||Bz.y>y1+br) continue;
-        const ew=Math.max(2.2,3.2/cam.z);            // constant on-screen edge weight
-        batA.add(sPx,Bz.x,Bz.y,sd,sd,0,60,150,220,13);                     // fill wash
-        batA.add(sPx,Bz.x,Bz.y-br,sd,ew,0,120,215,255,120);                // edges
-        batA.add(sPx,Bz.x,Bz.y+br,sd,ew,0,120,215,255,120);
-        batA.add(sPx,Bz.x-br,Bz.y,ew,sd,0,120,215,255,120);
-        batA.add(sPx,Bz.x+br,Bz.y,ew,sd,0,120,215,255,120);
-        const cb=br*0.24;                                                   // corner brackets
-        for(const sx3 of [-1,1]) for(const sy3 of [-1,1]){
-          batA.add(sPx,Bz.x+sx3*(br-cb/2),Bz.y+sy3*br,cb,ew*2.1,0,150,235,255,215);
-          batA.add(sPx,Bz.x+sx3*br,Bz.y+sy3*(br-cb/2),ew*2.1,cb,0,150,235,255,215);
-        }
-      }
-    }
-    // snap grid
-    const gx0=Math.round((placing.x-160)/SNAP)*SNAP, gy0=Math.round((placing.y-160)/SNAP)*SNAP;
-    for(let k=0;k<=16;k++){
-      batA.add(sPx,gx0+k*SNAP,placing.y,1.2,320,0,120,220,255,44);
-      batA.add(sPx,placing.x,gy0+k*SNAP,320,1.2,0,120,220,255,44);
-    }
-    // alignment guides to snapped neighbours
-    for(const Bg of blds){
-      if(!Bg.alive||Bg.team!==0) continue;
-      if(Math.abs(Bg.x-placing.x)<1 && Math.abs(Bg.y-placing.y)<300)
-        batA.add(sPx,placing.x,(placing.y+Bg.y)/2,1.6,Math.abs(placing.y-Bg.y),0,120,255,190,120);
-      if(Math.abs(Bg.y-placing.y)<1 && Math.abs(Bg.x-placing.x)<300)
-        batA.add(sPx,(placing.x+Bg.x)/2,placing.y,Math.abs(placing.x-Bg.x),1.6,0,120,255,190,120);
-    }
-    batA.add(glow,placing.x,placing.y,T.size*2.6,T.size*2.6,0, ok?80:255, ok?255:70, ok?140:60, 60);
-    const prot=placing.rot||0;
-    /* The ghost's FOOTPRINT is the important thing to show — the exact oriented
-       rectangle of ground this will consume, so overlaps are obvious before you
-       commit rather than a mystery rejection afterwards. */
-    const pf=bldFoot(placing.type);
-    const pr=ok?[90,235,150]:[255,80,70];
-    /* Paint each snapped cell under the proposed footprint. A red cell and
-       diagonal cross make an invalid site understandable before Build is
-       pressed, including large structures whose centre looks clear while one
-       corner clips water, a node, or another building. */
-    const nx=Math.max(1,Math.round(pf[0]/SNAP)),ny=Math.max(1,Math.round(pf[1]/SNAP));
-    const cellW=pf[0]/nx,cellH=pf[1]/ny;
-    const rc=Math.cos(prot),rs=Math.sin(prot);
-    for(let cy=0;cy<ny;cy++) for(let cx=0;cx<nx;cx++){
-      const lx=(cx-(nx-1)*.5)*cellW,ly=(cy-(ny-1)*.5)*cellH;
-      const wx=placing.x+lx*rc-ly*rs,wy=placing.y+lx*rs+ly*rc;
-      batA.add(sPx,wx,wy,cellW*.82,cellH*.82,prot,pr[0],pr[1],pr[2],ok?20:72);
-      if(!ok) batA.add(sPx,wx,wy,cellW*.92,2.1,prot+Math.PI*.25,255,155,130,180);
-    }
-    BILLBOARD=0;                    // the footprint lies ON the ground and turns with it
-    batA.add(sPx,placing.x,placing.y,pf[0],pf[1],prot, pr[0],pr[1],pr[2], 34);   // filled plate
-    const pc=Math.cos(prot), ps=Math.sin(prot), phw=pf[0]/2, phh=pf[1]/2;
-    const edge=(ex,ey,w,h,r)=>batA.add(sPx,placing.x+ex*pc-ey*ps,placing.y+ex*ps+ey*pc,w,h,r,pr[0],pr[1],pr[2],210);
-    edge(0,-phh,pf[0],2.2,prot); edge(0,phh,pf[0],2.2,prot);
-    edge(-phw,0,2.2,pf[1],prot);  edge(phw,0,2.2,pf[1],prot);
-    // facing chevron: which way the structure will point once built
-    edge(phw*0.55,0, pf[0]*0.30, 3.2, prot);
-    edge(phw*0.30,-phh*0.34, pf[0]*0.22, 3.2, prot+0.7);
-    edge(phw*0.30, phh*0.34, pf[0]*0.22, 3.2, prot-0.7);
-    BILLBOARD=1;
-    const guv=UNIT_UV[T.spr];                        // ghost: prefer baked 3D sprite; some buildings have no 2D atlas art
-    if(guv) batU.add(guv[0],placing.x,placing.y,T.size*S3B,T.size*S3B,0, ok?160:255, ok?255:120, ok?180:110, 200, T.size*0.5);
-    else if(sprites[T.spr]) batN.add(sprites[T.spr],placing.x,placing.y,T.size,T.size,0,
-      ok?160:255, ok?255:120, ok?180:110, 190, T.size*0.5);
-    if(!freeNode&&!inBuildRange(placing.x,placing.y,0))   // clear "why not" cue, no dark wash
-      batA.add(selRing,placing.x,placing.y,T.r*3.4,T.r*3.4,t*1.2,255,90,70,120);
-    if(placing.type==='turret') batA.add(selRing,placing.x,placing.y,TURRET_RNG*2,TURRET_RNG*2,0,255,255,255,26);
-    if(placing.type==='bastion'){
-      batA.add(selRing,placing.x,placing.y,BASTION.rng*2,BASTION.rng*2,0,255,255,255,22);
-      batA.add(selRing,placing.x,placing.y,BASTION.minRng*2,BASTION.minRng*2,0,255,90,60,30);
-    }
-    const newDefR=placing.type==='minelaser'?MINELASER.rng:
-                  placing.type==='missilebastion'?MISSILE_BASTION.rng:
-                  placing.type==='plasma'?PLASMA_CHARGER.rng:0;
-    if(newDefR) batA.add(selRing,placing.x,placing.y,newDefR*2,newDefR*2,0,120,225,255,24);
-  }
-
-  // ---- SUPER CARRIER (pre-deployment) ----
-  if(carrier.active&&carrier.phase<2){
-    const alt=carrierEffectiveAlt(), tc=TEAMC[0];
-    const sc=1+alt/620;                                    // parallax: bigger while high
-    // ground shadow tightens as it descends
-    batN.add(sprites.glow,carrier.x+alt*0.10,carrier.y+alt*0.16,
-      110*(1+alt/900),74*(1+alt/900),0,0,0,0,Math.max(28,120-alt*0.09));
-    if(carrier.phase===1&&(carrier.tx!==carrier.x||carrier.ty!==carrier.y)){
-      batA.add(sprites.beam,(carrier.x+carrier.tx)/2,(carrier.y+carrier.ty)/2,2.4,
-        Math.hypot(carrier.tx-carrier.x,carrier.ty-carrier.y),
-        Math.atan2(carrier.ty-carrier.y,carrier.tx-carrier.x)+Math.PI/2,120,220,255,42);
-      batA.add(selRing,carrier.tx,carrier.ty,44,44,t*1.4,120,220,255,110);
-    }
-    // deploy-site validity halo
-    if(carrier.phase===1){
-      const okd=carrierCanDeploy();
-      batA.add(selRing,carrier.x,carrier.y-alt*0.5,150,150,t*0.35,
-        okd?90:255, okd?240:90, okd?150:70, 90+Math.sin(t*3)*35);
-      if(okd) batA.add(sprites.glow,carrier.x,carrier.y,160,110,0,90,240,150,26);
-    }
-    batN.add(sprites.carrier,carrier.x,carrier.y-alt*0.5,150*sc,150*sc,carrier.ang,
-      tc[0],tc[1],tc[2],255);
-    if(alt>0){                                             // retro-thrust plumes
-      for(const sx2 of [-42,42]){
-        batA.add(sprites.glow,carrier.x+sx2,carrier.y-alt*0.5+52,34,52,0,255,190,110,150);
-        batA.add(sprites.glow,carrier.x+sx2,carrier.y-alt*0.5+78,22,84,0,255,140,60,90);
-      }
-    }
-  }
-
-  // ---- meteor warnings ----
-  for(const M of meteors){
-    const pulse=0.6+Math.sin(t*8)*0.4;
-    batA.add(sprites.warn,M.x,M.y,170,170,t*0.8,255,90,60,120*pulse);
-    batA.add(glow,M.x,M.y,40*pulse,40*pulse,0,255,90,60,70);
-    if(M.t<0.6){
-      const fall=1-M.t/0.6;
-      batA.add(sprites.beam,M.x+40*(1-fall),M.y-320*(1-fall*0.9),10,560,0.12,255,190,110,fall*220);
-      batA.add(glow,M.x+40*(1-fall),M.y-620*(1-fall),30,30,0,255,220,150,fall*255);
-    }
-  }
-
-  // ---- baked 3D unit batch (own texture), then overlays ----
-  if(batU.n){
-    gl.bindTexture(gl.TEXTURE_2D,unitTex);
-    batU.flush();
-    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
-  }
-  batN.flush();
-
-  // ---- night ambient: cool darkness over the world; lights punch through ----
-  if(nAmt>0.02){
-    batN.add(sPx,camx,camy,B.hw*2+120,B.hh*2+120,0, 13,19,48, Math.min(150,nAmt*135));
-    batN.flush();
-  }
-
-  // ---- additive pass ----
-  gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
-
-  /* ---- VOLUMETRIC LIGHT ------------------------------------------------
-     In dark air — night, a Blood Moon, a fog bank — a light source stops
-     being a bright dot and becomes a visible SHAFT, because you can see the
-     medium it's travelling through. Each shaft is a stack of additive cones
-     leaning away from the light, widening and fading with distance; layering
-     three of them with slightly different widths gives the soft-edged falloff
-     a single quad can't. Gated hard on darkness so noon costs nothing.    */
-  const volAmt=Math.min(1, nAmt*1.15 + (WC.moon?0.55:0) + (WC.fogb?0.42:0));
-  if(volAmt>0.22 && bloomOn && perfScale>0.35){
-    const sBm=sprites.beam, sGl=sprites.glow;
-    const drift=Math.sin(t*0.25)*0.10;                 // the air is never quite still
-    const shaft=(sx,sy,len,wid,r,g,b,a,ang)=>{
-      const A=a*volAmt;
-      batA.add(sGl,sx,sy,wid*2.4,wid*2.4,0,r,g,b,A*0.55);            // source bloom
-      for(let L=0;L<3;L++){
-        const f=1+L*0.9, al=A*(0.34-L*0.09);
-        if(al<=1) continue;
-        batA.add(sBm, sx+Math.cos(ang)*len*0.5, sy+Math.sin(ang)*len*0.5,
-                 wid*f, len, ang+Math.PI/2, r,g,b, al);
-      }
-    };
-    /* Specialist night shafts only. Generic work-light cones used to stamp
-       a warm source bloom on every large building — the HUD leftover of
-       the 3D billboard this pass retired. Searchlights and runway lamps stay. */
-    for(const Bv of blds){
-      if(!Bv.alive||Bv.prog<1||Bv.team===2) continue;
-      if(Bv.x<x0-140||Bv.x>x1+140||Bv.y<y0-140||Bv.y>y1+140) continue;
-      if(!fogEntityVisible(Bv.team,Bv.x,Bv.y)) continue;
-      const szv=BT[Bv.type].size;
-      if(Bv.type==='techlab'||Bv.type==='uplink'||Bv.type==='nova'){   // sweeping searchlight
-        const sw=t*0.55+Bv.anim;
-        shaft(Bv.x, Bv.y-szv*0.5, szv*4.4, szv*0.42, 150,210,255, 84, sw);
-      }
-      if(Bv.type==='airfield'){                                        // runway approach lights
-        shaft(Bv.x, Bv.y, szv*3.0, szv*0.32, 120,255,170, 76, (Bv.rot||0));
-        shaft(Bv.x, Bv.y, szv*3.0, szv*0.32, 255,140,110, 76, (Bv.rot||0)+Math.PI);
-      }
-    }
-    // vehicle headlights: the beam itself, not just the pool on the ground
-    if(volAmt>0.4){
-      const stepV=Math.max(1,Math.ceil(teamCount[0]/170));
-      for(let i=0;i<unitHigh;i+=stepV){
-        if(!ualive[i]||uteam[i]===2||!umov[i]) continue;
-        const Tv=TYPES[utype[i]];
-        if(Tv.naval||Tv.size<15) continue;
-        const X=ux[i], Y=uy[i];
-        if(X<x0-40||X>x1+40||Y<y0-40||Y>y1+40) continue;
-        if(!fogEntityVisible(uteam[i],X,Y)) continue;
-        const ha=uang[i]-Math.PI/2;
-        shaft(X+Math.cos(ha)*Tv.size*0.5, Y+Math.sin(ha)*Tv.size*0.5,
-              Tv.size*3.4, Tv.size*0.5, 255,242,206, 62, ha);
-      }
-    }
-    // burning ruins glow through the murk
-    for(const Rv of relics){
-      if(!Rv.alive||!(Rv.burn>0.3)) continue;
-      if(Rv.x<x0-120||Rv.x>x1+120||Rv.y<y0-120||Rv.y>y1+120) continue;
-      shaft(Rv.x, Rv.y-Rv.s*0.4, Rv.s*2.2, Rv.s*0.6, 255,150,70, 70*Rv.burn, -Math.PI/2+drift);
-    }
-  }
-  // beams
-  const sBeam=sprites.beam;
-  /* The 3D renderer owns combat VFX when enabled. Drawing the legacy 2D beam
-     batch on top projected world lengths through the HUD camera a second time,
-     producing the full-screen bars seen in dense battles. */
-  if(!use3D) for(const bm of beams){
-    const lf=1-bm.t/bm.max;
-    const mx=(bm.x0+bm.x1)/2, my=(bm.y0+bm.y1)/2;
-    if(mx<x0-200||mx>x1+200||my<y0-200||my>y1+200) continue;
-    if(!fogFxVisible(bm.x0,bm.y0,bm.team)||!fogFxVisible(bm.x1,bm.y1,bm.team)) continue;
-    const len=Math.sqrt(dist2(bm.x0,bm.y0,bm.x1,bm.y1));
-    const rot=Math.atan2(bm.y1-bm.y0,bm.x1-bm.x0)+Math.PI/2;
-    batA.add(sBeam,mx,my,bm.w*(2.4-lf),len,rot,bm.r,bm.g,bm.b,lf*230);
-    batA.add(sBeam,mx,my,bm.w*0.8,len,rot,255,255,255,lf*255);
-    batA.add(glow,bm.x1,bm.y1,bm.w*4,bm.w*4,0,bm.r,bm.g,bm.b,lf*200);
-  }
-  // projectiles
-  const sBolt=sprites.bolt, sGlow=sprites.glow;
-  if(!use3D) for(let i=0;i<pHigh;i++){
-    if(!palive[i]) continue;
-    const X=px[i], Y=py[i];
-    if(X<x0||X>x1||Y<y0||Y>y1) continue;
-    if(!fogFxVisible(X,Y,pteam[i])) continue;
-    const c=TEAMB[pteam[i]], wk=pwk[i]||'p';
-    if(wk==='g'){
-      const a=Math.atan2(pvy[i],pvx[i])+Math.PI/2;
-      batA.add(sBolt,X,Y,4,22,a,205,245,255,255);
-      batA.add(sGlow,X,Y,10,10,0,100,215,255,190);
-    } else if(wk==='s'){
-      batA.add(sGlow,X,Y,14,14,0,205,125,255,230);
-      batA.add(sRing,X,Y,19,19,0,120,225,255,160);
-    } else if(wk==='i'){
-      batA.add(sGlow,X,Y,17,17,0,75,205,255,235);
-      batA.add(sGlow,X,Y,7,7,0,235,255,255,255);
-    } else if(wk==='f'){
-      batA.add(sprites.flame,X,Y,13,18,Math.atan2(pvy[i],pvx[i])+Math.PI/2,255,205,115,235);
-    } else if(ptype[i]===2){
-      const arc=Math.sin(pt[i]*Math.PI);
-      const lift=arc*clamp((pArc[i]||70)*.37,26,240);
-      const s=(pBarrage[i]?10:6)+arc*(pBarrage[i]?15:10);
-      batA.add(sGlow,X,Y-lift,s,s,0,255,pBarrage[i]?150:190,pBarrage[i]?55:90,235);
-      if(pBarrage[i])batN.add(sprites.debris||sGlow,X,Y-lift,s*.72,s*1.7,
-        Math.atan2(pvy[i],pvx[i])+Math.PI/2,70,66,62,255);
-      batA.add(sGlow,X,Y,4,4,0,40,30,20,120);
-    } else if(ptype[i]===3){
-      batA.add(sBolt,X,Y,10,26,Math.atan2(pvy[i],pvx[i])+Math.PI/2,140,230,255,255);
-    } else if(ptype[i]===4){
-      batA.add(sGlow,X,Y,7,7,0,255,170,90,240);
-    } else if(ptype[i]===5){
-      const gr=1.6-plife[i]*2;   // flame grows as it travels
-      batA.add(sprites.flame,X,Y,9*gr,13*gr,Math.atan2(pvy[i],pvx[i])+Math.PI/2,255,255,255,210);
-    } else {
-      const s=ptype[i]===1?8:5;
-      batA.add(sBolt,X,Y,s,s*2.6,Math.atan2(pvy[i],pvx[i])+Math.PI/2,c[0],c[1],c[2],240);
-    }
-  }
-  // particles (additive types)
-  const sRing=sprites.ring, sFire=sprites.fireball, sDeb=sprites.debris;
-  for(let i=0;i<MAXPART;i++){
-    if(!flife[i]) continue;
-    if(use3D) continue;
-    const X=fx[i], Y=fy[i];
-    if(X<x0||X>x1||Y<y0||Y>y1) continue;
-    if(!fogPointVisible(X,Y)) continue;
-    const lf=flife[i]/fmax[i];
-    const tp=ftype[i];
-    if(tp===0){ batA.add(sGlow,X,Y,fsize[i]*(1.4-lf*0.4),fsize[i]*(1.4-lf*0.4),0,fcr[i],fcg[i],fcb[i],lf*255); }
-    else if(tp===2){ batA.add(sGlow,X,Y,fsize[i],fsize[i],0,fcr[i],fcg[i],fcb[i],lf*255); }
-    else if(tp===3){ const g=1-lf; batA.add(sRing,X,Y,fsize[i]*(0.3+g*0.7)*2,fsize[i]*(0.3+g*0.7)*2,0,fcr[i],fcg[i],fcb[i],lf*180); }
-    else if(tp===4){ batA.add(sFire,X,Y,fsize[i],fsize[i],i*0.7,255,255,255,lf*235); }
-    else if(tp===5){ batA.add(sDeb,X,Y,fsize[i],fsize[i]*2.4,Math.atan2(fvy[i],fvx[i])+Math.PI/2,fcr[i],fcg[i],fcb[i],lf*255); }
-    else if(tp===6&&!use3D){ batA.add(sFire,X,Y,fsize[i]*0.6,fsize[i]*0.6,i*0.7,255,255,255,lf*235); }
-    else if(tp===7&&!use3D){ batA.add(sDeb,X,Y,fsize[i]*0.5,fsize[i],Math.atan2(fvy[i],fvx[i])+Math.PI/2,255,200,120,lf*255); }
-    // feed the bloom pass from the brightest emitters
-    if(bloomOn&&(tp===0||tp===4||tp===6)&&fsize[i]>7&&lf>0.25)
-      addBloom(X,Y,fsize[i]*3.1,fcr[i],fcg[i],fcb[i],lf*(tp===0?0.30:0.42));
-  }
-  /* ---- world alert pings: expanding rings at attack locations ---- */
-  const sRing2=sprites.ring, sGlow3=sprites.glow;
-  for(let pi=worldAlertPings.length-1;pi>=0;pi--){
-    const P=worldAlertPings[pi];
-    const age=stats.t-P.t;
-    if(age>P.dur){ worldAlertPings.splice(pi,1); continue; }
-    if(P.x<x0-200||P.x>x1+200||P.y<y0-200||P.y>y1+200) continue;
-    const frac=age/P.dur;
-    const innerR=40+age*55;
-    const outerR=70+age*80;
-    batA.add(sRing2,P.x,P.y,innerR,innerR,age*0.6, P.cr,P.cg,P.cb, (1-frac)*200);
-    batA.add(sRing2,P.x,P.y,outerR,outerR,-age*0.4, P.cr,P.cg,P.cb, (1-frac)*120);
-    batA.add(sGlow3,P.x,P.y,innerR*0.6,innerR*0.6,0, P.cr,P.cg,P.cb, (1-frac)*50);
-  }
-  /* ---- directional off-screen threat arrow ---- */
-  renderOffscreenArrows();
-  batA.flush();
-  // smoke/dust (normal blending, tinted)
-  gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-  const sSmoke=sprites.smoke;
-  if(!use3D)for(let s=0;s<artShellSmoke.length;s++){
-    const S=artShellSmoke[s];
-    if(S.x<x0||S.x>x1||S.y<y0||S.y>y1||!fogFxVisible(S.x,S.y,S.team))continue;
-    const lf=S.life/S.max,age=1-lf,sz=S.size*(1+age*1.8),lift=clamp(S.lift*.37,0,260);
-    batN.add(sSmoke,S.x,S.y-lift,sz,sz,S.rot+age*.55,78+age*14,73+age*13,69+age*12,145*lf);
-  }
-  for(let i=0;i<MAXPART;i++){
-    if(!flife[i]) continue;
-    const tp=ftype[i];
-    if(use3D&&tp!==9) continue;
-    if(tp!==1&&tp!==8&&tp!==9) continue;
-    const X=fx[i], Y=fy[i];
-    if(X<x0||X>x1||Y<y0||Y>y1) continue;
-    if(tp!==9&&!fogPointVisible(X,Y)) continue;
-    const lf=flife[i]/fmax[i];
-    if(tp===9){                                   // ambient mote: leaf / snowflake
-      batN.add(sprites.glow,X+Math.sin(flife[i]*4+i)*6,Y,fsize[i],fsize[i],0,fcr[i],fcg[i],fcb[i],Math.min(1,lf*2.5)*190);
-    } else if(tp===1){
-      batN.add(sSmoke,X,Y,fsize[i],fsize[i],i,fcr[i],fcg[i],fcb[i],lf*140);
-    } else {
-      // volumetric mushroom plume: smoke column + rising expanding cap
-      const age=1-lf, S=fsize[i];
-      const colH=S*1.9*Math.min(1,age*2.2);
-      const nSeg=4;
-      for(let s2=1;s2<=nSeg;s2++){
-        const fy2=Y-colH*s2/nSeg;
-        const w=S*(0.34+0.1*s2/nSeg+age*0.14);
-        batN.add(sSmoke,X+Math.sin(i+s2*1.7+age*5)*S*0.05,fy2,w,w,i+s2,52,50,52,lf*165);
-      }
-      const capW=S*(0.75+age*0.85);
-      batN.add(sSmoke,X,Y-colH,capW,capW*0.7,i*0.7,58,54,56,lf*185);
-      batN.add(sSmoke,X-capW*0.3,Y-colH+capW*0.12,capW*0.6,capW*0.5,i*1.3,46,44,46,lf*160);
-      batN.add(sSmoke,X+capW*0.3,Y-colH+capW*0.12,capW*0.6,capW*0.5,i*2.1,46,44,46,lf*160);
-      if(age<0.45) batA.add(sprites.glow,X,Y-colH*0.4,S*0.5*(1-age*2),S*0.7*(1-age*2),0,255,150,60,(1-age*2.2)*160);
-    }
-  }
-  // ---- bird flocks (ambient life, day only) ----
-  if(nAmt<0.75) for(const F of birds){
-    const rot=Math.atan2(F.vy,F.vx)+Math.PI/2;
-    for(let k2=0;k2<F.n;k2++){
-      const bx2=F.x - F.vx*k2*0.55 + Math.sin(F.ph+k2*1.7)*13;
-      const by2=F.y - F.vy*k2*0.55 + Math.cos(F.ph*0.7+k2*2.1)*10;
-      if(bx2<x0||bx2>x1||by2<y0||by2>y1) continue;
-      const flap=0.45+Math.abs(Math.sin(F.ph*2.2+k2))*0.75;
-      batN.add(sprites.glow,bx2+9,by2+18,8,4,0,0,0,0,55);                    // ground shadow
-      batN.add(sprites.bird,bx2,by2,10,10*flap,rot,26,30,38,235);
-    }
-  }
-  // shard ground shadows (atlas still bound)
-  for(let i=0;i<MAXSH;i++){
-    if(shLife[i]<=0) continue;
-    const X=shX[i], Y=shY[i];
-    if(X<x0||X>x1||Y<y0||Y>y1) continue;
-    if(!fogPointVisible(X,Y)) continue;
-    const zf=1/(1+shZ[i]*0.02);
-    batN.add(sprites.glow,X,Y,shSize[i]*1.1*(2-zf),shSize[i]*0.7*(2-zf),0,0,0,0,70*zf*Math.min(1,shLife[i]*2));
-  }
-  batN.flush();
-  // ---- baked 3D FX: explosion flipbook + tumbling debris (topmost) ----
-  if(use3D){
-    for(let i=0;i<MAXPART;i++){
-      if(!flife[i]) continue;
-      const tp=ftype[i];
-      if(tp!==6&&tp!==7) continue;
-      const X=fx[i], Y=fy[i];
-      if(X<x0||X>x1||Y<y0||Y>y1) continue;
-      if(!fogPointVisible(X,Y)) continue;
-      const lf=flife[i]/fmax[i];
-      if(tp===6){
-        // volumetric fireball: three parallax layers rising at different speeds
-        const age=1-lf, fr=Math.min(23,(age*24)|0);
-        const S=fsize[i];
-        batA.add(sprites.glow,X,Y,S*2.5,S*2.5,0,255,185,105,lf*(50+110*nAmt));  // ground illumination
-        if(bloomOn) addBloom(X,Y,S*2.6,255,190,120,lf*0.55);
-        batU2.add(UNIT_UV.expl[fr],X,Y-age*S*0.10,S,S,(i&3)*1.57,255,255,255,255);
-        batU2.add(UNIT_UV.expl[Math.min(23,fr+2)],X+S*0.06,Y-age*S*0.34,S*0.72,S*0.72,((i>>2)&3)*1.57+0.6,255,255,255,215);
-        if(S>26) batU2.add(UNIT_UV.expl[Math.min(23,fr+4)],X-S*0.07,Y-age*S*0.58,S*0.5,S*0.5,(i&7)*0.8,255,255,255,170);
-      } else {
-        // ballistic debris: parabolic hop with ground shadow
-        const age=1-lf;
-        const hop=fsize[i]*1.7*4*lf*age;         // peak at mid-flight
-        const fr=(i+((age*22)|0))%32;
-        batU2.add(UNIT_UV.chunk[fr],X,Y-hop,fsize[i]*(1+hop*0.012),fsize[i]*(1+hop*0.012),age*6+i,255,255,255,lf<0.25?lf*1020:255);
-      }
-    }
-    // volumetric shards: textured fragments with altitude + tumble
-    for(let i=0;i<MAXSH;i++){
-      if(shLife[i]<=0) continue;
-      const X=shX[i], Y=shY[i];
-      if(X<x0||X>x1||Y<y0||Y>y1) continue;
-      if(!fogPointVisible(X,Y)) continue;
-      const a=Math.min(1,shLife[i]*2)*255;
-      batU2.add([shU0[i],shV0[i],shU1[i],shV1[i]],
-        X, Y-shZ[i]*0.9, shSize[i]*(1+shZ[i]*0.004), shSize[i]*(1+shZ[i]*0.004),
-        shRot[i], shR[i],shG[i],shB[i], a);
-    }
-    if(batU2.n){
-      gl.bindTexture(gl.TEXTURE_2D,unitTex);
-      batU2.flush();
-      gl.bindTexture(gl.TEXTURE_2D,atlasTex);
-    }
-  }
-  // ---- BLOOM: soft light bleed around every bright emitter ----
-  if(bloomOn&&bloomN){
-    gl.blendFunc(gl.SRC_ALPHA,gl.ONE);
-    const sGlow2=sprites.glow;
-    for(let i=0;i<bloomN;i++){
-      const a=bloomA[i];
-      batA.add(sGlow2,bloomX[i],bloomY[i],bloomS[i],bloomS[i],0,
-        bloomR[i],bloomG[i],bloomB[i],a*180);
-      batA.add(sGlow2,bloomX[i],bloomY[i],bloomS[i]*2.1,bloomS[i]*2.1,0,
-        bloomR[i],bloomG[i],bloomB[i],a*66);        // wide halo
-    }
-    batA.flush();
-    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-  }
-  bloomN=0;
-
-  BILLBOARD=0;
-  // ---- fog of war overlay ----
-  if(fogOn&&fogTex&&!demoMode){
-    gl.bindTexture(gl.TEXTURE_2D,fogTex);
-    batT.add(FULLUV,MAP/2,MAP/2,MAP,MAP,0,255,255,255,255);
-    batT.flush();
-    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
-  }
-
-  // ---- cinematic sun grade: warm key across the map, cool shadow side ----
-  if(gradeOn){
-    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
-    const nA=nightAmt();
-    gl.blendFunc(gl.DST_COLOR,gl.ONE);            // screen-ish lift on the sunlit side
-    batA.add(sprites.glow,cam.x-VW*0.22/cam.z,cam.y-VH*0.30/cam.z,
-      MAP*1.1,MAP*1.1,0,255,200,140,(19*(1-nA))|0);
-    batA.flush();
-    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
-    batA.add(sprites.glow,cam.x+VW*0.30/cam.z,cam.y+VH*0.34/cam.z,
-      MAP*1.0,MAP*1.0,0,18,32,74,(52+40*nA)|0);   // cool shadow wash
-    batA.flush();
-  }
-}
+/* renderLegacySprites was REMOVED here (was ~1232 lines).
+   It was the 2D sprite renderer and it had not been called from anywhere for
+   a long time -- the only reference in the tree was tools/test-fog-pickups.mjs
+   inspecting it via .toString(). That made it an active hazard, not just dead
+   weight: 1.33.42 spent a release editing its deposit/geyser/mex-rotor drawing,
+   and none of those edits could ever execute, and a comment in render3d.js
+   cited it as the reason the build-zone overlay could hide itself during
+   placement.
+   Everything player-facing was harvested into the live 3D renderer first:
+   rally flags, bird flocks, cloud shadows and the off-screen threat arrow.
+   Deliberately NOT harvested: worldAlertPing (dead end-to-end -- its consumer
+   was here and it has no callers either) and the generic per-building night
+   work-light cones, which the live renderer retired on purpose to cut clutter.
+   If you need the original, it is in git before this commit. */
 
 // ---------- minimap ----------
 const mm=document.getElementById('minimap').getContext('2d',{willReadFrequently:true});
@@ -1500,9 +298,73 @@ function mmBgIsLive(cv){
     return lit>=1;
   }catch(e){ return false; }
 }
-function mmFactionCrest(fac,x,y,size,stroke){
+/* The accessible command map batches one Path2D per allegiance/contact state:
+   at most six filled+outlined paths instead of up to 1,800 per-contact paints.
+   The backing store is always 256 px but the shipped tactical dock shrinks it
+   to 56 CSS px. Author the floor in CSS pixels at that WORST supported scale;
+   a 5 px backing-store pip is only 1.1 px there and every shape becomes a dot. */
+const MM_TEAM_ID_CANVAS=256, MM_TEAM_ID_MIN_CSS=56;
+function mmTeamIdBackingScale(cssWidth){
+  return MM_TEAM_ID_CANVAS/Math.max(MM_TEAM_ID_MIN_CSS,+cssWidth||MM_TEAM_ID_MIN_CSS);
+}
+function mmTeamIdCanvasScale(){
+  const C=typeof mm!=='undefined'&&mm&&mm.canvas;
+  return ((C&&C.width)||MM_TEAM_ID_CANVAS)/Math.max(MM_TEAM_ID_MIN_CSS,(C&&C.clientWidth)||MM_TEAM_ID_MIN_CSS);
+}
+function mmTeamIdMarkerSize(size,radar,scale){
+  return Math.max((radar?4:5)*(scale||mmTeamIdBackingScale()),size);
+}
+function mmTeamIdStrokeWidth(radar,scale){ return (radar?1.1:1)*(scale||mmTeamIdBackingScale()); }
+function mmTeamIdPath(path,x,y,size,allegiance){
+  const h=size*.5, w=Math.max(1,size*.22);
+  if(allegiance===0){ path.moveTo(x+h,y); path.arc(x,y,h,0,TAU); return; }
+  if(allegiance===1){
+    path.moveTo(x,y-h); path.lineTo(x+h*.92,y+h*.82); path.lineTo(x-h*.92,y+h*.82); path.closePath();
+    return;
+  }
+  /* A cross cannot be mistaken for square deposits or diamond supply crates. */
+  path.moveTo(x-w,y-h); path.lineTo(x+w,y-h); path.lineTo(x+w,y-w);
+  path.lineTo(x+h,y-w); path.lineTo(x+h,y+w); path.lineTo(x+w,y+w);
+  path.lineTo(x+w,y+h); path.lineTo(x-w,y+h); path.lineTo(x-w,y+w);
+  path.lineTo(x-h,y+w); path.lineTo(x-h,y-w); path.lineTo(x-w,y-w); path.closePath();
+}
+function mmTeamIdPaint(path,allegiance,radar,scale){
+  const c=mfTeamIdColorClass(allegiance,false), b=mfTeamIdColorClass(allegiance,true);
+  mm.fillStyle='rgba('+c[0]+','+c[1]+','+c[2]+','+(radar?.30:.96)+')';
+  mm.strokeStyle=radar?'rgba('+b[0]+','+b[1]+','+b[2]+',.92)':'rgba(3,10,18,.94)';
+  mm.lineWidth=mmTeamIdStrokeWidth(radar,scale);
+  if(path){ mm.fill(path); mm.stroke(path); } else { mm.fill(); mm.stroke(); }
+}
+function mmTeamIdBatch(){
+  return {paths:typeof Path2D==='function'?Array.from({length:6},()=>new Path2D()):null,
+    used:new Uint8Array(6),scale:mmTeamIdCanvasScale()};
+}
+function mmTeamIdQueue(batch,x,y,size,team,radar){
+  const allegiance=mfTeamIdAllegiance(team), at=allegiance+(radar?3:0);
+  size=mmTeamIdMarkerSize(size,radar,batch.scale);
+  if(batch.paths){ mmTeamIdPath(batch.paths[at],x,y,size,allegiance); batch.used[at]=1; return; }
+  /* Path2D predates every supported WebGL2 WebView, but retain a correct slow
+     fallback rather than reverting accessibility markers to colour-only. */
+  mm.save(); mm.beginPath(); mmTeamIdPath(mm,x,y,size,allegiance); mm.lineJoin='round';
+  mmTeamIdPaint(null,allegiance,radar,batch.scale); mm.restore();
+}
+function mmTeamIdFlush(batch){
+  if(!batch.paths) return;
+  mm.save(); mm.lineJoin='round';
+  for(let at=0;at<6;at++) if(batch.used[at]) mmTeamIdPaint(batch.paths[at],at%3,at>=3,batch.scale);
+  mm.restore();
+}
+function mmFactionCrest(fac,x,y,size,stroke,team){
   const I=typeof facIconCanvas==='function'?facIconCanvas(fac,()=>{mmFrame=0;}):null,s=size||12,h=s*.5;
-  mm.save();mm.beginPath();mm.arc(x,y,h+1.5,0,TAU);mm.fillStyle='rgba(3,10,18,.92)';mm.fill();
+  mm.save();
+  if(typeof mfTeamIdEnabled==='function'&&mfTeamIdEnabled()&&team!=null){
+    const allegiance=mfTeamIdAllegiance(team), P=typeof Path2D==='function'?new Path2D():null;
+    if(P) mmTeamIdPath(P,x,y,s+9,allegiance); else { mm.beginPath(); mmTeamIdPath(mm,x,y,s+9,allegiance); }
+    const c=mfTeamIdColorClass(allegiance,false);
+    mm.fillStyle='rgba(3,10,18,.94)';mm.strokeStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';mm.lineWidth=Math.max(2.4,mmTeamIdStrokeWidth(false,mmTeamIdCanvasScale()));mm.lineJoin='round';
+    if(P){mm.fill(P);mm.stroke(P);}else{mm.fill();mm.stroke();}
+  }
+  mm.beginPath();mm.arc(x,y,h+1.5,0,TAU);mm.fillStyle='rgba(3,10,18,.92)';mm.fill();
   mm.lineWidth=1.5;mm.strokeStyle=stroke||'#dff6ff';mm.stroke();
   if(I)mm.drawImage(I,x-h,y-h,s,s);
   else{mm.fillStyle=stroke||'#dff6ff';mm.font='900 '+Math.max(7,s*.65)+'px sans-serif';mm.textAlign='center';mm.textBaseline='middle';mm.fillText('\u25c8',x,y+.5);}
@@ -1511,7 +373,8 @@ function mmFactionCrest(fac,x,y,size,stroke){
 function renderMinimap(){
   if((mmFrame++)%5) return;
   /* 256 backing store: a 5x5 civic cell is ~10 px, so lots/streets survive
-     the command-map read. CSS still paints 72-84 px; the canvas is the map. */
+     the command-map read. CSS paints 56/84 px in portrait and uses the
+     intrinsic 256 px canvas in landscape, tablet and desktop layouts. */
   const S=256, k=S/MAP;
   const mmEl=mm.canvas;
   if(mmEl.width!==S){ mmEl.width=S; mmEl.height=S; }
@@ -1527,6 +390,8 @@ function renderMinimap(){
   }
   if(!mmBg) return;
   mm.drawImage(mmBg,0,0);
+  const teamId=typeof mfTeamIdEnabled==='function'&&mfTeamIdEnabled();
+  const teamMarks=teamId?mmTeamIdBatch():null;
   mm.fillStyle='#3dd68a';
   for(const d of deposits){
     const tier=depositTier(d);
@@ -1541,7 +406,8 @@ function renderMinimap(){
     if(!visB&&!radarB) continue;
     mm.fillStyle=radarB?'rgba(255,109,94,.42)':(B.team===0?mmPCol:(B.team===1?mmECol:'#ffb13a'));
     const s=Math.max(radarB?3:5,B.r*k*(radarB?1.05:1.6));
-    mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);
+    if(teamId) mmTeamIdQueue(teamMarks,B.x*k,B.y*k,s,B.team,radarB);
+    else mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);
   }
   const total=teamCount[0]+teamCount[1]+teamCount[2];
   const step=total>3000? Math.ceil(total/1800):1;
@@ -1554,8 +420,10 @@ function renderMinimap(){
     if(!visU&&!radarU) continue;
     mm.fillStyle=radarU?'rgba(255,109,94,.55)':(uteam[i]===0?mmPColA:(uteam[i]===1?mmEColA:'rgba(255,177,58,.9)'));
     const d=radarU?3:4;
-    mm.fillRect(ux[i]*k-d/2,uy[i]*k-d/2,d,d);
+    if(teamId) mmTeamIdQueue(teamMarks,ux[i]*k,uy[i]*k,d,uteam[i],radarU);
+    else mm.fillRect(ux[i]*k-d/2,uy[i]*k-d/2,d,d);
   }
+  if(teamId) mmTeamIdFlush(teamMarks);
   for(const C of crates){
     if(!C.seen&&!fogPointVisible(C.x,C.y)) continue;
     const cc=C.kind&&C.kind.col||[255,225,140];
@@ -1596,15 +464,15 @@ function renderMinimap(){
      navigation anchors even when the unit dots merge into a large army. */
   const ownFac=(typeof playerFaction!=='undefined'&&playerFaction)||'nova';
   const ownHq=bldLive.find(B=>B.alive&&B.team===0&&B.type==='hq'&&B.allyAI==null);
-  if(ownHq)mmFactionCrest(ownFac,ownHq.x*k,ownHq.y*k,20,'#5de1ff');
+  if(ownHq)mmFactionCrest(ownFac,ownHq.x*k,ownHq.y*k,20,'#5de1ff',0);
   if(typeof AI!=='undefined'){
-    for(const A of AI.allies||[])mmFactionCrest(A.fac||ownFac,A.x*k,A.y*k,20,'#66e5a2');
+    for(const A of AI.allies||[])mmFactionCrest(A.fac||ownFac,A.x*k,A.y*k,20,'#66e5a2',0);
     for(const A of AI.bases||[]){
       const h=A.commander,visible=h>=0&&ualive[h]&&fogEntityVisible(uteam[h],ux[h],uy[h]);
-      if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,24,'#ff6d5e');
+      if(visible)mmFactionCrest(A.fac||AI.fac,ux[h]*k,uy[h]*k,24,'#ff6d5e',1);
     }
   }
-  if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(ownFac,ux[heroIdx]*k,uy[heroIdx]*k,26,'#ffd257');
+  if(heroIdx>=0&&ualive[heroIdx])mmFactionCrest(ownFac,ux[heroIdx]*k,uy[heroIdx]*k,26,'#ffd257',0);
   /* Ground quad the ortho camera actually sees — not camBounds(). That AABB
      is a cull pad (+60) and at yaw=0 assigns the pitched along-view span to
      world Y while the eye looks along +X, so a portrait view drew a tall
@@ -1826,7 +694,7 @@ function updateSelInfo(){
   if(el._mfH!==h){
     el._mfH=h; el.innerHTML=h;
     const ib=el.querySelector('.selIntelBtn');
-    if(ib) ib.addEventListener('pointerdown',ev=>{
+    if(ib) mfBindNativePress(ib,ev=>{
       ev.stopPropagation();
       if(intelPrimaryUnit>=0&&ualive[intelPrimaryUnit]){ showUnitCard(intelPrimaryUnit,-1,true); sfx('ui'); }
     });
@@ -1863,12 +731,12 @@ function cycleSelectedModes(){
   updateSelInfo();
 }
 function hudPlayerPop(){
-  /* Player-slot wallet. Theatre size adds slots (2/3/4); each is still 1000.
-     Large's 4000 is the theatre total, not this chip. */
+  /* One faction-wide wallet. Allied commander seats contribute to this same
+     count and never multiply the 500-body admission cap. */
   if(typeof populationLedgerPlayer==='function') return populationLedgerPlayer();
-  const cap=typeof populationCapForCommander==='function'?populationCapForCommander(-1)
-    :(typeof FACTION_POP_CAP==='number'?FACTION_POP_CAP:1000);
-  const used=typeof populationUsedForCommander==='function'?populationUsedForCommander(-1)
+  const cap=typeof populationCapFor==='function'?populationCapFor(0)
+    :(typeof FACTION_POP_CAP==='number'?FACTION_POP_CAP:500);
+  const used=typeof populationUsedFor==='function'?populationUsedFor(0)
     :(teamCount[0]|0);
   return {used, cap};
 }
@@ -1880,34 +748,47 @@ let hudFrame=0;
 function hudTxt(el,t){ if(el&&el._mfT!==t){ el._mfT=t; el.textContent=t; } }
 function hudCol(el,c){ if(el&&el._mfC!==c){ el._mfC=c; el.style.color=c; } }
 function hudDisp(el,d){ if(el&&el.style.display!==d) el.style.display=d; }
+function hudIntelChip(kind,inner){
+  return '<span class="hudIntelChip '+kind+'">'+inner+'</span>';
+}
 function updateHUD(fps){
+  /* The commander rail runs on EVERY frame, ahead of the 1-in-10 gate below.
+     Its state machine is measured in tenths of a second and its idle path is a
+     couple of comparisons; running it at 6Hz made the entry and exit visibly
+     step. Placement solving inside it is separately throttled to twice a
+     second, so this does not add a layout read per frame. */
+  if(typeof cmdrTxTick==='function') cmdrTxTick();
+  mfEnsureEconomyInspectors();
   if((hudFrame++)%10){ if(typeof showHazChip==='function') showHazChip(); return; }
   updateWaveWarning();
   const massV=$('massV'), enV=$('enV'), massR=$('massR'), enR=$('enR');
-  hudTxt(massV, String(Math.floor(resM[0])));
-  hudTxt(enV, String(Math.floor(resE[0])));
-  hudCol(massV, stallM>0?'#ff8d7a':(resM[0]>=RES_MCAP[0]-1?'#ffd257':''));
+  const localBank=typeof mfLocalBank==='function'?mfLocalBank():{mass:resM[0],energy:resE[0],massCap:RES_MCAP[0],energyCap:RES_ECAP[0]};
+  hudTxt(massV, String(Math.floor(localBank.mass)));
+  hudTxt(enV, String(Math.floor(localBank.energy)));
+  hudCol(massV, stallM>0?'#ff8d7a':(localBank.mass>=localBank.massCap-1?'#ffd257':''));
   hudCol(enV, stallE>0?'#ff8d7a':'');
   // net rate = income − measured spending, so the economy reads honestly
   const mNet=mRate-mSpend, eNet=eRate-eSpend;
-  if(resM[0]>=RES_MCAP[0]-1){ hudTxt(massR,'FULL'); hudCol(massR,'#ffd257'); }
+  if(localBank.mass>=localBank.massCap-1){ hudTxt(massR,'FULL'); hudCol(massR,'#ffd257'); }
   else {
     hudTxt(massR,(mNet>=0?'+':'')+mNet.toFixed(1));
     hudCol(massR,mNet<0?'#ff8d7a':'');
   }
   hudTxt(enR,(eNet>=0?'+':'')+eNet.toFixed(0));
   hudCol(enR,eNet<0?'#ff8d7a':'');
+  const massBox=massV&&massV.closest('.res'),energyBox=enV&&enV.closest('.res');
+  if(massBox)massBox.title='Mass: '+Math.floor(localBank.mass)+' / '+Math.floor(localBank.massCap)+' · gross '+mRate.toFixed(1)+'/s · spend '+mSpend.toFixed(1)+'/s · tap for forecast';
+  if(energyBox)energyBox.title='Energy: '+Math.floor(localBank.energy)+' / '+Math.floor(localBank.energyCap)+' · gross '+eRate.toFixed(1)+'/s · spend '+eSpend.toFixed(1)+'/s · tap for forecast';
   coachTick();
   if(typeof updateSelInfo==='function') updateSelInfo();
   const popL=hudPlayerPop(),popEl=$('unitV'),popBox=$('unitRes');
-  /* Chip is this commander's 1000. 1000 → 1K on the cap side always — never
-     print 4K here. Theatre total on Large is 4×1000; the player wallet is 1K. */
+  /* Chip is the whole player faction's 500, including allied commanders. */
   const popNowTxt=hudPopK(popL.used);
   const popCapTxt=popL.cap===1000?'1K':hudPopK(popL.cap);
   hudTxt(popEl, popNowTxt+' / '+popCapTxt);
   popBox.classList.toggle('popWarn',popL.used>=popL.cap*.9);
   popBox.classList.toggle('popFull',popL.used>=popL.cap);
-  const popTitle='Your population: '+popL.used+' of '+popL.cap+' — theatre size adds slots, not cap';
+  const popTitle='Faction population: '+popL.used+' of '+popL.cap+' — allied commanders share this cap';
   if(popBox.title!==popTitle) popBox.title=popTitle;
   hudTxt($('fps'), fps+' fps');
   if(heroIdx>=0){
@@ -1976,15 +857,26 @@ function updateHUD(fps){
         if(live===0&&seats>0&&(typeof stats==='undefined'||(stats.t|0)<12))
           h='\u2620 enemy commanders inbound: '+seats;
       }
+      /* Compact chips for the top-plate strip only. goalStatus() still
+         feeds the tap toast — do not rewrite that string here. */
       const contact=typeof openingContactRemaining==='function'?openingContactRemaining():0;
+      let bar='';
       if(contact>0){
         const cs=Math.ceil(contact),cm=(cs/60)|0,cr=cs%60;
-        h='<span class="firstContact">\u25c8 FIRST CONTACT '+cm+':'+(cr<10?'0':'')+cr+'</span> '+h;
+        bar+=hudIntelChip('contact','\u25c8 <span class="hudIntelFull">FIRST CONTACT </span>'+cm+':'+(cr<10?'0':'')+cr);
       }
+      const leftCmd=/enemy commanders left: (\d+)/.exec(h);
+      const inboundCmd=/enemy commanders inbound: (\d+)/.exec(h);
+      const hivesLeft=/hives left: (\d+)/.exec(h);
+      if(leftCmd) bar+=hudIntelChip('goal','\u2620 '+leftCmd[1]+' left');
+      else if(inboundCmd) bar+=hudIntelChip('goal','\u2620 inbound '+inboundCmd[1]);
+      else if(hivesLeft) bar+=hudIntelChip('goal','🐛 '+hivesLeft[1]);
+      else if(h) bar+=hudIntelChip('goal',h);
       if(timeLimit>0){
         const m2=(matchClock/60)|0, s2=(matchClock%60)|0;
-        h+=' <span class="clk'+(matchClock<60?' low':'')+'">'+m2+':'+(s2<10?'0':'')+s2+'</span>';
+        bar+=hudIntelChip('time','<span class="clk'+(matchClock<60?' low':'')+'">'+m2+':'+(s2<10?'0':'')+s2+'</span>');
       }
+      h=bar;
       /* updateHUD runs ~6x a second but this string only changes once a second
          (the clock) — so five of every six assignments reparsed identical HTML
          and invalidated layout for nothing, inside the frame loop. The handler
@@ -2034,12 +926,77 @@ function updateHUD(fps){
   showConsHud();
 }
 
+/* UI_CONTROL_SAFETY_HELPERS_BEGIN
+   Custom role=button widgets are not native <button>s: Tab needs tabindex,
+   and Enter/Space does not synthesize click. Route keys through one fn so a
+   pointer path cannot double-fire. */
+function mfHudEnterSpace(el,fn){
+  el.addEventListener('keydown',ev=>{
+    /* Interactive descendants (for example the About button inside a build
+       card) own their own keyboard action. Letting their keydown bubble into
+       the card used to queue the unit / start placement instead of opening
+       help. Only the element that received this binding may commit it. */
+    if(ev.target!==el||ev.repeat||(ev.key!=='Enter'&&ev.key!==' '))return;
+    ev.preventDefault();ev.stopPropagation();
+    fn(ev);
+  });
+}
+/* A queue plate is replaced synchronously after its second confirmed release.
+   The browser's synthetic click can then retarget the new plate, so a guard
+   stored on the old node cannot stop a second cancellation. Keep the release
+   guard at document scope; any fresh pointerdown clears it, preserving rapid
+   deliberate input while suppressing only the click generated by that release. */
+let mfHudQueueClickGuard=null,mfHudQueueClickGuardReady=false;
+function mfHudEnsureQueueClickGuard(){
+  if(mfHudQueueClickGuardReady)return;
+  mfHudQueueClickGuardReady=true;
+  document.addEventListener('pointerdown',()=>{mfHudQueueClickGuard=null;},true);
+  document.addEventListener('click',ev=>{
+    const g=mfHudQueueClickGuard,now=Date.now();
+    if(!g||now>g.until||ev.detail===0)return;
+    const q=ev.target&&ev.target.closest?ev.target.closest('.qPlate'):null;
+    const samePointer=Number.isFinite(ev.pointerId)&&ev.pointerId===g.pointerId;
+    const sameSpot=Math.hypot((ev.clientX||0)-g.x,(ev.clientY||0)-g.y)<=28;
+    if(!q&&!samePointer&&!sameSpot)return;
+    mfHudQueueClickGuard=null;
+    ev.preventDefault();ev.stopImmediatePropagation();
+  },true);
+}
+function mfHudBindQueueCancel(plate,requestCancel){
+  mfHudEnsureQueueClickGuard();
+  let press=null;
+  plate.addEventListener('pointerdown',ev=>{
+    ev.stopPropagation();
+    press={id:ev.pointerId,x:ev.clientX,y:ev.clientY,moved:false};
+  });
+  plate.addEventListener('pointermove',ev=>{
+    if(!press||press.id!==ev.pointerId)return;
+    if(Math.hypot(ev.clientX-press.x,ev.clientY-press.y)>10)press.moved=true;
+  });
+  const finish=ev=>{
+    if(!press||press.id!==ev.pointerId)return;
+    const p=press;press=null;
+    if(ev.type!=='pointerup')return;
+    mfHudQueueClickGuard={pointerId:ev.pointerId,x:ev.clientX,y:ev.clientY,until:Date.now()+650};
+    if(!p.moved)requestCancel(ev);
+  };
+  plate.addEventListener('pointerup',finish);
+  plate.addEventListener('pointercancel',finish);
+  /* detail===0 is keyboard/assistive activation. Physical clicks are consumed
+     by the document guard before this handler, including after DOM replacement. */
+  plate.addEventListener('click',requestCancel);
+}
+/* UI_CONTROL_SAFETY_HELPERS_END */
 /* ---------- WILDCARD ACTIVE BANNER (top bar during match) ---------- */
 let _mfWcBannerEl=null;
 function showWcBanner(){
   if(!_mfWcBannerEl){
     _mfWcBannerEl=document.createElement('div');
     _mfWcBannerEl.id='wcBanner';
+    _mfWcBannerEl.setAttribute('role','button');
+    _mfWcBannerEl.setAttribute('tabindex','0');
+    _mfWcBannerEl.setAttribute('aria-label','Active modifiers');
+    mfHudEnterSpace(_mfWcBannerEl,()=>_mfWcBannerEl.click());
     document.body.appendChild(_mfWcBannerEl);
   }
   if(!wcActive||!wcActive.length||!matchLive){ _mfWcBannerEl.style.display='none'; return; }
@@ -2061,7 +1018,9 @@ function showHazChip(){
     _mfHazChipEl=document.createElement('div');
     _mfHazChipEl.id='hazChip';
     _mfHazChipEl.setAttribute('role','button');
+    _mfHazChipEl.setAttribute('tabindex','0');
     _mfHazChipEl.setAttribute('aria-label','Map weather');
+    mfHudEnterSpace(_mfHazChipEl,()=>_mfHazChipEl.click());
     document.body.appendChild(_mfHazChipEl);
     if(!_mfHazChipWatch&&typeof mfFlowWatch!=='undefined'&&mfFlowWatch){
       mfFlowWatch.observe(_mfHazChipEl,{attributes:true,attributeFilter:['style','class']});
@@ -2096,8 +1055,8 @@ function showConsHud(){
   let h='';
   for(const c of _mfMatchCons){
     const stock=b.consumables[c.id]||0;
-    h+='<div class="conHudSlot" title="'+c.nm+': '+c.ds+'"><span class="conHudEm">'+c.em+'</span>'
-      +'<span class="conHudNm">'+c.nm+'</span><span class="conHudCt">'+stock+'</span></div>';
+    h+='<div class="conHudSlot" title="ONE MATCH · '+c.nm+': '+c.ds+'"><span class="conHudEm">'+c.em+'</span>'
+      +'<span class="conHudNm">'+c.nm+'</span><span class="conHudScope">ONE MATCH</span><span class="conHudCt">'+stock+'</span></div>';
   }
   if(_mfConsHudEl._h!==h){ _mfConsHudEl._h=h; _mfConsHudEl.innerHTML=h; }
   _mfConsHudEl.style.display='flex';
@@ -2117,11 +1076,11 @@ function showModSplash(){
     h+='<div class="msRow"><span class="msEm">'+w.em+'</span><span class="msNm">'+w.nm+'</span><span class="msTag">WILDCARD</span></div>';
   if(hasGear) for(const g of _mfMatchGear){
     const r=invRarity(g.rarity);
-    h+='<div class="msRow"><span class="msEm">'+g.em+'</span><span class="msNm">'+g.nm+'</span><span class="msTag" style="color:'+r.col+'">'+r.nm+'</span></div>';
+    h+='<div class="msRow"><span class="msEm">'+g.em+'</span><span class="msNm">'+g.nm+'</span><span class="msTag" style="color:'+r.col+'">EQUIPPED · '+r.nm+'</span></div>';
   }
   if(hasCons) for(const c of _mfMatchCons){
     const r=invRarity(c.rarity);
-    h+='<div class="msRow"><span class="msEm">'+c.em+'</span><span class="msNm">'+c.nm+'</span><span class="msTag" style="color:'+r.col+'">'+r.nm+'</span></div>';
+    h+='<div class="msRow"><span class="msEm">'+c.em+'</span><span class="msNm">'+c.nm+'</span><span class="msTag" style="color:'+r.col+'">ONE MATCH · '+r.nm+'</span></div>';
   }
   inner.innerHTML=h;
   el.appendChild(inner);
@@ -2142,7 +1101,7 @@ function showModTooltip(it,kind,x,y){
   }
   const r=invRarity(it.rarity);
   const fx=typeof armInvEffect==='function'?armInvEffect(it.id):{value:'',stat:''};
-  const slot=kind==='wildcard'?'WILDCARD':kind==='gear'?it.slot.toUpperCase():'CONSUMABLE';
+  const slot=kind==='wildcard'?'WILDCARD':kind==='gear'?it.slot.toUpperCase()+' · EQUIPPED':'CONSUMABLE · ONE MATCH';
   let h='<div class="mtName" style="color:'+r.col+'">'+it.em+' '+it.nm+'</div>'
     +'<div class="mtRarity" style="color:'+r.col+'">'+r.nm+' · '+slot+'</div>'
     +'<div class="mtDesc">'+it.ds+'</div>';
@@ -2238,7 +1197,7 @@ const INTEL_BUILD_GUIDE={
   nav :{tag:'SEA CONTROL',use:'Launch fleets and coastal fire support from connected navigable water.',chain:'COAST → HARBOR → FLEET'},
   def :{tag:'DEFENCE LAYER',use:'Overlap ranges so one tower covers another tower’s weakness.',chain:'SCOUT → SCREEN → KILL ZONE'},
   wall:{tag:'PATH CONTROL',use:'Shape enemy movement without trapping your own reinforcements.',chain:'WALL → GATE → CROSS-FIRE'},
-  tech:{tag:'ACCOUNT RESEARCH',use:'Protect the lab network; completed studies persist beyond the match.',chain:'LAB → STUDY → ACCOUNT DATA'},
+  tech:{tag:'FIELD STUDIES',use:'Run match-only upgrades here; each completed study banks +3 ◆ Data for persistent Development at debrief.',chain:'LAB → FIELD STUDY → DEVELOPMENT DATA'},
   sup :{tag:'BATTLE NETWORK',use:'Extend territory, shielding, repairs, and targeting coverage.',chain:'UPLINK → COVERAGE → ADVANCE'},
   sup2:{tag:'STRATEGIC STRIKE',use:'Scout the target and force movement before committing the long cooldown.',chain:'VISION → LOCK → LAUNCH'}
 };
@@ -2307,6 +1266,142 @@ function intelBldPurpose(key){
 function intelBldMini(key){
   const T=BT[key], C=BCAT[T.bcat]||BCAT.sup, P=INTEL_BLD_WEAPONS[key];
   return C.em+' '+C.nm+(P?' · '+intelTarget(P)[0]+' '+intelTarget(P)[1]:'');
+}
+/* ---------- authoritative production / economy previews -----------------
+   These presenters deliberately read the same live values used by sim.js and
+   economy.js. They do not reserve resources or mutate queues; they explain the
+   consequence of the next tap before the player commits it. */
+const MF_PRODUCTION_QUEUE_CAP=30;
+function mfFmtSeconds(v){
+  v=Math.max(0,Number(v)||0);
+  if(v>=60) return Math.floor(v/60)+'m '+Math.ceil(v%60)+'s';
+  return (v>=10?Math.round(v):Math.round(v*10)/10)+'s';
+}
+function mfUnitSizeBand(T){
+  const d=Math.max(1,Math.round((T&&T.r||3)*2));
+  return {diameter:d,label:d>=28?'SUPERHEAVY':d>=18?'HEAVY':d>=11?'MEDIUM':'LIGHT'};
+}
+function mfFactorySpeed(B){
+  if(!B) return 1;
+  const team=B.team==null?0:B.team;
+  const tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1;
+  const doctrine=(typeof factionDoctrineBuildSpeedMul==='function')?factionDoctrineBuildSpeedMul(team):1;
+  const base=team===1?(typeof aiBuildMult==='number'?aiBuildMult:1)
+    :(typeof playerBuildMult==='number'?playerBuildMult:1);
+  const fort=(typeof fortOf==='function'&&fortOf(team))?fortOf(team).prod:1;
+  return Math.max(.01,base*doctrine*(1+.12*Math.min(2,B.adj||0))*fort*tractor);
+}
+function mfUnitProductionQuote(tIdx,B){
+  const T=TYPES[tIdx],team=B&&B.team!=null?B.team:0;
+  if(!T) return null;
+  const cost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,team):{m:T.cm,e:T.ce};
+  const size=mfUnitSizeBand(T),pop=hudPlayerPop(),q=B&&Array.isArray(B.queue)?B.queue.length:0;
+  const queueFull=q>=MF_PRODUCTION_QUEUE_CAP;
+  const facility=B&&BT[B.type]?BT[B.type].name:'compatible production facility';
+  const tier=B&&B.type==='fac'?' · TECH '+(B.tier||1):'';
+  return {
+    cost,baseSeconds:T.bt||0,effectiveSeconds:(T.bt||0)/mfFactorySpeed(B),size,
+    population:1,popUsed:pop.used,popCap:pop.cap,
+    queueUsed:q,queueCap:MF_PRODUCTION_QUEUE_CAP,queueFull,
+    queuePosition:queueFull?MF_PRODUCTION_QUEUE_CAP:q+1,
+    dependency:facility+tier
+  };
+}
+function mfStructureBuildSpeed(key){
+  const doctrine=(typeof defenseFocus!=='undefined'&&defenseFocus&&typeof DEFT!=='undefined'&&DEFT[key])?1.333:1;
+  const boost=typeof boostMul==='function'?boostMul('build'):1;
+  const research=typeof bldSpeedMult==='number'?bldSpeedMult:1;
+  return Math.max(.01,boost*research*doctrine);
+}
+function mfStructureEffect(key,T){
+  const effect={
+    mex:'+4 mass/s at a Tier-I phase deposit; richer deposits multiply yield',
+    pgen:'+14 energy/s at Mk1',geo:'+30 energy/s from an active geothermal vent',
+    silo:'+600 mass and +2,000 energy storage',fab:'Converts up to 58 energy/s into 3.6 mass/s',
+    fac:'Adds a ground-unit production queue',airfield:'Adds an aircraft production queue',
+    harbor:'Adds a naval production queue on connected water',techlab:'Unlocks field studies and banks Development data',
+    uplink:'Extends HQ construction range and targeting coverage'
+  };
+  return effect[key]||T.desc||'Battlefield structure';
+}
+function mfStructureLockReasons(key){
+  const T=BT[key],out=[];if(!T)return out;
+  if(T.clvl&&typeof heroLvl==='number'&&heroLvl<T.clvl)out.push('Commander level '+T.clvl);
+  if(T.req&&typeof hasBld==='function'&&!hasBld(0,T.req))out.push(BT[T.req].name);
+  if(T.placement==='water'&&typeof battlefieldNavalEnabled==='function'&&!battlefieldNavalEnabled())out.push('Connected naval domain');
+  return out;
+}
+function mfStructureDependencies(key){
+  const T=BT[key],out=[];if(!T)return out;
+  if(T.clvl)out.push('Commander level '+T.clvl);
+  if(T.req)out.push(BT[T.req].name);
+  if(T.placement==='water')out.push('Connected naval domain');
+  if(key==='mex')out.push('Phase deposit at placement');
+  if(key==='geo')out.push('Geothermal vent at placement');
+  return out.length?out:['None'];
+}
+function mfStructureBuildQuote(key){
+  const T=BT[key];if(!T)return null;
+  const kit=typeof playerKitKey==='function'?playerKitKey():'nova';
+  /* bldFoot(type, faction) with no tier returns the largest authored family
+     footprint. New sites reserve that complete envelope through footTier, so
+     this is the space placement and later upgrades actually own. */
+  const foot=typeof bldFoot==='function'?bldFoot(key,kit):[T.size,T.size];
+  const escrow=typeof MF_BUILD_ESCROW_FRAC==='number'?MF_BUILD_ESCROW_FRAC:.02;
+  return {cost:{m:T.cm,e:T.ce},effectiveSeconds:T.bt/mfStructureBuildSpeed(key),footprint:foot,
+    placement:T.placement==='water'?'NAVAL':'LAND',effect:mfStructureEffect(key,T),dependencies:mfStructureDependencies(key),locks:mfStructureLockReasons(key),
+    escrow:{m:T.cm*escrow,e:T.ce*escrow},streamPercent:Math.round((1-escrow)*100)};
+}
+function mfEconomySnapshot(){
+  const m={stored:Math.floor(resM[0]),cap:Math.floor(RES_MCAP[0]),gross:+mRate||0,spend:+mSpend||0};
+  const e={stored:Math.floor(resE[0]),cap:Math.floor(RES_ECAP[0]),gross:+eRate||0,spend:+eSpend||0};
+  for(const x of [m,e]){
+    x.net=x.gross-x.spend;
+    x.forecast=x.stored>=x.cap-1&&x.net>.001?'FULL · INCOME WASTED'
+      :x.net<-.001?'EMPTY IN '+mfFmtSeconds(x.stored/-x.net)
+      :x.net>.001?'CAP IN '+mfFmtSeconds(Math.max(0,x.cap-x.stored)/x.net):'STEADY';
+  }
+  let bottleneck='NONE — both resource flows are stable';
+  if(stallM>0)bottleneck='MASS — active work is stalled';
+  else if(stallE>0)bottleneck='ENERGY — active work is stalled';
+  else if(m.net<0||e.net<0){
+    const mr=m.net<0?m.stored/-m.net:Infinity,er=e.net<0?e.stored/-e.net:Infinity;
+    bottleneck=mr<=er?'MASS — shortest projected runway':'ENERGY — shortest projected runway';
+  }else{
+    const massFull=m.stored>=m.cap-1,energyFull=e.stored>=e.cap-1;
+    if(massFull&&energyFull)bottleneck='MASS + ENERGY STORAGE FULL — income is being wasted';
+    else if(massFull)bottleneck='MASS STORAGE FULL — income is being wasted';
+    else if(energyFull)bottleneck='ENERGY STORAGE FULL — income is being wasted';
+  }
+  return {mass:m,energy:e,bottleneck};
+}
+function mfEconomyRow(label,x){
+  const sign=n=>(n>=0?'+':'')+n.toFixed(1);
+  return '<div class="econResource"><b>'+label+'</b><span>STORED <strong>'+x.stored+' / '+x.cap+'</strong></span>'
+    +'<span>GROSS <strong>'+sign(x.gross)+'/s</strong></span><span>SPEND <strong>-'+x.spend.toFixed(1)+'/s</strong></span>'
+    +'<span>NET <strong class="'+(x.net<0?'bad':'good')+'">'+sign(x.net)+'/s</strong></span>'
+    +'<span class="econForecast">FORECAST <strong>'+x.forecast+'</strong></span></div>';
+}
+function showEconomyIntel(){
+  const E=mfEconomySnapshot();
+  const h='<section id="economyIntel"><div class="ucHead"><span class="ucRoleIcon">⌁</span><div><b>RESOURCE FORECAST</b>'
+    +'<small>Live income, committed spending, storage and projected runway.</small></div><button type="button" class="ucClose" aria-label="Close resource forecast">×</button></div>'
+    +'<div class="econGrid">'+mfEconomyRow('◆ MASS',E.mass)+mfEconomyRow('⚡ ENERGY',E.energy)+'</div>'
+    +'<div class="econBottleneck"><span>BOTTLENECK</span><b>'+E.bottleneck+'</b></div></section>';
+  showIntelMarkup(h,true);
+}
+function mfEnsureEconomyInspectors(){
+  if(mfEnsureEconomyInspectors.ready)return;
+  const mass=$('massV'),energy=$('enV');
+  const nodes=[mass&&mass.closest('.res'),energy&&energy.closest('.res')].filter(Boolean);
+  if(nodes.length!==2)return;
+  mfEnsureEconomyInspectors.ready=true;
+  nodes.forEach((el,i)=>{
+    el.dataset.econ=i?'energy':'mass';el.setAttribute('role','button');el.setAttribute('tabindex','0');
+    el.setAttribute('aria-label',(i?'Energy':'Mass')+' economy details');
+    if(typeof mfBindTap==='function')mfBindTap(el,showEconomyIntel);else el.addEventListener('click',showEconomyIntel);
+    mfHudEnterSpace(el,()=>el.click());
+  });
 }
 function armorThreats(ai2){                        // which weapons punish this armor class
   const s=[];
@@ -2672,7 +1767,7 @@ function renderMenuRoleBrief(kind,key,ids){
   const kit=mfIntelKit();
   visual.appendChild(mfIntelPreviewWindow(isUnit?'unit':'building',first,'TACTICAL PREVIEW',kit));
   const inspect=host.querySelector('.menuRoleInspect');
-  inspect.addEventListener('pointerdown',ev=>{
+  mfBindNativePress(inspect,ev=>{
     ev.preventDefault();ev.stopPropagation();
     if(isUnit)showUnitTypeCard(first,true,kit);else showBuildingTypeCard(first,-1,true,kit);
     sfx('ui');
@@ -2728,6 +1823,8 @@ function intelBldLine(id,kit){
 function showUnitTypeCard(tIdx,pinned,kit){
   const T=TYPES[tIdx]; if(!T) return;
   const C=UCAT[T.cat]||UCAT.veh, tg=intelTarget(T), ai2=ARM[tIdx]||0, ct=intelUnitCounters(T);
+  const factory=openBld>=0&&blds[openBld]&&blds[openBld].alive&&Array.isArray(blds[openBld].queue)?blds[openBld]:null;
+  const Q=mfUnitProductionQuote(tIdx,factory);
   const h='<div class="ucHead"><span class="ucRoleIcon">'+C.em+'</span><div><b>'+intelUnitName(tIdx,kit)+'</b>'
     +'<small>'+intelUnitLine(tIdx,kit)+'</small></div><button type="button" class="ucClose" aria-label="Close unit information">×</button></div>'
     +'<div class="ucChips">'+intelChip(C.em,C.nm)+intelChip(tg[0],tg[1])
@@ -2738,10 +1835,14 @@ function showUnitTypeCard(tIdx,pinned,kit){
     +'</div>'
     +'<div class="ucStats"><span>DMG <b>'+T.dmg+'</b></span><span>RANGE <b>'+T.rng+'</b></span><span>SPEED <b>'+T.spd+'</b></span>'
     +(T.aoe?'<span>SPLASH <b>'+T.aoe+'</b></span>':'')+'</div>'
+    +'<div class="ucStats productionQuote"><span>COST <b>'+Q.cost.m+'m · '+Q.cost.e+'e</b></span>'
+    +'<span>BUILD <b>'+mfFmtSeconds(Q.effectiveSeconds)+'</b></span><span>SIZE <b>'+Q.size.label+' · Ø'+Q.size.diameter+'m</b></span>'
+    +'<span>POPULATION <b>+1 · '+Q.popUsed+'/'+Q.popCap+'</b></span><span>QUEUE <b>'+Q.queuePosition+'/'+Q.queueCap+'</b></span></div>'
     +(T.wk==='n'?'<div class="ucCounter caution">⚠ UNARMED · ESCORT THIS UNIT</div>'
       :'<div class="ucMatchups" aria-label="Live combat matchup multipliers">'
        +intelWeaponMatchups(T.wk)+intelArmorThreatMatchups(ai2)+'</div>')
-    +'<div class="ucAmmo">AMMO · '+ammoName(T)+(T.minRng?' · MIN RANGE '+T.minRng:'')+'</div>';
+    +'<div class="ucAmmo">AMMO · '+ammoName(T)+(T.minRng?' · MIN RANGE '+T.minRng:'')+'</div>'
+    +'<div class="ucDependency">DEPENDENCY · '+Q.dependency+'</div>';
   showIntelMarkup(h,pinned);
   if(T.cat==='art'){
     const card=$('unitCard'),info=document.createElement('div');
@@ -2766,6 +1867,7 @@ function showUnitTypeCard(tIdx,pinned,kit){
 function showBuildingTypeCard(key,bIdx,pinned,kit){
   const T=BT[key]; if(!T) return;
   const B=bIdx>=0?blds[bIdx]:null, C=BCAT[T.bcat]||BCAT.sup, P=INTEL_BLD_WEAPONS[key], tg=P?intelTarget(P):null;
+  const Q=mfStructureBuildQuote(key);
   const W=B&&typeof bldWeaponSnapshot==='function'?bldWeaponSnapshot(B,B.lvl||1):null;
   const shownRange=W?Math.round(W.range):(P?P.rng():0);
   const bkit=B?((typeof factionTextKit==='function')?factionTextKit(B.team):undefined):kit;
@@ -2781,10 +1883,14 @@ function showBuildingTypeCard(key,bIdx,pinned,kit){
       +(W?'<span>DAMAGE <b>'+bldNum(W.damage)+'</b></span><span>RATE <b>'+bldNum(W.rate)+'/s</b></span>':'')
       +'<span>RANGE <b>'+shownRange+'</b></span>'
       +(P.min?'<span>MIN <b>'+P.min()+'</b></span>':'')+'</div>':'')
+    +'<div class="ucStats productionQuote"><span>COST <b>'+Q.cost.m+'m · '+Q.cost.e+'e</b></span>'
+    +'<span>BUILD <b>'+mfFmtSeconds(Q.effectiveSeconds)+'</b></span><span>FOOTPRINT <b>'+Math.round(Q.footprint[0])+'×'+Math.round(Q.footprint[1])+'m</b></span>'
+    +'<span>DOMAIN <b>'+Q.placement+'</b></span><span>PAYMENT <b>2% start · '+Q.streamPercent+'% streamed</b></span></div>'
+    +'<div class="ucDependency">OUTPUT · '+Q.effect+'</div>'
     +'<div class="ucMatchups" aria-label="Live structure matchup multipliers">'
     +(P?intelWeaponMatchups(P.wk):'')+intelStructureThreats()+'</div>'
     +'<div class="ucCounter"><span>✓ PURPOSE: '+(INTEL_BUILD_COPY[T.bcat]||T.desc)+'</span>'
-    +((T.req||T.clvl)?'<span class="caution">⌁ '+(T.req?'NEEDS '+BT[T.req].name.toUpperCase():'CDR LEVEL '+T.clvl)+'</span>':'')+'</div>';
+    +'<span class="caution">⌁ DEPENDENCIES · '+Q.dependencies.join(' · ').toUpperCase()+'</span></div>';
   showIntelMarkup(h,pinned);
   mfIntelAttachPreview('building',key,bkit);
 }
@@ -2794,7 +1900,18 @@ function showIntelMarkup(h,pinned){
   el.style.display='block';
   el.classList.toggle('pinned',!!pinned);
   const close=el.querySelector('.ucClose');
-  if(close) close.addEventListener('pointerdown',ev=>{ ev.stopPropagation(); clearTimeout(el._t); el.style.display='none'; });
+  if(close){
+    const dismiss=ev=>{
+      if(ev)ev.stopPropagation();
+      clearTimeout(el._t);el.style.display='none';
+      if(typeof mfUiQueueSync==='function')mfUiQueueSync();
+    };
+    /* Stop the battlefield press at its source, then commit on a completed tap
+       or native keyboard click. pointerdown-only made the visible 44px close
+       button impossible to operate with Enter/Space. */
+    close.addEventListener('pointerdown',ev=>ev.stopPropagation(),{passive:true});
+    if(typeof mfBindTap==='function')mfBindTap(close,dismiss);else close.addEventListener('click',dismiss);
+  }
   clearTimeout(el._t);
   if(!pinned) el._t=setTimeout(()=>el.style.display='none',6500);
 }
@@ -2820,20 +1937,47 @@ function addCardIntelButton(card,kind,id){
   const b=document.createElement('button');
   b.type='button'; b.className='cardIntel'; b.textContent='ⓘ';
   b.setAttribute('aria-label','About '+(kind==='unit'?TYPES[id].name:BT[id].name));
-  b.addEventListener('pointerdown',ev=>{
-    ev.preventDefault(); ev.stopPropagation();
+  const inspect=ev=>{
+    if(ev){ev.preventDefault();ev.stopPropagation();}
     if(kind==='unit') showUnitTypeCard(id,true); else showBuildingTypeCard(id,-1,true);
     sfx('ui');
-  });
+  };
+  /* Keep the parent card from arming on a press that began on About. The
+     shared tap contract supplies release/cancel safety and a real click path
+     for keyboard and assistive activation. */
+  b.addEventListener('pointerdown',ev=>ev.stopPropagation(),{passive:true});
+  if(typeof mfBindTap==='function')mfBindTap(b,inspect);else b.addEventListener('click',inspect);
   card.appendChild(b);
 }
 
 // ---------- menus ----------
 function closeMenus(){
+  const menuVisible=id=>{const el=$(id);return !!(el&&getComputedStyle(el).display!=='none');};
+  const hadOpen=menuVisible('buildMenu')||menuVisible('prodMenu')||menuVisible('bldMenu2');
+  if(hadOpen&&typeof mfUiMarkPanelDismiss==='function')mfUiMarkPanelDismiss();
   $('buildMenu').style.display='none';
   $('prodMenu').style.display='none';
   $('bldMenu2').style.display='none';
   openBld=-1;
+}
+/* THE PANEL MUST DIE WITH THE STRUCTURE.
+   `blds` entries are never spliced during a match — a destroyed structure just
+   gets `alive=false` (sim.js) and its slot stays in the array until resetWorld
+   empties it. Every menu renderer here only ever asked `openBld<0`, and the
+   800ms refresh in main.js only asks `!blds[openBld]`, so NONE of those tests
+   can ever notice a death. A raid that killed the factory you had open left the
+   production sheet on screen, still painting that factory's queue and ETA, and
+   still accepting unit taps with a confirm sound — every unit queued that way
+   went into a corpse and never appeared. (The batch-hold path two lines below
+   the single push already checked `B5.alive`, which is what makes the missing
+   check on the single push an omission rather than a decision.)
+   One guard, called at the top of every renderer, closes the sheet instead. */
+function openBldGone(){
+  if(openBld<0) return true;
+  const B=blds[openBld];
+  if(B&&B.alive) return false;
+  closeMenus();
+  return true;
 }
 function openBldMenu(b){
   closeMenus();
@@ -2866,14 +2010,15 @@ function prodNavShell(){
      APK install, while the same OTA patch worked on an older shell. */
   if(nav.dataset.bound!=='1'){
     nav.dataset.bound='1';
-    nav.querySelector('#prodPrev').addEventListener('pointerdown',ev=>{ev.stopPropagation();cycleProdBuilding(-1);});
-    nav.querySelector('#prodNext').addEventListener('pointerdown',ev=>{ev.stopPropagation();cycleProdBuilding(1);});
+    mfBindNativePress(nav.querySelector('#prodPrev'),ev=>{ev.stopPropagation();cycleProdBuilding(-1);});
+    mfBindNativePress(nav.querySelector('#prodNext'),ev=>{ev.stopPropagation();cycleProdBuilding(1);});
   }
   return nav;
 }
 function prodBuildingPeers(B){
   if(!B)return [];
-  return blds.map((Q,i)=>({Q,i})).filter(o=>o.Q&&o.Q.alive&&o.Q.team===0&&o.Q.type===B.type);
+  return blds.map((Q,i)=>({Q,i})).filter(o=>o.Q&&o.Q.alive&&
+    (typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(o.Q):o.Q.team===0)&&o.Q.type===B.type);
 }
 function cycleProdBuilding(dir){
   if(openBld<0||!blds[openBld]||!blds[openBld].alive)return;
@@ -2894,7 +2039,7 @@ function renderProdNav(B){
   }
   nav.style.display='grid';
 }
-function renderBldPanel(){
+function renderBldPanel(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld], T=BT[B.type];
   const bi=$('bp_ic'); bi.innerHTML='';
@@ -2939,28 +2084,35 @@ function renderBldPanel(){
   const fb=$('bp_fire');
   if(fb){
     if(B.type==='nova'&&B.prog>=1){
-      const lowE=resE[0]<NOVA.e;
+      /* novaFire spends the wallet that OWNS the silo. Reading resE[0] here made
+         the button say READY on an ally Nova the ally could not afford, and
+         NEEDS ENERGY on one it could. Ask the same wallet the shot will bill. */
+      const novaBank=(typeof econBankE==='function'&&typeof commanderSlotForBuilding==='function')
+        ? econBankE(0,commanderSlotForBuilding(B)) : resE[0];
+      const lowE=novaBank<NOVA.e;
       fb.style.display='block';
       fb.disabled=B.cool>0||lowE;
       fb.textContent=B.cool>0? ('☄ CHARGING… '+Math.ceil(B.cool)+'s')
-                    : lowE? ('⚡ NEEDS '+NOVA.e+' ENERGY ('+Math.floor(resE[0])+')')
+                    : lowE? ('⚡ NEEDS '+NOVA.e+' ENERGY ('+Math.floor(novaBank)+')')
                           : '☄ FIRE NOVA — then tap any target';
     } else fb.style.display='none';
   }
 }
-function renderResearchMenu(){
+function renderResearchMenu(){ if(openBldGone()) return;
   const g=$('prodGrid'); g.innerHTML='';
   if(openBld<0) return;
   const B=blds[openBld];
   renderProdNav(B);
+  $('prodNavName').textContent='FIELD STUDIES';
   const status=document.createElement('div');
   status.className='researchStatus';
   const carryN=Object.keys(researchCarry).filter(id=>!researched[id]&&researchCarry[id]>.5).length;
   const guard=B.guardT>0?('CONTAINMENT '+Math.ceil(B.guardT)+'s')
     :B.guardReady?'CONTAINMENT READY'
     :('REARM '+Math.min(99,Math.floor((B.guardCharge||0)/TECH_GUARD.rearm*100))+'%');
-  status.innerHTML='<b>FIELD NETWORK</b><span>'+Math.ceil(B.shield)+' / '+Math.ceil(B.shieldMax)+' SHIELD · '
-    +guard+' · '+resDone+' STUDIES'+(carryN?' · '+carryN+' RECOVERABLE':'')+'</span>';
+  status.innerHTML='<b>FIELD STUDIES · MATCH ONLY</b><span>'+Math.ceil(B.shield)+' / '+Math.ceil(B.shieldMax)+' SHIELD · '
+    +guard+' · '+resDone+' STUDIES'+(carryN?' · '+carryN+' RECOVERABLE':'')+'</span>'
+    +'<small>Effects end with this battle. Each completion banks +3 ◆ Data for persistent Development at debrief.</small>';
   g.appendChild(status);
   let shown=0;
   RESEARCH.forEach((R,idx)=>{
@@ -2977,9 +2129,18 @@ function renderResearchMenu(){
       +(recover?'<div class="researchRecover">◆ RECOVER '+recover+'%</div>':'');
     d.addEventListener('pointerdown',ev=>{
       ev.stopPropagation();
-      if(lockLvl){ toast('🔒 '+R.nm+' unlocks at Commander level '+R.clvl); return; }
+      if(lockLvl){ toast('🔒 Field Study '+R.nm+' unlocks at Commander level '+R.clvl); return; }
+      /* Same corpse hazard as the production sheet, plus a hard throw: a lab
+         destroyed while its card list was on screen left openBld pointing at a
+         dead slot, and `Bb.res` on a cleared openBld (-1) is a TypeError that
+         kills the whole pointerdown handler chain. */
+      if(openBldGone()) return;
       const Bb=blds[openBld];
-      if(Bb.res>=0){ toast('Already researching '+RESEARCH[Bb.res].nm); return; }
+      if(Bb.res>=0){ toast('Already studying '+RESEARCH[Bb.res].nm); return; }
+      if(window.MFMatchCommandConsumer&&typeof MFMatchCommandConsumer.takeover==='function'&&
+         MFMatchCommandConsumer.takeover({type:'research',building:{id:openBld,type:Bb.type},study:R.id})){
+        toast('◆ '+R.nm+' order transmitted');return;
+      }
       Bb.res=idx; Bb.resT=Math.min(R.t-.01,researchResumeTime(R.id)); sfx('ui'); renderQueue();
       if(Bb.resT>0) toast('◆ '+R.nm+' recovered at '+Math.floor(Bb.resT/R.t*100)+'%');
     });
@@ -3111,6 +2272,19 @@ function bldIconEl(key,size,kit){
    building anti-air should not be dropped back on infantry every time they
    reopen the panel. */
 let prodTab='inf', bldTab='eco';
+function mfSyncProductionQueueCards(B){
+  const full=!!(B&&Array.isArray(B.queue)&&B.queue.length>=MF_PRODUCTION_QUEUE_CAP);
+  const cards=document.querySelectorAll('#prodGrid .bcard[data-queue-sensitive="1"]');
+  for(const card of cards){
+    const authored=card.dataset.authoredLock==='1';
+    card.classList.toggle('locked',authored||full);
+    card.classList.toggle('queueFull',full);
+    card.setAttribute('aria-disabled',authored||full?'true':'false');
+    const flag=card.querySelector('.cardQueueLock');if(flag)flag.hidden=!full;
+    const base=card.dataset.baseAria||card.getAttribute('aria-label')||'';
+    card.setAttribute('aria-label',(full?'Queue full. ':'')+base);
+  }
+}
 let baseFinderFilter='all',baseFinderCursor=0;
 function baseFinderGroup(B){
   const c=(BT[B.type]&&BT[B.type].bcat)||'sup';
@@ -3131,8 +2305,8 @@ function renderBaseFinder(){
   p.innerHTML='<header><b>⌖ BASE FINDER</b><button type="button" aria-label="Close base finder">×</button></header>'
     +'<div class="baseFindTabs">'+groups.map(g=>'<button data-f="'+g+'" class="'+(g===baseFinderFilter?'on':'')+'">'+g.toUpperCase()+'</button>').join('')+'</div>'
     +'<p>'+list.length+' owned structures · tap a category to cycle and focus its next structure.</p>';
-  p.querySelector('header button').addEventListener('pointerdown',()=>{p.style.display='none';});
-  p.querySelectorAll('[data-f]').forEach(btn=>btn.addEventListener('pointerdown',ev=>{
+  mfBindNativePress(p.querySelector('header button'),()=>{p.style.display='none';});
+  p.querySelectorAll('[data-f]').forEach(btn=>mfBindNativePress(btn,ev=>{
     ev.stopPropagation();const f=btn.dataset.f;if(f!==baseFinderFilter){baseFinderFilter=f;baseFinderCursor=0;}
     const now=all.filter(B=>baseFinderFilter==='all'||baseFinderGroup(B)===baseFinderFilter);
     if(!now.length){toast('NO '+baseFinderFilter.toUpperCase()+' STRUCTURES');renderBaseFinder();return;}
@@ -3153,25 +2327,48 @@ function toggleBaseFinder(){
   }
   renderBaseFinder();p.style.display='block';
 }
-function renderProdMenu(){
+function renderProdMenu(){ if(openBldGone()) return;
   const g=$('prodGrid'); g.innerHTML='';
   $('repeatBtn').style.display='block';
   if(openBld<0) return;
   const B=blds[openBld];
   renderProdNav(B);
-  let list;
+  /* Locked units used to be DELETED from the roster: a tier-1 factory simply
+     did not draw the twelve tier-2 chassis, and factionDoctrineRoster silently
+     dropped whatever the faction does not field. Structures have always shown
+     their locks (grey + padlock + reason); units showed nothing, so the player
+     could not tell a missing card from a card that does not exist. Keep the
+     removed entries and render them locked. */
+  let list, lockedTier=[], lockedDoc=[];
   if(B.type==='tgate') list=[8,26];
   else if(B.type==='harbor') list=[14,15];
   else if(B.type==='airfield') list=[5,17,25];
-  else list = B.tier===2? [0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]
-                        : [0,1,9,10,19,24,32];
-  if(typeof factionDoctrineRoster==='function') list=factionDoctrineRoster(list,B.type,0);
+  else {
+    const T2=[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32];
+    const T1=[0,1,9,10,19,24,32];
+    list = B.tier===2? T2 : T1;
+    if(B.tier!==2) lockedTier=T2.filter(t=>T1.indexOf(t)<0);
+  }
+  if(typeof factionDoctrineRoster==='function'){
+    const kept=factionDoctrineRoster(list,B.type,0);
+    lockedDoc=list.filter(t=>kept.indexOf(t)<0);
+    /* A chassis the faction does not field is not unlocked by TECH 2 either. */
+    if(lockedTier.length) lockedTier=factionDoctrineRoster(lockedTier,B.type,0);
+    list=kept;
+  }
+  const lockWhy={};
+  for(const t of lockedTier) lockWhy[t]='TECH 2';
+  for(const t of lockedDoc) lockWhy[t]='NOT FIELDED';
+  const lockedAll=lockedTier.concat(lockedDoc);
   /* ROLE TABS. A flat grid of eighteen cards is a wall; one tap per role lets
      the player find the answer to whatever is killing them without reading
      every stat block on the way there. */
   const order=['inf','veh','at','aoe','art','aa','air','nav','sup','exp'];
   const groups={};
   for(const t of list){ const c=TYPES[t].cat||'veh'; (groups[c]||(groups[c]=[])).push(t); }
+  /* Locked chassis join their own role tab so the tab itself stops lying about
+     how deep the roster is. They sort last within the tab. */
+  for(const t of lockedAll){ const c=TYPES[t].cat||'veh'; (groups[c]||(groups[c]=[])).push(t); }
   const tabs=order.filter(c=>groups[c]);
   if(tabs.indexOf(prodTab)<0) prodTab=tabs[0];
   const tr=$('prodTabs'); tr.innerHTML='';
@@ -3181,52 +2378,100 @@ function renderProdMenu(){
     const b=document.createElement('button');
     b.className='tabBtn'+(c===prodTab?' on':'');
     b.innerHTML='<span class="tEm">'+C.em+'</span>'+C.nm;
-    b.addEventListener('pointerdown',ev=>{ ev.stopPropagation(); prodTab=c; sfx('ui'); renderProdMenu(); });
+    mfBindNativePress(b,ev=>{ ev.stopPropagation(); prodTab=c; sfx('ui'); renderProdMenu(); });
     tr.appendChild(b);
   }
   renderMenuRoleBrief('unit',prodTab,groups[prodTab]||[]);
-  (groups[prodTab]||[]).forEach(tIdx=>{
+  const tabList=(groups[prodTab]||[]).slice().sort((a,b)=>(lockWhy[a]?1:0)-(lockWhy[b]?1:0));
+  tabList.forEach(tIdx=>{
     const T=TYPES[tIdx];
-    const C=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,0):{m:T.cm,e:T.ce};
+    const why=lockWhy[tIdx]||'';
+    const Q=mfUnitProductionQuote(tIdx,B),C=Q.cost;
     const d=document.createElement('div');
-    d.className='bcard';
-    d.innerHTML='<div class="nm">'+intelUnitName(tIdx)+'</div><div class="cost">'+C.m+'m <span>'+C.e+'e</span></div>'
-      +'<div class="wkTag">'+ammoName(T)+'</div><div class="cardPurpose">'+intelUnitLine(tIdx)+'</div>';
+    d.className='bcard'+((why||Q.queueFull)?' locked':'')+(Q.queueFull?' queueFull':'');
+    d.dataset.queueSensitive='1';d.dataset.authoredLock=why?'1':'0';
+    d.dataset.previewKind='unit';d.dataset.previewId=String(tIdx);
+    d.innerHTML='<div class="nm">'+intelUnitName(tIdx)+'</div>'
+      +'<div class="cost">'+C.m+'m <span>'+C.e+'e</span></div>'
+      +'<div class="cardMeta"><span>⏱ '+mfFmtSeconds(Q.effectiveSeconds)+'</span><span>'+Q.size.label+' · Ø'+Q.size.diameter+'m</span></div>'
+      +'<div class="cardMeta"><span>POP +1 · '+Q.popUsed+'/'+Q.popCap+'</span><span>'+(Q.queueFull?'QUEUE FULL':'QUEUE '+Q.queuePosition+'/'+Q.queueCap)+'</span></div>'
+      +'<div class="cardDependency">FACILITY · '+Q.dependency+'</div>'
+      +(why?'<div class="cardLocks">🔒 '+why+'</div>':'')
+      +'<div class="cardLocks cardQueueLock"'+(Q.queueFull?'':' hidden')+'>🔒 QUEUE FULL · CANCEL OR COMPLETE A UNIT</div>'
+      +'<div class="wkTag">'+ammoName(T)+'</div><div class="cardPurpose">'+intelUnitLine(tIdx)+'</div>'
+      +(why?'<span class="lockOv">🔒</span>':'');
     d.setAttribute('role','button');
-    d.setAttribute('aria-label','Build '+intelUnitName(tIdx)+'. '+intelUnitLine(tIdx));
+    d.setAttribute('tabindex','0');
+    d.dataset.baseAria='Build '+intelUnitName(tIdx)+'. Cost '+C.m+' mass and '+C.e+' energy. '+mfFmtSeconds(Q.effectiveSeconds)+'. '+Q.size.label+' size. Population plus one. Queue position '+Q.queuePosition+' of '+Q.queueCap+'. '+(why?'Locked: '+why+'. ':'')+intelUnitLine(tIdx);
+    d.setAttribute('aria-label',(Q.queueFull?'Queue full. ':'')+d.dataset.baseAria);
+    d.setAttribute('aria-disabled',(why||Q.queueFull)?'true':'false');
     const icw=document.createElement('div'); icw.className='icw';
     icw.appendChild(unitIconEl(tIdx,44));
     d.insertBefore(icw,d.firstChild);
-    d.addEventListener('pointerdown',ev=>{
-      ev.stopPropagation();
-      if(openBld<0) return;
+    const queueUnit=(batch)=>{
+      if(why){
+        if(typeof sfx==='function') sfx('deny');
+        toast(why==='TECH 2'
+          ? '🔒 '+intelUnitName(tIdx)+' needs a TECH 2 factory — upgrade this factory to field it'
+          : '🔒 '+intelUnitName(tIdx)+' is not fielded by your faction');
+        return false;
+      }
+      /* The structure can die between opening the sheet and this tap. Without
+         this the push lands in a corpse: sfx('ui') fires, the plate paints, and
+         the unit is never built. */
+      if(openBldGone()) return false;
       const Bb=blds[openBld];
       const popSlot=typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(Bb):-1;
       if(!populationCanSpawn(tIdx,0,popSlot)){
-        /* Each slot is 1000. Theatre size only adds slots — recycle, do not
-           tell the player expanding the theatre would raise this wallet. */
-        const used=typeof populationUsedForCommander==='function'?populationUsedForCommander(popSlot):(teamCount[0]|0);
-        const cap=typeof populationCapForCommander==='function'?populationCapForCommander(popSlot):1000;
-        toast('⚠ UNIT CAP '+used+' / '+cap+' — recycle units to free population');
-        sfx('deny');return;
+        const used=typeof populationUsedFor==='function'?populationUsedFor(0):(teamCount[0]|0);
+        const cap=typeof populationCapFor==='function'?populationCapFor(0):500;
+        toast('⚠ FACTION CAP '+used+' / '+cap+' — recycle units to free population');
+        sfx('deny');return false;
       }
-      if(tIdx===8 && titanCount[0]+Bb.queue.filter(q=>q===8).length>=3){ toast('Max 3 TITANs'); return; }
+      if(tIdx===8 && titanCount[0]+Bb.queue.filter(q=>q===8).length>=3){ toast('Max 3 TITANs'); return false; }
       if((tIdx===UT_ENGINEER||tIdx===UT_MINER)&&supportUnitCount(0,true)>=supportUnitCap(0)){
-        toast('⚙ SUPPORT CAP '+supportUnitCap(0)+' — raise Commander level or operate a Research Lab');return;
+        toast('⚙ SUPPORT CAP '+supportUnitCap(0)+' — raise Commander level or operate a Research Lab');return false;
       }
-      if(Bb.queue.length<30){ Bb.queue.push(tIdx); sfx('ui'); renderQueue(); }
-      if(tIdx!==8){                              // hold to queue a batch of 5
-        const hold=setTimeout(()=>{
-          const B5=blds[openBld];
-          if(B5&&B5.alive&&B5.queue.length<26&&populationCanSpawn(tIdx,0,popSlot)){
-            for(let q=0;q<4;q++) B5.queue.push(tIdx);
-            renderQueue(); toast('▶ ×5 '+T.name+' queued (hold to batch)'); sfx('ui');
-          }
-        },430);
-        const clr=()=>{ clearTimeout(hold); d.removeEventListener('pointerup',clr); d.removeEventListener('pointercancel',clr); d.removeEventListener('pointerleave',clr); };
-        d.addEventListener('pointerup',clr); d.addEventListener('pointercancel',clr); d.addEventListener('pointerleave',clr);
+      const room=MF_PRODUCTION_QUEUE_CAP-Bb.queue.length;
+      if(room<=0){
+        toast('🔒 PRODUCTION QUEUE FULL · CANCEL OR COMPLETE A UNIT');sfx('deny');
+        mfSyncProductionQueueCards(Bb);return false;
       }
+      const n=Math.max(1,Math.min(batch||1,tIdx===8?1:5,room));
+      if(window.MFMatchCommandConsumer&&typeof MFMatchCommandConsumer.takeover==='function'&&
+         MFMatchCommandConsumer.takeover({type:'produce',building:{id:openBld,type:Bb.type},unit:tIdx,count:n})){
+        toast('▶ '+T.name+' order transmitted');return true;
+      }
+      for(let q=0;q<n;q++)Bb.queue.push(tIdx);
+      if(n){renderQueue();sfx('ui');if(n>1)toast('▶ ×'+n+' '+T.name+' queued (hold to batch)');}
+      return !!n;
+    };
+    /* Commit on release, not pointerdown: scrolling the roster cannot queue a
+       unit. A stationary 430ms hold still queues the authored batch of five. */
+    let prodPress=null;
+    d.addEventListener('pointerdown',ev=>{
+      ev.stopPropagation();
+      prodPress={id:ev.pointerId,x:ev.clientX,y:ev.clientY,moved:false,batch:false,hold:0};
+      if(tIdx!==8)prodPress.hold=setTimeout(()=>{
+        if(prodPress&&!prodPress.moved){prodPress.batch=true;queueUnit(5);}
+      },430);
     });
+    d.addEventListener('pointermove',ev=>{
+      if(!prodPress||prodPress.id!==ev.pointerId)return;
+      if(Math.hypot(ev.clientX-prodPress.x,ev.clientY-prodPress.y)>10){prodPress.moved=true;clearTimeout(prodPress.hold);}
+    });
+    const finishProd=ev=>{
+      if(!prodPress||prodPress.id!==ev.pointerId)return;
+      const p=prodPress;prodPress=null;clearTimeout(p.hold);
+      if(ev.type==='pointerup'&&!p.moved&&!p.batch)queueUnit(1);
+    };
+    d.addEventListener('pointerup',finishProd);
+    d.addEventListener('pointercancel',finishProd);
+    d.addEventListener('pointerleave',ev=>{if(prodPress&&prodPress.id===ev.pointerId&&prodPress.moved)finishProd(ev);});
+    /* Pointer already commits on release. Enter/Space must not also synthesize
+       a click handler — production cards have none — so the key path queues
+       once, matching a completed tap. */
+    mfHudEnterSpace(d,()=>{if(!prodPress)queueUnit(1);});
     addCardIntelButton(d,'unit',tIdx);
     g.appendChild(d);
   });
@@ -3271,15 +2516,18 @@ function cancelQueuedUnit(B,start){
     if(T&&B.prodT>0&&B.team===0){
       const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,0):{m:T.cm,e:T.ce};
       const frac=Math.min(1,B.prodT/Math.max(0.01,T.bt));
-      resM[0]=Math.min(RES_MCAP[0],resM[0]+facCost.m*frac);
-      resE[0]=Math.min(RES_ECAP[0],resE[0]+facCost.e*frac);
+      /* Refund the seat that OWNS the factory. Refunding the human bank
+         while an ally seat paid the stream is a wallet-to-wallet theft
+         primitive under shared control: queue in an ally factory, cancel,
+         pocket the refund. */
+      credit(0,facCost.m*frac,facCost.e*frac,typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B):null);
     }
     B.queue.shift();
     B.prodT=0;
   } else B.queue.splice(last,1);
   return true;
 }
-function renderQueue(){
+function renderQueue(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld];
   const el=$('prodQueue'); if(!el) return;
@@ -3287,12 +2535,13 @@ function renderQueue(){
     el._mfQ='';
     el.classList.add('empty');
     const shield='SHIELD '+Math.ceil(B.shield)+'/'+Math.ceil(B.shieldMax);
-    const pending=resDone*3+' ◆ DATA PENDING';
-    el.textContent=(B.res>=0?('Researching '+RESEARCH[B.res].nm+' — '+Math.ceil(RESEARCH[B.res].t-B.resT)+'s'):'Pick a field study')
+    const pending=resDone*3+' ◆ DATA → DEVELOPMENT AT DEBRIEF';
+    el.textContent=(B.res>=0?('Studying '+RESEARCH[B.res].nm+' — '+Math.ceil(RESEARCH[B.res].t-B.resT)+'s'):'Choose a match-only Field Study')
       +' · '+shield+' · '+pending;
     return;
   }
   const q=B.queue||[];
+  mfSyncProductionQueueCards(B);
   const stacks=queueStacks(q);
   const sig=stacks.map(s=>s.t+':'+s.n+':'+s.i).join(',')+'|'+(B.adj||0);
   if(el._mfQ!==sig){
@@ -3318,12 +2567,25 @@ function renderQueue(){
         ct.textContent='×'+S.n;
         const bar=document.createElement('i'); bar.className='qBar';
         plate.appendChild(ic); plate.appendChild(nm); plate.appendChild(ct); plate.appendChild(bar);
-        plate.addEventListener('pointerdown',ev=>{
+        /* Same two-tap arm as recycle (bp_sell): first completed tap states the
+           cancel, second commits. pointerdown only records the press so a
+           horizontal queue-row pan cannot refund a unit. */
+        const requestCancel=ev=>{
           ev.stopPropagation();
           const Bb=openBld>=0?blds[openBld]:null;
           if(!Bb||!Bb.alive) return;
+          const now=Date.now();
+          if(!(plate._mfQCancelAt>now)){
+            plate._mfQCancelAt=now+3000;
+            plate.setAttribute('aria-label','Tap again to cancel one '+intelUnitName(S.t)+', '+S.n+' queued');
+            if(typeof toast==='function') toast('✕ CANCEL '+intelUnitName(S.t).toUpperCase()+' · TAP AGAIN TO CONFIRM');
+            if(typeof sfx==='function') sfx('ui');
+            return;
+          }
+          plate._mfQCancelAt=0;
           if(cancelQueuedUnit(Bb,S.i)){ if(typeof sfx==='function') sfx('ui'); renderQueue(); }
-        });
+        };
+        mfHudBindQueueCancel(plate,requestCancel);
         row.appendChild(plate);
       });
       el.appendChild(row);
@@ -3340,6 +2602,19 @@ function renderQueue(){
     const T=TYPES[q[0]];
     bar.style.width=T?((clamp(B.prodT/T.bt,0,1)*100)+'%'):'0';
   }
+  /* Unit production was the ONLY system with no numeric time readout —
+     structures show 'UPGRADING… Ns', research shows its countdown, Nova shows
+     charge seconds, and a factory showed a bar with no scale. Written outside
+     the signature-diff above so it ticks without rebuilding the row. */
+  let eta=el.querySelector('.qEtaLine');
+  if(q.length){
+    const T0=TYPES[q[0]];
+    let total=0; for(const t of q) total+=(TYPES[t].bt||0);
+    const rem=Math.max(0,total-(B.prodT||0));
+    const head=T0?Math.max(0,Math.ceil((T0.bt||0)-(B.prodT||0))):0;
+    if(!eta){ eta=document.createElement('div'); eta.className='qAdj qEtaLine'; el.appendChild(eta); }
+    eta.textContent='▶ '+intelUnitName(q[0])+' in '+head+'s'+(q.length>1?('  ·  queue '+Math.ceil(rem)+'s'):'');
+  } else if(eta) eta.remove();
 }
 function renderBuildMenu(){
   const g=$('buildGrid'); g.innerHTML='';
@@ -3363,7 +2638,7 @@ function renderBuildMenu(){
     const b=document.createElement('button');
     b.className='tabBtn'+(c===bldTab?' on':'');
     b.innerHTML='<span class="tEm">'+C.em+'</span>'+C.nm;
-    b.addEventListener('pointerdown',ev=>{ ev.stopPropagation(); bldTab=c; sfx('ui'); renderBuildMenu(); });
+    mfBindNativePress(b,ev=>{ ev.stopPropagation(); bldTab=c; sfx('ui'); renderBuildMenu(); });
     tr.appendChild(b);
   }
   renderMenuRoleBrief('building',bldTab,grp[bldTab]||[]);
@@ -3373,24 +2648,49 @@ function renderBuildMenu(){
     const lockLvl=T.clvl&&heroLvl<T.clvl;
     const lockReq=T.req&&!hasBld(0,T.req);
     const lockDomain=T.placement==='water'&&typeof battlefieldNavalEnabled==='function'&&!battlefieldNavalEnabled();
+    const Q=mfStructureBuildQuote(key),hardLocks=[];
+    if(lockLvl)hardLocks.push('COMMANDER LEVEL '+T.clvl);
+    if(lockReq)hardLocks.push('NEEDS '+BT[T.req].name.toUpperCase());
+    if(lockDomain)hardLocks.push('CONNECTED NAVAL DOMAIN');
     d.className='bcard'+((lockLvl||lockReq||lockDomain)?' locked':'');
+    d.dataset.previewKind='building';d.dataset.previewId=key;
+    d.dataset.footprint=Math.round(Q.footprint[0])+'x'+Math.round(Q.footprint[1]);
+    d.dataset.footprintPolicy='reserved-max-tier';
     d.innerHTML='<div class="nm">'+intelBldName(key)+'</div>'
-      +(lockLvl?'<div class="cost" style="color:#ffd257">CDR LV '+T.clvl+'</div>'
-        :lockReq?'<div class="cost" style="color:#ffd257">Needs '+BT[T.req].name+'</div>'
-        :'<div class="cost">'+T.cm+'m <span>'+T.ce+'e</span></div>')
+      +'<div class="cost">'+T.cm+'m <span>'+T.ce+'e</span></div>'
+      +'<div class="cardMeta"><span>⏱ '+mfFmtSeconds(Q.effectiveSeconds)+'</span><span>FOOT '+Math.round(Q.footprint[0])+'×'+Math.round(Q.footprint[1])+'m</span></div>'
+      +'<div class="cardMeta"><span>'+Q.placement+'</span><span>2% START · '+Q.streamPercent+'% STREAM</span></div>'
+      +'<div class="cardDependency">PREREQ · '+Q.dependencies.join(' · ')+'</div>'
+      +'<div class="cardEffect">'+Q.effect+'</div>'
+      +(hardLocks.length?'<div class="cardLocks">🔒 '+hardLocks.join(' · ')+'</div>':'')
       +'<div class="cardPurpose">'+intelBldMini(key)+'</div><div class="cardDesc">'+T.desc+'</div>'
       +((lockLvl||lockReq)?'<span class="lockOv">🔒</span>':lockDomain?'<span class="lockOv navalX">✕</span>':'');
     d.setAttribute('role','button');
-    d.setAttribute('aria-label','Build '+intelBldName(key)+'. '+intelBldLine(key));
+    d.setAttribute('tabindex','0');
+    d.setAttribute('aria-disabled',(lockLvl||lockReq||lockDomain)?'true':'false');
+    d.setAttribute('aria-label','Build '+intelBldName(key)+'. Cost '+T.cm+' mass and '+T.ce+' energy. '+mfFmtSeconds(Q.effectiveSeconds)+'. Footprint '+Math.round(Q.footprint[0])+' by '+Math.round(Q.footprint[1])+' meters. '+(hardLocks.length?'Locked: '+hardLocks.join(', ')+'. ':'')+Q.effect);
     const icw=document.createElement('div'); icw.className='icw';
     icw.appendChild(bldIconEl(key,46));
     d.insertBefore(icw,d.firstChild);
-    d.addEventListener('pointerdown',ev=>{
+    const chooseStructure=ev=>{
       ev.stopPropagation();
       if(T.clvl&&heroLvl<T.clvl){ toast('🔒 '+T.name+' unlocks at Commander level '+T.clvl); return; }
       if(T.req&&!hasBld(0,T.req)){ toast('🔒 Requires a '+BT[T.req].name); return; }
       if(lockDomain){ toast('✕ NAVAL UNAVAILABLE — this battlefield has no connected ocean or river domain'); sfx('reject'); return; }
       startPlacing(key); sfx('ui');
+    };
+    /* A build card lives inside a scrollable phone sheet. Committing on
+       pointerdown made an attempt to scroll into an immediate placement action,
+       which reads as an unrelated notification/ghost instead of a deliberate
+       choice. Use the shared tap contract when it is available; it commits only
+       a completed tap and keeps keyboard activation intact. */
+    if(typeof mfBindTap==='function') mfBindTap(d,chooseStructure);
+    else d.addEventListener('pointerdown',chooseStructure);
+    /* mfBindTap already owns click (keyboard + assistive tap). Enter/Space on a
+       div does not fire click, so synthesize one click — not a second choose. */
+    mfHudEnterSpace(d,ev=>{
+      if(typeof mfBindTap==='function') d.click();
+      else chooseStructure(ev);
     });
     addCardIntelButton(d,'building',key);
     g.appendChild(d);
@@ -3796,3 +3096,315 @@ function mscheduleStep(s,t0){
   }catch(e){}
 }
 
+
+/* ============================================================================
+   COMMANDER / KEEL MINIMAP RECEIVER
+   ----------------------------------------------------------------------------
+   Presentation only. src/game/commander.js owns which cue happens, in what
+   order, and how often; src/story.js owns what it says; src/audio.js owns
+   whether it is spoken. This block owns the single in-battle presentation
+   surface requested for both profiles: the minimap temporarily becomes the
+   receiver, signal-flickers during the line, then returns to tactical use.
+
+   IT DOES NOT RE-IMPLEMENT ANY OF THAT. There is no local dedupe, no local
+   priority, no local queue and no replay buffer here — those all exist
+   upstream, and a second copy would drift. The receiver is instead the PACING
+   CONSUMER: it calls commanderDialogueDrain() only while it is idle, so a cue
+   is pulled at the exact moment the receiver is free, and anything that goes
+   stale while it is busy is dropped upstream by the rules that
+   already govern it. One cue on screen at a time, by construction.
+
+   ONE NODE, FOR THE WHOLE MATCH. #cmdrTx and its children are authored in
+   index.html and reused; nothing here creates, clones or appends an element, so
+   a long match cannot grow the DOM by a single node.
+
+   PLACEMENT IS DELIBERATE. #cmdrTx is a child of #minimapWrap and fills its
+   inner canvas area at every responsive HUD size. It is not allowed to float
+   elsewhere, because commander dialogue should read as an intercepted tactical
+   transmission rather than another unrelated HUD card.
+
+   NOTHING HERE IS INTERACTIVE. No listener, no tabindex, no focus() call, and
+   pointer-events:none in CSS. The rail cannot take a tap, cannot be tabbed to,
+   and cannot swallow a gesture meant for the battlefield or the command dock.
+   ============================================================================ */
+/* Entry and exit are short enough to read as a cut rather than an animation;
+   the hold is what the player actually experiences. Reduced motion drops the
+   transition in CSS and leaves these timings alone, so the line is on screen
+   for the same duration either way. */
+const CMDRTX_ENTER_MS=170, CMDRTX_EXIT_MS=230;
+/* Reading time, not a fixed dwell: a three-word acknowledgement and a full
+   sentence should not sit on screen for the same length of time. Floor keeps a
+   short line from flashing; ceiling keeps a long one from outstaying an event
+   the player has already moved past. */
+const CMDRTX_HOLD_MIN=2600, CMDRTX_HOLD_MAX=6500, CMDRTX_HOLD_BASE=900, CMDRTX_HOLD_PER_CHAR=46;
+/* Recheck while a cue is visible so responsive HUD changes and device rotation
+   cannot leave a legacy inline size on the fixed minimap receiver. */
+const CMDRTX_SOLVE_MS=500;
+const CMDRTX={el:null,wrap:null,video:null,img:null,initial:null,who:null,rank:null,tag:null,line:null,ready:false,missing:false,
+  bound:false,state:'idle',until:0,solveAt:0,cue:null,
+  shown:0,solved:0,placement:'',portraitFallbacks:0,lastKey:''};
+function cmdrTxEls(){
+  if(CMDRTX.ready) return true;
+  if(CMDRTX.missing) return false;
+  const el=document.getElementById('cmdrTx');
+  if(!el){
+    /* A shell without the container is an OTA skew, not a crash. Latch the miss
+       so this does not run a DOM query every frame for the rest of the match. */
+    CMDRTX.missing=true; return false;
+  }
+  CMDRTX.el=el;
+  CMDRTX.wrap=document.getElementById('minimapWrap');
+  CMDRTX.video=document.getElementById('cmdrTxVideo');
+  CMDRTX.img=document.getElementById('cmdrTxImg');
+  CMDRTX.initial=document.getElementById('cmdrTxInitial');
+  CMDRTX.who=document.getElementById('cmdrTxWho');
+  CMDRTX.rank=document.getElementById('cmdrTxRank');
+  CMDRTX.tag=document.getElementById('cmdrTxTag');
+  CMDRTX.line=document.getElementById('cmdrTxLine');
+  if(!CMDRTX.wrap||!CMDRTX.video||!CMDRTX.img||!CMDRTX.who||!CMDRTX.rank||!CMDRTX.tag||!CMDRTX.line){ CMDRTX.missing=true; return false; }
+  /* The portrait chain is bound ONCE on the single reused <img>: commander
+     portrait, then the faction portrait the cue supplies, then the initial
+     chip. A per-cue handler on a reused node stacks listeners; a per-cue node
+     grows the DOM. This does neither. */
+  CMDRTX.img.addEventListener('error',()=>{
+    const stage=CMDRTX.el.dataset.portrait||'primary';
+    const fb=CMDRTX.cue&&CMDRTX.cue.portrait&&CMDRTX.cue.portrait.fallback;
+    CMDRTX.portraitFallbacks++;
+    if(stage==='primary'&&fb&&CMDRTX.img.getAttribute('src')!==fb){
+      CMDRTX.el.dataset.portrait='fallback'; CMDRTX.img.src=fb; return;
+    }
+    CMDRTX.el.dataset.portrait='initial';
+  });
+  CMDRTX.ready=true;
+  return true;
+}
+function cmdrTxHoldMs(text,cue){
+  const authored=cue&&Number(cue.durationMs);
+  if(Number.isFinite(authored)) return Math.max(1000,Math.min(12000,authored));
+  const n=String(text||'').length;
+  return Math.max(CMDRTX_HOLD_MIN,Math.min(CMDRTX_HOLD_MAX,CMDRTX_HOLD_BASE+n*CMDRTX_HOLD_PER_CHAR));
+}
+/* This is intentionally not a placement search. CSS anchors the receiver to
+   the minimap; this check only clears pre-migration inline dimensions and
+   reports whether the receiver remains inside that authored surface. */
+function cmdrTxSolve(){
+  if(!cmdrTxEls()) return null;
+  /* CSS owns the inset. Clearing legacy inline placement is important for an
+     OTA shell that previously solved the receiver as a floating rail. */
+  CMDRTX.el.style.left='';
+  CMDRTX.el.style.top='';
+  CMDRTX.el.style.width='';
+  const own=CMDRTX.el.getBoundingClientRect();
+  const wrap=CMDRTX.wrap.getBoundingClientRect();
+  const box={l:own.left,t:own.top,w:own.width,h:own.height};
+  const overlap=Math.max(0,wrap.left-own.left)+Math.max(0,own.right-wrap.right)
+    +Math.max(0,wrap.top-own.top)+Math.max(0,own.bottom-wrap.bottom);
+  CMDRTX.placement=overlap?'minimap!':'minimap';
+  CMDRTX.solved++;
+  return {placement:CMDRTX.placement,overlap,box};
+}
+function cmdrTxShow(cue){
+  if(!cmdrTxEls()||!cue) return false;
+  const sub=cue.subtitle||{};
+  const por=cue.portrait||{};
+  const name=String(sub.speaker||sub.shortName||'COMMANDER');
+  const rank=sub.rank?String(sub.rank):'';
+  const call=sub.callsign?String(sub.callsign):'';
+  /* Three separate fields, deliberately. cue.subtitle.speaker is the authored
+     roster name and ALREADY carries a rank form — sometimes abbreviated, as in
+     "Cmdr. Sera Vale" — so prefixing the canonical rank rendered "Captain
+     Captain Elara Kai". The name stands alone; the canonical rank and the
+     callsign share the chip beside it; the tag says what kind of report this
+     is. All three are text nodes: cue strings are authored copy, but
+     textContent means they can never become markup. */
+  CMDRTX.who.textContent=name;
+  CMDRTX.rank.textContent=rank?(call?rank.toUpperCase()+' · '+call:rank.toUpperCase()):call;
+  /* The chip is the CATEGORY, not cue.subtitle.tag. Upstream builds that tag as
+     "<FACTION NAME> // <CATEGORY>", which is 36 characters for Nova — on the
+     915x412 rail, solved to 251px, it clipped at "TERRAN FRONTLINE COMMA" and
+     took the category, the one part this chip exists to show, off the screen
+     with it. The faction is already carried by the portrait and the speaker
+     name; the category is not carried anywhere else. */
+  CMDRTX.tag.textContent=String(cue.category||sub.tag||cue.key||'TRANSMISSION').toUpperCase();
+  CMDRTX.line.textContent=String(sub.text||'');
+  const initial=(sub.shortName||name).trim().charAt(0).toUpperCase()||'C';
+  CMDRTX.initial.textContent=initial;
+  const src=por.src||por.fallback||'';
+  const animationSrc=String(cue.animationSrc||(cue.animation&&cue.animation.src)||por.animationSrc||'');
+  if(animationSrc){
+    if(CMDRTX.video.getAttribute('src')!==animationSrc) CMDRTX.video.setAttribute('src',animationSrc);
+    CMDRTX.el.dataset.animation='video';
+    try{ CMDRTX.video.currentTime=0; CMDRTX.video.play().catch(()=>{}); }catch(e){}
+  } else {
+    CMDRTX.el.dataset.animation='portrait';
+    CMDRTX.video.removeAttribute('src');
+    try{ CMDRTX.video.load(); }catch(e){}
+  }
+  if(src){
+    CMDRTX.el.dataset.portrait='primary';
+    if(CMDRTX.img.getAttribute('src')!==src) CMDRTX.img.setAttribute('src',src);
+  } else {
+    CMDRTX.el.dataset.portrait='initial';
+  }
+  CMDRTX.cue=cue;
+  CMDRTX.lastKey=String(cue.speakerId||cue.commanderId||'')+'|'+String(cue.key||'')+'#'+String(cue.seq);
+  /* enter BEFORE solving: the box has to be laid out at its real height before
+     its position can be chosen, and [data-state="idle"] is display:none. */
+  CMDRTX.el.dataset.state='enter';
+  CMDRTX.wrap.dataset.transmission='enter';
+  cmdrTxSolve();
+  CMDRTX.shown++;
+  return true;
+}
+function cmdrTxReset(){
+  if(!cmdrTxEls()) return;
+  CMDRTX.state='idle'; CMDRTX.until=0; CMDRTX.cue=null; CMDRTX.solveAt=0;
+  CMDRTX.el.dataset.state='idle';
+  if(CMDRTX.wrap) delete CMDRTX.wrap.dataset.transmission;
+  if(CMDRTX.video){
+    try{ CMDRTX.video.pause(); }catch(e){}
+    CMDRTX.video.removeAttribute('src');
+    try{ CMDRTX.video.load(); }catch(e){}
+  }
+}
+/* Subscribe ONCE, for the life of the page. commanderDialogueOn() is idempotent
+   per function reference, but the guard also stops a re-entrant HUD init from
+   ever attaching a second copy of the handler. */
+function cmdrTxBind(){
+  if(CMDRTX.bound) return true;
+  CMDRTX.bound=true;
+  if(typeof commanderDialogueOn==='function') commanderDialogueOn(cue=>{
+    /* The rail only ever drains while idle, so a cue arriving here always has
+       somewhere to go. Guarded anyway: another consumer could pump the drain,
+       and dropping the newer cue is the correct outcome — replacing a line
+       mid-read would be the rail second-guessing upstream priority. */
+    if(CMDRTX.state!=='idle') return;
+    cmdrTxShow(cue);
+    CMDRTX.state='enter';
+    CMDRTX.until=cmdrTxNow()+CMDRTX_ENTER_MS;
+  });
+  /* Onboarding and future KEEL systems use one cancelable presenter event.
+     Mark it handled only when the battlefield receiver truly accepted it; if
+     a commander line is already active, onboarding retains its existing KEEL
+     bubble/toast fallback instead of silently losing guidance. */
+  window.addEventListener('massfront:keel-hint',ev=>{
+    const d=ev&&ev.detail;
+    if(!d||d.surface!=='battle-minimap'||CMDRTX.state!=='idle'||!cmdrTxInMatch()) return;
+    /* This event is KEEL's UGA contract, not a generic commander skin. Even a
+       stale or malformed caller cannot recast her as Nova (or any faction). */
+    const ugaMedia=d.affiliation==='uga'&&d.profileId==='uga-keel-expedition-guide';
+    const cue={speakerId:'keel',profileId:'uga-keel-expedition-guide',key:d.hintId||d.context||'keel-hint',seq:d.issuedAt||Date.now(),
+      category:'UGA GUIDANCE',durationMs:d.durationMs,animationSrc:ugaMedia?(d.animationSrc||''):'',
+      subtitle:{speaker:'KEEL',shortName:'KEEL',rank:'UGA SHIP LIAISON',text:d.text||''},
+      portrait:{src:ugaMedia?(d.portraitSrc||''):'',fallback:ugaMedia?(d.fallbackPortraitSrc||''):''}};
+    if(!cmdrTxShow(cue)) return;
+    CMDRTX.state='enter'; CMDRTX.until=cmdrTxNow()+CMDRTX_ENTER_MS;
+    d.handled=true; d.presenter='battle-minimap';
+    if(ev.cancelable) ev.preventDefault();
+  });
+  return true;
+}
+function cmdrTxNow(){
+  return (typeof performance!=='undefined'&&performance&&performance.now)?performance.now():0;
+}
+/* Is the battlefield actually on screen? A cue must not be presented over the
+   menu, over a results screen or while the match is not live. CSS already hides
+   the rail under body.mfMenuOpen; this stops the STATE MACHINE too, so a cue
+   cannot burn its hold time invisibly behind a front screen. */
+function cmdrTxInMatch(){
+  if(typeof matchLive!=='undefined'&&!matchLive) return false;
+  if(typeof gameEnded!=='undefined'&&gameEnded) return false;
+  const b=document.body;
+  if(b&&b.classList&&(b.classList.contains('mfMenuOpen')||b.classList.contains('menuMode'))) return false;
+  return true;
+}
+/* Driven from updateHUD(). Cheap on the common path: while idle and with an
+   empty upstream queue this is two comparisons and one function call. */
+function cmdrTxTick(){
+  if(!cmdrTxEls()) return;
+  cmdrTxBind();
+  const now=cmdrTxNow();
+  if(!cmdrTxInMatch()){
+    if(CMDRTX.state!=='idle') cmdrTxReset();
+    return;
+  }
+  if(CMDRTX.state==='idle'){
+    /* PULL, do not push. Draining only from idle is what makes "one cue at a
+       time" a property of the system rather than a rule the rail enforces by
+       throwing cues away. */
+    if(typeof commanderDialogueDrain==='function'){
+      /* Gameplay producers use the fixed-step match clock so replays and
+         different refresh rates retain identical cue age/order. UI animation
+         still uses performance.now above; only the dialogue queue uses sim
+         time, preventing a long-lived browser tab from marking a new-match cue
+         stale the instant it is raised. */
+      const cueNow=typeof stats!=='undefined'&&stats&&Number.isFinite(stats.t)
+        ?Math.max(0,stats.t*1000):now;
+      try{ commanderDialogueDrain(cueNow); }catch(e){}
+    }
+    return;
+  }
+  if(now>=CMDRTX.until){
+    if(CMDRTX.state==='enter'){
+      CMDRTX.state='hold'; CMDRTX.el.dataset.state='hold';
+      if(CMDRTX.wrap) CMDRTX.wrap.dataset.transmission='hold';
+      CMDRTX.until=now+cmdrTxHoldMs(CMDRTX.line?CMDRTX.line.textContent:'',CMDRTX.cue);
+    } else if(CMDRTX.state==='hold'){
+      CMDRTX.state='exit'; CMDRTX.el.dataset.state='exit';
+      if(CMDRTX.wrap) CMDRTX.wrap.dataset.transmission='exit';
+      CMDRTX.until=now+CMDRTX_EXIT_MS;
+    } else {
+      cmdrTxReset();
+      return;
+    }
+  }
+  if(CMDRTX.state!=='exit'&&now>=CMDRTX.solveAt){
+    CMDRTX.solveAt=now+CMDRTX_SOLVE_MS;
+    cmdrTxSolve();
+  }
+}
+/* Read-only introspection for tools/probe-commander-hud.mjs and for a debug
+   overlay. Never mutates; safe to call at any time. */
+function cmdrTxDebug(){
+  const el=CMDRTX.el;
+  const r=el?el.getBoundingClientRect():null;
+  return {
+    ready:CMDRTX.ready,missing:CMDRTX.missing,bound:CMDRTX.bound,
+    state:CMDRTX.state,placement:CMDRTX.placement,
+    shown:CMDRTX.shown,solved:CMDRTX.solved,portraitFallbacks:CMDRTX.portraitFallbacks,
+    lastKey:CMDRTX.lastKey,
+    portraitStage:el?(el.dataset.portrait||''):'',
+    text:CMDRTX.line?CMDRTX.line.textContent:'',
+    who:CMDRTX.who?CMDRTX.who.textContent:'',
+    rank:CMDRTX.rank?CMDRTX.rank.textContent:'',
+    tag:CMDRTX.tag?CMDRTX.tag.textContent:'',
+    audio:CMDRTX.cue?CMDRTX.cue.audio:null,
+    receiver:CMDRTX.wrap&&CMDRTX.wrap.dataset.transmission||'',
+    animation:el?(el.dataset.animation||''):'',
+    rect:r?{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}:null,
+    overflow:CMDRTX.line?{scroll:CMDRTX.line.scrollHeight,client:CMDRTX.line.clientHeight}:null
+  };
+}
+/* A new match starts with an empty rail: a line left over from the last one is
+   worse than silence. Exposed rather than wired — src/main.js owns resetWorld()
+   and this lane does not touch it — and called defensively from cmdrTxTick()
+   through cmdrTxInMatch() in the meantime. */
+function cmdrTxMatchReset(){
+  cmdrTxReset();
+  CMDRTX.shown=0; CMDRTX.solved=0; CMDRTX.portraitFallbacks=0; CMDRTX.lastKey='';
+}
+/* ---------------------------------------------------------------------------
+   INTEGRATION POINTS still open after this lane:
+
+     src/main.js resetWorld()          -> cmdrTxMatchReset()
+       Not wired here: main.js is out of this lane. Until it is, the rail clears
+       itself the first tick after matchLive/gameEnded flips, which covers every
+       observed transition but leaves one frame of the old line on a same-frame
+       restart.
+
+     src/game/sim.js, src/game/ai.js, src/develop.js, src/endgame.js
+       -> commanderCue(...) at the sites named in src/game/commander.js.
+       Nothing raises a cue in normal play yet, so the rail is correct and inert
+       on a shipped build; tools/probe-commander-hud.mjs raises real cues
+       through the public API to exercise it.
+   -------------------------------------------------------------------------- */

@@ -1,0 +1,69 @@
+{
+  "schema": "massfront-art-provenance-v1",
+  "art_direction_concept": {
+    "path": "source-media\\concepts\\planet-map-v2\\verdant-ashland-map-concept-v1.png",
+    "sha256": "4e628cca810a1c4146a9a629e7aac63e6851fc378fea1687d3445f233b2d5d1b",
+    "expected_sha256": "4e628cca810a1c4146a9a629e7aac63e6851fc378fea1687d3445f233b2d5d1b",
+    "pixels_used_in_production": false,
+    "direction": "verdant grass/loam/rock readability; dark ashland basalt; coherent engineered hardscape belongs to separate road/paving slots"
+  },
+  "production_process": "Original generated source plates were lighting-neutralized, periodicized, edge-locked, and converted into matched tangent-normal/roughness sheets by tools/planet-map-art/bake-planet-map-v2.py. Concept pixels were not used.",
+  "materials": {
+    "verdant-highland": {
+      "semantic_slot": "grass",
+      "source": {
+        "path": "tools\\planet-map-art\\source\\verdant-highland-source-imagegen-v1.png",
+        "sha256": "2492d51b714cb331b0c0ff198b4c394e2ee37bdb2aa12039af464859298002be",
+        "bytes": 3496446
+      },
+      "generation": {
+        "tool": "OpenAI built-in image generation",
+        "generation_id": "432333ec-83b5-4cab-b1e2-9dda6dee1a28",
+        "prompt_summary": "Orthographic lighting-neutral verdant highland material source: short dense grass, small loam flecks, mineral grit, subtle broad mottling; no cracks, objects, roads, buildings, water, text, shadows, directional highlights, or unique landmarks.",
+        "source_pixels_directly_shipped": false
+      },
+      "outputs": {
+        "assets\\textures\\terrain\\planet-map-v2\\verdant-highland-albedo-v2.webp": {
+          "sha256": "df884cd9440ec444d6fb535ac492b1cad94912cdbf0e5788ab36ca6b07f938a6",
+          "bytes": 1461252
+        },
+        "assets\\textures\\terrain\\planet-map-v2\\verdant-highland-normal-rough-v2.webp": {
+          "sha256": "3957914893f2e8195b916ab5150d1ebbe14857cd033e0d04b6247a4578fd2527",
+          "bytes": 2494348
+        }
+      }
+    },
+    "ashland-basalt": {
+      "semantic_slot": "soil",
+      "source": {
+        "path": "tools\\planet-map-art\\source\\ashland-basalt-source-imagegen-v2.png",
+        "sha256": "e98f626da9a1fbc98d736f3d791497124263c6bcbc1262ea4188735a7341bd4c",
+        "bytes": 3595081
+      },
+      "generation": {
+        "tool": "OpenAI built-in image generation",
+        "generation_id": "380d54cf-2121-4eb2-8bc0-ccbcb7eba9d5",
+        "prompt_summary": "Orthographic lighting-neutral ashland basalt material source: compact volcanic ash, dense small basalt chips, sparse short material-specific hairline fractures and fine mineral grit; no large hero rocks, lava, roads, buildings, text, shadows, or crack network.",
+        "source_pixels_directly_shipped": false
+      },
+      "outputs": {
+        "assets\\textures\\terrain\\planet-map-v2\\ashland-basalt-albedo-v2.webp": {
+          "sha256": "5037de20f02cae17b28a076a7712ede64e7859e203c0ce64e479cb3f0ef7d006",
+          "bytes": 1322128
+        },
+        "assets\\textures\\terrain\\planet-map-v2\\ashland-basalt-normal-rough-v2.webp": {
+          "sha256": "b9eff3d138169d8fdf8c468559c331d8fa0d40fba6cb3a853b9009fb12aae390",
+          "bytes": 2921076
+        }
+      }
+    }
+  },
+  "rejected_sources": [
+    {
+      "path": "tools\\planet-map-art\\source\\ashland-basalt-source-imagegen-v1.png",
+      "sha256": "6714499b4561f16d4e8d072a62e19e6688cc839f28d3fdf31247597105b891ee",
+      "generation_id": "ada4dc33-9e28-46c6-8225-103fb9039601",
+      "reason": "Rejected after 3x3 inspection: repeated hero stones and one dominant fracture path made the tile obvious."
+    }
+  ]
+}

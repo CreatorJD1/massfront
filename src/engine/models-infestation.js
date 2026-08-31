@@ -33,8 +33,27 @@ var INF_ICHOR=Object.freeze({
   const INF_SILK=C(191,184,169), INF_BORE=C(12,8,10);
 
   COL_MAT.set(INF_CHITIN,MAT.CHITIN); COL_MAT.set(INF_CHITIN_H,MAT.CHITIN);
-  COL_MAT.set(INF_FLESH,MAT.RUST);    COL_MAT.set(INF_FLESH_H,MAT.LEAF);
-  COL_MAT.set(INF_SAC,MAT.GLASS);     COL_MAT.set(INF_MUCUS,MAT.CRYST);
+  /* FLESH IS NOT CORRODED STEEL. INF_FLESH was pointed at MAT.RUST, which the
+     fragment stage classes as `mechanical` — so wet tissue took the rubbed
+     metal-corner wear term at metal=0.82, carbonised like a hull when the
+     structure died, and was excluded by construction from the organic
+     translucency branch. BROOD_VEIN is the faction's own flesh tile, it is a
+     flat fill (so the luminance-derived normal map leaves the surface smooth
+     rather than pitted), and it is inside the organic band. */
+  COL_MAT.set(INF_FLESH,MAT.BROOD_VEIN); COL_MAT.set(INF_FLESH_H,MAT.LEAF);
+  /* AN EGG SAC IS THE THINNEST TISSUE THIS FACTION HAS, and it was pointed at
+     MAT.GLASS — a material the shader treats as `glassLike`, which is excluded
+     from BOTH the mechanical and the organic branches. The one surface on a
+     hive that should visibly light up from behind was the one surface
+     guaranteed to receive no scattering at all. BROOD_MEMBRANE is the thin
+     tissue tile and carries the highest thickness weight in the LUT.
+
+     MUCUS was worse than wrong, it was the wrong COLOUR: MAT.CRYST is
+     hard-branched twice in the fragment stage (`alb=clamp(vCol*vec3(0.36,0.58,
+     0.82),...)` plus a cyan crystal rim), so this faction's wet green — the
+     same 115,177,77 that INF_ICHOR bleeds and that the slime tiles are painted
+     with — was being forced BLUE on every nest and hive in the game. */
+  COL_MAT.set(INF_SAC,MAT.BROOD_MEMBRANE); COL_MAT.set(INF_MUCUS,MAT.BROOD_SLIME);
   /* TWR_GLOW's atlas tile is Nova cyan (#78b6c4). Brood lumen painted through
      that id read as Frontline energy on every hive, nest and glow node. Slime
      keeps the wet-green emissive the ichor VFX already uses. */

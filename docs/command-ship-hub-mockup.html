@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MASSFRONT — Command Hub (Spaceship Interior Concept Art Match)</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@600;700;800&display=swap');
+
+  :root {
+    --bg-dark: #03060a;
+    --panel-bg: rgba(10, 18, 30, 0.92);
+    --border-dark: #122236;
+    --border-bright: #223c5e;
+    --text-main: #e8f4ff;
+    --text-muted: #7290b8;
+    --neon-blue: #00f0ff;
+    --neon-cyan: #06b6d4;
+    --neon-gold: #ffb700;
+    --neon-purple: #b026ff;
+    --neon-green: #00ff66;
+    --neon-red: #ff2a2a;
+    --font-heading: 'Orbitron', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Rajdhani', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  html, body { height: 100%; background: #000205; color: var(--text-main); font-family: var(--font-body); overflow: hidden; display: grid; place-items: center; }
+
+  /* Phone Outer Frame (412x915 Viewport) */
+  .phone-frame {
+    width: 412px;
+    height: 915px;
+    background: var(--bg-dark);
+    border: 1px solid #1c2e48;
+    border-radius: 32px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 30px 100px rgba(0,0,0,0.98), 0 0 70px rgba(0, 240, 255, 0.2);
+  }
+
+  /* Scanline Overlay */
+  .phone-frame::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(0, 240, 255, 0.015) 1px, transparent 1px);
+    background-size: 100% 3px;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Status Bar */
+  .statusbar {
+    height: 32px;
+    padding: 8px 18px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-heading);
+    font-size: 12px;
+    font-weight: 800;
+    color: #fff;
+    z-index: 60;
+    background: rgba(3, 6, 10, 0.95);
+  }
+  .statusbar .status-right { display: flex; gap: 6px; align-items: center; font-size: 11px; }
+
+  /* Header Section */
+  .header {
+    padding: 6px 14px 8px;
+    background: linear-gradient(180deg, rgba(8, 16, 28, 0.98) 0%, rgba(3, 6, 10, 0.95) 100%);
+    border-bottom: 1px solid var(--border-bright);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 50;
+  }
+
+  .profile-row { display: flex; justify-content: space-between; align-items: center; }
+  .user-info { display: flex; align-items: center; gap: 10px; }
+  .avatar-container {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 2px solid var(--neon-blue);
+    box-shadow: 0 0 14px rgba(0, 240, 255, 0.5);
+    position: relative;
+    overflow: visible;
+  }
+  .avatar-container img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  .avatar-container .lvl-pill {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--neon-gold);
+    color: #000;
+    font-family: var(--font-heading);
+    font-size: 9px;
+    font-weight: 900;
+    display: grid;
+    place-items: center;
+    border: 1.5px solid #000;
+    box-shadow: 0 0 6px var(--neon-gold);
+  }
+
+  .user-text .name { font-family: var(--font-heading); font-size: 13px; font-weight: 900; letter-spacing: 0.05em; color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.4); }
+  .user-text .guild { font-size: 10px; color: var(--neon-blue); font-weight: 800; letter-spacing: 0.04em; }
+  .user-text .rank-bar-wrap { display: flex; align-items: center; gap: 6px; margin-top: 2px; font-size: 9px; color: var(--text-muted); font-weight: 800; }
+  .user-text .rank-bar { width: 56px; height: 4px; background: rgba(255,255,255,0.12); border-radius: 2px; overflow: hidden; }
+  .user-text .rank-bar i { display: block; width: 43%; height: 100%; background: var(--neon-blue); box-shadow: 0 0 6px var(--neon-blue); }
+
+  .header-actions { display: flex; gap: 6px; }
+  .hdr-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(18, 32, 50, 0.75);
+    border: 1px solid var(--border-bright);
+    display: grid;
+    place-items: center;
+    position: relative;
+    cursor: pointer;
+  }
+  .hdr-btn svg { width: 15px; height: 15px; fill: var(--text-main); }
+  .hdr-btn .dot-badge { position: absolute; top: 5px; right: 5px; width: 6px; height: 6px; background: var(--neon-red); border-radius: 50%; box-shadow: 0 0 6px var(--neon-red); }
+
+  /* Resource Bar (5 Items) */
+  .resource-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    background: rgba(8, 16, 28, 0.85);
+    padding: 5px 6px;
+    border-radius: 8px;
+    border: 1px solid var(--border-dark);
+  }
+  .res-box { display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: 800; }
+  .res-box .top { display: flex; align-items: center; gap: 3px; color: #fff; font-family: var(--font-heading); font-size: 10px; }
+  .res-box .icon { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .res-box .rate { font-size: 8px; color: var(--neon-green); font-weight: 700; margin-top: 1px; }
+  .res-box .plus { font-size: 10px; background: rgba(255, 183, 0, 0.25); color: var(--neon-gold); padding: 0 3px; border-radius: 2px; margin-left: 2px; cursor: pointer; border: 1px solid var(--neon-gold); }
+
+  /* Viewport Container */
+  .viewport {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    z-index: 20;
+  }
+  .viewport::-webkit-scrollbar { width: 0; }
+
+  .screen { display: none; flex-direction: column; gap: 10px; padding: 10px 12px 16px; }
+  .screen.active { display: flex; }
+
+  .section-hdr {
+    font-family: var(--font-heading);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  /* Mode Carousel */
+  .mode-carousel { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .mode-carousel::-webkit-scrollbar { width: 0; }
+
+  .mode-card {
+    flex: 0 0 98px;
+    height: 126px;
+    border-radius: 10px;
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--border-bright);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 6px;
+    align-items: center;
+    text-align: center;
+  }
+  .mode-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(8, 16, 26, 0.3) 0%, rgba(4, 8, 14, 0.92) 100%);
+    z-index: 1;
+  }
+  .mode-card * { z-index: 2; }
+  .mode-card.active { border-color: var(--neon-blue); box-shadow: 0 0 16px rgba(0, 240, 255, 0.45); }
+  .mode-card.gold { border-color: var(--neon-gold); box-shadow: 0 0 12px rgba(255, 183, 0, 0.3); }
+  .mode-card.purple { border-color: var(--neon-purple); box-shadow: 0 0 12px rgba(176, 38, 255, 0.3); }
+  .mode-card.green { border-color: var(--neon-green); box-shadow: 0 0 12px rgba(0, 255, 102, 0.3); }
+
+  .mode-card .live-pill { position: absolute; top: 6px; left: 6px; background: var(--neon-purple); color: #fff; font-family: var(--font-heading); font-size: 7px; font-weight: 900; padding: 1px 5px; border-radius: 3px; box-shadow: 0 0 6px var(--neon-purple); }
+  .mode-card .icon-box { width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.55); border: 1px solid var(--border-bright); display: grid; place-items: center; margin-top: 8px; backdrop-filter: blur(4px); }
+  .mode-card .icon-box svg { width: 18px; height: 18px; fill: var(--text-main); }
+  .mode-card .mode-title { font-family: var(--font-heading); font-size: 10px; font-weight: 900; color: #fff; letter-spacing: 0.05em; }
+  .mode-card .mode-sub { font-size: 8px; color: var(--text-muted); font-weight: 800; }
+
+  /* PERIMETER OVERVIEW — 3D Rendered Spaceship Interior Deck */
+  .diorama-view {
+    height: 250px;
+    border-radius: 12px;
+    border: 1px solid var(--border-bright);
+    position: relative;
+    overflow: hidden;
+    background-image: url('mockup-assets/ship_interior_base.jpg');
+    background-size: cover;
+    background-position: center;
+    box-shadow: inset 0 0 40px rgba(0,0,0,0.8);
+  }
+  .diorama-view::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, rgba(0, 240, 255, 0.1) 0%, rgba(3, 6, 12, 0.6) 80%);
+    pointer-events: none;
+  }
+
+  .diorama-center-core {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 94px;
+    height: 94px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(42, 80, 120, 0.9), rgba(10, 24, 42, 0.95));
+    border: 2px solid var(--neon-blue);
+    box-shadow: 0 0 35px rgba(0, 240, 255, 0.6), inset 0 0 15px rgba(0,0,0,0.9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+  }
+  .diorama-center-core .beam {
+    position: absolute;
+    top: -55px;
+    width: 6px;
+    height: 55px;
+    background: linear-gradient(180deg, transparent, var(--neon-blue));
+    filter: blur(2px);
+  }
+  .diorama-center-core .lbl { font-size: 8px; color: var(--text-muted); font-weight: 800; letter-spacing: 0.04em; }
+  .diorama-center-core .lvl { font-family: var(--font-heading); font-size: 12px; font-weight: 900; color: #fff; }
+
+  .p-node-pill {
+    position: absolute;
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: rgba(8, 16, 26, 0.92);
+    border: 1px solid var(--neon-blue);
+    font-size: 7px;
+    font-weight: 800;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    backdrop-filter: blur(4px);
+  }
+  .p-node-pill.alert {
+    border-color: var(--neon-red);
+    box-shadow: 0 0 16px rgba(255, 42, 42, 0.9);
+    animation: pulseRedAlert 1.2s infinite alternate;
+  }
+  @keyframes pulseRedAlert { 0% { transform: scale(1); } 100% { transform: scale(1.08); } }
+
+  .alert-card-floating {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: rgba(45, 10, 10, 0.92);
+    border: 1px solid var(--neon-red);
+    border-radius: 8px;
+    padding: 6px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    z-index: 20;
+    box-shadow: 0 0 18px rgba(255, 42, 42, 0.4);
+    backdrop-filter: blur(4px);
+  }
+  .alert-card-floating .tag { font-family: var(--font-heading); font-size: 8px; font-weight: 900; color: var(--neon-red); }
+  .alert-card-floating .name { font-family: var(--font-heading); font-size: 10px; font-weight: 900; color: #fff; }
+  .alert-card-floating .timer { font-size: 8px; color: #ffa3a3; font-weight: 700; }
+  .alert-card-floating .btn-view { margin-top: 3px; padding: 2px 8px; background: var(--neon-red); color: #fff; font-family: var(--font-heading); font-size: 8px; font-weight: 900; border-radius: 3px; border: none; cursor: pointer; box-shadow: 0 0 8px rgba(255, 42, 42, 0.6); }
+
+  /* Quick Actions Grid (5 Tiles) */
+  .quick-actions-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .qa-tile {
+    height: 56px;
+    background: rgba(10, 20, 32, 0.88);
+    border: 1px solid var(--border-bright);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+  }
+  .qa-tile.blue { border-color: var(--neon-blue); box-shadow: 0 0 10px rgba(0, 240, 255, 0.25); }
+  .qa-tile.purple { border-color: var(--neon-purple); box-shadow: 0 0 10px rgba(176, 38, 255, 0.25); }
+  .qa-tile.gold { border-color: var(--neon-gold); box-shadow: 0 0 10px rgba(255, 183, 0, 0.25); }
+  .qa-tile.green { border-color: var(--neon-green); box-shadow: 0 0 10px rgba(0, 255, 102, 0.25); }
+  .qa-tile.cyan { border-color: var(--neon-cyan); box-shadow: 0 0 10px rgba(6, 186, 212, 0.25); }
+  .qa-tile svg { width: 18px; height: 18px; fill: currentColor; }
+  .qa-tile span { font-family: var(--font-heading); font-size: 8px; font-weight: 900; color: #fff; letter-spacing: 0.05em; }
+
+  /* MMO Warfront Banner */
+  .mmo-banner-card {
+    height: 68px;
+    border-radius: 10px;
+    background-image: url('mockup-assets/mmo_banner.jpg');
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--neon-blue);
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 16px rgba(0, 240, 255, 0.3);
+  }
+  .mmo-banner-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(8, 16, 28, 0.85) 0%, rgba(6, 12, 22, 0.5) 100%);
+    z-index: 1;
+  }
+  .mmo-banner-card * { z-index: 2; }
+  .mmo-banner-card .title { font-family: var(--font-heading); font-size: 11px; font-weight: 900; color: #fff; letter-spacing: 0.05em; }
+  .mmo-banner-card .sub { font-size: 8px; color: var(--text-muted); font-weight: 800; margin-top: 1px; }
+  .mmo-banner-card .btn-enter { padding: 6px 12px; background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%); border: 1px solid var(--neon-blue); color: #fff; font-family: var(--font-heading); font-size: 9px; font-weight: 900; border-radius: 5px; cursor: pointer; box-shadow: 0 0 12px rgba(2, 132, 199, 0.6); }
+
+  /* SCREEN 2: WAR ROOM (Image 4 Match) */
+  .warroom-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(10, 18, 28, 0.85);
+    border: 1px solid var(--border-bright);
+    padding: 8px 12px;
+    border-radius: 8px;
+  }
+  .warroom-header-bar .title { font-family: var(--font-heading); font-size: 13px; font-weight: 900; color: #fff; }
+  .warroom-header-bar .sub { font-size: 9px; color: var(--text-muted); font-weight: 700; }
+  .warroom-header-bar .integrity-meter { text-align: right; }
+  .warroom-header-bar .integrity-meter .lbl { font-size: 8px; color: var(--text-muted); font-weight: 700; }
+  .warroom-header-bar .integrity-meter .val { font-family: var(--font-heading); font-size: 11px; font-weight: 900; color: var(--neon-blue); }
+
+  .base-topology-map {
+    height: 250px;
+    background-image: url('mockup-assets/ship_interior_base.jpg');
+    background-size: cover;
+    background-position: center;
+    border: 1px solid var(--border-bright);
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .top-building-node {
+    position: absolute;
+    background: rgba(10, 20, 32, 0.95);
+    border: 1px solid var(--border-bright);
+    padding: 4px 6px;
+    border-radius: 5px;
+    font-size: 7px;
+    font-weight: 800;
+    text-align: center;
+    color: #fff;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+  }
+  .top-building-node.core {
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(24, 46, 75, 0.95);
+    border-color: var(--neon-gold);
+    padding: 6px 10px;
+    box-shadow: 0 0 18px rgba(255, 183, 0, 0.4);
+  }
+
+  .right-action-dock {
+    position: absolute;
+    top: 50%; right: 8px;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 20;
+  }
+  .dock-tile {
+    padding: 6px;
+    background: rgba(10, 20, 32, 0.95);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    font-family: var(--font-heading);
+    font-size: 8px;
+    font-weight: 900;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    cursor: pointer;
+  }
+  .dock-tile.gold { border-color: var(--neon-gold); background: rgba(35, 28, 10, 0.95); color: var(--neon-gold); box-shadow: 0 0 10px rgba(255, 183, 0, 0.3); }
+
+  /* Live 3D Feed Card */
+  .live-3d-feed {
+    background: var(--panel-bg);
+    border: 1px solid var(--border-bright);
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .feed-render-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 6px;
+    border: 1px solid var(--neon-blue);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .feed-render-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .feed-content { flex: 1; }
+  .feed-content .tag { font-size: 8px; color: var(--neon-green); font-weight: 800; }
+  .feed-content .title { font-family: var(--font-heading); font-size: 11px; font-weight: 900; color: #fff; }
+  .feed-content .desc { font-size: 8px; color: var(--text-muted); margin-top: 1px; font-weight: 700; }
+
+  /* 8 Sub-Actions Tiles */
+  .eight-sub-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .eight-tile {
+    height: 40px;
+    background: rgba(10, 20, 32, 0.88);
+    border: 1px solid var(--border-bright);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    font-family: var(--font-heading);
+    font-size: 8px;
+    font-weight: 900;
+    color: var(--text-main);
+    cursor: pointer;
+  }
+
+  /* Bottom Navigation Tab Bar */
+  .bottom-nav-bar {
+    height: 60px;
+    background: rgba(6, 12, 20, 0.98);
+    border-top: 1px solid var(--border-bright);
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: center;
+    z-index: 60;
+  }
+
+  .tab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    color: var(--text-muted);
+    font-family: var(--font-heading);
+    font-size: 8px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+  }
+  .tab-btn.active { color: var(--neon-gold); }
+  .tab-btn.active svg { fill: var(--neon-gold); filter: drop-shadow(0 0 6px var(--neon-gold)); }
+  .tab-btn svg { width: 18px; height: 18px; fill: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <!-- Status Bar -->
+  <div class="statusbar">
+    <span>2:00</span>
+    <div class="status-right">
+      <span>📶</span>
+      <span>🔋 87</span>
+    </div>
+  </div>
+
+  <!-- Header Section -->
+  <div class="header">
+    <div class="profile-row">
+      <div class="user-info">
+        <div class="avatar-container">
+          <img src="mockup-assets/elara_avatar.jpg" alt="Elara Kai">
+          <span class="lvl-pill">6</span>
+        </div>
+        <div class="user-text">
+          <div class="name">ELARA KAI</div>
+          <div class="guild">IRON VEIL</div>
+          <div class="rank-bar-wrap">
+            <div class="rank-bar"><i></i></div>
+            <span>43% TO MAJOR</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="hdr-btn">
+          <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+          <span class="dot-badge"></span>
+        </div>
+        <div class="hdr-btn">
+          <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+        </div>
+        <div class="hdr-btn">
+          <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resource Ledger (5 Items) -->
+    <div class="resource-grid">
+      <div class="res-box">
+        <div class="top"><i class="icon" style="background:#00ff66;"></i>125.7K</div>
+        <span class="rate">+340/m</span>
+      </div>
+      <div class="res-box">
+        <div class="top"><i class="icon" style="background:#00f0ff;"></i>98.5K</div>
+        <span class="rate">+280/m</span>
+      </div>
+      <div class="res-box">
+        <div class="top"><i class="icon" style="background:#b026ff;"></i>67.3K</div>
+        <span class="rate">+200/m</span>
+      </div>
+      <div class="res-box">
+        <div class="top"><i class="icon" style="background:#ffb700;"></i>3,250</div>
+      </div>
+      <div class="res-box">
+        <div class="top"><i class="icon" style="background:#ffb700;"></i>1,250 <span class="plus">+</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Viewport Area -->
+  <div class="viewport">
+
+    <!-- SCREEN 1: COMMAND HUB (100% Concept Image Match) -->
+    <div class="screen active" id="scr-command">
+      <div class="section-hdr">CHOOSE GAME MODE</div>
+
+      <div class="mode-carousel">
+        <div class="mode-card active" style="background-image: url('mockup-assets/mode_standard.jpg');" onclick="showScreen('scr-warroom', 'nav-warroom')">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+          </div>
+          <div>
+            <div class="mode-title">STANDARD</div>
+            <div class="mode-sub">vs AI</div>
+          </div>
+        </div>
+
+        <div class="mode-card gold" style="background-image: url('mockup-assets/mode_campaign.jpg');">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg>
+          </div>
+          <div>
+            <div class="mode-title">CAMPAIGN</div>
+            <div class="mode-sub">Story Missions</div>
+          </div>
+        </div>
+
+        <div class="mode-card purple" style="background-image: url('mockup-assets/mode_mmo.jpg');">
+          <span class="live-pill">LIVE</span>
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/></svg>
+          </div>
+          <div>
+            <div class="mode-title">MMO WARFRONT</div>
+            <div class="mode-sub" style="color:var(--neon-purple);">Persistent World</div>
+          </div>
+        </div>
+
+        <div class="mode-card green" style="background-image: url('mockup-assets/mode_coop.jpg');">
+          <div class="icon-box">
+            <svg viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3z"/></svg>
+          </div>
+          <div>
+            <div class="mode-title">CO-OP</div>
+            <div class="mode-sub">vs Adaptive AI</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-hdr">PERIMETER OVERVIEW (SPACESHIP INTERIOR DECK)</div>
+
+      <!-- High-Res Rendered Spaceship Interior Deck Base -->
+      <div class="diorama-view">
+        <div class="alert-card-floating">
+          <div class="tag">⚠ UNDER ATTACK</div>
+          <div class="name">SOUTHWEST NODE</div>
+          <div class="timer">WAVE 3/5 · 00:00:28</div>
+          <button class="btn-view" onclick="showScreen('scr-warroom', 'nav-warroom')">VIEW ALERTS ></button>
+        </div>
+
+        <div class="diorama-center-core">
+          <div class="beam"></div>
+          <span class="lbl">COMMAND CORE</span>
+          <span class="lvl">LEVEL 3</span>
+        </div>
+
+        <!-- Perimeter Compartment Nodes -->
+        <div class="p-node-pill" style="top: 8%; left: 50%; transform: translateX(-50%);">NORTH 100%</div>
+        <div class="p-node-pill" style="top: 24%; right: 8%;">NORTHEAST 100%</div>
+        <div class="p-node-pill" style="top: 50%; right: 4%;">EAST 100%</div>
+        <div class="p-node-pill" style="bottom: 24%; right: 8%;">SOUTHEAST 100%</div>
+        <div class="p-node-pill" style="bottom: 8%; left: 50%; transform: translateX(-50%);">SOUTH 100%</div>
+        <div class="p-node-pill alert" style="bottom: 24%; left: 6%;">SOUTHWEST UNDER ATTACK</div>
+        <div class="p-node-pill" style="top: 50%; left: 4%;">WEST 100%</div>
+        <div class="p-node-pill" style="top: 24%; left: 8%;">NORTHWEST 100%</div>
+      </div>
+
+      <div class="section-hdr">QUICK ACTIONS</div>
+
+      <div class="quick-actions-grid">
+        <div class="qa-tile blue" onclick="showScreen('scr-warroom', 'nav-warroom')">
+          <svg viewBox="0 0 24 24" style="fill:var(--neon-blue);"><path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.4-2.4c.4-.4.4-1 0-1.3z"/></svg>
+          <span>BUILD</span>
+        </div>
+        <div class="qa-tile purple">
+          <svg viewBox="0 0 24 24" style="fill:var(--neon-purple);"><path d="M6 22h12a2 2 0 0 0 2-2V8l-6-6H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2zm7-18l5 5h-5V4z"/></svg>
+          <span>RESEARCH</span>
+        </div>
+        <div class="qa-tile gold">
+          <svg viewBox="0 0 24 24" style="fill:var(--neon-gold);"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 10h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/></svg>
+          <span>CRAFT</span>
+        </div>
+        <div class="qa-tile green">
+          <svg viewBox="0 0 24 24" style="fill:var(--neon-green);"><path d="M12 4l-8 8h5v8h6v-8h5z"/></svg>
+          <span>UPGRADE</span>
+        </div>
+        <div class="qa-tile cyan">
+          <svg viewBox="0 0 24 24" style="fill:var(--neon-cyan);"><path d="M20 6h-4V4c0-1.1-.9-2-2-2h-4c-1.1 0-2 .9-2 2v2H4c-1.1 0-2 .9-2 2v11c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/></svg>
+          <span>INVENTORY</span>
+        </div>
+      </div>
+
+      <div class="mmo-banner-card">
+        <div>
+          <div class="title">MMO WARFRONT</div>
+          <div class="sub">PERSISTENT WORLD · MASSIVE BATTLES</div>
+        </div>
+        <button class="btn-enter">ENTER WORLD >></button>
+      </div>
+    </div>
+
+    <!-- SCREEN 2: WAR ROOM (Image 4 Match) -->
+    <div class="screen" id="scr-warroom">
+      <div class="warroom-header-bar">
+        <div>
+          <div class="title">⚔ WAR ROOM</div>
+          <div class="sub">Select an operation</div>
+        </div>
+        <div class="integrity-meter">
+          <div class="lbl">PERIMETER INTEGRITY</div>
+          <div class="val">100% ></div>
+        </div>
+      </div>
+
+      <div class="base-topology-map">
+        <div class="right-action-dock">
+          <div class="dock-tile gold">
+            <span>🛠</span>
+            <span>BUILD</span>
+          </div>
+          <div class="dock-tile">
+            <span>⬡</span>
+            <span>LAYOUT</span>
+          </div>
+          <div class="dock-tile">
+            <span>🛡</span>
+            <span>DEFENSES</span>
+          </div>
+        </div>
+
+        <div class="top-building-node core">COMMAND CORE<br><span style="font-size:6px;color:var(--neon-gold);">LEVEL 3</span></div>
+
+        <div class="top-building-node" style="top: 14%; left: 18%;">POWER PLANT<br>L3</div>
+        <div class="top-building-node" style="top: 14%; right: 24%;">BARRACKS<br>L2</div>
+        <div class="top-building-node" style="top: 46%; left: 8%;">EXTRACTOR<br>L3</div>
+        <div class="top-building-node" style="top: 46%; right: 22%;">RESEARCH LAB<br>L2</div>
+        <div class="top-building-node" style="bottom: 18%; left: 24%;">DEPOT<br>L2</div>
+        <div class="top-building-node" style="bottom: 18%; right: 26%;">DEFENSE TOWER<br>L2</div>
+
+        <div class="top-building-node" style="top: 4%; left: 42%;">BASE NODE ALPHA</div>
+        <div class="top-building-node" style="bottom: 4%; left: 42%;">BASE NODE HOTEL</div>
+      </div>
+
+      <div class="live-3d-feed">
+        <div class="feed-render-box">
+          <img src="mockup-assets/beam_post.jpg" alt="Beam Post">
+        </div>
+        <div class="feed-content">
+          <div class="tag">● LIVE MODEL FEED 02 / 06</div>
+          <div class="title">Beam Post</div>
+          <div class="desc">Fixed laser turret that burns whatever walks into its arc.</div>
+        </div>
+      </div>
+
+      <div class="eight-sub-grid">
+        <div class="eight-tile"><span>⚔</span><span>OPERATIONS</span></div>
+        <div class="eight-tile"><span>⬡</span><span>RESEARCH</span></div>
+        <div class="eight-tile"><span>📦</span><span>ARSENAL</span></div>
+        <div class="eight-tile"><span>✓</span><span>CONTRACTS</span></div>
+        <div class="eight-tile"><span>👤</span><span>CAREER</span></div>
+        <div class="eight-tile"><span>📖</span><span>INTEL</span></div>
+        <div class="eight-tile"><span>🔥</span><span>SANDBOX</span></div>
+        <div class="eight-tile"><span>⚙</span><span>SETTINGS</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Navigation Tab Bar (100% Concept Match) -->
+  <div class="bottom-nav-bar">
+    <div class="tab-btn active" id="nav-command" onclick="showScreen('scr-command', 'nav-command')">
+      <svg viewBox="0 0 24 24"><path d="M12 2L4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3z"/></svg>
+      <span>COMMAND</span>
+    </div>
+
+    <div class="tab-btn" id="nav-warroom" onclick="showScreen('scr-warroom', 'nav-warroom')">
+      <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>FACTION</span>
+    </div>
+
+    <div class="tab-btn">
+      <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+      <span>CONTRACTS</span>
+    </div>
+
+    <div class="tab-btn">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93z"/></svg>
+      <span>INTEL</span>
+    </div>
+
+    <div class="tab-btn">
+      <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49c.08-.14.12-.31.12-.48 0-.55-.45-1-1-1H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
+      <span>STORE</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showScreen(scrId, navId) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+    document.getElementById(scrId).classList.add('active');
+    if (document.getElementById(navId)) {
+      document.getElementById(navId).classList.add('active');
+    }
+  }
+</script>
+
+</body>
+</html>

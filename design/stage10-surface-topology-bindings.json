@@ -1,0 +1,233 @@
+{
+  "schema": "MassfrontStage10SurfaceTopologyBindingsV1",
+  "version": 1,
+  "status": "SOURCE_ONLY",
+  "sourceOnly": true,
+  "runtimeReady": false,
+  "registrationAuthorized": false,
+  "purpose": "Bind all sixteen Stage 10 Standard battlefield topology candidates to their processing-manifest records and Stage 9 location-plan baseline status without claiming model IDs, generated assets, or runtime readiness.",
+  "authorities": {
+    "processingManifest": {"path": "docs/MASTER_PLAN_STAGE10_LAYOUT_PROCESSING_MANIFEST_2026-08-29.json", "schema": "MassfrontStage10RoleAwareProcessingManifestV2", "version": 4},
+    "battlefieldTopology": {"path": "assets/data/battlefieldtopology-stage10.js", "schema": "BattlefieldTopologyV2", "version": 2},
+    "locationPlans": {"path": "assets/data/locationplans.js", "schema": "LocationMapPlanV1", "version": 1}
+  },
+  "coverage": {
+    "processingWave": "wave-1-standard",
+    "size": "standard",
+    "bindingCount": 16,
+    "fullV1Count": 6,
+    "pendingV0Count": 10
+  },
+  "assetAssertions": {
+    "status": "NOT_ASSERTED",
+    "modelIds": [],
+    "generatedAssetPaths": [],
+    "modelExistenceClaimed": false,
+    "generatedAssetsClaimed": false
+  },
+  "placementContract": {
+    "status": "TOPOLOGY_REQUIREMENTS_NOT_GEOMETRY_PROOF",
+    "requiredSourceFields": ["center", "radius", "major", "approaches", "siteClass", "domain", "supportMode"],
+    "commonProofs": ["center_radius_clearance", "declared_approach_connectivity", "collision_navigation_proxy", "buildability_and_sightline_clearance"],
+    "supportModeProofs": {
+      "terrain": ["terrain_grade", "foundation_footprint", "land_navigation_clearance"],
+      "fixed_caisson": ["seabed_datum", "seabed_reaching_support_geometry", "stable_deck_proxy", "naval_hull_and_support_clearance"],
+      "floating_pontoon": ["waterline", "draft", "freeboard", "mooring_stabilization", "stable_deck_proxy", "naval_hull_clearance"],
+      "semi_submersible": ["waterline", "draft", "freeboard", "deterministic_ballast_state", "mooring_stabilization", "stable_deck_proxy", "naval_hull_clearance"],
+      "shoreline_quay": ["shore_datum", "quay_or_revetment_connection", "stable_deck_proxy", "naval_and_land_interface_clearance"]
+    }
+  },
+  "requiredEvidenceGates": [
+    "processing_manifest_match",
+    "battlefield_topology_preflight",
+    "location_baseline_preservation",
+    "site_support_and_placement",
+    "collision_navigation",
+    "maritime_support_datums",
+    "asset_source_admission",
+    "deterministic_destruction_recovery",
+    "hardware_gpu_visual_performance",
+    "packaging_registration",
+    "human_visual_approval"
+  ],
+  "bindings": [
+    {
+      "mapId": "aelos_basin_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Canal Prefecture", "planet": "aelos", "faction": "nova", "region": "aelos_basin", "size": "standard", "theme": "verdant", "adaptation": "jungle_wetland", "hazard": "storm", "poi": "Quay Assembly", "waterMode": "river", "navalEnabled": true, "processingWave": "wave-1-standard", "processingPolicy": "extend-without-breaking-full-v1-contract", "candidateSiteClasses": ["city", "colony", "refinery", "outpost"]},
+      "topologyPlan": {"planId": "aelos_basin_medium", "region": "aelos_basin", "size": "standard", "layoutProfile": "canal-terraces", "landmark": "Quay Assembly", "extent": [2600, 2600], "waterMode": "river"},
+      "locationBaseline": {"status": "FULL_V1", "planPresent": true, "requestIds": ["aelos_basin_medium_colony", "aelos_basin_medium_refinery"], "declaredInstanceCount": 4},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "aelos_basin_medium_landmark", "class": "colony", "domain": "land", "support": "terrain"},
+        {"id": "aelos_basin_medium_industry", "class": "refinery", "domain": "land", "support": "terrain"},
+        {"id": "aelos_basin_medium_defense", "class": "city", "domain": "land", "support": "terrain"},
+        {"id": "aelos_basin_medium_logistics", "class": "outpost", "domain": "land", "support": "terrain"},
+        {"id": "aelos_basin_medium_expansion", "class": "colony", "domain": "land", "support": "terrain"},
+        {"id": "aelos_basin_medium_special", "class": "refinery", "domain": "maritime", "support": "shoreline_quay"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain", "shoreline_quay"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []},
+      "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []},
+      "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "aelos_coast_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Admiralty Causeway", "planet": "aelos", "faction": "nova", "region": "aelos_coast", "size": "standard", "theme": "verdant", "adaptation": "oceanic", "hazard": "storm", "poi": "Port Admiralty", "waterMode": "ocean", "navalEnabled": true, "processingWave": "wave-1-standard", "processingPolicy": "extend-without-breaking-full-v1-contract", "candidateSiteClasses": ["city", "colony", "refinery", "base", "spaceport"]},
+      "topologyPlan": {"planId": "aelos_coast_medium", "region": "aelos_coast", "size": "standard", "layoutProfile": "admiralty-causeway", "landmark": "Port Admiralty", "extent": [2600, 2600], "waterMode": "ocean"},
+      "locationBaseline": {"status": "FULL_V1", "planPresent": true, "requestIds": ["aelos_coast_medium_base"], "declaredInstanceCount": 2},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "aelos_coast_medium_landmark", "class": "base", "domain": "land", "support": "terrain"},
+        {"id": "aelos_coast_medium_industry", "class": "spaceport", "domain": "land", "support": "terrain"},
+        {"id": "aelos_coast_medium_defense", "class": "city", "domain": "land", "support": "terrain"},
+        {"id": "aelos_coast_medium_logistics", "class": "refinery", "domain": "land", "support": "terrain"},
+        {"id": "aelos_coast_medium_expansion", "class": "colony", "domain": "land", "support": "terrain"},
+        {"id": "aelos_coast_medium_special", "class": "base", "domain": "maritime", "support": "floating_pontoon"}
+      ], "floatingDatums": [{"siteId": "aelos_coast_medium_special", "waterline": 0, "draft": 12, "freeboard": 6, "stabilization": "four-point-catenary-mooring", "deckNav": "stable-proxy", "proofStatus": "TOPOLOGY_DECLARED_NOT_GEOMETRY_PROVEN"}], "requiredSupportModes": ["terrain", "floating_pontoon"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "aelos_north_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Civic Grid", "planet": "aelos", "faction": "nova", "region": "aelos_north", "size": "standard", "theme": "verdant", "adaptation": "temperate_civic", "hazard": "calm", "poi": "Prefecture Plaza", "waterMode": "river", "navalEnabled": true, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["city", "colony", "refinery", "outpost"]},
+      "topologyPlan": {"planId": "aelos_north_medium", "region": "aelos_north", "size": "standard", "layoutProfile": "civic-ring", "landmark": "Prefecture Plaza", "extent": [2600, 2600], "waterMode": "river"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "aelos_north_medium_command_citadel", "class": "city", "domain": "land", "support": "terrain"},
+        {"id": "aelos_north_medium_industrial_plaza", "class": "refinery", "domain": "land", "support": "terrain"},
+        {"id": "aelos_north_medium_energy_ring", "class": "refinery", "domain": "land", "support": "terrain"},
+        {"id": "aelos_north_medium_military_terrace", "class": "base", "domain": "land", "support": "terrain"},
+        {"id": "aelos_north_medium_logistics_yard", "class": "outpost", "domain": "land", "support": "terrain"},
+        {"id": "aelos_north_medium_river_command_platform", "class": "outpost", "domain": "maritime", "support": "floating_pontoon"}
+      ], "floatingDatums": [{"siteId": "aelos_north_medium_river_command_platform", "waterline": 0, "draft": 12, "freeboard": 6, "stabilization": "four-point-catenary-mooring", "deckNav": "stable-proxy", "proofStatus": "TOPOLOGY_DECLARED_NOT_GEOMETRY_PROVEN"}], "requiredSupportModes": ["terrain", "floating_pontoon"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "aelos_ridge_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Stone Rampart", "planet": "aelos", "faction": "nova", "region": "aelos_ridge", "size": "standard", "theme": "arctic", "adaptation": "glacial", "hazard": "collapse", "poi": "Rampart Tier", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["city", "colony", "refinery"]},
+      "topologyPlan": {"planId": "aelos_ridge_medium", "region": "aelos_ridge", "size": "standard", "layoutProfile": "rampart-terraces", "landmark": "Rampart Tier", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "aelos_ridge_medium_landmark", "class": "city", "domain": "land", "support": "terrain"}, {"id": "aelos_ridge_medium_industry", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "aelos_ridge_medium_defense", "class": "colony", "domain": "land", "support": "terrain"}, {"id": "aelos_ridge_medium_logistics", "class": "city", "domain": "land", "support": "terrain"}, {"id": "aelos_ridge_medium_expansion", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "aelos_ridge_medium_special", "class": "colony", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "nordhall_cliff_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Arcology Steps", "planet": "nordhall", "faction": "syndicate", "region": "nordhall_cliff", "size": "standard", "theme": "arctic", "adaptation": "glacial", "hazard": "collapse", "poi": "Terrace Vault Steps", "waterMode": "ocean", "navalEnabled": true, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["city", "refinery", "outpost", "ruin", "derelict"]},
+      "topologyPlan": {"planId": "nordhall_cliff_medium", "region": "nordhall_cliff", "size": "standard", "layoutProfile": "arcology-steps", "landmark": "Terrace Vault Steps", "extent": [2600, 2600], "waterMode": "ocean"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "nordhall_cliff_medium_landmark", "class": "ruin", "domain": "land", "support": "terrain"}, {"id": "nordhall_cliff_medium_industry", "class": "derelict", "domain": "land", "support": "terrain"}, {"id": "nordhall_cliff_medium_defense", "class": "city", "domain": "land", "support": "terrain"}, {"id": "nordhall_cliff_medium_logistics", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "nordhall_cliff_medium_expansion", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "nordhall_cliff_medium_special", "class": "ruin", "domain": "maritime", "support": "fixed_caisson"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain", "fixed_caisson"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "nordhall_frost_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Glacier Fault", "planet": "nordhall", "faction": "syndicate", "region": "nordhall_frost", "size": "standard", "theme": "arctic", "adaptation": "glacial", "hazard": "collapse", "poi": "Faultline Bridge", "waterMode": "river", "navalEnabled": true, "processingWave": "wave-1-standard", "processingPolicy": "extend-without-breaking-full-v1-contract", "candidateSiteClasses": ["city", "refinery", "outpost", "relic"]},
+      "topologyPlan": {"planId": "nordhall_frost_medium", "region": "nordhall_frost", "size": "standard", "layoutProfile": "glacier-fault", "landmark": "Faultline Bridge", "extent": [2600, 2600], "waterMode": "river"},
+      "locationBaseline": {"status": "FULL_V1", "planPresent": true, "requestIds": ["nordhall_frost_medium_outpost", "nordhall_frost_medium_relic"], "declaredInstanceCount": 2},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "nordhall_frost_medium_landmark", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "nordhall_frost_medium_industry", "class": "relic", "domain": "land", "support": "terrain"}, {"id": "nordhall_frost_medium_defense", "class": "city", "domain": "land", "support": "terrain"}, {"id": "nordhall_frost_medium_logistics", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "nordhall_frost_medium_expansion", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "nordhall_frost_medium_special", "class": "city", "domain": "maritime", "support": "floating_pontoon"}
+      ], "floatingDatums": [{"siteId": "nordhall_frost_medium_special", "waterline": 0, "draft": 12, "freeboard": 6, "stabilization": "four-point-catenary-mooring", "deckNav": "stable-proxy", "proofStatus": "TOPOLOGY_DECLARED_NOT_GEOMETRY_PROVEN"}], "requiredSupportModes": ["terrain", "floating_pontoon"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "nordhall_isles_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Rimewater Chain", "planet": "nordhall", "faction": "syndicate", "region": "nordhall_isles", "size": "standard", "theme": "arctic", "adaptation": "glacial", "hazard": "whiteout", "poi": "Boreal Relay Net", "waterMode": "ocean", "navalEnabled": true, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["city", "refinery", "outpost"]},
+      "topologyPlan": {"planId": "nordhall_isles_medium", "region": "nordhall_isles", "size": "standard", "layoutProfile": "rimewater-chain", "landmark": "Boreal Relay Net", "extent": [2600, 2600], "waterMode": "ocean"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "nordhall_isles_medium_landmark", "class": "city", "domain": "land", "support": "terrain"}, {"id": "nordhall_isles_medium_industry", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "nordhall_isles_medium_defense", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "nordhall_isles_medium_logistics", "class": "city", "domain": "land", "support": "terrain"}, {"id": "nordhall_isles_medium_expansion", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "nordhall_isles_medium_special", "class": "outpost", "domain": "maritime", "support": "semi_submersible"}
+      ], "floatingDatums": [{"siteId": "nordhall_isles_medium_special", "waterline": 0, "draft": 24, "freeboard": 9, "stabilization": "ballast-columns-and-spread-mooring", "deckNav": "stable-proxy", "proofStatus": "TOPOLOGY_DECLARED_NOT_GEOMETRY_PROVEN"}], "requiredSupportModes": ["terrain", "semi_submersible"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "nordhall_peaks_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Skyshield Range", "planet": "nordhall", "faction": "syndicate", "region": "nordhall_peaks", "size": "standard", "theme": "arctic", "adaptation": "glacial", "hazard": "meteor", "poi": "Skyshield Array", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["city", "refinery", "outpost"]},
+      "topologyPlan": {"planId": "nordhall_peaks_medium", "region": "nordhall_peaks", "size": "standard", "layoutProfile": "skyshield-plateaus", "landmark": "Skyshield Array", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "nordhall_peaks_medium_landmark", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "nordhall_peaks_medium_industry", "class": "city", "domain": "land", "support": "terrain"}, {"id": "nordhall_peaks_medium_defense", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "nordhall_peaks_medium_logistics", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "nordhall_peaks_medium_expansion", "class": "city", "domain": "land", "support": "terrain"}, {"id": "nordhall_peaks_medium_special", "class": "refinery", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "pyraeth_belt_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Iron Pyre Yards", "planet": "pyraeth", "faction": "legion", "region": "pyraeth_belt", "size": "standard", "theme": "vespera", "adaptation": "desert", "hazard": "heat", "poi": "Furnace Trench", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["city", "refinery", "outpost", "base"]},
+      "topologyPlan": {"planId": "pyraeth_belt_medium", "region": "pyraeth_belt", "size": "standard", "layoutProfile": "furnace-trenches", "landmark": "Furnace Trench", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "pyraeth_belt_medium_landmark", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "pyraeth_belt_medium_industry", "class": "city", "domain": "land", "support": "terrain"}, {"id": "pyraeth_belt_medium_defense", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "pyraeth_belt_medium_logistics", "class": "base", "domain": "land", "support": "terrain"}, {"id": "pyraeth_belt_medium_expansion", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "pyraeth_belt_medium_special", "class": "outpost", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "pyraeth_caldera_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Arcology Crucible", "planet": "pyraeth", "faction": "legion", "region": "pyraeth_caldera", "size": "standard", "theme": "vespera", "adaptation": "volcanic", "hazard": "heat", "poi": "Crucible Domes", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "extend-without-breaking-full-v1-contract", "candidateSiteClasses": ["city", "refinery", "outpost", "base"]},
+      "topologyPlan": {"planId": "pyraeth_caldera_medium", "region": "pyraeth_caldera", "size": "standard", "layoutProfile": "crucible-domes", "landmark": "Crucible Domes", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "FULL_V1", "planPresent": true, "requestIds": ["pyraeth_caldera_medium_city"], "declaredInstanceCount": 2},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "pyraeth_caldera_medium_landmark", "class": "city", "domain": "land", "support": "terrain"}, {"id": "pyraeth_caldera_medium_industry", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "pyraeth_caldera_medium_defense", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "pyraeth_caldera_medium_logistics", "class": "base", "domain": "land", "support": "terrain"}, {"id": "pyraeth_caldera_medium_expansion", "class": "city", "domain": "land", "support": "terrain"}, {"id": "pyraeth_caldera_medium_special", "class": "refinery", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "pyraeth_crater_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Underforge", "planet": "pyraeth", "faction": "legion", "region": "pyraeth_crater", "size": "standard", "theme": "vespera", "adaptation": "volcanic", "hazard": "pulse", "poi": "Vault Foundry", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["city", "refinery", "outpost", "base"]},
+      "topologyPlan": {"planId": "pyraeth_crater_medium", "region": "pyraeth_crater", "size": "standard", "layoutProfile": "underforge-radial", "landmark": "Vault Foundry", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "pyraeth_crater_medium_landmark", "class": "city", "domain": "land", "support": "terrain"}, {"id": "pyraeth_crater_medium_industry", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "pyraeth_crater_medium_defense", "class": "outpost", "domain": "land", "support": "terrain"}, {"id": "pyraeth_crater_medium_logistics", "class": "base", "domain": "land", "support": "terrain"}, {"id": "pyraeth_crater_medium_expansion", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "pyraeth_crater_medium_special", "class": "city", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "pyraeth_flats_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Blackwind Ports", "planet": "pyraeth", "faction": "legion", "region": "pyraeth_flats", "size": "standard", "theme": "vespera", "adaptation": "desert", "hazard": "dust", "poi": "Hub Delta Pads", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "extend-without-breaking-full-v1-contract", "candidateSiteClasses": ["city", "refinery", "outpost", "base", "spaceport", "derelict"]},
+      "topologyPlan": {"planId": "pyraeth_flats_medium", "region": "pyraeth_flats", "size": "standard", "layoutProfile": "blackwind-aprons", "landmark": "Hub Delta Pads", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "FULL_V1", "planPresent": true, "requestIds": ["pyraeth_flats_medium_spaceport", "pyraeth_flats_medium_derelict"], "declaredInstanceCount": 3},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "pyraeth_flats_medium_landmark", "class": "spaceport", "domain": "land", "support": "terrain"}, {"id": "pyraeth_flats_medium_industry", "class": "derelict", "domain": "land", "support": "terrain"}, {"id": "pyraeth_flats_medium_defense", "class": "city", "domain": "land", "support": "terrain"}, {"id": "pyraeth_flats_medium_logistics", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "pyraeth_flats_medium_expansion", "class": "base", "domain": "land", "support": "terrain"}, {"id": "pyraeth_flats_medium_special", "class": "outpost", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "vespera_dunes_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Sable Bloom", "planet": "vespera", "faction": "horde", "region": "vespera_dunes", "size": "standard", "theme": "ashland", "adaptation": "desert", "hazard": "spores", "poi": "Bloom Escarpment", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["brood", "derelict"]},
+      "topologyPlan": {"planId": "vespera_dunes_medium", "region": "vespera_dunes", "size": "standard", "layoutProfile": "buried-bloom-branches", "landmark": "Bloom Escarpment", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "vespera_dunes_medium_landmark", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_dunes_medium_industry", "class": "derelict", "domain": "land", "support": "terrain"}, {"id": "vespera_dunes_medium_defense", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_dunes_medium_logistics", "class": "derelict", "domain": "land", "support": "terrain"}, {"id": "vespera_dunes_medium_expansion", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_dunes_medium_special", "class": "derelict", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "vespera_plateau_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Gloam Ramparts", "planet": "vespera", "faction": "horde", "region": "vespera_plateau", "size": "standard", "theme": "verdant", "adaptation": "jungle_wetland", "hazard": "spores", "poi": "Gloam Keep Gate", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["brood", "ruin", "derelict"]},
+      "topologyPlan": {"planId": "vespera_plateau_medium", "region": "vespera_plateau", "size": "standard", "layoutProfile": "gloam-mesa-gates", "landmark": "Gloam Keep Gate", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "vespera_plateau_medium_landmark", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_plateau_medium_industry", "class": "ruin", "domain": "land", "support": "terrain"}, {"id": "vespera_plateau_medium_defense", "class": "derelict", "domain": "land", "support": "terrain"}, {"id": "vespera_plateau_medium_logistics", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_plateau_medium_expansion", "class": "ruin", "domain": "land", "support": "terrain"}, {"id": "vespera_plateau_medium_special", "class": "derelict", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "vespera_refinery_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Derelict Brood", "planet": "vespera", "faction": "horde", "region": "vespera_refinery", "size": "standard", "theme": "ashland", "adaptation": "volcanic", "hazard": "pulse", "poi": "Brood Matrix Core", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "extend-without-breaking-full-v1-contract", "candidateSiteClasses": ["brood", "ruin", "derelict", "refinery"]},
+      "topologyPlan": {"planId": "vespera_refinery_medium", "region": "vespera_refinery", "size": "standard", "layoutProfile": "consumed-foundry", "landmark": "Brood Matrix Core", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "FULL_V1", "planPresent": true, "requestIds": ["vespera_refinery_medium_ruin", "vespera_refinery_medium_brood"], "declaredInstanceCount": 3},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "vespera_refinery_medium_landmark", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_refinery_medium_industry", "class": "ruin", "domain": "land", "support": "terrain"}, {"id": "vespera_refinery_medium_defense", "class": "derelict", "domain": "land", "support": "terrain"}, {"id": "vespera_refinery_medium_logistics", "class": "refinery", "domain": "land", "support": "terrain"}, {"id": "vespera_refinery_medium_expansion", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_refinery_medium_special", "class": "ruin", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    },
+    {
+      "mapId": "vespera_spire_medium", "status": "SOURCE_ONLY_CANDIDATE", "sourceOnly": true, "runtimeReady": false,
+      "processingManifestRecord": {"name": "Spire Brood", "planet": "vespera", "faction": "horde", "region": "vespera_spire", "size": "standard", "theme": "ashland", "adaptation": "volcanic", "hazard": "eruption", "poi": "Great Hive Spire", "waterMode": "none", "navalEnabled": false, "processingWave": "wave-1-standard", "processingPolicy": "author-exact-plan-and-templates", "candidateSiteClasses": ["brood", "ruin", "derelict"]},
+      "topologyPlan": {"planId": "vespera_spire_medium", "region": "vespera_spire", "size": "standard", "layoutProfile": "hive-spire-radial", "landmark": "Great Hive Spire", "extent": [2600, 2600], "waterMode": "none"},
+      "locationBaseline": {"status": "PENDING_V0", "planPresent": false, "requestIds": [], "declaredInstanceCount": 0},
+      "supportPlacementNeeds": {"status": "REQUIRED_NOT_PROVEN", "siteSupport": [
+        {"id": "vespera_spire_medium_landmark", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_spire_medium_industry", "class": "ruin", "domain": "land", "support": "terrain"}, {"id": "vespera_spire_medium_defense", "class": "derelict", "domain": "land", "support": "terrain"}, {"id": "vespera_spire_medium_logistics", "class": "brood", "domain": "land", "support": "terrain"}, {"id": "vespera_spire_medium_expansion", "class": "ruin", "domain": "land", "support": "terrain"}, {"id": "vespera_spire_medium_special", "class": "brood", "domain": "land", "support": "terrain"}
+      ], "floatingDatums": [], "requiredSupportModes": ["terrain"]},
+      "assetBinding": {"status": "NOT_ASSERTED", "modelIds": [], "generatedAssetPaths": []}, "evidence": {"status": "PENDING_ALL_GATES", "passedGateIds": []}, "activation": {"runtime": false, "registrationAuthorized": false}
+    }
+  ],
+  "activation": {"runtime": false, "registrationAuthorized": false, "manifestRegistrationAuthorized": false, "reason": "SOURCE_ONLY_REQUIRES_ALL_EVIDENCE_GATES_AND_SEPARATE_HUMAN_ACTIVATION"}
+}

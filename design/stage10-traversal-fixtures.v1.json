@@ -1,0 +1,88 @@
+{
+  "schema": "MassfrontStage10TraversalFixturesV1",
+  "version": 1,
+  "status": "SOURCE_ONLY_PENDING_EXECUTION",
+  "runtimeReady": false,
+  "registrationAuthorized": false,
+  "purpose": "Define deterministic traversal evidence that every Stage 10 topology candidate must pass before terrain, navigation-cache, asset, or runtime integration.",
+  "authorities": {
+    "surface": "assets/data/battlefieldtopology-stage10.js",
+    "interior": "assets/data/interiortopology-stage10.js",
+    "orbital": "assets/data/orbitaltopology-stage10.js",
+    "theatre": "assets/data/theatreprofiles-stage10.js",
+    "surfaceBindings": "design/stage10-surface-topology-bindings.json",
+    "interiorBindings": "source-media/content-library/stage10-interior-layout-bindings.v1.json",
+    "orbitalBindings": "source-media/content-library/stage10-orbital-layout-bindings.v1.json"
+  },
+  "sourceHashPolicy": {
+    "mode": "CURRENT_PREFLIGHT_SEMANTIC_HASH_RECORDED_IN_VERIFICATION_REPORT",
+    "randomnessAllowed": false,
+    "staleHashPassAllowed": false
+  },
+  "captureProtocol": {
+    "status": "REQUIRED_NOT_CAPTURED",
+    "seed": 104729,
+    "simulationTick": 0,
+    "viewports": [[412, 900], [900, 412]],
+    "graphicsPreset": "stage10-authoring-reference",
+    "cameraStates": ["command", "tactical"],
+    "hardwareGpuRequired": true,
+    "sameStateBeforeAfterRequired": true
+  },
+  "domainPolicies": {
+    "surface": {
+      "allowedProbeClasses": ["infantry", "vehicle", "heavy", "artillery", "air", "naval"],
+      "requiredAssertions": ["spawn-route-resolution", "spawn-to-major-site", "minimum-two-site-approaches", "route-width-clearance", "cross-domain-transition", "support-mode-collision-navigation", "objective-resource-access", "destruction-recovery", "buildability-sightline", "deterministic-repeat"],
+      "maritimeModes": ["fixed_caisson", "floating_pontoon", "semi_submersible", "shoreline_quay"],
+      "maritimeProofs": ["waterline-or-shore-datum", "draft-or-seabed-support", "stable-deck-navigation", "naval-hull-clearance", "land-or-gangway-access", "deterministic-destruction-outcome"]
+    },
+    "interior": {
+      "allowedProbeClasses": ["infantry", "support_drone", "small_vehicle", "mech"],
+      "forbiddenProbeClasses": ["heavy_vehicle", "heavy_mech", "artillery", "air", "naval", "titan"],
+      "requiredAssertions": ["insertion-objective-extraction", "mixed-route-6.4m", "personnel-route-3.2m", "turning-pocket-9m", "portal-state-navigation", "four-state-destruction", "cutaway-objective-preservation", "deterministic-repeat"],
+      "portalStates": ["closed", "open", "jammed", "destroyed"],
+      "destructionStates": ["intact", "damaged", "critical", "destroyed"]
+    },
+    "orbital": {
+      "allowedEnvelopeRefs": ["infantry_boarding", "orbital_smallcraft"],
+      "requiredAssertions": ["insertion-objective-extraction", "route-or-deck-volume-clearance", "hazard-boundary", "dual-objective-access", "destructible-state-machine", "ordered-recovery", "rollback-last-complete-state", "deterministic-repeat"],
+      "recoveryStates": ["intact", "damaged", "disabled", "destroyed", "recovering", "restored"]
+    }
+  },
+  "fixtures": [
+    {"fixtureId":"traversal.surface.aelos_basin_medium","domain":"surface","sourceId":"aelos_basin_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.aelos_coast_medium","domain":"surface","sourceId":"aelos_coast_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.aelos_north_medium","domain":"surface","sourceId":"aelos_north_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.aelos_ridge_medium","domain":"surface","sourceId":"aelos_ridge_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.nordhall_cliff_medium","domain":"surface","sourceId":"nordhall_cliff_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.nordhall_frost_medium","domain":"surface","sourceId":"nordhall_frost_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.nordhall_isles_medium","domain":"surface","sourceId":"nordhall_isles_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.nordhall_peaks_medium","domain":"surface","sourceId":"nordhall_peaks_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.pyraeth_belt_medium","domain":"surface","sourceId":"pyraeth_belt_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.pyraeth_caldera_medium","domain":"surface","sourceId":"pyraeth_caldera_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.pyraeth_crater_medium","domain":"surface","sourceId":"pyraeth_crater_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.pyraeth_flats_medium","domain":"surface","sourceId":"pyraeth_flats_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.vespera_dunes_medium","domain":"surface","sourceId":"vespera_dunes_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.vespera_plateau_medium","domain":"surface","sourceId":"vespera_plateau_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.vespera_refinery_medium","domain":"surface","sourceId":"vespera_refinery_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.surface.vespera_spire_medium","domain":"surface","sourceId":"vespera_spire_medium","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.interior.interior_xs_breach_40x40","domain":"interior","sourceId":"interior_xs_breach_40x40","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.interior.interior_xs_linear_48x32","domain":"interior","sourceId":"interior_xs_linear_48x32","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.interior.interior_small_loop_64x64","domain":"interior","sourceId":"interior_small_loop_64x64","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.interior.interior_small_multilevel_80x64","domain":"interior","sourceId":"interior_small_multilevel_80x64","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.orbital.aelos_embassy_spindle","domain":"orbital","sourceId":"aelos_embassy_spindle","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.orbital.aelos_logistics_array","domain":"orbital","sourceId":"aelos_logistics_array","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.orbital.karak_colony_spine","domain":"orbital","sourceId":"karak_colony_spine","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.orbital.karak_lifeboat_field","domain":"orbital","sourceId":"karak_lifeboat_field","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.orbital.veyra_archive_hulk","domain":"orbital","sourceId":"veyra_archive_hulk","status":"PENDING_EXECUTION","runtimeReady":false},
+    {"fixtureId":"traversal.orbital.veyra_karak_gate","domain":"orbital","sourceId":"veyra_karak_gate","status":"PENDING_EXECUTION","runtimeReady":false}
+  ],
+  "evidence": {
+    "status": "NOT_CAPTURED",
+    "passedFixtureIds": [],
+    "capturePaths": [],
+    "sourceHashes": {},
+    "runtimeActivationAuthorized": false
+  },
+  "assetClaims": {"models":[],"generatedGeometry":[],"collision":[],"navigation":[]}
+}

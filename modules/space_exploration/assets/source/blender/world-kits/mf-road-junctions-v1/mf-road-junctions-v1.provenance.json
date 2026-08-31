@@ -1,0 +1,1010 @@
+{
+  "schema": "MassfrontHunyuanRoadJunctionsV1",
+  "status": "SOURCE_AUTHORING_ONLY",
+  "runtimeAccepted": false,
+  "visualAccepted": false,
+  "generatorScript": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tools\\blender\\hf-road-cleanup\\build-hf-road-junctions.py",
+    "sha256": "9E0FBFCA55D1B06835F2DBF6E7419338CFCBABBC54CA5E7F3127CEC0B70CF662",
+    "bytes": 64994
+  },
+  "straightSource": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-lod0-review.glb",
+    "sha256": "69D406836DB64BAF6154761332E04260DA8EF0A95C29FB006317834178EDC2F9",
+    "bytes": 6114376
+  },
+  "straightSourceReport": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\mf-road-straight-hunyuan-clean-v1.provenance.json",
+    "sha256": "DD6E763387CE7B5A2C59F7085483780125EBC2A45FFF964F2EC5362D16E0A839",
+    "bytes": 78540
+  },
+  "contract": {
+    "gridM": 40.0,
+    "primaryWidthM": 20.0,
+    "localWidthM": 12.0,
+    "surfaceElevationM": 1.9162261486053467,
+    "socketPolicy": "cardinal boundary sockets at +/-20 m; adapter N is 12 m local road"
+  },
+  "conceptDeltaChecklist": [
+    {
+      "requirement": "two readable carriageways at every primary socket",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "continuous lane grammar through corner and intersection approaches",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "central service median continues from the cleaned straight",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "raised curb, shoulder, barrier, drain, hatch and repair-detail hierarchy",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "no floating crosswalk bars or unrelated central octagon",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "vehicle-scale checkpoint endcap rather than an empty landing plate",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "solid symmetric four-to-two-lane adapter without a black void",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "restrained rather than dominant cyan guidance",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "same-camera individual and straight-adjacency evidence",
+      "implemented": true,
+      "accepted": false
+    },
+    {
+      "requirement": "deployable PBR parity with the Hunyuan straight",
+      "implemented": false,
+      "accepted": false
+    },
+    {
+      "requirement": "real phone tactical and command-zoom integration proof",
+      "implemented": false,
+      "accepted": false
+    }
+  ],
+  "materials": [
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_ROAD_SURFACE",
+      "role": "road_surface",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_ROAD_REPAIR_PATCH",
+      "role": "road_repair_patch",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_CURB_SERVICE_SHOULDER",
+      "role": "curb_service_shoulder",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_CURB_INSET",
+      "role": "curb_inset",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_STRUCTURAL_METAL",
+      "role": "structural_metal",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_SERVICE_MEDIAN",
+      "role": "service_median",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_PLAZA_PAVING",
+      "role": "plaza_paving",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_JUNCTION_SERVICE_PANEL",
+      "role": "junction_service_panel",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_LANE_MARKING",
+      "role": "lane_marking",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_RESTRAINED_CYAN_GUIDANCE",
+      "role": "restrained_cyan_guidance",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_HAZARD_MARKER",
+      "role": "hazard_marker",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_DRAINAGE_GRATE",
+      "role": "drainage_grate",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_REVIEW_COLLISION",
+      "role": "review_collision",
+      "runtimeAccepted": false
+    },
+    {
+      "name": "MF_HF_JUNCTION_V1_MAT_REVIEW_NAVIGATION",
+      "role": "review_navigation",
+      "runtimeAccepted": false
+    }
+  ],
+  "pieces": [
+    {
+      "id": "corner_90",
+      "connections": [
+        "S",
+        "E"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_CORNER_90_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_CORNER_90_E",
+          "direction": "E",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            20.0,
+            0.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 24724,
+          "objects": 131,
+          "intersectionAccounting": {
+            "testedObjects": 131,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 8804,
+          "objects": 81,
+          "intersectionAccounting": {
+            "testedObjects": 81,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 2312,
+          "objects": 52,
+          "intersectionAccounting": {
+            "testedObjects": 52,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 36,
+      "navTriangles": 36,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "t_junction",
+      "connections": [
+        "S",
+        "E",
+        "W"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_T_JUNCTION_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_T_JUNCTION_E",
+          "direction": "E",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            20.0,
+            0.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_T_JUNCTION_W",
+          "direction": "W",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            -20.0,
+            0.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 31208,
+          "objects": 166,
+          "intersectionAccounting": {
+            "testedObjects": 166,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 11232,
+          "objects": 104,
+          "intersectionAccounting": {
+            "testedObjects": 104,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 2904,
+          "objects": 66,
+          "intersectionAccounting": {
+            "testedObjects": 66,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 48,
+      "navTriangles": 48,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "x_plaza",
+      "connections": [
+        "N",
+        "E",
+        "S",
+        "W"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_X_PLAZA_N",
+          "direction": "N",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_E",
+          "direction": "E",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            20.0,
+            0.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_W",
+          "direction": "W",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            -20.0,
+            0.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 39856,
+          "objects": 212,
+          "intersectionAccounting": {
+            "testedObjects": 212,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 14472,
+          "objects": 134,
+          "intersectionAccounting": {
+            "testedObjects": 134,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 3784,
+          "objects": 86,
+          "intersectionAccounting": {
+            "testedObjects": 86,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 60,
+      "navTriangles": 60,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "straight_endcap",
+      "connections": [
+        "S"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_STRAIGHT_ENDCAP_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 16920,
+          "objects": 90,
+          "intersectionAccounting": {
+            "testedObjects": 90,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 6480,
+          "objects": 60,
+          "intersectionAccounting": {
+            "testedObjects": 60,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 1672,
+          "objects": 38,
+          "intersectionAccounting": {
+            "testedObjects": 38,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 24,
+      "navTriangles": 24,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    },
+    {
+      "id": "primary_local_adapter",
+      "connections": [
+        "S",
+        "N"
+      ],
+      "gridM": 40.0,
+      "primaryWidthM": 20.0,
+      "surfaceElevationM": 1.9162261486053467,
+      "sockets": [
+        {
+          "name": "SOCKET_PRIMARY_LOCAL_ADAPTER_S",
+          "direction": "S",
+          "socketType": "primary_road_20m",
+          "widthM": 20.0,
+          "lanes": 4,
+          "position": [
+            0.0,
+            -20.0,
+            1.916226
+          ]
+        },
+        {
+          "name": "SOCKET_PRIMARY_LOCAL_ADAPTER_N",
+          "direction": "N",
+          "socketType": "local_road_12m",
+          "widthM": 12.0,
+          "lanes": 2,
+          "position": [
+            0.0,
+            20.0,
+            1.916226
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 6580,
+          "objects": 35,
+          "intersectionAccounting": {
+            "testedObjects": 35,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 1,
+          "triangles": 3024,
+          "objects": 28,
+          "intersectionAccounting": {
+            "testedObjects": 28,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        },
+        {
+          "lod": 2,
+          "triangles": 924,
+          "objects": 21,
+          "intersectionAccounting": {
+            "testedObjects": 21,
+            "unexpectedIntersections": 0,
+            "records": []
+          }
+        }
+      ],
+      "collisionTriangles": 12,
+      "navTriangles": 12,
+      "clearanceClasses": "infantry,light,heavy,superheavy"
+    }
+  ],
+  "exports": {
+    "corner_90": {
+      "lods": [
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\corner_90-lod0-review.glb",
+          "sha256": "09B4074B2FD5251D89BF12EC1C2CDA338667C125C71054238B6BEC5ACAFAE06E",
+          "bytes": 1407948,
+          "lod": 0,
+          "triangles": 24724
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\corner_90-lod1-review.glb",
+          "sha256": "9CE3BBAD0DE3E07A784F65D9FFA106C03A95534EB872142ABE55706EE6FE2BED",
+          "bytes": 528504,
+          "lod": 1,
+          "triangles": 8804
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\corner_90-lod2-review.glb",
+          "sha256": "426FD60C5FDEE5DDFBF6C54346547A4F05FA3564D29DF03A4E3BBD94A1AB6E9A",
+          "bytes": 170016,
+          "lod": 2,
+          "triangles": 2312
+        }
+      ],
+      "collision": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\corner_90-collision-review.glb",
+        "sha256": "63B3FD8D64BF52E7D848FA80EF244CEB97105CF43001A2ED086992F0A91E32AD",
+        "bytes": 3528
+      },
+      "nav": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\corner_90-nav-review.glb",
+        "sha256": "2BEA8C4A97115BE536CB45CB24338A658654A89042D7224A036F47160E9A5E89",
+        "bytes": 4292
+      }
+    },
+    "t_junction": {
+      "lods": [
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\t_junction-lod0-review.glb",
+          "sha256": "9E2EF67E256DE5F34E79B7151329C415AF26D9F9D4FA4380620BC466F0D67F8C",
+          "bytes": 1742112,
+          "lod": 0,
+          "triangles": 31208
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\t_junction-lod1-review.glb",
+          "sha256": "39D8A0219EFAB1C538BD2A27E7B9FA2BF95F78ECA4EF2F666EDD156858EEE42B",
+          "bytes": 663416,
+          "lod": 1,
+          "triangles": 11232
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\t_junction-lod2-review.glb",
+          "sha256": "0545EEE5611A467AE7244A4B841B1D4DA0F06F2E305D6AF33A98CF1CA710A419",
+          "bytes": 206568,
+          "lod": 2,
+          "triangles": 2904
+        }
+      ],
+      "collision": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\t_junction-collision-review.glb",
+        "sha256": "495C629C25B8D3ACDD94DB502145704CD747D9856F2FEBB7DD841EDEEC0DEFB3",
+        "bytes": 4180
+      },
+      "nav": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\t_junction-nav-review.glb",
+        "sha256": "9905CDF8BBF489EF06C4BCD9E8CAB547B358E61C86B809A188C38DA40849D152",
+        "bytes": 5344
+      }
+    },
+    "x_plaza": {
+      "lods": [
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\x_plaza-lod0-review.glb",
+          "sha256": "66B09244DC004CBE82CE29EE829286D6803CE356F0E18D3893BB7C64E8FAAE49",
+          "bytes": 2219080,
+          "lod": 0,
+          "triangles": 39856
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\x_plaza-lod1-review.glb",
+          "sha256": "AD73D4557D31C4036D305747463CAB1201A76A427F8324DAADABFE8CBBF93979",
+          "bytes": 848272,
+          "lod": 1,
+          "triangles": 14472
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\x_plaza-lod2-review.glb",
+          "sha256": "BC1B7E3A009B8E9487DABA196416E295B6E91FD822A5A9D243788B1A5DCD5309",
+          "bytes": 267336,
+          "lod": 2,
+          "triangles": 3784
+        }
+      ],
+      "collision": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\x_plaza-collision-review.glb",
+        "sha256": "8E4BCF61C9A6E16539A5BDB082051847F7FAB4730E47068DC33A3FA3592DF2C1",
+        "bytes": 4824
+      },
+      "nav": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\x_plaza-nav-review.glb",
+        "sha256": "C3248E890DEABB3FFD3F4D17EA3F047A2C7BE2E8846D8BEE50F8716972408C28",
+        "bytes": 6320
+      }
+    },
+    "straight_endcap": {
+      "lods": [
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\straight_endcap-lod0-review.glb",
+          "sha256": "F1F54960B4162EA934F498DF2A919C7209E9159C3E02F2F686A0F12242498E6F",
+          "bytes": 956000,
+          "lod": 0,
+          "triangles": 16920
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\straight_endcap-lod1-review.glb",
+          "sha256": "5B1CD58B76D593546525EB88ED205598307ABDE8F1B00A2A5018438CF8A55FC6",
+          "bytes": 383936,
+          "lod": 1,
+          "triangles": 6480
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\straight_endcap-lod2-review.glb",
+          "sha256": "BAC4D723E96A76475CD75CFEFC66D1E2F5BC057369F0BE546D29E1550BAC64CC",
+          "bytes": 121400,
+          "lod": 2,
+          "triangles": 1672
+        }
+      ],
+      "collision": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\straight_endcap-collision-review.glb",
+        "sha256": "3CD0D7B159DB7DFA18033790530F8388988B7602853E018919FE9EB871F7FF5F",
+        "bytes": 2892
+      },
+      "nav": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\straight_endcap-nav-review.glb",
+        "sha256": "A04404CC0EA5A5D02C7399503B2DE1E5B8035A368BFB44157F9B8935EBD88C0F",
+        "bytes": 3264
+      }
+    },
+    "primary_local_adapter": {
+      "lods": [
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\primary_local_adapter-lod0-review.glb",
+          "sha256": "F7AF4D61093C61E2C87087BDFA9A8A21FD7A32AAC4E4CB458CCB6C418BAA1882",
+          "bytes": 387096,
+          "lod": 0,
+          "triangles": 6580
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\primary_local_adapter-lod1-review.glb",
+          "sha256": "DB6833D3C00C23EBE05DB4B3BBA135A241928B4592DF6911CC00AA2A35AAEFA4",
+          "bytes": 185752,
+          "lod": 1,
+          "triangles": 3024
+        },
+        {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\primary_local_adapter-lod2-review.glb",
+          "sha256": "4846420FE7905E220B0627A8C390E6FB0663D9BA71A80CE508E3662D66692B15",
+          "bytes": 71700,
+          "lod": 2,
+          "triangles": 924
+        }
+      ],
+      "collision": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\primary_local_adapter-collision-review.glb",
+        "sha256": "A699EBD10A194D7213060EA11095D08C27B0468EB0A5BA61388CB11C5C05F446",
+        "bytes": 2252
+      },
+      "nav": {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\review-exports\\primary_local_adapter-nav-review.glb",
+        "sha256": "3618A01BCF056938D6C148BB2C61B10F854737A022F9AF58CB73E5107D623447",
+        "bytes": 2980
+      }
+    }
+  },
+  "evidence": {
+    "resolution": [
+      1024,
+      1024
+    ],
+    "individualViews": [
+      "top",
+      "iso",
+      "edge"
+    ],
+    "straightAdjacencyViews": [
+      "seam_top",
+      "seam_iso"
+    ],
+    "renders": [
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\corner_90-top-1024.png",
+        "sha256": "1FD6294FAC0AB2514F9044FB12EA46967CD497C69FD0BCA6C740A65C3FB2CF3C",
+        "bytes": 932291,
+        "piece": "corner_90",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\corner_90-iso-1024.png",
+        "sha256": "386351764F9F7AA672F747447B09A115C5F501FEE9A5AC8596240F4FEEF13077",
+        "bytes": 980160,
+        "piece": "corner_90",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\corner_90-edge-1024.png",
+        "sha256": "932118A8017326D3B8888C455DD167F1ABA9BB2ED35400738A1171BB4AE9C3F6",
+        "bytes": 961902,
+        "piece": "corner_90",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\corner_90-seam_top-1024.png",
+        "sha256": "0FFCDFD003508A8F678620C849F70B16D11E9F118546A1419664D3127569C4C7",
+        "bytes": 999539,
+        "piece": "corner_90",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\corner_90-seam_iso-1024.png",
+        "sha256": "3A547698ACE089DB3BC901797C69333B4D70EFACB40B73B1CE8D4151F5CE6C21",
+        "bytes": 1013113,
+        "piece": "corner_90",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\t_junction-top-1024.png",
+        "sha256": "6F407F0AE31A7E21AD08AE910A4BF1811F8DABF7766C8A3850A0970B2F1C324E",
+        "bytes": 923586,
+        "piece": "t_junction",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\t_junction-iso-1024.png",
+        "sha256": "564C69ED2DDAA914D33B3CB1F0BAB42B746092E8EAF87AFF0CA432F4DD8B61E8",
+        "bytes": 999803,
+        "piece": "t_junction",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\t_junction-edge-1024.png",
+        "sha256": "EFA94E96910A614ACA108964AD58C04EAD9ADDF2DA6F73698F0DED6EEC41C993",
+        "bytes": 959424,
+        "piece": "t_junction",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\t_junction-seam_top-1024.png",
+        "sha256": "08D64401BFFA6D80263CFD9373577AF45A1AB44E70813F8C1AE802D3FE5CA514",
+        "bytes": 994147,
+        "piece": "t_junction",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\t_junction-seam_iso-1024.png",
+        "sha256": "AA06D80224B1F402789915FB393A587A4EA8A0879E1D47C3EAA29AF5475D23C6",
+        "bytes": 1022492,
+        "piece": "t_junction",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\x_plaza-top-1024.png",
+        "sha256": "453C2106B9425277B16509A7725856E9688151E900672B08217926542C522960",
+        "bytes": 950875,
+        "piece": "x_plaza",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\x_plaza-iso-1024.png",
+        "sha256": "FD5F548F7552641630196CF28BF92573AEC96411056493262D46686E8D5FE1A6",
+        "bytes": 1015228,
+        "piece": "x_plaza",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\x_plaza-edge-1024.png",
+        "sha256": "3615F942A256E36291EC0F067C5DFA5EE491A48ED94EA9E374951DAEB5DC0793",
+        "bytes": 967506,
+        "piece": "x_plaza",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\x_plaza-seam_top-1024.png",
+        "sha256": "8B901DE49FE06CAFEBA3B45E9FC7CD4A2BA30B1A94B189060569C238DB296937",
+        "bytes": 1005921,
+        "piece": "x_plaza",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\x_plaza-seam_iso-1024.png",
+        "sha256": "CA5192A59E1EF320C4B55107DF854E958024F2775BFF668CD635C18E9349CFF0",
+        "bytes": 1030019,
+        "piece": "x_plaza",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\straight_endcap-top-1024.png",
+        "sha256": "838C3132B899DC78784A4BDE37A01F6018CEC5ADB801659A660902EAACBB1F6A",
+        "bytes": 892631,
+        "piece": "straight_endcap",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\straight_endcap-iso-1024.png",
+        "sha256": "3CAB3AC7DEA292F33888684BCE159F5AF8044D084AEDB9C5B5C684437F1C6DCF",
+        "bytes": 983959,
+        "piece": "straight_endcap",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\straight_endcap-edge-1024.png",
+        "sha256": "0EEC1D22EBD6C0ABA636ECA0EC2DBC9A8EF6D99D588A879F5EE641DB6B4B07F5",
+        "bytes": 954694,
+        "piece": "straight_endcap",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\straight_endcap-seam_top-1024.png",
+        "sha256": "EE29064038B09C026A86EE4041C5D7FE9C07F41C73A235F605CC6F479C4F79FA",
+        "bytes": 981142,
+        "piece": "straight_endcap",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\straight_endcap-seam_iso-1024.png",
+        "sha256": "5C4AA4ACE31BE5E06C13588C2DF160B4B0E2A793FAC4FE8BD8E911D3643ED494",
+        "bytes": 1012972,
+        "piece": "straight_endcap",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\primary_local_adapter-top-1024.png",
+        "sha256": "B6718DC1977E069E480A0263FCC81B99B7D4B2089CAC04ECEF64932E8390E6D9",
+        "bytes": 949623,
+        "piece": "primary_local_adapter",
+        "view": "top",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\primary_local_adapter-iso-1024.png",
+        "sha256": "53215628F20BF499FAF3E3C1AA5C0DA9B64BD56ED7EE5468270FEA88F3094DE6",
+        "bytes": 992091,
+        "piece": "primary_local_adapter",
+        "view": "iso",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\primary_local_adapter-edge-1024.png",
+        "sha256": "DDFB3F7ABE4730F7220AF403590F042ED04104188A3CD84EF8308DBCD1A2E5D2",
+        "bytes": 972161,
+        "piece": "primary_local_adapter",
+        "view": "edge",
+        "kind": "individual",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\primary_local_adapter-seam_top-1024.png",
+        "sha256": "8B0429AFB9C0C8EFC1B4F33619E525314019C64BFC0CCB739375C75C77A30822",
+        "bytes": 1008599,
+        "piece": "primary_local_adapter",
+        "view": "seam_top",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      },
+      {
+        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\evidence\\primary_local_adapter-seam_iso-1024.png",
+        "sha256": "4582D1C26219B5EA0909B385AECE90724D7F13F960C5A41A04A7D53E96932775",
+        "bytes": 1014572,
+        "piece": "primary_local_adapter",
+        "view": "seam_iso",
+        "kind": "straight_adjacency",
+        "width": 1024,
+        "height": 1024
+      }
+    ],
+    "reviewIntent": {
+      "top": "phone-command-like orthographic silhouette and traffic grammar",
+      "iso": "close structural, curb, height and material review",
+      "edge": "vertical profile and gate clearance review",
+      "seam": "edge-to-edge source-straight adjacency; no runtime claim"
+    }
+  },
+  "blend": {
+    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-junctions-v1\\mf-road-junctions-v1.blend",
+    "sha256": "F993ADC92AA2A96C696A78CAAE1C73D7A2EADDEE7610929CC75F381EC04620FA",
+    "bytes": 7219006
+  },
+  "knownLimitations": [
+    "source candidates are not runtime registered",
+    "procedural Blender noise/bump is not a baked deployable PBR texture set",
+    "no verified normal, AO, or authored roughness texture pack exists for the junction family",
+    "collision and navigation are authoring proxies, not runtime planner integration",
+    "no phone tactical/command-zoom or heavy-mech traversal evidence exists",
+    "human visual approval is still required for every individual and seam render"
+  ],
+  "requiredNextSteps": [
+    "Codex review of all real Blender renders",
+    "author/bake deployable PBR texture set",
+    "runtime planner socket and traversal integration",
+    "phone evidence with units crossing every seam and junction",
+    "explicit lifecycle promotion decision"
+  ]
+}

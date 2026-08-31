@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "assetId": "uga_anime_human_master_v1",
+  "displayName": "UGA Expedition Specialist Human Master V1",
+  "status": "reference_only_clean_rebuild_required",
+  "runtimeReady": false,
+  "styleProfileId": "anime-cell-v1",
+  "source": {
+    "tool": "Spline",
+    "publicSceneUrl": "https://my.spline.design/untitled-vii8cSRLttVJvb6YWxjZIvw3/",
+    "sourceFile": "uga-anime-human-master-v1-source.glb",
+    "sha256": "1336d76bf02348209b9d62c4c0e852114cae75b0e51b8b2f80b0e69e00726d76",
+    "bytes": 12739372,
+    "sourceRootId": "ee8bcfa5-230e-42d2-b076-ed17f988f682",
+    "sourceObjectId": "0d7eaa4c-4812-494c-9ea8-0909d4ab37a6",
+    "imageGenerationId": "bc293e81-3df9-4ede-9a6e-db2e4290078b",
+    "imageAssetId": "87331ac9-8391-49f4-a46d-7dff8f1c5e4c"
+  },
+  "authoringContract": {
+    "subjectCoverage": "full_body",
+    "pose": "strict_t_pose",
+    "handsVisible": true,
+    "feetVisible": true,
+    "helmetPolicy": "sealed_face_until_facial_animation_is_authored",
+    "helmeted": true,
+    "faceVisible": false,
+    "faceAnimation": {
+      "enabled": false,
+      "facialRig": false,
+      "expressionSet": false,
+      "lipSync": false
+    },
+    "visualReview": "passed_full_body_framing_but_failed_surface_and_topology_quality",
+    "productionDecision": "reject_direct_runtime_or_automatic_lod_use",
+    "replacementConcept": "../../../concepts/characters/uga-anime-human-master-v1/uga-expedition-specialist-turnaround-v1.png",
+    "replacementConceptSha256": "ab31ed58d2132f42236840a5a33dff6a45b8c5f6841e523e6f304508b9edb75f",
+    "rigRestPoseReview": "pending_rig"
+  },
+  "sourceGeometry": {
+    "vertices": 252235,
+    "triangles": 375004,
+    "materials": 1,
+    "embeddedImages": 1,
+    "embeddedTextureBytes": 165521,
+    "bounds": {
+      "min": [-93.18719482421875, -25.386146545410156, -102.86946868896484],
+      "max": [93.18719482421875, 25.386150360107422, 102.86946868896484]
+    }
+  },
+  "normalization": {
+    "sourceUp": "Y",
+    "sourceForward": "-Z",
+    "runtimeUp": "Z",
+    "runtimeForward": "+Y",
+    "heightMeters": 1.78,
+    "origin": "between_feet_on_floor",
+    "applyTransforms": true
+  },
+  "runtimeContract": {
+    "rootName": "CHARACTER_uga_anime_human_master_v1",
+    "armatureContract": "MF_HUMANOID_V1",
+    "maximumDeformBones": 64,
+    "maximumInfluencesPerVertex": 4,
+    "maximumMaterials": 4,
+    "runtimeTextureSize": 1024,
+    "lodTriangles": {
+      "LOD0": [25000, 40000],
+      "LOD1": [8000, 12000],
+      "LOD2": [2500, 3000]
+    }
+  },
+  "requiredWork": [
+    "rebuild_clean_geometry_from_approved_turnaround_instead_of_decimating_source",
+    "normalize_to_1_78_meters_z_up",
+    "retopologize_deformation_ready_lod0",
+    "author_lod1_and_lod2",
+    "rig_shared_mf_humanoid_v1",
+    "bake_runtime_pbr_and_cel_maps",
+    "author_and_verify_animation_clips",
+    "capture_mobile_and_cinematic_visual_evidence"
+  ],
+  "portraitPersonnelId": null
+}

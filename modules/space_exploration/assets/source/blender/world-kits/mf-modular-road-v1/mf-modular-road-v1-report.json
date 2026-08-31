@@ -1,0 +1,796 @@
+{
+  "format": "MassfrontModularRoadKitV1",
+  "version": 1,
+  "units": "meters",
+  "deterministic": true,
+  "evidenceRenderer": "BLENDER_WORKBENCH",
+  "conceptReference": "modules/space_exploration/assets/source/spline/ground-sites/aelos_caldris/concepts/caldris-modular-kit-concept-v1.png",
+  "materials": [
+    "asphalt",
+    "curb",
+    "metal",
+    "paving",
+    "service",
+    "lane",
+    "glazing",
+    "emissive",
+    "hazard"
+  ],
+  "conceptDeltaChecklist": [
+    {
+      "criterion": "20 m heavy-mech deck reads as a divided multi-lane route",
+      "state": "IMPLEMENTED_PENDING_VISUAL_REVIEW",
+      "source": "lane seams, center dashes, transverse panel seams and socket metadata"
+    },
+    {
+      "criterion": "Road edge has raised, layered construction instead of one flat slab",
+      "state": "IMPLEMENTED_PENDING_VISUAL_REVIEW",
+      "source": "inner curb, raised sidewalk and lower structural frame are separate non-coplanar layers"
+    },
+    {
+      "criterion": "Structural edging is chamfered rather than primitive boxes",
+      "state": "IMPLEMENTED_PENDING_VISUAL_REVIEW",
+      "source": "applied deterministic LOD-specific bevels on frames, sidewalks, barriers and pylons"
+    },
+    {
+      "criterion": "Cyan service lighting is inset into an authored channel",
+      "state": "IMPLEMENTED_PENDING_VISUAL_REVIEW",
+      "source": "dark service channel surrounds a narrower cyan strip above the sidewalk layer"
+    },
+    {
+      "criterion": "Junctions use crosswalks and plaza paving",
+      "state": "IMPLEMENTED_PENDING_VISUAL_REVIEW",
+      "source": "T/X center tile fields plus branch-specific crosswalk bars"
+    },
+    {
+      "criterion": "Road has service/drainage hardware and edge protection",
+      "state": "IMPLEMENTED_PENDING_VISUAL_REVIEW",
+      "source": "socket-approach drain panels, grate slots, edge barriers and service bollards"
+    },
+    {
+      "criterion": "Gate has substantial pylons and an armored crossbeam",
+      "state": "IMPLEMENTED_PENDING_VISUAL_REVIEW",
+      "source": "tiered plinth/body/shoulder pylons, layered beam, glazing, emissive and hazard panels"
+    },
+    {
+      "criterion": "Final PBR wear, decals and runtime scale are approved",
+      "state": "NOT_YET_VERIFIED",
+      "source": "requires Blender MCP renders followed by in-game phone-first evidence"
+    }
+  ],
+  "visualAcceptance": "PENDING_BLENDER_MCP_REGENERATION_AND_REVIEW",
+  "modules": [
+    {
+      "id": "straight",
+      "gridM": 32.0,
+      "primaryWidthM": 20.0,
+      "connections": [
+        "N",
+        "S"
+      ],
+      "sockets": [
+        {
+          "name": "SOCKET_STRAIGHT_N",
+          "direction": "N",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_STRAIGHT_S",
+          "direction": "S",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 4152,
+          "rejectedGreyboxTriangles": 340,
+          "triangleDelta": 3380
+        },
+        {
+          "lod": 1,
+          "triangles": 1156,
+          "rejectedGreyboxTriangles": 172,
+          "triangleDelta": 984
+        },
+        {
+          "lod": 2,
+          "triangles": 820,
+          "rejectedGreyboxTriangles": 100,
+          "triangleDelta": 720
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard_emissive": 48,
+        "bollard_glazing": 176,
+        "chamfered_edge_frame": 1176,
+        "cyan_service_light": 144,
+        "drainage_service_panels": 36,
+        "drainage_slots": 96,
+        "inset_service_channel": 144,
+        "lane_and_crosswalk_markings": 144,
+        "lane_seams": 216,
+        "modular_edge_barrier": 648,
+        "raised_inner_curb": 1176,
+        "raised_sidewalk": 1176,
+        "road_surface": 84,
+        "service_bollard": 432
+      },
+      "materialRoles": [
+        "asphalt",
+        "curb",
+        "emissive",
+        "glazing",
+        "hazard",
+        "lane",
+        "metal",
+        "paving",
+        "service"
+      ],
+      "collisionTriangles": 28,
+      "gateClearanceM": null,
+      "tris": {
+        "lod0": 4152,
+        "lod1": 1156,
+        "lod2": 820
+      },
+      "polys": {
+        "lod0": 1919,
+        "lod1": 650,
+        "lod2": 482
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "corner",
+      "gridM": 32.0,
+      "primaryWidthM": 20.0,
+      "connections": [
+        "N",
+        "E"
+      ],
+      "sockets": [
+        {
+          "name": "SOCKET_CORNER_N",
+          "direction": "N",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_CORNER_E",
+          "direction": "E",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 4444,
+          "rejectedGreyboxTriangles": 340,
+          "triangleDelta": 3320
+        },
+        {
+          "lod": 1,
+          "triangles": 1072,
+          "rejectedGreyboxTriangles": 172,
+          "triangleDelta": 900
+        },
+        {
+          "lod": 2,
+          "triangles": 820,
+          "rejectedGreyboxTriangles": 100,
+          "triangleDelta": 720
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard_emissive": 48,
+        "bollard_glazing": 176,
+        "chamfered_edge_frame": 1176,
+        "cyan_service_light": 144,
+        "drainage_service_panels": 36,
+        "drainage_slots": 96,
+        "inset_service_channel": 144,
+        "lane_and_crosswalk_markings": 48,
+        "lane_seams": 96,
+        "modular_edge_barrier": 648,
+        "plaza_paving": 72,
+        "raised_inner_curb": 1176,
+        "raised_sidewalk": 1176,
+        "road_surface": 84,
+        "service_bollard": 432
+      },
+      "materialRoles": [
+        "asphalt",
+        "curb",
+        "emissive",
+        "glazing",
+        "hazard",
+        "lane",
+        "metal",
+        "paving",
+        "service"
+      ],
+      "collisionTriangles": 28,
+      "gateClearanceM": null,
+      "tris": {
+        "lod0": 4444,
+        "lod1": 1072,
+        "lod2": 820
+      },
+      "polys": {
+        "lod0": 1936,
+        "lod1": 608,
+        "lod2": 482
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "t_junction",
+      "gridM": 32.0,
+      "primaryWidthM": 20.0,
+      "connections": [
+        "N",
+        "E",
+        "W"
+      ],
+      "sockets": [
+        {
+          "name": "SOCKET_T_JUNCTION_N",
+          "direction": "N",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_T_JUNCTION_E",
+          "direction": "E",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_T_JUNCTION_W",
+          "direction": "W",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5844,
+          "rejectedGreyboxTriangles": 384,
+          "triangleDelta": 4148
+        },
+        {
+          "lod": 1,
+          "triangles": 1572,
+          "rejectedGreyboxTriangles": 204,
+          "triangleDelta": 1368
+        },
+        {
+          "lod": 2,
+          "triangles": 960,
+          "rejectedGreyboxTriangles": 120,
+          "triangleDelta": 840
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard_emissive": 48,
+        "bollard_glazing": 176,
+        "chamfered_edge_frame": 1372,
+        "cyan_service_light": 168,
+        "drainage_service_panels": 60,
+        "drainage_slots": 144,
+        "inset_service_channel": 168,
+        "lane_and_crosswalk_markings": 576,
+        "lane_seams": 144,
+        "modular_edge_barrier": 756,
+        "plaza_paving": 168,
+        "raised_inner_curb": 1372,
+        "raised_sidewalk": 1372,
+        "road_surface": 108,
+        "service_bollard": 432
+      },
+      "materialRoles": [
+        "asphalt",
+        "curb",
+        "emissive",
+        "glazing",
+        "hazard",
+        "lane",
+        "metal",
+        "paving",
+        "service"
+      ],
+      "collisionTriangles": 36,
+      "gateClearanceM": null,
+      "tris": {
+        "lod0": 5844,
+        "lod1": 1572,
+        "lod2": 960
+      },
+      "polys": {
+        "lod0": 2433,
+        "lod1": 870,
+        "lod2": 564
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "x_plaza",
+      "gridM": 32.0,
+      "primaryWidthM": 20.0,
+      "connections": [
+        "N",
+        "E",
+        "S",
+        "W"
+      ],
+      "sockets": [
+        {
+          "name": "SOCKET_X_PLAZA_N",
+          "direction": "N",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_E",
+          "direction": "E",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_S",
+          "direction": "S",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_X_PLAZA_W",
+          "direction": "W",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 7528,
+          "rejectedGreyboxTriangles": 428,
+          "triangleDelta": 4748
+        },
+        {
+          "lod": 1,
+          "triangles": 1856,
+          "rejectedGreyboxTriangles": 236,
+          "triangleDelta": 1620
+        },
+        {
+          "lod": 2,
+          "triangles": 1100,
+          "rejectedGreyboxTriangles": 140,
+          "triangleDelta": 960
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard_emissive": 48,
+        "bollard_glazing": 176,
+        "chamfered_edge_frame": 1568,
+        "cyan_service_light": 192,
+        "drainage_service_panels": 72,
+        "drainage_slots": 192,
+        "inset_service_channel": 192,
+        "lane_and_crosswalk_markings": 768,
+        "lane_seams": 192,
+        "modular_edge_barrier": 864,
+        "plaza_paving": 168,
+        "raised_inner_curb": 1568,
+        "raised_sidewalk": 1568,
+        "road_surface": 132,
+        "service_bollard": 432
+      },
+      "materialRoles": [
+        "asphalt",
+        "curb",
+        "emissive",
+        "glazing",
+        "hazard",
+        "lane",
+        "metal",
+        "paving",
+        "service"
+      ],
+      "collisionTriangles": 44,
+      "gateClearanceM": null,
+      "tris": {
+        "lod0": 7528,
+        "lod1": 1856,
+        "lod2": 1100
+      },
+      "polys": {
+        "lod0": 2888,
+        "lod1": 1024,
+        "lod2": 646
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "endcap",
+      "gridM": 32.0,
+      "primaryWidthM": 20.0,
+      "connections": [
+        "N"
+      ],
+      "sockets": [
+        {
+          "name": "SOCKET_ENDCAP_N",
+          "direction": "N",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3504,
+          "rejectedGreyboxTriangles": 296,
+          "triangleDelta": 2900
+        },
+        {
+          "lod": 1,
+          "triangles": 944,
+          "rejectedGreyboxTriangles": 140,
+          "triangleDelta": 804
+        },
+        {
+          "lod": 2,
+          "triangles": 680,
+          "rejectedGreyboxTriangles": 80,
+          "triangleDelta": 600
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard_emissive": 48,
+        "bollard_glazing": 176,
+        "chamfered_edge_frame": 980,
+        "cyan_service_light": 120,
+        "drainage_service_panels": 24,
+        "drainage_slots": 48,
+        "inset_service_channel": 120,
+        "lane_and_crosswalk_markings": 96,
+        "lane_seams": 48,
+        "modular_edge_barrier": 540,
+        "plaza_paving": 168,
+        "raised_inner_curb": 980,
+        "raised_sidewalk": 980,
+        "road_surface": 60,
+        "service_bollard": 432
+      },
+      "materialRoles": [
+        "asphalt",
+        "curb",
+        "emissive",
+        "glazing",
+        "hazard",
+        "lane",
+        "metal",
+        "paving",
+        "service"
+      ],
+      "collisionTriangles": 20,
+      "gateClearanceM": null,
+      "tris": {
+        "lod0": 3504,
+        "lod1": 944,
+        "lod2": 680
+      },
+      "polys": {
+        "lod0": 1644,
+        "lod1": 532,
+        "lod2": 400
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "primary_local_adapter",
+      "gridM": 32.0,
+      "primaryWidthM": 20.0,
+      "connections": [
+        "N",
+        "S"
+      ],
+      "sockets": [
+        {
+          "name": "SOCKET_PRIMARY_LOCAL_ADAPTER_N",
+          "direction": "N",
+          "type": "local_road",
+          "widthM": 12.0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_PRIMARY_LOCAL_ADAPTER_S",
+          "direction": "S",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 4492,
+          "rejectedGreyboxTriangles": 340,
+          "triangleDelta": 3368
+        },
+        {
+          "lod": 1,
+          "triangles": 1144,
+          "rejectedGreyboxTriangles": 172,
+          "triangleDelta": 972
+        },
+        {
+          "lod": 2,
+          "triangles": 820,
+          "rejectedGreyboxTriangles": 100,
+          "triangleDelta": 720
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard_emissive": 48,
+        "bollard_glazing": 176,
+        "chamfered_edge_frame": 1176,
+        "cyan_service_light": 144,
+        "drainage_service_panels": 36,
+        "drainage_slots": 96,
+        "inset_service_channel": 144,
+        "lane_and_crosswalk_markings": 144,
+        "lane_seams": 192,
+        "modular_edge_barrier": 648,
+        "raised_inner_curb": 1176,
+        "raised_sidewalk": 1176,
+        "road_surface": 84,
+        "service_bollard": 432
+      },
+      "materialRoles": [
+        "asphalt",
+        "curb",
+        "emissive",
+        "glazing",
+        "hazard",
+        "lane",
+        "metal",
+        "paving",
+        "service"
+      ],
+      "collisionTriangles": 28,
+      "gateClearanceM": null,
+      "tris": {
+        "lod0": 4492,
+        "lod1": 1144,
+        "lod2": 820
+      },
+      "polys": {
+        "lod0": 2063,
+        "lod1": 640,
+        "lod2": 478
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "gate",
+      "gridM": 32.0,
+      "primaryWidthM": 20.0,
+      "connections": [
+        "N",
+        "S"
+      ],
+      "sockets": [
+        {
+          "name": "SOCKET_GATE_N",
+          "direction": "N",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "SOCKET_GATE_S",
+          "direction": "S",
+          "type": "primary_road",
+          "widthM": 20.0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5448,
+          "rejectedGreyboxTriangles": 412,
+          "triangleDelta": 4484
+        },
+        {
+          "lod": 1,
+          "triangles": 1692,
+          "rejectedGreyboxTriangles": 244,
+          "triangleDelta": 1448
+        },
+        {
+          "lod": 2,
+          "triangles": 952,
+          "rejectedGreyboxTriangles": 136,
+          "triangleDelta": 816
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bollard_emissive": 48,
+        "bollard_glazing": 176,
+        "chamfered_edge_frame": 1176,
+        "cyan_service_light": 144,
+        "drainage_service_panels": 36,
+        "drainage_slots": 96,
+        "gate_emissive_channels": 72,
+        "gate_hazard_panels": 48,
+        "gate_pylons_crossbeam": 1652,
+        "gate_recessed_glazing": 72,
+        "inset_service_channel": 144,
+        "lane_and_crosswalk_markings": 144,
+        "lane_seams": 216,
+        "modular_edge_barrier": 648,
+        "raised_inner_curb": 1176,
+        "raised_sidewalk": 1176,
+        "road_surface": 84,
+        "service_bollard": 432
+      },
+      "materialRoles": [
+        "asphalt",
+        "curb",
+        "emissive",
+        "glazing",
+        "hazard",
+        "lane",
+        "metal",
+        "paving",
+        "service"
+      ],
+      "collisionTriangles": 28,
+      "gateClearanceM": {
+        "width": 20.0,
+        "height": 10.0
+      },
+      "tris": {
+        "lod0": 5448,
+        "lod1": 1692,
+        "lod2": 952
+      },
+      "polys": {
+        "lod0": 2464,
+        "lod1": 958,
+        "lod2": 560
+      },
+      "objectsPerModule": 3
+    }
+  ],
+  "exports": [
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/mf-road-straight.glb",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/mf-road-corner.glb",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/mf-road-t_junction.glb",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/mf-road-x_plaza.glb",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/mf-road-endcap.glb",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/mf-road-primary_local_adapter.glb",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/mf-road-gate.glb"
+  ],
+  "evidenceRenders": [
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-modular-road-v1-overview.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-straight-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-straight-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-straight-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-straight-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-corner-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-corner-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-corner-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-corner-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-t_junction-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-t_junction-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-t_junction-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-t_junction-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-x_plaza-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-x_plaza-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-x_plaza-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-x_plaza-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-endcap-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-endcap-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-endcap-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-endcap-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-primary_local_adapter-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-primary_local_adapter-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-primary_local_adapter-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-primary_local_adapter-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-gate-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-gate-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-gate-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/evidence/mf-road-gate-entry.png"
+  ],
+  "blend": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/mf-modular-road-v1.blend",
+  "consolidated": {
+    "tool": "tools/blender/consolidate-mf-kits.py",
+    "oneObjectPerModulePerLod": true,
+    "modulesRefreshed": 7
+  }
+}

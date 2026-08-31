@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "helmeted_human_faction_personnel_v1",
+  "status": "approved_for_clean_modeling_pass",
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "runtimeUse": {
+    "pixelsUsedAsTexture": false,
+    "sourceOnly": true,
+    "requiresCleanAuthoredTopology": true
+  },
+  "concepts": [
+    {
+      "id": "helmeted_human_faction_personnel_model_sheet_v1",
+      "file": "helmeted-human-faction-personnel-model-sheet-v1.png",
+      "sha256": "20cf2fff8968b569a5d60d76c61371d867b4dea99d600058a811bcd6b5683149",
+      "bytes": 2377980,
+      "resolution": [1536, 1024],
+      "generationEvidence": {
+        "system": "imagegen",
+        "executionId": "exec-811e8895-9687-4001-8d96-3aedce9d421a"
+      },
+      "biomeOrBiodome": [
+        "uga_ship_multideck",
+        "planetary_ground_operations"
+      ],
+      "faction": ["uga", "nova", "dominion", "syndicate"],
+      "intention": [
+        "commander_cinematic",
+        "ship_crew_occupancy",
+        "portrait_icon",
+        "survey_specialist",
+        "ground_operation_personnel",
+        "lod_silhouette"
+      ],
+      "camera": ["front_orthographic", "left_orthographic", "back_orthographic"],
+      "scale": ["human_full_body"],
+      "modelingTargets": [
+        "strict_neutral_t_pose",
+        "sealed_helmet_and_opaque_visor",
+        "clean_symmetrical_base_mesh",
+        "separate_rigid_helmet_and_backpack",
+        "animation_ready_deformation_zones",
+        "low_triangle_mobile_topology",
+        "lod0_lod1_lod2_silhouettes",
+        "faction_specific_material_slots"
+      ]
+    }
+  ],
+  "faceAnimationPolicy": {
+    "enabled": false,
+    "sealedHelmetRequired": true,
+    "exposedFaceAllowed": false,
+    "futureVisibleFaceRequires": [
+      "facial_rig",
+      "expression_shapes",
+      "lip_sync",
+      "close_up_qa"
+    ]
+  },
+  "constraints": [
+    "concept_pixels_must_not_ship_as_runtime_textures",
+    "no_automatic_decimation_of_rejected_source_meshes",
+    "no_exposed_faces_without_facial_animation_plan",
+    "no_weapon_bound_to_base_pose",
+    "full_body_must_not_be_cropped"
+  ]
+}

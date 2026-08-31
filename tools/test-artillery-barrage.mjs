@@ -9,7 +9,8 @@ const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const url=process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8100/';
 const chrome='C:/Program Files/Google/Chrome/Application/chrome.exe';
 const outDir=join(root,'releases','artillery-barrage');
-const shot=join(outDir,'artillery-barrage-flight-mobile.png');
+const shellShot=join(outDir,'artillery-shell-trail-mobile.png');
+const energyShot=join(outDir,'artillery-energy-trail-mobile.png');
 const assert=(ok,msg)=>{if(!ok)throw new Error(msg);};
 await mkdir(outDir,{recursive:true});
 
@@ -18,13 +19,22 @@ const browser=await launchPwBrowser({headless:true,executablePath:chrome,
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{try{
+    localStorage.setItem('mf_offline','1');
+    localStorage.setItem('mf_auth_gate_v1','1');
+    localStorage.setItem('mf_ap_gate_closed','1');
+    localStorage.setItem('mf_ap_dismissed','1');
+    localStorage.setItem('mf_prealpha_cinematic_v2','test-seen');
+  }catch{}});
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
   await page.waitForFunction(()=>typeof beginArtilleryBarrage==='function'&&typeof artBarrageTick==='function'&&
     typeof artBarragePattern==='function'&&typeof fireProj==='function'&&typeof renderMinimap==='function'&&
-    typeof stopAttract==='function'&&typeof artShellTurbulence==='function'&&typeof audWorldSpatial==='function',null,{timeout:60000});
+    typeof stopAttract==='function'&&typeof artShellTurbulence==='function'&&typeof audWorldSpatial==='function'&&
+    typeof FX==='object'&&FX.ring&&typeof FX.ring.add==='function'&&FX.line&&typeof FX.line.add==='function',null,{timeout:60000});
 
   const result=await page.evaluate(()=>{
     stopAttract();running=false;paused=true;demoMode=false;fogOn=false;
+    playerFaction='legion';
     const clear=()=>{
       for(let i=0;i<unitHigh;i++)ualive[i]=0;
       unitHigh=0;freeList.length=0;teamCount[0]=teamCount[1]=teamCount[2]=0;usel.fill(0);
@@ -130,7 +140,7 @@ try{
     for(const q of [[3,-55],[16,55]]){const i=spawnUnit(q[0],0,cx+q[1],cy+75);usel[i]=1;utgt[i]=-1;ucool[i]=999;}
     const tx=cx,ty=cy-260;beginArtilleryBarrage(tx,ty);artBarrageTick(1.45);
     stopAttract();running=true;paused=true;demoMode=true;matchLive=false;
-    document.querySelectorAll('.overlay,#dispatch,#gameOver,#levelUp,#bldMenu,#bldMenu2,#buildMenu,#prodMenu').forEach(e=>e.style.display='none');
+    document.querySelectorAll('.overlay,#dispatch,#gameOver,#levelUp,#bldMenu,#bldMenu2,#buildMenu,#prodMenu,#authGate').forEach(e=>e.style.display='none');
     document.body.classList.remove('menuMode');showHudDock(true,'powers');
     const toastEl=document.getElementById('toast');if(toastEl)toastEl.style.opacity=0;
     cam.x=cx;cam.y=cy-155;camFollow=-1;camYaw=yawTarget=Math.PI*.5;camPitch=pitchTarget=1.43;
@@ -149,6 +159,8 @@ try{
   assert(visual.probe.rings>=7&&visual.probe.lines>=2,'3D fire-plan overlay not submitted: '+JSON.stringify(visual));
   assert(visual.button.w>=48&&visual.button.h>=48,'barrage touch target below 48px: '+JSON.stringify(visual.button));
   assert(visual.charge&&visual.progress>.45&&visual.progress<.6&&/energy/.test(visual.label),'charge HUD/description missing');
+  await page.evaluate(()=>mfOrdInit());
+  await page.waitForFunction(()=>window.MF_ORD_TRAIL_TELEM&&MF_ORD_TRAIL_TELEM.driverReady,{timeout:15000});
 
   // The delivered image must show the actual descending round and its wake,
   // not the already-covered targeting/charge preview.
@@ -180,7 +192,31 @@ try{
     flight.smoke>=10&&flight.maxLift-flight.minLift>80&&!flight.charge,
     'capture is not a descending live shell with a tall wake: '+JSON.stringify(flight));
   await page.waitForTimeout(500);
-  await page.screenshot({path:shot,fullPage:false});
+  const shellTelemetry=await page.evaluate(()=>({...MF_ORD_TRAIL_TELEM}));
+  assert(shellTelemetry.shell>=1&&shellTelemetry.shaderReady&&shellTelemetry.driverReady&&shellTelemetry.drawCalls===2&&shellTelemetry.vertices>=36&&
+    shellTelemetry.smokeRibbons>=1&&shellTelemetry.smokeVertices>=30,
+    'physical-shell trajectory mesh was not drawn: '+JSON.stringify(shellTelemetry));
+  await page.screenshot({path:shellShot,fullPage:false});
+  const energyFlight=await page.evaluate(()=>{
+    pHigh=0;pFree.length=0;palive.fill(0);artShellSmoke.length=0;flife.fill(0);fCount=0;fHead=0;
+    playerFaction='nova';
+    const cx=MAP*.5,cy=MAP*.5;
+    const shell=fireProj(2,0,cx,cy+310,cx,cy-310,150,95,48,-1);
+    pBarrage[shell]=1;pArc[shell]=700;pwk[shell]='i';pArtTrail[shell]=MF_ORD_TRAIL_ENERGY;
+    while(palive[shell]&&pt[shell]<.86)projTick(.045);
+    document.querySelectorAll('.notice,.toast,#toast').forEach(e=>{e.style.display='none';e.style.opacity=0;});
+    cam.x=px[shell];cam.y=py[shell];camFollow=-1;camYaw=yawTarget=0;camPitch=pitchTarget=1.18;
+    orthoSpan=distTarget=700;clampCam();camUpdateMatrices();render(0);
+    return {shell,pt:pt[shell],arc:pArc[shell],smoke:artShellSmoke.length,style:pArtTrail[shell],telemetry:{...MF_ORD_TRAIL_TELEM}};
+  });
+  await page.waitForTimeout(300);
+  const energyTelemetry=await page.evaluate(()=>({...MF_ORD_TRAIL_TELEM}));
+  assert(energyFlight.style===2&&energyFlight.smoke===0&&energyTelemetry.energy>=1&&energyTelemetry.segments>=8&&
+    energyTelemetry.projectedPxMax>=100&&energyTelemetry.shaderReady&&energyTelemetry.driverReady&&energyTelemetry.drawCalls===1&&
+    energyTelemetry.instances===1&&energyTelemetry.vertices>=48&&energyTelemetry.vertices<=144,
+    'energy artillery ribbon contract failed: '+JSON.stringify({energyFlight,energyTelemetry}));
+  await page.screenshot({path:energyShot,fullPage:false});
   assert(errors.length===0,'page errors:\n'+errors.join('\n'));
-  console.log(JSON.stringify({ok:true,...result,visual,flight,screenshot:shot},null,2));
+  console.log(JSON.stringify({ok:true,...result,visual,flight,shellTelemetry,energyFlight,energyTelemetry,
+    screenshots:{shell:shellShot,energy:energyShot}},null,2));
 }finally{await browser.close();}

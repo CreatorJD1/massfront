@@ -1,0 +1,561 @@
+{
+  "$schema": "./modular-city-colony-kit-contract.v1.schema.json",
+  "schemaVersion": 1,
+  "contractId": "massfront-modular-city-colony-kit-v1",
+  "status": "AUTHORING_CONTRACT",
+  "scope": {
+    "assetFamilies": [
+      "city",
+      "colony",
+      "outpost",
+      "military_base",
+      "refinery",
+      "spaceport",
+      "ruin",
+      "infested_settlement"
+    ],
+    "consumers": [
+      "base-map",
+      "exploration-ground-site",
+      "map-editor",
+      "concept-library"
+    ],
+    "runtimeAuthority": false,
+    "statement": "This file is an authoring and validation contract. It does not make a source mesh runtime-ready."
+  },
+  "coordinateSystem": {
+    "units": "meters",
+    "upAxis": "+Y",
+    "northAxis": "+Z",
+    "eastAxis": "+X",
+    "socketForward": "outward-from-module",
+    "originRule": "Ground modules use the footprint center at Y=0. Building roots use the podium center at Y=0. Portal positions use the bottom-center of the clear opening.",
+    "importRule": "Source tools may use another basis, but the normalized candidate must publish this basis and a deterministic import transform."
+  },
+  "gridContract": {
+    "detailSnapMeters": 4,
+    "macroGridMeters": 16,
+    "districtBlockMeters": 64,
+    "verticalStepMeters": 2,
+    "allowedYawDegrees": [0, 90, 180, 270],
+    "runtimeScale": 1,
+    "positionToleranceMeters": 0.005,
+    "yawToleranceDegrees": 0.05,
+    "socketGapToleranceMeters": 0.01,
+    "rules": [
+      "Module footprints must be integer multiples of 16 m except declared 4 m detail adapters.",
+      "Socket centers must lie on the owning footprint boundary and on the 4 m detail grid.",
+      "Runtime placement may translate on the 16 m grid and rotate by allowed yaw only; no arbitrary or non-uniform scaling.",
+      "Road and corridor surfaces must meet without a vertical step larger than 0.02 m."
+    ]
+  },
+  "socketProfiles": [
+    {
+      "profileId": "road_primary_18",
+      "kind": "road",
+      "clearWidthMeters": 18,
+      "clearHeightMeters": 0,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["road_primary_18"],
+      "navClasses": ["infantry", "light_vehicle", "heavy_vehicle", "superheavy"],
+      "edgeTreatment": "0.24 m curbs terminate 1 m before the socket plane"
+    },
+    {
+      "profileId": "road_local_12",
+      "kind": "road",
+      "clearWidthMeters": 12,
+      "clearHeightMeters": 0,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["road_local_12", "road_primary_18_to_local_12"],
+      "navClasses": ["infantry", "light_vehicle", "heavy_vehicle"],
+      "edgeTreatment": "0.20 m curbs terminate 0.75 m before the socket plane"
+    },
+    {
+      "profileId": "road_primary_18_to_local_12",
+      "kind": "road_adapter",
+      "clearWidthMeters": 12,
+      "clearHeightMeters": 0,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["road_primary_18", "road_local_12"],
+      "navClasses": ["infantry", "light_vehicle", "heavy_vehicle"],
+      "edgeTreatment": "Authored 8 m minimum taper; never collapse the width at the socket plane"
+    },
+    {
+      "profileId": "lane_service_8",
+      "kind": "road",
+      "clearWidthMeters": 8,
+      "clearHeightMeters": 0,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["lane_service_8"],
+      "navClasses": ["infantry", "light_vehicle"],
+      "edgeTreatment": "Flush service edge; bollards stay outside the 8 m clearance"
+    },
+    {
+      "profileId": "concourse_ped_6",
+      "kind": "walkway",
+      "clearWidthMeters": 6,
+      "clearHeightMeters": 3.5,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["concourse_ped_6"],
+      "navClasses": ["infantry"],
+      "edgeTreatment": "Guard rails and glazing terminate outside the 6 m opening"
+    },
+    {
+      "profileId": "corridor_pressure_8x6",
+      "kind": "corridor_portal",
+      "clearWidthMeters": 8,
+      "clearHeightMeters": 6,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["corridor_pressure_8x6"],
+      "navClasses": ["infantry", "light_vehicle"],
+      "edgeTreatment": "Outer frame is 10 m wide by 7 m high; seals may not intrude into clearance"
+    },
+    {
+      "profileId": "corridor_cargo_12x8",
+      "kind": "corridor_portal",
+      "clearWidthMeters": 12,
+      "clearHeightMeters": 8,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["corridor_cargo_12x8"],
+      "navClasses": ["infantry", "light_vehicle", "heavy_vehicle"],
+      "edgeTreatment": "Outer frame is 14 m wide by 9.5 m high; door leaves park outside clearance"
+    },
+    {
+      "profileId": "utility_service_4x4",
+      "kind": "service_portal",
+      "clearWidthMeters": 4,
+      "clearHeightMeters": 4,
+      "surfaceElevationMeters": 0,
+      "mateWith": ["utility_service_4x4"],
+      "navClasses": ["infantry"],
+      "edgeTreatment": "Cable and pipe bundles remain outside the 4 m by 4 m maintenance opening"
+    }
+  ],
+  "moduleArchetypes": [
+    {
+      "moduleType": "road_primary_straight_32",
+      "footprintMeters": [32, 32],
+      "sockets": [
+        {"socketId": "road_n", "profileId": "road_primary_18", "localPositionMeters": [0, 0, 16], "outward": [0, 0, 1]},
+        {"socketId": "road_s", "profileId": "road_primary_18", "localPositionMeters": [0, 0, -16], "outward": [0, 0, -1]}
+      ]
+    },
+    {
+      "moduleType": "road_primary_corner_32",
+      "footprintMeters": [32, 32],
+      "sockets": [
+        {"socketId": "road_n", "profileId": "road_primary_18", "localPositionMeters": [0, 0, 16], "outward": [0, 0, 1]},
+        {"socketId": "road_e", "profileId": "road_primary_18", "localPositionMeters": [16, 0, 0], "outward": [1, 0, 0]}
+      ]
+    },
+    {
+      "moduleType": "road_primary_t_32",
+      "footprintMeters": [32, 32],
+      "sockets": [
+        {"socketId": "road_n", "profileId": "road_primary_18", "localPositionMeters": [0, 0, 16], "outward": [0, 0, 1]},
+        {"socketId": "road_e", "profileId": "road_primary_18", "localPositionMeters": [16, 0, 0], "outward": [1, 0, 0]},
+        {"socketId": "road_w", "profileId": "road_primary_18", "localPositionMeters": [-16, 0, 0], "outward": [-1, 0, 0]}
+      ]
+    },
+    {
+      "moduleType": "road_primary_x_plaza_48",
+      "footprintMeters": [48, 48],
+      "sockets": [
+        {"socketId": "road_n", "profileId": "road_primary_18", "localPositionMeters": [0, 0, 24], "outward": [0, 0, 1]},
+        {"socketId": "road_e", "profileId": "road_primary_18", "localPositionMeters": [24, 0, 0], "outward": [1, 0, 0]},
+        {"socketId": "road_s", "profileId": "road_primary_18", "localPositionMeters": [0, 0, -24], "outward": [0, 0, -1]},
+        {"socketId": "road_w", "profileId": "road_primary_18", "localPositionMeters": [-24, 0, 0], "outward": [-1, 0, 0]}
+      ]
+    },
+    {
+      "moduleType": "road_primary_endcap_32x16",
+      "footprintMeters": [32, 16],
+      "sockets": [
+        {"socketId": "road_s", "profileId": "road_primary_18", "localPositionMeters": [0, 0, -8], "outward": [0, 0, -1]}
+      ]
+    },
+    {
+      "moduleType": "road_local_straight_16",
+      "footprintMeters": [16, 16],
+      "sockets": [
+        {"socketId": "road_n", "profileId": "road_local_12", "localPositionMeters": [0, 0, 8], "outward": [0, 0, 1]},
+        {"socketId": "road_s", "profileId": "road_local_12", "localPositionMeters": [0, 0, -8], "outward": [0, 0, -1]}
+      ]
+    },
+    {
+      "moduleType": "lane_service_straight_16",
+      "footprintMeters": [16, 16],
+      "sockets": [
+        {"socketId": "lane_n", "profileId": "lane_service_8", "localPositionMeters": [0, 0, 8], "outward": [0, 0, 1]},
+        {"socketId": "lane_s", "profileId": "lane_service_8", "localPositionMeters": [0, 0, -8], "outward": [0, 0, -1]}
+      ]
+    },
+    {
+      "moduleType": "corridor_pressure_straight_16",
+      "footprintMeters": [16, 16],
+      "sockets": [
+        {"socketId": "portal_n", "profileId": "corridor_pressure_8x6", "localPositionMeters": [0, 0, 8], "outward": [0, 0, 1]},
+        {"socketId": "portal_s", "profileId": "corridor_pressure_8x6", "localPositionMeters": [0, 0, -8], "outward": [0, 0, -1]}
+      ]
+    },
+    {
+      "moduleType": "corridor_pressure_corner_16",
+      "footprintMeters": [16, 16],
+      "sockets": [
+        {"socketId": "portal_n", "profileId": "corridor_pressure_8x6", "localPositionMeters": [0, 0, 8], "outward": [0, 0, 1]},
+        {"socketId": "portal_e", "profileId": "corridor_pressure_8x6", "localPositionMeters": [8, 0, 0], "outward": [1, 0, 0]}
+      ]
+    },
+    {
+      "moduleType": "corridor_pressure_t_16",
+      "footprintMeters": [16, 16],
+      "sockets": [
+        {"socketId": "portal_n", "profileId": "corridor_pressure_8x6", "localPositionMeters": [0, 0, 8], "outward": [0, 0, 1]},
+        {"socketId": "portal_e", "profileId": "corridor_pressure_8x6", "localPositionMeters": [8, 0, 0], "outward": [1, 0, 0]},
+        {"socketId": "portal_w", "profileId": "corridor_pressure_8x6", "localPositionMeters": [-8, 0, 0], "outward": [-1, 0, 0]}
+      ]
+    },
+    {
+      "moduleType": "corridor_cargo_straight_32x16",
+      "footprintMeters": [32, 16],
+      "sockets": [
+        {"socketId": "portal_e", "profileId": "corridor_cargo_12x8", "localPositionMeters": [16, 0, 0], "outward": [1, 0, 0]},
+        {"socketId": "portal_w", "profileId": "corridor_cargo_12x8", "localPositionMeters": [-16, 0, 0], "outward": [-1, 0, 0]}
+      ]
+    }
+  ],
+  "podiumProfiles": [
+    {
+      "profileId": "podium_16",
+      "footprintMeters": [16, 16],
+      "maximumBuildingFootprintMeters": [12, 12],
+      "edgeSetbackMeters": [2, 2, 2, 2],
+      "requiredAccessProfiles": ["concourse_ped_6"],
+      "recommendedHeightBandMeters": [6, 24]
+    },
+    {
+      "profileId": "podium_32",
+      "footprintMeters": [32, 32],
+      "maximumBuildingFootprintMeters": [26, 26],
+      "edgeSetbackMeters": [3, 3, 3, 3],
+      "requiredAccessProfiles": ["concourse_ped_6", "lane_service_8"],
+      "recommendedHeightBandMeters": [18, 64]
+    },
+    {
+      "profileId": "podium_32x48",
+      "footprintMeters": [32, 48],
+      "maximumBuildingFootprintMeters": [26, 40],
+      "edgeSetbackMeters": [3, 4, 3, 4],
+      "requiredAccessProfiles": ["concourse_ped_6", "lane_service_8"],
+      "recommendedHeightBandMeters": [12, 72]
+    },
+    {
+      "profileId": "podium_48",
+      "footprintMeters": [48, 48],
+      "maximumBuildingFootprintMeters": [40, 40],
+      "edgeSetbackMeters": [4, 4, 4, 4],
+      "requiredAccessProfiles": ["concourse_ped_6", "road_local_12"],
+      "recommendedHeightBandMeters": [32, 110]
+    },
+    {
+      "profileId": "podium_hero_64",
+      "footprintMeters": [64, 64],
+      "maximumBuildingFootprintMeters": [54, 54],
+      "edgeSetbackMeters": [5, 5, 5, 5],
+      "requiredAccessProfiles": ["concourse_ped_6", "road_primary_18", "lane_service_8"],
+      "recommendedHeightBandMeters": [40, 160]
+    }
+  ],
+  "lodContract": {
+    "tiers": [
+      {
+        "tier": "LOD0",
+        "purpose": "close tactical and inspection",
+        "maximumTrianglesByClass": {"transit": 3000, "corridor": 8000, "podium": 3000, "tower_small": 20000, "tower_medium": 40000, "hero": 80000, "set_dressing": 4000}
+      },
+      {
+        "tier": "LOD1",
+        "purpose": "normal tactical",
+        "maximumTrianglesByClass": {"transit": 1400, "corridor": 3600, "podium": 1400, "tower_small": 9000, "tower_medium": 18000, "hero": 36000, "set_dressing": 1800}
+      },
+      {
+        "tier": "LOD2",
+        "purpose": "command zoom",
+        "maximumTrianglesByClass": {"transit": 500, "corridor": 1200, "podium": 500, "tower_small": 3000, "tower_medium": 6000, "hero": 12000, "set_dressing": 500}
+      },
+      {
+        "tier": "LOD3",
+        "purpose": "strategic silhouette or approved impostor",
+        "maximumTrianglesByClass": {"transit": 80, "corridor": 180, "podium": 80, "tower_small": 400, "tower_medium": 800, "hero": 1600, "set_dressing": 80}
+      }
+    ],
+    "hysteresisPercent": 15,
+    "requirements": [
+      "Every approved structural asset supplies LOD0, LOD1, and LOD2; LOD3 may be a mesh or approved impostor.",
+      "Socket planes, podium footprint, ground contact, height class, and primary silhouette stay invariant across LODs.",
+      "LOD simplification removes micro-detail before roofline, entrance, faction marker, damage breach, or objective silhouette.",
+      "Generated source meshes are SOURCE_CANDIDATE only until cameras/lights are removed, scale is normalized, topology is reduced, semantic material slots are bound, and all LOD evidence passes.",
+      "LOD thresholds are screen-space driven with hysteresis; distance-only switching without capture evidence is rejected."
+    ]
+  },
+  "collisionNavContract": {
+    "namedRoots": {
+      "render": "VIS_<assetId>_LOD<n>",
+      "collision": "COLL_<assetId>_<index>",
+      "navBlocker": "NAV_BLOCK_<assetId>_<index>",
+      "navLink": "NAV_LINK_<assetId>_<socketId>",
+      "occluder": "OCC_<assetId>_<index>"
+    },
+    "collisionRules": [
+      "Render meshes are never used directly as gameplay collision.",
+      "Static collision uses boxes, capsules, convex hulls, or authored low-poly compounds with at most 64 triangles per convex hull and at most 12 hulls per ordinary module.",
+      "Collision stays inside the visible solid by 0.05 m to prevent snagging and may not enter a declared socket clearance.",
+      "Damage variants preserve the base collision identifier unless they publish an explicit deterministic collision replacement.",
+      "Set dressing smaller than 0.5 m has no gameplay collision unless tagged hard_cover."
+    ],
+    "navClasses": [
+      {"classId": "infantry", "agentRadiusMeters": 0.45, "agentHeightMeters": 2.2, "minimumClearWidthMeters": 1.2, "maximumStepMeters": 0.4},
+      {"classId": "light_vehicle", "agentRadiusMeters": 2.25, "agentHeightMeters": 4, "minimumClearWidthMeters": 5, "maximumStepMeters": 0.25},
+      {"classId": "heavy_vehicle", "agentRadiusMeters": 4, "agentHeightMeters": 8, "minimumClearWidthMeters": 9, "maximumStepMeters": 0.2},
+      {"classId": "superheavy", "agentRadiusMeters": 7, "agentHeightMeters": 12, "minimumClearWidthMeters": 15, "maximumStepMeters": 0.15}
+    ],
+    "navRules": [
+      "Every road or corridor socket publishes a centered NAV_LINK using the same position and outward vector.",
+      "Mated socket links must be coincident within 0.01 m, face opposite directions, and share at least one nav class.",
+      "Road decoration, debris, props, ramps, and curb caps stay outside the profile clearance or publish an explicit blocked state.",
+      "An entrance is valid only when a continuous path exists from its podium access socket to the district road graph.",
+      "Ruined or infested states that change traversal publish a state-specific blocker and a deterministic reroute test."
+    ]
+  },
+  "materialContract": {
+    "semanticSlots": [
+      {"slotId": "MAT_STRUCTURAL", "required": true, "usage": "load-bearing frame, ribs, structural metal or composite"},
+      {"slotId": "MAT_FACADE", "required": true, "usage": "tileable primary wall or tower skin"},
+      {"slotId": "MAT_ROOF", "required": true, "usage": "roof, maintenance deck, and exposed top surfaces"},
+      {"slotId": "MAT_CONTACT", "required": true, "usage": "podium, curb, foundation, soil seal, and road transition"},
+      {"slotId": "MAT_GLAZING", "required": false, "usage": "glass or pressure glazing; separate from opaque façade"},
+      {"slotId": "MAT_EMISSIVE", "required": false, "usage": "windows, guidance, signs, and power status; restrained and mask-driven"},
+      {"slotId": "MAT_DECAL", "required": false, "usage": "district, traffic, faction, safety, and function markings"},
+      {"slotId": "MAT_DAMAGE", "required": false, "usage": "scorch, exposed structure, breach, and rubble transition"},
+      {"slotId": "MAT_INFESTATION", "required": false, "usage": "Brood biomass overlay; never a playable-faction skin"}
+    ],
+    "rules": [
+      "Geometry owns meaning; material swaps may adapt climate and faction but do not count as a new silhouette or new model.",
+      "Facade, roof, contact, glazing, emission, damage, and infestation remain separately addressable.",
+      "Tileable materials require 2K source, neutral lighting, matching tangent normal/roughness, four-way seam proof, 3x3 repeat proof, and mobile captures before approval.",
+      "Exterior hull material is not a universal interior, road, podium, or city material.",
+      "Emission uses a texture mask and post-process response; geometry glow shells are optional accents, not substitutes for emissive input."
+    ]
+  },
+  "appearanceBindings": {
+    "factions": [
+      {
+        "bindingId": "faction_neutral_civic",
+        "factionId": "neutral",
+        "requiredTexturePackIds": ["texture_city_faction_neutral_civic_v1"],
+        "geometryLanguage": ["legible civic massing", "balanced verticals", "public concourses"],
+        "emissionLanguage": "white and restrained cyan public guidance"
+      },
+      {
+        "bindingId": "faction_uga_institutional",
+        "factionId": "uga",
+        "requiredTexturePackIds": ["texture_city_faction_neutral_civic_v1"],
+        "geometryLanguage": ["institutional frames", "open operational crescents", "measured pressure links"],
+        "emissionLanguage": "cyan systems, amber warning, white occupancy"
+      },
+      {
+        "bindingId": "faction_nova",
+        "factionId": "nova",
+        "requiredTexturePackIds": ["texture_city_nova_contact_v1"],
+        "geometryLanguage": ["clean aerodynamic crowns", "terraced civic towers", "precise luminous seams"],
+        "emissionLanguage": "cool blue-white with restrained faction cyan"
+      },
+      {
+        "bindingId": "faction_dominion",
+        "factionId": "dominion",
+        "requiredTexturePackIds": ["texture_city_dominion_contact_v1"],
+        "geometryLanguage": ["brutalist armored masses", "deep buttresses", "heat-shielded domes"],
+        "emissionLanguage": "amber furnace lines and sparse red hazard states"
+      },
+      {
+        "bindingId": "faction_syndicate",
+        "factionId": "syndicate",
+        "requiredTexturePackIds": ["texture_city_syndicate_contact_v1"],
+        "geometryLanguage": ["faceted automation towers", "cantilevered sensor blocks", "machine-service terraces"],
+        "emissionLanguage": "cold cyan-violet machine status with white work light"
+      },
+      {
+        "bindingId": "brood_hostile_overlay",
+        "factionId": "brood_hostile",
+        "requiredTexturePackIds": ["texture_city_brood_hostile_contact_v1"],
+        "geometryLanguage": ["non-humanoid biomass growth", "asymmetric load paths", "recognizable consumed host silhouette"],
+        "emissionLanguage": "bioluminescent internal organs, never a team-color strip",
+        "playable": false
+      }
+    ],
+    "planets": [
+      {
+        "bindingId": "planet_aelos",
+        "planetId": "aelos",
+        "themeIds": ["verdant", "arctic"],
+        "permittedFactionBindingIds": ["faction_neutral_civic", "faction_uga_institutional", "faction_nova", "brood_hostile_overlay"],
+        "requiredTexturePackIds": ["texture_map_verdant_base_v1", "texture_map_aelos_north_accent_v1", "texture_city_nova_contact_v1"],
+        "contactRules": ["maintained civic foundations", "coastal salt weathering where authored", "no ashland lava language"]
+      },
+      {
+        "bindingId": "planet_pyraeth",
+        "planetId": "pyraeth",
+        "themeIds": ["ashland", "vespera"],
+        "permittedFactionBindingIds": ["faction_neutral_civic", "faction_uga_institutional", "faction_dominion", "brood_hostile_overlay"],
+        "requiredTexturePackIds": ["texture_map_ashland_base_v1", "texture_map_pyraeth_caldera_accent_v1", "texture_city_dominion_contact_v1"],
+        "contactRules": ["vitrified heat transitions", "buried foundations", "armored pressure seals"]
+      },
+      {
+        "bindingId": "planet_nordhall",
+        "planetId": "nordhall",
+        "themeIds": ["arctic"],
+        "permittedFactionBindingIds": ["faction_neutral_civic", "faction_uga_institutional", "faction_syndicate", "brood_hostile_overlay"],
+        "requiredTexturePackIds": ["texture_map_arctic_base_v1", "texture_map_nordhall_frost_accent_v1", "texture_city_syndicate_contact_v1"],
+        "contactRules": ["frost skirts", "thermal expansion joints", "snow exclusion around active machinery"]
+      },
+      {
+        "bindingId": "planet_vespera",
+        "planetId": "vespera",
+        "themeIds": ["vespera", "verdant", "ashland"],
+        "permittedFactionBindingIds": ["faction_neutral_civic", "faction_uga_institutional", "faction_nova", "faction_dominion", "faction_syndicate", "brood_hostile_overlay"],
+        "requiredTexturePackIds": ["texture_map_vespera_base_v1", "texture_city_brood_hostile_contact_v1"],
+        "contactRules": ["alien mineral-organic transition", "host geometry remains legible under infestation", "no universal purple palette wash"]
+      }
+    ],
+    "unknownPlanetPolicy": "REJECT_APPROVAL_UNTIL_EXPLICIT_PLANET_OR_REGION_BINDING_EXISTS"
+  },
+  "stateVariants": [
+    {
+      "stateId": "pristine",
+      "class": "base",
+      "preserveSocketTransforms": true,
+      "collisionPolicy": "base",
+      "navPolicy": "base",
+      "requiredSlots": ["MAT_STRUCTURAL", "MAT_FACADE", "MAT_ROOF", "MAT_CONTACT"]
+    },
+    {
+      "stateId": "weathered",
+      "class": "damage",
+      "preserveSocketTransforms": true,
+      "collisionPolicy": "base",
+      "navPolicy": "base",
+      "requiredSlots": ["MAT_DAMAGE"]
+    },
+    {
+      "stateId": "damaged_light",
+      "class": "damage",
+      "preserveSocketTransforms": true,
+      "collisionPolicy": "base",
+      "navPolicy": "base",
+      "requiredSlots": ["MAT_DAMAGE"]
+    },
+    {
+      "stateId": "damaged_heavy",
+      "class": "damage",
+      "preserveSocketTransforms": true,
+      "collisionPolicy": "authored_override_optional",
+      "navPolicy": "blocked_areas_must_be_declared",
+      "requiredSlots": ["MAT_DAMAGE"]
+    },
+    {
+      "stateId": "ruined",
+      "class": "damage",
+      "preserveSocketTransforms": false,
+      "collisionPolicy": "authored_override_required",
+      "navPolicy": "authored_override_required",
+      "requiredSlots": ["MAT_DAMAGE"]
+    },
+    {
+      "stateId": "infested_1_contact",
+      "class": "infestation",
+      "preserveSocketTransforms": true,
+      "collisionPolicy": "base",
+      "navPolicy": "base",
+      "requiredSlots": ["MAT_INFESTATION"]
+    },
+    {
+      "stateId": "infested_2_encroached",
+      "class": "infestation",
+      "preserveSocketTransforms": true,
+      "collisionPolicy": "authored_override_optional",
+      "navPolicy": "blocked_areas_must_be_declared",
+      "requiredSlots": ["MAT_INFESTATION"]
+    },
+    {
+      "stateId": "infested_3_consumed",
+      "class": "infestation",
+      "preserveSocketTransforms": false,
+      "collisionPolicy": "authored_override_required",
+      "navPolicy": "authored_override_required",
+      "requiredSlots": ["MAT_INFESTATION", "MAT_DAMAGE"]
+    }
+  ],
+  "compositionContract": {
+    "requiredKitCoverage": {
+      "roads": ["straight", "corner", "t_junction", "x_junction_or_plaza", "gated_endcap", "primary_to_local_adapter"],
+      "corridors": ["straight", "corner", "t_junction", "airlock_or_endcap"],
+      "podiums": ["16x16", "32x32", "32x48"],
+      "structures": ["two_low", "two_mid", "two_tall", "one_hero", "one_industrial_or_logistics"],
+      "states": ["pristine", "damaged_light", "damaged_heavy_or_ruined", "infested_overlay_if_applicable"]
+    },
+    "determinism": {
+      "seedFormula": "hash(worldSeed, planetId, regionId, siteId, districtIndex, plotIndex, kitVersion)",
+      "stableSort": ["districtIndex", "plotIndex", "assetId", "variantId"],
+      "forbidden": ["Math.random", "clock_time", "filesystem_order", "GPU_readback_as_seed"]
+    },
+    "assemblyRules": [
+      "The road graph is connected before buildings are placed; every unmatched road socket ends in an authored gate, plaza edge, collapsed state, or map boundary.",
+      "Every occupied podium has at least one reachable public entrance and one declared service path when its class requires one.",
+      "Corridors connect occupied destinations; decorative tunnels to nowhere are rejected.",
+      "The same repeatable asset may not occupy adjacent plots more than twice, and no 2x2 block may contain one asset ID four times.",
+      "A district uses at least three height bands and four silhouette families before palette or decal variation is counted.",
+      "Hero landmarks are unique per district unless the pack explicitly declares a paired landmark composition.",
+      "Prop density follows function: cargo near logistics, tanks near refinery, defenses around military frontage, civic furniture near public access.",
+      "Roads, doors, loading bays, stairs, rails, vehicles, and windows remain consistent with 1.8 m personnel, 8 m light vehicle, and 15 m superheavy references.",
+      "No unsupported floating masses, buried entrances, intersecting towers, curb-blocked roads, disconnected pipes, or random decorative greeble clouds.",
+      "Faction binding changes material, secondary profile, signs, and selected silhouette parts; a color-only swap does not satisfy faction-specific model coverage.",
+      "Planet binding changes terrain contact, weathering, drainage, foundation, and environmental protection; a global tint does not satisfy regional coverage.",
+      "Infestation grows as clustered overlays from authored infestation sockets and preserves the readable host-site function until the consumed state.",
+      "Damage exposes plausible structure and deposits bounded static rubble; it does not scatter unrelated cubes or seal all tactical routes."
+    ],
+    "rejectCodes": [
+      "SOCKET_PROFILE_UNKNOWN",
+      "SOCKET_OFF_BOUNDARY",
+      "SOCKET_TRANSFORM_MISMATCH",
+      "ROAD_GRAPH_DISCONNECTED",
+      "ROAD_CLEARANCE_BLOCKED",
+      "ENTRANCE_UNREACHABLE",
+      "CORRIDOR_TO_NOWHERE",
+      "PODIUM_FOOTPRINT_INVALID",
+      "NON_UNIFORM_SCALE",
+      "UNSUPPORTED_FLOATING_GEOMETRY",
+      "INTERSECTION_CLASH",
+      "REPETITION_LIMIT_EXCEEDED",
+      "INSUFFICIENT_SILHOUETTE_VARIETY",
+      "MATERIAL_SLOT_MISSING",
+      "PLANET_BINDING_MISSING",
+      "FACTION_VARIANT_COLOR_ONLY",
+      "LOD_SILHOUETTE_REGRESSION",
+      "COLLISION_EXCEEDS_VISIBLE_SOLID",
+      "NAV_OVERRIDE_MISSING",
+      "DAMAGE_VARIANT_IMPLAUSIBLE",
+      "INFESTATION_NOT_CLUSTERED",
+      "EVIDENCE_STALE_OR_MISSING"
+    ]
+  },
+  "authoringGates": [
+    {"gateId": "schema", "requiredEvidence": ["schema validation", "unique IDs", "cross-reference validation"], "missingEvidenceResult": "FAIL"},
+    {"gateId": "source_hygiene", "requiredEvidence": ["source hash", "meter bounds", "root inventory", "no source cameras or lights in runtime candidate"], "missingEvidenceResult": "FAIL"},
+    {"gateId": "socket_assembly", "requiredEvidence": ["straight-corner-T-X-endcap assembly", "all profile pairings", "seam and elevation measurements"], "missingEvidenceResult": "FAIL"},
+    {"gateId": "collision_nav", "requiredEvidence": ["collision visualization", "nav traversal by declared agent class", "damage and infestation overrides"], "missingEvidenceResult": "FAIL"},
+    {"gateId": "lod", "requiredEvidence": ["triangle inventory", "matched close/tactical/command captures", "pan-pop inspection"], "missingEvidenceResult": "FAIL"},
+    {"gateId": "materials", "requiredEvidence": ["semantic slot inventory", "2K source hash", "four-way seam proof", "3x3 tile proof", "mobile mip capture"], "missingEvidenceResult": "FAIL"},
+    {"gateId": "composition", "requiredEvidence": ["three seeded district assemblies", "road graph report", "repetition and silhouette report"], "missingEvidenceResult": "FAIL"},
+    {"gateId": "runtime", "requiredEvidence": ["explicit runtime allowlist", "package delta", "source/runtime fingerprint", "phone portrait and landscape captures", "zero page or WebGL errors"], "missingEvidenceResult": "FAIL"}
+  ]
+}

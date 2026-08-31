@@ -1,0 +1,200 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.local/schemas/interior-tactical-model-packs.v1.schema.json",
+  "title": "MASSFRONT Interior Tactical Model Packs V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "catalogId", "status", "runtimeReady", "units", "coordinateContract", "mobilityClasses", "socketProfiles", "assetArchetypes", "mapTemplates", "packs", "acceptanceGates"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "schemaVersion": { "const": 1 },
+    "catalogId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["PLANNED", "SOURCE_CANDIDATE", "APPROVED"] },
+    "runtimeReady": { "const": false },
+    "units": { "const": "meters" },
+    "coordinateContract": {
+      "type": "object",
+      "required": ["upAxis", "forwardAxis", "origin", "detailSnap", "structuralSnap", "verticalSnap"],
+      "properties": {
+        "upAxis": { "const": "+Y" },
+        "forwardAxis": { "const": "+Z" },
+        "origin": { "const": "floor-center" },
+        "detailSnap": { "type": "number", "exclusiveMinimum": 0 },
+        "structuralSnap": { "type": "number", "exclusiveMinimum": 0 },
+        "verticalSnap": { "type": "number", "exclusiveMinimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "mobilityClasses": {
+      "type": "object",
+      "minProperties": 3,
+      "additionalProperties": { "$ref": "#/$defs/mobilityClass" }
+    },
+    "socketProfiles": {
+      "type": "object",
+      "minProperties": 3,
+      "additionalProperties": { "$ref": "#/$defs/socketProfile" }
+    },
+    "assetArchetypes": {
+      "type": "object",
+      "minProperties": 12,
+      "additionalProperties": { "$ref": "#/$defs/archetype" }
+    },
+    "mapTemplates": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/mapTemplate" }
+    },
+    "packs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/pack" }
+    },
+    "acceptanceGates": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "mobilityClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agentEnvelope", "minimumPortal", "minimumTurnDiameter", "maximumStep", "maximumRampDegrees"],
+      "properties": {
+        "agentEnvelope": { "$ref": "#/$defs/vec3" },
+        "minimumPortal": { "$ref": "#/$defs/vec3" },
+        "minimumTurnDiameter": { "type": "number", "exclusiveMinimum": 0 },
+        "maximumStep": { "type": "number", "minimum": 0 },
+        "maximumRampDegrees": { "type": "number", "minimum": 0, "maximum": 45 }
+      }
+    },
+    "socketProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["openingWidth", "openingHeight", "clearWidth", "clearHeight", "mobility"],
+      "properties": {
+        "openingWidth": { "type": "number", "exclusiveMinimum": 0 },
+        "openingHeight": { "type": "number", "exclusiveMinimum": 0 },
+        "clearWidth": { "type": "number", "exclusiveMinimum": 0 },
+        "clearHeight": { "type": "number", "exclusiveMinimum": 0 },
+        "mobility": { "type": "array", "minItems": 1, "items": { "enum": ["infantry", "small_vehicle", "mech"] }, "uniqueItems": true }
+      }
+    },
+    "lod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lod0", "lod1", "lod2"],
+      "properties": {
+        "lod0": { "type": "integer", "minimum": 12 },
+        "lod1": { "type": "integer", "minimum": 12 },
+        "lod2": { "type": "integer", "minimum": 12 }
+      }
+    },
+    "collision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "maximumHulls", "separateFromRenderMesh"],
+      "properties": {
+        "kind": { "enum": ["none", "box-compound", "convex-compound", "primitive-plus-blockers"] },
+        "maximumHulls": { "type": "integer", "minimum": 0 },
+        "separateFromRenderMesh": { "const": true }
+      }
+    },
+    "nav": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["walkable", "carvesNav", "mobility", "clearanceRule"],
+      "properties": {
+        "walkable": { "type": "boolean" },
+        "carvesNav": { "type": "boolean" },
+        "mobility": { "type": "array", "items": { "enum": ["infantry", "small_vehicle", "mech"] }, "uniqueItems": true },
+        "clearanceRule": { "type": "string", "minLength": 1 }
+      }
+    },
+    "archetype": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "sizeMeters", "pivot", "tileable", "socketProfiles", "lodTriangleBudget", "collision", "nav", "damageStates"],
+      "properties": {
+        "category": { "enum": ["room", "corridor", "junction", "portal", "vertical-link", "cover", "objective", "landmark", "damage-shell"] },
+        "sizeMeters": { "$ref": "#/$defs/vec3" },
+        "pivot": { "const": "floor-center" },
+        "tileable": { "type": "boolean" },
+        "socketProfiles": { "type": "array", "items": { "type": "string" } },
+        "lodTriangleBudget": { "$ref": "#/$defs/lod" },
+        "collision": { "$ref": "#/$defs/collision" },
+        "nav": { "$ref": "#/$defs/nav" },
+        "damageStates": { "type": "array", "items": { "enum": ["intact", "damaged", "destroyed"] }, "uniqueItems": true }
+      }
+    },
+    "mapTemplate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["templateId", "sizeClass", "playableBoundsMeters", "requiredMobility", "minimumMixedRouteWidth", "minimumTurningPockets", "assemblyRules"],
+      "properties": {
+        "templateId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "sizeClass": { "enum": ["XS", "SMALL"] },
+        "playableBoundsMeters": { "type": "array", "prefixItems": [{ "type": "number" }, { "type": "number" }], "minItems": 2, "maxItems": 2 },
+        "requiredMobility": { "type": "array", "contains": { "const": "infantry" }, "items": { "enum": ["infantry", "small_vehicle", "mech"] }, "uniqueItems": true },
+        "minimumMixedRouteWidth": { "type": "number", "minimum": 6 },
+        "minimumTurningPockets": { "type": "integer", "minimum": 1 },
+        "assemblyRules": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+      }
+    },
+    "socket": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "profile", "face", "offsetMeters"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "profile": { "type": "string", "minLength": 1 },
+        "face": { "enum": ["north", "east", "south", "west", "up", "down", "interior"] },
+        "offsetMeters": { "$ref": "#/$defs/vec3" }
+      }
+    },
+    "member": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "displayName", "archetype", "sizeMeters", "gameplayRole", "mobility", "sockets", "destructible", "damageFamily", "hunyuanPromptIntent"],
+      "properties": {
+        "assetId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "displayName": { "type": "string", "minLength": 1 },
+        "archetype": { "type": "string", "minLength": 1 },
+        "sizeMeters": { "$ref": "#/$defs/vec3" },
+        "gameplayRole": { "type": "string", "minLength": 1 },
+        "mobility": { "type": "array", "minItems": 1, "items": { "enum": ["infantry", "small_vehicle", "mech"] }, "uniqueItems": true },
+        "sockets": { "type": "array", "items": { "$ref": "#/$defs/socket" } },
+        "destructible": { "type": "boolean" },
+        "damageFamily": { "enum": ["none", "three-state-swap", "fracture-cover", "portal-jam", "organic-rupture"] },
+        "hunyuanPromptIntent": { "type": "string", "minLength": 20 }
+      }
+    },
+    "pack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["packId", "title", "status", "runtimeReady", "faction", "planetIds", "locationIds", "missionIntents", "visualIdentity", "hunyuanPromptBase", "hunyuanNegativePrompt", "mapTemplateIds", "members"],
+      "properties": {
+        "packId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["PLANNED", "SOURCE_CANDIDATE", "APPROVED"] },
+        "runtimeReady": { "const": false },
+        "faction": { "enum": ["uga", "nova", "dominion", "syndicate", "brood", "faction-neutral"] },
+        "planetIds": { "type": "array", "minItems": 1, "items": { "type": "string" }, "uniqueItems": true },
+        "locationIds": { "type": "array", "minItems": 1, "items": { "type": "string" }, "uniqueItems": true },
+        "missionIntents": { "type": "array", "minItems": 1, "items": { "type": "string" }, "uniqueItems": true },
+        "visualIdentity": { "type": "array", "minItems": 3, "items": { "type": "string" } },
+        "hunyuanPromptBase": { "type": "string", "minLength": 80 },
+        "hunyuanNegativePrompt": { "type": "string", "minLength": 20 },
+        "mapTemplateIds": { "type": "array", "minItems": 1, "items": { "type": "string" }, "uniqueItems": true },
+        "members": { "type": "array", "minItems": 12, "items": { "$ref": "#/$defs/member" } }
+      }
+    }
+  }
+}

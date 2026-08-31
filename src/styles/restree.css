@@ -8,7 +8,7 @@
 .rt3d-summaryStats{display:flex;align-items:flex-end;flex-direction:column;gap:3px;font:800 9px var(--fT);color:#8db5ce}
 .rt3d-summaryStats span{white-space:nowrap}.rt3d-summaryStats i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
 .rt3d-summaryStats i.ready{background:#45d5ff;box-shadow:0 0 8px #45d5ff}
-.rt3d-focusReady{min-height:32px;margin-top:3px;padding:5px 7px;border-radius:7px;border:1px solid rgba(64,202,255,.45);
+.rt3d-focusReady{min-height:44px;margin-top:3px;padding:5px 7px;border-radius:7px;border:1px solid rgba(64,202,255,.45);
   color:#b9efff;background:rgba(16,58,82,.72);font:900 8px var(--fT);letter-spacing:.04em}
 .rt3d-focusReady:active{filter:brightness(1.2);transform:translateY(1px)}
 
@@ -100,9 +100,29 @@
 }
 @media (prefers-reduced-motion:reduce){.rt3d-stage{scroll-behavior:auto}.rt3d-links path,.rt3d-node{transition:none}}
 
+@media (orientation:landscape) and (max-height:560px){
+  .rt3d-wrap{width:min(100%,760px);max-width:100%;margin:0 auto 4px;gap:6px}
+  .rt3d-summary{padding:6px 8px;gap:4px}
+  .rt3d-queue{gap:4px}
+  .rt3d-qslot{height:58px;min-width:0}
+  .rt3d-stage{height:clamp(180px,52dvh,260px);min-height:180px}
+  .rt3d-inspector{min-height:220px}
+  .rt3d-detail{position:relative;bottom:auto;padding:10px}
+  .rt3d-focusReady,.rt3d-prereqs button{min-height:44px}
+}
+
 /* One-canvas research tree (branch sub-tabs removed): drag hint + grab cursor. */
 .rt3d-navHint{margin:2px 0 0;padding:6px 9px;border-radius:8px;border:1px dashed rgba(93,144,180,.24);font:800 9px var(--fT);letter-spacing:.05em;color:#84b4d0;background:rgba(7,18,30,.5);text-align:center}
 .rt3d-navHint span{color:#48cfff;margin-right:5px;font-size:9px;vertical-align:-1px}
 .rt3d-stage{cursor:grab}
 .rt3d-stage.grabbing{cursor:grabbing}
 .rt3d-stage.grabbing .rt3d-node{cursor:grabbing}
+
+/* The guide explains the two wallets before the graph; the permanent badges
+   then repeat the scope at the network summary and selected-node decision. */
+#devBody>.mfProgressionGuide{margin:0 auto 8px;width:min(96vw,430px)}
+.rt3d-summary .mfOwnershipBadge{margin-top:4px;font-size:6.5px;letter-spacing:.06em}
+.rt3d-detail header .mfOwnershipBadge{display:inline-flex;margin-top:4px;font:900 6.5px/1.2 var(--fT);letter-spacing:.06em}
+@media(max-width:360px){
+  #devBody>.mfProgressionGuide{width:calc(100vw - var(--sal) - var(--sar) - 18px)}
+}

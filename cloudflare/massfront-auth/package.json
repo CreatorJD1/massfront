@@ -7,8 +7,20 @@
     "deploy": "wrangler deploy",
     "tail": "wrangler tail",
     "db:create": "wrangler d1 create massfront-accounts",
-    "db:schema": "wrangler d1 execute massfront-accounts --file=schema.sql --remote",
-    "db:schema:local": "wrangler d1 execute massfront-accounts --file=schema.sql --local"
+    "test": "node test/social.test.mjs",
+    "dev:social": "wrangler dev --local --persist-to .wrangler/audit-state --port 8799 --ip 127.0.0.1 --var SOCIAL_CHAT_ENABLED:1 --var SOCIAL_PRESENCE_ENABLED:1 --var MULTIPLAYER_LOBBIES_ENABLED:1 --var MULTIPLAYER_INVITES_ENABLED:1 --var DEV_ECHO_CODE:1",
+    "test:e2e": "node test/e2e-worker.mjs",
+    "test:ratelimit:reset": "wrangler d1 execute massfront-accounts --local --persist-to .wrangler/audit-state --command \"DELETE FROM attempts\"",
+    "staging:plan": "node test/staging-provision.mjs",
+    "staging:run": "node test/staging-provision.mjs --confirm",
+    "db:migrations:list": "wrangler d1 migrations list massfront-accounts --local --persist-to .wrangler/audit-state",
+    "db:migrations:apply:local": "wrangler d1 migrations apply massfront-accounts --local --persist-to .wrangler/audit-state",
+    "db:migrations:list:remote": "wrangler d1 migrations list massfront-accounts --remote",
+    "db:migrate:production": "node scripts/migrate-production.mjs",
+    "test:migrations": "node test/migrations.test.mjs",
+    "test:all": "node test/social.test.mjs && node test/migrations.test.mjs && node test/staging-provision-safety.test.mjs"
   },
-  "devDependencies": { "wrangler": "^4" }
+  "devDependencies": {
+    "wrangler": "^4"
+  }
 }

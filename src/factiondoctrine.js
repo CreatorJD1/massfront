@@ -87,8 +87,14 @@ function factionDoctrineNodeYieldMul(team){
 const facFightStart=new Float32Array(MAXU),facFightLast=new Float32Array(MAXU);
 const facFightGen=new Int32Array(MAXU);
 const facFightLit=new Uint8Array(MAXU);
+const facPhaseUsed=new Uint8Array(MAXU);
+const facEntrenchTime=new Float32Array(MAXU);
+const facLastPosX=new Float32Array(MAXU);
+const facLastPosY=new Float32Array(MAXU);
+const facOutOfCombat=new Float32Array(MAXU);
 function factionDoctrineReset(){
   facFightStart.fill(0);facFightLast.fill(-999);facFightGen.fill(-1);facFightLit.fill(0);
+  facPhaseUsed.fill(0);facEntrenchTime.fill(0);facLastPosX.fill(0);facLastPosY.fill(0);facOutOfCombat.fill(0);
 }
 function factionDoctrineAttackMul(team,i){
   if(factionDoctrineKey(team)!=='legion'||i<0) return 1;
@@ -157,7 +163,7 @@ const mfFactionTechDevBuyBase=devBuy;
 devBuy=function(n,silent){
   if(n&&!mfFactionTechPurchasable(n.id)){
     if(!silent){
-      toast('AI DOSSIER — Brood evolution becomes researchable only when the faction is playable');
+      toast('AI DOSSIER — Brood unlocks become available in Development only when the faction is playable');
       if(typeof sfx==='function')sfx('ui');
     }
     return false;
@@ -180,6 +186,8 @@ spawnUnit=function(type,team,x,y,cmdSlot){
     mfFactionTechOverStart[i]=0;mfFactionTechOverEnd[i]=0;
     mfFactionTechOverReady[i]=0;mfFactionTechOverFx[i]=0;
     mfFactionTechMarkUntil[i]=0;mfFactionTechMarkGen[i]=0;
+    facPhaseUsed[i]=0;facEntrenchTime[i]=0;
+    facLastPosX[i]=ux[i];facLastPosY[i]=uy[i];facOutOfCombat[i]=0;
   }
   if(i>=0&&team===0&&mfFactionTechActive('asc_siege_foundry')&&mfFactionTechArtillery(type)){
     uhpm[i]*=1.12;uhp[i]*=1.12;
@@ -224,9 +232,12 @@ setMode=function(i,m){
    storage, construction escrow and account resources are intentionally not
    touched, so the stated 15% field-system saving is the complete effect. */
 const mfFactionTechDrawEnergyBase=drawEnergy;
-drawEnergy=function(team,e){
+drawEnergy=function(team,e,slot){
   if(team===0&&mfFactionTechActive('syn_quantum_grid'))e*=.85;
-  return mfFactionTechDrawEnergyBase(team,e);
+  /* Forward the SEAT too. This wrapper predates per-seat wallets, and its
+     two-argument signature silently dropped the slot - measured, not
+     hypothetical: the seat kept its 1900 energy while resE[0] paid the 300. */
+  return mfFactionTechDrawEnergyBase(team,e,slot);
 };
 
 /* A lightweight per-target generation mark avoids allocating objects during
@@ -259,8 +270,50 @@ function mfFactionTechScanDrones(now){
 const mfFactionTechDealDamageBase=dealDamage;
 dealDamage=function(j,dmg,attTeam,attacker,mu,wk){
   const now=(typeof stats!=='undefined'&&stats.t)||0;
+  if(j<0||!ualive[j]) return;
+  facOutOfCombat[j]=0;
+  if(attacker>=0&&attacker<MAXU) facOutOfCombat[attacker]=0;
+
+  // 1. Syndicate Quantum Energy Siphon
+  if(attTeam>=0&&factionDoctrineKey(attTeam)==='syndicate'&&dmg>0){
+    if(typeof drawEnergy==='function') drawEnergy(attTeam,-dmg*0.05);
+  }
+
+  // 2. Dominion Frontal Deflection Armor
+  if(factionDoctrineKey(uteam[j])==='legion'&&attacker>=0&&uhpm[j]>=450){
+    const dx=ux[attacker]-ux[j],dy=uy[attacker]-uy[j];
+    const len=Math.hypot(dx,dy);
+    if(len>1){
+      const dot=(dx*Math.cos(ua[j])+dy*Math.sin(ua[j]))/len;
+      if(dot>0.35) dmg*=0.80;
+    }
+  }
+
+  // 3. Brood Swarm AoE / Splash Resistance
+  if(factionDoctrineKey(uteam[j])==='horde'&&wk){
+    dmg*=0.75;
+  }
+
+  // 4. Nova Entrenchment Damage Mitigation
+  if(factionDoctrineKey(uteam[j])==='nova'){
+    if(facEntrenchTime[j]>6.0) dmg*=0.88;
+  }
+
+  // 5. Tech drone mesh
   if(attTeam===0&&mfFactionTechActive('syn_drone_mesh')&&
      mfFactionTechMarkGen[j]===ugen[j]&&mfFactionTechMarkUntil[j]>now)dmg*=1.10;
+
+  // 6. Syndicate Emergency Micro-Phase Shift
+  if(factionDoctrineKey(uteam[j])==='syndicate'&&uhp[j]<=dmg&&!facPhaseUsed[j]){
+    const T=TYPES[utype[j]];
+    if(T&&(T.cat==='hero'||T.cat==='tgate'||uhpm[j]>=850)){
+      facPhaseUsed[j]=1;
+      uhp[j]=uhpm[j]*0.15;
+      if(typeof addParticle==='function') addParticle(3,ux[j],uy[j],0,0,0.55,T.size*2.2,90,212,255);
+      return;
+    }
+  }
+
   return mfFactionTechDealDamageBase(j,dmg,attTeam,attacker,mu,wk);
 };
 
@@ -271,9 +324,37 @@ unitTick=function(dt){
   if(now<mfFactionTechLastT){
     mfFactionTechOverStart.fill(0);mfFactionTechOverEnd.fill(0);mfFactionTechOverReady.fill(0);
     mfFactionTechMarkUntil.fill(0);mfFactionTechMarkGen.fill(0);mfFactionTechScanAt=0;
+    factionDoctrineReset();
   }
   mfFactionTechLastT=now;
   if(now>=mfFactionTechScanAt){mfFactionTechScanAt=now+.66;mfFactionTechScanDrones(now);}
+
+  // Faction Signature Operational Rules Simulation
+  for(let i=0;i<unitHigh;i++){
+    if(!ualive[i]) continue;
+    facOutOfCombat[i]+=dt;
+    const fKey=factionDoctrineKey(uteam[i]);
+    
+    // Brood Creep Vitality: out-of-combat HP regeneration
+    if(fKey==='horde'){
+      if(facOutOfCombat[i]>4.0&&uhp[i]<uhpm[i]){
+        uhp[i]=Math.min(uhpm[i],uhp[i]+3.5*dt);
+      }
+    }
+    // Nova Entrenchment: stationary tracking
+    else if(fKey==='nova'){
+      if(Math.hypot(ux[i]-facLastPosX[i],uy[i]-facLastPosY[i])<0.6){
+        facEntrenchTime[i]+=dt;
+        if(facEntrenchTime[i]>6.0&&ucool[i]>0){
+          ucool[i]=Math.max(0,ucool[i]-dt*0.10); // +10% rate of fire when entrenched
+        }
+      } else {
+        facEntrenchTime[i]=0;
+        facLastPosX[i]=ux[i];facLastPosY[i]=uy[i];
+      }
+    }
+  }
+
   if(!mfFactionTechActive('asc_crown_battery'))return;
   for(let i=0;i<unitHigh;i++){
     if(!ualive[i]||uteam[i]!==0||umode[i]!==1||now<mfFactionTechOverStart[i]||now>=mfFactionTechOverEnd[i])continue;
@@ -303,4 +384,3 @@ mfAirliftPostTick=function(dt){
     }
   }
 };
-

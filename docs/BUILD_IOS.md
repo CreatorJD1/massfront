@@ -75,9 +75,10 @@ if the artwork changes.
 - Required capabilities are `arm64` + `metal` rather than the default `armv7`,
   which is a 32-bit capability that would refuse to build against a modern-only
   deployment target.
-- Portrait only on iPhone. A one-handed strategy HUD has no landscape layout,
-  and letting the device rotate into one it does not have is worse than not
-  offering it.
+- Portrait and both landscape directions are supported on iPhone; iPad also
+  supports upside-down portrait. The real War Table and tactical HUD are
+  captured in both phone orientations, and the canvas re-measures after each
+  rotation instead of retaining the old aspect ratio.
 - Status bar hidden, light content, full screen, home indicator auto-hidden —
   the HUD owns the bottom edge.
 - `ITSAppUsesNonExemptEncryption = false`, so App Store Connect stops asking the

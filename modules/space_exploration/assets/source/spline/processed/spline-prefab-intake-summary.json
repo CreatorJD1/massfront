@@ -1,0 +1,199 @@
+{
+  "ranDate": "2026-08-28",
+  "tool": "tools/intake-spline-prefabs.mjs",
+  "fit": "uniform",
+  "note": "target bounds come from PREFAB_LIBRARY.json sizeMeters, measured at authoring time",
+  "status": "SOURCE_AUTHORING_ONLY — intake does not make anything runtime-ready",
+  "rows": [
+    {
+      "id": "MF_PROP_ROCK_01",
+      "status": "skipped",
+      "reason": "already processed"
+    },
+    {
+      "id": "MF_PROP_TREE_01",
+      "status": "ok",
+      "targetBoundsM": [
+        8,
+        12,
+        6
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-tree-01-v1/source/mf-prop-tree-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_RELIC_01",
+      "status": "ok",
+      "targetBoundsM": [
+        11,
+        8,
+        11
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-relic-01-v1/source/mf-prop-relic-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_MOUNTAIN_01",
+      "status": "skipped",
+      "reason": "no exported GLB"
+    },
+    {
+      "id": "MF_STRUCT_CIVICBLOCK_01",
+      "status": "ok",
+      "targetBoundsM": [
+        20,
+        23,
+        16
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-struct-civicblock-01-v1/source/mf-struct-civicblock-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_CRYSTAL_01",
+      "status": "ok",
+      "targetBoundsM": [
+        11,
+        16,
+        10
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-crystal-01-v1/source/mf-prop-crystal-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_WRECK_01",
+      "status": "ok",
+      "targetBoundsM": [
+        21,
+        9,
+        15
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-wreck-01-v1/source/mf-prop-wreck-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_STRUCT_CITYTOWER_01",
+      "status": "ok",
+      "targetBoundsM": [
+        24,
+        70,
+        22
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-struct-citytower-01-v1/source/mf-struct-citytower-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_STRUCT_CITYDOME_01",
+      "status": "ok",
+      "targetBoundsM": [
+        55,
+        39,
+        62
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-struct-citydome-01-v1/source/mf-struct-citydome-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_GEYSER_01",
+      "status": "ok",
+      "targetBoundsM": [
+        19,
+        31,
+        19
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-geyser-01-v1/source/mf-prop-geyser-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_STRUCT_REFINERY_01",
+      "status": "ok",
+      "targetBoundsM": [
+        46,
+        33,
+        34
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-struct-refinery-01-v1/source/mf-struct-refinery-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_ROCKARCH_01",
+      "status": "ok",
+      "targetBoundsM": [
+        57,
+        52,
+        19
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-rockarch-01-v1/source/mf-prop-rockarch-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_ICESPIRE_01",
+      "status": "ok",
+      "targetBoundsM": [
+        33,
+        26,
+        29
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-icespire-01-v1/source/mf-prop-icespire-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_CARGODEPOT_01",
+      "status": "ok",
+      "targetBoundsM": [
+        34,
+        7,
+        26
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-cargodepot-01-v1/source/mf-prop-cargodepot-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_STRUCT_COMMSRELAY_01",
+      "status": "ok",
+      "targetBoundsM": [
+        17,
+        31,
+        14
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-struct-commsrelay-01-v1/source/mf-struct-commsrelay-01-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_TREE_02",
+      "status": "ok",
+      "targetBoundsM": [
+        3.9,
+        18.8,
+        6.2
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-tree-02-v1/source/mf-prop-tree-02-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_STRUCT_CITYTOWER_02",
+      "status": "skipped",
+      "reason": "no sizeMeters recorded — target bounds is an authoring call"
+    },
+    {
+      "id": "MF_PROP_MOUNTAIN_02",
+      "status": "ok",
+      "targetBoundsM": [
+        116,
+        110,
+        82
+      ],
+      "output": "/modules/space_exploration/assets/source/spline/processed/mf-prop-mountain-02-v1/source/mf-prop-mountain-02-source-v1.glb",
+      "measured": null
+    },
+    {
+      "id": "MF_PROP_RELICMONOLITH_01",
+      "status": "skipped",
+      "reason": "no exported GLB"
+    },
+    {
+      "id": "GSITE_AELOS_CALDRIS_HERO",
+      "status": "skipped",
+      "reason": "no exported GLB"
+    }
+  ]
+}

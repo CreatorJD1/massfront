@@ -22,6 +22,45 @@ let stallM=0, stallE=0;                 // production starving for mass / energy
    payStream(team,m,e) with no slot (Track 3 owns that file), so team-1
    streams infer the paying building this frame. Compact 1v1 is one seat. */
 let _econBldDt=0, _econPayUsed=null;
+/* Seat lookup for EITHER team. Team 0 scans AI.allies, team 1 AI.bases, and
+   a miss returns NULL - deliberately unlike econAiSeat's AI.bases[0]
+   fallback, because slot ids are shared across both arrays and a silent
+   miss must fail loudly rather than charge an arbitrary commander. */
+function econSeatFor(team,slot){
+  if(slot==null||slot<0||typeof AI==='undefined') return null;
+  const arr=team===0?AI.allies:AI.bases;
+  if(!arr||!arr.length) return null;
+  for(let i=0;i<arr.length;i++) if(arr[i].slot===slot) return arr[i];
+  return null;
+}
+/* Every income event routes here. Team-0 seat credits land in the ally
+   wallet; slot null/-1 is the human bank, byte-identical to the old inline
+   Math.min(RES_*CAP,...) form. Team 1 pays the AI seat and re-mirrors. */
+function credit(team,m,e,slot){
+  if(team===0){
+    const S=econSeatFor(0,slot);
+    if(S){ S.mass=Math.min(S.mcap||1400,(S.mass||0)+(m||0));
+           S.energy=Math.min(S.ecap||6200,(S.energy||0)+(e||0)); return; }
+    if(m) resM[0]=Math.min(RES_MCAP[0],resM[0]+m);
+    if(e) resE[0]=Math.min(RES_ECAP[0],resE[0]+e);
+    return;
+  }
+  if(team===1){
+    /* Gated. When false this deliberately writes the MIRROR, which the next
+       econTick erases - i.e. the current shipped behaviour, byte for byte. */
+    if(!econAiReal()){
+      if(m) resM[1]=Math.min(RES_MCAP[1],resM[1]+m);
+      if(e) resE[1]=Math.min(RES_ECAP[1],resE[1]+e);
+      return;
+    }
+    const S=econSeatFor(1,slot)||econAiSeat(slot);
+    if(S){ S.mass=Math.min(S.mcap||MCAP0,(S.mass||0)+(m||0));
+           S.energy=Math.min(S.ecap||ECAP0,(S.energy||0)+(e||0));
+           econMirrorAiBanks(); return; }
+    if(m) resM[1]=Math.min(RES_MCAP[1],resM[1]+m);
+    if(e) resE[1]=Math.min(RES_ECAP[1],resE[1]+e);
+  }
+}
 function econAiSeat(slot){
   if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return null;
   if(slot==null) return AI.base||AI.bases[0];
@@ -35,6 +74,33 @@ function econAiBuildingSlot(B){
   let best=AI.bases[0],bd=1e18;
   for(const S of AI.bases){ const d=dist2(B.x,B.y,S.x,S.y); if(d<bd){bd=d;best=S;} }
   return best.slot;
+}
+/* ENEMY ECONOMY: REAL, OR MIRRORED?
+   resM[1]/resE[1] are a pure DERIVED MIRROR - econMirrorAiBanks recomputes
+   them as the sum of the seat wallets, and bldTick runs BEFORE econTick
+   every frame. So anything that writes the team-1 ledger directly is erased
+   milliseconds later, and it cuts BOTH ways:
+     - enemy energy weapons are FREE       (measured: 201 e/s for a Hard Nova
+       base, 463 e/s for a Hard Syndicate turtle at its ai.js build caps)
+     - enemy reclaim, mobile mining and HQ labour are VOID - they earn nothing
+   Fixing only the spend side would be a pure nerf wearing a bugfix costume.
+   Both sides route through the seat when this is true.
+
+   SHIPS FALSE ON PURPOSE. Turning it on is a live difficulty change, and it
+   would land inside a release already carrying 36 bug fixes and the whole
+   delivery rewrite - any "the AI feels different" report would be
+   unattributable. It is a constant rather than a comment so BOTH paths stay
+   exercised by the probe, and flipping it is a config change you can A/B in
+   one play session rather than code archaeology months later.
+
+   What turning it on buys: destroying an enemy reactor currently does
+   NOTHING to their turrets and Nova. "Cut their power, then push" is a core
+   RTS verb that is inert against the AI today. That is the point of this,
+   more than the numbers. */
+let AI_ECON_REAL=false;
+function econAiReal(){
+  const o=(typeof window!=='undefined')?window.__aiEconReal:undefined;
+  return (typeof o==='boolean')?o:AI_ECON_REAL;
 }
 function econMirrorAiBanks(){
   if(typeof AI==='undefined'||!AI.bases||!AI.bases.length) return;
@@ -97,6 +163,16 @@ function econInferAiPaySlot(m,e){
   return fallback;
 }
 function payStream(team,m,e,slot){
+  /* A NAMED seat that cannot be found refuses - it never falls through to
+     the human bank. That fall-through is the econAiSeat fallback bug all
+     over again, and it is exactly what the first cut of this branch did:
+     measured, slot 7 with no matching seat took 50 mass out of resM[0]. */
+  if(team===0&&slot!=null&&slot>=0){
+    const S=econSeatFor(0,slot);
+    if(!S) return false;
+    if((S.mass||0)<m||(S.energy||0)<e) return false;
+    S.mass-=m; S.energy-=e; return true;
+  }
   if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
     if(slot==null) slot=econInferAiPaySlot(m,e);
     return econPayAiSeat(slot,m,e);
@@ -109,6 +185,7 @@ function payStream(team,m,e,slot){
   return false;
 }
 function canAfford(team,m,e,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot); return !!S&&(S.mass||0)>=m&&(S.energy||0)>=e; }
   if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
     const S=econAiSeat(slot);
     return !!S&&(S.mass||0)>=m&&(S.energy||0)>=e;
@@ -116,6 +193,8 @@ function canAfford(team,m,e,slot){
   return resM[team]>=m && resE[team]>=e;
 }
 function pay(team,m,e,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot);
+    if(S){ S.mass=Math.max(0,(S.mass||0)-m); S.energy=Math.max(0,(S.energy||0)-e); } return; }
   if(team===1&&typeof AI!=='undefined'&&AI.bases&&AI.bases.length){
     econPayAiSeat(slot,m,e); return;
   }
@@ -142,13 +221,72 @@ function beginBuild(team,type,x,y,rot,slot){
   if(team===1&&slot!=null) B.aiBaseSlot=slot;
   return B;
 }
-function drawEnergy(team,e){            // power weapons sip the grid; returns 0..1 satisfaction
+function drawEnergy(team,e,slot){    // power weapons sip the grid; returns 0..1 satisfaction
+  /* Enemy weapons draw from their SEAT when the real economy is on. Off, it
+     falls through to resE[1] - the mirror - which is why enemy energy
+     weapons cost nothing today. */
+  if(team===1&&econAiReal()&&slot!=null&&slot>=0){
+    const S=econSeatFor(1,slot)||econAiSeat(slot);
+    if(S){
+      if((S.energy||0)>=e){ S.energy-=e; econMirrorAiBanks(); return 1; }
+      const got=Math.max(0,S.energy||0); S.energy=0; econMirrorAiBanks();
+      return e>0?got/e:1;
+    }
+  }
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot);
+    if(!S) return 0;
+    if((S.energy||0)>=e){ S.energy-=e; return 1; }
+    const got=Math.max(0,S.energy||0); S.energy=0; return e>0?got/e:1; }
   if(resE[team]>=e){ resE[team]-=e; if(team===0) eSpendAcc+=e; return 1; }
   const got=Math.max(0,resE[team]); resE[team]=0;
   if(team===0){ eSpendAcc+=got; stallE=0.8; }
   return e>0?got/e:1;
 }
 
+/* ---- NAMED WHOLESALE BANK WRITES ---------------------------------------
+   credit() means somebody EARNED something and the right wallet has to be
+   found. These three are the only places that legitimately OVERWRITE a bank
+   outright - match init, God Mode, and the training floor - and they are now
+   named for what they do instead of hiding behind a Math.min that reads like
+   a credit. Keeping them here means the seat rules only ever have to be
+   taught to one file. */
+function econSetBanks(m,e,team){
+  /* Match init. Omitting team resets BOTH ledgers and both caps, which is
+     exactly what resetWorld has always done on the two lines this replaces. */
+  if(team==null){
+    resM[0]=resM[1]=m; resE[0]=resE[1]=e;
+    RES_MCAP[0]=RES_MCAP[1]=MCAP0; RES_ECAP[0]=RES_ECAP[1]=ECAP0;
+    return;
+  }
+  resM[team]=m; resE[team]=e;
+}
+function econFillBanks(team){
+  /* God Mode tops the ledger up every sim step. Fill to the CURRENT cap so a
+     Silo raised mid-cheat still lifts the ceiling. */
+  const t=team==null?0:team;
+  resM[t]=RES_MCAP[t]; resE[t]=RES_ECAP[t];
+}
+function econFloorBanks(m,e,team){
+  /* Training floor: raise a bank to a minimum, never lower it, never exceed
+     the cap. Math.min(cap,Math.max(cur,floor)) verbatim. */
+  const t=team==null?0:team;
+  if(m!=null) resM[t]=Math.min(RES_MCAP[t],Math.max(resM[t],m));
+  if(e!=null) resE[t]=Math.min(RES_ECAP[t],Math.max(resE[t],e));
+}
+/* Readable balance of the SAME wallet payStream/drawEnergy would touch.
+   Affordability checks that read resE[team] directly were correct only while
+   every team-0 structure shared one bank: an ally turret has to ask its own
+   seat, or it reads the human grid and then spends the human grid. The branch
+   below is deliberately identical to drawEnergy s, so a check and the spend it
+   guards can never disagree about which wallet is being asked. */
+function econBankM(team,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot); return S?(S.mass||0):0; }
+  return resM[team]||0;
+}
+function econBankE(team,slot){
+  if(team===0&&slot!=null&&slot>=0){ const S=econSeatFor(0,slot); return S?(S.energy||0):0; }
+  return resE[team]||0;
+}
 /* addBld only stamps dep/geo when dist2<9 (~3wu). Placement allows 34wu, and
    session restore rounds structure coords, so a finished Extractor can sit on
    a live node with dep=-1 and pay nothing. Repair here — not in sim.js —
@@ -185,6 +323,66 @@ function econBindResourceNode(B){
     return B.geo>=0&&B.geo<geysers.length?geysers[B.geo]:null;
   }
   return null;
+}
+/* ALLY SEAT INCOME. econTickAiSeats already does exactly this for enemy
+   commanders; allies had nothing equivalent, so aiAllyTick paid them a flat
+   difficulty-keyed drip instead - income that no map feature produced and
+   that destroying their Extractor could not touch. Two consequences beyond
+   the obvious: an ally seat could never STALL, and allied Extractors never
+   depleted their deposit, because econTick skips every B.allyAI structure
+   and nothing else was counting them. Same yield table as the enemy seats,
+   deliberately - a seat is a seat. */
+function econTickPlayerSeats(dt){
+  if(typeof AI==='undefined'||!AI.allies||!AI.allies.length) return;
+  for(const S of AI.allies){
+    if(S.mass==null) S.mass=220;
+    if(S.energy==null) S.energy=900;
+    let mi=0.6, ei=2, silos=0, fabs=0, owned=0;
+    for(const B of bldLive){
+      if(!B.alive||B.team!==0||B.prog<1) continue;
+      if(B.allyAI!==S.slot) continue;
+      owned++;
+      if(B.type==='hq'){ mi+=5.0; ei+=26; }
+      if(B.type==='mex'){
+        const D=econBindResourceNode(B), before=depositTier(D);
+        if(before>0){
+          const base=(B.lvl===3?11 : B.lvl===2?7 : 4)*(DEPOSIT_YIELD[before]||1);
+          const raw=drainDeposit(D,base*dt);
+          const got=raw*(typeof factionDoctrineNodeYieldMul==='function'?factionDoctrineNodeYieldMul(0):1);
+          mi+=got/Math.max(dt,.0001);
+          B.nodeTier=depositTier(D); B.nodeRemaining=D.remaining;
+        } else { B.nodeTier=0; B.nodeRemaining=0; }
+      }
+      else if(B.type==='pgen') ei+= B.lvl===3?38 : B.lvl===2?24 : 14;
+      else if(B.type==='geo'){
+        const G=econBindResourceNode(B), before=geyserTier(G);
+        if(before>0){
+          const raw=drainGeyser(G,30*dt);
+          const got=raw*(typeof factionDoctrineNodeYieldMul==='function'?factionDoctrineNodeYieldMul(0):1);
+          ei+=got/Math.max(dt,.0001);
+          B.nodeTier=geyserTier(G); B.nodeRemaining=G.remaining;
+        } else { B.nodeTier=0; B.nodeRemaining=0; }
+      }
+      else if(B.type==='silo') silos++;
+      else if(B.type==='fab') fabs++;
+    }
+    /* A seat holding no income structure at all still trickles, exactly as
+       the base 0.6/2 above gives a player with a bare HQ a way back. Without
+       this a seat whose base is levelled is dead rather than crippled. */
+    mi*=resPace; ei*=resPace;
+    /* Difficulty still shapes an ally, but as a MULTIPLIER on real income
+       rather than as income itself, so the map is always the source. */
+    const dm=1+0.15*(S.diff||0); mi*=dm; ei*=dm;
+    if(fabs){
+      const thr=clamp((S.energy||0)/900,0,1);
+      ei-=FAB_E*fabs*thr;
+      mi+=FAB_M*fabs*thr;
+    }
+    S.mcap=MCAP0+600*silos; S.ecap=ECAP0+2000*silos;
+    S.mass=Math.max(0,Math.min(S.mcap,S.mass+mi*dt));
+    S.energy=Math.max(0,Math.min(S.ecap,S.energy+ei*dt));
+    S.ownedStructures=owned;
+  }
 }
 function econTickAiSeats(dt){
   /* One wallet per enemy commander. Mex/pgen/geo/fab/silo follow B.aiBaseSlot
@@ -237,6 +435,9 @@ function econTickAiSeats(dt){
   return true;
 }
 function econTick(dt){
+  /* Ally seats bank their own structures before the player ledger runs, so
+     a stall on one seat cannot be masked by another seat is income. */
+  econTickPlayerSeats(dt);
   for(let team=0;team<2;team++){
     if(team===1&&econTickAiSeats(dt)) continue;
     /* The HQ is a working installation, not just a spawn point: it runs its own
@@ -346,6 +547,14 @@ function updatePlaceRotUI(){
   if(el&&placing) el.textContent=(Math.round(((placing.rot||0)*180/Math.PI)%360+360)%360)+'°';
 }
 const SNAP=SNAP_GRID;          // placement snaps to the same grid the build zone is drawn on
+function mfPlayerPlacementFaction(){
+  return (typeof playerKitKey==='function')?playerKitKey():'nova';
+}
+function mfReservedPlacementFoot(type){
+  /* No explicit tier means bldFoot returns the largest authored family
+     envelope — the same space addBld reserves through footTier. */
+  return bldFoot(type,mfPlayerPlacementFaction());
+}
 function snapPlace(){
   if(!placing) return;
   let x=placing.rx, y=placing.ry;
@@ -372,7 +581,7 @@ function snapPlace(){
      cell BOUNDARY for its edges to land on grid lines; an odd span has to sit
      on a cell CENTRE. Snapping the centre blindly to the grid put half of them
      permanently half a cell out of alignment. */
-  const f=bldFoot(placing.type), rot=placing.rot||0;
+  const f=mfReservedPlacementFoot(placing.type), rot=placing.rot||0;
   const swap=(Math.round(rot/(Math.PI/2))&1)===1;
   const fw=swap?f[1]:f[0], fh=swap?f[0]:f[1];
   const cellsX=Math.max(1,Math.round(fw/SNAP)), cellsY=Math.max(1,Math.round(fh/SNAP));
@@ -393,6 +602,11 @@ function startPlacing(type){
   /* Facing carries over between placements, so laying a whole wall run or a row
      of aligned factories doesn't mean re-aiming every single one. */
   placing={type, x:0, y:0, rx:clamp(wx,40,MAP-40), ry:clamp(wy,40,MAP-40), rot:lastPlaceRot};
+  /* bzGrid is rasterised on a 1.2s tick while placementValid() runs per frame,
+     so the territory overlay could disagree with the ghost's own red/green for
+     over a second after a structure lands. Re-rasterise once on entry — the
+     overlay is only trustworthy if it agrees with the thing it sits under. */
+  if(typeof markBuildZone==='function') markBuildZone();
   snapPlace();
   document.getElementById('placeUI').style.display='flex';
   document.getElementById('buildMenu').style.display='none';
@@ -402,7 +616,7 @@ function startPlacing(type){
 }
 function placementHasShoreAccess(type,x,y,rot){
   if(type!=='harbor')return true;
-  const f=bldFoot(type),reach=Math.max(f[0],f[1])*.5;
+  const f=mfReservedPlacementFoot(type),reach=Math.max(f[0],f[1])*.5;
   for(let a=0;a<TAU;a+=Math.PI/8){
     for(const d of [reach+18,reach+42,reach+68]){
       const wx=x+Math.cos(a)*d,wy=y+Math.sin(a)*d;
@@ -413,33 +627,30 @@ function placementHasShoreAccess(type,x,y,rot){
 }
 function placementValid(){
   if(!placing) return false;
-  const T=BT[placing.type];
+  const T=BT[placing.type],fac=mfPlayerPlacementFaction(),f=bldFoot(placing.type,fac);
   if(typeof battlefieldContains==='function'){
-    const f=bldFoot(placing.type),edgePad=Math.hypot(f[0],f[1])*.5+8;
+    const edgePad=Math.hypot(f[0],f[1])*.5+8;
     if(!battlefieldContains(placing.x,placing.y,edgePad))return false;
   }
   if(!canStartBuild(0,T)) return false;
-  if(placing.type==='mex'){
-    return depositAt(placing.x,placing.y,34)>=0;
-  }
-  if(placing.type==='geo'){
-    return geyserAt(placing.x,placing.y,34)>=0;
-  }
+  const resourceSite=placing.type==='mex'||placing.type==='geo';
+  if(placing.type==='mex'&&depositAt(placing.x,placing.y,34)<0)return false;
+  if(placing.type==='geo'&&geyserAt(placing.x,placing.y,34)<0)return false;
   // everything except resource claims must sit inside your construction zone
-  if(!inBuildRange(placing.x,placing.y,0)) return false;
+  if(!resourceSite&&!inBuildRange(placing.x,placing.y,0)) return false;
   if(T.placement==='water'){
     if(typeof battlefieldNavalEnabled!=='function'||!battlefieldNavalEnabled())return false;
-    if(!footOnWater(placing.type,placing.x,placing.y,placing.rot||0))return false;
+    if(!footOnWater(placing.type,placing.x,placing.y,placing.rot||0,fac))return false;
     if(!placementHasShoreAccess(placing.type,placing.x,placing.y,placing.rot||0))return false;
-  }else if(!footOnLand(placing.type,placing.x,placing.y,placing.rot||0)) return false;
+  }else if(!footOnLand(placing.type,placing.x,placing.y,placing.rot||0,fac)) return false;
   // no overlapping footprints — rectangles must not intersect, at any facing
-  if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0)) return false;
+  if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0,null,fac)) return false;
   // ruins occupy ground too: raze them before you build over them
   for(const Rc of relics){
-    if(Rc.alive && obbHit(placing.x,placing.y,bldFoot(placing.type)[0],bldFoot(placing.type)[1],placing.rot||0,
+    if(Rc.alive && obbHit(placing.x,placing.y,f[0],f[1],placing.rot||0,
                           Rc.x,Rc.y,Rc.w,Rc.h,Rc.a,4)) return false;
   }
-  for(const D of deposits){
+  if(placing.type!=='mex')for(const D of deposits){
     if(!D.taken && dist2(placing.x,placing.y,D.x,D.y)<(T.r+18)*(T.r+18)) return false;
   }
   return true;
@@ -448,18 +659,18 @@ function confirmPlace(){
   if(!placing) return;
   const T=BT[placing.type];
   if(!placementValid()){
-    const site=buildStartCost(T);
+    const site=buildStartCost(T),fac=mfPlayerPlacementFaction();
     if(!canAfford(0,site.m,site.e)) toast(resM[0]<site.m?('Need '+site.m+' mass to establish this site ('+Math.floor(resM[0])+' stored)'):('Need '+site.e+' energy to establish this site ('+Math.floor(resE[0])+' stored)'));
-    else if(placing.type==='mex') toast('Place extractors on a ◆ deposit');
-    else if(placing.type==='geo') toast('Place Geo Plants on a ✦ geyser');
-    else if(!inBuildRange(placing.x,placing.y,0)) toast('⬡ Outside command territory — stay inside the HQ grid or research a Targeting Array relay');
+    else if(placing.type==='mex'&&depositAt(placing.x,placing.y,34)<0) toast('Place extractors on a ◆ deposit');
+    else if(placing.type==='geo'&&geyserAt(placing.x,placing.y,34)<0) toast('Place Geo Plants on a ✦ geyser');
+    else if(placing.type!=='mex'&&placing.type!=='geo'&&!inBuildRange(placing.x,placing.y,0)) toast('⬡ Outside command territory — stay inside the HQ grid or research a Targeting Array relay');
     else if(T.placement==='water'&&(typeof battlefieldNavalEnabled!=='function'||!battlefieldNavalEnabled()))
       toast('✕ NAVAL UNAVAILABLE — this battlefield has no connected ocean or river domain');
-    else if(T.placement==='water'&&!footOnWater(placing.type,placing.x,placing.y,placing.rot||0))
+    else if(T.placement==='water'&&!footOnWater(placing.type,placing.x,placing.y,placing.rot||0,fac))
       toast('⚓ Entire footprint must sit in the connected navigable water domain');
     else if(T.placement==='water'&&!placementHasShoreAccess(placing.type,placing.x,placing.y,placing.rot||0))
       toast('⚓ Harbor needs a nearby friendly shoreline inside your build zone');
-    else if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0))
+    else if(footBlocked(placing.type,placing.x,placing.y,placing.rot||0,null,fac))
       toast('⬛ Footprints overlap — nudge it clear or rotate with ⟳');
     else toast('Blocked terrain — find open, flat ground clear of structures');
     return;
@@ -500,7 +711,7 @@ function confirmPlace(){
     /* Advance along the wall's own facing, not blindly east, so a rotated run
        keeps running in the direction you actually pointed it. */
     const px2=placing.x, py2=placing.y, rt=placing.rot||0, ty=placing.type;
-    const step=bldFoot(ty)[0]+2;
+    const step=mfReservedPlacementFoot(ty)[0]+2;
     startPlacing(ty);
     placing.rot=rt;
     placing.rx=clamp(px2+Math.cos(rt)*step,40,MAP-40);
@@ -513,7 +724,7 @@ function confirmPlace(){
      The player exits intentionally with Cancel instead of returning to a menu
      after every factory, generator, or defensive building. */
   const px2=placing.x, py2=placing.y, rt=placing.rot||0, ty=placing.type;
-  const foot=bldFoot(ty),step=Math.max(foot[0],foot[1])+8;
+  const foot=mfReservedPlacementFoot(ty),step=Math.max(foot[0],foot[1])+8;
   startPlacing(ty);
   placing.rot=rt;
   placing.rx=clamp(px2+Math.cos(rt)*step,40,MAP-40);
@@ -538,4 +749,3 @@ if(typeof bldTick==='function'&&!bldTick._econSeatWrap){
   };
   bldTick._econSeatWrap=true;
 }
-

@@ -60,7 +60,18 @@ function profIdentity(){
 }
 
 
-function profSave(){ try{ localStorage.setItem(PROF_KEY,JSON.stringify(PROFILES)); }catch(e){} }
+function profSave(){
+  let text;
+  try{ text=JSON.stringify(PROFILES); }
+  catch(e){ return false; }
+  try{ localStorage.setItem(PROF_KEY,text); if(localStorage.getItem(PROF_KEY)===text)return true; }
+  catch(e){}
+  /* Some Android WebViews briefly reject a write while their storage process
+     is being resumed. Match career saves and retry once before reporting the
+     record as unavailable; callers that need atomicity can trust the boolean. */
+  try{ localStorage.setItem(PROF_KEY,text); return localStorage.getItem(PROF_KEY)===text; }
+  catch(e2){ return false; }
+}
 function profLoad(){
   try{ const s=localStorage.getItem(PROF_KEY); const o=s&&JSON.parse(s);
     if(o&&Array.isArray(o.list)) PROFILES=o; }catch(e){}
@@ -104,6 +115,40 @@ const SCREEN_GRADES={
            ds:'Heavy contrast for dim or flat displays. Crushes dark detail to black — this was the old default.'}
 };
 function screenGradeKey(){ return SCREEN_GRADES[META.settings.screenGrade]?META.settings.screenGrade:'neutral'; }
+/* GPU vendor tiering. gl.js (manifest slot 3) stores the unmasked renderer
+   string in __MF_GL_INFO long before meta.js (slot 35) runs, but nothing ever
+   read it: the string was captured for diagnostics and then discarded, so an
+   integrated laptop and a discrete desktop both booted on HIGH. Classify it
+   once. Returns '' when the extension is masked, which is common and must
+   leave the existing defaults alone rather than guess. */
+function mfGpuTier(){
+  try{
+    const info=(typeof window!=='undefined'&&window.__MF_GL_INFO)||null;
+    const r=String((info&&info.renderer)||'').toLowerCase();
+    if(!r) return '';
+    /* Chrome on Windows wraps everything as "ANGLE (vendor, part, D3D11)", and
+       integrated AMD parts are named "Radeon(TM) 610M" with no RX/Pro token —
+       a first pass that keyed on RX/Pro classified this author's own AMD box as
+       '' and silently did nothing. Every branch below is unit-tested against
+       real renderer strings; do not tighten one without a case for it. */
+    if(/swiftshader|llvmpipe|lavapipe|software|basic render/.test(r)) return 'low';
+    if(/apple m\d/.test(r)) return 'high';
+    if(/apple a1[5-9]|apple a2\d/.test(r)) return 'medium';
+    if(/geforce|\brtx\b|\bgtx\b|quadro|nvidia|titan/.test(r)) return 'high';
+    /* AMD: discrete carries RX / Pro / FirePro / Wx000; APU graphics read as
+       "Radeon(TM) NNNm" or "Radeon(TM) Graphics" or "Vega N Graphics". */
+    if(/radeon/.test(r)||/\bamd\b/.test(r)){
+      if(/\brx\b|radeon pro|firepro|\bw[5-7]\d00\b/.test(r)) return 'high';
+      return 'medium';
+    }
+    if(/\barc\s*(\(tm\)\s*)?a\d{3}/.test(r)) return 'high';
+    if(/intel|uhd graphics|\bhd graphics\b|iris/.test(r)) return 'medium';
+    if(/adreno\s*(\(tm\)\s*)?(7|8)\d\d/.test(r)) return 'medium';
+    if(/mali-g[78]\d/.test(r)) return 'medium';
+    if(/adreno|mali|powervr|videocore|xclipse/.test(r)) return 'low';
+  }catch(e){}
+  return '';
+}
 function mfGuessMobile(){
   /* CINEMATIC/HIGH must not be the silent phone default. A 412×900 flagship
      at DPR 3 plus the FBO chain is the context-loss spike; mid-tier is the
@@ -116,10 +161,29 @@ function mfGuessMobile(){
   }catch(e){}
   return false;
 }
+const MF_TEXT_SCALE_STEPS=[100,125,150,200];
+function mfTextScaleValue(value){
+  const n=Number(value);
+  return MF_TEXT_SCALE_STEPS.includes(n)?n:100;
+}
+function mfApplyTextScale(value){
+  const pct=mfTextScaleValue(value);
+  if(typeof document!=='undefined'&&document.documentElement)
+    document.documentElement.dataset.mfTextScale=String(pct);
+  return pct;
+}
 const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:true,dayNight:true,
-                     haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
-                     godMode:false,tutorialVoice:true,sfxVol:3,musicVol:2,perf:'auto',menubg:'dim',healthBars:'select',
-                     quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false};
+                      haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
+                      godMode:false,tutorialVoice:true,sfxVol:3,ambVol:3,musicVol:2,voiceVol:3,
+                      perf:'auto',menubg:'dim',healthBars:'select',teamIdMode:false,textScale:100,
+                     quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false,
+                     /* EXPERIMENTAL, OFF BY DEFAULT AND NEVER DEFAULTED ON.
+                        Gates the space-exploration module's menu entry. The
+                        module is not packaged (tools/pack-www.mjs refuses
+                        modules/), so with this off the game is byte-identical
+                        to before and with it on the entry only appears where a
+                        development checkout actually has the module present. */
+                     experimentalExploration:false};
 /* CAREER RECORD. The old set was four numbers, which is enough to compute a
    rank and nothing else — no history, no identity, nothing a player would want
    to look at. These are the ones a commander would actually care about. */
@@ -128,17 +192,128 @@ const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:tru
    infestation a full tier, which on a fresh account meant the game silently
    made itself harder than the difficulty the player picked. Wildcards are a
    reward multiplier you opt into. */
+/* These four permanent percentages duplicated Development modules exactly.
+   Old saves only record the bought tier, not whether its 25%-off daily deal
+   was used, so list price is the one deterministic, player-favouring refund.
+   Deleting the old ownership key is the tombstone: a second load/save has
+   nothing left to refund, while an imported legacy payload is handled again. */
+const ARMORY_RETIRED_OVERLAPS=Object.freeze({
+  armor:Object.freeze([400,800,1600]),
+  targeting:Object.freeze([400,800,1600]),
+  salvage:Object.freeze([400,800]),
+  reactor:Object.freeze([380,760,1500]),
+});
+/* One local authority credits every earned Core. Pending idempotent grant
+   events live inside the career record, not only in module memory: every real
+   reward path saves META immediately after crediting it, so an OS kill cannot
+   erase the server-reconciliation half of an already-saved local reward. */
+let metaCoreGrantObserver=null;
+let metaCoreGrantTransaction=null;
+function metaCoreGrantId(){
+  try{ if(typeof crypto!=='undefined'&&crypto.randomUUID) return 'meta:'+crypto.randomUUID(); }
+  catch(e){}
+  return 'meta:'+Date.now().toString(36)+':'+Math.random().toString(36).slice(2,12);
+}
+function metaCoreGrantQueue(){
+  if(!META||typeof META!=='object') return [];
+  if(!Array.isArray(META.coreGrantPending)) META.coreGrantPending=[];
+  return META.coreGrantPending;
+}
+function metaDispatchCoreGrant(grant){
+  if(!metaCoreGrantObserver){ metaCoreGrantQueue().push(grant); return true; }
+  try{ return metaCoreGrantObserver(grant)!==false; }
+  catch(e){ return false; }
+}
+/* Imported legacy careers can earn an Armory-retirement refund while their two
+   local records are still being verified. Hold that external grant signal
+   until the save transaction commits; rolling the live META back must also
+   discard its not-yet-durable refund. */
+function metaCoreGrantTxnBegin(){
+  if(metaCoreGrantTransaction) return false;
+  metaCoreGrantTransaction=[];
+  return true;
+}
+function metaCoreGrantTxnEnd(commit){
+  const held=metaCoreGrantTransaction||[];
+  metaCoreGrantTransaction=null;
+  if(!commit) return true;
+  const queuedBefore=metaCoreGrantQueue().length;
+  let accepted=true;
+  for(const grant of held) if(!metaDispatchCoreGrant(grant)) accepted=false;
+  /* Import can run before economy-net has installed its observer. In that case
+     dispatch stores the held grant on META after the candidate's first write;
+     make that queue addition durable before the account transaction succeeds. */
+  if(accepted&&metaCoreGrantQueue().length!==queuedBefore&&typeof metaSave==='function')
+    accepted=metaSave(true)===true;
+  return accepted;
+}
+function metaRetryCoreGrants(){
+  const queue=metaCoreGrantQueue();
+  if(!queue.length) return true;
+  if(!metaCoreGrantObserver) return false;
+  const pending=queue.splice(0);
+  let accepted=true;
+  for(const grant of pending){
+    if(!metaDispatchCoreGrant(grant)){ queue.push(grant); accepted=false; }
+  }
+  /* Accepted events are already durable in economy-net's queue. Persist their
+     removal from META so restart cannot replay duplicates; idempotency still
+     makes a failed cleanup write safe. */
+  if(typeof metaSave==='function') metaSave(true);
+  return accepted&&!queue.length;
+}
+function metaObserveCoreGrants(observer){
+  metaCoreGrantObserver=typeof observer==='function'?observer:null;
+  metaRetryCoreGrants();
+}
+function metaGrantCores(amount,reason,idemKey){
+  amount=Math.trunc(Number(amount));
+  if(!Number.isFinite(amount)||amount<=0) return 0;
+  const balance=Number(META.cores);
+  META.cores=(Number.isFinite(balance)?balance:0)+amount;
+  const grant={amount,reason:String(reason||'grant').slice(0,64),
+    idemKey:String(idemKey||metaCoreGrantId()).slice(0,160)};
+  if(metaCoreGrantTransaction) metaCoreGrantTransaction.push(grant);
+  else if(!metaDispatchCoreGrant(grant)) metaCoreGrantQueue().push(grant);
+  return amount;
+}
+function armoryRetireOverlaps(){
+  const owned=META&&META.owned&&typeof META.owned==='object'?META.owned:null;
+  if(!owned) return {changed:false,refund:0};
+  let changed=false,refund=0;
+  for(const id in ARMORY_RETIRED_OVERLAPS){
+    const costs=ARMORY_RETIRED_OVERLAPS[id];
+    if(Object.prototype.hasOwnProperty.call(owned,id)){
+      const raw=Number(owned[id]);
+      const tier=Number.isNaN(raw)?0:Math.min(costs.length,Math.max(0,Math.floor(raw)));
+      for(let i=0;i<tier;i++) refund+=costs[i];
+      delete owned[id]; changed=true;
+    }
+    const claimed=META.deals&&META.deals.claimed;
+    if(claimed&&typeof claimed==='object'&&Object.prototype.hasOwnProperty.call(claimed,id)){
+      delete claimed[id]; changed=true;
+    }
+  }
+  if(refund>0) metaGrantCores(refund,'armory_retirement','armory-retirement:v1');
+  return {changed,refund};
+}
 const META_DEF={xp:0,cores:0,researchData:0,owned:{},color:'azure',wins:0,matches:0,standardMatches:0,kills:0,wcPref:0,
   losses:0, streak:0, bestStreak:0, playSec:0, built:0, lost:0, structs:0,
   bestKills:0, fastestWin:0, favFac:'', facWins:{}, mapWins:{}, firstPlayed:0, lastPlayed:0,
-  campaign:{missions:{}},
+  campaign:{missions:{}}, coreGrantPending:[],
   /* Account research/crafting lived only on first UI open, so a match started
      before Development, or a cloud merge that omitted the keys, dropped the
      tree, queue and bag. Defaults here make every load a complete career. */
   res:{}, resQueue:[], mats:{alloy:0,circuit:0,isotope:0,relic:0}, mods:{}, equip:[],
   inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
   settings:{...DEF_SETTINGS}};
-let META={...META_DEF};
+function metaFresh(){
+  return {...META_DEF,owned:{},facWins:{},mapWins:{},campaign:{missions:{}},coreGrantPending:[],
+    res:{},resQueue:[],mats:{alloy:0,circuit:0,isotope:0,relic:0},mods:{},equip:[],
+    inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
+    settings:{...DEF_SETTINGS}};
+}
+let META=metaFresh();
 function metaKey(){ return 'massfront_meta_'+PROFILES.active; }
 function metaHarden(){
   if(!META.owned||typeof META.owned!=='object') META.owned={};
@@ -146,6 +321,11 @@ function metaHarden(){
   if(!META.mapWins||typeof META.mapWins!=='object') META.mapWins={};
   if(!META.campaign||typeof META.campaign!=='object') META.campaign={missions:{}};
   if(!META.campaign.missions||typeof META.campaign.missions!=='object') META.campaign.missions={};
+  if(!Array.isArray(META.coreGrantPending)) META.coreGrantPending=[];
+  else META.coreGrantPending=META.coreGrantPending.filter(grant=>grant&&
+    Number.isFinite(Number(grant.amount))&&Number(grant.amount)>0).map(grant=>({
+      amount:Math.trunc(Number(grant.amount)),reason:String(grant.reason||'grant').slice(0,64),
+      idemKey:String(grant.idemKey||metaCoreGrantId()).slice(0,160)}));
   if(!META.res||typeof META.res!=='object') META.res={};
   if(!Array.isArray(META.resQueue)) META.resQueue=[];
   if(!META.mats||typeof META.mats!=='object') META.mats={alloy:0,circuit:0,isotope:0,relic:0};
@@ -155,7 +335,17 @@ function metaHarden(){
   if(!META.mods||typeof META.mods!=='object') META.mods={};
   if(!Array.isArray(META.equip)) META.equip=[];
   META.researchData=Math.max(0,META.researchData|0);
-  META.settings={...DEF_SETTINGS,...(META.settings||{})};
+  const priorSettings=META.settings||{};
+  const migrateExploration=!Object.prototype.hasOwnProperty.call(priorSettings,'experimentalExploration')
+    &&Object.prototype.hasOwnProperty.call(priorSettings,'expExploration');
+  META.settings={...DEF_SETTINGS,...priorSettings};
+  META.settings.textScale=mfTextScaleValue(META.settings.textScale);
+  /* Compatibility adapter for the short-lived preview key. Preserve an
+     explicit opt-in from an existing local career, then remove the legacy key
+     so every subsequent save has one authoritative setting. New careers still
+     default off. */
+  if(migrateExploration) META.settings.experimentalExploration=!!priorSettings.expExploration;
+  delete META.settings.expExploration;
   /* gfxOver is a sparse bag. Sharing DEF_SETTINGS' empty object would make
      the first profile's taps leak into every later career. */
   if(!META.settings.gfxOver||typeof META.settings.gfxOver!=='object'||Array.isArray(META.settings.gfxOver))
@@ -173,6 +363,20 @@ function metaHarden(){
       META.settings.quality='medium';
     META.settings.gfxPhoneMed=1;
   }
+  /* One-time GPU tier, stamped separately from gfxPhoneMed so the two never
+     fight. Runs AFTER the phone default, so on mobile it may only lower the
+     preset further, never raise it back to HIGH. Skipped entirely once the
+     player has any Advanced override — an explicit choice always wins. */
+  if(!META.settings.gfxGpuTier){
+    const gOver=META.settings.gfxOver;
+    const gStock=!gOver||typeof gOver!=='object'||!Object.keys(gOver).length;
+    const tier=mfGpuTier();
+    if(gStock&&tier){
+      if(mfGuessMobile()){ if(tier==='low') META.settings.quality='low'; }
+      else META.settings.quality=tier;
+    }
+    META.settings.gfxGpuTier=1;
+  }
   if(typeof invBag==='function') invBag();
   if(typeof COLORS!=='undefined'&&!COLORS[META.color]) META.color='azure';
 }
@@ -180,10 +384,7 @@ function metaLoad(){
   /* Nested bags are cloned, not shared with META_DEF. A shallow spread left
      res/mats/mods pointing at the defaults, so researching on one profile
      silently wrote into the next empty career. */
-  META={...META_DEF, owned:{}, facWins:{}, mapWins:{}, campaign:{missions:{}},
-    res:{}, resQueue:[], mats:{alloy:0,circuit:0,isotope:0,relic:0}, mods:{}, equip:[],
-    inventory:{gear:{},consumables:{},equipped:{weapon:'',armor:'',utility:''},ready:[]},
-    settings:{...DEF_SETTINGS}};
+  META=metaFresh();
   let loadedCareer=false,loadedStandardCount=false;
   try{
     const s=localStorage.getItem(metaKey());
@@ -196,8 +397,14 @@ function metaLoad(){
      from forcing their next three battles back through onboarding defaults. */
   if(loadedCareer&&!loadedStandardCount)META.standardMatches=META.matches||0;
   const needGfxMed=!(META.settings&&META.settings.gfxPhoneMed);
+  const needExplorationKey=!!(META.settings
+    &&!Object.prototype.hasOwnProperty.call(META.settings,'experimentalExploration')
+    &&Object.prototype.hasOwnProperty.call(META.settings,'expExploration'));
+  const needCoreGrantRepair=Array.isArray(META.coreGrantPending)&&META.coreGrantPending.some(grant=>
+    !grant||!Number.isFinite(Number(grant.amount))||Number(grant.amount)<=0||!grant.idemKey);
   metaHarden();
-  if(needGfxMed) metaSave();
+  const overlapMigration=armoryRetireOverlaps();
+  if(needGfxMed||needExplorationKey||needCoreGrantRepair||overlapMigration.changed) metaSave();
 }
 /* Local save is the source of truth for progress on THIS device. Harden it so a
    transient write failure (quota pressure, a WebView hiccup) does not silently
@@ -205,14 +412,26 @@ function metaLoad(){
    point them at the account backup, which now survives even a reinstall. */
 let metaSaveWarned=false;
 function metaSave(){
-  try{ localStorage.setItem(metaKey(),JSON.stringify(META)); metaSaveWarned=false; return; }
+  const quiet=arguments[0]===true;
+  /* Auth Portal restores assign META directly and then call metaSave without
+     metaHarden. Keep the retirement invariant at the serialization boundary
+     so local, cloud, file-import and profile-switch paths all converge. */
+  armoryRetireOverlaps();
+  let text;
+  try{ text=JSON.stringify(META); }
+  catch(e){ text=null; }
+  const key=metaKey();
+  try{ if(text===null) throw new Error('serialize'); localStorage.setItem(key,text);
+    if(localStorage.getItem(key)!==text)throw new Error('readback');metaSaveWarned=false;return true; }
   catch(e){}
-  try{ localStorage.setItem(metaKey(),JSON.stringify(META)); metaSaveWarned=false; }
+  try{ if(text===null) throw new Error('serialize'); localStorage.setItem(key,text);
+    if(localStorage.getItem(key)!==text)throw new Error('readback');metaSaveWarned=false;return true; }
   catch(e2){
-    if(!metaSaveWarned && typeof toast==='function'){
+    if(!quiet&&!metaSaveWarned && typeof toast==='function'){
       metaSaveWarned=true;
       toast('⚠ Progress could not be saved on this device — sign in to back it up to your account');
     }
+    return false;
   }
 }
 /* The live graphics budget. Every quality gate in the renderer reads this
@@ -221,7 +440,8 @@ function metaSave(){
    object is always the merge of preset + overrides. */
 let GFX={ao:true, bloom:true, grade:true, fxFloor:0.55, organicSpan:2700, particles:1,
          lights:8, aoSamples:12, bloomBlur:2, bloomAmt:0.14, aoAmt:0.18, glowDiv:2, shadowQ:2,
-         waterAmp:1, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1};
+         waterAmp:1, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1,
+         volSteps:24, groundQ:2};
 const GFX_PRESETS={
   /* Knobs the GL path actually reads. ao/bloom/grade are the old on/off
      gates; lights/aoSamples/bloomBlur/glowDiv are the mid-tier cheapeners.
@@ -239,19 +459,24 @@ const GFX_PRESETS={
      where secondary animation dies. */
   low:      {ao:false, bloom:false, grade:false, fxFloor:0,    organicSpan:0,    particles:0.5,
              lights:0, aoSamples:0,  bloomBlur:0, bloomAmt:0,    aoAmt:0,    glowDiv:3, shadowQ:0,
-             waterAmp:0.40, worldV2:false, dprCap:1.15, contact:false, aniso:1, lodBias:0.75},
+             waterAmp:0.40, worldV2:false, dprCap:1.15, contact:false, aniso:1, lodBias:0.75,
+             volSteps:0, groundQ:0},
   medium:   {ao:true,  bloom:true,  grade:true,  fxFloor:0.35, organicSpan:1800, particles:0.75,
              lights:4, aoSamples:4,  bloomBlur:0, bloomAmt:0.10, aoAmt:0.12, glowDiv:3, shadowQ:1,
-             waterAmp:0.80, worldV2:false, dprCap:1.25, contact:true, aniso:4, lodBias:0.90},
+             waterAmp:0.80, worldV2:false, dprCap:1.25, contact:true, aniso:4, lodBias:0.90,
+             volSteps:0, groundQ:1},
   high:     {ao:true,  bloom:true,  grade:true,  fxFloor:0.55, organicSpan:2700, particles:1,
              lights:8, aoSamples:12, bloomBlur:2, bloomAmt:0.14, aoAmt:0.18, glowDiv:2, shadowQ:2,
-             waterAmp:1, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1},
+             waterAmp:1, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1,
+             volSteps:24, groundQ:2},
   cinematic:{ao:true,  bloom:true,  grade:true,  fxFloor:0.75, organicSpan:4600, particles:1.5,
              lights:8, aoSamples:12, bloomBlur:2, bloomAmt:0.16, aoAmt:0.20, glowDiv:2, shadowQ:2,
-             waterAmp:1.15, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1.15},
+             waterAmp:1.15, worldV2:true, dprCap:0, contact:true, aniso:8, lodBias:1.15,
+             volSteps:32, groundQ:3},
 };
 const GFX_OVER_KEYS=['ao','bloom','grade','fxFloor','organicSpan','particles','lights','aoSamples',
-  'bloomBlur','bloomAmt','aoAmt','glowDiv','shadowQ','waterAmp','worldV2','dprCap','contact','aniso','lodBias'];
+  'bloomBlur','bloomAmt','aoAmt','glowDiv','shadowQ','waterAmp','worldV2','dprCap','contact','aniso','lodBias',
+  'volSteps','groundQ'];
 function qualityKey(){
   const q=(META.settings&&META.settings.quality)||'high';
   return GFX_PRESETS[q]?q:'high';
@@ -334,8 +559,22 @@ function applyQualityPreset(){
      drives GFX; the click handler below copies cine/perf only when the
      player actually cycles the quality row. */
   /* CINEMATIC must not be silently undone by the frame-rate scaler. The floor
-     is what makes it a promise rather than a suggestion. */
-  if(typeof perfFloor!=='undefined') perfFloor=GFX.fxFloor;
+     is what makes it a promise rather than a suggestion.
+     A floor is NOT a licence to overrule the player, though. main.js applies
+     perfFloor AFTER `META.settings.perf==='low'` caps perfScale at 0.45, so a
+     preset floor above 0.45 erased the Effects Budget row outright: measured
+     with the real perfScale block, HIGH read 0.55 and CINEMATIC 1.125 in every
+     scenario whether the budget was AUTO or LOW — identical, i.e. the row did
+     nothing. Clamping the floor to the budget keeps the preset promise while
+     an explicit player cap still lands (HIGH 0.45, CINEMATIC 0.675).
+     GFX.fxFloor itself is deliberately left alone: mesh.js reads `fxFloor>0`
+     as the "SSAO/bloom FBO stays pinned" flag, so changing the preset value
+     would silently drop the post chain. */
+  if(typeof perfFloor!=='undefined'){
+    let pf=+GFX.fxFloor||0;
+    if(META.settings&&META.settings.perf==='low') pf=Math.min(pf,0.45);
+    perfFloor=pf;
+  }
   /* Quality changes also change the mobile render-resolution ceiling. Apply it
      immediately instead of making the player relaunch before the lower-memory
      preset can prevent another context loss. */
@@ -344,6 +583,7 @@ function applyQualityPreset(){
 }
 function applySettings(){
   const s=META.settings;
+  mfApplyTextScale(s.textScale);
   /* GRAPHICS QUALITY — one dial, plus Advanced overrides underneath.
      A preset sets every renderer knob coherently; gfxOver then wins per key
      so a mid-tier phone can keep MEDIUM's DPR cap and still turn bloom off.
@@ -469,7 +709,76 @@ function liveryTooClose(a,b){
 function liveryContrast(c){
   return [Math.round(c[0]*0.46), Math.round(c[1]*0.40+18), Math.round(c[2]*0.52+92)];
 }
+/* Tactical Team Identification is an opt-in ALLEGIANCE layer, not a faction
+   repaint. The Okabe-Ito family stays separable under the common red/green
+   deficiencies; faction meshes, plates, crests and weapon palettes still own
+   identity. Arrays are copied into TEAMC/TEAMB so no consumer can mutate the
+   source palette through the shared renderer globals. */
+const MF_TEAM_ID_PALETTE=[
+  {c:[86,180,233], b:[0,114,178]},       // friendly: sky / blue
+  {c:[230,159,0], b:[213,94,0]},         // hostile: amber / vermilion
+  {c:[204,121,167], b:[204,121,167]},    // unaligned: reddish purple
+];
+let mfTeamIdApplied=false;
+function mfTeamIdEnabled(){ return !!(META&&META.settings&&META.settings.teamIdMode); }
+function mfTeamIdAllegiance(team){
+  if(team===0) return 0;
+  if(team===1||(team===2&&typeof broodIsEnemy==='function'&&broodIsEnemy())) return 1;
+  return 2;
+}
+function mfTeamIdColorClass(allegiance,bright){
+  const P=MF_TEAM_ID_PALETTE[clamp(allegiance|0,0,2)]||MF_TEAM_ID_PALETTE[2];
+  return bright?P.b:P.c;
+}
+function mfTeamIdColor(team,bright){ return mfTeamIdColorClass(mfTeamIdAllegiance(team),bright); }
+function mfTeamIdWrite(team,c,b){
+  TEAMC[team][0]=c[0]; TEAMC[team][1]=c[1]; TEAMC[team][2]=c[2];
+  TEAMB[team][0]=b[0]; TEAMB[team][1]=b[1]; TEAMB[team][2]=b[2];
+}
+function mfTeamIdNativeEnemy(){
+  const F=typeof FACTIONS!=='undefined'&&typeof AI!=='undefined'&&AI&&FACTIONS[AI.fac];
+  if(F&&F.col&&F.colB) return {c:F.col,b:F.colB};
+  return {c:[255,120,90],b:[255,93,67]};
+}
+function mfTeamIdNativeThird(){
+  const hostile=typeof broodIsEnemy==='function'&&broodIsEnemy();
+  const H=typeof FACTIONS!=='undefined'&&FACTIONS.horde;
+  if(hostile&&H&&H.col&&H.colB) return {c:H.col,b:H.colB};
+  const c=typeof WILD_C!=='undefined'?WILD_C:[235,235,220];
+  const b=typeof WILD_B!=='undefined'?WILD_B:[255,177,58];
+  return {c,b};
+}
+function mfTeamIdRestoreNative(){
+  const L=playerLivery(), E=mfTeamIdNativeEnemy(), N=mfTeamIdNativeThird();
+  mfTeamIdWrite(0,L.c,L.b); mfTeamIdWrite(1,E.c,E.b); mfTeamIdWrite(2,N.c,N.b);
+  if(liveryTooClose(TEAMC[0],TEAMC[1])){
+    const e=liveryContrast(TEAMC[1]), eb=liveryContrast(TEAMB[1]);
+    mfTeamIdWrite(1,e,eb);
+  }
+  mmPCol='rgb('+TEAMC[0][0]+','+TEAMC[0][1]+','+TEAMC[0][2]+')';
+  mmPColA='rgba('+TEAMC[0][0]+','+TEAMC[0][1]+','+TEAMC[0][2]+',.9)';
+  if(typeof mmECol!=='undefined'){
+    mmECol='rgb('+TEAMB[1][0]+','+TEAMB[1][1]+','+TEAMB[1][2]+')';
+    mmEColA='rgba('+TEAMB[1][0]+','+TEAMB[1][1]+','+TEAMB[1][2]+',.9)';
+  }
+}
 function applyColor(){
+  if(mfTeamIdEnabled()){
+    const P=MF_TEAM_ID_PALETTE[0], E=MF_TEAM_ID_PALETTE[1], N=MF_TEAM_ID_PALETTE[mfTeamIdAllegiance(2)];
+    mfTeamIdWrite(0,P.c,P.b); mfTeamIdWrite(1,E.c,E.b); mfTeamIdWrite(2,N.c,N.b);
+    mmPCol='rgb('+P.c[0]+','+P.c[1]+','+P.c[2]+')';
+    mmPColA='rgba('+P.c[0]+','+P.c[1]+','+P.c[2]+',.9)';
+    if(typeof mmECol!=='undefined'){
+      mmECol='rgb('+E.b[0]+','+E.b[1]+','+E.b[2]+')';
+      mmEColA='rgba('+E.b[0]+','+E.b[1]+','+E.b[2]+',.9)';
+    }
+    mfTeamIdApplied=true;
+    return;
+  }
+  /* The ordinary path below intentionally remains the old path. Only a mode
+     that was actually applied needs the full three-team restoration; this
+     keeps an untouched default career pixel-identical to the existing game. */
+  if(mfTeamIdApplied){ mfTeamIdRestoreNative(); mfTeamIdApplied=false; return; }
   const L=playerLivery();
   TEAMC[0][0]=L.c[0]; TEAMC[0][1]=L.c[1]; TEAMC[0][2]=L.c[2];
   TEAMB[0][0]=L.b[0]; TEAMB[0][1]=L.b[1]; TEAMB[0][2]=L.b[2];
@@ -532,14 +841,10 @@ function mfLiveryHint(){
 /* ---------- store (permanent perks, bought with ⬡ cores) ---------- */
 const STORE=[
  {id:'cache',    em:'📦', nm:'Supply Cache',    ds:'Start every match with +300 mass, +1200 energy', max:1, cost:[250]},
- {id:'armor',    em:'🛡', nm:'Composite Armor', ds:'+8% unit HP per tier',            max:3, cost:[400,800,1600]},
- {id:'targeting',em:'🎯', nm:'Targeting AI',    ds:'+6% unit damage per tier',        max:3, cost:[400,800,1600]},
  {id:'trade',    em:'🚚', nm:'Trade Network',   ds:'+1.5 mass, +5 energy income per tier', max:3, cost:[350,700,1400]},
  {id:'neural',   em:'🧠', nm:'Neural Uplink',   ds:'+15% Commander XP per tier',      max:2, cost:[300,600]},
  {id:'capacitor',em:'⚡', nm:'Rapid Capacitors',ds:'Ability cooldowns −10% per tier', max:2, cost:[300,600]},
- {id:'salvage', em:'♻', nm:'Salvage Rigs',   ds:'Wrecks and bug bounties pay +40% per tier', max:2, cost:[400,800]},
  {id:'droppod', em:'📦', nm:'Drop Priority',  ds:'Supply pods arrive 25% more often per tier', max:2, cost:[350,700]},
- {id:'reactor', em:'☢', nm:'Cold Reactors',  ds:'+12% energy income per tier',    max:3, cost:[380,760,1500]},
  {id:'bastion', em:'🏰', nm:'Fortified Plating',ds:'Your structures +15% HP per tier', max:2, cost:[420,840]},
  {id:'orbital', em:'🛰', nm:'Orbital Uplink', ds:'Unlocks the ORBITAL LANCE ability', max:1, cost:[1200]},
 ];
@@ -586,9 +891,9 @@ const INV_GEAR=[
    `apply(ty)` receives the locked TYPES index, or -1 for army-wide. */
 const INV_CONSUMABLES=[
  {id:'c_supply',rarity:'common',nm:'Supply Pack',em:'▰',scope:'army',
-  ds:'Next match: +220 starting mass',apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+220);}},
+  ds:'Next match: +220 starting mass',apply:()=>{credit(0,220,0);}},
  {id:'c_power',rarity:'uncommon',nm:'Charged Power Cell',em:'ϟ',scope:'army',
-  ds:'Next match: +900 starting energy',apply:()=>{resE[0]=Math.min(RES_ECAP[0],resE[0]+900);}},
+  ds:'Next match: +900 starting energy',apply:()=>{credit(0,0,900);}},
  {id:'c_nanites',rarity:'rare',nm:'Repair Nanites',em:'✚',scope:'type',
   ds:'Next match: +26% health, locked to one chassis',
   apply:(ty)=>{ if(ty>=0&&typeof typeHpMult!=='undefined') typeHpMult[ty]*=1.26; else resHpMult*=1.08; }},
@@ -604,12 +909,12 @@ const INV_CONSUMABLES=[
     of reducing "boosted rewards" to a line of temporary payout text. */
  {id:'c_standard_order',rarity:'uncommon',nm:'Skirmish Requisition',em:'⚔',scope:'army',mode:'standard',
   ds:'Standard victory supply: +280 starting mass and +800 starting energy',
-  apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+280);resE[0]=Math.min(RES_ECAP[0],resE[0]+800);}},
+  apply:()=>{credit(0,280,800);}},
  {id:'c_campaign_intel',rarity:'rare',nm:'Campaign Command Intel',em:'◇',scope:'army',mode:'campaign',
   ds:'Campaign mission supply: +6% army damage for one deployment',apply:()=>{armyDmgMult+=0.06;}},
  {id:'c_warfront_beacon',rarity:'epic',nm:'Warfront Logistics Beacon',em:'☷',scope:'army',mode:'mmo',
   ds:'MMO warfront supply: +400 starting mass and +1400 starting energy',
-  apply:()=>{resM[0]=Math.min(RES_MCAP[0],resM[0]+400);resE[0]=Math.min(RES_ECAP[0],resE[0]+1400);}},
+  apply:()=>{credit(0,400,1400);}},
 ];
 function invConsumableScope(id){
   const c=INV_CONSUMABLES.find(x=>x.id===id);
@@ -776,17 +1081,18 @@ function applyMetaPerks(){                    // call AFTER resetWorld, skirmish
      the previous match left behind. Drop Priority compounded 1.25x per tier per
      match — ten matches in with tier 2 it had multiplied by roughly fifty. */
   crateRate=crateRateBase;
-  if(o.cache){ resM[0]=Math.min(RES_MCAP[0],resM[0]+300); resE[0]=Math.min(RES_ECAP[0],resE[0]+1200); }
-  resHpMult*=1+0.08*(o.armor||0);
-  armyDmgMult+=0.06*(o.targeting||0);
+  /* The loadout belongs to the HUMAN commander, never to a seat: credit with
+     no slot is the human bank by construction. */
+  if(o.cache){ credit(0,300,1200); }
   bonusMass+=1.5*(o.trade||0); bonusEnergy+=5*(o.trade||0);
   const cd=1-0.10*(o.capacitor||0);
   for(let i=0;i<AB_CD.length;i++) AB_CD[i]=AB_BASE[i]*cd;
-  salvageMult=1+0.4*(o.salvage||0);
+  /* Retired percentage keys are intentionally not read here. Even a stale
+     in-memory/imported object cannot restore the Development overlap. */
+  salvageMult=1;
   if(WC.nofab) salvageMult=0;                       // No Salvage
   if(WC.brittle) resHpMult*=0.75;                   // Brittle Frames
   crateRate*=1+0.25*(o.droppod||0);
-  resEnergyMult*=1+0.12*(o.reactor||0);
   bldHpMult=1+0.15*(o.bastion||0);
   abUnlock[3]=!!o.orbital;                       // Orbital Lance is a bought ability
 }
@@ -935,11 +1241,11 @@ function matchCommitted(win){
    chosen difficulty, and rewards a genuinely fortified base. */
 function coreRewardLedger(win){
   /* Zero was the wrong number for the one player who most needs a reason to
-     press PLAY again: the new commander who gets rushed and loses at forty-five
-     seconds. They saw MISSION FAILED over an empty payout panel — no cores, no
-     XP, not even a breakdown explaining why. The anti-farm rule is still doing
-     its job; it just no longer has to be expressed as nothing. A token that
-     cannot be farmed profitably beats a blank screen. */
+     press PLAY again: the new commander who fights through the three-minute
+     commitment window and still loses. They saw MISSION FAILED over an empty
+     payout panel — no cores, no XP, not even a breakdown explaining why. The
+     anti-farm rule still blocks shorter exits; a committed loss earns a token
+     recovery instead of a blank screen. */
   if(!matchCommitted(win)) return {base:0,parts:[]};
   const secs=stats.t|0, kills=stats.kills[0]|0;
   const fort=(typeof fortOf==='function'&&fortOf(0))?fortOf(0).tier|0:0;
@@ -978,7 +1284,7 @@ function metaGrant(win){
   const field={mass:Math.max(0,Math.floor(resM[0]||0)),energy:Math.max(0,Math.floor(resE[0]||0)),
                reclaimed:Math.max(0,Math.round(stats.reclaimed||0))};
   const r0=metaRankIdx();
-  META.xp+=xp; META.cores+=cores; META.matches++; META.kills+=stats.kills[0];
+  META.xp+=xp; metaGrantCores(cores,'match_reward'); META.matches++; META.kills+=stats.kills[0];
   if(mode==='standard')META.standardMatches=(META.standardMatches||0)+1;
   META.modeMatches=META.modeMatches||{};META.modeMatches[mode]=(META.modeMatches[mode]||0)+1;
   /* The record a player would actually look back on: streaks, personal bests,
@@ -1030,6 +1336,129 @@ function mfGreetName(){
     return String(AP_SESSION.email).split('@')[0];
   return 'Commander';
 }
+/* Profile names are player-controlled and are also restored from account/save
+   data. Keep the stored value untouched, but encode it at the two profile
+   innerHTML boundaries so callsigns remain literal text rather than markup. */
+function mfMetaEsc(v){
+  return String(v==null?'':v).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+}
+
+/* A player should not have to infer whether two similarly named systems stack,
+   expire, or consume inventory. Keep the vocabulary and the two-system guide
+   in one classic-script owner so every screen tells the same truth. */
+const MF_OWNERSHIP_LABELS=Object.freeze({
+  permanent:'PERMANENT', equipped:'EQUIPPED', crafted:'WEARS', match:'ONE MATCH', cosmetic:'PERMANENT · COSMETIC'
+});
+function mfOwnershipBadgeHTML(kind){
+  const k=MF_OWNERSHIP_LABELS[kind]?kind:'permanent';
+  return '<span class="mfOwnershipBadge kind-'+k+'" data-ownership="'+k+'" data-scope="'+k+'">'+MF_OWNERSHIP_LABELS[k]+'</span>';
+}
+function mfProgressionGuideHTML(active){
+  const on=active==='development'?'development':'arsenal';
+  return '<section class="mfProgressionGuide" data-active="'+on+'" aria-label="Arsenal and Development progression">'
+    +'<div class="mfProgressionLane'+(on==='arsenal'?' on':'')+'" data-progression-system="arsenal"><b>ARSENAL / CORES</b>'
+    +'<span>Earned Cores buy PERMANENT protocols and cosmetics. Vault gear stays owned; EQUIPPED effects apply only while fitted.</span></div>'
+    +'<div class="mfProgressionLane'+(on==='development'?' on':'')+'" data-progression-system="development"><b>DEVELOPMENT / DATA + MATERIALS</b>'
+    +'<span>Research Data buys PERMANENT account unlocks. Recovered materials craft modules that WEAR with use. Readied supplies are ONE MATCH and consume one charge at launch.</span></div>'
+    +'</section>';
+}
+
+/* Rank rewards are derived from the actual unlock catalogs. Hand-authored rank
+   prose drifted away from those gates; deriving the ledger makes the Career
+   page and next-unlock rail change whenever a real gate changes. */
+function mfRankMilestonesAt(rankIdx){
+  const out=[];
+  CHARACTERS.filter(x=>x.unlock===rankIdx).forEach(x=>out.push({scope:'cosmetic',label:'COMMANDER · '+x.nm}));
+  TITLES.filter(x=>x.id&&x.unlock===rankIdx).forEach(x=>out.push({scope:'cosmetic',label:'TITLE · '+x.nm}));
+  FRAMES.filter(x=>x.unlock===rankIdx).forEach(x=>out.push({scope:'cosmetic',label:'FRAME · '+x.nm}));
+  if(typeof OPMODS!=='undefined') OPMODS.filter(x=>x.gate&&x.gate.kind==='rank'&&x.gate.n===rankIdx)
+    /* Rank permanently unlocks access to the rule; selecting it later changes
+       one operation. The Career milestone describes the entitlement. */
+    .forEach(x=>out.push({scope:'permanent',label:'OPERATION RULE · '+x.nm}));
+  return out;
+}
+function mfRankMilestoneSummary(rankIdx){
+  return mfRankMilestonesAt(rankIdx).map(x=>x.label).join(' · ');
+}
+
+function getNextUnlockTrack(maxItems){
+  const max=maxItems||3;
+  const items=[];
+  
+  // 1. Account Rank Progression
+  const r=metaRankIdx();
+  const nextRank=RANKS[r+1];
+  if(nextRank){
+    const req=nextRank.xp;
+    const cur=(typeof META!=='undefined'&&META.xp)||0;
+    const pct=Math.min(100,Math.round(metaRankProg()*100));
+    items.push({
+      type:'rank',
+      title:'ACCOUNT RANK '+(r+2),
+      name:nextRank.nm,
+      badge:nextRank.em||'🎖',
+      progress:pct,
+      progressLabel:cur+' / '+req+' XP ('+pct+'%)',
+      desc:mfRankMilestoneSummary(r+1)
+    });
+  }
+
+  // 2. Next Conquest Battlefield
+  if(typeof mfConquestCatalog==='function'){
+    const catalog=mfConquestCatalog();
+    const nextSite=catalog.find(x=>!x.won&&x.open);
+    if(nextSite){
+      const D=(typeof MAPDEFS!=='undefined'&&MAPDEFS[nextSite.key])||{};
+      const rew=(typeof mfConquestReward==='function')?mfConquestReward(nextSite.key):null;
+      items.push({
+        type:'conquest',
+        title:'FRONT '+nextSite.tier+' / 48',
+        name:D.nm||nextSite.key,
+        badge:'⚔',
+        progress:Math.round((nextSite.tier-1)/48*100),
+        progressLabel:'FRONT '+nextSite.tier+' / 48',
+        desc:rew?('First Clear: +'+rew.xp+' XP · +'+rew.cores+' Cores'):(D.ds||'Operational theatre')
+      });
+    }
+  }
+
+  // 3. Next Arsenal Perk
+  if(typeof STORE!=='undefined'){
+    const unbought=STORE.map(it=>({it,tier:Math.max(0,(META.owned&&META.owned[it.id])|0)}))
+      .filter(x=>x.tier<x.it.max);
+    if(unbought.length>0){
+      const curCores=(typeof META!=='undefined'&&META.cores)||0;
+      const next=unbought.find(x=>curCores>=x.it.cost[x.tier])||unbought[0];
+      const affordable=next.it,price=affordable.cost[next.tier];
+      const pct=Math.min(100,Math.round(curCores/Math.max(1,price)*100));
+      items.push({
+        type:'armory',
+        title:'ARSENAL REQUISITION',
+        name:affordable.nm,
+        badge:affordable.em||'⚙',
+        progress:pct,
+        progressLabel:curCores+' / '+price+' Cores',
+        desc:'PERMANENT · '+(affordable.ds||'combat doctrine upgrade')
+      });
+    }
+  }
+
+  return items.slice(0,max);
+}
+
+function renderNextUnlockRail(){
+  const box=document.getElementById('mfNextUnlockRail');
+  if(!box) return;
+  const tracks=getNextUnlockTrack(3);
+  box.innerHTML=tracks.map(t=>
+    '<div class="mfNextCard type-'+t.type+'">'
+    +'<div class="mfNextHead"><span class="mfNextBadge">'+t.badge+'</span><b>'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.title):t.title)+'</b></div>'
+    +'<div class="mfNextName">'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.name):t.name)+'</div>'
+    +'<div class="mfNextProg"><div class="mfNextFill" style="width:'+t.progress+'%"></div></div>'
+    +'<div class="mfNextMeta"><span>'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.progressLabel):t.progressLabel)+'</span><small>'+(typeof mfGalaxyEsc==='function'?mfGalaxyEsc(t.desc):t.desc)+'</small></div>'
+    +'</div>'
+  ).join('');
+}
 
 /* ---------- menu header + armory UI ---------- */
 function renderMetaHead(){
@@ -1061,6 +1490,7 @@ function renderMetaHead(){
      the one reliable place to refresh the Inbox badge. Without this the dot only
      appeared after opening the Inbox — which is the one moment it is useless. */
   if(typeof storyRefreshBadge==='function'){ try{ storyRefreshBadge(); }catch(e){} }
+  renderNextUnlockRail();
 }
 
 /* ---------- war room ----------
@@ -1068,10 +1498,8 @@ function renderMetaHead(){
    ones stay VISIBLE rather than hidden — a locked card that explains itself is
    a roadmap; a hidden one is just a menu that looks small. */
 /* Ordered by development priority, which is also the order a player should meet
-   them: learn, then skirmish, then play other people. Campaign / MMO / Co-op
-   stay visible as a roadmap, but they are not rooms — development has not
-   started, and `browse` used to walk the player into a stub that played like
-   a mode. Locked cards toast and stay put. */
+   them: learn, skirmish, then enter the authored solo Prologue. MMO / Co-op
+   stay visible as roadmap cards and never enter a stub. */
 const WAR_MODES=[
   {id:'training', em:'\u25b6', nm:'TRAINING',  ds:'Field orientation under KEEL guidance',
    foot:''},
@@ -1081,7 +1509,7 @@ const WAR_MODES=[
   {id:'standard', em:'\u2694', nm:'STANDARD',  ds:'Single-player against AI, with optional AI allies',
    foot:'4 planets \u00b7 16 regions \u00b7 48 conquest battlefields'},
   {id:'campaign', em:'\u2b21', nm:'CAMPAIGN',  ds:'Guided story missions with authored objectives',
-   foot:'Authored story missions \u00b7 not yet in play', locked:'IN DEVELOPMENT'},
+   foot:'5-mission playable Prologue \u00b7 solo authored objectives'},
   {id:'mmo',      em:'\u2637', nm:'MMO',       ds:'Persistent planets \u00b7 build a commander HQ, take ground',
    foot:'Persistent warfront \u00b7 not yet in play', locked:'LONG TERM'},
   {id:'coop',   em:'\u25c8', nm:'CO-OP', ds:'Two commanders against adaptive AI',
@@ -1090,6 +1518,10 @@ const WAR_MODES=[
 function renderWarRoom(){
   const g=document.getElementById('warGrid'); if(!g) return;
   const T=(typeof trainingUiState==='function')?trainingUiState():null;
+  /* tutorial.js polls mission state while this screen is open. Record the
+     exact state that produced these cards so the poll can refresh copy only
+     when it has changed, rather than replacing a card mid pointer gesture. */
+  g.dataset.mfTrainingSig=T?[T.done,T.active,T.interrupted,T.progress,T.rewarded,T.state,T.action].join(':'):'';
   g.innerHTML=WAR_MODES.map(M=>{
     let foot=M.foot, sub=M.ds;
     if(M.id==='training'&&T){
@@ -1099,7 +1531,7 @@ function renderWarRoom(){
     }
     const C=MODE_REWARD_CONTRACTS[M.id],it=C&&C.item?INV_CONSUMABLES.find(x=>x.id===C.item):null;
     const reward=C?'<span class="warReward" style="--mode:'+C.accent+'"><b>+'+Math.round((C.xp-1)*100)+'% XP</b>'
-      +(it?'<small>'+it.em+' '+it.nm.toUpperCase()+'</small>':'')+'</span>':'';
+      +(it?'<small>'+it.em+' '+it.nm.toUpperCase()+' · ONE MATCH</small>':'')+'</span>':'';
     const lock=M.locked
       ? '<span class="warLock">\ud83d\udd12 '+M.locked+'</span>' : '';
     return '<button type="button" class="warCard'+(M.locked?' locked':'')+(M.browse?' browse':'')+'" data-mode="'+M.id+'"'
@@ -1122,6 +1554,11 @@ function renderWarRoom(){
       }
       if(m==='standard'&&typeof openSkirmishSetup==='function') openSkirmishSetup();
       else if(m==='training'&&typeof resumeTrainingMission==='function') resumeTrainingMission();
+      else if(m==='campaign'){
+        if(typeof MF_TAB_STATE!=='undefined') MF_TAB_STATE.opsScr='campaign';
+        if(typeof renderOps==='function') renderOps();
+        if(typeof showFrontScreen==='function') showFrontScreen('opsScr');
+      }
     };
     if(typeof mfBindTap==='function') mfBindTap(el,go); else el.addEventListener('click',go);
   });
@@ -1142,7 +1579,15 @@ function renderCareer(){
   const wr=played? Math.round(wins/played*100) : 0;
   const facNm=(typeof FACTIONS!=='undefined'&&m.favFac&&FACTIONS[m.favFac])?FACTIONS[m.favFac].nm:'—';
   const cell=(v,l)=>'<div class="cCell"><b>'+v+'</b><span>'+l+'</span></div>';
-  const nx=RANKS[metaRankIdx()+1], P=(typeof activeProf==='function'?activeProf():null);
+  const rankIdx=metaRankIdx(), nx=RANKS[rankIdx+1], P=(typeof activeProf==='function'?activeProf():null);
+  const milestoneLedger='<section class="cMilestoneLedger" aria-label="Account rank unlock milestones">'
+    +'<div class="cMilestoneHead"><b>RANK MILESTONES</b><span>Actual unlocks at every account rank</span></div>'
+    +RANKS.map((rank,i)=>{
+      const state=i<rankIdx?' done':i===rankIdx?' current':' locked';
+      const milestones=mfRankMilestonesAt(i);
+      return '<div class="cMilestone'+state+'" data-rank-index="'+i+'"><div class="cMilestoneRank"><i>'+rank.em+'</i><span><b>'+(i+1)+' · '+rank.nm+'</b><small>'+rank.xp.toLocaleString()+' XP</small></span></div>'
+        +'<div class="cMilestoneItems">'+milestones.map(x=>'<div>'+mfOwnershipBadgeHTML(x.scope)+'<span>'+mfMetaEsc(x.label)+'</span></div>').join('')+'</div></div>';
+    }).join('')+'</section>';
   el.innerHTML=
     /* The rank ladder lives here now, not in the menu header. */
     '<div class="cLadder">'+
@@ -1151,7 +1596,7 @@ function renderCareer(){
           ? '<div class="cLadEm"><img class="badgePortrait fr-'+I.frame+'" src="'+I.portrait+'" alt=""></div>'
           : '<div class="cLadEm">'+I.emblem+'</div>'; })()+
       '<div class="cLadInfo">'+
-        '<div class="cLadNm">'+((P&&P.name)?P.name:'Commander')
+        '<div class="cLadNm">'+mfMetaEsc((P&&P.name)?P.name:'Commander')
           +((()=>{const I=profIdentity();return I.title?' <i>'+I.title+'</i>':'';})())+'</div>'+
         '<div class="cLadRank">'+R.em+' '+R.nm+'</div>'+
         '<div class="cLadBarO"><div class="cLadBarF" style="width:'+(metaRankProg()*100)+'%"></div></div>'+
@@ -1169,7 +1614,7 @@ function renderCareer(){
       cell(m.fastestWin? fmtDur(m.fastestWin):'—','FASTEST WIN')+
     '</div>'+
     '<div class="cFoot">Most beaten: '+facNm+
-      (m.streak? ' · on a '+m.streak+'-win run' : '')+'</div>';
+      (m.streak? ' · on a '+m.streak+'-win run' : '')+'</div>'+milestoneLedger;
 }
 
 /* One category system for the long-form meta screens. It follows the same
@@ -1233,6 +1678,55 @@ function mfBindTap(el,fn){
       e.preventDefault(); e.stopImmediatePropagation(); return;
     }
     if(!el.disabled) fn(e);
+  });
+}
+/* Native buttons already synthesize click for Enter/Space and assistive
+   technology, but the battle HUD predates that contract and deliberately owns
+   pointerdown (or, for release-safe controls, pointerup). Preserve the exact
+   pointer timing while adding one guarded keyboard path. Preventing the key's
+   native click and suppressing a same-turn synthetic click avoids the classic
+   double activation without making screen-reader click depend on key events. */
+function mfBindNativePress(el,fn,pointerEvent){
+  if(!el||typeof fn!=='function'||(el.dataset&&el.dataset.mfNativePress==='1')) return;
+  if(el.dataset) el.dataset.mfNativePress='1';
+  const now=typeof mfTapNow==='function'?mfTapNow:()=>performance.now();
+  let pointerCommit=-1e9,keyCommit=-1e9;
+  el.addEventListener(pointerEvent||'pointerdown',ev=>{
+    if(el.disabled)return;
+    pointerCommit=now(); fn(ev);
+  });
+  el.addEventListener('keydown',ev=>{
+    if(el.disabled||ev.target!==el||ev.isComposing||ev.repeat||(ev.key!=='Enter'&&ev.key!==' ')) return;
+    ev.preventDefault();ev.stopPropagation();
+    keyCommit=now(); fn(ev);
+  });
+  el.addEventListener('click',ev=>{
+    /* Physical clicks have detail>0 and already committed through the pointer
+       listener. detail===0 is the browser/AT activation path. */
+    if(ev.detail!==0||el.disabled) return;
+    if(now()-pointerCommit<600||now()-keyCommit<600){
+      ev.preventDefault();ev.stopImmediatePropagation();return;
+    }
+    fn(ev);
+  });
+}
+/* Settings rows are divs because their two-column visual treatment predates
+   the tabbed screen. Give those existing controls the keyboard contract of a
+   button without disturbing the pointer-up/slop path used by phones. The
+   second callback argument lets renderSettings restore focus after it replaces
+   the activated row. */
+function mfSettingsBindRow(el,fn){
+  if(!el||!el.dataset||!el.dataset.set||typeof fn!=='function') return;
+  if(!el.hasAttribute('role')) el.setAttribute('role','button');
+  if(!el.hasAttribute('tabindex')) el.tabIndex=0;
+  let keyActivation=false;
+  mfBindTap(el,e=>fn(keyActivation,e));
+  el.addEventListener('keydown',e=>{
+    if(e.isComposing||(e.key!=='Enter'&&e.key!==' ')) return;
+    e.preventDefault();
+    if(e.repeat) return;
+    keyActivation=true;
+    try{ el.click(); }finally{ keyActivation=false; }
   });
 }
 function mfSetTabs(root,key,focus){
@@ -1309,7 +1803,7 @@ function renderProfile(){
     let ri=0; for(let i=0;i<RANKS.length;i++) if(st.xp>=RANKS[i].xp) ri=i;
     h+='<div class="sItem pItem'+(p.id===PROFILES.active?' selP':'')+'" data-pid="'+p.id+'">'
       +'<div class="sEm">'+p.emblem+'</div>'
-      +'<div class="sTx"><b>'+p.name+'</b><div class="sDs">'+RANKS[ri].em+' '+RANKS[ri].nm
+      +'<div class="sTx"><b>'+mfMetaEsc(p.name)+'</b><div class="sDs">'+RANKS[ri].em+' '+RANKS[ri].nm
       +' · '+(st.wins||0)+'W/'+((st.matches||0)-(st.wins||0))+'L</div></div>'
       +(p.id===PROFILES.active?'<div class="sBuy" style="background:var(--panelG2) padding-box,var(--steelB) border-box;color:#5dff9a">ACTIVE</div>':'')
       +'</div>';
@@ -1437,15 +1931,16 @@ function renderIdentityPickers(){
     });
   }
   const lvHint=document.getElementById('idLiveryHint');
-  if(lvHint) lvHint.textContent=mfLiveryHint();
+  if(lvHint) lvHint.innerHTML=mfOwnershipBadgeHTML('cosmetic')+'<span>'+mfMetaEsc(mfLiveryHint())+'</span>';
 
   const hint=document.getElementById('charHint');
   if(hint){
     const nextC=CHARACTERS.find(c=>c.unlock>r), nextT=TITLES.find(t=>t.unlock>r), nextF=FRAMES.find(f=>f.unlock>r);
     const nx=[nextC&&{n:nextC.nm,u:nextC.unlock},nextT&&{n:nextT.nm+' title',u:nextT.unlock},
               nextF&&{n:nextF.nm+' frame',u:nextF.unlock}].filter(Boolean).sort((a,b)=>a.u-b.u)[0];
-    hint.textContent = nx ? ('Next unlock: '+nx.n+' at '+RANKS[nx.u].nm)
-                          : 'Every commander, title and frame is unlocked.';
+    hint.innerHTML=mfOwnershipBadgeHTML('cosmetic')+'<span>'
+      +mfMetaEsc(nx ? ('Next unlock: '+nx.n+' at '+RANKS[nx.u].nm)
+                    : 'Every commander, title and frame is unlocked.')+'</span>';
   }
 }
 
@@ -1455,38 +1950,57 @@ function renderSettings(){
   if(!list) return;
   const tog=(id,nm,ds)=>{
     const on=!!META.settings[id];
-    return '<div class="sItem setRow" data-set="'+id+'"><div class="sTx"><b>'+nm+'</b>'
+    return '<div class="sItem setRow" data-set="'+id+'" role="button" tabindex="0" aria-pressed="'+(on?'true':'false')+'"><div class="sTx"><b>'+nm+'</b>'
       +(ds?'<div class="sDs">'+ds+'</div>':'')+'</div><div class="sBuy togB'+(on?' onT':'')+'">'+(on?'ON':'OFF')+'</div></div>';
   };
-  const cyc=(id,nm,ds,val,on)=>'<div class="sItem setRow" data-set="'+id+'"><div class="sTx"><b>'+nm+'</b>'
+  const cyc=(id,nm,ds,val,on)=>'<div class="sItem setRow" data-set="'+id+'" role="button" tabindex="0"><div class="sTx"><b>'+nm+'</b>'
       +'<div class="sDs">'+ds+'</div></div><div class="sBuy togB'+(on?' onT':'')+'">'+val+'</div></div>';
   const group=(id,nm,ds,body)=>'<section class="setGroup mfTabPanel" id="setGroup-'+id+'" role="tabpanel" aria-labelledby="setTab-'+id+'" data-mf-panel="'+id+'"><div class="setGroupHd">'+nm+'</div>'
       +'<div class="setGroupDs">'+ds+'</div>'+body+'</section>';
   let h='<div class="screenTabs settingsNav" role="tablist" aria-label="Settings categories">'
        +'<button class="screenTabBtn on" id="setTab-audio" type="button" role="tab" data-mf-tab="audio" aria-controls="setGroup-audio"><span class="tabGlyph">♪</span><span>AUDIO</span></button>'
-       +'<button class="screenTabBtn" id="setTab-battle" type="button" role="tab" data-mf-tab="battle" aria-controls="setGroup-battle"><span class="tabGlyph">⚔</span><span>BATTLE</span></button>'
+       +'<button class="screenTabBtn" id="setTab-battle" type="button" role="tab" data-mf-tab="battle" aria-controls="setGroup-battle"><span class="tabGlyph">⚔</span><span>GAMEPLAY</span></button>'
        +'<button class="screenTabBtn" id="setTab-display" type="button" role="tab" data-mf-tab="display" aria-controls="setGroup-display"><span class="tabGlyph">◇</span><span>DISPLAY</span></button>'
        +'<button class="screenTabBtn" id="setTab-command" type="button" role="tab" data-mf-tab="command" aria-controls="setGroup-command"><span class="tabGlyph">⌁</span><span>COMMAND</span></button>'
        +'<button class="screenTabBtn" id="setTab-system" type="button" role="tab" data-mf-tab="system" aria-controls="setExtras"><span class="tabGlyph">⚙</span><span>SYSTEM</span></button></div>';
   const VL=['25%','50%','75%','100%'];
-  const sv=clamp(META.settings.sfxVol|0,0,3), mv=clamp(META.settings.musicVol|0,0,3);
-  h+=group('audio','AUDIO MIX','Separate combat, interface, ambience, and music controls.',
-      tog('sound','Sound Effects','Weapons, movement, construction, alarms, and interface feedback')
-     +cyc('sfxVol','Effects Volume','Tap to cycle the effects bus',VL[sv],true)
-     +tog('music','Adaptive Music','Music intensity follows the battle')
-     +cyc('musicVol','Music Volume','Tap to cycle the music bus',VL[mv],true));
+  const sv=clamp(META.settings.sfxVol|0,0,3), av=clamp(META.settings.ambVol|0,0,3);
+  const mv=clamp(META.settings.musicVol|0,0,3), vv=clamp(META.settings.voiceVol|0,0,3);
+  h+=group('audio','AUDIO MIX','Independent effects, ambience, music, and voice levels.',
+       '<div class="audNowPlaying" id="audNowPlaying" role="status" aria-live="polite" aria-atomic="true" data-scene="menu" data-phase="locked">'
+      +'<div class="audNowHead"><span>NOW PLAYING</span><b id="audNowScene">COMMAND MENU</b></div>'
+      +'<strong id="audNowTitle">Tap to enable music</strong>'
+      +'<span id="audNowSource">AUDIO PERMISSION REQUIRED</span>'
+      +'<small id="audNowPack">SOUNDTRACK PACK · CHECKING</small></div>'
+      +tog('sound','Sound Effects','Weapons, movement, construction, alarms, and interface feedback')
+      +cyc('sfxVol','Effects Volume','Activate to cycle the effects bus',VL[sv],true)
+      +cyc('ambVol','Ambience Volume','Activate to cycle the battlefield ambience bus',VL[av],true)
+      +tog('music','Adaptive Music','Music intensity follows the battle')
+      +cyc('musicVol','Music Volume','Activate to cycle the music bus',VL[mv],true)
+      +cyc('voiceVol','Voice Volume','Activate to cycle commander, unit, and tutorial voices',VL[vv],true));
 
   const hb=META.settings.healthBars||'select';
   const HBL={always:'ALWAYS',select:'SELECT',off:'HIDDEN'};
   const HBD={always:'Bars hover over every visible unit and structure',
              select:'Bars appear above selected units and the opened structure',
              off:'All battlefield health bars are hidden'};
-  h+=group('battle','BATTLEFIELD READABILITY','Information shown while commanding units.',
+  const explorationOn=!!META.settings.experimentalExploration;
+  const textScale=mfTextScaleValue(META.settings.textScale);
+  const explorationOpen=explorationOn
+    ?'<div class="sItem setRow" data-set="openExperimentalExploration" role="button" tabindex="0"><div class="sTx"><b>Open Galactic Campaign Preview</b>'
+      +'<div class="sDs">Launch the isolated converted menu, War Table, ship hub, and campaign systems in this tab.</div></div>'
+      +'<div class="sBuy togB onT">OPEN</div></div>'
+    :'';
+  h+=group('battle','GAMEPLAY & BATTLEFIELD','Information shown while commanding units and optional experimental experiences.',
       tog('godMode','God Mode (Solo)','Infinite mass and energy, instant ability recharge, and invulnerable friendly units and structures')
      +tog('fog','Fog of War','Hide unexplored and unobserved battlefield areas')
      +cyc('healthBars','3D Health Bars',HBD[hb],HBL[hb],hb!=='off')
      +tog('shake','Impact Camera Shake','Recoil and explosions move the camera')
-     +tog('haptics','Haptic Feedback','Short vibration cues for confirmations and impacts'));
+     +tog('haptics','Haptic Feedback','Short vibration cues for confirmations and impacts')
+      +tog('experimentalExploration','Experimental: Galactic Campaign',
+           'Isolated preview. Converts the menu, War Table, and campaign systems inside the module; '
+          +'Classic saves and live matches stay separate.')
+      +explorationOpen);
 
   const perf=META.settings.perf;
   const bg=META.settings.menubg||'dim';
@@ -1511,13 +2025,23 @@ function renderSettings(){
   const pL=GFX.particles>=1.25?'ULTRA':GFX.particles>=0.95?'HIGH':GFX.particles>=0.65?'MED':'LOW';
   const aL=GFX.aniso>=8?'8x':GFX.aniso>=4?'4x':'OFF';
   const dL=!(GFX.dprCap>0)?'AUTO':(Math.round(GFX.dprCap*100)/100===1?'1':String(Math.round(GFX.dprCap*100)/100))+'x';
+  /* resize() in gl.js overwrites the cap with 2 on a desktop GPU at HIGH or
+     CINEMATIC, so this row could read "1.15x" while the colour buffer ran at
+     DPR 2.00 — measured against the verbatim cap block: every one of 1 / 1.15 /
+     1.25 / 1.5 came back as 2 there. Until that branch honours an explicit
+     override, say so from the LIVE value instead of implying the tap took. */
+  const dprRaw=(typeof window!=='undefined'&&window.devicePixelRatio)||1;
+  const dprWant=GFX.dprCap>0?Math.min(dprRaw,GFX.dprCap):0;
+  const dprIgnored=dprWant>0&&typeof DPR==='number'&&Math.abs(DPR-dprWant)>0.01;
+  const dprDs='Fillrate cap. AUTO uses the preset. Native 2x/3x is never offered on phones — that is the context-loss spike.'
+    +(dprIgnored?' ⚠ NOT APPLIED on this device — the renderer is running at '+DPR.toFixed(2)+'.':'');
   const lodL=(GFX.organicSpan||0)>=4000?'FAR':(GFX.organicSpan||0)>=2400?'STANDARD':(GFX.organicSpan||0)>=800?'NEAR':'OFF';
   const liL=GFX.lights<=0?'OFF':String(GFX.lights|0);
   const live='AO '+(GFX.ao?'on':'off')+' · BLM '+(GFX.bloom?'on':'off')+' · sh '+shL
     +(GFX.contact===false?' · no contact':'')+' · dpr '+(typeof DPR==='number'?DPR.toFixed(2):dL)
     +' · ani '+aL;
-  const gfxRow=(id,nm,ds,val,on,lock)=>'<div class="sItem setRow" data-set="'+id+'"'
-      +(lock?' data-gfx-lock="'+lock.replace(/"/g,'')+'" style="opacity:.55"':'')
+  const gfxRow=(id,nm,ds,val,on,lock)=>'<div class="sItem setRow" data-set="'+id+'" role="button" tabindex="0"'
+      +(lock?' data-gfx-lock="'+lock.replace(/"/g,'')+'" aria-disabled="true" style="opacity:.55"':'')
       +'><div class="sTx"><b>'+nm+'</b><div class="sDs">'+(lock||ds)+'</div></div>'
       +'<div class="sBuy togB'+(on&&!lock?' onT':'')+'">'+(lock?'N/A':val)+'</div></div>';
   const aniOk=typeof mfAnisoSupported==='function'&&mfAnisoSupported();
@@ -1537,7 +2061,7 @@ function renderSettings(){
       +gfxRow('gfxWater','Water Quality','GPU swell and splash budget. Splashes need MED or higher.',wL,GFX.waterAmp>=0.55)
       +gfxRow('gfxParticles','Particles / VFX','Scales GPUFX and the combat particle budget.',pL,GFX.particles>=0.95)
       +gfxRow('gfxAniso','Anisotropic Filtering','Sharpens ground and hull mips at a glancing camera. 1x is off.',aL,GFX.aniso>=4,aniLock)
-      +gfxRow('gfxDpr','Resolution Scale','Fillrate cap. AUTO uses the preset. Native 2x/3x is never offered on phones — that is the context-loss spike.',dL,!(GFX.dprCap>0)||GFX.dprCap>=1.25)
+      +gfxRow('gfxDpr','Resolution Scale',dprDs,dL,(!(GFX.dprCap>0)||GFX.dprCap>=1.25)&&!dprIgnored)
       +gfxRow('gfxLod','Mesh LOD / Motion','How far secondary animation and full meshes survive toward strategic zoom.',lodL,(GFX.organicSpan||0)>=800)
       +gfxRow('gfxLights','Local Lights','Forward lights promoted into the material shader. Everything else stays emissive.',liL,GFX.lights>0)
       +gfxRow('gfxWorldV2','World PBR Materials','HIGH-class civic materials. Off on MEDIUM by default.',GFX.worldV2?'ON':'OFF',!!GFX.worldV2,worldLock)
@@ -1547,14 +2071,15 @@ function renderSettings(){
       '<div class="sItem setRow" id="gfxDiagRow"><div class="sTx"><b>Renderer status</b>'
       +'<div class="sDs" id="gfxDiagTx" style="word-break:break-word">'+diag+'</div></div>'
       +'<div class="sBuy togB'+(diagBad?'':' onT')+'">'+(diagBad?'FAULT':'OK')+'</div></div>'
-     +'<div class="sItem setRow" data-set="gfxLive"><div class="sTx"><b>Live quality</b>'
+     +'<div class="sItem setRow" data-set="gfxLive" role="button" tabindex="0"><div class="sTx"><b>Live quality</b>'
       +'<div class="sDs" style="word-break:break-word">'+live+'</div></div>'
       +'<div class="sBuy togB onT">GFX</div></div>'
      +cyc('quality','Graphics Quality',QD[qk],QL[qk],qk!=='low')
      +tog('cine','Cinematic Lighting','In-engine sun wash and the #grade overlay. Not bloom — that is Advanced. Not the Screen Grade filter.')
      +cyc('screenGrade','Screen Grade',sgDef.ds,sgDef.label,sgk!=='neutral')
+     +tog('teamIdMode','Tactical Team Identification','Color-vision-safe allegiance palette. Minimap markers use friendly circles, hostile triangles, and unaligned crosses; faction silhouettes, crests, and weapon effects stay authored.')
      +tog('dayNight','Day / Night Cycle','Animated time of day. OFF locks battles to clear daylight and overrides night-only modifiers')
-     +cyc('perf','Effects Budget','AUTO adapts; LOW caps the live particle scaler on older phones',perf==='auto'?'AUTO':'LOW',perf==='auto')
+     +cyc('perf','Effects Budget','AUTO lets the live effect scaler follow frame rate. LOW pins it to 0.45 or below on every preset — a second cap on top of Graphics Quality, for older phones.',perf==='auto'?'AUTO':'LOW',perf==='auto')
      +tog('fps','FPS Counter','Show the live frame-rate diagnostic')
      +cyc('menubg','Menu Backdrop',BGD[bg],BGL[bg],bg!=='off')
      +adv);
@@ -1563,18 +2088,23 @@ function renderSettings(){
       tog('formationPreview','Formation Preview','Outline where the platoon will end up, on every move order, before it commits')
      +tog('orderPaths','Route Arrows & Patrol Cues','Flashing arrows along the real pathfinding route, plus numbered waypoints and committed patrol loops'));
   h+='<section class="setGroup mfTabPanel" id="setExtras" role="tabpanel" aria-labelledby="setTab-system" data-mf-panel="system"><div class="setGroupHd">SERVICES & ACCESSIBILITY</div>'
-    +'<div class="setGroupDs">Tutorial, offline, connectivity, and optional world systems.</div><div id="setExtraRows"></div><div class="setEmpty">No additional services are configured.</div></section>';
+    +'<div class="setGroupDs">Tutorial, offline, connectivity, and optional world systems.</div><div id="setExtraRows">'
+    +cyc('textScale','Interface Text Size','Scales menu copy and critical battlefield status text without changing camera zoom or touch geometry.',textScale+'%',textScale>100)
+    +'</div><div class="setEmpty">No additional services are configured.</div></section>';
   list.innerHTML=h;
+  if(typeof audRenderNowPlaying==='function') audRenderNowPlaying();
   mfBindTabs(list,'audio');
-  list.querySelectorAll('.setRow').forEach(el=>{
-    mfBindTap(el,()=>{
+  const advControl=list.querySelector('.setRow[data-set="gfxAdvOpen"]');
+  if(advControl) advControl.setAttribute('aria-expanded',advOpen?'true':'false');
+  list.querySelectorAll('.setRow[data-set]').forEach(el=>{
+    mfSettingsBindRow(el,keyActivation=>{
       const k=el.dataset.set;
-      if(!k) return;
       if(el.dataset.gfxLock){
         if(typeof toast==='function') toast(el.dataset.gfxLock);
         return;
       }
-      if(k==='sfxVol'||k==='musicVol') META.settings[k]=((META.settings[k]|0)+1)%4;
+      if(k==='sfxVol'||k==='ambVol'||k==='musicVol'||k==='voiceVol')
+        META.settings[k]=((META.settings[k]|0)+1)%4;
       else if(k==='quality'){
         const o=['low','medium','high','cinematic'];
         META.settings.quality=o[(o.indexOf(qualityKey())+1)%4];
@@ -1583,7 +2113,19 @@ function renderSettings(){
            overlay), not bloom — Screen Grade stays whatever they set. */
         META.settings.gfxOver={};
         const nq=qualityKey(), P=GFX_PRESETS[nq];
-        META.settings.perf=(nq==='low')?'low':'auto';
+        /* Effects Budget is a SECOND, independent cap, and main.js multiplies
+           it against this preset's own particles scale. Forcing it to LOW
+           whenever the player picked the LOW preset stacked both penalties:
+           min(perfBand,0.45) x particles 0.5 = perfScale 0.225 at a LOCKED
+           60fps, which clears 3 of the 57 perfScale gates counted in src/ —
+           worse than the 0.31 the compounding note in main.js already calls a
+           bug, and flatly at odds with this preset's own "quiet water, half
+           particles" brief. LOW already pays through particles 0.5, dprCap
+           1.15, no post, no shadows and no local lights; left on AUTO it
+           measures 0.5 (45/57 gates) at 60fps and still falls to 0.275/0.125
+           with perfBand the moment frames sag. The budget row stays one tap
+           away for anyone who wants the extra cap. */
+        META.settings.perf='auto';
         META.settings.cine=!!P.grade;
       }
       else if(k==='screenGrade'){
@@ -1598,6 +2140,10 @@ function renderSettings(){
       else if(k==='healthBars'){
         const o=['always','select','off'];
         META.settings.healthBars=o[(o.indexOf(META.settings.healthBars||'select')+1)%3];
+      }
+      else if(k==='textScale'){
+        const o=[100,125,150,200],cur=mfTextScaleValue(META.settings.textScale);
+        META.settings.textScale=o[(o.indexOf(cur)+1)%o.length];
       }
       else if(k==='gfxShadows') gfxOverCycle('shadowQ',[0,1,2]);
       else if(k==='gfxSSAO') gfxOverToggle('ao');
@@ -1621,9 +2167,22 @@ function renderSettings(){
         if(typeof toast==='function') toast('Live GFX: AO '+(snap.gfx.ao?'on':'off')+' bloom '+(snap.gfx.bloom?'on':'off')+' sh'+snap.gfx.shadowQ);
       }
       else if(k==='gfxDiagRow'){ /* status only */ }
+      else if(k==='openExperimentalExploration'){
+        if(typeof mfOpenExploration==='function') mfOpenExploration();
+        else { if(typeof toast==='function') toast('Galactic preview is not available yet'); sfx('ui'); }
+        return;
+      }
       else META.settings[k]=!META.settings[k];
       if(k==='fog'&&running&&!demoMode){ fogOn=META.settings.fog; if(fogOn) updateFog(); }
+      if(k==='teamIdMode'){
+        applyColor();
+        if(typeof mmFrame!=='undefined') mmFrame=0;
+      }
       metaSave(); applySettings(); sfx('ui'); renderSettings();
+      if(keyActivation){
+        const next=[...list.querySelectorAll('.setRow[data-set]')].find(row=>row.dataset.set===k);
+        if(next) try{ next.focus({preventScroll:true}); }catch(e){ next.focus(); }
+      }
     });
   });
   /* Other modules append their own rows after this function returns. Adopt

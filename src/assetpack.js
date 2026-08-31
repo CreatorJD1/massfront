@@ -113,6 +113,7 @@ async function packDownload(pack, onProgress){
   }
   const base = packEndpoint();
   if(!base) return false;
+  if(PACK.busy) return false;              // second reader of the flag; see packStarting
   const miss = await packMissing(pack);
   if(!miss.files.length){ PACK.state = 'ready'; return true; }
   PACK.busy = true; PACK.state = 'downloading';
@@ -224,7 +225,22 @@ function packRenderBar(){
    notices missing, not by what was written first. */
 const PACK_WANT = ['voice', 'music'];
 
+/* Re-entrancy latch for packStart. PACK.busy exists but is only ever set and
+   cleared INSIDE packDownload, and packStart awaits the index plus one
+   packMissing() per pack before it gets there — so from the first tap until
+   the first byte, PACK.state is still 'offer' and the panel button's
+   `state === 'downloading'` guard is wide open. Two taps in that window (or a
+   tap landing while the 4s initAssetPacks timer fires) started two complete,
+   concurrent downloads of the same files: double the player's mobile data,
+   double the writes, and a progress bar driven by two writers at once. */
+let packStarting = false;
 async function packStart(manual){
+  if(packStarting) return;
+  packStarting = true;
+  try{ return await packStartInner(manual); }
+  finally{ packStarting = false; }
+}
+async function packStartInner(manual){
   packPanel();
   const idx = PACK.idx || await packLoadIndex();
   if(!idx){ PACK.state = 'idle'; packRenderBar(); return; }
@@ -246,9 +262,29 @@ async function packStart(manual){
   try{ pref = localStorage.getItem(PACK_PREF) || 'ask'; }catch(e){}
   if(!manual && pref !== 'auto'){ PACK.state = 'offer'; packRenderBar(); return; }
   try{ localStorage.setItem(PACK_PREF, 'auto'); }catch(e){}
-  let ok = true;
-  for(const p of need) ok = (await packDownload(p)) && ok;
-  if(ok && typeof audAttachPack === 'function') audAttachPack();
+  const failed = [];
+  for(const p of need) if(!(await packDownload(p))) failed.push(p);
+  /* Attach on ANY complete pack, never on a clean sweep of all of them.
+     `ok = (await packDownload(p)) && ok` meant a single permanently
+     unavailable file in ONE pack suppressed audAttachPack() for every pack
+     that had downloaded perfectly — and it stayed suppressed on every launch
+     afterwards, because the finished pack reports nothing missing (so it is
+     not even retried) while the broken one keeps failing and keeps holding
+     `ok` false. A player could be carrying the entire 16 MB soundtrack in
+     IndexedDB and never hear a note of it, permanently, with no control in
+     the UI that would fix it. Re-derived from storage rather than from the
+     download results so a pack completed on an EARLIER launch also counts. */
+  let haveOne = false;
+  for(const p of want) if(!(await packMissing(p)).files.length){ haveOne = true; break; }
+  if(haveOne && typeof audAttachPack === 'function') audAttachPack();
+  /* A later pack succeeding must not bury an earlier one's failure: PACK.state
+     is what the panel reads, and 'ready' hides the panel outright — so voice
+     failing and music succeeding used to leave no trace anywhere on screen. */
+  if(failed.length){
+    PACK.state = 'error';
+    PACK.err = 'Some audio could not be downloaded — the game runs without it';
+    packRenderBar();
+  }
 }
 
 function initAssetPacks(){
@@ -256,5 +292,99 @@ function initAssetPacks(){
   /* Deliberately late: terrain generation and audio decode are already
      competing for the first few seconds of a cold start. */
   if(typeof netAllowed!=='function' || netAllowed()) setTimeout(() => packStart(false), 4000);
+}
+
+/* Galactic Exploration ships in player APK/www from the signed runtime pack.
+   Older installs (notably 1.33.51) omitted it. When the HEAD probe misses, this
+   fetches the remote stub, then the signed manifest, then each file into a
+   dedicated IndexedDB — same blob-keyed pattern as audio packs. A blob: URL for
+   index.html was considered for navigation and rejected: the Galactic entry
+   ticket lives in this document's sessionStorage, and a blob: document is a
+   different origin, so the ticket and the return bridge would vanish. Cache
+   here; mfOpenExploration keeps the War Room fallback. Opening still needs the
+   files on the same origin (packaged www), which is why player packs include
+   the module instead of relying on this download alone. */
+const EXP_PACK_DB='massfront-exploration-pack', EXP_PACK_STORE='files';
+const EXP_PACK_STUB='assets/data/exploration-pack-remote.json';
+let expPackBusy=false;
+
+function expPackDb(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(EXP_PACK_DB, 1);
+    r.onupgradeneeded = () => { const d = r.result;
+      if(!d.objectStoreNames.contains(EXP_PACK_STORE)) d.createObjectStore(EXP_PACK_STORE); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  });
+}
+async function expPackGet(k){
+  const db = await expPackDb();
+  return new Promise((res, rej) => {
+    const q = db.transaction(EXP_PACK_STORE, 'readonly').objectStore(EXP_PACK_STORE).get(k);
+    q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+  });
+}
+async function expPackPut(k, v){
+  const db = await expPackDb();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(EXP_PACK_STORE, 'readwrite');
+    tx.objectStore(EXP_PACK_STORE).put(v, k);
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error);
+  });
+}
+function expPackJoin(base, rel){
+  const root=String(base||'').replace(/\/?$/,'/');
+  const path=String(rel||'').replace(/^\/+/,'');
+  return root+path.split('/').map(encodeURIComponent).join('/');
+}
+async function mfExplorationRemoteSpec(){
+  let stub=null;
+  try{
+    const r=await fetch(EXP_PACK_STUB,{cache:'no-store'});
+    if(r.ok) stub=await r.json();
+  }catch(e){}
+  const endpoint=(typeof packEndpoint==='function'&&packEndpoint())||'';
+  const base=endpoint
+    ? endpoint.replace(/\/$/,'')+'/exploration-pack/'
+    : String(stub&&stub.base||'');
+  const manifest=String(stub&&stub.manifest||'')
+    || (base?expPackJoin(base,'exploration-content-manifest-v1.json'):'');
+  const q=String(stub&&stub.downloadQuery||'');
+  return {base,manifest,downloadQuery:q};
+}
+async function mfInstallExplorationPack(){
+  if(expPackBusy) return {ok:false,reason:'busy'};
+  if(typeof indexedDB==='undefined') return {ok:false,reason:'no-idb'};
+  if(typeof netAllowed==='function'&&!netAllowed()) return {ok:false,reason:'offline'};
+  expPackBusy=true;
+  if(typeof toast==='function') toast('Galactic pack downloading...');
+  try{
+    const spec=await mfExplorationRemoteSpec();
+    if(!spec.manifest&&!spec.base) return {ok:false,reason:'no-endpoint'};
+    let manUrl=spec.manifest||expPackJoin(spec.base,'exploration-content-manifest-v1.json');
+    if(spec.downloadQuery&&manUrl.indexOf('?')<0) manUrl+=spec.downloadQuery;
+    const mr=await fetch(manUrl,{cache:'no-store'});
+    if(!mr.ok) return {ok:false,reason:'manifest'};
+    const man=await mr.json();
+    if(!man||man.kind!=='ExplorationContentManifestV1'||!Array.isArray(man.files)||!man.files.length)
+      return {ok:false,reason:'manifest'};
+    const q=spec.downloadQuery||'';
+    for(const entry of man.files){
+      const rel=String(entry.path||'').replace(/\\/g,'/');
+      if(!rel||rel.startsWith('/')||rel.includes('..')) return {ok:false,reason:'path'};
+      const have=await expPackGet(rel);
+      if(have&&typeof have.size==='number'&&have.size===entry.bytes) continue;
+      const fileUrl=expPackJoin(spec.base,rel);
+      const url=fileUrl+(q&&fileUrl.indexOf('?')<0?q:'');
+      const fr=await fetch(url,{cache:'no-store'});
+      if(!fr.ok) return {ok:false,reason:'file'};
+      const blob=await fr.blob();
+      await expPackPut(rel, blob);
+    }
+    return {ok:true,cached:true,openUrl:null};
+  }catch(e){
+    return {ok:false,reason:'fetch'};
+  }finally{
+    expPackBusy=false;
+  }
 }
 

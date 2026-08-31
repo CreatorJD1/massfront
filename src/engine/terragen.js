@@ -67,6 +67,13 @@ const TERRA={
   coastBand:0.055,          // height units either side of sea level that warp
   coastWarp:46,             // world units a shoreline can wander
   ceiling:0.93,             // crests must not clip into flat-topped mesas
+  /* RELIEF GAIN. Measured before adding this: essentially ZERO terrain reached
+     the ceiling (0.001% of land), so the clamp was inert and raising it would
+     have done nothing. The real flatness is distributional — two adjacent 0.1
+     height bins held 65-70% of every map, i.e. most of the surface lives in a
+     ~24 world-unit band. This expands land relief about the waterline so the
+     same landforms gain vertical range. 1.0 disables it exactly. */
+  reliefGain:1.22,
   regionBias:0.0            // dev tool: shifts how much of the map is mountainous
 };
 
@@ -271,10 +278,18 @@ function terraBlur(src,W,r,tmp){
    and before anything reads the field back — passability, district planning,
    the painted macro map, the mesh and the normal sheet all see eroded ground.
    --------------------------------------------------------------------------- */
-function terraShape(heightF,TS,MD,bumps,corridorFns,depPts){
+function terraShape(heightF,TS,MD,bumps,corridorFns,depPts,workOverride){
   if(typeof TERRA_ENABLED!=='undefined'&&!TERRA_ENABLED) return null;
   const t0=(typeof performance!=='undefined')?performance.now():0;
-  const W=TERRA.work, N=W*W, step=TS/W;
+  /* WORK RESOLUTION. Defaults to TERRA.work (512) so every existing caller is
+     byte-for-byte unchanged. A caller may ask for a coarser grid: the map
+     preview runs this exact algorithm at a fraction of the cost so a site card
+     shows the landform the player will actually get, instead of a second,
+     divergent generator that omitted ridges, drainage and coast warp entirely.
+     Clamped to <=TS because the downsample below point-samples cell centres and
+     a W above TS would just resample the same texels while costing more. */
+  const _wo=workOverride|0;
+  const W=_wo>0?Math.max(32,Math.min(TS,_wo)):TERRA.work, N=W*W, step=TS/W;
   const rand=terraRng((MD.seed^0xE20D10)|1);
   const LN=64;
   const gr=terraLattice(rand,LN), gm=terraLattice(rand,LN), gw1=terraLattice(rand,LN), gw2=terraLattice(rand,LN);
@@ -374,6 +389,12 @@ function terraShape(heightF,TS,MD,bumps,corridorFns,depPts){
       let v=was+d;
       if(was>=WATER_H){ if(v<WATER_H+0.002) v=WATER_H+0.002; }   // same guard at full res
       else if(v<was) v=was;                                       // no deepening underwater
+      /* Expand ONLY above the waterline, pivoting exactly at WATER_H. Nothing
+         crosses the boundary, so the land/water split — and therefore PASS,
+         which is a pure water test — is bit-identical to before. That is the
+         safety property that makes this changeable without re-validating
+         pathing on all 48 shipped maps. */
+      if(v>WATER_H&&TERRA.reliefGain!==1) v=WATER_H+(v-WATER_H)*TERRA.reliefGain;
       if(v>TERRA.ceiling) v=TERRA.ceiling;
       heightF[i]=v;
       if(d<lo) lo=d; if(d>hiV) hiV=d;

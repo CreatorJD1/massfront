@@ -2,7 +2,8 @@
   "_comment": "Official MASSFRONT release channel. Hugging Face resolve URLs return raw, cacheable bytes and work through CapacitorHttp without Drive confirmation pages.",
   "endpoint": "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/update.json?download=true",
   "mirrors": [
-    "https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json"
+    "https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json",
+    "https://massfront-update.jasondixon1994.workers.dev/update.json"
   ],
   "channel": "release",
   "authEndpoint": "https://massfront-auth.jasondixon1994.workers.dev"

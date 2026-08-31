@@ -25,8 +25,8 @@
 const MATS={
   alloy  :{nm:'Alloy',    em:'▬', ds:'Structural plate — salvaged from wrecks'},
   circuit:{nm:'Circuitry',em:'⌗', ds:'Intact logic boards — rarer than plate'},
-  isotope:{nm:'Isotope',  em:'☢', ds:'Reactor fuel — dropped by heavy kills'},
-  relic  :{nm:'Relic Core',em:'◈',ds:'Pre-collapse tech — only from ruins and hives'},
+  isotope:{nm:'Isotope',  em:'☢', ds:'Reactor fuel — recovered from victories and battlefield kills'},
+  relic  :{nm:'Relic Core',em:'◈',ds:'Pre-collapse tech — recovered from hives after Xenobiology'},
 };
 function matBag(){ META.mats=META.mats||{alloy:0,circuit:0,isotope:0,relic:0}; return META.mats; }
 function matHas(cost){ const b=matBag(); for(const k in cost) if((b[k]||0)<cost[k]) return false; return true; }
@@ -110,7 +110,7 @@ const DEVTREE=[
   ds:'Unlocks a selected support platoon repair-and-shield pulse',
   cost:{alloy:82,circuit:48,isotope:6}, data:24, req:['refit'], art:'res_servos'},
  {id:'firemission',br:'DOCTRINE',    nm:'Fire Mission Protocol',
-  ds:'Unlocks the player-commanded Charged Barrage for selected artillery',
+  ds:'Upgrades the basic artillery barrage with a larger coordinated salvo and tighter dispersion',
   cost:{alloy:90,circuit:44,isotope:8}, data:26, req:['logistics'], art:'res_refit'},
  {id:'slot3',      br:'DOCTRINE',    nm:'Command Retrofit', ds:'A third module slot',
   cost:{alloy:140,circuit:70,isotope:26,relic:4}, data:40, req:['refit','slot2']},
@@ -161,14 +161,14 @@ function devMissing(n){
 function devBuy(n,silent){
   if(!n||devHas(n.id)) return false;
   if(typeof mfFactionTechPurchasable==='function'&&!mfFactionTechPurchasable(n.id)){
-    if(!silent) toast('AI DOSSIER — Brood evolution becomes researchable only when the faction is playable');
+    if(!silent) toast('AI DOSSIER — Brood unlocks become available in Development only when the faction is playable');
     return false;
   }
   if(!devAvail(n)){ if(!silent) toast('🔒 Requires '+n.req.map(r=>DEVTREE.find(x=>x.id===r).nm).join(', ')); return false; }
   if((META.researchData||0)<n.data||!matHas(n.cost)){ if(!silent) toast('Need '+devMissing(n).join(', ')); return false; }
   META.researchData-=n.data; matSpend(n.cost);
   devDone()[n.id]=1; metaSave();
-  if(!silent){ toast('🔬 RESEARCHED — '+n.nm); sfx('level'); buzz(30); renderDevelop(); renderMetaHead(); }
+  if(!silent){ toast('🔬 DEVELOPMENT UNLOCKED — '+n.nm); sfx('level'); buzz(30); renderDevelop(); renderMetaHead(); }
   return true;
 }
 /* The research queue is a spend plan, not a shopping list. After a match pays
@@ -188,16 +188,22 @@ function devFlushQueue(){
   META.resQueue=next;
   if(done.length){
     metaSave();
-    toast('🔬 RESEARCH COMPLETE — '+done.map(n=>n.nm).join(', '));
+    toast('🔬 DEVELOPMENT COMPLETE — '+done.map(n=>n.nm).join(', '));
     if(typeof sfx==='function') sfx('level');
     if(typeof renderDevelop==='function') renderDevelop();
     if(typeof renderMetaHead==='function') renderMetaHead();
   } else if(q.join('|')!==next.join('|')) metaSave();
   return done;
 }
+/* These values already governed the simulation below; naming them lets the
+   Development sheet quote the exact same rules instead of restating numbers in
+   UI copy. They are deliberately not save fields. */
+const DEV_MODULE_WEAR_MUL=0.75, DEV_MATERIAL_YIELD_MUL=1.35,
+      DEV_MODULE_DURABILITY_CAP=2, DEV_REFIT_COST_MUL=0.5,
+      DEV_REFIT_RESTORE_MUL=0.6;
 function moduleSlots(){ return 1+(devHas('slot2')?1:0)+(devHas('slot3')?1:0); }
-function wearRate(){ return devHas('logistics')?0.75:1; }
-function matYield(){ return devHas('salvage')?1.35:1; }
+function wearRate(){ return devHas('logistics')?DEV_MODULE_WEAR_MUL:1; }
+function matYield(){ return devHas('salvage')?DEV_MATERIAL_YIELD_MUL:1; }
 
 /* Every committed operation advances account research, including a defeat.
    The Research Complex remains the fastest source through studies and a live
@@ -233,51 +239,153 @@ function researchDataFromMatch(win){
    never allows. */
 const MODULES=[
  {id:'plate',  nm:'Reactive Plating', em:'🛡', col:[120,200,255], req:'metallurgy',
-  ds:'Your units +10% health', dur:12, cost:{alloy:35},
+  ds:'Your units +10% health', compat:'All player combat and support units', dur:12, cost:{alloy:35},
   apply:()=>{ resHpMult*=1.10; }},
  {id:'optic',  nm:'Targeting Uplink', em:'🎯', col:[255,190,110], req:'optics',
-  ds:'Your units +8% damage', dur:10, cost:{alloy:24,circuit:10},
+  ds:'Your units +8% damage', compat:'All player combat and support units', dur:10, cost:{alloy:24,circuit:10},
   apply:()=>{ armyDmgMult+=0.08; }},
  {id:'range',  nm:'Sensor Mast',      em:'📡', col:[150,255,200], req:'optics',
-  ds:'Your units +10% range', dur:10, cost:{alloy:20,circuit:14},
+  ds:'Your units +10% range', compat:'All player armed units', dur:10, cost:{alloy:20,circuit:14},
   apply:()=>{ resRngMult*=1.10; }},
  {id:'tempo',  nm:'Drive Governors',  em:'⚙', col:[200,180,255], req:'servos',
-  ds:'Structures build 20% faster', dur:14, cost:{alloy:40,circuit:12},
+  ds:'Structures build 20% faster', compat:'Player structure construction network', dur:14, cost:{alloy:40,circuit:12},
   apply:()=>{ bldSpeedMult*=1.20; }},
  {id:'recl',   nm:'Reclaim Servos',   em:'♻', col:[140,235,150], req:'servos',
-  ds:'+40% salvage reclaimed', dur:14, cost:{alloy:45,circuit:8},
+  ds:'+40% salvage reclaimed', compat:'Player reclaim and salvage recovery', dur:14, cost:{alloy:45,circuit:8},
   apply:()=>{ salvageMult*=1.40; }},
  {id:'core',   nm:'Fusion Overdraw',  em:'☢', col:[255,150,90], req:'reactor',
-  ds:'+18% energy income', dur:9, cost:{isotope:16,circuit:16},
+  ds:'+18% energy income', compat:'Player battlefield energy economy', dur:9, cost:{isotope:16,circuit:16},
   apply:()=>{ resEnergyMult*=1.18; }},
  {id:'relic',  nm:'Relic Lattice',    em:'◈', col:[255,120,220], req:'relictech',
-  ds:'+15% health AND +12% damage — burns out fast', dur:5, cost:{relic:3,circuit:30},
+  ds:'+15% health AND +12% damage — burns out fast', compat:'All player combat and support units', dur:5, cost:{relic:3,circuit:30},
   apply:()=>{ resHpMult*=1.15; armyDmgMult+=0.12; }},
  {id:'emp',    nm:'EMP Charge',       em:'⚡', col:[120,255,255], req:'ability',
-  ds:'Commander ability: stun everything in a wide radius', dur:6, cost:{relic:5,isotope:30},
+  ds:'Commander ability: stun everything in a wide radius', compat:'Commander active-ability loadout', dur:6, cost:{relic:5,isotope:30},
   apply:()=>{ abUnlock[4]=true; }},
 ];
-function modOwned(){ META.mods=META.mods||{}; return META.mods; }
+
+/* ---- READ-ONLY DEVELOPMENT PRESENTERS --------------------------------------
+   These functions describe the live catalogs; they neither spend resources nor
+   add save fields. Keeping the quote beside MODULES/DEVTREE prevents the graph,
+   crafting list, and future inspectors from inventing their own numbers. */
+function devFactionLabel(id){
+  let key=id||'';
+  if(typeof facCanonicalId==='function') key=facCanonicalId(key)||key;
+  if(typeof facArt==='function'){
+    const a=facArt(key)||facArt(id); if(a&&a.nm) return a.nm;
+  }
+  return key?key.replace(/^./,c=>c.toUpperCase()):'All factions';
+}
+function devNodeScope(n){
+  if(!n) return 'ACCOUNT · FUTURE RTS MATCHES';
+  if(typeof mfFactionTechPurchasable==='function'&&!mfFactionTechPurchasable(n.id))
+    return 'AI DOSSIER · NO CURRENT PLAYER EFFECT';
+  return n.fac
+    ? 'ACCOUNT UNLOCK · ACTIVE IN '+devFactionLabel(n.fac).toUpperCase()+' RTS MATCHES'
+    : 'ACCOUNT UNLOCK · ACTIVE IN FUTURE RTS MATCHES';
+}
+function devNodeUnlocks(n){
+  if(!n) return [];
+  const out=[];
+  for(const m of MODULES) if(m.req===n.id) out.push({kind:'module',id:m.id,label:'MODULE · '+m.nm});
+  if(n.id==='slot2'||n.id==='slot3') out.push({kind:'loadout',id:n.id,label:'LOADOUT · +1 MODULE SLOT'});
+  else if(n.id==='salvage') out.push({kind:'system',id:n.id,label:'MATCH MATERIAL RECOVERY · +'+Math.round((DEV_MATERIAL_YIELD_MUL-1)*100)+'%'});
+  else if(n.id==='logistics') out.push({kind:'system',id:n.id,label:'EQUIPPED MODULE WEAR · -'+Math.round((1-DEV_MODULE_WEAR_MUL)*100)+'%'});
+  else if(n.id==='refit') out.push({kind:'system',id:n.id,label:'REFIT · '+Math.round(DEV_REFIT_COST_MUL*100)+'% MATERIAL COST · RESTORES '+Math.round(DEV_REFIT_RESTORE_MUL*100)+'% DURABILITY'});
+  else if(n.id==='xeno') out.push({kind:'system',id:n.id,label:'HIVE RECOVERY · RELIC CORE REWARDS ENABLED'});
+  if(!out.length) out.push({kind:n.fac?'doctrine':'system',id:n.id,label:(n.fac?'FACTION DOCTRINE · ':'SYSTEM · ')+n.ds});
+  return out;
+}
+function devNodeImpact(n){
+  if(!n) return 0;
+  const direct=DEVTREE.filter(x=>x.req&&x.req.indexOf(n.id)>=0).length;
+  return devNodeUnlocks(n).length*4+direct;
+}
+function devRecommendNext(nodes){
+  const source=Array.isArray(nodes)?nodes:DEVTREE;
+  const pool=source.filter(n=>!devHas(n.id)&&
+    (typeof mfFactionTechPurchasable!=='function'||mfFactionTechPurchasable(n.id)));
+  if(!pool.length) return null;
+  const ranked=pool.map(n=>{
+    const open=devAvail(n),ready=open&&(META.researchData||0)>=n.data&&matHas(n.cost);
+    const cost=(n.data||0)+Object.values(n.cost||{}).reduce((a,v)=>a+(+v||0),0);
+    return {n,state:ready?'ready':open?'funding':'locked',rank:ready?0:open?1:2,impact:devNodeImpact(n),cost,order:DEVTREE.indexOf(n)};
+  }).sort((a,b)=>a.rank-b.rank||b.impact-a.impact||a.cost-b.cost||a.order-b.order);
+  const r=ranked[0];
+  return {id:r.n.id,nm:r.n.nm,state:r.state,
+    reason:r.state==='ready'?'READY NOW · COSTS AND PREREQUISITES MET':
+      r.state==='funding'?'OPEN PATH · GATHER '+devMissing(r.n).join(' · '):
+        'PREREQUISITE PATH · '+r.n.req.filter(id=>!devHas(id)).map(id=>(DEVTREE.find(x=>x.id===id)||{nm:id}).nm).join(' · ')};
+}
+function devRecommendAfter(n){
+  if(!n||!devHas(n.id)) return null;
+  const direct=DEVTREE.filter(x=>x.req&&x.req.indexOf(n.id)>=0&&!devHas(x.id));
+  if(direct.length) return devRecommendNext(direct);
+  const same=DEVTREE.filter(x=>!devHas(x.id)&&((x.fac||'')===(n.fac||'')));
+  return devRecommendNext(same);
+}
+function devNodeOutcome(n){
+  const unlocks=devNodeUnlocks(n);
+  return {scope:devNodeScope(n),unlocks,recommendation:devRecommendAfter(n),
+    jump:unlocks.some(x=>x.kind==='module')?'craft':unlocks.some(x=>x.kind==='loadout')?'loadout':''};
+}
+function modRefitCost(m){
+  const out={}; for(const k in m.cost) out[k]=Math.max(1,Math.round(m.cost[k]*DEV_REFIT_COST_MUL));
+  return out;
+}
+function modCraftQuote(m,have){
+  const cap=m.dur*DEV_MODULE_DURABILITY_CAP;
+  have=Math.min(cap,Math.max(0,have==null?(modOwned()[m.id]||0):+have||0));
+  const craftResult=Math.min(have+m.dur,cap),craftAdd=craftResult-have;
+  const refitRequested=Math.ceil(m.dur*DEV_REFIT_RESTORE_MUL);
+  const refitResult=Math.min(have+refitRequested,cap),refitAdd=refitResult-have;
+  return {compatibility:m.compat||'Player battlefield loadout',scope:'ACCOUNT INVENTORY · ACTIVE IN FUTURE RTS MATCHES WHILE FITTED',
+    current:have,cap,atCap:have>=cap,
+    craftRequested:m.dur,craftAdd,craftResult,canCraft:craftAdd>0,
+    refitCost:modRefitCost(m),refitRequested,refitAdd,refitResult,canRefit:refitAdd>0};
+}
+function modWearDisplay(n){ return Math.round(Math.max(0,n)*10)/10; }
+function modOwned(){
+  META.mods=META.mods||{};
+  /* Imported/legacy saves can contain durability above the advertised cap.
+     Clamp the authoritative inventory itself, not just quotes, or the module
+     keeps applying for hidden extra matches while every presenter says FULL. */
+  for(const m of MODULES){
+    if(!Object.prototype.hasOwnProperty.call(META.mods,m.id)) continue;
+    const raw=+META.mods[m.id],cap=m.dur*DEV_MODULE_DURABILITY_CAP;
+    META.mods[m.id]=Math.min(cap,Math.max(0,Number.isFinite(raw)?raw:0));
+  }
+  return META.mods;
+}
 function modEquipped(){ META.equip=META.equip||[]; return META.equip; }
 function modCraft(m){
-  if(!devHas(m.req)){ toast('🔒 Research '+(DEVTREE.find(r=>r.id===m.req)||{}).nm+' first'); return; }
+  if(!devHas(m.req)){ toast('🔒 Unlock '+(DEVTREE.find(r=>r.id===m.req)||{}).nm+' in Development first'); return; }
+  const quote=modCraftQuote(m);
+  if(!quote.canCraft){ toast(m.nm+' is already at durability cap ('+quote.current+' / '+quote.cap+')'); return false; }
   if(!matHas(m.cost)){ toast('Not enough materials'); return; }
   matSpend(m.cost);
   const o=modOwned();
   /* Crafting a module you already own TOPS IT UP rather than making a second
      copy — inventory management is not the interesting part of this system. */
-  o[m.id]=Math.min((o[m.id]||0)+m.dur, m.dur*2);
+  o[m.id]=quote.craftResult;
   metaSave();
-  toast('🔧 CRAFTED — '+m.nm+'  ·  '+o[m.id]+' matches of wear');
+  toast('🔧 CRAFTED — '+m.nm+' · +'+modWearDisplay(quote.craftAdd)+' durability · '
+    +modWearDisplay(quote.current)+' → '+modWearDisplay(quote.craftResult)+' / '+quote.cap);
   sfx('level'); buzz(25); renderDevelop();
+  return true;
 }
 function modRepair(m){
-  if(!devHas('refit')){ toast('🔒 Research Field Refit to repair modules'); return; }
-  const half={}; for(const k in m.cost) half[k]=Math.max(1,Math.round(m.cost[k]*0.5));
+  if(!devHas('refit')){ toast('🔒 Unlock Field Refit in Development to repair modules'); return; }
+  const quote=modCraftQuote(m);
+  if(!quote.canRefit){ toast(m.nm+' is already at durability cap ('+quote.current+' / '+quote.cap+')'); return false; }
+  const half=quote.refitCost;
   if(!matHas(half)){ toast('Repair needs '+matCostStr(half)); return; }
   matSpend(half);
-  const o=modOwned(); o[m.id]=Math.min((o[m.id]||0)+Math.ceil(m.dur*0.6), m.dur*2);
-  metaSave(); toast('🔧 Refitted — '+m.nm); sfx('ui'); renderDevelop();
+  const o=modOwned(); o[m.id]=quote.refitResult;
+  metaSave(); toast('🔧 REFITTED — '+m.nm+' · +'+modWearDisplay(quote.refitAdd)+' durability · '
+    +modWearDisplay(quote.current)+' → '+modWearDisplay(quote.refitResult)+' / '+quote.cap);
+  sfx('ui'); renderDevelop();
+  return true;
 }
 function modToggle(m){
   const eq=modEquipped(), i=eq.indexOf(m.id);
@@ -334,6 +442,9 @@ function devBranchNav(){
 }
 function devResearchExtra(n,done,open){
   let h='';
+  const outcome=devNodeOutcome(n);
+  h+='<div class="devReqInline">AFFECTS · '+outcome.scope+'</div>'
+    +'<div class="devReqInline">OUTCOME · '+outcome.unlocks.map(x=>x.label).join(' · ')+'</div>';
   if(n.req.length){
     h+='<div class="devReqs"><b>REQUIRES</b>'+n.req.map(id=>{
       const r=DEVTREE.find(x=>x.id===id);
@@ -345,73 +456,83 @@ function devResearchExtra(n,done,open){
     const mods=MODULES.filter(m=>m.req===n.id);
     if(mods.length) h+='<button class="devSub devJump" data-jump="craft">OPEN CRAFTING · '+mods.length+' UNLOCKED</button>';
     else if(n.id==='slot2'||n.id==='slot3') h+='<button class="devSub devJump" data-jump="loadout">OPEN LOADOUT</button>';
+    if(outcome.recommendation) h+='<div class="devReqInline">RECOMMENDED NEXT · '+outcome.recommendation.nm+' · '+outcome.recommendation.reason+'</div>';
   }
   return h;
 }
 function renderDevelop(){
   const scr=document.getElementById('devScr'); if(!scr) return;
+  const title=scr.querySelector('h2'); if(title) title.textContent='🔬 DEVELOPMENT';
   const b=matBag();
   const mr=document.getElementById('matRow');
   if(mr) mr.innerHTML=Object.keys(MATS).map(k=>
     '<div class="matChip">'+itemArt('mat_'+k,MATS[k].em,20)+Math.floor(b[k]||0)+'</div>').join('')
-    +'<div class="matChip data"><span>◆</span>'+Math.floor(META.researchData||0)+' DATA</div>'
-    +'<div class="matChip core"><span>⬡</span>'+(META.cores|0)+'</div>';
+    +'<div class="matChip data"><span>◆</span>'+Math.floor(META.researchData||0)+' DATA · DEV ONLY</div>';
   const tr=document.getElementById('devTabs');
   if(tr){
-    tr.innerHTML=[['research','🔬','RESEARCH'],['craft','🔧','CRAFTING'],['loadout','★','LOADOUT']]
-      .map(([k,e,n])=>'<button class="tabBtn'+(devTab===k?' on':'')+'" data-k="'+k+'">'
+    tr.setAttribute('role','tablist');
+    tr.setAttribute('aria-label','Development categories');
+    tr.innerHTML=[['research','🔬','UNLOCKS'],['craft','🔧','CRAFTING'],['loadout','★','LOADOUT']]
+      .map(([k,e,n])=>'<button class="tabBtn'+(devTab===k?' on':'')+'" data-k="'+k+'" role="tab" aria-selected="'+(devTab===k?'true':'false')+'" aria-controls="devBody">'
         +'<span class="tEm">'+e+'</span>'+n+'</button>').join('');
     tr.querySelectorAll('.tabBtn').forEach(x=>mfBindTap(x,ev=>{
       ev.stopPropagation(); devTab=x.dataset.k; sfx('ui'); renderDevelop();
     }));
   }
   const g=document.getElementById('devBody'); if(!g) return;
-  let h='';
+  g.setAttribute('role','tabpanel');
+  let h=mfProgressionGuideHTML('development');
   if(devTab==='research'){
     const total=DEVTREE.filter(n=>devHas(n.id)).length;
-    h+='<div class="devProgress"><b>'+total+'/'+DEVTREE.length+'</b><span>ACCOUNT RESEARCH · FIELD LABS BANK ◆ DATA</span></div>'+devBranchNav();
+    h+='<div class="devProgress"><b>'+total+'/'+DEVTREE.length+'</b>'+mfOwnershipBadgeHTML('permanent')+'<span>ACCOUNT UNLOCKS CARRY INTO FUTURE MATCHES · FIELD STUDIES BANK ◆ DATA</span></div>'+devBranchNav();
     h+='<div class="devBr">'+devBranch+' PATH</div>';
       for(const n of DEVTREE.filter(x=>x.br===devBranch)){
         const done=devHas(n.id), open=devAvail(n);
         const can=open&&!done&&(META.researchData||0)>=n.data&&matHas(n.cost);
         h+='<div class="devItem'+(done?' done':open?'':' lock')+'" data-r="'+n.id+'">'
           +'<div class="modEm">'+itemArt(n.art||'res_'+n.id,'🔬',34)+'</div>'
-          +'<div class="devTx"><b>'+n.nm+'</b><span>'+n.ds+'</span>'
-          +'<div class="devCost">'+(done?'RESEARCHED':matCostStr(n.cost)+'   ◆ '+n.data+' DATA')+'</div></div>'
-          +'<div class="devAct'+(can?' go':'')+'">'+(done?'✓':open?'RESEARCH':'🔒')+'</div></div>'
+          +'<div class="devTx">'+mfOwnershipBadgeHTML('permanent')+'<b>'+n.nm+'</b><span>'+n.ds+'</span>'
+          +'<div class="devCost">'+(done?'UNLOCKED':matCostStr(n.cost)+'   ◆ '+n.data+' DATA')+'</div></div>'
+          +'<div class="devAct'+(can?' go':'')+'">'+(done?'✓':open?'UNLOCK':'🔒')+'</div></div>'
           +devResearchExtra(n,done,open);
       }
   } else if(devTab==='craft'){
     const o=modOwned();
+    h+='<div class="devProgress"><b>ACCOUNT</b>'+mfOwnershipBadgeHTML('crafted')+'<span>CRAFTED MODULES CARRY BETWEEN MATCHES AND WEAR WITH USE</span></div>';
     for(const m of MODULES){
-      const locked=!devHas(m.req), have=o[m.id]||0;
+      const locked=!devHas(m.req), quote=modCraftQuote(m,o[m.id]),have=quote.current;
+      const canCraft=!locked&&quote.canCraft;
       h+='<div class="devItem'+(locked?' lock':'')+'" data-c="'+m.id+'">'
         +'<div class="modEm">'+itemArt('mod_'+m.id,m.em,34)+'</div>'
-        +'<div class="devTx"><b>'+m.nm+'</b><span>'+m.ds+'</span>'
+        +'<div class="devTx">'+mfOwnershipBadgeHTML('crafted')+'<b>'+m.nm+'</b><span>'+m.ds+'</span>'
+        +'<div class="devReqInline">COMPATIBLE · '+quote.compatibility+'</div>'
+        +'<div class="devReqInline">OUTPUT · +'+modWearDisplay(quote.craftAdd)+' DURABILITY · RESULT '+modWearDisplay(quote.current)+' → '+modWearDisplay(quote.craftResult)+' / '+quote.cap+' CAP</div>'
         +(locked?'<div class="devReqInline">REQUIRES '+((DEVTREE.find(x=>x.id===m.req)||{}).nm||m.req)+'</div>':'')
-        +'<div class="devCost">'+matCostStr(m.cost)+'<span class="costSep">lasts '+m.dur+' matches</span></div>'
-        +(have>0?'<div class="wearO"><div class="wearF" style="width:'+Math.min(100,have/m.dur*100)+'%"></div></div>':'')
+        +'<div class="devCost">'+matCostStr(m.cost)+'<span class="costSep">RECIPE +'+m.dur+' · APPLIED +'+modWearDisplay(quote.craftAdd)+(quote.atCap?' · CAP REACHED':'')+'</span></div>'
+        +(have>0?'<div class="wearO"><div class="wearF" style="width:'+Math.min(100,have/quote.cap*100)+'%"></div></div>':'')
         +'</div>'
-        +'<div class="devAct'+(locked?'':' go')+'">'+(locked?'🔒':(have>0?'+'+m.dur:'CRAFT'))+'</div></div>';
+        +'<div class="devAct'+(canCraft?' go':'')+'">'+(locked?'🔒':!quote.canCraft?'CAP REACHED':(have>0?'CRAFT +'+modWearDisplay(quote.craftAdd):'CRAFT'))+'</div></div>';
     }
   } else {
     const eq=modEquipped(), o=modOwned();
+    h+='<div class="devProgress"><b>ACCOUNT</b>'+mfOwnershipBadgeHTML('crafted')+'<span>EQUIPPED MODULES APPLY IN FUTURE MATCHES UNTIL DURABILITY IS SPENT</span></div>';
     h+='<div class="devBr">EQUIPPED — '+eq.length+' / '+moduleSlots()+' SLOTS</div>';
     if(!eq.length) h+='<div class="devNone">Nothing fitted. Equipped modules appear as marks on your Commander and HQ in the field.</div>';
     for(const m of MODULES){
-      const have=o[m.id]||0;
+      const quote=modCraftQuote(m,o[m.id]),have=quote.current;
       if(have<=0&&eq.indexOf(m.id)<0) continue;
       const on=eq.indexOf(m.id)>=0;
       const worn=have<=m.dur*0.25;
       h+='<div class="devItem'+(on?' done':'')+'" data-e="'+m.id+'">'
         +'<div class="modEm">'+itemArt('mod_'+m.id,m.em,34)+'</div>'
-        +'<div class="devTx"><b>'+m.nm+'</b><span>'+m.ds+'</span>'
-        +'<div class="wearO"><div class="wearF'+(worn?' low':'')+'" style="width:'+Math.min(100,have/m.dur*100)+'%"></div></div>'
-        +'<div class="devCost">'+Math.ceil(have)+' matches left'+(worn?'  ·  WEARING OUT':'')+'</div></div>'
+        +'<div class="devTx">'+mfOwnershipBadgeHTML('crafted')+'<b>'+m.nm+'</b><span>'+m.ds+'</span>'
+        +'<div class="devReqInline">COMPATIBLE · '+quote.compatibility+'</div>'
+        +'<div class="wearO"><div class="wearF'+(worn?' low':'')+'" style="width:'+Math.min(100,have/quote.cap*100)+'%"></div></div>'
+        +'<div class="devCost">'+Math.ceil(have)+' matches left · '+modWearDisplay(have)+' / '+quote.cap+' DURABILITY CAP'+(worn?'  ·  WEARING OUT':'')+'</div></div>'
         +'<div class="devAct'+(on?'':' go')+'">'+(on?'FITTED':'FIT')+'</div></div>';
-      if(have<m.dur&&devHas('refit'))
-        h+='<div class="devSub" data-x="'+m.id+'">🔧 REFIT — '+matCostStr(
-             Object.fromEntries(Object.entries(m.cost).map(([k,v])=>[k,Math.max(1,Math.round(v*0.5))])))+'</div>';
+      if(quote.canRefit&&devHas('refit'))
+        h+='<div class="devSub" data-x="'+m.id+'">🔧 REFIT — '+matCostStr(quote.refitCost)
+          +' · REFIT RESTORES +'+modWearDisplay(quote.refitAdd)+' · RESULT '+modWearDisplay(quote.current)+' → '+modWearDisplay(quote.refitResult)+' / '+quote.cap+'</div>';
     }
   }
   g.innerHTML=h;
@@ -469,4 +590,3 @@ function initDevelop(){
     applyCrate._devFlush=true;
   }
 }
-

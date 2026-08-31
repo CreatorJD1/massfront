@@ -1,0 +1,356 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.local/schemas/modular-city-colony-kit-contract.v1.schema.json",
+  "title": "MASSFRONT Modular City and Colony Kit Contract V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "contractId",
+    "status",
+    "scope",
+    "coordinateSystem",
+    "gridContract",
+    "socketProfiles",
+    "moduleArchetypes",
+    "podiumProfiles",
+    "lodContract",
+    "collisionNavContract",
+    "materialContract",
+    "appearanceBindings",
+    "stateVariants",
+    "compositionContract",
+    "authoringGates"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "contractId": {"const": "massfront-modular-city-colony-kit-v1"},
+    "status": {"const": "AUTHORING_CONTRACT"},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetFamilies", "consumers", "runtimeAuthority", "statement"],
+      "properties": {
+        "assetFamilies": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}, "minItems": 1, "uniqueItems": true},
+        "consumers": {"type": "array", "items": {"enum": ["base-map", "exploration-ground-site", "map-editor", "concept-library"]}, "minItems": 1, "uniqueItems": true},
+        "runtimeAuthority": {"const": false},
+        "statement": {"type": "string", "minLength": 1}
+      }
+    },
+    "coordinateSystem": {"$ref": "#/$defs/coordinateSystem"},
+    "gridContract": {"$ref": "#/$defs/gridContract"},
+    "socketProfiles": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/socketProfile"},
+      "minItems": 8
+    },
+    "moduleArchetypes": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/moduleArchetype"},
+      "minItems": 10
+    },
+    "podiumProfiles": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/podiumProfile"},
+      "minItems": 3
+    },
+    "lodContract": {"$ref": "#/$defs/lodContract"},
+    "collisionNavContract": {"$ref": "#/$defs/collisionNavContract"},
+    "materialContract": {"$ref": "#/$defs/materialContract"},
+    "appearanceBindings": {"$ref": "#/$defs/appearanceBindings"},
+    "stateVariants": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/stateVariant"},
+      "minItems": 8
+    },
+    "compositionContract": {"$ref": "#/$defs/compositionContract"},
+    "authoringGates": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/authoringGate"},
+      "minItems": 8
+    }
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+    "positiveVec2": {
+      "type": "array",
+      "prefixItems": [{"type": "number", "exclusiveMinimum": 0}, {"type": "number", "exclusiveMinimum": 0}],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "vec3": {
+      "type": "array",
+      "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}],
+      "items": false
+    },
+    "outward": {
+      "type": "array",
+      "oneOf": [
+        {"const": [1, 0, 0]},
+        {"const": [-1, 0, 0]},
+        {"const": [0, 0, 1]},
+        {"const": [0, 0, -1]}
+      ]
+    },
+    "stringList": {"type": "array", "items": {"type": "string", "minLength": 1}, "minItems": 1},
+    "coordinateSystem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["units", "upAxis", "northAxis", "eastAxis", "socketForward", "originRule", "importRule"],
+      "properties": {
+        "units": {"const": "meters"},
+        "upAxis": {"const": "+Y"},
+        "northAxis": {"const": "+Z"},
+        "eastAxis": {"const": "+X"},
+        "socketForward": {"const": "outward-from-module"},
+        "originRule": {"type": "string", "minLength": 1},
+        "importRule": {"type": "string", "minLength": 1}
+      }
+    },
+    "gridContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["detailSnapMeters", "macroGridMeters", "districtBlockMeters", "verticalStepMeters", "allowedYawDegrees", "runtimeScale", "positionToleranceMeters", "yawToleranceDegrees", "socketGapToleranceMeters", "rules"],
+      "properties": {
+        "detailSnapMeters": {"const": 4},
+        "macroGridMeters": {"const": 16},
+        "districtBlockMeters": {"const": 64},
+        "verticalStepMeters": {"const": 2},
+        "allowedYawDegrees": {"const": [0, 90, 180, 270]},
+        "runtimeScale": {"const": 1},
+        "positionToleranceMeters": {"type": "number", "minimum": 0, "maximum": 0.01},
+        "yawToleranceDegrees": {"type": "number", "minimum": 0, "maximum": 0.1},
+        "socketGapToleranceMeters": {"type": "number", "minimum": 0, "maximum": 0.02},
+        "rules": {"$ref": "#/$defs/stringList"}
+      }
+    },
+    "socketProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId", "kind", "clearWidthMeters", "clearHeightMeters", "surfaceElevationMeters", "mateWith", "navClasses", "edgeTreatment"],
+      "properties": {
+        "profileId": {"$ref": "#/$defs/id"},
+        "kind": {"enum": ["road", "road_adapter", "walkway", "corridor_portal", "service_portal"]},
+        "clearWidthMeters": {"type": "number", "exclusiveMinimum": 0},
+        "clearHeightMeters": {"type": "number", "minimum": 0},
+        "surfaceElevationMeters": {"type": "number"},
+        "mateWith": {"type": "array", "items": {"$ref": "#/$defs/id"}, "minItems": 1, "uniqueItems": true},
+        "navClasses": {"type": "array", "items": {"enum": ["infantry", "light_vehicle", "heavy_vehicle", "superheavy"]}, "minItems": 1, "uniqueItems": true},
+        "edgeTreatment": {"type": "string", "minLength": 1}
+      }
+    },
+    "socketInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["socketId", "profileId", "localPositionMeters", "outward"],
+      "properties": {
+        "socketId": {"$ref": "#/$defs/id"},
+        "profileId": {"$ref": "#/$defs/id"},
+        "localPositionMeters": {"$ref": "#/$defs/vec3"},
+        "outward": {"$ref": "#/$defs/outward"}
+      }
+    },
+    "moduleArchetype": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["moduleType", "footprintMeters", "sockets"],
+      "properties": {
+        "moduleType": {"$ref": "#/$defs/id"},
+        "footprintMeters": {"$ref": "#/$defs/positiveVec2"},
+        "sockets": {"type": "array", "items": {"$ref": "#/$defs/socketInstance"}, "minItems": 1}
+      }
+    },
+    "podiumProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId", "footprintMeters", "maximumBuildingFootprintMeters", "edgeSetbackMeters", "requiredAccessProfiles", "recommendedHeightBandMeters"],
+      "properties": {
+        "profileId": {"$ref": "#/$defs/id"},
+        "footprintMeters": {"$ref": "#/$defs/positiveVec2"},
+        "maximumBuildingFootprintMeters": {"$ref": "#/$defs/positiveVec2"},
+        "edgeSetbackMeters": {"type": "array", "items": {"type": "number", "minimum": 0}, "minItems": 4, "maxItems": 4},
+        "requiredAccessProfiles": {"type": "array", "items": {"$ref": "#/$defs/id"}, "minItems": 1, "uniqueItems": true},
+        "recommendedHeightBandMeters": {"type": "array", "prefixItems": [{"type": "number", "minimum": 0}, {"type": "number", "exclusiveMinimum": 0}], "items": false, "minItems": 2, "maxItems": 2}
+      }
+    },
+    "triangleBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["transit", "corridor", "podium", "tower_small", "tower_medium", "hero", "set_dressing"],
+      "properties": {
+        "transit": {"type": "integer", "minimum": 1},
+        "corridor": {"type": "integer", "minimum": 1},
+        "podium": {"type": "integer", "minimum": 1},
+        "tower_small": {"type": "integer", "minimum": 1},
+        "tower_medium": {"type": "integer", "minimum": 1},
+        "hero": {"type": "integer", "minimum": 1},
+        "set_dressing": {"type": "integer", "minimum": 1}
+      }
+    },
+    "lodTier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tier", "purpose", "maximumTrianglesByClass"],
+      "properties": {
+        "tier": {"enum": ["LOD0", "LOD1", "LOD2", "LOD3"]},
+        "purpose": {"type": "string", "minLength": 1},
+        "maximumTrianglesByClass": {"$ref": "#/$defs/triangleBudget"}
+      }
+    },
+    "lodContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tiers", "hysteresisPercent", "requirements"],
+      "properties": {
+        "tiers": {"type": "array", "items": {"$ref": "#/$defs/lodTier"}, "minItems": 4, "maxItems": 4},
+        "hysteresisPercent": {"type": "number", "minimum": 10, "maximum": 30},
+        "requirements": {"$ref": "#/$defs/stringList"}
+      }
+    },
+    "navClass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classId", "agentRadiusMeters", "agentHeightMeters", "minimumClearWidthMeters", "maximumStepMeters"],
+      "properties": {
+        "classId": {"enum": ["infantry", "light_vehicle", "heavy_vehicle", "superheavy"]},
+        "agentRadiusMeters": {"type": "number", "exclusiveMinimum": 0},
+        "agentHeightMeters": {"type": "number", "exclusiveMinimum": 0},
+        "minimumClearWidthMeters": {"type": "number", "exclusiveMinimum": 0},
+        "maximumStepMeters": {"type": "number", "minimum": 0}
+      }
+    },
+    "collisionNavContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namedRoots", "collisionRules", "navClasses", "navRules"],
+      "properties": {
+        "namedRoots": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["render", "collision", "navBlocker", "navLink", "occluder"],
+          "properties": {
+            "render": {"type": "string"},
+            "collision": {"type": "string"},
+            "navBlocker": {"type": "string"},
+            "navLink": {"type": "string"},
+            "occluder": {"type": "string"}
+          }
+        },
+        "collisionRules": {"$ref": "#/$defs/stringList"},
+        "navClasses": {"type": "array", "items": {"$ref": "#/$defs/navClass"}, "minItems": 4, "maxItems": 4},
+        "navRules": {"$ref": "#/$defs/stringList"}
+      }
+    },
+    "materialSlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slotId", "required", "usage"],
+      "properties": {
+        "slotId": {"type": "string", "pattern": "^MAT_[A-Z_]+$"},
+        "required": {"type": "boolean"},
+        "usage": {"type": "string", "minLength": 1}
+      }
+    },
+    "materialContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["semanticSlots", "rules"],
+      "properties": {
+        "semanticSlots": {"type": "array", "items": {"$ref": "#/$defs/materialSlot"}, "minItems": 8},
+        "rules": {"$ref": "#/$defs/stringList"}
+      }
+    },
+    "factionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bindingId", "factionId", "requiredTexturePackIds", "geometryLanguage", "emissionLanguage"],
+      "properties": {
+        "bindingId": {"$ref": "#/$defs/id"},
+        "factionId": {"$ref": "#/$defs/id"},
+        "requiredTexturePackIds": {"type": "array", "items": {"$ref": "#/$defs/id"}, "minItems": 1, "uniqueItems": true},
+        "geometryLanguage": {"$ref": "#/$defs/stringList"},
+        "emissionLanguage": {"type": "string", "minLength": 1},
+        "playable": {"type": "boolean"}
+      }
+    },
+    "planetBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bindingId", "planetId", "themeIds", "permittedFactionBindingIds", "requiredTexturePackIds", "contactRules"],
+      "properties": {
+        "bindingId": {"$ref": "#/$defs/id"},
+        "planetId": {"$ref": "#/$defs/id"},
+        "themeIds": {"type": "array", "items": {"$ref": "#/$defs/id"}, "minItems": 1, "uniqueItems": true},
+        "permittedFactionBindingIds": {"type": "array", "items": {"$ref": "#/$defs/id"}, "minItems": 1, "uniqueItems": true},
+        "requiredTexturePackIds": {"type": "array", "items": {"$ref": "#/$defs/id"}, "minItems": 1, "uniqueItems": true},
+        "contactRules": {"$ref": "#/$defs/stringList"}
+      }
+    },
+    "appearanceBindings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["factions", "planets", "unknownPlanetPolicy"],
+      "properties": {
+        "factions": {"type": "array", "items": {"$ref": "#/$defs/factionBinding"}, "minItems": 6},
+        "planets": {"type": "array", "items": {"$ref": "#/$defs/planetBinding"}, "minItems": 4},
+        "unknownPlanetPolicy": {"const": "REJECT_APPROVAL_UNTIL_EXPLICIT_PLANET_OR_REGION_BINDING_EXISTS"}
+      }
+    },
+    "stateVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stateId", "class", "preserveSocketTransforms", "collisionPolicy", "navPolicy", "requiredSlots"],
+      "properties": {
+        "stateId": {"$ref": "#/$defs/id"},
+        "class": {"enum": ["base", "damage", "infestation"]},
+        "preserveSocketTransforms": {"type": "boolean"},
+        "collisionPolicy": {"enum": ["base", "authored_override_optional", "authored_override_required"]},
+        "navPolicy": {"enum": ["base", "blocked_areas_must_be_declared", "authored_override_required"]},
+        "requiredSlots": {"type": "array", "items": {"type": "string", "pattern": "^MAT_[A-Z_]+$"}, "minItems": 1, "uniqueItems": true}
+      }
+    },
+    "compositionContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredKitCoverage", "determinism", "assemblyRules", "rejectCodes"],
+      "properties": {
+        "requiredKitCoverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["roads", "corridors", "podiums", "structures", "states"],
+          "properties": {
+            "roads": {"$ref": "#/$defs/stringList"},
+            "corridors": {"$ref": "#/$defs/stringList"},
+            "podiums": {"$ref": "#/$defs/stringList"},
+            "structures": {"$ref": "#/$defs/stringList"},
+            "states": {"$ref": "#/$defs/stringList"}
+          }
+        },
+        "determinism": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["seedFormula", "stableSort", "forbidden"],
+          "properties": {
+            "seedFormula": {"type": "string", "minLength": 1},
+            "stableSort": {"$ref": "#/$defs/stringList"},
+            "forbidden": {"$ref": "#/$defs/stringList"}
+          }
+        },
+        "assemblyRules": {"$ref": "#/$defs/stringList"},
+        "rejectCodes": {"type": "array", "items": {"type": "string", "pattern": "^[A-Z0-9_]+$"}, "minItems": 10, "uniqueItems": true}
+      }
+    },
+    "authoringGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["gateId", "requiredEvidence", "missingEvidenceResult"],
+      "properties": {
+        "gateId": {"$ref": "#/$defs/id"},
+        "requiredEvidence": {"$ref": "#/$defs/stringList"},
+        "missingEvidenceResult": {"const": "FAIL"}
+      }
+    }
+  }
+}

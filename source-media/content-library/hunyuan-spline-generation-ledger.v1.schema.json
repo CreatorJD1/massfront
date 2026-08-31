@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.local/schemas/hunyuan-spline-generation-ledger.v1.schema.json",
+  "title": "MASSFRONT Hunyuan/Spline Source Generation Ledger V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "ledgerId",
+    "ledgerDate",
+    "sourceOnly",
+    "runtimeReady",
+    "evidencePolicy",
+    "entries"
+  ],
+  "properties": {
+    "$schema": { "const": "./hunyuan-spline-generation-ledger.v1.schema.json" },
+    "schemaVersion": { "const": 1 },
+    "ledgerId": { "const": "massfront-hunyuan-spline-source-generation-v1" },
+    "ledgerDate": { "type": "string", "format": "date" },
+    "sourceOnly": { "const": true },
+    "runtimeReady": { "const": false },
+    "evidencePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["generatedDoesNotMeanAccepted", "sourceAcceptedDoesNotMeanRuntimeReady", "missingEvidenceStatus"],
+      "properties": {
+        "generatedDoesNotMeanAccepted": { "const": true },
+        "sourceAcceptedDoesNotMeanRuntimeReady": { "const": true },
+        "missingEvidenceStatus": { "const": "UNKNOWN" }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "minLength": 1,
+      "not": { "pattern": "^(?:[A-Za-z]:|/|\\\\|file:)" }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "bounds": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0 },
+        { "type": "number", "exclusiveMinimum": 0 }
+      ],
+      "items": false
+    },
+    "generation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "provider",
+        "mode",
+        "provenanceStatus",
+        "conceptGenerationId",
+        "conceptImageAssetId",
+        "generatedMeshParentId",
+        "generatedMeshNodeId"
+      ],
+      "properties": {
+        "provider": { "const": "hunyuan3d" },
+        "mode": { "const": "concept_image_to_3d" },
+        "provenanceStatus": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL_UNKNOWN_CONCEPT_IDS",
+            "PARTIAL_UNKNOWN_CONCEPT_ASSET_ID"
+          ]
+        },
+        "conceptGenerationId": {
+          "anyOf": [
+            { "$ref": "#/$defs/uuid" },
+            { "type": "null" }
+          ]
+        },
+        "conceptImageAssetId": {
+          "anyOf": [
+            { "$ref": "#/$defs/uuid" },
+            { "type": "null" }
+          ]
+        },
+        "conceptReferencePath": { "$ref": "#/$defs/repositoryPath" },
+        "conceptReferenceSha256": { "$ref": "#/$defs/sha256" },
+        "generatedMeshParentId": { "$ref": "#/$defs/uuid" },
+        "generatedMeshNodeId": { "$ref": "#/$defs/uuid" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "provenanceStatus": { "const": "COMPLETE" } },
+            "required": ["provenanceStatus"]
+          },
+          "then": {
+            "properties": {
+              "conceptGenerationId": { "$ref": "#/$defs/uuid" },
+              "conceptImageAssetId": { "$ref": "#/$defs/uuid" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "provenanceStatus": { "const": "PARTIAL_UNKNOWN_CONCEPT_IDS" } },
+            "required": ["provenanceStatus"]
+          },
+          "then": {
+            "properties": {
+              "conceptGenerationId": { "type": "null" },
+              "conceptImageAssetId": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "provenanceStatus": { "const": "PARTIAL_UNKNOWN_CONCEPT_ASSET_ID" } },
+            "required": ["provenanceStatus"]
+          },
+          "then": {
+            "properties": {
+              "conceptGenerationId": { "$ref": "#/$defs/uuid" },
+              "conceptImageAssetId": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "spline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documentName",
+        "documentNameEvidence",
+        "rootName",
+        "meshName",
+        "parentNodeId",
+        "meshNodeId",
+        "publicUrl"
+      ],
+      "properties": {
+        "documentName": { "type": "string", "minLength": 1 },
+        "documentNameEvidence": {
+          "enum": ["VERIFIED_IN_SPLINE", "RENAME_REQUESTED_UNVERIFIED"]
+        },
+        "rootName": { "type": "string", "minLength": 1 },
+        "meshName": { "type": "string", "minLength": 1 },
+        "parentNodeId": { "$ref": "#/$defs/uuid" },
+        "meshNodeId": { "$ref": "#/$defs/uuid" },
+        "publicUrl": {
+          "type": ["string", "null"],
+          "format": "uri"
+        }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "acceptedCategory",
+        "acceptedRole",
+        "acceptedAsOriginallyIntended",
+        "decisionReason"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "ACCEPTED_AS_INTENDED_SOURCE_CANDIDATE",
+            "RECLASSIFIED_SOURCE_CANDIDATE",
+            "REJECTED_SOURCE",
+            "REJECTED_VISUAL_CONTRACT_FAILURE"
+          ]
+        },
+        "acceptedCategory": { "type": ["string", "null"], "minLength": 1 },
+        "acceptedRole": { "type": ["string", "null"], "minLength": 1 },
+        "acceptedAsOriginallyIntended": { "type": "boolean" },
+        "processingAllowed": { "type": "boolean" },
+        "registrationAllowed": { "type": "boolean" },
+        "decisionReason": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "state": { "const": "REJECTED_VISUAL_CONTRACT_FAILURE" } },
+            "required": ["state"]
+          },
+          "then": {
+            "required": ["processingAllowed", "registrationAllowed"],
+            "properties": {
+              "acceptedCategory": { "type": "null" },
+              "acceptedRole": { "type": "null" },
+              "acceptedAsOriginallyIntended": { "const": false },
+              "processingAllowed": { "const": false },
+              "registrationAllowed": { "const": false }
+            }
+          }
+        }
+      ]
+    },
+    "sourceMaster": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "format",
+        "glbPath",
+        "sha256",
+        "byteLength",
+        "measuredTriangles",
+        "rawSplineBounds",
+        "rawBoundsUnit"
+      ],
+      "properties": {
+        "status": { "enum": ["EXPORTED_HASH_VERIFIED", "EXPORT_PENDING", "EXPORT_FAILED"] },
+        "format": { "const": "glb" },
+        "glbPath": {
+          "anyOf": [
+            { "$ref": "#/$defs/repositoryPath" },
+            { "type": "null" }
+          ]
+        },
+        "sha256": {
+          "anyOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "byteLength": { "type": ["integer", "null"], "minimum": 1 },
+        "measuredTriangles": { "type": "integer", "minimum": 1 },
+        "rawSplineBounds": { "$ref": "#/$defs/bounds" },
+        "rawBoundsUnit": { "const": "spline_scene_units" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "status": { "const": "EXPORTED_HASH_VERIFIED" } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "glbPath": { "$ref": "#/$defs/repositoryPath" },
+              "sha256": { "$ref": "#/$defs/sha256" },
+              "byteLength": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "status": { "enum": ["EXPORT_PENDING", "EXPORT_FAILED"] } },
+            "required": ["status"]
+          },
+          "then": {
+            "properties": {
+              "glbPath": { "type": "null" },
+              "sha256": { "type": "null" },
+              "byteLength": { "type": "null" }
+            }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "liveVisualReview",
+        "persistedSourceCapturePath",
+        "persistedSourceCaptureSha256",
+        "sourceHashVerified",
+        "runtimeEvidenceStatus",
+        "runtimeCapturePaths",
+        "notes"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "PARTIAL_SOURCE_EVIDENCE",
+            "LIVE_REVIEW_ONLY_EXPORT_PENDING",
+            "UNKNOWN",
+            "REJECTED"
+          ]
+        },
+        "liveVisualReview": { "type": "boolean" },
+        "persistedSourceCapturePath": {
+          "anyOf": [
+            { "$ref": "#/$defs/repositoryPath" },
+            { "type": "null" }
+          ]
+        },
+        "persistedSourceCaptureSha256": {
+          "anyOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "sourceHashVerified": { "type": "boolean" },
+        "runtimeEvidenceStatus": { "const": "UNKNOWN" },
+        "runtimeCapturePaths": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "notes": { "type": "string", "minLength": 1 }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recordId",
+        "planetId",
+        "siteId",
+        "assetId",
+        "intendedCategory",
+        "intendedRole",
+        "generation",
+        "spline",
+        "acceptance",
+        "sourceMaster",
+        "runtimeReady",
+        "runtimeAdmissionBlockers",
+        "evidence"
+      ],
+      "properties": {
+        "recordId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "planetId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "siteId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "assetId": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "intendedCategory": { "type": "string", "minLength": 1 },
+        "intendedRole": { "type": "string", "minLength": 1 },
+        "generation": { "$ref": "#/$defs/generation" },
+        "spline": { "$ref": "#/$defs/spline" },
+        "acceptance": { "$ref": "#/$defs/acceptance" },
+        "sourceMaster": { "$ref": "#/$defs/sourceMaster" },
+        "runtimeReady": { "const": false },
+        "runtimeAdmissionBlockers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidence": { "$ref": "#/$defs/evidence" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "generation": {
+                "properties": {
+                  "provenanceStatus": {
+                    "enum": ["PARTIAL_UNKNOWN_CONCEPT_IDS", "PARTIAL_UNKNOWN_CONCEPT_ASSET_ID"]
+                  }
+                },
+                "required": ["provenanceStatus"]
+              }
+            },
+            "required": ["generation"]
+          },
+          "then": {
+            "properties": { "runtimeReady": { "const": false } }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "acceptance": {
+                "properties": { "state": { "const": "REJECTED_VISUAL_CONTRACT_FAILURE" } },
+                "required": ["state"]
+              }
+            },
+            "required": ["acceptance"]
+          },
+          "then": {
+            "properties": {
+              "runtimeReady": { "const": false },
+              "evidence": {
+                "properties": {
+                  "status": { "const": "REJECTED" },
+                  "runtimeEvidenceStatus": { "const": "UNKNOWN" }
+                },
+                "required": ["status", "runtimeEvidenceStatus"]
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

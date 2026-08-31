@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "indexId": "massfront_32_planet_spline_prompt_library_v1",
+  "createdDate": "2026-08-25",
+  "status": "SOURCE_AUTHORING_PROMPTS_ONLY",
+  "runtimeReady": false,
+  "contract": "PLANET_32_GUIDE_CONTRACT.md",
+  "summary": {
+    "planetCount": 32,
+    "existingCanonPlanets": 4,
+    "expansionProposalPlanets": 28,
+    "orbitalPromptCount": 32,
+    "locationsPerPlanet": 8,
+    "locationPromptCount": 256,
+    "totalPromptCount": 288,
+    "locationClasses": [
+      "city_colony",
+      "outpost",
+      "military_base",
+      "refinery",
+      "relic_ruin",
+      "spaceport",
+      "pressure_dome",
+      "derelict_megastructure"
+    ]
+  },
+  "groupIndexes": [
+    "index-a.json",
+    "index-b.json",
+    "index-c.json"
+  ],
+  "sectors": [
+    {
+      "id": "sombrero_core",
+      "name": "Sombrero Core",
+      "planetIds": ["aelos", "elysion", "thalassa", "viridia"]
+    },
+    {
+      "id": "andromeda_forge",
+      "name": "Andromeda Forge",
+      "planetIds": ["pyraeth", "ferrum", "cinderfall", "talos"]
+    },
+    {
+      "id": "orion_cryosphere",
+      "name": "Orion Cryosphere",
+      "planetIds": ["nordhall", "nacre", "borealis", "erebos"]
+    },
+    {
+      "id": "helios_quarantine",
+      "name": "Helios Quarantine",
+      "planetIds": ["vespera", "karaxis", "mycora", "ichoris"]
+    },
+    {
+      "id": "veyra_frontier",
+      "name": "Veyra Frontier",
+      "planetIds": ["caligo", "lumen", "ossara", "prismara"]
+    },
+    {
+      "id": "perseus_expanse",
+      "name": "Perseus Expanse",
+      "planetIds": ["zephyria", "tempestus", "causton", "pelagos"]
+    },
+    {
+      "id": "karak_lost_colonies",
+      "name": "Karak Lost Colonies",
+      "planetIds": ["karak_prime", "sablemarch", "dredge", "umbra"]
+    },
+    {
+      "id": "outer_reach",
+      "name": "Outer Reach",
+      "planetIds": ["qadesh", "helion", "gravem", "asterion"]
+    }
+  ],
+  "existingCanonPlanetIds": ["aelos", "pyraeth", "nordhall", "vespera"],
+  "expansionProposalPlanetIds": [
+    "elysion",
+    "thalassa",
+    "viridia",
+    "ferrum",
+    "cinderfall",
+    "talos",
+    "nacre",
+    "borealis",
+    "erebos",
+    "karaxis",
+    "mycora",
+    "ichoris",
+    "caligo",
+    "lumen",
+    "ossara",
+    "prismara",
+    "zephyria",
+    "tempestus",
+    "causton",
+    "pelagos",
+    "karak_prime",
+    "sablemarch",
+    "dredge",
+    "umbra",
+    "qadesh",
+    "helion",
+    "gravem",
+    "asterion"
+  ]
+}

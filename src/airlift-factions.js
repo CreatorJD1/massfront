@@ -70,7 +70,9 @@ function mfAflAtlasModel(){
     for(const x of [-5.2,-2.2])m.cyl(x,.25,sd*3.45,.42,.42,1.25,8,RUBBER);
   }
   sensorMast(m,-6.2,7.25,1.15,1.75,MET_L);
-  return {hull:m.build(),tur:null,s:1.16,air:1};
+  return {hull:m.build(),tur:null,s:1.16,air:1,propulsion:{mode:'lift-down',sockets:MF_AFL_ATLAS_LIFT_PODS.map(P=>({
+    p:[P[0],.35,P[1]],axis:[0,-1,0],diameter:3.20,effect:'lift'
+  }))}};
 }
 
 /* SYNDICATE COALITION — PHASE ARK
@@ -113,7 +115,9 @@ function mfAflPhaseArkModel(){
   for(const sd of [-1,1])for(const x of [-5.4,-2.2,1.2,4.6])
     m.bevelBox(x,2.35,sd*(3.8+(.5-Math.abs(x)*.025)),1.25,.44,.92,.13,
       (x===1.2||x===-5.4)?MF_AFL_SYN_GLOW:MF_AFL_SYN_EDGE);
-  return {hull:m.build(),tur:null,s:1.17,air:1};
+  return {hull:m.build(),tur:null,s:1.17,air:1,propulsion:{mode:'field-lift',sockets:MF_AFL_PHASE_LIFT_NODES.map(P=>({
+    p:[P[0],.34,P[1]],axis:[0,-1,0],diameter:2.10,effect:'lift'
+  }))}};
 }
 
 /* Safe because main.js calls initModels only after every manifest script has
@@ -124,4 +128,3 @@ UNIT_MDL[MF_UT_AIRLIFT]=mfAflAtlasModel;
 FAC_KIT.nova[MF_UT_AIRLIFT]=mfAflAtlasModel;
 FAC_KIT.legion[MF_UT_AIRLIFT]=mfAflAtlasModel;
 FAC_KIT.syndicate[MF_UT_AIRLIFT]=mfAflPhaseArkModel;
-

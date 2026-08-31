@@ -1,0 +1,5186 @@
+{
+  "format": "MassfrontModularBuildingKitV1",
+  "version": 1,
+  "units": "metres",
+  "deterministic": true,
+  "generator": "tools/blender/build-mf-modular-building-kit.py",
+  "evidenceRenderer": "BLENDER_WORKBENCH",
+  "blenderVersion": "5.2.0 LTS",
+  "tilingContract": {
+    "placementGridM": 32.0,
+    "sharedWith": "mf-modular-road-v1",
+    "facadeBayM": 8.0,
+    "floorPitchM": 4.0,
+    "plinthHeightM": 0.6,
+    "sillHeightM": 1.2,
+    "bandHeightM": 2.0,
+    "partyJointM": 0.06,
+    "partyJointTotalM": 0.12,
+    "notes": [
+      "Facades stop at the cell boundary less partyJointM, so two neighbours meet in a recessed joint of partyJointTotalM instead of coplanar walls.",
+      "Sill heights derive from the shared floor datum, so window bands line up across adjacent modules of different archetypes.",
+      "Edges typed party_wall are authored blind: no glazing, no clutter.",
+      "One socket per cell edge, placed on the true grid plane."
+    ]
+  },
+  "styles": {
+    "colonial": {
+      "label": "Neutral colonial",
+      "modules": 12
+    },
+    "brutalist": {
+      "label": "Nova brutalist",
+      "modules": 12
+    },
+    "ruined": {
+      "label": "Derelict",
+      "modules": 12
+    }
+  },
+  "archetypes": [
+    "hab_block",
+    "gatehouse",
+    "watchtower",
+    "depot_shed",
+    "tower_slab",
+    "tower_spire",
+    "civic_hall",
+    "arcology_stack",
+    "industrial_hall",
+    "tank_farm",
+    "power_relay",
+    "corner_infill"
+  ],
+  "moduleCount": 36,
+  "triangleSummary": {
+    "lod0Total": 204376,
+    "lod0Min": 896,
+    "lod0Max": 17192,
+    "lod0Mean": 5677.1,
+    "lod1Total": 29360,
+    "lod2Total": 7944
+  },
+  "tilingProof": [
+    {
+      "id": "outpost_row",
+      "style": "colonial",
+      "items": [
+        "gatehouse",
+        "hab_block",
+        "hab_block",
+        "watchtower"
+      ],
+      "spanCells": 4.0,
+      "spanM": 128.0
+    },
+    {
+      "id": "city_street",
+      "style": "brutalist",
+      "items": [
+        "tower_slab",
+        "corner_infill",
+        "tower_spire",
+        "hab_block",
+        "civic_hall"
+      ],
+      "spanCells": 6.0,
+      "spanM": 192.0
+    },
+    {
+      "id": "colony_yard",
+      "style": "colonial",
+      "items": [
+        "depot_shed",
+        "tank_farm",
+        "power_relay",
+        "industrial_hall"
+      ],
+      "spanCells": 6.0,
+      "spanM": 192.0
+    },
+    {
+      "id": "dead_block",
+      "style": "ruined",
+      "items": [
+        "tower_slab",
+        "hab_block",
+        "corner_infill",
+        "tower_spire"
+      ],
+      "spanCells": 4.0,
+      "spanM": 128.0
+    }
+  ],
+  "modules": [
+    {
+      "id": "colonial_hab_block",
+      "archetype": "hab_block",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "outpost",
+      "form": "slab",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 4,
+      "heightM": 16.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_HAB_BLOCK_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_HAB_BLOCK_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_HAB_BLOCK_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_HAB_BLOCK_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3874
+        },
+        {
+          "lod": 1,
+          "triangles": 510
+        },
+        {
+          "lod": 2,
+          "triangles": 158
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 648,
+        "base_block": 220,
+        "coping": 28,
+        "cornice_reveal": 28,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 864,
+        "louvre_bank": 72,
+        "louvre_fin": 252,
+        "mast_antenna": 76,
+        "panel_detail": 48,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "riser_stack": 120,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 336,
+        "service_clutter": 36,
+        "spandrel": 1100,
+        "window_drum": 880,
+        "window_emissive": 96,
+        "window_glass": 96
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_HAB_BLOCK_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 3874,
+        "lod1": 510,
+        "lod2": 158
+      },
+      "polys": {
+        "lod0": 1337,
+        "lod1": 203,
+        "lod2": 61
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_gatehouse",
+      "archetype": "gatehouse",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "outpost",
+      "form": "arch",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 4,
+      "heightM": 16.6,
+      "edges": {
+        "N": "open",
+        "E": "party_wall",
+        "S": "open",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_GATEHOUSE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_GATEHOUSE_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_GATEHOUSE_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_GATEHOUSE_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1578
+        },
+        {
+          "lod": 1,
+          "triangles": 294
+        },
+        {
+          "lod": 2,
+          "triangles": 174
+        }
+      ],
+      "geometryRoleTriangles": {
+        "coping": 28,
+        "cornice_reveal": 28,
+        "gate_lintel": 324,
+        "mast_antenna": 76,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "shell_mass": 660,
+        "window_drum": 108,
+        "window_emissive": 24
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_GATEHOUSE_COLLISION",
+        "triangles": 36,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 1578,
+        "lod1": 294,
+        "lod2": 174
+      },
+      "polys": {
+        "lod0": 494,
+        "lod1": 119,
+        "lod2": 65
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_watchtower",
+      "archetype": "watchtower",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "outpost",
+      "form": "mast",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 8,
+      "floors": 8,
+      "heightM": 40.3,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_WATCHTOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_WATCHTOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_WATCHTOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_WATCHTOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5648
+        },
+        {
+          "lod": 1,
+          "triangles": 564
+        },
+        {
+          "lod": 2,
+          "triangles": 124
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "cornice": 60,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 864,
+        "mast_antenna": 76,
+        "plinth": 108,
+        "service_clutter": 48,
+        "shell_mass": 440,
+        "spandrel": 1760,
+        "window_drum": 1540,
+        "window_emissive": 24,
+        "window_glass": 48
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_WATCHTOWER_COLLISION",
+        "triangles": 24,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 5648,
+        "lod1": 564,
+        "lod2": 124
+      },
+      "polys": {
+        "lod0": 2448,
+        "lod1": 228,
+        "lod2": 46
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_depot_shed",
+      "archetype": "depot_shed",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "outpost",
+      "form": "shed",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "authoredFloors": 3,
+      "floors": 3,
+      "heightM": 17.6,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_DEPOT_SHED_SOCKET_N_0",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_DEPOT_SHED_SOCKET_N_1",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_DEPOT_SHED_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_DEPOT_SHED_SOCKET_S_0",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_DEPOT_SHED_SOCKET_S_1",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_DEPOT_SHED_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5788
+        },
+        {
+          "lod": 1,
+          "triangles": 644
+        },
+        {
+          "lod": 2,
+          "triangles": 96
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 1080,
+        "base_block": 220,
+        "cargo_door": 168,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 1728,
+        "hab_pod": 220,
+        "mast_antenna": 76,
+        "panel_detail": 120,
+        "plinth": 108,
+        "pod_light": 12,
+        "riser_stack": 60,
+        "roof_deck": 180,
+        "service_clutter": 24,
+        "spandrel": 880,
+        "vent_bank": 48,
+        "window_drum": 660,
+        "window_emissive": 72,
+        "window_glass": 72
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_DEPOT_SHED_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 5788,
+        "lod1": 644,
+        "lod2": 96
+      },
+      "polys": {
+        "lod0": 2139,
+        "lod1": 288,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_tower_slab",
+      "archetype": "tower_slab",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "city",
+      "form": "tower",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 13,
+      "floors": 13,
+      "heightM": 52.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SLAB_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SLAB_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SLAB_SOCKET_S",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SLAB_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 9096
+        },
+        {
+          "lod": 1,
+          "triangles": 884
+        },
+        {
+          "lod": 2,
+          "triangles": 264
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 324,
+        "base_block": 220,
+        "coping": 56,
+        "cornice_reveal": 56,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 756,
+        "hab_pod": 220,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "panel_detail": 120,
+        "parapet_wall": 112,
+        "plinth": 108,
+        "pod_light": 12,
+        "riser_stack": 60,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 168,
+        "service_clutter": 48,
+        "spandrel": 3300,
+        "window_drum": 2860,
+        "window_emissive": 132,
+        "window_glass": 156
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_TOWER_SLAB_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 9096,
+        "lod1": 884,
+        "lod2": 264
+      },
+      "polys": {
+        "lod0": 3596,
+        "lod1": 336,
+        "lod2": 100
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_tower_spire",
+      "archetype": "tower_spire",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "city",
+      "form": "stepped",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 18,
+      "floors": 18,
+      "heightM": 72.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SPIRE_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SPIRE_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SPIRE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TOWER_SPIRE_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 11362
+        },
+        {
+          "lod": 1,
+          "triangles": 1310
+        },
+        {
+          "lod": 2,
+          "triangles": 370
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 432,
+        "base_block": 220,
+        "coping": 84,
+        "cornice_reveal": 84,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 1944,
+        "louvre_bank": 24,
+        "louvre_fin": 84,
+        "mast_antenna": 124,
+        "parapet_wall": 168,
+        "plinth": 108,
+        "riser_stack": 60,
+        "roof_deck": 108,
+        "roof_plant": 140,
+        "service_clutter": 36,
+        "spandrel": 4620,
+        "window_drum": 3960,
+        "window_emissive": 312,
+        "window_glass": 432
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_TOWER_SPIRE_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 11362,
+        "lod1": 1310,
+        "lod2": 370
+      },
+      "polys": {
+        "lod0": 4676,
+        "lod1": 509,
+        "lod2": 139
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_civic_hall",
+      "archetype": "civic_hall",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "city",
+      "form": "hall",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "authoredFloors": 5,
+      "floors": 5,
+      "heightM": 33.6,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_N_0",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_N_1",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_E_0",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_E_1",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            32.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_S_0",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_S_1",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            -32.0,
+            16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 11634
+        },
+        {
+          "lod": 1,
+          "triangles": 1034
+        },
+        {
+          "lod": 2,
+          "triangles": 186
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 1620,
+        "base_block": 220,
+        "colonnade": 1868,
+        "coping": 28,
+        "cornice": 92,
+        "cornice_reveal": 28,
+        "dish_array": 56,
+        "entrance_canopy": 216,
+        "entrance_portal": 24,
+        "fin": 2592,
+        "louvre_bank": 72,
+        "louvre_fin": 252,
+        "mast_antenna": 76,
+        "panel_detail": 288,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "riser_stack": 120,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 252,
+        "service_clutter": 48,
+        "shell_mass": 220,
+        "spandrel": 1320,
+        "vent_bank": 96,
+        "window_drum": 1100,
+        "window_emissive": 156,
+        "window_glass": 180
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_CIVIC_HALL_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 11634,
+        "lod1": 1034,
+        "lod2": 186
+      },
+      "polys": {
+        "lod0": 4019,
+        "lod1": 421,
+        "lod2": 71
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_arcology_stack",
+      "archetype": "arcology_stack",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "city",
+      "form": "mega",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "authoredFloors": 15,
+      "floors": 15,
+      "heightM": 60.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            32.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            -32.0,
+            16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 16970
+        },
+        {
+          "lod": 1,
+          "triangles": 1618
+        },
+        {
+          "lod": 2,
+          "triangles": 358
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 540,
+        "base_block": 220,
+        "coping": 84,
+        "cornice_reveal": 84,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 3888,
+        "mast_antenna": 76,
+        "panel_detail": 72,
+        "parapet_wall": 168,
+        "plinth": 108,
+        "riser_stack": 60,
+        "service_clutter": 36,
+        "skybridge": 220,
+        "spandrel": 5500,
+        "vent_bank": 48,
+        "window_drum": 4840,
+        "window_emissive": 336,
+        "window_glass": 492
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_ARCOLOGY_STACK_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 16970,
+        "lod1": 1618,
+        "lod2": 358
+      },
+      "polys": {
+        "lod0": 6673,
+        "lod1": 649,
+        "lod2": 133
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_industrial_hall",
+      "archetype": "industrial_hall",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "colony",
+      "form": "sawtooth",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 4,
+      "heightM": 21.8,
+      "edges": {
+        "N": "service",
+        "E": "party_wall",
+        "S": "street",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_INDUSTRIAL_HALL_SOCKET_N_0",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_INDUSTRIAL_HALL_SOCKET_N_1",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_INDUSTRIAL_HALL_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_INDUSTRIAL_HALL_SOCKET_S_0",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_INDUSTRIAL_HALL_SOCKET_S_1",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_INDUSTRIAL_HALL_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5838
+        },
+        {
+          "lod": 1,
+          "triangles": 702
+        },
+        {
+          "lod": 2,
+          "triangles": 202
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 1080,
+        "base_block": 220,
+        "coping": 28,
+        "cornice_reveal": 28,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 1728,
+        "mast_antenna": 76,
+        "panel_detail": 120,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "riser_stack": 132,
+        "sawtooth_roof": 1100,
+        "service_clutter": 36,
+        "spandrel": 1100,
+        "vent_bank": 48,
+        "window_drum": 880,
+        "window_emissive": 96,
+        "window_glass": 156
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_INDUSTRIAL_HALL_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 5838,
+        "lod1": 702,
+        "lod2": 202
+      },
+      "polys": {
+        "lod0": 2212,
+        "lod1": 287,
+        "lod2": 75
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_tank_farm",
+      "archetype": "tank_farm",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "colony",
+      "form": "tanks",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 2,
+      "floors": 2,
+      "heightM": 13.273,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TANK_FARM_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TANK_FARM_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TANK_FARM_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_TANK_FARM_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2232
+        },
+        {
+          "lod": 1,
+          "triangles": 604
+        },
+        {
+          "lod": 2,
+          "triangles": 112
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bund_wall": 440,
+        "mast_antenna": 76,
+        "pipe_rack": 108,
+        "service_clutter": 48,
+        "storage_tank": 900
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_TANK_FARM_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2232,
+        "lod1": 604,
+        "lod2": 112
+      },
+      "polys": {
+        "lod0": 684,
+        "lod1": 226,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_power_relay",
+      "archetype": "power_relay",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "colony",
+      "form": "relay",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 3,
+      "floors": 3,
+      "heightM": 15.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "street",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_POWER_RELAY_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_POWER_RELAY_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_POWER_RELAY_SOCKET_S",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_POWER_RELAY_SOCKET_W",
+          "direction": "W",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2264
+        },
+        {
+          "lod": 1,
+          "triangles": 770
+        },
+        {
+          "lod": 2,
+          "triangles": 250
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 28,
+        "cornice_reveal": 28,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 756,
+        "insulator": 180,
+        "mast_antenna": 76,
+        "parapet_wall": 56,
+        "pylon_mast": 104,
+        "service_clutter": 36,
+        "spandrel": 880,
+        "transformer": 84,
+        "window_drum": 660,
+        "window_emissive": 36,
+        "window_glass": 36
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_POWER_RELAY_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2264,
+        "lod1": 770,
+        "lod2": 250
+      },
+      "polys": {
+        "lod0": 796,
+        "lod1": 307,
+        "lod2": 99
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "colonial_corner_infill",
+      "archetype": "corner_infill",
+      "style": "colonial",
+      "styleLabel": "Neutral colonial",
+      "settlementClass": "city",
+      "form": "corner",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 6,
+      "floors": 6,
+      "heightM": 25.8,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CORNER_INFILL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CORNER_INFILL_SOCKET_E",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CORNER_INFILL_SOCKET_S",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_COLONIAL_CORNER_INFILL_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 8004
+        },
+        {
+          "lod": 1,
+          "triangles": 856
+        },
+        {
+          "lod": 2,
+          "triangles": 264
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 216,
+        "base_block": 220,
+        "coping": 56,
+        "corner_chamfer": 220,
+        "cornice_reveal": 56,
+        "dish_array": 56,
+        "entrance_canopy": 216,
+        "entrance_portal": 24,
+        "fin": 648,
+        "louvre_bank": 72,
+        "louvre_fin": 252,
+        "mast_antenna": 76,
+        "parapet_wall": 112,
+        "plinth": 108,
+        "riser_stack": 60,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 252,
+        "service_clutter": 36,
+        "spandrel": 3080,
+        "vent_bank": 48,
+        "window_drum": 2640,
+        "window_emissive": 144,
+        "window_glass": 144
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_COLONIAL_CORNER_INFILL_COLLISION",
+        "triangles": 24,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 8004,
+        "lod1": 856,
+        "lod2": 264
+      },
+      "polys": {
+        "lod0": 2981,
+        "lod1": 326,
+        "lod2": 100
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_hab_block",
+      "archetype": "hab_block",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "outpost",
+      "form": "slab",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 4,
+      "heightM": 16.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_HAB_BLOCK_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_HAB_BLOCK_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_HAB_BLOCK_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_HAB_BLOCK_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3774
+        },
+        {
+          "lod": 1,
+          "triangles": 486
+        },
+        {
+          "lod": 2,
+          "triangles": 158
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 432,
+        "base_block": 220,
+        "coping": 28,
+        "cornice_reveal": 28,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 648,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "panel_detail": 96,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "riser_stack": 120,
+        "roof_deck": 108,
+        "roof_duct": 12,
+        "roof_plant": 224,
+        "service_clutter": 12,
+        "spandrel": 1100,
+        "vent_bank": 48,
+        "window_drum": 880,
+        "window_emissive": 72,
+        "window_glass": 96
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_HAB_BLOCK_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 3774,
+        "lod1": 486,
+        "lod2": 158
+      },
+      "polys": {
+        "lod0": 1299,
+        "lod1": 191,
+        "lod2": 61
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_gatehouse",
+      "archetype": "gatehouse",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "outpost",
+      "form": "arch",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 4,
+      "heightM": 16.6,
+      "edges": {
+        "N": "open",
+        "E": "party_wall",
+        "S": "open",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_GATEHOUSE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_GATEHOUSE_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_GATEHOUSE_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_GATEHOUSE_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1392
+        },
+        {
+          "lod": 1,
+          "triangles": 294
+        },
+        {
+          "lod": 2,
+          "triangles": 174
+        }
+      ],
+      "geometryRoleTriangles": {
+        "coping": 28,
+        "cornice_reveal": 28,
+        "dish_array": 56,
+        "gate_lintel": 324,
+        "mast_antenna": 76,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "shell_mass": 660,
+        "window_drum": 108,
+        "window_emissive": 24
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_GATEHOUSE_COLLISION",
+        "triangles": 36,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 1392,
+        "lod1": 294,
+        "lod2": 174
+      },
+      "polys": {
+        "lod0": 459,
+        "lod1": 119,
+        "lod2": 65
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_watchtower",
+      "archetype": "watchtower",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "outpost",
+      "form": "mast",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 8,
+      "floors": 8,
+      "heightM": 40.3,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_WATCHTOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_WATCHTOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_WATCHTOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_WATCHTOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 4726
+        },
+        {
+          "lod": 1,
+          "triangles": 468
+        },
+        {
+          "lod": 2,
+          "triangles": 124
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "cornice": 60,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "mast_antenna": 76,
+        "plinth": 108,
+        "service_clutter": 12,
+        "shell_mass": 440,
+        "spandrel": 1760,
+        "window_drum": 1540,
+        "window_emissive": 24,
+        "window_glass": 48
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_WATCHTOWER_COLLISION",
+        "triangles": 24,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 4726,
+        "lod1": 468,
+        "lod2": 124
+      },
+      "polys": {
+        "lod0": 2088,
+        "lod1": 180,
+        "lod2": 46
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_depot_shed",
+      "archetype": "depot_shed",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "outpost",
+      "form": "shed",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "authoredFloors": 3,
+      "floors": 3,
+      "heightM": 17.6,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_DEPOT_SHED_SOCKET_N_0",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_DEPOT_SHED_SOCKET_N_1",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_DEPOT_SHED_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_DEPOT_SHED_SOCKET_S_0",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_DEPOT_SHED_SOCKET_S_1",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_DEPOT_SHED_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5426
+        },
+        {
+          "lod": 1,
+          "triangles": 596
+        },
+        {
+          "lod": 2,
+          "triangles": 96
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 864,
+        "base_block": 220,
+        "cargo_door": 144,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 1512,
+        "mast_antenna": 76,
+        "panel_detail": 240,
+        "plinth": 108,
+        "riser_stack": 120,
+        "roof_deck": 180,
+        "service_clutter": 24,
+        "spandrel": 880,
+        "window_drum": 660,
+        "window_emissive": 48,
+        "window_glass": 72
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_DEPOT_SHED_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 5426,
+        "lod1": 596,
+        "lod2": 96
+      },
+      "polys": {
+        "lod0": 1983,
+        "lod1": 264,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_tower_slab",
+      "archetype": "tower_slab",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "city",
+      "form": "tower",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 13,
+      "floors": 13,
+      "heightM": 52.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SLAB_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SLAB_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SLAB_SOCKET_S",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SLAB_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 8342
+        },
+        {
+          "lod": 1,
+          "triangles": 872
+        },
+        {
+          "lod": 2,
+          "triangles": 264
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 216,
+        "base_block": 220,
+        "coping": 56,
+        "cornice_reveal": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 648,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "panel_detail": 72,
+        "parapet_wall": 112,
+        "plinth": 108,
+        "riser_stack": 60,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 168,
+        "service_clutter": 12,
+        "spandrel": 3300,
+        "vent_bank": 48,
+        "window_drum": 2860,
+        "window_emissive": 96,
+        "window_glass": 156
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SLAB_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 8342,
+        "lod1": 872,
+        "lod2": 264
+      },
+      "polys": {
+        "lod0": 3381,
+        "lod1": 330,
+        "lod2": 100
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_tower_spire",
+      "archetype": "tower_spire",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "city",
+      "form": "stepped",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 18,
+      "floors": 18,
+      "heightM": 72.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SPIRE_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SPIRE_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SPIRE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SPIRE_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 10302
+        },
+        {
+          "lod": 1,
+          "triangles": 1214
+        },
+        {
+          "lod": 2,
+          "triangles": 370
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 108,
+        "base_block": 220,
+        "coping": 84,
+        "cornice_reveal": 84,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 1080,
+        "louvre_bank": 24,
+        "louvre_fin": 84,
+        "mast_antenna": 124,
+        "parapet_wall": 168,
+        "plinth": 108,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 84,
+        "service_clutter": 12,
+        "spandrel": 4620,
+        "window_drum": 3960,
+        "window_emissive": 252,
+        "window_glass": 432
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_TOWER_SPIRE_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 10302,
+        "lod1": 1214,
+        "lod2": 370
+      },
+      "polys": {
+        "lod0": 4353,
+        "lod1": 461,
+        "lod2": 139
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_civic_hall",
+      "archetype": "civic_hall",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "city",
+      "form": "hall",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "authoredFloors": 5,
+      "floors": 5,
+      "heightM": 33.6,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_N_0",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_N_1",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_E_0",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_E_1",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            32.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_S_0",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_S_1",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            -32.0,
+            16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 9832
+        },
+        {
+          "lod": 1,
+          "triangles": 970
+        },
+        {
+          "lod": 2,
+          "triangles": 186
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 1080,
+        "base_block": 220,
+        "colonnade": 1648,
+        "coping": 28,
+        "cornice": 92,
+        "cornice_reveal": 28,
+        "entrance_canopy": 216,
+        "entrance_portal": 24,
+        "fin": 2268,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "panel_detail": 396,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "riser_stack": 60,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 168,
+        "service_clutter": 24,
+        "shell_mass": 220,
+        "spandrel": 1320,
+        "vent_bank": 96,
+        "window_drum": 1100,
+        "window_emissive": 132,
+        "window_glass": 180
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_CIVIC_HALL_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 9832,
+        "lod1": 970,
+        "lod2": 186
+      },
+      "polys": {
+        "lod0": 3220,
+        "lod1": 393,
+        "lod2": 71
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_arcology_stack",
+      "archetype": "arcology_stack",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "city",
+      "form": "mega",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "authoredFloors": 15,
+      "floors": 15,
+      "heightM": 60.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            32.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            -32.0,
+            16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 17640
+        },
+        {
+          "lod": 1,
+          "triangles": 1594
+        },
+        {
+          "lod": 2,
+          "triangles": 358
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 540,
+        "base_block": 220,
+        "coping": 84,
+        "cornice_reveal": 84,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 3348,
+        "panel_detail": 144,
+        "parapet_wall": 168,
+        "plinth": 108,
+        "riser_stack": 60,
+        "service_clutter": 24,
+        "skybridge": 220,
+        "spandrel": 5940,
+        "window_drum": 5280,
+        "window_emissive": 312,
+        "window_glass": 540
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_ARCOLOGY_STACK_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 17640,
+        "lod1": 1594,
+        "lod2": 358
+      },
+      "polys": {
+        "lod0": 6989,
+        "lod1": 631,
+        "lod2": 133
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_industrial_hall",
+      "archetype": "industrial_hall",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "colony",
+      "form": "sawtooth",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 4,
+      "heightM": 21.8,
+      "edges": {
+        "N": "service",
+        "E": "party_wall",
+        "S": "street",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_INDUSTRIAL_HALL_SOCKET_N_0",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_INDUSTRIAL_HALL_SOCKET_N_1",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_INDUSTRIAL_HALL_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_INDUSTRIAL_HALL_SOCKET_S_0",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_INDUSTRIAL_HALL_SOCKET_S_1",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_INDUSTRIAL_HALL_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5430
+        },
+        {
+          "lod": 1,
+          "triangles": 678
+        },
+        {
+          "lod": 2,
+          "triangles": 202
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 756,
+        "base_block": 220,
+        "coping": 28,
+        "cornice_reveal": 28,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 1512,
+        "mast_antenna": 76,
+        "panel_detail": 240,
+        "parapet_wall": 56,
+        "plinth": 108,
+        "riser_stack": 72,
+        "sawtooth_roof": 1100,
+        "service_clutter": 12,
+        "spandrel": 1100,
+        "window_drum": 880,
+        "window_emissive": 72,
+        "window_glass": 156
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_INDUSTRIAL_HALL_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 5430,
+        "lod1": 678,
+        "lod2": 202
+      },
+      "polys": {
+        "lod0": 2045,
+        "lod1": 275,
+        "lod2": 75
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_tank_farm",
+      "archetype": "tank_farm",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "colony",
+      "form": "tanks",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 2,
+      "floors": 2,
+      "heightM": 16.235,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TANK_FARM_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TANK_FARM_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TANK_FARM_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_TANK_FARM_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2248
+        },
+        {
+          "lod": 1,
+          "triangles": 584
+        },
+        {
+          "lod": 2,
+          "triangles": 112
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bund_wall": 440,
+        "pipe_rack": 108,
+        "service_clutter": 24,
+        "storage_tank": 900
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_TANK_FARM_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2248,
+        "lod1": 584,
+        "lod2": 112
+      },
+      "polys": {
+        "lod0": 702,
+        "lod1": 218,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_power_relay",
+      "archetype": "power_relay",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "colony",
+      "form": "relay",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 3,
+      "floors": 3,
+      "heightM": 15.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "street",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_POWER_RELAY_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_POWER_RELAY_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_POWER_RELAY_SOCKET_S",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_POWER_RELAY_SOCKET_W",
+          "direction": "W",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2168
+        },
+        {
+          "lod": 1,
+          "triangles": 710
+        },
+        {
+          "lod": 2,
+          "triangles": 250
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 28,
+        "cornice_reveal": 28,
+        "dish_array": 56,
+        "entrance_canopy": 108,
+        "entrance_portal": 12,
+        "fin": 216,
+        "insulator": 180,
+        "mast_antenna": 76,
+        "parapet_wall": 56,
+        "pylon_mast": 104,
+        "service_clutter": 12,
+        "spandrel": 880,
+        "transformer": 84,
+        "window_drum": 660,
+        "window_emissive": 48,
+        "window_glass": 36
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_POWER_RELAY_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2168,
+        "lod1": 710,
+        "lod2": 250
+      },
+      "polys": {
+        "lod0": 786,
+        "lod1": 277,
+        "lod2": 99
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "brutalist_corner_infill",
+      "archetype": "corner_infill",
+      "style": "brutalist",
+      "styleLabel": "Nova brutalist",
+      "settlementClass": "city",
+      "form": "corner",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 6,
+      "floors": 6,
+      "heightM": 25.8,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CORNER_INFILL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CORNER_INFILL_SOCKET_E",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CORNER_INFILL_SOCKET_S",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_BRUTALIST_CORNER_INFILL_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 6624
+        },
+        {
+          "lod": 1,
+          "triangles": 820
+        },
+        {
+          "lod": 2,
+          "triangles": 264
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 220,
+        "coping": 56,
+        "corner_chamfer": 220,
+        "cornice_reveal": 56,
+        "entrance_canopy": 216,
+        "entrance_portal": 24,
+        "fin": 324,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 76,
+        "parapet_wall": 112,
+        "plinth": 108,
+        "roof_deck": 108,
+        "roof_duct": 24,
+        "roof_plant": 168,
+        "service_clutter": 12,
+        "spandrel": 3080,
+        "window_drum": 2640,
+        "window_emissive": 144,
+        "window_glass": 144
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_BRUTALIST_CORNER_INFILL_COLLISION",
+        "triangles": 24,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 6624,
+        "lod1": 820,
+        "lod2": 264
+      },
+      "polys": {
+        "lod0": 2590,
+        "lod1": 308,
+        "lod2": 100
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_hab_block",
+      "archetype": "hab_block",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "outpost",
+      "form": "slab",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 3,
+      "heightM": 12.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_HAB_BLOCK_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_HAB_BLOCK_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_HAB_BLOCK_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_HAB_BLOCK_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2488
+        },
+        {
+          "lod": 1,
+          "triangles": 650
+        },
+        {
+          "lod": 2,
+          "triangles": 158
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 176,
+        "base_block": 92,
+        "coping": 28,
+        "coping_breach": 72,
+        "cornice_reveal": 28,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "fin": 352,
+        "hab_pod": 92,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 56,
+        "panel_detail": 48,
+        "parapet_wall": 56,
+        "plinth": 44,
+        "riser_stack": 60,
+        "roof_deck": 44,
+        "roof_duct": 24,
+        "roof_plant": 196,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "spandrel": 368,
+        "window_drum": 276,
+        "window_glass": 72
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_HAB_BLOCK_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2488,
+        "lod1": 650,
+        "lod2": 158
+      },
+      "polys": {
+        "lod0": 752,
+        "lod1": 265,
+        "lod2": 61
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_gatehouse",
+      "archetype": "gatehouse",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "outpost",
+      "form": "arch",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 2,
+      "heightM": 16.4,
+      "edges": {
+        "N": "open",
+        "E": "party_wall",
+        "S": "open",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_GATEHOUSE_SOCKET_N",
+          "direction": "N",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_GATEHOUSE_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_GATEHOUSE_SOCKET_S",
+          "direction": "S",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_GATEHOUSE_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 914
+        },
+        {
+          "lod": 1,
+          "triangles": 434
+        },
+        {
+          "lod": 2,
+          "triangles": 174
+        }
+      ],
+      "geometryRoleTriangles": {
+        "coping": 28,
+        "coping_breach": 96,
+        "cornice_reveal": 28,
+        "exposed_slab": 24,
+        "gate_lintel": 132,
+        "mast_antenna": 56,
+        "parapet_wall": 56,
+        "plinth": 44,
+        "rubble_debris": 112,
+        "shell_mass": 276,
+        "window_drum": 44
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_GATEHOUSE_COLLISION",
+        "triangles": 36,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 914,
+        "lod1": 434,
+        "lod2": 174
+      },
+      "polys": {
+        "lod0": 312,
+        "lod1": 181,
+        "lod2": 65
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_watchtower",
+      "archetype": "watchtower",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "outpost",
+      "form": "mast",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 8,
+      "floors": 5,
+      "heightM": 28.3,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_WATCHTOWER_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_WATCHTOWER_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_WATCHTOWER_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_WATCHTOWER_SOCKET_W",
+          "direction": "W",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2070
+        },
+        {
+          "lod": 1,
+          "triangles": 508
+        },
+        {
+          "lod": 2,
+          "triangles": 124
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "coping_breach": 96,
+        "cornice": 44,
+        "dish_array": 56,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "mast_antenna": 56,
+        "plinth": 44,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "shell_mass": 184,
+        "spandrel": 460,
+        "window_drum": 368,
+        "window_glass": 48
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_WATCHTOWER_COLLISION",
+        "triangles": 24,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2070,
+        "lod1": 508,
+        "lod2": 124
+      },
+      "polys": {
+        "lod0": 826,
+        "lod1": 208,
+        "lod2": 46
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_depot_shed",
+      "archetype": "depot_shed",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "outpost",
+      "form": "shed",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "authoredFloors": 3,
+      "floors": 2,
+      "heightM": 13.6,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_DEPOT_SHED_SOCKET_N_0",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_DEPOT_SHED_SOCKET_N_1",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_DEPOT_SHED_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_DEPOT_SHED_SOCKET_S_0",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_DEPOT_SHED_SOCKET_S_1",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_DEPOT_SHED_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2728
+        },
+        {
+          "lod": 1,
+          "triangles": 708
+        },
+        {
+          "lod": 2,
+          "triangles": 96
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 352,
+        "base_block": 92,
+        "cargo_door": 144,
+        "coping_breach": 96,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "fin": 704,
+        "hab_pod": 92,
+        "panel_detail": 60,
+        "plinth": 44,
+        "riser_stack": 120,
+        "roof_deck": 132,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "spandrel": 276,
+        "window_drum": 184,
+        "window_glass": 48
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_DEPOT_SHED_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2728,
+        "lod1": 708,
+        "lod2": 96
+      },
+      "polys": {
+        "lod0": 1002,
+        "lod1": 322,
+        "lod2": 36
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_tower_slab",
+      "archetype": "tower_slab",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "city",
+      "form": "tower",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 13,
+      "floors": 6,
+      "heightM": 24.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SLAB_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SLAB_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SLAB_SOCKET_S",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SLAB_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 3100
+        },
+        {
+          "lod": 1,
+          "triangles": 856
+        },
+        {
+          "lod": 2,
+          "triangles": 264
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 88,
+        "base_block": 92,
+        "coping": 56,
+        "coping_breach": 72,
+        "cornice_reveal": 56,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "fin": 308,
+        "louvre_bank": 24,
+        "louvre_fin": 84,
+        "mast_antenna": 56,
+        "panel_detail": 36,
+        "parapet_wall": 112,
+        "plinth": 44,
+        "riser_stack": 60,
+        "roof_deck": 44,
+        "roof_duct": 24,
+        "roof_plant": 84,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "spandrel": 736,
+        "window_drum": 552,
+        "window_glass": 72
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_TOWER_SLAB_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 3100,
+        "lod1": 856,
+        "lod2": 264
+      },
+      "polys": {
+        "lod0": 1059,
+        "lod1": 338,
+        "lod2": 100
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_tower_spire",
+      "archetype": "tower_spire",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "city",
+      "form": "stepped",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 18,
+      "floors": 10,
+      "heightM": 40.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SPIRE_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SPIRE_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SPIRE_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TOWER_SPIRE_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 4900
+        },
+        {
+          "lod": 1,
+          "triangles": 1198
+        },
+        {
+          "lod": 2,
+          "triangles": 370
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 176,
+        "base_block": 92,
+        "coping": 84,
+        "coping_breach": 12,
+        "cornice_reveal": 84,
+        "dish_array": 56,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "fin": 704,
+        "hab_pod": 92,
+        "louvre_bank": 24,
+        "louvre_fin": 84,
+        "mast_antenna": 104,
+        "parapet_wall": 168,
+        "plinth": 44,
+        "riser_stack": 120,
+        "roof_deck": 44,
+        "roof_duct": 24,
+        "roof_plant": 84,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "spandrel": 1196,
+        "window_drum": 920,
+        "window_glass": 240
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_TOWER_SPIRE_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 4900,
+        "lod1": 1198,
+        "lod2": 370
+      },
+      "polys": {
+        "lod0": 1739,
+        "lod1": 469,
+        "lod2": 139
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_civic_hall",
+      "archetype": "civic_hall",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "city",
+      "form": "hall",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "authoredFloors": 5,
+      "floors": 3,
+      "heightM": 25.6,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "service",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_N_0",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_N_1",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_E_0",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_E_1",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            32.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_S_0",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_S_1",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            -32.0,
+            16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 5722
+        },
+        {
+          "lod": 1,
+          "triangles": 1066
+        },
+        {
+          "lod": 2,
+          "triangles": 186
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 396,
+        "base_block": 92,
+        "colonnade": 688,
+        "coping": 28,
+        "coping_breach": 48,
+        "cornice": 60,
+        "cornice_reveal": 28,
+        "entrance_portal": 24,
+        "exposed_slab": 24,
+        "fin": 1056,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 56,
+        "panel_detail": 192,
+        "parapet_wall": 56,
+        "plinth": 44,
+        "roof_deck": 44,
+        "roof_duct": 24,
+        "roof_plant": 168,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "shell_mass": 92,
+        "spandrel": 368,
+        "vent_bank": 96,
+        "window_drum": 276,
+        "window_glass": 108
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_CIVIC_HALL_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 5722,
+        "lod1": 1066,
+        "lod2": 186
+      },
+      "polys": {
+        "lod0": 1748,
+        "lod1": 441,
+        "lod2": 71
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_arcology_stack",
+      "archetype": "arcology_stack",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "city",
+      "form": "mega",
+      "cells": [
+        2,
+        2
+      ],
+      "footprintM": [
+        64.0,
+        64.0
+      ],
+      "authoredFloors": 15,
+      "floors": 8,
+      "heightM": 32.6,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_N_0",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_N_1",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_E_0",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_E_1",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            32.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_S_0",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_S_1",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -32.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_W_0",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_SOCKET_W_1",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 1,
+          "localPosition": [
+            -32.0,
+            16.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 6540
+        },
+        {
+          "lod": 1,
+          "triangles": 1438
+        },
+        {
+          "lod": 2,
+          "triangles": 358
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 176,
+        "base_block": 92,
+        "coping": 84,
+        "coping_breach": 192,
+        "cornice_reveal": 84,
+        "dish_array": 56,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "fin": 1408,
+        "mast_antenna": 56,
+        "panel_detail": 96,
+        "parapet_wall": 168,
+        "plinth": 44,
+        "riser_stack": 60,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "skybridge": 92,
+        "spandrel": 1196,
+        "window_drum": 920,
+        "window_glass": 204
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_ARCOLOGY_STACK_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 6540,
+        "lod1": 1438,
+        "lod2": 358
+      },
+      "polys": {
+        "lod0": 2278,
+        "lod1": 607,
+        "lod2": 133
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_industrial_hall",
+      "archetype": "industrial_hall",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "colony",
+      "form": "sawtooth",
+      "cells": [
+        2,
+        1
+      ],
+      "footprintM": [
+        64.0,
+        32.0
+      ],
+      "authoredFloors": 4,
+      "floors": 2,
+      "heightM": 13.8,
+      "edges": {
+        "N": "service",
+        "E": "party_wall",
+        "S": "street",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_INDUSTRIAL_HALL_SOCKET_N_0",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_INDUSTRIAL_HALL_SOCKET_N_1",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_INDUSTRIAL_HALL_SOCKET_E",
+          "direction": "E",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            32.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_INDUSTRIAL_HALL_SOCKET_S_0",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_INDUSTRIAL_HALL_SOCKET_S_1",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 1,
+          "localPosition": [
+            16.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_INDUSTRIAL_HALL_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -32.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2854
+        },
+        {
+          "lod": 1,
+          "triangles": 790
+        },
+        {
+          "lod": 2,
+          "triangles": 202
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 352,
+        "base_block": 92,
+        "coping": 28,
+        "coping_breach": 96,
+        "cornice_reveal": 28,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "fin": 704,
+        "panel_detail": 96,
+        "parapet_wall": 56,
+        "plinth": 44,
+        "riser_stack": 132,
+        "rubble_debris": 112,
+        "sawtooth_roof": 460,
+        "service_clutter": 12,
+        "spandrel": 276,
+        "vent_bank": 48,
+        "window_drum": 184,
+        "window_glass": 108
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_INDUSTRIAL_HALL_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2854,
+        "lod1": 790,
+        "lod2": 202
+      },
+      "polys": {
+        "lod0": 871,
+        "lod1": 333,
+        "lod2": 75
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_tank_farm",
+      "archetype": "tank_farm",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "colony",
+      "form": "tanks",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 2,
+      "floors": 1,
+      "heightM": 15.847,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_TANK_FARM_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TANK_FARM_SOCKET_E",
+          "direction": "E",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TANK_FARM_SOCKET_S",
+          "direction": "S",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_TANK_FARM_SOCKET_W",
+          "direction": "W",
+          "type": "open",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2048
+        },
+        {
+          "lod": 1,
+          "triangles": 652
+        },
+        {
+          "lod": 2,
+          "triangles": 112
+        }
+      ],
+      "geometryRoleTriangles": {
+        "bund_wall": 184,
+        "exposed_slab": 24,
+        "pipe_rack": 108,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "storage_tank": 900
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_TANK_FARM_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2048,
+        "lod1": 652,
+        "lod2": 112
+      },
+      "polys": {
+        "lod0": 590,
+        "lod1": 244,
+        "lod2": 40
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_power_relay",
+      "archetype": "power_relay",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "colony",
+      "form": "relay",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 3,
+      "floors": 1,
+      "heightM": 15.0,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "street",
+        "W": "service"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_POWER_RELAY_SOCKET_N",
+          "direction": "N",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_POWER_RELAY_SOCKET_E",
+          "direction": "E",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_POWER_RELAY_SOCKET_S",
+          "direction": "S",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_POWER_RELAY_SOCKET_W",
+          "direction": "W",
+          "type": "service",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 1290
+        },
+        {
+          "lod": 1,
+          "triangles": 770
+        },
+        {
+          "lod": 2,
+          "triangles": 250
+        }
+      ],
+      "geometryRoleTriangles": {
+        "base_block": 92,
+        "coping": 28,
+        "cornice_reveal": 28,
+        "entrance_portal": 12,
+        "exposed_slab": 24,
+        "fin": 308,
+        "insulator": 180,
+        "mast_antenna": 56,
+        "parapet_wall": 56,
+        "pylon_mast": 104,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "spandrel": 184,
+        "transformer": 84,
+        "window_drum": 92,
+        "window_glass": 12
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_POWER_RELAY_COLLISION",
+        "triangles": 12,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 1290,
+        "lod1": 770,
+        "lod2": 250
+      },
+      "polys": {
+        "lod0": 409,
+        "lod1": 307,
+        "lod2": 99
+      },
+      "objectsPerModule": 3
+    },
+    {
+      "id": "ruined_corner_infill",
+      "archetype": "corner_infill",
+      "style": "ruined",
+      "styleLabel": "Derelict",
+      "settlementClass": "city",
+      "form": "corner",
+      "cells": [
+        1,
+        1
+      ],
+      "footprintM": [
+        32.0,
+        32.0
+      ],
+      "authoredFloors": 6,
+      "floors": 3,
+      "heightM": 13.8,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
+      "sockets": [
+        {
+          "name": "MF_MODBLD_V1_RUINED_CORNER_INFILL_SOCKET_N",
+          "direction": "N",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CORNER_INFILL_SOCKET_E",
+          "direction": "E",
+          "type": "street",
+          "cellIndex": 0,
+          "localPosition": [
+            16.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CORNER_INFILL_SOCKET_S",
+          "direction": "S",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            0.0,
+            -16.0,
+            0.0
+          ]
+        },
+        {
+          "name": "MF_MODBLD_V1_RUINED_CORNER_INFILL_SOCKET_W",
+          "direction": "W",
+          "type": "party_wall",
+          "cellIndex": 0,
+          "localPosition": [
+            -16.0,
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "lods": [
+        {
+          "lod": 0,
+          "triangles": 2916
+        },
+        {
+          "lod": 1,
+          "triangles": 908
+        },
+        {
+          "lod": 2,
+          "triangles": 264
+        }
+      ],
+      "geometryRoleTriangles": {
+        "armour_plate": 44,
+        "base_block": 92,
+        "coping": 56,
+        "coping_breach": 96,
+        "corner_chamfer": 92,
+        "cornice_reveal": 56,
+        "entrance_portal": 24,
+        "exposed_slab": 24,
+        "fin": 264,
+        "louvre_bank": 48,
+        "louvre_fin": 168,
+        "mast_antenna": 56,
+        "parapet_wall": 112,
+        "plinth": 44,
+        "riser_stack": 60,
+        "roof_deck": 44,
+        "roof_plant": 168,
+        "rubble_debris": 112,
+        "service_clutter": 12,
+        "spandrel": 736,
+        "window_drum": 552,
+        "window_glass": 72
+      },
+      "collision": {
+        "name": "MF_MODBLD_V1_RUINED_CORNER_INFILL_COLLISION",
+        "triangles": 24,
+        "class": "static_structure"
+      },
+      "tris": {
+        "lod0": 2916,
+        "lod1": 908,
+        "lod2": 264
+      },
+      "polys": {
+        "lod0": 935,
+        "lod1": 360,
+        "lod2": 100
+      },
+      "objectsPerModule": 3
+    }
+  ],
+  "exports": [
+    {
+      "module": "colonial_hab_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-hab-block.glb"
+    },
+    {
+      "module": "colonial_gatehouse",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-gatehouse.glb"
+    },
+    {
+      "module": "colonial_watchtower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-watchtower.glb"
+    },
+    {
+      "module": "colonial_depot_shed",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-depot-shed.glb"
+    },
+    {
+      "module": "colonial_tower_slab",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-tower-slab.glb"
+    },
+    {
+      "module": "colonial_tower_spire",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-tower-spire.glb"
+    },
+    {
+      "module": "colonial_civic_hall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-civic-hall.glb"
+    },
+    {
+      "module": "colonial_arcology_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-arcology-stack.glb"
+    },
+    {
+      "module": "colonial_industrial_hall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-industrial-hall.glb"
+    },
+    {
+      "module": "colonial_tank_farm",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-tank-farm.glb"
+    },
+    {
+      "module": "colonial_power_relay",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-power-relay.glb"
+    },
+    {
+      "module": "colonial_corner_infill",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-colonial-corner-infill.glb"
+    },
+    {
+      "module": "brutalist_hab_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-hab-block.glb"
+    },
+    {
+      "module": "brutalist_gatehouse",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-gatehouse.glb"
+    },
+    {
+      "module": "brutalist_watchtower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-watchtower.glb"
+    },
+    {
+      "module": "brutalist_depot_shed",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-depot-shed.glb"
+    },
+    {
+      "module": "brutalist_tower_slab",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-tower-slab.glb"
+    },
+    {
+      "module": "brutalist_tower_spire",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-tower-spire.glb"
+    },
+    {
+      "module": "brutalist_civic_hall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-civic-hall.glb"
+    },
+    {
+      "module": "brutalist_arcology_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-arcology-stack.glb"
+    },
+    {
+      "module": "brutalist_industrial_hall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-industrial-hall.glb"
+    },
+    {
+      "module": "brutalist_tank_farm",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-tank-farm.glb"
+    },
+    {
+      "module": "brutalist_power_relay",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-power-relay.glb"
+    },
+    {
+      "module": "brutalist_corner_infill",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-brutalist-corner-infill.glb"
+    },
+    {
+      "module": "ruined_hab_block",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-hab-block.glb"
+    },
+    {
+      "module": "ruined_gatehouse",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-gatehouse.glb"
+    },
+    {
+      "module": "ruined_watchtower",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-watchtower.glb"
+    },
+    {
+      "module": "ruined_depot_shed",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-depot-shed.glb"
+    },
+    {
+      "module": "ruined_tower_slab",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-tower-slab.glb"
+    },
+    {
+      "module": "ruined_tower_spire",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-tower-spire.glb"
+    },
+    {
+      "module": "ruined_civic_hall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-civic-hall.glb"
+    },
+    {
+      "module": "ruined_arcology_stack",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-arcology-stack.glb"
+    },
+    {
+      "module": "ruined_industrial_hall",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-industrial-hall.glb"
+    },
+    {
+      "module": "ruined_tank_farm",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-tank-farm.glb"
+    },
+    {
+      "module": "ruined_power_relay",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-power-relay.glb"
+    },
+    {
+      "module": "ruined_corner_infill",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/exports/mf-bld-ruined-corner-infill.glb"
+    }
+  ],
+  "evidenceRenders": [
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-modular-building-v1-overview-colonial.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-modular-building-v1-overview-brutalist.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-modular-building-v1-overview-ruined.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-hab-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-hab-block-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-hab-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-hab-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-gatehouse-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-gatehouse-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-gatehouse-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-gatehouse-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-watchtower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-watchtower-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-watchtower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-watchtower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-depot-shed-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-depot-shed-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-depot-shed-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-depot-shed-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-slab-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-slab-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-slab-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-spire-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-spire-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-spire-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tower-spire-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-civic-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-civic-hall-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-civic-hall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-civic-hall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-arcology-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-arcology-stack-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-arcology-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-arcology-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-industrial-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-industrial-hall-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-industrial-hall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-industrial-hall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tank-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tank-farm-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tank-farm-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-tank-farm-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-power-relay-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-power-relay-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-power-relay-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-power-relay-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-corner-infill-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-corner-infill-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-corner-infill-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-colonial-corner-infill-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-hab-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-hab-block-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-hab-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-hab-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-gatehouse-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-gatehouse-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-gatehouse-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-gatehouse-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-watchtower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-watchtower-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-watchtower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-watchtower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-depot-shed-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-depot-shed-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-depot-shed-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-depot-shed-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-slab-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-slab-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-slab-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-spire-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-spire-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-spire-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tower-spire-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-civic-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-civic-hall-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-civic-hall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-civic-hall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-arcology-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-arcology-stack-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-arcology-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-arcology-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-industrial-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-industrial-hall-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-industrial-hall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-industrial-hall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tank-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tank-farm-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tank-farm-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-tank-farm-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-power-relay-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-power-relay-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-power-relay-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-power-relay-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-corner-infill-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-corner-infill-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-corner-infill-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-brutalist-corner-infill-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-hab-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-hab-block-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-hab-block-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-hab-block-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-gatehouse-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-gatehouse-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-gatehouse-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-gatehouse-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-watchtower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-watchtower-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-watchtower-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-watchtower-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-depot-shed-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-depot-shed-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-depot-shed-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-depot-shed-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-slab-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-slab-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-slab-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-spire-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-spire-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-spire-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tower-spire-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-civic-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-civic-hall-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-civic-hall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-civic-hall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-arcology-stack-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-arcology-stack-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-arcology-stack-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-arcology-stack-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-industrial-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-industrial-hall-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-industrial-hall-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-industrial-hall-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tank-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tank-farm-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tank-farm-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-tank-farm-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-power-relay-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-power-relay-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-power-relay-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-power-relay-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-corner-infill-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-corner-infill-iso_nw.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-corner-infill-top.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-bld-ruined-corner-infill-entry.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-outpost-row-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-outpost-row-street.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-city-street-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-city-street-street.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-colony-yard-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-colony-yard-street.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-dead-block-iso.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/evidence/mf-tiling-dead-block-street.png"
+  ],
+  "blend": "modules/space_exploration/assets/source/blender/world-kits/mf-modular-building-v1/mf-modular-building-v1.blend",
+  "runtimeIntegration": {
+    "state": "SOURCE_CANDIDATE",
+    "note": "Exported GLBs are source candidates. Nothing is registered in boot.js or assets/data/manifest.json by this generator; runtime integration and phone-first evidence remain a separate gate."
+  },
+  "consolidated": {
+    "tool": "tools/blender/consolidate-mf-kits.py",
+    "oneObjectPerModulePerLod": true,
+    "modulesRefreshed": 36
+  }
+}

@@ -4,7 +4,11 @@ import { extname, join, resolve } from 'path';
 
 const root = resolve(process.argv[2] || 'www');
 const port = +(process.argv[3] || 8901);
-const types = { '.html':'text/html', '.js':'text/javascript', '.mjs':'text/javascript', '.css':'text/css', '.png':'image/png', '.json':'application/json', '.webmanifest':'application/manifest+json', '.ogg':'audio/ogg', '.m4a':'audio/mp4', '.mp3':'audio/mpeg', '.wav':'audio/wav', '.svg':'image/svg+xml', '.glb':'model/gltf-binary', '.gltf':'model/gltf+json' };
+const types = { '.html':'text/html', '.js':'text/javascript', '.mjs':'text/javascript', '.css':'text/css', '.png':'image/png', '.json':'application/json', '.webmanifest':'application/manifest+json', '.ogg':'audio/ogg', '.m4a':'audio/mp4', '.mp3':'audio/mpeg', '.wav':'audio/wav', '.svg':'image/svg+xml', '.glb':'model/gltf-binary', '.gltf':'model/gltf+json',
+  /* WebAssembly.instantiateStreaming REQUIRES application/wasm; served as
+     octet-stream the Basis transcoder falls back with a console warning.
+     .ktx2 has no registered type and is fetched as an ArrayBuffer. */
+  '.wasm':'application/wasm', '.ktx2':'application/octet-stream' };
 http.createServer((req, res) => {
   let path = decodeURIComponent(req.url.split('?')[0]);
   if (path === '/') path = '/index.html';

@@ -312,7 +312,10 @@ function mfWorld2Init(){
   mfWorld2Ready=false;mfWorld2Loaded=0;mfWorld2Error=false;mfWorld2Epoch=glEpoch;
   mfWorld2Prog=mkProg(
     MFWORLD2_VS.replace(/MAPSIZE_CONST/g,MAP.toFixed(1)).replace(/BFOG_CONST/g,'430.0'),
-    MFWORLD2_FS,'world-structures-v2');if(!mfWorld2Prog){mfWorld2Error=true;return;}
+    MFWORLD2_FS,'world-structures-v2');
+  /* Reversible V2 -> legacy InstMesh fallback: mkProg() defers link
+     validation (see mesh.js), so ask for this program's result now. */
+  if(!mfProgOk(mfWorld2Prog)){mfWorld2Error=true;return;}
   for(const k of ['uVP','uEye','uHazeQ','uRect','uBaseAO','uNRE','uMasks','uDamageTex','uDetail','uFowMap','uFowOn','uSun','uSunC','uAmbSky','uAmbGnd','uFogC','uNight','uTime','uFamily','uRole','uLightCount'])
     mfWorld2U[k]=gl.getUniformLocation(mfWorld2Prog,k);
   mfWorld2U.uLightPosR=gl.getUniformLocation(mfWorld2Prog,'uLightPosR[0]');mfWorld2U.uLightColI=gl.getUniformLocation(mfWorld2Prog,'uLightColI[0]');

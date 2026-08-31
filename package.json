@@ -1,6 +1,6 @@
 {
   "name": "massfront",
-  "version": "1.33.44",
+  "version": "1.33.52",
   "description": "MASSFRONT — a large-scale mobile RTS",
   "private": true,
   "type": "module",
@@ -8,6 +8,8 @@
     "dev": "node serve.mjs www 8100",
     "bundle": "node tools/bundle.mjs",
     "pack": "node tools/pack-www.mjs",
+    "gate": "node tools/verify-global-scope.mjs && node tools/bundle.mjs && node tools/pack-www.mjs",
+    "verify:social:live": "node tools/verify-social-live-contract.mjs",
     "preview:experimental": "vite --config experimental/preview/vite.config.js",
     "towers:blender": "node tools/render-tower-lab.mjs",
     "android:sync": "npm run pack && npx cap sync android",
@@ -18,6 +20,7 @@
   "devDependencies": {
     "@babylonjs/core": "^7.54.3",
     "@capacitor/cli": "^8.5.0",
+    "basis_universal": "^1.16.4-1",
     "playwright": "^1.62.1",
     "vite": "^6.1.0"
   },

@@ -1,0 +1,3150 @@
+{
+  "format": "MassfrontPlatformKitHS1",
+  "version": 1,
+  "units": "metres",
+  "deterministic": true,
+  "generator": "tools/blender/build-mf-platform-hs.py",
+  "toolkit": "tools/blender/mf_hardsurface.py (bmesh)",
+  "purpose": "structures units walk ON and bases build ON, not scenery",
+  "navigationContract": {
+    "levelHeightM": 13.0,
+    "parapetM": 2.2,
+    "rampGradient": "1:2.2",
+    "minBuildPadM": 8.0,
+    "notes": [
+      "A deck is the TOP FACE OF A SOLID, cut by inset -- never a plane floating over one, so a unit cannot path onto nothing.",
+      "The parapet is extruded from the deck's own edge ring, so the walkable extent and the barrier can never disagree.",
+      "Ramp run is derived from the gradient, so the declared link and the modelled slope are the same thing.",
+      "Each deck also ships a flat NAV proxy plane so a navmesh builder does not have to reconstruct it from the render mesh."
+    ]
+  },
+  "blenderVersion": "5.2.0 LTS",
+  "moduleCount": 30,
+  "totalWalkableDecks": 63,
+  "totalBuildPads": 39,
+  "totalBuildableAreaM2": 73393.5,
+  "polySummary": {
+    "lod0Total": 39271,
+    "lod0Mean": 1309.0,
+    "lod0Min": 223,
+    "lod0Max": 3112,
+    "lod1Total": 34846,
+    "lod2Total": 12552
+  },
+  "modules": [
+    {
+      "id": "colonial_deck_tower_3",
+      "archetype": "deck_tower_3",
+      "style": "colonial",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 47.8,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.98,
+            30.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            25.71,
+            25.71
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            18.95,
+            18.95
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            18.25,
+            18.25
+          ],
+          "areaM2": 1332.0
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            28.35
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            23.08,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 1,
+      "buildableAreaM2": 1332.0,
+      "polys": {
+        "lod0": 462,
+        "lod1": 494,
+        "lod2": 452
+      },
+      "tris": {
+        "lod0": 1405,
+        "lod1": 494,
+        "lod2": 452
+      }
+    },
+    {
+      "id": "colonial_deck_tower_4",
+      "archetype": "deck_tower_4",
+      "style": "colonial",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 60.8,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.98,
+            30.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            25.71,
+            25.71
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            20.45,
+            20.45
+          ],
+          "parapet": false
+        },
+        {
+          "z": 52.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            13.68,
+            13.68
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 52.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            12.98,
+            12.98
+          ],
+          "areaM2": 674.0
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            28.35
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            23.08,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 39.0,
+          "toZ": 52.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 38.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            17.81
+          ]
+        }
+      ],
+      "deckCount": 4,
+      "padCount": 1,
+      "buildableAreaM2": 674.0,
+      "polys": {
+        "lod0": 532,
+        "lod1": 625,
+        "lod2": 173
+      },
+      "tris": {
+        "lod0": 1740,
+        "lod1": 625,
+        "lod2": 173
+      }
+    },
+    {
+      "id": "colonial_terrace_block",
+      "archetype": "terrace_block",
+      "style": "colonial",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 41.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            31.94,
+            31.94
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            9.58
+          ],
+          "halfExtents": [
+            31.94,
+            22.36
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            19.16
+          ],
+          "halfExtents": [
+            30.44,
+            11.28
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            -22.36
+          ],
+          "halfExtents": [
+            24.91,
+            7.98
+          ],
+          "areaM2": 795.4
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            -3.19
+          ],
+          "halfExtents": [
+            24.91,
+            7.98
+          ],
+          "areaM2": 795.4
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            19.16
+          ],
+          "halfExtents": [
+            24.91,
+            11.18
+          ],
+          "areaM2": 1113.7
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 8.0,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            20.44,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 8.0,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            20.44,
+            9.58
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 3,
+      "buildableAreaM2": 2704.5,
+      "polys": {
+        "lod0": 223,
+        "lod1": 256,
+        "lod2": 70
+      },
+      "tris": {
+        "lod0": 712,
+        "lod1": 256,
+        "lod2": 70
+      }
+    },
+    {
+      "id": "colonial_bunker_base",
+      "archetype": "bunker_base",
+      "style": "colonial",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 14.55,
+      "walkableDecks": [
+        {
+          "z": 12.35,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            28.84,
+            28.84
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 12.35,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.34,
+            27.34
+          ],
+          "areaM2": 2990.6
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 12.35,
+          "riseM": 12.35,
+          "runM": 27.17,
+          "gradient": "1:2.2",
+          "widthM": 10.7,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            43.93
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 2990.6,
+      "polys": {
+        "lod0": 1969,
+        "lod1": 1613,
+        "lod2": 447
+      },
+      "tris": {
+        "lod0": 4523,
+        "lod1": 1613,
+        "lod2": 447
+      }
+    },
+    {
+      "id": "colonial_build_platform",
+      "archetype": "build_platform",
+      "style": "colonial",
+      "cells": [
+        3,
+        3
+      ],
+      "heightM": 21.7,
+      "walkableDecks": [
+        {
+          "z": 19.5,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            46.44,
+            46.44
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 19.5,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            44.54,
+            44.54
+          ],
+          "areaM2": 7935.2
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 19.5,
+          "riseM": 19.5,
+          "runM": 42.9,
+          "gradient": "1:2.2",
+          "widthM": 11.7,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            69.39
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 7935.2,
+      "polys": {
+        "lod0": 2264,
+        "lod1": 1960,
+        "lod2": 543
+      },
+      "tris": {
+        "lod0": 5459,
+        "lod1": 1960,
+        "lod2": 543
+      }
+    },
+    {
+      "id": "colonial_landing_deck",
+      "archetype": "landing_deck",
+      "style": "colonial",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 16.5,
+      "walkableDecks": [
+        {
+          "z": 14.3,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            28.52,
+            28.52
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 14.3,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.02,
+            27.02
+          ],
+          "areaM2": 2921.1
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 14.3,
+          "riseM": 14.3,
+          "runM": 31.46,
+          "gradient": "1:2.2",
+          "widthM": 9.7,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            45.75,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 2921.1,
+      "polys": {
+        "lod0": 1815,
+        "lod1": 1516,
+        "lod2": 682
+      },
+      "tris": {
+        "lod0": 4264,
+        "lod1": 1516,
+        "lod2": 682
+      }
+    },
+    {
+      "id": "colonial_gantry_frame",
+      "archetype": "gantry_frame",
+      "style": "colonial",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 41.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 6.8,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 11.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            14.05,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 6.8,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 24.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            -14.05,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 3,
+      "buildableAreaM2": 5055.3,
+      "polys": {
+        "lod0": 909,
+        "lod1": 1034,
+        "lod2": 326
+      },
+      "tris": {
+        "lod0": 2884,
+        "lod1": 1034,
+        "lod2": 326
+      }
+    },
+    {
+      "id": "colonial_ramp_core",
+      "archetype": "ramp_core",
+      "style": "colonial",
+      "cells": [
+        1,
+        1
+      ],
+      "heightM": 43.0,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        }
+      ],
+      "buildPads": [],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.1,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": 11.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.1,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": 24.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 0,
+      "buildableAreaM2": 0,
+      "polys": {
+        "lod0": 2484,
+        "lod1": 2127,
+        "lod2": 589
+      },
+      "tris": {
+        "lod0": 5925,
+        "lod1": 2127,
+        "lod2": 589
+      }
+    },
+    {
+      "id": "colonial_bridge_deck",
+      "archetype": "bridge_deck",
+      "style": "colonial",
+      "cells": [
+        2,
+        1
+      ],
+      "heightM": 15.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.44,
+            4.88
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.94,
+            3.38
+          ],
+          "areaM2": 377.3
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 13.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 7.26,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": 1,
+          "centre": [
+            -46.24,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 0.0,
+          "toZ": 13.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 7.26,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            46.24,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 377.3,
+      "polys": {
+        "lod0": 1393,
+        "lod1": 1128,
+        "lod2": 312
+      },
+      "tris": {
+        "lod0": 3136,
+        "lod1": 1128,
+        "lod2": 312
+      }
+    },
+    {
+      "id": "colonial_silo_pad",
+      "archetype": "silo_pad",
+      "style": "colonial",
+      "cells": [
+        1,
+        1
+      ],
+      "heightM": 13.25,
+      "walkableDecks": [
+        {
+          "z": 11.05,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            11.99,
+            11.99
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 11.05,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            10.89,
+            10.89
+          ],
+          "areaM2": 474.5
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 11.05,
+          "riseM": 11.05,
+          "runM": 24.31,
+          "gradient": "1:2.2",
+          "widthM": 6.9,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            25.65
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 474.5,
+      "polys": {
+        "lod0": 1156,
+        "lod1": 1009,
+        "lod2": 299
+      },
+      "tris": {
+        "lod0": 2814,
+        "lod1": 1009,
+        "lod2": 299
+      }
+    },
+    {
+      "id": "brutalist_deck_tower_3",
+      "archetype": "deck_tower_3",
+      "style": "brutalist",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 47.8,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.98,
+            30.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            25.71,
+            25.71
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            18.95,
+            18.95
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            18.25,
+            18.25
+          ],
+          "areaM2": 1332.0
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            28.35
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            23.08,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 1,
+      "buildableAreaM2": 1332.0,
+      "polys": {
+        "lod0": 670,
+        "lod1": 568,
+        "lod2": 156
+      },
+      "tris": {
+        "lod0": 1586,
+        "lod1": 568,
+        "lod2": 156
+      }
+    },
+    {
+      "id": "brutalist_deck_tower_4",
+      "archetype": "deck_tower_4",
+      "style": "brutalist",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 60.8,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.98,
+            30.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            25.71,
+            25.71
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            20.45,
+            20.45
+          ],
+          "parapet": false
+        },
+        {
+          "z": 52.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            13.68,
+            13.68
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 52.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            12.98,
+            12.98
+          ],
+          "areaM2": 674.0
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            28.35
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            23.08,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 39.0,
+          "toZ": 52.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 38.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            17.81
+          ]
+        }
+      ],
+      "deckCount": 4,
+      "padCount": 1,
+      "buildableAreaM2": 674.0,
+      "polys": {
+        "lod0": 446,
+        "lod1": 539,
+        "lod2": 149
+      },
+      "tris": {
+        "lod0": 1500,
+        "lod1": 539,
+        "lod2": 149
+      }
+    },
+    {
+      "id": "brutalist_terrace_block",
+      "archetype": "terrace_block",
+      "style": "brutalist",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 41.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            31.94,
+            31.94
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            9.58
+          ],
+          "halfExtents": [
+            31.94,
+            22.36
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            19.16
+          ],
+          "halfExtents": [
+            30.44,
+            11.28
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            -22.36
+          ],
+          "halfExtents": [
+            24.91,
+            7.98
+          ],
+          "areaM2": 795.4
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            -3.19
+          ],
+          "halfExtents": [
+            24.91,
+            7.98
+          ],
+          "areaM2": 795.4
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            19.16
+          ],
+          "halfExtents": [
+            24.91,
+            11.18
+          ],
+          "areaM2": 1113.7
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 8.0,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            20.44,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 8.0,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            20.44,
+            9.58
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 3,
+      "buildableAreaM2": 2704.5,
+      "polys": {
+        "lod0": 268,
+        "lod1": 317,
+        "lod2": 87
+      },
+      "tris": {
+        "lod0": 886,
+        "lod1": 317,
+        "lod2": 87
+      }
+    },
+    {
+      "id": "brutalist_bunker_base",
+      "archetype": "bunker_base",
+      "style": "brutalist",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 14.55,
+      "walkableDecks": [
+        {
+          "z": 12.35,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            28.84,
+            28.84
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 12.35,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.34,
+            27.34
+          ],
+          "areaM2": 2990.6
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 12.35,
+          "riseM": 12.35,
+          "runM": 27.17,
+          "gradient": "1:2.2",
+          "widthM": 10.7,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            43.93
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 2990.6,
+      "polys": {
+        "lod0": 1657,
+        "lod1": 1458,
+        "lod2": 766
+      },
+      "tris": {
+        "lod0": 4117,
+        "lod1": 1458,
+        "lod2": 766
+      }
+    },
+    {
+      "id": "brutalist_build_platform",
+      "archetype": "build_platform",
+      "style": "brutalist",
+      "cells": [
+        3,
+        3
+      ],
+      "heightM": 21.7,
+      "walkableDecks": [
+        {
+          "z": 19.5,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            46.44,
+            46.44
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 19.5,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            44.54,
+            44.54
+          ],
+          "areaM2": 7935.2
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 19.5,
+          "riseM": 19.5,
+          "runM": 42.9,
+          "gradient": "1:2.2",
+          "widthM": 11.7,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            69.39
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 7935.2,
+      "polys": {
+        "lod0": 2074,
+        "lod1": 1758,
+        "lod2": 564
+      },
+      "tris": {
+        "lod0": 4903,
+        "lod1": 1758,
+        "lod2": 564
+      }
+    },
+    {
+      "id": "brutalist_landing_deck",
+      "archetype": "landing_deck",
+      "style": "brutalist",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 16.5,
+      "walkableDecks": [
+        {
+          "z": 14.3,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            28.52,
+            28.52
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 14.3,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.02,
+            27.02
+          ],
+          "areaM2": 2921.1
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 14.3,
+          "riseM": 14.3,
+          "runM": 31.46,
+          "gradient": "1:2.2",
+          "widthM": 9.7,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            45.75,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 2921.1,
+      "polys": {
+        "lod0": 1867,
+        "lod1": 1515,
+        "lod2": 833
+      },
+      "tris": {
+        "lod0": 4276,
+        "lod1": 1515,
+        "lod2": 833
+      }
+    },
+    {
+      "id": "brutalist_gantry_frame",
+      "archetype": "gantry_frame",
+      "style": "brutalist",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 41.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 6.8,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 11.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            14.05,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 6.8,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 24.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            -14.05,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 3,
+      "buildableAreaM2": 5055.3,
+      "polys": {
+        "lod0": 870,
+        "lod1": 1035,
+        "lod2": 387
+      },
+      "tris": {
+        "lod0": 2888,
+        "lod1": 1035,
+        "lod2": 387
+      }
+    },
+    {
+      "id": "brutalist_ramp_core",
+      "archetype": "ramp_core",
+      "style": "brutalist",
+      "cells": [
+        1,
+        1
+      ],
+      "heightM": 43.0,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        }
+      ],
+      "buildPads": [],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.1,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": 11.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.1,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": 24.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 0,
+      "buildableAreaM2": 0,
+      "polys": {
+        "lod0": 3084,
+        "lod1": 2601,
+        "lod2": 722
+      },
+      "tris": {
+        "lod0": 7236,
+        "lod1": 2601,
+        "lod2": 722
+      }
+    },
+    {
+      "id": "brutalist_bridge_deck",
+      "archetype": "bridge_deck",
+      "style": "brutalist",
+      "cells": [
+        2,
+        1
+      ],
+      "heightM": 15.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.44,
+            4.88
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.94,
+            3.38
+          ],
+          "areaM2": 377.3
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 13.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 7.26,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": 1,
+          "centre": [
+            -46.24,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 0.0,
+          "toZ": 13.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 7.26,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            46.24,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 377.3,
+      "polys": {
+        "lod0": 1398,
+        "lod1": 1157,
+        "lod2": 321
+      },
+      "tris": {
+        "lod0": 3233,
+        "lod1": 1157,
+        "lod2": 321
+      }
+    },
+    {
+      "id": "brutalist_silo_pad",
+      "archetype": "silo_pad",
+      "style": "brutalist",
+      "cells": [
+        1,
+        1
+      ],
+      "heightM": 13.25,
+      "walkableDecks": [
+        {
+          "z": 11.05,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            11.99,
+            11.99
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 11.05,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            10.89,
+            10.89
+          ],
+          "areaM2": 474.5
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 11.05,
+          "riseM": 11.05,
+          "runM": 24.31,
+          "gradient": "1:2.2",
+          "widthM": 6.9,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            25.65
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 474.5,
+      "polys": {
+        "lod0": 849,
+        "lod1": 676,
+        "lod2": 188
+      },
+      "tris": {
+        "lod0": 1883,
+        "lod1": 676,
+        "lod2": 188
+      }
+    },
+    {
+      "id": "ruined_deck_tower_3",
+      "archetype": "deck_tower_3",
+      "style": "ruined",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 47.8,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.98,
+            30.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            25.71,
+            25.71
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            18.95,
+            18.95
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            18.25,
+            18.25
+          ],
+          "areaM2": 1332.0
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            28.35
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            23.08,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 1,
+      "buildableAreaM2": 1332.0,
+      "polys": {
+        "lod0": 518,
+        "lod1": 553,
+        "lod2": 469
+      },
+      "tris": {
+        "lod0": 1569,
+        "lod1": 553,
+        "lod2": 469
+      }
+    },
+    {
+      "id": "ruined_deck_tower_4",
+      "archetype": "deck_tower_4",
+      "style": "ruined",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 60.8,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.98,
+            30.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            25.71,
+            25.71
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            20.45,
+            20.45
+          ],
+          "parapet": false
+        },
+        {
+          "z": 52.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            13.68,
+            13.68
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 52.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            12.98,
+            12.98
+          ],
+          "areaM2": 674.0
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            28.35
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            23.08,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 39.0,
+          "toZ": 52.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.67,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 38.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            17.81
+          ]
+        }
+      ],
+      "deckCount": 4,
+      "padCount": 1,
+      "buildableAreaM2": 674.0,
+      "polys": {
+        "lod0": 475,
+        "lod1": 569,
+        "lod2": 157
+      },
+      "tris": {
+        "lod0": 1588,
+        "lod1": 569,
+        "lod2": 157
+      }
+    },
+    {
+      "id": "ruined_terrace_block",
+      "archetype": "terrace_block",
+      "style": "ruined",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 41.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            31.94,
+            31.94
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            9.58
+          ],
+          "halfExtents": [
+            31.94,
+            22.36
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            19.16
+          ],
+          "halfExtents": [
+            30.44,
+            11.28
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            -22.36
+          ],
+          "halfExtents": [
+            24.91,
+            7.98
+          ],
+          "areaM2": 795.4
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            -3.19
+          ],
+          "halfExtents": [
+            24.91,
+            7.98
+          ],
+          "areaM2": 795.4
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            19.16
+          ],
+          "halfExtents": [
+            24.91,
+            11.18
+          ],
+          "areaM2": 1113.7
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 8.0,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 12.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            20.44,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 8.0,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 25.4,
+          "toeM": 5.0,
+          "overlapM": 2.0,
+          "riseDir": 1,
+          "centre": [
+            20.44,
+            9.58
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 3,
+      "buildableAreaM2": 2704.5,
+      "polys": {
+        "lod0": 240,
+        "lod1": 292,
+        "lod2": 80
+      },
+      "tris": {
+        "lod0": 814,
+        "lod1": 292,
+        "lod2": 80
+      }
+    },
+    {
+      "id": "ruined_bunker_base",
+      "archetype": "bunker_base",
+      "style": "ruined",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 14.55,
+      "walkableDecks": [
+        {
+          "z": 12.35,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            28.84,
+            28.84
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 12.35,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.34,
+            27.34
+          ],
+          "areaM2": 2990.6
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 12.35,
+          "riseM": 12.35,
+          "runM": 27.17,
+          "gradient": "1:2.2",
+          "widthM": 10.7,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            43.93
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 2990.6,
+      "polys": {
+        "lod0": 1675,
+        "lod1": 1448,
+        "lod2": 879
+      },
+      "tris": {
+        "lod0": 4094,
+        "lod1": 1448,
+        "lod2": 879
+      }
+    },
+    {
+      "id": "ruined_build_platform",
+      "archetype": "build_platform",
+      "style": "ruined",
+      "cells": [
+        3,
+        3
+      ],
+      "heightM": 21.7,
+      "walkableDecks": [
+        {
+          "z": 19.5,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            46.44,
+            46.44
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 19.5,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            44.54,
+            44.54
+          ],
+          "areaM2": 7935.2
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 19.5,
+          "riseM": 19.5,
+          "runM": 42.9,
+          "gradient": "1:2.2",
+          "widthM": 11.7,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            69.39
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 7935.2,
+      "polys": {
+        "lod0": 2132,
+        "lod1": 1764,
+        "lod2": 489
+      },
+      "tris": {
+        "lod0": 4900,
+        "lod1": 1764,
+        "lod2": 489
+      }
+    },
+    {
+      "id": "ruined_landing_deck",
+      "archetype": "landing_deck",
+      "style": "ruined",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 16.5,
+      "walkableDecks": [
+        {
+          "z": 14.3,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            28.52,
+            28.52
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 14.3,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.02,
+            27.02
+          ],
+          "areaM2": 2921.1
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 14.3,
+          "riseM": 14.3,
+          "runM": 31.46,
+          "gradient": "1:2.2",
+          "widthM": 9.7,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            45.75,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 2921.1,
+      "polys": {
+        "lod0": 1849,
+        "lod1": 1510,
+        "lod2": 818
+      },
+      "tris": {
+        "lod0": 4260,
+        "lod1": 1510,
+        "lod2": 818
+      }
+    },
+    {
+      "id": "ruined_gantry_frame",
+      "archetype": "gantry_frame",
+      "style": "ruined",
+      "cells": [
+        2,
+        2
+      ],
+      "heightM": 41.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            24.05,
+            19.58
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            22.55,
+            18.68
+          ],
+          "areaM2": 1685.1
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 6.8,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 11.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            14.05,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 6.8,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 0.0,
+          "underside": 24.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            -14.05,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 3,
+      "buildableAreaM2": 5055.3,
+      "polys": {
+        "lod0": 897,
+        "lod1": 1069,
+        "lod2": 415
+      },
+      "tris": {
+        "lod0": 2994,
+        "lod1": 1069,
+        "lod2": 415
+      }
+    },
+    {
+      "id": "ruined_ramp_core",
+      "archetype": "ramp_core",
+      "style": "ruined",
+      "cells": [
+        1,
+        1
+      ],
+      "heightM": 43.0,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 26.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        },
+        {
+          "z": 39.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            14.98,
+            14.98
+          ],
+          "parapet": false
+        }
+      ],
+      "buildPads": [],
+      "rampLinks": [
+        {
+          "fromZ": 13.0,
+          "toZ": 26.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.1,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": 11.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 26.0,
+          "toZ": 39.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 4.1,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": 24.8,
+          "toeM": 5.0,
+          "overlapM": 0.0,
+          "riseDir": 1,
+          "centre": [
+            0.0,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 3,
+      "padCount": 0,
+      "buildableAreaM2": 0,
+      "polys": {
+        "lod0": 3112,
+        "lod1": 2625,
+        "lod2": 729
+      },
+      "tris": {
+        "lod0": 7304,
+        "lod1": 2625,
+        "lod2": 729
+      }
+    },
+    {
+      "id": "ruined_bridge_deck",
+      "archetype": "bridge_deck",
+      "style": "ruined",
+      "cells": [
+        2,
+        1
+      ],
+      "heightM": 15.2,
+      "walkableDecks": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            30.44,
+            4.88
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 13.0,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            27.94,
+            3.38
+          ],
+          "areaM2": 377.3
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 13.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 7.26,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": 1,
+          "centre": [
+            -46.24,
+            0.0
+          ]
+        },
+        {
+          "fromZ": 0.0,
+          "toZ": 13.0,
+          "riseM": 13.0,
+          "runM": 28.6,
+          "gradient": "1:2.2",
+          "widthM": 7.26,
+          "axis": "x",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            46.24,
+            0.0
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 377.3,
+      "polys": {
+        "lod0": 1243,
+        "lod1": 1014,
+        "lod2": 280
+      },
+      "tris": {
+        "lod0": 2833,
+        "lod1": 1014,
+        "lod2": 280
+      }
+    },
+    {
+      "id": "ruined_silo_pad",
+      "archetype": "silo_pad",
+      "style": "ruined",
+      "cells": [
+        1,
+        1
+      ],
+      "heightM": 13.25,
+      "walkableDecks": [
+        {
+          "z": 11.05,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            11.99,
+            11.99
+          ],
+          "parapet": true
+        }
+      ],
+      "buildPads": [
+        {
+          "z": 11.05,
+          "centre": [
+            0.0,
+            0.0
+          ],
+          "halfExtents": [
+            10.89,
+            10.89
+          ],
+          "areaM2": 474.5
+        }
+      ],
+      "rampLinks": [
+        {
+          "fromZ": 0.0,
+          "toZ": 11.05,
+          "riseM": 11.05,
+          "runM": 24.31,
+          "gradient": "1:2.2",
+          "widthM": 6.9,
+          "axis": "y",
+          "solidEmbankment": true,
+          "kerbH": 1.5,
+          "underside": -2.0,
+          "toeM": 5.0,
+          "overlapM": 3.0,
+          "riseDir": -1,
+          "centre": [
+            0.0,
+            25.65
+          ]
+        }
+      ],
+      "deckCount": 1,
+      "padCount": 1,
+      "buildableAreaM2": 474.5,
+      "polys": {
+        "lod0": 740,
+        "lod1": 616,
+        "lod2": 170
+      },
+      "tris": {
+        "lod0": 1713,
+        "lod1": 616,
+        "lod2": 170
+      }
+    }
+  ],
+  "evidenceRenders": [
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-deck-tower-3-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-deck-tower-4-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-terrace-block-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-bunker-base-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-build-platform-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-landing-deck-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-gantry-frame-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-ramp-core-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-bridge-deck-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-colonial-silo-pad-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-deck-tower-3-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-deck-tower-4-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-terrace-block-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-bunker-base-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-build-platform-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-landing-deck-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-gantry-frame-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-ramp-core-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-bridge-deck-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-brutalist-silo-pad-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-deck-tower-3-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-deck-tower-4-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-terrace-block-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-bunker-base-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-build-platform-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-landing-deck-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-gantry-frame-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-ramp-core-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-bridge-deck-iso_ne.png",
+    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-platform-hs-v1\\evidence\\mf-plat-ruined-silo-pad-iso_ne.png"
+  ],
+  "runtimeIntegration": {
+    "state": "SOURCE_CANDIDATE"
+  },
+  "meshPipeline": {
+    "polysRaw": 49261,
+    "polysFinal": 39271,
+    "reductionPct": 20.3,
+    "shellsRawTotal": 168,
+    "shellsFinalTotal": 38,
+    "modulesFusedToOneShell": 25,
+    "solvers": {
+      "EXACT": 20,
+      "MANIFOLD": 9,
+      "SELF": 1
+    },
+    "rolledBack": [],
+    "coplanarMerged": 8246,
+    "interiorFacesStripped": 1134,
+    "hiddenFacesStripped": 2221,
+    "tjunctionsSplit": 87,
+    "holesFilled": 12
+  }
+}

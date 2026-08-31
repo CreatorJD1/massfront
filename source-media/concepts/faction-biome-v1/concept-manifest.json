@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "conceptSetId": "massfront_faction_biome_model_reference_v1",
+  "status": "approved_for_preproduction_reference",
+  "originalProjectArt": true,
+  "generatedWith": "OpenAI built-in image generation",
+  "sharedPolicy": {
+    "conceptRequiredBeforeGeometry": true,
+    "conceptPixelsAreRuntimeTextures": false,
+    "helmetRequiredWithoutFacialAnimation": true,
+    "matchedInEngineCaptureRequired": true,
+    "requiredLods": ["LOD0", "LOD1", "LOD2"],
+    "primaryCamera": "tilted_top_down_mobile_rts"
+  },
+  "concepts": [
+    {
+      "id": "nova_aelos_verdant_arctic_model_sheet_v1",
+      "file": "nova-aelos-verdant-arctic-model-sheet-v1.png",
+      "sha256": "cfc49fe3e9ef388682104410a9bf27e6f4c3c593af7b4a11aa90c904faa0bd88",
+      "bytes": 2262982,
+      "resolution": [1536, 1024],
+      "faction": ["nova"],
+      "runtimeFactionIds": ["nova"],
+      "biomeOrBiodome": ["verdant", "arctic"],
+      "intention": ["production_structure", "research_outpost", "infrastructure_kit", "ground_vehicle", "utility_drone", "helmeted_character", "damage_state"]
+    },
+    {
+      "id": "dominion_pyraeth_ashland_model_sheet_v1",
+      "file": "dominion-pyraeth-ashland-model-sheet-v1.png",
+      "sha256": "867660efe624659ac50e1ec892758e619d4b1e1f6ca772f9dc8cd7c13becc346",
+      "bytes": 2163846,
+      "resolution": [1536, 1024],
+      "faction": ["dominion"],
+      "runtimeFactionIds": ["ascendancy", "legion"],
+      "biomeOrBiodome": ["vespera", "ashland"],
+      "intention": ["command_foundry", "artillery_annex", "industrial_infrastructure_kit", "heavy_vehicle", "repair_drone", "helmeted_character", "destroyed_state"]
+    },
+    {
+      "id": "syndicate_nordhall_arctic_model_sheet_v1",
+      "file": "syndicate-nordhall-arctic-model-sheet-v1.png",
+      "sha256": "8bc081f3ea7d1cca7624584f0a73d791251fc3db4c6d23d7706ca7b1431c8862",
+      "bytes": 2267032,
+      "resolution": [1536, 1024],
+      "faction": ["syndicate"],
+      "runtimeFactionIds": ["syndicate"],
+      "biomeOrBiodome": ["arctic"],
+      "intention": ["covert_command_structure", "sensor_annex", "cold_infrastructure_kit", "low_profile_vehicle", "stealth_drone", "helmeted_character", "damage_state"]
+    },
+    {
+      "id": "brood_vespera_ashland_verdant_model_sheet_v1",
+      "file": "brood-vespera-ashland-verdant-model-sheet-v1.png",
+      "sha256": "26c907327a0e21e79d57247ada2ce983f4e299f7461aedea0c58411785969c64",
+      "bytes": 2554664,
+      "resolution": [1536, 1024],
+      "faction": ["brood"],
+      "forceRelationshipRole": "hostile_ai_non_playable",
+      "runtimeFactionIds": ["horde", "brood"],
+      "biomeOrBiodome": ["ashland", "verdant"],
+      "intention": ["living_production_structure", "spawning_annex", "organic_infrastructure_kit", "non_humanoid_assault_creature", "non_humanoid_worker_creature", "ruptured_burning_state", "human_scale_reference_only"]
+    }
+  ],
+  "canonConstraints": {
+    "broodPlayable": false,
+    "broodHumanoid": false,
+    "broodRelationship": "galactic_enemy_of_all_factions_primary_enemy_of_uga",
+    "broodScaleFigureIsModelTarget": false
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "worktree": {
+    "baseRef": "head"
+  },
+  "permissions": {
+    "deny": [
+      "EnterWorktree"
+    ]
+  }
+}

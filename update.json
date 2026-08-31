@@ -10,21 +10,1343 @@
                               "id":  "music",
                               "category":  "audio",
                               "optional":  true
+                          },
+                          {
+                              "id":  "exploration",
+                              "category":  "galactic",
+                              "optional":  true
                           }
                       ],
     "base":  "",
+    "kind":  "content",
     "severity":  "recommended",
-    "notes":  "Fixes the white bloom disc on resource nodes. The extraction and build-assist beams no longer use the weapon impact burst, so extractors and the ground under them stay readable.",
+    "full":  [
+                 {
+                     "path":  "ota/00-runtime.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/ota/00-runtime.js?download=true",
+                     "size":  23415314,
+                     "sha256":  "874f966fb62e2041c5a41a9adc07c279ee80b0db83d69d3a2528da607452be1c"
+                 },
+                 {
+                     "path":  "ota/01-shell.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/ota/01-shell.js?download=true",
+                     "size":  4731361,
+                     "sha256":  "fd6146ba50e8664129f65eec7f8c33e320d6d3181fe694aa4b19e95176ce5ed8"
+                 },
+                 {
+                     "path":  "assets/data/theatreprofiles-stage10.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/theatreprofiles-stage10.js?download=true",
+                     "size":  9297,
+                     "sha256":  "02c0096f6cc060f0271bfad65fed82d3d2985ab944d72e0bdc122b6c2506e91a"
+                 },
+                 {
+                     "path":  "assets/data/interiortopology-stage10.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/interiortopology-stage10.js?download=true",
+                     "size":  39275,
+                     "sha256":  "05230b584611ceef993ea7de792416633a996f53363db32539e5882869935928"
+                 },
+                 {
+                     "path":  "assets/data/orbitaltopology-stage10.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/orbitaltopology-stage10.js?download=true",
+                     "size":  38121,
+                     "sha256":  "0487ce755444572372037234684e003bd31c84f456dbf40c9ce9ccf1e5ec6d44"
+                 },
+                 {
+                     "path":  "src/game/determinism.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/determinism.js?download=true",
+                     "size":  4501,
+                     "sha256":  "ef7dc7132ffc5337e35e2d849feb2645383ad23a66a854214d6225f910fb63d1"
+                 },
+                 {
+                     "path":  "assets/data/unitrows.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/unitrows.js?download=true",
+                     "size":  2356,
+                     "sha256":  "8d4ed590e6a6220416aa374d68cf87ad3619f0fe3adf4541b7e120b66494ec6a"
+                 },
+                 {
+                     "path":  "assets/data/unitsheet.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/unitsheet.js?download=true",
+                     "size":  1621322,
+                     "sha256":  "2772396c5354ace1f2be3111611407a51e716acdde90bbfa49f9f0e20fc2272c"
+                 },
+                 {
+                     "path":  "assets/data/itemart.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/itemart.js?download=true",
+                     "size":  1096462,
+                     "sha256":  "77286ac75e154d2d1418aed650e4406aac883ba29e480b31f39b411d1fee7e79"
+                 },
+                 {
+                     "path":  "assets/data/planetart.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/planetart.js?download=true",
+                     "size":  3293,
+                     "sha256":  "1491a8dcb051eebc60f748aa7d5b6cb0879ec1233348d01fb1ffaea8c5f06f3c"
+                 },
+                 {
+                     "path":  "src/engine/gl.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/gl.js?download=true",
+                     "size":  27682115,
+                     "sha256":  "c3d2c4997d638f09ae4e5c8dddfffa6f76161b4fa28d67a181f3b7fa33fe2eeb"
+                 },
+                 {
+                     "path":  "src/engine/planetpreview.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/planetpreview.js?download=true",
+                     "size":  24828,
+                     "sha256":  "a5d96dfcefc1cb14f49f0bcaf31dc8fbb8c470119875f6f6e9b8daad486fb170"
+                 },
+                 {
+                     "path":  "src/engine/perf.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/perf.js?download=true",
+                     "size":  8330,
+                     "sha256":  "4978303b0003c8f08e517ac3803a048b8dde7654e589b4c03042e35f163e1fb9"
+                 },
+                 {
+                     "path":  "src/engine/noisegen.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/noisegen.js?download=true",
+                     "size":  14869,
+                     "sha256":  "e67a060ca7f7153b1b71e5755569538a88afe2da80f5b769dc2db6bd8f74f364"
+                 },
+                 {
+                     "path":  "src/engine/factionenergy.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/factionenergy.js?download=true",
+                     "size":  7149,
+                     "sha256":  "43c7bdcb8e75571833d1559303bd715a28acc6ccfa9fbb328231888a84a80bd6"
+                 },
+                 {
+                     "path":  "src/engine/ordnancetrails.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/ordnancetrails.js?download=true",
+                     "size":  31484,
+                     "sha256":  "28b9e64e5f27e9a0e2f1fb5954e77f714520b650b691dfa83f354d7e8349e2f1"
+                 },
+                 {
+                     "path":  "src/engine/terragen.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/terragen.js?download=true",
+                     "size":  20623,
+                     "sha256":  "57ed991599a7014004faecf10bc68c3fe45ddcfcf927ef4ef692f8de419e5286"
+                 },
+                 {
+                     "path":  "src/terralab.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/terralab.js?download=true",
+                     "size":  18426,
+                     "sha256":  "0015c0398dc71ac47fc91735f6c0a72a6e95126699b10736b0829ab31e144f26"
+                 },
+                 {
+                     "path":  "src/engine/mesh.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/mesh.js?download=true",
+                     "size":  228745,
+                     "sha256":  "bd12d89f8a8e5931d2e361f4f5f33080f4f568de6333567960151f226923622a"
+                 },
+                 {
+                     "path":  "src/engine/billboard.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/billboard.js?download=true",
+                     "size":  11582,
+                     "sha256":  "5646ea0ca60fba9c762355a012753220907d39dc1bbc823b2eb0d1787b1c2aa3"
+                 },
+                 {
+                     "path":  "src/engine/macrofx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/macrofx.js?download=true",
+                     "size":  5528787,
+                     "sha256":  "e9baa55bcd5722d37dd57cb3865fe4d35e7a011b923a905c6fbd4bb31d80ddf0"
+                 },
+                 {
+                     "path":  "src/engine/shieldfx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/shieldfx.js?download=true",
+                     "size":  20848,
+                     "sha256":  "88d3323cd7d427d0d537464471891d4ace86755c8264716c4192ffbc14dc5d1d"
+                 },
+                 {
+                     "path":  "src/engine/tacticons.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/tacticons.js?download=true",
+                     "size":  44354,
+                     "sha256":  "6c224186bae966fec6edccc4eb654f9bb9f41b5a7a1c8e42b06c8e4b2dfe1510"
+                 },
+                 {
+                     "path":  "src/engine/gpufx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/gpufx.js?download=true",
+                     "size":  24100,
+                     "sha256":  "5adcce639ccec730c2429c46249b769f98c7baa424b88627dccf79f35e9294aa"
+                 },
+                 {
+                     "path":  "src/engine/volfx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/volfx.js?download=true",
+                     "size":  1431780,
+                     "sha256":  "dce919bcf54de0f8a5f241fcf9731ea7dc7e6bb31c5eb15c0349ec3780157231"
+                 },
+                 {
+                     "path":  "src/engine/shockwave.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/shockwave.js?download=true",
+                     "size":  20767,
+                     "sha256":  "3b06fce2482ce2bffefceee7a0fb04827cd076d746330f65d9be83f99f268151"
+                 },
+                 {
+                     "path":  "src/engine/vfxlayers.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/vfxlayers.js?download=true",
+                     "size":  13149,
+                     "sha256":  "8022eb3a9c5198ca597d78481e45acce114c5c552391d483ee4094f906a854cd"
+                 },
+                 {
+                     "path":  "src/engine/organicfx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/organicfx.js?download=true",
+                     "size":  9419,
+                     "sha256":  "7dd4e3a64625f33a7f0bd6e1904de9a8dc224ff699891a7bf46bfb82a5572752"
+                 },
+                 {
+                     "path":  "assets/basis/basis_transcoder.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/basis/basis_transcoder.js?download=true",
+                     "size":  57578,
+                     "sha256":  "c77147fa0ec7b751fbbd812ddf348af1f85d31e519a5640ad564d7e14d411e0f"
+                 },
+                 {
+                     "path":  "src/engine/materials.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/materials.js?download=true",
+                     "size":  12283360,
+                     "sha256":  "3d7df1a09d03561500717910d762c27218b03a6daa523fec3cd2878b18022bfc"
+                 },
+                 {
+                     "path":  "src/engine/materials-v2.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/materials-v2.js?download=true",
+                     "size":  77057,
+                     "sha256":  "c111a0374a723cebae0488a58dfe9f0482205f5294b25a3db70804134d32b2f8"
+                 },
+                 {
+                     "path":  "src/engine/terrain.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/terrain.js?download=true",
+                     "size":  94229,
+                     "sha256":  "870872a48513d454e9f3bf5631a65018b3ad43a8b2122506a7928e585b87d56c"
+                 },
+                 {
+                     "path":  "src/engine/models-world-data.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-world-data.js?download=true",
+                     "size":  756923,
+                     "sha256":  "b6e7b7c84e5e628ff0d131de38ccdf4944ddd6ed5478c4154337a1ff9c6770ad"
+                 },
+                 {
+                     "path":  "src/engine/models-world-loader.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-world-loader.js?download=true",
+                     "size":  9106,
+                     "sha256":  "920c424342f8d27db316236cd9bc850d48c1cb416e681268c0b36d76bccc4c6f"
+                 },
+                 {
+                     "path":  "src/engine/models.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models.js?download=true",
+                     "size":  240656,
+                     "sha256":  "1dabc77eea5346422b58fe48ba379b799835559686a047427ebe3d83c08237be"
+                 },
+                 {
+                     "path":  "assets/data/worldkit.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/worldkit.js?download=true",
+                     "size":  406107,
+                     "sha256":  "92f9dcea81157f161726416aecf0f2edcae0b24346f11122f51e574221a17fb7"
+                 },
+                 {
+                     "path":  "assets/data/locationgrammar.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/locationgrammar.js?download=true",
+                     "size":  17114,
+                     "sha256":  "483849186656601b19811d9d3b457cbeb70ac9e92abc8ddcc3b4c3a5a70ae57a"
+                 },
+                 {
+                     "path":  "assets/data/sitetemplates.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/sitetemplates.js?download=true",
+                     "size":  20418,
+                     "sha256":  "9dbf3906cfd572f1c85c4a06b18652d8aa39403347b58c0bc77cb64f715583e1"
+                 },
+                 {
+                     "path":  "assets/data/sitetemplates-stage9.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/sitetemplates-stage9.js?download=true",
+                     "size":  13174,
+                     "sha256":  "7c1ac5b1cea4f71fbd9c4778b0d8efabaf8f1bf0e983a3b4ae302a990b29a532"
+                 },
+                 {
+                     "path":  "assets/data/locationplans.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/locationplans.js?download=true",
+                     "size":  15747,
+                     "sha256":  "49d8f91fbf43f7fefac5c35f00a8413d790e5c6f4955606cb2bb70502176dd84"
+                 },
+                 {
+                     "path":  "assets/data/battlefieldtopology-stage10.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/battlefieldtopology-stage10.js?download=true",
+                     "size":  30980,
+                     "sha256":  "741b375bd72091527eec175036b7c75ecafe2ca3f7d22e5f4a299adf1b9c2200"
+                 },
+                 {
+                     "path":  "src/engine/worldsites.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/worldsites.js?download=true",
+                     "size":  28706,
+                     "sha256":  "7995bf6b980033a66d710847daeac14272cf99d1d3a2528560993f9610034f42"
+                 },
+                 {
+                     "path":  "assets/data/meshes.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/meshes.js?download=true",
+                     "size":  7792151,
+                     "sha256":  "fb452c74979fe7224b92aa14e19f29c6fcfeaad4de543d74bb881541cdaaa226"
+                 },
+                 {
+                     "path":  "src/engine/models-legion.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-legion.js?download=true",
+                     "size":  31836,
+                     "sha256":  "0f67a65b282c80c12d781a09cf75849d2df62b83c1668e9f6ef583b7a37f980d"
+                 },
+                 {
+                     "path":  "src/engine/models-machine.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-machine.js?download=true",
+                     "size":  42892,
+                     "sha256":  "ff6a138015f21c82a157cc5ef5a5d3010c937549cf0938b70637b9d8308a5f82"
+                 },
+                 {
+                     "path":  "src/engine/models-infestation.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-infestation.js?download=true",
+                     "size":  46183,
+                     "sha256":  "881091a2a5d4fd5d0dd0f3d1d05a059f72ba3c0af4719f2bb8d49b7d5b75f2fd"
+                 },
+                 {
+                     "path":  "src/engine/models-civic.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-civic.js?download=true",
+                     "size":  7747,
+                     "sha256":  "c311f992141eb02d66ed7f2a686fcf17c6f4ee73f553491eccc242cf75e2759d"
+                 },
+                 {
+                     "path":  "src/engine/models-skyline.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-skyline.js?download=true",
+                     "size":  10264,
+                     "sha256":  "add0acb2f7ae4b8f2ed9293b3a6f7b1ef12bbfb5f3efcf3d21c466ce6e00351b"
+                 },
+                 {
+                     "path":  "src/engine/materials-world-v2.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/materials-world-v2.js?download=true",
+                     "size":  25350,
+                     "sha256":  "5770baface5a0a5bc6b1706b6addb5e8be84f33fa4fbc68e2ceabafee2183ba3"
+                 },
+                 {
+                     "path":  "src/engine/models-units-nova.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-nova.js?download=true",
+                     "size":  100636,
+                     "sha256":  "a78dea6369893c63e389ebf6d2543679e217e7319346de65efac64c7602763f6"
+                 },
+                 {
+                     "path":  "src/engine/models-units-legion.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-legion.js?download=true",
+                     "size":  76662,
+                     "sha256":  "5e61f5f0d496a9944fc0bc634328cf5317ea2c8943bd706f18e4e536c6582e21"
+                 },
+                 {
+                     "path":  "src/engine/models-units-syndicate.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-syndicate.js?download=true",
+                     "size":  72182,
+                     "sha256":  "b3501cfb7daccabc6d49f9c8ac56fd477b5b5630977f707f240e17c881efb306"
+                 },
+                 {
+                     "path":  "src/engine/models-units-brood.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-brood.js?download=true",
+                     "size":  108956,
+                     "sha256":  "f2b9c5153997adcad8bdd2e52360d920584afa623d914e2daaac65182cd407c6"
+                 },
+                 {
+                     "path":  "src/engine/modkit.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/modkit.js?download=true",
+                     "size":  9338,
+                     "sha256":  "da7f00d051d53c1ca4851450bca37cc80f6f846167b7d003b1d0296e057106ff"
+                 },
+                 {
+                     "path":  "src/engine/physics.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/physics.js?download=true",
+                     "size":  51701,
+                     "sha256":  "40d8362261aa33a6bb6e1b41e11e9654ac25b05c192792920185e5640e244615"
+                 },
+                 {
+                     "path":  "src/engine/cloudfx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/cloudfx.js?download=true",
+                     "size":  15507,
+                     "sha256":  "1d224787d53993cbc083966027bf44fe3f72e498b5c422ef056bad629c57ab2d"
+                 },
+                 {
+                     "path":  "src/engine/cloudpostfx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/cloudpostfx.js?download=true",
+                     "size":  23656,
+                     "sha256":  "cfa97ca37cac18de9fb338f7dfcde42751beb3f2ed3eb39617ea7e7c03d7ed61"
+                 },
+                 {
+                     "path":  "src/game/utilityjobs.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/utilityjobs.js?download=true",
+                     "size":  17852,
+                     "sha256":  "3969f19a6699a14be31c4de8dba65e542c6beed1592ed7c84a3acf1c6c8cabb9"
+                 },
+                 {
+                     "path":  "src/game/sim.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/sim.js?download=true",
+                     "size":  522603,
+                     "sha256":  "14cfb38709e63226aa416e2f9aa67a7ac45058ebf08dcef9b2452dac6c7113c5"
+                 },
+                 {
+                     "path":  "src/game/airwarfare.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/airwarfare.js?download=true",
+                     "size":  29926,
+                     "sha256":  "c34a166a9f64a86ebdbdc7f0568b6ff6bfe4fffcd0eb9467af52cc6cc67e5167"
+                 },
+                 {
+                     "path":  "src/game/economy.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/economy.js?download=true",
+                     "size":  37496,
+                     "sha256":  "6dd0f791af8b4ee2f5a20ff4c8b48dadc3535be13dd6be2209e3dcc2aed919ea"
+                 },
+                 {
+                     "path":  "src/game/commander.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/commander.js?download=true",
+                     "size":  94555,
+                     "sha256":  "2da7e1ee21d93de31be5204fa014926a0c1e011fd87c18300602f5b0e57e6567"
+                 },
+                 {
+                     "path":  "src/game/meta.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/meta.js?download=true",
+                     "size":  126905,
+                     "sha256":  "bca2214d9e70575e1ae6679024a9afe5adb991e90156ebf2bbbff2915ce4322c"
+                 },
+                 {
+                     "path":  "src/game/ai.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/ai.js?download=true",
+                     "size":  61890,
+                     "sha256":  "1891bbdbad00c0f6bc3e1d5cd534c77b4601c27a06e75e0f32b957ad13d6248e"
+                 },
+                 {
+                     "path":  "src/ui/input.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/input.js?download=true",
+                     "size":  84257,
+                     "sha256":  "db804861e3a5f5d29d4cbcf52c9198231aab2a6e651885734ca0987fefcafe2a"
+                 },
+                 {
+                     "path":  "src/ui/facticons.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/facticons.js?download=true",
+                     "size":  18235,
+                     "sha256":  "bf21107ec756382c67e215e47b32317a1cb22061983ca38709e499aa90f78c87"
+                 },
+                 {
+                     "path":  "src/ui/hud.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/hud.js?download=true",
+                     "size":  178275,
+                     "sha256":  "5385b08eff68d7173f30731f64c444dd9fe6674e8f1f4c1ae5cb7fab87fc6011"
+                 },
+                 {
+                     "path":  "src/ui/render3d.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/render3d.js?download=true",
+                     "size":  208468,
+                     "sha256":  "7c047ba2cb4a948f9eaced79a5b62dbe44a7835da3a0f58da0cb8d32c8941e97"
+                 },
+                 {
+                     "path":  "src/ui/orderfx.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/orderfx.js?download=true",
+                     "size":  7548,
+                     "sha256":  "a8604b5984ab2f3a182098824767944a41519db9cef2bb8a050d0d0c17f4afac"
+                 },
+                 {
+                     "path":  "src/airlift.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/airlift.js?download=true",
+                     "size":  56963,
+                     "sha256":  "7b34db8050736b72c08538fe3914ab8a87f5c96aaa6bb181a739d181a5d15dff"
+                 },
+                 {
+                     "path":  "src/airlift-factions.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/airlift-factions.js?download=true",
+                     "size":  7125,
+                     "sha256":  "75d6301da658055ffd95d284d43df238ca7de3c0ef09d110229fe60522a7fd52"
+                 },
+                 {
+                     "path":  "src/rumble.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/rumble.js?download=true",
+                     "size":  9787,
+                     "sha256":  "393cb53bb014ede478fa2ad435c6db8ff7172550feb08b371ea136893fb51201"
+                 },
+                 {
+                     "path":  "src/factions.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/factions.js?download=true",
+                     "size":  335227,
+                     "sha256":  "2c9a959c0369fdbe4030125b8eb3ba036748281090554e808488c96377146670"
+                 },
+                 {
+                     "path":  "src/factext.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/factext.js?download=true",
+                     "size":  38778,
+                     "sha256":  "b6612e237120af25296b9a307519a18dd1d7c6d678cd836e392f5936f6881941"
+                 },
+                 {
+                     "path":  "src/offline.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/offline.js?download=true",
+                     "size":  15053,
+                     "sha256":  "3531e20faba6b3058ce48ed8d417e76479c4cfd57c66e920311bc0482f236229"
+                 },
+                 {
+                     "path":  "src/audio.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/audio.js?download=true",
+                     "size":  156905,
+                     "sha256":  "bcd554d894aea3b63a069b998da787be263515d2dd9323320e147e1a649c6083"
+                 },
+                 {
+                     "path":  "src/assetpack.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/assetpack.js?download=true",
+                     "size":  18169,
+                     "sha256":  "863d8aa68f7facf1fa63e68506da58bab145d71026c5dbc3d2790c41bf33a522"
+                 },
+                 {
+                     "path":  "src/hazards.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/hazards.js?download=true",
+                     "size":  23160,
+                     "sha256":  "2f10b409a4972ccf3af3564b5d947c0736a13a7c9bd3b4c80ae43ca143f8c6be"
+                 },
+                 {
+                     "path":  "src/game/statehash.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/statehash.js?download=true",
+                     "size":  11187,
+                     "sha256":  "b1a297157f41c1ac82f879fa95a592fb880755bec625adebb4d5496c9fd0be7b"
+                 },
+                 {
+                     "path":  "src/authportal.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/authportal.js?download=true",
+                     "size":  103468,
+                     "sha256":  "8ce33dc070ad918f202f140bea30b10c02e5318df30477b1b156125c9cce7b2e"
+                 },
+                 {
+                     "path":  "src/tutorial.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/tutorial.js?download=true",
+                     "size":  129801,
+                     "sha256":  "b07e6887a427dbfbd31914844a62b575bdf2f4f524da72582e9d45e5bc135c4e"
+                 },
+                 {
+                     "path":  "src/adboards.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/adboards.js?download=true",
+                     "size":  55874,
+                     "sha256":  "8042fe3335457ce3efa224e4f70eb9be8db84cf7310fea0d84b87481a3e034ee"
+                 },
+                 {
+                     "path":  "src/storeui.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/storeui.js?download=true",
+                     "size":  42326,
+                     "sha256":  "6e79f6291ba4978669ec685d41434de5d414025371fc8ce230d0989e4f876971"
+                 },
+                 {
+                     "path":  "src/restree3d.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/restree3d.js?download=true",
+                     "size":  24229,
+                     "sha256":  "55b2dd11b64eb2711e2fb4d5621ba861852973dbb3c80b6c02f2dde3af6cc71d"
+                 },
+                 {
+                     "path":  "src/develop.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/develop.js?download=true",
+                     "size":  34891,
+                     "sha256":  "04420be271e5a05e97a4aacc0d5872e071fe4cd303ef5383f25c8f56bf1af7eb"
+                 },
+                 {
+                     "path":  "src/factiondoctrine.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/factiondoctrine.js?download=true",
+                     "size":  17290,
+                     "sha256":  "71b8647c4b504a30eaa9586afa56f35ed9c954e3ad77bfa76f7fb3589c5062f0"
+                 },
+                 {
+                     "path":  "src/endgame.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/endgame.js?download=true",
+                     "size":  27651,
+                     "sha256":  "f490a3d3885aa4b00b61643df1fc353a98a75a64c42177f364dec1b337add809"
+                 },
+                 {
+                     "path":  "src/story.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/story.js?download=true",
+                     "size":  1085597,
+                     "sha256":  "4cd17fba5c0ceaeae832e613ce89dac1075e7a4162f69b8424a46bd6131722e3"
+                 },
+                 {
+                     "path":  "src/socialui.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/socialui.js?download=true",
+                     "size":  81625,
+                     "sha256":  "5c61cf27fb64b216faa0a64b26174b5b7535bb257c2f9836253b6217c426aca7"
+                 },
+                 {
+                     "path":  "src/game/matchconsumer.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/matchconsumer.js?download=true",
+                     "size":  24629,
+                     "sha256":  "7f17067c092ab0ac59faf480ea0b83e72d9a39f13bf0d07478a400305459bbde"
+                 },
+                 {
+                     "path":  "src/daily.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/daily.js?download=true",
+                     "size":  16702,
+                     "sha256":  "9a1ae5070bc351d92c2c4991406fc256ff3ea899f49b19e62299d444a93384cc"
+                 },
+                 {
+                     "path":  "src/account.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/account.js?download=true",
+                     "size":  43807,
+                     "sha256":  "e788e70cd2191b52bd48712a765d365888824648bec79f32f0fab978a86e4bad"
+                 },
+                 {
+                     "path":  "src/economy-net.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/economy-net.js?download=true",
+                     "size":  18398,
+                     "sha256":  "d0a021fd43489795cae9dbabda314c6c298919aee7af3a0a293bbbe009dc175f"
+                 },
+                 {
+                     "path":  "src/updater.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/updater.js?download=true",
+                     "size":  101009,
+                     "sha256":  "df5ed2f16f321252f9843210741bab7b4f89b686d85060778e328dd9fc31d67f"
+                 },
+                 {
+                     "path":  "src/intro.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/intro.js?download=true",
+                     "size":  207163,
+                     "sha256":  "087ffa5a081da41f9048032b65f46e68b39bf3bbbd014ed1b068118a3e546c0e"
+                 },
+                 {
+                     "path":  "src/session.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/session.js?download=true",
+                     "size":  63971,
+                     "sha256":  "f6bb01154af4b5b303d9b728453f2ca0e8b31ded783323395d98bd455e0656a2"
+                 },
+                 {
+                     "path":  "src/faction-id.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/faction-id.js?download=true",
+                     "size":  6471,
+                     "sha256":  "3699ff8bda97ee7d17858978235d065d191c1002700c0290a251a57a0fc08a76"
+                 },
+                 {
+                     "path":  "src/glrecover.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/glrecover.js?download=true",
+                     "size":  15147,
+                     "sha256":  "a80f6cbcf9f92c7b08667b7b567dd1b422c1d523317c4ca5c647635451d1f8e3"
+                 },
+                 {
+                     "path":  "src/main.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/main.js?download=true",
+                     "size":  181139,
+                     "sha256":  "bc8368e70cd154d701bfc335527b5d0437270b8ebc122c14ef9fd4c836d5ac7e"
+                 },
+                 {
+                     "path":  "src/intel.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/intel.js?download=true",
+                     "size":  18589,
+                     "sha256":  "eeeb33390160d00455a4f64db36b1befe333cb588de415ca465d6a2d49a8a903"
+                 },
+                 {
+                     "path":  "src/repairbay.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/repairbay.js?download=true",
+                     "size":  15170,
+                     "sha256":  "1c053d15ecb17745c5f6adb2b2c9206aa09180d2d4c01049667072b188c5e329"
+                 },
+                 {
+                     "path":  "src/galaxyui.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/galaxyui.js?download=true",
+                     "size":  134066,
+                     "sha256":  "2becc4bf87bddb6918eb1f97ff701bc200fcc9d0f6995aa4be6631457b09c67c"
+                 },
+                 {
+                     "path":  "src/departure.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/departure.js?download=true",
+                     "size":  9855,
+                     "sha256":  "94f9ba683362cc2fc52839e324f4021e3bc11d97cef7b38394718db34bec5e57"
+                 },
+                 {
+                     "path":  "src/warprimer.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/warprimer.js?download=true",
+                     "size":  15684,
+                     "sha256":  "ebbad3129e4f717e86eb3a282933c1a200c2834af3b46879231e500d3469cd2b"
+                 },
+                 {
+                     "path":  "src/uistack.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/uistack.js?download=true",
+                     "size":  5497,
+                     "sha256":  "2cb4becd9ea51749ec3edf1e1f442bae58f6552cd7cc29f060f47bbbf289cd7f"
+                 },
+                 {
+                     "path":  "src/ui/hudflow.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/hudflow.js?download=true",
+                     "size":  37950,
+                     "sha256":  "8fff999ff74689bf909be3c5179c74761f1ef2ff8aacf01543d9e47e053d4694"
+                 },
+                 {
+                     "path":  "src/ui/hotslots.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/hotslots.js?download=true",
+                     "size":  22140,
+                     "sha256":  "8109f24580c525cdf6da9e5d550c9e1cdd49082cd72d2b7ad888f473f079f3a9"
+                 },
+                 {
+                     "path":  "src/galactic-operations.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/galactic-operations.js?download=true",
+                     "size":  57231,
+                     "sha256":  "5f95b66398cb325e1a4cfeefd61616df68dbcc9d512164019c491ddd6229e24c"
+                 },
+                 {
+                     "path":  "src/onboarding.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/onboarding.js?download=true",
+                     "size":  29042,
+                     "sha256":  "cb04793d71c91cda72098803649f96c0786189f8b4cc321112ea1d2fe053004f"
+                 },
+                 {
+                     "path":  "src/career-faction-gate.js",
+                     "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/career-faction-gate.js?download=true",
+                     "size":  29572,
+                     "sha256":  "9164b948340e1196c3c45e4731ba4c773bcfb59d1d8b6e557ab23a6721632d78"
+                 }
+             ],
+    "notes":  "1.33.52 includes Galactic Exploration in the APK and web package (~542 MiB runtime pack with Stage 10 GLBs). Enable Experimental: Galactic Campaign, then Open Experimental Galactic. This OTA updates game code including the 1.33.51 puff-cloud and HUD hotfix. Module files are in the APK/Space and the exploration-pack download; a 1.33.51 APK cannot grow those files from OTA JS alone.",
     "files":  [
                   {
-                      "path":  "MASSFRONT-v1.33.44-update.js",
-                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/MASSFRONT-v1.33.44-update.js?download=true",
-                      "size":  57272352,
-                      "sha256":  "d8b64cc91b921d06e5bc6464c3613f0bda71b9b3796369cddd924762e7abb013"
+                      "path":  "ota/00-runtime.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/ota/00-runtime.js?download=true",
+                      "size":  23415314,
+                      "sha256":  "874f966fb62e2041c5a41a9adc07c279ee80b0db83d69d3a2528da607452be1c"
+                  },
+                  {
+                      "path":  "ota/01-shell.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/ota/01-shell.js?download=true",
+                      "size":  4731361,
+                      "sha256":  "fd6146ba50e8664129f65eec7f8c33e320d6d3181fe694aa4b19e95176ce5ed8"
+                  },
+                  {
+                      "path":  "assets/data/theatreprofiles-stage10.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/theatreprofiles-stage10.js?download=true",
+                      "size":  9297,
+                      "sha256":  "02c0096f6cc060f0271bfad65fed82d3d2985ab944d72e0bdc122b6c2506e91a"
+                  },
+                  {
+                      "path":  "assets/data/interiortopology-stage10.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/interiortopology-stage10.js?download=true",
+                      "size":  39275,
+                      "sha256":  "05230b584611ceef993ea7de792416633a996f53363db32539e5882869935928"
+                  },
+                  {
+                      "path":  "assets/data/orbitaltopology-stage10.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/orbitaltopology-stage10.js?download=true",
+                      "size":  38121,
+                      "sha256":  "0487ce755444572372037234684e003bd31c84f456dbf40c9ce9ccf1e5ec6d44"
+                  },
+                  {
+                      "path":  "src/game/determinism.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/determinism.js?download=true",
+                      "size":  4501,
+                      "sha256":  "ef7dc7132ffc5337e35e2d849feb2645383ad23a66a854214d6225f910fb63d1"
+                  },
+                  {
+                      "path":  "assets/data/unitrows.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/unitrows.js?download=true",
+                      "size":  2356,
+                      "sha256":  "8d4ed590e6a6220416aa374d68cf87ad3619f0fe3adf4541b7e120b66494ec6a"
+                  },
+                  {
+                      "path":  "assets/data/unitsheet.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/unitsheet.js?download=true",
+                      "size":  1621322,
+                      "sha256":  "2772396c5354ace1f2be3111611407a51e716acdde90bbfa49f9f0e20fc2272c"
+                  },
+                  {
+                      "path":  "assets/data/itemart.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/itemart.js?download=true",
+                      "size":  1096462,
+                      "sha256":  "77286ac75e154d2d1418aed650e4406aac883ba29e480b31f39b411d1fee7e79"
+                  },
+                  {
+                      "path":  "assets/data/planetart.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/planetart.js?download=true",
+                      "size":  3293,
+                      "sha256":  "1491a8dcb051eebc60f748aa7d5b6cb0879ec1233348d01fb1ffaea8c5f06f3c"
+                  },
+                  {
+                      "path":  "src/engine/gl.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/gl.js?download=true",
+                      "size":  27682115,
+                      "sha256":  "c3d2c4997d638f09ae4e5c8dddfffa6f76161b4fa28d67a181f3b7fa33fe2eeb"
+                  },
+                  {
+                      "path":  "src/engine/planetpreview.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/planetpreview.js?download=true",
+                      "size":  24828,
+                      "sha256":  "a5d96dfcefc1cb14f49f0bcaf31dc8fbb8c470119875f6f6e9b8daad486fb170"
+                  },
+                  {
+                      "path":  "src/engine/perf.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/perf.js?download=true",
+                      "size":  8330,
+                      "sha256":  "4978303b0003c8f08e517ac3803a048b8dde7654e589b4c03042e35f163e1fb9"
+                  },
+                  {
+                      "path":  "src/engine/noisegen.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/noisegen.js?download=true",
+                      "size":  14869,
+                      "sha256":  "e67a060ca7f7153b1b71e5755569538a88afe2da80f5b769dc2db6bd8f74f364"
+                  },
+                  {
+                      "path":  "src/engine/factionenergy.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/factionenergy.js?download=true",
+                      "size":  7149,
+                      "sha256":  "43c7bdcb8e75571833d1559303bd715a28acc6ccfa9fbb328231888a84a80bd6"
+                  },
+                  {
+                      "path":  "src/engine/ordnancetrails.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/ordnancetrails.js?download=true",
+                      "size":  31484,
+                      "sha256":  "28b9e64e5f27e9a0e2f1fb5954e77f714520b650b691dfa83f354d7e8349e2f1"
+                  },
+                  {
+                      "path":  "src/engine/terragen.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/terragen.js?download=true",
+                      "size":  20623,
+                      "sha256":  "57ed991599a7014004faecf10bc68c3fe45ddcfcf927ef4ef692f8de419e5286"
+                  },
+                  {
+                      "path":  "src/terralab.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/terralab.js?download=true",
+                      "size":  18426,
+                      "sha256":  "0015c0398dc71ac47fc91735f6c0a72a6e95126699b10736b0829ab31e144f26"
+                  },
+                  {
+                      "path":  "src/engine/mesh.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/mesh.js?download=true",
+                      "size":  228745,
+                      "sha256":  "bd12d89f8a8e5931d2e361f4f5f33080f4f568de6333567960151f226923622a"
+                  },
+                  {
+                      "path":  "src/engine/billboard.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/billboard.js?download=true",
+                      "size":  11582,
+                      "sha256":  "5646ea0ca60fba9c762355a012753220907d39dc1bbc823b2eb0d1787b1c2aa3"
+                  },
+                  {
+                      "path":  "src/engine/macrofx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/macrofx.js?download=true",
+                      "size":  5528787,
+                      "sha256":  "e9baa55bcd5722d37dd57cb3865fe4d35e7a011b923a905c6fbd4bb31d80ddf0"
+                  },
+                  {
+                      "path":  "src/engine/shieldfx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/shieldfx.js?download=true",
+                      "size":  20848,
+                      "sha256":  "88d3323cd7d427d0d537464471891d4ace86755c8264716c4192ffbc14dc5d1d"
+                  },
+                  {
+                      "path":  "src/engine/tacticons.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/tacticons.js?download=true",
+                      "size":  44354,
+                      "sha256":  "6c224186bae966fec6edccc4eb654f9bb9f41b5a7a1c8e42b06c8e4b2dfe1510"
+                  },
+                  {
+                      "path":  "src/engine/gpufx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/gpufx.js?download=true",
+                      "size":  24100,
+                      "sha256":  "5adcce639ccec730c2429c46249b769f98c7baa424b88627dccf79f35e9294aa"
+                  },
+                  {
+                      "path":  "src/engine/volfx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/volfx.js?download=true",
+                      "size":  1431780,
+                      "sha256":  "dce919bcf54de0f8a5f241fcf9731ea7dc7e6bb31c5eb15c0349ec3780157231"
+                  },
+                  {
+                      "path":  "src/engine/shockwave.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/shockwave.js?download=true",
+                      "size":  20767,
+                      "sha256":  "3b06fce2482ce2bffefceee7a0fb04827cd076d746330f65d9be83f99f268151"
+                  },
+                  {
+                      "path":  "src/engine/vfxlayers.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/vfxlayers.js?download=true",
+                      "size":  13149,
+                      "sha256":  "8022eb3a9c5198ca597d78481e45acce114c5c552391d483ee4094f906a854cd"
+                  },
+                  {
+                      "path":  "src/engine/organicfx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/organicfx.js?download=true",
+                      "size":  9419,
+                      "sha256":  "7dd4e3a64625f33a7f0bd6e1904de9a8dc224ff699891a7bf46bfb82a5572752"
+                  },
+                  {
+                      "path":  "assets/basis/basis_transcoder.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/basis/basis_transcoder.js?download=true",
+                      "size":  57578,
+                      "sha256":  "c77147fa0ec7b751fbbd812ddf348af1f85d31e519a5640ad564d7e14d411e0f"
+                  },
+                  {
+                      "path":  "src/engine/materials.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/materials.js?download=true",
+                      "size":  12283360,
+                      "sha256":  "3d7df1a09d03561500717910d762c27218b03a6daa523fec3cd2878b18022bfc"
+                  },
+                  {
+                      "path":  "src/engine/materials-v2.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/materials-v2.js?download=true",
+                      "size":  77057,
+                      "sha256":  "c111a0374a723cebae0488a58dfe9f0482205f5294b25a3db70804134d32b2f8"
+                  },
+                  {
+                      "path":  "src/engine/terrain.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/terrain.js?download=true",
+                      "size":  94229,
+                      "sha256":  "870872a48513d454e9f3bf5631a65018b3ad43a8b2122506a7928e585b87d56c"
+                  },
+                  {
+                      "path":  "src/engine/models-world-data.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-world-data.js?download=true",
+                      "size":  756923,
+                      "sha256":  "b6e7b7c84e5e628ff0d131de38ccdf4944ddd6ed5478c4154337a1ff9c6770ad"
+                  },
+                  {
+                      "path":  "src/engine/models-world-loader.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-world-loader.js?download=true",
+                      "size":  9106,
+                      "sha256":  "920c424342f8d27db316236cd9bc850d48c1cb416e681268c0b36d76bccc4c6f"
+                  },
+                  {
+                      "path":  "src/engine/models.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models.js?download=true",
+                      "size":  240656,
+                      "sha256":  "1dabc77eea5346422b58fe48ba379b799835559686a047427ebe3d83c08237be"
+                  },
+                  {
+                      "path":  "assets/data/worldkit.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/worldkit.js?download=true",
+                      "size":  406107,
+                      "sha256":  "92f9dcea81157f161726416aecf0f2edcae0b24346f11122f51e574221a17fb7"
+                  },
+                  {
+                      "path":  "assets/data/locationgrammar.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/locationgrammar.js?download=true",
+                      "size":  17114,
+                      "sha256":  "483849186656601b19811d9d3b457cbeb70ac9e92abc8ddcc3b4c3a5a70ae57a"
+                  },
+                  {
+                      "path":  "assets/data/sitetemplates.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/sitetemplates.js?download=true",
+                      "size":  20418,
+                      "sha256":  "9dbf3906cfd572f1c85c4a06b18652d8aa39403347b58c0bc77cb64f715583e1"
+                  },
+                  {
+                      "path":  "assets/data/sitetemplates-stage9.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/sitetemplates-stage9.js?download=true",
+                      "size":  13174,
+                      "sha256":  "7c1ac5b1cea4f71fbd9c4778b0d8efabaf8f1bf0e983a3b4ae302a990b29a532"
+                  },
+                  {
+                      "path":  "assets/data/locationplans.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/locationplans.js?download=true",
+                      "size":  15747,
+                      "sha256":  "49d8f91fbf43f7fefac5c35f00a8413d790e5c6f4955606cb2bb70502176dd84"
+                  },
+                  {
+                      "path":  "assets/data/battlefieldtopology-stage10.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/battlefieldtopology-stage10.js?download=true",
+                      "size":  30980,
+                      "sha256":  "741b375bd72091527eec175036b7c75ecafe2ca3f7d22e5f4a299adf1b9c2200"
+                  },
+                  {
+                      "path":  "src/engine/worldsites.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/worldsites.js?download=true",
+                      "size":  28706,
+                      "sha256":  "7995bf6b980033a66d710847daeac14272cf99d1d3a2528560993f9610034f42"
+                  },
+                  {
+                      "path":  "assets/data/meshes.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/assets/data/meshes.js?download=true",
+                      "size":  7792151,
+                      "sha256":  "fb452c74979fe7224b92aa14e19f29c6fcfeaad4de543d74bb881541cdaaa226"
+                  },
+                  {
+                      "path":  "src/engine/models-legion.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-legion.js?download=true",
+                      "size":  31836,
+                      "sha256":  "0f67a65b282c80c12d781a09cf75849d2df62b83c1668e9f6ef583b7a37f980d"
+                  },
+                  {
+                      "path":  "src/engine/models-machine.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-machine.js?download=true",
+                      "size":  42892,
+                      "sha256":  "ff6a138015f21c82a157cc5ef5a5d3010c937549cf0938b70637b9d8308a5f82"
+                  },
+                  {
+                      "path":  "src/engine/models-infestation.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-infestation.js?download=true",
+                      "size":  46183,
+                      "sha256":  "881091a2a5d4fd5d0dd0f3d1d05a059f72ba3c0af4719f2bb8d49b7d5b75f2fd"
+                  },
+                  {
+                      "path":  "src/engine/models-civic.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-civic.js?download=true",
+                      "size":  7747,
+                      "sha256":  "c311f992141eb02d66ed7f2a686fcf17c6f4ee73f553491eccc242cf75e2759d"
+                  },
+                  {
+                      "path":  "src/engine/models-skyline.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-skyline.js?download=true",
+                      "size":  10264,
+                      "sha256":  "add0acb2f7ae4b8f2ed9293b3a6f7b1ef12bbfb5f3efcf3d21c466ce6e00351b"
+                  },
+                  {
+                      "path":  "src/engine/materials-world-v2.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/materials-world-v2.js?download=true",
+                      "size":  25350,
+                      "sha256":  "5770baface5a0a5bc6b1706b6addb5e8be84f33fa4fbc68e2ceabafee2183ba3"
+                  },
+                  {
+                      "path":  "src/engine/models-units-nova.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-nova.js?download=true",
+                      "size":  100636,
+                      "sha256":  "a78dea6369893c63e389ebf6d2543679e217e7319346de65efac64c7602763f6"
+                  },
+                  {
+                      "path":  "src/engine/models-units-legion.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-legion.js?download=true",
+                      "size":  76662,
+                      "sha256":  "5e61f5f0d496a9944fc0bc634328cf5317ea2c8943bd706f18e4e536c6582e21"
+                  },
+                  {
+                      "path":  "src/engine/models-units-syndicate.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-syndicate.js?download=true",
+                      "size":  72182,
+                      "sha256":  "b3501cfb7daccabc6d49f9c8ac56fd477b5b5630977f707f240e17c881efb306"
+                  },
+                  {
+                      "path":  "src/engine/models-units-brood.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/models-units-brood.js?download=true",
+                      "size":  108956,
+                      "sha256":  "f2b9c5153997adcad8bdd2e52360d920584afa623d914e2daaac65182cd407c6"
+                  },
+                  {
+                      "path":  "src/engine/modkit.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/modkit.js?download=true",
+                      "size":  9338,
+                      "sha256":  "da7f00d051d53c1ca4851450bca37cc80f6f846167b7d003b1d0296e057106ff"
+                  },
+                  {
+                      "path":  "src/engine/physics.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/physics.js?download=true",
+                      "size":  51701,
+                      "sha256":  "40d8362261aa33a6bb6e1b41e11e9654ac25b05c192792920185e5640e244615"
+                  },
+                  {
+                      "path":  "src/engine/cloudfx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/cloudfx.js?download=true",
+                      "size":  15507,
+                      "sha256":  "1d224787d53993cbc083966027bf44fe3f72e498b5c422ef056bad629c57ab2d"
+                  },
+                  {
+                      "path":  "src/engine/cloudpostfx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/engine/cloudpostfx.js?download=true",
+                      "size":  23656,
+                      "sha256":  "cfa97ca37cac18de9fb338f7dfcde42751beb3f2ed3eb39617ea7e7c03d7ed61"
+                  },
+                  {
+                      "path":  "src/game/utilityjobs.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/utilityjobs.js?download=true",
+                      "size":  17852,
+                      "sha256":  "3969f19a6699a14be31c4de8dba65e542c6beed1592ed7c84a3acf1c6c8cabb9"
+                  },
+                  {
+                      "path":  "src/game/sim.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/sim.js?download=true",
+                      "size":  522603,
+                      "sha256":  "14cfb38709e63226aa416e2f9aa67a7ac45058ebf08dcef9b2452dac6c7113c5"
+                  },
+                  {
+                      "path":  "src/game/airwarfare.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/airwarfare.js?download=true",
+                      "size":  29926,
+                      "sha256":  "c34a166a9f64a86ebdbdc7f0568b6ff6bfe4fffcd0eb9467af52cc6cc67e5167"
+                  },
+                  {
+                      "path":  "src/game/economy.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/economy.js?download=true",
+                      "size":  37496,
+                      "sha256":  "6dd0f791af8b4ee2f5a20ff4c8b48dadc3535be13dd6be2209e3dcc2aed919ea"
+                  },
+                  {
+                      "path":  "src/game/commander.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/commander.js?download=true",
+                      "size":  94555,
+                      "sha256":  "2da7e1ee21d93de31be5204fa014926a0c1e011fd87c18300602f5b0e57e6567"
+                  },
+                  {
+                      "path":  "src/game/meta.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/meta.js?download=true",
+                      "size":  126905,
+                      "sha256":  "bca2214d9e70575e1ae6679024a9afe5adb991e90156ebf2bbbff2915ce4322c"
+                  },
+                  {
+                      "path":  "src/game/ai.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/ai.js?download=true",
+                      "size":  61890,
+                      "sha256":  "1891bbdbad00c0f6bc3e1d5cd534c77b4601c27a06e75e0f32b957ad13d6248e"
+                  },
+                  {
+                      "path":  "src/ui/input.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/input.js?download=true",
+                      "size":  84257,
+                      "sha256":  "db804861e3a5f5d29d4cbcf52c9198231aab2a6e651885734ca0987fefcafe2a"
+                  },
+                  {
+                      "path":  "src/ui/facticons.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/facticons.js?download=true",
+                      "size":  18235,
+                      "sha256":  "bf21107ec756382c67e215e47b32317a1cb22061983ca38709e499aa90f78c87"
+                  },
+                  {
+                      "path":  "src/ui/hud.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/hud.js?download=true",
+                      "size":  178275,
+                      "sha256":  "5385b08eff68d7173f30731f64c444dd9fe6674e8f1f4c1ae5cb7fab87fc6011"
+                  },
+                  {
+                      "path":  "src/ui/render3d.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/render3d.js?download=true",
+                      "size":  208468,
+                      "sha256":  "7c047ba2cb4a948f9eaced79a5b62dbe44a7835da3a0f58da0cb8d32c8941e97"
+                  },
+                  {
+                      "path":  "src/ui/orderfx.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/orderfx.js?download=true",
+                      "size":  7548,
+                      "sha256":  "a8604b5984ab2f3a182098824767944a41519db9cef2bb8a050d0d0c17f4afac"
+                  },
+                  {
+                      "path":  "src/airlift.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/airlift.js?download=true",
+                      "size":  56963,
+                      "sha256":  "7b34db8050736b72c08538fe3914ab8a87f5c96aaa6bb181a739d181a5d15dff"
+                  },
+                  {
+                      "path":  "src/airlift-factions.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/airlift-factions.js?download=true",
+                      "size":  7125,
+                      "sha256":  "75d6301da658055ffd95d284d43df238ca7de3c0ef09d110229fe60522a7fd52"
+                  },
+                  {
+                      "path":  "src/rumble.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/rumble.js?download=true",
+                      "size":  9787,
+                      "sha256":  "393cb53bb014ede478fa2ad435c6db8ff7172550feb08b371ea136893fb51201"
+                  },
+                  {
+                      "path":  "src/factions.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/factions.js?download=true",
+                      "size":  335227,
+                      "sha256":  "2c9a959c0369fdbe4030125b8eb3ba036748281090554e808488c96377146670"
+                  },
+                  {
+                      "path":  "src/factext.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/factext.js?download=true",
+                      "size":  38778,
+                      "sha256":  "b6612e237120af25296b9a307519a18dd1d7c6d678cd836e392f5936f6881941"
+                  },
+                  {
+                      "path":  "src/offline.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/offline.js?download=true",
+                      "size":  15053,
+                      "sha256":  "3531e20faba6b3058ce48ed8d417e76479c4cfd57c66e920311bc0482f236229"
+                  },
+                  {
+                      "path":  "src/audio.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/audio.js?download=true",
+                      "size":  156905,
+                      "sha256":  "bcd554d894aea3b63a069b998da787be263515d2dd9323320e147e1a649c6083"
+                  },
+                  {
+                      "path":  "src/assetpack.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/assetpack.js?download=true",
+                      "size":  18169,
+                      "sha256":  "863d8aa68f7facf1fa63e68506da58bab145d71026c5dbc3d2790c41bf33a522"
+                  },
+                  {
+                      "path":  "src/hazards.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/hazards.js?download=true",
+                      "size":  23160,
+                      "sha256":  "2f10b409a4972ccf3af3564b5d947c0736a13a7c9bd3b4c80ae43ca143f8c6be"
+                  },
+                  {
+                      "path":  "src/game/statehash.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/statehash.js?download=true",
+                      "size":  11187,
+                      "sha256":  "b1a297157f41c1ac82f879fa95a592fb880755bec625adebb4d5496c9fd0be7b"
+                  },
+                  {
+                      "path":  "src/authportal.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/authportal.js?download=true",
+                      "size":  103468,
+                      "sha256":  "8ce33dc070ad918f202f140bea30b10c02e5318df30477b1b156125c9cce7b2e"
+                  },
+                  {
+                      "path":  "src/tutorial.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/tutorial.js?download=true",
+                      "size":  129801,
+                      "sha256":  "b07e6887a427dbfbd31914844a62b575bdf2f4f524da72582e9d45e5bc135c4e"
+                  },
+                  {
+                      "path":  "src/adboards.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/adboards.js?download=true",
+                      "size":  55874,
+                      "sha256":  "8042fe3335457ce3efa224e4f70eb9be8db84cf7310fea0d84b87481a3e034ee"
+                  },
+                  {
+                      "path":  "src/storeui.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/storeui.js?download=true",
+                      "size":  42326,
+                      "sha256":  "6e79f6291ba4978669ec685d41434de5d414025371fc8ce230d0989e4f876971"
+                  },
+                  {
+                      "path":  "src/restree3d.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/restree3d.js?download=true",
+                      "size":  24229,
+                      "sha256":  "55b2dd11b64eb2711e2fb4d5621ba861852973dbb3c80b6c02f2dde3af6cc71d"
+                  },
+                  {
+                      "path":  "src/develop.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/develop.js?download=true",
+                      "size":  34891,
+                      "sha256":  "04420be271e5a05e97a4aacc0d5872e071fe4cd303ef5383f25c8f56bf1af7eb"
+                  },
+                  {
+                      "path":  "src/factiondoctrine.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/factiondoctrine.js?download=true",
+                      "size":  17290,
+                      "sha256":  "71b8647c4b504a30eaa9586afa56f35ed9c954e3ad77bfa76f7fb3589c5062f0"
+                  },
+                  {
+                      "path":  "src/endgame.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/endgame.js?download=true",
+                      "size":  27651,
+                      "sha256":  "f490a3d3885aa4b00b61643df1fc353a98a75a64c42177f364dec1b337add809"
+                  },
+                  {
+                      "path":  "src/story.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/story.js?download=true",
+                      "size":  1085597,
+                      "sha256":  "4cd17fba5c0ceaeae832e613ce89dac1075e7a4162f69b8424a46bd6131722e3"
+                  },
+                  {
+                      "path":  "src/socialui.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/socialui.js?download=true",
+                      "size":  81625,
+                      "sha256":  "5c61cf27fb64b216faa0a64b26174b5b7535bb257c2f9836253b6217c426aca7"
+                  },
+                  {
+                      "path":  "src/game/matchconsumer.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/game/matchconsumer.js?download=true",
+                      "size":  24629,
+                      "sha256":  "7f17067c092ab0ac59faf480ea0b83e72d9a39f13bf0d07478a400305459bbde"
+                  },
+                  {
+                      "path":  "src/daily.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/daily.js?download=true",
+                      "size":  16702,
+                      "sha256":  "9a1ae5070bc351d92c2c4991406fc256ff3ea899f49b19e62299d444a93384cc"
+                  },
+                  {
+                      "path":  "src/account.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/account.js?download=true",
+                      "size":  43807,
+                      "sha256":  "e788e70cd2191b52bd48712a765d365888824648bec79f32f0fab978a86e4bad"
+                  },
+                  {
+                      "path":  "src/economy-net.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/economy-net.js?download=true",
+                      "size":  18398,
+                      "sha256":  "d0a021fd43489795cae9dbabda314c6c298919aee7af3a0a293bbbe009dc175f"
+                  },
+                  {
+                      "path":  "src/updater.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/updater.js?download=true",
+                      "size":  101009,
+                      "sha256":  "df5ed2f16f321252f9843210741bab7b4f89b686d85060778e328dd9fc31d67f"
+                  },
+                  {
+                      "path":  "src/intro.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/intro.js?download=true",
+                      "size":  207163,
+                      "sha256":  "087ffa5a081da41f9048032b65f46e68b39bf3bbbd014ed1b068118a3e546c0e"
+                  },
+                  {
+                      "path":  "src/session.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/session.js?download=true",
+                      "size":  63971,
+                      "sha256":  "f6bb01154af4b5b303d9b728453f2ca0e8b31ded783323395d98bd455e0656a2"
+                  },
+                  {
+                      "path":  "src/faction-id.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/faction-id.js?download=true",
+                      "size":  6471,
+                      "sha256":  "3699ff8bda97ee7d17858978235d065d191c1002700c0290a251a57a0fc08a76"
+                  },
+                  {
+                      "path":  "src/glrecover.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/glrecover.js?download=true",
+                      "size":  15147,
+                      "sha256":  "a80f6cbcf9f92c7b08667b7b567dd1b422c1d523317c4ca5c647635451d1f8e3"
+                  },
+                  {
+                      "path":  "src/main.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/main.js?download=true",
+                      "size":  181139,
+                      "sha256":  "bc8368e70cd154d701bfc335527b5d0437270b8ebc122c14ef9fd4c836d5ac7e"
+                  },
+                  {
+                      "path":  "src/intel.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/intel.js?download=true",
+                      "size":  18589,
+                      "sha256":  "eeeb33390160d00455a4f64db36b1befe333cb588de415ca465d6a2d49a8a903"
+                  },
+                  {
+                      "path":  "src/repairbay.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/repairbay.js?download=true",
+                      "size":  15170,
+                      "sha256":  "1c053d15ecb17745c5f6adb2b2c9206aa09180d2d4c01049667072b188c5e329"
+                  },
+                  {
+                      "path":  "src/galaxyui.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/galaxyui.js?download=true",
+                      "size":  134066,
+                      "sha256":  "2becc4bf87bddb6918eb1f97ff701bc200fcc9d0f6995aa4be6631457b09c67c"
+                  },
+                  {
+                      "path":  "src/departure.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/departure.js?download=true",
+                      "size":  9855,
+                      "sha256":  "94f9ba683362cc2fc52839e324f4021e3bc11d97cef7b38394718db34bec5e57"
+                  },
+                  {
+                      "path":  "src/warprimer.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/warprimer.js?download=true",
+                      "size":  15684,
+                      "sha256":  "ebbad3129e4f717e86eb3a282933c1a200c2834af3b46879231e500d3469cd2b"
+                  },
+                  {
+                      "path":  "src/uistack.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/uistack.js?download=true",
+                      "size":  5497,
+                      "sha256":  "2cb4becd9ea51749ec3edf1e1f442bae58f6552cd7cc29f060f47bbbf289cd7f"
+                  },
+                  {
+                      "path":  "src/ui/hudflow.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/hudflow.js?download=true",
+                      "size":  37950,
+                      "sha256":  "8fff999ff74689bf909be3c5179c74761f1ef2ff8aacf01543d9e47e053d4694"
+                  },
+                  {
+                      "path":  "src/ui/hotslots.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/ui/hotslots.js?download=true",
+                      "size":  22140,
+                      "sha256":  "8109f24580c525cdf6da9e5d550c9e1cdd49082cd72d2b7ad888f473f079f3a9"
+                  },
+                  {
+                      "path":  "src/galactic-operations.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/galactic-operations.js?download=true",
+                      "size":  57231,
+                      "sha256":  "5f95b66398cb325e1a4cfeefd61616df68dbcc9d512164019c491ddd6229e24c"
+                  },
+                  {
+                      "path":  "src/onboarding.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/onboarding.js?download=true",
+                      "size":  29042,
+                      "sha256":  "cb04793d71c91cda72098803649f96c0786189f8b4cc321112ea1d2fe053004f"
+                  },
+                  {
+                      "path":  "src/career-faction-gate.js",
+                      "url":  "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/v1.33.52/src/career-faction-gate.js?download=true",
+                      "size":  29572,
+                      "sha256":  "9164b948340e1196c3c45e4731ba4c773bcfb59d1d8b6e557ab23a6721632d78"
                   }
               ],
     "packsIndex":  "packs.json",
     "minBaseVersion":  "1.22.0",
     "channel":  "stable",
-    "version":  "1.33.44"
+    "version":  "1.33.52"
 }

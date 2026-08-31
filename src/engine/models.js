@@ -477,14 +477,13 @@ function wheelAsm(m,x,y,z,r,w,col){
   return m;
 }
 
-/* Thruster: gimbal collar, bell that WIDENS toward the exit, recessed throat,
-   and a glow disc set inside the bell so the emissive reads as heat coming
-   from within, not paint on the back face. Points -X (exhaust rearward). */
+/* Thruster hardware only: gimbal collar, flared bell and recessed dark throat.
+   Emitted energy is never welded into the hull as solid geometry; the
+   transparent propulsion renderer owns it so throttle, fog and damage apply. */
 function thrusterBell(m,x,y,z,r,len,col){
   m.cyl(x,y,z,r*0.74,r*0.62,len*0.30,10,MET_D,Math.PI/2);               // gimbal collar
   m.cyl(x-len*0.30,y,z,r*0.62,r,len*0.70,12,col||MET_L,Math.PI/2);      // bell (flares out)
   m.tube(x-len,y,z,r*0.98,r*0.80,len*0.14,12,DARKER,Math.PI/2);         // rim ring
-  m.cyl(x-len*0.86,y,z,r*0.72,r*0.72,len*0.10,10,HOT,Math.PI/2);        // glow, recessed
   return m;
 }
 
@@ -865,7 +864,6 @@ function mdlWasp(){                          // 5 — light air
     cylX(m,-4.65,1.34,sd*3.75,5.55,1.13,.94,10,DARK,false);   // long nacelle
     ringX(m,-4.69,1.34,sd*3.75,.78,1.18,12,MET_L);
     tubeX(m,-5.12,1.34,sd*3.75,.82,.92,.43,10,TWR_BORE);      // actual hollow exhaust
-    ringX(m,-5.15,1.34,sd*3.75,.31,.48,10,HOT);
     ringX(m,.43,1.34,sd*3.75,.67,1.00,10,MET_L);              // intake lip
     m.box(-1.10,1.96,sd*3.75,2.20,.42,1.26,TEAM_T);            // nacelle livery saddle
     ventBank(m,-1.05,2.39,sd*3.75,1.62,.90,3,MET_D,0);
@@ -880,7 +878,10 @@ function mdlWasp(){                          // 5 — light air
   m.bevelBox(-4.15,1.58,0,2.35,1.25,3.55,.30,DARKER);         // tail gearbox links fins
   sensorMast(m,-3.85,2.82,0,1.55,MET_L);
   m.greeble(-.40,3.10,0,3.3,1.05,.34,5,MET_D,0,51);
-  return {hull:m.build(),tur:null,s:1.0,air:1};
+  return {hull:m.build(),tur:null,s:1.0,air:1,propulsion:{mode:'rear-trail',sockets:[
+    {p:[-5.12,1.34,-3.75],axis:[-1,0,0],diameter:.86,effect:'trail'},
+    {p:[-5.12,1.34, 3.75],axis:[-1,0,0],diameter:.86,effect:'trail'}
+  ]}};
 }
 function mdlLongbow(){                       // 6 — beam sniper
   const m=MB();
@@ -1614,7 +1615,6 @@ function mdlRaptor(){                        // 17 — gunship
     cylX(m,-5.15,1.62,sd*3.78,5.95,1.42,1.15,11,DARK,false);  // armoured turbine nacelle
     ringX(m,-5.18,1.62,sd*3.78,1.03,1.48,12,MET_L);
     tubeX(m,-5.67,1.62,sd*3.78,1.02,1.12,.55,12,TWR_BORE);    // shadowed exhaust throat
-    ringX(m,-5.71,1.62,sd*3.78,.37,.58,12,HOT);
     ringX(m,.35,1.62,sd*3.78,.88,1.20,12,MET_L);
     m.bevelBox(-1.55,2.56,sd*3.78,2.75,.82,1.75,.28,TEAM_A);   // nacelle livery fairing
     ventBank(m,-1.55,3.39,sd*3.78,1.95,1.18,3,MET_D,0);
@@ -1630,7 +1630,10 @@ function mdlRaptor(){                        // 17 — gunship
   m.box(-6.42,2.00,0,.60,1.20,2.75,MET_L);                    // rear cargo ramp edge
   sensorMast(m,-4.20,3.38,0,1.52,MET_L);
   m.greeble(-.90,3.88,0,3.05,1.10,.40,5,MET_D,0,117);
-  return {hull:m.build(),tur:null,s:1.0,air:1};
+  return {hull:m.build(),tur:null,s:1.0,air:1,propulsion:{mode:'rear-trail',sockets:[
+    {p:[-5.67,1.62,-3.78],axis:[-1,0,0],diameter:1.10,effect:'trail'},
+    {p:[-5.67,1.62, 3.78],axis:[-1,0,0],diameter:1.10,effect:'trail'}
+  ]}};
 }
 function mdlScorcher(){                      // 18 — heavy flamer
   const m=MB();
@@ -2219,7 +2222,10 @@ function initFactionKits(){
       if(!cache[fn.name]){
         const g=fn();
         cache[fn.name]={hull:new InstMesh(gl,g.hull,900), tur:g.tur?new InstMesh(gl,g.tur,900):null,
-                        s:g.s||1, turH:g.turH||0, muzzle:g.muzzle||0, muzzleZ:g.muzzleZ||0};
+                        s:g.s||1, turH:g.turH||0, air:g.air||0,
+                        muzzle:g.muzzle||0, muzzleZ:g.muzzleZ||0,
+                        propulsion:g.propulsion||(k==='horde'&&(g.air||(typeof TYPES!=='undefined'&&TYPES[ty]&&TYPES[ty].air))
+                          ?{mode:'organic-none',sockets:[]}:null)};
         /* Per-asset baked maps, when this slot declares a triplet AND the flag
            is on. Async and self-cancelling: if any of the three fails to decode
            the mesh simply stays on the shared atlas, which is why this can be
@@ -3770,7 +3776,14 @@ function mdlBerm(){ return loadWorldModel('mdlBerm'); }
 /* Effect geometry — all real solids, no camera-facing quads anywhere. */
 function mdlShell(){ return MB().sphere(0,0,0,1,10,C(255,255,255),1,false).build(); }
 function mdlBolt(){  return MB().cyl(0,-0.5,0,0.32,0.10,1.6,6,C(255,255,255)).build(); }
-function mdlShard(){ return MB().box(0,-0.5,0,1,1,1,C(255,255,255)).build(); }
+function mdlShard(){
+  /* Compact sharp fractured shrapnel fragment with 3D faceted geometry.
+     Tumbles realistically in flight without presenting giant 2D polygon cards. */
+  const m=MB();
+  m.extrude(0,-0.16,0,[[-.52,-.22],[.08,-.42],[.62,-.10],[.42,.32],[-.22,.38],[-.56,.10]],
+    .32,C(78,74,70));
+  return m.build();
+}
 function mdlBeamSeg(){                        // unit cylinder along +Y, scaled in the shader
   return MB().cyl(0,0,0,1,1,1,7,C(255,255,255),false).build();
 }
@@ -4068,7 +4081,6 @@ function mdlKestrel(){                       // scout aircraft — thin delta
     cylX(m,-7.12,.92,sd*1.14,3.42,.72,.61,10,DARK,false);
     tubeX(m,-7.66,.92,sd*1.14,.88,.58,.27,10,TWR_BORE);      // real hollow exhaust
     ringX(m,-7.70,.92,sd*1.14,.52,.78,12,MET_L);
-    ringX(m,-7.73,.92,sd*1.14,.20,.30,10,HOT);
     ringX(m,-3.74,.92,sd*1.14,.44,.65,10,MET_L);              // intake rim
     m.box(3.72,.42,sd*.83,2.15,.72,.64,DARK);                 // attached nose-gun receiver
     gunX(m,4.45,.68,2.58,.22,MET_D,sd*.83);
@@ -4080,7 +4092,10 @@ function mdlKestrel(){                       // scout aircraft — thin delta
   ventBank(m,-2.62,2.80,0,1.95,1.10,4,MET_D,0);
   m.greeble(.05,2.80,0,2.55,.82,.28,5,MET_D,0,251);
   sensorMast(m,-4.48,2.60,0,1.12,MET_L);
-  return {hull:m.build(),tur:null,s:0.92};
+  return {hull:m.build(),tur:null,s:0.92,air:1,propulsion:{mode:'rear-trail',sockets:[
+    {p:[-7.66,.92,-1.14],axis:[-1,0,0],diameter:.54,effect:'trail'},
+    {p:[-7.66,.92, 1.14],axis:[-1,0,0],diameter:.54,effect:'trail'}
+  ]}};
 }
 function mdlBasilisk(){                      // heavy siege tank, turreted
   const m=MB();
@@ -4427,6 +4442,10 @@ function bldMeshFor(B){
    imported models are interchangeable per unit with no other change. */
 const MF_BLENDER_GEO={};
 function initModels(){
+  /* Alternate faction sets are lazy and otherwise survive a restored context
+     as truthy InstMeshes. Clear the registry before any core mesh can throw;
+     bldMeshFor() repopulates the active kit on its next normal submission. */
+  for(const fac in BLD_FACTION_MESH) delete BLD_FACTION_MESH[fac];
   for(let t=0;t<UNIT_MDL.length;t++){
     const ext=MF_BLENDER_GEO[t];
     const g=ext?{hull:ext,tur:null,s:1}:UNIT_MDL[t]();
@@ -4434,7 +4453,8 @@ function initModels(){
     UNIT_MESH[t]={
       hull:new InstMesh(gl,g.hull, t===12||t===13?4200:1400),
       tur: g.tur? new InstMesh(gl,g.tur, 1400):null,
-      s:g.s||1, turH:g.turH||0, air:g.air||0, muzzle:g.muzzle||0, muzzleZ:g.muzzleZ||0
+      s:g.s||1, turH:g.turH||0, air:g.air||0, muzzle:g.muzzle||0, muzzleZ:g.muzzleZ||0,
+      propulsion:g.propulsion||null
     };
   }
   Object.assign(BLD_MESH,initBldMeshSet(BLD_MDL,BLD_TUR_MDL,BLD_TIER_MDL,BLD_TUR_H,BLD_TUR_S,260));

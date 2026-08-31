@@ -580,17 +580,15 @@ function mfIconInk(team){
 }
 
 /* ---------------------------------------------------------------------------
-   AUTHORED SHEET OVERRIDE
-   The procedural cells above are PLACEHOLDERS. When an authored sheet exists at
-   assets/textures/ui/tacticons.png it replaces them wholesale — same 8x8 / 128px
-   grid, same cell order (MF_ICON_ORDER), so no code changes when the art lands.
-   The load is async and non-blocking: the placeholder sheet renders until the
-   real one decodes, then one flag swap re-uploads. A missing or broken file is
-   not an error, it just means placeholders stay.
-   Contract for the artist: docs/TACTICON_ART_SPEC.md
-   --------------------------------------------------------------------------- */
-const MF_ICON_SHEET_URL='assets/textures/ui/tacticons.png';
-let mfIcoAuthored=null, mfIcoAuthoredTried=false;
+   LEFT-HALF BASELINE
+   ---------------------------------------------------------------------------
+   The left 1024px half is the procedural strategic-icon baseline built above.
+   An old optional `tacticons.png` probe used to request an intentionally absent
+   legacy override on every icon-atlas initialisation, producing a guaranteed
+   browser 404 despite never changing the visible fallback.  The shipped
+   authored contribution is the validated faction sheet on the right half;
+   keeping the left half procedural avoids that dead request and leaves its
+   exact current appearance intact. */
 /* Drop the uploaded texture so the next icon frame rebuilds it with whatever
    has decoded since. Deletes rather than orphans: two sheets arrive
    asynchronously, so without this a session could leak two 8 MB textures. */
@@ -598,23 +596,6 @@ function mfIconInvalidate(){
   try{ if(mfIcoTex&&typeof gl!=='undefined'&&gl) gl.deleteTexture(mfIcoTex); }catch(e){}
   mfIcoTex=null;
 }
-function mfIconLoadAuthored(){
-  if(mfIcoAuthoredTried) return; mfIcoAuthoredTried=true;
-  try{
-    const img=new Image();
-    img.onload=()=>{
-      /* Same trap as the faction half: a valid PNG of the wrong size decodes
-         and never hits onerror. texSubImage2D would then write the image's
-         native pixels into the left 1024² of a 2048x1024 texture — overflow
-         or a smeared atlas, both worse than keeping the procedural cells. */
-      if(img.naturalWidth!==MF_ICON_ATLAS||img.naturalHeight!==MF_ICON_ATLAS) return;
-      mfIcoAuthored=img; mfIconInvalidate();
-    };
-    img.onerror=()=>{};                                        // placeholders stand
-    img.src=(typeof mf2AssetURL==='function')?mf2AssetURL(MF_ICON_SHEET_URL):('./'+MF_ICON_SHEET_URL);
-  }catch(e){}
-}
-
 /* LAZY. Rasterising a 1024 sheet, uploading it and generating mipmaps is real
    work, and the tier that needs it only engages past ~1800 span. FAR zoom now
    reaches that band on every theatre (Compact used to stop short). Doing it
@@ -625,7 +606,6 @@ function mfIconLoadAuthored(){
 function mfIconEnsure(){
   if(mfIcoTex) return true;
   if(typeof gl==='undefined'||!gl) return false;
-  mfIconLoadAuthored();
   mfIconFacLoad();
   if(!mfIcoCanvas) buildIconAtlas();
   const t=gl.createTexture();
@@ -644,7 +624,7 @@ function mfIconEnsure(){
      held for one frame, and drawImage of a 1024 source into it would resample
      art that is already the right size. Both halves go up at native 1:1. */
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,MF_ICON_TEX_W,MF_ICON_TEX_H,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
-  gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,mfIcoAuthored||mfIcoCanvas);
+  gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,mfIcoCanvas);
   /* Absent, undecodable or unreadable: the right half stays transparent and
      mfIcoFacHas stays null, so every role resolves procedural. Nothing here is
      allowed to be fatal. */

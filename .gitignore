@@ -24,9 +24,87 @@ archive/
 /rosteraudit.mjs
 /MASSFRONT-source.zip
 releases/
+.cursor/dlds/
+/tmp/
+modules/space_exploration/tmp/
+modules/space_exploration/_archive/
+**/.hf-downloads/
+android/capacitor-cordova-android-plugins/build/
+/MASSFRONT.apk.idsig
+/ab.txt
+/cloud.txt
+/match.txt
+/perf.txt
+/previewcost.txt
+/shader.txt
+/speed2.txt
+/speed3.txt
+/speedprobe.txt
+/terratime.txt
+/weekly.txt
+
+# Final authored reports are source artifacts; render intermediates are not.
+/output/*
+!/output/pdf/
+/output/pdf/*
+!/output/pdf/*.pdf
+
+# Captures remain local unless a named acceptance report deliberately promotes
+# them. This prevents verifier reruns from creating an unbounded Git payload.
+/audit/intel-context-leak/
+/tools/planet-map-art/evidence/
+/tools/verify_*.png
+/tools/drive_folder_screenshot.png
+
+# Agent worktree/download payloads are not source. Keep them reviewable on disk
+# without allowing blanket staging to turn an embedded repository into a gitlink.
+.claude/worktrees/
+
+# Blender world-kit binaries, exports, and contact sheets are deterministic
+# products of tools/blender/*.py. Keep generators, reports, provenance, and
+# READMEs in Git; store large binary products outside the code baseline or in
+# an explicitly configured LFS/asset release when a source candidate is accepted.
+modules/space_exploration/assets/source/blender/world-kits/**/*.blend
+modules/space_exploration/assets/source/blender/world-kits/**/*.blend1
+modules/space_exploration/assets/source/blender/world-kits/**/exports/
+modules/space_exploration/assets/source/blender/world-kits/**/review-exports/
+modules/space_exploration/assets/source/blender/world-kits/**/evidence/
+modules/space_exploration/assets/source/**/evidence/
+modules/space_exploration/assets/source/**/review-exports/
+modules/space_exploration/assets/source/**/rejected-candidates/
+
+# Blender's numbered backup is a duplicate of the owned .blend source and can
+# also retain machine-local paths. Keep the current source scene only.
+*.blend1
+
+# Loose module-root images are visual references, including third-party
+# franchise screenshots, with no public redistribution record. Production and
+# original art live in the structured source/, textures/, and models/ trees.
+modules/space_exploration/assets/*.jpg
+modules/space_exploration/assets/media_*.png
 
 # --- large raw-source / generated / staged dirs (keep out of the code baseline; use Git LFS or a separate backup) ---
-source-media/
+source-media/*
+!source-media/content-library/
+!source-media/content-library/**
+!source-media/concepts/
+source-media/concepts/*
+!source-media/concepts/planet-map-v2/
+!source-media/concepts/planet-map-v2/**
+!source-media/concepts/faction-biome-v1/
+!source-media/concepts/faction-biome-v1/**
+!source-media/concepts/world-environment-v1/
+!source-media/concepts/world-environment-v1/**
+!source-media/concepts/biodome-typology-v1/
+!source-media/concepts/biodome-typology-v1/**
+!source-media/concepts/faction-personnel-v1/
+!source-media/concepts/faction-personnel-v1/**
+!source-media/concepts/planetary-landmarks-v1/
+!source-media/concepts/planetary-landmarks-v1/**
+!source-media/concepts/expedition-manifests-v1/
+!source-media/concepts/expedition-manifests-v1/**
+!source-media/concepts/brood-enemy-ecology-v1/
+!source-media/concepts/brood-enemy-ecology-v1/**
 design/
 android/app/src/main/assets/public/
 ios/App/public/

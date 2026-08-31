@@ -42,10 +42,12 @@
    dozen matches will hear the same trigger a dozen times.
    --------------------------------------------------------------------------- */
 var KEEL_NAME='KEEL';
-var KEEL_TAG='SHIP LIAISON · LANCE OF MORNING';
-var GUIDE_VERSION=4;
+var KEEL_TAG='UGA SHIP LIAISON · LANCE OF MORNING';
+var GUIDE_VERSION=5;
+var TRAINING_COMPLETE_EVENT='massfront:protected-training-complete';
+var TRAINING_SKIP_EVENT='massfront:protected-training-skipped';
 
-var GREETING='KEEL online — ship liaison, Lance of Morning. Follow the gold signal: it marks the exact control for your next action. '+
+var GREETING='KEEL online — UGA ship liaison, Lance of Morning. Follow the gold signal: it marks the exact control for your next action. '+
              'Tap SKIP any time; replay this guide from Settings.';
 
 var SKIP_LINE='Understood. Find me again under Settings → Tutorial if you change your mind.';
@@ -53,6 +55,8 @@ var SKIP_LINE='Understood. Find me again under Settings → Tutorial if you chan
 var GRADUATION='Field orientation complete. Camera, economy, orders, logistics, formations, scouting, technology and extraction are certified. '+
                'Real operations are chosen at the WAR TABLE: system, planet, region, then a site. '+
                "I'll go quiet now — unless something's on fire.";
+var BASIC_GRADUATION='Planetary basics complete. Camera, landing, Commander control, economy, production, army selection, orders and extraction are confirmed. '+
+                     'Next: choose your faction and receive that faction\'s Commander 1.';
 
 /* Each step tests REAL state. `say` is shown the moment a step becomes
    current; `done` fires once, the moment its test flips true — but only if
@@ -104,8 +108,8 @@ var STEPS=[
    test:function(){ return hasPlayerBld('fac'); } },
 
  { id:'queue', icon:'▤',
-   say:'Tap the Factory on the map, then tap the Striker unit card. The queue line shows what is being built. Each unit also costs population — the HUD counter reads pop n/1K, and 1K is this commander\'s cap.',
-   done:'Striker queued. Production burns mass and energy over the build time. Pop n/1K is live headcount against the 1K seat cap — theatre size adds more seats, it does not raise yours.',
+   say:'Tap the Factory on the map, then tap the Striker unit card. The queue line shows what is being built. Each unit also costs population — the HUD counter reads pop n/500, shared by your combat faction.',
+   done:'Striker queued. Production burns mass and energy over the build time. Pop n/500 is live faction headcount — adding commanders does not multiply the cap.',
    test:function(){ return MATCH.sawQueue; } },
 
  { id:'train', icon:'⚔',
@@ -184,6 +188,17 @@ var STEPS=[
    test:function(){ return MATCH.cloudAck; } }
 ];
 
+/* The first-career course is intentionally super-basic. The existing longer
+   certification remains available from Operations/Settings, but a new player
+   reaches faction commissioning after these ten essential actions instead of
+   being held inside a twenty-one-objective systems tour. Reusing the authored
+   step objects keeps every gate tied to real simulation state. */
+var BASIC_STEP_IDS=['camera','deploy','commander','mex','power','fac','queue','train','orders','objective'];
+var BASIC_STEPS=BASIC_STEP_IDS.map(function(id){
+  for(var i=0;i<STEPS.length;i++)if(STEPS[i].id===id)return STEPS[i];
+  throw new Error('Missing basic tutorial step '+id);
+});
+
 var BASE_ATTACK_LINES=[
  'Contact on the perimeter — tap the ⚠ alert, top of screen, and go see for yourself.',
  "Something's testing your walls. The ⚠ alert will take you straight there."
@@ -206,7 +221,7 @@ var HAZARD_LINES={
    STATE
    --------------------------------------------------------------------------- */
 var TUT={ active:false, stepIdx:0, doneFlags:[], shownStepIdx:-1, graduated:false, forceNext:false,
-          trainingMode:false, finishTimer:0 };
+          trainingMode:false, basicMode:false, course:'certification', finishTimer:0 };
 var trainingPrev=null, trainingLaunched=false;
 /* Set only while re-entering tutSkip from its own confirmation callback, so the
    dialog cannot ask twice. */
@@ -233,7 +248,23 @@ function tutMeta(){
      authority whenever a mission is running. */
   if(typeof META.tutorial.progress!=='number') META.tutorial.progress=META.tutorial.done?STEPS.length:0;
   META.tutorial.progress=Math.max(0,Math.min(STEPS.length,META.tutorial.progress|0));
+  if(typeof META.tutorial.basicProgress!=='number') META.tutorial.basicProgress=META.tutorial.done?BASIC_STEPS.length:0;
+  META.tutorial.basicProgress=Math.max(0,Math.min(BASIC_STEPS.length,META.tutorial.basicProgress|0));
+  if(META.tutorial.done)META.tutorial.basicDone=true;
   return META.tutorial;
+}
+function courseSteps(){return TUT.basicMode?BASIC_STEPS:STEPS;}
+function courseName(){return TUT.basicMode?'basic':'certification';}
+function newCareerTrainingRequested(){
+  try{
+    var gate=window.MFNewCareerFactionGate;
+    var state=gate&&typeof gate.state==='function'?gate.state():null;
+    return !!(state&&state.pending&&state.phase==='training');
+  }catch(e){return false;}
+}
+function trainingSignal(type,detail){
+  if(typeof window==='undefined'||typeof window.dispatchEvent!=='function')return false;
+  try{window.dispatchEvent(new CustomEvent(type,{detail:detail}));return true;}catch(e){return false;}
 }
 function pick(arr){ return arr[(Math.random()*arr.length)|0]; }
 function hasPlayerBld(type){
@@ -292,10 +323,21 @@ function sawQueuedUnit(){
    to whatever the resting text was (or hide, if the tutorial isn't running).
    --------------------------------------------------------------------------- */
 var queue=[], holdUntil=0, restingText='', restingTag='', restingId='', lastText=null, domReady=false;
+var keelMapSpeakingUntil=0;
 var focusEls=[], mapCue=null;
 
+function syncTrainingChrome(){
+  var skipBtn=document.getElementById('keelSkip');
+  if(skipBtn){
+    skipBtn.classList.toggle('keelSkipEnd',!!TUT.trainingMode);
+    skipBtn.textContent=TUT.trainingMode?(TUT.basicMode?'SKIP TRAINING':'END'):'SKIP';
+    skipBtn.setAttribute('aria-label',TUT.trainingMode?(TUT.basicMode?'Skip training and continue to faction commissioning':'End training operation'):'Skip tutorial guidance');
+  }
+  var mode=document.getElementById('keelModeBadge');
+  if(mode){var b=mode.querySelector('b');if(b)b.textContent=TUT.basicMode?'PLANETARY BASICS':'TRAINING OPERATION';}
+}
 function buildDOM(){
-  if(domReady) return;
+  if(domReady){syncTrainingChrome();return;}
   domReady=true;
   var wrap=document.createElement('div');
   wrap.id='keelWrap';
@@ -317,19 +359,18 @@ function buildDOM(){
   document.body.appendChild(cue);
   var mode=document.createElement('div');
   mode.id='keelModeBadge'; mode.setAttribute('aria-live','polite');
-  mode.innerHTML='<b>TRAINING OPERATION</b><span>KEEL GUIDANCE ACTIVE</span>';
+  mode.innerHTML='<b>TRAINING OPERATION</b><span>UGA KEEL GUIDANCE ACTIVE</span>';
   document.body.appendChild(mode);
   var skipBtn=document.getElementById('keelSkip');
   skipBtn.addEventListener('pointerdown',function(ev){ ev.stopPropagation(); tutSkip(); });
   /* A control that abandons a match should not be styled as a hint. In a
      training match the label becomes END and the button takes the warning
      treatment, so the destructive one is never the quiet one. */
-  skipBtn.classList.toggle('keelSkipEnd',!!TUT.trainingMode);
-  skipBtn.textContent=TUT.trainingMode?'END':'SKIP';
+  syncTrainingChrome();
   var nextBtn=document.getElementById('keelNext');
   nextBtn.addEventListener('pointerdown',function(ev){
     ev.preventDefault(); ev.stopPropagation();
-    var S=TUT.active&&STEPS[TUT.stepIdx];
+    var active=courseSteps(),S=TUT.active&&active[TUT.stepIdx];
     if(!S||!S.manual) return;
     MATCH[S.manual]=true;
     if(typeof sfx==='function'){ try{ sfx('ui'); }catch(e){} }
@@ -348,8 +389,8 @@ function renderBubble(text,tag){
   var tg=document.getElementById('keelStepTag'); if(tg) tg.textContent=tag||'';
   var pg=document.getElementById('keelProgress');
   if(pg){
-    var at=Math.min(STEPS.length,TUT.stepIdx),pct=STEPS.length?at/STEPS.length*100:0;
-    pg.setAttribute('aria-valuemax',STEPS.length);pg.setAttribute('aria-valuenow',at);
+    var active=courseSteps(),at=Math.min(active.length,TUT.stepIdx),pct=active.length?at/active.length*100:0;
+    pg.setAttribute('aria-valuemax',active.length);pg.setAttribute('aria-valuenow',at);
     var fill=pg.querySelector('i');if(fill)fill.style.width=pct+'%';
   }
 }
@@ -437,6 +478,7 @@ function buildFocus(cat,name,type){
 }
 function syncFocus(){
   clearFocus();
+  var active=courseSteps();
   var badge=document.getElementById('keelModeBadge');
   /* The KEEL card already carries STEP / TOTAL and the current objective.
      Repeating that information in a second fixed badge consumed the same
@@ -444,10 +486,10 @@ function syncFocus(){
      the tutorial is meant to teach through. Keep the legacy node for old OTA
      shells, but it is no longer a visible surface. */
   if(badge) badge.classList.remove('show');
-  if(!TUT.active||TUT.stepIdx>=STEPS.length) return;
-  var S=STEPS[TUT.stepIdx],next=document.getElementById('keelNext');
+  if(!TUT.active||TUT.stepIdx>=active.length) return;
+  var S=active[TUT.stepIdx],next=document.getElementById('keelNext');
   if(badge){
-    var bs=badge.querySelector('span'); if(bs) bs.textContent='OBJECTIVE '+(TUT.stepIdx+1)+' / '+STEPS.length+' · '+S.id.toUpperCase();
+    var bs=badge.querySelector('span'); if(bs) bs.textContent='OBJECTIVE '+(TUT.stepIdx+1)+' / '+active.length+' · '+S.id.toUpperCase();
   }
   if(next){
     next.style.display=S.manual?'inline-flex':'none';next.textContent=S.action||'GOT IT';
@@ -530,17 +572,48 @@ function speak(text,holdSec,kind,id){
   queue.push({text:text,hold:holdSec||4.4,kind:kind||'bark',id:id||null});
   while(queue.length>MAX_QUEUE) queue.shift();
 }
+function keelBattleReceiverAvailable(){
+  if(typeof document==='undefined'||!document.getElementById('cmdrTx')||!document.getElementById('minimapWrap')) return false;
+  if(typeof running!=='undefined'&&!running) return false;
+  if(typeof matchLive!=='undefined'&&!matchLive) return false;
+  if(typeof gameEnded!=='undefined'&&gameEnded) return false;
+  var b=document.body;
+  return !(b&&b.classList&&(b.classList.contains('mfMenuOpen')||b.classList.contains('menuMode')));
+}
+/* KEEL owns the same in-match receiver as commanders, but never their faction
+   identity. The cancelable event lets the HUD accept the line only when the
+   minimap bay is idle; a busy receiver is retried instead of spawning a second
+   talking portrait elsewhere on the battlefield. */
+function keelPresentAtBattleMap(message,durationMs){
+  if(!keelBattleReceiverAvailable()||typeof window==='undefined'||typeof window.dispatchEvent!=='function') return 0;
+  var detail={schema:'massfront.keel-hint.v1',hintId:'tutorial-'+(message.id||message.kind||'guidance'),
+    context:'protected-training',surface:'battle-minimap',speaker:'KEEL',speakerId:'keel',affiliation:'uga',
+    speakerRole:'UGA SHIP LIAISON',channel:'UGA TACTICAL LINK',voiceId:'keen',
+    profileId:'uga-keel-expedition-guide',animationId:'keel-tactical-link',text:message.text,
+    durationMs:durationMs,priority:message.kind==='step'?85:70,issuedAt:Date.now(),handled:false};
+  try{
+    var ev;
+    if(typeof CustomEvent==='function') ev=new CustomEvent('massfront:keel-hint',{detail:detail,cancelable:true});
+    else if(document.createEvent){ev=document.createEvent('CustomEvent');ev.initCustomEvent('massfront:keel-hint',false,true,detail);}
+    if(!ev) return 0;
+    window.dispatchEvent(ev);
+    return detail.handled?1:2;
+  }catch(e){return 0;}
+}
 function pump(){
   var now=performance.now()/1000;
   if(now<holdUntil) return;
   if(queue.length){
     var m=queue.shift();
-    renderBubble(m.text,restingTag);
     /* Hold time compresses while a backlog remains, so a burst of catch-up
        lines still reads in order without pinning the HUD for the better
        part of a minute. */
-    holdUntil=now+(queue.length? Math.min(m.hold,2.4) : m.hold);
-    showWrap(true);
+    var hold=queue.length?Math.min(m.hold,2.4):m.hold;
+    var mapResult=keelPresentAtBattleMap(m,Math.max(1000,Math.round(hold*1000)));
+    if(mapResult===2){queue.unshift(m);holdUntil=now+.18;hideWrap();return;}
+    holdUntil=now+hold;
+    if(mapResult===1){keelMapSpeakingUntil=holdUntil;hideWrap();}
+    else{renderBubble(m.text,restingTag);showWrap(true);}
     /* Pass the line's identity through, so a rendered take can be found for it
        instead of every line silently falling through to synthesis. */
     speakVoice(m.text,'keen',keenLineId(m.kind,m.id));
@@ -647,7 +720,10 @@ function speakVoiceFallback(text,faction){
     window.speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(String(text).replace(/[\u2192\u25c6\u26cf\ud83c\udfd7\ud83c\udfed\ud83d\udca5\u26a0\u2715]/g,''));
     var v={keen:[1.06,.94],nova:[1.02,.82],ascendancy:[.92,.66],syndicate:[1.10,1.03],horde:[.78,.52]}[faction]||[1.02,.82];
-    u.rate=v[0]; u.pitch=v[1]; u.volume=0.85;
+    u.rate=v[0]; u.pitch=v[1];
+    /* The last-resort OS voice cannot enter Web Audio, but it must still obey
+       the same Voice Volume setting as the rendered commander/tutorial bank. */
+    u.volume=0.85*(typeof audVoiceLevel==='function'?audVoiceLevel():1);
     var voices=window.speechSynthesis.getVoices?window.speechSynthesis.getVoices():[];
     if(voices.length&&faction){
       var prefer=faction==='ascendancy'?'male':(faction==='syndicate'||faction==='keen')?'female':faction==='horde'?'en':null;
@@ -697,54 +773,65 @@ function trackMatchSignals(){
    --------------------------------------------------------------------------- */
 function beginRun(){
   buildDOM();
+  var active=courseSteps();
   TUT.active=true;
   TUT.graduated=false;
   TUT.stepIdx=0;
   TUT.shownStepIdx=-1;
-  TUT.doneFlags=STEPS.map(function(){ return false; });
+  TUT.doneFlags=active.map(function(){ return false; });
   MATCH.sawSel=false;MATCH.sawCombatSel=false;MATCH.sawMove=false;MATCH.sawQueue=false;MATCH.sawCamera=false;
   MATCH.sawPickup=false;MATCH.sawPlatoon=false;MATCH.sawFormation=false;MATCH.sawAttackMove=false;MATCH.sawScout=false;MATCH.sawRetreat=false;
   MATCH.territoryAck=false;MATCH.objectiveAck=false;MATCH.cloudAck=false;MATCH.usedAbility=false;
   MATCH.startCombat=combatCount();MATCH.pickup=null;MATCH.scoutIdx=-1;MATCH.scoutStart=null;
   MATCH.cameraBase={yaw:yawTarget,pitch:pitchTarget,span:orthoSpan};
   MATCH.lastAbCool=(typeof abCool!=='undefined')?abCool.slice():[0,0,0,0];
-  queue.length=0;
+  queue.length=0;keelMapSpeakingUntil=0;
   speak(GREETING,5.5,'greeting','greeting');
 }
 function evalSteps(){
   if(!TUT.active) return;
-  for(var i=0;i<STEPS.length;i++){
+  var active=courseSteps();
+  for(var i=0;i<active.length;i++){
     if(TUT.doneFlags[i]) continue;
     var ok=false;
-    try{ ok=!!STEPS[i].test(); }catch(e){ ok=false; }
+    try{ ok=!!active[i].test(); }catch(e){ ok=false; }
     if(ok){
       TUT.doneFlags[i]=true;
-      if(i===TUT.stepIdx) speak(STEPS[i].done,3.8,'done','done_'+STEPS[i].id);
+      if(i===TUT.stepIdx) speak(active[i].done,3.8,'done','done_'+active[i].id);
     }
   }
-  while(TUT.stepIdx<STEPS.length && TUT.doneFlags[TUT.stepIdx]) TUT.stepIdx++;
+  while(TUT.stepIdx<active.length && TUT.doneFlags[TUT.stepIdx]) TUT.stepIdx++;
   var progressMeta=tutMeta();
-  if(TUT.stepIdx>(progressMeta.progress|0)){
-    progressMeta.progress=TUT.stepIdx;
+  var progressKey=TUT.basicMode?'basicProgress':'progress';
+  if(TUT.stepIdx>(progressMeta[progressKey]|0)){
+    progressMeta[progressKey]=TUT.stepIdx;
     if(typeof metaSave==='function') metaSave();
   }
-  if(TUT.stepIdx>=STEPS.length){
+  if(TUT.stepIdx>=active.length){
     if(!TUT.graduated){
       TUT.graduated=true; TUT.active=false;
-      var M=tutMeta(); M.done=true; M.skipped=false; M.version=GUIDE_VERSION;
-      M.progress=STEPS.length;
-      restingText=''; restingTag=''; restingId='';
-      speak(GRADUATION,6.5,'graduation','graduation');
+      var M=tutMeta();
+      /* Dedicated Training commits completion in finishTrainingMission(),
+         where persistence is checked before the commissioning event exists.
+         Publishing basicDone here let the faction gate observe an in-memory
+         success up to 1.3 seconds before the save transaction ran. */
+      if(!TUT.trainingMode){
+        M.skipped=false;M.version=GUIDE_VERSION;
+        if(TUT.basicMode){M.basicDone=true;M.basicSkipped=false;M.basicProgress=BASIC_STEPS.length;}
+        else{M.done=true;M.basicDone=true;M.progress=STEPS.length;M.basicProgress=BASIC_STEPS.length;}
+      }
+      restingText=''; restingTag=''; restingId=''; keelMapSpeakingUntil=0;
+      speak(TUT.basicMode?BASIC_GRADUATION:GRADUATION,6.5,'graduation','graduation');
       if(typeof sfx==='function'){ try{ sfx('level'); }catch(e){} }
       if(TUT.trainingMode&&!TUT.finishTimer) TUT.finishTimer=setTimeout(finishTrainingMission,1300);
       else if(typeof metaSave==='function') metaSave();
     }
     return;
   }
-  var cur=STEPS[TUT.stepIdx];
+  var cur=active[TUT.stepIdx];
   restingText=cur.say;
   restingId='step_'+cur.id;
-  restingTag=(cur.icon||'◇')+'  STEP '+(TUT.stepIdx+1)+' / '+STEPS.length;
+  restingTag=(cur.icon||'◇')+'  STEP '+(TUT.stepIdx+1)+' / '+active.length;
   if(TUT.shownStepIdx!==TUT.stepIdx){
     TUT.shownStepIdx=TUT.stepIdx;
     speak(cur.say,5.5,'step',restingId);
@@ -761,23 +848,42 @@ function tutSkip(){
   var liveTraining=TUT.trainingMode&&(typeof running!=='undefined'&&running)&&
                    !(typeof gameEnded!=='undefined'&&gameEnded);
   if(liveTraining&&!tutSkipConfirmed&&typeof accConfirm==='function'){
-    accConfirm('Leave training and return to the menu? This operation grants no payout.',
+    accConfirm(TUT.basicMode
+      ?'Skip the remaining basics and continue to required faction commissioning? This operation grants no payout.'
+      :'Leave training and return to the menu? This operation grants no payout.',
       function(){ tutSkipConfirmed=true; tutSkip(); tutSkipConfirmed=false; });
     return;
   }
   TUT.active=false;
-  var wasTraining=TUT.trainingMode;
-  var M=tutMeta(); M.skipped=true; M.version=GUIDE_VERSION;
+  var wasTraining=TUT.trainingMode,wasBasic=TUT.basicMode;
+  var M=tutMeta(),skipSaved=false; M.skipped=true; M.version=GUIDE_VERSION;
+  if(wasBasic){M.basicSkipped=true;M.basicDone=false;}
   queue.length=0;
-  restingText=''; restingTag=''; restingId='';
+  restingText=''; restingTag=''; restingId=''; keelMapSpeakingUntil=0;
   clearFocus();
   if(wasTraining){
     TUT.trainingMode=false; trainingLaunched=false; restoreTrainingConfig();
-    if(typeof metaSave==='function') metaSave();
+    if(typeof metaSave==='function')try{skipSaved=metaSave()!==false;}catch(e){skipSaved=false;}
     if(typeof returnToMainMenu==='function') returnToMainMenu();
-  } else if(typeof metaSave==='function') metaSave();
+  } else if(typeof metaSave==='function')try{skipSaved=metaSave()!==false;}catch(e2){skipSaved=false;}
   speak(SKIP_LINE,4.0,'skip','skip');
   if(typeof sfx==='function'){ try{ sfx('ui'); }catch(e){} }
+  if(wasBasic&&skipSaved){
+    var detail={schema:'massfront.protected-training-skipped.v1',course:'basic',
+      speaker:'KEEL',affiliation:'uga',nextStep:'required-faction-selection',at:Date.now()};
+    trainingSignal(TRAINING_SKIP_EVENT,detail);
+    /* A player who changes their mind after landing chose to skip Training,
+       not to abandon the new-career workflow. Converge on the same mandatory
+       commissioning gate as the pre-drop skip path. */
+    setTimeout(function(){
+      try{
+        var gate=window.MFNewCareerFactionGate;
+        if(gate&&typeof gate.openFromRoute==='function')gate.openFromRoute({choice:'skipped'});
+      }catch(e){}
+    },0);
+  }else if(wasBasic&&!skipSaved&&typeof toast==='function')toast('Training skip could not be saved — commissioning remains locked');
+  TUT.basicMode=false;TUT.course='certification';
+  syncTrainingChrome();
 }
 
 /* ---------------------------------------------------------------------------
@@ -874,7 +980,7 @@ function tutTick(){
        holding the current line. TUT.active is the authoritative mission state,
        so never leave an active training objective visually absent just because
        the voice pump is between messages. */
-    if(TUT.active&&restingText) showWrap(false);
+    if(TUT.active&&restingText&&performance.now()/1000>=keelMapSpeakingUntil) showWrap(false);
     syncFocus();
     updateTrainingEntry();
     /* A carrier transition, a modal, or opening an interface briefly changes
@@ -918,16 +1024,18 @@ function restoreTrainingConfig(){
 function cancelTrainingMission(){
   if(!TUT.trainingMode&&!trainingPrev) return;
   TUT.trainingMode=false; trainingLaunched=false; TUT.active=false; TUT.finishTimer=0;
-  queue.length=0; restingText=''; restingTag=''; restingId=''; clearFocus(); hideWrap();
+  queue.length=0; restingText=''; restingTag=''; restingId=''; keelMapSpeakingUntil=0; clearFocus(); hideWrap();
   document.body.classList.remove('trainingOperation');
   restoreTrainingConfig();
   /* Recover old OTA saves that retained trainingMode after losing the borrowed
      config snapshot; an invisible training mode must never reach Standard. */
   if(typeof activeWarMode!=='undefined'&&activeWarMode==='training') activeWarMode='standard';
+  TUT.basicMode=false;TUT.course='certification';
+  syncTrainingChrome();
   updateTrainingEntry();
 }
 function trainingStepId(){
-  return TUT.active&&STEPS[TUT.stepIdx]?STEPS[TUT.stepIdx].id:'';
+  var active=courseSteps();return TUT.active&&active[TUT.stepIdx]?active[TUT.stepIdx].id:'';
 }
 function ensureTrainingPickup(){
   if(MATCH.sawPickup||(MATCH.pickup&&crates.indexOf(MATCH.pickup)>=0))return;
@@ -956,8 +1064,10 @@ function trainingSafety(){
   if(typeof AI!=='undefined'){
     AI.waveTimer=Math.max(AI.waveTimer||0,300); AI.harassTimer=Math.max(AI.harassTimer||0,300); AI.warned=false;
   }
-  if(typeof resM!=='undefined'&&typeof RES_MCAP!=='undefined') resM[0]=Math.min(RES_MCAP[0],Math.max(resM[0],620));
-  if(typeof resE!=='undefined'&&typeof RES_ECAP!=='undefined') resE[0]=Math.min(RES_ECAP[0],Math.max(resE[0],2200));
+  /* A FLOOR, not income - econFloorBanks says so in its name and keeps the
+     Math.min(cap,Math.max(cur,floor)) arithmetic verbatim. */
+  if(typeof econFloorBanks==='function') econFloorBanks(620,2200);
+
   if(typeof heroIdx==='number'&&heroIdx>=0&&ualive[heroIdx]) uhp[heroIdx]=Math.max(uhp[heroIdx],uhpm[heroIdx]*.72);
   var H=playerBld('hq'); if(H) H.hp=Math.max(H.hp,H.hpm*.75);
   var step=trainingStepId();
@@ -966,6 +1076,14 @@ function trainingSafety(){
   if(step==='tech'&&typeof heroLvl==='number')heroLvl=Math.max(heroLvl,3);
 }
 function startTrainingMission(){
+  /* Standard deploy (setupStart → newSkirmish → deployCarrier) must never
+     auto-enter Training. activeWarMode defaults to 'standard' on the menu, so
+     this guard is only the live Standard battle, not the War Room card. */
+  if(typeof running!=='undefined'&&running&&typeof matchLive!=='undefined'&&matchLive
+     &&typeof activeWarMode!=='undefined'&&activeWarMode==='standard'
+     &&!(typeof META!=='undefined'&&META.onboarding&&META.onboarding.choice==='training')){
+    toast('Training is a separate operation — return to the menu or choose Training'); return;
+  }
   if(typeof running!=='undefined'&&running){ toast('Leave the current battle before starting training'); return; }
   if(!trainingPrev) saveTrainingConfig();
   difficulty=0; defenseFocus=0; infestationOn=false; wcChoice=0;
@@ -974,7 +1092,11 @@ function startTrainingMission(){
   aiSlots[0].on=true; aiSlots[0].diff=0; aiSlots[0].zone='ne';aiSlots[0].ally=false;aiSlots[0].behavior='balanced';
   for(var i=1;i<aiSlots.length;i++){aiSlots[i].on=false;aiSlots[i].ally=false;aiSlots[i].behavior='balanced';}
   META.opmods={}; META.threatSel=1;
-  var M=tutMeta(); M.skipped=false;
+  var M=tutMeta(); M.skipped=false;M.basicSkipped=false;
+  /* The first run is always the rebuilt basic course. New-career provenance
+     makes that intent explicit, while a later replay after basics becomes the
+     optional full certification. */
+  TUT.basicMode=newCareerTrainingRequested()||(!M.basicDone&&!M.done);TUT.course=courseName();
   TUT.trainingMode=true; TUT.forceNext=true; TUT.finishTimer=0; trainingLaunched=false;
   /* Training is a real dedicated mode, not a Standard match with tutorial
      chrome painted over it. The saved mode is restored by the same transaction
@@ -1000,61 +1122,97 @@ function startTrainingMission(){
        now so the dedicated Tutorial exposes KEEL and its deployment HUD. */
     if(typeof stopAttract==='function') stopAttract();
     if(typeof mfFlowLayout==='function') mfFlowLayout();
-    toast('TRAINING OPERATION — war table skipped; threat paused while KEEL guides you');
+    toast(TUT.basicMode
+      ?'PLANETARY BASICS — protected drop; faction commissioning follows'
+      :'TRAINING OPERATION — war table skipped; threat paused while KEEL guides you');
   });});
 }
 function finishTrainingMission(){
   TUT.finishTimer=0;
   if(!TUT.trainingMode) return;
-  var M=tutMeta(),reward=(M.rewardedVersion|0)<GUIDE_VERSION?TRAINING_REWARD:0;
-  M.done=true; M.skipped=false; M.version=GUIDE_VERSION;
-  M.progress=STEPS.length;
-  if(reward){ META.cores=(META.cores||0)+reward; M.rewardedVersion=GUIDE_VERSION; }
+  var wasBasic=TUT.basicMode,active=courseSteps(),M=tutMeta(),before={
+    done:M.done,basicDone:M.basicDone,skipped:M.skipped,basicSkipped:M.basicSkipped,
+    version:M.version,progress:M.progress,basicProgress:M.basicProgress,rewardedVersion:M.rewardedVersion
+  },reward=(M.rewardedVersion|0)<GUIDE_VERSION?TRAINING_REWARD:0;
+  M.skipped=false;M.version=GUIDE_VERSION;
+  if(wasBasic){M.basicDone=true;M.basicSkipped=false;M.basicProgress=BASIC_STEPS.length;}
+  else{M.done=true;M.basicDone=true;M.progress=STEPS.length;M.basicProgress=BASIC_STEPS.length;}
+  if(reward){ metaGrantCores(reward,'training_reward','training:'+GUIDE_VERSION); M.rewardedVersion=GUIDE_VERSION; }
   TUT.trainingMode=false; trainingLaunched=false; TUT.active=false;
   document.body.classList.remove('trainingOperation');
   clearFocus(); restoreTrainingConfig();
-  if(typeof metaSave==='function') metaSave();
+  var saved=false;
+  if(typeof metaSave==='function')try{saved=metaSave()!==false;}catch(e){saved=false;}
+  if(!saved){
+    M.done=before.done;M.basicDone=before.basicDone;M.skipped=before.skipped;M.basicSkipped=before.basicSkipped;
+    M.version=before.version;M.progress=before.progress;M.basicProgress=before.basicProgress;M.rewardedVersion=before.rewardedVersion;
+  }
   if(typeof renderMetaHead==='function') renderMetaHead();
   if(typeof gameEnded!=='undefined') gameEnded=true;
   if(typeof paused!=='undefined') paused=false;
   if(typeof running!=='undefined') running=false;
   var title=document.getElementById('goTitle'); if(title){title.textContent='TRAINING COMPLETE';title.style.color='#9fffc4';}
-  var out=document.getElementById('goOutcome'); if(out) out.textContent='FIELD ORIENTATION · ALL '+STEPS.length+' OBJECTIVES COMPLETE';
+  var out=document.getElementById('goOutcome'); if(out) out.textContent=(wasBasic?'PLANETARY BASICS':'FIELD CERTIFICATION')+' · ALL '+active.length+' OBJECTIVES COMPLETE';
   var gs=document.getElementById('goStats');
-  if(gs) gs.innerHTML='<div class="goStatGrid"><div><b>'+STEPS.length+' / '+STEPS.length+'</b><span>OBJECTIVES</span></div>'
+  if(gs) gs.innerHTML='<div class="goStatGrid"><div><b>'+active.length+' / '+active.length+'</b><span>OBJECTIVES</span></div>'
     +'<div><b>'+((stats&&stats.built&&stats.built[0])|0)+'</b><span>STRUCTURES BUILT</span></div>'
     +'<div><b>'+((stats&&stats.t)|0)+'s</b><span>TRAINING TIME</span></div>'
     +'<div><b>READY</b><span>FIELD STATUS</span></div></div>';
   var rw=document.getElementById('goRewards');
   if(rw) rw.innerHTML='<section class="goSection"><h3>TRAINING PAYOUT</h3><div class="goPayout">'
     +'<div><b>+'+reward+'</b><span>⬡ CORES</span></div><div><b>COMPLETE</b><span>KEEL ORIENTATION</span></div></div>'
-    +'<div class="goNotice good">NORMAL SKIRMISHES ARE NOW READY · REPLAY ANY TIME FROM SETTINGS OR OPERATIONS</div></section>';
+    +'<div class="goNotice good">'+(wasBasic
+      ?'PLANETARY BASICS COMPLETE · FACTION COMMISSIONING AND COMMANDER 1 ARE NEXT'
+      :'FIELD CERTIFICATION COMPLETE · REPLAY ANY TIME FROM SETTINGS OR OPERATIONS')+'</div></section>';
   if(typeof drawMatchChart==='function') drawMatchChart();
   var go=document.getElementById('gameOver'); if(go) go.style.display='flex';
   if(typeof sfx==='function'){ try{sfx('level');}catch(e){} }
+  if(wasBasic&&saved){
+    trainingSignal(TRAINING_COMPLETE_EVENT,{schema:'massfront.protected-training-complete.v1',
+      course:'basic',objectives:active.length,speaker:'KEEL',affiliation:'uga',
+      nextStep:'required-faction-selection',at:Date.now()});
+  }else if(wasBasic&&!saved&&typeof toast==='function'){
+    toast('Training finished, but career progress could not be saved');
+  }
+  TUT.basicMode=false;TUT.course='certification';
+  syncTrainingChrome();
   updateTrainingEntry();
 }
 
 function needsTraining(){
-  var M=tutMeta(); return !M.skipped&&(!M.done||(M.version|0)<GUIDE_VERSION);
+  var M=tutMeta(); return !M.skipped&&!M.basicSkipped&&!M.basicDone&&!M.done;
 }
 function trainingUiState(){
-  var M=tutMeta(),done=!!M.done&&(M.version|0)>=GUIDE_VERSION,
+  var M=tutMeta(),certified=!!M.done&&(M.version|0)>=GUIDE_VERSION,
+      basicDone=!!M.basicDone||certified,done=basicDone,
       active=!!TUT.trainingMode&&!!TUT.active&&typeof running!=='undefined'&&!!running,
-      progress=done?STEPS.length:(active?TUT.stepIdx:Math.min(STEPS.length-1,M.progress|0)),
-      interrupted=!done&&!active&&(progress>0||!!M.skipped),rewarded=(M.rewardedVersion|0)>=GUIDE_VERSION;
-  return {done:done,active:active,interrupted:interrupted,progress:progress,rewarded:rewarded,
-    state:done?'COMPLETED · REPLAYABLE':active?'TRAINING PAUSED · RESUMABLE':interrupted?'INCOMPLETE · RESTARTABLE':'RECOMMENDED · SKIPS WAR TABLE',
-    action:done?'↻ REPLAY TRAINING':active?'▶ RESUME TRAINING':interrupted?'↻ RESTART TRAINING':'▶ START TRAINING'};
+      course=active?courseName():(certified?'certification':'basic'),
+      total=active?courseSteps().length:(certified?STEPS.length:BASIC_STEPS.length),
+      progress=active?TUT.stepIdx:certified?STEPS.length:basicDone?BASIC_STEPS.length:
+        Math.min(BASIC_STEPS.length,M.basicProgress|0),
+      interrupted=!done&&!active&&(progress>0||!!M.skipped||!!M.basicSkipped),rewarded=(M.rewardedVersion|0)>=GUIDE_VERSION;
+  return {done:done,basicDone:basicDone,certified:certified,active:active,course:course,total:total,
+    interrupted:interrupted,progress:progress,rewarded:rewarded,
+    state:active?(TUT.basicMode?'PLANETARY BASICS ACTIVE':'FIELD CERTIFICATION ACTIVE'):
+      certified?'FIELD CERTIFIED · REPLAYABLE':basicDone?'BASICS COMPLETE · CERTIFICATION AVAILABLE':
+      interrupted?'INCOMPLETE · RESTARTABLE':'RECOMMENDED · SHORT PROTECTED DROP',
+    action:active?'▶ RESUME TRAINING':certified?'↻ REPLAY CERTIFICATION':basicDone?'▶ START FIELD CERTIFICATION':
+      interrupted?'↻ RESTART BASICS':'▶ START PLANETARY BASICS'};
 }
 function updateTrainingEntry(){
   var S=trainingUiState();
   /* The training card's label and state line come from trainingUiState(), the
-     same source the Operations card reads, so the two can never disagree. If
-     the War Room is on screen, refresh it in place. */
-  var wr=document.getElementById('warScr');
-  if(wr&&wr.style.display&&wr.style.display!=='none'&&typeof renderWarRoom==='function') renderWarRoom();
-  var op=document.getElementById('keelTrainingOp'),sig=[S.done,S.active,S.interrupted,S.progress,S.rewarded].join(':');
+     same source the Operations card reads, so the two can never disagree. The
+     old 350 ms poll rebuilt `#warGrid` unconditionally; if that landed between
+     a card's pointerdown and pointerup, mfBindTap's press record disappeared
+     and the card silently did nothing. Refresh only when its rendered state
+     changed, preserving the live control and its accessibility semantics
+     through ordinary taps. */
+  var wr=document.getElementById('warScr'),grid=document.getElementById('warGrid');
+  var warSig=[S.done,S.certified,S.active,S.course,S.total,S.interrupted,S.progress,S.rewarded,S.state,S.action].join(':');
+  if(wr&&wr.style.display&&wr.style.display!=='none'&&typeof renderWarRoom==='function'
+     &&(!grid||grid.dataset.mfTrainingSig!==warSig)) renderWarRoom();
+  var op=document.getElementById('keelTrainingOp'),sig=[S.done,S.certified,S.active,S.course,S.total,S.interrupted,S.progress,S.rewarded].join(':');
   if(op&&op.dataset.stateSig!==sig) appendTrainingOperation();
 }
 function openTrainingBrief(){
@@ -1091,28 +1249,28 @@ function ensureTrainingEntry(){
 function appendTrainingOperation(){
   var pane=document.getElementById('opsPane-threat'); if(!pane) return;
   var old=document.getElementById('keelTrainingOp'); if(old) old.remove();
-  var S=trainingUiState(),nova=typeof facArt==='function'?facArt('nova'):null,
-      commander=(nova&&nova.cdr)||'Captain Elara Kai',progressPct=Math.round(S.progress/STEPS.length*100),
+  var S=trainingUiState(),displayDone=!S.active&&S.done,progressPct=Math.round(S.progress/Math.max(1,S.total)*100),
+      topicHtml=S.course==='basic'
+        ?'<span>◇ CAMERA</span><span>⚓ LANDING</span><span>★ COMMANDER</span><span>⬡ ECONOMY</span><span>▣ PRODUCTION</span><span>➤ ORDERS</span><span>◎ EXTRACTION</span>'
+        :'<span>⌁ LOGISTICS</span><span>⬢ COUNTERS</span><span>⛨ DEFENCE</span><span>Ⅳ PLATOONS</span><span>⌾ SCOUTING</span><span>⌬ TECH</span><span>✦ POWERS</span>',
       rewardText=S.rewarded?'FIRST-CLEAR REWARD CLAIMED':'FIRST CLEAR · +'+TRAINING_REWARD+' ⬡ CORES';
   var d=document.createElement('article'); d.id='keelTrainingOp';
-  d.className='keelTrainingOp'+(S.done?' done':'')+(S.active?' active':'');
-  d.dataset.stateSig=[S.done,S.active,S.interrupted,S.progress,S.rewarded].join(':');
+  d.className='keelTrainingOp'+(displayDone?' done':'')+(S.active?' active':'');
+  d.dataset.stateSig=[S.done,S.certified,S.active,S.course,S.total,S.interrupted,S.progress,S.rewarded].join(':');
   d.dataset.progress=String(S.progress);
   d.innerHTML='<header class="ktoHead"><span>'+S.state+'</span><b>'+rewardText+'</b></header>'
-    +'<div class="ktoHero"><div class="ktoPortrait"><img src="./assets/factions/nova_192.jpg" alt="'+commander+', Nova commander">'
-      +'<span>'+(typeof facIcon==='function'?facIcon('nova',38,'ktoCrestImg'):'✦')+'</span></div>'
-      +'<div class="ktoIdentity"><small>TRAINING OPERATION 01</small><b>FIELD ORIENTATION</b>'
-      +'<i>'+commander+' · KEEL tactical guidance</i>'
-      +'<p>A protected live-fire drop. Skips the galaxy war table and lands on a fixed training map with no early enemy rush.</p></div></div>'
-    +'<div class="ktoTeach" aria-label="Training topics"><span>◇ CAMERA</span><span>⬡ ECONOMY</span><span>▣ PRODUCTION</span>'
-      +'<span>➤ ORDERS</span><span>n/1K POP</span><span>⛨ DEFENCE</span><span>Ⅳ PLATOONS</span><span>⌾ SCOUTING</span>'
-      +'<span>⌬ TECH</span><span>✦ POWERS</span><span>☁ SAVES</span></div>'
-    +'<div class="ktoProgress"><div><span>OBJECTIVE PROGRESS</span><b>'+S.progress+' / '+STEPS.length+'</b></div>'
+    +'<div class="ktoHero"><div class="ktoPortrait ktoUgaPortrait" role="img" aria-label="KEEL, UGA ship liaison">'
+      +'<span class="ktoUgaSeal"><b>UGA</b><i>KEEL</i></span></div>'
+      +'<div class="ktoIdentity"><small>UGA TRAINING OPERATION 01</small><b>'+(S.course==='basic'?'PLANETARY BASICS':'FIELD CERTIFICATION')+'</b>'
+      +'<i>KEEL · UGA SHIP LIAISON</i>'
+      +'<p>'+(S.course==='basic'?'<b>Short faction-neutral orientation.</b> Learn the essentials before faction and Commander 1 commissioning.':'<b>Optional advanced course.</b> Continue into counters, logistics, defence, formations, scouting and technology.')+'</p></div></div>'
+    +'<div class="ktoTeach" aria-label="Training topics">'+topicHtml+'</div>'
+    +'<div class="ktoProgress"><div><span>OBJECTIVE PROGRESS</span><b>'+S.progress+' / '+S.total+'</b></div>'
       +'<div class="ktoProgressTrack"><i style="width:'+progressPct+'%"></i></div>'
-      +'<small>'+(S.done?'Orientation certified · replay does not repeat the first-clear reward':
-                   S.active?'Current lesson: '+(STEPS[Math.min(TUT.stepIdx,STEPS.length-1)].id||'field systems').toUpperCase():
-                   S.interrupted?'Previous best retained · a new drop restarts at camera control':STEPS.length+' guided objectives · progress is saved to this profile')+'</small></div>'
-    +'<div class="ktoFacts"><div><b>'+STEPS.length+'</b><span>OBJECTIVES</span></div><div><b>EASY</b><span>FIXED OPPONENT</span></div>'
+      +'<small>'+(S.active?'Current lesson: '+((courseSteps()[Math.min(TUT.stepIdx,courseSteps().length-1)]||{}).id||'field systems').toUpperCase():
+                   S.done?'Orientation certified · replay does not repeat the first-clear reward':
+                   S.interrupted?'Previous best retained · a new drop restarts at camera control':S.total+' guided objectives · progress is saved to this profile')+'</small></div>'
+    +'<div class="ktoFacts"><div><b>'+S.total+'</b><span>OBJECTIVES</span></div><div><b>EASY</b><span>FIXED OPPONENT</span></div>'
       +'<div><b>SAFE</b><span>NO INFESTATION</span></div></div>'
     +'<button class="ktoAction" type="button">'+S.action+'</button>';
   pane.insertBefore(d,pane.firstChild);
@@ -1146,18 +1304,19 @@ function tutSettingsAction(){
 function appendTutorialSettingsRow(){
   var list=document.getElementById('setList');
   if(!list) return;
-  var M=tutMeta();
-  var status=TUT.active? ('Training in progress — step '+(TUT.stepIdx+1)+' of '+STEPS.length)
-             : M.done? 'Completed'
-             : M.skipped? 'Skipped'
+  var M=tutMeta(),S=trainingUiState();
+  var status=TUT.active? ('Training in progress — step '+(TUT.stepIdx+1)+' of '+courseSteps().length)
+             : S.certified? 'Field certification completed'
+             : S.basicDone? 'Planetary basics completed · advanced certification available'
+             : M.skipped||M.basicSkipped? 'Skipped'
              : 'Not started yet';
-  var label=trainingUiState().active?'▶ RESUME':(!M.done&&!M.skipped&&!TUT.active)? '▶ START' : '↺ REPLAY';
+  var label=S.active?'▶ RESUME':S.certified?'↺ REPLAY':S.basicDone?'▶ ADVANCED':(!M.skipped&&!M.basicSkipped&&!TUT.active)?'▶ START':'↺ RESTART';
   var row=document.createElement('div');
   row.className='sItem setRow';
   row.id='keelSetRow';
   row.setAttribute('role','button');
   row.setAttribute('tabindex','0');
-  row.innerHTML='<div class="sTx"><b>🎓 Training Operation</b><div class="sDs">'+status+' — skips the war table; protected mission with guided controls</div></div>'
+  row.innerHTML='<div class="sTx"><b>🎓 Training Operation</b><div class="sDs">'+status+' — protected planetary mission with real-state objectives</div></div>'
     +'<div class="sBuy">'+label+'</div>';
   var act=function(ev){ if(ev){ ev.preventDefault(); } tutSettingsAction(); };
   row.addEventListener('pointerdown',act);
@@ -1237,16 +1396,23 @@ function initTutorial(){
   setInterval(tutTick,350);
 }
 window.initTutorial=initTutorial;
-/* Main-menu navigation owns the application-level exit transaction. Export
-   the training cleanup explicitly so returnToMainMenu() can actually call it;
-   this file is intentionally scoped in an IIFE, so a bare function declaration
-   was never global and the old typeof guard silently did nothing. */
+/* Main-menu and War Room navigation own application-level entry/exit
+   transactions. This file is intentionally scoped in an IIFE, so expose the
+   small public bridge explicitly: otherwise meta.js' defensive typeof checks
+   see no Training handlers at all and the card silently does nothing. */
 window.cancelTrainingMission=cancelTrainingMission;
 window.trainingMissionActive=function(){return !!(TUT.trainingMode||trainingPrev);};
+window.trainingUiState=trainingUiState;
+window.resumeTrainingMission=resumeTrainingMission;
+window.needsTraining=needsTraining;
+/* commander.js legacyVoiceSpeak checks window.speakVoice before voPlay.
+   __tutDebug alone is not enough — the global must exist for battle comms. */
+window.speakVoice=speakVoice;
 /* Inspection hook for automated verification — read-only, harmless to leave
    wired for real players (no different from any other console-reachable
    global in this codebase). */
-window.__tutDebug=function(){ return {TUT:TUT,MATCH:MATCH,REACT:REACT,STEPS:STEPS,
+window.__tutDebug=function(){ return {TUT:TUT,MATCH:MATCH,REACT:REACT,STEPS:STEPS,BASIC_STEPS:BASIC_STEPS,
+  activeSteps:courseSteps(),trainingCompleteEvent:TRAINING_COMPLETE_EVENT,trainingSkipEvent:TRAINING_SKIP_EVENT,
   needsTraining:needsTraining(),startTraining:startTrainingMission,
   /* The voice plumbing lives inside this IIFE, so verifykeen.mjs cannot reach
      speak()/keenLineId()/pump() any other way. Read-only handles, no state. */

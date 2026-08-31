@@ -318,8 +318,8 @@ function mfNoticeHistoryShell(){
   el.innerHTML='<header><div><small>BATTLEFIELD COMMS</small><b>EVENT FEED</b></div><button type="button" aria-label="Close event feed">×</button></header>'+ 
     '<nav><button data-f="all" class="on">ALL</button><button data-f="alert">ALERTS</button><button data-f="command">ORDERS</button><button data-f="radio">RADIO</button><button data-f="pickup">LOOT</button></nav><div class="mfNoticeList"></div>';
   document.body.appendChild(el);
-  el.querySelector('header button').addEventListener('pointerdown',e=>{e.stopPropagation();mfNoticeHistoryClose();});
-  el.querySelectorAll('nav button').forEach(b=>b.addEventListener('pointerdown',e=>{e.stopPropagation();mfNHistoryFilter=b.dataset.f;mfNoticeHistoryRender();}));
+  mfBindNativePress(el.querySelector('header button'),e=>{e.stopPropagation();mfNoticeHistoryClose();});
+  el.querySelectorAll('nav button').forEach(b=>mfBindNativePress(b,e=>{e.stopPropagation();mfNHistoryFilter=b.dataset.f;mfNoticeHistoryRender();}));
   return el;
 }
 function mfNoticeHistoryRender(){
@@ -420,7 +420,7 @@ function mfFlowChipSync(){
     const c=mfFlowChips[id];
     const b=document.createElement('button');
     b.type='button'; b.className='mfChip'; b.textContent=c.label;
-    b.addEventListener('pointerdown',ev=>{ ev.preventDefault(); ev.stopPropagation();
+    mfBindNativePress(b,ev=>{ ev.preventDefault(); ev.stopPropagation();
       if(typeof sfx==='function') sfx('ui'); c.fn(); });
     r.appendChild(b);
   }
@@ -544,11 +544,19 @@ if(typeof updateWaveWarning==='function'){
    second on top of the main menu is still a banner on top of the main menu. */
 if(typeof showFrontScreen==='function'){
   const mfFlowBaseShowFront=showFrontScreen;
-  showFrontScreen=function(id){ mfFlowBaseShowFront(id); mfFlowLayout(); };
+  showFrontScreen=function(id){
+    const opened=mfFlowBaseShowFront(id);
+    mfFlowLayout();
+    return opened;
+  };
 }
 if(typeof hideFrontScreens==='function'){
   const mfFlowBaseHideFront=hideFrontScreens;
-  hideFrontScreens=function(except){ mfFlowBaseHideFront(except); mfFlowLayout(); };
+  hideFrontScreens=function(except){
+    const hidden=mfFlowBaseHideFront(except);
+    mfFlowLayout();
+    return hidden;
+  };
 }
 
 /* Stop / Hold readout lives in input.js (ustopDisp next to the orders).
@@ -572,12 +580,18 @@ if(typeof orderHold==='function'){
 }
 
 mfFlowTickT=setInterval(mfFlowTick,220);
-const mfNoticeLogBtn=mfFlowEl('noticeLogBtn');if(mfNoticeLogBtn)mfNoticeLogBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();const n=mfFlowEl('mfNoticeHistory');if(n&&n.style.display!=='none')mfNoticeHistoryClose();else mfNoticeHistoryOpen();});
+const mfNoticeLogBtn=mfFlowEl('noticeLogBtn');if(mfNoticeLogBtn)mfBindNativePress(mfNoticeLogBtn,e=>{e.preventDefault();e.stopPropagation();const n=mfFlowEl('mfNoticeHistory');if(n&&n.style.display!=='none')mfNoticeHistoryClose();else mfNoticeHistoryOpen();});
 const mfFlowWatch=new MutationObserver(()=>{
   for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el) el._mfVisH=undefined; }
   if(!mfFlowMute) mfFlowQueueLayout();
 });
-for(const id of ['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','hazChip','heroBar','topbar','selInfo','cmdbar','tacRow','grpRow','hotSlots','primaryRow','hudDeckTabs','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory'] ){
+/* mfFlowFrontOpen() owns the authoritative menu predicate, so the same front
+   screens must trigger its observer. Settings-from-pause changes only the
+   screen's inline display; without this list mfMenuOpen stayed latched after
+   Resume and hid the complete tactical HUD until an unrelated mutation. */
+const mfFlowWatchIds=['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','hazChip','heroBar','topbar','selInfo','cmdbar','tacRow','grpRow','hotSlots','primaryRow','hudDeckTabs','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory',
+  ...((typeof FRONT_SCREEN_IDS!=='undefined'&&FRONT_SCREEN_IDS.length)?FRONT_SCREEN_IDS.concat('loadScr'):MF_FRONT_FALLBACK)];
+for(const id of new Set(mfFlowWatchIds)){
   const el=mfFlowEl(id); if(el) mfFlowWatch.observe(el,{attributes:true,attributeFilter:['style','class']});
 }
 document.body&&mfFlowWatch.observe(document.body,{attributes:true,attributeFilter:['class']});
@@ -694,7 +708,8 @@ if(typeof renderOps==='function'&&!renderOps.__mfThreatTabFix){
    opens the war table. The tap still opens the War Room. trainingUiState()
    lives inside tutorial.js's IIFE, so meta.js's War Room card never receives
    SKIPS WAR TABLE. Settings copy in meta.js names engine internals (#grade,
-   film-grain) and advertises four audio buses when two exist.
+   film-grain). Audio now exposes the four independent Stage 8 buses named by
+   the settings copy.
    ============================================================================ */
 function mfPatchHomeChrome(){
   const start=document.getElementById('startBtn');
@@ -703,13 +718,15 @@ function mfPatchHomeChrome(){
     start.setAttribute('aria-label','Open the War Room');
   }
   const sub=document.querySelector('#settingsScr .subMenuHead span');
-  if(sub) sub.textContent='Audio · Battle · Display · Command · System';
+  if(sub) sub.textContent='Audio · Gameplay · Display · Command · System';
 }
 function mfPolishSettingsCopy(){
   const setDs=(sel,tx)=>{ const el=document.querySelector(sel); if(el) el.textContent=tx; };
-  setDs('#setGroup-audio .setGroupDs','Effects and music are separate. Tap a volume row to cycle 25–100%.');
+  setDs('#setGroup-audio .setGroupDs','Effects, ambience, music, and voice are independent. Tap a volume row to cycle 25–100%.');
   setDs('[data-set="sfxVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="ambVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
   setDs('[data-set="musicVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="voiceVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
   setDs('[data-set="cine"] .sDs','Warm sun wash and the color overlay. Not bloom — that is Advanced. Not the Screen Grade filter.');
   setDs('[data-set="screenGrade"] .sDs','No screen filter. Shows lighting, bloom, and vignette as authored.');
   setDs('[data-set="gfxAdvOpen"] .sDs','Independent overrides. Changing Graphics Quality resets these to that preset. Screen Grade stays on the row above.');
@@ -744,9 +761,10 @@ if(typeof mfRenameFrontNav==='function'&&!mfRenameFrontNav.__mfWarRoomLabel){
 if(typeof showFrontScreen==='function'&&!showFrontScreen.__mfHomeChrome){
   const _show=showFrontScreen;
   showFrontScreen=function(id){
-    _show.apply(this,arguments);
+    const opened=_show.apply(this,arguments);
     mfPatchHomeChrome();
     if(typeof audMusicEnterScreen==='function') audMusicEnterScreen(id);
+    return opened;
   };
   showFrontScreen.__mfHomeChrome=1;
 }

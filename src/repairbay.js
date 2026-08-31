@@ -129,7 +129,10 @@ function mfRepairBayTick(dt){
          seen; drawing one per serviced unit would turn a base full of
          casualties into a solid sheet of light. */
       if(k<2&&perfScale>0.4){
-        addBeam(B.x,B.y,ux[i],uy[i],2.4,150,235,120,MF_BAY_CADENCE,'repair');
+        if(typeof mfBeamUpsert==='function')
+          mfBeamUpsert('bay:'+blds.indexOf(B)+':'+i+':'+ugen[i],B.x,B.y,ux[i],uy[i],2.4,
+            150,235,120,'repair',B.team,{lease:MF_BAY_CADENCE*1.35,fadeIn:.05,fadeOut:.13});
+        else addBeam(B.x,B.y,ux[i],uy[i],2.4,150,235,120,MF_BAY_CADENCE,'repair');
         addParticle(2,ux[i]+rr(-5,5),uy[i]+rr(-5,5),rr(-3,3),rr(-9,-2),.4,2.8,150,235,120);
       }
     }
@@ -161,16 +164,20 @@ function mfEngineerRaiseTick(){
     if(!ualive[i]) continue;
     const T=TYPES[utype[i]];
     if(!T||!T.builder) continue;
+    const beamKey='u:'+i+':'+ugen[i]+':engineer-raise';
     /* A fresh move / patrol / barrage / guard order wins. Once they arrive
        (ustate 1 → 0 at 7 units), the next tick picks up the foundation. */
-    if(ustate[i]===1||ustate[i]===5||ustate[i]===6||ustate[i]===7) continue;
+    if(ustate[i]===1||ustate[i]===5||ustate[i]===6||ustate[i]===7){
+      if(typeof mfBeamStop==='function')mfBeamStop(beamKey,.1);
+      continue;
+    }
     let best=null,bd=MF_ENG_RAISE_R*MF_ENG_RAISE_R;
     for(const B of blds){
       if(!B.alive||B.team!==uteam[i]||B.prog>=1) continue;
       const d=dist2(ux[i],uy[i],B.x,B.y);
       if(d<bd){bd=d;best=B;}
     }
-    if(!best) continue;
+    if(!best){if(typeof mfBeamStop==='function')mfBeamStop(beamKey,.1);continue;}
     const n=Math.min(2,(best.tractorFrame===tick?(best.tractorN||0)+1:1));
     best.tractorT=.18; best.tractorN=n; best.tractorFrame=tick;
     uheal[i]=0.6; umov[i]=0;
@@ -178,8 +185,12 @@ function mfEngineerRaiseTick(){
       mfEngRaiseAnnounced=true;
       toast('🔧 CONSTRUCTORS RAISE STRUCTURES — park one on a foundation to finish it faster');
     }
-    if(n<=2&&perfScale>0.4)
-      addBeam(ux[i],uy[i],best.x,best.y,2.4,170,220,255,0.12,'repair');
+    if(n<=2&&perfScale>0.4){
+      if(typeof mfBeamUpsert==='function')
+        mfBeamUpsert(beamKey,ux[i],uy[i],best.x,best.y,2.4,170,220,255,'repair',uteam[i],
+          {lease:.18,fadeIn:.045,fadeOut:.1});
+      else addBeam(ux[i],uy[i],best.x,best.y,2.4,170,220,255,0.12,'repair');
+    }else if(typeof mfBeamStop==='function')mfBeamStop(beamKey,.1);
   }
 }
 

@@ -31,6 +31,7 @@
 let AUTH_CFG={googleClientId:'',facebookAppId:'',syncUrl:''};
 let ACCOUNT=null;                       // {provider,id,name,email,picture,at}
 let SYNC={state:'off', last:0, err:''};
+let ACC_IMPORT_TXN=false;
 const ACC_KEY='massfront_account_v1';
 
 function accSave(){
@@ -269,33 +270,135 @@ function accApplySetupLive(){
     if(typeof renderFacRow==='function') renderFacRow();
   }catch(e){}
 }
+function accTxnClone(v){ return JSON.parse(JSON.stringify(v)); }
+function accTxnRead(key){
+  try{ return {ok:true,key,value:localStorage.getItem(key)}; }
+  catch(e){ return {ok:false,key,value:null}; }
+}
+function accTxnRestore(rec){
+  if(!rec||!rec.ok) return false;
+  try{
+    /* A rejected candidate write often leaves the old bytes untouched. Check
+       that first: rewriting an already-correct record can itself fail under
+       quota pressure and would turn a clean rollback into a false emergency. */
+    if(localStorage.getItem(rec.key)===rec.value) return true;
+    /* Removing only a record created by this failed transaction restores the
+       exact prior absence. Never evict unrelated saves to manufacture quota. */
+    if(rec.value===null) localStorage.removeItem(rec.key);
+    else localStorage.setItem(rec.key,rec.value);
+    return localStorage.getItem(rec.key)===rec.value;
+  }catch(e){ return false; }
+}
+function accImportStorageFailure(recovered,error){
+  const detail=String(error&&error.message||error||'unknown import failure');
+  try{ console.warn('save import transaction failed:',detail,'storage rollback:',recovered===false?'INCOMPLETE':'complete'); }catch(e){}
+  const storageFailure=/profile-(write|readback)|career-write|save-readback|grant-write|storage|quota/i.test(detail);
+  const m=recovered===false
+    ? 'Save import stopped and this session was restored, but device storage could not restore every previous record. Keep the game open, free space, then export or retry before closing.'
+    : storageFailure
+      ? 'Save was not imported because this device is low on storage or storage is unavailable. Your current career is unchanged — free space and try again.'
+      : 'Save was not imported because it could not be verified safely. Your current career is unchanged.';
+  if(typeof toast==='function') toast(m);
+  else if(typeof accToast==='function') accToast(m);
+}
 function applyCareerPayload(p,src,opts){
   opts=opts||{};
   if(!p||!p.meta||typeof p.meta!=='object') return false;
-  META=Object.assign({},META,p.meta);
-  if(typeof metaHarden==='function') metaHarden();
-  else {
-    if(!META.owned||typeof META.owned!=='object') META.owned={};
-    if(!META.facWins||typeof META.facWins!=='object') META.facWins={};
-    if(!META.mapWins||typeof META.mapWins!=='object') META.mapWins={};
-    if(!META.campaign||typeof META.campaign!=='object') META.campaign={missions:{}};
-    if(!META.campaign.missions||typeof META.campaign.missions!=='object') META.campaign.missions={};
-    if(typeof DEF_SETTINGS!=='undefined') META.settings=Object.assign({},DEF_SETTINGS,META.settings||{});
-    if(typeof invBag==='function') invBag();
-  }
-  if(p.profile){
-    const a=typeof activeProf==='function'?activeProf():null;
-    if(a){
+  const a=typeof activeProf==='function'?activeProf():null;
+  const profileKey=typeof PROF_KEY!=='undefined'?PROF_KEY:'massfront_profiles_v1';
+  const activeId=typeof PROFILES!=='undefined'?PROFILES.active:null;
+  let metaBefore,profileBefore,syncBefore,metaRecord,profileRecord,metaRecordKey;
+  try{
+    metaBefore=accTxnClone(META);
+    profileBefore=a?accTxnClone(a):null;
+    syncBefore=accTxnClone(SYNC);
+    metaRecordKey=typeof metaKey==='function'?metaKey():'massfront_meta_'+(activeId||'');
+    metaRecord=accTxnRead(metaRecordKey);
+    profileRecord=accTxnRead(profileKey);
+  }catch(e){ accImportStorageFailure(true,e); return false; }
+  if(!metaRecord.ok||!profileRecord.ok){ accImportStorageFailure(true,new Error('storage-read')); return false; }
+
+  let persisted=false,failure=null,grantTxn=false;
+  try{
+    if(typeof metaCoreGrantTxnBegin==='function'){
+      grantTxn=metaCoreGrantTxnBegin();
+      if(!grantTxn) throw new Error('core-grant-transaction-busy');
+    }
+    /* A file load replaces a career; it must not inherit progression bags that
+       an older save schema simply did not know about from the target device. */
+    const fresh=typeof metaFresh==='function'?metaFresh():{};
+    META=Object.assign(fresh,p.meta);
+    if(typeof metaHarden==='function') metaHarden();
+    else {
+      if(!META.owned||typeof META.owned!=='object') META.owned={};
+      if(!META.facWins||typeof META.facWins!=='object') META.facWins={};
+      if(!META.mapWins||typeof META.mapWins!=='object') META.mapWins={};
+      if(!META.campaign||typeof META.campaign!=='object') META.campaign={missions:{}};
+      if(!META.campaign.missions||typeof META.campaign.missions!=='object') META.campaign.missions={};
+      if(typeof DEF_SETTINGS!=='undefined') META.settings=Object.assign({},DEF_SETTINGS,META.settings||{});
+      if(typeof invBag==='function') invBag();
+    }
+    if(p.profile&&a){
       if(p.profile.name) a.name=p.profile.name;
       if(p.profile.emblem) a.emblem=p.profile.emblem;
       if('char' in p.profile) a.char=p.profile.char;
       if('title' in p.profile) a.title=p.profile.title;
       if('frame' in p.profile) a.frame=p.profile.frame;
       if('link' in p.profile) a.link=p.profile.link;
-      if(typeof profSave==='function') profSave();
+    }
+    /* Run the legacy Armory retirement on the live candidate before the
+       canonical-faction save wrapper takes its shallow copy. Otherwise the
+       stored refund can differ from the live/read-back candidate. */
+    if(typeof armoryRetireOverlaps==='function') armoryRetireOverlaps();
+
+    /* A restore is one transaction even though the browser exposes only
+       per-key writes. Suppress the normal cloud debounce until both local
+       records have been written and read back byte-for-byte. */
+    ACC_IMPORT_TXN=true;
+    const profileText=JSON.stringify(typeof PROFILES!=='undefined'?PROFILES:{active:activeId,list:a?[a]:[]});
+    if(typeof profSave!=='function'||profSave()!==true) throw new Error('profile-write');
+    if(localStorage.getItem(profileKey)!==profileText) throw new Error('profile-readback');
+    if(typeof metaSave!=='function'||metaSave(true)!==true) throw new Error('career-write');
+    const storedMeta=typeof facPersistMeta==='function'?facPersistMeta(META):META;
+    const metaText=JSON.stringify(storedMeta);
+    if(localStorage.getItem(metaRecordKey)!==metaText||localStorage.getItem(profileKey)!==profileText)
+      throw new Error('save-readback');
+    persisted=true;
+  }catch(e){ failure=e; }
+  finally{
+    ACC_IMPORT_TXN=false;
+    if(grantTxn&&typeof metaCoreGrantTxnEnd==='function'){
+      try{
+        if(persisted&&metaCoreGrantTxnEnd(true)===false){
+          persisted=false;failure=new Error('grant-write');
+        }else if(!persisted) metaCoreGrantTxnEnd(false);
+      }catch(e){
+        if(persisted){ persisted=false;failure=e; }
+        try{ console.warn('save import grant dispatch failed',e); }catch(ignore){}
+      }
     }
   }
-  if(typeof metaSave==='function') metaSave();
+
+  if(!persisted){
+    META=metaBefore;
+    if(a&&profileBefore){
+      Object.keys(a).forEach(k=>delete a[k]);
+      Object.assign(a,profileBefore);
+    }
+    if(typeof PROFILES!=='undefined') PROFILES.active=activeId;
+    Object.keys(SYNC).forEach(k=>delete SYNC[k]);
+    Object.assign(SYNC,syncBefore);
+    /* Exact, scoped restoration is best-effort: quota pressure can reject even
+       the previous bytes, but no unrelated record is ever deleted to make room. */
+    const metaRestored=accTxnRestore(metaRecord),profileRestored=accTxnRestore(profileRecord);
+    const recovered=metaRestored&&profileRestored;
+    if(!recovered){
+      SYNC.state='error';
+      SYNC.err='Local save rollback incomplete; keep this session open and free device storage.';
+    }
+    accImportStorageFailure(recovered,failure);
+    return false;
+  }
   if(typeof applyColor==='function') try{ applyColor(); }catch(e){}
   if(typeof applySettings==='function') try{ applySettings(); }catch(e){}
   accApplySetupLive();
@@ -306,24 +409,27 @@ function applyCareerPayload(p,src,opts){
   accUi(renderMetaHead); accUi(renderProfile); accUi(renderAccount);
   accUi(renderSettings); accUi(renderBoosts); accUi(storyRefreshBadge);
   SYNC.state='ok'; SYNC.last=Date.now();
+  try{ cloudAutoSave(); }catch(e){}
   if(!opts.quiet && typeof toast==='function') toast('✓ Restored from '+(src||'save'));
   return true;
 }
 function applyIncoming(p,src,force){
+  force=!!force;
   const use=()=>{
-    applyCareerPayload(p,src);
+    const ok=applyCareerPayload(p,src);
     /* An explicit file load is this device's new master copy. Mark pulled so
        a later auto-push cannot cloudPull and undo the file we just applied. */
-    if(force) cloudMarkPulled();
+    if(ok&&force) cloudMarkPulled();
+    return ok;
   };
-  if(force){ use(); return; }
+  if(force) return use();
   const mine=careerWeight(META), theirs=careerWeight(p&&p.meta);
-  if(theirs>mine*1.02) use();
+  if(theirs>mine*1.02) return use();
   else if(mine>theirs*1.02){
     accConfirm('This device is further along than the '+src+' save ('+
       Math.round(mine/1000)+'k vs '+Math.round(theirs/1000)+'k career score). Keep this device?',
       ()=>{ SYNC.state='ok'; syncPush(); }, use);
-  } else use();
+  } else return use();
 }
 
 /* ---- CLOUD PAYLOAD CODEC ---------------------------------------------------
@@ -535,6 +641,7 @@ function renderAccount(){
           (CLOUD.last?new Date(CLOUD.last).toLocaleTimeString():'ready')+'.'
       : CLOUD.state==='syncing' ? '☁ Syncing career to your account…'
       : CLOUD.state==='pending' ? '☁ Cloud backup waiting — will retry when online.'
+      : CLOUD.state==='error' ? '⚠ '+(CLOUD.err||'Cloud save could not be stored safely on this device.')
       : '✓ Account session active · local autosave remains available offline.';
   } else if(ACCOUNT){
     who.textContent=ACCOUNT.name;
@@ -600,7 +707,7 @@ function renderAccount(){
    one. Non-blocking and offline-safe (netAllowed), the same contract
    economy-net.js/offline.js use. Signed-out play is untouched — the local save
    in game/meta.js stays the source of truth. */
-const CLOUD={ state:'off', last:0, busy:false, dirty:false, timer:0, pulledFor:'', announced:false };
+const CLOUD={ state:'off', last:0, err:'', busy:false, dirty:false, timer:0, pulledFor:'', announced:false, diffToldFor:null };
 function cloudBase(){ return ((typeof apEndpoint==='function'&&apEndpoint())||AUTH_CFG.syncUrl||'').replace(/\/+$/,''); }
 function cloudSession(){ return (typeof AP_SESSION!=='undefined'&&AP_SESSION&&AP_SESSION.token)?AP_SESSION:null; }
 function cloudOnline(){ return typeof netAllowed!=='function'||netAllowed(); }
@@ -623,7 +730,7 @@ async function cloudPush(){
       headers:{'content-type':'application/json','authorization':'Bearer '+sess.token},
       cache:'no-store', body:JSON.stringify({payload}) });
     if(!r.ok) throw new Error('HTTP '+r.status);
-    CLOUD.state='ok'; CLOUD.last=Date.now();
+    CLOUD.state='ok'; CLOUD.err=''; CLOUD.last=Date.now();
     if(!CLOUD.announced){ CLOUD.announced=true; if(typeof toast==='function') toast('☁ Progress is now saving to your account'); }
   }catch(e){ CLOUD.state='pending'; CLOUD.dirty=true; }
   finally{ CLOUD.busy=false; if(typeof renderAccount==='function') renderAccount(); }
@@ -642,9 +749,13 @@ function cloudMerge(incoming){
     if(!incoming||!incoming.meta){ cloudMarkPulled(); cloudAutoSave(); return; }
     const mine=careerWeight(META), theirs=careerWeight(incoming.meta);
     if(theirs>mine*1.02){
-      applyCareerPayload(incoming,'your account');
-      cloudMarkPulled();
-      return;
+      const ok=applyCareerPayload(incoming,'your account');
+      if(ok){ CLOUD.err=''; cloudMarkPulled(); }
+      else {
+        CLOUD.state='error';
+        CLOUD.err='Cloud save downloaded, but local storage could not verify it. Free space and retry.';
+      }
+      return ok;
     }
     if(mine>theirs*1.02){
       cloudMarkPulled();
@@ -652,50 +763,87 @@ function cloudMerge(incoming){
       return;
     }
     const local=typeof syncPayload==='function'?syncPayload():{profile:null,meta:META};
-    if(typeof apSavesEquivalent==='function' && apSavesEquivalent(local, incoming)){
+    /* COMPARE IN ONE ENCODING.
+       src/faction-id.js maintains a canonical<->runtime seam in which two of the
+       four factions rename: dominion<->legion and brood<->horde. It then wraps
+       BOTH sides of this comparison, in OPPOSITE directions - syncPayload gets
+       persistMeta (canonical) at faction-id.js:49, and this function's argument
+       gets restoreMeta (runtime) at faction-id.js:51. So for any career that has
+       ever selected, favoured or won with Crimson Dominion or Brood Swarm, the
+       two operands could NEVER be equal, no matter how perfectly the saves
+       matched - and the player was told their cloud save differs, forever, on a
+       ~30 second floor. (Nova/Syndicate-only careers escape, because their keys
+       are identical across the seam. That is why this went unnoticed.)
+       Normalise the incoming side back to canonical so both are in the same
+       encoding. The comparator is correct; it was being fed mismatched inputs. */
+    const incomingCanon=(typeof facPersistMeta==='function'&&incoming&&incoming.meta)
+      ? Object.assign({},incoming,{meta:facPersistMeta(incoming.meta)})
+      : incoming;
+    if(typeof apSavesEquivalent==='function' && apSavesEquivalent(local, incomingCanon)){
       cloudMarkPulled();
-      CLOUD.state='ok'; CLOUD.last=Date.now();
+      CLOUD.state='ok'; CLOUD.err=''; CLOUD.last=Date.now();
       return;
     }
     /* Similar career score, different contents (settings, identity, gear).
        Do not auto-write either side — that is how a settings-only cloud copy
        used to vanish. Manual Pull/Push in the account panel decides. */
-    CLOUD.state='ok';
-    if(typeof toast==='function')
-      toast('☁ Cloud save differs — restore or backup from Profile ▸ Account');
+    CLOUD.state='ok'; CLOUD.err='';
+    /* SAY IT ONCE PER SESSION, NOT EVERY 30 SECONDS.
+       toast() has no dedupe or rate limit and CSS stamps every toast with the
+       COMMAND NOTICE header, so this shared the in-match rail with wave
+       warnings and fired on each autosave debounce (~4 s during play) and on an
+       unconditional 30 s retry. Repeating it adds no information: the state is
+       identical each time and the remedy is a manual action in another screen. */
+    const _sess=cloudSession(), _tok=_sess?_sess.token:'';
+    if(CLOUD.diffToldFor!==_tok){
+      CLOUD.diffToldFor=_tok;
+      if(typeof toast==='function')
+        toast('☁ Cloud save differs — restore or backup from Profile ▸ Account');
+    }
   }catch(e){}
 }
 async function cloudPull(){
   const sess=cloudSession();
   if(!cloudBase()||!sess||!cloudOnline()||CLOUD.busy) return;
   CLOUD.busy=true; CLOUD.state='syncing'; if(typeof renderAccount==='function') renderAccount();
-  let incoming=null, reached=false;
+  let incoming=null, reached=false, payloadPresent=false, decodeFailed=false;
   try{
     const r=await accFetch(cloudBase()+'/save',{ method:'GET',
       headers:{'authorization':'Bearer '+sess.token}, cache:'no-store' });
     if(!r.ok) throw new Error('HTTP '+r.status);
     const j=await r.json();
-    reached=true; CLOUD.state='ok'; CLOUD.last=Date.now();
-    if(j&&j.payload){ try{ incoming=await decodeSave(j.payload); }catch(e){ incoming=null; } }
+    reached=true; CLOUD.state='ok'; CLOUD.err=''; CLOUD.last=Date.now();
+    payloadPresent=!!j&&j.payload!=null;
+    if(payloadPresent){
+      try{
+        incoming=await decodeSave(j.payload);
+        if(!incoming||!incoming.meta||typeof incoming.meta!=='object') throw new Error('invalid cloud save payload');
+      }catch(e){
+        incoming=null; decodeFailed=true; CLOUD.state='error';
+        CLOUD.err='Cloud save could not be decoded safely. This device did not overwrite it.';
+      }
+    }
   }catch(e){ CLOUD.state='pending'; }
   CLOUD.busy=false;
   if(incoming&&incoming.meta) cloudMerge(incoming);
-  else if(reached){ cloudMarkPulled(); cloudAutoSave(); }
+  else if(reached&&!payloadPresent){ cloudMarkPulled(); cloudAutoSave(); }
+  else if(decodeFailed&&typeof toast==='function') toast('⚠ '+CLOUD.err);
   if(typeof renderAccount==='function') renderAccount();
+  return !decodeFailed;
 }
 function initCloudSave(){
   /* every local save also schedules an account push, when signed in. Wrap,
      don't edit game/meta.js (the takeover pattern this codebase uses). */
   if(typeof metaSave==='function' && !metaSave.__mfCloud){
     const _ms=metaSave;
-    metaSave=function(){ const r=_ms.apply(this,arguments); try{ cloudAutoSave(); }catch(e){} return r; };
+    metaSave=function(){ const r=_ms.apply(this,arguments); if(!ACC_IMPORT_TXN)try{ cloudAutoSave(); }catch(e){} return r; };
     metaSave.__mfCloud=true;
   }
   /* Identity lives on the profile record (profSave), not META. Without this
      wrap, renaming a commander or picking a title never reached the account. */
   if(typeof profSave==='function' && !profSave.__mfCloud){
     const _ps=profSave;
-    profSave=function(){ const r=_ps.apply(this,arguments); try{ cloudAutoSave(); }catch(e){} return r; };
+    profSave=function(){ const r=_ps.apply(this,arguments); if(!ACC_IMPORT_TXN)try{ cloudAutoSave(); }catch(e){} return r; };
     profSave.__mfCloud=true;
   }
   /* Sign-in comparison belongs to apOfferSyncAfterSignIn. Auto-pull here raced
@@ -711,13 +859,20 @@ function initCloudSave(){
   }
   if(typeof apCommitIncoming==='function' && !apCommitIncoming.__mfCloud){
     apCommitIncoming=function(data){
-      applyCareerPayload(data,'cloud',{quiet:true});
+      const ok=applyCareerPayload(data,'cloud',{quiet:true});
+      if(!ok){
+        const m='Cloud save was not restored because it could not be stored and verified safely. Free space and try again.';
+        if(typeof apSyncSet==='function') apSyncSet('error',m,false);
+        if(typeof apToast==='function') apToast(m);
+        return false;
+      }
       cloudMarkPulled();
       if(typeof AP_LAST_PULL!=='undefined') AP_LAST_PULL=Date.now();
       if(typeof apSyncSet==='function')
         apSyncSet('success','SYNCED: Cloud save restored to this device - '+
           (typeof apSaveStats==='function'?apSaveStats(data):''), false);
       if(typeof apToast==='function') apToast('✓ Cloud save restored');
+      return true;
     };
     apCommitIncoming.__mfCloud=true;
   }
@@ -733,7 +888,7 @@ function initCloudSave(){
   /* on sign-out, push the final state while the token is still valid, then reset */
   if(typeof apClearSession==='function' && !apClearSession.__mfCloud){
     const _clr=apClearSession;
-    apClearSession=function(){ try{ if(cloudSession()&&CLOUD.dirty&&CLOUD.pulledFor) cloudPush(); }catch(e){} const r=_clr.apply(this,arguments); CLOUD.state='off'; CLOUD.pulledFor=''; CLOUD.announced=false; return r; };
+    apClearSession=function(){ try{ if(cloudSession()&&CLOUD.dirty&&CLOUD.pulledFor) cloudPush(); }catch(e){} const r=_clr.apply(this,arguments); CLOUD.state='off'; CLOUD.err=''; CLOUD.pulledFor=''; CLOUD.announced=false; return r; };
     apClearSession.__mfCloud=true;
   }
   /* already signed in at launch -> restore/merge once (not on a fresh sign-in) */
@@ -756,11 +911,11 @@ async function initAccounts(){
   const $$=id=>document.getElementById(id);
   const get=$$('saveFileGet'), put=$$('saveFilePut'), input=$$('saveFileInput');
   /* Android WebView drops the compatibility click when the finger drifts a few
-     pixels inside the scrollable Transfer panel this button sits in, so a plain
-     click binding read as a dead button on real phones: no file, no share
-     sheet, no toast, because the handler never ran. Bind through mfBindTap
-     (pointer-up + slop — the same fix the tab rows already use) and keep click
-     as the fallback so keyboard/AT activation still works. */
+     pixels inside the scrollable Transfer panel this button sits in, so native
+     builds need mfBindTap's pointer-up + slop path. A browser download is the
+     opposite: Chromium accepts the Blob navigation only from the trusted click
+     path even while userActivation remains true after pointer-up. Split the
+     binding by runtime so both player paths retain their platform contract. */
   const doSaveFile=async e=>{
     if(e&&e.stopPropagation) e.stopPropagation();
     const label=get.textContent; get.disabled=true; get.textContent='PREPARING…';
@@ -769,7 +924,15 @@ async function initAccounts(){
     finally{ get.disabled=false; get.textContent=label; }
   };
   if(get){
-    if(typeof mfBindTap==='function') mfBindTap(get,doSaveFile);
+    let nativeTap=false;
+    try{
+      const cap=typeof window!=='undefined'&&window.Capacitor;
+      nativeTap=!!(cap&&(
+        (typeof cap.isNativePlatform==='function'&&cap.isNativePlatform())||
+        (typeof cap.getPlatform==='function'&&cap.getPlatform()!=='web')
+      ));
+    }catch(e){}
+    if(nativeTap&&typeof mfBindTap==='function') mfBindTap(get,doSaveFile);
     else get.addEventListener('click',doSaveFile);
   }
   if(put&&input) put.addEventListener('click',e=>{
@@ -793,4 +956,3 @@ async function initAccounts(){
      guards its own wrapping so a re-init cannot double-wrap. */
   initCloudSave();
 }
-

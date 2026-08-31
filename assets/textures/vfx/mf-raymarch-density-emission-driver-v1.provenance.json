@@ -1,0 +1,265 @@
+{
+  "format": "MASSFRONT raymarch density/emission driver v1",
+  "source": {
+    "path": "C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/assets/source/vfx/mf-raymarch-density-emission-master-v1.png",
+    "sha256": "3b74613c3b576ce505f93080351854e2296407b7ad07f4a2d92158eec1b5bc37",
+    "dimensions": [
+      1254,
+      1254
+    ],
+    "mode": "RGB"
+  },
+  "output": {
+    "path": "C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/assets/textures/vfx/mf-raymarch-density-emission-driver-v1.png",
+    "sha256": "de1b83b3c1ffb8d0094a4f1fe0fc5ffc16f1bf0128241ca701cb612eddf79a01",
+    "dimensions": [
+      1024,
+      1024
+    ],
+    "mode": "RGBA",
+    "channels": {
+      "r": "density",
+      "g": "emission",
+      "b": "soot",
+      "a": "support"
+    }
+  },
+  "atlas": {
+    "grid": [
+      4,
+      4
+    ],
+    "cellPixels": 256,
+    "contentPixels": 248,
+    "gutterPixels": 4,
+    "gutterMaxByteMismatch": 0,
+    "alphaNonZeroPixels": 344441,
+    "alphaZeroPixels": 704135
+  },
+  "stages": [
+    {
+      "stage": 0,
+      "sourceCrop": [
+        0,
+        0,
+        314,
+        314
+      ],
+      "supportPixels": 8623,
+      "supportMean": 0.115447,
+      "densityMean": 0.082961,
+      "emissionMean": 0.066149,
+      "sootMean": 0.031031
+    },
+    {
+      "stage": 1,
+      "sourceCrop": [
+        314,
+        0,
+        627,
+        314
+      ],
+      "supportPixels": 14717,
+      "supportMean": 0.216912,
+      "densityMean": 0.177917,
+      "emissionMean": 0.16178,
+      "sootMean": 0.04977
+    },
+    {
+      "stage": 2,
+      "sourceCrop": [
+        627,
+        0,
+        940,
+        314
+      ],
+      "supportPixels": 22384,
+      "supportMean": 0.332857,
+      "densityMean": 0.217624,
+      "emissionMean": 0.178013,
+      "sootMean": 0.084874
+    },
+    {
+      "stage": 3,
+      "sourceCrop": [
+        940,
+        0,
+        1254,
+        314
+      ],
+      "supportPixels": 22054,
+      "supportMean": 0.328667,
+      "densityMean": 0.183565,
+      "emissionMean": 0.12314,
+      "sootMean": 0.100665
+    },
+    {
+      "stage": 4,
+      "sourceCrop": [
+        0,
+        314,
+        314,
+        627
+      ],
+      "supportPixels": 26535,
+      "supportMean": 0.378901,
+      "densityMean": 0.225605,
+      "emissionMean": 0.166748,
+      "sootMean": 0.104375
+    },
+    {
+      "stage": 5,
+      "sourceCrop": [
+        314,
+        314,
+        627,
+        627
+      ],
+      "supportPixels": 26312,
+      "supportMean": 0.367307,
+      "densityMean": 0.190323,
+      "emissionMean": 0.118047,
+      "sootMean": 0.109846
+    },
+    {
+      "stage": 6,
+      "sourceCrop": [
+        627,
+        314,
+        940,
+        627
+      ],
+      "supportPixels": 30120,
+      "supportMean": 0.402671,
+      "densityMean": 0.172818,
+      "emissionMean": 0.088933,
+      "sootMean": 0.111845
+    },
+    {
+      "stage": 7,
+      "sourceCrop": [
+        940,
+        314,
+        1254,
+        627
+      ],
+      "supportPixels": 27193,
+      "supportMean": 0.363027,
+      "densityMean": 0.161912,
+      "emissionMean": 0.070426,
+      "sootMean": 0.113786
+    },
+    {
+      "stage": 8,
+      "sourceCrop": [
+        0,
+        627,
+        314,
+        940
+      ],
+      "supportPixels": 25182,
+      "supportMean": 0.319438,
+      "densityMean": 0.125014,
+      "emissionMean": 0.041611,
+      "sootMean": 0.097895
+    },
+    {
+      "stage": 9,
+      "sourceCrop": [
+        314,
+        627,
+        627,
+        940
+      ],
+      "supportPixels": 26488,
+      "supportMean": 0.331769,
+      "densityMean": 0.118396,
+      "emissionMean": 0.011438,
+      "sootMean": 0.112073
+    },
+    {
+      "stage": 10,
+      "sourceCrop": [
+        627,
+        627,
+        940,
+        940
+      ],
+      "supportPixels": 24822,
+      "supportMean": 0.314533,
+      "densityMean": 0.1087,
+      "emissionMean": 0.005732,
+      "sootMean": 0.1057
+    },
+    {
+      "stage": 11,
+      "sourceCrop": [
+        940,
+        627,
+        1254,
+        940
+      ],
+      "supportPixels": 23062,
+      "supportMean": 0.268111,
+      "densityMean": 0.085676,
+      "emissionMean": 0.003945,
+      "sootMean": 0.083652
+    },
+    {
+      "stage": 12,
+      "sourceCrop": [
+        0,
+        940,
+        314,
+        1254
+      ],
+      "supportPixels": 22168,
+      "supportMean": 0.257642,
+      "densityMean": 0.081029,
+      "emissionMean": 0.00815,
+      "sootMean": 0.076466
+    },
+    {
+      "stage": 13,
+      "sourceCrop": [
+        314,
+        940,
+        627,
+        1254
+      ],
+      "supportPixels": 20445,
+      "supportMean": 0.241581,
+      "densityMean": 0.075595,
+      "emissionMean": 0.003617,
+      "sootMean": 0.073688
+    },
+    {
+      "stage": 14,
+      "sourceCrop": [
+        627,
+        940,
+        940,
+        1254
+      ],
+      "supportPixels": 14507,
+      "supportMean": 0.150174,
+      "densityMean": 0.043885,
+      "emissionMean": 0.000968,
+      "sootMean": 0.043405
+    },
+    {
+      "stage": 15,
+      "sourceCrop": [
+        940,
+        940,
+        1254,
+        1254
+      ],
+      "supportPixels": 9445,
+      "supportMean": 0.077933,
+      "densityMean": 0.020133,
+      "emissionMean": 0.00039,
+      "sootMean": 0.01992
+    }
+  ]
+}

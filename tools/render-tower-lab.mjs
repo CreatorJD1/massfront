@@ -12,6 +12,7 @@ import {mkdir, writeFile, readFile, access} from 'node:fs/promises';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {dirname, join, resolve} from 'node:path';
+import {writeMaterialAtlases} from './material-atlas-io.mjs';
 
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const base=(process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8100').replace(/\/$/,'');
@@ -183,12 +184,7 @@ try{
   if(modelFailures)throw new Error(`Global UV quality gate failed: ${modelFailures} invalid model triangles across ${modelParts.length} parts`);
   process.stdout.write(`validated ${modelParts.length} model parts; worst UV stretch ${Math.max(...modelParts.map(part=>part.max)).toFixed(3)}x\n`);
   const atlases=await page.evaluate(()=>__MF_MATERIAL_ATLASES);
-  for(const [kind,dataUrl] of Object.entries(atlases)){
-    const encoded=dataUrl.slice(dataUrl.indexOf(',')+1);
-    const target=join(outDir,`material-atlas-${kind}.png`);
-    await writeFile(target,Buffer.from(encoded,'base64'));
-    process.stdout.write(`wrote ${target}\n`);
-  }
+  for(const target of await writeMaterialAtlases(outDir,atlases))process.stdout.write(`wrote ${target}\n`);
   for(const tower of payload.towers){
     const vertices=(tower.base.v.length+(tower.turret?tower.turret.v.length:0))/payload.vertexStride;
     const triangles=(tower.base.count+(tower.turret?tower.turret.count:0))/3;

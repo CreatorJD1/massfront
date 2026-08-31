@@ -192,6 +192,10 @@ let weeklyMode=false;
    "doesn't make sense": you set up a match, played one Weekly, and your setup
    was someone else's. Same borrow/return shape tutorial.js already uses for
    training (saveTrainingConfig / restoreTrainingConfig). */
+/* Rendered site previews for the Weekly card, keyed by map id. drawMapPreview()
+   re-runs the match terrain generator, so it is paid once per site per session
+   exactly like the War Room map row does with mapPrevCache. */
+const weeklyMapPrevCache={};
 let weeklyPrev=null;
 function saveWeeklyConfig(){
   weeklyPrev={ threatSel:META.threatSel, opmods:Object.assign({},META.opmods||{}),
@@ -367,7 +371,8 @@ function renderOps(){
   /* Modifiers */
   const mr=document.getElementById('opModRow');
   if(mr){
-    mr.innerHTML=OPMODS.map((k,mi)=>{ const u=opModUnlockState(k),active=opModActive(k.id),
+    mr.innerHTML='<div class="opScopeNote">'+mfOwnershipBadgeHTML('match')+'<span>Selected rules alter this operation only; they never become account upgrades.</span></div>'
+      +OPMODS.map((k,mi)=>{ const u=opModUnlockState(k),active=opModActive(k.id),
       /* The atlas is row-major 5x2. CSS percentage positions are relative to
          the remaining overflow, so five columns land at 0/25/50/75/100. */
       artX=(mi%5)*25,artY=mi<5?0:100; return '<div class="opMod'
@@ -422,6 +427,7 @@ function renderOps(){
         +'<div><span>EST. DURATION</span><b>'+(mins?'≈ '+mins+' MIN':'OPEN ENDED')+'</b></div>'
         +'<div><span>THREAT</span><b>T'+playThreat+(playThreat<wd.threat?' / T'+wd.threat:'')+'</b></div>'
         +'<div><span>ENVIRONMENT</span><b>'+haz.em+' '+haz.nm+'</b></div></div>'
+      +'<div class="wkModScope">'+mfOwnershipBadgeHTML('match')+'<span>Weekly rules apply to this operation only.</span></div>'
       +'<div class="wkModChips">'+modNames.map(n=>'<span>'+n+'</span>').join('')+'</div>'
       +'<div class="wkReward"><div><span>PROJECTED CORE RANGE</span><b>+'+forecast.min+'–'+forecast.max+'</b></div>'
         +'<small>×'+forecast.mult.toFixed(2)+' XP &amp; CORE PAYOUT<br>Performance determines final recovery</small></div>'
@@ -429,6 +435,30 @@ function renderOps(){
       +'<div class="wkRecord"><span>PERSONAL BEST</span><b>'+(wb.best||0).toLocaleString()+'</b>'
         +'<small>'+(wb.runs?wb.runs+' completed run'+(wb.runs>1?'s':''):'No attempts this rotation')+'</small></div>'
       +'</article>';
+    /* THE PREVIEW IS THE REAL LANDFORM, NOT A STAND-IN.
+       This tile used to be four CSS rules keyed on vanguard/highland/isles/
+       crater -- map ids retired from the drop pool -- so no selector could ever
+       match what weeklyDef() picks out of the 48 authored sites, and every week
+       showed the same generic gradient. It now runs the same drawMapPreview()
+       the War Room site cards run, off MAPDEFS + the region BIOME_KITS palette,
+       so the card shows the terrain the match will actually generate. Nothing
+       is keyed on an id: any site added to PLANETS/MAPDEFS is covered for free.
+       If the site has no def or the render throws, the .wkMapPreview gradient in
+       ui.css is the last-resort fallback. */
+    const wkPrevBox=wk.querySelector('.wkMapPreview'), wkDef=MAPDEFS[wd.map];
+    if(wkPrevBox&&wkDef&&typeof drawMapPreview==='function'){
+      let cv=weeklyMapPrevCache[wd.map];
+      if(!cv){
+        try{
+          /* Square: the world is square, and this card crops to the playable
+             theatre like the War Table cards do. 320x200 left it stretched 1.6x. */
+          cv=document.createElement('canvas'); cv.width=320; cv.height=320;
+          drawMapPreview(cv,wkDef,wkDef.theme||curTheme);
+          weeklyMapPrevCache[wd.map]=cv;
+        }catch(err){ cv=null; }
+      }
+      if(cv) wkPrevBox.insertBefore(cv,wkPrevBox.firstChild);
+    }
   }
   /* Mastery */
   const mg=document.getElementById('masteryGrid');
@@ -461,4 +491,3 @@ function initOps(){
      endgameRecord().msgs — main.js already prints those into #goRewards. */
   renderOps();
 }
-

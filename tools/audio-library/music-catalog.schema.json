@@ -1,0 +1,405 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://massfront.local/schemas/music-catalog-v1.json",
+  "title": "MASSFRONT music catalog",
+  "description": "Fail-closed source, rights, media, scene-role, pack, loudness, and fallback contract for instrumental music.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "catalogId",
+    "auditedAt",
+    "inventory",
+    "policy",
+    "tracks"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": 1 },
+    "catalogId": { "const": "massfront-music-library" },
+    "auditedAt": { "type": "string", "format": "date" },
+    "inventory": { "$ref": "#/$defs/inventory" },
+    "policy": { "$ref": "#/$defs/policy" },
+    "tracks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/track" }
+    }
+  },
+  "$defs": {
+    "nullableString": {
+      "type": ["string", "null"]
+    },
+    "nullableBoolean": {
+      "type": ["boolean", "null"]
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "repoRefs": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "sceneRole": {
+      "enum": [
+        "menu",
+        "wartable",
+        "exploration",
+        "ship-room",
+        "ambient",
+        "tension",
+        "combat",
+        "victory",
+        "defeat"
+      ]
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adaptiveBedGlob",
+        "runtimePlaylistManifest",
+        "runtimePlaylistState",
+        "runtimePlaylistTrackCount",
+        "assignmentManifest",
+        "assignmentTrackCount",
+        "ingestTool",
+        "ingestOutputCodecs",
+        "generatorTool"
+      ],
+      "properties": {
+        "adaptiveBedGlob": { "const": "assets/audio/mus_*" },
+        "runtimePlaylistManifest": { "const": "assets/audio/music.json" },
+        "runtimePlaylistState": { "enum": ["EMPTY_CURATED", "CATALOGED"] },
+        "runtimePlaylistTrackCount": { "type": "integer", "minimum": 0 },
+        "assignmentManifest": { "const": "assets/audio/music-assign.json" },
+        "assignmentTrackCount": { "type": "integer", "minimum": 0 },
+        "ingestTool": { "const": "tools/ingest-music.py" },
+        "ingestOutputCodecs": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["ogg", "m4a"] }
+        },
+        "generatorTool": { "const": "tools/make-audio.py" }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredSceneRoles",
+        "requiredRuntimeCodecs",
+        "loudness",
+        "release"
+      ],
+      "properties": {
+        "requiredSceneRoles": {
+          "type": "array",
+          "minItems": 9,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sceneRole" }
+        },
+        "requiredRuntimeCodecs": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": { "enum": ["ogg", "m4a"] }
+        },
+        "loudness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "targetIntegratedLufs",
+            "integratedLufsTolerance",
+            "maxTruePeakDbtp",
+            "measurementTolerance"
+          ],
+          "properties": {
+            "targetIntegratedLufs": { "type": "number", "minimum": -30, "maximum": -5 },
+            "integratedLufsTolerance": { "type": "number", "exclusiveMinimum": 0, "maximum": 5 },
+            "maxTruePeakDbtp": { "type": "number", "minimum": -12, "maximum": 0 },
+            "measurementTolerance": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }
+          }
+        },
+        "release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requireApprovedRights",
+            "requireAllRolesApproved",
+            "requireDualCodecCoreBeds",
+            "requireLoudnessConformance",
+            "requireVerifiedFallback"
+          ],
+          "properties": {
+            "requireApprovedRights": { "const": true },
+            "requireAllRolesApproved": { "const": true },
+            "requireDualCodecCoreBeds": { "const": true },
+            "requireLoudnessConformance": { "const": true },
+            "requireVerifiedFallback": { "const": true }
+          }
+        }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "owner", "basis", "evidenceRefs"],
+      "properties": {
+        "status": { "enum": ["UNKNOWN", "VERIFIED"] },
+        "owner": { "$ref": "#/$defs/nullableString" },
+        "basis": { "$ref": "#/$defs/nullableString" },
+        "evidenceRefs": { "$ref": "#/$defs/repoRefs" }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "name",
+        "version",
+        "permissions",
+        "attribution",
+        "contentId",
+        "evidenceRefs"
+      ],
+      "properties": {
+        "status": { "enum": ["UNKNOWN", "VERIFIED"] },
+        "name": { "$ref": "#/$defs/nullableString" },
+        "version": { "$ref": "#/$defs/nullableString" },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "commercialGameSync",
+            "modification",
+            "binaryRedistribution",
+            "standaloneSoundtrack",
+            "marketing"
+          ],
+          "properties": {
+            "commercialGameSync": { "$ref": "#/$defs/nullableBoolean" },
+            "modification": { "$ref": "#/$defs/nullableBoolean" },
+            "binaryRedistribution": { "$ref": "#/$defs/nullableBoolean" },
+            "standaloneSoundtrack": { "$ref": "#/$defs/nullableBoolean" },
+            "marketing": { "$ref": "#/$defs/nullableBoolean" }
+          }
+        },
+        "attribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["required", "text"],
+          "properties": {
+            "required": { "$ref": "#/$defs/nullableBoolean" },
+            "text": { "$ref": "#/$defs/nullableString" }
+          }
+        },
+        "contentId": { "enum": ["UNKNOWN", "CLEAR", "ENROLLED"] },
+        "evidenceRefs": { "$ref": "#/$defs/repoRefs" }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "creationType",
+        "creator",
+        "sourceRefs",
+        "evidenceRefs",
+        "note"
+      ],
+      "properties": {
+        "status": { "enum": ["UNKNOWN", "PARTIAL", "VERIFIED"] },
+        "creationType": { "enum": ["UNKNOWN", "PROJECT_GENERATED", "LICENSED", "COMMISSIONED"] },
+        "creator": { "$ref": "#/$defs/nullableString" },
+        "sourceRefs": { "$ref": "#/$defs/repoRefs" },
+        "evidenceRefs": { "$ref": "#/$defs/repoRefs" },
+        "note": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "sourceMaster": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "kind", "path", "sha256", "bytes", "recipeEntry"],
+      "properties": {
+        "status": { "enum": ["MISSING", "UNKNOWN", "RECIPE_ONLY", "VERIFIED"] },
+        "kind": { "enum": ["MISSING", "FILE", "GENERATOR_RECIPE"] },
+        "path": { "$ref": "#/$defs/nullableString" },
+        "sha256": {
+          "anyOf": [
+            { "$ref": "#/$defs/sha256" },
+            { "type": "null" }
+          ]
+        },
+        "bytes": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "recipeEntry": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "codec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "format",
+        "codec",
+        "bytes",
+        "sha256",
+        "sampleRateHz",
+        "channels",
+        "durationSeconds",
+        "integratedLufs",
+        "truePeakDbtp"
+      ],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "format": { "enum": ["ogg-vorbis", "m4a-aac-lc"] },
+        "codec": { "enum": ["vorbis", "aac"] },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "sampleRateHz": { "type": "integer", "minimum": 8000, "maximum": 384000 },
+        "channels": { "type": "integer", "minimum": 1, "maximum": 8 },
+        "durationSeconds": { "type": "number", "exclusiveMinimum": 0 },
+        "integratedLufs": { "type": "number", "minimum": -70, "maximum": 0 },
+        "truePeakDbtp": { "type": "number", "minimum": -70, "maximum": 6 }
+      }
+    },
+    "packMembership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "inclusion", "packId", "evidenceRefs"],
+      "properties": {
+        "status": { "enum": ["UNKNOWN", "PLANNED", "VERIFIED"] },
+        "inclusion": { "enum": ["CORE", "OPTIONAL", "EXCLUDED", "PLANNED"] },
+        "packId": { "$ref": "#/$defs/nullableString" },
+        "evidenceRefs": { "$ref": "#/$defs/repoRefs" }
+      }
+    },
+    "fallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "type", "trackId", "reasons", "evidenceRefs"],
+      "properties": {
+        "status": { "enum": ["UNKNOWN", "PLANNED", "VERIFIED"] },
+        "type": { "enum": ["SELF_BED", "TRACK", "SILENCE", "NONE"] },
+        "trackId": { "$ref": "#/$defs/nullableString" },
+        "reasons": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        },
+        "evidenceRefs": { "$ref": "#/$defs/repoRefs" }
+      }
+    },
+    "loudness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "conformance", "measuredAt", "tool"],
+      "properties": {
+        "status": { "enum": ["NOT_MEASURED", "MEASURED"] },
+        "conformance": { "enum": ["UNKNOWN", "CONFORMING", "NONCONFORMING"] },
+        "measuredAt": {
+          "anyOf": [
+            { "type": "string", "format": "date" },
+            { "type": "null" }
+          ]
+        },
+        "tool": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "playback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "loop",
+        "introSeconds",
+        "outroSeconds",
+        "loopStartSeconds",
+        "loopEndSeconds",
+        "authoredLoopCrossfadeMs",
+        "transitionCrossfadeMs"
+      ],
+      "properties": {
+        "mode": { "enum": ["LOOP", "PLAY_ONCE", "PLANNED"] },
+        "loop": { "$ref": "#/$defs/nullableBoolean" },
+        "introSeconds": { "type": ["number", "null"], "minimum": 0 },
+        "outroSeconds": { "type": ["number", "null"], "minimum": 0 },
+        "loopStartSeconds": { "type": ["number", "null"], "minimum": 0 },
+        "loopEndSeconds": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+        "authoredLoopCrossfadeMs": { "type": ["integer", "null"], "minimum": 0 },
+        "transitionCrossfadeMs": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "track": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "status",
+        "instrumental",
+        "sceneRoles",
+        "mood",
+        "allowedContexts",
+        "playback",
+        "ownership",
+        "license",
+        "provenance",
+        "sourceMaster",
+        "codecs",
+        "packMembership",
+        "fallback",
+        "loudness"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9_-]*$" },
+        "title": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["PLANNED", "UNKNOWN", "APPROVED"] },
+        "instrumental": { "type": "boolean" },
+        "sceneRoles": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/sceneRole" }
+        },
+        "mood": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "allowedContexts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "playback": { "$ref": "#/$defs/playback" },
+        "ownership": { "$ref": "#/$defs/ownership" },
+        "license": { "$ref": "#/$defs/license" },
+        "provenance": { "$ref": "#/$defs/provenance" },
+        "sourceMaster": { "$ref": "#/$defs/sourceMaster" },
+        "codecs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ogg": { "$ref": "#/$defs/codec" },
+            "m4a": { "$ref": "#/$defs/codec" }
+          }
+        },
+        "packMembership": { "$ref": "#/$defs/packMembership" },
+        "fallback": { "$ref": "#/$defs/fallback" },
+        "loudness": { "$ref": "#/$defs/loudness" }
+      }
+    }
+  }
+}

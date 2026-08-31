@@ -1,0 +1,513 @@
+{
+  "$schema": "./interior-tactical-model-packs.v1.schema.json",
+  "schemaVersion": 1,
+  "catalogId": "massfront-interior-tactical-model-packs-v1",
+  "status": "PLANNED",
+  "runtimeReady": false,
+  "units": "meters",
+  "coordinateContract": {
+    "upAxis": "+Y",
+    "forwardAxis": "+Z",
+    "origin": "floor-center",
+    "detailSnap": 0.5,
+    "structuralSnap": 4,
+    "verticalSnap": 4
+  },
+  "mobilityClasses": {
+    "infantry": {
+      "agentEnvelope": [1.2, 2.4, 1.2],
+      "minimumPortal": [1.6, 2.8, 0.5],
+      "minimumTurnDiameter": 1.8,
+      "maximumStep": 0.35,
+      "maximumRampDegrees": 20
+    },
+    "small_vehicle": {
+      "agentEnvelope": [3.2, 2.6, 5.5],
+      "minimumPortal": [4, 3.2, 1],
+      "minimumTurnDiameter": 7,
+      "maximumStep": 0.18,
+      "maximumRampDegrees": 12
+    },
+    "mech": {
+      "agentEnvelope": [5.5, 5.4, 4.5],
+      "minimumPortal": [6, 5.8, 1.5],
+      "minimumTurnDiameter": 9,
+      "maximumStep": 0.5,
+      "maximumRampDegrees": 15
+    }
+  },
+  "socketProfiles": {
+    "interior_personnel_4x4": {
+      "openingWidth": 4,
+      "openingHeight": 4,
+      "clearWidth": 3.2,
+      "clearHeight": 3.2,
+      "mobility": ["infantry"]
+    },
+    "interior_mixed_8x6": {
+      "openingWidth": 8,
+      "openingHeight": 6,
+      "clearWidth": 6.4,
+      "clearHeight": 5.8,
+      "mobility": ["infantry", "small_vehicle", "mech"]
+    },
+    "interior_vertical_8x6": {
+      "openingWidth": 8,
+      "openingHeight": 6,
+      "clearWidth": 6.4,
+      "clearHeight": 5.8,
+      "mobility": ["infantry", "small_vehicle", "mech"]
+    }
+  },
+  "assetArchetypes": {
+    "room_4x4": {
+      "category": "room",
+      "sizeMeters": [4, 4, 4],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_personnel_4x4"],
+      "lodTriangleBudget": { "lod0": 12000, "lod1": 5000, "lod2": 1800 },
+      "collision": { "kind": "primitive-plus-blockers", "maximumHulls": 8, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry"], "clearanceRule": "Maintain a continuous 1.6 m by 2.8 m personnel path between every declared socket." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "room_8x8": {
+      "category": "room",
+      "sizeMeters": [8, 6, 8],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_personnel_4x4", "interior_mixed_8x6"],
+      "lodTriangleBudget": { "lod0": 22000, "lod1": 9000, "lod2": 3000 },
+      "collision": { "kind": "primitive-plus-blockers", "maximumHulls": 12, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Keep a 6.4 m mixed-mobility lane and a 9 m turning pocket free of decorative geometry." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "corridor_4x8_straight": {
+      "category": "corridor",
+      "sizeMeters": [4, 4, 8],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_personnel_4x4"],
+      "lodTriangleBudget": { "lod0": 9000, "lod1": 3600, "lod2": 1200 },
+      "collision": { "kind": "box-compound", "maximumHulls": 6, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry"], "clearanceRule": "No prop may reduce the 3.2 m clear lane; visual ribs must remain outside navigation clearance." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "corridor_4x4_corner": {
+      "category": "corridor",
+      "sizeMeters": [4, 4, 4],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_personnel_4x4"],
+      "lodTriangleBudget": { "lod0": 8000, "lod1": 3200, "lod2": 1000 },
+      "collision": { "kind": "box-compound", "maximumHulls": 6, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry"], "clearanceRule": "Corner inner radius must preserve a 1.8 m infantry turning diameter." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "corridor_8x8_straight": {
+      "category": "corridor",
+      "sizeMeters": [8, 6, 8],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_mixed_8x6"],
+      "lodTriangleBudget": { "lod0": 15000, "lod1": 6000, "lod2": 2000 },
+      "collision": { "kind": "box-compound", "maximumHulls": 8, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Preserve the full 6.4 m by 5.8 m clear mixed lane from socket plane to socket plane." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "junction_8x8": {
+      "category": "junction",
+      "sizeMeters": [8, 6, 8],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_mixed_8x6"],
+      "lodTriangleBudget": { "lod0": 18000, "lod1": 7200, "lod2": 2400 },
+      "collision": { "kind": "primitive-plus-blockers", "maximumHulls": 10, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "All declared branches meet through a central 9 m turning pocket; corner props are non-blocking or destructible." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "vertical_link_8x8": {
+      "category": "vertical-link",
+      "sizeMeters": [8, 6, 8],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_mixed_8x6", "interior_vertical_8x6"],
+      "lodTriangleBudget": { "lod0": 18000, "lod1": 7000, "lod2": 2400 },
+      "collision": { "kind": "primitive-plus-blockers", "maximumHulls": 10, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "The authored ramp is no steeper than 12 degrees and preserves 6.4 m width; lift platforms expose explicit nav links." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "door_4x4": {
+      "category": "portal",
+      "sizeMeters": [4, 4, 1],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_personnel_4x4"],
+      "lodTriangleBudget": { "lod0": 6000, "lod1": 2400, "lod2": 800 },
+      "collision": { "kind": "box-compound", "maximumHulls": 4, "separateFromRenderMesh": true },
+      "nav": { "walkable": false, "carvesNav": true, "mobility": ["infantry"], "clearanceRule": "Closed state blocks; open state clears 3.2 m by 3.2 m and never leaves invisible collision." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "gate_8x6": {
+      "category": "portal",
+      "sizeMeters": [8, 6, 1.5],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_mixed_8x6"],
+      "lodTriangleBudget": { "lod0": 10000, "lod1": 4000, "lod2": 1300 },
+      "collision": { "kind": "box-compound", "maximumHulls": 6, "separateFromRenderMesh": true },
+      "nav": { "walkable": false, "carvesNav": true, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Open state clears 6.4 m by 5.8 m; jammed state publishes the remaining clearance explicitly." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "cover_low_2m": {
+      "category": "cover",
+      "sizeMeters": [2, 1.2, 1],
+      "pivot": "floor-center",
+      "tileable": false,
+      "socketProfiles": [],
+      "lodTriangleBudget": { "lod0": 3000, "lod1": 1200, "lod2": 400 },
+      "collision": { "kind": "box-compound", "maximumHulls": 3, "separateFromRenderMesh": true },
+      "nav": { "walkable": false, "carvesNav": true, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Intact and damaged states carve their measured footprint; destroyed state uses a low rubble blocker no wider than 1.5 m." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "cover_large_4m": {
+      "category": "cover",
+      "sizeMeters": [4, 2, 1.5],
+      "pivot": "floor-center",
+      "tileable": false,
+      "socketProfiles": [],
+      "lodTriangleBudget": { "lod0": 5000, "lod1": 2000, "lod2": 650 },
+      "collision": { "kind": "convex-compound", "maximumHulls": 4, "separateFromRenderMesh": true },
+      "nav": { "walkable": false, "carvesNav": true, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Placement must leave either a 1.6 m infantry bypass or a 6.4 m mixed bypass; destroyed state may not seal the route." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "objective_console_3m": {
+      "category": "objective",
+      "sizeMeters": [3, 2.5, 2],
+      "pivot": "floor-center",
+      "tileable": false,
+      "socketProfiles": [],
+      "lodTriangleBudget": { "lod0": 7000, "lod1": 2800, "lod2": 900 },
+      "collision": { "kind": "box-compound", "maximumHulls": 4, "separateFromRenderMesh": true },
+      "nav": { "walkable": false, "carvesNav": true, "mobility": ["infantry"], "clearanceRule": "Provide one unobstructed 1.6 m interaction face and do not place inside the mixed-mobility lane." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "objective_machine_4m": {
+      "category": "objective",
+      "sizeMeters": [4, 4, 4],
+      "pivot": "floor-center",
+      "tileable": false,
+      "socketProfiles": [],
+      "lodTriangleBudget": { "lod0": 12000, "lod1": 4800, "lod2": 1600 },
+      "collision": { "kind": "convex-compound", "maximumHulls": 6, "separateFromRenderMesh": true },
+      "nav": { "walkable": false, "carvesNav": true, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Maintain two opposing infantry interaction faces and a 6.4 m vehicle/mech bypass in mixed rooms." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "landmark_8m": {
+      "category": "landmark",
+      "sizeMeters": [8, 8, 8],
+      "pivot": "floor-center",
+      "tileable": false,
+      "socketProfiles": [],
+      "lodTriangleBudget": { "lod0": 28000, "lod1": 11000, "lod2": 3600 },
+      "collision": { "kind": "convex-compound", "maximumHulls": 10, "separateFromRenderMesh": true },
+      "nav": { "walkable": false, "carvesNav": true, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Landmark silhouette must fit its 8 m cell and leave the authored route and turning pocket readable from tactical camera." },
+      "damageStates": ["intact", "damaged", "destroyed"]
+    },
+    "damage_shell_8m": {
+      "category": "damage-shell",
+      "sizeMeters": [8, 6, 8],
+      "pivot": "floor-center",
+      "tileable": true,
+      "socketProfiles": ["interior_mixed_8x6"],
+      "lodTriangleBudget": { "lod0": 18000, "lod1": 7000, "lod2": 2300 },
+      "collision": { "kind": "primitive-plus-blockers", "maximumHulls": 10, "separateFromRenderMesh": true },
+      "nav": { "walkable": true, "carvesNav": false, "mobility": ["infantry", "small_vehicle", "mech"], "clearanceRule": "Damage silhouette is asymmetric but retains one 6.4 m mixed route; debris islands are explicit blockers and never random." },
+      "damageStates": ["damaged", "destroyed"]
+    }
+  },
+  "mapTemplates": [
+    {
+      "templateId": "interior_xs_breach_40x40",
+      "sizeClass": "XS",
+      "playableBoundsMeters": [40, 40],
+      "requiredMobility": ["infantry", "small_vehicle", "mech"],
+      "minimumMixedRouteWidth": 6.4,
+      "minimumTurningPockets": 2,
+      "assemblyRules": [
+        "One continuous 8 m-module route connects insertion, objective, and extraction for one small vehicle or one mech.",
+        "At least one 4 m personnel flank connects two mixed-route nodes without becoming the only objective route.",
+        "No combat lane is longer than 24 m without hard cover or a turn."
+      ]
+    },
+    {
+      "templateId": "interior_xs_linear_48x32",
+      "sizeClass": "XS",
+      "playableBoundsMeters": [48, 32],
+      "requiredMobility": ["infantry", "small_vehicle", "mech"],
+      "minimumMixedRouteWidth": 6.4,
+      "minimumTurningPockets": 2,
+      "assemblyRules": [
+        "A mixed-mobility spine uses 8 m sockets from insertion to the landmark objective.",
+        "Two 4 m service branches create infantry crossfire positions while preserving the vehicle spine.",
+        "A 9 m turning pocket exists at both the objective and extraction ends."
+      ]
+    },
+    {
+      "templateId": "interior_small_loop_64x64",
+      "sizeClass": "SMALL",
+      "playableBoundsMeters": [64, 64],
+      "requiredMobility": ["infantry", "small_vehicle", "mech"],
+      "minimumMixedRouteWidth": 6.4,
+      "minimumTurningPockets": 4,
+      "assemblyRules": [
+        "The 8 m circulation loop has no dead-end shorter than a mech turn diameter.",
+        "At least three 4 m infantry connectors cross or shortcut the loop.",
+        "Two objective rooms permit vehicle or mech bypass rather than forcing units to stack."
+      ]
+    },
+    {
+      "templateId": "interior_small_multilevel_80x64",
+      "sizeClass": "SMALL",
+      "playableBoundsMeters": [80, 64],
+      "requiredMobility": ["infantry", "small_vehicle", "mech"],
+      "minimumMixedRouteWidth": 6.4,
+      "minimumTurningPockets": 4,
+      "assemblyRules": [
+        "A vehicle/mech ramp or lift connects both authored levels and has an alternate infantry route.",
+        "Height change is one 4 m vertical snap; no procedural half-levels are permitted.",
+        "Camera cutaway masks roof and upper wall modules without hiding objective silhouettes."
+      ]
+    }
+  ],
+  "packs": [
+    {
+      "packId": "interior_uga_nexus_vii_strike_logistics_v1",
+      "title": "UGA NEXUS-VII Strike Bay and Logistics Interior",
+      "status": "PLANNED",
+      "runtimeReady": false,
+      "faction": "uga",
+      "planetIds": ["nexus_vii"],
+      "locationIds": ["ship_strike_expedition_bay", "ship_logistics_cargo", "ship_mission_operations"],
+      "missionIntents": ["expedition-staging-defense", "cargo-recovery", "base-deployer-sabotage", "medical-evacuation"],
+      "visualIdentity": [
+        "off-white pressure ceramic over graphite structural ribs",
+        "cyan navigation light with restrained amber load warnings",
+        "human-scale fixtures surrounding oversized base-deployer and mech clearances",
+        "clean UGA command spine geometry with visible service conduits"
+      ],
+      "hunyuanPromptBase": "Original low-poly game-ready UGA expedition-ship interior module, readable from a tilted top-down RTS camera, coherent near-future military science-fiction, clean off-white pressure ceramic, graphite ribs, cyan guidance and restrained amber hazard accents, purposeful bevels, separate material regions, exact modular envelope, centered floor pivot, watertight visible surfaces, strategic silhouette clarity and tactical cover readability without copying any existing franchise asset or logo.",
+      "hunyuanNegativePrompt": "No exterior spaceship, no complete room diorama, no characters, no text, no logo, no floating parts, no micro-greeble noise, no baked ground plane, no photographic background, no weapon turret, no space-combat equipment.",
+      "mapTemplateIds": ["interior_xs_breach_40x40", "interior_xs_linear_48x32", "interior_small_loop_64x64", "interior_small_multilevel_80x64"],
+      "members": [
+        { "assetId": "int_uga_n7_mission_ready_cell_4x4", "displayName": "Mission Readiness Cell 4x4", "archetype": "room_4x4", "sizeMeters": [4,4,4], "gameplayRole": "Infantry briefing and side-route room", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,2]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-2]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Compact UGA briefing cell with recessed wall map, foldaway crash benches, pressure ribs, and a clear central infantry lane." },
+        { "assetId": "int_uga_n7_manifest_hall_8x8", "displayName": "Expedition Manifest Hall 8x8", "archetype": "room_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility deployment room and encounter node", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Wide UGA manifest chamber with floor load lanes, overhead restraint rails, personnel balconies, and an unobstructed mech turning pocket." },
+        { "assetId": "int_uga_n7_service_corridor_4x8", "displayName": "Command Service Corridor 4x8", "archetype": "corridor_4x8_straight", "sizeMeters": [4,4,8], "gameplayRole": "Tileable infantry flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,4]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Straight UGA service corridor with repeating four-meter pressure frames, recessed utilities, matte floor panels, and sparse cyan wayfinding." },
+        { "assetId": "int_uga_n7_service_corner_4x4", "displayName": "Command Service Corner 4x4", "archetype": "corridor_4x4_corner", "sizeMeters": [4,4,4], "gameplayRole": "Tileable infantry turn", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,2]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[2,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Ninety-degree UGA service corner with an open inner radius, protected conduit bank, and no obstruction in the infantry path." },
+        { "assetId": "int_uga_n7_deployer_lane_8x8", "displayName": "Base-Deployer Transit Lane 8x8", "archetype": "corridor_8x8_straight", "sizeMeters": [8,6,8], "gameplayRole": "Tileable vehicle and mech route", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Eight-meter UGA transit bay segment with flush floor guide rails, overhead service crane ribs, protected side walkways, and full mech clearance." },
+        { "assetId": "int_uga_n7_deployer_junction_8x8", "displayName": "Deployer Routing Junction 8x8", "archetype": "junction_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed route branch and turning pocket", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "UGA T-junction with a circular floor routing marker, recessed corner equipment, and a clear nine-meter-equivalent turning composition." },
+        { "assetId": "int_uga_n7_cargo_lift_8x8", "displayName": "Expedition Cargo Lift 8x8", "archetype": "vertical_link_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility deck transition", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"vertical","profile":"interior_vertical_8x6","face":"up","offsetMeters":[0,6,0]}], "destructible": false, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Heavy UGA cargo lift platform with flush restraint clamps, four corner guide columns, and visible but protected mechanical drive details." },
+        { "assetId": "int_uga_n7_pressure_door_4x4", "displayName": "Personnel Pressure Door 4x4", "archetype": "door_4x4", "sizeMeters": [4,4,1], "gameplayRole": "Lockable infantry portal", "mobility": ["infantry"], "sockets": [{"id":"personnel","profile":"interior_personnel_4x4","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Split-panel UGA pressure door with thick seal ring, manual release recess, cyan status strip, and readable open closed and jammed silhouettes." },
+        { "assetId": "int_uga_n7_deployer_gate_8x6", "displayName": "Base-Deployer Blast Gate 8x6", "archetype": "gate_8x6", "sizeMeters": [8,6,1.5], "gameplayRole": "Lockable mixed-mobility portal", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed","profile":"interior_mixed_8x6","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Massive vertically segmented UGA blast gate sized for the base deployer, with side actuators and a completely clear raised state." },
+        { "assetId": "int_uga_n7_gear_locker_cover", "displayName": "Expedition Gear Locker Cover", "archetype": "cover_low_2m", "sizeMeters": [2,1.2,1], "gameplayRole": "Destructible half cover", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Low locked UGA expedition case with reinforced corners, recessed handles, and three readable fracture states without tiny loose clutter." },
+        { "assetId": "int_uga_n7_cargo_pallet_cover", "displayName": "Mag-Clamped Cargo Pallet", "archetype": "cover_large_4m", "sizeMeters": [4,2,1.5], "gameplayRole": "Destructible full cover and lane divider", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Four-meter UGA cargo pallet with two large coherent containers, magnetic floor clamps, and a collapsed low-rubble destroyed state." },
+        { "assetId": "int_uga_n7_manifest_console", "displayName": "Strike Manifest Console", "archetype": "objective_console_3m", "sizeMeters": [3,2.5,2], "gameplayRole": "Hack, defend, or extract mission manifest", "mobility": ["infantry"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Freestanding UGA expedition manifest console with armored base, angled holographic frame, two clear interaction faces, and no floating UI text." },
+        { "assetId": "int_uga_n7_deployer_cradle", "displayName": "Base-Deployer Service Cradle", "archetype": "objective_machine_4m", "sizeMeters": [4,4,4], "gameplayRole": "Sabotage or repair mission objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "UGA base-deployer service cradle with folded support arms, power couplings, maintenance access, and an unmistakable repair-objective silhouette." },
+        { "assetId": "int_uga_n7_command_spine_beacon", "displayName": "Expedition Command Spine Beacon", "archetype": "landmark_8m", "sizeMeters": [8,8,8], "gameplayRole": "Navigation landmark and command objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Tall UGA command-spine beacon with a structural arch, restrained cyan navigation core, readable asymmetry, and open floor clearance around its base." },
+        { "assetId": "int_uga_n7_breached_hangar_shell", "displayName": "Breached Expedition Hangar Shell", "archetype": "damage_shell_8m", "sizeMeters": [8,6,8], "gameplayRole": "Authored damaged encounter tile", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Breached UGA hangar segment with peeled pressure lining, scorched structural ribs, deterministic debris islands, and one fully clear mixed route." }
+      ]
+    },
+    {
+      "packId": "interior_nova_aelos_caldris_customs_v1",
+      "title": "Nova Aelos Caldris Orbital Customs Interior",
+      "status": "PLANNED",
+      "runtimeReady": false,
+      "faction": "nova",
+      "planetIds": ["aelos"],
+      "locationIds": ["aelos_caldris", "aelos_north", "aelos_coast"],
+      "missionIntents": ["customs-hostage-rescue", "contraband-interdiction", "orbital-ring-defense", "civilian-evacuation"],
+      "visualIdentity": [
+        "pearl civic ceramic and brushed silver structural bands",
+        "teal pressure glass with blue-white plasma wayfinding",
+        "open crescent and lantern forms rather than fortress blocks",
+        "civilian orbital architecture adapted for clear military routes"
+      ],
+      "hunyuanPromptBase": "Original low-poly game-ready Nova orbital customs interior module for Aelos Caldris, readable from a tilted top-down RTS camera, elegant pearl ceramic, brushed silver bands, teal pressure glazing, blue-white restrained energy accents, open crescent and civic lantern motifs, exact modular envelope, centered floor pivot, clean beveled hard-surface topology, separate material regions, strategic silhouette clarity and tactical cover readability without copying any existing franchise asset or logo.",
+      "hunyuanNegativePrompt": "No full city scene, no spaceship exterior, no characters, no text, no logo, no fantasy cathedral, no excessive gold, no floating fragments, no ground plane, no microscopic pipes, no weapon turret.",
+      "mapTemplateIds": ["interior_xs_breach_40x40", "interior_xs_linear_48x32", "interior_small_loop_64x64"],
+      "members": [
+        { "assetId": "int_nova_caldris_customs_cell_4x4", "displayName": "Customs Interview Cell 4x4", "archetype": "room_4x4", "sizeMeters": [4,4,4], "gameplayRole": "Infantry investigation room", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,2]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-2]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Compact curved Nova customs interview cell with translucent privacy fins, integrated bench, and uncluttered central personnel lane." },
+        { "assetId": "int_nova_caldris_inspection_hall_8x8", "displayName": "Orbital Inspection Hall 8x8", "archetype": "room_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility customs encounter room", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"personnel_w","profile":"interior_personnel_4x4","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Bright Nova inspection hall with crescent ceiling frames, flush cargo scan lanes, raised civilian side walk, and clear mech turning floor." },
+        { "assetId": "int_nova_caldris_pressure_walk_4x8", "displayName": "Pressure Walk 4x8", "archetype": "corridor_4x8_straight", "sizeMeters": [4,4,8], "gameplayRole": "Tileable glazed infantry flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,4]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Straight Nova pressure walk with teal glass strips, silver crescent ribs, opaque lower kick panels, and a clean three-point-two-meter lane." },
+        { "assetId": "int_nova_caldris_pressure_corner_4x4", "displayName": "Pressure Walk Corner 4x4", "archetype": "corridor_4x4_corner", "sizeMeters": [4,4,4], "gameplayRole": "Tileable glazed infantry turn", "mobility": ["infantry"], "sockets": [{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-2]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[2,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Nova pressure-walk corner with a broad inner curve, protected glass seam, and a tiny wall-mounted evacuation light outside the route." },
+        { "assetId": "int_nova_caldris_cargo_concourse_8x8", "displayName": "Customs Cargo Concourse 8x8", "archetype": "corridor_8x8_straight", "sizeMeters": [8,6,8], "gameplayRole": "Tileable cargo vehicle and mech route", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Nova cargo concourse segment with pearl edge curbs, luminous blue-white lane insets, crescent overhead scanners, and unobstructed heavy clearance." },
+        { "assetId": "int_nova_caldris_crescent_junction_8x8", "displayName": "Crescent Routing Junction 8x8", "archetype": "junction_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed route branch and visual node", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Nova three-way concourse with an open crescent floor medallion, recessed customs pylons, and a clean central turning pocket." },
+        { "assetId": "int_nova_caldris_magtram_lift_8x8", "displayName": "Mag-Tram Service Lift 8x8", "archetype": "vertical_link_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility orbital ring deck link", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]},{"id":"vertical","profile":"interior_vertical_8x6","face":"up","offsetMeters":[0,6,0]}], "destructible": false, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Nova mag-tram freight lift with slim silver guide arches, flush platform magnets, pearl guard walls, and full vehicle-mech footprint." },
+        { "assetId": "int_nova_caldris_iris_door_4x4", "displayName": "Customs Iris Door 4x4", "archetype": "door_4x4", "sizeMeters": [4,4,1], "gameplayRole": "Lockable personnel portal", "mobility": ["infantry"], "sockets": [{"id":"personnel","profile":"interior_personnel_4x4","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Elegant Nova segmented iris door with asymmetric customs seal frame, visible mechanical track, and a fully clear opened state." },
+        { "assetId": "int_nova_caldris_cargo_seal_8x6", "displayName": "Orbital Cargo Pressure Seal 8x6", "archetype": "gate_8x6", "sizeMeters": [8,6,1.5], "gameplayRole": "Lockable cargo portal", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed","profile":"interior_mixed_8x6","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Broad Nova cargo pressure seal with nested crescent plates, teal edge gasket, side actuators, and readable jammed-open damage state." },
+        { "assetId": "int_nova_caldris_luggage_pod_cover", "displayName": "Secured Luggage Pod", "archetype": "cover_low_2m", "sizeMeters": [2,1.2,1], "gameplayRole": "Destructible half cover", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Low Nova luggage-security pod with pearl shell, dark grip band, subtle blue locator light, and two-piece destroyed silhouette." },
+        { "assetId": "int_nova_caldris_scan_barrier_cover", "displayName": "Mobile Scan Barrier", "archetype": "cover_large_4m", "sizeMeters": [4,2,1.5], "gameplayRole": "Destructible full cover and checkpoint divider", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Four-meter Nova customs scan barrier with two thick pylons and a low energy-free physical crossbar, designed as coherent cover not a particle effect." },
+        { "assetId": "int_nova_caldris_identity_console", "displayName": "Orbital Identity Console", "archetype": "objective_console_3m", "sizeMeters": [3,2.5,2], "gameplayRole": "Hackable identity and access objective", "mobility": ["infantry"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Nova customs identity console with crescent frame, shielded data core, two interaction faces, and restrained blue-white emissive strips without text." },
+        { "assetId": "int_nova_caldris_contraband_scanner", "displayName": "Contraband Resonance Scanner", "archetype": "objective_machine_4m", "sizeMeters": [4,4,4], "gameplayRole": "Capture, scan, or sabotage objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Freestanding Nova contraband scanner, open crescent machine around a central cargo aperture, pearl supports, teal glass sensor vanes, clear bypass." },
+        { "assetId": "int_nova_caldris_customs_lantern", "displayName": "Caldris Customs Lantern", "archetype": "landmark_8m", "sizeMeters": [8,8,8], "gameplayRole": "Orbital-ring navigation landmark and defend objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Iconic Caldris customs lantern with an inhabited open-crescent frame, teal faceted core, silver spine, and clear floor circulation around it." },
+        { "assetId": "int_nova_caldris_breached_inspection_shell", "displayName": "Breached Inspection Shell", "archetype": "damage_shell_8m", "sizeMeters": [8,6,8], "gameplayRole": "Authored decompression encounter tile", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Caldris inspection hall damage module with peeled pearl panels, crazed pressure glass, bent silver ribs, deterministic debris pockets, and one open heavy lane." }
+      ]
+    },
+    {
+      "packId": "interior_dominion_pyraeth_mech_foundry_v1",
+      "title": "Dominion Pyraeth Mech Foundry Interior",
+      "status": "PLANNED",
+      "runtimeReady": false,
+      "faction": "dominion",
+      "planetIds": ["pyraeth"],
+      "locationIds": ["pyraeth_belt", "pyraeth_caldera", "pyraeth_flats"],
+      "missionIntents": ["foundry-sabotage", "mech-recovery", "reactor-shutdown", "worker-extraction"],
+      "visualIdentity": [
+        "layered black iron armor and heat-stained structural steel",
+        "deep red furnace light with amber industrial warnings",
+        "massive load-bearing arches and machine-readable service lanes",
+        "brutalist Dominion geometry softened only by functional chamfers"
+      ],
+      "hunyuanPromptBase": "Original low-poly game-ready Dominion mech-foundry interior module for Pyraeth, readable from a tilted top-down RTS camera, brutal black iron, heat-stained steel, dark red furnace recesses, restrained amber safety markings, massive but coherent load-bearing forms, exact modular envelope, centered floor pivot, efficient beveled topology, separate material regions, heavy strategic silhouette and clear tactical cover without copying any existing franchise asset or logo.",
+      "hunyuanNegativePrompt": "No complete factory diorama, no workers, no text, no logo, no gothic ornament, no random scrap pile, no floating chains, no lava ocean, no weapon turret, no baked floor outside the module, no tiny pipes covering every surface.",
+      "mapTemplateIds": ["interior_xs_linear_48x32", "interior_small_loop_64x64", "interior_small_multilevel_80x64"],
+      "members": [
+        { "assetId": "int_dom_pyraeth_foreman_cell_4x4", "displayName": "Foundry Foreman Cell 4x4", "archetype": "room_4x4", "sizeMeters": [4,4,4], "gameplayRole": "Infantry control room and flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[2,0,0]},{"id":"personnel_w","profile":"interior_personnel_4x4","face":"west","offsetMeters":[-2,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Armored Dominion foreman cell with inset observation slit, heavy desk housing, red status recess, and an open infantry lane." },
+        { "assetId": "int_dom_pyraeth_assembly_bay_8x8", "displayName": "Mech Assembly Bay 8x8", "archetype": "room_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mech-capable combat and repair chamber", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Dominion mech assembly bay with folded maintenance arms, heat-shield walls, floor anchor circle, side catwalk, and a clear nine-meter turning pocket." },
+        { "assetId": "int_dom_pyraeth_service_trench_4x8", "displayName": "Foundry Service Trench 4x8", "archetype": "corridor_4x8_straight", "sizeMeters": [4,4,8], "gameplayRole": "Tileable infantry service flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,4]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Narrow Dominion service trench with armored lower walls, overhead heat duct, sparse amber line, repeating four-meter frame, and uncluttered floor." },
+        { "assetId": "int_dom_pyraeth_service_trench_corner_4x4", "displayName": "Foundry Service Trench Corner 4x4", "archetype": "corridor_4x4_corner", "sizeMeters": [4,4,4], "gameplayRole": "Tileable infantry turn", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,2]},{"id":"personnel_w","profile":"interior_personnel_4x4","face":"west","offsetMeters":[-2,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Dominion trench corner with reinforced outer elbow, protected furnace pipe bank, and an open rounded inner turn for infantry." },
+        { "assetId": "int_dom_pyraeth_armor_lane_8x8", "displayName": "Armor Transfer Lane 8x8", "archetype": "corridor_8x8_straight", "sizeMeters": [8,6,8], "gameplayRole": "Tileable mech and vehicle foundry route", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Heavy Dominion transfer lane with inset tread plates, overhead gantry beam, heat baffles, protected side walkway, and full mech clearance." },
+        { "assetId": "int_dom_pyraeth_crucible_junction_8x8", "displayName": "Crucible Routing Junction 8x8", "archetype": "junction_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mech route branch and fire-control node", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Dominion three-way foundry junction with recessed circular crucible cover, corner armor buttresses, and no obstruction in the turning center." },
+        { "assetId": "int_dom_pyraeth_slag_ramp_8x8", "displayName": "Slag Transfer Ramp 8x8", "archetype": "vertical_link_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility foundry level change", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"vertical","profile":"interior_vertical_8x6","face":"up","offsetMeters":[0,4,4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Broad twelve-degree Dominion transfer ramp with heavy tread ribs, side heat shields, drainage channels, and uninterrupted six-point-four-meter clearance." },
+        { "assetId": "int_dom_pyraeth_bulkhead_4x4", "displayName": "Foreman Bulkhead 4x4", "archetype": "door_4x4", "sizeMeters": [4,4,1], "gameplayRole": "Lockable infantry portal", "mobility": ["infantry"], "sockets": [{"id":"personnel","profile":"interior_personnel_4x4","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Thick Dominion sliding bulkhead with dogged corners, red inset status lamp, exposed protected track, and a clear open state." },
+        { "assetId": "int_dom_pyraeth_foundry_gate_8x6", "displayName": "Mech Foundry Gate 8x6", "archetype": "gate_8x6", "sizeMeters": [8,6,1.5], "gameplayRole": "Lockable mech portal", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed","profile":"interior_mixed_8x6","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Dominion vertical guillotine foundry gate with paired counterweight housings, black iron armor, amber edge marks, and readable damaged jam." },
+        { "assetId": "int_dom_pyraeth_slag_bin_cover", "displayName": "Cooled Slag Bin", "archetype": "cover_low_2m", "sizeMeters": [2,1.2,1], "gameplayRole": "Destructible half cover", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Low Dominion slag bin with thick folded walls, dark cooled mineral mass, lift sockets, and a simple collapsed state." },
+        { "assetId": "int_dom_pyraeth_armor_rack_cover", "displayName": "Mech Armor Rack", "archetype": "cover_large_4m", "sizeMeters": [4,2,1.5], "gameplayRole": "Destructible full cover and foundry divider", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Four-meter Dominion rack holding two large coherent armor plates, strong diagonal supports, and a destroyed state that falls inward below route height." },
+        { "assetId": "int_dom_pyraeth_furnace_control", "displayName": "Crucible Control Station", "archetype": "objective_console_3m", "sizeMeters": [3,2.5,2], "gameplayRole": "Hackable furnace shutdown objective", "mobility": ["infantry"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Dominion furnace control station with armored angled console, protected emergency lever recess, red-amber indicators, and two interaction faces." },
+        { "assetId": "int_dom_pyraeth_mech_clamp", "displayName": "Mech Assembly Clamp", "archetype": "objective_machine_4m", "sizeMeters": [4,4,4], "gameplayRole": "Repair, recover, or sabotage mech objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Dominion mech assembly clamp with two folded armored jaws, hydraulic base, service ports, and a distinctive inactive versus damaged silhouette." },
+        { "assetId": "int_dom_pyraeth_promethean_crucible", "displayName": "Promethean Crucible Crown", "archetype": "landmark_8m", "sizeMeters": [8,8,8], "gameplayRole": "Foundry landmark and reactor objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Monumental Dominion crucible crown, asymmetrical black iron arches around a shielded furnace core, red heat seams, and open circulation at the base." },
+        { "assetId": "int_dom_pyraeth_collapsed_foundry_shell", "displayName": "Collapsed Foundry Shell", "archetype": "damage_shell_8m", "sizeMeters": [8,6,8], "gameplayRole": "Authored industrial destruction tile", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Collapsed Dominion foundry span with buckled armor plates, cooled slag, bent gantry, deterministic large rubble, and one clear mixed-mobility path." }
+      ]
+    },
+    {
+      "packId": "interior_syndicate_nordhall_reactor_vault_v1",
+      "title": "Syndicate Nordhall Reactor and Data Vault Interior",
+      "status": "PLANNED",
+      "runtimeReady": false,
+      "faction": "syndicate",
+      "planetIds": ["nordhall"],
+      "locationIds": ["nordhall_frost", "nordhall_cliff", "nordhall_peaks"],
+      "missionIntents": ["data-theft", "reactor-stabilization", "stealth-infiltration", "drone-control-seizure"],
+      "visualIdentity": [
+        "faceted midnight composite and cold brushed titanium",
+        "thin cyan data light with violet security accents",
+        "folding panels, offset seams, and concealed utility geometry",
+        "thermal insulation and ice-weathered pressure interfaces"
+      ],
+      "hunyuanPromptBase": "Original low-poly game-ready Syndicate arctic reactor-vault interior module for Nordhall, readable from a tilted top-down RTS camera, faceted midnight composite, cold brushed titanium, thin cyan data light, restrained violet security accents, folding panels and concealed utilities, exact modular envelope, centered floor pivot, efficient hard-surface topology, separate material regions, stealthy but legible tactical silhouette without copying any existing franchise asset or logo.",
+      "hunyuanNegativePrompt": "No full base scene, no characters, no text, no logo, no glowing transparent maze, no cyberpunk billboard clutter, no floating hologram panels, no ice blocking the route, no weapon turret, no micro-panel noise everywhere.",
+      "mapTemplateIds": ["interior_xs_breach_40x40", "interior_xs_linear_48x32", "interior_small_loop_64x64", "interior_small_multilevel_80x64"],
+      "members": [
+        { "assetId": "int_syn_nordhall_cipher_cell_4x4", "displayName": "Cipher Analyst Cell 4x4", "archetype": "room_4x4", "sizeMeters": [4,4,4], "gameplayRole": "Infantry intelligence room", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,2]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-2]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Compact Syndicate cipher cell with folded-wall workstation, narrow observation facets, cold insulation, and a clean central infantry lane." },
+        { "assetId": "int_syn_nordhall_drone_vault_8x8", "displayName": "Drone Command Vault 8x8", "archetype": "room_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility control encounter room", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Syndicate drone vault with folded ceiling rails, recessed control bays, asymmetric faceted walls, and an empty central mech turning pocket." },
+        { "assetId": "int_syn_nordhall_thermal_duct_4x8", "displayName": "Thermal Service Duct 4x8", "archetype": "corridor_4x8_straight", "sizeMeters": [4,4,8], "gameplayRole": "Tileable infantry stealth flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,4]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Straight Syndicate thermal duct corridor with insulated wall facets, concealed cyan floor guide, sparse service hatches, and exact repeating end seams." },
+        { "assetId": "int_syn_nordhall_thermal_corner_4x4", "displayName": "Thermal Service Corner 4x4", "archetype": "corridor_4x4_corner", "sizeMeters": [4,4,4], "gameplayRole": "Tileable infantry stealth turn", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,2]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[2,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Syndicate ninety-degree duct corner with folded outer wall, protected thermal manifold, and an unobstructed inner walking curve." },
+        { "assetId": "int_syn_nordhall_machine_lane_8x8", "displayName": "Reactor Machine Lane 8x8", "archetype": "corridor_8x8_straight", "sizeMeters": [8,6,8], "gameplayRole": "Tileable vehicle and mech route", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Wide Syndicate machine lane with flush traction ribs, faceted overhead insulation, recessed side cable vaults, and full mech clearance." },
+        { "assetId": "int_syn_nordhall_veil_junction_8x8", "displayName": "Veil Routing Junction 8x8", "archetype": "junction_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed route junction and ambush node", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Four-way Syndicate junction with offset diamond floor seams, low corner data pylons outside clearance, and subtle violet security nodes." },
+        { "assetId": "int_syn_nordhall_reactor_lift_8x8", "displayName": "Reactor Service Lift 8x8", "archetype": "vertical_link_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility vault level transition", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"vertical","profile":"interior_vertical_8x6","face":"down","offsetMeters":[0,-4,0]}], "destructible": false, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Syndicate reactor lift with four faceted telescoping rails, flush black platform, cyan edge indicators, and no exposed moving hazard in the nav area." },
+        { "assetId": "int_syn_nordhall_fold_door_4x4", "displayName": "Veil Fold Door 4x4", "archetype": "door_4x4", "sizeMeters": [4,4,1], "gameplayRole": "Lockable infantry portal", "mobility": ["infantry"], "sockets": [{"id":"personnel","profile":"interior_personnel_4x4","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Syndicate faceted fold door that retracts into offset wall pockets, with thin cyan seal line and distinct jammed triangular silhouette." },
+        { "assetId": "int_syn_nordhall_vault_gate_8x6", "displayName": "Drone Vault Security Gate 8x6", "archetype": "gate_8x6", "sizeMeters": [8,6,1.5], "gameplayRole": "Lockable mixed-mobility security portal", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed","profile":"interior_mixed_8x6","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Wide Syndicate segmented security gate with telescoping black facets, titanium edge rails, and a fully clear retracted state." },
+        { "assetId": "int_syn_nordhall_coolant_case_cover", "displayName": "Cryogenic Coolant Case", "archetype": "cover_low_2m", "sizeMeters": [2,1.2,1], "gameplayRole": "Destructible half cover and hazard", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Low insulated Syndicate coolant case with a faceted dark shell, frost-resistant metal corners, and two large readable rupture panels." },
+        { "assetId": "int_syn_nordhall_drone_rack_cover", "displayName": "Folded Drone Rack", "archetype": "cover_large_4m", "sizeMeters": [4,2,1.5], "gameplayRole": "Destructible full cover and objective-adjacent prop", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Four-meter Syndicate rack of three folded drone cradles, coherent large panels, low-profile destroyed state, no loose drones or tiny clutter." },
+        { "assetId": "int_syn_nordhall_cipher_console", "displayName": "Black-Ice Cipher Console", "archetype": "objective_console_3m", "sizeMeters": [3,2.5,2], "gameplayRole": "Hackable intelligence objective", "mobility": ["infantry"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Syndicate black-ice cipher console with folded protective hood, cold titanium base, thin cyan-violet interface lines, and two clear interaction faces." },
+        { "assetId": "int_syn_nordhall_reactor_regulator", "displayName": "Thermal Reactor Regulator", "archetype": "objective_machine_4m", "sizeMeters": [4,4,4], "gameplayRole": "Stabilize or sabotage reactor objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Syndicate reactor regulator with a shielded faceted core, four compact coolant trunks, clear service sides, and restrained cold emission." },
+        { "assetId": "int_syn_nordhall_veil_data_prism", "displayName": "Veil Data Prism", "archetype": "landmark_8m", "sizeMeters": [8,8,8], "gameplayRole": "Vault landmark and data-extraction objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Tall asymmetrical Syndicate data prism inside a protective black-metal fork, thin cyan inner seams, violet lock nodes, and open circulation around its base." },
+        { "assetId": "int_syn_nordhall_frozen_vault_shell", "displayName": "Frozen Reactor Vault Shell", "archetype": "damage_shell_8m", "sizeMeters": [8,6,8], "gameplayRole": "Authored failed-cooling encounter tile", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Damaged Syndicate vault with split black panels, restrained ice sheets on walls, bent titanium ribs, deterministic debris, and a clear mixed route." }
+      ]
+    },
+    {
+      "packId": "interior_neutral_veyra_orison_derelict_v1",
+      "title": "Veyra Orison Derelict and Ossuary Interior",
+      "status": "PLANNED",
+      "runtimeReady": false,
+      "faction": "faction-neutral",
+      "planetIds": ["veyra"],
+      "locationIds": ["veyra_orison", "veyra_lens", "veyra_ossuary"],
+      "missionIntents": ["derelict-salvage", "relic-recovery", "observatory-reactivation", "hazard-survival"],
+      "visualIdentity": [
+        "ancient charcoal stone-metal with pale mineral ceramic inlays",
+        "dim violet lens light and cold white relic seams",
+        "nonhuman radial apertures built at vehicle and mech scale",
+        "erosion, missing panels, and precise astronomical geometry"
+      ],
+      "hunyuanPromptBase": "Original low-poly game-ready ancient Veyra derelict interior module, readable from a tilted top-down RTS camera, charcoal stone-metal, pale mineral ceramic inlays, restrained violet lens light and cold white relic seams, nonhuman radial apertures at vehicle and mech scale, weathered astronomical geometry, exact modular envelope, centered floor pivot, clean optimized topology, separate material regions, mysterious but tactically readable silhouette without copying any existing franchise asset or logo.",
+      "hunyuanNegativePrompt": "No fantasy dungeon, no skull piles, no readable alien writing, no full spaceship, no characters, no text, no logo, no floating rocks, no random tentacles, no dense rubble blocking all routes, no photographic backdrop.",
+      "mapTemplateIds": ["interior_xs_breach_40x40", "interior_xs_linear_48x32", "interior_small_loop_64x64", "interior_small_multilevel_80x64"],
+      "members": [
+        { "assetId": "int_veyra_orison_reliquary_cell_4x4", "displayName": "Reliquary Cell 4x4", "archetype": "room_4x4", "sizeMeters": [4,4,4], "gameplayRole": "Infantry relic room and flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,2]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[2,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Small Veyra reliquary cell with radial wall recess, one pale mineral shelf, eroded stone-metal ribs, and a clear human-width lane." },
+        { "assetId": "int_veyra_orison_lens_chamber_8x8", "displayName": "Lensing Chamber 8x8", "archetype": "room_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility relic encounter room", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"personnel_w","profile":"interior_personnel_4x4","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Ancient circular Veyra lens chamber in an eight-meter square module, radial floor channels, weathered walls, empty mech turn area, dim violet focus points." },
+        { "assetId": "int_veyra_orison_relic_passage_4x8", "displayName": "Relic Passage 4x8", "archetype": "corridor_4x8_straight", "sizeMeters": [4,4,8], "gameplayRole": "Tileable infantry exploration flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,4]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Straight Veyra passage with repeating radial ribs, mineral inset floor line, weathered charcoal surfaces, and no loose rubble in the clear path." },
+        { "assetId": "int_veyra_orison_relic_corner_4x4", "displayName": "Relic Passage Corner 4x4", "archetype": "corridor_4x4_corner", "sizeMeters": [4,4,4], "gameplayRole": "Tileable infantry exploration turn", "mobility": ["infantry"], "sockets": [{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-2]},{"id":"personnel_w","profile":"interior_personnel_4x4","face":"west","offsetMeters":[-2,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Veyra passage corner with circular inner geometry, a broken but nonblocking wall inlay, and exact matching end profiles." },
+        { "assetId": "int_veyra_orison_processional_lane_8x8", "displayName": "Processional Machine Lane 8x8", "archetype": "corridor_8x8_straight", "sizeMeters": [8,6,8], "gameplayRole": "Tileable vehicle and mech exploration route", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Broad ancient processional lane with nested astronomical arches, worn mineral floor strips, side alcoves, and uninterrupted mixed-mobility clearance." },
+        { "assetId": "int_veyra_orison_orbit_junction_8x8", "displayName": "Orbital Geometry Junction 8x8", "archetype": "junction_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed route branch and puzzle node", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Veyra three-way junction with concentric orbit grooves, off-center mineral marker, eroded corner buttresses, and a completely open turning center." },
+        { "assetId": "int_veyra_orison_gravity_ramp_8x8", "displayName": "Dormant Gravity Ramp 8x8", "archetype": "vertical_link_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility derelict level transition", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"vertical","profile":"interior_vertical_8x6","face":"up","offsetMeters":[0,4,4]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Ancient wide ramp with shallow astronomical grooves, broken inactive gravitic ribs, no floating pieces, and a safe twelve-degree physical surface." },
+        { "assetId": "int_veyra_orison_aperture_4x4", "displayName": "Reliquary Aperture 4x4", "archetype": "door_4x4", "sizeMeters": [4,4,1], "gameplayRole": "Lockable relic personnel portal", "mobility": ["infantry"], "sockets": [{"id":"personnel","profile":"interior_personnel_4x4","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Circular Veyra stone-metal aperture with three retracting radial leaves, mineral seam light, and a clearly open human-width center." },
+        { "assetId": "int_veyra_orison_processional_gate_8x6", "displayName": "Processional Aperture 8x6", "archetype": "gate_8x6", "sizeMeters": [8,6,1.5], "gameplayRole": "Lockable ancient mixed portal", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed","profile":"interior_mixed_8x6","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Large Veyra elliptical aperture with segmented stone-metal petals, pale mineral tracks, and one broken-leaf jammed state retaining measured clearance." },
+        { "assetId": "int_veyra_orison_relic_plinth_cover", "displayName": "Eroded Relic Plinth", "archetype": "cover_low_2m", "sizeMeters": [2,1.2,1], "gameplayRole": "Destructible half cover", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Low Veyra mineral plinth with radial facets, weathered charcoal base, one large missing segment, and a compact destroyed state." },
+        { "assetId": "int_veyra_orison_broken_lens_cover", "displayName": "Broken Lens Cradle", "archetype": "cover_large_4m", "sizeMeters": [4,2,1.5], "gameplayRole": "Destructible full cover and relic obstacle", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "fracture-cover", "hunyuanPromptIntent": "Four-meter Veyra lens cradle with a single cracked opaque mineral disc, strong triangular supports, and deterministic inward collapse." },
+        { "assetId": "int_veyra_orison_archive_terminal", "displayName": "Ossuary Archive Terminal", "archetype": "objective_console_3m", "sizeMeters": [3,2.5,2], "gameplayRole": "Scan and extract relic data", "mobility": ["infantry"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Ancient archive terminal formed from layered stone-metal arcs around a pale mineral slab, two human interaction faces, no readable glyphs." },
+        { "assetId": "int_veyra_orison_lens_regulator", "displayName": "Lensing Observatory Regulator", "archetype": "objective_machine_4m", "sizeMeters": [4,4,4], "gameplayRole": "Reactivate or stabilize observatory objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Veyra observatory regulator with concentric physical rings around a shielded mineral lens, stout base, service gaps, and restrained violet emission." },
+        { "assetId": "int_veyra_orison_orrery_landmark", "displayName": "Orison Dormant Orrery", "archetype": "landmark_8m", "sizeMeters": [8,8,8], "gameplayRole": "Derelict landmark and major scan objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Monumental dormant Veyra orrery of three thick offset rings and a stone-metal fork, no floating planets, clear base circulation, iconic top-down silhouette." },
+        { "assetId": "int_veyra_orison_collapsed_nave_shell", "displayName": "Collapsed Ossuary Nave Shell", "archetype": "damage_shell_8m", "sizeMeters": [8,6,8], "gameplayRole": "Authored derelict hazard tile", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]}], "destructible": false, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Collapsed Veyra nave with one fallen astronomical arch, large deterministic slabs, eroded mineral panels, and a clear diagonal mixed route." }
+      ]
+    },
+    {
+      "packId": "interior_brood_karak_meridian_breach_v1",
+      "title": "Brood-Infested Karak Meridian Colony Interior",
+      "status": "PLANNED",
+      "runtimeReady": false,
+      "faction": "brood",
+      "planetIds": ["karak"],
+      "locationIds": ["karak_meridian", "karak_spine", "karak_hive"],
+      "missionIntents": ["colony-rescue", "infestation-purge", "hive-sample-recovery", "transit-spine-breach"],
+      "visualIdentity": [
+        "damaged human colony infrastructure overtaken by nonhumanoid Brood growth",
+        "bone chitin, dark wet membrane, amber-red bioluminescent organs",
+        "directional root structures that frame rather than randomly bury routes",
+        "clear distinction between original colony metal and active infestation"
+      ],
+      "hunyuanPromptBase": "Original low-poly game-ready Karak colony interior module overtaken by the nonhumanoid hostile Brood, readable from a tilted top-down RTS camera, damaged human industrial shell plus directional bone chitin, dark wet membrane and restrained amber-red bioluminescent organs, coherent large organic forms, exact modular envelope, centered floor pivot, optimized topology, separate colony and infestation materials, clear tactical silhouette and navigation without copying any existing franchise creature, asset, or logo.",
+      "hunyuanNegativePrompt": "No humanoid alien, no playable-faction architecture, no insect swarm, no gore carpet, no random spaghetti tentacles, no full hive landscape, no text, no logo, no floating organs, no route-blocking clutter, no microscopic pores covering every surface.",
+      "mapTemplateIds": ["interior_xs_breach_40x40", "interior_xs_linear_48x32", "interior_small_loop_64x64", "interior_small_multilevel_80x64"],
+      "members": [
+        { "assetId": "int_brood_karak_infested_quarters_4x4", "displayName": "Infested Colony Quarters 4x4", "archetype": "room_4x4", "sizeMeters": [4,4,4], "gameplayRole": "Infantry rescue room and nest flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[2,0,0]},{"id":"personnel_w","profile":"interior_personnel_4x4","face":"west","offsetMeters":[-2,0,0]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Small human colony quarters with one wall overtaken by a coherent Brood rib growth, restrained membrane, broken bunks, and an open infantry lane." },
+        { "assetId": "int_brood_karak_brood_nursery_8x8", "displayName": "Meridian Brood Nursery 8x8", "archetype": "room_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility hive encounter room", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[4,0,0]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Former colony machine hall transformed into a Brood nursery, large wall-attached egg organs outside the central mech turn, bone ribs and damaged steel clearly separated." },
+        { "assetId": "int_brood_karak_vein_passage_4x8", "displayName": "Infested Service Passage 4x8", "archetype": "corridor_4x8_straight", "sizeMeters": [4,4,8], "gameplayRole": "Tileable infantry hive flank", "mobility": ["infantry"], "sockets": [{"id":"personnel_n","profile":"interior_personnel_4x4","face":"north","offsetMeters":[0,0,4]},{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Straight colony service passage with directional Brood vein ribs along ceiling and one wall, repeating ends, dark membrane panels, and clear floor." },
+        { "assetId": "int_brood_karak_vein_corner_4x4", "displayName": "Infested Service Corner 4x4", "archetype": "corridor_4x4_corner", "sizeMeters": [4,4,4], "gameplayRole": "Tileable infantry hive turn", "mobility": ["infantry"], "sockets": [{"id":"personnel_s","profile":"interior_personnel_4x4","face":"south","offsetMeters":[0,0,-2]},{"id":"personnel_e","profile":"interior_personnel_4x4","face":"east","offsetMeters":[2,0,0]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Infested colony corridor corner where one thick Brood root follows the outer elbow, leaving the inner infantry turn completely clear." },
+        { "assetId": "int_brood_karak_transit_spine_8x8", "displayName": "Infested Transit Spine 8x8", "archetype": "corridor_8x8_straight", "sizeMeters": [8,6,8], "gameplayRole": "Tileable vehicle and mech hive route", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Wide damaged colony transit lane framed by paired Brood chitin arches and membrane-filled wall bays, with an untouched six-point-four-meter central route." },
+        { "assetId": "int_brood_karak_hive_junction_8x8", "displayName": "Hive Confluence Junction 8x8", "archetype": "junction_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed route branch and Brood ambush node", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_e","profile":"interior_mixed_8x6","face":"east","offsetMeters":[4,0,0]},{"id":"mixed_w","profile":"interior_mixed_8x6","face":"west","offsetMeters":[-4,0,0]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Three-way colony junction with Brood roots converging into wall-attached organs at the corners, amber-red pulses, and a fully clear turning center." },
+        { "assetId": "int_brood_karak_spine_ramp_8x8", "displayName": "Transit Spine Ramp 8x8", "archetype": "vertical_link_8x8", "sizeMeters": [8,6,8], "gameplayRole": "Mixed-mobility infested level transition", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]},{"id":"vertical","profile":"interior_vertical_8x6","face":"up","offsetMeters":[0,4,4]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Damaged colony transit ramp reinforced by Brood chitin along both guard edges, shallow physical incline, restrained membrane, and clear vehicle tread." },
+        { "assetId": "int_brood_karak_torn_door_4x4", "displayName": "Torn Colony Pressure Door 4x4", "archetype": "door_4x4", "sizeMeters": [4,4,1], "gameplayRole": "Jam-capable infantry portal", "mobility": ["infantry"], "sockets": [{"id":"personnel","profile":"interior_personnel_4x4","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "portal-jam", "hunyuanPromptIntent": "Human colony pressure door bent by a single Brood chitin wedge, with readable intact, partially jammed, and torn-open states." },
+        { "assetId": "int_brood_karak_sphincter_gate_8x6", "displayName": "Brood Membrane Gate 8x6", "archetype": "gate_8x6", "sizeMeters": [8,6,1.5], "gameplayRole": "Destructible mixed-mobility organic portal", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed","profile":"interior_mixed_8x6","face":"interior","offsetMeters":[0,0,0]}], "destructible": true, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Large wall-attached Brood membrane gate with six thick radial muscle leaves in a colony frame, fully retracted open state, no gore spray." },
+        { "assetId": "int_brood_karak_chitin_node_cover", "displayName": "Chitin Anchorage Node", "archetype": "cover_low_2m", "sizeMeters": [2,1.2,1], "gameplayRole": "Destructible half cover and infestation node", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Low Brood chitin anchorage grown through a colony floor plate, three large armored lobes, small amber organ, compact ruptured state." },
+        { "assetId": "int_brood_karak_biomass_barrier_cover", "displayName": "Biomass Rib Barrier", "archetype": "cover_large_4m", "sizeMeters": [4,2,1.5], "gameplayRole": "Destructible full cover and hive divider", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Four-meter Brood barrier of three coherent bone ribs and dark membrane rooted to a metal base, collapsing inward into low remains." },
+        { "assetId": "int_brood_karak_colony_distress_console", "displayName": "Meridian Distress Console", "archetype": "objective_console_3m", "sizeMeters": [3,2.5,2], "gameplayRole": "Rescue beacon and survivor-data objective", "mobility": ["infantry"], "sockets": [], "destructible": true, "damageFamily": "three-state-swap", "hunyuanPromptIntent": "Damaged human colony distress console partly restrained by Brood tendons, readable interaction face, amber emergency lamp, no text or loose gore." },
+        { "assetId": "int_brood_karak_hive_sample_organ", "displayName": "Primary Hive Sample Organ", "archetype": "objective_machine_4m", "sizeMeters": [4,4,4], "gameplayRole": "Scan, capture, or purge Brood objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": true, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Large nonhumanoid Brood sensory organ attached to a colony machine plinth, layered chitin petals, shielded amber core, clear access on two sides." },
+        { "assetId": "int_brood_karak_meridian_hive_heart", "displayName": "Meridian Hive Heart", "archetype": "landmark_8m", "sizeMeters": [8,8,8], "gameplayRole": "Infestation landmark and major purge objective", "mobility": ["infantry","small_vehicle","mech"], "sockets": [], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Iconic Brood hive heart fused to a broken colony support tower, four large chitin buttresses, dark membrane, restrained amber-red pulse, open base routes." },
+        { "assetId": "int_brood_karak_ruptured_spine_shell", "displayName": "Ruptured Transit Spine Shell", "archetype": "damage_shell_8m", "sizeMeters": [8,6,8], "gameplayRole": "Authored infestation-destruction encounter tile", "mobility": ["infantry","small_vehicle","mech"], "sockets": [{"id":"mixed_n","profile":"interior_mixed_8x6","face":"north","offsetMeters":[0,0,4]},{"id":"mixed_s","profile":"interior_mixed_8x6","face":"south","offsetMeters":[0,0,-4]}], "destructible": false, "damageFamily": "organic-rupture", "hunyuanPromptIntent": "Ruptured Karak transit spine with split colony wall, torn Brood membrane, three large deterministic chitin slabs, and one fully clear mixed route." }
+      ]
+    }
+  ],
+  "acceptanceGates": [
+    "Every pack remains PLANNED and runtimeReady false until generated sources, provenance, optimizer output, socket assembly, collision, nav, and device captures pass.",
+    "Each Hunyuan generation is one isolated named asset; a generated scene or combined kit is rejected because dimensions, pivots, sockets, collision, and LODs cannot be verified independently.",
+    "Generated LOD0 is retopologized to the archetype triangle cap; LOD1 and LOD2 preserve silhouette and socket planes and are not raw Hunyuan outputs.",
+    "Every 4 m and 8 m socket assembly passes straight, rotated, corner, T, and loop tests with no visible gap above 0.02 m and no collision overlap above 0.05 m.",
+    "Every XS and SMALL map preserves an end-to-end route for infantry, one small vehicle, and one mech; infantry-only branches may enrich but never define the only objective route.",
+    "Door and gate intact, open, jammed, and destroyed states update collision and navigation atomically.",
+    "Destructible cover uses authored deterministic state swaps; no physics fragments become navigation authority.",
+    "An assembled XS scene at LOD0 stays below 180000 visible triangles and 90 draw calls before batching; an assembled SMALL scene stays below 320000 visible triangles and 140 draw calls before batching.",
+    "Mobile portrait and landscape captures at tactical and close zoom show readable objectives, vehicle clearances, nonrepeating landmark identity, and no cutaway occlusion or micro-detail shimmer.",
+    "No generated asset may reproduce franchise logos, recognizable copyrighted models, or source-image pixels; cited games contribute only high-level silhouette, modularity, and tactical-readability principles."
+  ]
+}

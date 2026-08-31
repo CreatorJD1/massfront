@@ -421,7 +421,10 @@ function mdlDomFlyer(){
     m.box(-3.60,3.32,sd*1.45,1.40,0.26,0.34,LAMP);
   }
   m.bevelBox(-4.10,1.50,0,2.25,1.20,3.40,0.30,DARKER);                 // tail gearbox
-  return {hull:m.build(),tur:null,s:0.96,air:1};
+  return {hull:m.build(),tur:null,s:0.96,air:1,propulsion:{mode:'rear-trail',sockets:[
+    {p:[-4.90,1.36,-3.60],axis:[-1,0,0],diameter:.84,effect:'trail'},
+    {p:[-4.90,1.36, 3.60],axis:[-1,0,0],diameter:.84,effect:'trail'}
+  ]}};
 }
 
 /* ---------------------------------------------------------------------------
@@ -468,7 +471,10 @@ function mdlDomGunship(){
     m.box(-3.80,6.15,sd*2.30,1.35,0.30,0.46,TWR_TRIM);
   }
   m.bevelBox(-4.35,3.10,0,2.55,1.55,3.85,0.42,DARKER);                 // tail gearbox
-  return {hull:m.build(),tur:null,s:1.0,air:1};
+  return {hull:m.build(),tur:null,s:1.0,air:1,propulsion:{mode:'rear-trail',sockets:[
+    {p:[-4.58,2.80,-3.85],axis:[-1,0,0],diameter:1.08,effect:'trail'},
+    {p:[-4.58,2.80, 3.85],axis:[-1,0,0],diameter:1.08,effect:'trail'}
+  ]}};
 }
 
 /* ---------------------------------------------------------------------------
@@ -1390,7 +1396,12 @@ function mdlDomAirlift(){
   }
   ventBank(m,-2.2,7.52,0,4.4,3.4,5,TWR_MACH,0);
   for(const sd of [-1,1]) m.bevelBox(-3.4,1.9,sd*3.3,4.4,.7,.78,.16,DARKER);
-  return {hull:m.build(),tur:null,s:1.16,air:1};
+  return {hull:m.build(),tur:null,s:1.16,air:1,propulsion:{mode:'lift-down',sockets:[
+    {p:[-5.2,.30,-7.2],axis:[0,-1,0],diameter:2.90,effect:'lift'},
+    {p:[-5.2,.30, 7.2],axis:[0,-1,0],diameter:2.90,effect:'lift'},
+    {p:[ 4.6,.30,-7.2],axis:[0,-1,0],diameter:2.90,effect:'lift'},
+    {p:[ 4.6,.30, 7.2],axis:[0,-1,0],diameter:2.90,effect:'lift'}
+  ]}};
 }
 if(typeof initFactionKits==='function'){
   const _domInitKits=initFactionKits;
@@ -1405,7 +1416,7 @@ if(typeof initFactionKits==='function'){
       if(FAC_KIT.legion) FAC_KIT.legion[MF_UT_AIRLIFT]=fn;
       if(FAC_MESH.legion&&typeof InstMesh==='function'&&typeof gl!=='undefined'&&gl){
         const g=fn();
-        FAC_MESH.legion[MF_UT_AIRLIFT]={hull:new InstMesh(gl,g.hull,900),tur:g.tur?new InstMesh(gl,g.tur,900):null,s:g.s||1,turH:g.turH||0,muzzle:g.muzzle||0,muzzleZ:g.muzzleZ||0};
+        FAC_MESH.legion[MF_UT_AIRLIFT]={hull:new InstMesh(gl,g.hull,900),tur:g.tur?new InstMesh(gl,g.tur,900):null,s:g.s||1,turH:g.turH||0,air:g.air||0,muzzle:g.muzzle||0,muzzleZ:g.muzzleZ||0,propulsion:g.propulsion||null};
       }
     }
     if(typeof mfCdrKitInst!=='function'||typeof COMMANDER_KIT_MESH==='undefined') return;
