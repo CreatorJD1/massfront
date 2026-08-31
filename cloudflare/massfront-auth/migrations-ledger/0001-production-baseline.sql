@@ -20,7 +20,7 @@
 -- nothing, which is what makes the two paths converge.
 --
 -- DO NOT EDIT to add new objects. Later schema changes get their own numbered
--- file after this one; editing a migration already recorded in some
+-- file after this one, editing a migration already recorded in some
 -- environment ledger is how environments silently diverge.
 -- ============================================================================
 
@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS users (
   pass_salt  TEXT NOT NULL,          -- hex, random per user, >=16 bytes
   pass_iter  INTEGER NOT NULL,       -- PBKDF2 iterations used for pass_hash
   created_at INTEGER NOT NULL,       -- unix ms
-  username   TEXT,                   -- public handle for friends; NULL until claimed
+  username   TEXT,                   -- public handle for friends, NULL until claimed
   age_ok     INTEGER NOT NULL DEFAULT 0,  -- 13+ confirmed. The date of birth itself is NEVER stored.
   age_checked_at INTEGER,
   -- Added on production by legacy migration 0001-social-columns.sql (Aug 19).
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE UNIQUE INDEX IF NOT EXISTS users_username_lower ON users (lower(username));
 
 -- Opaque bearer session tokens. Random, unguessable, stored server-side with
--- an expiry — this is the "real" session record; the token itself carries no
+-- an expiry — this is the "real" session record, the token itself carries no
 -- meaning on its own and cannot be forged or decoded (unlike a JWT), so
 -- revocation is just deleting the row.
 CREATE TABLE IF NOT EXISTS sessions (
@@ -81,7 +81,7 @@ CREATE TABLE IF NOT EXISTS saves (
 );
 
 -- Sliding-window log for rate-limiting /register and /login. A row per
--- attempt; checks count rows newer than the window cutoff for a given
+-- attempt, checks count rows newer than the window cutoff for a given
 -- (bucket, key) pair. See src/index.js `checkRateLimit`, which also prunes
 -- rows older than 24h on a small random fraction of requests so this table
 -- never needs a separate cron job to stay small.
@@ -111,7 +111,7 @@ CREATE INDEX IF NOT EXISTS idx_attempts_lookup ON attempts(bucket, akey, created
 -- itself is never stored: code_hash is `<saltHex>$<pbkdf2Hex>`, the same
 -- WebCrypto PBKDF2-SHA256 the passwords use, with a fresh random salt per
 -- issue. A six-digit code only has a million possibilities, so a plain digest
--- would be trivially reversible from a database leak; salted PBKDF2 at the
+-- would be trivially reversible from a database leak, salted PBKDF2 at the
 -- project's iteration floor is not, and `attempts` caps online guessing at
 -- VERIFY_MAX_ATTEMPTS before the row is destroyed.
 CREATE TABLE IF NOT EXISTS email_verifications (
@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS email_verifications (
 );
 
 -- A friendship is ONE row, not two. Storing it twice (a->b and b->a) means
--- every write has to keep two rows consistent and every read has to dedupe;
+-- every write has to keep two rows consistent and every read has to dedupe,
 -- the CHECK below makes the single canonical row unforgeable — lo_id is always
 -- the smaller user id, so the primary key IS the pair identity and a duplicate
 -- friendship cannot be inserted from the other direction.
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS friendships (
   PRIMARY KEY (lo_id, hi_id),
   CHECK (lo_id < hi_id)
 );
-/* The primary key already indexes lo_id; hi_id needs its own index because
+/* The primary key already indexes lo_id, hi_id needs its own index because
    "who are my friends" scans both columns. */
 CREATE INDEX IF NOT EXISTS idx_friendships_hi ON friendships(hi_id);
 
@@ -173,7 +173,7 @@ CREATE INDEX IF NOT EXISTS idx_blocks_blocked ON blocks(blocked_id);
 -- Abuse reports. body_snapshot is a JSON blob captured at report time so the
 -- evidence survives the reported player editing or deleting whatever prompted
 -- it. It carries usernames and the reporter's reason — never an e-mail
--- address; see the snapshot builder in src/index.js.
+-- address, see the snapshot builder in src/index.js.
 CREATE TABLE IF NOT EXISTS reports (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,
   reporter_id   INTEGER NOT NULL,
