@@ -11,13 +11,21 @@
    nothing had run. Copying a file list by hand is exactly the kind of thing that
    goes wrong once and then hides, so the copy is now verified below rather than
    trusted. */
-import {cpSync, rmSync, mkdirSync, existsSync, readFileSync, readdirSync, statSync} from 'node:fs';
+import {cpSync, rmSync, mkdirSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 import {basename, dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {buildRuntimeCompatibility, BALANCE_AUTHORITY_V1} from './runtime-compatibility.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const www = join(root,'www');
 const beforeBytes = dirBytes(www);
+/* Player packages include the signed Galactic Exploration runtime. The 2.6 GiB
+   authoring tree still never ships — only the hashed allowlist. Set
+   MASSFRONT_INCLUDE_EXPLORATION=0 for a slim developer pack without the module.
+   1.33.51 omitted this and shipped a second tree under the same number as the
+   1.33.50 APK that did contain it; default-on stops that miss. */
+const includeExploration = process.env.MASSFRONT_INCLUDE_EXPLORATION !== '0';
 
 /* Authored / live-loaded V2 maps. Everything else under textures/materials is
    a generated 256px stub (~80 KB, many byte-identical across units). Those
@@ -95,6 +103,43 @@ rmSync(join(www,'assets','brand'), {recursive:true, force:true});
 rmSync(join(www,'assets','factions','cinematic'), {recursive:true, force:true});
 rmSync(join(www,'assets','source'), {recursive:true, force:true});
 
+/* Galactic Exploration ships in player www/APK/Space from the signed allowlist,
+   not the 2.6 GiB authoring tree. This keeps Blender sources, autosaves, tests,
+   captures and rejected candidates out of www while making HEAD
+   ./modules/space_exploration/index.html succeed on the packaged player path. */
+function stageExplorationPack(){
+  const moduleRoot=join(root,'modules','space_exploration');
+  const manifestPath=join(moduleRoot,'dist','exploration-content-manifest-v1.json');
+  if(!existsSync(manifestPath)) throw new Error('Exploration runtime manifest is missing; run modules/space_exploration/tools/build-runtime-content-manifest.mjs');
+  const manifest=JSON.parse(readFileSync(manifestPath,'utf8'));
+  const claimed=String(manifest.hash||''),unsigned={...manifest};delete unsigned.hash;
+  const actual='sha256-'+createHash('sha256').update(JSON.stringify(unsigned)).digest('hex');
+  if(manifest.schemaVersion!==1||manifest.kind!=='ExplorationContentManifestV1'||claimed!==actual)
+    throw new Error('Exploration runtime manifest identity is invalid or stale.');
+  if(!Array.isArray(manifest.files)||!manifest.files.length) throw new Error('Exploration runtime manifest has no files.');
+  let total=0;
+  for(const entry of manifest.files){
+    const rel=String(entry.path||'').replace(/\\/g,'/');
+    if(!rel||rel.startsWith('/')||rel.includes('..')||rel.startsWith('assets/source/')||/(^|\/)(?:tools|tests|tmp|docs|_archive|\.toolchains)(\/|$)/.test(rel))
+      throw new Error('Unsafe exploration runtime path: '+rel);
+    const source=join(moduleRoot,...rel.split('/'));
+    if(!existsSync(source)||!statSync(source).isFile()) throw new Error('Missing exploration runtime file: '+rel);
+    const bytes=readFileSync(source),hash='sha256-'+createHash('sha256').update(bytes).digest('hex');
+    if(bytes.length!==entry.bytes||hash!==entry.hash) throw new Error('Stale exploration runtime manifest entry: '+rel);
+    const target=join(www,'modules','space_exploration',...rel.split('/'));
+    mkdirSync(dirname(target),{recursive:true});
+    cpSync(source,target);total+=bytes.length;
+  }
+  if(total!==manifest.totalBytes) throw new Error('Exploration runtime manifest total does not match its files.');
+  const installedManifest=join(www,'modules','space_exploration','exploration-content-manifest-v1.json');
+  /* Preserve the content-contract bytes. Installation state belongs to the
+     host/IndexedDB envelope; rewriting it here would invalidate the hash. */
+  cpSync(manifestPath,installedManifest);
+  console.log('  optional Galactic Exploration pack: '+manifest.files.length+' files, '+(total/1048576).toFixed(2)+' MiB');
+}
+if(includeExploration) stageExplorationPack();
+else rmSync(join(www,'modules'), {recursive:true, force:true});
+
 /* The soundtrack ships INSIDE the installer by default, and the reason is worth
    recording because it reverses an earlier decision. The build had hit 51 MB and
    music looked like the culprit, so it was moved to an on-demand Cloudflare
@@ -161,20 +206,21 @@ if(existsSync(join(www,'assets','source')))
   missing.push('assets/source/   (must not ship — image-generation authoring inputs)');
 if(existsSync(join(www,'node_modules'))||existsSync(join(www,'.tmp')))
   missing.push('node_modules/ or .tmp/   (must not ship in Capacitor www/)');
-/* modules/space_exploration is 264 MiB of authoring material — Blender sources,
-   .blend1 autosaves, 62 MiB of tmp/ capture output, and unoptimised GLB/PNG.
-   Even its genuine RUNTIME subset is ~124 MiB, which would more than double the
-   installer on its own. Nothing copies it today (the loop above takes an
-   allowlist of index.html/boot.js/src/assets), so this is a guard against a
-   future well-meaning addition rather than a live leak — exactly the role the
-   experimental/ wipe above already plays. */
-if(existsSync(join(www,'modules')))
-  missing.push('modules/   (must not ship — 264 MiB authoring module; package a curated subset deliberately, never the tree)');
+/* The full module source tree is 2.6+ GiB. Only the manifest-verified optimized
+   runtime closure may enter www; never copy the authoring tree. */
+if(includeExploration)
+  check('modules/space_exploration/index.html','Galactic Exploration player entry');
+else if(existsSync(join(www,'modules')))
+  missing.push('modules/   (slim pack requested; MASSFRONT_INCLUDE_EXPLORATION=0 must not leave a leftover tree)');
 
-const html = readFileSync(join(root,'index.html'),'utf8');
+const html = readFileSync(join(www,'index.html'),'utf8');
 for(const m of html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"/g)) check(m[1],'index.html');
+/* KTX2Loader resolves the transcoder WASM at runtime, so it never appears in
+   static HTML or the script manifest. Make the device-critical binary an
+   explicit package invariant instead of allowing a silent 404. */
+check('assets/basis/basis_transcoder.wasm','Basis/KTX2 transcoder runtime');
 
-const boot = readFileSync(join(root,'boot.js'),'utf8');
+const boot = readFileSync(join(www,'boot.js'),'utf8');
 const mf = boot.match(/MANIFEST\s*=\s*\[([\s\S]*?)\]/);
 let bootList = [];
 if(!mf) missing.push('boot.js MANIFEST could not be parsed — cannot verify script list');
@@ -190,6 +236,39 @@ else if(bootList.length){
   const manList = order.map(s => String(s).replace(/^\.\//,''));
   if(bootList.join('|') !== manList.join('|'))
     missing.push('assets/data/manifest.json order does not match boot.js MANIFEST');
+}
+
+/* Match launch compatibility must describe the bytes a player will execute,
+   not the Git checkout that happened to produce them. Build the descriptor
+   only after www/ is fully staged and read every leaf back from that directory.
+   The descriptor excludes itself, which makes a second identical pack byte-for-
+   byte deterministic and avoids the impossible self-hash problem. */
+if(bootList.length){
+  const styles=Array.from(html.matchAll(/<link\s+rel=["']stylesheet["']\s+href=["']([^"']+)["'][^>]*>/gi),
+    m=>m[1].split('?')[0].replace(/^\.\//,''));
+  const paths=['index.html','boot.js','sw.js',...styles,...bootList];
+  const seen=new Set(), ordered=[];
+  for(const path of paths) if(!seen.has(path)){seen.add(path);ordered.push(path);}
+  const absent=ordered.filter(path=>!existsSync(join(www,path)));
+  if(absent.length) missing.push(...absent.map(path=>path+'   (runtime compatibility input)'));
+  else {
+    const updater=readFileSync(join(www,'src','updater.js'),'utf8');
+    const versionMatch=updater.match(/\bconst\s+APP_VERSION\s*=\s*['"](\d+\.\d+\.\d+)['"]/);
+    if(!versionMatch) throw new Error('cannot derive packaged buildVersion from executing src/updater.js APP_VERSION');
+    const version=versionMatch[1];
+    const packageVersion=JSON.parse(readFileSync(join(root,'package.json'),'utf8')).version;
+    if(packageVersion!==version)
+      throw new Error('package.json version '+packageVersion+' disagrees with executing APP_VERSION '+version);
+    const descriptor=buildRuntimeCompatibility({
+      buildVersion:version,
+      channel:'packaged-www',
+      manifestArtifacts:ordered.map(path=>({path,bytes:readFileSync(join(www,path))})),
+      balancePaths:BALANCE_AUTHORITY_V1,
+      excluded:['assets/data/runtime-compatibility.json (descriptor carrier; self-reference)']
+    });
+    writeFileSync(join(www,'assets','data','runtime-compatibility.json'),JSON.stringify(descriptor,null,2)+'\n');
+    console.log('  runtime compatibility '+descriptor.manifestHash.slice(0,12)+' / balance '+descriptor.balanceHash.slice(0,12));
+  }
 }
 
 const wmPath = join(www,'assets','app.webmanifest');

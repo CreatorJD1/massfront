@@ -3,7 +3,7 @@
    only after the player has successfully fetched them. */
 'use strict';
 
-const MF_SW_VERSION = '1.33.51-shell1';
+const MF_SW_VERSION = '1.33.52-shell1';
 const MF_SW_PREFIX = 'massfront-pwa-';
 const MF_SW_CACHE = MF_SW_PREFIX + MF_SW_VERSION;
 const MF_SW_BOOT = [

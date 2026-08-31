@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.51';
+const APP_VERSION = '1.33.52';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Hotfix: High/Cinematic clouds are separate puffs instead of a white veil, commander minimap voice, minimap dock and intel layout, softer rank marks, and map-edge camera clamp.";
+const APP_NOTES = "1.33.52 includes Galactic Exploration in this install (~542 MiB runtime pack with Stage 10 GLBs). Enable Experimental: Galactic Campaign, then Open Experimental Galactic. Also includes the 1.33.51 hotfix: High/Cinematic clouds as separate puffs, commander minimap voice, minimap dock and intel layout, softer rank marks, and map-edge camera clamp.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,

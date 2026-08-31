@@ -30,7 +30,7 @@
      otherwise reuse a stale source even after the installer or local preview
      has changed, which made new settings appear to be missing until cache was
      cleared manually. Patch bundles keep their content-addressed Blob URLs. */
-  var PACKAGED_REV='1.33.51';
+  var PACKAGED_REV='1.33.52';
   /* Source-cache revision is deliberately independent from the user-facing
      release number. Local/hotfix rebuilds of the same release must not reuse
      an older gl.js merely because its ?v= version string is unchanged. */
@@ -580,7 +580,7 @@
   if(!secure) return;
   window.__mfPwaDiag={supported:true,registered:false,controlled:!!navigator.serviceWorker.controller,error:null};
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js?v=1.33.51-shell1',{scope:'./',updateViaCache:'none'})
+    navigator.serviceWorker.register('./sw.js?v=1.33.52-shell1',{scope:'./',updateViaCache:'none'})
       .then(function(reg){
         window.__mfPwaDiag.registered=true;
         window.__mfPwaDiag.scope=reg.scope;

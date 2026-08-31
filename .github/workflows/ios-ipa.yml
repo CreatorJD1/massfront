@@ -67,7 +67,7 @@ jobs:
         # boot.js reference a file that did not make it into www/, which is
         # exactly the mistake that once shipped an app with no JavaScript.
         run: |
-          node tools/pack-www.mjs
+          MASSFRONT_INCLUDE_EXPLORATION=1 node tools/pack-www.mjs
           npx cap sync ios
 
       - name: Decide signing mode

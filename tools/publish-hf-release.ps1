@@ -126,7 +126,12 @@ $g2=[regex]::Replace($g2,'versionName\s+"[^"]+"','versionName "'+$Version+'"')
 if($g2 -ne $g){ [IO.File]::WriteAllText($gradle,$g2,(New-Object Text.UTF8Encoding($false))) }
 
 Run 'Bundle syntax gate' { node tools/bundle.mjs }
+# Player packs include the signed Galactic Exploration runtime (index.html HEAD
+# path). 1.33.51 omitted it because pack-www defaulted off. Force the player
+# include here so a future publisher run cannot silently drop the module.
+$env:MASSFRONT_INCLUDE_EXPLORATION='1'
 Run 'Stage web build' { node tools/pack-www.mjs }
+Need (Test-Path -LiteralPath (Join-Path $Root 'www\modules\space_exploration\index.html')) 'Packed www is missing modules/space_exploration/index.html — refusing to publish a 1.33.51-style omit.'
 if($PatchFrom){
   Write-Host "Hotfix: skipping Android wrapper sync (a delta cannot change the APK)." -ForegroundColor Yellow
 } else {
@@ -224,13 +229,20 @@ if($PatchFrom){
 }
 Need ($publishFiles.Count -gt 0) "Refusing to publish an empty file list"
 
+$optionalPacks=@(); if($previousManifest.optionalPacks){ $optionalPacks=@($previousManifest.optionalPacks) }
+$hasExploration=$false
+foreach($p in $optionalPacks){ if([string]$p.id -eq 'exploration'){ $hasExploration=$true } }
+if(-not $hasExploration){
+  $optionalPacks += [pscustomobject]@{ id='exploration'; category='galactic'; optional=$true }
+}
+
 $manifest=[ordered]@{
   schema=if($previousManifest.schema){[int]$previousManifest.schema}else{2}
   channel=if($previousManifest.channel){[string]$previousManifest.channel}else{'stable'}
   severity=if($previousManifest.severity){[string]$previousManifest.severity}else{'recommended'}
   minBaseVersion=if($previousManifest.minBaseVersion){[string]$previousManifest.minBaseVersion}else{'1.22.0'}
   packsIndex=if($previousManifest.packsIndex){[string]$previousManifest.packsIndex}else{'packs.json'}
-  optionalPacks=if($previousManifest.optionalPacks){@($previousManifest.optionalPacks)}else{@()}
+  optionalPacks=@($optionalPacks)
   notes=$Notes
   version=$Version
   base=''
@@ -290,9 +302,9 @@ $keep=@(
   # audit/ is local verification evidence only. Including it bloated 1.33.49 to
   # 5.68 GiB and broke the HF LFS upload; evidence stays in the checkout, not
   # the collaborator handoff archive (same class as tmp/ and .tmp/).
-  # These are development/source handoff material, not runtime payload. The
-  # optional Galactic module stays out of www/ and OTA, but must survive a
-  # full-source release archive together with its authoring references.
+  # These are development/source handoff material plus the Galactic module
+  # authoring tree. Player www/APK/Space carry only the signed runtime
+  # allowlist; the full module still belongs in the collaborator source zip.
   'modules','source-media'
 )
 foreach($name in $keep){
@@ -373,6 +385,15 @@ if($PatchFrom){
   Write-Host "Hotfix: skipping this upload - the APK is unchanged." -ForegroundColor Yellow
 } else {
   Run 'Publish Android installer' { & $Hf upload $Repo $apk "MASSFRONT-v$Version-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer" }
+}
+# OTA JS cannot write GLBs into an already-installed APK tree. Upload the same
+# signed runtime pack the APK carries so older clients can fetch it, and so the
+# dataset actually contains the module instead of only the source zip.
+$expLocal=Join-Path $Root 'www\modules\space_exploration'
+if(Test-Path -LiteralPath (Join-Path $expLocal 'index.html')){
+  Run 'Publish Galactic exploration pack' { & $Hf upload $Repo $expLocal 'exploration-pack' --type dataset --commit-message "Publish MASSFRONT v$Version Galactic exploration pack" }
+} else {
+  throw 'Exploration pack missing after pack-www; refusing to activate a release that omits it.'
 }
 foreach($x in $extraEntries){
   $xPath=$x.path; $xLocal=$x.local
