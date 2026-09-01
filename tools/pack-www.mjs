@@ -20,12 +20,10 @@ import {buildRuntimeCompatibility, BALANCE_AUTHORITY_V1} from './runtime-compati
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const www = join(root,'www');
 const beforeBytes = dirBytes(www);
-/* Player packages include the signed Galactic Exploration runtime. The 2.6 GiB
-   authoring tree still never ships — only the hashed allowlist. Set
-   MASSFRONT_INCLUDE_EXPLORATION=0 for a slim developer pack without the module.
-   1.33.51 omitted this and shipped a second tree under the same number as the
-   1.33.50 APK that did contain it; default-on stops that miss. */
-const includeExploration = process.env.MASSFRONT_INCLUDE_EXPLORATION !== '0';
+/* Galactic Exploration is an optional content channel, not base installer
+   weight. A normal pack must stay slim for browser/PWA and Android; the signed
+   541 MiB allowlist is included only for an explicit monolithic QA build. */
+const includeExploration = process.env.MASSFRONT_INCLUDE_EXPLORATION === '1';
 
 /* Authored / live-loaded V2 maps. Everything else under textures/materials is
    a generated 256px stub (~80 KB, many byte-identical across units). Those
@@ -103,10 +101,10 @@ rmSync(join(www,'assets','brand'), {recursive:true, force:true});
 rmSync(join(www,'assets','factions','cinematic'), {recursive:true, force:true});
 rmSync(join(www,'assets','source'), {recursive:true, force:true});
 
-/* Galactic Exploration ships in player www/APK/Space from the signed allowlist,
-   not the 2.6 GiB authoring tree. This keeps Blender sources, autosaves, tests,
-   captures and rejected candidates out of www while making HEAD
-   ./modules/space_exploration/index.html succeed on the packaged player path. */
+/* Explicit full-QA packs stage Galactic Exploration from the signed allowlist,
+   never from the 2.6 GiB authoring tree. This keeps Blender sources, autosaves,
+   tests, captures and rejected candidates out of www while making HEAD
+   ./modules/space_exploration/index.html succeed on that QA player path. */
 function stageExplorationPack(){
   const moduleRoot=join(root,'modules','space_exploration');
   const manifestPath=join(moduleRoot,'dist','exploration-content-manifest-v1.json');
@@ -139,6 +137,18 @@ function stageExplorationPack(){
 }
 if(includeExploration) stageExplorationPack();
 else rmSync(join(www,'modules'), {recursive:true, force:true});
+
+/* `checkGalactic` must never discover optional content by requesting a path
+   that a slim build deliberately omitted. Rewrite only the copied immutable
+   boot authority; the canonical source/default pack stays true, while a slim
+   package and every later OTA source read exact false without a network probe. */
+{
+  const bootPath=join(www,'boot.js'),source=readFileSync(bootPath,'utf8');
+  const marker=/window\.__MF_BUILD_HAS_GALACTIC_EXPLORATION=(?:true|false);/;
+  if(!marker.test(source)) throw new Error('boot.js is missing Galactic build capability authority');
+  writeFileSync(bootPath,source.replace(marker,
+    'window.__MF_BUILD_HAS_GALACTIC_EXPLORATION='+(includeExploration?'true':'false')+';'));
+}
 
 /* The soundtrack ships INSIDE the installer by default, and the reason is worth
    recording because it reverses an earlier decision. The build had hit 51 MB and
@@ -211,7 +221,7 @@ if(existsSync(join(www,'node_modules'))||existsSync(join(www,'.tmp')))
 if(includeExploration)
   check('modules/space_exploration/index.html','Galactic Exploration player entry');
 else if(existsSync(join(www,'modules')))
-  missing.push('modules/   (slim pack requested; MASSFRONT_INCLUDE_EXPLORATION=0 must not leave a leftover tree)');
+  missing.push('modules/   (base pack must stay slim; only MASSFRONT_INCLUDE_EXPLORATION=1 may stage Galactic content)');
 
 const html = readFileSync(join(www,'index.html'),'utf8');
 for(const m of html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"/g)) check(m[1],'index.html');
@@ -360,6 +370,12 @@ for(const suf of ['baseao','nre','masks'])
 check('assets/textures/materials/mf2-carbon-cracks-v1.png','V2 damage');
 check('assets/textures/materials/mf_mechanical_microdetail_v2.webp','V2 detail');
 check('assets/textures/ui/tacticons-faction.png','faction tacticons');
+check('assets/textures/ui/cmdicons.png','cinematic command icons');
+check('assets/textures/ui/icon-index.json','faction icon index');
+for(const kit of ['nova','legion','syndicate','horde'])
+  check('assets/textures/ui/icons-'+kit+'.png','faction build-card icons');
+check('assets/textures/ui/mf-hud-panel-material-v1.webp','cinematic HUD panel material');
+check('assets/textures/ui/mf-keel-uga-portrait-v1.webp','KEEL UGA communications portrait');
 check(KEEP_MODIFIER,'operations modifier art atlas');
 for(const stem of ['nova-rhino-v2','nova-rhino-v2-turret','brood-gorger-v2','nova-factory-v2','nova-heavy-tank-v2'])
   for(const suf of ['baseao','nre','masks'])

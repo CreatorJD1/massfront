@@ -388,6 +388,10 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
   white-space:nowrap;overflow:hidden;
   background:rgba(4,10,18,.4) padding-box,var(--steelB) border-box;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+#goalDetailBtn{appearance:none;-webkit-appearance:none;display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;min-width:0;min-height:24px;margin:0;padding:0;border:0;background:none;color:inherit;
+  font:inherit;letter-spacing:inherit;white-space:inherit;overflow:hidden;cursor:pointer}
+#goalDetailBtn:focus-visible{outline:2px solid #77ddff;outline-offset:1px;border-radius:6px}
 #goalBar .hudIntelChip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:7px;
   border:1px solid rgba(120,170,205,.22);background:rgba(6,14,24,.42);letter-spacing:.05em}
 #goalBar .hudIntelChip.contact{color:#8fffc0;border-color:rgba(80,255,180,.28);
@@ -488,8 +492,29 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
 /* ---------- BOTTOM COMMAND BAR ---------- */
 #cmdbar{position:absolute;right:6px;bottom:calc(var(--sab) + 6px);z-index:10;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
 .btnrow{display:flex;gap:6px}
-.baseFinder{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 68px);z-index:14;display:none;width:min(94vw,382px);padding:9px;border-radius:13px;border:1px solid rgba(107,205,249,.56);background:linear-gradient(155deg,rgba(16,42,61,.98),rgba(6,14,25,.98));box-shadow:0 9px 30px rgba(0,0,0,.7)}
-.baseFinder header{display:flex;align-items:center;justify-content:space-between;color:#c8f1ff;font:900 10px/1 var(--fT);letter-spacing:.1em}.baseFinder header button{width:44px;height:44px;display:grid;place-items:center;color:#dcefff;font-size:22px;border:1px solid rgba(147,204,235,.35);border-radius:7px;background:#0a1825}.baseFindTabs{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}.baseFindTabs button{min-height:44px;padding:5px 7px;color:#afc9da;border:1px solid rgba(110,161,190,.28);border-radius:7px;background:rgba(4,13,22,.72);font:800 9px/1 var(--fT);letter-spacing:.06em}.baseFindTabs button.on{color:#fff1a5;border-color:#ffe17c;background:rgba(91,67,12,.72);box-shadow:0 0 10px rgba(255,214,80,.2)}.baseFinder p{margin:9px 2px 1px;color:#83a1b4;font:700 9px/1.35 var(--fT);letter-spacing:.05em}
+.baseFinder{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 72px);z-index:14;display:none;
+  width:min(94vw,560px);max-height:calc(100dvh - var(--sat) - var(--sab) - 96px);box-sizing:border-box;padding:10px;
+  border-radius:14px;border:1px solid rgba(107,205,249,.62);background:linear-gradient(155deg,rgba(16,42,61,.985),rgba(6,14,25,.99));
+  box-shadow:0 12px 36px rgba(0,0,0,.76),inset 0 1px 0 rgba(255,255,255,.08);overflow:hidden}
+.baseFinder header{display:flex;align-items:center;gap:10px;color:#c8f1ff;font:900 10px/1 var(--fT);letter-spacing:.1em}
+.baseFinder header>span{display:flex;min-width:0;flex:1;align-items:center;justify-content:space-between;gap:8px}
+.baseFinder header small{color:#7fa7c2;font:800 8px/1 var(--fT);letter-spacing:.08em}
+.baseFindBack{min-width:88px;min-height:44px;padding:6px 10px;color:#dcefff;border:1px solid rgba(147,204,235,.35);border-radius:8px;
+  background:linear-gradient(180deg,rgba(25,54,77,.96),rgba(8,23,37,.98));font:900 9px/1 var(--fT);letter-spacing:.07em}
+.baseFindTabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:8px}
+.baseFindTabs button{min-width:0;min-height:44px;padding:5px 3px;display:flex;align-items:center;justify-content:center;gap:4px;color:#afc9da;
+  border:1px solid rgba(110,161,190,.28);border-radius:7px;background:rgba(4,13,22,.72);font:800 8px/1 var(--fT);letter-spacing:.035em;overflow:hidden}
+.baseFindTabs button .baseFindTabIcon{font-size:12px;line-height:1}.baseFindTabs button .baseFindTabLabel{min-width:0;font:inherit;line-height:1;white-space:nowrap}
+.baseFindTabs button.on{color:#fff1a5;border-color:#ffe17c;background:rgba(91,67,12,.72);box-shadow:0 0 10px rgba(255,214,80,.2)}
+.baseFindGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px;max-height:min(46dvh,344px);overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.baseFindCard{min-width:0;min-height:62px;padding:6px 7px;display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:center;gap:7px;text-align:left;
+  color:#dceeff;border:1px solid rgba(111,166,201,.28);border-radius:9px;background:linear-gradient(145deg,rgba(20,39,57,.96),rgba(7,18,29,.98));box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.baseFindCard.on{border-color:#62d2ff;box-shadow:0 0 12px rgba(57,198,255,.25),inset 0 0 0 1px rgba(98,210,255,.14)}
+.baseFindIcon{width:38px;height:38px;display:grid;place-items:center;border-radius:8px;border:1px solid rgba(112,201,240,.28);background:radial-gradient(circle at 45% 38%,rgba(67,145,188,.38),rgba(5,18,29,.88));font-size:20px}
+.baseFindCopy{display:flex;min-width:0;flex-direction:column;gap:4px}.baseFindCopy b{overflow:hidden;text-overflow:ellipsis;color:#eaf7ff;font:900 9px/1.1 var(--fT);letter-spacing:.045em;white-space:nowrap}
+.baseFindCopy small{overflow:hidden;text-overflow:ellipsis;color:#82a7be;font:700 7.5px/1 var(--fT);letter-spacing:.03em;white-space:nowrap}.baseFindCopy i{height:3px;overflow:hidden;border-radius:2px;background:#06101a}.baseFindCopy i span{display:block;height:100%;background:linear-gradient(90deg,#46c985,#96edb7)}
+.baseFindCard>strong{display:flex;flex-direction:column;align-items:flex-end;color:#8be8ff;font:900 11px/1 var(--fT)}.baseFindCard>strong small{margin-top:5px;color:#7799ae;font:700 7px/1 var(--fT);white-space:nowrap}
+.baseFinder .baseFindHint{margin:8px 2px 0;color:#83a1b4;font:700 8px/1.3 var(--fT);letter-spacing:.04em}.baseFindEmpty{grid-column:1/-1;margin:0!important;padding:24px 10px;text-align:center;color:#83a1b4;font:800 9px/1.3 var(--fT)}
 .cbtn{min-width:53px;height:53px;border-radius:11px;color:#dfeeff;font-size:11px;font-weight:700;letter-spacing:.04em;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;pointer-events:auto;padding:2px 6px;
   border:1px solid transparent;background:var(--panelG2) padding-box,var(--steelB) border-box;
@@ -515,7 +540,19 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
   filter:drop-shadow(0 1px 2px rgba(0,0,0,.55))}
 .em[data-icon]{display:inline-block;width:24px;height:24px;background-repeat:no-repeat}
 .camBtn .em[data-icon]{width:20px;height:20px}
-html.cmdIcons .em[data-icon]{
+/* Cinematic-only glyphs that have no honest shipped atlas cell use inline
+   monochrome vectors. Explicit SVG sizing prevents the browser's 300×150
+   replaced-element default from escaping a 44px touch target. */
+.mfCinematicVectorIcon{display:inline-grid!important;place-items:center;width:24px;height:24px;flex:0 0 24px;line-height:0;background:none!important}
+.mfCinematicVectorIcon svg{display:block;width:100%;height:100%;overflow:visible;pointer-events:none}
+.tabBtn .tEm.mfCinematicVectorIcon{width:18px;height:18px;flex-basis:18px}
+body.mf-cinematic-hud #inboxHudBtn>.mfCinematicVectorIcon,
+body.mf-cinematic-hud #menuBtn>.mfCinematicVectorIcon{width:22px;height:22px;flex-basis:22px}
+body.mf-cinematic-hud #heroRankEm.mfCinematicVectorIcon{width:16px;height:16px;min-width:16px;flex-basis:16px;padding:0;color:var(--gold)}
+body.mf-cinematic-hud #upBtn,body.mf-cinematic-hud #repeatBtn,body.mf-cinematic-hud #rallyBtn{
+  display:flex;align-items:center;justify-content:center;gap:6px
+}
+html.cmdIcons .em[data-icon][data-icon-ready="true"]{
   color:transparent;font-size:0;
   background-image:var(--cmdSheet);background-size:800% 800%;
 }
@@ -551,6 +588,12 @@ html.cmdIcons .em[data-icon="victory"]   {background-position:57.1428% 42.8571%}
 html.cmdIcons .em[data-icon="defeat"]    {background-position:71.4285% 42.8571%}
 html.cmdIcons .em[data-icon="pause"]     {background-position:85.7142% 42.8571%}
 html.cmdIcons .em[data-icon="options"]   {background-position:100% 42.8571%}
+html.cmdIcons body.mf-cinematic-hud [data-mf-hud-role="service-controls"] button[data-icon][data-icon-ready="true"]::before{
+  content:'';display:inline-block;position:static;width:24px;height:24px;flex:0 0 24px;
+  background-image:var(--cmdSheet);background-size:800% 800%;background-repeat:no-repeat
+}
+html.cmdIcons body.mf-cinematic-hud [data-mf-hud-role="service-controls"] button[data-icon="repair"]::before{background-position:57.1428% 14.2857%}
+html.cmdIcons body.mf-cinematic-hud [data-mf-hud-role="service-controls"] button[data-icon="delete"]::before{background-position:100% 14.2857%}
 .cbtn.on{background:linear-gradient(180deg,rgba(46,110,152,.96),rgba(20,52,80,.97)) padding-box,var(--goldB) border-box;
   box-shadow:0 0 12px rgba(255,210,87,.45),inset 0 1px 0 rgba(255,255,255,.2)}
 .cbtn:active{transform:scale(.94)}
@@ -591,6 +634,39 @@ html.cmdIcons .em[data-icon="options"]   {background-position:100% 42.8571%}
   background:linear-gradient(180deg,rgba(15,30,46,.94),rgba(7,16,27,.97));
   clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
   pointer-events:none;user-select:none}
+/* Unit stacks are a takeover inside the existing PLATOONS row, not another
+   battlefield drawer. P1-P4 keep their match-memory authority while the
+   remaining width becomes a finger-stable, horizontally panning type rail. */
+#grpRow.mfUnitStackReady>.grpBtn{flex:0 0 44px}
+#grpRow.mfUnitStackReady>#modeBtn{flex:0 0 54px}
+#mfUnitStackRail{display:none;flex:1 1 112px;min-width:96px;height:48px;align-items:stretch;gap:4px;
+  overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scroll-padding-inline:1px;
+  scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch;touch-action:pan-x}
+#mfUnitStackRail::-webkit-scrollbar{display:none}
+.mfUnitStackCard{position:relative;flex:0 0 82px;width:82px;min-width:82px;height:48px;min-height:44px;
+  display:grid;grid-template-columns:34px minmax(0,1fr);align-items:center;gap:3px;padding:3px;
+  overflow:hidden;scroll-snap-align:start;touch-action:pan-x;pointer-events:auto;color:#dff7ff;
+  border:1px solid rgba(91,174,218,.34);border-radius:8px;
+  background:linear-gradient(180deg,rgba(17,38,56,.94),rgba(5,17,28,.98));
+  box-shadow:inset 0 1px rgba(255,255,255,.07);font-family:var(--fT);text-align:left}
+.mfUnitStackCard:focus-visible{outline:2px solid #8be8ff;outline-offset:-2px}
+.mfUnitStackCard.selected{border-color:#4ed5ff;background:linear-gradient(180deg,rgba(20,86,124,.98),rgba(5,33,54,.99));
+  box-shadow:0 0 9px rgba(61,201,248,.24),inset 0 1px rgba(255,255,255,.12)}
+.mfUnitStackCard.partial{border-color:rgba(255,210,87,.72)}
+.mfUnitStackIcon{width:34px;height:34px;display:grid;place-items:center;overflow:hidden;pointer-events:none}
+.mfUnitStackIcon>*{max-width:34px;max-height:34px}
+.mfUnitStackFallback{font-size:19px;line-height:1;color:#83dfff}
+.mfUnitStackCopy{min-width:0;height:100%;display:flex;flex-direction:column;justify-content:center;gap:2px;pointer-events:none}
+.mfUnitStackName{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:#e5f8ff;font:900 8px/1.05 var(--fT);letter-spacing:.025em;text-transform:uppercase}
+.mfUnitStackMeta{display:flex;justify-content:space-between;align-items:center;gap:2px;color:#88bad0;
+  font:800 7px/1 var(--fT);font-variant-numeric:tabular-nums}
+.mfUnitStackCount{color:#8be8ff;font:900 9px/1 var(--fT)}
+.mfUnitStackReady{font:800 7px/1 var(--fT);color:#8bb0c2}
+.mfUnitStackCard.ready .mfUnitStackReady{color:#72e0a1}
+.mfUnitStackHealth{display:block;width:100%;height:3px;overflow:hidden;border-radius:2px;background:rgba(0,0,0,.66)}
+.mfUnitStackHealthFill{display:block;height:100%;min-width:1px;background:linear-gradient(90deg,#40d77c,#b9ef70);
+  box-shadow:0 0 4px rgba(88,226,134,.35)}
 
 /* ---------- SELECTION INFO ---------- */
 #selInfo{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 6px);z-index:9;
@@ -745,7 +821,7 @@ html.cmdIcons .em[data-icon="options"]   {background-position:100% 42.8571%}
 #placeUI{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(var(--sab) + 68px);z-index:12;display:none;gap:12px}
 #placeUI .cbtn{width:62px;height:62px;font-size:26px;position:relative}
 #placeRotL,#placeRotR{width:52px;height:52px;font-size:22px;align-self:center;color:#8be8ff}
-#placeRotDeg{position:absolute;left:0;right:0;bottom:3px;font-size:9px;font-family:var(--fU);letter-spacing:.04em;opacity:.75}
+#placeRotDeg{position:absolute;left:0;right:0;bottom:3px;font-size:max(9px,var(--mfHudTextMeta,8px));font-family:var(--fU);letter-spacing:.04em;opacity:.75}
 #placeOk{background:linear-gradient(180deg,rgba(20,64,40,.96),rgba(8,30,18,.97)) padding-box,linear-gradient(160deg,#b6ffd4,#2bd672 40%,#0d5a2e 70%,#6dffa8) border-box!important;color:var(--green)}
 #placeNo{background:linear-gradient(180deg,rgba(66,22,14,.96),rgba(32,10,6,.97)) padding-box,var(--redB) border-box!important;color:var(--red)}
 
@@ -772,18 +848,49 @@ html.cmdIcons .em[data-icon="options"]   {background-position:100% 42.8571%}
 #bp_fire{color:#1c1403;height:44px;font-weight:800;letter-spacing:.06em;
   background:linear-gradient(180deg,#ffe9a3,#e8bd5c 45%,#c9973b 55%,#f2cf78) padding-box,var(--goldB) border-box}
 #bp_fire:disabled{color:#8a7a4a;background:var(--panelG2) padding-box,var(--steelB) border-box}
+.bldServiceActions{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);gap:8px;margin-top:8px;width:100%}
+.bldServiceActions .bldServiceBtn{box-sizing:border-box;width:auto;height:auto;min-height:48px;margin:0;padding:8px 10px;border:1px solid transparent;
+  border-radius:9px;font:900 11px/1.15 var(--fT);letter-spacing:.065em;white-space:normal;touch-action:manipulation}
+.bldServiceRepair{color:#87edff!important;background:linear-gradient(180deg,rgba(10,59,82,.98),rgba(4,25,39,.98)) padding-box,
+  linear-gradient(145deg,#aaf5ff,#26c8f3 52%,#126995) border-box!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 12px rgba(39,199,244,.1)}
+.bldServiceRepair[data-state="repairing"]{color:#d7fbff!important;box-shadow:inset 0 0 12px rgba(50,212,255,.18),0 0 15px rgba(39,199,244,.18)}
+.bldServiceRepair[data-state="stalled"]{color:#ffe39a!important;background:linear-gradient(180deg,rgba(72,51,13,.98),rgba(34,24,6,.98)) padding-box,var(--goldB) border-box!important}
+.bldServiceRepair[data-state="under-fire"]{color:#ffc08d!important;background:linear-gradient(180deg,rgba(75,31,14,.98),rgba(37,14,7,.98)) padding-box,
+  linear-gradient(145deg,#ffc175,#ef6c34 55%,#84200d) border-box!important}
+.bldServiceRepair[data-state="full"]{color:#8cebb4!important;background:linear-gradient(180deg,rgba(16,57,38,.9),rgba(7,29,19,.94)) padding-box,
+  linear-gradient(145deg,#b9f6cf,#3fc77d 52%,#1b6b42) border-box!important}
+.bldServiceActions .bldServiceRepair:disabled{opacity:.72}
+.bldServiceRecycle{color:#ffd98a!important;background:linear-gradient(180deg,rgba(65,45,13,.96),rgba(31,22,7,.98)) padding-box,var(--goldB) border-box!important}
+.bldServiceRecycle[data-armed="true"]{color:#ff9e9e!important;background:linear-gradient(180deg,rgba(81,20,24,.98),rgba(38,8,12,.99)) padding-box,
+  linear-gradient(145deg,#ff9b9b,#ff4653 52%,#86141d) border-box!important;box-shadow:inset 0 0 12px rgba(255,65,79,.18),0 0 14px rgba(255,50,65,.14)}
+#prodMenu>.bldServiceActions{position:sticky;bottom:-9px;z-index:3;margin:8px -1px -1px;padding:7px 1px 1px;
+  background:linear-gradient(180deg,rgba(5,12,20,0),rgba(5,12,20,.97) 36%)}
+@media(max-width:360px){.bldServiceActions{gap:6px}.bldServiceActions .bldServiceBtn{padding:7px 6px;font-size:10px}}
 
-/* ---------- HERO XP BAR ---------- */
-/* Pinned to the top-left corner with position:fixed, so it holds its place
-   against the safe-area insets instead of riding the positioned ancestor. */
-#heroBar{position:fixed;top:calc(var(--sat) + 62px);left:calc(var(--sal) + 8px);z-index:9;width:auto;min-width:96px;
-  pointer-events:auto;display:none;white-space:nowrap;cursor:pointer;
-  border:1px solid transparent;background:rgba(8,14,22,.72) padding-box,var(--steelB) border-box;border-radius:9px;padding:4px 8px 5px}
-#heroBar .heroRow{display:flex;align-items:center;gap:5px}
-#heroRankEm{font-size:14px;line-height:1;filter:drop-shadow(0 0 5px rgba(255,210,87,.5))}
-#heroLvlTxt{font-size:11px;color:var(--gold);font-weight:700;letter-spacing:.1em;font-family:var(--fT)}
-#xpOuter{height:5px;background:rgba(0,0,0,.65);border-radius:3px;border:1px solid rgba(255,210,87,.4);margin-top:2px}
-#xpFill{height:100%;width:0%;background:linear-gradient(90deg,#c9973b,var(--gold),#ffef9a);border-radius:3px;box-shadow:0 0 6px var(--gold)}
+/* ---------- COMMANDER LOCATOR ---------- */
+/* Identity, live condition and the fastest route back to the Commander share
+   one top-left chip. This is a navigation control, not a decorative XP strip. */
+#heroBar{position:fixed;top:calc(var(--sat) + 62px);left:calc(var(--sal) + 8px);z-index:9;width:min(232px,54vw);min-height:60px;box-sizing:border-box;
+  pointer-events:auto;display:none;align-items:center;gap:7px;white-space:nowrap;cursor:pointer;overflow:hidden;
+  border:1px solid transparent;background:linear-gradient(145deg,rgba(11,25,38,.96),rgba(5,12,21,.94)) padding-box,var(--steelB) border-box;border-radius:10px;padding:5px 7px;
+  box-shadow:0 4px 14px rgba(0,0,0,.52),inset 0 1px 0 rgba(255,255,255,.08)}
+#heroBar:active{transform:translateY(1px)}
+#heroPortrait{position:relative;width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;overflow:hidden;border-radius:8px;border:1px solid rgba(119,213,249,.5);background:radial-gradient(circle at 50% 32%,rgba(63,147,192,.48),rgba(5,14,23,.95));box-shadow:0 0 10px rgba(59,191,242,.18)}
+#heroPortraitImg{position:absolute;inset:0;width:100%;height:100%;display:none;object-fit:cover;object-position:center 18%}
+#heroPortraitFallback{display:grid;place-items:center;color:#bfeeff;font:900 20px/1 var(--fT);font-style:normal}
+#heroRankEm{position:absolute;right:1px;bottom:1px;display:grid;place-items:center;min-width:16px;height:16px;padding:0 2px;border-radius:5px;background:rgba(3,9,15,.9);font-size:10px;line-height:1;filter:drop-shadow(0 0 5px rgba(255,210,87,.5))}
+.heroProfileBody{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}.heroProfileHead{display:flex;min-width:0;align-items:center;justify-content:space-between;gap:6px}
+#heroNameTxt{min-width:0;overflow:hidden;text-overflow:ellipsis;color:#eaf8ff;font:900 10px/1.1 var(--fT);letter-spacing:.08em}
+#heroLvlTxt{flex:0 0 auto;color:var(--gold);font:800 8px/1 var(--fT);letter-spacing:.06em}
+#heroCallsignTxt{overflow:hidden;text-overflow:ellipsis;color:#79cbe8;font:800 7px/1 var(--fT);letter-spacing:.1em}
+.heroVital{display:grid;grid-template-columns:15px minmax(36px,1fr) 27px;align-items:center;gap:3px}.heroVital small{color:#7c9aae;font:800 6.5px/1 var(--fT)}.heroVital>b{color:#a9cadc;text-align:right;font:800 6.5px/1 var(--fT)}
+.heroBarOuter,#xpOuter{height:4px;overflow:hidden;border-radius:3px;border:1px solid rgba(101,162,193,.3);background:rgba(0,0,0,.65)}
+#heroHpFill,#xpFill{display:block;height:100%;width:0%;border-radius:2px;transition:width .16s linear}
+#heroHpFill{background:linear-gradient(90deg,#32af71,#78e5a5);box-shadow:0 0 5px rgba(73,219,139,.5)}
+#xpFill{background:linear-gradient(90deg,#c9973b,var(--gold),#ffef9a);box-shadow:0 0 5px rgba(255,210,87,.6)}
+#heroBar.heroCritical{border-color:#ff6d62;background:linear-gradient(145deg,rgba(61,22,24,.96),rgba(18,10,16,.96));animation:heroCriticalPulse 1s ease-in-out infinite alternate}
+#heroBar.heroCritical #heroHpFill{background:linear-gradient(90deg,#e53f3f,#ff8a72)}
+@keyframes heroCriticalPulse{to{box-shadow:0 0 16px rgba(255,75,69,.34),inset 0 1px 0 rgba(255,255,255,.08)}}
 
 /* ---------- OVERLAYS ---------- */
 .overlay{position:absolute;inset:0;z-index:50;background:rgba(3,7,14,.9);display:flex;align-items:center;justify-content:center;
@@ -2194,6 +2301,7 @@ body.offline #packPanel{display:none!important}
   border:1px solid rgba(120,170,205,.25);background:linear-gradient(180deg,rgba(23,36,53,.94),rgba(9,17,28,.96));
   box-shadow:0 2px 7px rgba(0,0,0,.38);pointer-events:auto}
 .hudDeckBtn span{font-size:13px;color:#9fc6e0}
+.hudDeckBtn[data-deck="buildings"]{font-size:7px;letter-spacing:0}
 .hudDeckBtn.on{color:#fff;border-color:#62d2ff;background:linear-gradient(180deg,rgba(42,105,145,.96),rgba(14,46,70,.98));
   box-shadow:0 0 10px rgba(65,200,255,.24),inset 0 1px 0 rgba(255,255,255,.13)}
 .hudDeckBtn:disabled{opacity:.34;filter:grayscale(1) saturate(.15);color:#5f7180;border-color:rgba(100,125,144,.18);
@@ -2249,9 +2357,20 @@ body.godMode #godBadge{display:flex}
      so ORDERS can never paint under the canvas when the ratio changes. */
   #hudDeckTabs{width:100%;gap:3px;overflow-x:auto;scrollbar-width:none}
   #hudDeckTabs::-webkit-scrollbar{display:none}
-  .hudDeckBtn{flex:1 1 0;min-width:0;min-height:38px;padding:5px 3px;font-size:8px;
-    overflow:hidden;white-space:nowrap;letter-spacing:.04em}
-  .hudDeckBtn span{font-size:11px;flex:0 0 auto}
+  /* The shared tab-typography rule further down lists .hudDeckBtn alongside
+     .setupTabBtn and sets font-size:.5625rem with no media query. Same
+     specificity, later in the file, so it silently won and this portrait
+     sizing never applied: every tab rendered at 9px, PLATOONS overflowed its
+     78px cell, and BUILDINGS was pinned to a one-off 7px purely so it would
+     fit — which is what made the row read as mismatched. Own the sizing from
+     the dock's own id so the responsive value wins, and stack the glyph over
+     the label the way the action row directly below already does. That
+     returns the glyph's width to the text and lets all five share one size. */
+  #hudDeckTabs .hudDeckBtn{flex:1 1 0;min-width:0;min-height:38px;padding:4px 2px;
+    flex-direction:column;gap:2px;font-size:8px;
+    overflow:hidden;white-space:nowrap;letter-spacing:.02em}
+  #hudDeckTabs .hudDeckBtn span{font-size:12px;flex:0 0 auto}
+  #hudDeckTabs .hudDeckBtn[data-deck="buildings"]{font-size:8px;letter-spacing:.02em}
   #cmdbar .btnrow{width:100%;justify-content:flex-end;gap:3px}
   #cmdbar #primaryRow{margin-top:auto}
   #cmdbar #heroRow{justify-content:flex-start;overflow-x:auto;scrollbar-width:none}
@@ -2309,7 +2428,15 @@ body.godMode #godBadge{display:flex}
   #hazChip{top:calc(var(--sat) + var(--hudTopStack));left:auto;right:calc(var(--sar) + 8px);
     max-width:calc(42vw - var(--sar) - 12px);min-height:44px;max-height:44px;padding:2px 6px;font-size:9px}
   #heroBar{top:calc(var(--sat) + var(--hudTopStack) + var(--hudSideRow));left:calc(var(--sal) + 8px);right:auto;
-    width:auto;max-width:44vw;min-height:0}
+    width:min(232px,54vw);max-width:54vw;min-height:60px}
+  .baseFinder{left:calc(var(--sal) + 7px);right:calc(var(--sar) + 7px);transform:none;bottom:max(calc(var(--sab) + 202px),208px);
+    width:auto;max-height:calc(100dvh - var(--sat) - var(--sab) - 224px)}
+  .baseFindGrid{grid-template-columns:1fr;max-height:min(32dvh,276px)}
+  /* Five filters remain simultaneously discoverable on 344px phones. Stack a
+     compact visual label under its icon; the button keeps the full category
+     in aria-label/title for assistive technology and long-press inspection. */
+  .baseFindTabs button{padding:3px 1px;flex-direction:column;gap:2px;font-size:7px;letter-spacing:0}
+  .baseFindTabs button .baseFindTabIcon{font-size:10px}.baseFindTabs button .baseFindTabLabel{font-size:7px}
   /* One compact status chip replaces the old full-width icon strip. */
   #wcBanner{top:calc(var(--sat) + var(--hudTopStack));font-size:9px;padding:2px 7px;gap:4px}
   #wcBanner .wcBIcon{display:none}
@@ -2379,6 +2506,12 @@ body.godMode #godBadge{display:flex}
   body.uiPrimaryOpen .menuRoleCopy>p,body.uiPrimaryOpen .menuRoleCopy>small{display:none}
   body.uiPrimaryOpen .menuRoleDoctrine{margin-top:4px}
   body.uiPrimaryOpen .menuRoleInspect{min-height:44px;margin-top:auto;padding:4px 8px}
+}
+@media (orientation:landscape) and (max-height:600px){
+  /* Keep the building directory to the right of the always-available commander
+     locator. A centred 560px sheet overlapped the profile on common 900×412
+     phones even though both controls individually fit the viewport. */
+  .baseFinder{left:auto;right:calc(var(--sar) + 8px);transform:none;width:min(62vw,560px)}
 }
 
 /* ==========================================================================
@@ -2500,7 +2633,6 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
    wider is its longer label, so the type is sized to stay inside that
    min-width rather than push past it. The two must report identical
    offsetWidth at 412 px and at 360 px; that is measured, not assumed. */
-}
 
 
 /* ── Career ladder (Profile ▸ CAREER) ──────────────────────────────────────
@@ -2759,11 +2891,206 @@ body.menuMode #inboxHudBtn{display:none}
 #updDot.updBusy::after{animation:updPulse 1s ease-in-out infinite}
 @keyframes updPulse{0%,100%{opacity:1}50%{opacity:.25}}
 
-/* Its own screen, reusing the existing #updPanel wholesale. */
-#updScr{display:none;justify-content:flex-start;padding-left:0;padding-right:0}
-.updScroll{flex:1 1 auto;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:6px calc(var(--sar) + 16px) 10px calc(var(--sal) + 16px)}
-.updScroll #updPanel{width:min(94vw,460px);margin:0 auto}
+/* ============================================================================
+   VISUAL LAUNCHER / GAME VERSION GATEWAY
+   ----------------------------------------------------------------------------
+   #updScr is deliberately reused: old OTA sources still know this route and
+   the established updater retains authority over Download, Apply and Rollback.
+   The launcher adds presentation and sequencing around it, never a second
+   updater implementation. All art below already ships in www.
+   ============================================================================ */
+#updScr{display:none;justify-content:flex-start;padding:0;overflow:hidden;
+  color:#e9f7ff;background:#02070f;isolation:isolate}
+.mfLauncherBackdrop{position:absolute;inset:0;z-index:-2;overflow:hidden;pointer-events:none;
+  background:radial-gradient(80% 62% at 50% 12%,rgba(26,91,132,.28),transparent 70%),
+             radial-gradient(62% 55% at 8% 78%,rgba(0,118,151,.12),transparent 78%),
+             linear-gradient(180deg,#07111d 0%,#030912 52%,#02060c 100%)}
+.mfLauncherBackdrop::before{content:'';position:absolute;inset:0;opacity:.18;
+  background-image:linear-gradient(rgba(87,193,239,.09) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(87,193,239,.07) 1px,transparent 1px);
+  background-size:42px 42px;transform:perspective(460px) rotateX(58deg) scale(1.6);transform-origin:50% 100%}
+.mfLauncherBackdrop::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0 8%,rgba(87,202,248,.07) 8.15%,transparent 8.3% 91.7%,rgba(87,202,248,.07) 91.85%,transparent 92%),
+             repeating-linear-gradient(180deg,transparent 0 3px,rgba(126,216,255,.018) 4px)}
+.mfLauncherBackdrop i{position:absolute;border-radius:50%;border:1px solid rgba(94,204,250,.10)}
+.mfLauncherBackdrop i:nth-child(1){width:68vw;height:68vw;right:-38vw;top:10vh}
+.mfLauncherBackdrop i:nth-child(2){width:42vw;height:42vw;left:-27vw;top:44vh}
+.mfLauncherBackdrop i:nth-child(3){width:84vw;height:84vw;left:8vw;bottom:-68vw}
+
+.mfLauncherTop{position:relative;z-index:3;flex:0 0 auto;width:100%;min-height:62px;
+  padding:calc(var(--sat) + 10px) calc(var(--sar) + 16px) 9px calc(var(--sal) + 16px);
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  border-bottom:1px solid rgba(104,203,245,.19);background:linear-gradient(180deg,rgba(3,10,18,.97),rgba(5,15,26,.91));
+  box-shadow:0 12px 34px rgba(0,0,0,.28)}
+.mfLauncherTopBrand{display:flex;flex-direction:column;min-width:0}
+.mfLauncherTopBrand b{font:900 15px/1 var(--fT);letter-spacing:.22em;color:#ecfaff;text-shadow:0 0 14px rgba(96,217,255,.46)}
+.mfLauncherTopBrand span{margin-top:4px;font:800 7px/1 var(--fT);letter-spacing:.28em;color:#5d9fbd}
+.mfLauncherIdentity{flex:0 1 auto;min-height:30px;max-width:54%;display:flex;align-items:center;gap:7px;
+  padding:6px 9px;border:1px solid rgba(105,177,215,.22);border-radius:999px;background:rgba(11,27,42,.68);
+  color:#8faabe;font:800 8px/1.15 var(--fT);letter-spacing:.11em;text-align:right}
+.mfLauncherIdentity i{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#d8b357;box-shadow:0 0 9px rgba(255,196,68,.54)}
+.mfLauncherIdentity[data-state="connected"]{color:#b6f9d0;border-color:rgba(91,230,159,.26)}
+.mfLauncherIdentity[data-state="connected"] i{background:#5be69f;box-shadow:0 0 10px rgba(91,230,159,.75)}
+.mfLauncherIdentity[data-state="offline"]{color:#a8b4bd;border-color:rgba(157,170,180,.18)}
+.mfLauncherIdentity[data-state="offline"] i{background:#7e8d98;box-shadow:none}
+
+.updScroll.mfLauncherScroll{position:relative;flex:1 1 auto;width:100%;min-height:0;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#24516b transparent;
+  padding:12px calc(var(--sar) + 14px) 22px calc(var(--sal) + 14px)}
+.mfLauncherScroll>section,.mfLauncherScroll>details{width:min(100%,760px);margin:0 auto 13px}
+.mfLauncherHero{position:relative;min-height:218px;overflow:hidden;border-radius:17px;
+  border:1px solid rgba(105,205,249,.28);background:#02060c;box-shadow:0 18px 44px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.06)}
+.mfLauncherHeroArt{position:absolute;inset:0;overflow:hidden;background:#000}
+.mfLauncherHeroArt::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,rgba(1,6,11,.96) 0%,rgba(2,8,15,.77) 46%,rgba(2,8,14,.20) 74%,rgba(2,7,13,.62) 100%),
+             linear-gradient(0deg,rgba(1,5,10,.88),transparent 54%,rgba(1,5,10,.18))}
+.mfLauncherHeroArt img{position:absolute;width:100%;height:100%;object-fit:cover;transform:scale(1.62);filter:saturate(.92) contrast(1.08) brightness(.92)}
+.mfLauncherSweep{position:absolute;z-index:2;left:-12%;top:0;width:34%;height:100%;opacity:.55;
+  background:linear-gradient(90deg,transparent,rgba(110,222,255,.22),transparent);transform:skewX(-18deg);animation:mfLaunchSweep 5.6s ease-in-out infinite}
+.mfLauncherOrbit{position:absolute;z-index:2;right:-50px;top:-56px;width:236px;height:236px;border-radius:50%;
+  border:1px solid rgba(111,219,255,.22);box-shadow:0 0 44px rgba(40,171,222,.08),inset 0 0 38px rgba(50,178,230,.06)}
+.mfLauncherOrbit::before,.mfLauncherOrbit::after{content:'';position:absolute;border-radius:50%;border:1px dashed rgba(108,210,250,.16)}
+.mfLauncherOrbit::before{inset:24px}.mfLauncherOrbit::after{inset:58px}
+.mfLauncherHeroCopy{position:relative;z-index:3;min-height:218px;width:min(75%,480px);padding:25px 20px 19px;
+  display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start}
+.mfLauncherEyebrow{font:900 8px/1 var(--fT);letter-spacing:.25em;color:#68cff5}
+.mfLauncherHero h2{margin:8px 0 5px;font:900 clamp(21px,6vw,34px)/.98 var(--fT);letter-spacing:.08em;color:#f4fbff;
+  text-shadow:0 2px 16px rgba(0,0,0,.9),0 0 18px rgba(80,196,242,.24)}
+.mfLauncherHero p{max-width:420px;margin:0;color:#a8bfd0;font:600 11px/1.45 var(--fU);text-wrap:balance}
+.mfLauncherHeroChips{display:flex;flex-wrap:wrap;gap:5px;margin-top:12px}
+.mfLauncherHeroChips span{min-height:24px;display:inline-flex;align-items:center;padding:5px 8px;border-radius:6px;
+  background:rgba(8,24,38,.76);border:1px solid rgba(103,191,230,.24);color:#a9d9ee;font:900 7.5px/1 var(--fT);letter-spacing:.12em}
+.mfLauncherHeroChips #mfLaunchCategory{color:#90f1b5;border-color:rgba(91,230,159,.26)}
+.mfLauncher[data-category="hotfix"] .mfLauncherHeroChips #mfLaunchCategory{color:#ffd089;border-color:rgba(255,180,80,.34)}
+.mfLauncher[data-category="content"] .mfLauncherHeroChips #mfLaunchCategory{color:#c5a6ff;border-color:rgba(174,130,255,.34)}
+.mfLauncher[data-category="overhaul"] .mfLauncherHeroChips #mfLaunchCategory{color:#8eeaff;border-color:rgba(80,210,255,.36)}
+
+.mfLauncherSectionHead{min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 2px 7px}
+.mfLauncherSectionHead>div{display:flex;align-items:center;gap:8px;min-width:0}
+.mfLauncherSectionHead span{display:grid;place-items:center;width:24px;height:24px;border-radius:5px;background:#10293d;
+  border:1px solid rgba(103,196,237,.27);color:#73cce8;font:900 7px/1 var(--fT)}
+.mfLauncherSectionHead h3{margin:0;color:#d9f4ff;font:900 10px/1 var(--fT);letter-spacing:.17em}
+.mfLauncherSectionHead>b{max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#638ca5;font:800 7px/1 var(--fT);letter-spacing:.10em}
+.mfLauncherConsole{padding:11px;border-radius:15px;border:1px solid rgba(94,181,221,.18);background:rgba(5,14,24,.76);box-shadow:0 12px 30px rgba(0,0,0,.20)}
+.mfLauncherConsole .mfLauncherSectionHead{padding-left:1px;padding-right:1px}
+.mfLauncher .updScroll #updPanel,.mfLauncher #updPanel{width:100%;max-width:none;margin:0;padding:13px;border-radius:12px;
+  background:linear-gradient(180deg,rgba(17,35,53,.95),rgba(7,18,30,.97)) padding-box,
+             linear-gradient(150deg,rgba(126,218,255,.37),rgba(25,75,108,.15)) border-box;
+  box-shadow:inset 0 1px rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.28)}
+.mfLauncher #updPanel.mini{padding:13px;margin:0;box-shadow:inset 0 1px rgba(255,255,255,.05),0 10px 26px rgba(0,0,0,.28)}
+.mfLauncher #updPanel.mini #updBarO{display:block!important}
+.mfLauncher #updPanel.mini #updTxt{font-size:10.5px;color:#d2ecfa}.mfLauncher #updPanel.mini #updSub{font-size:9.5px}
+.mfLauncher #updPanel.mini #updBtn{opacity:1}
+.mfLauncher #updBarO{height:9px;margin-top:12px;border:1px solid rgba(107,199,237,.13);background:rgba(1,7,13,.92)}
+.mfLauncher #updBarF{position:relative;height:100%;min-width:0;background:linear-gradient(90deg,#0a789b,#46d7ff 60%,#a2f4ff);box-shadow:0 0 15px rgba(70,215,255,.46)}
+.mfLauncher #updBarF::after{content:'';position:absolute;inset:0;opacity:.4;background:repeating-linear-gradient(115deg,transparent 0 8px,rgba(255,255,255,.5) 9px 11px,transparent 12px 18px);animation:mfLaunchProgress 1.1s linear infinite}
+.mfLauncherTelemetry{display:grid;grid-template-columns:1.25fr .8fr .8fr;gap:6px;margin-top:9px}
+.mfLauncherTelemetry span{min-width:0;padding:7px 8px;border-radius:7px;border:1px solid rgba(101,178,214,.13);background:rgba(5,15,25,.72)}
+.mfLauncherTelemetry small,.mfLauncherDetailGrid small{display:block;color:#567b91;font:800 6.5px/1 var(--fT);letter-spacing:.13em}
+.mfLauncherTelemetry b,.mfLauncherDetailGrid b{display:block;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#b9ddec;font:800 8px/1 var(--fT);letter-spacing:.06em}
+.mfLauncher #updNotes{margin-top:9px;color:#9eb8c8;font-size:9.5px;line-height:1.45}
+.mfLauncher #updRoll{min-height:44px}
+
+.mfLauncherRelease,.mfLauncherContent,.mfLauncherHistory{padding:11px;border-radius:15px;border:1px solid rgba(93,174,213,.16);background:rgba(5,14,24,.68)}
+.mfLauncherReleaseCard{overflow:hidden;border-radius:12px;border:1px solid rgba(102,190,231,.20);background:linear-gradient(155deg,rgba(19,43,62,.93),rgba(7,18,30,.96))}
+.mfLauncherReleaseBanner{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:13px;
+  overflow:hidden;border-bottom:1px solid rgba(103,190,230,.15)}
+.mfLauncherReleaseBanner::after{content:'MASSFRONT';position:absolute;right:-10px;bottom:-8px;color:rgba(115,211,250,.035);font:900 34px/1 var(--fT);letter-spacing:.04em}
+#mfLaunchReleaseKind{position:relative;z-index:1;min-height:28px;display:inline-flex;align-items:center;padding:6px 8px;border-radius:6px;
+  color:#9bf1b9;border:1px solid rgba(91,230,159,.28);background:rgba(22,79,49,.34);font:900 7px/1 var(--fT);letter-spacing:.13em}
+.mfLauncherReleaseBanner>div{position:relative;z-index:1;min-width:0}.mfLauncherReleaseBanner h4{margin:0;color:#ecf9ff;font:900 11px/1.15 var(--fT);letter-spacing:.12em}
+.mfLauncherReleaseBanner p{margin:5px 0 0;color:#8faabb;font:600 9.5px/1.4 var(--fU)}
+.mfLauncherTabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:7px;background:rgba(2,9,16,.46)}
+.mfLauncherTabs button{min-width:0;min-height:44px;padding:7px 4px;border-radius:7px;border:1px solid rgba(83,143,176,.20);
+  color:#6f91a7;background:#0c1b2a;font:800 7px/1.12 var(--fT);letter-spacing:.08em;white-space:normal}
+.mfLauncherTabs button.on{color:#e9faff;border-color:rgba(83,210,255,.55);background:linear-gradient(180deg,#1b5878,#123a55);box-shadow:0 0 13px rgba(59,190,239,.16)}
+.mfLauncherNoteList{display:grid;gap:6px;margin:0;padding:10px 11px 12px;list-style:none}
+.mfLauncherNoteList li{position:relative;min-height:34px;padding:8px 9px 8px 27px;border-radius:7px;background:rgba(11,29,43,.72);color:#acc4d2;font:600 9.5px/1.4 var(--fU)}
+.mfLauncherNoteList li::before{content:'◆';position:absolute;left:10px;top:10px;color:#56d4fa;font-size:7px}
+.mfLauncherNoteList.upcoming li{color:#8898a4}.mfLauncherNoteList.upcoming li::before{content:'◇';color:#a687e5}
+
+.mfLauncherPackRail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.mfLauncherPack{position:relative;min-width:0;min-height:182px;overflow:hidden;border-radius:12px;border:1px solid rgba(104,191,232,.21);background:#0a1724}
+.mfLauncherPack>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(.84) brightness(.62);opacity:.72}
+.mfLauncherPack::after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(3,10,17,.99) 5%,rgba(4,12,20,.82) 54%,rgba(3,9,16,.13) 100%)}
+.mfLauncherPack>div{position:relative;z-index:2;min-height:136px;padding:55px 10px 8px;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start}
+.mfLauncherPack>div>span{color:#65c8ed;font:900 6.5px/1 var(--fT);letter-spacing:.16em}.mfLauncherPack h4{margin:5px 0 3px;color:#ecf9ff;font:900 9px/1.1 var(--fT);letter-spacing:.08em}
+.mfLauncherPack p{margin:0;color:#98aebb;font:600 8.5px/1.35 var(--fU)}.mfLauncherPack small{margin-top:6px;color:#85dba8;font:900 7px/1 var(--fT);letter-spacing:.10em}
+.mfLauncherPack>button{position:relative;z-index:3;width:calc(100% - 16px);min-height:44px;margin:0 8px 8px;border-radius:7px;border:1px solid rgba(89,197,240,.42);
+  color:#d9f4ff;background:linear-gradient(180deg,#1c5575,#12364f);font:900 8px/1 var(--fT);letter-spacing:.11em}
+.mfLauncherPack>button:disabled{opacity:.44;filter:grayscale(.7)}
+.mfRequiresNet{display:none;position:absolute;z-index:4;inset:auto 7px 7px 7px;min-height:38px;align-items:center;justify-content:center;border-radius:7px;
+  color:#8a9aa4;background:rgba(7,12,17,.95);border:1px solid rgba(145,159,168,.20);font:900 6.5px/1 var(--fT);letter-spacing:.10em}
+.mfLauncher[data-online="false"] .onlineOnly{filter:saturate(.18);opacity:.67}.mfLauncher[data-online="false"] .onlineOnly>button{visibility:hidden}.mfLauncher[data-online="false"] .onlineOnly .mfRequiresNet{display:flex}
+#mfLaunchPackProgress #packPanel{width:100%;margin:8px 0 0}
+
+.mfLauncherHistoryTabs{grid-template-columns:repeat(2,minmax(0,1fr));padding:0 0 8px;background:none}
+.mfLauncherTimeline{position:relative;display:grid;gap:0;margin:0;padding:1px 0 0 17px;list-style:none}
+.mfLauncherTimeline::before{content:'';position:absolute;left:5px;top:8px;bottom:9px;width:1px;background:linear-gradient(#5acff6,rgba(65,145,180,.12))}
+.mfLauncherTimeline li{position:relative;min-height:58px;padding:8px 9px 9px 11px;border-bottom:1px solid rgba(98,173,209,.12)}
+.mfLauncherTimeline li::before{content:'';position:absolute;left:-16px;top:13px;width:7px;height:7px;border-radius:50%;background:#47d3ff;border:2px solid #092135;box-shadow:0 0 9px rgba(71,211,255,.55)}
+.mfLauncherTimeline li.gap::before{background:#536673;box-shadow:none}.mfLauncherTimeline li:last-child{border-bottom:0}
+.mfLauncherTimeline b{display:block;color:#d8f0fa;font:900 8.5px/1.2 var(--fT);letter-spacing:.10em}.mfLauncherTimeline em{margin-left:6px;color:#68cdef;font:900 6.5px/1 var(--fT);font-style:normal}
+.mfLauncherTimeline span{display:block;margin-top:4px;color:#829aaa;font:600 8.5px/1.35 var(--fU)}
+
+.mfLauncherDetails{overflow:hidden;border:1px solid rgba(94,174,213,.16);border-radius:12px;background:rgba(4,13,22,.76)}
+.mfLauncherDetails summary{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;cursor:pointer;
+  color:#8eb6ca;font:900 8px/1 var(--fT);letter-spacing:.13em;list-style:none}.mfLauncherDetails summary::-webkit-details-marker{display:none}
+.mfLauncherDetails summary::after{content:'＋';font-size:15px;color:#68c7e8}.mfLauncherDetails[open] summary::after{content:'−'}
+.mfLauncherDetails summary span{margin-left:auto;color:#536f80;font-size:6.5px;letter-spacing:.08em}
+.mfLauncherDetailGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:0 10px 10px}
+.mfLauncherDetailGrid>span{min-width:0;padding:9px;border-radius:7px;background:rgba(12,29,42,.72);border:1px solid rgba(93,164,198,.12)}
+
+.mfLauncherFoot{position:relative;z-index:4;flex:0 0 auto;width:100%;display:grid;grid-template-columns:minmax(0,.72fr) minmax(0,1.4fr) auto;gap:7px;
+  padding:9px calc(var(--sar) + 12px) calc(var(--sab) + 10px) calc(var(--sal) + 12px);border-top:1px solid rgba(104,199,239,.22);
+  background:linear-gradient(180deg,rgba(4,13,23,.96),rgba(2,7,13,.99));box-shadow:0 -14px 30px rgba(0,0,0,.34)}
+.mfLauncherFoot button{margin:0;min-width:0;min-height:50px}.mfLauncherPlay{position:relative;overflow:hidden;font:900 10px/1 var(--fT);letter-spacing:.12em}
+.mfLauncherPlay:not(:disabled){box-shadow:0 0 24px rgba(64,196,244,.23),inset 0 1px rgba(255,255,255,.12)}
+.mfLauncherPlay:disabled{opacity:.48}.mfLauncherOfflineAction{font-size:8px;letter-spacing:.08em;padding-left:8px;padding-right:8px}
+.mfLauncherFoot #updBack{width:50px;min-width:50px;max-width:50px;padding:0;font-size:0;overflow:hidden}.mfLauncherFoot #updBack::before{content:'◀';font-size:14px}
+body.mfLauncherGate .mfLauncherFoot #updBack{display:none}
+body.mfLauncherGate .mfLauncherFoot{grid-template-columns:minmax(0,.78fr) minmax(0,1.45fr)}
+/* updatePrimary() reveals the secondary route with an inline display value.
+   Explicitly constrain the grid items so the legacy .mbtn minimum cannot
+   overflow its column and let the disabled online action steal Offline taps.
+   #updBack needs the same treatment above and is constrained on its own rule:
+   it carries .mbtn.alt, whose min-width:238px outranks .mfLauncherFoot button
+   on specificity and then overrides width, which starved PLAY OFFLINE to 44px
+   of the 108px its label needs at 412px wide. */
+.mfLauncherFoot .mfLauncherOfflineAction,.mfLauncherFoot .mfLauncherPlay{
+  min-width:0;width:100%;max-width:100%;justify-self:stretch;overflow:hidden
+}
+
+@keyframes mfLaunchSweep{0%,18%{transform:translateX(-125%) skewX(-18deg);opacity:0}40%{opacity:.58}72%,100%{transform:translateX(420%) skewX(-18deg);opacity:0}}
+@keyframes mfLaunchProgress{to{background-position:22px 0}}
+
+/* Phone cards get the full viewport width. The former two-column layout fit
+   mathematically at 412px but reduced the artwork to postage stamps. */
+@media(max-width:520px){
+  .mfLauncherPackRail{grid-template-columns:1fr}.mfLauncherPack{min-height:168px}
+  .mfLauncherPack>div{min-height:122px;padding-top:48px;padding-right:116px}
+  .mfLauncherPack>button{width:auto;min-width:96px;position:absolute;right:0;bottom:0}
+}
+
+@media(max-width:370px){
+  .mfLauncherTop{padding-left:calc(var(--sal) + 11px);padding-right:calc(var(--sar) + 11px)}
+  .updScroll.mfLauncherScroll{padding-left:calc(var(--sal) + 9px);padding-right:calc(var(--sar) + 9px)}
+  .mfLauncherHero{min-height:204px}.mfLauncherHeroCopy{min-height:204px;width:82%;padding:20px 14px 15px}
+  .mfLauncherPack{min-height:158px}.mfLauncherPack>div{min-height:112px;padding-top:42px;padding-right:112px}
+  .mfLauncherFoot{padding-left:calc(var(--sal) + 8px);padding-right:calc(var(--sar) + 8px)}
+}
+@media(orientation:landscape) and (min-width:640px) and (max-height:620px){
+  .mfLauncherTop{min-height:48px;padding-top:calc(var(--sat) + 5px);padding-bottom:6px}.mfLauncherTopBrand b{font-size:12px}
+  .updScroll.mfLauncherScroll{display:grid;grid-template-columns:minmax(290px,1.04fr) minmax(280px,.96fr);align-items:start;gap:10px;padding-top:8px;padding-bottom:12px}
+  .mfLauncherScroll>section,.mfLauncherScroll>details{width:100%;margin:0}.mfLauncherHero{grid-row:span 2;min-height:270px;height:calc(100vh - var(--sat) - var(--sab) - 128px)}
+  .mfLauncherHeroCopy{min-height:100%;width:76%;padding:18px}.mfLauncherHero h2{font-size:23px}.mfLauncherConsole{padding:8px}
+  .mfLauncherRelease,.mfLauncherContent,.mfLauncherHistory{padding:8px}.mfLauncherPackRail{grid-template-columns:repeat(2,minmax(0,1fr))}.mfLauncherPack{min-height:154px}
+  .mfLauncherPack>div{min-height:109px;padding-top:34px}.mfLauncherDetails{grid-column:1/-1}.mfLauncherFoot{padding-top:6px;padding-bottom:calc(var(--sab) + 6px)}
+}
+@media(prefers-reduced-motion:reduce){
+  .mfLauncherSweep,.mfLauncher #updBarF::after{animation:none!important}.mfLauncherBackdrop::before{transform:none;opacity:.08}
+  .mfLauncher *{scroll-behavior:auto!important;transition:none!important}
+}
 
 /* OPERATIONS FOOT — the start button is pinned, not buried.
    Measured at 360x640: the old screen spent 386px on chrome and left a 254px
@@ -3087,8 +3414,9 @@ body.menuMode #inboxHudBtn{display:none}
 #cmdrTx::before{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;opacity:.34;
   background:repeating-linear-gradient(180deg,transparent 0 3px,rgba(105,226,255,.16) 4px,transparent 5px),linear-gradient(90deg,rgba(0,208,255,.13),transparent 36%,rgba(255,191,70,.08));
   mix-blend-mode:screen;animation:mfReceiverScan .8s steps(6,end) infinite}
-#cmdrTx::after{content:'UGA COMMS';position:absolute;right:5px;top:4px;z-index:4;color:#8eeaff;
+#cmdrTx::after{content:'COMMAND LINK';position:absolute;right:5px;top:4px;z-index:4;color:#8eeaff;
   font:900 6px/1 var(--fT);letter-spacing:.14em;text-shadow:0 0 6px #16bce8}
+#cmdrTx[data-mf-link="uga-keel"]::after{content:'UGA // KEEL'}
 #cmdrTx[data-state="enter"],#cmdrTx[data-state="hold"]{opacity:1}
 #cmdrTx[data-state="exit"]{opacity:0;transition-duration:.22s}
 #cmdrTx[data-state="idle"]{display:none}
@@ -3255,4 +3583,953 @@ html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #waveAlert{top:ca
 html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) #waveAlert.withAttack{top:calc(var(--sat) + 260px)}
 html[data-mf-text-scale="200"] .menuGrid,
 html[data-mf-text-scale="200"] .commanderGrid{grid-template-columns:1fr}
+
+/* ---------- MMO EVENT FEED -------------------------------------------------
+   hudflow.js reparents the old VIEW/LOG control here so recent events are one
+   tap away from every command deck. Closed state costs one 44px corner target;
+   routine comms and loot never add another battlefield card. */
+#mfNoticeDock{position:fixed;z-index:24;right:max(var(--sar),8px);bottom:calc(var(--sab) + 72px);
+  display:flex;align-items:center;justify-content:center;width:44px;height:44px;pointer-events:none}
+#mfNoticeDock #noticeLogBtn{position:relative;pointer-events:auto;display:grid;grid-template-rows:22px 10px;
+  place-items:center;width:44px;min-width:44px;height:44px;min-height:44px;padding:3px 2px;border-radius:10px;
+  color:#ccecff;border:1px solid rgba(105,196,235,.5);background:linear-gradient(155deg,rgba(20,50,72,.97),rgba(6,18,30,.98));
+  box-shadow:0 4px 14px rgba(0,0,0,.58),inset 0 1px rgba(255,255,255,.1);font:900 7px/1 var(--fT);letter-spacing:.06em}
+#mfNoticeDock #noticeLogBtn .em{font-size:18px;line-height:1;color:#8edfff;text-shadow:0 0 8px rgba(75,205,255,.45)}
+#mfNoticeDock #noticeLogBtn:active{transform:translateY(1px) scale(.96)}
+#mfNoticeDock #noticeLogBtn[aria-expanded="true"]{color:#fff;border-color:#8be5ff;background:linear-gradient(155deg,#1b6289,#0a2d47)}
+#mfNoticeDock #noticeLogBtn.hasUnread{border-color:#ef8a72;box-shadow:0 4px 14px rgba(0,0,0,.58),0 0 10px rgba(239,104,80,.24)}
+#mfNoticeDock #noticeLogCount{position:absolute;right:-5px;top:-6px;min-width:18px;height:18px;padding:0 4px;
+  display:grid;place-items:center;border-radius:10px;border:1px solid #ffb19e;background:#d94138;color:#fff;
+  box-shadow:0 2px 8px rgba(0,0,0,.65);font:900 8px/1 var(--fT);font-style:normal;letter-spacing:0}
+#mfNoticeDock #noticeLogCount:empty{display:none}
+body.mfMenuOpen #mfNoticeDock,body.menuMode #mfNoticeDock,body.mfDeparting #mfNoticeDock{display:none!important}
+/* Context panels already own the lower command lane. Keeping FEED floating
+   above their destructive/service actions made the 44px target obstruct the
+   RECYCLE button on narrow phones, so remove it until the panel closes. */
+body:has(#buildMenu[style*="display: block"]) #mfNoticeDock,
+body:has(#prodMenu[style*="display: block"]) #mfNoticeDock,
+body:has(#bldMenu2[style*="display: block"]) #mfNoticeDock{display:none!important}
+
+/* The diagnostics surface sits over live UI, so its shell must be opaque
+   enough to read at a glance. Keep the compact route counters on one line in
+   the three-column mobile grid rather than orphaning the final P marker. */
+#mfPerfDashboard{background:#030e17!important;box-shadow:0 12px 38px rgba(0,0,0,.72)!important}
+#mfPerfDashboard [data-perf="routeCache"]{white-space:nowrap!important;overflow-wrap:normal!important;
+  word-break:normal!important;font-size:11px!important;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+
+/* Non-modal: the map and command dock remain live around this right-side
+   drawer. Inline bottom placement from hudflow keeps it above the measured dock
+   and above the permanent FEED control on both new and OTA-upgraded shells. */
+#mfNoticeHistory{left:auto;right:max(var(--sar),8px);bottom:calc(var(--sab) + 124px);width:min(92vw,390px);
+  height:auto;max-height:min(48dvh,390px);border-radius:13px;border-color:rgba(102,210,251,.62);
+  background:linear-gradient(160deg,rgba(15,39,59,.985),rgba(4,13,23,.99));
+  box-shadow:0 14px 38px rgba(0,0,0,.72),inset 0 1px rgba(255,255,255,.09)}
+#mfNoticeHistory header{min-height:48px;box-sizing:border-box;padding:5px 6px 5px 10px;gap:8px;background:linear-gradient(90deg,rgba(30,91,124,.36),transparent)}
+#mfNoticeHistory header>div{min-width:0;display:grid;grid-template-columns:auto auto;align-items:end;column-gap:8px}
+#mfNoticeHistory header small{display:block;grid-column:1/-1;color:#659ab7;font:900 7px/1 var(--fT);letter-spacing:.16em}
+#mfNoticeHistory header b{margin:2px 0 0;color:#b9eeff;font:900 11px/1 var(--fT);letter-spacing:.13em}
+#mfNoticeFeedState{align-self:center;color:#64879c;font:800 7px/1 var(--fT);letter-spacing:.08em;white-space:nowrap}
+#mfNoticeHistory header button{flex:0 0 44px;width:44px;height:44px;min-width:44px;min-height:44px;border-radius:9px;font-size:20px}
+#mfNoticeHistory nav{flex:0 0 auto;display:flex;gap:4px;padding:5px 6px;overflow-x:auto;scrollbar-width:none;touch-action:pan-x}
+#mfNoticeHistory nav::-webkit-scrollbar{display:none}
+#mfNoticeHistory nav button{flex:1 0 auto;min-width:54px;min-height:44px;padding:5px 8px;border-radius:8px;font-size:7px;letter-spacing:.05em;touch-action:manipulation}
+#mfNoticeHistory .mfNoticeList{min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;padding:0 6px 7px;scrollbar-width:thin}
+#mfNoticeHistory .mfNoticeItem{display:grid;grid-template-columns:38px 48px minmax(0,1fr) auto;align-items:start;gap:5px;
+  min-height:34px;box-sizing:border-box;padding:6px 5px;border-bottom:1px solid rgba(110,175,210,.13);font-size:10px;line-height:1.25}
+#mfNoticeHistory .mfNoticeItem time{color:#5f8499;font:800 8px/1.25 var(--fT);letter-spacing:.03em}
+#mfNoticeHistory .mfNoticeItem i{overflow:hidden;color:#68cffa;font:900 7px/1.25 var(--fT);letter-spacing:.06em;text-overflow:ellipsis}
+#mfNoticeHistory .mfNoticeItem>span{min-width:0;color:#d6e8f2;overflow-wrap:anywhere}
+#mfNoticeHistory .mfNoticeItem.ch-alert i{color:#ff756d}#mfNoticeHistory .mfNoticeItem.ch-alert>span{color:#ffd0c8}
+#mfNoticeHistory .mfNoticeItem.ch-pickup i{color:#e2bd65}#mfNoticeHistory .mfNoticeItem.ch-radio i{color:#91c8e8}
+#mfNoticeHistory .mfNoticeRepeat{align-self:center;min-width:25px;padding:2px 5px;border-radius:8px;text-align:center;
+  color:#08131d;background:#8ddcff;font:900 8px/1.2 var(--fT);white-space:nowrap}
+#mfNoticeHistory .mfNoticeEmpty{margin:0;padding:28px 12px;color:#7896aa;font:750 10px/1.4 var(--fU)}
+#toast.noticeBox.noticeUrgent{border-left-color:#ff6e5e;box-shadow:0 5px 18px rgba(0,0,0,.66),0 0 12px rgba(255,75,62,.15)}
+@media (orientation:portrait) and (max-width:430px){
+  #mfNoticeHistory{right:calc(var(--sar) + 7px);width:calc(100vw - var(--sal) - var(--sar) - 14px);max-height:min(44dvh,360px)}
+  #mfNoticeHistory nav button{min-width:56px}
+}
+@media (orientation:landscape) and (max-height:600px){
+  #mfNoticeHistory{right:calc(var(--sar) + 7px);width:min(48vw,390px);max-height:176px}
+  #mfNoticeHistory header{min-height:44px}#mfNoticeHistory header button{width:44px;height:44px}
+  #mfNoticeHistory nav button{min-height:44px}
+}
 html[data-mf-text-scale="200"] .menuStrip{grid-template-columns:repeat(2,1fr)}
+
+/* ===========================================================================
+   CINEMATIC BATTLE HUD — late, opt-in takeover
+   cinematic-hud.js adds body.mf-cinematic-hud and semantic role hooks, then
+   reparents the authoritative controls without cloning their ids. Everything
+   here is scoped to that class so an older OTA shell keeps the proven dock.
+
+   The material bitmap is deliberately only one translucent layer. If it is
+   absent while an optional asset pack is repairing, the gradients underneath
+   remain a complete high-contrast interface rather than a blank panel.
+   ========================================================================== */
+body.mf-cinematic-hud{
+  --mfHudGap:clamp(3px,.75vmin,7px);
+  --mfHudEdge:clamp(6px,1.2vmin,12px);
+  --mfHudTouch:clamp(44px,5.8vmin,54px);
+  --mfHudTopProfile:clamp(50px,13.4vw,76px);
+  --mfHudTopRow:var(--mfHudTouch);
+  --mfHudIntel:clamp(28px,6.2vmin,34px);
+  --mfHudTopClear:calc(var(--sat) + var(--mfHudTopRow) + var(--mfHudIntel) + var(--mfHudGap) * 3);
+  --mfHudDockRows:calc(var(--mfHudTouch) * 2 + var(--mfHudGap) * 3);
+  --mfHudDockClear:calc(var(--sab) + var(--mfHudDockRows) + var(--mfHudEdge));
+  --mfHudMap:clamp(74px,23vw,112px);
+  --mfHudContextW:min(66vw,390px);
+  --mfHudTextGoal:max(9px,.5625rem);
+  --mfHudTextCard:max(8px,.5rem);
+  --mfHudTextFeed:max(10px,.625rem);
+  --mfHudTextAction:clamp(10px,.625rem,18px);
+  --mfHudTextDock:clamp(7px,.4375rem,11px);
+  --mfHudTextMeta:clamp(8px,.5rem,14px);
+  --mfHudPanelFallback:linear-gradient(155deg,rgba(14,31,46,.985),rgba(3,10,18,.99));
+  --mfHudPanelMaterial:
+    linear-gradient(155deg,rgba(11,27,41,.92),rgba(3,10,18,.965)),
+    url('../../assets/textures/ui/mf-hud-panel-material-v1.webp') center/360px 360px repeat,
+    var(--mfHudPanelFallback);
+  /* Large chassis deliberately omit the opaque bitmap layer. Their bounded
+     alpha lets the battle remain legible underneath without the GPU cost or
+     fixed-descendant side effects of backdrop-filter. Cards and controls keep
+     their denser fills below, so copy never depends on the map for contrast. */
+  --mfHudSurfaceTranslucent:linear-gradient(155deg,rgba(10,27,42,.78),rgba(3,10,18,.89));
+  --mfHudRailTranslucent:linear-gradient(180deg,rgba(7,20,31,.61),rgba(2,8,15,.84));
+  --mfHudLine:rgba(112,204,241,.48);
+  --mfHudLineSoft:rgba(112,204,241,.2);
+  --mfHudShadow:0 10px 28px rgba(0,0,0,.66),inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* The wrapper is semantic, not a new containing block: fixed children retain
+   viewport/safe-area geometry in source, PWA and Capacitor shells. */
+body.mf-cinematic-hud #mfCinematicTopRail[data-mf-hud-role="top-rail"],
+body.mf-cinematic-hud #mfCinematicContext[data-mf-hud-role="context"],
+body.mf-cinematic-hud #mfCinematicGroupPalette[data-mf-hud-role="group-palette"]{display:contents}
+
+/* Commander identity + resources form one compact rail. The portrait is a
+   distinct navigation target; resource cells and pause controls never sit on
+   top of it, even at 344 CSS px with safe-area pressure. */
+body.mf-cinematic-hud #heroBar{
+  position:fixed;z-index:21;top:calc(var(--sat) + var(--mfHudEdge));left:calc(var(--sal) + var(--mfHudEdge));
+  width:var(--mfHudTopProfile);height:calc(var(--mfHudTopRow) + var(--mfHudIntel) + var(--mfHudGap));min-height:0;
+  padding:3px;display:flex;align-items:flex-start;justify-content:center;overflow:hidden;border-radius:9px 0 0 9px;
+  border:1px solid transparent;border-right:0;background:var(--mfHudPanelMaterial) padding-box,var(--steelB) border-box;
+  box-shadow:var(--mfHudShadow);clip-path:polygon(7px 0,100% 0,100% 100%,0 100%,0 7px)
+}
+body.mf-cinematic-hud #heroPortrait{
+  width:calc(var(--mfHudTopProfile) - 8px);height:calc(var(--mfHudTopRow) + 4px);flex-basis:auto;border-radius:7px
+}
+body.mf-cinematic-hud #heroRankEm{right:2px;bottom:2px}
+body.mf-cinematic-hud #heroBar .heroProfileBody{
+  position:absolute;left:3px;right:3px;bottom:3px;height:calc(var(--mfHudIntel) - 2px);display:flex;
+  align-items:center;justify-content:center;padding:0 2px;border-top:1px solid var(--mfHudLineSoft);
+  background:linear-gradient(180deg,rgba(4,12,20,.62),rgba(3,9,16,.96))
+}
+body.mf-cinematic-hud #heroBar .heroProfileHead{justify-content:center}
+body.mf-cinematic-hud #heroNameTxt,body.mf-cinematic-hud #heroCallsignTxt,
+body.mf-cinematic-hud #heroBar .heroVital{display:none}
+body.mf-cinematic-hud #heroLvlTxt{color:#dff7ff;font:900 9px/1 var(--fT);letter-spacing:.08em}
+
+body.mf-cinematic-hud #topbar{
+  position:fixed;z-index:20;top:calc(var(--sat) + var(--mfHudEdge));
+  left:calc(var(--sal) + var(--mfHudTopProfile) + var(--mfHudEdge) - 1px);right:calc(var(--sar) + var(--mfHudEdge));
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,var(--mfHudTouch));
+  grid-auto-flow:row;align-items:center;gap:var(--mfHudGap);padding:0;pointer-events:none;
+  background:none;border:0;box-shadow:none;backdrop-filter:none;overflow:visible;isolation:isolate
+}
+/* One low-cost bracket chassis joins the resource/status rail. The pseudo
+   frame paints first and never intercepts a tap; individual controls retain
+   their complete 44px hit boxes and opaque-enough state fills. */
+body.mf-cinematic-hud #topbar::before,
+body.mf-cinematic-hud #cmdbar::before{
+  content:'';position:absolute;inset:-1px;pointer-events:none;border:1px solid var(--mfHudLineSoft);
+  background:var(--mfHudRailTranslucent);box-shadow:inset 0 1px rgba(255,255,255,.055);
+  clip-path:polygon(9px 0,calc(100% - 9px) 0,100% 9px,100% calc(100% - 9px),calc(100% - 9px) 100%,9px 100%,0 calc(100% - 9px),0 9px)
+}
+body.mf-cinematic-hud #topbar>.res{
+  min-width:0;width:auto;height:var(--mfHudTopRow);min-height:44px;padding:2px 4px;gap:3px;overflow:hidden;
+  border-radius:8px;border-color:rgba(112,204,241,.16);background:linear-gradient(180deg,rgba(16,42,60,.48),rgba(4,15,25,.64));
+  box-shadow:inset 0 1px rgba(255,255,255,.065);clip-path:none
+}
+body.mf-cinematic-hud #topbar>.res .ic{width:clamp(15px,4.5vmin,20px);height:clamp(15px,4.5vmin,20px)}
+body.mf-cinematic-hud #topbar>.res b{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;
+  font-size:max(clamp(9px,2.85vw,13px),var(--mfHudTextMeta));font-variant-numeric:tabular-nums;white-space:nowrap}
+body.mf-cinematic-hud #unitV{letter-spacing:-.03em}
+body.mf-cinematic-hud #topbar>.res .rate{min-width:0;font-size:clamp(7px,2.1vw,10px);white-space:nowrap}
+body.mf-cinematic-hud #inboxHudBtn,body.mf-cinematic-hud #spdBtn,body.mf-cinematic-hud #menuBtn{
+  width:var(--mfHudTouch);height:var(--mfHudTouch);min-width:44px;min-height:44px;margin:0;border-radius:9px;
+  pointer-events:auto;background:var(--mfHudPanelMaterial) padding-box,var(--steelB) border-box;
+  box-shadow:0 4px 13px rgba(0,0,0,.55),inset 0 1px rgba(255,255,255,.1)
+}
+body.mf-cinematic-hud #inboxHudBtn{position:relative;top:auto;right:auto;font-size:18px}
+body.mf-cinematic-hud #spdBtn{font-size:12px}
+body.mf-cinematic-hud #menuBtn{font-size:18px}
+body.mf-cinematic-hud #godBadge,body.mf-cinematic-hud #fps{display:none!important}
+body.mf-cinematic-hud #topbar #goalBar{
+  grid-column:1/-1;width:100%;min-width:0;min-height:var(--mfHudIntel);height:var(--mfHudIntel);max-height:var(--mfHudIntel);
+  margin:0;padding:1px 8px;border-radius:8px;gap:5px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  background:linear-gradient(90deg,rgba(5,20,29,.94),rgba(8,25,37,.88),rgba(5,16,26,.94)) padding-box,var(--steelB) border-box;
+  box-shadow:0 4px 13px rgba(0,0,0,.52),inset 0 1px rgba(255,255,255,.07)
+}
+body.mf-cinematic-hud #goalBar .hudIntelChip{min-width:0;padding:2px 5px;overflow:hidden;text-overflow:ellipsis}
+body.mf-cinematic-hud #goalBar .mfCinematicGoalIcon{width:16px;height:16px;flex:0 0 16px}
+
+/* Alerts occupy the short strip below the rail and never become a second
+   full-width header. Urgent attack controls retain the authored 44px target. */
+body.mf-cinematic-hud #wcRow{top:var(--mfHudTopClear);left:calc(var(--sal) + var(--mfHudEdge));right:auto;max-width:44vw}
+body.mf-cinematic-hud #infMeter,body.mf-cinematic-hud #hazChip{
+  top:var(--mfHudTopClear);right:calc(var(--sar) + var(--mfHudEdge));left:auto;max-width:42vw
+}
+body.mf-cinematic-hud #atkAlert,body.mf-cinematic-hud #waveAlert{
+  top:calc(var(--mfHudTopClear) + 36px);max-width:min(70vw,430px);min-height:44px
+}
+
+/* The lower command dock is a shallow two-row control palette. Active rows are
+   ordered above navigation tabs, while the permanent five high-frequency
+   actions remain the final row. No opaque full-screen-width plate is painted. */
+body.mf-cinematic-hud #cmdbar{
+  position:fixed;z-index:20;left:calc(var(--sal) + var(--mfHudEdge));right:calc(var(--sar) + var(--mfHudEdge));
+  bottom:calc(var(--sab) + var(--mfHudEdge));width:auto;max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2);
+  min-height:0;box-sizing:border-box;display:flex;align-items:stretch;gap:var(--mfHudGap);
+  padding:2px;border:0;border-radius:0;background:transparent;isolation:isolate;
+  /* A backdrop filter establishes a containing block for fixed descendants.
+     #minimapWrap lives inside this authoritative dock, so blur made its
+     viewport coordinates relative to the right-hand landscape dock. */
+  box-shadow:none;
+  backdrop-filter:none;-webkit-backdrop-filter:none
+}
+body.mf-cinematic-hud #cmdbar::before{
+  inset:0;border:0;background:
+    linear-gradient(90deg,var(--mfHudLine),transparent 18%,transparent 82%,var(--mfHudLine)) 0 0/100% 1px no-repeat,
+    linear-gradient(90deg,var(--mfHudLineSoft),transparent 24%,transparent 76%,var(--mfHudLineSoft)) 0 100%/100% 1px no-repeat;
+  box-shadow:none;clip-path:none
+}
+body.mf-cinematic-hud #cmdbar>*{width:100%;max-width:100%;min-width:0;box-sizing:border-box;grid-column:auto}
+body.mf-cinematic-hud #cmdbar #hudDeckTabs{order:80;display:flex;justify-content:flex-start;gap:0;padding:2px 4px;
+  overflow-x:auto;scroll-padding-inline:2px;scrollbar-width:none}
+body.mf-cinematic-hud #cmdbar #primaryRow{order:90;display:flex;gap:0;padding:2px 4px}
+body.mf-cinematic-hud #cmdbar #camRow,body.mf-cinematic-hud #cmdbar #tacRow,
+body.mf-cinematic-hud #cmdbar #grpRow,body.mf-cinematic-hud #cmdbar #hotSlots{order:70}
+body.mf-cinematic-hud #cmdbar .btnrow,
+body.mf-cinematic-hud #cmdbar #hudDeckTabs{
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;justify-content:center;
+  border-top:1px solid rgba(112,204,241,.22);border-bottom:1px solid rgba(112,204,241,.13);
+  background:linear-gradient(90deg,rgba(4,13,22,.18),rgba(5,17,28,.72) 8%,rgba(5,17,28,.72) 92%,rgba(4,13,22,.18));
+  clip-path:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px)
+}
+body.mf-cinematic-hud #cmdbar .btnrow{gap:0;padding:2px 4px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn,
+body.mf-cinematic-hud #cmdbar .cbtn{
+  flex:1 1 0;width:auto;min-width:44px;height:var(--mfHudTouch);min-height:44px;padding:2px 3px;border-radius:0;
+  border:0;border-left:1px solid rgba(113,169,202,.18);background:transparent;
+  box-shadow:none;clip-path:none;font-size:8px;letter-spacing:.035em;overflow:hidden
+}
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn:first-child,
+body.mf-cinematic-hud #cmdbar .btnrow>.cbtn:first-child{border-left:0}
+body.mf-cinematic-hud #cmdbar .cbtn .em{font-size:17px}
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn{gap:3px;white-space:nowrap;color:#7795a9}
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn span{font-size:13px}
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn.mfCinematicDeckActive,
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn[data-mf-active="true"],
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn.on{
+  color:#eafdff;border-color:#32c9ff;background:linear-gradient(180deg,rgba(20,88,128,.98),rgba(5,35,58,.99));
+  box-shadow:0 0 11px rgba(37,191,247,.28),inset 0 1px rgba(255,255,255,.13)
+}
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn:disabled{opacity:.35;filter:grayscale(1);box-shadow:none}
+body.mf-cinematic-hud #cmdbar #deployBtn{order:75;min-height:48px;margin:0}
+body.mf-cinematic-hud #heroRow[data-mf-hud-role="ability-authority"]{position:absolute!important;left:-9999px!important;top:-9999px!important}
+
+/* Match-memory control groups read as saved command cards. They intentionally
+   say PLATOONS, not account presets: these slots expire with the match. */
+body.mf-cinematic-hud #grpRow[data-mf-hud-role="match-command-palette"]{
+  align-items:stretch;gap:var(--mfHudGap);overflow-x:auto;scrollbar-width:none;overscroll-behavior-x:contain
+}
+body.mf-cinematic-hud #grpRow .pltLabel{flex:0 0 auto;align-self:center;max-width:58px;padding:0 4px;
+  color:#69bad8;font:900 7px/1.15 var(--fT);letter-spacing:.08em;white-space:normal}
+body.mf-cinematic-hud #grpRow .grpBtn{flex:1 0 44px;min-width:44px;height:var(--mfHudTouch);min-height:44px}
+body.mf-cinematic-hud #grpRow .grpBtn .pId{font-size:16px}
+body.mf-cinematic-hud #grpRow .grpBtn.saved{border-color:#4ed5ff;background:linear-gradient(180deg,rgba(22,76,105,.97),rgba(6,28,43,.99));
+  box-shadow:0 0 9px rgba(61,201,248,.22)}
+body.mf-cinematic-hud #grpRow .grpBtn.active{border-color:#fff0a2;box-shadow:0 0 12px rgba(255,212,85,.32)}
+body.mf-cinematic-hud #grpRow.mfUnitStackReady{overflow:hidden}
+body.mf-cinematic-hud #grpRow.mfUnitStackReady .grpBtn{flex:0 0 44px}
+body.mf-cinematic-hud #grpRow.mfUnitStackReady #modeBtn{flex:0 0 44px}
+body.mf-cinematic-hud #mfUnitStackRail{flex:1 1 112px;min-width:96px;height:var(--mfHudTouch);gap:var(--mfHudGap)}
+body.mf-cinematic-hud .mfUnitStackCard{flex-basis:104px;width:104px;min-width:104px;height:var(--mfHudTouch);min-height:44px;border-radius:7px;
+  display:block;padding:2px}
+/* The model occupies the lower-left while the authored name spans the whole
+   card. A two-column grid made long real names clip beside their thumbnail. */
+body.mf-cinematic-hud .mfUnitStackCopy{display:contents}
+body.mf-cinematic-hud .mfUnitStackName{
+  position:absolute;left:3px;right:3px;top:3px;overflow:hidden;text-align:left
+}
+body.mf-cinematic-hud .mfUnitStackIcon{
+  position:absolute;left:3px;bottom:4px;width:27px;height:27px
+}
+body.mf-cinematic-hud .mfUnitStackIcon>*{max-width:27px;max-height:27px}
+body.mf-cinematic-hud .mfUnitStackMeta{
+  position:absolute;left:33px;right:3px;top:17px
+}
+body.mf-cinematic-hud .mfUnitStackHealth{
+  position:absolute;left:33px;right:3px;bottom:5px;width:auto
+}
+
+/* The minimap stays a separate lower-left tactical instrument when a context
+   surface opens. Commander/KEEL transmissions still replace its canvas using
+   the established data-transmission state machine. */
+body.mf-cinematic-hud #minimapWrap[data-mf-hud-role="minimap-receiver"]{
+  position:fixed;z-index:19;left:calc(var(--sal) + var(--mfHudEdge));right:auto;
+  bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));width:calc(var(--mfHudMap) + 10px);height:calc(var(--mfHudMap) + 10px);
+  margin:0;padding:4px;border-radius:10px;overflow:hidden;background:var(--mfHudPanelMaterial) padding-box,var(--steelB) border-box;
+  box-shadow:var(--mfHudShadow);clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)
+}
+body.mf-cinematic-hud #minimapWrap[data-mf-hud-role="minimap-receiver"]::after{
+  content:'';inset:3px;border-radius:7px;opacity:.65;background:
+    linear-gradient(var(--cy),var(--cy)) 0 0/16px 2px,
+    linear-gradient(var(--cy),var(--cy)) 0 0/2px 16px,
+    linear-gradient(var(--cy),var(--cy)) 100% 100%/16px 2px,
+    linear-gradient(var(--cy),var(--cy)) 100% 100%/2px 16px;background-repeat:no-repeat
+}
+body.mf-cinematic-hud #minimapWrap #minimap{width:var(--mfHudMap);height:var(--mfHudMap);border-radius:7px}
+body.mf-cinematic-hud.uiPrimaryOpen #minimapWrap[data-mf-hud-role="minimap-receiver"],
+body.mf-cinematic-hud.uiPrimaryOpen #heroBar{display:flex!important}
+body.mf-cinematic-hud.uiPrimaryOpen #minimapWrap[data-mf-hud-role="minimap-receiver"]{display:block!important}
+/* Reparenting #grpRow through a display:contents semantic wrapper changes its
+   DOM ancestry even though it does not change layout. Preserve primary-panel
+   focus explicitly; otherwise a previously open Platoons row remains live
+   behind production/service controls. */
+body.mf-cinematic-hud.uiPrimaryOpen #mfCinematicGroupPalette #grpRow{display:none!important}
+/* Context, placement, feed and transmissions are higher-priority surfaces.
+   A first-seen unit card must never survive behind them as a second panel. */
+body.mf-cinematic-hud:is(.mfCinematicContextOpen,.uiPanelOpen,.uiPlacing,.mfNoticeFeedOpen) #unitCard,
+body.mf-cinematic-hud:has(#minimapWrap[data-transmission="enter"],#minimapWrap[data-transmission="hold"],#minimapWrap[data-transmission="exit"]) #unitCard{display:none!important}
+body.mf-cinematic-hud:is(.mfCinematicContextOpen,.uiPrimaryOpen,.uiPlacing) #selInfo{display:none!important}
+/* PLATOONS already names the selected force and exposes its saved groups.
+   Keeping the legacy selection card beside that third phone row repeated the
+   same information and consumed the centre of 344–412px screens at 200% text. */
+body.mf-cinematic-hud:has(#cmdbar #grpRow[style*="display: flex"]) #selInfo{display:none!important}
+
+/* Context lives opposite the map. Its cards scroll inside one surface instead
+   of opening stacked overlays; the battlefield remains visible between the
+   top rail and lower instruments. */
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{
+  position:fixed;z-index:22;left:auto;right:calc(var(--sar) + var(--mfHudEdge));transform:none;
+  bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));width:var(--mfHudContextW);max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudMap) - 10px - var(--mfHudGap) - var(--mfHudEdge) * 3);
+  max-height:min(36dvh,390px);padding:8px;border-radius:11px;overflow-x:hidden;overflow-y:auto;
+  border:1px solid transparent;background:var(--mfHudPanelMaterial) padding-box,var(--steelB) border-box;
+  box-shadow:var(--mfHudShadow);clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)
+}
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface],
+body.mf-cinematic-hud #mfNoticeHistory{scrollbar-width:thin;scrollbar-color:rgba(100,174,205,.72) rgba(3,12,20,.72)}
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]::-webkit-scrollbar,
+body.mf-cinematic-hud #mfNoticeHistory::-webkit-scrollbar{width:5px;height:5px}
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]::-webkit-scrollbar-track,
+body.mf-cinematic-hud #mfNoticeHistory::-webkit-scrollbar-track{background:rgba(3,12,20,.72)}
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]::-webkit-scrollbar-thumb,
+body.mf-cinematic-hud #mfNoticeHistory::-webkit-scrollbar-thumb{border-radius:5px;background:rgba(100,174,205,.72)}
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface].mfCinematicSurfaceActive,
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface][data-mf-active="true"]{isolation:isolate}
+body.mf-cinematic-hud #mfCinematicContext .mfPanelChrome{top:-8px;height:44px;margin:-8px -8px 6px;padding-left:10px;
+  background:linear-gradient(180deg,rgba(13,31,46,.99),rgba(4,13,22,.99))}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleBrief{grid-template-columns:76px minmax(0,1fr);min-height:76px;margin:5px 0 7px}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleVisual,
+body.mf-cinematic-hud #mfCinematicContext .menuRoleVisual .mfIntelPreview{min-height:76px}
+/* The live model is the visual label here; repeating TACTICAL PREVIEW over its
+   62px phone bay obscures the model and adds no decision value. */
+body.mf-cinematic-hud #mfCinematicContext .menuRoleVisual .mfIntelPreviewTag{display:none}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleCopy{padding:5px 7px}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleCopy>strong{margin-top:3px;font-size:10px}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleCopy>p,
+body.mf-cinematic-hud #mfCinematicContext .menuRoleCopy>small{display:none}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleDoctrine{margin-top:3px;font-size:8px}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleInspect{min-height:44px;margin-top:auto;padding:3px 6px}
+body.mf-cinematic-hud #mfCinematicContext #buildGrid,
+body.mf-cinematic-hud #mfCinematicContext #prodGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;align-items:stretch}
+body.mf-cinematic-hud #mfCinematicContext .bcard{width:auto;min-width:0;min-height:88px;padding:5px;align-items:center;gap:2px}
+/* The legacy intel target sat four pixels outside an overflow-clipped card.
+   Keep its full 44px hit box inside the contextual production surface. */
+body.mf-cinematic-hud #mfCinematicContext .bcard .cardIntel{top:0;right:0}
+body.mf-cinematic-hud #mfCinematicContext .bcard .icw,
+body.mf-cinematic-hud #mfCinematicContext .bcard .em{height:38px}
+body.mf-cinematic-hud #mfCinematicContext .bcard .nm{min-height:22px;padding:0;text-align:center;font-size:9px;-webkit-line-clamp:2}
+body.mf-cinematic-hud #mfCinematicContext .bcard .cost{font-size:9px;text-align:center}
+body.mf-cinematic-hud #mfCinematicContext .bcard .cardPurpose,
+body.mf-cinematic-hud #mfCinematicContext .bcard .cardDesc,
+body.mf-cinematic-hud #mfCinematicContext .bcard .cardMeta,
+body.mf-cinematic-hud #mfCinematicContext .bcard .cardDependency,
+body.mf-cinematic-hud #mfCinematicContext .bcard .cardEffect,
+body.mf-cinematic-hud #mfCinematicContext .bcard .cardLocks{display:none}
+body.mf-cinematic-hud #mfCinematicContext .tabRow{top:35px;gap:4px;margin-bottom:5px}
+body.mf-cinematic-hud #mfCinematicContext .tabRow{scroll-snap-type:x proximity;transition:box-shadow .15s ease}
+body.mf-cinematic-hud #mfCinematicContext .tabRow button{min-height:44px;scroll-snap-align:start}
+/* A soft edge signal appears only while more categories exist off-screen.
+   It consumes no touch area and disappears at the terminal scroll edge. */
+body.mf-cinematic-hud #mfCinematicContext .tabRow[data-mf-overflow="start"],
+body.mf-cinematic-hud #mfCinematicContext .tabRow[data-mf-overflow="middle"]{
+  box-shadow:inset -14px 0 10px -8px rgba(95,215,255,.85)
+}
+body.mf-cinematic-hud #mfCinematicContext .tabRow[data-mf-overflow="middle"],
+body.mf-cinematic-hud #mfCinematicContext .tabRow[data-mf-overflow="end"]{
+  border-left:1px solid rgba(95,215,255,.38)
+}
+body.mf-cinematic-hud #mfCinematicContext #prodNav{gap:4px;margin-bottom:4px}
+body.mf-cinematic-hud #mfCinematicContext #prodQueue{margin-top:4px}
+body.mf-cinematic-hud #mfCinematicContext #bldMenu2{text-align:left}
+body.mf-cinematic-hud #mfCinematicContext #bp_head{justify-content:flex-start}
+body.mf-cinematic-hud #mfCinematicContext #bp_title{font-size:12px}
+body.mf-cinematic-hud #mfCinematicContext #bp_desc{font-size:10px}
+body.mf-cinematic-hud #mfCinematicContext #bp_stats{font-size:9px}
+
+/* Repair and recycle are opposing primary actions. State is communicated by
+   colour, border and text, and not by motion alone. */
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"]{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:7px}
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceBtn{
+  min-width:0;min-height:52px;padding:7px 6px;border-width:1px;border-radius:8px;font-size:10px;
+  overflow-wrap:normal;word-break:normal;hyphens:none;white-space:normal;display:flex;align-items:center;justify-content:center;gap:5px
+}
+/* Production keeps the sole Repair/Recycle authority in normal document flow.
+   The former sticky footer covered the first visible unit cards on phones. */
+body.mf-cinematic-hud #prodMenu>#mfBldServiceActions{
+  position:static;bottom:auto;z-index:auto;margin:8px 0 0;padding:0;background:none
+}
+body.mf-cinematic-hud #rotL .em[data-icon="patrol"]{transform:scaleX(-1)}
+/* The legacy recycle rule is ID-scoped at 44px. Restate both authoritative
+   actions with the HUD scope so the paired targets remain equally tappable. */
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_repair,
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_sell{height:auto;min-height:52px}
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceRepair{
+  color:#74eaff!important;background:linear-gradient(180deg,rgba(8,69,94,.99),rgba(3,29,45,.99)) padding-box,
+    linear-gradient(145deg,#c4fbff,#27ccf5 54%,#08729d) border-box!important
+}
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"][data-mf-service-state="repairing"] .bldServiceRepair,
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceRepair[data-state="repairing"]{
+  color:#e8fdff!important;box-shadow:inset 0 0 13px rgba(44,216,255,.22),0 0 12px rgba(25,190,240,.24)
+}
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"][data-mf-service-state="stalled"] .bldServiceRepair,
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceRepair[data-state="stalled"]{color:#ffe39b!important}
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"][data-mf-service-state="under-fire"] .bldServiceRepair,
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceRepair[data-state="under-fire"]{color:#ffc18f!important}
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceRecycle{
+  color:#ff8f8f!important;background:linear-gradient(180deg,rgba(73,18,24,.99),rgba(31,7,12,.99)) padding-box,
+    linear-gradient(145deg,#ffaaa8,#f34853 54%,#80101b) border-box!important
+}
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"][data-mf-recycle-armed="true"] .bldServiceRecycle,
+body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceRecycle[data-armed="true"]{
+  color:#fff!important;border-color:#ff5b64;box-shadow:inset 0 0 13px rgba(255,53,67,.2),0 0 13px rgba(255,52,65,.26)
+}
+
+/* The building directory uses canonical faction thumbnails injected by the
+   takeover. Art remains the primary identifier; copy may wrap beside it. It
+   shares the right context lane instead of spanning the phone: bottom-aligning
+   it with the map leaves the centre camera open and its maximum width reserves
+   the complete map receiver plus the authored instrument gap. */
+body.mf-cinematic-hud .baseFinder{
+  left:auto;right:calc(var(--sar) + var(--mfHudEdge));transform:none;
+  bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));width:var(--mfHudContextW);
+  max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudMap) - 10px - var(--mfHudGap) - var(--mfHudEdge) * 3);
+  max-height:min(36dvh,390px)
+}
+body.mf-cinematic-hud .baseFinder.mfCinematicDecorated{background:var(--mfHudPanelMaterial);border-color:var(--mfHudLine)}
+/* Five category filters must remain simultaneously readable, including shallow
+   landscape with enlarged text. Their full names remain in aria-label/title;
+   the compact visible contract is always icon above short label. */
+body.mf-cinematic-hud .baseFindTabs button{padding:3px 1px;flex-direction:column;gap:2px;letter-spacing:0}
+body.mf-cinematic-hud .baseFindTabs button .baseFindTabIcon{font-size:10px}
+body.mf-cinematic-hud .baseFindTabs button .baseFindTabLabel{font-size:7px;line-height:1;white-space:nowrap}
+body.mf-cinematic-hud .baseFinder .mfBaseFinderArt{width:38px;height:38px;display:grid;place-items:center;overflow:hidden;border-radius:7px}
+body.mf-cinematic-hud .baseFinder .mfBaseFinderArt .facIcon,
+body.mf-cinematic-hud .baseFinder .mfBaseFinderArt img{max-width:100%;max-height:100%;object-fit:contain}
+body.mf-cinematic-hud .baseFinder .mfBaseFinderCopy{min-width:0}
+
+/* Routine events live behind one corner feed target. Opening the drawer does
+   not modal-block the map, and an active production/service surface wins the
+   lower-right lane via the existing :has rule. */
+body.mf-cinematic-hud #mfNoticeDock{right:calc(var(--sar) + var(--mfHudEdge));bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));width:44px;height:44px}
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn{background:var(--mfHudPanelMaterial) padding-box,var(--steelB) border-box}
+body.mf-cinematic-hud #mfNoticeHistory{
+  right:calc(var(--sar) + var(--mfHudEdge));bottom:calc(var(--mfHudDockClear) + 52px);width:min(88vw,390px);
+  max-height:min(42dvh,390px);background:var(--mfHudPanelMaterial);border-color:var(--mfHudLine);box-shadow:var(--mfHudShadow)
+}
+/* Selectively translucent chassis expose more of the battlefield. Inner cards,
+   tabs and destructive actions keep their own denser backgrounds, and no blur
+   pass is used on these frequently moving gameplay surfaces. */
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface],
+body.mf-cinematic-hud .baseFinder.mfCinematicDecorated,
+body.mf-cinematic-hud #unitCard,
+body.mf-cinematic-hud #hotUtilityPanel,
+body.mf-cinematic-hud #mfNoticeHistory{
+  background:var(--mfHudSurfaceTranslucent);backdrop-filter:none;-webkit-backdrop-filter:none
+}
+/* The open drawer already owns a full 44px close target. Retiring its launch
+   button removes duplicate chrome and keeps placement rotation unobstructed. */
+body.mf-cinematic-hud.mfNoticeFeedOpen #mfNoticeDock,
+body.mf-cinematic-hud.uiPlacing #mfNoticeDock{display:none!important}
+/* The open feed is itself the optional command surface. Retire the prior
+   camera/tactics/group row until it closes so the playfield does not inherit a
+   third dock row from the button used immediately beforehand. */
+body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #camRow,
+body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #tacRow,
+body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #grpRow,
+body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #hotSlots{display:none!important}
+
+/* Compact portrait phones. Values survive; expendable rate copy yields first.
+   Context width is computed from the actual map bay, preventing a 344px overlap. */
+@media (max-width:430px) and (orientation:portrait){
+  body.mf-cinematic-hud{--mfHudTopProfile:clamp(50px,15vw,62px);--mfHudContextW:calc(100vw - var(--sal) - var(--sar) - var(--mfHudMap) - var(--mfHudEdge) * 3)}
+  body.mf-cinematic-hud #topbar{grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,44px)}
+  body.mf-cinematic-hud #topbar>.res{min-height:44px;padding:1px 2px;gap:2px}
+  body.mf-cinematic-hud #topbar>.res .rate{display:none}
+  body.mf-cinematic-hud #topbar>.res b{font-size:max(clamp(10px,3.2vw,13px),var(--mfHudTextMeta))}
+  body.mf-cinematic-hud #topbar>.res .ic{width:16px;height:16px}
+  body.mf-cinematic-hud #topbar #goalBar{font-size:9px;letter-spacing:.025em;padding-left:4px;padding-right:4px}
+  body.mf-cinematic-hud #goalBar .hudIntelChip{padding-left:3px;padding-right:3px}
+  body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn{font-size:7px;letter-spacing:0;padding-left:1px;padding-right:1px}
+  body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn span{font-size:11px}
+  body.mf-cinematic-hud #cmdbar .cbtn{font-size:7px;padding-left:1px;padding-right:1px}
+  body.mf-cinematic-hud #cmdbar .cbtn .em{font-size:15px}
+  body.mf-cinematic-hud #minimapWrap[data-mf-hud-role="minimap-receiver"]{bottom:calc(var(--mfHudDockClear) + var(--mfHudGap) + 7px)}
+  /* Platoons, view and ability decks add a real third row to the phone dock.
+     Follow the authoritative inline visibility instead of the selected tab:
+     Orders can be selected while its optional row is still closed. */
+  body.mf-cinematic-hud:has(#cmdbar #grpRow[style*="display: flex"]) #minimapWrap[data-mf-hud-role="minimap-receiver"],
+  body.mf-cinematic-hud:has(#cmdbar #camRow[style*="display: flex"]) #minimapWrap[data-mf-hud-role="minimap-receiver"],
+  body.mf-cinematic-hud:has(#cmdbar #tacRow[style*="display: flex"]) #minimapWrap[data-mf-hud-role="minimap-receiver"],
+  body.mf-cinematic-hud:has(#cmdbar #hotSlots[style*="display: flex"]) #minimapWrap[data-mf-hud-role="minimap-receiver"],
+  body.mf-cinematic-hud:has(#placeUI[style*="display: flex"]) #minimapWrap[data-mf-hud-role="minimap-receiver"]{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudTouch) + var(--mfHudGap) * 2 + 7px)
+  }
+  /* Selection and placement controls share the lower instrument band with the
+     map receiver; offset them into the remaining width instead of layering. */
+  body.mf-cinematic-hud #selInfo,
+  body.mf-cinematic-hud #placeUI{
+    left:calc(var(--sal) + var(--mfHudMap) + var(--mfHudEdge) * 2 + 12px);
+    right:calc(var(--sar) + var(--mfHudEdge));width:auto;transform:none
+  }
+  /* UTILITY is a transient continuation of the Abilities row. Keep it in the
+     same right-hand instrument lane as selection intel so the higher-z minimap
+     never steals the first action's touch target; selection copy yields only
+     for the lifetime of this drawer. The landscape ribbon remains centred. */
+  body.mf-cinematic-hud.mfHotUtilityOpen #hotUtilityPanel{
+    left:calc(var(--sal) + var(--mfHudMap) + var(--mfHudEdge) * 2 + 12px);
+    right:calc(var(--sar) + var(--mfHudEdge));width:auto;transform:none
+  }
+  body.mf-cinematic-hud.mfHotUtilityOpen #selInfo{display:none!important}
+  body.mf-cinematic-hud #placeUI{justify-content:flex-end}
+  body.mf-cinematic-hud.uiPlacing #selInfo{display:none!important}
+  /* The measured dock director applies an inline bottom to transient controls.
+     On portrait phones the left instrument rail has a safer destination: both
+     the feed target and consumables clear the whole minimap receiver, while a
+     visible consumable strip lifts FEED one 44px target higher. `!important`
+     intentionally outranks that generic inline dock value only in this lane. */
+  body.mf-cinematic-hud #consHud{
+    position:fixed;left:calc(var(--sal) + var(--mfHudEdge));right:auto;
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + 10px + var(--mfHudGap) * 2 + 7px)!important;
+    max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2)
+  }
+  body.mf-cinematic-hud #mfNoticeDock{
+    left:calc(var(--sal) + var(--mfHudEdge));right:auto;
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + 10px + var(--mfHudGap) * 2 + 7px)!important
+  }
+  /* A visible third command row lifts the map exactly one 44px target + gap.
+     FEED must follow that lift; otherwise its whole target lands on the map's
+     upper-left corner. A consumable strip uses the same first tier. When both
+     coexist, stack the strip and FEED on two tiers instead of double-owning the
+     receiver. These formulas include the map's 10px frame and authored 7px
+     dock clearance, so they continue to follow --mfHudMap at <=365px. */
+  body.mf-cinematic-hud:has(#cmdbar :is(#grpRow,#camRow,#tacRow,#hotSlots)[style*="display: flex"]) #mfNoticeDock,
+  body.mf-cinematic-hud:has(#consHud[style*="display: flex"]) #mfNoticeDock{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + var(--mfHudTouch) + var(--mfHudGap) * 3 + 17px)!important
+  }
+  body.mf-cinematic-hud:has(#cmdbar :is(#grpRow,#camRow,#tacRow,#hotSlots)[style*="display: flex"]):has(#consHud[style*="display: flex"]) #consHud{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + var(--mfHudTouch) + var(--mfHudGap) * 3 + 17px)!important
+  }
+  body.mf-cinematic-hud:has(#cmdbar :is(#grpRow,#camRow,#tacRow,#hotSlots)[style*="display: flex"]):has(#consHud[style*="display: flex"]) #mfNoticeDock{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + var(--mfHudTouch) * 2 + var(--mfHudGap) * 4 + 17px)!important
+  }
+  /* The selected PLATOONS tab already names this row on phones. Removing the
+     duplicate label gives all five saved-group targets equal readable width. */
+  body.mf-cinematic-hud #grpRow .pltLabel{display:none}
+  body.mf-cinematic-hud .mfUnitStackCard{flex-basis:104px;width:104px;min-width:104px}
+  /* The history drawer is a glanceable MMO feed, not a modal log covering the
+     centre of the battlefield. The full history remains internally scrollable. */
+  body.mf-cinematic-hud #mfNoticeHistory{width:min(60vw,280px);max-height:min(20dvh,190px)}
+  body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));max-height:min(34dvh,320px)}
+  /* Explicit About intel is a compact contextual instrument, not a centre
+     modal. hudflow writes top/max-height inline for the legacy banner lane, so
+     only this pinned phone state deliberately outranks those two coordinates.
+     The width equation preserves the complete minimap receiver and its gap. */
+  body.mf-cinematic-hud #unitCard.pinned{
+    position:fixed;left:auto;right:calc(var(--sar) + var(--mfHudEdge));top:auto!important;transform:none;
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));width:var(--mfHudContextW);
+    max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudMap) - 10px - var(--mfHudGap) - var(--mfHudEdge) * 3);
+    height:auto;max-height:min(30dvh,270px)!important;overflow-x:hidden;overflow-y:auto;
+    overscroll-behavior:contain;-webkit-overflow-scrolling:touch
+  }
+  body.mf-cinematic-hud #mfCinematicContext .menuRoleBrief{grid-template-columns:62px minmax(0,1fr)}
+  body.mf-cinematic-hud #mfCinematicContext .menuRoleEyebrow{font-size:7px}
+  body.mf-cinematic-hud #mfCinematicContext .menuRoleCopy>strong{font-size:8px}
+  body.mf-cinematic-hud #mfCinematicContext .menuRoleDoctrine{font-size:7px}
+  body.mf-cinematic-hud #mfCinematicContext .bcard{min-height:82px;padding:4px 3px}
+  body.mf-cinematic-hud #mfCinematicContext .bcard .nm{font-size:8px}
+  body.mf-cinematic-hud #mfCinematicContext .bcard .cost{font-size:8px}
+  body.mf-cinematic-hud #bp_ic{min-width:44px;min-height:44px}
+  body.mf-cinematic-hud #bp_title{overflow-wrap:anywhere}
+}
+
+@media (max-width:365px) and (orientation:portrait){
+  body.mf-cinematic-hud{--mfHudGap:2px;--mfHudEdge:2px;--mfHudTopProfile:44px;--mfHudMap:70px}
+  body.mf-cinematic-hud #topbar{grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,44px)}
+  body.mf-cinematic-hud #topbar>.res{min-width:44px}
+  body.mf-cinematic-hud #topbar>.res .ic{display:none}
+  body.mf-cinematic-hud #topbar>.res b{font-size:max(10px,var(--mfHudTextMeta));letter-spacing:-.02em}
+  body.mf-cinematic-hud #goalBar .hudIntelChip.goal{display:none}
+  body.mf-cinematic-hud #cmdbar{padding-left:3px;padding-right:3px}
+  body.mf-cinematic-hud #grpRow.mfUnitStackReady{gap:0;padding-left:1px;padding-right:1px}
+  body.mf-cinematic-hud #grpRow.mfUnitStackReady>.grpBtn{flex-basis:44px}
+  body.mf-cinematic-hud #mfUnitStackRail{min-width:84px}
+  body.mf-cinematic-hud .mfUnitStackCard{flex-basis:84px;width:84px;min-width:84px}
+  body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn{min-width:44px}
+  body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{padding:6px;max-height:31dvh}
+  body.mf-cinematic-hud #mfCinematicContext .mfPanelChrome{top:-6px;margin:-6px -6px 5px}
+  /* The 76px role preview cannot coexist with the 44px close target in this
+     width band. Cards remain the complete visual chooser, so retire the
+     duplicate preview instead of leaving its INSPECT action live under chrome. */
+  body.mf-cinematic-hud #mfCinematicContext .menuRoleBrief{display:none}
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"]{gap:4px}
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceBtn{font-size:8px;padding:5px 3px}
+}
+
+/* Short landscape keeps the permanent deck and primary orders in one shallow
+   ribbon. Optional controls borrow one second row only while selected, leaving
+   the left rail and centre camera unobstructed. */
+@media (orientation:landscape) and (max-height:600px){
+  body.mf-cinematic-hud{
+    --mfHudTopProfile:54px;--mfHudTopRow:44px;--mfHudIntel:28px;
+    --mfHudMap:clamp(76px,23vh,96px);--mfHudDockW:min(65vw,560px);
+    --mfHudDockRows:54px;--mfHudContextW:min(32vw,320px);
+    --mfHudLeftRailW:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2 - var(--mfHudDockW) - var(--mfHudGap))
+  }
+  body.mf-cinematic-hud #heroBar{width:54px;height:44px}
+  body.mf-cinematic-hud #heroPortrait{width:46px;height:36px}
+  body.mf-cinematic-hud #heroBar .heroProfileBody{left:auto;right:2px;bottom:2px;height:auto;padding:2px 3px;border:0;border-radius:4px}
+  body.mf-cinematic-hud #topbar{
+    right:auto;width:min(46vw,360px,calc(100vw - var(--sal) - var(--sar) - 54px - var(--mfHudEdge) * 3));
+    grid-template-columns:repeat(3,minmax(58px,1fr)) repeat(3,44px)
+  }
+  body.mf-cinematic-hud #topbar>.res .rate{display:none}
+  body.mf-cinematic-hud #topbar #goalBar{
+    position:absolute;left:0;top:calc(44px + var(--mfHudGap));width:100%;height:28px;min-height:28px;max-height:28px;
+    justify-self:auto;white-space:nowrap
+  }
+  body.mf-cinematic-hud #cmdbar{
+    left:auto;right:calc(var(--sar) + var(--mfHudEdge));width:var(--mfHudDockW);display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:44px;gap:var(--mfHudGap);padding:4px
+  }
+  body.mf-cinematic-hud #cmdbar #hudDeckTabs{grid-column:1;grid-row:1;justify-content:flex-start}
+  /* The atlas is the label in the shallow landscape ribbon. Literal names are
+     retained as the no-art fallback, but once the validated sheet is ready a
+     44px PLATOONS target must not clip eight characters around its glyph. */
+  html.cmdIcons body.mf-cinematic-hud #cmdbar #hudDeckTabs .hudDeckBtn{font-size:0;letter-spacing:0}
+  body.mf-cinematic-hud #cmdbar #primaryRow{grid-column:2;grid-row:1}
+  body.mf-cinematic-hud #cmdbar #camRow,
+  body.mf-cinematic-hud #cmdbar #tacRow,
+  body.mf-cinematic-hud #cmdbar #grpRow,
+  body.mf-cinematic-hud #cmdbar #hotSlots{grid-column:1/-1;grid-row:1}
+  body.mf-cinematic-hud:has(#cmdbar #camRow[style*="display: flex"]),
+  body.mf-cinematic-hud:has(#cmdbar #tacRow[style*="display: flex"]),
+  body.mf-cinematic-hud:has(#cmdbar #grpRow[style*="display: flex"]),
+  body.mf-cinematic-hud:has(#cmdbar #hotSlots[style*="display: flex"]){--mfHudDockRows:101px}
+  body.mf-cinematic-hud:has(#cmdbar #camRow[style*="display: flex"]) #hudDeckTabs,
+  body.mf-cinematic-hud:has(#cmdbar #tacRow[style*="display: flex"]) #hudDeckTabs,
+  body.mf-cinematic-hud:has(#cmdbar #grpRow[style*="display: flex"]) #hudDeckTabs,
+  body.mf-cinematic-hud:has(#cmdbar #hotSlots[style*="display: flex"]) #hudDeckTabs,
+  body.mf-cinematic-hud:has(#cmdbar #camRow[style*="display: flex"]) #primaryRow,
+  body.mf-cinematic-hud:has(#cmdbar #tacRow[style*="display: flex"]) #primaryRow,
+  body.mf-cinematic-hud:has(#cmdbar #grpRow[style*="display: flex"]) #primaryRow,
+  body.mf-cinematic-hud:has(#cmdbar #hotSlots[style*="display: flex"]) #primaryRow{grid-row:2}
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing){--mfHudDockRows:54px}
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #hudDeckTabs,
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #cmdbar #camRow,
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #cmdbar #tacRow,
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #cmdbar #mfCinematicGroupPalette,
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #cmdbar #hotSlots{display:none!important}
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #cmdbar{grid-template-columns:1fr;grid-template-rows:44px}
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #cmdbar #primaryRow{grid-column:1;grid-row:1}
+  body.mf-cinematic-hud #minimapWrap[data-mf-hud-role="minimap-receiver"]{bottom:calc(var(--sab) + var(--mfHudEdge))}
+  body.mf-cinematic-hud #selInfo{
+    left:auto;right:calc(var(--sar) + var(--mfHudEdge) + var(--mfHudDockW) + var(--mfHudGap));
+    bottom:calc(var(--sab) + var(--mfHudEdge));width:46px;max-width:46px;min-height:44px;padding:0;transform:none;overflow:hidden
+  }
+  body.mf-cinematic-hud #selInfo .selIntelCopy{display:none}
+  body.mf-cinematic-hud #selInfo .selIntelBtn{border:0;border-radius:9px}
+  body.mf-cinematic-hud:is(.uiPrimaryOpen,.uiPlacing) #selInfo{display:none!important}
+  body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));width:var(--mfHudContextW);max-width:var(--mfHudContextW);
+    max-height:min(45dvh,186px,calc(100dvh - var(--mfHudTopClear) - var(--mfHudDockClear) - var(--mfHudGap) * 2));
+    scroll-padding-top:52px
+  }
+  body.mf-cinematic-hud #mfCinematicContext .tabRow{position:static;top:auto}
+  body.mf-cinematic-hud #mfCinematicContext .bcard{scroll-margin-top:52px}
+  body.mf-cinematic-hud #mfCinematicContext .menuRoleBrief{display:none}
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"]{position:sticky;z-index:3;bottom:0;background:var(--mfHudPanelFallback)}
+  body.mf-cinematic-hud #placeUI{
+    left:auto;right:calc(var(--sar) + var(--mfHudEdge));bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));transform:none
+  }
+  body.mf-cinematic-hud #mfNoticeDock{
+    left:calc(var(--sal) + var(--mfHudEdge));right:auto;
+    bottom:calc(var(--sab) + var(--mfHudEdge) + var(--mfHudMap) + 10px + var(--mfHudGap))
+  }
+  body.mf-cinematic-hud #mfNoticeDock:has(#noticeLogBtn[aria-expanded="true"]){display:none}
+  body.mf-cinematic-hud #mfNoticeHistory{
+    left:calc(var(--sal) + var(--mfHudEdge));right:auto;width:min(var(--mfHudLeftRailW),300px);
+    bottom:calc(var(--sab) + var(--mfHudEdge) + var(--mfHudMap) + 10px + var(--mfHudGap));
+    height:min(46dvh,176px,calc(100dvh - var(--mfHudTopClear) - var(--mfHudDockClear) - var(--mfHudGap) * 2));
+    max-height:min(46dvh,176px,calc(100dvh - var(--mfHudTopClear) - var(--mfHudDockClear) - var(--mfHudGap) * 2))
+  }
+  body.mf-cinematic-hud #mfNoticeHistory header{height:44px;min-height:44px;padding:0 4px}
+  body.mf-cinematic-hud #mfNoticeHistory nav{height:48px;padding:2px 4px}
+  body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem{grid-template-columns:38px minmax(0,1fr) auto}
+  body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem i,
+  body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem>span{grid-column:2}
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceBtn,
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_repair,
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_sell{min-height:48px}
+  /* Enlarged text previously consumed the horizontal icon allowance and forced
+     REPAIRING / CONFIRM through arbitrary mid-word breaks. Stack the icon only
+     in this shallow band and permit wrapping at semantic spaces, never letters. */
+  html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud [data-mf-hud-role="service-controls"] .bldServiceBtn,
+  html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_repair,
+  html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_sell{
+    flex-direction:column;gap:2px;padding:4px 3px;font-size:8px;line-height:1.12;letter-spacing:0;
+    overflow-wrap:normal;word-break:normal;hyphens:none
+  }
+}
+
+/* Tablets/desktops expose the full commander condition without making it a
+   central overlay. Context and commands remain right-aligned; the map stays in
+   its own lower-left well. */
+@media (min-width:700px) and (min-height:601px){
+  body.mf-cinematic-hud{
+    --mfHudTopProfile:clamp(210px,22vw,246px);--mfHudMap:clamp(104px,13vw,150px);
+    --mfHudContextW:min(34vw,380px);--mfHudDockRows:calc(var(--mfHudTouch) * 2 + var(--mfHudGap) * 3)
+  }
+  body.mf-cinematic-hud #heroBar{height:var(--mfHudTopRow);padding:4px 7px;justify-content:flex-start;gap:7px}
+  body.mf-cinematic-hud #heroPortrait{width:calc(var(--mfHudTopRow) - 8px);height:calc(var(--mfHudTopRow) - 8px);flex:0 0 calc(var(--mfHudTopRow) - 8px)}
+  body.mf-cinematic-hud #heroBar .heroProfileBody{position:static;height:auto;display:flex;align-items:stretch;justify-content:center;padding:0;border:0;background:none}
+  body.mf-cinematic-hud #heroNameTxt,body.mf-cinematic-hud #heroCallsignTxt,
+  body.mf-cinematic-hud #heroBar .heroVital{display:grid}
+  body.mf-cinematic-hud #heroNameTxt,body.mf-cinematic-hud #heroCallsignTxt{display:block}
+  body.mf-cinematic-hud #heroBar .heroProfileHead{justify-content:space-between}
+  body.mf-cinematic-hud #topbar{grid-template-columns:repeat(3,minmax(84px,1fr)) repeat(3,var(--mfHudTouch));max-width:760px}
+  body.mf-cinematic-hud #cmdbar{left:auto;width:min(58vw,590px)}
+  body.mf-cinematic-hud #minimapWrap[data-mf-hud-role="minimap-receiver"]{bottom:calc(var(--sab) + var(--mfHudEdge))}
+  body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{max-width:var(--mfHudContextW);bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));max-height:min(48dvh,470px)}
+  body.mf-cinematic-hud #mfNoticeDock{right:calc(var(--sar) + min(58vw,590px) + var(--mfHudEdge) * 2);bottom:calc(var(--sab) + var(--mfHudEdge))}
+  body.mf-cinematic-hud #mfNoticeHistory{left:calc(var(--sal) + var(--mfHudEdge));right:auto;bottom:calc(var(--sab) + 54px);width:min(34vw,360px)}
+}
+
+/* Text scale is applied to visible tactical copy, not merely to a settings
+   label. Touch geometry stays stable while scrollable decks absorb long copy. */
+body.mf-cinematic-hud #topbar #goalBar{font-size:var(--mfHudTextGoal)}
+/* A minimap transmission has only a 99px receiver on phones. Use the authored
+   feed token and three compact lines rather than inheriting the larger legacy
+   rem value, so Commander and KEEL copy remains complete at the base scale. */
+body.mf-cinematic-hud #cmdrTxBody{padding:17px 5px 4px}
+body.mf-cinematic-hud #cmdrTxWho{font-size:var(--mfHudTextAction);line-height:1.15}
+body.mf-cinematic-hud #cmdrTxLine{font-size:var(--mfHudTextFeed);line-height:1.15;-webkit-line-clamp:3}
+body.mf-cinematic-hud #mfCinematicContext .bcard .nm,
+body.mf-cinematic-hud #mfCinematicContext .bcard .cost{font-size:var(--mfHudTextCard)}
+body.mf-cinematic-hud #mfCinematicContext #bp_desc,
+body.mf-cinematic-hud .mfNoticeItem>span,
+body.mf-cinematic-hud .mfNoticeEmpty,
+body.mf-cinematic-hud #selInfo .selIntelCopy span{font-size:var(--mfHudTextFeed)}
+body.mf-cinematic-hud #mfCinematicContext #bp_title,
+body.mf-cinematic-hud #bp_repair,
+body.mf-cinematic-hud #bp_sell,
+body.mf-cinematic-hud #mfCinematicContext .menuRoleInspect,
+body.mf-cinematic-hud #mfNoticeHistory header b{font-size:var(--mfHudTextAction)}
+body.mf-cinematic-hud #cmdbar .cbtn,
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn,
+body.mf-cinematic-hud #mfCinematicContext .tabRow button{font-size:var(--mfHudTextDock)}
+body.mf-cinematic-hud #mfCinematicContext #bp_stats,
+body.mf-cinematic-hud #mfCinematicContext #bp_delta,
+body.mf-cinematic-hud #mfCinematicContext .menuRoleEyebrow,
+body.mf-cinematic-hud #mfCinematicContext .menuRoleDoctrine,
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem time,
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem i,
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeRepeat{font-size:var(--mfHudTextMeta)}
+body.mf-cinematic-hud.uiPlacing #selInfo{display:none!important}
+html[data-mf-text-scale="125"] body.mf-cinematic-hud{--mfHudIntel:30px}
+html[data-mf-text-scale="150"] body.mf-cinematic-hud{--mfHudIntel:34px}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud{--mfHudIntel:42px}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #topbar{overflow:visible;touch-action:none}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #topbar>.res{flex:initial}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #topbar #goalBar{
+  min-height:var(--mfHudIntel);height:var(--mfHudIntel);max-height:var(--mfHudIntel);white-space:normal;line-height:1.12
+}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn{
+  flex:0 0 auto;min-width:max(44px,6.4em)
+}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #topbar>.res .rate{display:none}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{overflow-y:auto}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfCinematicContext #buildGrid,
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfCinematicContext #prodGrid{grid-template-columns:1fr}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfCinematicContext .bcard{min-height:96px}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem{grid-template-columns:38px minmax(0,1fr)}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem i,
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem>span{grid-column:2}
+
+/* Measured collision/scale remediation. The status chip is an action, so the
+   enlarged-copy rule above may wrap it but may never shrink its hit target. */
+body.mf-cinematic-hud #hazChip{box-sizing:border-box;min-height:44px;max-height:none}
+body.mf-cinematic-hud .baseFinder header b{
+  min-width:0;font-size:min(var(--mfHudTextFeed),12px);line-height:1.1;overflow-wrap:anywhere
+}
+body.mf-cinematic-hud .baseFinder .baseFindCopy b{font-size:min(var(--mfHudTextGoal),11px)}
+
+/* The receiver is intentionally the minimap rather than a second dialogue
+   panel. Cap only its local type scale so a speaker plus three useful lines
+   remain legible inside the 70--112px tactical instrument. */
+body.mf-cinematic-hud #cmdrTxWho{font-size:min(var(--mfHudTextAction),10px);line-height:1.1}
+body.mf-cinematic-hud #cmdrTxLine{font-size:min(var(--mfHudTextFeed),10px);line-height:1.1;-webkit-line-clamp:3}
+
+/* Structure service is the one context whose last row is destructive. Keep
+   that row inside its own scroller at every height; production retains normal
+   flow so this never covers unit cards. */
+body.mf-cinematic-hud #bldMenu2 [data-mf-hud-role="service-controls"]{
+  position:sticky;z-index:4;bottom:0;margin-bottom:0;padding-top:4px;
+  background:linear-gradient(180deg,rgba(3,10,18,0),rgba(3,10,18,.98) 28%)
+}
+
+/* Unit-stack cards scale their useful copy while the fixed 44px target and
+   ellipsis keep the same-row PLATOONS rail bounded. */
+body.mf-cinematic-hud .mfUnitStackName{
+  font-size:var(--mfHudTextCard);overflow:visible;text-overflow:clip;white-space:nowrap
+}
+body.mf-cinematic-hud .mfUnitStackMeta,
+body.mf-cinematic-hud .mfUnitStackCount,
+body.mf-cinematic-hud .mfUnitStackReady{font-size:var(--mfHudTextMeta)}
+body.mf-cinematic-hud .mfUnitStackReady{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Compact tactical labels keep their authored phone floors, then participate
+   in text scaling without outgrowing the 44px hot-slot and consumable rows. */
+body.mf-cinematic-hud #cmdbar #hotSlots>.hotSlot .hNm{
+  font-size:max(9px,min(11px,var(--mfHudTextDock)))
+}
+body.mf-cinematic-hud #consHud .conHudNm{
+  font-size:clamp(11px,var(--mfHudTextFeed),14px)
+}
+
+/* Mid-width portrait devices were outside the phone collision lane but still
+   used the full-width three-row dock. Follow the measured third row and keep
+   selection/utility to the right of the map; transient strips stack above it. */
+@media (min-width:431px) and (max-width:699px) and (orientation:portrait){
+  body.mf-cinematic-hud:has(#cmdbar :is(#grpRow,#camRow,#tacRow,#hotSlots)[style*="display: flex"]) #minimapWrap[data-mf-hud-role="minimap-receiver"],
+  body.mf-cinematic-hud:has(#placeUI[style*="display: flex"]) #minimapWrap[data-mf-hud-role="minimap-receiver"]{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudTouch) + var(--mfHudGap) * 2)
+  }
+  body.mf-cinematic-hud #selInfo,
+  body.mf-cinematic-hud #placeUI,
+  body.mf-cinematic-hud.mfHotUtilityOpen #hotUtilityPanel{
+    left:calc(var(--sal) + var(--mfHudEdge) + var(--mfHudMap) + 10px + var(--mfHudGap));
+    right:calc(var(--sar) + var(--mfHudEdge));width:auto;transform:none
+  }
+  body.mf-cinematic-hud #consHud,
+  body.mf-cinematic-hud #mfNoticeDock{
+    left:calc(var(--sal) + var(--mfHudEdge));right:auto;
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + 10px + var(--mfHudGap) * 2)!important
+  }
+  body.mf-cinematic-hud:has(#cmdbar :is(#grpRow,#camRow,#tacRow,#hotSlots)[style*="display: flex"]) #consHud,
+  body.mf-cinematic-hud:has(#cmdbar :is(#grpRow,#camRow,#tacRow,#hotSlots)[style*="display: flex"]) #mfNoticeDock{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudTouch) + var(--mfHudMap) + 10px + var(--mfHudGap) * 3)!important
+  }
+  body.mf-cinematic-hud:has(#consHud[style*="display: flex"]) #mfNoticeDock{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + var(--mfHudTouch) + 10px + var(--mfHudGap) * 3)!important
+  }
+  body.mf-cinematic-hud:has(#cmdbar :is(#grpRow,#camRow,#tacRow,#hotSlots)[style*="display: flex"]):has(#consHud[style*="display: flex"]) #mfNoticeDock{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + var(--mfHudTouch) * 2 + 10px + var(--mfHudGap) * 4)!important
+  }
+}
+
+@media (max-width:430px) and (orientation:portrait){
+  /* One glanceable card is enough for FIND; removing the repeated hint and
+     trimming its internal gaps pulls the opaque chassis out of the camera ROI. */
+  body.mf-cinematic-hud .baseFinder{max-height:min(21dvh,170px)}
+  body.mf-cinematic-hud .baseFinder header small,
+  body.mf-cinematic-hud .baseFinder .baseFindHint{display:none}
+  body.mf-cinematic-hud .baseFindTabs{margin-top:4px}
+  body.mf-cinematic-hud .baseFindGrid{margin-top:4px;max-height:52px}
+  body.mf-cinematic-hud .baseFindCard{min-height:52px;padding-top:3px;padding-bottom:3px}
+  /* Keep one complete stack card visible beside the fixed 44px controls. The
+     rail itself scrolls; shrinking its viewport to a single touch target made
+     the first card look cut off even though the dock remained in bounds. */
+  body.mf-cinematic-hud:has(#modeBtn[style*="display: flex"]) #mfUnitStackRail{
+    flex-basis:84px;min-width:84px
+  }
+}
+
+@media (max-width:365px) and (orientation:portrait){
+  /* 236px outer width - borders - 5px padding = 224px: five 44px targets plus
+     four 1px gaps fit exactly even with the stressed safe-area profile. */
+  body.mf-cinematic-hud .baseFinder{padding:5px}
+  body.mf-cinematic-hud .baseFindTabs{grid-template-columns:repeat(5,minmax(44px,1fr));gap:1px}
+  body.mf-cinematic-hud .baseFindTabs button{min-width:44px}
+  body.mf-cinematic-hud #cmdrTxBody{gap:1px;padding:14px 4px 3px}
+  body.mf-cinematic-hud #cmdrTxWho{font-size:9px;line-height:1.05}
+  body.mf-cinematic-hud #cmdrTxLine{font-size:8px;line-height:1.05}
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_repair,
+  body.mf-cinematic-hud [data-mf-hud-role="service-controls"] #bp_sell{
+    flex-direction:column;gap:2px;padding:4px 3px;font-size:10px;line-height:1.1;letter-spacing:0
+  }
+}
+
+@media (orientation:landscape) and (max-height:600px){
+  /* The shallow ribbon has two unequal jobs: four atlas-labelled deck targets
+     and five permanent order targets. One-pixel gaps fit both without pushing
+     scrollWidth through the dock root at 640x360 / 200% text. */
+  body.mf-cinematic-hud #topbar{grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,44px)}
+  body.mf-cinematic-hud #cmdbar{grid-template-columns:minmax(0,44fr) minmax(0,56fr);gap:1px;padding:2px}
+  body.mf-cinematic-hud #cmdbar #hudDeckTabs,
+  body.mf-cinematic-hud #cmdbar #primaryRow{gap:1px}
+  /* Three columns keep every 44px category visible without widening the
+     contextual lane into the centre playfield. Cards remain below in scroll. */
+  body.mf-cinematic-hud .baseFinder{width:min(28vw,280px);max-height:min(45dvh,186px)}
+  body.mf-cinematic-hud .baseFinder header{gap:4px}
+  body.mf-cinematic-hud .baseFinder header small,
+  body.mf-cinematic-hud .baseFinder .baseFindHint{display:none}
+  body.mf-cinematic-hud .baseFinder header>span{overflow:hidden;flex-wrap:wrap;gap:2px}
+  body.mf-cinematic-hud .baseFinder header b{min-width:0;overflow-wrap:anywhere}
+  body.mf-cinematic-hud .baseFindBack{width:44px;min-width:44px;padding:2px;font-size:0}
+  body.mf-cinematic-hud .baseFindTabs{grid-template-columns:repeat(3,minmax(44px,1fr));gap:3px;margin-top:4px}
+  body.mf-cinematic-hud .baseFindTabs button{min-width:44px}
+  body.mf-cinematic-hud .baseFindGrid{margin-top:4px;max-height:52px}
+  /* FEED and consumables occupy measured tiers above the map. When Utility is
+     also open, consumables move to the free top-left tier and FEED stays beside
+     (not under) Utility. */
+  body.mf-cinematic-hud #consHud{
+    left:calc(var(--sal) + var(--mfHudEdge));right:auto;
+    bottom:calc(var(--sab) + var(--mfHudEdge) + var(--mfHudMap) + 10px + var(--mfHudGap))!important
+  }
+  body.mf-cinematic-hud:not(.mfHotUtilityOpen):has(#consHud[style*="display: flex"]) #mfNoticeDock{
+    bottom:calc(var(--sab) + var(--mfHudEdge) + var(--mfHudMap) + var(--mfHudTouch) + 10px + var(--mfHudGap) * 2)!important
+  }
+  body.mf-cinematic-hud.mfHotUtilityOpen:has(#consHud[style*="display: flex"]) #consHud{
+    top:var(--mfHudTopClear);bottom:auto!important
+  }
+  body.mf-cinematic-hud #mfNoticeHistory{width:min(42vw,260px)}
+  body.mf-cinematic-hud #mfNoticeHistory nav{overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+}
+
+@media (prefers-reduced-motion:reduce){
+  body.mf-cinematic-hud #heroBar,body.mf-cinematic-hud #heroHpFill,body.mf-cinematic-hud #xpFill,
+  body.mf-cinematic-hud #minimapWrap,body.mf-cinematic-hud #minimap,
+  body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface],
+  body.mf-cinematic-hud #cmdbar button{transition:none!important;animation:none!important}
+  body.mf-cinematic-hud #goalBar .clk.low,body.mf-cinematic-hud #infMeter.t4,
+  body.mf-cinematic-hud #atkAlert,body.mf-cinematic-hud #waveAlert{animation:none!important}
+}
+
+@media (hover:none) and (pointer:coarse){
+  body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn,body.mf-cinematic-hud #cmdbar .cbtn{touch-action:manipulation}
+  body.mf-cinematic-hud #mfCinematicContext .bcard{touch-action:manipulation}
+}

@@ -54,8 +54,8 @@ function selectPayload(){
 }
 
 function decodeDataUri(uri,label){
-  const match=/^data:(image\/(?:jpeg|jpg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/.exec(uri);
-  if(!match) fail(label+' is not a supported base64 image data URI');
+  const match=/^data:(image\/(?:jpeg|jpg|png|webp)|application\/json);base64,([A-Za-z0-9+/]+={0,2})$/.exec(uri);
+  if(!match) fail(label+' is not a supported base64 asset data URI');
   const bytes=Buffer.from(match[2],'base64');
   if(bytes.length<1024) fail(label+' is suspiciously small ('+bytes.length+' bytes)');
   if(bytes.toString('base64')!==match[2]) fail(label+' has malformed or non-canonical base64');
@@ -137,15 +137,39 @@ function validateRuntimeAssetMap(runtimeText){
     if(typeof uri!=='string'||!uri.startsWith('data:'))
       fail(path+' is not embedded in the OTA runtime asset map');
     const decoded=decodeDataUri(uri,'runtime asset '+path);
+    const sourcePath=join(root,...path.split('/'));
+    if(!existsSync(sourcePath))fail('runtime asset source is missing: '+path);
+    const sourceBytes=readFileSync(sourcePath);
+    if(!decoded.bytes.equals(sourceBytes))fail('runtime asset bytes differ from source: '+path);
     embeddedBytes+=decoded.bytes.length;
     hashes.add(decoded.sha256);
     const pair=JSON.stringify(path)+':'+JSON.stringify(uri);
     if(countOccurrences(jsonText,pair)!==1)
       fail(path+' does not have exactly one runtime asset-map entry');
   }
+  for(const path of ['assets/textures/ui/cmdicons.png','assets/textures/ui/icon-index.json',
+    'assets/textures/ui/icons-nova.png','assets/textures/ui/icons-legion.png',
+    'assets/textures/ui/icons-syndicate.png','assets/textures/ui/icons-horde.png']){
+    if(!Object.prototype.hasOwnProperty.call(map,path))fail('OTA runtime asset map is missing '+path);
+  }
   if(!runtimeText.includes('window.mf2AssetURL=function'))
     fail('OTA runtime artifact does not install mf2AssetURL');
   return {assetCount:entries.length,embeddedBytes,uniquePayloads:hashes.size};
+}
+
+function validateCinematicHudArt(artifacts){
+  const joined=artifacts.map(item=>item.text).join('\n'),checked=[];
+  if(joined.includes('../.data:'))fail('OTA payload contains corrupt ../.data: asset URL');
+  for(const [path,mime] of [
+    ['assets/textures/ui/mf-hud-panel-material-v1.webp','image/webp'],
+    ['assets/textures/ui/mf-keel-uga-portrait-v1.webp','image/webp']
+  ]){
+    const bytes=readFileSync(join(root,...path.split('/'))),uri='data:'+mime+';base64,'+bytes.toString('base64');
+    const occurrences=countOccurrences(joined,uri);
+    if(occurrences!==1)fail(path+' occurs '+occurrences+' times in OTA; expected exactly once');
+    checked.push({path,bytes:bytes.length,sha256:sha256(bytes)});
+  }
+  return checked;
 }
 
 function validateCommanderArt(artifacts){
@@ -193,6 +217,7 @@ function validateCommanderArt(artifacts){
 const selected=selectPayload();
 const loaded=selected.format==='per-file'?loadPerFilePayload(selected):loadLegacyPayload(selected);
 const runtimeAssets=validateRuntimeAssetMap(loaded.runtimeText);
+const cinematicHudArt=validateCinematicHudArt(loaded.artifacts);
 const commanders=validateCommanderArt(loaded.artifacts);
 
 console.log(JSON.stringify({
@@ -203,5 +228,6 @@ console.log(JSON.stringify({
   artifactCount:loaded.artifacts.length,
   payloadBytes:loaded.payloadBytes,
   runtimeAssets,
+  cinematicHudArt,
   commanderArt:commanders
 },null,2));

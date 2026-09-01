@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 import {resolve,join} from 'node:path';
+import {TextEncoder} from 'node:util';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
 
@@ -364,7 +365,8 @@ function launchBoot(database){
       const id='blob:massfront-test/'+nextBlob++;
       blobSources.set(id,blob.source);
       return id;
-    }
+    },
+    revokeObjectURL(id){ blobSources.delete(id); }
   };
   function element(tag){
     return {
@@ -427,7 +429,12 @@ function launchBoot(database){
       error(message){ warnings.push('ERROR '+String(message)); },
       info(){}
     },
-    indexedDB:database.indexedDB,document,Blob:TestBlob,URL:TestURL,
+    indexedDB:database.indexedDB,document,Blob:TestBlob,URL:TestURL,TextEncoder,
+    crypto:{subtle:{digest:async(algorithm,bytes)=>{
+      assert.equal(String(algorithm).toUpperCase(),'SHA-256');
+      const digest=createHash('sha256').update(bytes).digest();
+      return digest.buffer.slice(digest.byteOffset,digest.byteOffset+digest.byteLength);
+    }}},
     Promise,Date,Math,Map,Set,Object,Array,String,Number,Boolean,RegExp,JSON,
     setTimeout:trackedSetTimeout,clearTimeout:trackedClearTimeout,queueMicrotask,
     requestAnimationFrame(fn){ return trackedSetTimeout(()=>fn(Date.now()),0); }
@@ -465,11 +472,21 @@ const healthyBundle=makeBundle();
 const futureBundle={...makeBundle(),version:'1.33.49',at:Date.now()+1000};
 function bundleMeta(bundle){
   return {version:bundle.version,channel:bundle.channel||'stable',at:bundle.at,
+    schema:bundle.schema||1,
     notes:bundle.notes||'',severity:bundle.severity||'recommended',
-    kind:bundle.kind||'full',patchedFrom:bundle.patchedFrom||''};
+    kind:bundle.kind||'full',patchedFrom:bundle.patchedFrom||'',
+    manifestRoot:bundle.manifestRoot||'',payloadRoot:bundle.payloadRoot||'',
+    targetRoot:bundle.targetRoot||'',sourcePayloadRoot:bundle.sourcePayloadRoot||'',
+    fullRoot:bundle.fullRoot||'',manifestKind:bundle.manifestKind||'',
+    manifestCategory:bundle.manifestCategory||'',
+    manifestPatchFrom:bundle.manifestPatchFrom||'',
+    runtimeRoot:bundle.runtimeRoot||'',
+    storage:bundle.storage||''};
 }
 function bundleIdentity(bundle){
-  return {version:bundle.version,channel:bundle.channel||'stable',at:bundle.at};
+  return {version:bundle.version,channel:bundle.channel||'stable',at:bundle.at,
+    manifestRoot:bundle.manifestRoot||'',targetRoot:bundle.targetRoot||'',
+    runtimeRoot:bundle.runtimeRoot||''};
 }
 function previousRef(key,bundle){
   return {key,...bundleIdentity(bundle)};
@@ -477,6 +494,52 @@ function previousRef(key,bundle){
 function rollbackPayloadGets(database){
   return ['previousA','previousB','previous']
     .reduce((sum,key)=>sum+database.payloadGetCount(key),0);
+}
+function schema3Contract(bundle,runtimeRoot,{manifestKind='full',mode='payload'}={}){
+  const manifestCategory='system';
+  const manifestPatchFrom=manifestKind==='patch'?packagedBase:'';
+  const sourcePayloadRoot=sha256('source-payload:'+bundle.version+':'+manifestKind);
+  const fullRoot=manifestKind==='full'
+    ?sourcePayloadRoot:sha256('full-payload:'+bundle.version);
+  const payloadRoot=mode==='full'?fullRoot:sourcePayloadRoot;
+  const contract=[
+    'schema=3','channel='+(bundle.channel||'stable'),'version='+bundle.version,
+    'kind='+manifestKind,'category='+manifestCategory,
+    'patchFrom='+manifestPatchFrom,
+    'payload='+sourcePayloadRoot,'full='+fullRoot,'runtime='+runtimeRoot
+  ].join('\n');
+  return {schema:3,manifestRoot:sha256(contract),payloadRoot,sourcePayloadRoot,
+    fullRoot,targetRoot:fullRoot,runtimeRoot,manifestKind,manifestCategory,
+    manifestPatchFrom};
+}
+function descriptorFixture(bundle,options={}){
+  const files={},records={},encoder=new TextEncoder(),runtimeRows=[];
+  for(const path of bundle.order){
+    const text=bundle.files[path],bytes=encoder.encode(text);
+    runtimeRows.push(path+'|'+bytes.byteLength+'|'+sha256(bytes));
+  }
+  const runtimeRoot=sha256(encoder.encode(runtimeRows.join('\n')));
+  const roots=schema3Contract(bundle,runtimeRoot,options);
+  const mode=options.mode||'payload';
+  for(const path of bundle.order){
+    const text=bundle.files[path],bytes=encoder.encode(text);
+    const key='transfer-v1:'+(bundle.channel||'stable')+'-'+bundle.version+'-'+
+      roots.manifestRoot+'-'+mode+':file:'+path;
+    const ref={key,size:bytes.byteLength,sha256:sha256(bytes)};
+    files[path]=ref;
+    records[key]={size:ref.size,sha256:ref.sha256,text};
+  }
+  return {bundle:{...bundle,...roots,order:bundle.order.slice(),
+    storage:'artifact-v1',files},records};
+}
+function rootedStringBundle(bundle){
+  const encoder=new TextEncoder();
+  const rows=bundle.order.map(path=>{
+    const bytes=encoder.encode(bundle.files[path]);
+    return path+'|'+bytes.byteLength+'|'+sha256(bytes);
+  });
+  const runtimeRoot=sha256(encoder.encode(rows.join('\n')));
+  return {...bundle,...schema3Contract(bundle,runtimeRoot),storage:'bundle-v1'};
 }
 
 /* The fixture itself must roll back aborted writes; otherwise a fake that
@@ -486,6 +549,172 @@ await abortDb.abortWriteRecords({sentinel:{version:'lost'},leak:{version:'bad'}}
 assert.deepEqual(abortDb.get('sentinel'),{version:'kept'},
                  'fake IndexedDB committed an aborted overwrite');
 assert.equal(abortDb.has('leak'),false,'fake IndexedDB committed an aborted insert');
+
+/* A packaged descriptor-capable boot reads and verifies one artifact record at
+   a time. The full staged source never has to be materialized as one giant
+   IndexedDB value, while execution order and the probation handshake remain
+   identical to the legacy bundle path. */
+/* Model an off-base client taking the full fallback from a patch manifest.
+   The selected transfer is `full`, but manifestRoot must still be rebuilt
+   from the source manifest's patch kind/category/base and original roots. */
+const descriptor=descriptorFixture(healthyBundle,{manifestKind:'patch',mode:'full'});
+const descriptorDb=makeDatabase({
+  ...descriptor.records,
+  active:descriptor.bundle,activeMeta:bundleMeta(descriptor.bundle)
+});
+const descriptorLaunch=launchBoot(descriptorDb);
+await waitFor('descriptor artifact boot',()=>
+  (descriptorLaunch.window.__TEST_STAGED_EXEC|0)===expectedArtifacts&&descriptorLaunch.idle());
+assert.equal(descriptorLaunch.runtimeErrors.length,0,
+             'descriptor boot raised a runtime error: '+descriptorLaunch.runtimeErrors.join('; '));
+assert.equal(descriptorLaunch.window.__TEST_PACKAGED_EXEC|0,0,
+             'descriptor boot fell back to packaged source');
+assert.equal(descriptorLaunch.window.__MF_ARTIFACT_BOOT_V1,true,
+             'packaged boot did not advertise descriptor capability');
+descriptorLaunch.close();
+
+/* Delta targets retain unchanged references from the installed base. Those
+   refs remain content-addressed under the prior release identity and must not
+   be mistaken for arbitrary cache keys. */
+{
+  const reused=descriptorFixture(healthyBundle);
+  const path=reused.bundle.order[2],old=reused.bundle.files[path];
+  const priorKey='transfer-v1:stable-'+packagedBase+'-'+'e'.repeat(64)+
+    '-payload:file:'+path;
+  reused.records[priorKey]=reused.records[old.key];
+  delete reused.records[old.key];
+  reused.bundle.files[path]={...old,key:priorKey};
+  const db=makeDatabase({...reused.records,
+    active:reused.bundle,activeMeta:bundleMeta(reused.bundle)});
+  const launch=launchBoot(db);
+  await waitFor('content-addressed prior-ref boot',()=>
+    (launch.window.__TEST_STAGED_EXEC|0)===expectedArtifacts&&launch.idle());
+  assert.equal(launch.window.__TEST_PACKAGED_EXEC|0,0,
+               'valid unchanged prior-release artifact ref was rejected');
+  launch.close();
+}
+
+async function assertDescriptorRejected(label,fixture){
+  const db=makeDatabase({...fixture.records,
+    active:fixture.bundle,activeMeta:bundleMeta(fixture.bundle)});
+  const launch=launchBoot(db);
+  await waitFor(label+' fallback',()=>
+    (launch.window.__TEST_PACKAGED_BOOTED|0)===1&&launch.idle());
+  assert.equal(launch.window.__TEST_STAGED_EXEC|0,0,
+               label+' executed staged code before rejection');
+  assert.equal(launch.window.__MASSFRONT_PATCHED,undefined,
+               label+' let packaged fallback confirm the rejected patch');
+  launch.close();
+}
+
+/* A storage attacker/corruption event can update the descriptor and its IDB
+   record coherently. Re-hashing only that record would accept it, so also
+   rebuild the ordered runtime root and then the source manifest contract. */
+{
+  const coherent=descriptorFixture(healthyBundle);
+  const path=order[Math.min(order.length-1,order.indexOf('src/engine/gl.js')+2)];
+  const ref=coherent.bundle.files[path],text=coherent.records[ref.key].text+'\n/*tamper*/';
+  const bytes=new TextEncoder().encode(text),sha=sha256(bytes);
+  coherent.bundle.files[path]={...ref,size:bytes.byteLength,sha256:sha};
+  coherent.records[ref.key]={text,size:bytes.byteLength,sha256:sha};
+  const rows=coherent.bundle.order.map(p=>{
+    const item=coherent.bundle.files[p];
+    return p+'|'+item.size+'|'+item.sha256;
+  });
+  coherent.bundle.runtimeRoot=sha256(rows.join('\n'));
+  coherent.bundle.targetRoot=coherent.bundle.fullRoot;
+  await assertDescriptorRejected('coherent IDB/runtime-root tamper',coherent);
+}
+
+for(const invalidCase of [
+  {label:'unsafe relative path',mutate(f){
+    const old=f.bundle.order[2],path='../escape.js',ref=f.bundle.files[old];
+    delete f.bundle.files[old]; f.bundle.order[2]=path;
+    f.bundle.files[path]={...ref,key:ref.key.slice(0,ref.key.lastIndexOf(':file:')+6)+path};
+  }},
+  {label:'duplicate order path',mutate(f){ f.bundle.order[2]=f.bundle.order[1]; }},
+  {label:'extra files key',mutate(f){
+    f.bundle.files['src/unlisted.js']={...f.bundle.files[f.bundle.order[2]]};
+  }},
+  {label:'fractional descriptor size',mutate(f){
+    const path=f.bundle.order[2];
+    f.bundle.files[path]={...f.bundle.files[path],size:f.bundle.files[path].size+0.5};
+  }},
+  {label:'non-content-addressed descriptor key',mutate(f){
+    const path=f.bundle.order[2];
+    f.bundle.files[path]={...f.bundle.files[path],key:'artifact-cache:'+path};
+  }}
+]){
+  const fixture=descriptorFixture(healthyBundle);
+  invalidCase.mutate(fixture);
+  await assertDescriptorRejected(invalidCase.label,fixture);
+}
+
+{
+  const rooted=descriptorFixture(healthyBundle,{manifestKind:'patch',mode:'full'});
+  const meta={...bundleMeta(rooted.bundle),runtimeRoot:'f'.repeat(64)};
+  const db=makeDatabase({...rooted.records,active:rooted.bundle,activeMeta:meta});
+  const launch=launchBoot(db);
+  await waitFor('runtime identity mismatch fallback',()=>
+    (launch.window.__TEST_PACKAGED_BOOTED|0)===1&&launch.idle());
+  assert.equal(launch.window.__TEST_STAGED_EXEC|0,0,
+               'runtime identity mismatch executed staged code');
+  assert.match(db.get('applyFailure').reason,/metadata did not match/i,
+               'runtime identity mismatch was not classified as metadata drift');
+  launch.close();
+}
+
+for(const failureCase of [
+  {label:'missing pre-gate',path:order[2],mutate(records,key){ delete records[key]; }},
+  {label:'corrupt post-gate',path:order[Math.min(order.length-1,order.indexOf('src/engine/gl.js')+2)],
+   mutate(records,key){ records[key]={...records[key],text:records[key].text+'corrupt'}; }}
+]){
+  const broken=descriptorFixture(healthyBundle),records={...broken.records};
+  failureCase.mutate(records,broken.bundle.files[failureCase.path].key);
+  const db=makeDatabase({...records,
+    active:broken.bundle,activeMeta:bundleMeta(broken.bundle)});
+  const launch=launchBoot(db);
+  await waitFor('descriptor '+failureCase.label+' fallback',()=>
+    (launch.window.__TEST_PACKAGED_BOOTED|0)===1&&launch.idle());
+  assert.equal(launch.window.__TEST_STAGED_EXEC|0,0,
+               failureCase.label+' executed a partial staged global scope');
+  assert.equal(launch.window.__MASSFRONT_PATCHED,undefined,
+               failureCase.label+' allowed packaged fallback to claim the broken patch');
+  launch.close();
+}
+{
+  const tampered=descriptorFixture(healthyBundle);
+  [tampered.bundle.order[3],tampered.bundle.order[4]]=
+    [tampered.bundle.order[4],tampered.bundle.order[3]];
+  const db=makeDatabase({...tampered.records,
+    active:tampered.bundle,activeMeta:bundleMeta(tampered.bundle)});
+  const launch=launchBoot(db);
+  await waitFor('descriptor ordered-root fallback',()=>
+    (launch.window.__TEST_PACKAGED_BOOTED|0)===1&&launch.idle());
+  assert.equal(launch.window.__TEST_STAGED_EXEC|0,0,
+               'runtime order tamper executed staged scripts before rejection');
+  launch.close();
+}
+{
+  const rooted=rootedStringBundle(healthyBundle);
+  const validDb=makeDatabase({active:rooted,activeMeta:bundleMeta(rooted)});
+  const validLaunch=launchBoot(validDb);
+  await waitFor('schema-3 string root boot',()=>
+    (validLaunch.window.__TEST_STAGED_EXEC|0)===expectedArtifacts&&validLaunch.idle());
+  assert.equal(validLaunch.window.__TEST_PACKAGED_EXEC|0,0,
+               'valid schema-3 string bundle fell back to packaged source');
+  validLaunch.close();
+
+  const reordered={...rooted,order:rooted.order.slice()};
+  [reordered.order[3],reordered.order[4]]=[reordered.order[4],reordered.order[3]];
+  const badDb=makeDatabase({active:reordered,activeMeta:bundleMeta(reordered)});
+  const badLaunch=launchBoot(badDb);
+  await waitFor('schema-3 string order rejection',()=>
+    (badLaunch.window.__TEST_PACKAGED_BOOTED|0)===1&&badLaunch.idle());
+  assert.equal(badLaunch.window.__TEST_STAGED_EXEC|0,0,
+               'schema-3 string order tamper executed staged code');
+  badLaunch.close();
+}
 
 /* A current full release is roughly 85 MiB per payload. Model that logical
    cost without allocating three giant fixtures, and make accidental payload
@@ -524,6 +753,39 @@ assert.equal(memoryDb.has('previousA'),true,
 assert.equal(memoryDb.has('operation'),false,
              'confirmed target did not clear its orphan Apply lease');
 memoryLaunch.close();
+
+/* A stale activeMeta index can strand the already-running updater, but it
+   cannot survive a real process restart. The immutable packaged boot reads the
+   authoritative active payload, detects the mismatch, removes only the broken
+   installed state, and retains a different fully-downloaded successor. This is
+   the no-reinstall recovery bridge for clients whose old updater cannot repair
+   its own metadata while the document is still alive. */
+const metadataDriftDb=makeDatabase({
+  active:healthyBundle,
+  activeMeta:bundleMeta(futureBundle),
+  pending:futureBundle,
+  pendingMeta:bundleMeta(futureBundle)
+},{logicalPayloadBytes:{active:fullPayloadLogicalBytes,
+                        pending:fullPayloadLogicalBytes},
+   maxPayloadGets:{active:1,pending:0,previous:1}});
+const metadataDriftLaunch=launchBoot(metadataDriftDb);
+await waitFor('stale active metadata packaged recovery',()=>
+  (metadataDriftLaunch.window.__TEST_PACKAGED_BOOTED|0)===1&&
+  !metadataDriftDb.has('active')&&!metadataDriftDb.has('activeMeta')&&
+  metadataDriftLaunch.idle());
+assert.equal(metadataDriftLaunch.window.__MASSFRONT_PATCHED,undefined,
+             'metadata drift relaunched the mismatched active payload');
+assert.deepEqual(metadataDriftDb.get('pending'),futureBundle,
+                 'metadata recovery discarded the downloaded successor');
+assert.deepEqual(metadataDriftDb.get('pendingMeta'),bundleMeta(futureBundle),
+                 'metadata recovery changed the successor identity');
+assert.match(metadataDriftDb.get('applyFailure').reason,/metadata did not match/i,
+             'metadata recovery did not record its exact cause');
+assert.equal(metadataDriftDb.payloadGetCount('active'),1,
+             'metadata recovery did not inspect active exactly once');
+assert.equal(metadataDriftDb.payloadGetCount('pending'),0,
+             'metadata recovery deserialized the retained successor');
+metadataDriftLaunch.close();
 
 /* A boot attempt is not allowed to execute even its first script until the
    readwrite transaction which increments probation has committed. Killing the
@@ -876,6 +1138,41 @@ assert.equal(recoveryDb.logicalBytesRead(),fullPayloadLogicalBytes,
              'known failed-start recovery crossed one payload of logical reads');
 recoveryLaunch.close();
 
+/* A rollback descriptor can lose one shared artifact after it was first
+   validated. Recovery gives it one exact probation attempt; failed preflight
+   runs zero recovered scripts, uses packaged code for this session, and the
+   next launch retires the broken recovered active instead of looping forever. */
+{
+  const brokenPrevious=descriptorFixture(healthyBundle);
+  const missingPath=order[Math.min(order.length-1,order.indexOf('src/engine/gl.js')+3)];
+  const records={...brokenPrevious.records};
+  delete records[brokenPrevious.bundle.files[missingPath].key];
+  const db=makeDatabase({...records,
+    pending:recoveryBroken,pendingMeta:bundleMeta(recoveryBroken),
+    active:recoveryBroken,activeMeta:bundleMeta(recoveryBroken),
+    probation:{version:recoveryBroken.version,channel:'stable',pendingAt:recoveryBroken.at,
+      at:Date.now(),tries:1},
+    previousA:brokenPrevious.bundle,previousAMeta:bundleMeta(brokenPrevious.bundle),
+    previousRef:previousRef('previousA',brokenPrevious.bundle)
+  });
+  const first=launchBoot(db);
+  await waitFor('broken descriptor recovery fallback',()=>
+    (first.window.__TEST_PACKAGED_BOOTED|0)===1&&first.idle());
+  assert.equal(first.window.__TEST_STAGED_EXEC|0,0,
+               'broken recovered descriptor executed a partial staged runtime');
+  assert.equal(db.get('active').version,brokenPrevious.bundle.version);
+  assert.equal(db.get('probation').tries,1,
+               'recovered descriptor was not guarded for its current launch');
+  assert.equal(db.get('probation').runtimeRoot,brokenPrevious.bundle.runtimeRoot,
+               'recovered descriptor probation omitted its exact runtime root');
+  first.close();
+  const second=launchBoot(db);
+  await waitFor('broken recovered descriptor retirement',()=>
+    !db.has('active')&&!db.has('probation')&&
+    (second.window.__TEST_PACKAGED_BOOTED|0)===1&&second.idle());
+  second.close();
+}
+
 /* A pointer is authority only when its identity exactly matches that slot's
    metadata. A torn pointer must select the legacy previous/previousMeta pair,
    never probe the unowned slot and then double the recovery memory peak. */
@@ -979,6 +1276,10 @@ console.log(JSON.stringify({
   indexedDbFallback:{
     packagedFrameDidNotClearProbation:true,
     recoveredLaunchRetriedUnderProbation:true
+  },
+  metadataDriftRecovery:{
+    selected:'packaged',activeRemoved:true,pendingRetained:true,
+    activeGets:metadataDriftDb.payloadGetCount('active')
   },
   transactions:{
     abortRolledBack:true,

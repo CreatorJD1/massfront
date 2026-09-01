@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { createGroundOperationRequestV1 } from '../modules/space_exploration/src/domain/host_contract.js';
+import { createGroundOperationRequestV2 } from '../modules/space_exploration/src/domain/host_contract.js';
 import { beginGroundOperation } from '../modules/space_exploration/src/domain/ground_operation.js';
 import { createShowcaseReadyDomainState } from '../modules/space_exploration/src/domain/state_store.js';
+import { createMassfrontGalacticEntryTicket } from '../modules/space_exploration/src/host/massfront_solo_host.js';
+import { loadProductionCommanderRosterSnapshot } from '../modules/space_exploration/tools/tests/production-commander-roster.fixture.mjs';
 
 const source = fs.readFileSync(new URL('../src/galactic-operations.js', import.meta.url), 'utf8');
 assert.doesNotMatch(source, /\b(?:import|export)\s/, 'classic bridge source must not declare modules');
@@ -33,14 +35,14 @@ assert.equal(idleBillboardImpressions, 1, 'ordinary billboard impressions must r
 
 const now = Date.now();
 const profileId = 'p1';
-const ticket = {
-  schemaVersion: 1,
-  kind: 'MassfrontGalacticEntryV1',
-  profileId,
+const productionRoster = await loadProductionCommanderRosterSnapshot();
+const ticket = createMassfrontGalacticEntryTicket(profileId, {
   issuedAt: now,
-  expiresAt: now + 300_000,
-  source: 'massfront-base'
-};
+  ttlMs: 300_000,
+  commanderRosterSnapshot: productionRoster,
+  commanderRosterFingerprint: productionRoster.fingerprint,
+  commissioning: { factionId: 'nova', commanderId: 'nova_kai' }
+});
 assert.equal(api.validateEntryTicket(ticket, now, profileId).ok, true);
 assert.equal(api.validateEntryTicket({ ...ticket, profileId: 'p2' }, now, profileId).ok, false);
 assert.equal(api.validateEntryTicket({ ...ticket, issuedAt: now + 1 }, now, profileId).ok, false);
@@ -51,6 +53,7 @@ state.profileId = profileId;
 const { operation } = beginGroundOperation(state, {
   missionId: 'uga_pale_bloom',
   factionId: 'nova',
+  commanderId: 'nova_holt',
   deploymentManifest: {
     units: [{ id: 'recon_team', count: 1 }, { id: 'line_section', count: 1 }, { id: 'armored_element', count: 1 }],
     structures: [{ id: 'field_relay', count: 1 }],
@@ -58,31 +61,33 @@ const { operation } = beginGroundOperation(state, {
   }
 });
 const nonce = '0123456789abcdef0123456789abcdef';
-const request = createGroundOperationRequestV1(operation, {
+const request = createGroundOperationRequestV2(operation, {
   nonce,
   accountId: profileId,
   issuedAt: now,
   ttlMs: 300_000,
   contentVersion: 'catalog-6'
 });
-const requestValidation = api.validateRequest(request, nonce, profileId, now + 1);
+const requestValidation = api.validateRequest(request, nonce, profileId, now + 1, ticket);
 assert.equal(requestValidation.ok, true, requestValidation.issues.join(','));
 assert.equal(api.validateDeploymentContract(operation).ok, true);
 const mirror = {
-  schemaVersion: 1,
-  kind: 'MassfrontGalacticRequestMirrorV1',
+  schemaVersion: 2,
+  kind: 'MassfrontGalacticRequestMirrorV2',
+  adapter: 'massfront-solo-v2',
+  commanderRosterFingerprint: productionRoster.fingerprint,
   nonce,
   accountId: profileId,
   operationId: operation.operationId,
   request
 };
-assert.equal(api.validateRequestMirror(mirror, nonce, profileId, now + 1).ok, true);
+assert.equal(api.validateRequestMirror(mirror, nonce, profileId, now + 1, ticket).ok, true);
 
 const tampered = structuredClone(request);
 tampered.operation.missionId = 'uga_hive_heart';
-assert.equal(api.validateRequest(tampered, nonce, profileId, now + 1).ok, false);
-assert.ok(api.validateRequest(tampered, nonce, profileId, now + 1).issues.includes('REQUEST_CHECKSUM_INVALID'));
-assert.equal(api.validateRequestMirror({ ...mirror, operationId: 'foreign' }, nonce, profileId, now + 1).ok, false);
+assert.equal(api.validateRequest(tampered, nonce, profileId, now + 1, ticket).ok, false);
+assert.ok(api.validateRequest(tampered, nonce, profileId, now + 1, ticket).issues.includes('REQUEST_CHECKSUM_INVALID'));
+assert.equal(api.validateRequestMirror({ ...mirror, operationId: 'foreign' }, nonce, profileId, now + 1, ticket).ok, false);
 const overCapacityOperation = structuredClone(operation);
 overCapacityOperation.deploymentManifest.units[0].count = 8;
 overCapacityOperation.configuration.deploymentManifest = structuredClone(overCapacityOperation.deploymentManifest);
@@ -143,6 +148,39 @@ const tacticalMirror = {
 tacticalMirror.checksum = api.checksum(tacticalMirror);
 assert.equal(api.validateResultMirror(tacticalMirror, nonce, profileId, request, now + 3).ok, true);
 assert.equal(api.validateResultMirror({ ...tacticalMirror, checksum: '00000000' }, nonce, profileId, request, now + 3).ok, false);
+
+const rejectedMirror = structuredClone(mirror);
+rejectedMirror.adapter = 'massfront-solo-v1';
+let rejectedWrites = 0;
+let rejectedSkirmishes = 0;
+const rejectedSession = new Map([
+  ['massfront.galactic.entry.v1', JSON.stringify(ticket)],
+  [`massfront.galactic.request.v1.${nonce}`, JSON.stringify(rejectedMirror)]
+]);
+const rejectedRuntime = {
+  console,
+  document: { getElementById: () => null, createElement: () => ({}), querySelectorAll: () => [] },
+  location: { search: `?groundOperation=${nonce}`, href: '' },
+  sessionStorage: {
+    getItem: key => rejectedSession.get(key) ?? null,
+    setItem: () => { rejectedWrites += 1; }
+  },
+  setTimeout,
+  clearTimeout,
+  requestAnimationFrame: callback => callback(0),
+  bootConfirmed: true,
+  PROFILES: { active: profileId },
+  META: { settings: { experimentalExploration: true } },
+  newSkirmish: () => { rejectedSkirmishes += 1; }
+};
+rejectedRuntime.window = rejectedRuntime;
+vm.createContext(rejectedRuntime);
+vm.runInContext(source, rejectedRuntime, { filename: 'src/galactic-operations.js' });
+await new Promise(resolve => setTimeout(resolve, 20));
+assert.equal(rejectedRuntime.__MF_GALACTIC_BRIDGE.status, 'rejected');
+assert.match(rejectedRuntime.__MF_GALACTIC_BRIDGE.reason, /REQUEST_MIRROR_ADAPTER_INVALID/);
+assert.equal(rejectedWrites, 0, 'invalid production mirrors must fail before any bridge write');
+assert.equal(rejectedSkirmishes, 0, 'invalid production mirrors must fail before RTS state construction');
 
 // Execute the actual classic-script takeover against a minimal base runtime.
 // This proves the authored module manifest becomes real RTS units/structures,
@@ -246,6 +284,7 @@ assert.equal(liveApi.status, 'battle');
 assert.equal(runtime.META.marker, 'live-career', 'temporary META must be restored after newSkirmish');
 assert.equal(runtime.deploymentPackage, 'expedition');
 assert.equal(runtime.activeWarMode, 'galactic');
+assert.equal(runtime.playerCommanderId, operation.commanderId, 'base runtime must preserve the exact operation commander');
 assert.equal(runtime.deployCarrier(), 'base-deploy');
 assert.equal(liveApi.packageApplied, true);
 assert.deepEqual(spawnedUnits.map(entry => runtime.TYPES[entry.type].name), ['Striker', 'Striker', 'Striker', 'Rhino']);
@@ -352,12 +391,15 @@ assert.equal(reloadSkirmishes, 0);
 assert.equal(reloadSession.get(`massfront.galactic.result.v1.${nonce}`), originalReportBytes);
 
 const manifest = JSON.parse(fs.readFileSync(new URL('../assets/data/manifest.json', import.meta.url), 'utf8'));
-assert.equal(manifest.order.at(-1), 'src/galactic-operations.js');
+assert.equal(manifest.order.filter(path => path === 'src/galactic-operations.js').length, 1);
+assert.ok(manifest.order.indexOf('src/galactic-operations.js') > manifest.order.indexOf('src/ui/hotslots.js'));
+assert.ok(manifest.order.indexOf('src/onboarding.js') > manifest.order.indexOf('src/galactic-operations.js'));
 const boot = fs.readFileSync(new URL('../boot.js', import.meta.url), 'utf8');
 assert.match(boot, /'\.\/src\/ui\/hotslots\.js','\.\/src\/galactic-operations\.js'/);
 const main = fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 assert.match(main, /massfront\.galactic\.entry\.v1/);
-assert.match(main, /MassfrontGalacticEntryV1/);
+assert.match(main, /MassfrontGalacticEntryV2/);
+assert.doesNotMatch(main, /MassfrontGalacticEntryV1/);
 assert.match(main, /sessionStorage\.getItem\(key\)/);
 
 console.log('Stage 9 Galactic base bridge contract: PASS');

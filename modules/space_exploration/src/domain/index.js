@@ -1,4 +1,5 @@
 export * from './catalog.js';
+export * from './commander_catalog.js';
 export * from './commander_roster_contract.js';
 export * from './construction_catalog.js';
 export * from './construction.js';

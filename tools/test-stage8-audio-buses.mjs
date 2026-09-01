@@ -46,13 +46,13 @@ for(const name of ['audLevelSetting','audSfxLevel','audAmbienceLevel','audMusicL
 }
 vm.runInContext('audApplyLevels()',context);
 
-assert.equal(context.audSfxLevel(),0.25,'effects level must read its own setting');
-assert.equal(context.audAmbienceLevel(),0.50,'ambience level must read its own setting');
-assert.equal(context.audMusicLevel(),0.75,'music level must read its own setting');
-assert.equal(context.audVoiceLevel(),1.0,'voice level must read its own setting');
-assert.equal(calls.sfx[0].value,0.25,'effects bus received the wrong gain');
-assert.equal(calls.amb[0].value,0.50,'ambience bus received the wrong gain');
-assert.equal(calls.voice[0].value,1.0,'voice bus received the wrong gain');
+assert.equal(context.audSfxLevel(),0,'effects level must support a true silent setting');
+assert.equal(context.audAmbienceLevel(),0.25,'ambience level must read its own setting');
+assert.equal(context.audMusicLevel(),0.50,'music level must read its own setting');
+assert.equal(context.audVoiceLevel(),0.75,'voice level must read its own setting');
+assert.equal(calls.sfx[0].value,0,'effects bus received the wrong gain');
+assert.equal(calls.amb[0].value,0.25,'ambience bus received the wrong gain');
+assert.equal(calls.voice[0].value,0.75,'voice bus received the wrong gain');
 assert(calls.sfx[0].time===12&&calls.amb[0].time===12&&calls.voice[0].time===12,
   'bus gain changes must share the live AudioContext clock');
 
@@ -61,8 +61,10 @@ for(const name of ['vo_nova_move','vo_keen_greeting','vo_cmdr_kai_mission_victor
 for(const name of ['radio','boom','amb_low0','mus_ambient'])
   assert.equal(context.audIsVoiceSlot(name),false,name+' must not use the voice bus');
 
-assert(meta.includes('sfxVol:3,ambVol:3,musicVol:2,voiceVol:3'),
-  'new careers must preserve the old effective levels while adding both buses');
+assert(meta.includes('sfxVol:4,ambVol:4,musicVol:3,voiceVol:4,audioLevelSteps:2'),
+  'new careers must use the five-step mixer while preserving the old default levels');
+assert(meta.includes("priorSettings[key]=clamp((priorSettings[key]|0)+1,1,4)"),
+  'legacy four-step saves must migrate once without changing their audible level');
 for(const key of ['sfxVol','ambVol','musicVol','voiceVol']){
   assert(meta.includes("data-set=\"'+key+'\"")||meta.includes("cyc('"+key+"'"),
     'settings UI is missing '+key);

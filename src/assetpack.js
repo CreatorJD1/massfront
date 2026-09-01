@@ -30,42 +30,186 @@
        size; a pack that has not changed costs one small JSON request.
    ============================================================================ */
 
-const PACK = { idx:null, have:{}, busy:false, got:0, total:0, state:'idle', err:'' };
+const PACK = {
+  /* idx/rawIndex describe what the server currently offers. activeIdx/rawActive
+     describe the last fully verified set the game is allowed to mount. Keeping
+     those identities separate is what lets a player keep using v1 while a v2
+     download is declined, interrupted, corrupt or too large for free storage. */
+  idx:null, rawIndex:null, activeIdx:Object.create(null), rawActive:{version:2,packs:{}},
+  have:{}, busy:false, got:0, total:0, state:'idle', err:'', storage:null
+};
 const PACK_DB = 'massfront-packs', PACK_STORE = 'files';
+const PACK_CHUNK_STORE = 'chunks', PACK_META_STORE = 'meta', PACK_DB_VERSION = 2;
 const PACK_PREF = 'massfront_pack_pref';       // 'auto' | 'ask' | 'off'
+/* Two MiB keeps a killed phone from repeating a large transfer, but does not
+   turn IndexedDB into tens of thousands of tiny transactions. Publishers may
+   choose smaller chunks; anything larger than eight MiB is rejected so a bad
+   manifest cannot silently defeat the bounded-memory contract. A single file
+   is capped too: very large products must be sectioned into independent files
+   and packs instead of recreating the old monolithic download problem. */
+const PACK_DEFAULT_CHUNK_BYTES = 2 * 1024 * 1024;
+const PACK_MAX_CHUNK_BYTES = 8 * 1024 * 1024;
+const PACK_MAX_FILE_BYTES = 256 * 1024 * 1024;
+const PACK_MAX_PACKS = 512, PACK_MAX_FILES = 4096, PACK_MAX_CHUNKS_PER_FILE = 4096;
+const PACK_STORAGE_MARGIN_BYTES = 16 * 1024 * 1024;
 
-function packDb(){
-  return new Promise((res, rej) => {
-    const r = indexedDB.open(PACK_DB, 1);
-    r.onupgradeneeded = () => { const d = r.result;
-      if(!d.objectStoreNames.contains(PACK_STORE)) d.createObjectStore(PACK_STORE); };
-    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-  });
+const PACK_SHA256_K = new Uint32Array([
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+]);
+
+/* WebCrypto has no streaming digest. Reading a 200+ MiB GLB into one
+   ArrayBuffer merely to verify it would negate chunked delivery, so this small
+   incremental SHA-256 keeps verification bounded to one chunk at a time. */
+class PackSha256State{
+  constructor(){
+    this.h = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+    this.w = new Uint32Array(64);
+    this.buf = new Uint8Array(64);
+    this.bufLen = 0;
+    this.bytes = 0;
+  }
+  block(data, off){
+    const w=this.w;
+    for(let i=0;i<16;i++){
+      const p=off+i*4;
+      w[i]=((data[p]<<24)|(data[p+1]<<16)|(data[p+2]<<8)|data[p+3])>>>0;
+    }
+    for(let i=16;i<64;i++){
+      const x=w[i-15],y=w[i-2];
+      const s0=((x>>>7)|(x<<25))^((x>>>18)|(x<<14))^(x>>>3);
+      const s1=((y>>>17)|(y<<15))^((y>>>19)|(y<<13))^(y>>>10);
+      w[i]=(w[i-16]+s0+w[i-7]+s1)>>>0;
+    }
+    let a=this.h[0],b=this.h[1],c=this.h[2],d=this.h[3];
+    let e=this.h[4],f=this.h[5],g=this.h[6],h=this.h[7];
+    for(let i=0;i<64;i++){
+      const s1=((e>>>6)|(e<<26))^((e>>>11)|(e<<21))^((e>>>25)|(e<<7));
+      const ch=(e&f)^(~e&g);
+      const t1=(h+s1+ch+PACK_SHA256_K[i]+w[i])>>>0;
+      const s0=((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10));
+      const maj=(a&b)^(a&c)^(b&c);
+      const t2=(s0+maj)>>>0;
+      h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+    }
+    this.h[0]=(this.h[0]+a)>>>0;this.h[1]=(this.h[1]+b)>>>0;
+    this.h[2]=(this.h[2]+c)>>>0;this.h[3]=(this.h[3]+d)>>>0;
+    this.h[4]=(this.h[4]+e)>>>0;this.h[5]=(this.h[5]+f)>>>0;
+    this.h[6]=(this.h[6]+g)>>>0;this.h[7]=(this.h[7]+h)>>>0;
+  }
+  update(input){
+    const data=input instanceof Uint8Array?input:new Uint8Array(input);
+    this.bytes+=data.length;
+    let off=0;
+    if(this.bufLen){
+      const n=Math.min(64-this.bufLen,data.length);
+      this.buf.set(data.subarray(0,n),this.bufLen);this.bufLen+=n;off=n;
+      if(this.bufLen===64){this.block(this.buf,0);this.bufLen=0;}
+    }
+    while(off+64<=data.length){this.block(data,off);off+=64;}
+    if(off<data.length){this.buf.set(data.subarray(off),0);this.bufLen=data.length-off;}
+    return this;
+  }
+  hex(){
+    const bitHi=Math.floor(this.bytes/0x20000000),bitLo=(this.bytes*8)>>>0;
+    this.buf[this.bufLen++]=0x80;
+    if(this.bufLen>56){this.buf.fill(0,this.bufLen);this.block(this.buf,0);this.bufLen=0;}
+    this.buf.fill(0,this.bufLen,56);
+    this.buf[56]=(bitHi>>>24)&255;this.buf[57]=(bitHi>>>16)&255;
+    this.buf[58]=(bitHi>>>8)&255;this.buf[59]=bitHi&255;
+    this.buf[60]=(bitLo>>>24)&255;this.buf[61]=(bitLo>>>16)&255;
+    this.buf[62]=(bitLo>>>8)&255;this.buf[63]=bitLo&255;
+    this.block(this.buf,0);
+    return [...this.h].map(n=>n.toString(16).padStart(8,'0')).join('');
+  }
 }
-async function packGet(k){
+
+async function packHashBlob(blob, sliceBytes=PACK_DEFAULT_CHUNK_BYTES){
+  const hash=new PackSha256State();
+  for(let off=0;off<blob.size;off+=sliceBytes)
+    hash.update(new Uint8Array(await blob.slice(off,Math.min(blob.size,off+sliceBytes)).arrayBuffer()));
+  return hash.hex();
+}
+
+let packDbPromise=null;
+function packDb(){
+  if(packDbPromise) return packDbPromise;
+  packDbPromise=new Promise((res, rej) => {
+    const r = indexedDB.open(PACK_DB, PACK_DB_VERSION);
+    r.onupgradeneeded = () => { const d = r.result;
+      if(!d.objectStoreNames.contains(PACK_STORE)) d.createObjectStore(PACK_STORE);
+      if(!d.objectStoreNames.contains(PACK_CHUNK_STORE)) d.createObjectStore(PACK_CHUNK_STORE);
+      if(!d.objectStoreNames.contains(PACK_META_STORE)) d.createObjectStore(PACK_META_STORE); };
+    r.onsuccess = () => {
+      r.result.onversionchange=()=>{r.result.close();packDbPromise=null;};
+      res(r.result);
+    };
+    r.onerror = () => {packDbPromise=null;rej(r.error);};
+    r.onblocked=()=>{packDbPromise=null;rej(new Error('Asset-pack storage upgrade is blocked by another tab'));};
+  });
+  return packDbPromise;
+}
+async function packStoreGet(store,k){
   const db = await packDb();
   return new Promise((res, rej) => {
-    const tx = db.transaction(PACK_STORE, 'readonly');
-    const q = tx.objectStore(PACK_STORE).get(k);
+    const tx = db.transaction(store, 'readonly');
+    const q = tx.objectStore(store).get(k);
     q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
   });
 }
-async function packPut(k, v){
+async function packStorePut(store,k,v){
   const db = await packDb();
   return new Promise((res, rej) => {
-    const tx = db.transaction(PACK_STORE, 'readwrite');
-    tx.objectStore(PACK_STORE).put(v, k);
-    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error);
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(v, k);
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error);tx.onabort=()=>rej(tx.error);
   });
 }
-async function packKeys(){
+async function packStoreDelete(store,k){
+  const db=await packDb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readwrite');
+    tx.objectStore(store).delete(k);
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error);
+  });
+}
+async function packKeys(store=PACK_STORE){
   const db = await packDb();
   return new Promise((res, rej) => {
-    const tx = db.transaction(PACK_STORE, 'readonly');
-    const q = tx.objectStore(PACK_STORE).getAllKeys();
+    const tx = db.transaction(store, 'readonly');
+    const q = tx.objectStore(store).getAllKeys();
     q.onsuccess = () => res(q.result || []); q.onerror = () => rej(q.error);
   });
 }
+async function packDeletePrefix(store,prefix){
+  const keys=(await packKeys(store)).filter(k=>String(k).startsWith(prefix));
+  if(!keys.length) return 0;
+  const db=await packDb();
+  await new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readwrite'),target=tx.objectStore(store);
+    for(const k of keys) target.delete(k);
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error);
+  });
+  return keys.length;
+}
+async function packDeleteKeys(store,keys){
+  if(!keys.length) return 0;
+  const db=await packDb();
+  await new Promise((res,rej)=>{
+    const tx=db.transaction(store,'readwrite'),target=tx.objectStore(store);
+    for(const key of keys) target.delete(key);
+    tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error);
+  });
+  return keys.length;
+}
+const packGet=k=>packStoreGet(PACK_STORE,k);
+const packPut=(k,v)=>packStorePut(PACK_STORE,k,v);
 
 /* The endpoint is the same one the updater resolves — one server, one setting,
    configured in exactly one place. */
@@ -80,63 +224,549 @@ function packBytes(n){
   return n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB';
 }
 
+const PACK_INDEX_META_KEY='index:active';
+const PACK_OFFER_META_KEY='index:offered';
+const PACK_ACTIVE_ROLE='active-v2';
+function packIndexRecord(saved){return saved&&saved.index?saved.index:saved;}
+async function packPersistOffer(raw){
+  await packStorePut(PACK_META_STORE,PACK_OFFER_META_KEY,{role:'offered-v2',index:raw,savedAt:Date.now()});
+}
+async function packPersistActive(raw){
+  const normalized=packNormalizeIndex(raw);
+  /* One IndexedDB record is the activation pointer. Payload Blobs may arrive
+     over many launches, but the game sees all of the new dependency set or
+     none of it because this transaction completes before the in-memory pointer
+     moves. */
+  await packStorePut(PACK_META_STORE,PACK_INDEX_META_KEY,{
+    role:PACK_ACTIVE_ROLE,index:raw,savedAt:Date.now()
+  });
+  PACK.rawActive=raw;PACK.activeIdx=normalized;
+  return normalized;
+}
+function packPackIdentity(pack){
+  if(!pack) return '';
+  return JSON.stringify({
+    format:pack.format,dependencies:pack.dependencies,
+    files:pack.files.map(file=>({
+      name:file.name,size:file.size,sha256:file.sha256,
+      chunks:file.chunks.map(chunk=>[chunk.offset,chunk.size,chunk.sha256])
+    }))
+  });
+}
+async function packOwnFilesReady(index,id){
+  const pack=index&&index[id];
+  if(!pack) return false;
+  for(const file of pack.files) if(!(await packFileReady(id,file))) return false;
+  return true;
+}
+async function packRecoverLegacyActive(raw,index){
+  const packs={},accepted=new Set(),order=[];
+  const seen=new Set();
+  function add(id){if(seen.has(id)) return;seen.add(id);for(const dep of index[id].dependencies)add(dep);order.push(id);}
+  for(const id of Object.keys(index)) add(id);
+  for(const id of order){
+    if(index[id].dependencies.some(dep=>!accepted.has(dep))) continue;
+    if(await packOwnFilesReady(index,id)){packs[id]=raw.packs[id];accepted.add(id);}
+  }
+  return {version:Number(raw.version)||2,packs};
+}
+async function packLoadCachedIndex(){
+  try{
+    const offeredSaved=await packStoreGet(PACK_META_STORE,PACK_OFFER_META_KEY);
+    const activeSaved=await packStoreGet(PACK_META_STORE,PACK_INDEX_META_KEY);
+    const taggedActive=!!(activeSaved&&activeSaved.role===PACK_ACTIVE_ROLE);
+    const legacyRaw=!taggedActive?packIndexRecord(activeSaved):null;
+    let offeredRaw=packIndexRecord(offeredSaved)||legacyRaw;
+    let activeRaw=taggedActive?packIndexRecord(activeSaved):null;
+    if(!offeredRaw&&activeRaw) offeredRaw=activeRaw;
+    if(!offeredRaw) return null;
+    const offered=packNormalizeIndex(offeredRaw);
+    if(!activeRaw){
+      /* v1 stored a server offer under the misleading `index:active` key.
+         Promote only entries whose final Blobs already verify; a merely cached
+         manifest must never become executable authority during migration. */
+      activeRaw=await packRecoverLegacyActive(offeredRaw,offered);
+      try{await packPersistOffer(offeredRaw);}catch(e){}
+      await packPersistActive(activeRaw);
+    }else{
+      PACK.rawActive=activeRaw;PACK.activeIdx=packNormalizeIndex(activeRaw);
+    }
+    PACK.idx=offered;PACK.rawIndex=offeredRaw;
+    return PACK.idx;
+  }catch(e){return null;}
+}
+async function packAdoptInstalledOffers(){
+  if(!PACK.idx||!PACK.rawIndex) return false;
+  const raw={...PACK.rawActive,packs:{...(PACK.rawActive&&PACK.rawActive.packs||{})}};
+  const activeNext={...PACK.activeIdx};
+  let changed=false;
+  const order=[],seen=new Set();
+  function add(id){if(seen.has(id))return;seen.add(id);for(const dep of PACK.idx[id].dependencies)add(dep);order.push(id);}
+  for(const id of Object.keys(PACK.idx)) add(id);
+  for(const id of order){
+    if(activeNext[id]) continue;
+    let depsReady=true;
+    for(const dep of PACK.idx[id].dependencies){
+      const active=activeNext[dep];
+      if(!active||packPackIdentity(active)!==packPackIdentity(PACK.idx[dep])){depsReady=false;break;}
+    }
+    if(!depsReady||!(await packOwnFilesReady(PACK.idx,id))) continue;
+    raw.packs[id]=PACK.rawIndex.packs[id];
+    /* Make this entry visible to later nodes in the same topological pass, but
+       do not move the live pointer before the IDB activation record commits. */
+    activeNext[id]=PACK.idx[id];
+    changed=true;
+  }
+  if(changed) await packPersistActive(raw);
+  return changed;
+}
 async function packLoadIndex(){
-  if(typeof netAllowed==='function' && !netAllowed()) return null;
+  if(PACK.busy&&PACK.idx) return PACK.idx;
+  const cached=await packLoadCachedIndex();
+  if(typeof netAllowed==='function' && !netAllowed()) return cached;
   const base = packEndpoint();
-  if(!base) return null;
+  if(!base) return cached;
   try{
     const r = await fetch(base + '/packs.json?t=' + Date.now(), {cache:'no-store'});
-    if(!r.ok) return null;
+    if(!r.ok) return cached;
     const j = await r.json();
-    PACK.idx = j && j.packs ? j.packs : null;
-    return PACK.idx;
-  }catch(e){ return null; }
-}
-
-/* What is missing, and how many bytes that is. Size is part of the key so a
-   replaced file re-downloads without needing a version number. */
-async function packMissing(pack){
-  if(!PACK.idx || !PACK.idx[pack]) return {files:[], bytes:0};
-  const keys = new Set(await packKeys());
-  const out = [];
-  let bytes = 0;
-  for(const f of PACK.idx[pack].files){
-    const k = pack + '/' + f.name + ':' + f.size;
-    if(!keys.has(k)){ out.push({...f, key:k}); bytes += f.size; }
-  }
-  return {files:out, bytes};
-}
-
-async function packDownload(pack, onProgress){
-  if(typeof netAllowed==='function' && !netAllowed()){
-    PACK.state='idle'; packRenderBar(); return false;
-  }
-  const base = packEndpoint();
-  if(!base) return false;
-  if(PACK.busy) return false;              // second reader of the flag; see packStarting
-  const miss = await packMissing(pack);
-  if(!miss.files.length){ PACK.state = 'ready'; return true; }
-  PACK.busy = true; PACK.state = 'downloading';
-  PACK.total = miss.bytes; PACK.got = 0;
-  for(const f of miss.files){
+    let merged=j;
     try{
-      const r = await fetch(base + '/pack/' + pack + '/' + encodeURIComponent(f.name));
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      const blob = await r.blob();
-      await packPut(f.key, blob);
-      PACK.got += f.size;
-      if(onProgress) onProgress(PACK.got, PACK.total);
-      packRenderBar();
-    }catch(e){
-      PACK.busy = false; PACK.state = 'error';
-      PACK.err = 'Download failed — the game runs without it';
-      packRenderBar();
-      return false;
-    }
+      const prior=PACK.rawIndex&&PACK.rawIndex.packs?PACK.rawIndex.packs:{};
+      const local=Object.fromEntries(Object.entries(prior).filter(([,pack])=>pack&&pack.localRegistration));
+      merged={...j,packs:{...local,...j.packs}}; // an official endpoint entry supersedes a local registration.
+    }catch(e){}
+    PACK.idx = packNormalizeIndex(merged);PACK.rawIndex=merged;
+    /* The offer is durable for interrupted downloads, but it is not the mount
+       pointer. packPersistActive() is the sole authority transition. */
+    try{await packPersistOffer(merged);}catch(e){}
+    try{await packAdoptInstalledOffers();}catch(e){}
+    return PACK.idx;
+  }catch(e){
+    if(cached) return cached;
+    PACK.err='Optional content manifest is invalid';return null;
   }
-  PACK.busy = false; PACK.state = 'ready';
-  packRenderBar();
+}
+
+function packValidId(id){return /^[a-z0-9][a-z0-9._-]{0,63}$/i.test(String(id||''));}
+function packValidPath(name){
+  const p=String(name||'').replace(/\\/g,'/');
+  return p&&!p.startsWith('/')&&!p.split('/').some(s=>!s||s==='.'||s==='..')?p:'';
+}
+function packHash(value){
+  const h=String(value||'').toLowerCase();
+  return /^[a-f0-9]{64}$/.test(h)?h:'';
+}
+function packNormalizeIndex(index){
+  if(!index||typeof index!=='object'||!index.packs||typeof index.packs!=='object') throw new Error('packs');
+  if(Object.keys(index.packs).length>PACK_MAX_PACKS) throw new Error('packs');
+  const out=Object.create(null);
+  for(const [id,raw] of Object.entries(index.packs)){
+    if(!packValidId(id)||!raw||!Array.isArray(raw.files)||raw.files.length>PACK_MAX_FILES) throw new Error('pack');
+    const format=Math.max(1,Number(raw.format||raw.manifestVersion||1)|0);
+    const chunkSize=Number(raw.chunkSize||PACK_DEFAULT_CHUNK_BYTES);
+    if(!Number.isSafeInteger(chunkSize)||chunkSize<1||chunkSize>PACK_MAX_CHUNK_BYTES) throw new Error('chunk-size');
+    const dependencies=Array.isArray(raw.dependencies)?raw.dependencies.map(String):[];
+    if(new Set(dependencies).size!==dependencies.length||dependencies.some(dep=>!packValidId(dep))) throw new Error('dependencies');
+    const seen=new Set(),files=[];
+    let bytes=0;
+    for(const source of raw.files){
+      const name=packValidPath(source&&source.name);
+      const size=Number(source&&source.size);
+      const sha256=packHash(source&&source.sha256);
+      if(!name||seen.has(name)||!Number.isSafeInteger(size)||size<1||size>PACK_MAX_FILE_BYTES) throw new Error('file');
+      if(format>=2&&!sha256) throw new Error('whole-hash');
+      seen.add(name);bytes+=size;
+      let chunks=[];
+      if(Array.isArray(source.chunks)){
+        if(source.chunks.length>PACK_MAX_CHUNKS_PER_FILE) throw new Error('chunks');
+        let offset=0;
+        chunks=source.chunks.map((chunk,index)=>{
+          const at=Number(chunk&&chunk.offset),n=Number(chunk&&chunk.size),hash=packHash(chunk&&chunk.sha256);
+          if(!Number.isSafeInteger(at)||at!==offset||!Number.isSafeInteger(n)||n<1||n>PACK_MAX_CHUNK_BYTES||at+n>size||!hash)
+            throw new Error('chunk');
+          offset+=n;
+          return {index,offset:at,size:n,sha256:hash};
+        });
+        if(offset!==size) throw new Error('chunk-coverage');
+      }else{
+        if(format>=2) throw new Error('chunks');
+        if(Math.ceil(size/chunkSize)>PACK_MAX_CHUNKS_PER_FILE) throw new Error('chunks');
+        for(let offset=0,index=0;offset<size;offset+=chunkSize,index++)
+          chunks.push({index,offset,size:Math.min(chunkSize,size-offset),sha256:''});
+      }
+      files.push({...source,name,size,sha256,chunks});
+    }
+    if(raw.bytes!==undefined&&Number(raw.bytes)!==bytes) throw new Error('pack-bytes');
+    out[id]={...raw,id,format,chunkSize,bytes,files,dependencies};
+  }
+  /* Reject missing edges and cycles at the trust boundary. Install order can
+     then be a small deterministic DFS, and a malformed remote manifest can
+     never recurse forever or silently omit a prerequisite. */
+  const visiting=new Set(),visited=new Set();
+  function visit(id){
+    if(visited.has(id)) return;
+    if(visiting.has(id)) throw new Error('dependency-cycle');
+    visiting.add(id);
+    for(const dep of out[id].dependencies){if(!out[dep]) throw new Error('dependency-missing');visit(dep);}
+    visiting.delete(id);visited.add(id);
+  }
+  for(const id of Object.keys(out)) visit(id);
+  return out;
+}
+async function packRegisterPack(id,raw){
+  if(!packValidId(id)||!raw) throw new Error('pack');
+  const base=PACK.rawIndex&&PACK.rawIndex.packs?PACK.rawIndex:{version:2,packs:{}};
+  const merged={...base,packs:{...base.packs,[id]:{...raw,localRegistration:true}}};
+  const normalized=packNormalizeIndex(merged);
+  PACK.rawIndex=merged;PACK.idx=normalized;
+  await packPersistOffer(merged);
+  return normalized[id];
+}
+function packLegacyFileKey(pack,file){return pack+'/'+file.name+':'+file.size;}
+function packFileKey(pack,file){
+  const legacy=packLegacyFileKey(pack,file);
+  return file.sha256?legacy+':sha256:'+file.sha256:legacy;
+}
+function packMetaKey(pack,file,storageKey=packFileKey(pack,file)){return 'file:'+storageKey;}
+function packChunkPrefix(pack,file){return pack+'/'+file.name+':'+file.size+':'+(file.sha256||'legacy')+':chunk:';}
+function packChunkKey(pack,file,chunk){return packChunkPrefix(pack,file)+chunk.index;}
+function packStoredBlob(value){return value instanceof Blob?value:(value&&value.blob instanceof Blob?value.blob:null);}
+async function packStoredFinal(pack,file){
+  const key=packFileKey(pack,file);
+  let blob=packStoredBlob(await packGet(key));
+  if(blob) return {key,blob};
+  const legacyKey=packLegacyFileKey(pack,file);
+  if(legacyKey!==key){
+    blob=packStoredBlob(await packGet(legacyKey));
+    if(blob) return {key:legacyKey,blob};
+  }
+  return {key,blob:null};
+}
+async function packFileReady(pack,file,{forceHash=false}={}){
+  const stored=await packStoredFinal(pack,file),blob=stored.blob;
+  if(!blob||blob.size!==file.size) return false;
+  if(!file.sha256) return true; // v1 manifests and their legacy Blobs remain playable.
+  const metaKey=packMetaKey(pack,file,stored.key);
+  const meta=await packStoreGet(PACK_META_STORE,metaKey);
+  if(!forceHash&&meta&&meta.sha256===file.sha256&&meta.size===file.size) return true;
+  const actual=await packHashBlob(blob,file.chunkSize||PACK_DEFAULT_CHUNK_BYTES);
+  if(actual!==file.sha256) return false;
+  await packStorePut(PACK_META_STORE,metaKey,{sha256:actual,size:file.size,verifiedAt:Date.now()});
   return true;
+}
+async function packStoredChunk(pack,file,chunk){
+  const value=await packStoreGet(PACK_CHUNK_STORE,packChunkKey(pack,file,chunk));
+  const blob=packStoredBlob(value);
+  if(!blob||blob.size!==chunk.size) return null;
+  if(chunk.sha256){
+    /* IDB is durable, not an integrity oracle. A killed or externally damaged
+       record can retain its old metadata, so always re-hash persisted chunks
+       before resuming instead of trusting value.sha256. */
+    if(await packHashBlob(blob,chunk.size)!==chunk.sha256) return null;
+  }
+  return blob;
+}
+async function packResumeState(pack,file){
+  const present=new Map();let bytes=0;
+  for(const chunk of file.chunks){
+    const blob=await packStoredChunk(pack,file,chunk);
+    if(blob){present.set(chunk.index,blob);bytes+=chunk.size;}
+  }
+  return {present,bytes,remaining:file.size-bytes};
+}
+
+/* What is missing, including already-persisted partial chunks. Hashed finals
+   use content identities so a same-size replacement cannot overwrite the live
+   version before activation; packStoredFinal keeps the v1 name+size key as a
+   read-compatible fallback for existing voice/music installs. */
+async function packMissing(pack,options={},index=PACK.idx){
+  if(!index || !index[pack]) return {files:[], bytes:0};
+  const out = [];
+  let bytes = 0,storedBytes=0;
+  for(const f of index[pack].files){
+    if(await packFileReady(pack,f,{forceHash:!!options.forceHash})){storedBytes+=f.size;continue;}
+    const resume=await packResumeState(pack,f);
+    out.push({...f,key:packFileKey(pack,f),remainingBytes:resume.remaining});
+    bytes+=resume.remaining;storedBytes+=resume.bytes;
+  }
+  return {files:out,bytes,storedBytes,totalBytes:index[pack].bytes};
+}
+
+function packFail(code,message){const e=new Error(message||code);e.code=code;throw e;}
+function packFileUrl(base,pack,file,meta){
+  meta=meta||(PACK.idx&&PACK.idx[pack]);
+  if(meta&&meta.baseUrl){
+    const root=String(meta.baseUrl).replace(/\/?$/,'/');
+    const url=root+file.name.split('/').map(encodeURIComponent).join('/');
+    const query=String(meta.downloadQuery||'');
+    return url+(query&&url.indexOf('?')<0?(query.startsWith('?')?query:'?'+query):'');
+  }
+  return String(base||'').replace(/\/$/,'')+'/pack/'+encodeURIComponent(pack)+'/'
+    +file.name.split('/').map(encodeURIComponent).join('/');
+}
+async function packStoragePreflight(pack,missing){
+  const largest=missing.files.reduce((n,f)=>Math.max(n,f.size),0);
+  const margin=missing.bytes?Math.max(PACK_STORAGE_MARGIN_BYTES,Math.ceil(missing.bytes*.08)):0;
+  const required=missing.bytes+largest+margin;
+  const storage=typeof navigator!=='undefined'&&navigator.storage;
+  if(!storage||typeof storage.estimate!=='function')
+    return {ok:true,supported:false,pack,required,available:null,quota:null,usage:null};
+  try{
+    const estimate=await storage.estimate();
+    const quota=Number(estimate.quota),usage=Number(estimate.usage||0);
+    const available=Number.isFinite(quota)?Math.max(0,quota-usage):null;
+    return {ok:available===null||available>=required,supported:true,pack,required,available,quota,usage};
+  }catch(e){return {ok:true,supported:false,pack,required,available:null,quota:null,usage:null};}
+}
+async function packClearChunks(pack,file){await packDeletePrefix(PACK_CHUNK_STORE,packChunkPrefix(pack,file));}
+function packDropURL(pack,name){
+  const key=pack+'/'+name,entry=packURLs[key],url=entry&&entry.url||entry;
+  if(url&&typeof URL.revokeObjectURL==='function') try{URL.revokeObjectURL(url);}catch(e){}
+  delete packURLs[key];
+}
+async function packCommitFullResponse(pack,file,response,onBytes,resume){
+  /* A 200 response means the origin ignored Range. Consume its body as a
+     stream and commit only complete manifest chunks; response.blob() would
+     recreate the exact monolithic allocation this subsystem exists to avoid.
+     Completed chunks survive a short response or killed tab and are reused on
+     the next attempt. Browsers without response streaming fail closed here;
+     the origin must honor Range for them. */
+  const reader=response.body&&typeof response.body.getReader==='function'?response.body.getReader():null;
+  if(!reader) packFail('range-stream','Range was ignored and bounded response streaming is unavailable');
+  const whole=new PackSha256State();
+  let total=0,index=0,chunk=file.chunks[0],filled=0;
+  let buffer=chunk?new Uint8Array(chunk.size):null;
+  try{
+    while(true){
+      const read=await reader.read();
+      if(read.done) break;
+      const data=read.value instanceof Uint8Array?read.value:new Uint8Array(read.value||0);
+      if(total+data.length>file.size) packFail('range-ignored-size','Ignored Range response exceeds manifest size');
+      whole.update(data);total+=data.length;
+      let at=0;
+      while(at<data.length){
+        if(!chunk) packFail('range-ignored-size','Ignored Range response exceeds manifest chunks');
+        const n=Math.min(chunk.size-filled,data.length-at);
+        buffer.set(data.subarray(at,at+n),filled);filled+=n;at+=n;
+        if(filled===chunk.size){
+          const actual=new PackSha256State().update(buffer).hex();
+          if(chunk.sha256&&actual!==chunk.sha256) packFail('chunk-hash','Full response chunk hash failed');
+          const reusable=!!chunk.sha256&&resume.present.has(chunk.index);
+          if(!reusable){
+            await packStorePut(PACK_CHUNK_STORE,packChunkKey(pack,file,chunk),{
+              blob:new Blob([buffer],{type:file.type||'application/octet-stream'}),
+              size:chunk.size,sha256:chunk.sha256||actual
+            });
+            if(onBytes&&!resume.present.has(chunk.index)) onBytes(chunk.size);
+          }
+          chunk=file.chunks[++index];filled=0;
+          buffer=chunk?new Uint8Array(chunk.size):null;
+        }
+      }
+    }
+  }catch(e){try{await reader.cancel();}catch(ignore){}throw e;}
+  if(total!==file.size||index!==file.chunks.length||filled)
+    packFail('range-ignored-size','Ignored Range response ended before manifest size');
+  const actual=whole.hex();
+  if(file.sha256&&actual!==file.sha256){
+    /* Synthetic legacy chunks carry no individual hashes. Keeping them after
+       a whole-file failure poisons every retry because size alone would make
+       the bad records look resumable. Clear the identity as one unit. */
+    await packClearChunks(pack,file);
+    packFail('file-hash','Whole-file hash failed');
+  }
+  await packAssembleFile(pack,file);
+}
+async function packFetchChunk(base,pack,file,chunk,packMeta){
+  const end=chunk.offset+chunk.size-1;
+  const response=await fetch(packFileUrl(base,pack,file,packMeta),{
+    cache:'no-store',headers:{Range:'bytes='+chunk.offset+'-'+end}
+  });
+  if(!response.ok) packFail('http','HTTP '+response.status);
+  if(response.status===200){
+    /* A CDN may legally ignore Range. Treat that as one explicit full-file
+       fallback, never as the requested chunk, or each loop iteration would
+       download and append the entire object again. */
+    return {fullResponse:response};
+  }
+  if(response.status!==206) packFail('range-status','Unexpected Range response');
+  const blob=await response.blob();
+  const contentRange=response.headers&&response.headers.get&&response.headers.get('content-range');
+  const match=/^bytes\s+(\d+)-(\d+)\/(\d+)$/i.exec(String(contentRange||''));
+  if(!match||Number(match[1])!==chunk.offset||Number(match[2])!==end||Number(match[3])!==file.size)
+    packFail('content-range','Content-Range does not match request');
+  if(blob.size!==chunk.size) packFail('chunk-size','Chunk size does not match manifest');
+  const hash=await packHashBlob(blob,chunk.size);
+  if(chunk.sha256&&hash!==chunk.sha256) packFail('chunk-hash','Chunk hash failed');
+  return {chunk:blob,sha256:hash};
+}
+async function packAssembleFile(pack,file){
+  const parts=[],hash=new PackSha256State();let size=0;
+  for(const chunk of file.chunks){
+    const blob=await packStoredChunk(pack,file,chunk);
+    if(!blob) packFail('chunk-missing','Verified chunk disappeared before assembly');
+    const bytes=new Uint8Array(await blob.arrayBuffer());
+    hash.update(bytes);parts.push(blob);size+=blob.size;
+  }
+  if(size!==file.size) packFail('size','Assembled size does not match manifest');
+  const actual=hash.hex();
+  if(file.sha256&&actual!==file.sha256){
+    await packClearChunks(pack,file);
+    packFail('file-hash','Whole-file hash failed');
+  }
+  const blob=new Blob(parts,{type:file.type||'application/octet-stream'});
+  packDropURL(pack,file.name);
+  await packPut(packFileKey(pack,file),blob);
+  if(file.sha256) await packStorePut(PACK_META_STORE,packMetaKey(pack,file),{sha256:actual,size:file.size,verifiedAt:Date.now()});
+  await packClearChunks(pack,file);
+}
+async function packDownloadFile(base,pack,file,onBytes,packMeta){
+  /* Keep the prior final Blob until the replacement has passed every chunk and
+     whole-file hash. packPut() is the atomic identity swap; deleting first made
+     an interrupted Repair destroy the last-known-good offline copy. */
+  const resume=await packResumeState(pack,file);
+  for(const chunk of file.chunks){
+    if(resume.present.has(chunk.index)) continue;
+    const received=await packFetchChunk(base,pack,file,chunk,packMeta);
+    if(received.fullResponse){
+      await packCommitFullResponse(pack,file,received.fullResponse,onBytes,resume);
+      return;
+    }
+    await packStorePut(PACK_CHUNK_STORE,packChunkKey(pack,file,chunk),{
+      blob:received.chunk,size:chunk.size,sha256:chunk.sha256||received.sha256
+    });
+    if(onBytes) onBytes(chunk.size);
+  }
+  await packAssembleFile(pack,file);
+}
+function packDependencyOrder(pack,index=PACK.idx){
+  const order=[],seen=new Set();
+  function add(id){if(seen.has(id)) return;seen.add(id);for(const dep of index[id].dependencies) add(dep);order.push(id);}
+  add(pack);return order;
+}
+async function packPlan(pack,{forceHash=false,index=PACK.idx}={}){
+  const order=packDependencyOrder(pack,index),byPack=[],files=[];
+  let bytes=0,storedBytes=0;
+  for(const id of order){
+    const missing=await packMissing(id,{forceHash},index);
+    byPack.push({pack:id,meta:index[id],missing});bytes+=missing.bytes;storedBytes+=missing.storedBytes;
+    for(const file of missing.files) files.push(file);
+  }
+  return {order,byPack,files,bytes,storedBytes};
+}
+async function packGcPromotedPack(pack){
+  const active=PACK.activeIdx&&PACK.activeIdx[pack];
+  if(!active) return {files:0,chunks:0,metadata:0};
+  const filePrefix=pack+'/',metaPrefix='file:'+filePrefix;
+  const keepFiles=new Set(),keepMeta=new Set();
+  for(const file of active.files){
+    const stored=await packStoredFinal(pack,file);
+    if(stored.blob){keepFiles.add(stored.key);keepMeta.add(packMetaKey(pack,file,stored.key));}
+  }
+  const staleFiles=(await packKeys(PACK_STORE)).filter(key=>{
+    const value=String(key);return value.startsWith(filePrefix)&&!keepFiles.has(value);
+  });
+  const staleMeta=(await packKeys(PACK_META_STORE)).filter(key=>{
+    const value=String(key);return value.startsWith(metaPrefix)&&!keepMeta.has(value);
+  });
+  /* Promotion proves every active file has a verified final Blob. No chunk is
+     still needed by that identity, and any older hash/size identity is now
+     unreachable. Clearing only this pack namespace preserves dependencies and
+     every independently installed optional pack. */
+  const staleChunks=(await packKeys(PACK_CHUNK_STORE)).filter(key=>String(key).startsWith(filePrefix));
+  return {
+    files:await packDeleteKeys(PACK_STORE,staleFiles),
+    chunks:await packDeleteKeys(PACK_CHUNK_STORE,staleChunks),
+    metadata:await packDeleteKeys(PACK_META_STORE,staleMeta)
+  };
+}
+async function packPromotePlan(plan,index,rawIndex){
+  for(const id of plan.order){
+    const remaining=await packMissing(id,{},index);
+    if(remaining.files.length) packFail('verify','Pack cannot activate before every file verifies');
+  }
+  const packs={...(PACK.rawActive&&PACK.rawActive.packs||{})};
+  for(const id of plan.order){
+    if(!rawIndex||!rawIndex.packs||!rawIndex.packs[id]) packFail('manifest','Pack offer changed before activation');
+    packs[id]=rawIndex.packs[id];
+  }
+  const next={...(PACK.rawActive||{}),version:Number(rawIndex&&rawIndex.version)||2,packs};
+  await packPersistActive(next);
+  const gc={};
+  for(const id of plan.order){
+    try{gc[id]=await packGcPromotedPack(id);}
+    catch(e){gc[id]={error:e&&e.message||String(e)};}
+  }
+  return gc;
+}
+function packJournalKey(pack){return 'journal:'+pack;}
+async function packInstallPack(pack,options={}){
+  if(!packValidId(pack)) return {ok:false,reason:'pack-id'};
+  if(PACK.busy) return {ok:false,reason:'busy'};
+  PACK.busy=true;PACK.state='downloading';PACK.err='';
+  try{
+    /* Own the operation before the first await. Otherwise two callers that
+       both need packs.json can pass the busy check and begin parallel writes. */
+    const idx=PACK.idx||await packLoadIndex();
+    if(!idx||!idx[pack]){PACK.state='error';PACK.err='Optional content manifest is unavailable';return {ok:false,reason:'manifest'};}
+    const offerIndex=idx,offerRaw=PACK.rawIndex;
+    const plan=await packPlan(pack,{forceHash:!!options.repair,index:offerIndex});
+    if(!plan.files.length){
+      const gc=await packPromotePlan(plan,offerIndex,offerRaw);
+      PACK.state='ready';return {ok:true,pack,packs:plan.order,installed:true,downloaded:0,gc};
+    }
+    if(typeof netAllowed==='function'&&!netAllowed()){
+      PACK.state='error';PACK.err='Optional content is unavailable while offline';
+      return {ok:false,reason:'offline'};
+    }
+    const storage=await packStoragePreflight(pack,plan);PACK.storage=storage;
+    if(!storage.ok){
+      PACK.state='error';PACK.err='Not enough storage for this optional pack';
+      return {ok:false,reason:'storage',storage};
+    }
+    const base=packEndpoint();
+    if(!base&&plan.byPack.some(item=>item.missing.files.length&&!offerIndex[item.pack].baseUrl)){
+      PACK.state='error';PACK.err='Optional content server is unavailable';return {ok:false,reason:'endpoint'};
+    }
+    PACK.total=plan.bytes;PACK.got=0;
+    await packStorePut(PACK_META_STORE,packJournalKey(pack),{
+      state:'installing',pack,dependencies:plan.order,bytes:plan.bytes,startedAt:Date.now()
+    });
+    for(const item of plan.byPack){
+      for(const file of item.missing.files){
+        await packDownloadFile(base,item.pack,file,n=>{
+          PACK.got+=n;
+          if(options.onProgress) options.onProgress(PACK.got,PACK.total,{pack:item.pack,file:file.name});
+          if(options.ui) packRenderBar();
+        },item.meta);
+        await packStorePut(PACK_META_STORE,packJournalKey(pack),{
+          state:'installing',pack,dependencies:plan.order,bytes:plan.bytes,downloaded:PACK.got,
+          completedPack:item.pack,completedFile:file.name,updatedAt:Date.now()
+        });
+      }
+      if((await packMissing(item.pack,{},offerIndex)).files.length) packFail('verify','Pack remained incomplete after install');
+    }
+    const gc=await packPromotePlan(plan,offerIndex,offerRaw);
+    await packStorePut(PACK_META_STORE,packJournalKey(pack),{
+      state:'ready',pack,dependencies:plan.order,bytes:plan.bytes,completedAt:Date.now()
+    });
+    PACK.state='ready';
+    return {ok:true,pack,packs:plan.order,installed:true,downloaded:plan.bytes,storage,gc};
+  }catch(e){
+    PACK.state='error';PACK.err='Download failed — the game runs without it';
+    try{await packStorePut(PACK_META_STORE,packJournalKey(pack),{
+      state:'failed',pack,reason:e&&e.code||'download',updatedAt:Date.now()
+    });}catch(ignore){}
+    return {ok:false,reason:e&&e.code||'download',message:e&&e.message||String(e)};
+  }finally{
+    PACK.busy=false;
+    if(options.ui) packRenderBar();
+  }
+}
+async function packDownload(pack,onProgress){
+  const result=await packInstallPack(pack,{onProgress,ui:true});
+  return !!result.ok;
 }
 
 /* Hand back a playable URL for a pack file, or null if it is not stored. The
@@ -145,14 +775,94 @@ async function packDownload(pack, onProgress){
 const packURLs = {};
 async function packURL(pack, name){
   const k = pack + '/' + name;
-  if(packURLs[k]) return packURLs[k];
-  if(!PACK.idx || !PACK.idx[pack]) return null;
-  const meta = PACK.idx[pack].files.find(f => f.name === name);
+  if(!PACK.idx) await packLoadIndex();
+  const active=PACK.activeIdx&&PACK.activeIdx[pack];
+  if(!active) return null;
+  const meta = active.files.find(f => f.name === name);
   if(!meta) return null;
-  const blob = await packGet(k + ':' + meta.size);
+  const identity=packFileKey(pack,meta)+':'+(meta.sha256||'legacy');
+  if(packURLs[k]&&packURLs[k].identity===identity) return packURLs[k].url;
+  if(packURLs[k]) packDropURL(pack,name);
+  if(!(await packFileReady(pack,meta))) return null;
+  const blob = (await packStoredFinal(pack,meta)).blob;
   if(!blob) return null;
-  return (packURLs[k] = URL.createObjectURL(blob));
+  const url=URL.createObjectURL(blob);
+  packURLs[k]={identity,url};return url;
 }
+
+async function packList(){
+  const idx=PACK.idx||await packLoadIndex();
+  const ids=new Set([...Object.keys(PACK.activeIdx||{}),...Object.keys(idx||{})]);
+  return [...ids].map(id=>{
+    const offer=idx&&idx[id],active=PACK.activeIdx&&PACK.activeIdx[id],pack=offer||active;
+    return {
+      id,label:String(pack.label||id),bytes:pack.bytes,files:pack.files.length,
+      installed:!!active,updateAvailable:!!(active&&offer&&packPackIdentity(active)!==packPackIdentity(offer)),
+      dependencies:Array.isArray(pack.dependencies)?[...pack.dependencies]:[]
+    };
+  });
+}
+async function packStatus(pack,options={}){
+  const idx=PACK.idx||await packLoadIndex();
+  if(!idx||!idx[pack]) return {ok:false,reason:'manifest',pack};
+  const plan=await packPlan(pack,{forceHash:!!options.verify,index:idx});
+  const missing=plan.byPack.find(item=>item.pack===pack).missing;
+  const active=PACK.activeIdx&&PACK.activeIdx[pack];
+  const activePlan=active?await packPlan(pack,{forceHash:!!options.verify,index:PACK.activeIdx}):null;
+  const installed=!!(activePlan&&!activePlan.files.length);
+  return {
+    ok:true,pack,installed,partial:plan.storedBytes>0&&plan.files.length>0,
+    updateAvailable:!!(active&&packPackIdentity(active)!==packPackIdentity(idx[pack])),
+    bytes:idx[pack].bytes,storedBytes:missing.storedBytes,remainingBytes:missing.bytes,
+    missingFiles:missing.files.map(f=>f.name),dependencies:plan.order.filter(id=>id!==pack),
+    missingDependencies:plan.byPack.filter(item=>item.pack!==pack&&item.missing.files.length).map(item=>item.pack)
+  };
+}
+async function packPreflight(pack){
+  const idx=PACK.idx||await packLoadIndex();
+  if(!idx||!idx[pack]) return {ok:false,reason:'manifest',pack};
+  return packStoragePreflight(pack,await packPlan(pack));
+}
+async function packRemove(pack,options={}){
+  if(!packValidId(pack)) return {ok:false,reason:'pack-id'};
+  if(PACK.busy) return {ok:false,reason:'busy'};
+  PACK.busy=true;
+  try{
+    const idx=PACK.idx||await packLoadIndex();
+    const active=PACK.activeIdx||Object.create(null),dependents=[];
+    if(active[pack]){
+      for(const id of Object.keys(active)){
+        if(id!==pack&&packDependencyOrder(id,active).includes(pack)) dependents.push(id);
+      }
+      if(dependents.length&&!options.force) return {ok:false,reason:'dependency',pack,dependents};
+      const deactivate=new Set([pack,...(options.force?dependents:[])]);
+      const packs=Object.fromEntries(Object.entries(PACK.rawActive.packs||{}).filter(([id])=>!deactivate.has(id)));
+      await packPersistActive({...PACK.rawActive,packs});
+    }
+    const files=await packDeletePrefix(PACK_STORE,pack+'/');
+    const chunks=await packDeletePrefix(PACK_CHUNK_STORE,pack+'/');
+    const metadata=await packDeletePrefix(PACK_META_STORE,'file:'+pack+'/');
+    await packStoreDelete(PACK_META_STORE,packJournalKey(pack));
+    for(const key of Object.keys(packURLs)) if(key.startsWith(pack+'/')) packDropURL(pack,key.slice(pack.length+1));
+    return {ok:true,pack,removed:true,files,chunks,metadata};
+  }catch(e){return {ok:false,reason:'storage',message:e&&e.message||String(e)};}
+  finally{PACK.busy=false;}
+}
+
+/* Public, pack-ID-neutral control surface. Audio keeps using packURL() and the
+   legacy start-screen prompt; launcher/settings code can install, verify,
+   repair or remove any manifest pack without learning its IndexedDB layout. */
+const MASSFRONT_ASSET_PACKS=Object.freeze({
+  loadIndex:packLoadIndex,
+  list:packList,
+  status:packStatus,
+  preflight:packPreflight,
+  install:(pack,options)=>packInstallPack(pack,options||{}),
+  repair:(pack,options)=>packInstallPack(pack,{...(options||{}),repair:true}),
+  remove:(pack,options)=>packRemove(pack,options||{}),
+  url:packURL
+});
+if(typeof window!=='undefined') window.MASSFRONT_ASSET_PACKS=MASSFRONT_ASSET_PACKS;
 
 /* ---- UI -------------------------------------------------------------------
    A single line on the start screen, in the same register as the updater panel:
@@ -252,10 +962,14 @@ async function packStartInner(manual){
     const m = await packMissing(p);
     if(m.files.length){ need.push(p); bytes += m.bytes; }
   }
+  let activeOne=false;
+  for(const p of want){
+    if(PACK.activeIdx[p]&&!(await packPlan(p,{index:PACK.activeIdx})).files.length){activeOne=true;break;}
+  }
+  if(activeOne&&typeof audAttachPack==='function') audAttachPack();
   PACK.total = bytes;
   if(!need.length){
     PACK.state = 'ready'; packRenderBar();
-    if(typeof audAttachPack === 'function') audAttachPack();
     return;
   }
   let pref = 'ask';
@@ -275,7 +989,9 @@ async function packStartInner(manual){
      the UI that would fix it. Re-derived from storage rather than from the
      download results so a pack completed on an EARLIER launch also counts. */
   let haveOne = false;
-  for(const p of want) if(!(await packMissing(p)).files.length){ haveOne = true; break; }
+  for(const p of want){
+    if(PACK.activeIdx[p]&&!(await packPlan(p,{index:PACK.activeIdx})).files.length){haveOne=true;break;}
+  }
   if(haveOne && typeof audAttachPack === 'function') audAttachPack();
   /* A later pack succeeding must not bury an earlier one's failure: PACK.state
      is what the panel reads, and 'ready' hides the panel outright — so voice
@@ -296,39 +1012,36 @@ function initAssetPacks(){
 
 /* Galactic Exploration ships in player APK/www from the signed runtime pack.
    Older installs (notably 1.33.51) omitted it. When the HEAD probe misses, this
-   fetches the remote stub, then the signed manifest, then each file into a
-   dedicated IndexedDB — same blob-keyed pattern as audio packs. A blob: URL for
-   index.html was considered for navigation and rejected: the Galactic entry
+   fetches the remote stub and signed manifest, then registers that manifest
+   with the same bounded pack engine used by audio. The former dedicated DB is
+   read only for verified migration. A blob: URL for index.html was considered
+   for navigation and rejected: the Galactic entry
    ticket lives in this document's sessionStorage, and a blob: document is a
    different origin, so the ticket and the return bridge would vanish. Cache
    here; mfOpenExploration keeps the War Room fallback. Opening still needs the
    files on the same origin (packaged www), which is why player packs include
    the module instead of relying on this download alone. */
 const EXP_PACK_DB='massfront-exploration-pack', EXP_PACK_STORE='files';
+const EXP_PACK_ID='galactic-exploration';
 const EXP_PACK_STUB='assets/data/exploration-pack-remote.json';
-let expPackBusy=false;
+let expPackBusy=false,expPackDbPromise=null;
 
 function expPackDb(){
-  return new Promise((res, rej) => {
+  if(expPackDbPromise) return expPackDbPromise;
+  expPackDbPromise=new Promise((res, rej) => {
     const r = indexedDB.open(EXP_PACK_DB, 1);
     r.onupgradeneeded = () => { const d = r.result;
       if(!d.objectStoreNames.contains(EXP_PACK_STORE)) d.createObjectStore(EXP_PACK_STORE); };
-    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    r.onsuccess = () => {r.result.onversionchange=()=>{r.result.close();expPackDbPromise=null;};res(r.result);};
+    r.onerror = () => {expPackDbPromise=null;rej(r.error);};
   });
+  return expPackDbPromise;
 }
 async function expPackGet(k){
   const db = await expPackDb();
   return new Promise((res, rej) => {
     const q = db.transaction(EXP_PACK_STORE, 'readonly').objectStore(EXP_PACK_STORE).get(k);
     q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
-  });
-}
-async function expPackPut(k, v){
-  const db = await expPackDb();
-  return new Promise((res, rej) => {
-    const tx = db.transaction(EXP_PACK_STORE, 'readwrite');
-    tx.objectStore(EXP_PACK_STORE).put(v, k);
-    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error);
   });
 }
 function expPackJoin(base, rel){
@@ -354,10 +1067,18 @@ async function mfExplorationRemoteSpec(){
 async function mfInstallExplorationPack(){
   if(expPackBusy) return {ok:false,reason:'busy'};
   if(typeof indexedDB==='undefined') return {ok:false,reason:'no-idb'};
-  if(typeof netAllowed==='function'&&!netAllowed()) return {ok:false,reason:'offline'};
   expPackBusy=true;
   if(typeof toast==='function') toast('Galactic pack downloading...');
   try{
+    /* A completed generic pack remains discoverable from the cached manifest
+       after an offline restart. Do not require the remote special manifest in
+       that case. */
+    const cached=PACK.idx||await packLoadCachedIndex();
+    if(cached&&cached[EXP_PACK_ID]){
+      const ready=await packStatus(EXP_PACK_ID);
+      if(ready.installed) return {ok:true,cached:true,openUrl:null,pack:EXP_PACK_ID};
+    }
+    if(typeof netAllowed==='function'&&!netAllowed()) return {ok:false,reason:'offline'};
     const spec=await mfExplorationRemoteSpec();
     if(!spec.manifest&&!spec.base) return {ok:false,reason:'no-endpoint'};
     let manUrl=spec.manifest||expPackJoin(spec.base,'exploration-content-manifest-v1.json');
@@ -367,22 +1088,45 @@ async function mfInstallExplorationPack(){
     const man=await mr.json();
     if(!man||man.kind!=='ExplorationContentManifestV1'||!Array.isArray(man.files)||!man.files.length)
       return {ok:false,reason:'manifest'};
-    const q=spec.downloadQuery||'';
+    const files=[];
     for(const entry of man.files){
       const rel=String(entry.path||'').replace(/\\/g,'/');
       if(!rel||rel.startsWith('/')||rel.includes('..')) return {ok:false,reason:'path'};
-      const have=await expPackGet(rel);
-      if(have&&typeof have.size==='number'&&have.size===entry.bytes) continue;
-      const fileUrl=expPackJoin(spec.base,rel);
-      const url=fileUrl+(q&&fileUrl.indexOf('?')<0?q:'');
-      const fr=await fetch(url,{cache:'no-store'});
-      if(!fr.ok) return {ok:false,reason:'file'};
-      const blob=await fr.blob();
-      await expPackPut(rel, blob);
+      const match=/^sha256-([a-f0-9]{64})$/i.exec(String(entry.hash||''));
+      if(!match) return {ok:false,reason:'hash'};
+      files.push({name:rel,size:Number(entry.bytes),sha256:match[1].toLowerCase()});
     }
-    return {ok:true,cached:true,openUrl:null};
+    const bytes=files.reduce((n,file)=>n+file.size,0);
+    if(!Number.isSafeInteger(bytes)||Number(man.totalBytes)!==bytes) return {ok:false,reason:'size'};
+    if(!PACK.idx) await packLoadIndex();
+    const registered=await packRegisterPack(EXP_PACK_ID,{
+      format:1,label:'Galactic Exploration',bytes,chunkSize:PACK_DEFAULT_CHUNK_BYTES,
+      baseUrl:spec.base,downloadQuery:spec.downloadQuery||'',files
+    });
+    const migrationPlan=await packPlan(EXP_PACK_ID);
+    const migrationStorage=await packStoragePreflight(EXP_PACK_ID,migrationPlan);
+    if(!migrationStorage.ok) return {ok:false,reason:'storage',storage:migrationStorage};
+
+    /* 1.33.51 wrote whole, size-only Blobs into a separate database. Import
+       only those that pass the signed manifest's whole-file SHA-256; the old
+       store is otherwise read-only and the generic engine owns all new data,
+       repair, removal, quota checks, Range chunks and offline mounting. */
+    for(const file of registered.files){
+      if(await packFileReady(EXP_PACK_ID,file)) continue;
+      let legacy=null;
+      try{legacy=packStoredBlob(await expPackGet(file.name));}catch(e){}
+      if(!legacy||legacy.size!==file.size) continue;
+      const actual=await packHashBlob(legacy,file.chunkSize);
+      if(actual!==file.sha256) continue;
+      await packPut(packFileKey(EXP_PACK_ID,file),legacy);
+      await packStorePut(PACK_META_STORE,packMetaKey(EXP_PACK_ID,file),{
+        sha256:actual,size:file.size,verifiedAt:Date.now(),migratedFrom:EXP_PACK_DB
+      });
+    }
+    const result=await packInstallPack(EXP_PACK_ID);
+    return {...result,cached:!!result.ok,openUrl:null};
   }catch(e){
-    return {ok:false,reason:'fetch'};
+    return {ok:false,reason:e&&e.code||'fetch',message:e&&e.message||String(e)};
   }finally{
     expPackBusy=false;
   }

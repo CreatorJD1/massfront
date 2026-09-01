@@ -26,6 +26,11 @@ archive/
 releases/
 .cursor/dlds/
 /tmp/
+# Production database exports and Time Travel bookmarks are local rollback
+# evidence, never source or release-archive inputs. Keep both the retired
+# location and the guarded workspace-tmp destination explicitly excluded.
+/cloudflare/massfront-auth/.migration-evidence/
+/tmp/migration-evidence/
 modules/space_exploration/tmp/
 modules/space_exploration/_archive/
 **/.hf-downloads/

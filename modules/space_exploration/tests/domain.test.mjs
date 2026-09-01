@@ -25,6 +25,7 @@ import {
   calculateAdjacencySynergies,
   calculatePowerGridStatus,
   calculateShipExplorationRating,
+  commissionCareerFaction,
   commitResearch,
   createGroundResult,
   createGroundOperationRequestV1,
@@ -149,7 +150,7 @@ function verifyLockedCatalog() {
 }
 
 function completeAelosVeyraKarakChain() {
-  let state = createInitialDomainState();
+  let state = commissionCareerFaction(createInitialDomainState(), 'nova');
   assert.deepEqual(validateDomainState(state), { ok: true, issues: [] });
   assert.equal(state.route.systemId, 'aelos');
   assert.equal(state.world.systems.aelos.discovered, true);
@@ -262,7 +263,7 @@ function verifyMissionLocksAndProxies(progressionState) {
     factionId: 'dominion'
   });
   assert.equal(dominion.operation.proxyFactionId, 'dominion');
-  assert.equal(dominion.operation.commanderId, 'dominion_toren_vale');
+  assert.equal(dominion.operation.commanderId, 'legion_vex');
   assert.equal(validateGroundOperation(dominion.operation).ok, true);
 
   const factionLock = getMissionEligibility(showcase, 'nova_heliograph_wake', { factionId: 'syndicate' });
@@ -321,20 +322,20 @@ function verifyAccountProfileIsolation() {
   const profile = createInitialAccountProfile(campaign.profileId);
   profile.career.experience = 420;
   profile.inventory.craftedMods.survey_link = 2;
-  profile.commanders.nova_rhea_voss.level = 5;
-  profile.commanders.nova_rhea_voss.experience = 900;
+  profile.commanders.nova_kai.level = 5;
+  profile.commanders.nova_kai.experience = 900;
   profile.settings.permanentDeath = true;
 
   const applied = applyAccountProfile(campaign, normalizeAccountProfile(profile));
-  assert.equal(applied.personnel.commanders.nova_rhea_voss.level, 5);
-  assert.equal(applied.personnel.commanders.nova_rhea_voss.experience, 900);
+  assert.equal(applied.personnel.commanders.nova_kai.level, 5);
+  assert.equal(applied.personnel.commanders.nova_kai.experience, 900);
   assert.equal(applied.operations.nextSequence, campaign.operations.nextSequence);
 
   const resetCampaign = createInitialDomainState();
   const preserved = projectAccountProfile(resetCampaign, profile);
   assert.equal(preserved.career.experience, 420, 'campaign reset must preserve account career XP');
   assert.equal(preserved.inventory.craftedMods.survey_link, 2, 'campaign reset must preserve crafted mods');
-  assert.equal(preserved.commanders.nova_rhea_voss.level, 5, 'campaign reset must preserve commander progression');
+  assert.equal(preserved.commanders.nova_kai.level, 5, 'campaign reset must preserve commander progression');
   assert.equal(preserved.settings.permanentDeath, true, 'campaign reset must preserve account difficulty setting');
 }
 
@@ -500,7 +501,7 @@ function verifyVersionedMigration() {
   assert.equal(migrated.resources.bioSamples, 11);
   assert.equal(migrated.resources.credits, 9400);
   assert.equal(migrated.factions.dominion.resident, true);
-  assert.equal(migrated.personnel.commanders.dominion_toren_vale.status, 'ready');
+  assert.equal(migrated.personnel.commanders.legion_vex.status, 'ready');
   assert.ok(migrated.research.completedIds.includes('universal_spectral_cartography'));
   assert.equal(migrated.operations.nextSequence, 7);
   assert.ok(Object.values(migrated.ship.districts).every(district => district.commissioned), 'Legacy rooms remain commissioned');
@@ -546,7 +547,7 @@ function verifyClassicModeIsolation(progressionState) {
 }
 
 function verifyBaseManagementAndStaffing() {
-  const state = createInitialDomainState();
+  const state = commissionCareerFaction(createInitialDomainState(), 'nova');
 
   // Test Power Grid calculation
   const initialPower = calculatePowerGridStatus(state);
@@ -566,7 +567,7 @@ function verifyBaseManagementAndStaffing() {
   assert.equal(initialSynergies.length, 0, 'Adjacency remains inactive until both commissioned districts reach Tier 2');
 
   // Test Specialist Staffing in District Sockets
-  // Ilan is Nova (unlocked initially)
+  // Explicit Nova commissioning unlocks the starter expedition specialists.
   const staffedState = assignSpecialistToDistrict(state, 'survey', 0, 'nova_scout_ilan');
   assert.equal(staffedState.ship.districts.survey.staff[0], 'nova_scout_ilan', 'Ilan must be stationed in survey slot 0');
 

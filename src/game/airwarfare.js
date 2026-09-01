@@ -12,7 +12,9 @@ const MF_AIR_MISSION_NONE=0,MF_AIR_MISSION_CAP=1,MF_AIR_MISSION_INTERCEPT=2,
 const MF_AIR_PHASE_HOLD=0,MF_AIR_PHASE_INGRESS=1,MF_AIR_PHASE_ALIGN=2,
       MF_AIR_PHASE_RELEASE=3,MF_AIR_PHASE_BREAK=4,MF_AIR_PHASE_EGRESS=5,
       MF_AIR_PHASE_REFORM=6,MF_AIR_PHASE_EXTEND=7,MF_AIR_PHASE_REACQUIRE=8;
-const MF_AIR_BAND_H=new Float32Array([8,27,58,94,0]);
+/* Visual cruise bands were too low from a pitched camera — tactical 58 read as
+   skimming the deck. Raised so band changes read as flight, not hover. */
+const MF_AIR_BAND_H=new Float32Array([22,62,128,196,0]);
 const MF_AIR_MISSION_NAME=['none','cap','intercept','escort','strike','recon','rtb'];
 const MF_AIR_PHASE_NAME=['hold','ingress','alignment','release','pull-up','egress','reform','extend','reacquire'];
 const MF_AIR_BAND_NAME=['landing','low','tactical','high','crashing'];

@@ -44,6 +44,24 @@ const HOT_UTILITIES=[
   {src:'abEmp',   em:'⚡', nm:'EMP',   ab:4},
 ];
 let hotSig='', hotSlots=[], hotRow=null,hotUtilityPanel=null,hotUtilityItems=[];
+/* Presentation takeovers may replace the fallback glyph with validated art.
+   Remember the owner's semantic value separately so the HUD frame mirror does
+   not erase and recreate that art when the weapon/ability has not changed. */
+function hotIconText(el,value){
+  const text=value||'•';if(el&&el._mfHotIconText!==text){el._mfHotIconText=text;el.textContent=text;}
+}
+/* A slot's DOM identity follows its authoritative action, never its visible
+   copy. UNLOAD gains a cargo count and Commander weapons can rename in place;
+   neither is allowed to manufacture a new button (and discard its injected
+   vector art) just because the label changed. */
+function hotDataSource(def){
+  if(!def)return 'action:unknown';
+  if(def.src)return def.src;
+  if(def.hotSrc)return def.hotSrc;
+  if(def.kind==='mode')return 'mode:'+String(def.mode);
+  if(def.kind==='utility')return 'utility:more';
+  return (def.kind||'action')+':'+String(def.nm||'action').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
 
 function hotSlotRow(){
   if(hotRow&&hotRow.isConnected) return hotRow;
@@ -79,27 +97,40 @@ function hotUtilityShell(){
     hotUtilityPanel.setAttribute('role','group');hotUtilityPanel.setAttribute('aria-label','Additional selected unit actions');
     document.body.appendChild(hotUtilityPanel);
   }
+  hotUtilityPanel.setAttribute('data-mf-hud-role','utility-drawer');
   return hotUtilityPanel;
 }
-function hotUtilityClose(){
-  if(hotUtilityPanel)hotUtilityPanel.style.display='none';
+function hotUtilityClose(clear){
+  if(!hotUtilityPanel)hotUtilityPanel=document.getElementById('hotUtilityPanel');
+  document.body.classList.remove('mfHotUtilityOpen');
+  if(hotUtilityPanel){
+    hotUtilityPanel.style.display='none';hotUtilityPanel.setAttribute('aria-hidden','true');
+    /* A closed drawer must not keep focusable, selection-specific commands in
+       document.body. Clearing also prevents a later Commander selection from
+       briefly exposing the previous unit's actions while its row rebuilds. */
+    if(clear!==false)hotUtilityPanel.replaceChildren();
+  }
+  if(clear!==false)hotUtilityItems.length=0;
   const more=hotSlots.find(s=>s.def.kind==='utility');if(more)more.el.classList.remove('on');
 }
 function hotUtilityToggle(items){
-  const p=hotUtilityShell();if(p.style.display==='grid'){hotUtilityClose();return;}
+  const p=hotUtilityShell();if(p.style.display==='grid'){hotUtilityClose(true);return;}
   hotUtilityItems=items.slice();p.innerHTML='';
   for(const s of hotUtilityItems){
-    const b=document.createElement('button');b.type='button';b.className='hotUtility';b.dataset.hotSrc=s.src||'';
+    const b=document.createElement('button');b.type='button';b.className='hotUtility';b.dataset.hotSrc=hotDataSource(s);b._mfHotDef=s;
     b.innerHTML='<span class="hEm"></span><span class="hNm"></span><span class="hCd"></span>';
-    b.querySelector('.hEm').textContent=s.em||'✦';b.querySelector('.hNm').textContent=s.nm||'ACTION';
+    hotIconText(b.querySelector('.hEm'),s.em||'✦');b.querySelector('.hNm').textContent=s.nm||'ACTION';
     b.setAttribute('aria-label',(s.nm||'Action')+(s.ds?' — '+s.ds:''));
-    b.addEventListener('pointerdown',ev=>{ev.preventDefault();ev.stopPropagation();hotUtilityClose();
-      if(s.kind==='mode')hotSetMode(s.mode);
-      else if(s.kind==='local'&&s.fn)s.fn();
-      else hotActivateSource(hotSrc(s.src));});
+    const activate=ev=>{ev.preventDefault();ev.stopPropagation();const def=b._mfHotDef;hotUtilityClose(true);
+      if(def.kind==='mode')hotSetMode(def.mode);
+      else if(def.kind==='local'&&def.fn)def.fn();
+      else hotActivateSource(hotSrc(def.src));};
+    if(typeof mfBindNativePress==='function')mfBindNativePress(b,activate);
+    else b.addEventListener('pointerdown',activate);
     p.appendChild(b);
   }
-  p.style.display='grid';const more=hotSlots.find(s=>s.def.kind==='utility');if(more)more.el.classList.add('on');hotSlotPlace();
+  p.style.display='grid';p.setAttribute('aria-hidden','false');document.body.classList.add('mfHotUtilityOpen');
+  const more=hotSlots.find(s=>s.def.kind==='utility');if(more)more.el.classList.add('on');hotSlotPlace();
 }
 
 /* What is selected, reduced to the shape the bar depends on. Rebuilding the
@@ -225,7 +256,7 @@ function hotBuilderSalvage(){
 
 function hotBuild(){
   const row=hotSlotRow();
-  hotUtilityClose();
+  hotUtilityClose(true);
   hotSlots=[];
   const sel=hotSelectionSig();
   if(!sel){ row.style.display='none'; row.innerHTML=''; hotTabState(false); hotSlotPlace(); return; }
@@ -257,8 +288,8 @@ function hotBuild(){
      field repair, and routing to its faster salvage pass. */
   if(hotSelectedBuilders().length){
     want.push({kind:'ab',src:'buildBtn',em:'🏗',nm:'BUILD',ds:'Open the structure catalogue'});
-    want.push({kind:'local',fn:hotBuilderRepair,em:'🔧',nm:'REPAIR',ds:'Move to the nearest damaged or unfinished friendly structure'});
-    want.push({kind:'local',fn:hotBuilderSalvage,em:'♻',nm:'SALVAGE',ds:'Move to the nearest wreck and reclaim it at 2× rate'});
+    want.push({kind:'local',hotSrc:'local:builder-repair',fn:hotBuilderRepair,em:'🔧',nm:'REPAIR',ds:'Move to the nearest damaged or unfinished friendly structure'});
+    want.push({kind:'local',hotSrc:'local:builder-salvage',fn:hotBuilderSalvage,em:'♻',nm:'SALVAGE',ds:'Move to the nearest wreck and reclaim it at 2× rate'});
   }
   /* Repair-bay MEND is owned by src/repairbay.js. A one-line hook keeps this
      file from duplicating apron rules, and the function is absent until that
@@ -268,7 +299,7 @@ function hotBuild(){
     const sky=mfAirliftSelected();
     if(sky>=0){
       const H=typeof mfAirliftHold==='function'?mfAirliftHold(sky,false):null;
-      want.push({kind:'local',fn:()=>{if(typeof mfAirliftArmUnload==='function')mfAirliftArmUnload(sky);},
+      want.push({kind:'local',hotSrc:'local:airlift-unload',fn:()=>{if(typeof mfAirliftArmUnload==='function')mfAirliftArmUnload(sky);},
         em:'⇩',nm:H&&H.cargo.length?'UNLOAD '+H.cargo.length:'UNLOAD',
         ds:'Set a formation drop zone for Skycrane cargo'});
     }
@@ -277,7 +308,7 @@ function hotBuild(){
     const mass=mfMassSelected();
     if(mass>=0){
       const air=utype[mass]===MF_UT_MASSFLESH_AIR;
-      want.push({kind:'local',fn:()=>{if(typeof mfMassArmSelected==='function')mfMassArmSelected();},
+      want.push({kind:'local',hotSrc:air?'local:mass-birth':'local:mass-flight',fn:()=>{if(typeof mfMassArmSelected==='function')mfMassArmSelected();},
         em:'♒',nm:air?'BIRTH':'TAKE FLIGHT',
         ds:air?'Mark a birth site behind the defensive line':'Ascend for a timed breakthrough flight'});
     }
@@ -303,24 +334,39 @@ function hotBuild(){
   const use=want.slice(0,4);
   if(want.length>4)utility.unshift(...want.slice(4));
   if(utility.length)use.push({kind:'utility',em:'⋯',nm:'UTILITY',items:utility});
-  row.innerHTML='';
+  /* Reconcile by data-hot-src. Reusing an unchanged button preserves the SVG
+     or atlas node a presentation layer injected into .hEm, while the one
+     bound handler reads the current definition and keeps behaviour owned by
+     the original source control. */
+  const old=new Map();
+  for(const b of row.querySelectorAll(':scope > .hotSlot[data-hot-src]'))old.set(b.dataset.hotSrc,b);
+  const next=document.createDocumentFragment();
   for(const s of use){
-    const b=document.createElement('button');
-    b.type='button'; b.className='hotSlot';
-    b.innerHTML='<span class="hEm"></span><span class="hNm"></span><span class="hCd"></span>';
-    b.querySelector('.hEm').textContent=s.em;
+    const key=hotDataSource(s);let b=old.get(key);old.delete(key);
+    if(!b){
+      b=document.createElement('button');b.type='button';b.className='hotSlot';b.dataset.hotSrc=key;
+      b.innerHTML='<span class="hEm"></span><span class="hNm"></span><span class="hCd"></span>';
+      const activate=ev=>{
+        ev.preventDefault();ev.stopPropagation();const def=b._mfHotDef;if(!def)return;
+        if(def.kind==='utility')hotUtilityToggle(def.items||[]);
+        else{
+          hotUtilityClose(true);
+          if(def.kind==='mode')hotSetMode(def.mode);
+          else if(def.kind==='local'&&def.fn)def.fn();
+          else hotActivateSource(hotSrc(def.src));
+        }
+      };
+      if(typeof mfBindNativePress==='function')mfBindNativePress(b,activate);
+      else b.addEventListener('pointerdown',activate);
+    }
+    b._mfHotDef=s;b.dataset.hotSrc=key;
+    hotIconText(b.querySelector('.hEm'),s.em);
     b.querySelector('.hNm').textContent=s.nm;
     b.setAttribute('aria-label',s.nm+(s.ds?' — '+s.ds:''));
-    b.addEventListener('pointerdown',ev=>{
-      ev.preventDefault(); ev.stopPropagation();
-      if(s.kind==='mode') hotSetMode(s.mode);
-      else if(s.kind==='local'&&s.fn)s.fn();
-      else if(s.kind==='utility')hotUtilityToggle(s.items||[]);
-      else hotActivateSource(hotSrc(s.src));
-    });
-    row.appendChild(b);
+    next.appendChild(b);
     hotSlots.push({def:s,el:b});
   }
+  row.replaceChildren(next);
   hotTabState(!!use.length);
   row.style.display=use.length&&typeof hudDeck==='string'&&hudDeck==='abilities'?'flex':'none';
   hotSlotPlace();
@@ -346,15 +392,15 @@ function hotSlotSync(force){
       cd.textContent=busy&&ring?(ring.textContent||''):'';
       if(S.def.src==='abCommander'){
         const em=document.getElementById('cmdAbEm'),nm=document.getElementById('cmdAbNm');
-        if(em)el.querySelector('.hEm').textContent=em.textContent||'✦';
+        if(em)hotIconText(el.querySelector('.hEm'),em.textContent||'✦');
         if(nm)el.querySelector('.hNm').textContent=nm.textContent||'SIGNATURE';
         el.setAttribute('aria-label',src.getAttribute('aria-label')||'Commander signature ability');
       }else if(S.def.src==='abPrimary'||S.def.src==='abSecondary'){
         const W=typeof commanderWeaponDef==='function'?commanderWeaponDef(S.def.src==='abSecondary'?1:0):null;
-        if(W){el.querySelector('.hEm').textContent=W.em||'•';el.querySelector('.hNm').textContent=W.nm.toUpperCase();}
+        if(W){hotIconText(el.querySelector('.hEm'),W.em||'•');el.querySelector('.hNm').textContent=W.nm.toUpperCase();}
       }else if(S.def.src==='abClass'){
         const em=document.getElementById('classAbEm'), nm=document.getElementById('classAbNm');
-        if(em) el.querySelector('.hEm').textContent=em.textContent||'✦';
+        if(em) hotIconText(el.querySelector('.hEm'),em.textContent||'✦');
         if(nm) el.querySelector('.hNm').textContent=nm.textContent||'DOCTRINE';
       }
     }else if(S.def.kind==='local'){
@@ -375,7 +421,7 @@ function hotSlotSync(force){
   }
   if(hotUtilityPanel&&hotUtilityPanel.style.display==='grid'){
     hotUtilityPanel.querySelectorAll('[data-hot-src]').forEach(el=>{
-      const src=hotSrc(el.dataset.hotSrc),ring=src&&src.querySelector('.cdring'),cd=el.querySelector('.hCd');
+      const def=el._mfHotDef,src=def&&def.src?hotSrc(def.src):null,ring=src&&src.querySelector('.cdring'),cd=el.querySelector('.hCd');
       const busy=!!(src&&src.classList.contains('cd'));el.classList.toggle('cd',busy);
       if(cd)cd.textContent=busy&&ring?(ring.textContent||''):'';
     });
@@ -442,4 +488,27 @@ if(typeof updateHUD==='function'){
 }
 addEventListener('resize',()=>hotSlotPlace());
 hotSlotRow();
+/* Deck changes call hotUtilityClose synchronously from main.js. Attribute
+   observation is the safety net for contexts owned elsewhere (a selected
+   Factory opening production, a pause/level overlay, or a front-screen
+   transition). It only does work while the drawer is actually open. */
+function hotUtilityGuard(){
+  if(!hotUtilityPanel||hotUtilityPanel.style.display!=='grid')return;
+  const body=document.body,front=body.classList.contains('mfMenuOpen')||body.classList.contains('menuMode');
+  const context=['buildMenu','prodMenu','bldMenu2','baseFinder'].some(id=>{
+    const el=document.getElementById(id);return !!(el&&!el.hidden&&el.style.display!=='none'&&getComputedStyle(el).display!=='none');
+  });
+  const modal=['pauseOverlay','levelUp','gameOver','loadScr'].some(id=>{
+    const el=document.getElementById(id);return !!(el&&el.style.display!=='none'&&getComputedStyle(el).display!=='none');
+  });
+  const dockHidden=typeof running==='boolean'&&running&&!body.classList.contains('hudTacticalDock');
+  if(typeof hudDeck==='string'&&hudDeck!=='abilities'||typeof paused==='boolean'&&paused||front||context||modal||dockHidden)hotUtilityClose(true);
+}
+if(typeof MutationObserver!=='undefined'){
+  const hotUtilityWatch=new MutationObserver(hotUtilityGuard);
+  hotUtilityWatch.observe(document.body,{attributes:true,attributeFilter:['class']});
+  for(const id of ['cmdbar','hudDeckTabs','buildMenu','prodMenu','bldMenu2','baseFinder','pauseOverlay','levelUp','gameOver','loadScr']){
+    const el=document.getElementById(id);if(el)hotUtilityWatch.observe(el,{attributes:true,attributeFilter:['class','style','hidden']});
+  }
+}
 

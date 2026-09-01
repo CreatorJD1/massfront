@@ -3,10 +3,23 @@
 const MF_SH_MAGIC='massfront-gameplay-state-v1',MF_SH_HEX=/^[0-9a-f]{64}$/;
 function MF_SH_error(code){const e=new Error(code);e.code=code;return e;}
 function MF_SH_writer(){
-  const chunks=[],refs=new WeakMap();let size=0,nextRef=1;const push=a=>{chunks.push(a);size+=a.byteLength;};
-  return {u8(v){const a=new Uint8Array(1);a[0]=v&255;push(a);},u32(v){const a=new Uint8Array(4);new DataView(a.buffer).setUint32(0,v>>>0,true);push(a);},
-    f64(v){if(!Number.isFinite(v))throw MF_SH_error('gameplay_state_nonfinite');const a=new Uint8Array(8);new DataView(a.buffer).setFloat64(0,Object.is(v,-0)?0:v,true);push(a);},
-    str(v){const a=new TextEncoder().encode(String(v));this.u32(a.length);push(a);},ref(v){if(refs.has(v))return [true,refs.get(v)];const id=nextRef++;refs.set(v,id);return [false,id];},finish(){const out=new Uint8Array(size);let n=0;for(const a of chunks){out.set(a,n);n+=a.length;}return out;}};
+  let out=new Uint8Array(65536),view=new DataView(out.buffer),size=0,nextRef=1;const refs=new WeakMap();
+  /* PASS alone contributes 147,456 scalar values on a medium map. The prior
+     writer allocated a separate Uint8Array (and usually a DataView) for every
+     tag and number, then copied hundreds of thousands of tiny chunks at the
+     end. Connected play hashes once per second, so that allocation storm froze
+     the main thread. A grow-only byte buffer emits the identical canonical
+     little-endian stream while keeping allocation proportional to output size. */
+  const reserve=n=>{
+    const need=size+n;if(need<=out.length)return;
+    let cap=out.length;while(cap<need)cap*=2;
+    const grown=new Uint8Array(cap);grown.set(out);out=grown;view=new DataView(out.buffer);
+  };
+  return {u8(v){reserve(1);out[size++]=v&255;},u32(v){reserve(4);view.setUint32(size,v>>>0,true);size+=4;},
+    f64(v){if(!Number.isFinite(v))throw MF_SH_error('gameplay_state_nonfinite');reserve(8);view.setFloat64(size,Object.is(v,-0)?0:v,true);size+=8;},
+    str(v){const a=new TextEncoder().encode(String(v));this.u32(a.length);reserve(a.length);out.set(a,size);size+=a.length;},
+    ref(v){if(refs.has(v))return [true,refs.get(v)];const id=nextRef++;refs.set(v,id);return [false,id];},
+    finish(){return out.slice(0,size);}};
 }
 function MF_SH_value(w,v,depth=0){
   if(depth>32)throw MF_SH_error('gameplay_state_depth');
@@ -30,7 +43,7 @@ function MF_SH_snapshot(){
   const opt=[['uUtilityJob',typeof uUtilityJob!=='undefined'?uUtilityJob:null],['uUtilityGoalX',typeof uUtilityGoalX!=='undefined'?uUtilityGoalX:null],['uUtilityGoalY',typeof uUtilityGoalY!=='undefined'?uUtilityGoalY:null],['uUtilityAuto',typeof uUtilityAuto!=='undefined'?uUtilityAuto:null],['uUtilityProgressX',typeof uUtilityProgressX!=='undefined'?uUtilityProgressX:null],['uUtilityProgressY',typeof uUtilityProgressY!=='undefined'?uUtilityProgressY:null],['uUtilityProgressAt',typeof uUtilityProgressAt!=='undefined'?uUtilityProgressAt:null],['uUtilityRetryAt',typeof uUtilityRetryAt!=='undefined'?uUtilityRetryAt:null],['uAirGen',typeof uAirGen!=='undefined'?uAirGen:null],['uAirTarget',typeof uAirTarget!=='undefined'?uAirTarget:null],['uAirTargetG',typeof uAirTargetG!=='undefined'?uAirTargetG:null],['uAirEscort',typeof uAirEscort!=='undefined'?uAirEscort:null],['uAirEscortG',typeof uAirEscortG!=='undefined'?uAirEscortG:null],['uAirBand',typeof uAirBand!=='undefined'?uAirBand:null],['uAirBandReq',typeof uAirBandReq!=='undefined'?uAirBandReq:null],['uAirMission',typeof uAirMission!=='undefined'?uAirMission:null],['uAirHomeMission',typeof uAirHomeMission!=='undefined'?uAirHomeMission:null],['uAirPhase',typeof uAirPhase!=='undefined'?uAirPhase:null],['uAirFire',typeof uAirFire!=='undefined'?uAirFire:null],['uAirScanClock',typeof uAirScanClock!=='undefined'?uAirScanClock:null],['uAirAlt',typeof uAirAlt!=='undefined'?uAirAlt:null],['uAirPhaseT',typeof uAirPhaseT!=='undefined'?uAirPhaseT:null],['uAirAnchorX',typeof uAirAnchorX!=='undefined'?uAirAnchorX:null],['uAirAnchorY',typeof uAirAnchorY!=='undefined'?uAirAnchorY:null],['uAirGoalX',typeof uAirGoalX!=='undefined'?uAirGoalX:null],['uAirGoalY',typeof uAirGoalY!=='undefined'?uAirGoalY:null],['uAirAimX',typeof uAirAimX!=='undefined'?uAirAimX:null],['uAirAimY',typeof uAirAimY!=='undefined'?uAirAimY:null],['uAirVx',typeof uAirVx!=='undefined'?uAirVx:null],['uAirVy',typeof uAirVy!=='undefined'?uAirVy:null],['uAirCourse',typeof uAirCourse!=='undefined'?uAirCourse:null],['uAirYawRate',typeof uAirYawRate!=='undefined'?uAirYawRate:null],['uAirPass',typeof uAirPass!=='undefined'?uAirPass:null],['uAirReleaseN',typeof uAirReleaseN!=='undefined'?uAirReleaseN:null],['uAirReacquireN',typeof uAirReacquireN!=='undefined'?uAirReacquireN:null],['uAirSortie',typeof uAirSortie!=='undefined'?uAirSortie:null]];
   for(const x of opt)if(x[1])MF_SH_indexed(w,x[0],x[1],units);
   MF_SH_named(w,'unitQueues',units.map(i=>[i,uQueue[i]||null]));MF_SH_named(w,'patrolRoutes',typeof patrolRoutes!=='undefined'?patrolRoutes:[]);MF_SH_named(w,'moveCohorts',typeof moveCohorts!=='undefined'?moveCohorts:[]);
-  const bf=['type','team','fac','x','y','hp','hpm','r','alive','prog','cool','queue','repeat','prodT','heal','tier','lvl','upT','upMax','tang','gunPitch','boost','boostM','res','resT','rally','rich','dep','geo','shield','shieldMax','shieldT','guardReady','guardT','guardCharge','rot','footTier','link','conduit','buildPaidM','buildPaidE','buildStalled','aim','aimG','target','targetG','mode','state','stun','haz'];
+  const bf=['type','team','fac','x','y','hp','hpm','r','alive','prog','cool','queue','repeat','prodT','heal','tier','lvl','upT','upMax','tang','gunPitch','boost','boostM','res','resT','rally','rich','dep','geo','shield','shieldMax','shieldT','guardReady','guardT','guardCharge','rot','footTier','link','conduit','buildPaidM','buildPaidE','buildStalled','repairOn','dmgT','aim','aimG','target','targetG','mode','state','stun','haz'];
   MF_SH_named(w,'buildings',blds.map((b,i)=>[i,MF_SH_fields(b,bf)]));MF_SH_named(w,'economy',{resM:typeof resM!=='undefined'?resM:[],resE:typeof resE!=='undefined'?resE:[],mSpendAcc:typeof mSpendAcc!=='undefined'?mSpendAcc:0,eSpendAcc:typeof eSpendAcc!=='undefined'?eSpendAcc:0,spendT:typeof spendT!=='undefined'?spendT:0,stats:typeof stats!=='undefined'?stats:{},researched:typeof researched!=='undefined'?researched:{},researchCarry:typeof researchCarry!=='undefined'?researchCarry:{},researching:typeof researching!=='undefined'?researching:null});
   MF_SH_named(w,'pHigh',pHigh);MF_SH_named(w,'projectileFree',typeof pFree!=='undefined'?pFree:[]);
   const pa=[['px',px],['py',py],['pvx',pvx],['pvy',pvy],['plife',plife],['pdmg',pdmg],['paoe',paoe],['ptype',ptype],['pteam',pteam],['ptgt',ptgt],['ptgtg',ptgtg],['pmu0',pmu0],['pwk',pwk],['psx',psx],['psy',psy],['pex',pex],['pey',pey],['pt',pt],['pmax',pmax],['pSplit',pSplit],['pCannon',pCannon],['pBio',pBio],['pBarrage',pBarrage],['pFlightId',pFlightId],['pBaseSpeed',pBaseSpeed],['pSpeed',pSpeed],['pAge',pAge],['pSrcUnit',pSrcUnit],['pSrcGen',pSrcGen],['pArc',pArc],['pz0',pz0],['pz1',pz1],['pz',pz],['pLastTX',pLastTX],['pLastTY',pLastTY]];for(const x of pa)MF_SH_indexed(w,x[0],x[1],shots);
@@ -39,7 +52,17 @@ function MF_SH_snapshot(){
   MF_SH_named(w,'deposits',typeof deposits!=='undefined'?world(deposits):[]);MF_SH_named(w,'geysers',typeof geysers!=='undefined'?world(geysers):[]);MF_SH_named(w,'crates',typeof crates!=='undefined'?world(crates):[]);MF_SH_named(w,'relics',typeof relics!=='undefined'?world(relics):[]);MF_SH_named(w,'tanks',typeof tanks!=='undefined'?world(tanks):[]);MF_SH_named(w,'wrecks',typeof wrecks!=='undefined'?world(wrecks):[]);
   MF_SH_named(w,'carrier',typeof carrier!=='undefined'?MF_SH_fields(carrier,['active','x','y','tx','ty','alt','clearance','ang','phase','fac']):{});MF_SH_named(w,'deformQueue',typeof deformQ!=='undefined'?deformQ:[]);MF_SH_named(w,'passability',typeof PASS!=='undefined'&&PASS?PASS:new Uint8Array(0));MF_SH_named(w,'match',{live:typeof matchLive!=='undefined'?matchLive:false,setup:typeof matchSetupArmed!=='undefined'?matchSetupArmed:false});return w.finish();
 }
-async function MF_SH_digest(){if(!globalThis.crypto||!crypto.subtle||typeof crypto.subtle.digest!=='function')throw MF_SH_error('gameplay_hash_unavailable');const bytes=MF_SH_snapshot(),digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));let hex='';for(const b of digest)hex+=b.toString(16).padStart(2,'0');if(!MF_SH_HEX.test(hex))throw MF_SH_error('gameplay_hash_invalid');return hex;}
+async function MF_SH_digest(){
+  if(!globalThis.crypto||!crypto.subtle||typeof crypto.subtle.digest!=='function')throw MF_SH_error('gameplay_hash_unavailable');
+  /* The profiler measures only canonical-state construction on the main
+     thread. WebCrypto time is asynchronous and must not be mislabeled as a
+     simulation/network hitch. These hooks are optional and do not alter the
+     hashed bytes, cadence, authority, or Promise contract. */
+  const measured=typeof window!=='undefined'&&typeof window.mfPerfBegin==='function'&&typeof window.mfPerfEnd==='function';
+  if(measured)window.mfPerfBegin('networkSync');
+  let bytes;try{bytes=MF_SH_snapshot();}finally{if(measured)window.mfPerfEnd('networkSync');}
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));let hex='';for(const b of digest)hex+=b.toString(16).padStart(2,'0');if(!MF_SH_HEX.test(hex))throw MF_SH_error('gameplay_hash_invalid');return hex;
+}
 /* Some focused browser probes install a strict mock before loading the normal
    source order. Preserve that test seam and avoid redefining a sealed global. */
 if(typeof window.mfGameplayStateHash!=='function')Object.defineProperty(window,'mfGameplayStateHash',{value:MF_SH_digest,writable:false,configurable:false,enumerable:false});

@@ -2,7 +2,11 @@
 
 Inventory of **gameplay that C&C3 / Supreme Commander 2 taught players to expect**, scored against what this tree actually runs. Scoped for a **phone RTS**: one thumb, WebGL2 battle, pop cap 1000/seat, The Four, Standard `*_medium`. Not a campaign design doc.
 
-Identity at writing: local `1.33.31`. Source of truth is `src/`, plus `docs/MASTER_PLAN_2026-08-14.md`, `docs/BALANCE_REVIEW_2026-08-14.md`, `docs/HANDOFF.md`. Balance numbers in §6 are measured; they were **not** applied here.
+Identity at writing: local `1.33.31`. The historical sources used by this
+record were `src/`, `docs/archive/plans/MASTER_PLAN_2026-08-14.md`,
+`docs/BALANCE_REVIEW_2026-08-14.md`, and
+`docs/archive/handoffs/2026-08/HANDOFF.md`. Balance numbers in §6 are measured;
+they were **not** applied here.
 
 ## Locks (do not undo)
 

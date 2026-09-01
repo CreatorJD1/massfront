@@ -273,7 +273,10 @@ function resize(){
   VW = cssW; VH = cssH;
   cv.width = Math.round(VW*DPR); cv.height = Math.round(VH*DPR);
   gl.viewport(0,0,cv.width,cv.height);
-  if(typeof camUpdateMatrices==='function') camUpdateMatrices();
+  /* mesh.js loads before terrain.js. A startup resize can land in that narrow
+     window, where the camera helper exists but its terrainH dependency does
+     not. Defer the matrix refresh; main performs one after all sources load. */
+  if(typeof camUpdateMatrices==='function'&&typeof terrainH==='function') camUpdateMatrices();
 }
 /* Sun-depth CSM atlas binds on TEXTURE4 during csmApply only. Terrain
    already owns 0/1/2/3/7–15; ads stay on 7; post 4/5/6 never move to 0.
@@ -2026,7 +2029,7 @@ const PLANETS={
       {id:'aelos_north', nm:'CAPITAL CIRCUMFERENCE', poi:'Command Circumference', hook:'Intact brutalist avenues around a living TFC capital.', lat:0.45, lon:0.20, rad:0.38, color:'#5ad4ff', maps:['aelos_north_small','aelos_north_medium','aelos_north_large']},
       {id:'aelos_basin', nm:'HEARTLAND YARDS', poi:'Heartland Foundry', hook:'Factory terraces inside maintained parkland and river quays.', lat:-0.20, lon:0.80, rad:0.42, color:'#7dffb0', maps:['aelos_basin_small','aelos_basin_medium','aelos_basin_large']},
       {id:'aelos_coast', nm:'HARBOR COMMAND', poi:'Port Admiralty', hook:'Working naval yards and brutalist port blocks.', lat:0.10, lon:-0.70, rad:0.36, color:'#ffd36a', maps:['aelos_coast_small','aelos_coast_medium','aelos_coast_large']},
-      {id:'aelos_ridge', nm:'HIGH SHELF', poi:'Great Divide Gate', hook:'Sibling arctic read: garrisoned mountain infrastructure.', lat:-0.50, lon:-0.30, rad:0.35, color:'#a8c4ff', maps:['aelos_ridge_small','aelos_ridge_medium','aelos_ridge_large']}
+      {id:'aelos_ridge', nm:'HIGH SHELF', poi:'Great Divide Gate', hook:'Sibling arctic read: garrisoned mountain infrastructure.', theme:'arctic', lat:-0.50, lon:-0.30, rad:0.35, color:'#a8c4ff', maps:['aelos_ridge_small','aelos_ridge_medium','aelos_ridge_large']}
     ]
   },
   pyraeth:{
@@ -2036,7 +2039,7 @@ const PLANETS={
     lore:'Red-faction theatre. Domes, mech factories and orbital aprons under dangerous storms.',
     atmosphereColor:'rgba(255,90,70,0.5)', ringColor:'rgba(255,140,80,0.35)',
     regions:[
-      {id:'pyraeth_crater', nm:'BURIED COURT', poi:'Court of Iron', hook:'Subterranean dome stacks in crater bowls.', lat:0.30, lon:-0.50, rad:0.40, color:'#ff4e50', maps:['pyraeth_crater_small','pyraeth_crater_medium','pyraeth_crater_large']},
+      {id:'pyraeth_crater', nm:'BURIED COURT', poi:'Court of Iron', hook:'Subterranean dome stacks in crater bowls.', themes:['vespera','ashland'], lat:0.30, lon:-0.50, rad:0.40, color:'#ff4e50', maps:['pyraeth_crater_small','pyraeth_crater_medium','pyraeth_crater_large']},
       {id:'pyraeth_belt', nm:'MECH FOUNDRY', poi:'Promethean Mega-Grid', hook:'Sprawling assembly trenches feeding Dominion armor.', lat:-0.40, lon:0.40, rad:0.38, color:'#ff8a3a', maps:['pyraeth_belt_small','pyraeth_belt_medium','pyraeth_belt_large']},
       {id:'pyraeth_caldera', nm:'DOME ARCOLOGY', poi:'Ignis Dome Court', hook:'Pressure-dome cities under perpetual storm cover.', lat:0.60, lon:0.70, rad:0.36, color:'#ff6b8a', maps:['pyraeth_caldera_small','pyraeth_caldera_medium','pyraeth_caldera_large']},
       {id:'pyraeth_flats', nm:'ORBITAL APRONS', poi:'Hub Delta Pads', hook:'Spaceport flats where every advance is exposed.', lat:-0.10, lon:-0.90, rad:0.37, color:'#e65c00', maps:['pyraeth_flats_small','pyraeth_flats_medium','pyraeth_flats_large']}
@@ -2065,7 +2068,7 @@ const PLANETS={
       {id:'vespera_spire', nm:'CALDERA NESTS', poi:'Great Hive Spire', hook:'Hive stacks in a superheated caldera.', lat:0.25, lon:0.50, rad:0.38, color:'#c46bff', maps:['vespera_spire_small','vespera_spire_medium','vespera_spire_large']},
       {id:'vespera_dunes', nm:'INFESTATION FIELDS', poi:'Tide Relay Net', hook:'Open hive carpets and ichor lanes.', lat:-0.35, lon:-0.60, rad:0.40, color:'#ff5e62', maps:['vespera_dunes_small','vespera_dunes_medium','vespera_dunes_large']},
       {id:'vespera_refinery', nm:'MAGMA HATCHERIES', poi:'Megaforge Spine', hook:'Swallowed factories now continent-scale nests.', lat:0.55, lon:-0.80, rad:0.36, color:'#ff8008', maps:['vespera_refinery_small','vespera_refinery_medium','vespera_refinery_large']},
-      {id:'vespera_plateau', nm:'OVERGROWN FRONT', poi:'Terminator Hive Spire', hook:'Sibling verdant read: jungle drowning in biomass.', lat:-0.15, lon:0.85, rad:0.37, color:'#9dff6a', maps:['vespera_plateau_small','vespera_plateau_medium','vespera_plateau_large']}
+      {id:'vespera_plateau', nm:'OVERGROWN FRONT', poi:'Terminator Hive Spire', hook:'Sibling verdant read: jungle drowning in biomass.', themes:['verdant','ashland'], lat:-0.15, lon:0.85, rad:0.37, color:'#9dff6a', maps:['vespera_plateau_small','vespera_plateau_medium','vespera_plateau_large']}
     ]
   }
 };
@@ -4751,6 +4754,7 @@ function loadTerrainTextures(){
   };
   const mk=(key,src,fallback)=>{
     const im=new Image();
+    im.crossOrigin='anonymous';
     const choices=[src].concat(Array.isArray(fallback)?fallback:(fallback?[fallback]:[]))
       .filter((v,i,a)=>v&&a.indexOf(v)===i);
     let choice=0;
@@ -4773,6 +4777,7 @@ function loadTerrainTextures(){
     const next=()=>{
       if(pi>=pairs.length){ failed=true; finish(keyA,null); finish(keyN,null); return; }
       const pair=pairs[pi++], a=new Image(), n=new Image();
+      a.crossOrigin='anonymous'; n.crossOrigin='anonymous';
       let decoded=0, done=false;
       const bad=src=>{ if(done) return; done=true;
         console.warn('terrain texture pair missing:',src); next(); };

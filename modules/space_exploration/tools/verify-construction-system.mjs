@@ -40,6 +40,7 @@ if (!viewports.length) throw new Error(`Unknown MF_CONSTRUCTION_VIEWPORT ${viewp
 const sourceFiles = [
   'index.html',
   'src/space_experience.js',
+  'src/core/gltf_runtime_loader.js',
   'src/core/uga_command_scene.js',
   'src/core/window_emissive_bloom.js',
   'src/domain/construction.js',
@@ -47,13 +48,16 @@ const sourceFiles = [
   'src/domain/state_store.js',
   'src/ui/uga_command.css',
   'src/ui/uga_command.js',
+  'lib/DRACOLoader.js',
+  'lib/draco/gltf/draco_decoder.wasm',
+  'assets/runtime/models/uga-command-cutaway.glb',
   'tools/verify-construction-system.mjs'
 ];
 const MIME = {
   '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary', '.html': 'text/html; charset=utf-8',
   '.ico': 'image/x-icon', '.jpeg': 'image/jpeg', '.jpg': 'image/jpeg', '.js': 'text/javascript; charset=utf-8',
   '.json': 'application/json; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.png': 'image/png',
-  '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.webp': 'image/webp'
+  '.svg': 'image/svg+xml', '.wasm': 'application/wasm', '.webmanifest': 'application/manifest+json', '.webp': 'image/webp'
 };
 
 await mkdir(output, { recursive: true });
@@ -108,8 +112,11 @@ async function startServer() {
     try {
       const pathname = decodeURIComponent(new URL(request.url || '/', 'http://127.0.0.1').pathname);
       const requested = pathname === '/' ? '/index.html' : pathname;
-      const file = resolve(moduleRoot, `.${requested}`);
-      if (file !== moduleRoot && !file.startsWith(`${moduleRoot}${sep}`)) throw new Error('path outside module root');
+      // The standalone document legitimately consumes shared game-root audio
+      // via /assets/**. Serve the same repository-relative route used by the
+      // integrated game instead of creating verifier-only 404s.
+      const file = resolve(repoRoot, `.${requested}`);
+      if (file !== repoRoot && !file.startsWith(`${repoRoot}${sep}`)) throw new Error('path outside repository root');
       const bytes = await readFile(file);
       response.writeHead(200, { 'Cache-Control': 'no-store', 'Content-Type': MIME[extname(file).toLowerCase()] || 'application/octet-stream' });
       response.end(bytes);
@@ -124,7 +131,7 @@ async function startServer() {
   });
   const address = server.address();
   return {
-    url: `http://127.0.0.1:${address.port}/index.html`,
+    url: `http://127.0.0.1:${address.port}/modules/space_exploration/index.html`,
     mode: 'ephemeral-local',
     close: () => new Promise(resolveClose => server.close(resolveClose))
   };
@@ -278,8 +285,11 @@ async function clickDistrict(page, districtId) {
 
 async function capture(page, scenario, stage) {
   const filename = `${scenario.id}--${stage}.png`;
-  await page.screenshot({ path: join(output, filename), animations: 'disabled' });
-  scenario.captures.push(posixPath(relative(moduleRoot, join(output, filename))));
+  const absolute = join(output, filename);
+  await page.screenshot({ path: absolute, animations: 'disabled' });
+  const relativePath = posixPath(relative(moduleRoot, absolute));
+  scenario.captures.push(relativePath);
+  report.captureHashes[relativePath] = sha256(await readFile(absolute));
 }
 
 async function layoutAudit(page, label) {
@@ -601,6 +611,7 @@ const report = {
   server: null,
   gpu: null,
   browserSessions: [],
+  captureHashes: {},
   scenarios: [],
   blockers: []
 };

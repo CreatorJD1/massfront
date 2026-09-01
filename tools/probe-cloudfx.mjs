@@ -52,8 +52,32 @@ check('simulation time advances cloud positions',JSON.stringify(b)!==JSON.string
 C.reset();
 const target=C.sample(input('high',25,{perfScale:0.4125}));
 const targetProbe=C.probe();
-check('target-device pressure cap keeps two systems',target.length===4&&targetProbe.lastClouds===2,
+check('high keeps profile clouds at target-device pressure',target.length===8&&targetProbe.lastClouds===4,
   targetProbe.lastClouds+' clouds / '+target.length+' layers');
+C.reset();
+const cinLow=C.sample(input('cinematic',25,{perfScale:0.30}));
+const cinProbe=C.probe();
+check('cinematic keeps profile clouds when perf<=0.50',cinLow.length===15&&cinProbe.lastClouds===5,
+  cinProbe.lastClouds+' clouds / '+cinLow.length+' layers');
+C.reset();
+const lowCap=C.sample(input('low',25,{perfScale:0.4125}));
+const lowProbe=C.probe();
+check('low still yields to target-device pressure',lowCap.length===1&&lowProbe.lastClouds===1,
+  lowProbe.lastClouds+' clouds / '+lowCap.length+' layers');
+
+C.reset();
+const closeAlt=C.sample(input('high',25,{viewSpan:520})).find(L=>L.kind==='body');
+C.reset();
+const wideAlt=C.sample(input('high',25,{viewSpan:2000})).find(L=>L.kind==='body');
+check('view span moves body off a fixed altitude slab',
+  !!(closeAlt&&wideAlt&&Math.abs(closeAlt.z-wideAlt.z)>20&&closeAlt.size<wideAlt.size&&closeAlt.z>80),
+  'closeZ='+(closeAlt&&closeAlt.z)+' wideZ='+(wideAlt&&wideAlt.z));
+
+C.reset();
+const startZone=C.sample(input('high',22,{focusX:576,focusY:576}));
+const near=startZone.filter(L=>L.kind==='body'&&Math.hypot(L.x-576,L.y-576)<1400);
+check('high start-zone camera keeps a nearby body',near.length>=1,
+  'near='+near.length+' / bodies='+startZone.filter(L=>L.kind==='body').length);
 
 C.reset();
 const culled=C.sample(input('high',25,{visible:()=>false}));

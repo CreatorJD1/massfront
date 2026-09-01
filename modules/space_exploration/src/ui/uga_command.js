@@ -11,9 +11,17 @@ import {
   CAMPAIGN_HUB_QUICK_NAV,
   CAMPAIGN_HUB_ROUTES,
   CAMPAIGN_HUB_ROUTE_STATUS,
+  CAMPAIGN_HUB_SESSION_TYPES,
+  CAMPAIGN_HUB_SESSION_STATUS,
   campaignHubRouteIsReachable,
-  getCampaignHubRoute
-} from './campaign_hub_registry.js?v=20260825-hub1';
+  campaignHubSessionIsReachable,
+  getCampaignHubRoute,
+  getCampaignHubSessionType
+} from './campaign_hub_registry.js?v=20260830-sessionroutes4';
+
+const CAMPAIGN_HUB_SESSION_ROUTE_IDS = new Set([
+  'classic', 'training', 'standard', 'campaign', 'weekly', 'mmo', 'coop'
+]);
 
 const DISTRICT_ORDER = [
   'command', 'navigation', 'survey', 'mission_ops', 'research', 'fabricator', 'engineering',
@@ -159,90 +167,21 @@ const PERSONNEL_PORTRAIT_MAX_ASPECT = 1;
 // original illustrations belong at these paths; missing or invalid files keep
 // that person sealed in both Factions and Deployment.
 export const UGA_PERSONNEL_PORTRAIT_CONTRACT = Object.freeze({
-  nova_rhea_voss: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/textures/personnel/commander-rhea-voss.png' }),
-  dominion_toren_vale: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/textures/personnel/commander-toren-vale.png' }),
-  syndicate_mara_quill: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/textures/personnel/commander-mara-quill.png' }),
-  nova_scout_ilan: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-ilan-reeve.png' }),
-  nova_tech_sumi: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-sumi-kade.png' }),
-  nova_medic_orr: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-orr-sato.png' }),
-  nova_support_vik: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-vik-arden.png' }),
-  dominion_scout_brann: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-brann-holt.png' }),
-  dominion_tech_vesk: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-vesk-orra.png' }),
-  dominion_medic_tala: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-tala-rune.png' }),
-  dominion_support_kray: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-kray-damar.png' }),
-  syndicate_scout_nix: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-nix-ravel.png' }),
-  syndicate_tech_aya: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-aya-senn.png' }),
-  syndicate_medic_lev: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-lev-iora.png' }),
-  syndicate_support_kest: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/textures/personnel/specialist-kest-morrow.png' })
-});
-
-const CLASSIC_MODE_CONFIGS = Object.freeze({
-  training: {
-    name: 'Training', detail: 'Systems tutorial simulation', participants: 'UGA instructor AI // local trainee profile',
-    fields: [
-      ['scenarioId', 'Syllabus', [['command_certification', 'Command Certification'], ['expedition_deployment', 'Expedition Deployment'], ['brood_containment_drill', 'Brood Containment Drill']]],
-      ['theaterId', 'Training Theater', [['wayfarer_holoroom', 'Wayfarer Holo-Room'], ['aelos_academy', 'Aelos Orbital Academy'], ['karak_reconstruction', 'Karak Reconstruction Model']]],
-      ['difficulty', 'Assessment Level', [['guided', 'Guided'], ['assisted', 'Assisted'], ['evaluation', 'Evaluation']]],
-      ['forceScale', 'Exercise Scale', [['fireteam', 'Fireteam'], ['strike_group', 'Strike Group'], ['full_exercise', 'Full Exercise']]],
-      ['aiProfile', 'Instructor Profile', [['instructor', 'Instructor'], ['reactive_tutor', 'Reactive Tutor'], ['examiner', 'Examiner']]],
-      ['simulatedActivity', 'Training Activity', [['coached_sequence', 'Coached Sequence'], ['timed_assessment', 'Timed Assessment'], ['live_remediation', 'Live Remediation']]]
-    ]
-  },
-  standard: {
-    name: 'Standard', detail: 'Classic skirmish configuration', participants: 'Local commanders // authored opposing AI',
-    fields: [
-      ['scenarioId', 'Scenario', [['frontier_control', 'Frontier Control'], ['relay_dominance', 'Relay Dominance'], ['resource_denial', 'Resource Denial']]],
-      ['theaterId', 'Theater', [['aelos_bastion', 'Aelos Bastion'], ['veyra_perimeter', 'Veyra Perimeter'], ['karak_exclusion', 'Karak Exclusion Zone']]],
-      ['difficulty', 'Difficulty', [['regular', 'Regular'], ['veteran', 'Veteran'], ['elite', 'Elite'], ['adaptive', 'Adaptive']]],
-      ['forceScale', 'Force Scale', [['compact', 'Compact'], ['standard', 'Standard'], ['grand', 'Grand']]],
-      ['aiProfile', 'Opposition AI', [['methodical', 'Methodical'], ['aggressive', 'Aggressive'], ['opportunist', 'Opportunist']]],
-      ['simulatedActivity', 'Victory Protocol', [['territory_control', 'Territory Control'], ['objective_race', 'Objective Race'], ['survival_clock', 'Survival Clock']]]
-    ]
-  },
-  campaign: {
-    name: 'Campaign', detail: 'Story archive simulation', participants: 'Archive cast // continuity-safe local simulation',
-    fields: [
-      ['scenarioId', 'Archive Chapter', [['first_contact', 'First Contact Archive'], ['broken_frontier', 'Broken Frontier'], ['containment_dawn', 'Containment Dawn']]],
-      ['theaterId', 'Story Theater', [['sombrero_archive', 'Sombrero-I Archive'], ['aelos_corridor', 'Aelos Corridor'], ['karak_memory', 'Karak Memory Reconstruction']]],
-      ['difficulty', 'Narrative Difficulty', [['story', 'Story'], ['command', 'Command'], ['veteran', 'Veteran']]],
-      ['forceScale', 'Battle Scale', [['authored', 'Authored'], ['expanded', 'Expanded'], ['adaptive', 'Adaptive']]],
-      ['aiProfile', 'Director Profile', [['narrative', 'Narrative Director'], ['pressure', 'Pressure Director'], ['simulationist', 'Simulationist']]],
-      ['simulatedActivity', 'Continuity Model', [['canonical', 'Canonical Record'], ['alternate_orders', 'Alternate Orders'], ['challenge_replay', 'Challenge Replay']]]
-    ]
-  },
-  mmo_warfront: {
-    name: 'MMO Warfront', detail: 'Persistent-warfront preview', participants: 'Simulated sector population // no network session',
-    fields: [
-      ['scenarioId', 'Warfront Pattern', [['border_escalation', 'Border Escalation'], ['three_faction_push', 'Three-Faction Push'], ['sector_recovery', 'Sector Recovery']]],
-      ['theaterId', 'Simulated Sector', [['heliograph_reach', 'Heliograph Reach'], ['veyra_marches', 'Veyra Marches'], ['karak_quarantine', 'Karak Quarantine Belt']]],
-      ['difficulty', 'Pressure Curve', [['equilibrium', 'Equilibrium'], ['escalating', 'Escalating'], ['crisis', 'Crisis']]],
-      ['forceScale', 'Population Scale', [['regional', 'Regional'], ['sector', 'Sector'], ['massive', 'Massive']]],
-      ['aiProfile', 'Population Director', [['balanced_population', 'Balanced Population'], ['rivalry_weighted', 'Rivalry Weighted'], ['underdog_support', 'Underdog Support']]],
-      ['simulatedActivity', 'Activity Pulse', [['steady_front', 'Steady Front'], ['surge_window', 'Surge Window'], ['public_event_cycle', 'Public Event Cycle']]]
-    ]
-  },
-  co_op: {
-    name: 'Co-op', detail: 'Adaptive AI team exercise', participants: 'Local partner profile // adaptive opposition AI',
-    fields: [
-      ['scenarioId', 'Team Scenario', [['joint_recon', 'Joint Reconnaissance'], ['fortress_relief', 'Fortress Relief'], ['containment_team', 'Containment Team']]],
-      ['theaterId', 'Co-op Theater', [['aelos_training_ring', 'Aelos Training Ring'], ['orison_wreck', 'Orison Wreck Field'], ['meridian_colony', 'Meridian Colony Model']]],
-      ['difficulty', 'Difficulty', [['coordinated', 'Coordinated'], ['veteran', 'Veteran'], ['relentless', 'Relentless']]],
-      ['forceScale', 'Team Scale', [['two_commands', 'Two Commands'], ['joint_taskforce', 'Joint Taskforce'], ['coalition', 'Coalition']]],
-      ['aiProfile', 'Partner Profile', [['supportive', 'Supportive'], ['synchronized', 'Synchronized'], ['independent', 'Independent']]],
-      ['simulatedActivity', 'Coordination Protocol', [['shared_intel', 'Shared Intelligence'], ['split_objectives', 'Split Objectives'], ['mutual_support', 'Mutual Support']]]
-    ]
-  },
-  events: {
-    name: 'Events', detail: 'Limited-operation archive', participants: 'Local event ghosts // archived score envelopes',
-    fields: [
-      ['scenarioId', 'Event Archive', [['black_sky_week', 'Black Sky Week'], ['relay_forge', 'Relay Forge'], ['hivefall_protocol', 'Hivefall Protocol']]],
-      ['theaterId', 'Event Theater', [['aelos_festival_grid', 'Aelos Festival Grid'], ['veyra_lens_run', 'Veyra Lens Run'], ['karak_red_zone', 'Karak Red Zone']]],
-      ['difficulty', 'Challenge Tier', [['open', 'Open'], ['ranked', 'Ranked'], ['apex', 'Apex']]],
-      ['forceScale', 'Event Scale', [['focused', 'Focused'], ['expanded', 'Expanded'], ['spectacle', 'Spectacle']]],
-      ['aiProfile', 'Event Director', [['fair_play', 'Fair Play'], ['modifier_driven', 'Modifier Driven'], ['leaderboard_ghost', 'Leaderboard Ghost']]],
-      ['simulatedActivity', 'Active Modifier', [['supply_scarcity', 'Supply Scarcity'], ['sensor_blackout', 'Sensor Blackout'], ['accelerated_clock', 'Accelerated Clock']]]
-    ]
-  }
+  nova_rhea_voss: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/runtime/personnel/commander-rhea-voss.webp' }),
+  dominion_toren_vale: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/runtime/personnel/commander-toren-vale.webp' }),
+  syndicate_mara_quill: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/runtime/personnel/commander-mara-quill.webp' }),
+  nova_scout_ilan: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-ilan-reeve.webp' }),
+  nova_tech_sumi: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-sumi-kade.webp' }),
+  nova_medic_orr: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-orr-sato.webp' }),
+  nova_support_vik: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-vik-arden.webp' }),
+  dominion_scout_brann: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-brann-holt.webp' }),
+  dominion_tech_vesk: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-vesk-orra.webp' }),
+  dominion_medic_tala: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-tala-rune.webp' }),
+  dominion_support_kray: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-kray-damar.webp' }),
+  syndicate_scout_nix: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-nix-ravel.webp' }),
+  syndicate_tech_aya: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-aya-senn.webp' }),
+  syndicate_medic_lev: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-lev-iora.webp' }),
+  syndicate_support_kest: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-kest-morrow.webp' })
 });
 
 const ICON_PATHS = Object.freeze({
@@ -362,7 +301,7 @@ function ensureStylesheet() {
   if (document.querySelector('link[data-uga-command-style]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = new URL('./uga_command.css?v=20260828-stage9ops2', import.meta.url).href;
+  link.href = new URL('./uga_command.css?v=20260830-sessionroutes4', import.meta.url).href;
   link.dataset.ugaCommandStyle = 'true';
   document.head.appendChild(link);
 }
@@ -411,12 +350,10 @@ export function createUgaCommand(options = {}) {
   let selectedDistrictId = DISTRICT_DEFAULTS[options.selectedDistrict]?.id ? options.selectedDistrict : 'command';
   let activeView = 'command';
   let selectedMissionId = null;
-  let selectedClassicModeId = null;
   let selectedBuildPlotId = null;
   let activeHubRouteId = null;
   let confirmationKey = null;
   let sheetExpanded = false;
-  const classicSetupDrafts = {};
   const deploymentDrafts = new Map();
   let visible = options.visible !== false;
   let destroyed = false;
@@ -658,6 +595,18 @@ export function createUgaCommand(options = {}) {
     return result;
   }
 
+  function hostRoutesAvailable() {
+    return typeof options.onHostRoute === 'function';
+  }
+
+  function hubRouteReachable(entry) {
+    return campaignHubRouteIsReachable(entry, { hostRoutes: hostRoutesAvailable() });
+  }
+
+  function hubSessionReachable(entry) {
+    return campaignHubSessionIsReachable(entry, { hostRoutes: hostRoutesAvailable() });
+  }
+
   function resources() {
     const state = getState();
     const values = state.resources || state.economy || {};
@@ -835,62 +784,29 @@ export function createUgaCommand(options = {}) {
     }).join('');
   }
 
-  function classicDraft(modeId) {
-    if (!classicSetupDrafts[modeId]) {
-      classicSetupDrafts[modeId] = Object.fromEntries(
-        CLASSIC_MODE_CONFIGS[modeId].fields.map(([key, , choices]) => [key, choices[0][0]])
-      );
-    }
-    return classicSetupDrafts[modeId];
-  }
-
-  function classicSetupPanel(modeId) {
-    const mode = CLASSIC_MODE_CONFIGS[modeId];
-    const draft = classicDraft(modeId);
-    return `<div class="uga-classic-setup" data-classic-setup="${escapeHtml(modeId)}">
-      <header>
-        <button type="button" class="uga-classic-back" data-action="classic-back" aria-label="Return to Classic Modes">${icon('chevron')}</button>
-        <div><small>LOCAL SIMULATION CONFIGURATION</small><b>${escapeHtml(mode.name)}</b><span>${escapeHtml(mode.detail)}</span></div>
-        <em>OFFLINE</em>
-      </header>
-      <div class="uga-classic-setup-grid">${mode.fields.map(([key, label, choices]) => `<label>
-        <span>${escapeHtml(label)}</span>
-        <select data-classic-field="${escapeHtml(key)}">${choices.map(([value, name]) => `<option value="${escapeHtml(value)}" ${draft[key] === value ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select>
-      </label>`).join('')}</div>
-      <div class="uga-classic-activity">
-        ${icon('terminal')}
-        <div><small>SIMULATED ACTIVITY</small><b>${escapeHtml(mode.participants)}</b></div>
-        <span>LOCAL</span>
-      </div>
-      <div class="uga-classic-isolation">${icon('lock')}<p><b>ISOLATED SIMULATION</b><span>No expedition resources, research, faction readiness, discoveries, or exploration progression will be modified.</span></p></div>
-      <button type="button" class="uga-primary-button uga-classic-launch" data-action="classic-launch">SIMULATE CINEMATIC LAUNCH${icon('chevron')}</button>
-    </div>`;
-  }
-
-  function finalizedClassicSetup(modeId) {
-    const mode = CLASSIC_MODE_CONFIGS[modeId];
-    const draft = classicDraft(modeId);
-    const labels = {};
-    for (const [key, label, choices] of mode.fields) {
-      const selected = choices.find(([value]) => value === draft[key]) || choices[0];
-      labels[key] = { field: label, value: selected[1] };
-    }
-    return {
-      ...draft,
-      labels,
-      simulationOnly: true,
-      localOnly: true,
-      affectsExplorationProgression: false,
-      terminal: 'uga_command_core'
-    };
-  }
-
   function classicTerminal() {
-    const modes = Object.entries(CLASSIC_MODE_CONFIGS);
+    const modes = [
+      ['mode-standard', 'Standard / Classic', 'Offline RTS skirmish against authored AI with optional AI allies', false],
+      ['mode-campaign', 'Campaign', 'Existing five-mission playable Prologue', false],
+      ['', 'Co-op / Versus', 'Synchronized network sessions are not implemented in this build', true],
+      ['', 'MMO', 'Persistent planetary warfront authority is not implemented in this build', true]
+    ];
+    const supporting = [
+      ['mode-training', 'Training', 'KEEL-guided protected live-fire operation'],
+      ['mode-weekly', 'Weekly Operation', 'Current authored weekly briefing and deployment']
+    ];
+    const hostReady = hostRoutesAvailable();
     return `<section class="uga-classic-terminal">
-      <div class="uga-terminal-heading">${icon('terminal')}<div><small>COMMAND CORE // PHYSICAL TERMINAL</small><b>CLASSIC MODES</b></div><span class="uga-terminal-live">ISOLATED</span></div>
-      <p>Simulated setup and launch only. Exploration progression remains unchanged.</p>
-      ${selectedClassicModeId ? classicSetupPanel(selectedClassicModeId) : `<div class="uga-mode-grid">${modes.map(([id, mode]) => `<button type="button" data-classic-mode="${id}"><span>${escapeHtml(mode.name)}</span><small>${escapeHtml(mode.detail)}</small>${icon('chevron')}</button>`).join('')}</div>`}
+      <div class="uga-terminal-heading">${icon('terminal')}<div><small>COMMAND CORE // VALIDATED MASSFRONT LINK</small><b>SESSION TYPES</b></div><span class="uga-terminal-live">${hostReady ? 'OFFLINE READY' : 'HOST LOCKED'}</span></div>
+      <p>Available entries open the real MASSFRONT mode. Co-op / Versus and MMO remain separate locked routes until their real services exist.</p>
+      <div class="uga-mode-grid">${modes.map(([routeId, name, detail, locked]) => {
+        const enabled = Boolean(routeId && hostReady && !locked);
+        return `<button type="button" data-session-mode="${escapeHtml(name)}" ${enabled ? `data-host-route="${escapeHtml(routeId)}"` : 'disabled aria-disabled="true"'}><span>${escapeHtml(name)}</span><small>${escapeHtml(detail)} // ${enabled ? 'OFFLINE PLAYABLE' : locked ? 'NETWORK UNAVAILABLE' : 'MASSFRONT HOST REQUIRED'}</small>${enabled ? icon('chevron') : icon('lock')}</button>`;
+      }).join('')}</div>
+      <div class="uga-mode-support"><small>SUPPORTING OFFLINE PLAYLISTS</small><div class="uga-mode-grid">${supporting.map(([routeId, name, detail]) => {
+        const enabled = hostReady;
+        return `<button type="button" ${enabled ? `data-host-route="${escapeHtml(routeId)}"` : 'disabled aria-disabled="true"'}><span>${escapeHtml(name)}</span><small>${escapeHtml(detail)} // ${enabled ? 'PLAYABLE' : 'MASSFRONT HOST REQUIRED'}</small>${enabled ? icon('chevron') : icon('lock')}</button>`;
+      }).join('')}</div></div>
     </section>`;
   }
 
@@ -1321,18 +1237,41 @@ export function createUgaCommand(options = {}) {
   function hubStatusLabel(status) {
     if (status === CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED) return 'IMPLEMENTED';
     if (status === CAMPAIGN_HUB_ROUTE_STATUS.LOCAL_PREVIEW) return 'LOCAL PREVIEW';
+    if (status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE) return hostRoutesAvailable() ? 'MASSFRONT LIVE' : 'HOST REQUIRED';
     return 'HOST REQUIRED';
   }
 
+  function hubSessionStatusLabel(entry) {
+    if (entry.status === CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE) return 'NETWORK UNAVAILABLE';
+    return hubSessionReachable(entry) ? 'OFFLINE READY' : 'MASSFRONT HOST REQUIRED';
+  }
+
   function campaignHubPanel() {
-    return `<div class="uga-context-scroll uga-campaign-hub"><div class="uga-section-title"><small>EXPERIMENTAL MODULE // ISOLATED NAVIGATION</small><h2>Campaign Hub</h2><p>The Galactic Campaign converts familiar MASSFRONT functions into ship facilities. Availability below reflects real wiring; unfinished host services stay disabled.</p></div><div class="uga-hub-route-list">${CAMPAIGN_HUB_ROUTES.map(entry => {
-      const reachable = campaignHubRouteIsReachable(entry);
+    const serviceRoutes = CAMPAIGN_HUB_ROUTES.filter(entry => !CAMPAIGN_HUB_SESSION_ROUTE_IDS.has(entry.id));
+    return `<div class="uga-context-scroll uga-campaign-hub"><div class="uga-section-title"><small>GALACTIC STRATEGIC WAR TABLE // UGA COMMAND</small><h2>Campaign Hub</h2><p>The shared strategic layer owns offline MASSFRONT navigation now and is structured for future persistent sectors without replacing offline play. No MMO connection is claimed in this build.</p></div>
+      <section class="uga-strategic-layer-model" aria-label="MASSFRONT strategic layer availability">
+        <header><span>${icon('overview')}</span><div><small>ONE WAR TABLE // TWO DELIVERY HORIZONS</small><b>SHARED STRATEGIC LAYER</b></div></header>
+        <div class="uga-strategic-horizons">
+          <article class="is-live"><small>CURRENT</small><b>OFFLINE COMMAND</b><span>Real local play and authored campaign routes</span></article>
+          <article class="is-future"><small>FUTURE</small><b>PERSISTENT MMO</b><span>Network authority and sector persistence not implemented</span></article>
+        </div>
+      </section>
+      <section class="uga-session-types" aria-label="MASSFRONT session types"><header><small>SESSION TYPES</small><span>REAL ROUTES ONLY</span></header><div class="uga-session-type-grid">${CAMPAIGN_HUB_SESSION_TYPES.map(entry => {
+        const reachable = hubSessionReachable(entry);
+        return `<article class="uga-session-type is-${entry.status}">
+          <span class="uga-session-type-icon">${icon(entry.icon)}</span>
+          <div><small>${escapeHtml(hubSessionStatusLabel(entry))}</small><h3>${escapeHtml(entry.label)}</h3><p>${escapeHtml(entry.description)}</p><b>${escapeHtml(entry.detail)}</b></div>
+          <button type="button" data-session-route="${escapeHtml(entry.id)}" ${reachable ? '' : 'disabled aria-disabled="true"'}>${reachable ? 'OPEN' : 'UNAVAILABLE'}</button>
+        </article>`;
+      }).join('')}</div></section>
+      <section class="uga-hub-services"><header><small>COMMAND SYSTEMS & SERVICES</small><span>SHARED NAVIGATION</span></header><div class="uga-hub-route-list">${serviceRoutes.map(entry => {
+      const reachable = hubRouteReachable(entry);
       return `<article class="uga-hub-route is-${entry.status}${activeHubRouteId === entry.id ? ' is-selected' : ''}">
         <span class="uga-hub-route-icon">${icon(entry.icon)}</span>
         <div class="uga-hub-route-copy"><div><h3>${escapeHtml(entry.label)}</h3><span>${escapeHtml(hubStatusLabel(entry.status))}</span></div><p>${escapeHtml(entry.description)}</p><small>${escapeHtml(entry.detail)}</small></div>
         <button type="button" data-hub-route="${escapeHtml(entry.id)}" ${reachable ? '' : 'disabled'}>${reachable ? 'OPEN' : 'UNAVAILABLE'}</button>
       </article>`;
-    }).join('')}</div></div>`;
+    }).join('')}</div></section></div>`;
   }
 
   function renderContext() {
@@ -1370,7 +1309,7 @@ export function createUgaCommand(options = {}) {
     if (!target) return false;
     if (target.kind === 'route') {
       const entry = getCampaignHubRoute(target.routeId);
-      if (!entry || !campaignHubRouteIsReachable(entry)) {
+      if (!entry || !hubRouteReachable(entry)) {
         activeHubRouteId = target.routeId || null;
         activeView = 'campaign_hub';
         sheetExpanded = true;
@@ -1388,6 +1327,11 @@ export function createUgaCommand(options = {}) {
     }
     if (target.kind === 'host-action') {
       if (target.action === 'open-galaxy') call('onOpenGalaxy');
+      return true;
+    }
+    if (target.kind === 'host-route') {
+      if (!hostRoutesAvailable()) return false;
+      call('onHostRoute', target.routeId);
       return true;
     }
     if (target.kind === 'district') {
@@ -1544,11 +1488,25 @@ export function createUgaCommand(options = {}) {
       render();
       return;
     }
+    if (button.dataset.sessionRoute) {
+      const sessionType = getCampaignHubSessionType(button.dataset.sessionRoute);
+      activeHubRouteId = sessionType?.routeId || null;
+      if (sessionType && hubSessionReachable(sessionType)) {
+        openNavigationTarget({ kind: 'route', routeId: sessionType.routeId }, sessionType.routeId);
+      } else {
+        render();
+      }
+      return;
+    }
     if (button.dataset.hubRoute) {
       const entry = getCampaignHubRoute(button.dataset.hubRoute);
       activeHubRouteId = entry?.id || null;
-      if (entry && campaignHubRouteIsReachable(entry)) openNavigationTarget(entry.target, entry.id);
+      if (entry && hubRouteReachable(entry)) openNavigationTarget(entry.target, entry.id);
       else render();
+      return;
+    }
+    if (button.dataset.hostRoute) {
+      if (hostRoutesAvailable()) call('onHostRoute', button.dataset.hostRoute);
       return;
     }
     if (button.dataset.buildPlot) {
@@ -1651,20 +1609,6 @@ export function createUgaCommand(options = {}) {
       queueMicrotask(() => readDeploymentPlanner(root.querySelector('.uga-deployment-planner')));
       return;
     }
-    if (button.dataset.classicMode) {
-      selectedClassicModeId = button.dataset.classicMode;
-      classicDraft(selectedClassicModeId);
-      render();
-      return;
-    }
-    if (button.dataset.action === 'classic-back') {
-      selectedClassicModeId = null;
-      render();
-      return;
-    }
-    if (button.dataset.action === 'classic-launch' && selectedClassicModeId) {
-      return void call('onClassicMode', selectedClassicModeId, finalizedClassicSetup(selectedClassicModeId));
-    }
     if (button.dataset.action === 'overview') {
       activeHubRouteId = null;
       sheetExpanded = false;
@@ -1706,11 +1650,6 @@ export function createUgaCommand(options = {}) {
   }, true);
 
   root.addEventListener('change', event => {
-    const classicField = event.target.closest('[data-classic-field]');
-    if (classicField && selectedClassicModeId) {
-      classicDraft(selectedClassicModeId)[classicField.dataset.classicField] = classicField.value;
-      return;
-    }
     const personnel = event.target.closest('[data-deploy="commanderId"], [data-specialist]');
     if (personnel) {
       syncPersonnelPortrait(personnel);
@@ -1812,6 +1751,7 @@ export function createUgaCommand(options = {}) {
       if (allowed.has(view)) {
         activeHubRouteId = null;
         activeView = view;
+        sheetExpanded = view !== 'command';
       }
       render();
       return api;

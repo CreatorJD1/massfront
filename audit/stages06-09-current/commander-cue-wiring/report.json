@@ -1,0 +1,133 @@
+{
+  "probe": "commander-cue-wiring",
+  "startedUtc": "2026-08-31T00:18:24.119Z",
+  "finishedUtc": "2026-08-31T00:18:24.318Z",
+  "source": {
+    "branch": "cursor/strip-mass-node-bloom",
+    "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+    "dirty": true,
+    "dirtyFingerprint": "62b31d204dddeb79e7975d1db3a16f56785c1f1eaef17da1e96aa8a2b4243916",
+    "path": "src/game/sim.js",
+    "sha256": "ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48",
+    "bytes": 522210
+  },
+  "checks": [
+    {
+      "name": "real sim cue-wiring block found",
+      "ok": true,
+      "detail": "4347 chars"
+    },
+    {
+      "name": "cue wiring consumes no random values",
+      "ok": true,
+      "detail": "no simulation RNG call"
+    },
+    {
+      "name": "cue wiring consumes no wall clock",
+      "ok": true,
+      "detail": "stats.t only"
+    },
+    {
+      "name": "casualty uses fixed-step milliseconds",
+      "ok": true,
+      "detail": "{\"category\":\"casualty\",\"kind\":\"unit\",\"opts\":{\"subject\":\"Rhino\",\"wx\":100,\"wy\":200,\"force\":false,\"now\":1250}}"
+    },
+    {
+      "name": "ordinary unit casualty is classified correctly",
+      "ok": true,
+      "detail": "casualty.unit / Rhino"
+    },
+    {
+      "name": "source burst limiter suppresses casualty spam",
+      "ok": true,
+      "detail": "source-rate"
+    },
+    {
+      "name": "terminal commander casualty bypasses ordinary loss throttle",
+      "ok": true,
+      "detail": "{\"category\":\"casualty\",\"kind\":\"commander\",\"opts\":{\"subject\":\"commander\",\"wx\":20,\"wy\":30,\"force\":true,\"now\":2000}}"
+    },
+    {
+      "name": "friendly strategic launch maps to launch",
+      "ok": true,
+      "detail": "{\"category\":\"strategic\",\"kind\":\"launch\",\"opts\":{\"subject\":\"nova\",\"wx\":300,\"wy\":400,\"force\":true,\"data\":{\"team\":0},\"now\":10000}}"
+    },
+    {
+      "name": "hostile strategic launch maps to incoming",
+      "ok": true,
+      "detail": "{\"category\":\"strategic\",\"kind\":\"incoming\",\"opts\":{\"subject\":\"singularity\",\"wx\":500,\"wy\":600,\"force\":true,\"data\":{\"team\":1},\"now\":17000}}"
+    },
+    {
+      "name": "research completion carries id and fixed-step timestamp",
+      "ok": true,
+      "detail": "{\"category\":\"research\",\"kind\":\"complete\",\"opts\":{\"subject\":\"optics\",\"now\":23750}}"
+    },
+    {
+      "name": "confirmed contacts emit first, heavy, then air without a burst",
+      "ok": true,
+      "detail": "first,heavy,air"
+    },
+    {
+      "name": "contact subjects come from faction/type truth",
+      "ok": true,
+      "detail": "legion,Goliath,Wasp"
+    },
+    {
+      "name": "backwards simulation clock resets match-local cue state",
+      "ok": true,
+      "detail": "{\"first\":false,\"heavy\":false,\"air\":false,\"last\":0}"
+    },
+    {
+      "name": "unit death path raises player casualty cues",
+      "ok": true,
+      "detail": "killUnit"
+    },
+    {
+      "name": "commander death raises terminal objective failure",
+      "ok": true,
+      "detail": "killUnit"
+    },
+    {
+      "name": "last hostile commander raises objective completion",
+      "ok": true,
+      "detail": "killUnit"
+    },
+    {
+      "name": "structure death path raises casualty cues",
+      "ok": true,
+      "detail": "damageBld"
+    },
+    {
+      "name": "last purge nest raises exact objective completion",
+      "ok": true,
+      "detail": "damageBld"
+    },
+    {
+      "name": "authoritative research mutation raises completion cue",
+      "ok": true,
+      "detail": "applyResearch"
+    },
+    {
+      "name": "NOVA launch path raises a strategic cue",
+      "ok": true,
+      "detail": "novaFire"
+    },
+    {
+      "name": "singularity launch path raises a strategic cue",
+      "ok": true,
+      "detail": "spawnSingularity"
+    },
+    {
+      "name": "normal fixed-step unit loop polls confirmed intel",
+      "ok": true,
+      "detail": "unitTick"
+    },
+    {
+      "name": "internal detonation conversion suppresses duplicate singularity cue",
+      "ok": true,
+      "detail": "superDetonation"
+    }
+  ],
+  "passed": 23,
+  "failed": 0
+}

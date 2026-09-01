@@ -1451,8 +1451,13 @@ def purge_orphans(keep_collection=None):
         if not coll.all_objects and not coll.children:
             removed.append("collection:" + coll.name)
             bpy.data.collections.remove(coll)
-    for block in (bpy.data.meshes, bpy.data.materials, bpy.data.collections):
-        for item in list(block):
-            if item.users == 0:
-                block.remove(item)
+    # Only meshes, and only the ones orphaned by the objects just removed.
+    # Sweeping 0-user MATERIALS as well broke the junction generator: it holds
+    # Python references to its material set to build the provenance report, and
+    # a material with no faces yet still has zero users. Blender drops genuine
+    # orphans on save anyway; this pass exists for the factory Cube, not for
+    # datablock housekeeping.
+    for item in list(bpy.data.meshes):
+        if item.users == 0:
+            bpy.data.meshes.remove(item)
     return removed

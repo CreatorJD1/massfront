@@ -28,7 +28,30 @@ database_id = "e3c74e0d-59b8-427e-92b8-ea8a3bbd6573"
 # if it is put anywhere else.
 migrations_dir = "migrations-ledger"
 
+# One object owns one launched match. New namespaces use the declarative
+# SQLite-backed class export; this is intentionally not a legacy migration.
+[[durable_objects.bindings]]
+name = "MATCH_ROOMS"
+class_name = "MatchRoom"
+
+[exports.MatchRoom]
+type = "durable-object"
+storage = "sqlite"
+
+# 1.33.49 release decision: multiplayer is player-visible. Capability
+# discovery still verifies the D1 tables and Durable Object binding before it
+# advertises any route, so a missing migration remains fail-closed.
+[vars]
+MULTIPLAYER_LOBBIES_ENABLED = "1"
+MULTIPLAYER_INVITES_ENABLED = "1"
+MULTIPLAYER_REALTIME_ENABLED = "1"
+ONLINE_COUNT_ENABLED = "1"
+SOCIAL_WORLD_CHAT_ENABLED = "1"
+SOCIAL_CHAT_ENABLED = "1"
 # ---- e-mail verification -----------------------------------------------------
+# Optional account-address confirmation only. It is permanently independent of
+# Social, multiplayer, and offline play; no deployment variable can turn it
+# back into a game-access gate.
 # DEV_ECHO_CODE=1 makes POST /verify/request return the six-digit code in its own
 # response body. It exists so the verification path can be driven end to end
 # before a mail provider is wired up — see sendVerificationEmail() in
@@ -51,7 +74,7 @@ migrations_dir = "migrations-ledger"
 # allowed_sender_addresses = [ "verify@example.com" ]
 # remote = true
 #
-# [vars]
+# Add MAIL_FROM to the active [vars] table above only after sender onboarding.
 # MAIL_FROM = "verify@example.com"
 #
 # Runtime contract: env.EMAIL exposes async send(MessageBuilder), and
@@ -59,19 +82,23 @@ migrations_dir = "migrations-ledger"
 # either is absent/invalid or Email Service rejects the send, /verify/request
 # keeps its existing non-throwing `sent:false` response. No code/token is
 # logged. Do not add the binding or MAIL_FROM until the domain owner approves.
-#
 # ---- disabled social communication foundation -------------------------------
 # Chat and presence routes are compiled and locally tested, but capability
-# discovery reports both false unless the operator explicitly adds these to a
-# [vars] table (merge them with MAIL_FROM if that table is enabled):
+# discovery reports both false unless the operator explicitly adds them to the
+# active [vars] table:
 #
 # SOCIAL_CHAT_ENABLED = "1"
 # SOCIAL_PRESENCE_ENABLED = "1"
-# MULTIPLAYER_LOBBIES_ENABLED = "1"
-# MULTIPLAYER_INVITES_ENABLED = "1"
+# Multiplayer lobby, invite, and realtime flags are active above by Jason's
+# explicit 1.33.49 release decision. Chat and presence remain separately off.
 #
-# Do not set these for a release until migration 0002, moderation operations,
-# store review, and live privacy/load checks are complete.
+# Moderation operator routes use a SEPARATE authorization realm and remain
+# fail-closed until a Cloudflare secret named MODERATION_OPERATOR_KEYS_JSON is
+# installed. Its value is a JSON object mapping a stable actor label to an
+# independently generated 32+ character token, for example:
+#   {"reviewer-a":"<random secret>"}
+# Operators send `Authorization: Moderator <token>`. Never place the secret in
+# this file, never reuse a player bearer token, and rotate one actor at a time.
 #
 # ---- migrations ----------------------------------------------------------------
 # schema.sql is now only a SYNCHRONISED SNAPSHOT of the current schema. It is

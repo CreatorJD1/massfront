@@ -1,6 +1,7 @@
 /* Focused platoon formation/patrol regression and mobile visual capture.
    Usage: node tools/test-platoon-orders.mjs [local URL] */
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import {assertHardwareGpu} from './chrome-gpu.mjs';
 import {mkdir} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -18,10 +19,39 @@ const browser=await launchPwBrowser({headless:true,executablePath:chrome,
 try{
   const page=await browser.newPage({viewport:{width:393,height:852},deviceScaleFactor:2,hasTouch:true,isMobile:true,colorScheme:'dark'});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  /* The account gate opens asynchronously during the title handoff. Seed its
+     real persisted offline choice before any app script runs, then keep the
+     modal suppressed for this gameplay-only capture even if that handoff is
+     delayed beyond the normal boot-readiness signal. */
+  await page.addInitScript(()=>{
+    try{localStorage.setItem('mf_auth_gate_v1','1');}catch(_){}
+  });
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  await page.addStyleTag({content:'#apOverlay,#apConfirmOverlay,#updScr,#startScreen{display:none!important}'});
+  const gpu=await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof formationTargets==='function'&&typeof allocMoveCohort==='function'&&
     typeof tickMoveCohorts==='function'&&typeof tickPatrolRoutes==='function'&&typeof commitPatrolDraft==='function'&&
     typeof stopAttract==='function'&&typeof renderMinimap==='function',null,{timeout:60000});
+  /* Exercise the title's real dismissal path before staging the patrol scene.
+     Boot readiness can arrive during its 2.8 s reveal, so waiting on engine
+     globals alone is not enough to guarantee an unobstructed screenshot. */
+  await page.waitForFunction(()=>document.body.classList.contains('mfIntroDone')||
+    !!document.getElementById('mfIntroStart'),null,{timeout:10000});
+  const introStart=page.locator('#mfIntroStart');
+  if(await introStart.isVisible())await introStart.click();
+  await page.waitForFunction(()=>{
+    const el=document.getElementById('mfPreAlphaIntro');
+    return document.body.classList.contains('mfIntroDone')&&(!el||el.hidden||el.getAttribute('aria-hidden')==='true');
+  },null,{timeout:10000});
+  await page.addStyleTag({content:'#mfPreAlphaIntro{display:none!important}'});
+  await page.evaluate(()=>{
+    if(typeof apGateSatisfied==='function')apGateSatisfied('offline');
+    else if(typeof apClose==='function')apClose();
+  });
+  await page.waitForFunction(()=>['apOverlay','apConfirmOverlay'].every(id=>{
+    const el=document.getElementById(id);
+    return !el||getComputedStyle(el).display==='none';
+  }),null,{timeout:10000});
 
   const result=await page.evaluate(()=>{
     stopAttract();running=false;demoMode=false;
@@ -109,6 +139,8 @@ try{
     'large patrol quorum/shared-field contract failed: '+JSON.stringify(result.big));
   assert(errors.length===0,'page errors:\n'+errors.join('\n'));
 
+  await page.waitForFunction(()=>typeof FX==='object'&&FX&&FX.line&&typeof FX.line.add==='function'&&
+    FX.ring&&typeof FX.ring.add==='function',null,{timeout:60000});
   await page.evaluate(()=>{
     for(let i=0;i<unitHigh;i++)ualive[i]=0;
     unitHigh=0;freeList.length=0;teamCount[0]=teamCount[1]=teamCount[2]=0;usel.fill(0);
@@ -150,7 +182,12 @@ try{
     route:patrolRoutes[uPatrolRoute[formationMembers()[0]]]?.step,paths:META.settings.orderPaths,preview:!!orderPreview}));
   assert(visualProbe.probe.routeLines>0&&visualProbe.probe.routeRings>0,
     'active patrol leg/slot cues were not submitted to the 3D renderer: '+JSON.stringify(visualProbe));
+  const visualOccluders=await page.evaluate(()=>Array.from(document.querySelectorAll(
+    '.overlay,.apOverlay,.apConfirmOverlay,#mfPreAlphaIntro')).filter(el=>{
+      const s=getComputedStyle(el);return s.display!=='none'&&s.visibility!=='hidden'&&el.offsetParent!==null;
+    }).map(el=>el.id||el.className));
+  assert(visualOccluders.length===0,'front-end gate occluded platoon visual evidence: '+visualOccluders.join(','));
   await page.screenshot({path:shot,fullPage:false});
   assert(errors.length===0,'page errors during capture:\n'+errors.join('\n'));
-  console.log(JSON.stringify({ok:true,...result,visualProbe,screenshot:shot},null,2));
+  console.log(JSON.stringify({ok:true,gpu,...result,visualProbe,screenshot:shot},null,2));
 }finally{await browser.close();}

@@ -1,4 +1,5 @@
 import {
+  COMMANDER_CATALOG,
   DISCOVERY_CATALOG,
   DISTRICT_ADJACENCIES,
   DISTRICT_CATALOG,
@@ -13,6 +14,7 @@ import {
   SURVEY_CATALOG,
   SYSTEM_CATALOG
 } from './catalog.js';
+import { COMMANDER1_BY_CAMPAIGN_FACTION, isSelectableCommanderIdV1 } from './commander_roster_contract.js';
 import { clamp, deepClone } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 import { assertDomainState } from './state_store.js';
@@ -150,6 +152,7 @@ export function commitResearch(state, researchId, amount = null) {
 
 export function grantFactionResidency(state, factionId) {
   assertDomainState(state);
+  if (!state.commissioning?.completed) fail('Complete new-career faction commissioning before recruiting resident factions.', 'CAREER_COMMISSIONING_REQUIRED', 'commissioning');
   if (state.ship?.districts?.factions?.commissioned === false) fail('Coalition Embassy must be commissioned before faction residency.', 'EMBASSY_NOT_COMMISSIONED', 'ship.districts.factions.commissioned');
   if (!RESIDENT_FACTION_IDS.includes(factionId) || !FACTION_CATALOG[factionId]?.hireable) fail('Only Nova, Dominion, or Syndicate can become residents.', 'FACTION_NOT_RESIDENT_CAPABLE', 'factionId');
   if (state.factions[factionId].resident) return state;
@@ -165,26 +168,74 @@ export function grantFactionResidency(state, factionId) {
   faction.readiness = 100;
   faction.loyalty = Math.max(50, faction.loyalty);
   faction.residentSinceRevision = state.revision + 1;
-  for (const [commanderId, commander] of Object.entries(next.personnel.commanders)) {
-    if (commanderId.startsWith(`${factionId}_`)) {
-      commander.unlocked = true;
-      commander.status = 'ready';
-      commander.readiness = 100;
-    }
+  for (const [commanderId, definition] of Object.entries(COMMANDER_CATALOG)) {
+    if (definition.factionId !== factionId) continue;
+    const commander = next.personnel.commanders[commanderId];
+    commander.unlocked = true;
+    commander.status = commander.injury ? 'recovering' : 'ready';
+    commander.readiness = 100;
   }
-  for (const [specialistId, specialist] of Object.entries(next.personnel.specialists)) {
-    if (specialistId.startsWith(`${factionId}_`)) {
-      specialist.unlocked = true;
-      specialist.status = 'ready';
-      specialist.readiness = 100;
-    }
+  for (const [specialistId, definition] of Object.entries(SPECIALIST_CATALOG)) {
+    if (definition.factionId !== factionId) continue;
+    const specialist = next.personnel.specialists[specialistId];
+    specialist.unlocked = true;
+    specialist.status = specialist.injury ? 'recovering' : 'ready';
+    specialist.readiness = 100;
   }
   next.revision += 1;
   assertDomainState(next);
   return next;
 }
 
-export function getSurveyEligibility(state, surveyId) {
+export function commissionCareerFaction(state, factionId, commanderId = COMMANDER1_BY_CAMPAIGN_FACTION[factionId]) {
+  assertDomainState(state);
+  if (!RESIDENT_FACTION_IDS.includes(factionId) || !FACTION_CATALOG[factionId]?.hireable) fail('Choose Nova, Dominion, or Syndicate for career commissioning.', 'COMMISSIONING_FACTION_INVALID', 'factionId');
+  if (!isSelectableCommanderIdV1(commanderId) || !COMMANDER_CATALOG[commanderId] || COMMANDER_CATALOG[commanderId].factionId !== factionId) fail('Commissioning commander is not selectable for this faction.', 'COMMISSIONING_COMMANDER_INVALID', 'commanderId');
+  if (commanderId !== COMMANDER1_BY_CAMPAIGN_FACTION[factionId]) fail('A new career begins with that faction\'s Commander 1.', 'COMMISSIONING_COMMANDER1_REQUIRED', 'commanderId');
+  if (state.commissioning?.completed) {
+    if (state.commissioning.factionId === factionId && state.commissioning.commanderId === commanderId) return state;
+    fail('Career faction commissioning is permanent.', 'COMMISSIONING_ALREADY_COMPLETE', 'commissioning');
+  }
+
+  const next = deepClone(state);
+  const completedRevision = state.revision + 1;
+  next.commissioning = { factionId, commanderId, completed: true, completedRevision };
+  const faction = next.factions[factionId];
+  faction.resident = true;
+  faction.recruitmentComplete = true;
+  faction.status = 'ready';
+  faction.readiness = 100;
+  faction.loyalty = Math.max(50, faction.loyalty);
+  faction.residentSinceRevision = completedRevision;
+
+  const commander = next.personnel.commanders[commanderId];
+  commander.unlocked = true;
+  commander.status = commander.injury ? 'recovering' : 'ready';
+  commander.readiness = 100;
+  commander.loyalty = Math.max(50, commander.loyalty);
+  for (const [specialistId, definition] of Object.entries(SPECIALIST_CATALOG)) {
+    if (definition.factionId !== factionId) continue;
+    const specialist = next.personnel.specialists[specialistId];
+    specialist.unlocked = true;
+    specialist.status = specialist.injury ? 'recovering' : 'ready';
+    specialist.readiness = 100;
+  }
+  next.revision = completedRevision;
+  assertDomainState(next);
+  return next;
+}
+
+export function surveySensorProfile(state) {
+  const district = state?.ship?.districts?.survey;
+  const level = Math.max(1, Number(district?.level) || 1);
+  const commissioned = district?.commissioned !== false;
+  const cap = DISTRICT_CATALOG.survey?.tiers?.[level - 1]?.capacity || {};
+  const range = Math.max(0.4, (cap.probeRange || 1) * (commissioned ? 1 : 0.4));
+  const threshold = Math.max(46, 82 - (level - 1) * 12);
+  return { range, threshold, level, commissioned };
+}
+
+export function getSurveyEligibility(state, surveyId, opts = {}) {
   const survey = SURVEY_CATALOG[surveyId];
   if (!survey) return { ok: false, issues: [issue('SURVEY_UNKNOWN', 'Unknown survey.', 'surveyId')] };
   const issues = [];
@@ -194,9 +245,34 @@ export function getSurveyEligibility(state, surveyId) {
   if (surveyState.status === 'locked') issues.push(issue('SURVEY_LOCKED', 'Survey is not yet available.', `surveys.${surveyId}.status`));
   if (state.ship.districts.survey.commissioned === false) issues.push(issue('SURVEY_NOT_COMMISSIONED', 'Survey Lab must be commissioned.', 'ship.districts.survey.commissioned'));
   if (state.ship.districts.survey.level < survey.requiredSurveyLevel) issues.push(issue('SURVEY_LEVEL_REQUIRED', `Survey Lab level ${survey.requiredSurveyLevel} is required.`, 'ship.districts.survey.level'));
+  if (opts.planetId && survey.planetId && survey.planetId !== opts.planetId) {
+    issues.push(issue('SURVEY_WRONG_PLANET', 'This signal is on another body in the system.', 'planetId'));
+  }
   const probeCost = Math.max(1, survey.probeCost - (calculateFacilityCapabilities(state).surveyProbeDiscount || 0));
   if (state.resources.probes < probeCost) issues.push(issue('PROBE_SHORTAGE', `Survey requires ${probeCost} probe.`, 'resources.probes'));
   return { ok: issues.length === 0, issues, survey, probeCost };
+}
+
+export function spendSurveyProbe(state) {
+  assertDomainState(state);
+  if ((state.resources.probes || 0) < 1) fail('No probes remaining.', 'PROBE_SHORTAGE', 'resources.probes');
+  const next = deepClone(state);
+  next.resources.probes -= 1;
+  next.revision += 1;
+  return next;
+}
+
+export function recoverPlanetFind(state, find) {
+  assertDomainState(state);
+  const next = spendSurveyProbe(state);
+  const type = find?.type;
+  const amount = Math.max(0, Number(find?.amount) || 0);
+  if (type && RESOURCE_KEYS.includes(type) && amount) next.resources[type] += amount;
+  const discoveryId = find?.discoveryId;
+  if (discoveryId && DISCOVERY_CATALOG[discoveryId] && !next.discoveries.foundIds.includes(discoveryId)) {
+    next.discoveries.foundIds.push(discoveryId);
+  }
+  return next;
 }
 
 export function deployProbe(state, surveyId) {

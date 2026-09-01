@@ -686,6 +686,7 @@ function mfAssetTex(gl,url){
   const t=gl.createTexture();
   const rec={tex:t,ready:false};
   const img=new Image();
+  img.crossOrigin='anonymous';
   img.onload=()=>{
     /* Image decode can outlive WEBGL_lose_context. A replacement request now
        owns this URL; the detached callback must not upload through its dead

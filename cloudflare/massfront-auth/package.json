@@ -10,6 +10,8 @@
     "test": "node test/social.test.mjs",
     "dev:social": "wrangler dev --local --persist-to .wrangler/audit-state --port 8799 --ip 127.0.0.1 --var SOCIAL_CHAT_ENABLED:1 --var SOCIAL_PRESENCE_ENABLED:1 --var MULTIPLAYER_LOBBIES_ENABLED:1 --var MULTIPLAYER_INVITES_ENABLED:1 --var DEV_ECHO_CODE:1",
     "test:e2e": "node test/e2e-worker.mjs",
+    "test:e2e:realtime": "node test/e2e-realtime.mjs",
+    "test:e2e:realtime:audit": "node test/verify-realtime-local-audit.mjs",
     "test:ratelimit:reset": "wrangler d1 execute massfront-accounts --local --persist-to .wrangler/audit-state --command \"DELETE FROM attempts\"",
     "staging:plan": "node test/staging-provision.mjs",
     "staging:run": "node test/staging-provision.mjs --confirm",

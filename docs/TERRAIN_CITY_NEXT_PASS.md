@@ -4,7 +4,7 @@
 > `planCityInfrastructure()` / `applyGroundDestruction()` branch. Those APIs
 > have no definitions in the recovered v1.33.31 tree. Current ownership is
 > paint + masks in `sim.js` / `gl.js` / `terrain.js` / `render3d.js`, with
-> city combat gated on `CITYG >= 1`. Read `docs/HANDOFF-2026-08-13.md`
+> city combat gated on `CITYG >= 1`. Read `docs/archive/handoffs/2026-08/HANDOFF-2026-08-13.md`
 > section 3.1 and "City-combat surface recovery" before editing source.
 > Do not revive this plan as part of a combat or material pass.
 

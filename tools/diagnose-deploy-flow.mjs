@@ -48,6 +48,7 @@ async function startStaticServer() {
 }
 
 const steps = [];
+const timedSamples = [];
 
 async function snapshot(page, label) {
   const file = `${String(steps.length).padStart(2, '0')}-${label.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.png`;
@@ -122,7 +123,10 @@ try {
   await tap(page, '#mfIntroStart', 'intro');
   await snapshot(page, 'after intro');
   await tap(page, '#apOfflineBtn', 'PLAY OFFLINE');
-  await snapshot(page, 'after play offline');
+  await snapshot(page, 'after account offline choice');
+  await tap(page, '#mfLaunchPlay', 'LAUNCH PLAY OFFLINE');
+  await snapshot(page, 'after launcher play offline');
+  await tap(page, '#mfOnboardingSkip', 'SKIP FIRST-RUN SETUP');
   await tap(page, '#startBtn', 'WAR ROOM');
   await snapshot(page, 'after war room');
   await tap(page, '.warCard[data-mode="standard"]', 'standard card');
@@ -169,16 +173,38 @@ try {
     await snapshot(page, 'after base deployed');
   }
 
+  /* A clean entry frame does not disprove the reported gameplay freeze. Watch
+     the authoritative fixed-step clock for one real minute and fail if an
+     unpaused live match stops advancing between samples. */
+  if (await page.evaluate(() => typeof matchLive !== 'undefined' && matchLive === true).catch(() => false)) {
+    for (let i = 0; i < 12; i++) {
+      await page.waitForTimeout(5000);
+      const sample = await page.evaluate(() => ({
+        wall: performance.now(), running, matchLive, paused,
+        simTime: Number(stats && stats.t), matchClock: Number(matchClock),
+        units: typeof unitCount !== 'undefined' ? unitCount : (typeof simHot !== 'undefined' ? simHot.live : null)
+      }));
+      timedSamples.push(sample);
+      console.log(`    timed ${i + 1}/12: sim=${sample.simTime.toFixed(2)} clock=${sample.matchClock.toFixed(2)} units=${sample.units} paused=${sample.paused}`);
+    }
+  }
+  const stalledSamples = timedSamples.slice(1).filter((sample, index) =>
+    sample.running && sample.matchLive && !sample.paused && sample.simTime <= timedSamples[index].simTime
+  );
+
   const networkEvidence = await networkIsolation.finalize('deployment-flow diagnostic');
   await writeFile(join(OUT, 'report.json'),
-    JSON.stringify({ gpu: gpu.renderer, errors, steps, networkIsolation: networkEvidence }, null, 2) + '\n');
+    JSON.stringify({ gpu: gpu.renderer, errors, steps, timedSamples, stalledSamples, networkIsolation: networkEvidence }, null, 2) + '\n');
 
   console.log('\n=== RUNTIME ERRORS ===');
   console.log(errors.length ? errors.slice(0, 20).join('\n') : '  none');
   const last = steps[steps.length - 1].state;
   console.log('\n=== VERDICT ===');
   console.log(`  final: running=${last.running} matchLive=${last.matchLive} demoMode=${last.demoMode} units=${last.liveUnits}`);
+  console.log(`  timed clock: ${timedSamples.length ? `${timedSamples[0].simTime.toFixed(2)} -> ${timedSamples.at(-1).simTime.toFixed(2)}` : 'not reached'}`);
+  console.log(`  stalled samples: ${stalledSamples.length}`);
   console.log(`  screenshots: ${OUT}`);
+  if (stalledSamples.length) process.exitCode = 1;
 } finally {
   await Promise.race([closePwBrowser(), new Promise(r => setTimeout(r, 5000))]);
   await server.close();

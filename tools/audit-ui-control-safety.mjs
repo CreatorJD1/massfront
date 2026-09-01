@@ -146,7 +146,8 @@ async function audit(root, { fixtureMode = false, out = null } = {}) {
 
   const handlerCorpus = [main, account, updater, input].join('\n');
   const confirmationEvidence = {
-    bp_sell: /bp_sell[\s\S]{0,1800}recycleConfirmAt/.test(main),
+    bp_sell: /function\s+mfBuildingRecyclePress[\s\S]{0,1800}recycleConfirmAt/.test(main) &&
+      /mfBindTap\(\$\('bp_sell'\),mfBuildingRecyclePress\)/.test(main),
     profReset: /profReset[\s\S]{0,500}resetArm/.test(main) || /resetArm[\s\S]{0,500}profReset/.test(main),
     profDel: /profDel[\s\S]{0,500}delArm/.test(main) || /delArm[\s\S]{0,500}profDel/.test(main),
     quitBtn: /quitBtn[\s\S]{0,300}accConfirm/.test(main),
@@ -159,7 +160,7 @@ async function audit(root, { fixtureMode = false, out = null } = {}) {
     requirement('destructive-confirmations', [...destructive].every(id => confirmationEvidence[id] === true), confirmationEvidence),
     requirement('touch-target-declarations', /@media\s*\(pointer:coarse\)[\s\S]*min-width:44px[\s\S]*min-height:44px/.test(css), 'assets/ui.css coarse-pointer global minimum'),
     requirement('computed-touch-targets', fixtureMode||touchProbeCurrent, fixtureMode?'not applicable to static fixture mode':touchProbeCurrent?{path:touchProbePath,summary:touchProbe.summary,viewport:touchProbe.runtime.viewport,screenshot:touchProbe.screenshot}:{path:touchProbePath,status:'UNKNOWN or stale'}),
-    requirement('retap-suppression', /mfUiLastTarget&&now-mfUiLastAt<\d+&&\(el!==mfUiLastTarget\|\|risk==='destructive'\)/.test(input) && /stopImmediatePropagation/.test(input), 'cross-control bounce window at window capture, including destructive same-control retaps'),
+    requirement('retap-suppression', /mfUiLastTarget&&now-mfUiLastAt<\d+&&risk!=='benign'/.test(input) && /stopImmediatePropagation/.test(input), 'risky-control bounce window at window capture; benign navigation remains responsive'),
     requirement('drag-threshold', /Math\.hypot\([^)]*\)>10/.test(input) && /g\.moved/.test(input), '10px movement rejection before replay'),
     requirement('panel-dismiss-tap-through', /mfUiMarkPanelDismiss/.test(hud) && /now-mfUiPanelDismissedAt<220/.test(input) && /up!==down/.test(input), 'closeMenus mark + 220ms guard + down/up target mismatch'),
     requirement('android-back', /addListener\('backButton'/.test(main) && /handleNativeBack/.test(main) && /activeElement[\s\S]{0,120}blur/.test(main), 'Capacitor back handler closes layers and blurs active editor'),

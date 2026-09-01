@@ -91,7 +91,8 @@ section('static shape');
   check('CONTROL the archived legacy file really is the ALTER-based one',
     /\bALTER\s+TABLE\s+users\s+ADD\s+COLUMN\b/i.test(strip(legacy)), 'so the contrast is real');
 
-  for (const f of ['0002-chat-presence.sql', '0003-lobbies-invites.sql']) {
+  for (const f of ['0002-chat-presence.sql', '0003-lobbies-invites.sql', '0004-moderation-foundation.sql',
+    '0005-match-launch-compatibility.sql','0006-online-aggregate.sql','0007-world-chat.sql']) {
     const s = strip(sqlOf(f));
     check(`${f} is additive and fully guarded`,
       !/\bALTER\b|\bDROP\b/i.test(s)
@@ -118,6 +119,14 @@ section('fresh database, ledger order');
   check('fresh apply creates the 0002 + 0003 tables',
     ['presence', 'multiplayer_lobbies', 'multiplayer_lobby_members', 'multiplayer_invites']
       .every(x => t.includes(x)));
+  check('fresh apply creates the moderation foundation',
+    ['moderation_subjects','moderation_cases','moderation_sanctions','moderation_appeals','moderation_events']
+      .every(x => t.includes(x)));
+  check('fresh apply creates match launch compatibility',
+    ['multiplayer_lobby_compatibility','multiplayer_matches','multiplayer_match_seats']
+      .every(x => t.includes(x)));
+  check('fresh apply creates aggregate online heartbeat table',t.includes('online_heartbeats'));
+  check('fresh apply creates world chat table',t.includes('world_messages'));
   check('fresh users has both legacy columns without any ALTER',
     REQUIRED_LEGACY_COLUMNS.every(c => cols.includes(c)), cols.join(','));
 
@@ -186,8 +195,18 @@ function snapshot(db) {
 
   applyFile(db, '0002-chat-presence.sql');
   applyFile(db, '0003-lobbies-invites.sql');
-  check('0002 + 0003 then apply on top', tablesOf(db).includes('presence')
-    && tablesOf(db).includes('multiplayer_invites'));
+  applyFile(db, '0004-moderation-foundation.sql');
+  applyFile(db, '0005-match-launch-compatibility.sql');
+  applyFile(db, '0006-online-aggregate.sql');
+  applyFile(db, '0007-world-chat.sql');
+  check('0002 through 0007 then apply on top', tablesOf(db).includes('presence')
+    && tablesOf(db).includes('multiplayer_invites') && tablesOf(db).includes('moderation_events')
+    && tablesOf(db).includes('multiplayer_match_seats')&&tablesOf(db).includes('online_heartbeats')
+    && tablesOf(db).includes('world_messages'));
+  const worldIndexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='world_messages'").all().map(r => r.name);
+  check('0007 creates world_messages page and user indexes',
+    worldIndexes.includes('idx_world_messages_page') && worldIndexes.includes('idx_world_messages_user'),
+    worldIndexes.join(','));
 
   check('account rows, password hashes, sessions and saves are BYTE-IDENTICAL',
     snapshot(db) === before, 'compared users/sessions/saves/friendships');
@@ -342,9 +361,9 @@ if (!existsSync(WRANGLER_JS)) {
   const run = args => execFileSync(process.execPath, [WRANGLER_JS, ...args], { cwd: ROOT, encoding: 'utf8', maxBuffer: 32e6 });
   try {
     const first = run(['d1', 'migrations', 'apply', DB, '--local', '--persist-to', persist]);
-    check('fresh database: ledger applies all three migrations',
+    check('fresh database: ledger applies every migration',
       LEDGER_MIGRATIONS.every(m => first.includes(m)),
-      LEDGER_MIGRATIONS.filter(m => first.includes(m)).length + '/3 named in output');
+      LEDGER_MIGRATIONS.filter(m => first.includes(m)).length + '/' + LEDGER_MIGRATIONS.length + ' named in output');
 
     const listed = run(['d1', 'migrations', 'list', DB, '--local', '--persist-to', persist]);
     check('after applying, nothing remains unapplied',
@@ -359,10 +378,10 @@ if (!existsSync(WRANGLER_JS)) {
     const led = run(['d1', 'execute', DB, '--local', '--persist-to', persist, '--json',
       '--command', 'SELECT name FROM d1_migrations ORDER BY id']);
     const rows = JSON.parse(led.slice(led.indexOf('[')))[0].results.map(r => r.name);
-    check('d1_migrations records exactly the three ledger files, in order',
+    check('d1_migrations records exactly the ledger files, in order',
       JSON.stringify(rows) === JSON.stringify(LEDGER_MIGRATIONS), rows.join(','));
     check('the ledger rows were written by wrangler, never hand-inserted',
-      rows.length === 3, 'no manual INSERT anywhere in this repo');
+      rows.length === LEDGER_MIGRATIONS.length, 'no manual INSERT anywhere in this repo');
   } catch (e) {
     check('real wrangler ledger run completed', false, String(e.message || e).slice(0, 90));
   } finally {

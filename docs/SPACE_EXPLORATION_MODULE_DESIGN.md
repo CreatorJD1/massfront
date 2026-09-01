@@ -134,7 +134,7 @@ The flagship model procedurally rendered in the 3D space engine embodies brutali
 ## 5. Technical Implementation & Prototype Access
 
 The fully functional, responsive, standalone prototype is located at:
-- [`docs/mmo-space-exploration-sandbox.html`](file:///c:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/docs/mmo-space-exploration-sandbox.html)
+- [`docs/mmo-space-exploration-sandbox.html`](mmo-space-exploration-sandbox.html)
 
 ### Verification Test Runner
 ```bash

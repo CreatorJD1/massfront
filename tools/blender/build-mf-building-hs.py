@@ -225,7 +225,12 @@ def carve_facade(hs, spec, style, floors, top, shaft_lo, shaft_hi, rng, lod_full
 def carve_roof(hs, style, top, shaft_hi):
     """Inset the top face and push it down. The parapet is what is left of the
     wall around it, so the roof physically cannot detach."""
-    roof = hs.select(all_of(upward(0.8), between(top - 0.6, top + 0.6)))
+    # Facade carving leaves tiny sloped trim faces whose centres can sit inside
+    # the roof-height band. At upward(0.8) those faces were mistaken for roof
+    # deck; the 2.6 m inset depth then pushed them sideways through party walls
+    # by as much as 1.60 m. A roof tray starts only from genuinely horizontal
+    # caps. This changes the authored selection, not the footprint allowance.
+    roof = hs.select(all_of(upward(0.99999), between(top - 0.6, top + 0.6)))
     if not roof:
         return top
     tray = hs.inset(roof, thickness=1.6, depth=0.0, material="trim")
@@ -237,7 +242,13 @@ def add_roof_plant(hs, style, top, hx, hy, rng, lod_full=True):
     """Plant grown out of the roof tray by extrusion, not dropped on top."""
     if not lod_full:
         return
-    tray = hs.select(all_of(upward(0.8), between(top - ROOF_PARAPET - 1.2, top - 0.8)))
+    # Only faces that are essentially FLAT. Extrusion runs along the face
+    # normal, so a tray face tilted by the chamfer throws the plant sideways:
+    # at upward(0.8) -- up to 37 degrees -- a 4.6 m mast reached 1.8 m past the
+    # party plane on the tower spire and 1.5 m on the gatehouse, which is a
+    # neighbour's cell. Flat faces keep the plant growing straight up, which is
+    # what this function claims to do.
+    tray = hs.select(all_of(upward(0.995), between(top - ROOF_PARAPET - 1.2, top - 0.8)))
     if not tray:
         return
     picks = []
@@ -476,6 +487,7 @@ def main():
     for m in modules:
         records.append({"id": m["key"], "archetype": m["spec"]["id"], "style": m["style"],
                         "cells": list(m["spec"]["cells"]), "floors": m["floors"],
+                        "edges": dict(m["spec"].get("edges") or {}),
                         "heightM": round(m["top"], 2),
                         "polys": {"lod0": m["polys"][0], "lod1": m["polys"][1],
                                   "lod2": m["polys"][2]},

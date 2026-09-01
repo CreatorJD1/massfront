@@ -17,19 +17,19 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#060c16">
 <meta name="format-detection" content="telephone=no">
-<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.52">
-  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.52">
-  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.52">
-  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.52">
-  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.52">
-  <link rel="stylesheet" href="./src/styles/ui.css?v=1.33.52-hud">
-  <link rel="stylesheet" href="./assets/ui.css?v=1.33.52-ui-safety">
-  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.52">
-  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.52">
-  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.52">
-  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.52">
-  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.52">
-  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.52">
+<link rel="apple-touch-icon" href="./assets/icons/icon-180.png?v=1.33.68">
+  <link rel="apple-touch-icon" sizes="152x152" href="./assets/icons/icon-152.png?v=1.33.68">
+  <link rel="apple-touch-startup-image" href="./assets/icons/splash-2732.png?v=1.33.68">
+  <link rel="icon" href="./assets/icons/icon-192.png?v=1.33.68">
+  <link rel="manifest" href="./assets/app.webmanifest?v=1.33.68">
+<link rel="stylesheet" href="./src/styles/ui.css?v=1.33.68-hud2">
+  <link rel="stylesheet" href="./assets/ui.css?v=1.33.68-ui-safety">
+  <link rel="stylesheet" href="./src/styles/auth.css?v=1.33.68">
+  <link rel="stylesheet" href="./src/styles/tutorial.css?v=1.33.68">
+  <link rel="stylesheet" href="./src/styles/ads.css?v=1.33.68">
+  <link rel="stylesheet" href="./src/styles/store.css?v=1.33.68">
+  <link rel="stylesheet" href="./src/styles/restree.css?v=1.33.68">
+  <link rel="stylesheet" href="./src/styles/intro.css?v=1.33.68">
 <style>
 /* CRITICAL — inline so it holds on the FIRST painted frame even if the linked
    intro.css above is slow or fails. The launch reveal (src/intro.js, z-index 950)
@@ -68,19 +68,24 @@ body:not(.mfIntroDone) .overlay{display:none!important}
   <div id="godBadge">∞ GOD</div>
   <div id="fps">60</div>
   <button id="inboxHudBtn" aria-label="Inbox">✉</button>
-  <button id="spdBtn">1×</button>
-  <button id="menuBtn">⏸</button>
-  <div id="goalBar" role="status" aria-live="polite"></div>
+  <button id="spdBtn" aria-label="Game speed 1 times">1×</button>
+  <button id="menuBtn" aria-label="Pause game">⏸</button>
+  <div id="goalBar" role="status" aria-live="polite" aria-atomic="true">
+    <button type="button" id="goalDetailBtn" aria-label="Open mission objective details"></button>
+  </div>
 </div>
 
-<!-- Was: a truncated profile name ("COMMANDE ▪ LV 1"), an XP bar and a health
-     bar. The name was slice(0,8) of whatever the profile was called, so it read
-     as a different word for most players, and the commander's health is already
-     on the unit itself in the 3D view. Now: rank symbol + level + XP, pinned to
-     the top-left corner. Still tappable to select and center the Commander. -->
+<!-- The upper-left commander locator is both identity and navigation: it uses
+     the chosen commander's canonical portrait/callsign, exposes live HP/XP, and
+     a tap always selects and recentres that commander. -->
 <div id="heroBar" role="button" tabindex="0" aria-label="Select and center the Commander">
-  <div class="heroRow"><span id="heroRankEm">🎗</span><span id="heroLvlTxt">LV 1</span></div>
-  <div id="xpOuter"><div id="xpFill"></div></div>
+  <span id="heroPortrait" aria-hidden="true"><img id="heroPortraitImg" alt=""><i id="heroPortraitFallback">C</i><b id="heroRankEm">🎗</b></span>
+  <span class="heroProfileBody">
+    <span class="heroProfileHead"><strong id="heroNameTxt">COMMANDER</strong><b id="heroLvlTxt">LV 1</b></span>
+    <span id="heroCallsignTxt">FIELD COMMAND</span>
+    <span class="heroVital"><small>HP</small><span class="heroBarOuter"><i id="heroHpFill"></i></span><b id="heroHpTxt">100%</b></span>
+    <span class="heroVital heroXp"><small>XP</small><span id="xpOuter"><i id="xpFill"></i></span><b id="heroXpTxt">0%</b></span>
+  </span>
 </div>
 
 <div id="toast"></div>
@@ -96,7 +101,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
        inside the dock so the well scales with the command plate instead of
        floating as a second HUD. #cmdrTx still fills this canvas. -->
   <div id="minimapWrap">
-    <canvas id="minimap" width="256" height="256"></canvas>
+    <canvas id="minimap" width="256" height="256" role="application" tabindex="0" aria-label="Tactical minimap. Use arrow keys to pan the camera and Home to center the map"></canvas>
     <div id="cmdrTx" data-state="idle" role="status" aria-live="polite" aria-atomic="true">
       <span id="cmdrTxPortrait"><video id="cmdrTxVideo" muted playsinline preload="metadata"></video><img id="cmdrTxImg" alt="" decoding="async"><i id="cmdrTxInitial"></i></span>
       <span id="cmdrTxBody">
@@ -105,11 +110,12 @@ body:not(.mfIntroDone) .overlay{display:none!important}
       </span>
     </div>
   </div>
-  <div id="hudDeckTabs" aria-label="Command dock">
-    <button class="hudDeckBtn on" data-deck="orders"><span>⌁</span>ORDERS</button>
-    <button class="hudDeckBtn" data-deck="platoons"><span>Ⅳ</span>PLATOONS</button>
-    <button class="hudDeckBtn" data-deck="abilities" disabled aria-disabled="true"><span>✦</span>ABILITIES</button>
-    <button class="hudDeckBtn" data-deck="view"><span>◇</span>VIEW</button>
+  <div id="hudDeckTabs" role="tablist" aria-label="Command dock">
+    <button class="hudDeckBtn on" role="tab" aria-selected="true" data-deck="orders"><span>⌁</span>ORDERS</button>
+    <button class="hudDeckBtn" role="tab" aria-selected="false" data-deck="platoons"><span>Ⅳ</span>PLATOONS</button>
+    <button class="hudDeckBtn" role="tab" aria-selected="false" data-deck="buildings"><span>⌂</span>BUILDINGS</button>
+    <button class="hudDeckBtn" role="tab" aria-selected="false" data-deck="abilities" disabled aria-disabled="true"><span>✦</span>ABILITIES</button>
+    <button class="hudDeckBtn" role="tab" aria-selected="false" data-deck="view"><span>◇</span>VIEW</button>
   </div>
   <div class="btnrow" id="camRow">
     <button class="cbtn camBtn" id="rotL"><span class="em">⟲</span><span>Rot</span></button>
@@ -156,7 +162,6 @@ body:not(.mfIntroDone) .overlay{display:none!important}
     <button class="cbtn" id="boxBtn"><span class="em">⬚</span><span>Select</span></button>
     <button class="cbtn" id="stopBtn"><span class="em">✋</span><span>Stop</span></button>
     <button class="cbtn" id="buildBtn"><span class="em">🏗</span><span>Build</span></button>
-    <button class="cbtn" id="baseFindBtn"><span class="em">⌖</span><span>Base</span></button>
   </div>
 </div>
 
@@ -168,7 +173,7 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 <button type="button" id="waveAlert" style="display:none" aria-label="Jump to predicted enemy approach"></button>
 <div id="buildMenu"><div class="tabRow" id="buildTabs"></div><div class="grid" id="buildGrid"></div></div>
 <div id="prodMenu"><div id="prodNav" aria-label="Selected production structure"><button id="prodPrev" aria-label="Previous structure">‹</button><b id="prodNavName">PRODUCTION</b><span id="prodNavCount">1 / 1</span><button id="prodNext" aria-label="Next structure">›</button></div><div class="tabRow" id="prodTabs"></div><div class="grid" id="prodGrid"></div><div class="queue" id="prodQueue"></div><button id="upBtn" style="display:none">⬆ UPGRADE</button><button id="rallyBtn">⚑ SET RALLY POINT</button><button id="repeatBtn">REPEAT: OFF</button></div>
-<div id="placeUI"><button class="cbtn" id="placeRotL">⟲</button><button class="cbtn" id="placeOk">✓</button><button class="cbtn" id="placeNo">✗</button><button class="cbtn" id="placeRotR">⟳<span id="placeRotDeg"></span></button></div>
+<div id="placeUI"><button class="cbtn" id="placeRotL" aria-label="Rotate placement left">⟲</button><button class="cbtn" id="placeOk" aria-label="Confirm building placement">✓</button><button class="cbtn" id="placeNo" aria-label="Cancel building placement">✗</button><button class="cbtn" id="placeRotR" aria-label="Rotate placement right">⟳<span id="placeRotDeg"></span></button></div>
 
 <div id="bldMenu2">
   <div id="bp_head"><div id="bp_ic"></div><div><div id="bp_title"></div><div id="bp_desc"></div></div></div>
@@ -526,30 +531,129 @@ body:not(.mfIntroDone) .overlay{display:none!important}
 <!-- The version block used to sit permanently at the bottom of the menu. It is
      now a status dot in the header — grey unchecked, amber checking or update
      waiting, green current, red failed — and this is where the dot leads. -->
-<div class="overlay" id="updScr">
-  <div class="subMenuHead">
-    <h2>◈ GAME VERSION</h2>
-    <span>Updates · release notes · rollback</span>
-  </div>
-  <div class="updScroll">
-  <div id="updPanel" class="mini">
-    <div class="updHead">
-      <div>
-        <div id="updTxt">GAME VERSION</div>
-        <div id="updSub">v1.32.40</div>
-      </div>
-      <div class="updBtns">
-        <button id="updCancel" style="display:none">✕</button>
-        <button id="updBtn">CHECK</button>
-      </div>
+<!-- GAME LAUNCHER / VERSION CENTER
+     One surface owns both cold-launch readiness and the menu's version detail.
+     The updater keeps its established IDs and authority; src/launcher.js reads
+     explicit updater/auth events and never infers state from the labels below. -->
+<div class="overlay mfLauncher" id="updScr" aria-label="MASSFRONT launcher and game version">
+  <div class="mfLauncherBackdrop" aria-hidden="true"><i></i><i></i><i></i></div>
+  <header class="mfLauncherTop">
+    <div class="mfLauncherTopBrand"><b>MASSFRONT</b><span>COMMAND NETWORK</span></div>
+    <div class="mfLauncherIdentity" id="mfLaunchIdentity" data-state="pending">
+      <i aria-hidden="true"></i><span id="mfLaunchIdentityText">IDENTITY LINK</span>
     </div>
-    <div id="updBarO"><div id="updBarF"></div></div>
-    <div id="updFeed" style="display:none"></div>
-    <div id="updNotes" style="display:none"></div>
-    <button id="updRoll">↺ Revert to the packaged build</button>
+  </header>
+  <div class="updScroll mfLauncherScroll" id="mfLauncherScroll">
+    <section class="mfLauncherHero" aria-labelledby="mfLaunchHeroTitle">
+      <div class="mfLauncherHeroArt" aria-hidden="true">
+        <img src="./assets/icons/splash-2732.png?v=1.33.68" alt="" decoding="async">
+        <span class="mfLauncherOrbit"></span><span class="mfLauncherSweep"></span>
+      </div>
+      <div class="mfLauncherHeroCopy">
+        <span class="mfLauncherEyebrow">◈ MASSFRONT LAUNCH CONTROL</span>
+        <h2 id="mfLaunchHeroTitle">YOUR COMMAND AWAITS</h2>
+        <p id="mfLaunchHeroSummary">Verifying the installed battlefield and command link.</p>
+        <div class="mfLauncherHeroChips">
+          <span id="mfLaunchVersion">v—</span><span id="mfLaunchCategory">SYSTEM</span><span id="mfLaunchNetwork">CHECKING LINK</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="mfLauncherConsole" aria-labelledby="mfLaunchUpdateTitle">
+      <div class="mfLauncherSectionHead">
+        <div><span>01</span><h3 id="mfLaunchUpdateTitle">GAME READINESS</h3></div>
+        <b id="mfLaunchPhase">INITIALIZING</b>
+      </div>
+      <div id="updPanel" class="mini">
+        <div class="updHead">
+          <div>
+            <div id="updTxt">GAME VERSION</div>
+            <div id="updSub">Preparing local runtime</div>
+          </div>
+          <div class="updBtns">
+            <button id="updCancel" type="button" aria-label="Cancel update" style="display:none">✕</button>
+            <button id="updBtn" type="button">CHECK</button>
+          </div>
+        </div>
+        <div id="updBarO" role="progressbar" aria-label="Update progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="updBarF"></div></div>
+        <div class="mfLauncherTelemetry" aria-live="polite">
+          <span><small>TRANSFER</small><b id="mfLaunchTransfer">—</b></span>
+          <span><small>SPEED</small><b id="mfLaunchSpeed">—</b></span>
+          <span><small>INTEGRITY</small><b id="mfLaunchIntegrity">LOCAL</b></span>
+        </div>
+        <div id="updFeed" style="display:none"></div>
+        <div id="updNotes" style="display:none"></div>
+        <button id="updRoll" type="button">↺ Revert to the packaged build</button>
+      </div>
+    </section>
+
+    <section class="mfLauncherRelease" aria-labelledby="mfLaunchReleaseTitle">
+      <div class="mfLauncherSectionHead">
+        <div><span>02</span><h3 id="mfLaunchReleaseTitle">LATEST RELEASE</h3></div>
+        <b id="mfLaunchReleaseVersion">v—</b>
+      </div>
+      <article class="mfLauncherReleaseCard">
+        <div class="mfLauncherReleaseBanner">
+          <span id="mfLaunchReleaseKind">SYSTEM</span>
+          <div><h4 id="mfLaunchReleaseName">COMMAND SYSTEM</h4><p id="mfLaunchReleaseSummary">Release information is loading.</p></div>
+        </div>
+        <div class="mfLauncherTabs" role="tablist" aria-label="Release note sections">
+          <button type="button" class="on" role="tab" aria-selected="true" data-launch-notes="features">FEATURES</button>
+          <button type="button" role="tab" aria-selected="false" data-launch-notes="fixes">BUG FIXES</button>
+          <button type="button" role="tab" aria-selected="false" data-launch-notes="upcoming">UPCOMING</button>
+        </div>
+        <ul id="mfLaunchNoteList" class="mfLauncherNoteList"><li>Preparing release briefing…</li></ul>
+      </article>
+    </section>
+
+    <section class="mfLauncherContent" aria-labelledby="mfLaunchContentTitle">
+      <div class="mfLauncherSectionHead">
+        <div><span>03</span><h3 id="mfLaunchContentTitle">OPTIONAL DOWNLOADS</h3></div>
+        <b>CORE PLAY UNAFFECTED</b>
+      </div>
+      <div class="mfLauncherPackRail">
+        <article class="mfLauncherPack" data-launch-pack="audio">
+          <img src="./assets/icons/icon-512.png?v=1.33.68" alt="MASSFRONT faction command insignia" loading="lazy" decoding="async">
+          <div><span>COMMAND AUDIO</span><h4>VOICES + MUSIC</h4><p>Faction radio, UGA KEEL guidance and the full battle score.</p><small id="mfLaunchPackAudioState">CHECKING</small></div>
+          <button id="mfLaunchPackAudio" type="button">MANAGE</button>
+        </article>
+        <article class="mfLauncherPack onlineOnly" data-launch-pack="galactic">
+          <img src="./assets/textures/planets/war-table/aelos-basecolor-v1.png?v=1.33.68" alt="Aelos planetary surface" loading="lazy" decoding="async">
+          <div><span>EXPANSION MODULE</span><h4>GALACTIC EXPLORATION</h4><p>Optional ship, orbital and planetary campaign content.</p><small id="mfLaunchPackGalacticState">OPTIONAL</small></div>
+          <button id="mfLaunchPackGalactic" type="button">INSTALL</button>
+          <i class="mfRequiresNet">☁ REQUIRES INTERNET</i>
+        </article>
+      </div>
+      <div id="mfLaunchPackProgress"></div>
+    </section>
+
+    <section class="mfLauncherHistory" aria-labelledby="mfLaunchHistoryTitle">
+      <div class="mfLauncherSectionHead">
+        <div><span>04</span><h3 id="mfLaunchHistoryTitle">VERSION HISTORY</h3></div>
+        <b>EVIDENCE-BACKED</b>
+      </div>
+      <div class="mfLauncherTabs mfLauncherHistoryTabs" role="tablist" aria-label="Version history source">
+        <button type="button" class="on" role="tab" aria-selected="true" data-launch-history="published">PUBLISHED</button>
+        <button type="button" role="tab" aria-selected="false" data-launch-history="device">THIS DEVICE</button>
+      </div>
+      <ol id="mfLaunchHistoryList" class="mfLauncherTimeline"><li><b>BUILDING CATALOG</b><span>Verified records are loading.</span></li></ol>
+    </section>
+
+    <details class="mfLauncherDetails" id="mfLaunchDetails">
+      <summary>TECHNICAL DETAILS <span>storage · channel · rollback</span></summary>
+      <div class="mfLauncherDetailGrid">
+        <span><small>INSTALLED</small><b id="mfLaunchTechInstalled">v—</b></span>
+        <span><small>CHANNEL</small><b id="mfLaunchTechChannel">STABLE</b></span>
+        <span><small>NETWORK</small><b id="mfLaunchTechNetwork">CHECKING</b></span>
+        <span><small>AVAILABLE STORAGE</small><b id="mfLaunchTechStorage">—</b></span>
+      </div>
+    </details>
   </div>
-  </div>
-  <div class="warFoot"><button class="mbtn alt" id="updBack">◀ &nbsp;BACK</button></div>
+  <footer class="warFoot mfLauncherFoot">
+    <button class="mbtn alt mfLauncherOfflineAction" id="mfLaunchOffline" type="button">PLAY OFFLINE</button>
+    <button class="accBtn mfLauncherPlay" id="mfLaunchPlay" type="button" data-front-focus disabled>VERIFYING GAME…</button>
+    <button class="mbtn alt" id="updBack" type="button">◀ &nbsp;BACK</button>
+  </footer>
 </div>
 
 <div class="overlay" id="inboxScr">
@@ -707,6 +811,6 @@ body:not(.mfIntroDone) .overlay{display:none!important}
   <button class="mbtn alt" id="pauseSettings">⚙ &nbsp;SETTINGS</button>
   <button class="mbtn alt" id="quitBtn">✦ &nbsp;ABANDON MATCH</button>
 </div>
-<script src="./boot.js?v=1.33.52-boot6"></script>
+<script src="./boot.js?v=1.33.68-boot7"></script>
 </body>
 </html>

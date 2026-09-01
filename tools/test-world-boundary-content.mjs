@@ -4,6 +4,7 @@
    Compact / Standard / Large. Usage:
      node tools/test-world-boundary-content.mjs [local URL] */
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
+import { assertHardwareGpu } from './chrome-gpu.mjs';
 
 const started=Date.now();
 const url=process.argv.find(a=>/^https?:\/\//.test(a))||'http://127.0.0.1:8100/';
@@ -20,10 +21,14 @@ try{
     typeof battlefieldContains==='function'&&typeof battlefieldBoundaryPoint==='function'&&
     typeof bldFoot==='function'&&typeof aiFreeSpot==='function'&&typeof spawnCrate==='function'&&
     typeof relics!=='undefined'&&typeof tanks!=='undefined'&&typeof crates!=='undefined',null,{timeout:60000});
+  const gpu=await assertHardwareGpu(page);
 
   const result=await page.evaluate(()=>{
     const scenes=[
-      {key:'compact', map:'isles',    theme:'verdant',fac:'legion'},
+      /* Use the shipped planet-aware Compact city theatre. Legacy `isles`
+         intentionally has no town plan, so it could never exercise the relic
+         footprint this boundary gate claims to cover. */
+      {key:'compact', map:'aelos_north_small',theme:'verdant',fac:'legion'},
       {key:'standard',map:'crater',   theme:'ashland',fac:'syndicate'},
       {key:'large',   map:'highland', theme:'arctic', fac:'horde'}
     ];
@@ -126,5 +131,5 @@ try{
   assert(errors.length===0,'page errors:\n'+errors.join('\n'));
   const elapsed=Date.now()-started;
   assert(elapsed<120000,'world-boundary test exceeded 2 minutes: '+elapsed+'ms');
-  console.log(JSON.stringify({ok:true,elapsedMs:elapsed,...result},null,2));
-}finally{await browser.close();}
+  console.log(JSON.stringify({ok:true,elapsedMs:elapsed,gpu,...result},null,2));
+}finally{await closePwBrowser(browser);}

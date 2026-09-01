@@ -169,9 +169,14 @@ try{
     if(u<0)throw new Error('runtime damaged-air admission failed');
     uhp[u]=uhpm[u]*.12;
     for(let n=0;n<9;n++){tick++;stats.t+=1/30;ux[u]+=2.8;uy[u]-=.7;emitAirSmoke(u,TYPES[airType],false);}
-    const airDuring={active:mfOrdnanceTrailVolActive('air:'+u),history:volFxTrailHistoryTelemetry()};
-    mfOrdnanceTrailSimStop('air:'+u,.2);
-    const airAfter={active:mfOrdnanceTrailVolActive('air:'+u),history:volFxTrailHistoryTelemetry()};
+    /* Runtime keys include generation so a recycled unit slot cannot inherit
+       the previous aircraft's damage trail. The old probe omitted that suffix,
+       reported active=false against a populated real history, and blamed the
+       lifecycle for its own lookup mismatch. */
+    const airKey='air:'+u+':'+ugen[u];
+    const airDuring={active:mfOrdnanceTrailVolActive(airKey),history:volFxTrailHistoryTelemetry()};
+    mfOrdnanceTrailSimStop(airKey,.2);
+    const airAfter={active:mfOrdnanceTrailVolActive(airKey),history:volFxTrailHistoryTelemetry()};
     ualive[u]=0;teamCount[0]=Math.max(0,teamCount[0]-1);
     mfOrdnanceTrailSimReset();volFxClear();
     return {families,air:{type:airType,slot:u,during:airDuring,after:airAfter}};
@@ -251,7 +256,8 @@ try{
         uhp[u]=uhpm[u]*.12;
         for(let n=0;n<12;n++){tick++;stats.t+=1/30;ux[u]+=7.4;uy[u]-=1.8;emitAirSmoke(u,TYPES[airType],false);}
         render(0);render(0);render(0);
-        return {key:'air:'+u,slot:u,active:mfOrdnanceTrailVolActive('air:'+u),
+        const key='air:'+u+':'+ugen[u];
+        return {key,slot:u,active:mfOrdnanceTrailVolActive(key),
           history:volFxTrailHistoryTelemetry(),volume:{...VOLFX_TELEMETRY}};
       }
       const i=fireProj(spec.type,0,cam.x-155,cam.y+58,cam.x+175,cam.y-48,spec.speed,150,46,-1);

@@ -24,18 +24,31 @@
     './assets/data/theatreprofiles-stage10.js',
     './assets/data/interiortopology-stage10.js','./assets/data/orbitaltopology-stage10.js',
     './src/game/determinism.js',
-    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./assets/data/planetart.js','./src/engine/gl.js','./src/engine/planetpreview.js','./src/engine/perf.js','./src/engine/noisegen.js','./src/engine/factionenergy.js','./src/engine/ordnancetrails.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/macrofx.js','./src/engine/shieldfx.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/volfx.js','./src/engine/shockwave.js','./src/engine/vfxlayers.js','./src/engine/organicfx.js','./assets/basis/basis_transcoder.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/locationgrammar.js','./assets/data/sitetemplates.js','./assets/data/sitetemplates-stage9.js','./assets/data/locationplans.js','./assets/data/battlefieldtopology-stage10.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/modkit.js','./src/engine/physics.js','./src/engine/cloudfx.js','./src/engine/cloudpostfx.js','./src/game/utilityjobs.js','./src/game/sim.js','./src/game/airwarfare.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/hazards.js','./src/game/statehash.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/socialui.js','./src/game/matchconsumer.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js','./src/galactic-operations.js','./src/onboarding.js','./src/career-faction-gate.js'
+    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./assets/data/planetart.js','./src/engine/gl.js','./src/engine/planetpreview.js','./src/engine/perf.js','./src/engine/noisegen.js','./src/engine/factionenergy.js','./src/engine/ordnancetrails.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/macrofx.js','./src/engine/shieldfx.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/volfx.js','./src/engine/shockwave.js','./src/engine/vfxlayers.js','./src/engine/organicfx.js','./assets/basis/basis_transcoder.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/locationgrammar.js','./assets/data/sitetemplates.js','./assets/data/sitetemplates-stage9.js','./assets/data/locationplans.js','./assets/data/battlefieldtopology-stage10.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/modkit.js','./src/engine/physics.js','./src/engine/cloudfx.js','./src/engine/cloudpostfx.js','./src/game/utilityjobs.js','./src/game/sim.js','./src/game/airwarfare.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/hazards.js','./src/game/statehash.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/socialui.js','./src/game/matchconsumer.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/launcher.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js','./src/ui/unit-stack-hotbar.js','./src/galactic-operations.js','./src/onboarding.js','./src/career-faction-gate.js','./src/ui/cinematic-hud.js'
   ];
   /* Packaged scripts need a release key. WebViews and development browsers can
      otherwise reuse a stale source even after the installer or local preview
      has changed, which made new settings appear to be missing until cache was
      cleared manually. Patch bundles keep their content-addressed Blob URLs. */
-  var PACKAGED_REV='1.33.52';
+  var PACKAGED_REV='1.33.68';
   /* Source-cache revision is deliberately independent from the user-facing
      release number. Local/hotfix rebuilds of the same release must not reuse
      an older gl.js merely because its ?v= version string is unchanged. */
-  var PACKAGED_SRC_REV=PACKAGED_REV+'-boot6';
+  /* shell2 changes recovery delivery only. Keep the already-verified runtime
+     source revision so a service-worker repair does not cold-fetch all 108
+     scripts from the host at once. */
+  var PACKAGED_SRC_REV=PACKAGED_REV+'-boot8';
   var DB='massfront-updates', STORE='bundles';
+  /* Packaged boot capability flag. OTA source checks this before staging a
+     descriptor that references per-artifact records. Old APK-bound boot
+     loaders never set it and therefore continue receiving the legacy complete
+     in-record bundle they understand. */
+  window.__MF_ARTIFACT_BOOT_V1=true;
+  /* Source preview and the default player pack include the signed Galactic
+     runtime allowlist. pack-www rewrites only its copied boot.js to false for
+     an explicitly slim package, giving later OTA launcher code local build
+     authority without ever requesting an intentionally absent module path. */
+  window.__MF_BUILD_HAS_GALACTIC_EXPLORATION=true;
   var bootShield=null, bootShieldTimer=0, bootShieldWatchdog=0;
   var bootShieldEvents=['pointerdown','pointerup','touchstart','touchend','click'];
   /* Absolute ceiling on how long the shield/guard may live. The guard is only
@@ -104,12 +117,35 @@
   function bundleMeta(rec){
     if(!rec) return null;
     return {version:rec.version,channel:rec.channel||'stable',at:rec.at,
+      schema:rec.schema||1,
       notes:rec.notes||'',severity:rec.severity||'recommended',
-      kind:rec.kind||'full',patchedFrom:rec.patchedFrom||''};
+      kind:rec.kind||'full',patchedFrom:rec.patchedFrom||'',
+      manifestRoot:rec.manifestRoot||'',payloadRoot:rec.payloadRoot||'',
+      targetRoot:rec.targetRoot||'',sourcePayloadRoot:rec.sourcePayloadRoot||'',
+      fullRoot:rec.fullRoot||'',manifestKind:rec.manifestKind||'',
+      manifestCategory:rec.manifestCategory||'',
+      manifestPatchFrom:rec.manifestPatchFrom||'',
+      runtimeRoot:rec.runtimeRoot||'',
+      storage:rec.storage||''};
+  }
+  function sameRoots(a,b){
+    if(!a||!b) return false;
+    var ah=!!(a.manifestRoot||a.targetRoot||a.runtimeRoot),
+        bh=!!(b.manifestRoot||b.targetRoot||b.runtimeRoot);
+    if(!ah&&!bh) return true;
+    if(!(a.manifestRoot&&b.manifestRoot&&a.targetRoot&&b.targetRoot&&
+      String(a.manifestRoot).toLowerCase()===String(b.manifestRoot).toLowerCase()&&
+      String(a.targetRoot).toLowerCase()===String(b.targetRoot).toLowerCase())) return false;
+    /* Schema-1/2 records from before rooted identities remain compatible only
+       when both sides omit the runtime root. Once either side names one, both
+       must name the same ordered runtime or it cannot bless/replace the other. */
+    if(a.runtimeRoot||b.runtimeRoot) return !!(a.runtimeRoot&&b.runtimeRoot&&
+      String(a.runtimeRoot).toLowerCase()===String(b.runtimeRoot).toLowerCase());
+    return true;
   }
   function sameBundle(a,b){
     if(!a||!b||String(a.version)!==String(b.version)||
-       patchChannel(a)!==patchChannel(b)) return false;
+       patchChannel(a)!==patchChannel(b)||!sameRoots(a,b)) return false;
     if(a.at!=null||b.at!=null) return String(a.at||'')===String(b.at||'');
     return true;
   }
@@ -142,19 +178,21 @@
   }
   function probationMatchesBundle(prob,bundle){
     if(!prob||!bundle||String(prob.version)!==String(bundle.version)||
-       patchChannel(prob)!==patchChannel(bundle)) return false;
+       patchChannel(prob)!==patchChannel(bundle)||!sameRoots(prob,bundle)) return false;
     return prob.pendingAt==null||String(prob.pendingAt)===String(bundle.at||'');
   }
   function probationOwnsMetaExact(prob,meta){
     return !!(prob&&meta&&prob.pendingAt!=null&&meta.at!=null&&
       String(prob.version)===String(meta.version)&&
       patchChannel(prob)===patchChannel(meta)&&
+      sameRoots(prob,meta)&&
       String(prob.pendingAt)===String(meta.at));
   }
   function pendingMatchesFailure(pending,prob,bundle,version){
     if(!pending||String(pending.version)!==String(version)) return false;
     var owner=prob||bundle;
     if(owner&&patchChannel(pending)!==patchChannel(owner)) return false;
+    if(owner&&!sameRoots(pending,owner)) return false;
     var token=prob&&prob.pendingAt!=null?prob.pendingAt:
       (bundle&&bundle.at!=null?bundle.at:null);
     /* Old records without an attempt token cannot be distinguished from a
@@ -212,7 +250,58 @@
   function validBundle(b){
     if(!b||!b.files||!verNewer(b.version,PACKAGED_REV)) return false;
     var order=b.order&&b.order.length?b.order:MANIFEST;
-    for(var i=0;i<order.length;i++) if(typeof b.files[order[i]]!=='string') return false;
+    var schema=Number(b.schema||1);
+    if(schema>=3){
+      var hex=/^[0-9a-f]{64}$/;
+      if(!Number.isSafeInteger(schema)||
+         !hex.test(String(b.manifestRoot||''))||
+         !hex.test(String(b.payloadRoot||''))||
+         !hex.test(String(b.sourcePayloadRoot||''))||
+         !hex.test(String(b.fullRoot||''))||
+         !hex.test(String(b.targetRoot||''))||
+         !hex.test(String(b.runtimeRoot||''))||
+         String(b.targetRoot)!==String(b.fullRoot)||
+         (String(b.payloadRoot)!==String(b.sourcePayloadRoot)&&
+          String(b.payloadRoot)!==String(b.fullRoot))||
+         (b.manifestKind!=='full'&&b.manifestKind!=='patch')||
+         ['system','hotfix','content','overhaul'].indexOf(b.manifestCategory)<0||
+         (b.manifestKind==='patch'&&!/^\d+\.\d+\.\d+$/.test(String(b.manifestPatchFrom||'')))||
+         (b.manifestKind==='full'&&String(b.manifestPatchFrom||'')!=='')||
+         (b.channel!=='stable'&&b.channel!=='preview')||
+         (b.storage!=='artifact-v1'&&b.storage!=='bundle-v1')||
+         !Array.isArray(b.order)||!b.order.length||
+         !b.files||typeof b.files!=='object'||Array.isArray(b.files)) return false;
+      var own=Object.keys(b.files),seen={};
+      if(own.length!==b.order.length) return false;
+      for(var p=0;p<b.order.length;p++){
+        var path=b.order[p];
+        if(typeof path!=='string'||path.length>512||
+           !/^[A-Za-z0-9._/-]+$/.test(path)||path.charAt(0)==='/'||
+           path.slice(-1)==='/'||path.indexOf('//')>=0||
+           path.split('/').some(function(part){return !part||part==='.'||part==='..';})||
+           seen[path]||!Object.prototype.hasOwnProperty.call(b.files,path)) return false;
+        seen[path]=true;
+      }
+      for(var o=0;o<own.length;o++) if(!seen[own[o]]) return false;
+    }
+    for(var i=0;i<order.length;i++){
+      var file=b.files[order[i]];
+      if(typeof file==='string'){
+        if(schema>=3&&b.storage!=='bundle-v1') return false;
+        continue;
+      }
+      if(!file||typeof file!=='object'||typeof file.key!=='string'||!file.key||
+         typeof file.sha256!=='string'||!/^[0-9a-f]{64}$/i.test(file.sha256)||
+         !Number.isSafeInteger(file.size)||file.size<=0) return false;
+      if(schema>=3){
+        if(b.storage!=='artifact-v1') return false;
+        var suffix=':file:'+order[i];
+        if(file.key.slice(-suffix.length)!==suffix||
+           !/^transfer-v1:(stable|preview)-\d+\.\d+\.\d+-[0-9a-f]{64}-(payload|full)$/.test(
+             file.key.slice(0,-suffix.length)))
+          return false;
+      }
+    }
     return true;
   }
   function evictSuperseded(db){
@@ -350,6 +439,15 @@
                 :(!meta||sameBundle(meta,value)));
             if(good){
               store.put(value,'active'); store.put(bundleMeta(value),'activeMeta');
+              /* Re-validate the rollback payload on this launch. Its metadata
+                 was previously trusted, but descriptor records may since have
+                 been evicted or corrupted. tries:1 makes the next launch fail
+                 closed to packaged code unless this exact recovered runtime
+                 reaches __bootOk now. */
+              store.put({version:value.version,channel:value.channel||'stable',
+                manifestRoot:value.manifestRoot||'',targetRoot:value.targetRoot||'',
+                runtimeRoot:value.runtimeRoot||'',
+                pendingAt:value.at,at:Date.now(),tries:1,recoveryOf:version},'probation');
               clearPreviousRecords(store);
               clearFinishedRollback(value);
               decision={kind:'recovered',bundle:value,failedVersion:version,
@@ -401,6 +499,8 @@
               return;
             }
             var claimed={version:bundle.version,channel:bundle.channel||prob.channel,
+              manifestRoot:bundle.manifestRoot||'',targetRoot:bundle.targetRoot||'',
+              runtimeRoot:bundle.runtimeRoot||'',
               pendingAt:bundle.at!=null?bundle.at:prob.pendingAt,
               at:prob.at||Date.now(),tries:(prob.tries|0)+1};
             store.put(claimed,'probation');
@@ -412,6 +512,8 @@
             /* A mismatched legacy/torn guard must never be used to validate a
                different active record. Replace it with an exact first claim. */
             store.put({version:bundle.version,channel:bundle.channel||'stable',
+              manifestRoot:bundle.manifestRoot||'',targetRoot:bundle.targetRoot||'',
+              runtimeRoot:bundle.runtimeRoot||'',
               pendingAt:bundle.at,at:Date.now(),tries:1},'probation');
             clearFinishedRollback(bundle);
             decision={kind:'run',bundle:bundle,claimed:true,repaired:true};
@@ -506,10 +608,158 @@
     injectScripts(function(s,i){ s.src=MANIFEST[i]+'?v='+PACKAGED_SRC_REV; },
                   MANIFEST.length,rendererGateIndex(MANIFEST));
   }
+  function runArtifactBundle(b){
+    /* Descriptor bundles keep each verified source artifact in its own IDB
+       record. Load, re-hash, execute and release one file at a time so a large
+       source update does not deserialize a ~93 MB object or create 110 Blob
+       URLs simultaneously. Strict sequencing preserves the classic shared
+       global scope just like async=false script tags. */
+    var order=b.order&&b.order.length?b.order:MANIFEST;
+    var gate=rendererGateIndex(order),index=0,total=order.length,executed=0,stopped=false;
+    var runtimeRows=[];
+    bootProgress(0,total);
+    function rangeFailure(path,reason){
+      if(stopped) return;
+      stopped=true;
+      console.error('boot: failed',path,reason||'stored artifact unavailable');
+      clearBootShield();
+      try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
+        window.__MASSFRONT_CLEAR_INPUT_GUARD();}catch(e){}
+      if(executed===0){
+        /* The verification pass failed before one downloaded script executed,
+           so a packaged session is safe. Keep probation in IndexedDB; clearing
+           only the window identity prevents that fallback frame from blessing
+           the broken patch through __bootOk. */
+        try{
+          delete window.__MASSFRONT_PATCHED; delete window.__MASSFRONT_PATCH_AT;
+          delete window.__MASSFRONT_PATCH_CHANNEL;
+          delete window.__MASSFRONT_PATCH_MANIFEST_ROOT;
+          delete window.__MASSFRONT_PATCH_TARGET_ROOT;
+          delete window.__MASSFRONT_PATCH_RUNTIME_ROOT;
+        }catch(e){}
+        runPackaged();
+      }else{
+        /* A record changed between preflight and execution. Never mix a partial
+           classic-script global scope with packaged code; restart so the armed
+           probation transaction performs normal recovery. */
+        console.warn('boot: stored artifact changed during execution; restarting for recovery');
+        try{ if(window.location&&typeof window.location.reload==='function') window.location.reload(); }
+        catch(e){}
+      }
+    }
+    function textDigest(text){
+      if(!window.crypto||!window.crypto.subtle||typeof TextEncoder==='undefined')
+        return Promise.reject(new Error('integrity checks unavailable'));
+      var bytes=new TextEncoder().encode(text);
+      return window.crypto.subtle.digest('SHA-256',bytes).then(function(value){
+        var a=new Uint8Array(value),hex='';
+        for(var i=0;i<a.length;i++) hex+=a[i].toString(16).padStart(2,'0');
+        return {size:bytes.byteLength,sha256:hex.toLowerCase()};
+      });
+    }
+    function digest(text,ref,path){
+      return textDigest(text).then(function(actual){
+        if(!Number.isSafeInteger(ref.size)||ref.size<=0||actual.size!==ref.size)
+          throw new Error('stored size mismatch');
+        if(actual.sha256!==String(ref.sha256).toLowerCase())
+          throw new Error('stored hash mismatch');
+        return text;
+      });
+    }
+    function append(text,path){
+      var blob=URL.createObjectURL(new Blob([text+'\n//# sourceURL='+path],{type:'text/javascript'}));
+      var script=document.createElement('script'); script.async=false; script.src=blob;
+      script.onload=function(){
+        URL.revokeObjectURL(blob);
+        var current=index++; executed++;
+        bootProgress(index,total);
+        if(current===gate&&window.__MF_GL_BOOT_FAILED===true){
+          console.warn('boot: renderer phase stopped after WebGL2 initialization failed');
+          clearBootShield();
+          try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
+            window.__MASSFRONT_CLEAR_INPUT_GUARD();}catch(e){}
+          return;
+        }
+        next();
+      };
+      script.onerror=function(){ URL.revokeObjectURL(blob); rangeFailure(path,'script load error'); };
+      document.body.appendChild(script);
+    }
+    var dbPromise=idb();
+    function readArtifact(path,ref){
+      if(typeof ref==='string') return Promise.resolve(ref);
+      return dbPromise.then(function(db){
+        return new Promise(function(res,rej){
+          try{
+            var q=db.transaction(STORE,'readonly').objectStore(STORE).get(ref.key);
+            q.onsuccess=function(){ res(q.result); };
+            q.onerror=function(){ rej(q.error||new Error('artifact read failed')); };
+          }catch(e){ rej(e); }
+        });
+      }).then(function(rec){
+        if(!rec||typeof rec.text!=='string'||!Number.isSafeInteger(rec.size)||
+           rec.size<=0||rec.size!==ref.size||
+           String(rec.sha256).toLowerCase()!==String(ref.sha256).toLowerCase())
+          throw new Error('stored artifact metadata mismatch');
+        return digest(rec.text,ref,path);
+      });
+    }
+    function preflight(i){
+      if(stopped) return;
+      if(i>=total){
+        textDigest(runtimeRows.join('\n')).then(function(actual){
+          if(Number(b.schema||1)<3) return actual;
+          if(actual.sha256!==String(b.runtimeRoot||'').toLowerCase())
+            throw new Error('ordered runtime root mismatch');
+          var contract=[
+            'schema='+b.schema,'channel='+b.channel,'version='+b.version,
+            'kind='+b.manifestKind,'category='+b.manifestCategory,
+            'patchFrom='+b.manifestPatchFrom,
+            'payload='+b.sourcePayloadRoot,'full='+b.fullRoot,
+            'runtime='+actual.sha256
+          ].join('\n');
+          return textDigest(contract).then(function(root){
+            if(root.sha256!==String(b.manifestRoot||'').toLowerCase())
+              throw new Error('manifest root contract mismatch');
+            return actual;
+          });
+        }).then(function(){
+          index=0;bootProgress(0,total);next();
+        }).catch(function(error){ rangeFailure('__runtime__',error&&error.message); });
+        return;
+      }
+      var path=order[i],ref=b.files[path];
+      if(typeof ref==='string'){
+        textDigest(ref).then(function(actual){
+          if(!Number.isSafeInteger(actual.size)||actual.size<=0)
+            throw new Error('stored size mismatch');
+          runtimeRows.push(path+'|'+actual.size+'|'+actual.sha256);
+          bootProgress(i+1,total);preflight(i+1);
+        }).catch(function(error){ rangeFailure(path,error&&error.message); });
+        return;
+      }
+      readArtifact(path,ref).then(function(){
+        runtimeRows.push(path+'|'+ref.size+'|'+String(ref.sha256).toLowerCase());
+        bootProgress(i+1,total);preflight(i+1);
+      }).catch(function(error){ rangeFailure(path,error&&error.message); });
+    }
+    function next(){
+      if(stopped||index>=total) return;
+      var path=order[index],ref=b.files[path];
+      if(typeof ref==='string'){ append(ref,path); return; }
+      readArtifact(path,ref).then(function(text){ append(text,path); })
+        .catch(function(error){ rangeFailure(path,error&&error.message); });
+    }
+    preflight(0);
+  }
   function runBundle(b){
     /* Blob URLs rather than inline text: the browser keeps a real filename for
        each source, so a stack trace from a patched build is still readable. */
     var order=b.order&&b.order.length? b.order : MANIFEST;
+    if(Number(b.schema||1)>=3&&b.runtimeRoot){ runArtifactBundle(b);return; }
+    for(var i=0;i<order.length;i++) if(typeof b.files[order[i]]!=='string'){
+      runArtifactBundle(b); return;
+    }
     injectScripts(function(s,i){
       var path=order[i], src=b.files[path];
       if(src==null) s.src=path;
@@ -530,6 +780,9 @@
         window.__MASSFRONT_PATCHED=decision.bundle.version||'?';
         window.__MASSFRONT_PATCH_AT=decision.bundle.at;
         window.__MASSFRONT_PATCH_CHANNEL=decision.bundle.channel||'stable';
+        window.__MASSFRONT_PATCH_MANIFEST_ROOT=decision.bundle.manifestRoot||'';
+        window.__MASSFRONT_PATCH_TARGET_ROOT=decision.bundle.targetRoot||'';
+        window.__MASSFRONT_PATCH_RUNTIME_ROOT=decision.bundle.runtimeRoot||'';
         window.__MASSFRONT_RECOVERED_PATCH=decision.failedVersion||'?';
         console.warn('boot: restored validated patch '+decision.bundle.version+
                      ' after '+decision.failedVersion+' failed');
@@ -540,6 +793,9 @@
         window.__MASSFRONT_PATCHED=decision.bundle.version||'?';
         window.__MASSFRONT_PATCH_AT=decision.bundle.at;
         window.__MASSFRONT_PATCH_CHANNEL=decision.bundle.channel||'stable';
+        window.__MASSFRONT_PATCH_MANIFEST_ROOT=decision.bundle.manifestRoot||'';
+        window.__MASSFRONT_PATCH_TARGET_ROOT=decision.bundle.targetRoot||'';
+        window.__MASSFRONT_PATCH_RUNTIME_ROOT=decision.bundle.runtimeRoot||'';
         runBundle(decision.bundle);
         return;
       }
@@ -557,12 +813,16 @@
        failed before it selected `active`. It has NOT proved the stored patch
        good, so it must not erase that patch's probation record. Leaving it in
        place means the next healthy launch retries under the normal rollback
-       guard instead of running an unguarded payload. A recovered previous
-       patch is similarly only a fallback for a different failed version. */
-    if(!window.__MASSFRONT_PATCHED||window.__MASSFRONT_RECOVERED_PATCH) return;
+       guard instead of running an unguarded payload. Recovered previous code
+       now owns a fresh probation guard and must confirm its own descriptor
+       records before becoming the new last-known-good runtime. */
+    if(!window.__MASSFRONT_PATCHED) return;
     idb().then(function(db){
       return confirmPatch(db,{version:window.__MASSFRONT_PATCHED,
         channel:window.__MASSFRONT_PATCH_CHANNEL||'stable',
+        manifestRoot:window.__MASSFRONT_PATCH_MANIFEST_ROOT||'',
+        targetRoot:window.__MASSFRONT_PATCH_TARGET_ROOT||'',
+        runtimeRoot:window.__MASSFRONT_PATCH_RUNTIME_ROOT||'',
         at:window.__MASSFRONT_PATCH_AT});
     }).catch(function(){});
   };
@@ -580,7 +840,7 @@
   if(!secure) return;
   window.__mfPwaDiag={supported:true,registered:false,controlled:!!navigator.serviceWorker.controller,error:null};
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js?v=1.33.52-shell1',{scope:'./',updateViaCache:'none'})
+    navigator.serviceWorker.register('./sw.js?v=1.33.68-shell2',{scope:'./',updateViaCache:'none'})
       .then(function(reg){
         window.__mfPwaDiag.registered=true;
         window.__mfPwaDiag.scope=reg.scope;

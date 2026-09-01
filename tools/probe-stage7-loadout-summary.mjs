@@ -26,7 +26,7 @@ const REPORT=join(OUT,'report.json');
 const SOURCE_FILES=[
   'index.html','boot.js','assets/data/manifest.json','src/galaxyui.js',
   'src/game/meta.js','src/develop.js','src/storeui.js','src/game/commander.js',
-  'src/main.js','tools/pw-browser.mjs','tools/chrome-gpu.mjs',
+  'src/main.js','src/onboarding.js','tools/pw-browser.mjs','tools/chrome-gpu.mjs',
   'tools/probe-stage7-loadout-summary.mjs',
 ];
 const PROFILES=[
@@ -259,6 +259,16 @@ async function main(){
         await page.waitForTimeout(11000);
         const intro=page.locator('#mfIntroStart');if(await intro.isVisible()){await tap(intro);await page.waitForTimeout(500);}
         const gate=page.locator('#apCloseBtn');if(await gate.isVisible()){await tap(gate);await page.waitForTimeout(100);}
+        /* A fresh career now owns the first modal layer. Exercise its real
+           player-facing skip control before entering the War Table instead of
+           bypassing the onboarding state or letting it intercept Start. */
+        const onboarding=page.locator('#mfOnboardingChoice');
+        rec.onboarding={present:await onboarding.isVisible(),action:'none'};
+        if(rec.onboarding.present){
+          await tap(page.locator('#mfOnboardingSkip'));
+          await onboarding.waitFor({state:'detached',timeout:5000});
+          rec.onboarding.action='skip-via-ui';
+        }
         gpu=await assertHardwareGpu(page);try{recordPwBrowserGpu(browser,gpu);}catch{}
         rec.runtime=await page.evaluate(()=>({sourceMarker:document.querySelector('script[src*="src/"]')?.src||'',viewport:{width:innerWidth,height:innerHeight,dpr:devicePixelRatio},initMissing:window.__MF_INIT_MISSING||[],glLosses:window.__mfStage7LoadoutGlLosses||0}));
         const opened=await openStandardDeploy(page);rec.seed=opened.seed;rec.route=opened.route;

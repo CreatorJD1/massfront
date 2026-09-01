@@ -172,7 +172,7 @@ assert.match(main,/mfBindNativePress\(\$\('deployBtn'\)[\s\S]*?'pointerup'\)/,'D
 assert.match(input,/mfBindNativePress\(b,[\s\S]*?toggleQueuePlanner/,'dynamic queue button is pointer-only');
 assert.match(commander,/mfBindNativePress\(b,[\s\S]*?tryCommanderWeapon/,'commander weapon buttons are pointer-only');
 assert.match(airlift,/mfBindNativePress\(b,[\s\S]*?mfAirliftArmUnload/,'airlift unload button is pointer-only');
-assert.match(hudflow,/mfBindNativePress\(mfNoticeLogBtn/,'battle notification log is pointer-only');
+assert.match(hudflow,/function mfNoticeLogShell\([\s\S]*?mfBindNativePress\(btn,/,'battle notification log is pointer-only');
 assert.match(hud,/mfBindNativePress\(nav\.querySelector\('#prodPrev'\)/,'production navigator is pointer-only');
 assert.match(index,/<button type="button" id="atkAlert"[^>]+aria-label="Jump to base under attack"/,
   'base-under-attack alarm is not a named native control');

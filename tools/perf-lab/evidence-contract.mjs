@@ -5,8 +5,8 @@
 export const PERF_EVIDENCE_SCHEMA = 'massfront-perf-evidence-v3';
 export const PERF_EXECUTION_PATH = 'synthetic-load-in-real-match';
 export const PERF_CAPTURE_STAGES = Object.freeze(['start', 'mid', 'end']);
-export const PERF_CURRENT_MAX_SEATS = 4;
-export const PERF_CURRENT_MAX_AI_SLOT = 2;
+export const PERF_CURRENT_MAX_SEATS = 5;
+export const PERF_CURRENT_MAX_AI_SLOT = 3;
 export const PERF_ACCEPTANCE_UNITS_PER_FACTION = 500;
 export const PERF_FRAME_P99_BUDGET_MS = 33.3;
 export const PERF_GATE_SCHEMA = 'massfront-stage8-short-frame-gate-v1';
@@ -14,12 +14,14 @@ export const PERF_STAGE8_SCENARIO_TOTALS = Object.freeze({
   '1v1_duel_verdant': 1000,
   '1v1_duel_megacity': 1000,
   '1v2_flank_arctic': 1500,
-  '1v3_crossfire_ashland': 2000
+  '1v3_crossfire_ashland': 2000,
+  '1v4_continental_conquest': 2500
 });
 export const PERF_STAGE8_DESKTOP_REQUIRED_SCENARIOS = Object.freeze([
   '1v1_duel_verdant',
   '1v2_flank_arctic',
-  '1v3_crossfire_ashland'
+  '1v3_crossfire_ashland',
+  '1v4_continental_conquest'
 ]);
 
 const STAT_KEYS = Object.freeze(['p50', 'p95', 'p99', 'mean', 'max', 'min']);
@@ -187,8 +189,7 @@ function validateTelemetryMetric(metric, path, errors, { required = false, posit
   }
 }
 
-/** A fifth seat is authored for future work but does not exist in the runtime.
-    Unsupported evidence is excluded as UNSUPPORTED, never accepted or failed. */
+/** Evidence outside the current five-seat topology is excluded as unsupported. */
 export function classifyPerfTopology(record) {
   const seats = record?.population?.expected?.seats;
   const explicit = record?.topology;
@@ -196,7 +197,7 @@ export function classifyPerfTopology(record) {
     ? seats.find(seat => Number.isInteger(seat?.slot) && (seat.slot < -1 || seat.slot > PERF_CURRENT_MAX_AI_SLOT))
     : null;
   if (record?.evidenceStatus === 'unsupported' || explicit?.status === 'unsupported' ||
-      record?.scenarioId === '1v4_continental_conquest' || (Array.isArray(seats) && seats.length > PERF_CURRENT_MAX_SEATS) || invalidSlot) {
+      (Array.isArray(seats) && seats.length > PERF_CURRENT_MAX_SEATS) || invalidSlot) {
     return {
       status: 'unsupported',
       reason: explicit?.reason || (invalidSlot

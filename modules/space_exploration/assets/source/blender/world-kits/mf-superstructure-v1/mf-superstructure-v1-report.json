@@ -8,15 +8,15 @@
   "evidenceRenderer": "BLENDER_WORKBENCH",
   "blenderVersion": "5.2.0 LTS",
   "engineAnchors": {
-    "waterZ": 0.0,
-    "seabedZ": -26.0,
-    "terrainHScale": 118.0,
+    "waterZ": 0,
+    "seabedZ": -26,
+    "terrainHScale": 118,
     "source": "src/engine/terrain.js (WATER_Y, SEABED, HSCALE)"
   },
   "tilingContract": {
-    "placementGridM": 32.0,
+    "placementGridM": 32,
     "sharedWith": "mf-modular-building-v1",
-    "floorPitchM": 4.0,
+    "floorPitchM": 4,
     "partyJointM": 0.06,
     "partyJointTotalM": 0.12,
     "wallRunAxis": "EW",
@@ -66,9 +66,9 @@
     "platform_spoke",
     "platform_split"
   ],
-  "moduleCount": 57,
-  "tallestM": 350.0,
-  "deepestZ": -26.0,
+  "moduleCount": 56,
+  "tallestM": 350,
+  "deepestZ": -26,
   "triangleSummary": {
     "lod0Total": 298036,
     "lod0Min": 724,
@@ -89,8 +89,8 @@
         "wall_bastion",
         "wall_corner"
       ],
-      "spanCells": 6.0,
-      "spanM": 192.0
+      "spanCells": 6,
+      "spanM": 192
     },
     {
       "id": "breached_wall",
@@ -101,8 +101,8 @@
         "wall_straight",
         "wall_bastion"
       ],
-      "spanCells": 4.0,
-      "spanM": 128.0
+      "spanCells": 4,
+      "spanM": 128
     },
     {
       "id": "skyline",
@@ -113,8 +113,8 @@
         "spire_crown",
         "arcology_pylon"
       ],
-      "spanCells": 7.0,
-      "spanM": 224.0
+      "spanCells": 7,
+      "spanM": 224
     },
     {
       "id": "offshore",
@@ -125,8 +125,8 @@
         "platform_causeway",
         "platform_deck"
       ],
-      "spanCells": 10.0,
-      "spanM": 320.0
+      "spanCells": 10,
+      "spanM": 320
     },
     {
       "id": "platform_network",
@@ -137,8 +137,8 @@
         "platform_spoke",
         "platform_split"
       ],
-      "spanCells": 10.0,
-      "spanM": 320.0
+      "spanCells": 10,
+      "spanM": 320
     }
   ],
   "modules": [
@@ -154,8 +154,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 20.6,
       "boundsM": {
@@ -172,7 +172,7 @@
       },
       "lowestZ": -2.34,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -186,11 +186,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -199,11 +199,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -212,11 +212,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -225,18 +225,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2718
+          "triangles": 2700
         },
         {
           "lod": 1,
@@ -270,16 +270,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2718,
+        "lod0": 2700,
         "lod1": 268,
         "lod2": 56
       },
       "polys": {
-        "lod0": 1135,
+        "lod0": 1132,
         "lod1": 106,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 22,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_wall_corner",
@@ -293,15 +298,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 41.2,
       "boundsM": {
         "lo": [
           139.42,
           -10.58,
-          0.0
+          0
         ],
         "hi": [
           165.94,
@@ -309,9 +314,9 @@
           41.7
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "open",
@@ -325,11 +330,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -338,11 +343,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -351,11 +356,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -364,18 +369,18 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2630
+          "triangles": 2604
         },
         {
           "lod": 1,
@@ -409,16 +414,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2630,
+        "lod0": 2604,
         "lod1": 496,
         "lod2": 140
       },
       "polys": {
-        "lod0": 996,
+        "lod0": 992,
         "lod1": 196,
         "lod2": 50
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 24,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_wall_gate",
@@ -432,15 +442,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 26.6,
       "boundsM": {
         "lo": [
           284.06,
           -6.19,
-          0.0
+          0
         ],
         "hi": [
           315.94,
@@ -448,9 +458,9 @@
           37.34
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -464,11 +474,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -477,11 +487,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -490,11 +500,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -503,18 +513,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2580
+          "triangles": 2532
         },
         {
           "lod": 1,
@@ -548,16 +558,21 @@
         "triangles": 36
       },
       "tris": {
-        "lod0": 2580,
+        "lod0": 2532,
         "lod1": 352,
         "lod2": 112
       },
       "polys": {
-        "lod0": 1000,
+        "lod0": 991,
         "lod1": 148,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 20,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_wall_bastion",
@@ -571,15 +586,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 23.32,
       "boundsM": {
         "lo": [
           434.06,
           -9.64,
-          0.0
+          0
         ],
         "hi": [
           465.94,
@@ -587,9 +602,9 @@
           35.34
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -603,11 +618,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -616,11 +631,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -629,11 +644,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -642,18 +657,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3866
+          "triangles": 3842
         },
         {
           "lod": 1,
@@ -689,16 +704,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3866,
+        "lod0": 3842,
         "lod1": 496,
         "lod2": 84
       },
       "polys": {
-        "lod0": 1535,
+        "lod0": 1530,
         "lod1": 196,
         "lod2": 30
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 15,
+        "lod1": 24,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_wall_ramp",
@@ -712,8 +732,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 20.6,
       "boundsM": {
@@ -730,7 +750,7 @@
       },
       "lowestZ": -2.34,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -744,11 +764,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -757,11 +777,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -770,11 +790,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -783,18 +803,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3046
+          "triangles": 3032
         },
         {
           "lod": 1,
@@ -827,16 +847,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3046,
+        "lod0": 3032,
         "lod1": 280,
         "lod2": 56
       },
       "polys": {
-        "lod0": 1221,
+        "lod0": 1217,
         "lod1": 112,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 22,
+        "lod1": 14,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_wall_terminus",
@@ -850,15 +875,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 20.52,
       "boundsM": {
         "lo": [
           733.09,
           -9.58,
-          0.0
+          0
         ],
         "hi": [
           765.94,
@@ -866,9 +891,9 @@
           25.92
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -882,11 +907,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -895,11 +920,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -908,11 +933,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -921,18 +946,18 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1690
+          "triangles": 1654
         },
         {
           "lod": 1,
@@ -965,16 +990,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1690,
+        "lod0": 1654,
         "lod1": 312,
         "lod2": 84
       },
       "polys": {
-        "lod0": 613,
+        "lod0": 607,
         "lod1": 120,
         "lod2": 30
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 8,
+        "lod1": 14,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_spire_needle",
@@ -988,15 +1018,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 200.0,
+      "heightM": 200,
       "boundsM": {
         "lo": [
           -15.94,
           -356.23,
-          0.0
+          0
         ],
         "hi": [
           15.94,
@@ -1004,9 +1034,9 @@
           201.3
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -1020,11 +1050,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -1033,11 +1063,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -1046,11 +1076,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -1059,18 +1089,18 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 14858
+          "triangles": 14826
         },
         {
           "lod": 1,
@@ -1105,16 +1135,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 14858,
+        "lod0": 14826,
         "lod1": 978,
         "lod2": 162
       },
       "polys": {
-        "lod0": 5586,
+        "lod0": 5570,
         "lod1": 363,
         "lod2": 59
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 93,
+        "lod1": 36,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_tower_monolith",
@@ -1128,15 +1163,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 188.0,
+      "heightM": 188,
       "boundsM": {
         "lo": [
           118.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           181.94,
@@ -1144,9 +1179,9 @@
           202.72
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -1160,11 +1195,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -1173,11 +1208,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -1186,11 +1221,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -1199,11 +1234,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -1212,11 +1247,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -1225,11 +1260,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -1238,11 +1273,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -1251,18 +1286,18 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 19950
+          "triangles": 19946
         },
         {
           "lod": 1,
@@ -1300,16 +1335,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 19950,
+        "lod0": 19946,
         "lod1": 1178,
         "lod2": 134
       },
       "polys": {
-        "lod0": 6667,
+        "lod0": 6663,
         "lod1": 437,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 77,
+        "lod1": 44,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_spire_crown",
@@ -1323,15 +1363,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 294.0,
+      "heightM": 294,
       "boundsM": {
         "lo": [
           418.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           483.9,
@@ -1339,9 +1379,9 @@
           295.25
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "street",
@@ -1355,11 +1395,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -1368,11 +1408,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -1381,11 +1421,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -1394,11 +1434,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -1407,11 +1447,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -1420,11 +1460,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -1433,11 +1473,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -1446,18 +1486,18 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 22392
+          "triangles": 22376
         },
         {
           "lod": 1,
@@ -1492,16 +1532,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 22392,
+        "lod0": 22376,
         "lod1": 1514,
         "lod2": 374
       },
       "polys": {
-        "lod0": 8464,
+        "lod0": 8458,
         "lod1": 599,
         "lod2": 137
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 165,
+        "lod1": 70,
+        "lod2": 11
+      }
     },
     {
       "id": "colonial_arcology_pylon",
@@ -1515,15 +1560,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 350.0,
+      "heightM": 350,
       "boundsM": {
         "lo": [
           718.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           781.94,
@@ -1531,9 +1576,9 @@
           351.4
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -1547,11 +1592,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -1560,11 +1605,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -1573,11 +1618,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -1586,11 +1631,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -1599,11 +1644,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -1612,11 +1657,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -1625,11 +1670,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -1638,18 +1683,18 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 30996
+          "triangles": 30999
         },
         {
           "lod": 1,
@@ -1680,16 +1725,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 30996,
+        "lod0": 30999,
         "lod1": 1598,
         "lod2": 352
       },
       "polys": {
-        "lod0": 10185,
+        "lod0": 10177,
         "lod1": 621,
         "lod2": 128
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 154,
+        "lod1": 68,
+        "lod2": 11
+      }
     },
     {
       "id": "colonial_platform_deck",
@@ -1703,15 +1753,15 @@
         3
       ],
       "footprintM": [
-        96.0,
-        96.0
+        96,
+        96
       ],
-      "heightM": 54.0,
+      "heightM": 54,
       "boundsM": {
         "lo": [
           -47.94,
           -727.94,
-          -26.0
+          -26
         ],
         "hi": [
           47.94,
@@ -1719,9 +1769,9 @@
           57.02
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "open",
@@ -1735,11 +1785,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            48.0,
-            0.0
+            -32,
+            48,
+            0
           ]
         },
         {
@@ -1748,11 +1798,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            0.0,
-            48.0,
-            0.0
+            0,
+            48,
+            0
           ]
         },
         {
@@ -1761,11 +1811,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            48.0,
-            0.0
+            32,
+            48,
+            0
           ]
         },
         {
@@ -1774,11 +1824,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            -32.0,
-            0.0
+            48,
+            -32,
+            0
           ]
         },
         {
@@ -1787,11 +1837,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            0.0,
-            0.0
+            48,
+            0,
+            0
           ]
         },
         {
@@ -1800,11 +1850,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            32.0,
-            0.0
+            48,
+            32,
+            0
           ]
         },
         {
@@ -1813,11 +1863,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -48.0,
-            0.0
+            -32,
+            -48,
+            0
           ]
         },
         {
@@ -1826,11 +1876,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            0.0,
-            -48.0,
-            0.0
+            0,
+            -48,
+            0
           ]
         },
         {
@@ -1839,11 +1889,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -48.0,
-            0.0
+            32,
+            -48,
+            0
           ]
         },
         {
@@ -1852,11 +1902,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            -32.0,
-            0.0
+            -48,
+            -32,
+            0
           ]
         },
         {
@@ -1865,11 +1915,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            0.0,
-            0.0
+            -48,
+            0,
+            0
           ]
         },
         {
@@ -1878,11 +1928,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            32.0,
-            0.0
+            -48,
+            32,
+            0
           ]
         }
       ],
@@ -1941,7 +1991,12 @@
         "lod1": 876,
         "lod2": 201
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 103,
+        "lod2": 12
+      }
     },
     {
       "id": "colonial_platform_rig",
@@ -1955,25 +2010,25 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 78.0,
+      "heightM": 78,
       "boundsM": {
         "lo": [
           418.06,
           -711.89,
-          -26.0
+          -26
         ],
         "hi": [
           481.94,
           -648.11,
-          78.0
+          78
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -1987,11 +2042,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -2000,11 +2055,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -2013,11 +2068,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -2026,11 +2081,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -2039,11 +2094,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -2052,11 +2107,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -2065,11 +2120,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -2078,18 +2133,18 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 7542
+          "triangles": 7540
         },
         {
           "lod": 1,
@@ -2128,7 +2183,7 @@
         "triangles": 72
       },
       "tris": {
-        "lod0": 7542,
+        "lod0": 7540,
         "lod1": 1028,
         "lod2": 362
       },
@@ -2137,7 +2192,12 @@
         "lod1": 434,
         "lod2": 135
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 46,
+        "lod2": 9
+      }
     },
     {
       "id": "colonial_platform_landing",
@@ -2151,25 +2211,25 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 38.0,
+      "heightM": 38,
       "boundsM": {
         "lo": [
           718.11,
           -711.89,
-          -7.0
+          -7
         ],
         "hi": [
           781.89,
           -648.11,
-          38.0
+          38
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "service",
@@ -2183,11 +2243,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -2196,11 +2256,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -2209,11 +2269,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -2222,11 +2282,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -2235,11 +2295,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -2248,11 +2308,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -2261,11 +2321,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -2274,18 +2334,18 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3036
+          "triangles": 3024
         },
         {
           "lod": 1,
@@ -2318,16 +2378,21 @@
         "triangles": 72
       },
       "tris": {
-        "lod0": 3036,
+        "lod0": 3024,
         "lod1": 736,
         "lod2": 246
       },
       "polys": {
-        "lod0": 1158,
+        "lod0": 1160,
         "lod1": 296,
         "lod2": 89
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 29,
+        "lod2": 8
+      }
     },
     {
       "id": "colonial_platform_causeway",
@@ -2341,15 +2406,15 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 29.6,
       "boundsM": {
         "lo": [
           1018.06,
           -687.24,
-          -26.0
+          -26
         ],
         "hi": [
           1081.94,
@@ -2357,9 +2422,9 @@
           29.7
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -2373,11 +2438,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            16.0,
-            0.0
+            -16,
+            16,
+            0
           ]
         },
         {
@@ -2386,11 +2451,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            16.0,
-            0.0
+            16,
+            16,
+            0
           ]
         },
         {
@@ -2399,11 +2464,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            0.0,
-            0.0
+            32,
+            0,
+            0
           ]
         },
         {
@@ -2412,11 +2477,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -16.0,
-            0.0
+            -16,
+            -16,
+            0
           ]
         },
         {
@@ -2425,11 +2490,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -16.0,
-            0.0
+            16,
+            -16,
+            0
           ]
         },
         {
@@ -2438,11 +2503,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            0.0,
-            0.0
+            -32,
+            0,
+            0
           ]
         }
       ],
@@ -2483,7 +2548,12 @@
         "lod1": 149,
         "lod2": 48
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 15,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_platform_ramp",
@@ -2497,15 +2567,15 @@
         1
       ],
       "footprintM": [
-        96.0,
-        32.0
+        96,
+        32
       ],
       "heightM": 28.6,
       "boundsM": {
         "lo": [
           -47.94,
           -1032.2,
-          -26.0
+          -26
         ],
         "hi": [
           47.94,
@@ -2513,9 +2583,9 @@
           28.6
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -2529,11 +2599,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         },
         {
@@ -2542,11 +2612,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -2555,11 +2625,11 @@
           "type": "service",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -2568,11 +2638,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            0.0,
-            0.0
+            48,
+            0,
+            0
           ]
         },
         {
@@ -2581,11 +2651,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -2594,11 +2664,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -2607,11 +2677,11 @@
           "type": "service",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -2620,18 +2690,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -48.0,
-            0.0,
-            0.0
+            -48,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2900
+          "triangles": 2888
         },
         {
           "lod": 1,
@@ -2657,7 +2727,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2900,
+        "lod0": 2888,
         "lod1": 378,
         "lod2": 86
       },
@@ -2666,7 +2736,12 @@
         "lod1": 159,
         "lod2": 37
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 18,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_platform_ramp_tower",
@@ -2680,15 +2755,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 28.6,
       "boundsM": {
         "lo": [
           568.06,
           -1048.8,
-          -7.0
+          -7
         ],
         "hi": [
           631.36,
@@ -2696,9 +2771,9 @@
           28.4
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "service",
@@ -2712,11 +2787,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -2725,11 +2800,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -2738,11 +2813,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -2751,11 +2826,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -2764,11 +2839,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -2777,11 +2852,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -2790,11 +2865,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -2803,18 +2878,18 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1766
+          "triangles": 1149
         },
         {
           "lod": 1,
@@ -2841,16 +2916,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1766,
+        "lod0": 1149,
         "lod1": 390,
         "lod2": 242
       },
       "polys": {
-        "lod0": 657,
+        "lod0": 408,
         "lod1": 161,
         "lod2": 91
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 20,
+        "lod2": 9
+      }
     },
     {
       "id": "colonial_platform_disc",
@@ -2864,15 +2944,15 @@
         4
       ],
       "footprintM": [
-        128.0,
-        128.0
+        128,
+        128
       ],
-      "heightM": 46.0,
+      "heightM": 46,
       "boundsM": {
         "lo": [
           987.66,
           -1082.34,
-          -26.0
+          -26
         ],
         "hi": [
           1112.34,
@@ -2880,9 +2960,9 @@
           48.63
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "open",
@@ -2896,11 +2976,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            64.0,
-            0.0
+            -48,
+            64,
+            0
           ]
         },
         {
@@ -2909,11 +2989,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            64.0,
-            0.0
+            -16,
+            64,
+            0
           ]
         },
         {
@@ -2922,11 +3002,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            64.0,
-            0.0
+            16,
+            64,
+            0
           ]
         },
         {
@@ -2935,11 +3015,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            64.0,
-            0.0
+            48,
+            64,
+            0
           ]
         },
         {
@@ -2948,11 +3028,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            -48.0,
-            0.0
+            64,
+            -48,
+            0
           ]
         },
         {
@@ -2961,11 +3041,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            -16.0,
-            0.0
+            64,
+            -16,
+            0
           ]
         },
         {
@@ -2974,11 +3054,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            16.0,
-            0.0
+            64,
+            16,
+            0
           ]
         },
         {
@@ -2987,11 +3067,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            48.0,
-            0.0
+            64,
+            48,
+            0
           ]
         },
         {
@@ -3000,11 +3080,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            -64.0,
-            0.0
+            -48,
+            -64,
+            0
           ]
         },
         {
@@ -3013,11 +3093,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -64.0,
-            0.0
+            -16,
+            -64,
+            0
           ]
         },
         {
@@ -3026,11 +3106,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -64.0,
-            0.0
+            16,
+            -64,
+            0
           ]
         },
         {
@@ -3039,11 +3119,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            -64.0,
-            0.0
+            48,
+            -64,
+            0
           ]
         },
         {
@@ -3052,11 +3132,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            -48.0,
-            0.0
+            -64,
+            -48,
+            0
           ]
         },
         {
@@ -3065,11 +3145,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            -16.0,
-            0.0
+            -64,
+            -16,
+            0
           ]
         },
         {
@@ -3078,11 +3158,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            16.0,
-            0.0
+            -64,
+            16,
+            0
           ]
         },
         {
@@ -3091,11 +3171,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            48.0,
-            0.0
+            -64,
+            48,
+            0
           ]
         }
       ],
@@ -3143,11 +3223,16 @@
         "lod2": 196
       },
       "polys": {
-        "lod0": 1360,
+        "lod0": 1361,
         "lod1": 561,
         "lod2": 82
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 26,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_platform_spoke",
@@ -3161,15 +3246,15 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 32.7,
       "boundsM": {
         "lo": [
           1768.06,
           -1026.27,
-          -26.0
+          -26
         ],
         "hi": [
           1831.94,
@@ -3177,9 +3262,9 @@
           33.45
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -3193,11 +3278,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            16.0,
-            0.0
+            -16,
+            16,
+            0
           ]
         },
         {
@@ -3206,11 +3291,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            16.0,
-            0.0
+            16,
+            16,
+            0
           ]
         },
         {
@@ -3219,11 +3304,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            0.0,
-            0.0
+            32,
+            0,
+            0
           ]
         },
         {
@@ -3232,11 +3317,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -16.0,
-            0.0
+            -16,
+            -16,
+            0
           ]
         },
         {
@@ -3245,11 +3330,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -16.0,
-            0.0
+            16,
+            -16,
+            0
           ]
         },
         {
@@ -3258,18 +3343,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            0.0,
-            0.0
+            -32,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 4872
+          "triangles": 4800
         },
         {
           "lod": 1,
@@ -3296,16 +3381,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 4872,
+        "lod0": 4800,
         "lod1": 526,
         "lod2": 128
       },
       "polys": {
-        "lod0": 1652,
+        "lod0": 1636,
         "lod1": 229,
         "lod2": 48
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 29,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_platform_split",
@@ -3319,15 +3409,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 32.7,
       "boundsM": {
         "lo": [
           2218.06,
           -1051.88,
-          -7.0
+          -7
         ],
         "hi": [
           2281.94,
@@ -3335,9 +3425,9 @@
           33.45
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "service",
@@ -3351,11 +3441,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -3364,11 +3454,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -3377,11 +3467,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -3390,11 +3480,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -3403,11 +3493,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -3416,11 +3506,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -3429,11 +3519,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -3442,11 +3532,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
@@ -3488,7 +3578,12 @@
         "lod1": 186,
         "lod2": 66
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 27,
+        "lod2": 7
+      }
     },
     {
       "id": "brutalist_wall_straight",
@@ -3502,8 +3597,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 20.6,
       "boundsM": {
@@ -3520,7 +3615,7 @@
       },
       "lowestZ": -2.34,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -3534,11 +3629,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -3547,11 +3642,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -3560,11 +3655,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -3573,18 +3668,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2750
+          "triangles": 2726
         },
         {
           "lod": 1,
@@ -3618,16 +3713,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2750,
+        "lod0": 2726,
         "lod1": 268,
         "lod2": 56
       },
       "polys": {
-        "lod0": 1136,
+        "lod0": 1130,
         "lod1": 106,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 16,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_wall_corner",
@@ -3641,15 +3741,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 41.2,
       "boundsM": {
         "lo": [
           3339.49,
           -10.51,
-          0.0
+          0
         ],
         "hi": [
           3365.94,
@@ -3657,9 +3757,9 @@
           41.7
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "open",
@@ -3673,11 +3773,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -3686,11 +3786,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -3699,11 +3799,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -3712,18 +3812,18 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2792
+          "triangles": 2762
         },
         {
           "lod": 1,
@@ -3757,16 +3857,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2792,
+        "lod0": 2762,
         "lod1": 496,
         "lod2": 140
       },
       "polys": {
-        "lod0": 1048,
+        "lod0": 1042,
         "lod1": 196,
         "lod2": 50
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 24,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_wall_gate",
@@ -3780,15 +3885,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 26.6,
       "boundsM": {
         "lo": [
           3484.06,
           -6.19,
-          0.0
+          0
         ],
         "hi": [
           3515.94,
@@ -3796,9 +3901,9 @@
           37.34
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -3812,11 +3917,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -3825,11 +3930,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -3838,11 +3943,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -3851,18 +3956,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2618
+          "triangles": 2556
         },
         {
           "lod": 1,
@@ -3896,16 +4001,21 @@
         "triangles": 36
       },
       "tris": {
-        "lod0": 2618,
+        "lod0": 2556,
         "lod1": 352,
         "lod2": 112
       },
       "polys": {
-        "lod0": 1006,
+        "lod0": 994,
         "lod1": 148,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 20,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_wall_bastion",
@@ -3919,15 +4029,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 23.32,
       "boundsM": {
         "lo": [
           3634.06,
           -10.35,
-          0.0
+          0
         ],
         "hi": [
           3665.94,
@@ -3935,9 +4045,9 @@
           35.34
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -3951,11 +4061,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -3964,11 +4074,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -3977,11 +4087,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -3990,18 +4100,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3970
+          "triangles": 3942
         },
         {
           "lod": 1,
@@ -4037,16 +4147,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3970,
+        "lod0": 3942,
         "lod1": 496,
         "lod2": 84
       },
       "polys": {
-        "lod0": 1588,
+        "lod0": 1581,
         "lod1": 196,
         "lod2": 30
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 17,
+        "lod1": 24,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_wall_ramp",
@@ -4060,8 +4175,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 20.6,
       "boundsM": {
@@ -4078,7 +4193,7 @@
       },
       "lowestZ": -2.34,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -4092,11 +4207,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -4105,11 +4220,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -4118,11 +4233,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -4131,18 +4246,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3172
+          "triangles": 3156
         },
         {
           "lod": 1,
@@ -4175,16 +4290,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3172,
+        "lod0": 3156,
         "lod1": 280,
         "lod2": 56
       },
       "polys": {
-        "lod0": 1267,
+        "lod0": 1262,
         "lod1": 112,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 25,
+        "lod1": 14,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_wall_terminus",
@@ -4198,15 +4318,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 20.52,
       "boundsM": {
         "lo": [
           3933.09,
           -9.56,
-          0.0
+          0
         ],
         "hi": [
           3965.94,
@@ -4214,9 +4334,9 @@
           25.92
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "open",
@@ -4230,11 +4350,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -4243,11 +4363,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -4256,11 +4376,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -4269,18 +4389,18 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1802
+          "triangles": 1766
         },
         {
           "lod": 1,
@@ -4313,16 +4433,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1802,
+        "lod0": 1766,
         "lod1": 312,
         "lod2": 84
       },
       "polys": {
-        "lod0": 654,
+        "lod0": 645,
         "lod1": 120,
         "lod2": 30
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 8,
+        "lod1": 14,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_spire_needle",
@@ -4336,15 +4461,15 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 200.0,
+      "heightM": 200,
       "boundsM": {
         "lo": [
           3184.06,
           -357.15,
-          0.0
+          0
         ],
         "hi": [
           3215.94,
@@ -4352,9 +4477,9 @@
           201.3
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -4368,11 +4493,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -4381,11 +4506,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -4394,11 +4519,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -4407,11 +4532,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
@@ -4456,11 +4581,16 @@
         "lod2": 162
       },
       "polys": {
-        "lod0": 4853,
+        "lod0": 4857,
         "lod1": 351,
         "lod2": 59
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 58,
+        "lod1": 34,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_tower_monolith",
@@ -4474,15 +4604,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 188.0,
+      "heightM": 188,
       "boundsM": {
         "lo": [
           3318.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           3381.94,
@@ -4490,9 +4620,9 @@
           196.89
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -4506,11 +4636,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -4519,11 +4649,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -4532,11 +4662,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -4545,11 +4675,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -4558,11 +4688,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -4571,11 +4701,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -4584,11 +4714,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -4597,11 +4727,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
@@ -4652,7 +4782,12 @@
         "lod1": 401,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 141,
+        "lod1": 40,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_spire_crown",
@@ -4666,15 +4801,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 294.0,
+      "heightM": 294,
       "boundsM": {
         "lo": [
           3618.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           3681.94,
@@ -4682,9 +4817,9 @@
           295.25
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "street",
@@ -4698,11 +4833,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -4711,11 +4846,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -4724,11 +4859,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -4737,11 +4872,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -4750,11 +4885,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -4763,11 +4898,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -4776,11 +4911,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -4789,18 +4924,18 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 16090
+          "triangles": 16174
         },
         {
           "lod": 1,
@@ -4833,16 +4968,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 16090,
+        "lod0": 16174,
         "lod1": 1418,
         "lod2": 374
       },
       "polys": {
-        "lod0": 6683,
+        "lod0": 6701,
         "lod1": 551,
         "lod2": 137
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 158,
+        "lod1": 62,
+        "lod2": 11
+      }
     },
     {
       "id": "brutalist_arcology_pylon",
@@ -4856,15 +4996,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 350.0,
+      "heightM": 350,
       "boundsM": {
         "lo": [
           3918.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           3981.94,
@@ -4872,9 +5012,9 @@
           351.4
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -4888,11 +5028,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -4901,11 +5041,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -4914,11 +5054,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -4927,11 +5067,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -4940,11 +5080,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -4953,11 +5093,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -4966,11 +5106,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -4979,18 +5119,18 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 24552
+          "triangles": 24548
         },
         {
           "lod": 1,
@@ -5021,16 +5161,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 24552,
+        "lod0": 24548,
         "lod1": 1550,
         "lod2": 352
       },
       "polys": {
-        "lod0": 8236,
+        "lod0": 8235,
         "lod1": 597,
         "lod2": 128
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 88,
+        "lod1": 64,
+        "lod2": 11
+      }
     },
     {
       "id": "brutalist_platform_deck",
@@ -5044,15 +5189,15 @@
         3
       ],
       "footprintM": [
-        96.0,
-        96.0
+        96,
+        96
       ],
-      "heightM": 54.0,
+      "heightM": 54,
       "boundsM": {
         "lo": [
           3152.06,
           -727.94,
-          -26.0
+          -26
         ],
         "hi": [
           3247.94,
@@ -5060,9 +5205,9 @@
           56.63
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "open",
@@ -5076,11 +5221,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            48.0,
-            0.0
+            -32,
+            48,
+            0
           ]
         },
         {
@@ -5089,11 +5234,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            0.0,
-            48.0,
-            0.0
+            0,
+            48,
+            0
           ]
         },
         {
@@ -5102,11 +5247,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            48.0,
-            0.0
+            32,
+            48,
+            0
           ]
         },
         {
@@ -5115,11 +5260,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            -32.0,
-            0.0
+            48,
+            -32,
+            0
           ]
         },
         {
@@ -5128,11 +5273,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            0.0,
-            0.0
+            48,
+            0,
+            0
           ]
         },
         {
@@ -5141,11 +5286,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            32.0,
-            0.0
+            48,
+            32,
+            0
           ]
         },
         {
@@ -5154,11 +5299,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -48.0,
-            0.0
+            -32,
+            -48,
+            0
           ]
         },
         {
@@ -5167,11 +5312,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            0.0,
-            -48.0,
-            0.0
+            0,
+            -48,
+            0
           ]
         },
         {
@@ -5180,11 +5325,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -48.0,
-            0.0
+            32,
+            -48,
+            0
           ]
         },
         {
@@ -5193,11 +5338,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            -32.0,
-            0.0
+            -48,
+            -32,
+            0
           ]
         },
         {
@@ -5206,11 +5351,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            0.0,
-            0.0
+            -48,
+            0,
+            0
           ]
         },
         {
@@ -5219,11 +5364,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            32.0,
-            0.0
+            -48,
+            32,
+            0
           ]
         }
       ],
@@ -5282,7 +5427,12 @@
         "lod1": 856,
         "lod2": 201
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 101,
+        "lod2": 12
+      }
     },
     {
       "id": "brutalist_platform_rig",
@@ -5296,25 +5446,25 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 78.0,
+      "heightM": 78,
       "boundsM": {
         "lo": [
           3618.06,
           -711.88,
-          -26.0
+          -26
         ],
         "hi": [
           3681.94,
           -648.12,
-          78.0
+          78
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -5328,11 +5478,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -5341,11 +5491,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -5354,11 +5504,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -5367,11 +5517,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -5380,11 +5530,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -5393,11 +5543,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -5406,11 +5556,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -5419,11 +5569,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
@@ -5475,11 +5625,16 @@
         "lod2": 362
       },
       "polys": {
-        "lod0": 2788,
+        "lod0": 2790,
         "lod1": 434,
         "lod2": 135
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 46,
+        "lod2": 9
+      }
     },
     {
       "id": "brutalist_platform_landing",
@@ -5493,25 +5648,25 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 38.0,
+      "heightM": 38,
       "boundsM": {
         "lo": [
           3918.13,
           -711.87,
-          -7.0
+          -7
         ],
         "hi": [
           3981.87,
           -648.13,
-          38.0
+          38
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "street",
         "E": "service",
@@ -5525,11 +5680,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -5538,11 +5693,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -5551,11 +5706,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -5564,11 +5719,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -5577,11 +5732,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -5590,11 +5745,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -5603,11 +5758,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -5616,18 +5771,18 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3116
+          "triangles": 3108
         },
         {
           "lod": 1,
@@ -5660,7 +5815,7 @@
         "triangles": 72
       },
       "tris": {
-        "lod0": 3116,
+        "lod0": 3108,
         "lod1": 736,
         "lod2": 246
       },
@@ -5669,7 +5824,12 @@
         "lod1": 296,
         "lod2": 89
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 29,
+        "lod2": 8
+      }
     },
     {
       "id": "brutalist_platform_causeway",
@@ -5683,15 +5843,15 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 29.6,
       "boundsM": {
         "lo": [
           4218.06,
           -687.2,
-          -26.0
+          -26
         ],
         "hi": [
           4281.94,
@@ -5699,9 +5859,9 @@
           29.7
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -5715,11 +5875,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            16.0,
-            0.0
+            -16,
+            16,
+            0
           ]
         },
         {
@@ -5728,11 +5888,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            16.0,
-            0.0
+            16,
+            16,
+            0
           ]
         },
         {
@@ -5741,11 +5901,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            0.0,
-            0.0
+            32,
+            0,
+            0
           ]
         },
         {
@@ -5754,11 +5914,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -16.0,
-            0.0
+            -16,
+            -16,
+            0
           ]
         },
         {
@@ -5767,11 +5927,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -16.0,
-            0.0
+            16,
+            -16,
+            0
           ]
         },
         {
@@ -5780,18 +5940,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            0.0,
-            0.0
+            -32,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3508
+          "triangles": 3500
         },
         {
           "lod": 1,
@@ -5816,7 +5976,7 @@
         "triangles": 60
       },
       "tris": {
-        "lod0": 3508,
+        "lod0": 3500,
         "lod1": 374,
         "lod2": 128
       },
@@ -5825,7 +5985,12 @@
         "lod1": 149,
         "lod2": 48
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 15,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_platform_ramp",
@@ -5839,15 +6004,15 @@
         1
       ],
       "footprintM": [
-        96.0,
-        32.0
+        96,
+        32
       ],
       "heightM": 28.6,
       "boundsM": {
         "lo": [
           3152.06,
           -1032.2,
-          -26.0
+          -26
         ],
         "hi": [
           3247.94,
@@ -5855,9 +6020,9 @@
           28.6
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -5871,11 +6036,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         },
         {
@@ -5884,11 +6049,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -5897,11 +6062,11 @@
           "type": "service",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -5910,11 +6075,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            0.0,
-            0.0
+            48,
+            0,
+            0
           ]
         },
         {
@@ -5923,11 +6088,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -5936,11 +6101,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -5949,11 +6114,11 @@
           "type": "service",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -5962,18 +6127,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -48.0,
-            0.0,
-            0.0
+            -48,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3038
+          "triangles": 3022
         },
         {
           "lod": 1,
@@ -5999,7 +6164,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3038,
+        "lod0": 3022,
         "lod1": 378,
         "lod2": 86
       },
@@ -6008,7 +6173,12 @@
         "lod1": 159,
         "lod2": 37
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 18,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_platform_ramp_tower",
@@ -6022,15 +6192,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 28.6,
       "boundsM": {
         "lo": [
           3768.06,
           -1048.8,
-          -7.0
+          -7
         ],
         "hi": [
           3831.36,
@@ -6038,9 +6208,9 @@
           28.4
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "service",
@@ -6054,11 +6224,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -6067,11 +6237,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -6080,11 +6250,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -6093,11 +6263,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -6106,11 +6276,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -6119,11 +6289,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -6132,11 +6302,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -6145,18 +6315,18 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1794
+          "triangles": 1170
         },
         {
           "lod": 1,
@@ -6183,16 +6353,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1794,
+        "lod0": 1170,
         "lod1": 390,
         "lod2": 242
       },
       "polys": {
-        "lod0": 657,
+        "lod0": 409,
         "lod1": 161,
         "lod2": 91
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 20,
+        "lod2": 9
+      }
     },
     {
       "id": "brutalist_platform_disc",
@@ -6206,15 +6381,15 @@
         4
       ],
       "footprintM": [
-        128.0,
-        128.0
+        128,
+        128
       ],
-      "heightM": 46.0,
+      "heightM": 46,
       "boundsM": {
         "lo": [
           4187.66,
           -1082.34,
-          -26.0
+          -26
         ],
         "hi": [
           4312.34,
@@ -6222,9 +6397,9 @@
           49.03
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "open",
@@ -6238,11 +6413,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            64.0,
-            0.0
+            -48,
+            64,
+            0
           ]
         },
         {
@@ -6251,11 +6426,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            64.0,
-            0.0
+            -16,
+            64,
+            0
           ]
         },
         {
@@ -6264,11 +6439,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            64.0,
-            0.0
+            16,
+            64,
+            0
           ]
         },
         {
@@ -6277,11 +6452,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            64.0,
-            0.0
+            48,
+            64,
+            0
           ]
         },
         {
@@ -6290,11 +6465,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            -48.0,
-            0.0
+            64,
+            -48,
+            0
           ]
         },
         {
@@ -6303,11 +6478,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            -16.0,
-            0.0
+            64,
+            -16,
+            0
           ]
         },
         {
@@ -6316,11 +6491,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            16.0,
-            0.0
+            64,
+            16,
+            0
           ]
         },
         {
@@ -6329,11 +6504,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            48.0,
-            0.0
+            64,
+            48,
+            0
           ]
         },
         {
@@ -6342,11 +6517,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            -64.0,
-            0.0
+            -48,
+            -64,
+            0
           ]
         },
         {
@@ -6355,11 +6530,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -64.0,
-            0.0
+            -16,
+            -64,
+            0
           ]
         },
         {
@@ -6368,11 +6543,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -64.0,
-            0.0
+            16,
+            -64,
+            0
           ]
         },
         {
@@ -6381,11 +6556,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            -64.0,
-            0.0
+            48,
+            -64,
+            0
           ]
         },
         {
@@ -6394,11 +6569,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            -48.0,
-            0.0
+            -64,
+            -48,
+            0
           ]
         },
         {
@@ -6407,11 +6582,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            -16.0,
-            0.0
+            -64,
+            -16,
+            0
           ]
         },
         {
@@ -6420,11 +6595,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            16.0,
-            0.0
+            -64,
+            16,
+            0
           ]
         },
         {
@@ -6433,18 +6608,18 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            48.0,
-            0.0
+            -64,
+            48,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 4082
+          "triangles": 4080
         },
         {
           "lod": 1,
@@ -6480,7 +6655,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 4082,
+        "lod0": 4080,
         "lod1": 1258,
         "lod2": 196
       },
@@ -6489,7 +6664,12 @@
         "lod1": 561,
         "lod2": 82
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 26,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_platform_spoke",
@@ -6503,15 +6683,15 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 32.7,
       "boundsM": {
         "lo": [
           4968.06,
           -1026.27,
-          -26.0
+          -26
         ],
         "hi": [
           5031.94,
@@ -6519,9 +6699,9 @@
           33.45
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "service",
         "E": "open",
@@ -6535,11 +6715,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            16.0,
-            0.0
+            -16,
+            16,
+            0
           ]
         },
         {
@@ -6548,11 +6728,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            16.0,
-            0.0
+            16,
+            16,
+            0
           ]
         },
         {
@@ -6561,11 +6741,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            0.0,
-            0.0
+            32,
+            0,
+            0
           ]
         },
         {
@@ -6574,11 +6754,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -16.0,
-            0.0
+            -16,
+            -16,
+            0
           ]
         },
         {
@@ -6587,11 +6767,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -16.0,
-            0.0
+            16,
+            -16,
+            0
           ]
         },
         {
@@ -6600,18 +6780,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            0.0,
-            0.0
+            -32,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 4982
+          "triangles": 4978
         },
         {
           "lod": 1,
@@ -6638,7 +6818,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 4982,
+        "lod0": 4978,
         "lod1": 526,
         "lod2": 128
       },
@@ -6647,7 +6827,12 @@
         "lod1": 229,
         "lod2": 48
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 29,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_platform_split",
@@ -6661,15 +6846,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 32.7,
       "boundsM": {
         "lo": [
           5418.06,
           -1051.86,
-          -7.0
+          -7
         ],
         "hi": [
           5481.94,
@@ -6677,9 +6862,9 @@
           33.45
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
-      "ruinScale": 1.0,
+      "ruinScale": 1,
       "edges": {
         "N": "open",
         "E": "service",
@@ -6693,11 +6878,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -6706,11 +6891,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -6719,11 +6904,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -6732,11 +6917,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -6745,11 +6930,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -6758,11 +6943,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -6771,11 +6956,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -6784,11 +6969,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
@@ -6830,7 +7015,12 @@
         "lod1": 186,
         "lod2": 66
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 27,
+        "lod2": 7
+      }
     },
     {
       "id": "ruined_wall_straight",
@@ -6844,8 +7034,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 10.66,
       "boundsM": {
@@ -6876,11 +7066,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -6889,11 +7079,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -6902,11 +7092,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -6915,18 +7105,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1228
+          "triangles": 1220
         },
         {
           "lod": 1,
@@ -6959,16 +7149,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1228,
+        "lod0": 1220,
         "lod1": 268,
         "lod2": 56
       },
       "polys": {
-        "lod0": 520,
+        "lod0": 515,
         "lod1": 106,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 10,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_wall_corner",
@@ -6982,8 +7177,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 34.88,
       "boundsM": {
@@ -7014,11 +7209,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -7027,11 +7222,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -7040,11 +7235,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -7053,18 +7248,18 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1550
+          "triangles": 1544
         },
         {
           "lod": 1,
@@ -7096,16 +7291,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1550,
+        "lod0": 1544,
         "lod1": 440,
         "lod2": 140
       },
       "polys": {
-        "lod0": 573,
+        "lod0": 571,
         "lod1": 170,
         "lod2": 50
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 20,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_wall_gate",
@@ -7119,8 +7319,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 15.59,
       "boundsM": {
@@ -7151,11 +7351,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -7164,11 +7364,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -7177,11 +7377,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -7190,18 +7390,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1357
+          "triangles": 1331
         },
         {
           "lod": 1,
@@ -7233,16 +7433,21 @@
         "triangles": 36
       },
       "tris": {
-        "lod0": 1357,
+        "lod0": 1331,
         "lod1": 328,
         "lod2": 112
       },
       "polys": {
-        "lod0": 533,
+        "lod0": 525,
         "lod1": 136,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 18,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_wall_bastion",
@@ -7256,8 +7461,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 16.6,
       "boundsM": {
@@ -7269,7 +7474,7 @@
         "hi": [
           6865.94,
           15.78,
-          29.0
+          29
         ]
       },
       "lowestZ": -4.68,
@@ -7288,11 +7493,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -7301,11 +7506,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -7314,11 +7519,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -7327,18 +7532,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2014
+          "triangles": 2000
         },
         {
           "lod": 1,
@@ -7372,16 +7577,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2014,
+        "lod0": 2000,
         "lod1": 472,
         "lod2": 84
       },
       "polys": {
-        "lod0": 813,
+        "lod0": 807,
         "lod1": 184,
         "lod2": 30
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 14,
+        "lod1": 22,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_wall_ramp",
@@ -7395,8 +7605,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 14.99,
       "boundsM": {
@@ -7427,11 +7637,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -7440,11 +7650,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -7453,11 +7663,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -7466,18 +7676,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1426
+          "triangles": 1418
         },
         {
           "lod": 1,
@@ -7509,16 +7719,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1426,
+        "lod0": 1418,
         "lod1": 280,
         "lod2": 56
       },
       "polys": {
-        "lod0": 606,
+        "lod0": 601,
         "lod1": 112,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 15,
+        "lod1": 14,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_wall_terminus",
@@ -7532,8 +7747,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 12.69,
       "boundsM": {
@@ -7564,11 +7779,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -7577,11 +7792,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -7590,11 +7805,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -7603,18 +7818,18 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": true,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 976
+          "triangles": 944
         },
         {
           "lod": 1,
@@ -7646,16 +7861,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 976,
+        "lod0": 944,
         "lod1": 312,
         "lod2": 84
       },
       "polys": {
-        "lod0": 365,
+        "lod0": 357,
         "lod1": 120,
         "lod2": 30
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 10,
+        "lod1": 14,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_spire_needle",
@@ -7669,23 +7889,23 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 120.69,
       "boundsM": {
         "lo": [
           6384.06,
-          -356.0,
-          0.0
+          -356,
+          0
         ],
         "hi": [
           6415.94,
-          -324.0,
+          -324,
           121.99
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
       "ruinScale": 0.492,
       "edges": {
@@ -7701,11 +7921,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -7714,11 +7934,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            0.0,
-            0.0
+            16,
+            0,
+            0
           ]
         },
         {
@@ -7727,11 +7947,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -7740,11 +7960,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            0.0,
-            0.0
+            -16,
+            0,
+            0
           ]
         }
       ],
@@ -7791,7 +8011,12 @@
         "lod1": 205,
         "lod2": 59
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 37,
+        "lod1": 22,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_tower_monolith",
@@ -7805,15 +8030,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 86.6,
       "boundsM": {
         "lo": [
           6518.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           6581.94,
@@ -7821,7 +8046,7 @@
           94.67
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
       "ruinScale": 0.461,
       "edges": {
@@ -7837,11 +8062,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -7850,11 +8075,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -7863,11 +8088,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -7876,11 +8101,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -7889,11 +8114,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -7902,11 +8127,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -7915,11 +8140,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -7928,11 +8153,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
@@ -7983,196 +8208,12 @@
         "lod1": 239,
         "lod2": 49
       },
-      "objectsPerModule": 3
-    },
-    {
-      "id": "ruined_spire_crown",
-      "archetype": "spire_crown",
-      "style": "ruined",
-      "styleLabel": "Derelict",
-      "superstructureClass": "tower",
-      "form": "crown",
-      "cells": [
-        2,
-        2
-      ],
-      "footprintM": [
-        64.0,
-        64.0
-      ],
-      "heightM": 208.79,
-      "boundsM": {
-        "lo": [
-          6818.06,
-          -371.94,
-          0.0
-        ],
-        "hi": [
-          6881.94,
-          -308.0,
-          210.04
-        ]
-      },
-      "lowestZ": 0.0,
-      "submerged": false,
-      "ruinScale": 0.656,
-      "edges": {
-        "N": "street",
-        "E": "street",
-        "S": "party_wall",
-        "W": "party_wall"
-      },
-      "sockets": [
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_N_0",
-          "direction": "N",
-          "type": "street",
-          "cellIndex": 0,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            -16.0,
-            32.0,
-            0.0
-          ]
-        },
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_N_1",
-          "direction": "N",
-          "type": "street",
-          "cellIndex": 1,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            16.0,
-            32.0,
-            0.0
-          ]
-        },
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_E_0",
-          "direction": "E",
-          "type": "street",
-          "cellIndex": 0,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            32.0,
-            -16.0,
-            0.0
-          ]
-        },
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_E_1",
-          "direction": "E",
-          "type": "street",
-          "cellIndex": 1,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            32.0,
-            16.0,
-            0.0
-          ]
-        },
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_S_0",
-          "direction": "S",
-          "type": "party_wall",
-          "cellIndex": 0,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
-          ]
-        },
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_S_1",
-          "direction": "S",
-          "type": "party_wall",
-          "cellIndex": 1,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            16.0,
-            -32.0,
-            0.0
-          ]
-        },
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_W_0",
-          "direction": "W",
-          "type": "party_wall",
-          "cellIndex": 0,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
-          ]
-        },
-        {
-          "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_SOCKET_W_1",
-          "direction": "W",
-          "type": "party_wall",
-          "cellIndex": 1,
-          "wallRun": false,
-          "edgeZ": 0.0,
-          "localPosition": [
-            -32.0,
-            16.0,
-            0.0
-          ]
-        }
-      ],
-      "lods": [
-        {
-          "lod": 0,
-          "triangles": 8312
-        },
-        {
-          "lod": 1,
-          "triangles": 1242
-        },
-        {
-          "lod": 2,
-          "triangles": 374
-        }
-      ],
-      "geometryRoleTriangles": {
-        "armour_plate": 264,
-        "base_block": 92,
-        "coping": 84,
-        "cornice_reveal": 84,
-        "crown": 92,
-        "fin": 1232,
-        "mast_antenna": 56,
-        "panel_detail": 1956,
-        "parapet_wall": 168,
-        "riser_stack": 60,
-        "spandrel": 1472,
-        "vent_bank": 48,
-        "window_drum": 1196,
-        "window_glass": 312
-      },
-      "collision": {
-        "name": "MF_SUPER_V1_RUINED_SPIRE_CROWN_COLLISION",
-        "triangles": 12
-      },
-      "tris": {
-        "lod0": 8312,
-        "lod1": 1242,
-        "lod2": 374
-      },
-      "polys": {
-        "lod0": 3107,
-        "lod1": 495,
-        "lod2": 137
-      },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 33,
+        "lod1": 26,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_arcology_pylon",
@@ -8186,15 +8227,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 221.44,
       "boundsM": {
         "lo": [
           7118.06,
           -371.94,
-          0.0
+          0
         ],
         "hi": [
           7181.94,
@@ -8202,7 +8243,7 @@
           222.84
         ]
       },
-      "lowestZ": 0.0,
+      "lowestZ": 0,
       "submerged": false,
       "ruinScale": 0.56,
       "edges": {
@@ -8218,11 +8259,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -8231,11 +8272,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -8244,11 +8285,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -8257,11 +8298,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -8270,11 +8311,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -8283,11 +8324,11 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -8296,11 +8337,11 @@
           "type": "party_wall",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -8309,18 +8350,18 @@
           "type": "party_wall",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 10834
+          "triangles": 10854
         },
         {
           "lod": 1,
@@ -8350,7 +8391,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 10834,
+        "lod0": 10854,
         "lod1": 1034,
         "lod2": 352
       },
@@ -8359,7 +8400,12 @@
         "lod1": 407,
         "lod2": 128
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 101,
+        "lod1": 46,
+        "lod2": 11
+      }
     },
     {
       "id": "ruined_platform_deck",
@@ -8373,15 +8419,15 @@
         3
       ],
       "footprintM": [
-        96.0,
-        96.0
+        96,
+        96
       ],
-      "heightM": 54.0,
+      "heightM": 54,
       "boundsM": {
         "lo": [
           6352.06,
           -727.94,
-          -26.0
+          -26
         ],
         "hi": [
           6447.94,
@@ -8389,7 +8435,7 @@
           56.57
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
       "ruinScale": 0.596,
       "edges": {
@@ -8405,11 +8451,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            48.0,
-            0.0
+            -32,
+            48,
+            0
           ]
         },
         {
@@ -8418,11 +8464,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            0.0,
-            48.0,
-            0.0
+            0,
+            48,
+            0
           ]
         },
         {
@@ -8431,11 +8477,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            48.0,
-            0.0
+            32,
+            48,
+            0
           ]
         },
         {
@@ -8444,11 +8490,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            -32.0,
-            0.0
+            48,
+            -32,
+            0
           ]
         },
         {
@@ -8457,11 +8503,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            0.0,
-            0.0
+            48,
+            0,
+            0
           ]
         },
         {
@@ -8470,11 +8516,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            32.0,
-            0.0
+            48,
+            32,
+            0
           ]
         },
         {
@@ -8483,11 +8529,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -48.0,
-            0.0
+            -32,
+            -48,
+            0
           ]
         },
         {
@@ -8496,11 +8542,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            0.0,
-            -48.0,
-            0.0
+            0,
+            -48,
+            0
           ]
         },
         {
@@ -8509,11 +8555,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -48.0,
-            0.0
+            32,
+            -48,
+            0
           ]
         },
         {
@@ -8522,11 +8568,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            -32.0,
-            0.0
+            -48,
+            -32,
+            0
           ]
         },
         {
@@ -8535,11 +8581,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            0.0,
-            0.0
+            -48,
+            0,
+            0
           ]
         },
         {
@@ -8548,11 +8594,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            32.0,
-            0.0
+            -48,
+            32,
+            0
           ]
         }
       ],
@@ -8608,7 +8654,12 @@
         "lod1": 844,
         "lod2": 201
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 99,
+        "lod2": 12
+      }
     },
     {
       "id": "ruined_platform_rig",
@@ -8622,23 +8673,23 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 78.0,
+      "heightM": 78,
       "boundsM": {
         "lo": [
           6818.06,
           -711.89,
-          -26.0
+          -26
         ],
         "hi": [
           6881.94,
           -648.11,
-          78.0
+          78
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
       "ruinScale": 0.65,
       "edges": {
@@ -8654,11 +8705,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -8667,11 +8718,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -8680,11 +8731,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -8693,11 +8744,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -8706,11 +8757,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -8719,11 +8770,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -8732,11 +8783,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -8745,18 +8796,18 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 4320
+          "triangles": 4316
         },
         {
           "lod": 1,
@@ -8792,16 +8843,21 @@
         "triangles": 72
       },
       "tris": {
-        "lod0": 4320,
+        "lod0": 4316,
         "lod1": 1028,
         "lod2": 362
       },
       "polys": {
-        "lod0": 1504,
+        "lod0": 1505,
         "lod1": 434,
         "lod2": 135
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 46,
+        "lod2": 9
+      }
     },
     {
       "id": "ruined_platform_landing",
@@ -8815,23 +8871,23 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 38.0,
+      "heightM": 38,
       "boundsM": {
         "lo": [
           7118.12,
           -711.88,
-          -7.0
+          -7
         ],
         "hi": [
           7181.88,
           -648.12,
-          38.0
+          38
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
       "ruinScale": 0.481,
       "edges": {
@@ -8847,11 +8903,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -8860,11 +8916,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -8873,11 +8929,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -8886,11 +8942,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -8899,11 +8955,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -8912,11 +8968,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -8925,11 +8981,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -8938,11 +8994,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 22.0,
+          "edgeZ": 22,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
@@ -8989,7 +9045,12 @@
         "lod1": 248,
         "lod2": 89
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 21,
+        "lod2": 8
+      }
     },
     {
       "id": "ruined_platform_causeway",
@@ -9003,15 +9064,15 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 29.6,
       "boundsM": {
         "lo": [
           7418.06,
           -687.22,
-          -26.0
+          -26
         ],
         "hi": [
           7481.94,
@@ -9019,7 +9080,7 @@
           29.7
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
       "ruinScale": 0.495,
       "edges": {
@@ -9035,11 +9096,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            16.0,
-            0.0
+            -16,
+            16,
+            0
           ]
         },
         {
@@ -9048,11 +9109,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            16.0,
-            0.0
+            16,
+            16,
+            0
           ]
         },
         {
@@ -9061,11 +9122,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            0.0,
-            0.0
+            32,
+            0,
+            0
           ]
         },
         {
@@ -9074,11 +9135,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -16.0,
-            0.0
+            -16,
+            -16,
+            0
           ]
         },
         {
@@ -9087,11 +9148,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -16.0,
-            0.0
+            16,
+            -16,
+            0
           ]
         },
         {
@@ -9100,11 +9161,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            0.0,
-            0.0
+            -32,
+            0,
+            0
           ]
         }
       ],
@@ -9144,7 +9205,12 @@
         "lod1": 143,
         "lod2": 48
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 14,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_platform_ramp",
@@ -9158,15 +9224,15 @@
         1
       ],
       "footprintM": [
-        96.0,
-        32.0
+        96,
+        32
       ],
       "heightM": 28.6,
       "boundsM": {
         "lo": [
           6352.06,
           -1032.2,
-          -26.0
+          -26
         ],
         "hi": [
           6447.94,
@@ -9174,7 +9240,7 @@
           28.6
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
       "ruinScale": 0.593,
       "edges": {
@@ -9190,11 +9256,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         },
         {
@@ -9203,11 +9269,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            16.0,
-            0.0
+            0,
+            16,
+            0
           ]
         },
         {
@@ -9216,11 +9282,11 @@
           "type": "service",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -9229,11 +9295,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            0.0,
-            0.0
+            48,
+            0,
+            0
           ]
         },
         {
@@ -9242,11 +9308,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -9255,11 +9321,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            0.0,
-            -16.0,
-            0.0
+            0,
+            -16,
+            0
           ]
         },
         {
@@ -9268,11 +9334,11 @@
           "type": "service",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -9281,11 +9347,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -48.0,
-            0.0,
-            0.0
+            -48,
+            0,
+            0
           ]
         }
       ],
@@ -9326,7 +9392,12 @@
         "lod1": 147,
         "lod2": 37
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 16,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_platform_ramp_tower",
@@ -9340,15 +9411,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 28.6,
       "boundsM": {
         "lo": [
           6968.06,
           -1048.8,
-          -7.0
+          -7
         ],
         "hi": [
           7031.36,
@@ -9356,7 +9427,7 @@
           28.4
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
       "ruinScale": 0.627,
       "edges": {
@@ -9372,11 +9443,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -9385,11 +9456,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -9398,11 +9469,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -9411,11 +9482,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -9424,11 +9495,11 @@
           "type": "street",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -9437,11 +9508,11 @@
           "type": "street",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -9450,11 +9521,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -9463,18 +9534,18 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 0.0,
+          "edgeZ": 0,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 1274
+          "triangles": 816
         },
         {
           "lod": 1,
@@ -9501,16 +9572,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1274,
+        "lod0": 816,
         "lod1": 390,
         "lod2": 242
       },
       "polys": {
-        "lod0": 455,
+        "lod0": 276,
         "lod1": 161,
         "lod2": 91
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 20,
+        "lod2": 9
+      }
     },
     {
       "id": "ruined_platform_disc",
@@ -9524,15 +9600,15 @@
         4
       ],
       "footprintM": [
-        128.0,
-        128.0
+        128,
+        128
       ],
-      "heightM": 46.0,
+      "heightM": 46,
       "boundsM": {
         "lo": [
           7387.66,
           -1082.34,
-          -26.0
+          -26
         ],
         "hi": [
           7512.34,
@@ -9540,7 +9616,7 @@
           49.02
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
       "ruinScale": 0.705,
       "edges": {
@@ -9556,11 +9632,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            64.0,
-            0.0
+            -48,
+            64,
+            0
           ]
         },
         {
@@ -9569,11 +9645,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            64.0,
-            0.0
+            -16,
+            64,
+            0
           ]
         },
         {
@@ -9582,11 +9658,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            64.0,
-            0.0
+            16,
+            64,
+            0
           ]
         },
         {
@@ -9595,11 +9671,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            64.0,
-            0.0
+            48,
+            64,
+            0
           ]
         },
         {
@@ -9608,11 +9684,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            -48.0,
-            0.0
+            64,
+            -48,
+            0
           ]
         },
         {
@@ -9621,11 +9697,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            -16.0,
-            0.0
+            64,
+            -16,
+            0
           ]
         },
         {
@@ -9634,11 +9710,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            16.0,
-            0.0
+            64,
+            16,
+            0
           ]
         },
         {
@@ -9647,11 +9723,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            64.0,
-            48.0,
-            0.0
+            64,
+            48,
+            0
           ]
         },
         {
@@ -9660,11 +9736,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -48.0,
-            -64.0,
-            0.0
+            -48,
+            -64,
+            0
           ]
         },
         {
@@ -9673,11 +9749,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -64.0,
-            0.0
+            -16,
+            -64,
+            0
           ]
         },
         {
@@ -9686,11 +9762,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -64.0,
-            0.0
+            16,
+            -64,
+            0
           ]
         },
         {
@@ -9699,11 +9775,11 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            48.0,
-            -64.0,
-            0.0
+            48,
+            -64,
+            0
           ]
         },
         {
@@ -9712,11 +9788,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            -48.0,
-            0.0
+            -64,
+            -48,
+            0
           ]
         },
         {
@@ -9725,11 +9801,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            -16.0,
-            0.0
+            -64,
+            -16,
+            0
           ]
         },
         {
@@ -9738,11 +9814,11 @@
           "type": "open",
           "cellIndex": 2,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            16.0,
-            0.0
+            -64,
+            16,
+            0
           ]
         },
         {
@@ -9751,18 +9827,18 @@
           "type": "open",
           "cellIndex": 3,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -64.0,
-            48.0,
-            0.0
+            -64,
+            48,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 3100
+          "triangles": 2406
         },
         {
           "lod": 1,
@@ -9797,16 +9873,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3100,
+        "lod0": 2406,
         "lod1": 1258,
         "lod2": 196
       },
       "polys": {
-        "lod0": 885,
+        "lod0": 849,
         "lod1": 561,
         "lod2": 82
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 26,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_platform_spoke",
@@ -9820,15 +9901,15 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 32.7,
       "boundsM": {
         "lo": [
           8168.06,
           -1025.62,
-          -26.0
+          -26
         ],
         "hi": [
           8231.94,
@@ -9836,7 +9917,7 @@
           28.01
         ]
       },
-      "lowestZ": -26.0,
+      "lowestZ": -26,
       "submerged": true,
       "ruinScale": 0.523,
       "edges": {
@@ -9852,11 +9933,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            16.0,
-            0.0
+            -16,
+            16,
+            0
           ]
         },
         {
@@ -9865,11 +9946,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            16.0,
-            0.0
+            16,
+            16,
+            0
           ]
         },
         {
@@ -9878,11 +9959,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            0.0,
-            0.0
+            32,
+            0,
+            0
           ]
         },
         {
@@ -9891,11 +9972,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -16.0,
-            0.0
+            -16,
+            -16,
+            0
           ]
         },
         {
@@ -9904,11 +9985,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -16.0,
-            0.0
+            16,
+            -16,
+            0
           ]
         },
         {
@@ -9917,18 +9998,18 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            0.0,
-            0.0
+            -32,
+            0,
+            0
           ]
         }
       ],
       "lods": [
         {
           "lod": 0,
-          "triangles": 2556
+          "triangles": 2436
         },
         {
           "lod": 1,
@@ -9953,16 +10034,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2556,
+        "lod0": 2436,
         "lod1": 526,
         "lod2": 128
       },
       "polys": {
-        "lod0": 856,
+        "lod0": 816,
         "lod1": 229,
         "lod2": 48
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 29,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_platform_split",
@@ -9976,15 +10062,15 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 32.7,
       "boundsM": {
         "lo": [
           8618.06,
           -1051.87,
-          -7.0
+          -7
         ],
         "hi": [
           8681.94,
@@ -9992,7 +10078,7 @@
           28.01
         ]
       },
-      "lowestZ": -7.0,
+      "lowestZ": -7,
       "submerged": true,
       "ruinScale": 0.751,
       "edges": {
@@ -10008,11 +10094,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            32.0,
-            0.0
+            -16,
+            32,
+            0
           ]
         },
         {
@@ -10021,11 +10107,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            32.0,
-            0.0
+            16,
+            32,
+            0
           ]
         },
         {
@@ -10034,11 +10120,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            -16.0,
-            0.0
+            32,
+            -16,
+            0
           ]
         },
         {
@@ -10047,11 +10133,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            32.0,
-            16.0,
-            0.0
+            32,
+            16,
+            0
           ]
         },
         {
@@ -10060,11 +10146,11 @@
           "type": "open",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -16.0,
-            -32.0,
-            0.0
+            -16,
+            -32,
+            0
           ]
         },
         {
@@ -10073,11 +10159,11 @@
           "type": "open",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            16.0,
-            -32.0,
-            0.0
+            16,
+            -32,
+            0
           ]
         },
         {
@@ -10086,11 +10172,11 @@
           "type": "service",
           "cellIndex": 0,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            -16.0,
-            0.0
+            -32,
+            -16,
+            0
           ]
         },
         {
@@ -10099,11 +10185,11 @@
           "type": "service",
           "cellIndex": 1,
           "wallRun": false,
-          "edgeZ": 26.0,
+          "edgeZ": 26,
           "localPosition": [
-            -32.0,
-            16.0,
-            0.0
+            -32,
+            16,
+            0
           ]
         }
       ],
@@ -10143,7 +10229,12 @@
         "lod1": 186,
         "lod2": 66
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 27,
+        "lod2": 7
+      }
     }
   ],
   "exports": [
@@ -10330,10 +10421,6 @@
     {
       "module": "ruined_tower_monolith",
       "path": "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/exports/mf-sup-ruined-tower-monolith.glb"
-    },
-    {
-      "module": "ruined_spire_crown",
-      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/exports/mf-sup-ruined-spire-crown.glb"
     },
     {
       "module": "ruined_arcology_pylon",
@@ -10564,10 +10651,6 @@
     "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-tower-monolith-iso_nw.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-tower-monolith-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-tower-monolith-entry.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-spire-crown-iso_ne.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-spire-crown-iso_nw.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-spire-crown-top.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-spire-crown-entry.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-arcology-pylon-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-arcology-pylon-iso_nw.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-superstructure-v1/evidence/mf-sup-ruined-arcology-pylon-top.png",

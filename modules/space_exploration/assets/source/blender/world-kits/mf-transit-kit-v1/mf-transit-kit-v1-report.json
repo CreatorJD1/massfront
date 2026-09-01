@@ -106,6 +106,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -141,7 +147,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1494
+          "triangles": 1498
         },
         {
           "lod": 1,
@@ -165,16 +171,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1494,
+        "lod0": 1498,
         "lod1": 360,
         "lod2": 40
       },
       "polys": {
-        "lod0": 477,
+        "lod0": 478,
         "lod1": 172,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_skyway_curve",
@@ -186,6 +197,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -254,7 +271,12 @@
         "lod1": 214,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 15,
+        "lod2": 6
+      }
     },
     {
       "id": "colonial_skyway_junction",
@@ -266,6 +288,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -301,7 +329,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1697
+          "triangles": 2108
         },
         {
           "lod": 1,
@@ -326,16 +354,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1697,
+        "lod0": 2108,
         "lod1": 436,
         "lod2": 52
       },
       "polys": {
-        "lod0": 591,
+        "lod0": 723,
         "lod1": 206,
         "lod2": 22
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 13,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_skyway_station",
@@ -347,6 +380,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
       "topZ": 50.6,
       "bottomZ": 0.0,
       "sockets": [
@@ -427,7 +466,12 @@
         "lod1": 588,
         "lod2": 32
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 12,
+        "lod1": 52,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_skyway_pylon",
@@ -439,6 +483,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.0,
       "bottomZ": 0.0,
       "sockets": [
@@ -474,7 +524,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1622
+          "triangles": 1628
         },
         {
           "lod": 1,
@@ -496,16 +546,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1622,
+        "lod0": 1628,
         "lod1": 484,
         "lod2": 28
       },
       "polys": {
-        "lod0": 535,
+        "lod0": 539,
         "lod1": 232,
         "lod2": 10
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 1
+      }
     },
     {
       "id": "colonial_flyover_straight",
@@ -517,6 +572,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -584,7 +645,12 @@
         "lod1": 166,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 7,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_flyover_curve",
@@ -596,6 +662,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -663,7 +735,12 @@
         "lod1": 202,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 13,
+        "lod2": 6
+      }
     },
     {
       "id": "colonial_flyover_merge",
@@ -675,6 +752,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -710,7 +793,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2508
+          "triangles": 2284
         },
         {
           "lod": 1,
@@ -733,16 +816,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2508,
+        "lod0": 2284,
         "lod1": 420,
         "lod2": 88
       },
       "polys": {
-        "lod0": 949,
+        "lod0": 838,
         "lod1": 202,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 13,
+        "lod2": 6
+      }
     },
     {
       "id": "colonial_flyover_ramp",
@@ -754,6 +842,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.9,
       "bottomZ": 0.0,
       "sockets": [
@@ -821,7 +915,12 @@
         "lod1": 314,
         "lod2": 38
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 11,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_flyover_interchange",
@@ -833,6 +932,12 @@
         2,
         2
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "open",
+        "W": "open"
+      },
       "topZ": 29.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -900,7 +1005,12 @@
         "lod1": 516,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 22,
+        "lod1": 24,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_edge_megawall",
@@ -912,6 +1022,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -947,7 +1063,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 279
+          "triangles": 270
         },
         {
           "lod": 1,
@@ -971,16 +1087,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 279,
+        "lod0": 270,
         "lod1": 76,
         "lod2": 40
       },
       "polys": {
-        "lod0": 103,
+        "lod0": 115,
         "lod1": 34,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_edge_corner",
@@ -992,6 +1113,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "open",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -1027,7 +1154,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 459
+          "triangles": 462
         },
         {
           "lod": 1,
@@ -1049,16 +1176,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 459,
+        "lod0": 462,
         "lod1": 92,
         "lod2": 68
       },
       "polys": {
-        "lod0": 162,
+        "lod0": 175,
         "lod1": 38,
         "lod2": 26
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_edge_buttress",
@@ -1070,6 +1202,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -1105,7 +1243,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 575
+          "triangles": 576
         },
         {
           "lod": 1,
@@ -1128,16 +1266,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 575,
+        "lod0": 576,
         "lod1": 136,
         "lod2": 68
       },
       "polys": {
-        "lod0": 232,
+        "lod0": 239,
         "lod1": 52,
         "lod2": 26
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 6,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_edge_terrace",
@@ -1149,6 +1292,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -1184,7 +1333,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1522
+          "triangles": 1520
         },
         {
           "lod": 1,
@@ -1206,7 +1355,7 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1522,
+        "lod0": 1520,
         "lod1": 92,
         "lod2": 40
       },
@@ -1215,7 +1364,12 @@
         "lod1": 38,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_edge_tunnel",
@@ -1227,6 +1381,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -1262,7 +1422,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1188
+          "triangles": 1168
         },
         {
           "lod": 1,
@@ -1286,16 +1446,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1188,
+        "lod0": 1168,
         "lod1": 168,
         "lod2": 96
       },
       "polys": {
-        "lod0": 460,
+        "lod0": 456,
         "lod1": 72,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 10,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_edge_outfall",
@@ -1307,6 +1472,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -1342,7 +1513,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 274
+          "triangles": 257
         },
         {
           "lod": 1,
@@ -1368,16 +1539,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 274,
+        "lod0": 257,
         "lod1": 292,
         "lod2": 40
       },
       "polys": {
-        "lod0": 102,
+        "lod0": 103,
         "lod1": 112,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_edge_dock",
@@ -1389,6 +1565,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 2.2,
       "bottomZ": -20.64,
       "sockets": [
@@ -1424,7 +1606,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2628
+          "triangles": 2592
         },
         {
           "lod": 1,
@@ -1453,16 +1635,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2628,
+        "lod0": 2592,
         "lod1": 384,
         "lod2": 40
       },
       "polys": {
-        "lod0": 863,
+        "lod0": 853,
         "lod1": 168,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 24,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_edge_ramp",
@@ -1474,6 +1661,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -1509,7 +1702,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1370
+          "triangles": 1350
         },
         {
           "lod": 1,
@@ -1534,16 +1727,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1370,
+        "lod0": 1350,
         "lod1": 144,
         "lod2": 76
       },
       "polys": {
-        "lod0": 572,
+        "lod0": 569,
         "lod1": 60,
         "lod2": 34
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_skyway_straight",
@@ -1555,6 +1753,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -1590,7 +1794,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1370
+          "triangles": 1288
         },
         {
           "lod": 1,
@@ -1614,7 +1818,7 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1370,
+        "lod0": 1288,
         "lod1": 360,
         "lod2": 40
       },
@@ -1623,7 +1827,12 @@
         "lod1": 172,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_skyway_curve",
@@ -1635,6 +1844,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -1703,7 +1918,12 @@
         "lod1": 214,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 15,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_skyway_junction",
@@ -1715,6 +1935,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -1750,7 +1976,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1910
+          "triangles": 2372
         },
         {
           "lod": 1,
@@ -1775,16 +2001,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1910,
+        "lod0": 2372,
         "lod1": 436,
         "lod2": 52
       },
       "polys": {
-        "lod0": 644,
+        "lod0": 703,
         "lod1": 206,
         "lod2": 22
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 13,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_skyway_station",
@@ -1796,6 +2027,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
       "topZ": 50.6,
       "bottomZ": 0.0,
       "sockets": [
@@ -1876,7 +2113,12 @@
         "lod1": 588,
         "lod2": 32
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 14,
+        "lod1": 52,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_skyway_pylon",
@@ -1888,6 +2130,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.0,
       "bottomZ": 0.0,
       "sockets": [
@@ -1923,7 +2171,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1858
+          "triangles": 1767
         },
         {
           "lod": 1,
@@ -1945,16 +2193,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1858,
+        "lod0": 1767,
         "lod1": 484,
         "lod2": 28
       },
       "polys": {
-        "lod0": 624,
+        "lod0": 601,
         "lod1": 232,
         "lod2": 10
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 1
+      }
     },
     {
       "id": "brutalist_flyover_straight",
@@ -1966,6 +2219,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -2033,7 +2292,12 @@
         "lod1": 166,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 7,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_flyover_curve",
@@ -2045,6 +2309,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -2080,7 +2350,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2690
+          "triangles": 2684
         },
         {
           "lod": 1,
@@ -2103,16 +2373,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2690,
+        "lod0": 2684,
         "lod1": 420,
         "lod2": 88
       },
       "polys": {
-        "lod0": 1012,
+        "lod0": 1008,
         "lod1": 202,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 13,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_flyover_merge",
@@ -2124,6 +2399,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -2159,7 +2440,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2702
+          "triangles": 2482
         },
         {
           "lod": 1,
@@ -2182,16 +2463,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2702,
+        "lod0": 2482,
         "lod1": 420,
         "lod2": 88
       },
       "polys": {
-        "lod0": 1010,
+        "lod0": 899,
         "lod1": 202,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 13,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_flyover_ramp",
@@ -2203,6 +2489,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.9,
       "bottomZ": 0.0,
       "sockets": [
@@ -2238,7 +2530,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 3180
+          "triangles": 3178
         },
         {
           "lod": 1,
@@ -2261,16 +2553,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 3180,
+        "lod0": 3178,
         "lod1": 660,
         "lod2": 92
       },
       "polys": {
-        "lod0": 1107,
+        "lod0": 1105,
         "lod1": 314,
         "lod2": 38
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 11,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_flyover_interchange",
@@ -2282,6 +2579,12 @@
         2,
         2
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "open",
+        "W": "open"
+      },
       "topZ": 29.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -2349,7 +2652,12 @@
         "lod1": 516,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 22,
+        "lod1": 24,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_edge_megawall",
@@ -2361,6 +2669,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -2396,7 +2710,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 298
+          "triangles": 271
         },
         {
           "lod": 1,
@@ -2420,16 +2734,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 298,
+        "lod0": 271,
         "lod1": 76,
         "lod2": 40
       },
       "polys": {
-        "lod0": 103,
+        "lod0": 106,
         "lod1": 34,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_edge_corner",
@@ -2441,6 +2760,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "open",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -2476,7 +2801,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 469
+          "triangles": 464
         },
         {
           "lod": 1,
@@ -2498,16 +2823,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 469,
+        "lod0": 464,
         "lod1": 92,
         "lod2": 68
       },
       "polys": {
-        "lod0": 163,
+        "lod0": 173,
         "lod1": 38,
         "lod2": 26
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_edge_buttress",
@@ -2519,6 +2849,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -2554,7 +2890,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 567
+          "triangles": 566
         },
         {
           "lod": 1,
@@ -2577,16 +2913,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 567,
+        "lod0": 566,
         "lod1": 136,
         "lod2": 68
       },
       "polys": {
-        "lod0": 225,
+        "lod0": 233,
         "lod1": 52,
         "lod2": 26
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 6,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_edge_terrace",
@@ -2598,6 +2939,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -2664,7 +3011,12 @@
         "lod1": 38,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_edge_tunnel",
@@ -2676,6 +3028,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -2711,7 +3069,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1190
+          "triangles": 1172
         },
         {
           "lod": 1,
@@ -2735,16 +3093,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1190,
+        "lod0": 1172,
         "lod1": 168,
         "lod2": 96
       },
       "polys": {
-        "lod0": 454,
+        "lod0": 450,
         "lod1": 72,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 10,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_edge_outfall",
@@ -2756,6 +3119,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -2791,7 +3160,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 301
+          "triangles": 268
         },
         {
           "lod": 1,
@@ -2817,16 +3186,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 301,
+        "lod0": 268,
         "lod1": 292,
         "lod2": 40
       },
       "polys": {
-        "lod0": 104,
+        "lod0": 105,
         "lod1": 112,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_edge_dock",
@@ -2838,6 +3212,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 2.2,
       "bottomZ": -20.64,
       "sockets": [
@@ -2873,7 +3253,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2680
+          "triangles": 2655
         },
         {
           "lod": 1,
@@ -2902,16 +3282,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2680,
+        "lod0": 2655,
         "lod1": 384,
         "lod2": 40
       },
       "polys": {
-        "lod0": 866,
+        "lod0": 867,
         "lod1": 168,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 24,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_edge_ramp",
@@ -2923,6 +3308,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -2958,7 +3349,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1364
+          "triangles": 1342
         },
         {
           "lod": 1,
@@ -2983,16 +3374,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1364,
+        "lod0": 1342,
         "lod1": 144,
         "lod2": 76
       },
       "polys": {
-        "lod0": 568,
+        "lod0": 565,
         "lod1": 60,
         "lod2": 34
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_skyway_straight",
@@ -3004,6 +3400,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -3067,11 +3469,16 @@
         "lod2": 40
       },
       "polys": {
-        "lod0": 353,
+        "lod0": 354,
         "lod1": 172,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_skyway_curve",
@@ -3083,6 +3490,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -3150,7 +3563,12 @@
         "lod1": 214,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 15,
+        "lod2": 6
+      }
     },
     {
       "id": "ruined_skyway_junction",
@@ -3162,6 +3580,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.4,
       "bottomZ": 0.0,
       "sockets": [
@@ -3197,7 +3621,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1182
+          "triangles": 1191
         },
         {
           "lod": 1,
@@ -3221,16 +3645,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1182,
+        "lod0": 1191,
         "lod1": 436,
         "lod2": 52
       },
       "polys": {
-        "lod0": 414,
+        "lod0": 410,
         "lod1": 206,
         "lod2": 22
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 13,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_skyway_station",
@@ -3242,6 +3671,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
       "topZ": 50.6,
       "bottomZ": 0.0,
       "sockets": [
@@ -3318,7 +3753,12 @@
         "lod1": 582,
         "lod2": 32
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 15,
+        "lod1": 51,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_skyway_pylon",
@@ -3330,6 +3770,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 44.0,
       "bottomZ": 0.0,
       "sockets": [
@@ -3395,7 +3841,12 @@
         "lod1": 224,
         "lod2": 10
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 7,
+        "lod2": 1
+      }
     },
     {
       "id": "ruined_flyover_straight",
@@ -3407,6 +3858,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -3442,7 +3899,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 855
+          "triangles": 789
         },
         {
           "lod": 1,
@@ -3465,16 +3922,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 855,
+        "lod0": 789,
         "lod1": 348,
         "lod2": 40
       },
       "polys": {
-        "lod0": 308,
+        "lod0": 304,
         "lod1": 166,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 7,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_flyover_curve",
@@ -3486,6 +3948,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "service",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -3521,7 +3989,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1255
+          "triangles": 1404
         },
         {
           "lod": 1,
@@ -3544,16 +4012,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1255,
+        "lod0": 1404,
         "lod1": 420,
         "lod2": 88
       },
       "polys": {
-        "lod0": 479,
+        "lod0": 527,
         "lod1": 202,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 13,
+        "lod2": 6
+      }
     },
     {
       "id": "ruined_flyover_merge",
@@ -3565,6 +4038,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -3600,7 +4079,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1087
+          "triangles": 1344
         },
         {
           "lod": 1,
@@ -3623,16 +4102,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1087,
+        "lod0": 1344,
         "lod1": 420,
         "lod2": 88
       },
       "polys": {
-        "lod0": 427,
+        "lod0": 491,
         "lod1": 202,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 13,
+        "lod2": 6
+      }
     },
     {
       "id": "ruined_flyover_ramp",
@@ -3644,6 +4128,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 19.9,
       "bottomZ": 0.0,
       "sockets": [
@@ -3679,7 +4169,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2384
+          "triangles": 2392
         },
         {
           "lod": 1,
@@ -3702,16 +4192,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 2384,
+        "lod0": 2392,
         "lod1": 660,
         "lod2": 92
       },
       "polys": {
-        "lod0": 741,
+        "lod0": 747,
         "lod1": 314,
         "lod2": 38
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 11,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_flyover_interchange",
@@ -3723,6 +4218,12 @@
         2,
         2
       ],
+      "edges": {
+        "N": "open",
+        "E": "open",
+        "S": "open",
+        "W": "open"
+      },
       "topZ": 29.8,
       "bottomZ": 0.0,
       "sockets": [
@@ -3790,7 +4291,12 @@
         "lod1": 516,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 22,
+        "lod1": 24,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_edge_megawall",
@@ -3802,6 +4308,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -3837,7 +4349,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 184
+          "triangles": 170
         },
         {
           "lod": 1,
@@ -3861,16 +4373,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 184,
+        "lod0": 170,
         "lod1": 76,
         "lod2": 40
       },
       "polys": {
-        "lod0": 82,
+        "lod0": 78,
         "lod1": 34,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_edge_corner",
@@ -3882,6 +4399,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "open",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -3917,7 +4440,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 307
+          "triangles": 299
         },
         {
           "lod": 1,
@@ -3939,16 +4462,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 307,
+        "lod0": 299,
         "lod1": 92,
         "lod2": 68
       },
       "polys": {
-        "lod0": 131,
+        "lod0": 128,
         "lod1": 38,
         "lod2": 26
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_edge_buttress",
@@ -3960,6 +4488,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -3995,7 +4529,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 372
+          "triangles": 364
         },
         {
           "lod": 1,
@@ -4018,16 +4552,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 372,
+        "lod0": 364,
         "lod1": 136,
         "lod2": 68
       },
       "polys": {
-        "lod0": 173,
+        "lod0": 171,
         "lod1": 52,
         "lod2": 26
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 6,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_edge_terrace",
@@ -4039,6 +4578,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -4105,7 +4650,12 @@
         "lod1": 38,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 5,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_edge_tunnel",
@@ -4117,6 +4667,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -4152,7 +4708,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 544
+          "triangles": 536
         },
         {
           "lod": 1,
@@ -4175,16 +4731,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 544,
+        "lod0": 536,
         "lod1": 144,
         "lod2": 96
       },
       "polys": {
-        "lod0": 225,
+        "lod0": 222,
         "lod1": 60,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_edge_outfall",
@@ -4196,6 +4757,12 @@
         1,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -4231,7 +4798,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 178
+          "triangles": 170
         },
         {
           "lod": 1,
@@ -4257,16 +4824,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 178,
+        "lod0": 170,
         "lod1": 292,
         "lod2": 40
       },
       "polys": {
-        "lod0": 82,
+        "lod0": 78,
         "lod1": 112,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_edge_dock",
@@ -4278,6 +4850,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 2.2,
       "bottomZ": -20.64,
       "sockets": [
@@ -4313,7 +4891,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1246
+          "triangles": 1217
         },
         {
           "lod": 1,
@@ -4340,16 +4918,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 1246,
+        "lod0": 1217,
         "lod1": 384,
         "lod2": 40
       },
       "polys": {
-        "lod0": 491,
+        "lod0": 473,
         "lod1": 168,
         "lod2": 16
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 24,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_edge_ramp",
@@ -4361,6 +4944,12 @@
         2,
         1
       ],
+      "edges": {
+        "N": "street",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "topZ": 0.0,
       "bottomZ": -22.0,
       "sockets": [
@@ -4396,7 +4985,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 634
+          "triangles": 626
         },
         {
           "lod": 1,
@@ -4421,16 +5010,21 @@
         "triangles": 24
       },
       "tris": {
-        "lod0": 634,
+        "lod0": 626,
         "lod1": 144,
         "lod2": 76
       },
       "polys": {
-        "lod0": 286,
+        "lod0": 283,
         "lod1": 60,
         "lod2": 34
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 8,
+        "lod2": 5
+      }
     }
   ],
   "exports": [

@@ -35,8 +35,27 @@ LOD_TARGETS = (1.0, 0.36, 0.10)
 LOD_TOLERANCE = 0.12
 COLLIDER_TRI_BUDGET = 400
 GRID_HALF_M = 16.0
+# A hab pod is 2.2-3.4 m deep and is authored to cantilever; only `street` and
+# `service` edges may carry one, because only those face a road rather than a
+# neighbouring module. Everything else gets the joint and a chamfer's grace.
+CANTILEVER_EDGES = ("street", "service")
+# Measured across the kits that declare edges: on BUTTED edges the array kits
+# reach -0.06 m (they stop exactly at the joint, as designed) with a worst case
+# of +0.64 m for a cornice; on LICENSED edges they reach +2.06 m, which is the
+# hab pod. These allowances sit just above each measured worst case, so a
+# cornice passes and the 4.9 m slip road that started this did not.
+CANTILEVER_ALLOWANCE_M = 2.6
+BUTTED_ALLOWANCE_M = 0.8
 DEFAULT_NAMES = {"Cube", "Plane", "Sphere", "Icosphere", "Cylinder", "Cone",
                  "Torus", "Circle", "Grid", "Suzanne", "Camera", "Light"}
+# Scaffolding the road kits ship inside their authoring blends but never
+# render: sockets, the high-detail source, and the straight seam reference the
+# junction blend imports for continuity checking. Its name ends in _LOD0, which
+# is why a name-based rule kept auditing it as a junction production module.
+NON_PRODUCTION_ROLES = {"road_socket", "source_high_detail_reference",
+                        "straight_seam_reference", "connected_component_clean_base",
+                        "collision", "simplified_collision", "navigation_proxy",
+                        "evidence_only"}
 
 FAILURES = []
 CHECKS = [0]
@@ -113,7 +132,8 @@ def check_blend(kit, blend_path, expect_collider=True, shell_cap=12):
                   and "NAV" not in o.name.upper()
                   and not o.get("mf_evidence_only")
                   and not o.get("mf_proof_only")
-                  and o.name.split(".")[0] not in DEFAULT_NAMES]
+                  and o.name.split(".")[0] not in DEFAULT_NAMES
+                  and o.get("mf_role") not in NON_PRODUCTION_ROLES]
     bare = [o.name for o in renderable if not len(o.data.uv_layers)]
     check(not bare, "%s: every renderable mesh is unwrapped" % kit,
           "%d without UVs, e.g. %s" % (len(bare), ", ".join(bare[:2])))
@@ -121,6 +141,7 @@ def check_blend(kit, blend_path, expect_collider=True, shell_cap=12):
     no_uv = [o.name for o in lod0 if not len(o.data.uv_layers)]
     check(not no_uv, "%s: every LOD0 is unwrapped" % kit, ", ".join(no_uv[:3]))
 
+    lod0 = [o for o in lod0 if o.get("mf_role") not in NON_PRODUCTION_ROLES]
     flat = [o.name for o in lod0 if not all(p.use_smooth for p in o.data.polygons)]
     check(not flat, "%s: every LOD0 is smooth-shaded" % kit, ", ".join(flat[:3]))
 
@@ -140,15 +161,8 @@ def check_blend(kit, blend_path, expect_collider=True, shell_cap=12):
     empty = [o.name for o in lod0 if not len(o.data.polygons)]
     check(not empty, "%s: no empty LOD0 meshes" % kit, ", ".join(empty[:3]))
 
-    # A shell cap only means something where a module is meant to be one
-    # solid. An antenna farm or a spire crown is genuinely an assembly of
-    # separate parts that never touch, so a union cannot -- and should not --
-    # fuse them. The cap is passed in per kit.
-    if shell_cap:
-        unmerged = [(o.name, shell_count(o.data)) for o in lod0]
-        worst = max(unmerged, key=lambda t: t[1]) if unmerged else ("", 0)
-        check(worst[1] <= shell_cap, "%s: no module left in many pieces" % kit,
-              "%s has %d shells" % worst)
+    # the shell contract lives in check_shells(), which measures against what
+    # each module was actually joined from rather than a blanket cap
 
 
 # ---------------------------------------------------------------------------
@@ -213,32 +227,132 @@ def check_report(kit, report_path, navigation=False, ladder=True):
 
 
 def check_footprint(kit, blend_path, report):
-    """Nothing may sit in a neighbouring grid cell it did not declare."""
+    """Nothing may sit in a neighbouring cell it did not declare.
+
+    The allowance is per axis and comes from the module's own declared edge
+    types, not from a blanket number: a `street` or `service` edge may carry a
+    cantilevered pod, a butted edge may not. Consolidated meshes are recentred
+    on their geometry, so the two sides of an axis cannot be distinguished from
+    a vertex sign — an axis takes the more permissive of its two edges.
+    """
     if report is None or not blend_path.exists():
         return
     bpy.ops.wm.open_mainfile(filepath=str(blend_path))
+    by_name = {o.name: o for o in bpy.data.objects if o.type == "MESH"}
+
+    def allowance(edges, a, b):
+        kinds = [edges.get(a), edges.get(b)]
+        if any(k in CANTILEVER_EDGES for k in kinds):
+            return CANTILEVER_ALLOWANCE_M
+        return BUTTED_ALLOWANCE_M
+
     for m in report.get("modules", []):
         obj = None
-        for o in bpy.data.objects:
-            if o.type == "MESH" and o.name.endswith("_LOD0") and m["id"] in o.name:
-                obj = o
+        for name, candidate in by_name.items():
+            if name.endswith("_LOD0") and m["id"] in name:
+                obj = candidate
                 break
         if obj is None or "cells" not in m:
             continue
-        allow_x = m["cells"][0] * GRID_HALF_M
-        allow_y = m["cells"][1] * GRID_HALF_M
+        edges = m.get("edges") or {}
+        allow_x = m["cells"][0] * GRID_HALF_M + allowance(edges, "E", "W")
+        allow_y = m["cells"][1] * GRID_HALF_M + allowance(edges, "N", "S")
+        # An approach ramp is DECLARED to leave the footprint, so it sets the
+        # envelope rather than being measured against it. The mesh is recentred
+        # on its own geometry, so this is an absolute span from the module
+        # centre, not an offset added to the cell.
         for r in m.get("rampLinks", []):
-            reach = r["runM"] + r.get("toeM", 0.0) + r.get("overlapM", 0.0)
+            reach = abs(r["runM"]) + r.get("toeM", 0.0) + abs(r.get("overlapM", 0.0))
             cx, cy = r["centre"]
             if r["axis"] == "y":
-                allow_y = max(allow_y, abs(cy) + reach * 0.5 + 2.0)
+                allow_y = max(allow_y, abs(cy) + reach * 0.5 + 1.0)
             else:
-                allow_x = max(allow_x, abs(cx) + reach * 0.5 + 2.0)
-        over = 0.0
-        for v in obj.data.vertices:
-            over = max(over, abs(v.co.x) - allow_x, abs(v.co.y) - allow_y)
-        check(over <= 2.0, "%s/%s: stays inside its declared cells" % (kit, m["id"]),
-              "overhangs by %.1f m" % over)
+                allow_x = max(allow_x, abs(cx) + reach * 0.5 + 1.0)
+        over_x = max((abs(v.co.x) for v in obj.data.vertices), default=0.0) - allow_x
+        over_y = max((abs(v.co.y) for v in obj.data.vertices), default=0.0) - allow_y
+        over = max(over_x, over_y)
+        # 1 cm of slack. Consolidation recentres a module on its own
+        # geometry, so a value that is exactly on the allowance in the
+        # generator lands a few millimetres over here.
+        check(over <= 0.01, "%s/%s: stays inside its declared cells" % (kit, m["id"]),
+              "overhangs by %.2f m (allowed x %.2f, y %.2f, edges %s)"
+              % (over, allow_x, allow_y, edges or "none declared"))
+
+
+def check_shells(kit, blend_path, report, hard_cap):
+    """A consolidated module may be in no more pieces than its sources were.
+
+    An antenna farm is legitimately an assembly of parts that never touch, so a
+    fixed cap would be wrong. The measure is SHELLS in the source geometry, not
+    source objects: the array kits pack many disjoint boxes into one mesh per
+    role, so an object count is not a bound at all. A union can only reduce the
+    shell count, which makes this a real contract for every kit and still
+    catches any step that fragments a mesh.
+    """
+    if not blend_path.exists():
+        return
+    bpy.ops.wm.open_mainfile(filepath=str(blend_path))
+    sources = {}
+    if report:
+        for m in report.get("modules", []):
+            got = (m.get("sourceShells") or {}).get("lod0")
+            if got:
+                sources[m["id"]] = int(got)
+
+    for obj in bpy.data.objects:
+        if obj.type != "MESH" or not obj.name.endswith("_LOD0"):
+            continue
+        if obj.get("mf_collision"):
+            continue
+        shells = shell_count(obj.data)
+        recorded = obj.get("mf_source_shells")
+        if not recorded:
+            for ident, n in sources.items():
+                if ident in obj.name:
+                    recorded = n
+                    break
+        if recorded:
+            check(shells <= int(recorded),
+                  "%s: %s is in no more pieces than its sources" % (kit, obj.name),
+                  "%d shells from %d source shells" % (shells, recorded))
+        elif hard_cap:
+            check(shells <= hard_cap, "%s: %s is not fragmented" % (kit, obj.name),
+                  "%d shells, cap %d" % (shells, hard_cap))
+
+
+def check_proof_exclusion():
+    """Regression: an identically named proof copy must never be joined in.
+
+    The cityforms kit lays tiling-proof copies of a module across ~1.3 km and
+    names them exactly like production LODs; the only thing that distinguishes
+    them is a custom property. Grouping on the name alone joined them into 90
+    production modules and put `colonial_mega_slab` 1,322 m wide.
+    """
+    import runpy
+    cons = runpy.run_path(str(Path(__file__).with_name("consolidate-mf-kits.py")),
+                          run_name="mf_consolidate_probe")
+    group_modules = cons["group_modules"]
+
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    made = []
+    for tag, props in (("real", {}), ("proof", {"mf_proof_only": True}),
+                       ("evidence", {"mf_evidence_only": True})):
+        me = bpy.data.meshes.new("PROBE_%s" % tag)
+        me.from_pydata([(0, 0, 0), (1, 0, 0), (0, 1, 0)], [], [(0, 1, 2)])
+        me.update()
+        # every one of them carries the SAME production-looking name pattern
+        o = bpy.data.objects.new("MF_PROBE_V1_style_arch_LOD0_BLOCK_%s" % tag, me)
+        for k, v in props.items():
+            o[k] = v
+        bpy.context.scene.collection.objects.link(o)
+        made.append(o)
+
+    groups = group_modules(list(bpy.data.objects))
+    joined = sum(len(v) for lods in groups.values() for v in lods.values())
+    check(joined == 1, "consolidator: proof and evidence copies are excluded by property",
+          "%d objects would be joined, expected 1" % joined)
+    for o in made:
+        bpy.data.objects.remove(o, do_unlink=True)
 
 
 def check_determinism(kit, blend_path):
@@ -301,6 +415,7 @@ KIT_SPECS = [
 
 
 def main():
+    check_proof_exclusion()
     for kit, folder, caps in KIT_SPECS:
         blend = KITS / folder / (folder + ".blend")
         report = KITS / folder / (folder + "-report.json")
@@ -310,7 +425,8 @@ def main():
         data = check_report(kit, report, navigation=caps["nav"],
                             ladder=caps["ladder"]) if report.exists() else None
         check_blend(kit, blend, expect_collider=caps["collider"],
-                    shell_cap=caps.get("shell_cap", 12))
+                    shell_cap=0)
+        check_shells(kit, blend, data, caps.get("shell_cap", 12))
         if data:
             check_footprint(kit, blend, data)
         check_determinism(kit, blend)

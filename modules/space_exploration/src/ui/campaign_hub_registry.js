@@ -11,23 +11,63 @@
 export const CAMPAIGN_HUB_ROUTE_STATUS = Object.freeze({
   IMPLEMENTED: 'implemented',
   LOCAL_PREVIEW: 'local-preview',
+  HOST_ROUTE: 'host-route',
   HOST_REQUIRED: 'host-required'
+});
+
+export const CAMPAIGN_HUB_SESSION_STATUS = Object.freeze({
+  OFFLINE_READY: 'offline-ready',
+  NETWORK_UNAVAILABLE: 'network-unavailable'
 });
 
 const route = (id, label, icon, status, description, target = null, detail = '') => Object.freeze({
   id, label, icon, status, description, target: target ? Object.freeze(target) : null, detail
 });
 
+const sessionType = (id, label, icon, status, description, routeId = null, detail = '') => Object.freeze({
+  id, label, icon, status, description, routeId, detail
+});
+
 export const CAMPAIGN_HUB_ROUTES = Object.freeze([
-  route('operations', 'Operations & Missions', 'contracts', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
-    'Review authored contracts, readiness locks, deployment capacity, and Strike Team preparation.',
-    { kind: 'view', view: 'contracts' }, 'LOCAL CAMPAIGN CONTROLLER'),
-  route('development', 'Development & Research', 'research', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
-    'Allocate the shared research bank against authored prerequisites and exact campaign unlocks.',
-    { kind: 'view', view: 'research' }, 'LOCAL CAMPAIGN CONTROLLER'),
-  route('armory', 'Armory & Fabrication', 'fabricator', CAMPAIGN_HUB_ROUTE_STATUS.LOCAL_PREVIEW,
-    'Inspect the commissioned Fabrication district. A dedicated crafting transaction controller is not connected yet.',
-    { kind: 'district', districtId: 'fabricator' }, 'DISTRICT PREVIEW ONLY'),
+  route('galactic-operations', 'Galactic Expedition Operations', 'mission_ops', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
+    'Open the local expedition contract board and deployment planner backed by Galactic campaign state.',
+    { kind: 'view', view: 'contracts' }, 'LOCAL GALACTIC CONTROLLER'),
+  route('galactic-research', 'Galactic Expedition Research', 'research', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
+    'Open the local expedition research controller without leaving the shared strategic layer.',
+    { kind: 'view', view: 'research' }, 'LOCAL GALACTIC CONTROLLER'),
+  route('galactic-intel', 'Galactic Expedition Intel', 'intel', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
+    'Inspect local expedition discoveries and intelligence recorded in Galactic campaign state.',
+    { kind: 'view', view: 'intel' }, 'LOCAL GALACTIC CONTROLLER'),
+  route('operations', 'MASSFRONT Operations', 'contracts', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the existing weekly operations and playable campaign mission ladder in MASSFRONT.',
+    { kind: 'host-route', routeId: 'operations' }, 'LIVE MASSFRONT SUBMENU'),
+  route('development', 'Development & Research', 'research', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the existing research, crafting, and loadout progression screens in MASSFRONT.',
+    { kind: 'host-route', routeId: 'development' }, 'LIVE MASSFRONT SUBMENU'),
+  route('armory', 'Armory & Loadout', 'fabricator', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the existing MASSFRONT armory, vault, loadout, and style screens.',
+    { kind: 'host-route', routeId: 'armory' }, 'LIVE MASSFRONT SUBMENU'),
+  route('orders', 'Orders & Boosters', 'contracts', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open active orders, claimable rewards, and field boosters in MASSFRONT.',
+    { kind: 'host-route', routeId: 'orders' }, 'LIVE MASSFRONT SUBMENU'),
+  route('intel', 'Intel & Faction Dossier', 'intel', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the existing faction codex and current intelligence archive.',
+    { kind: 'host-route', routeId: 'intel' }, 'LIVE MASSFRONT SUBMENU'),
+  route('profile', 'Career & Account', 'staff', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the existing career, account, transfer, and identity screens.',
+    { kind: 'host-route', routeId: 'profile' }, 'LIVE MASSFRONT SUBMENU'),
+  route('inbox', 'Inbox', 'contracts', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open transmissions, requests, messages, newsletters, and update history.',
+    { kind: 'host-route', routeId: 'inbox' }, 'LIVE MASSFRONT SUBMENU'),
+  route('social', 'Social Command', 'factions', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the real MASSFRONT friends, chat, and lobby capability screen. Signed-out and unavailable services remain explicit.',
+    { kind: 'host-route', routeId: 'social' }, 'LIVE MASSFRONT SUBMENU'),
+  route('settings', 'Settings', 'engineering', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the existing audio, gameplay, display, command, and system settings.',
+    { kind: 'host-route', routeId: 'settings' }, 'LIVE MASSFRONT SUBMENU'),
+  route('game-version', 'Game Version & Updates', 'terminal', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the current release channel, notes, checks, and rollback controls.',
+    { kind: 'host-route', routeId: 'game-version' }, 'LIVE MASSFRONT SUBMENU'),
   route('inventory', 'Inventory', 'inventory', CAMPAIGN_HUB_ROUTE_STATUS.LOCAL_PREVIEW,
     'Inspect authoritative expedition modules and cargo without implying that crafting or loadout mutation is complete.',
     { kind: 'view', view: 'inventory' }, 'READ-ONLY LOCAL MANIFEST'),
@@ -40,61 +80,125 @@ export const CAMPAIGN_HUB_ROUTES = Object.freeze([
   route('logistics', 'Logistics & Cargo', 'logistics', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
     'Inspect fuel, probes, resources, and the expedition supply manifest from authoritative campaign state.',
     { kind: 'view', view: 'logistics' }, 'LOCAL CAMPAIGN CONTROLLER'),
-  route('social', 'Social Status', 'factions', CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED,
-    'Friends, chat, invitations, and player lobbies belong to the production social host and are not available in isolation.',
-    null, 'HOST CAPABILITY REQUIRED'),
-  route('settings', 'Settings', 'engineering', CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED,
-    'Account, graphics, audio, accessibility, and experimental-module settings remain owned by the MASSFRONT host.',
-    null, 'HOST CAPABILITY REQUIRED'),
   route('classic', 'Classic MASSFRONT Terminal', 'terminal', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
-    'Open the isolated Command Core simulation terminal. Classic launches do not mutate Galactic campaign progression.',
-    { kind: 'view', view: 'classic' }, 'LOCAL ISOLATED SIMULATION')
+    'Open the Command Core launch terminal. Playable modes route to the real game; unavailable modes stay locked.',
+    { kind: 'view', view: 'classic' }, 'VALIDATED MODE ROUTER'),
+  route('training', 'Training', 'terminal', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Enter the real KEEL-guided protected training operation.',
+    { kind: 'host-route', routeId: 'mode-training' }, 'PLAYABLE MASSFRONT MODE'),
+  route('standard', 'Standard', 'command', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the real solo War Table setup with AI opponents and optional AI allies.',
+    { kind: 'host-route', routeId: 'mode-standard' }, 'PLAYABLE MASSFRONT MODE'),
+  route('campaign', 'Campaign Prologue', 'mission_ops', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the existing five-mission playable Prologue and authored objectives.',
+    { kind: 'host-route', routeId: 'mode-campaign' }, 'PLAYABLE MASSFRONT MODE'),
+  route('weekly', 'Weekly Operation', 'contracts', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Open the current real weekly operation briefing and deployment action.',
+    { kind: 'host-route', routeId: 'mode-weekly' }, 'PLAYABLE MASSFRONT MODE'),
+  route('mmo', 'MMO Warfront', 'galaxy', CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED,
+    'Persistent planetary warfront service is not implemented yet.',
+    null, 'LONG TERM // LOCKED'),
+  route('coop', 'Co-op / Versus', 'factions', CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED,
+    'Networked co-op and commander-versus-commander sessions are not implemented yet.',
+    null, 'NETWORK IN DEVELOPMENT // LOCKED'),
+  route('home', 'Return to MASSFRONT Home', 'crest', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
+    'Return to the existing MASSFRONT main menu without disabling Galactic Campaign.',
+    { kind: 'host-route', routeId: 'home' }, 'LIVE MASSFRONT HOME')
+]);
+
+// These are product-level session families, not speculative game modes. The
+// The first two resolve to existing MASSFRONT routes; the two network families
+// remain separate and have no targets until real session authorities exist.
+export const CAMPAIGN_HUB_SESSION_TYPES = Object.freeze([
+  sessionType('standard-classic', 'Standard / Classic', 'command', CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY,
+    'Offline skirmish play against authored AI, with Training and Weekly Operations available from the same terminal.',
+    'classic', 'OFFLINE PLAY // AVAILABLE NOW'),
+  sessionType('campaign', 'Campaign', 'mission_ops', CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY,
+    'Enter the existing playable Campaign Prologue and authored mission progression.',
+    'campaign', 'OFFLINE STORY // AVAILABLE NOW'),
+  sessionType('coop-versus', 'Co-op / Versus', 'factions', CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE,
+    'Future commanders may cooperate or fight through this strategic layer. No synchronized session service exists in this build.',
+    null, 'CO-OP VS NETWORK // NOT IMPLEMENTED'),
+  sessionType('mmo', 'MMO', 'galaxy', CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE,
+    'The persistent planetary warfront remains a separate future route. No sector authority or MMO connection exists in this build.',
+    null, 'PERSISTENT WARFRONT // NOT IMPLEMENTED')
 ]);
 
 export const CAMPAIGN_HUB_PRIMARY_NAV = Object.freeze([
   Object.freeze({ id: 'galaxy', label: 'Galaxy', icon: 'overview', target: Object.freeze({ kind: 'host-action', action: 'open-galaxy' }) }),
   Object.freeze({ id: 'ship', label: 'Ship', icon: 'command', target: Object.freeze({ kind: 'view', view: 'command' }) }),
-  Object.freeze({ id: 'missions', label: 'Missions', icon: 'contracts', target: Object.freeze({ kind: 'route', routeId: 'operations' }) }),
+  Object.freeze({ id: 'missions', label: 'Missions', icon: 'contracts', target: Object.freeze({ kind: 'route', routeId: 'galactic-operations' }) }),
   Object.freeze({ id: 'crew', label: 'Crew', icon: 'staff', target: Object.freeze({ kind: 'route', routeId: 'crew' }) }),
   Object.freeze({ id: 'more', label: 'More', icon: 'logistics', target: Object.freeze({ kind: 'hub' }) })
 ]);
 
 export const CAMPAIGN_HUB_QUICK_NAV = Object.freeze([
   Object.freeze({ id: 'construction', label: 'Construction', icon: 'build', target: Object.freeze({ kind: 'view', view: 'construction' }) }),
-  Object.freeze({ id: 'research', label: 'Research', icon: 'research', target: Object.freeze({ kind: 'route', routeId: 'development' }) }),
+  Object.freeze({ id: 'research', label: 'Research', icon: 'research', target: Object.freeze({ kind: 'route', routeId: 'galactic-research' }) }),
   Object.freeze({ id: 'armory', label: 'Armory', icon: 'fabricator', target: Object.freeze({ kind: 'route', routeId: 'armory' }) }),
   Object.freeze({ id: 'hub', label: 'Campaign Hub', icon: 'overview', target: Object.freeze({ kind: 'hub' }) })
 ]);
 
 const ROUTES_BY_ID = new Map(CAMPAIGN_HUB_ROUTES.map(entry => [entry.id, entry]));
+const SESSION_TYPES_BY_ID = new Map(CAMPAIGN_HUB_SESSION_TYPES.map(entry => [entry.id, entry]));
 const REQUIRED_ROUTE_IDS = Object.freeze([
-  'operations', 'development', 'armory', 'inventory', 'factions',
-  'crew', 'social', 'settings', 'classic'
+  'galactic-operations', 'galactic-research', 'galactic-intel',
+  'operations', 'development', 'armory', 'orders', 'intel', 'profile',
+  'inbox', 'social', 'settings', 'game-version', 'inventory', 'factions',
+  'crew', 'logistics', 'classic', 'training', 'standard', 'campaign',
+  'weekly', 'mmo', 'coop', 'home'
 ]);
+const REQUIRED_SESSION_TYPE_IDS = Object.freeze(['standard-classic', 'campaign', 'coop-versus', 'mmo']);
 
 export function getCampaignHubRoute(id) {
   return ROUTES_BY_ID.get(String(id || '')) || null;
 }
 
-export function campaignHubRouteIsReachable(entry) {
+export function getCampaignHubSessionType(id) {
+  return SESSION_TYPES_BY_ID.get(String(id || '')) || null;
+}
+
+export function campaignHubRouteIsReachable(entry, capabilities = {}) {
   const routeEntry = typeof entry === 'string' ? getCampaignHubRoute(entry) : entry;
-  return Boolean(routeEntry?.target && routeEntry.status !== CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED);
+  if (!routeEntry?.target || routeEntry.status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED) return false;
+  if (routeEntry.status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE) return capabilities.hostRoutes === true;
+  return true;
+}
+
+export function campaignHubSessionIsReachable(entry, capabilities = {}) {
+  const sessionEntry = typeof entry === 'string' ? getCampaignHubSessionType(entry) : entry;
+  if (!sessionEntry?.routeId || sessionEntry.status === CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE) return false;
+  // Offline play is owned by the base game. A standalone module can explain
+  // the product model, but must not pretend it can launch those sessions.
+  if (capabilities.hostRoutes !== true) return false;
+  return campaignHubRouteIsReachable(sessionEntry.routeId, capabilities);
 }
 
 export function auditCampaignHubRegistry() {
   const ids = CAMPAIGN_HUB_ROUTES.map(entry => entry.id);
+  const sessionIds = CAMPAIGN_HUB_SESSION_TYPES.map(entry => entry.id);
   const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+  const duplicateSessionIds = sessionIds.filter((id, index) => sessionIds.indexOf(id) !== index);
   const missingIds = REQUIRED_ROUTE_IDS.filter(id => !ROUTES_BY_ID.has(id));
+  const missingSessionIds = REQUIRED_SESSION_TYPE_IDS.filter(id => !SESSION_TYPES_BY_ID.has(id));
   const invalidStatuses = CAMPAIGN_HUB_ROUTES.filter(entry => !Object.values(CAMPAIGN_HUB_ROUTE_STATUS).includes(entry.status)).map(entry => entry.id);
+  const invalidSessionStatuses = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => !Object.values(CAMPAIGN_HUB_SESSION_STATUS).includes(entry.status)).map(entry => entry.id);
   const falseHostTargets = CAMPAIGN_HUB_ROUTES.filter(entry => entry.status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED && entry.target).map(entry => entry.id);
+  const falseNetworkTargets = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => entry.status === CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE && entry.routeId).map(entry => entry.id);
   const unreachableLocalRoutes = CAMPAIGN_HUB_ROUTES.filter(entry => entry.status !== CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED && !entry.target).map(entry => entry.id);
+  const invalidOfflineSessionRoutes = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => entry.status === CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY && !ROUTES_BY_ID.has(entry.routeId)).map(entry => entry.id);
   return Object.freeze({
-    ok: duplicateIds.length === 0 && missingIds.length === 0 && invalidStatuses.length === 0 && falseHostTargets.length === 0 && unreachableLocalRoutes.length === 0,
+    ok: duplicateIds.length === 0 && duplicateSessionIds.length === 0 && missingIds.length === 0 && missingSessionIds.length === 0 && invalidStatuses.length === 0 && invalidSessionStatuses.length === 0 && falseHostTargets.length === 0 && falseNetworkTargets.length === 0 && unreachableLocalRoutes.length === 0 && invalidOfflineSessionRoutes.length === 0,
     duplicateIds: Object.freeze(duplicateIds),
+    duplicateSessionIds: Object.freeze(duplicateSessionIds),
     missingIds: Object.freeze(missingIds),
+    missingSessionIds: Object.freeze(missingSessionIds),
     invalidStatuses: Object.freeze(invalidStatuses),
+    invalidSessionStatuses: Object.freeze(invalidSessionStatuses),
     falseHostTargets: Object.freeze(falseHostTargets),
-    unreachableLocalRoutes: Object.freeze(unreachableLocalRoutes)
+    falseNetworkTargets: Object.freeze(falseNetworkTargets),
+    unreachableLocalRoutes: Object.freeze(unreachableLocalRoutes),
+    invalidOfflineSessionRoutes: Object.freeze(invalidOfflineSessionRoutes)
   });
 }
 

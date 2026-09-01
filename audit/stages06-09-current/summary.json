@@ -1,0 +1,86 @@
+{
+  "schema": "MassfrontStages06To09CurrentAcceptanceV1",
+  "generatedAt": "2026-08-31T00:30:00Z",
+  "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+  "branch": "cursor/strip-mass-node-bloom",
+  "workingTree": "dirty-preserved",
+  "gpu": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "stages": {
+    "06": {
+      "state": "PARTIAL",
+      "passes": {
+        "commanderHud": "139/139",
+        "commanderCueWiring": "23/23",
+        "commanderVoiceContract": "69/69",
+        "commanderSignatures": "PASS"
+      },
+      "blockers": [
+        "No approved commander voice recordings ship: 0 of 9 commanders have takes.",
+        "No current Deployment Arena acceptance proves the shared card/hotspot state or the 45 percent portrait-height requirement.",
+        "Current HUD capture covers 412x915, 915x412, 800x1280 and 1440x900, not the complete seven-viewport plan matrix or a physical phone."
+      ]
+    },
+    "07": {
+      "state": "PARTIAL",
+      "passes": {
+        "productionUiHardwareGpuProfiles": "2/2",
+        "productionUiScreenshots": "10/10",
+        "productionContracts": "PASS",
+        "inputNavigation": "PASS",
+        "inputCancel": "PASS",
+        "economyContracts": "PASS",
+        "armoryMigration": "PASS",
+        "progressionPresenters": "PASS",
+        "progressionCoherence": "PASS"
+      },
+      "failures": [
+        "probe-stage7-loadout-summary: 0/2 accepted; onboarding choice dialog intercepted Start MASSFRONT and the evidence identity changed during the run."
+      ],
+      "blockers": [
+        "Fresh-profile comprehension and physical-device sign-off remain human gates.",
+        "At 344px, visual review found the top population readout abbreviated and a production tab label clipped; automated overflow and 44px target checks still passed."
+      ]
+    },
+    "08": {
+      "state": "INCOMPLETE",
+      "passes": {
+        "vfxPickupApi": "10/10",
+        "resourceDropStaticContract": "16/16",
+        "commanderEntryClock": "PASS"
+      },
+      "failures": [
+        "test-mobile-mobility-fx: expected Striker 38/Pyro 36/Rhino 27/Goliath 22, current source is 21/18/13/10.",
+        "test-dark-faction-readability: Legion/mex lacks both coated-core and armor material zones."
+      ],
+      "blockers": [
+        "No source-matched current combat-VFX phone capture was produced in this verification lane.",
+        "The full combat matrix, gore settings, force fields, fog/depth/GL restoration and physical S25 cloud/high-altitude acceptance remain open."
+      ]
+    },
+    "09": {
+      "state": "INCOMPLETE",
+      "passes": {
+        "locationGrammar": "PASS: 5 contracts, 16 regions, 48 maps",
+        "locationPlans": "59/60",
+        "galacticBridge": "PASS"
+      },
+      "failures": [
+        "verify-stage9-location-plans: source.stage9-runtime-chain failed because battlefieldtopology-stage10.js now sits between locationplans.js and worldsites.js; planner execution and runtime topology remain pending.",
+        "verify-world-catalog: aelos_ridge_small theme is arctic instead of the planet theme expected by the gate.",
+        "test-world-asset-quality: mdlGatehouse generated runtime payload is missing.",
+        "test-world-boundary-content on packaged www: compact scenario did not exercise a city relic."
+      ],
+      "blockers": [
+        "No source-matched current Stage 9 phone visual matrix was produced.",
+        "Planner execution, runtime topology, recovery fidelity and physical-phone visual acceptance remain open."
+      ]
+    }
+  },
+  "evidenceClassification": {
+    "automated": "The listed probes were executed against the current dirty checkout during this pass.",
+    "visual": "Commander HUD and Stage 7 production/economy screenshots were manually inspected; this is desktop-host evidence, not S25 evidence.",
+    "human": "Fresh-profile comprehension, art direction approval and performance/voice approval are not automated.",
+    "device": "No physical Galaxy S25 Ultra was connected or tested in this lane.",
+    "production": "No production service was contacted or changed."
+  }
+}

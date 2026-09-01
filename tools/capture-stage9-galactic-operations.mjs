@@ -73,7 +73,6 @@ const ENTRY_KEY='massfront.galactic.entry.v1';
 const REQUEST_PREFIX='massfront.galactic.request.v1.';
 const RESULT_PREFIX='massfront.galactic.result.v1.';
 const PROXY_MAP={nova:'nova',dominion:'legion',syndicate:'syndicate'};
-const COMMANDER_MAP={nova:'nova_kai',dominion:'legion_vex',syndicate:'syndicate_renn'};
 const DEPLOY_UNIT_EXPECTATIONS={
   recon_team:{type:'Striker',perGroup:1},line_section:{type:'Striker',perGroup:2},
   support_vehicle:{type:'Warden',perGroup:1},armored_element:{type:'Rhino',perGroup:1}
@@ -582,7 +581,7 @@ async function runFlow(browser,report,url){
     }finally{moduleProbeAbortArmed=false;}
     let moduleReady=await waitForModuleReady(page);
     assertion(report,'module-entry','OPEN selected the integrated profile host',
-      moduleReady.productionIntegrated&&moduleReady.hostKind==='MassfrontSoloHostV1'
+      moduleReady.productionIntegrated&&moduleReady.hostKind==='MassfrontSoloHostV2'
         &&moduleReady.accountId===optedIn.activeProfile&&!moduleReady.error,moduleReady);
     report.seed=await seedIntegratedShowcase(page);
     assertion(report,'precondition','showcase seed starts with no result or pending operation',
@@ -691,6 +690,7 @@ async function runFlow(browser,report,url){
         operation:{operationId:operation?.operationId,missionId:operation?.missionId,
           missionType:operation?.missionType,sponsorId:operation?.sponsorId,
           opponentFactionId:operation?.opponentFactionId,proxyFactionId:operation?.proxyFactionId,
+          commanderId:operation?.commanderId,commanderRosterFingerprint:operation?.commanderRosterFingerprint,
           playerCount:operation?.playerCount,allyCount:operation?.allyCount},
         match:{activeWarMode,playerFaction,playerCommanderId,curMap,curRegionId,goalSel,
           infestationOn,difficulty,enemyFaction:AI?.fac,activeAi:active.map(slot=>({
@@ -703,11 +703,13 @@ async function runFlow(browser,report,url){
       };
     });
     const expectedProxy=loadout.faction,expectedFaction=PROXY_MAP[expectedProxy],
-      expectedCommander=COMMANDER_MAP[expectedProxy];
+      expectedCommander=setup.operation.commanderId;
     assertion(report,'base-bridge','validated Pale Bloom request configured only the solo Brood purge',
       setup.bridge.active&&setup.bridge.status==='battle'&&setup.operation.missionId==='uga_pale_bloom'
         &&setup.operation.missionType==='uga_brood_purge'&&setup.operation.sponsorId==='uga'
         &&setup.operation.opponentFactionId==='brood'&&setup.operation.proxyFactionId===expectedProxy
+        &&setup.operation.commanderRosterFingerprint==='fnv1a32:0aadcd2d'
+        &&expectedCommander===loadout.commander
         &&setup.match.activeWarMode==='galactic'&&setup.match.playerFaction===expectedFaction
         &&setup.match.playerCommanderId===expectedCommander&&setup.match.curMap==='vespera_spire_medium'
         &&setup.match.curRegionId==='vespera_spire'&&setup.match.goalSel==='purge'
@@ -1234,17 +1236,17 @@ async function selfTest(){
   const indexSource=await readFile(join(moduleRoot,'index.html'),'utf8');
   const moduleSource=await readFile(join(moduleRoot,'src','space_module.js'),'utf8');
   const experienceSource=await readFile(join(moduleRoot,'src','space_experience.js'),'utf8');
-  if(!/space_module\.js\?v=20260828-stage9ops2/.test(indexSource)
-    ||!/space_experience\.js\?v=20260828-stage9ops2/.test(moduleSource)
-    ||!/massfront_solo_host\.js\?v=20260828-stage9host2/.test(moduleSource)
-    ||!/uga_command\.js\?v=20260828-stage9ops2/.test(experienceSource))
+  if(!/space_module\.js\?v=20260829-entryintro2/.test(indexSource)
+    ||!/space_experience\.js\?v=20260829-entryintro2/.test(moduleSource)
+    ||!/massfront_solo_host\.js\?v=20260829-careergate1/.test(moduleSource)
+    ||!/uga_command\.js\?v=20260829-wartable2/.test(experienceSource))
     throw new Error('SELF_TEST_STAGE9_CACHE_CHAIN_STALE');
   console.log(JSON.stringify({status:'PASS',moduleRuntime:{
     fingerprint:identity.runtimeFingerprint,moduleFileCount:identity.moduleFileCount,
     runtimeFileCount:identity.runtimeFileCount,expectedPathCount:identity.expectedPathCount,
     reachableCodeCount:identity.reachableCodeCount,reachableAssetCount:identity.reachableAssetCount
   },requiredPaths:required,packageExpectation,effectExpectation,
-  cacheVersions:{operations:'20260828-stage9ops2',host:'20260828-stage9host2'}},null,2));
+  cacheVersions:{module:'20260829-entryintro2',host:'20260829-careergate1',operations:'20260829-wartable2'}},null,2));
 }
 
 (selfTestMode?selfTest():main()).catch(error=>{

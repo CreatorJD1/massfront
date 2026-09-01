@@ -234,12 +234,12 @@ function broodDmgMul(i){return ubroodLed[i]>0?1.18:1;}
 function broodCoolMul(i){return ubroodLed[i]>0?.82:1;}
 function broodSpdMul(i){return ubroodLed[i]>0?1.14:1;}
 const utype=new Uint8Array(MAXU), uteam=new Uint8Array(MAXU);
-/* -1 = directly commanded player/enemy/wildlife; 0..2 = shared-control allied
+/* -1 = directly commanded player/enemy/wildlife; 0..3 = shared-control allied
    AI slot. Same-team combat rules make allies genuinely friendly while this
    owner tag lets their lightweight director move only its own reinforcements. */
 const uAllyBase=new Int8Array(MAXU);uAllyBase.fill(-1);
 /* Commander owner for population ledgers. Same ids as skirmish spawn:
-   -1 player, 0..2 = aiSlots. Team 0 copies this into uAllyBase so the
+   -1 player, 0..3 = aiSlots. Team 0 copies this into uAllyBase so the
    ally director keeps matching on the tag it already owns. */
 const uCmd=new Int8Array(MAXU);uCmd.fill(-1);
 const ualive=new Uint8Array(MAXU), ustate=new Uint8Array(MAXU);
@@ -314,10 +314,9 @@ let freeList=[], unitHigh=0;
 const teamCount=[0,0,0];
 /* Population is a gameplay budget AND a mobile stability budget. MAXU remains
    large because the renderer and save format need a wide slot address space.
-   FACTION_POP_CAP is shared by every commander on one combat side: a 1v3
-   enemy faction still admits at most 500 bodies in total. Commander-seat
-   counts remain transient diagnostics/AI pacing inputs, not admission wallets.
-   SESS_MAX_UNITS=4000 is a map-total snapshot — debt, not a population cap. */
+   Every participant/Commander seat owns one hard 500-body wallet; allied seats
+   never consume each other's admission budget. SESS_MAX_UNITS=4000 is a
+   map-total snapshot — debt, not a population cap. */
 const FACTION_POP_CAP=500;
 const POP_PLAYER_SLOT=-1;
 const POP_MAX_AI_SLOT=3,POP_INVALID_SLOT=-2;
@@ -355,14 +354,17 @@ function nCommandersOnTeam(team){
   return 0;
 }
 function populationTeamCeiling(team){
-  if(team===0||team===1) return FACTION_POP_CAP;
-  return populationCapFor(team);
+  if(team===0||team===1) return Math.max(1,populationExpectedSlots(team).length)*FACTION_POP_CAP;
+  if(team===2&&typeof broodIsEnemy==='function'&&broodIsEnemy())return populationTeamCeiling(1);
+  if(team===2&&typeof bugCap==='function')return bugCap();
+  return 0;
 }
 function populationCapFor(team){
-  /* Player and opposing factions each own one 500-body wallet. Neutral
-     wildlife keeps its separately tuned budget when it is not the opponent. */
-  if(team===2&&!(typeof broodIsEnemy==='function'&&broodIsEnemy())&&typeof bugCap==='function')return bugCap();
-  return FACTION_POP_CAP;
+  /* Team callers receive the aggregate ceiling for diagnostics. Admission is
+     always decided by populationCapForCommander() below. Neutral wildlife
+     keeps its separately tuned budget when it is not a match participant. */
+  if(team===0||team===1||team===2)return populationTeamCeiling(team);
+  return 0;
 }
 function populationUsedFor(team){
   if((team===1||team===2)&&typeof broodIsEnemy==='function'&&broodIsEnemy())return teamCount[1]+teamCount[2];
@@ -429,7 +431,7 @@ function populationMissingCommanderReservations(team){
 function populationFactionTeam(team){
   return team===2&&typeof broodIsEnemy==='function'&&broodIsEnemy()?1:team;
 }
-function populationLedgerPlayer(){return {used:populationUsedFor(0),cap:populationCapFor(0)};}
+function populationLedgerPlayer(){return {used:populationUsedForCommander(POP_PLAYER_SLOT),cap:populationCapForCommander(POP_PLAYER_SLOT)};}
 function populationFactionLedger(team){
   const factionTeam=populationFactionTeam(team);
   return {team:factionTeam,used:populationUsedFor(factionTeam),cap:populationCapFor(factionTeam)};
@@ -441,24 +443,21 @@ function populationCanSpawn(type,team,slot,x,y){
     if(typeof broodIsEnemy==='function'&&broodIsEnemy()){
       const s=populationResolveSlot(2,slot,x,y);
       if(s===POP_INVALID_SLOT)return false;
-      const used=populationUsedFor(1),cap=populationCapFor(1);
-      /* Hostile Brood bodies share the opposing faction wallet. Preserve every
-         missing commander slot so a tide cannot permanently block a respawn. */
+      const used=populationUsedForCommander(s),cap=populationCapForCommander(s),k=popCmdIndex(s);
+      /* Hostile Brood bodies use the nearest opposing seat's wallet, so a tide
+         cannot drain unrelated AI participants or block their Commanders. */
       if(T.cat==='hero') return used<cap;
-      const reserve=populationMissingCommanderReservations(1);
-      return used<cap-reserve;
+      return used<cap-(k>=0&&!popCmdHeroes[k]?1:0);
     }
     return populationUsedFor(2)<populationCapFor(2);
   }
   const s=populationResolveSlot(team,slot,x,y);
   if(s===POP_INVALID_SLOT)return false;
-  const used=populationUsedFor(team),cap=populationCapFor(team);
-  /* One faction wallet, with one reserved place for each expected Commander
-     absent from the transient live/cargo recount. Normal setup, save restore
-     in any order, and later respawns therefore all end at 500, never 501. */
+  const used=populationUsedForCommander(s),cap=populationCapForCommander(s),k=popCmdIndex(s);
+  /* Each seat reserves its own missing Commander place. Normal setup, save
+     restore in any order, and later respawns therefore end at 500 per seat. */
   if(T.cat==='hero') return used<cap;
-  const reserve=populationMissingCommanderReservations(team);
-  return used<cap-reserve;
+  return used<cap-(k>=0&&!popCmdHeroes[k]?1:0);
 }
 function assignUnitCommander(i,slot){
   if(i<0||!ualive[i]||uteam[i]>1) return;
@@ -701,14 +700,14 @@ const MOVE_COHORT_MAX=64,moveCohorts=new Array(MOVE_COHORT_MAX);
 const uMoveCohort=new Int16Array(MAXU),uCohesion=new Float32Array(MAXU);
 uMoveCohort.fill(-1);uCohesion.fill(1);
 let moveCohortNext=0;
-function allocMoveCohort(sel,targets,form){
+function allocMoveCohort(sel,targets,form,preassigned){
   if(sel.length<2) return -1;
   /* Match the source and destination shells before either the live goals or
      the cohort copy consume this array. Unit-index order mapped a 4x2 launch
      block straight into row-major 3x3 slots. Sorting both shapes by polar
      angle (then radius and stable index) preserves each hull's quadrant and
      removes the close crossings without an O(n^2) assignment solver. */
-  if(targets&&targets.length===sel.length){
+  if(!preassigned&&targets&&targets.length===sel.length){
     let sx=0,sy=0,tx=0,ty=0;
     for(let k=0;k<sel.length;k++){
       sx+=ux[sel[k]];sy+=uy[sel[k]];tx+=targets[k].x;ty+=targets[k].y;
@@ -726,14 +725,15 @@ function allocMoveCohort(sel,targets,form){
   }
   const ci=moveCohortNext++%MOVE_COHORT_MAX,old=moveCohorts[ci];
   if(old) for(const e of old.members) if(ualive[e[0]]&&ugen[e[0]]===e[1]&&uMoveCohort[e[0]]===ci) uMoveCohort[e[0]]=-1;
-  moveCohorts[ci]={members:sel.map((i,k)=>[i,ugen[i],k]),targets,form,created:stats.t};
+  moveCohorts[ci]={members:sel.map((i,k)=>[i,ugen[i],k]),targets,form,
+    team:sel.length?uteam[sel[0]]:0,created:stats.t};
   return ci;
 }
 function tickMoveCohorts(){
   uCohesion.fill(1,0,unitHigh);
   for(let ci=0;ci<MOVE_COHORT_MAX;ci++){
     const C=moveCohorts[ci];if(!C)continue;
-    const live=C.members.filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===0&&uMoveCohort[e[0]]===ci);
+    const live=C.members.filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===(C.team==null?0:C.team)&&uMoveCohort[e[0]]===ci);
     C.members=live;
     if(!live.length){moveCohorts[ci]=null;continue;}
     let far=0,arrived=0,slowest=Infinity;
@@ -771,7 +771,10 @@ function tickMoveCohorts(){
          unit-width of slack is enough: inside it everyone runs free so
          stragglers can close, beyond it a leader drops to the group's pace. */
       const blend=Math.max(0,Math.min(1,(lead-10)/14));
-      uCohesion[i]=d<=2&&far>34 ? .35 : (1-blend*(1-pace));
+      /* A member already on its exact slot holds with the same bounded crawl
+         used at patrol corners; 35% let leaders visibly leave their slots
+         while a slow hull was still hundreds of world units behind. */
+      uCohesion[i]=d<=2&&far>34 ? .16 : (1-blend*(1-pace));
     }
   }
 }
@@ -1056,7 +1059,7 @@ function spawnUnit(type,team,x,y,cmdSlot){
   ux[i]=x; uy[i]=y; uang[i]=team?Math.PI:0; uturr[i]=uang[i];ugunPitch[i]=0;
   utx[i]=x; uty[i]=y;
   uhp[i]=T.hp*(team===0?resHpMult*typeHpMult[type]*(T.cat==='hero'?commanderHpMult:1):(team===1?aiHpMult*(WC.iron?1.25:1):1)); uhpm[i]=uhp[i];
-  ucool[i]=Math.random()*T.cool; ubuff[i]=0; ustomp[i]=0; ureclaim[i]=0;
+  ucool[i]=mfSimRandom()*T.cool; ubuff[i]=0; ustomp[i]=0; ureclaim[i]=0;
   uclassBuff[i]=0;uclassBuffT[i]=0;ubroodLed[i]=0;uMineT[i]=0;uMineNode[i]=-1;
   utype[i]=type; uteam[i]=team; ualive[i]=1; ustate[i]=0; usel[i]=0;
   const slot=populationResolveSlot(team,cmdSlot,x,y);
@@ -1428,9 +1431,16 @@ function findEnemyDomain(x,y,team,rad,mask,prefer){
 
 /* ---------- flow-field pathfinding (SupCom2-style) ---------- */
 const DIRX=[1,1,0,-1,-1,-1,0,1,0], DIRY=[0,1,1,1,0,-1,-1,-1,0];
-const FF_MAX=8;
-const fields=[];              // {tx,ty,dirs:Uint8Array}
-let ffNext=0;
+/* Sixteen direction fields cost about 2.3 MiB at the production 384x384 grid.
+   That bounded pool is large enough for every movement/clearance cohort plus
+   normal AI traffic. More importantly, replacement is reference-aware: the
+   old eight-slot round robin detached units that were still marching. */
+const FF_MAX=16;
+const fields=[];              // {tx,ty,dirs:Uint8Array,rev,lastUse,pending}
+let ffNext=0,mfFieldUseClock=1,mfNavBuildTick=-1;
+const mfFieldRefs=new Uint16Array(FF_MAX);
+const mfNavPerf={requests:0,hits:0,misses:0,builds:0,deferred:0,evictions:0,
+  activeProtected:0,overflows:0,invalidations:0,lastBuildMs:0,maxBuildMs:0};
 const ffDist=new Uint16Array(0);  // replaced at init
 let ffDistA=null,ffQueue=null,ffBucketHead=null,ffBucketNext=null,ffBucketPrev=null,ffBucketCost=null;
 function ffCell(wx,wy){ return clamp(wy/MAP*PGS|0,0,PGS-1)*PGS+clamp(wx/MAP*PGS|0,0,PGS-1); }
@@ -1462,9 +1472,18 @@ let mfNavPassRef=null,mfNavWaterRef=null,mfNavCompRef=null;
 function mfNavInvalidate(reason){
   mfMoveBlockMaskKey='';mfNavClearRevision=0;mfNavLastInvalidation=reason||'dynamic';
   mfMoveBlockRevision=(mfMoveBlockRevision+1)>>>0||1;
+  mfNavPerf.invalidations++;
   return mfMoveBlockRevision;
 }
 function mfNavRevision(){return mfMoveBlockRevision;}
+function mfNavDiagnostics(){
+  let active=0,pending=0;
+  mfFieldRefs.fill(0);
+  for(let i=0;i<unitHigh;i++)if(ualive[i]&&ufield[i]>=0&&ufield[i]<FF_MAX)mfFieldRefs[ufield[i]]++;
+  for(let f=0;f<fields.length;f++)if(fields[f]){if(mfFieldRefs[f])active++;if(fields[f].pending)pending++;}
+  return {...mfNavPerf,slots:fields.filter(Boolean).length,active,pending,revision:mfMoveBlockRevision,
+    lastInvalidation:mfNavLastInvalidation};
+}
 function mfMoveBlockersDirty(){mfNavInvalidate('blockers');}
 function mfMoveStampCircle(mask,x,y,r){
   const cell=MAP/PGS,pad=cell*.42,rr=Math.max(0,r)+pad,r2=rr*rr;
@@ -1498,7 +1517,12 @@ function mfMoveBlockMaskEnsure(){
   mask.fill(0);
   if(typeof blds!=='undefined')for(let n=0;n<blds.length;n++){
     const B=blds[n];if(!B||!B.alive||B.type==='gate'||B.prog<.15)continue;
-    mfMoveStampCircle(mask,B.x,B.y,(B.r||0)+6);
+    /* Placement, selection and collision already know the authored rotated
+       footprint. Navigation must stamp that same shape; a radius around a
+       long Factory blocked empty corners while leaving real wall edges open. */
+    const f=typeof bldFoot==='function'?bldFoot(B):null;
+    if(f&&isFinite(f[0])&&isFinite(f[1]))mfMoveStampObb(mask,{x:B.x,y:B.y,w:f[0],h:f[1],a:B.rot||0},6);
+    else mfMoveStampCircle(mask,B.x,B.y,(B.r||0)+6);
   }
   if(typeof relics!=='undefined')for(let n=0;n<relics.length;n++){
     const R=relics[n];if(R&&R.alive)mfMoveStampObb(mask,R,15);
@@ -1614,8 +1638,17 @@ function mfNavSectorWaypoint(F,wx,wy){
 function mfMoveFieldFresh(F){
   if(!F)return null;
   mfMoveBlockMaskEnsure();
-  if(F.rev!==mfMoveBlockRevision){
-    F.dirs=computeField(F.tx,F.ty,F.naval,F.clearance);F.sectorDist=F.dirs.mfSectorDist;F.rev=mfMoveBlockRevision;
+  F.lastUse=++mfFieldUseClock;
+  if(F.rev!==mfMoveBlockRevision||!F.dirs){
+    /* At most one expensive field build is admitted per deterministic sim
+       tick. Existing directions remain usable until their replacement lands;
+       a brand-new deferred field falls back to local steering for that tick. */
+    const buildTick=typeof tick==='number'?tick:-1;
+    if(mfNavBuildTick===buildTick){F.pending=true;return F;}
+    const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
+    F.dirs=computeField(F.tx,F.ty,F.naval,F.clearance);F.sectorDist=F.dirs.mfSectorDist;
+    F.rev=mfMoveBlockRevision;F.pending=false;mfNavBuildTick=buildTick;mfNavPerf.builds++;
+    if(t0){const ms=performance.now()-t0;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
   }
   return F;
 }
@@ -1681,17 +1714,53 @@ function computeField(tx,ty,naval,clearance){
   }
   return dirs;
 }
-function requestField(tx,ty,naval,clearance){
+function mfNavFieldRefCounts(){
+  mfFieldRefs.fill(0);
+  for(let i=0;i<unitHigh;i++)if(ualive[i]&&ufield[i]>=0&&ufield[i]<FF_MAX)mfFieldRefs[ufield[i]]++;
+  return mfFieldRefs;
+}
+function mfNavFieldSlot(){
+  for(let n=0;n<FF_MAX;n++){
+    const f=(ffNext+n)%FF_MAX;if(!fields[f]){ffNext=(f+1)%FF_MAX;return f;}
+  }
+  const refs=mfNavFieldRefCounts();let best=-1,bestUse=Infinity;
+  for(let f=0;f<FF_MAX;f++){
+    const F=fields[f];if(!F||refs[f])continue;
+    const use=F.lastUse||0;if(use<bestUse){bestUse=use;best=f;}
+  }
+  if(best>=0){ffNext=(best+1)%FF_MAX;mfNavPerf.evictions++;return best;}
+  mfNavPerf.activeProtected+=FF_MAX;mfNavPerf.overflows++;return -1;
+}
+function requestField(tx,ty,naval,clearance,defer){
   naval=!!naval;
   clearance=mfNavClearanceToken(clearance,naval);
+  mfNavPerf.requests++;
   mfMoveBlockMaskEnsure();
   for(let f=0;f<fields.length;f++){
-    if(fields[f]&&fields[f].rev===mfMoveBlockRevision&&!!fields[f].naval===naval&&fields[f].clearance===clearance&&dist2(fields[f].tx,fields[f].ty,tx,ty)<70*70) return f;
+    const F=fields[f];
+    if(F&&!!F.naval===naval&&F.clearance===clearance&&dist2(F.tx,F.ty,tx,ty)<70*70){
+      F.lastUse=++mfFieldUseClock;mfNavPerf.hits++;
+      /* Simulation/AI callers retain the historical synchronous freshness
+         contract. Only explicit player-authoring calls pass defer=true. */
+      if(!defer&&(F.rev!==mfMoveBlockRevision||!F.dirs)){
+        const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
+        F.dirs=computeField(F.tx,F.ty,F.naval,F.clearance);F.sectorDist=F.dirs.mfSectorDist;
+        F.rev=mfMoveBlockRevision;F.pending=false;mfNavPerf.builds++;
+        if(t0){const ms=performance.now()-t0;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
+      }
+      return f;
+    }
   }
-  const f=ffNext; ffNext=(ffNext+1)%FF_MAX;
-  for(let i=0;i<unitHigh;i++) if(ufield[i]===f) ufield[i]=-1;   // detach units from recycled slot
-  const dirs=computeField(tx,ty,naval,clearance);
-  fields[f]={tx,ty,naval,clearance,dirs,sectorDist:dirs.mfSectorDist,rev:mfMoveBlockRevision};
+  mfNavPerf.misses++;
+  const f=mfNavFieldSlot();if(f<0)return -1;
+  let dirs=null,rev=0;
+  if(!defer){
+    const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
+    dirs=computeField(tx,ty,naval,clearance);rev=mfMoveBlockRevision;mfNavPerf.builds++;
+    if(t0){const ms=performance.now()-t0;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
+  }else mfNavPerf.deferred++;
+  fields[f]={tx,ty,naval,clearance,dirs,sectorDist:dirs&&dirs.mfSectorDist,
+    rev,lastUse:++mfFieldUseClock,pending:!!defer};
   return f;
 }
 function mfNavFindAttackBlocker(i,gx,gy){
@@ -2356,6 +2425,7 @@ function addBld(type,team,x,y,instant,rot,suppressPackageGrant){
             cool:0,queue:[],repeat:false,prodT:0,heal:0,tier:1,lvl:1,upT:0,upMax:1,tang:team?Math.PI:0,gunPitch:0,
             seen:false,boost:0,boostM:UPLINK_BOOST,res:-1,resT:0,rally:null,rich:false,dep:-1,geo:-1,
             shield:instant?shieldMax:0,shieldMax,shieldT:0,dmgT:0,
+            repairOn:false,repairStalled:false,
             guardReady:type==='techlab',guardT:0,guardCharge:0,
             rot:rot||0,footTier:bldFootTierCount(type,fac),link:0,anim:Math.random()*10,animS:0,conduit:[],
             buildPaidM:instant?T.cm:0,buildPaidE:instant?T.ce:0,buildStalled:false};
@@ -2444,6 +2514,7 @@ function damageBld(b,dmg,attTeam){
   }
   if(B.hp<=0){
     B.alive=false;
+    B.repairOn=false; B.repairStalled=false;
     B.fallT=stats.t;
     const strategic=!!_superT;
     if(B.type==='mex'&&B.dep>=0) redirectProspectorsFromNode(B.dep,B.team);
@@ -2505,8 +2576,14 @@ function damageBld(b,dmg,attTeam){
    only ever restores toward the ceiling — upgrades set hpm first, then repair
    follows it — so a partially-upgraded turret cannot be healed past its tier. */
 function repairBld(B,amt){
-  if(!B||!B.alive||B.prog<1) return;
+  if(!B||!B.alive||B.prog<1||!(amt>0)) return 0;
+  const before=B.hp;
   B.hp=Math.min(B.hpm,B.hp+amt);
+  /* Any repair source may finish the job before paid maintenance runs later in
+     the tick. Clear the toggle here so Constructor/Aegis healing cannot leave
+     a full structure displaying or hashing a stale active order. */
+  if(B.hp>=B.hpm){B.hp=B.hpm;B.repairOn=false;B.repairStalled=false;}
+  return B.hp-before;
 }
 
 // ---------- resource nodes: mass deposits, rich veins, energy geysers ----------
@@ -3016,19 +3093,19 @@ function bugQTick(){                      // pour queued broods out of the groun
     const q=bugQ[0];
     const batch=Math.min(q.n,budget,70);
     for(let k=0;k<batch;k++){
-      const alpha=Math.random()<0.02*q.tier;
-      const typ=alpha?13:(Math.random()<0.13?17:12);
-      const i=spawnUnit(typ,2,q.x+rr(-90,90),q.y+rr(-90,90),q.seat>=0?q.seat:undefined);
+      const alpha=mfSimRandom()<0.02*q.tier;
+      const typ=alpha?13:(mfSimRandom()<0.13?17:12);
+      const i=spawnUnit(typ,2,q.x+mfSimRange(-90,90),q.y+mfSimRange(-90,90),q.seat>=0?q.seat:undefined);
       if(i>=0){
         ustate[i]=2; ubuff[i]=q.tier>=4?6:0;              // frenzied at high tiers
-        const r3=Math.random();
+        const r3=mfSimRandom();
         /* Who the brood walks at. Half of every eruption marching straight for
            the player made the hive feel personal rather than ambient; on Easy
            most of a tide now wanders or goes for the AI instead. */
         const atPlayer=[0.26,0.38,0.5][diffLvl()]*(broodIsEnemy()?1:0.7);
-        if(r3<atPlayer&&q.tpx>=0){ utx[i]=clamp(q.tpx+rr(-140,140),20,MAP-20); uty[i]=clamp(q.tpy+rr(-140,140),20,MAP-20); }
-        else if(r3<atPlayer+0.35&&q.tex>=0){ utx[i]=clamp(q.tex+rr(-140,140),20,MAP-20); uty[i]=clamp(q.tey+rr(-140,140),20,MAP-20); }
-        else { utx[i]=clamp(q.x+rr(-600,600),20,MAP-20); uty[i]=clamp(q.y+rr(-600,600),20,MAP-20); }
+        if(r3<atPlayer&&q.tpx>=0){ utx[i]=clamp(q.tpx+mfSimRange(-140,140),20,MAP-20); uty[i]=clamp(q.tpy+mfSimRange(-140,140),20,MAP-20); }
+        else if(r3<atPlayer+0.35&&q.tex>=0){ utx[i]=clamp(q.tex+mfSimRange(-140,140),20,MAP-20); uty[i]=clamp(q.tey+mfSimRange(-140,140),20,MAP-20); }
+        else { utx[i]=clamp(q.x+mfSimRange(-600,600),20,MAP-20); uty[i]=clamp(q.y+mfSimRange(-600,600),20,MAP-20); }
       }
     }
     q.n-=batch; budget-=batch;
@@ -3084,13 +3161,13 @@ function envTick(dt){
   const meteorSite=!hazOwnsMeteor&&!!(WC.meteor||hazMeteor);
   if(meteorSite) stormTimer-=dt;
   if(meteorSite&&stormTimer<=0){
-    stormTimer=(90+Math.random()*70)*(WC.meteor?0.33:1)*[2.1,1.4,1][D];
-    const n=Math.max(1,(2+Math.random()*3|0)-[2,1,0][D])+(WC.meteor?2:0);
+    stormTimer=(90+mfSimRandom()*70)*(WC.meteor?0.33:1)*[2.1,1.4,1][D];
+    const n=Math.max(1,(2+mfSimRandom()*3|0)-[2,1,0][D])+(WC.meteor?2:0);
     // aim near random units for drama
     for(let k=0;k<n;k++){
-      let x=rr(300,MAP-300), y=rr(300,MAP-300);
-      const pick=Math.random()*unitHigh|0;
-      if(ualive[pick]&&Math.random()<0.7){ x=clamp(ux[pick]+rr(-160,160),100,MAP-100); y=clamp(uy[pick]+rr(-160,160),100,MAP-100); }
+      let x=mfSimRange(300,MAP-300), y=mfSimRange(300,MAP-300);
+      const pick=mfSimRandom()*unitHigh|0;
+      if(ualive[pick]&&mfSimRandom()<0.7){ x=clamp(ux[pick]+mfSimRange(-160,160),100,MAP-100); y=clamp(uy[pick]+mfSimRange(-160,160),100,MAP-100); }
       meteors.push({x,y,t:3.2+k*0.5});
     }
     toast('☄ METEOR STORM INBOUND — clear the strike zones!');
@@ -3134,11 +3211,11 @@ function envTick(dt){
   // hive spread — faster and denser as the threat grows
   nestSpreadT-=dt;
   if(nestSpreadT<=0){
-    nestSpreadT=(Math.max(45,150-tier*20)+Math.random()*40)*[1.9,1.3,1][D];
+    nestSpreadT=(Math.max(45,150-tier*20)+mfSimRandom()*40)*[1.9,1.3,1][D];
     const nests=liveNests();
     if(nests.length && nests.length<[3+tier,5+tier*1.5,6+tier*2][D]){
-      const N=nests[Math.random()*nests.length|0];
-      let L=findLand(N.x+rr(-300,300),N.y+rr(-300,300));
+      const N=nests[mfSimRandom()*nests.length|0];
+      let L=findLand(N.x+mfSimRange(-300,300),N.y+mfSimRange(-300,300));
       if(typeof battlefieldClampPoint==='function')L=battlefieldClampPoint(L[0],L[1],135);
       if((typeof battlefieldContains!=='function'||battlefieldContains(L[0],L[1],135))
          && dist2(L[0],L[1],MAP*SP_LO,MAP*SP_HI)>480*480 && dist2(L[0],L[1],MAP*SP_HI,MAP*SP_LO)>480*480
@@ -3167,7 +3244,7 @@ function envTick(dt){
   // mass eruptions — multiple hives at once, escalating 20x counts
   infestT-=dt;
   if(infestT<=0){
-    infestT=(Math.max(55,210-tier*30)+Math.random()*40)*[1.75,1.25,1][D]*(broodIsEnemy()?1:1.8);
+    infestT=(Math.max(55,210-tier*30)+mfSimRandom()*40)*[1.75,1.25,1][D]*(broodIsEnemy()?1:1.8);
     const nests=liveNests();
     if(nests.length && (broodIsEnemy()?populationCanSpawn(12,2,undefined,nests[0].x,nests[0].y):populationUsedFor(2)<bugCap())){
       const eruptN=Math.max(1,Math.min(nests.length,Math.round((1+tier*0.6)*infQty()*1.8)));
@@ -3176,7 +3253,7 @@ function envTick(dt){
       const per=Math.max(8,Math.round((6+tier*5)*20*infQty()));
       const pool=[...nests];
       for(let e2=0;e2<eruptN;e2++){
-        const N=pool.splice(Math.random()*pool.length|0,1)[0];
+        const N=pool.splice(mfSimRandom()*pool.length|0,1)[0];
         nestErupt(N,per,tier);
         mmPing(N.x,N.y);
       }
@@ -3191,7 +3268,7 @@ function envTick(dt){
   if(tier>=[6,5,4][D]){
     tideT-=dt;
     if(tideT<=0){
-      tideT=(230+Math.random()*60)*[2,1.4,1][D];
+      tideT=(230+mfSimRandom()*60)*[2,1.4,1][D];
       const nests=liveNests();
       if(nests.length && (broodIsEnemy()?populationCanSpawn(12,2,undefined,nests[0].x,nests[0].y):populationUsedFor(2)<bugCap())){
         let total=0;
@@ -3237,7 +3314,7 @@ let crateT=55, sitePickupT=28, boostDmgT=0;
 function spawnCrate(x,y,forced){
   let k=typeof forced==='string'?CRATE_KINDS.find(o=>o.id===forced):forced;
   if(!k){
-    let roll=Math.random()*CRATE_KINDS.reduce((n,o)=>n+o.w,0);
+    let roll=mfSimRandom()*CRATE_KINDS.reduce((n,o)=>n+o.w,0);
     for(const q of CRATE_KINDS){ roll-=q.w; if(roll<=0){k=q;break;} }
     k=k||CRATE_KINDS[0];
   }
@@ -3268,7 +3345,7 @@ function spawnResourceSiteCrate(){
     for(const C of crates) if(dist2(S.x,S.y,C.x,C.y)<190*190){ sites.splice(n,1); break; }
   }
   if(!sites.length) return null;
-  const S=sites[Math.random()*sites.length|0],a=Math.random()*TAU;
+  const S=sites[mfSimRandom()*sites.length|0],a=mfSimRandom()*TAU;
   const C=spawnCrate(S.x+Math.cos(a)*54,S.y+Math.sin(a)*54,S.k);
   C.alt=0; C.site=true; C.siteName=S.site; C.announced=false;
   return C;
@@ -3279,8 +3356,8 @@ function crateTick(dt){
   if(!matchLive||demoMode) return;
   crateT-=dt;
   if(crateRate>0&&crateT<=0&&crates.length<4){
-    crateT=(50+Math.random()*40)/(crateRate||1);
-    const c2=spawnCrate(rr(300,MAP-300),rr(300,MAP-300));
+    crateT=(50+mfSimRandom()*40)/(crateRate||1);
+    const c2=spawnCrate(mfSimRange(300,MAP-300),mfSimRange(300,MAP-300));
     mmPing(c2.x,c2.y);
     toast('📦 Supply pod inbound — grab it with any unit');
   }
@@ -3288,7 +3365,7 @@ function crateTick(dt){
   sitePickupT-=dt;
   if(sitePickupT<=0&&crates.filter(C=>C.site).length<2){
     const P=typeof battlefieldPresetDef==='function'?battlefieldPresetDef():{site:1};
-    sitePickupT=(62+Math.random()*34)*(P.site||1);
+    sitePickupT=(62+mfSimRandom()*34)*(P.site||1);
     spawnResourceSiteCrate();
   }
   for(let i=crates.length-1;i>=0;i--){
@@ -3364,7 +3441,7 @@ function applyCrate(k,x,y){
     /* One focused material drop is easier to plan around than four tiny
        increments. Relic cores remain tied to hives and ruins. */
     var pool=['alloy','alloy','circuit','circuit','isotope'];
-    var mat=pool[Math.random()*pool.length|0],amount=mat==='alloy'?12:(mat==='circuit'?7:4),grant={};
+    var mat=pool[mfSimRandom()*pool.length|0],amount=mat==='alloy'?12:(mat==='circuit'?7:4),grant={};
     grant[mat]=amount;
     if(typeof matGrant==='function') matGrant(grant);
     pickupToast(k,'+'+amount+' '+(typeof MATS!=='undefined'?MATS[mat].nm:mat.toUpperCase()).toUpperCase());
@@ -4335,7 +4412,7 @@ function blowTank(T){
   shake=Math.max(shake,9);
   sfx('boom',T.x,T.y,2.2);
   // chain reaction through the tank farm
-  for(const O of tanks) if(O.alive&&O.fuse<=0&&dist2(O.x,O.y,T.x,T.y)<(R*1.15)*(R*1.15)) O.fuse=0.18+Math.random()*0.35;
+  for(const O of tanks) if(O.alive&&O.fuse<=0&&dist2(O.x,O.y,T.x,T.y)<(R*1.15)*(R*1.15)) O.fuse=0.18+mfSimRandom()*0.35;
 }
 function sceneryTick(dt){
   for(const T of tanks){
@@ -4345,7 +4422,7 @@ function sceneryTick(dt){
     if((tick&15)===0){
       let hot=false;
       forUnitsIn(T.x,T.y,T.s*0.9,j=>{ if(uteam[j]===2) hot=true; });   // bugs smash them open
-      if(hot&&Math.random()<0.25) T.fuse=0.5;
+      if(hot&&mfSimRandom()<0.25) T.fuse=0.5;
     }
   }
   for(const R of relics){
@@ -4479,7 +4556,7 @@ function damageScenery(x,y,rad,dmg,byTeam){   // called from every area damage s
      stop exactly this exploit. */
   if(R.hp<=0) collapseBlock(R, byTeam===undefined?2:byTeam);
   }
-  for(const T of tanks) if(T.alive&&T.fuse<=0&&dist2(x,y,T.x,T.y)<r2) T.fuse=0.12+Math.random()*0.2;
+  for(const T of tanks) if(T.alive&&T.fuse<=0&&dist2(x,y,T.x,T.y)<r2) T.fuse=0.12+mfSimRandom()*0.2;
 }
 
 /* ============================================================
@@ -5057,7 +5134,7 @@ function novaFire(b,wx,wy){
      crater/deformation, sound and aftermath. Previously this was two complete
      super-detonations plus two more rings at nearly the same point. */
   spawnExplosion(wx,wy,band(64,86),B.team);
-  superDetonation(wx+rr(-50,50),wy+rr(-50,50),52/44,B.team,{visual:false,ground:false});
+  superDetonation(wx+mfSimRange(-50,50),wy+mfSimRange(-50,50),52/44,B.team,{visual:false,ground:false});
   shake=22; flashScreen();
   if(B.team===0) toast('☄ NOVA STRIKE — target zone annihilated');
   return true;
@@ -5210,7 +5287,7 @@ function dropRemains(i,airCrash){
   }
 }
 function addWreck(x,y,mass,energy,kind,scale,style){
-  wrecks.push({x,y,a:Math.random()*TAU,s:(scale||1)*(16+Math.random()*10),
+  wrecks.push({x,y,a:mfSimRandom()*TAU,s:(scale||1)*(16+mfSimRandom()*10),
                /* `mass||20` turned an EXPLICIT zero into 20 - which quietly
                   minted metal out of every biomass pile, since biomass is
                   defined by carrying mass 0. Default only when absent. */
@@ -5224,8 +5301,8 @@ function addWreck(x,y,mass,energy,kind,scale,style){
 function addWreckField(x,y,mass,energy,kind,rad,n,style){
   n=Math.max(1,n|0);
   for(let k=0;k<n;k++){
-    const a=Math.random()*TAU, d=Math.sqrt(Math.random())*(rad||30);
-    addWreck(x+Math.cos(a)*d, y+Math.sin(a)*d, mass/n, energy/n, kind, 0.8+Math.random()*0.6,style);
+    const a=mfSimRandom()*TAU, d=Math.sqrt(mfSimRandom())*(rad||30);
+    addWreck(x+Math.cos(a)*d, y+Math.sin(a)*d, mass/n, energy/n, kind, 0.8+mfSimRandom()*0.6,style);
   }
 }
 let reclTip=0;
@@ -7836,12 +7913,12 @@ function redirectProspector(i){
   }
   if(best>=0){
     const D=deposits[best];umode[i]=0;uMineNode[i]=best;ustate[i]=2;utgt[i]=-1;
-    utx[i]=D.x+rr(-30,30);uty[i]=D.y+rr(-30,30);ufield[i]=requestField(D.x,D.y,false,mfNavUnitClearance(TYPES[utype[i]]));
+    utx[i]=D.x+mfSimRange(-30,30);uty[i]=D.y+mfSimRange(-30,30);ufield[i]=requestField(D.x,D.y,false,mfNavUnitClearance(TYPES[utype[i]]));
     return true;
   }
   const h=nearestSupportBuilding(i,['hq','fac','airfield','harbor','tgate'],MAP*2);
   umode[i]=6;uMineNode[i]=-1;
-  if(h>=0){const B=blds[h];ustate[i]=2;utx[i]=B.x+rr(-24,24);uty[i]=B.y+rr(-24,24);ufield[i]=requestField(B.x,B.y,false,mfNavUnitClearance(TYPES[utype[i]]));return true;}
+  if(h>=0){const B=blds[h];ustate[i]=2;utx[i]=B.x+mfSimRange(-24,24);uty[i]=B.y+mfSimRange(-24,24);ufield[i]=requestField(B.x,B.y,false,mfNavUnitClearance(TYPES[utype[i]]));return true;}
   return false;
 }
 function redirectProspectorsFromNode(dep,team){
@@ -7868,7 +7945,7 @@ function prospectorAssistTick(i,dt){
     if(ustate[i]===2&&dist2(ux[i],uy[i],utx[i],uty[i])>35*35)return false;
     bi=nearestSupportBuilding(i,['hq','fac','airfield','harbor','tgate'],MAP*2);
     if(bi<0)return false;
-    const G=blds[bi];ustate[i]=2;utx[i]=G.x+rr(-28,28);uty[i]=G.y+rr(-28,28);ufield[i]=requestField(G.x,G.y,false,mfNavUnitClearance(TYPES[utype[i]]));return false;
+    const G=blds[bi];ustate[i]=2;utx[i]=G.x+mfSimRange(-28,28);uty[i]=G.y+mfSimRange(-28,28);ufield[i]=requestField(G.x,G.y,false,mfNavUnitClearance(TYPES[utype[i]]));return false;
   }
   const B=blds[bi],a=Math.atan2(B.y-uy[i],B.x-ux[i]);umov[i]=0;uang[i]=a+Math.PI/2;
   B.tractorT=.18;B.tractorN=Math.min(2,(B.tractorFrame===tick?(B.tractorN||0)+1:1));B.tractorFrame=tick;
@@ -8338,7 +8415,7 @@ function unitTick(dt){
              expires and never returns its slot. A handful of those permanently
              exhausts the 6000-slot pool and then NOTHING in the match can fire.
              Guard here as well as in the data, because the data is easy to extend. */
-          const pk=fireProj(T.ptype,uteam[i],mx,my,ex+rr(-3,3),ey+rr(-3,3),T.psp>0?T.psp:240,dmg*pmu*(tg<=-2?(T.bldMul||1):1),T.aoe,tg);
+          const pk=fireProj(T.ptype,uteam[i],mx,my,ex+mfSimRange(-3,3),ey+mfSimRange(-3,3),T.psp>0?T.psp:240,dmg*pmu*(tg<=-2?(T.bldMul||1):1),T.aoe,tg);
           const commanderCannon=utype[i]===4;
           if(pk>=0){
             pmu0[pk]=pmu; pwk[pk]=T.wk||'p'; pCannon[pk]=commanderCannon?1:0;
@@ -8423,7 +8500,7 @@ function unitTick(dt){
       if(!engaging && !T.air && ufield[i]>=0 && (distGoal>slotApproach||!directApproachClear)){
         fieldAttempted=true;
         const F=mfMoveFieldFresh(fields[ufield[i]]);
-        if(F&&!!F.naval===!!T.naval){
+        if(F&&F.dirs&&!!F.naval===!!T.naval){
           const k=F.dirs[ffCell(ux[i],uy[i])];
           if(k<8){
             const inv=1/Math.hypot(DIRX[k],DIRY[k]);
@@ -8434,7 +8511,7 @@ function unitTick(dt){
             if(P){const dx=P.x-ux[i],dy=P.y-uy[i],dl=Math.hypot(dx,dy)||1;mvx=dx/dl*sp;mvy=dy/dl*sp;ffOk=true;}
             else fieldUnreachable=true;
           }
-        } else ufield[i]=-1;
+        } else if(!F||!!F.naval!==!!T.naval) ufield[i]=-1;
       }
       if(!ffOk){
         if(fieldAttempted&&fieldUnreachable){
@@ -9165,7 +9242,7 @@ function bldTick(dt){
           const ma=B.tang-Math.PI/2;
           const mx=B.x+Math.cos(ma)*BT[B.type].size*0.89, my=B.y+Math.sin(ma)*BT[B.type].size*0.89;
           const bio=bfac==='horde',phase=bfac==='syndicate';
-          const pk=fireProj(bio?6:phase?3:2,B.team,mx,my,ux[e]+rr(-14,14),uy[e]+rr(-14,14),bio?112:135,
+          const pk=fireProj(bio?6:phase?3:2,B.team,mx,my,ux[e]+mfSimRange(-14,14),uy[e]+mfSimRange(-14,14),bio?112:135,
             (sea?BASTION.dmg*.84:BASTION.dmg)*bldDmgMul(B)*(bio?.9:1),BASTION.aoe*(bio?1.25:1),-1);
           if(pk>=0){
             pwk[pk]='e';
@@ -9433,10 +9510,10 @@ function bldTick(dt){
         if(mfBldCanFire(B,aimErr,.14))B.sqT-=dt;
         while(B.sq.length&&B.sqT<=0&&mfBldCanFire(B,aimErr,.14)){
           const S=B.sq.shift(); B.sqT+=STORM.cadence;
-          const mz=bldMuzzleXY(B,0.17,rr(-4.8,4.8));
+          const mz=bldMuzzleXY(B,0.17,mfSimRange(-4.8,4.8));
           const mx=mz[0], my=mz[1];
           const pk=fireProj(2,B.team,mx,my,S[0],S[1],118,STORM.dmg*bldDmgMul(B),STORM.aoe,-1);
-          if(pk>=0){ pwk[pk]='e'; pBarrage[pk]=1; pArc[pk]=560+rr(0,120); pSrcBld[pk]=B; }
+          if(pk>=0){ pwk[pk]='e'; pBarrage[pk]=1; pArc[pk]=560+mfSimRange(0,120); pSrcBld[pk]=B; }
           addParticle(0,mx,my,0,0,.15,17, 255,214,130);
           addParticle(1,mx,my,rr(-4,4),rr(-10,-3),.7,9, 96,96,102);
           if(typeof artilleryWorldAudio==='function')artilleryWorldAudio('launch',mx,my,B.team,1.16);
@@ -9528,8 +9605,8 @@ function bldTick(dt){
         if(near<(4+nTier*3)*10*infQty()*1.7 && populationCanSpawn(12,2,undefined,B.x,B.y)){
           const hiveSeat=(typeof broodIsEnemy==='function'&&broodIsEnemy())?populationDefaultSeat(1,B.x,B.y):undefined;
           for(let s2=0;s2<batch;s2++){
-            const i=spawnUnit(12,2,B.x+rr(-40,40),B.y+rr(-40,40),hiveSeat);
-            if(i>=0){ ustate[i]=2; const L=findLand(B.x+rr(-220,220),B.y+rr(-220,220)); utx[i]=L[0]; uty[i]=L[1]; }
+            const i=spawnUnit(12,2,B.x+mfSimRange(-40,40),B.y+mfSimRange(-40,40),hiveSeat);
+            if(i>=0){ ustate[i]=2; const L=findLand(B.x+mfSimRange(-220,220),B.y+mfSimRange(-220,220)); utx[i]=L[0]; uty[i]=L[1]; }
           }
         }
       }
@@ -9539,7 +9616,7 @@ function bldTick(dt){
         forUnitsIn(B.x,B.y,400,j=>{ if(uteam[j]===2&&utype[j]===13) alpha++; });
         if(alpha<(nTier>=4?3:1) && populationCanSpawn(13,2,undefined,B.x,B.y)){
           const hiveSeat=(typeof broodIsEnemy==='function'&&broodIsEnemy())?populationDefaultSeat(1,B.x,B.y):undefined;
-          const i=spawnUnit(13,2,B.x+rr(-30,30),B.y+rr(-30,30),hiveSeat);
+          const i=spawnUnit(13,2,B.x+mfSimRange(-30,30),B.y+mfSimRange(-30,30),hiveSeat);
           if(i>=0){ ustate[i]=2; utx[i]=B.x; uty[i]=B.y; }
         }
       }
@@ -9583,16 +9660,16 @@ function bldTick(dt){
           B.prodT=0; B.queue.shift();
           if(B.repeat) B.queue.push(t);
           if(teamCount[B.team]<MAXU/2-10){
-            const i=spawnUnit(t,B.team,B.x+rr(-14,14),B.y+ (B.team===0?B.r+16:-(B.r+16)),cmdSlot);
+            const i=spawnUnit(t,B.team,B.x+mfSimRange(-14,14),B.y+ (B.team===0?B.r+16:-(B.r+16)),cmdSlot);
             if(i>=0){
               ustate[i]=2;
               let rx,ry;
               if(B.team===0 && B.rally){          // player rally point
-                rx=clamp(B.rally.x+rr(-26,26),20,MAP-20);
-                ry=clamp(B.rally.y+rr(-26,26),20,MAP-20);
+                rx=clamp(B.rally.x+mfSimRange(-26,26),20,MAP-20);
+                ry=clamp(B.rally.y+mfSimRange(-26,26),20,MAP-20);
               } else {
-                rx=clamp(B.x+(B.team===0?rr(60,120):rr(-120,-60)),20,MAP-20);
-                ry=clamp(B.y+(B.team===0?rr(60,120):rr(-120,-60)),20,MAP-20);
+                rx=clamp(B.x+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
+                ry=clamp(B.y+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
               }
               const L=TYPES[t].naval? (findWater(rx,ry)||[ux[i],uy[i]]) : findLand(rx,ry);
               utx[i]=L[0]; uty[i]=L[1];

@@ -29,6 +29,7 @@ $jar = Join-Path $java 'bin\jar.exe'
 $zipalign = Join-Path $bt 'zipalign.exe'
 $signer = Join-Path $bt 'apksigner.bat'
 $key = Join-Path $env:USERPROFILE '.android\debug.keystore'
+$expectedSignerSha256 = 'D61AAF77C171F0F1E7841394EB0ADAED196E146AD90226A0F07854C29EE073F0'
 
 foreach($required in @($jar,$zipalign,$signer,$key)){
   if(-not (Test-Path -LiteralPath $required)){ throw "Required APK tool missing: $required" }
@@ -57,8 +58,19 @@ try{
   & $signer sign --ks $key --ks-pass pass:android --key-pass pass:android `
     --ks-key-alias androiddebugkey --out $out $aligned
   if($LASTEXITCODE -ne 0){ throw "APK signing failed ($LASTEXITCODE)" }
-  & $signer verify --verbose $out
-  if($LASTEXITCODE -ne 0){ throw "APK signature verification failed ($LASTEXITCODE)" }
+  $verifyOutput = @(& $signer verify --verbose --print-certs $out 2>&1)
+  $verifyExit = $LASTEXITCODE
+  $verifyOutput | ForEach-Object { Write-Host $_ }
+  if($verifyExit -ne 0){ throw "APK signature verification failed ($verifyExit)" }
+  $signerMatches = [regex]::Matches(($verifyOutput -join "`n"),
+    '(?im)^Signer #\d+ certificate SHA-256 digest:\s*([0-9a-f:]+)\s*$')
+  if($signerMatches.Count -ne 1){
+    throw "Expected exactly one APK signing certificate, found $($signerMatches.Count)"
+  }
+  $actualSignerSha256 = $signerMatches[0].Groups[1].Value.Replace(':','').ToUpperInvariant()
+  if($actualSignerSha256 -ne $expectedSignerSha256){
+    throw "APK signer SHA-256 changed: $actualSignerSha256 (expected $expectedSignerSha256)"
+  }
   & $zipalign -c -P 16 4 $out
   if($LASTEXITCODE -ne 0){ throw "APK alignment verification failed ($LASTEXITCODE)" }
   Get-Item -LiteralPath $out | Select-Object FullName,Length,LastWriteTime

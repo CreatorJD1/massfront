@@ -10,8 +10,8 @@ same principles should become native MASSFRONT systems.
 It complements, rather than replaces:
 
 - docs/UI_SYSTEM_BLUEPRINT.md
-- docs/MULTI_STAGE_PRODUCTION_PLAN.md
-- docs/TUTORIAL_STAGE6_AUDIT.md
+- docs/archive/plans/MULTI_STAGE_PRODUCTION_PLAN.md
+- docs/archive/tutorial/TUTORIAL_STAGE6_AUDIT.md
 - design/faction-production-matrix.md
 - design/tower-factions/catalog.json
 
@@ -856,7 +856,7 @@ ruleset. Keep those strengths. Upgrade its presentation and mission wrapper.
 ## 11. Prioritized implementation stages
 
 This is a reference-driven sequencing overlay for
-docs/MULTI_STAGE_PRODUCTION_PLAN.md. Each stage should ship behind a small data
+docs/archive/plans/MULTI_STAGE_PRODUCTION_PLAN.md. Each historical local phase should ship behind a small data
 contract and have a visible screenshot checkpoint.
 
 ### Stage R0 — Canon and data lock

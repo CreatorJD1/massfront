@@ -751,6 +751,21 @@ function hudDisp(el,d){ if(el&&el.style.display!==d) el.style.display=d; }
 function hudIntelChip(kind,inner){
   return '<span class="hudIntelChip '+kind+'">'+inner+'</span>';
 }
+function hudCommanderPortrait(C){
+  const img=$('heroPortraitImg'),fallback=$('heroPortraitFallback');if(!img||!fallback)return;
+  const binding=C&&C.portrait,primary=typeof binding==='string'?binding:(binding&&binding.src)||'',
+        secondary=typeof binding==='object'&&binding?binding.fallback||'':'';
+  const key=primary+'|'+secondary;
+  if(img.dataset.portraitKey===key)return;
+  img.dataset.portraitKey=key;img.dataset.stage='primary';
+  const showFallback=()=>{img.style.display='none';fallback.style.display='grid';};
+  img.onload=()=>{img.style.display='block';fallback.style.display='none';};
+  img.onerror=()=>{
+    if(img.dataset.stage==='primary'&&secondary&&secondary!==primary){img.dataset.stage='fallback';img.src=secondary;return;}
+    showFallback();
+  };
+  if(primary){img.style.display='block';img.src=primary;}else showFallback();
+}
 function updateHUD(fps){
   /* The commander rail runs on EVERY frame, ahead of the 1-in-10 gate below.
      Its state machine is measured in tenths of a second and its idle path is a
@@ -763,8 +778,11 @@ function updateHUD(fps){
   updateWaveWarning();
   const massV=$('massV'), enV=$('enV'), massR=$('massR'), enR=$('enR');
   const localBank=typeof mfLocalBank==='function'?mfLocalBank():{mass:resM[0],energy:resE[0],massCap:RES_MCAP[0],energyCap:RES_ECAP[0]};
-  hudTxt(massV, String(Math.floor(localBank.mass)));
-  hudTxt(enV, String(Math.floor(localBank.energy)));
+  /* The upper rail is a tactical glance surface, so four- and five-digit banks
+     use the same compact K notation as population. Full precision remains in
+     the inspector title reached by tapping the chip. */
+  hudTxt(massV, hudPopK(Math.floor(localBank.mass)));
+  hudTxt(enV, hudPopK(Math.floor(localBank.energy)));
   hudCol(massV, stallM>0?'#ff8d7a':(localBank.mass>=localBank.massCap-1?'#ffd257':''));
   hudCol(enV, stallE>0?'#ff8d7a':'');
   // net rate = income − measured spending, so the economy reads honestly
@@ -785,25 +803,38 @@ function updateHUD(fps){
   /* Chip is the whole player faction's 500, including allied commanders. */
   const popNowTxt=hudPopK(popL.used);
   const popCapTxt=popL.cap===1000?'1K':hudPopK(popL.cap);
-  hudTxt(popEl, popNowTxt+' / '+popCapTxt);
+  hudTxt(popEl, popNowTxt+'/'+popCapTxt);
   popBox.classList.toggle('popWarn',popL.used>=popL.cap*.9);
   popBox.classList.toggle('popFull',popL.used>=popL.cap);
   const popTitle='Faction population: '+popL.used+' of '+popL.cap+' — allied commanders share this cap';
   if(popBox.title!==popTitle) popBox.title=popTitle;
   hudTxt($('fps'), fps+' fps');
-  if(heroIdx>=0){
-    hudDisp($('heroBar'),'block');
-    /* Rank symbol, not a sliced profile name. #heroHpFill no longer exists —
-       the commander's health reads off the unit in the 3D view like every
-       other unit's does. */
+  const localHero=typeof mfLocalCommander==='function'?mfLocalCommander():heroIdx;
+  if(localHero>=0&&ualive[localHero]){
+    /* Realtime seats can own a commander that is not heroIdx. The locator must
+       describe the same unit it selects and centres, otherwise seats 2-4 see
+       the primary player's portrait/callsign on their own commander control. */
+    const heroBar=$('heroBar'),localCommanderId=typeof commanderIdForUnit==='function'?commanderIdForUnit(localHero):null,
+          C=localCommanderId&&typeof commanderIdentity==='function'?commanderIdentity(localCommanderId):
+            (typeof playerCommanderIdentity==='function'?playerCommanderIdentity():null);
+    hudDisp(heroBar,'flex');hudCommanderPortrait(C);
     const _hb=$('heroRankEm');
     if(_hb&&typeof metaRankIdx==='function'&&typeof RANKS!=='undefined'){
       const _r=RANKS[metaRankIdx()]; if(_r) hudTxt(_hb,_r.em);
     }
+    const heroName=(C&&(C.shortName||C.name))||'COMMANDER',heroCall=(C&&C.callsign)||'FIELD COMMAND';
+    hudTxt($('heroNameTxt'),String(heroName).toUpperCase());hudTxt($('heroCallsignTxt'),String(heroCall).toUpperCase());
+    hudTxt($('heroPortraitFallback'),String(heroName).trim().charAt(0).toUpperCase()||'C');
     hudTxt($('heroLvlTxt'),'LV '+heroLvl);
-    const xpW=(heroXp/heroXpNext*100)+'%';
-    const xpEl=$('xpFill'); if(xpEl&&xpEl._mfW!==xpW){ xpEl._mfW=xpW; xpEl.style.width=xpW; }
-    hudTxt($('heroLvlBadge'), String(heroLvl));
+    const xpPct=Math.round(clamp(heroXp/Math.max(1,heroXpNext),0,1)*100),hpPct=Math.round(clamp(uhp[localHero]/Math.max(1,uhpm[localHero]),0,1)*100);
+    const xpW=xpPct+'%',hpW=hpPct+'%';
+    const xpEl=$('xpFill');if(xpEl&&xpEl._mfW!==xpW){xpEl._mfW=xpW;xpEl.style.width=xpW;}
+    const hpEl=$('heroHpFill');if(hpEl&&hpEl._mfW!==hpW){hpEl._mfW=hpW;hpEl.style.width=hpW;}
+    hudTxt($('heroHpTxt'),hpPct+'%');hudTxt($('heroXpTxt'),xpPct+'%');hudTxt($('heroLvlBadge'),String(heroLvl));
+    heroBar.classList.toggle('heroCritical',hpPct<=25);
+    const commanderLabel='Commander '+heroName+', callsign '+heroCall+', level '+heroLvl+', health '+hpPct+' percent, XP '+xpPct+' percent. Activate to select and center.';
+    if(heroBar.getAttribute('aria-label')!==commanderLabel)heroBar.setAttribute('aria-label',commanderLabel);
+    if(heroBar.title!==commanderLabel)heroBar.title=commanderLabel;
   } else hudDisp($('heroBar'),'none');
   /* Length-driven, not a hardcoded 4. The EMP module added a fifth ability and
      the old literal silently left it out of the cooldown/lock rendering. */
@@ -844,6 +875,24 @@ function updateHUD(fps){
   if(gb){
     if(running&&!demoMode&&matchLive){
       gb.style.display='flex';
+      /* #goalBar remains the polite live status region, while its one native
+         button owns the briefing action. A role=status element with only an
+         onclick was reachable by touch but was neither keyboard-actionable nor
+         exposed as a control to assistive technology. Keep an OTA-safe fallback
+         because an updated script may run once against an older HTML shell. */
+      let goalAction=$('goalDetailBtn');
+      if(!goalAction){
+        goalAction=document.createElement('button');goalAction.type='button';goalAction.id='goalDetailBtn';
+        goalAction.setAttribute('aria-label','Open mission objective details');gb.replaceChildren(goalAction);gb._mfH=null;
+      }
+      if(gb.onclick)gb.onclick=null;
+      if(goalAction.dataset.mfMissionBound!=='1'){
+        goalAction.dataset.mfMissionBound='1';
+        mfBindTap(goalAction,()=>{
+          const def=typeof goalDef==='function'?goalDef():null;
+          if(def)toast((def.em?def.em+' ':'')+def.nm+' — '+def.ds);
+        });
+      }
       let h=goalStatus();
       /* Annihilate keys off livingEnemyCommanders(). Those units spawn in
          newSkirmish, but a first HUD paint (or a failed slot) can still read
@@ -881,8 +930,10 @@ function updateHUD(fps){
          (the clock) — so five of every six assignments reparsed identical HTML
          and invalidated layout for nothing, inside the frame loop. The handler
          was also a fresh closure every pass. */
-      if(gb._mfH!==h){ gb._mfH=h; gb.innerHTML=h; }
-      if(!gb.onclick) gb.onclick=()=>toast(goalDef().em+' '+goalDef().nm+' — '+goalDef().ds);
+      if(gb._mfH!==h){ gb._mfH=h; goalAction.innerHTML=h; }
+      const def=typeof goalDef==='function'?goalDef():null;
+      const actionLabel='Open mission objective details'+(def&&def.nm?': '+def.nm:'');
+      if(goalAction.getAttribute('aria-label')!==actionLabel)goalAction.setAttribute('aria-label',actionLabel);
     } else hudDisp(gb,'none');
   }
   // hive threat meter
@@ -1055,7 +1106,11 @@ function showConsHud(){
   let h='';
   for(const c of _mfMatchCons){
     const stock=b.consumables[c.id]||0;
-    h+='<div class="conHudSlot" title="ONE MATCH · '+c.nm+': '+c.ds+'"><span class="conHudEm">'+c.em+'</span>'
+    /* Keep the live match chip on the same canonical art mapping as Account
+       Armory. The data emoji remains the fallback when the inventory renderer
+       is unavailable or the mapped image cannot load. */
+    const art=typeof armInvIcon==='function'?armInvIcon(c,32):'<span>'+c.em+'</span>';
+    h+='<div class="conHudSlot" title="ONE MATCH · '+c.nm+': '+c.ds+'"><span class="conHudEm">'+art+'</span>'
       +'<span class="conHudNm">'+c.nm+'</span><span class="conHudScope">ONE MATCH</span><span class="conHudCt">'+stock+'</span></div>';
   }
   if(_mfConsHudEl._h!==h){ _mfConsHudEl._h=h; _mfConsHudEl.innerHTML=h; }
@@ -1673,27 +1728,53 @@ function mfIntel3DPump(ts){
    using the legacy unit sheet gives every faction a Nova silhouette. The PNG
    cache is keyed by the exact runtime faction kit and model ID, so a tab can
    rebuild freely without rebuilding geometry or lying about the subject. */
-const mfIntelThumbCache=new Map(),mfIntelThumbWait=new Map(),mfIntelThumbQueue=[];
+const mfIntelThumbCache=new Map(),mfIntelThumbWait=new Map(),mfIntelThumbQueue=[],mfIntelThumbState=new Map();
 let mfIntelThumbBusy=false,mfIntelThumbCanvas=null,mfIntelThumbView=null;
+let mfIntelThumbRequests=0,mfIntelThumbCacheHits=0,mfIntelThumbRenders=0,mfIntelThumbFailures=0;
 function mfIntelThumbKey(kind,id,kit){return kind+':'+mfIntelKit(kit)+':'+id;}
+function mfIntelThumbRecord(key,kind,id,kit,status,bytes,reason){
+  const old=mfIntelThumbState.get(key)||{};
+  mfIntelThumbState.set(key,{key,kind,id:String(id),kit,status,bytes:bytes||old.bytes||0,reason:reason||''});
+}
+function mfIntelThumbHolder(holder,key,kind,id,kit,status,source){
+  if(!holder)return;
+  holder.dataset.mfModelKey=key;holder.dataset.mfModelKind=kind;holder.dataset.mfModelId=String(id);
+  holder.dataset.mfModelKit=kit;holder.dataset.mfThumbStatus=status;holder.dataset.mfThumbSource=source||'pending';
+}
+function mfIntelThumbUnavailable(holder,key,kind,id,kit,reason){
+  if(!holder||holder.dataset.mfModelKey!==key)return;
+  holder.replaceChildren();holder.classList.add('missingFactionModel');
+  mfIntelThumbHolder(holder,key,kind,id,kit,'unavailable','unavailable');
+  const mark=document.createElement('span');mark.className='mfRuntimeThumbUnavailable';mark.textContent='!';
+  mark.setAttribute('aria-label',kit+' '+kind+' model unavailable');holder.appendChild(mark);
+  if(reason)holder.dataset.mfThumbReason=reason;
+}
 function mfIntelThumbRequest(img,holder,kind,id,kit){
   kit=mfIntelKit(kit);const key=mfIntelThumbKey(kind,id,kit),cached=mfIntelThumbCache.get(key);
+  mfIntelThumbRequests++;mfIntelThumbHolder(holder,key,kind,id,kit,'queued','pending');
   const done=url=>{
-    if(!holder.isConnected)return;
-    if(url){img.src=url;img.style.opacity='1';holder.classList.remove('missingFactionModel');}
-    else if(kit!=='nova'){
-      holder.replaceChildren();holder.classList.add('missingFactionModel');holder.dataset.faction=kit;
-      const mark=document.createElement('span');mark.textContent='!';mark.setAttribute('aria-label',kit+' model unavailable');holder.appendChild(mark);
-    }
+    if(!holder||holder.dataset.mfModelKey!==key)return;
+    if(!url){mfIntelThumbUnavailable(holder,key,kind,id,kit,'geometry');return;}
+    const ready=()=>{
+      if(holder.dataset.mfModelKey!==key)return;
+      const fallback=holder.querySelector('.mfRuntimeThumbFallback');if(fallback)fallback.remove();
+      img.style.opacity='1';holder.classList.remove('missingFactionModel');delete holder.dataset.mfThumbReason;
+      mfIntelThumbHolder(holder,key,kind,id,kit,'ready','runtime-geometry');
+    };
+    img.onload=ready;img.onerror=()=>mfIntelThumbUnavailable(holder,key,kind,id,kit,'decode');img.src=url;
+    mfIntelThumbHolder(holder,key,kind,id,kit,'rendered','runtime-geometry');
+    if(img.complete&&img.naturalWidth)ready();
   };
-  if(cached!==undefined){done(cached);return;}
+  if(cached!==undefined){mfIntelThumbCacheHits++;done(cached);return;}
   const waits=mfIntelThumbWait.get(key);if(waits){waits.push(done);return;}
+  mfIntelThumbRecord(key,kind,id,kit,'queued',0,'');
   mfIntelThumbWait.set(key,[done]);mfIntelThumbQueue.push({key,kind,id,kit});mfIntelThumbPump();
 }
 function mfIntelThumbPump(){
   if(mfIntelThumbBusy||!mfIntelThumbQueue.length)return;mfIntelThumbBusy=true;
   requestAnimationFrame(ts=>{
     const job=mfIntelThumbQueue.shift();let url='',subjectReady=false;
+    mfIntelThumbRecord(job.key,job.kind,job.id,job.kit,'rendering',0,'');
     try{
       if(!mfIntelThumbCanvas){
         mfIntelThumbCanvas=document.createElement('canvas');
@@ -1707,10 +1788,25 @@ function mfIntelThumbPump(){
          faction and recreate the exact silent-fallback bug this path fixes. */
       if(subjectReady){mfIntelThumbView.dirty=true;mfIntelThumbView.draw(2100);url=mfIntelThumbCanvas.toDataURL('image/png');}
     }catch(e){url='';}
+    if(url){mfIntelThumbRenders++;mfIntelThumbRecord(job.key,job.kind,job.id,job.kit,'ready',url.length,'');}
+    else{mfIntelThumbFailures++;mfIntelThumbRecord(job.key,job.kind,job.id,job.kit,'unavailable',0,subjectReady?'snapshot':'geometry');}
     mfIntelThumbCache.set(job.key,url);const waits=mfIntelThumbWait.get(job.key)||[];mfIntelThumbWait.delete(job.key);for(const fn of waits)fn(url);
     mfIntelThumbBusy=false;if(mfIntelThumbQueue.length)mfIntelThumbPump();
   });
 }
+function mfIntelThumbSnapshot(){
+  const entries=[...mfIntelThumbState.values()].map(row=>({...row})),holders=[...document.querySelectorAll('.mfRuntimeThumb[data-mf-model-key]')].map(el=>({
+    key:el.dataset.mfModelKey,kind:el.dataset.mfModelKind,id:el.dataset.mfModelId,kit:el.dataset.mfModelKit,
+    status:el.dataset.mfThumbStatus,source:el.dataset.mfThumbSource,connected:el.isConnected
+  }));
+  return {sharedContextCount:mfIntel3DGL?1:0,sharedSurfaceCount:mfIntel3DSurf?1:0,
+    contextReady:!!(mfIntel3DGL&&mfIntel3DProg&&!mfIntel3DGL.isContextLost()),busy:mfIntelThumbBusy,
+    queueDepth:mfIntelThumbQueue.length,waitingKeys:mfIntelThumbWait.size,requests:mfIntelThumbRequests,
+    cacheHits:mfIntelThumbCacheHits,renders:mfIntelThumbRenders,failures:mfIntelThumbFailures,
+    readyEntries:entries.filter(row=>row.status==='ready').length,unavailableEntries:entries.filter(row=>row.status==='unavailable').length,
+    readyHolders:holders.filter(row=>row.status==='ready'&&row.source==='runtime-geometry').length,entries,holders};
+}
+window.MFIntelRuntimeThumbnails=Object.freeze({snapshot:mfIntelThumbSnapshot});
 function mfIntelPreviewWindow(kind,id,tag,kit){
   kit=mfIntelKit(kit);
   const w=document.createElement('div');w.className='mfIntelPreview';w.setAttribute('role','img');
@@ -2039,6 +2135,54 @@ function renderProdNav(B){
   }
   nav.style.display='grid';
 }
+/* One service strip moves between the general structure panel and the
+   production sheet. Reusing the existing bp_sell node preserves its global
+   release/confirmation guard; duplicating a second destructive control in the
+   factory sheet would silently drop that safety contract. */
+function mfEnsureBuildingServiceControls(panelId){
+  const host=$(panelId||'bldMenu2'),sell=$('bp_sell');
+  if(!host||!sell)return null;
+  let row=$('mfBldServiceActions');
+  if(!row){
+    row=document.createElement('div');row.id='mfBldServiceActions';row.className='bldServiceActions';
+    row.setAttribute('role','group');
+    row.setAttribute('aria-label','Structure maintenance');
+  }
+  let repair=$('bp_repair');
+  if(!repair){
+    repair=document.createElement('button');repair.type='button';repair.id='bp_repair';
+    repair.className='bldServiceBtn bldServiceRepair';repair.textContent='REPAIR';
+  }
+  sell.classList.add('bldServiceBtn','bldServiceRecycle');
+  if(repair.parentElement!==row)row.appendChild(repair);
+  if(sell.parentElement!==row)row.appendChild(sell);
+  if(row.parentElement!==host){
+    if(host.id==='prodMenu')host.insertBefore(row,$('upBtn')||null);
+    else host.appendChild(row);
+  }
+  row.dataset.panel=host.id;
+  return {row,repair,recycle:sell};
+}
+function mfRenderBuildingServiceControls(B,panelId){
+  const C=mfEnsureBuildingServiceControls(panelId);if(!C||!B)return;
+  const S=window.MFBuildingService,Q=S&&typeof S.quote==='function'?S.quote(B):
+    {eligible:false,state:'unavailable',reason:'service-unavailable',active:false,rate:0,fullCostM:0,fullCostE:0};
+  const state=Q.state||'unavailable',labels={off:'REPAIR',repairing:'REPAIRING',stalled:'STALLED',
+    'under-fire':'UNDER FIRE',full:'FULL HEALTH',building:'BUILDING',unavailable:'UNAVAILABLE'};
+  C.repair.textContent=labels[state]||'UNAVAILABLE';
+  C.repair.dataset.state=state;C.repair.disabled=!Q.eligible;
+  C.repair.setAttribute('aria-pressed',Q.active?'true':'false');
+  const cost=[];if(Q.fullCostM>0)cost.push(Math.ceil(Q.fullCostM)+' mass');if(Q.fullCostE>0)cost.push(Math.ceil(Q.fullCostE)+' energy');
+  const detail=state==='repairing'?'Repair active':state==='stalled'?'Repair stalled; more resources required':
+    state==='under-fire'?'Repair paused under hostile fire':state==='full'?'Structure is at full health':
+    state==='building'?'Repair unlocks when construction finishes':state==='off'?'Start structure repair':'Structure repair unavailable';
+  C.repair.setAttribute('aria-label',detail+(cost.length?'. Full recovery costs up to '+cost.join(' and '):''));
+  C.repair.title=detail+(Q.rate?(' · '+Math.round(Q.rate)+' HP/s'):'')+(cost.length?(' · '+cost.join(' / ')):'' );
+  const refund=typeof bldRecycleMass==='function'?bldRecycleMass(B):0,armed=B.recycleConfirmAt>Date.now();
+  C.recycle.disabled=!B.alive;C.recycle.dataset.armed=armed?'true':'false';
+  C.recycle.textContent=armed?'CONFIRM RECYCLE +'+refund+'M':'RECYCLE +'+refund+'M';
+  C.recycle.setAttribute('aria-label',armed?'Confirm recycle '+BT[B.type].name+' for '+refund+' mass':'Arm recycle '+BT[B.type].name+' for '+refund+' mass');
+}
 function renderBldPanel(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld], T=BT[B.type];
@@ -2048,7 +2192,14 @@ function renderBldPanel(){ if(openBldGone()) return;
   bi.classList.add('intelTap');
   bi.setAttribute('role','button'); bi.setAttribute('tabindex','0');
   bi.setAttribute('aria-label','Explain '+T.name);
-  bi.onpointerdown=ev=>{ ev.stopPropagation(); showBuildingTypeCard(B.type,openBld,true); sfx('ui'); };
+  const explainBuilding=ev=>{
+    if(ev)ev.stopPropagation();
+    const live=openBld>=0&&blds[openBld];if(!live||!live.alive)return;
+    showBuildingTypeCard(live.type,openBld,true);sfx('ui');
+  };
+  bi.onpointerdown=explainBuilding;
+  bi.onkeydown=ev=>{if(!ev.repeat&&(ev.key==='Enter'||ev.key===' ')){ev.preventDefault();explainBuilding(ev);}};
+  bi.onclick=ev=>{if(ev.detail===0)explainBuilding(ev);};
   const bLv=typeof bldDisplayLevel==='function'?bldDisplayLevel(B):(B.type==='fac'?(B.tier===2?2:1):(B.lvl||1));
   $('bp_title').textContent=intelBldName(B.type,(typeof factionTextKit==='function')?factionTextKit(B.team):undefined)
     +'  ·  LV'+bLv+(bLv>1?' '+'★'.repeat(Math.min(3,bLv)):'');
@@ -2072,8 +2223,7 @@ function renderBldPanel(){ if(openBldGone()) return;
       deltaEl.textContent='◆ MAXIMUM STRUCTURE GRADE  ·  '+bldUpgradePlanText(B);
     } else if(deltaEl) deltaEl.style.display='none';
   }
-  const recycle=bldRecycleMass(B), armed=B.recycleConfirmAt>Date.now();
-  $('bp_sell').textContent=armed?'⚠ TAP AGAIN — RECYCLE +'+recycle+'m':'♻ RECYCLE  +'+recycle+'m';
+  mfRenderBuildingServiceControls(B,'bldMenu2');
   const pb=$('bp_prio');
   if(pb){
     if(B.type==='turret'){
@@ -2122,12 +2272,16 @@ function renderResearchMenu(){ if(openBldGone()) return;
     const carry=researchResumeTime(R.id),recover=carry>0?Math.min(99,Math.floor(carry/R.t*100)):0;
     const d=document.createElement('div');
     d.className='bcard'+(lockLvl?' locked':'');
+    d.setAttribute('role','button');d.tabIndex=0;d.setAttribute('aria-disabled',lockLvl?'true':'false');
+    d.setAttribute('aria-label',R.nm+'. '+(lockLvl?'Unlocks at Commander level '+R.clvl:
+      'Costs '+R.cm+' mass and '+R.ce+' energy. '+R.ds));
     d.innerHTML='<div class="em">'+(lockLvl?'🔒':R.em)+'</div><div class="nm">'+R.nm+'</div>'
       +(lockLvl?'<div class="cost" style="color:#ffd257">CDR LV '+R.clvl+'</div>'
         :'<div class="cost">'+R.cm+'m <span>'+R.ce+'e</span></div>')
       +'<div style="opacity:.7">'+R.ds+'</div>'
       +(recover?'<div class="researchRecover">◆ RECOVER '+recover+'%</div>':'');
-    d.addEventListener('pointerdown',ev=>{
+    const activate=ev=>{
+      if(ev)ev.preventDefault();
       ev.stopPropagation();
       if(lockLvl){ toast('🔒 Field Study '+R.nm+' unlocks at Commander level '+R.clvl); return; }
       /* Same corpse hazard as the production sheet, plus a hard throw: a lab
@@ -2143,7 +2297,9 @@ function renderResearchMenu(){ if(openBldGone()) return;
       }
       Bb.res=idx; Bb.resT=Math.min(R.t-.01,researchResumeTime(R.id)); sfx('ui'); renderQueue();
       if(Bb.resT>0) toast('◆ '+R.nm+' recovered at '+Math.floor(Bb.resT/R.t*100)+'%');
-    });
+    };
+    if(typeof mfBindNativePress==='function')mfBindNativePress(d,activate);
+    else d.addEventListener('pointerdown',activate);
     g.appendChild(d);
     shown++;
   });
@@ -2184,88 +2340,33 @@ function makeIcon(spr,size,frame){
 }
 function unitIconEl(tIdx,size,kit){
   kit=mfIntelKit(kit);
-  const T=TYPES[tIdx], F=4;                       // 3/4-view yaw frame
+  const T=TYPES[tIdx];
   const w=document.createElement('div');
   w.className='mfRuntimeThumb';
   w.style.cssText='position:relative;width:'+size+'px;height:'+size+'px;display:grid;place-items:center;overflow:hidden';
-  /* Do not paint a base-roster thumbnail while waiting for the live preview.
-     That mixed registry contains Brood slots, so its optimistic fallback was
-     enough to put Ravagers in Blue catalogues even when strict 3D rejected it. */
-  if(typeof factionUnitModelAllowed==='function'&&!factionUnitModelAllowed(tIdx,kit)){
-    const unavailable=document.createElement('span');unavailable.textContent='—';unavailable.style.opacity='.38';
-    w.appendChild(unavailable);return w;
-  }
+  w.setAttribute('role','img');w.setAttribute('aria-label',(T&&T.name||'Unit')+' runtime model');
+  /* A neutral loading reticle is deliberately the only pre-render fallback.
+     The faction icon sheets classify a role; they do not depict the exact live
+     chassis, and were the source of the commander/build-card mismatch. */
+  const fallback=document.createElement('span');fallback.className='mfRuntimeThumbFallback';fallback.textContent='◌';
+  fallback.setAttribute('aria-hidden','true');fallback.style.opacity='.42';w.appendChild(fallback);
   const live=document.createElement('img');live.alt='';live.setAttribute('aria-hidden','true');
   live.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .16s';
-  const special={
-    13:'unit_alpha',18:'unit_scorcher',19:'unit_constructor',
-    20:'unit_reaper',21:'unit_cinder',22:'unit_lancer',23:'unit_resonator',
-    24:'unit_warden',25:'unit_kestrel',26:'unit_basilisk',27:'unit_harbinger',
-    28:'unit_praetor',29:'unit_archon',30:'unit_brood',31:'unit_brood'
-  }[tIdx];
-  /* The faction sheet leads: it is the only static art that exists for three of
-     the four kits, and it is drawn in that kit's livery rather than Nova's. It
-     returns null before the sheet decodes or when a role has no glyph, so the
-     older paths below stay live as written. */
-  const facIc=(typeof mfFacUnitIcon==='function')?mfFacUnitIcon(tIdx,size,kit):null;
-  if(facIc){
-    w.appendChild(facIc);
-  }else if(kit==='nova'&&special&&typeof itemArt==='function'){
-    w.innerHTML=itemArt(special,T.name,size);
-    const img=w.firstElementChild; if(img) img.classList.add('rosterArt');
-  }else{
-    /* Sheet sprites for every kit. Codex PNGs are not in the tree, so the
-       old nova-only branch left Brood/Legion/Syndicate on a ◇ diamond. */
-    const h=makeIcon(T.spr,size,F); if(h) w.appendChild(h);
-    if(T.tur){ const t=makeIcon(T.tur,size,F);
-      if(t){ t.style.position='absolute'; t.style.left='0'; t.style.top='0'; w.appendChild(t); } }
-    if(!h){
-      const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';w.appendChild(wait);
-    }
-  }
-  /* A baked icon IS a render of this model, so asking the live thumbnail path
-     for one would spend a GPU pass reproducing the image already on screen and
-     then crossfade it onto itself. Skip it; the request still runs for anything
-     falling back to a role glyph, where the live render is a real upgrade. */
-  const baked=facIc&&facIc.classList.contains('bmIcon');
   w.appendChild(live);
-  if(!baked) mfIntelThumbRequest(live,w,'unit',tIdx,kit);
+  mfIntelThumbRequest(live,w,'unit',tIdx,kit);
   return w;
 }
 function bldIconEl(key,size,kit){
   kit=mfIntelKit(kit);
   const d=document.createElement('div');d.className='mfRuntimeThumb';
   d.style.cssText='position:relative;width:'+size+'px;height:'+size+'px;display:grid;place-items:center;overflow:hidden';
+  const T=BT[key];d.setAttribute('role','img');d.setAttribute('aria-label',(T&&T.name||'Building')+' runtime model');
+  const fallback=document.createElement('span');fallback.className='mfRuntimeThumbFallback';fallback.textContent='◌';
+  fallback.setAttribute('aria-hidden','true');fallback.style.opacity='.42';d.appendChild(fallback);
   const live=document.createElement('img');live.alt='';live.setAttribute('aria-hidden','true');
   live.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .16s';
-  const special={geo:'bld_geo',gate:'bld_gate'}[key];
-  /* Same order as unitIconEl, and it matters more here: 29 structures share
-     only ~15 sprite rows, so the sheet also ends a lot of duplicate art. */
-  const facIc=(typeof mfFacBldIcon==='function')?mfFacBldIcon(key,size,kit):null;
-  if(facIc){
-    d.appendChild(facIc);
-  }else if(kit==='nova'&&special&&typeof itemArt==='function'){
-    d.innerHTML=itemArt(special,BT[key].em,size);
-    const img=d.firstElementChild; if(img) img.classList.add('rosterArt');
-  }else{
-    const el=makeIcon(BT[key]&&BT[key].spr,size,0);
-    if(el){d.appendChild(el);
-      if(key==='geo') el.style.filter='hue-rotate(150deg) saturate(1.6) drop-shadow(0 3px 3px rgba(0,0,0,.55))';}
-    if(!el){
-      const uv=sprites[BT[key]&&BT[key].spr];
-      if(uv&&typeof atlasCanvas!=='undefined'&&atlasCanvas){
-        const cv3=document.createElement('canvas'); cv3.width=cv3.height=64;
-        cv3.getContext('2d').drawImage(atlasCanvas,
-          uv[0]*ATLAS,uv[1]*ATLAS,(uv[2]-uv[0])*ATLAS,(uv[3]-uv[1])*ATLAS, 0,0,64,64);
-        d.style.background='url('+cv3.toDataURL()+') center/contain no-repeat';
-      }else{
-        const wait=document.createElement('span');wait.textContent='◇';wait.style.opacity='.45';d.appendChild(wait);
-      }
-    }
-  }
   d.appendChild(live);
-  if(!(facIc&&facIc.classList.contains('bmIcon')))   // see unitIconEl
-    mfIntelThumbRequest(live,d,'building',key,kit);
+  mfIntelThumbRequest(live,d,'building',key,kit);
   return d;
 }
 /* The open tab persists across openings — a player who is in the middle of
@@ -2285,47 +2386,88 @@ function mfSyncProductionQueueCards(B){
     card.setAttribute('aria-label',(full?'Queue full. ':'')+base);
   }
 }
-let baseFinderFilter='all',baseFinderCursor=0;
+const BASE_FINDER_GROUPS=[
+  {id:'all',nm:'All buildings',short:'ALL',em:'⌂'},{id:'economy',nm:'Economy buildings',short:'ECON',em:'⛏'},
+  {id:'production',nm:'Factories',short:'FACT',em:'🏭'},{id:'defence',nm:'Defence buildings',short:'DEF',em:'🛡'},
+  {id:'support',nm:'Support buildings',short:'SUP',em:'📡'}
+];
+const BASE_FINDER_ECON=new Set(['mex','pgen','geo','silo','fab']);
+const BASE_FINDER_PROD=new Set(['fac','tgate','harbor','airfield']);
+const BASE_FINDER_DEF=new Set(['turret','bunker','seafort','bastion','aatower','hellstorm','arc','rail','nova','minelaser','missilebastion','plasma','stormcaller','wall','gate']);
+let baseFinderFilter='all';
+const baseFinderTypeCursor=Object.create(null);
 function baseFinderGroup(B){
-  const c=(BT[B.type]&&BT[B.type].bcat)||'sup';
-  return c==='eco'?'economy':c==='prod'?'production':(c==='def'||c==='wall')?'defence':c==='tech'?'tech':'support';
+  const type=B&&B.type||'';
+  if(BASE_FINDER_ECON.has(type))return'economy';
+  if(BASE_FINDER_PROD.has(type))return'production';
+  if(BASE_FINDER_DEF.has(type))return'defence';
+  /* HQ, research, shields and territory relays are support. This explicit map
+     fixes the old `bcat || support` fallback that labelled Extractors, Reactors,
+     Factories, artillery and walls as Support. */
+  return'support';
 }
 function ensureBaseFinder(){
   let p=$('baseFinder'); if(p) return p;
-  p=document.createElement('section');p.id='baseFinder';p.className='baseFinder';document.body.appendChild(p);return p;
+  p=document.createElement('section');p.id='baseFinder';p.className='baseFinder';p.setAttribute('aria-label','Owned buildings');document.body.appendChild(p);return p;
 }
 function focusBaseBuilding(B){
-  clearSel(); openBld=blds.indexOf(B); cam.x=B.x;cam.y=B.y;clampCam();camUpdateMatrices();
+  clearSel();openBld=blds.indexOf(B);camFollow=-1;cam.x=B.x;cam.y=B.y;clampCam();camUpdateMatrices();
   addParticle(3,B.x,B.y,0,0,.55,B.r*2.4,112,220,255); toast('⌖ '+BT[B.type].name.toUpperCase()+' — '+baseFinderGroup(B).toUpperCase());
 }
+function baseFinderTypeStatus(list){
+  let building=0,stalled=0,damaged=0,hp=0,hpm=0;
+  for(const B of list){
+    if(B.prog!=null&&B.prog<1){building++;if(B.buildStalled)stalled++;}
+    else if(B.hp<B.hpm*.75)damaged++;
+    hp+=Math.max(0,B.hp||0);hpm+=Math.max(1,B.hpm||1);
+  }
+  const ready=list.length-building,parts=[];
+  if(ready)parts.push(ready+' READY');if(building)parts.push(building+' BUILDING');if(stalled)parts.push(stalled+' STALLED');if(damaged)parts.push(damaged+' DAMAGED');
+  return {text:parts.join(' · ')||'READY',health:Math.round(clamp(hp/hpm,0,1)*100)};
+}
 function renderBaseFinder(){
-  const p=ensureBaseFinder(),all=blds.filter(B=>B.alive&&B.team===0);
-  const groups=['all','economy','production','defence','tech','support'];
+  const p=ensureBaseFinder(),all=blds.filter(B=>B.alive&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(B):B.team===0));
   const list=all.filter(B=>baseFinderFilter==='all'||baseFinderGroup(B)===baseFinderFilter);
-  p.innerHTML='<header><b>⌖ BASE FINDER</b><button type="button" aria-label="Close base finder">×</button></header>'
-    +'<div class="baseFindTabs">'+groups.map(g=>'<button data-f="'+g+'" class="'+(g===baseFinderFilter?'on':'')+'">'+g.toUpperCase()+'</button>').join('')+'</div>'
-    +'<p>'+list.length+' owned structures · tap a category to cycle and focus its next structure.</p>';
-  mfBindNativePress(p.querySelector('header button'),()=>{p.style.display='none';});
+  const byType=new Map();for(const B of list){if(!byType.has(B.type))byType.set(B.type,[]);byType.get(B.type).push(B);}
+  const types=Array.from(byType.keys()).sort((a,b)=>a==='hq'?-1:b==='hq'?1:BT[a].name.localeCompare(BT[b].name));
+  const cards=types.map(type=>{
+    const owned=byType.get(type),T=BT[type],S=baseFinderTypeStatus(owned),active=openBld>=0&&blds[openBld]&&blds[openBld].type===type;
+    return '<button type="button" class="baseFindCard'+(active?' on':'')+'" data-btype="'+type+'" aria-label="'+T.name+', '+owned.length+' owned, '+S.text+'. Tap to focus the next one.">'
+      +'<span class="baseFindIcon">'+(T.em||'◇')+'</span><span class="baseFindCopy"><b>'+T.name+'</b><small>'+S.text+'</small>'
+      +'<i><span style="width:'+S.health+'%"></span></i></span><strong>×'+owned.length+'<small>'+S.health+'% HP</small></strong></button>';
+  }).join('');
+  p.innerHTML='<header><button type="button" class="baseFindBack" aria-label="Close Buildings and return to Orders">‹ ORDERS</button><span><b>OWNED BUILDINGS</b><small>'+all.length+' TOTAL</small></span></header>'
+    +'<div class="baseFindTabs" role="tablist" aria-label="Building categories">'+BASE_FINDER_GROUPS.map(g=>'<button type="button" role="tab" aria-selected="'+(g.id===baseFinderFilter?'true':'false')+'" aria-label="'+g.nm+'" title="'+g.nm+'" data-f="'+g.id+'" class="'+(g.id===baseFinderFilter?'on':'')+'"><span class="baseFindTabIcon" aria-hidden="true">'+g.em+'</span><span class="baseFindTabLabel">'+g.short+'</span></button>').join('')+'</div>'
+    +'<div class="baseFindGrid" role="list">'+(cards||'<p class="baseFindEmpty">NO '+baseFinderFilter.toUpperCase()+' BUILDINGS YET</p>')+'</div>'
+    +'<p class="baseFindHint">Tap a building card to select and center it. Tap again to cycle another of that type.</p>';
+  /* Cards are first assembled as light markup, then receive the same exact
+     runtime-geometry thumbnails as production and Unit Intel. T.em remains
+     only in the category vocabulary; it must not masquerade as a building. */
+  const finderKit=typeof playerKitKey==='function'?playerKitKey():'nova';
+  p.querySelectorAll('[data-btype]').forEach(btn=>{
+    const icon=btn.querySelector('.baseFindIcon'),type=btn.dataset.btype;if(!icon||!BT[type])return;
+    icon.replaceChildren(bldIconEl(type,36,finderKit));
+  });
+  mfBindNativePress(p.querySelector('.baseFindBack'),()=>{closeBaseFinder(true);sfx('ui');});
   p.querySelectorAll('[data-f]').forEach(btn=>mfBindNativePress(btn,ev=>{
-    ev.stopPropagation();const f=btn.dataset.f;if(f!==baseFinderFilter){baseFinderFilter=f;baseFinderCursor=0;}
-    const now=all.filter(B=>baseFinderFilter==='all'||baseFinderGroup(B)===baseFinderFilter);
-    if(!now.length){toast('NO '+baseFinderFilter.toUpperCase()+' STRUCTURES');renderBaseFinder();return;}
-    focusBaseBuilding(now[baseFinderCursor%now.length]);baseFinderCursor++;renderBaseFinder();
+    ev.stopPropagation();baseFinderFilter=btn.dataset.f;renderBaseFinder();sfx('ui');
+  }));
+  p.querySelectorAll('[data-btype]').forEach(btn=>mfBindNativePress(btn,ev=>{
+    ev.stopPropagation();const type=btn.dataset.btype,owned=all.filter(B=>B.type===type);
+    if(!owned.length){renderBaseFinder();return;}
+    const at=(baseFinderTypeCursor[type]||0)%owned.length;baseFinderTypeCursor[type]=at+1;
+    focusBaseBuilding(owned[at]);renderBaseFinder();sfx('ui');
   }));
 }
+function openBaseFinder(){renderBaseFinder();ensureBaseFinder().style.display='block';}
+function closeBaseFinder(restoreDeck){
+  const p=$('baseFinder');if(p)p.style.display='none';
+  if(restoreDeck!==false&&typeof hudDeck==='string'&&hudDeck==='buildings'&&typeof setHudDeck==='function')setHudDeck('orders',true);
+}
 function toggleBaseFinder(){
-  const p=ensureBaseFinder(); if(p.style.display==='block'){p.style.display='none';return;}
-  /* BASE means "take me home" before it means "open a filter". Center the
-     command structure immediately, then expose the category finder for the
-     player's next tap. */
-  const hq=blds.find(B=>B.alive&&B.team===0&&B.type==='hq');
-  if(hq)focusBaseBuilding(hq);
-  else {
-    const any=blds.find(B=>B.alive&&B.team===0);
-    if(any)focusBaseBuilding(any);
-    else if(heroIdx>=0&&ualive[heroIdx]){cam.x=ux[heroIdx];cam.y=uy[heroIdx];clampCam();camUpdateMatrices();}
-  }
-  renderBaseFinder();p.style.display='block';
+  const p=ensureBaseFinder();
+  if(p.style.display==='block'){closeBaseFinder(true);return;}
+  if(typeof setHudDeck==='function')setHudDeck('buildings');else openBaseFinder();
 }
 function renderProdMenu(){ if(openBldGone()) return;
   const g=$('prodGrid'); g.innerHTML='';
@@ -2530,6 +2672,7 @@ function cancelQueuedUnit(B,start){
 function renderQueue(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld];
+  mfRenderBuildingServiceControls(B,'prodMenu');
   const el=$('prodQueue'); if(!el) return;
   if(B.type==='techlab'){
     el._mfQ='';
@@ -3296,7 +3439,10 @@ function cmdrTxBind(){
     const cue={speakerId:'keel',profileId:'uga-keel-expedition-guide',key:d.hintId||d.context||'keel-hint',seq:d.issuedAt||Date.now(),
       category:'UGA GUIDANCE',durationMs:d.durationMs,animationSrc:ugaMedia?(d.animationSrc||''):'',
       subtitle:{speaker:'KEEL',shortName:'KEEL',rank:'UGA SHIP LIAISON',text:d.text||''},
-      portrait:{src:ugaMedia?(d.portraitSrc||''):'',fallback:ugaMedia?(d.fallbackPortraitSrc||''):''}};
+      /* KEEL owns an original neutral-UGA portrait even when an older hint
+         caller supplies no media. Callers may still replace it with an
+         authored animation/portrait while the UGA identity gate remains. */
+      portrait:{src:ugaMedia?(d.portraitSrc||'assets/textures/ui/mf-keel-uga-portrait-v1.webp'):'',fallback:ugaMedia?(d.fallbackPortraitSrc||''):''}};
     if(!cmdrTxShow(cue)) return;
     CMDRTX.state='enter'; CMDRTX.until=cmdrTxNow()+CMDRTX_ENTER_MS;
     d.handled=true; d.presenter='battle-minimap';

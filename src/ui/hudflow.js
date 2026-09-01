@@ -8,7 +8,7 @@
    each other. Every transient element in this game hard-codes an absolute
    offset from the top of the screen:
 
-       #goalBar      sat + 36      #coach        sat + 150
+       #goalBar      inside #topbar #coach        sat + 150
        #atkAlert     sat + 108     #mfMassAlert  sat + 158   (injected from JS)
        #waveAlert    sat + 108     #toast        sat + 182
        #unitCard     sat + 190     #keelWrap     sat + 204
@@ -156,7 +156,21 @@ function mfFlowLayout(){
   mfFlowRaf=0;
   mfFlowMute++;
   try{ mfFlowLayoutGo(); }
-  finally{ mfFlowMute--; }
+  finally{
+    /* mfFlowMute alone cannot work as written. A MutationObserver delivers
+       its callback asynchronously, at the microtask checkpoint after this task
+       ends, by which point this finally block has already returned the counter
+       to 0 — verified directly in a browser. So the observer always read
+       !mfFlowMute as true and could re-queue a layout in response to this
+       pass's own writes. Draining the records here empties the queue
+       synchronously, so our writes never reach the callback while any later
+       foreign mutation is still observed normally.
+       This was NOT the cause of the whole-HUD flicker: measured with
+       tools/probe-hud-flicker.mjs, removing this drain changes nothing
+       (3/s either way). That was mfCinematicEnsureStructure() re-adding a
+       class it already had. Kept because the guard should do what it says. */
+    mfFlowMute--;
+  }
 }
 function mfFlowLayoutGo(){
   for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el) el._mfVisH=undefined; }
@@ -169,6 +183,8 @@ function mfFlowLayoutGo(){
   const menu=body.classList.contains('menuMode')||mfFlowFrontOpen();
   if(body.classList.contains('mfMenuOpen')!==menu) body.classList.toggle('mfMenuOpen',menu);
   if(menu){
+    const feed=mfFlowEl('mfNoticeHistory');
+    if(feed&&feed.style.display!=='none')mfNoticeHistoryClose(true);
     for(const s of MF_LANE) mfFlowRelease(mfFlowEl(s.id));
     for(const id of MF_LANE_L) mfFlowRelease(mfFlowEl(id));
     for(const id of MF_LANE_R) mfFlowRelease(mfFlowEl(id));
@@ -182,7 +198,14 @@ function mfFlowLayoutGo(){
   if(gb&&mfFlowVis(gb)) head=Math.max(head,gb.getBoundingClientRect().bottom);
 
   /* Corner columns first — the centre lane must clear whichever is taller. */
-  const lb=mfFlowLaneSide(MF_LANE_L,head+6,5);
+  /* The cinematic HUD physically joins #heroBar to #topbar. The legacy traffic
+     lane used to write an inline top below the header, which won over the late
+     CSS and recreated the large empty corner the joined rail was designed to
+     remove. Hand the portrait back to its rail owner; only transient world
+     condition badges continue down the left lane. */
+  const cinematic=body.classList.contains('mf-cinematic-hud');
+  if(cinematic)mfFlowRelease(mfFlowEl('heroBar'));
+  const lb=mfFlowLaneSide(cinematic?MF_LANE_L.filter(id=>id!=='heroBar'):MF_LANE_L,head+6,5);
   const rb=mfFlowLaneSide(MF_LANE_R,head+6,5);
 
   let y=Math.max(head,lb,rb)+8;
@@ -240,7 +263,7 @@ function mfFlowLayoutGo(){
 /* Anything that must clear the live command dock. Same owner as the
    top lane — one measurement, many panels — so a new sheet cannot land
    on a guessed 160px that is already occupied. */
-const MF_DOCK_LIFT=['selInfo','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory'];
+const MF_DOCK_LIFT=['selInfo','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeDock','mfNoticeHistory'];
 function mfFlowDockRelease(el){
   if(!el||!el._mfDocked) return;
   el.style.removeProperty('bottom');
@@ -256,10 +279,30 @@ function mfFlowDockSelInfo(release){
     const el=mfFlowEl(id);
     if(!el) continue;
     if(!can||!mfFlowVis(el)){ mfFlowDockRelease(el); continue; }
-    if(el._mfDockBottom!==want){
-      el._mfDockBottom=want;
+    /* The legacy skin keeps its 44px FEED launcher below the drawer. The
+       cinematic skin hides that duplicate launcher while open and puts a full
+       close target in the drawer header, so reserving another 52px needlessly
+       pushed the feed into the centre of the battlefield. */
+    const feedGap=id==='mfNoticeHistory'&&!document.body.classList.contains('mf-cinematic-hud')?52:0;
+    let dockWant=want+feedGap;
+    /* Tablet/desktop cinematic layouts deliberately move the feed to the
+       minimap side so the right command dock stays live. Dock height alone is
+       not enough there: the map can be taller than the dock by a few pixels.
+       Measure horizontal ownership and clear the map only when the two lanes
+       actually intersect; portrait feeds on the opposite side keep their
+       shallower, glanceable position. */
+    if(id==='mfNoticeHistory'&&document.body.classList.contains('mf-cinematic-hud')){
+      const map=mfFlowEl('minimapWrap');
+      if(map&&mfFlowVis(map)){
+        const er=el.getBoundingClientRect(),mr=map.getBoundingClientRect();
+        const overlapX=Math.min(er.right,mr.right)-Math.max(er.left,mr.left);
+        if(overlapX>1)dockWant=Math.max(dockWant,Math.round(vh-mr.top+6));
+      }
+    }
+    if(el._mfDockBottom!==dockWant){
+      el._mfDockBottom=dockWant;
       el.style.top='auto';
-      el.style.bottom=want+'px';
+      el.style.bottom=dockWant+'px';
     }
     el._mfDocked=true;
   }
@@ -288,10 +331,12 @@ function mfFlowOverflow(n,y){
    the same #toast element and used to overwrite each other mid-sentence.
    --------------------------------------------------------------------------- */
 const MF_N_CRIT=0, MF_N_ORDER=1, MF_N_INFO=2, MF_N_CHAT=3;
-const MF_N_MAXQ=4;
-let mfNQ=[], mfNKey='', mfNPri=99, mfNUntil=0, mfNCount=1, mfNDrainT=0, mfNRender=null, mfNHold=false;
-const MF_N_HISTORY_MAX=30;
-let mfNHistory=[],mfNHistoryFilter='all';
+const MF_N_MAXQ=3, MF_N_LIVE_WINDOW=4500, MF_N_LIVE_MAX=2;
+let mfNQ=[], mfNKey='', mfNPri=99, mfNUntil=0, mfNCount=1, mfNDrainT=0, mfNRender=null, mfNHold=false, mfNUrgent=false;
+let mfNLiveTimes=[];
+const MF_N_HISTORY_MAX=80;
+let mfNHistory=[],mfNHistoryFilter='all',mfNUnread=0;
+const MF_N_URGENT=/[⚠⛔✖]|UNDER ATTACK|INCOMING|REJECTED|FAILED|FAILURE|CANNOT|CAN'T|\bDOWN\b|NEEDS RESOURCES|EXPIRED|BROKEN|CRITICAL/i;
 
 /* FPS is diagnostic information, not a resource.  Older OTA shells still put
    it inside #topbar, where WebView flex layout reserves a full resource tile
@@ -303,44 +348,101 @@ if(mfFpsDiagnostic&&mfFpsDiagnostic.parentElement!==document.body){
   mfFpsDiagnostic.setAttribute('aria-label','Optional frame-rate diagnostic');
 }
 
+function mfNoticeHistoryShown(){
+  const el=mfFlowEl('mfNoticeHistory');
+  return !!(el&&el.style.display!=='none'&&getComputedStyle(el).display!=='none');
+}
+function mfNoticeBadgeSync(){
+  const btn=mfFlowEl('noticeLogBtn');if(!btn)return;
+  let count=mfFlowEl('noticeLogCount');
+  if(!count){count=document.createElement('i');count.id='noticeLogCount';btn.appendChild(count);}
+  count.textContent=mfNUnread?String(Math.min(99,mfNUnread))+(mfNUnread>99?'+':''):'';
+  btn.classList.toggle('hasUnread',mfNUnread>0);
+  btn.setAttribute('aria-label',mfNUnread?'Open event feed, '+mfNUnread+' unread':'Open event feed');
+}
 function mfNoticeHistoryAdd(pri,key,label,channel){
   if(!label)return;
-  const now=performance.now(),last=mfNHistory[0];
-  if(last&&last.key===key&&now-last.t<5000){last.n++;last.t=now;}
-  else mfNHistory.unshift({pri,key,label,channel:channel||'command',t:now,n:1});
+  const now=performance.now(),at=Date.now(),ch=channel||'command';
+  /* A burst can interleave two event types (damage / income / damage). Search
+     the recent bounded feed rather than deduplicating only adjacent rows. */
+  const hit=mfNHistory.findIndex(n=>n.key===key&&n.channel===ch&&now-n.t<8000);
+  if(hit>=0){
+    const row=mfNHistory.splice(hit,1)[0];row.n++;row.t=now;row.at=at;mfNHistory.unshift(row);
+  }else mfNHistory.unshift({pri,key,label,channel:ch,t:now,at,n:1});
   if(mfNHistory.length>MF_N_HISTORY_MAX)mfNHistory.length=MF_N_HISTORY_MAX;
-  const count=mfFlowEl('noticeLogCount');if(count)count.textContent=Math.min(99,mfNHistory.length);
-  const drawer=mfFlowEl('mfNoticeHistory');if(drawer&&drawer.style.display!=='none')mfNoticeHistoryRender();
+  if(!mfNoticeHistoryShown())mfNUnread++;
+  mfNoticeBadgeSync();
+  if(mfNoticeHistoryShown())mfNoticeHistoryRender();
+}
+function mfNoticeLogShell(){
+  let dock=mfFlowEl('mfNoticeDock');
+  if(!dock){
+    dock=document.createElement('div');dock.id='mfNoticeDock';document.body.appendChild(dock);mfFlowEls.mfNoticeDock=dock;
+  }
+  let btn=mfFlowEl('noticeLogBtn');
+  if(!btn){
+    btn=document.createElement('button');btn.id='noticeLogBtn';btn.className='cbtn';btn.type='button';
+    btn.innerHTML='<span class="em" aria-hidden="true">☷</span><span>FEED</span><i id="noticeLogCount"></i>';
+  }else{
+    const label=btn.querySelector('span:last-of-type');if(label)label.textContent='FEED';
+  }
+  if(btn.parentElement!==dock)dock.appendChild(btn);
+  btn.setAttribute('aria-controls','mfNoticeHistory');btn.setAttribute('aria-expanded','false');
+  if(!btn._mfNoticeBound){
+    btn._mfNoticeBound=true;
+    mfBindNativePress(btn,e=>{e.preventDefault();e.stopPropagation();if(mfNoticeHistoryShown())mfNoticeHistoryClose();else mfNoticeHistoryOpen();});
+  }
+  mfFlowEls.noticeLogBtn=btn;
+  mfNoticeBadgeSync();
+  return btn;
 }
 function mfNoticeHistoryShell(){
   let el=mfFlowEl('mfNoticeHistory');if(el)return el;
-  el=document.createElement('section');el.id='mfNoticeHistory';el.setAttribute('aria-label','Battle notification history');
-  el.innerHTML='<header><div><small>BATTLEFIELD COMMS</small><b>EVENT FEED</b></div><button type="button" aria-label="Close event feed">×</button></header>'+ 
-    '<nav><button data-f="all" class="on">ALL</button><button data-f="alert">ALERTS</button><button data-f="command">ORDERS</button><button data-f="radio">RADIO</button><button data-f="pickup">LOOT</button></nav><div class="mfNoticeList"></div>';
+  el=document.createElement('section');el.id='mfNoticeHistory';el.setAttribute('aria-label','Battle event feed');el.setAttribute('aria-modal','false');
+  el.innerHTML='<header><div><small>TACTICAL NETWORK</small><b>EVENT FEED</b><span id="mfNoticeFeedState"></span></div><button type="button" aria-label="Close event feed">×</button></header>'+
+    '<nav role="tablist" aria-label="Event filters"><button role="tab" data-f="all" class="on">ALL</button><button role="tab" data-f="alert">ALERTS</button><button role="tab" data-f="command">ORDERS</button><button role="tab" data-f="radio">COMMS</button><button role="tab" data-f="pickup">LOOT</button></nav><div class="mfNoticeList" role="log" aria-live="off" aria-label="Recent battle events"></div>';
   document.body.appendChild(el);
   mfBindNativePress(el.querySelector('header button'),e=>{e.stopPropagation();mfNoticeHistoryClose();});
   el.querySelectorAll('nav button').forEach(b=>mfBindNativePress(b,e=>{e.stopPropagation();mfNHistoryFilter=b.dataset.f;mfNoticeHistoryRender();}));
+  mfFlowEls.mfNoticeHistory=el;
   return el;
+}
+function mfNoticeClock(at){
+  const d=new Date(at||Date.now());return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
 }
 function mfNoticeHistoryRender(){
   const el=mfNoticeHistoryShell(),list=el.querySelector('.mfNoticeList');list.innerHTML='';
-  el.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.f===mfNHistoryFilter));
+  el.querySelectorAll('nav button').forEach(b=>{const on=b.dataset.f===mfNHistoryFilter;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');});
   const rows=mfNHistory.filter(n=>mfNHistoryFilter==='all'||n.channel===mfNHistoryFilter);
+  const state=el.querySelector('#mfNoticeFeedState');if(state)state.textContent=rows.length+' RECENT';
   if(!rows.length){const e=document.createElement('p');e.className='mfNoticeEmpty';e.textContent='No messages in this channel yet.';list.appendChild(e);return;}
+  const channelLabel={command:'ORDER',alert:'ALERT',radio:'COMMS',pickup:'LOOT'};
   for(const N of rows){
-    const row=document.createElement('div');row.className='mfNoticeItem p'+N.pri;
-    const tag=document.createElement('i');tag.textContent=N.channel.toUpperCase();
-    const msg=document.createElement('span');msg.textContent=N.label+(N.n>1?' ×'+N.n:'');
-    row.append(tag,msg);list.appendChild(row);
+    const row=document.createElement('div');row.className='mfNoticeItem p'+N.pri+' ch-'+N.channel;row.setAttribute('role','listitem');
+    const tm=document.createElement('time');tm.dateTime=new Date(N.at||Date.now()).toISOString();tm.textContent=mfNoticeClock(N.at);
+    const tag=document.createElement('i');tag.textContent=channelLabel[N.channel]||N.channel.toUpperCase();
+    tag.setAttribute('aria-label',N.channel==='command'?'Order':tag.textContent);
+    const msg=document.createElement('span');msg.textContent=N.label;msg.title=N.label;
+    row.append(tm,tag,msg);
+    if(N.n>1){const repeat=document.createElement('b');repeat.className='mfNoticeRepeat';repeat.textContent='×'+N.n;row.appendChild(repeat);}
+    list.appendChild(row);
   }
 }
 function mfNoticeHistoryOpen(){
   /* A battlefield feed is not a modal. Production, selection and camera input
      stay available around it while the player glances at recent events. */
-  const el=mfNoticeHistoryShell();mfNoticeHistoryRender();el.style.display='flex';
+  const el=mfNoticeHistoryShell();mfNUnread=0;mfNoticeBadgeSync();mfNoticeHistoryRender();el.style.display='flex';
+  document.body.classList.add('mfNoticeFeedOpen');
+  const btn=mfNoticeLogShell();btn.setAttribute('aria-expanded','true');
+  mfFlowQueueLayout();
   if(typeof sfx==='function')sfx('ui');
 }
-function mfNoticeHistoryClose(){const el=mfFlowEl('mfNoticeHistory');if(el)el.style.display='none';}
+function mfNoticeHistoryClose(quiet){
+  const el=mfFlowEl('mfNoticeHistory');if(el)el.style.display='none';
+  document.body.classList.remove('mfNoticeFeedOpen');
+  const btn=mfFlowEl('noticeLogBtn');if(btn)btn.setAttribute('aria-expanded','false');
+  mfFlowQueueLayout();if(!quiet&&typeof sfx==='function')sfx('ui');
+}
 
 function mfNoticeBadge(){
   const el=mfFlowEl('toast'); if(!el) return;
@@ -353,10 +455,11 @@ function mfNoticeArm(){
   clearTimeout(mfNDrainT);
   mfNDrainT=setTimeout(mfNoticeDrain,Math.max(80,mfNUntil-performance.now()+70));
 }
-function mfNoticeShow(pri,key,dur,render,n){
-  mfNKey=key; mfNPri=pri; mfNCount=n||1; mfNRender=render;
+function mfNoticeShow(pri,key,dur,render,n,urgent){
+  mfNKey=key; mfNPri=pri; mfNCount=n||1; mfNRender=render;mfNUrgent=!!urgent;
   mfNUntil=performance.now()+dur;
   render();
+  const el=mfFlowEl('toast');if(el)el.classList.toggle('noticeUrgent',mfNUrgent);
   mfNoticeBadge();
   mfFlowQueueLayout();
   mfNoticeArm();
@@ -365,41 +468,55 @@ function mfNoticeDrain(){
   mfNDrainT=0;
   if(mfNHold) return;                 /* the lane has no room; wait to be released */
   if(performance.now()<mfNUntil){ mfNoticeArm(); return; }
-  mfNPri=99; mfNKey=''; mfNRender=null;
+  mfNPri=99; mfNKey=''; mfNRender=null;mfNUrgent=false;
   const nxt=mfNQ.shift(); if(!nxt) return;
-  /* A queued pleasantry that waited out a whole engagement is no longer news. */
-  if(nxt.pri>=MF_N_INFO&&performance.now()-nxt.t>9000){ mfNoticeDrain(); return; }
-  mfNoticeShow(nxt.pri,nxt.key,nxt.dur,nxt.render,nxt.n);
+  /* History keeps every event. A stale routine acknowledgement does not need
+     to cover the map several seconds after the action that caused it. */
+  if(!nxt.urgent&&performance.now()-nxt.t>6500){ mfNoticeDrain(); return; }
+  mfNoticeShow(nxt.pri,nxt.key,nxt.dur,nxt.render,nxt.n,nxt.urgent);
 }
 /* Called when the lane had no room for the rail: the message was never read,
    so it goes back to the front of the queue instead of evaporating. */
 function mfNoticeReturn(){
   if(!mfNRender||mfNPri>=MF_N_CHAT) return;
-  mfNQ.unshift({pri:mfNPri,key:mfNKey,dur:2000,render:mfNRender,t:performance.now(),n:mfNCount});
+  mfNQ.unshift({pri:mfNPri,key:mfNKey,dur:2000,render:mfNRender,t:performance.now(),n:mfNCount,urgent:mfNUrgent});
   if(mfNQ.length>MF_N_MAXQ) mfNQ.length=MF_N_MAXQ;
-  mfNKey=''; mfNPri=99; mfNRender=null; mfNUntil=0;
+  mfNKey=''; mfNPri=99; mfNRender=null; mfNUrgent=false; mfNUntil=0;
   mfNoticeArm();
 }
-function mfNoticeSubmit(pri,key,dur,render,label,channel){
+function mfNoticeLiveAllowed(pri,urgent,now){
+  /* Info, commander chatter and loot always reach the feed and badge, but do
+     not repeatedly occupy the battlefield. Only alerts and direct command
+     acknowledgements use the one-line live rail. */
+  if(pri>=MF_N_INFO)return false;
+  if(pri<=MF_N_CRIT||urgent)return true;
+  mfNLiveTimes=mfNLiveTimes.filter(t=>now-t<MF_N_LIVE_WINDOW);
+  if(mfNLiveTimes.length>=MF_N_LIVE_MAX)return false;
+  mfNLiveTimes.push(now);return true;
+}
+function mfNoticeSubmit(pri,key,dur,render,label,channel,forceUrgent){
   mfNoticeHistoryAdd(pri,key,label,channel);
-  const heat=mfFlowHeatV;
-  if(pri>=MF_N_CHAT&&heat>0.55) return;    /* no loot flavour mid-firefight    */
-  if(pri>=MF_N_INFO&&heat>0.85) return;    /* at full heat, only orders survive */
-  if(heat>0.5) dur=Math.round(dur*0.72);   /* in a fight, say it faster         */
   const now=performance.now();
+  const urgent=!!forceUrgent||pri<=MF_N_CRIT||MF_N_URGENT.test(String(label||''));
   if(key===mfNKey&&now<mfNUntil){          /* same line again — count it        */
-    mfNCount++; mfNoticeBadge(); mfNUntil=now+dur; mfNoticeArm(); return;
+    mfNCount++; mfNoticeBadge();
+    /* Repeated feedback counts up without pinning a banner on screen forever. */
+    mfNUntil=Math.min(mfNUntil+450,now+(urgent?2100:1450));mfNoticeArm();return;
   }
-  /* Live orders replace scripted First Contact lines. CLAIM MASS is also
-     MF_N_ORDER, so retreat queued 2.6s and 8901 never saw the toast. */
-  if(!mfNHold&&(now>=mfNUntil||pri<mfNPri||(pri===MF_N_ORDER&&mfNPri===MF_N_ORDER))){
-    mfNoticeShow(pri,key,dur,render,1); return;
+  if(!mfNoticeLiveAllowed(pri,urgent,now))return;
+  const heat=mfFlowHeatV;
+  if(heat>0.5&&!urgent)dur=Math.round(dur*0.68);
+  /* Equal-priority routine notices queue instead of replacing one another.
+     Only a genuinely urgent command may interrupt an ordinary command line. */
+  if(!mfNHold&&(now>=mfNUntil||pri<mfNPri||(urgent&&!mfNUrgent&&pri===mfNPri))){
+    mfNoticeShow(pri,key,dur,render,1,urgent); return;
   }
   const dup=mfNQ.find(q=>q.key===key);
-  if(dup){ dup.n=(dup.n||1)+1; return; }
-  mfNQ.push({pri,key,dur,render,t:now,n:1});
-  mfNQ.sort((a,b)=>a.pri-b.pri||a.t-b.t);
-  if(mfNQ.length>MF_N_MAXQ) mfNQ.length=MF_N_MAXQ;   /* drop the least urgent */
+  if(dup){dup.n=(dup.n||1)+1;dup.urgent=dup.urgent||urgent;return;}
+  mfNQ.push({pri,key,dur,render,t:now,n:1,urgent});
+  mfNQ.sort((a,b)=>a.pri-b.pri||Number(b.urgent)-Number(a.urgent)||a.t-b.t);
+  /* The live queue is bounded; the full event remains in the 80-row feed. */
+  if(mfNQ.length>MF_N_MAXQ)mfNQ.length=MF_N_MAXQ;
 }
 
 /* ---------------------------------------------------------------------------
@@ -485,7 +602,10 @@ function mfFlowTick(){
    LATE TAKEOVER. Loaded last, so every base function below is already final.
    --------------------------------------------------------------------------- */
 const mfFlowBaseToast=toast;
-toast=function(msg){ mfNoticeSubmit(MF_N_ORDER,'t:'+msg,2600,()=>mfFlowBaseToast(msg),msg,'command'); };
+toast=function(msg){
+  const label=String(msg||'');
+  mfNoticeSubmit(MF_N_ORDER,'t:'+label,2200,()=>mfFlowBaseToast(label),label,'command',MF_N_URGENT.test(label));
+};
 
 const mfFlowBaseRadio=radioNotice;
 radioNotice=function(title,msg){ mfNoticeSubmit(MF_N_INFO,'r:'+title+'|'+msg,2350,()=>mfFlowBaseRadio(title,msg),title+' — '+msg,'radio'); };
@@ -503,7 +623,6 @@ showCoach=function(msg){
      factory the message referred to. Advice now uses the same compact,
      deduplicated event rail as orders and remains available in EVENT FEED. */
   const old=mfFlowEl('coach');if(old)old.style.opacity=0;
-  if(mfFlowHeatV>0.6)return;
   mfNoticeSubmit(MF_N_INFO,'coach:'+String(msg).replace(/\s+/g,' ').trim(),3000,
     ()=>mfFlowBaseToast(msg),msg,'command');
 };
@@ -580,7 +699,9 @@ if(typeof orderHold==='function'){
 }
 
 mfFlowTickT=setInterval(mfFlowTick,220);
-const mfNoticeLogBtn=mfFlowEl('noticeLogBtn');if(mfNoticeLogBtn)mfBindNativePress(mfNoticeLogBtn,e=>{e.preventDefault();e.stopPropagation();const n=mfFlowEl('mfNoticeHistory');if(n&&n.style.display!=='none')mfNoticeHistoryClose();else mfNoticeHistoryOpen();});
+/* Reparent the existing VIEW/LOG button into a permanent gameplay corner. The
+   creation path keeps OTA source compatible with older packaged HTML shells. */
+const mfNoticeLogBtn=mfNoticeLogShell();
 const mfFlowWatch=new MutationObserver(()=>{
   for(const id in mfFlowEls){ const el=mfFlowEls[id]; if(el) el._mfVisH=undefined; }
   if(!mfFlowMute) mfFlowQueueLayout();
@@ -589,7 +710,7 @@ const mfFlowWatch=new MutationObserver(()=>{
    screens must trigger its observer. Settings-from-pause changes only the
    screen's inline display; without this list mfMenuOpen stayed latched after
    Resume and hid the complete tactical HUD until an unrelated mutation. */
-const mfFlowWatchIds=['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','hazChip','heroBar','topbar','selInfo','cmdbar','tacRow','grpRow','hotSlots','primaryRow','hudDeckTabs','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeHistory',
+const mfFlowWatchIds=['atkAlert','waveAlert','keelWrap','toast','coach','unitCard','goalBar','wcRow','infMeter','hazChip','heroBar','topbar','selInfo','cmdbar','tacRow','grpRow','hotSlots','primaryRow','hudDeckTabs','buildMenu','prodMenu','bldMenu2','placeUI','consHud','mfNoticeDock','mfNoticeHistory',
   ...((typeof FRONT_SCREEN_IDS!=='undefined'&&FRONT_SCREEN_IDS.length)?FRONT_SCREEN_IDS.concat('loadScr'):MF_FRONT_FALLBACK)];
 for(const id of new Set(mfFlowWatchIds)){
   const el=mfFlowEl(id); if(el) mfFlowWatch.observe(el,{attributes:true,attributeFilter:['style','class']});
@@ -626,9 +747,23 @@ if(typeof updateHUD==='function'){
    transparency, cell order per docs/CMD_ICON_ART_SPEC.md.
    ============================================================================ */
 const CMD_ICON_SHEET='assets/textures/ui/cmdicons.png';
+const CMD_ICON_INDEX='assets/textures/ui/icon-index.json';
+let mfCmdIconNames=null,mfCmdIconObserver=null;
+function cmdIconsRefresh(root){
+  if(!mfCmdIconNames)return;
+  const scope=root&&root.querySelectorAll?root:document;
+  const list=[];
+  if(scope.nodeType===1&&scope.matches('[data-icon]'))list.push(scope);
+  scope.querySelectorAll('[data-icon]').forEach(el=>list.push(el));
+  for(const el of list){
+    const ready=mfCmdIconNames.has(el.getAttribute('data-icon')||'');
+    el.setAttribute('data-icon-ready',ready?'true':'false');
+  }
+}
 function cmdIconsBind(){
   try{
     const rel=(typeof mf2AssetURL==='function')?mf2AssetURL(CMD_ICON_SHEET):('./'+CMD_ICON_SHEET);
+    const indexRel=(typeof mf2AssetURL==='function')?mf2AssetURL(CMD_ICON_INDEX):('./'+CMD_ICON_INDEX);
     /* MUST be absolute. A relative url() inside a custom property is resolved
        against the stylesheet that uses it, not the document — so the plain
        relative form loaded fine for this Image() probe (document-based) and
@@ -636,13 +771,32 @@ function cmdIconsBind(){
        every tagged button blank: .cmdIcons had already hidden the emoji. */
     const url=new URL(rel,document.baseURI).href;
     const img=new Image();
-    img.onload=()=>{
+    const imageReady=new Promise(resolve=>{
+      img.onload=()=>resolve(img.naturalWidth===1024&&img.naturalHeight===1024);
+      img.onerror=()=>resolve(false);
+    });
+    const indexReady=fetch(new URL(indexRel,document.baseURI).href,{cache:'force-cache'}).then(r=>r.ok?r.json():null).catch(()=>null);
+    Promise.all([imageReady,indexReady]).then(([imageOk,index])=>{
+      const common=index&&index.common_neutral;
+      if(!imageOk||!common||common.sheet!=='cmdicons.png'||!common.cells)return;
+      const entries=Object.entries(common.cells);
+      if(!entries.length||entries.some(([,cell])=>!Number.isInteger(cell)||cell<0||cell>=64))return;
+      mfCmdIconNames=new Set(entries.map(([name])=>name));
       /* Hand the resolved URL to CSS rather than repeating it there, so the OTA
          asset resolver stays the single source of truth for asset paths. */
       document.documentElement.style.setProperty('--cmdSheet','url("'+url+'")');
       document.documentElement.classList.add('cmdIcons');
-    };
-    img.onerror=()=>{};          // emoji stand; nothing to report
+      cmdIconsRefresh(document);
+      if(!mfCmdIconObserver){
+        mfCmdIconObserver=new MutationObserver(records=>{
+          for(const record of records){
+            if(record.type==='attributes')cmdIconsRefresh(record.target);
+            else record.addedNodes.forEach(node=>{if(node.nodeType===1)cmdIconsRefresh(node);});
+          }
+        });
+        mfCmdIconObserver.observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['data-icon']});
+      }
+    });
     img.src=url;
   }catch(e){}
 }
@@ -705,7 +859,9 @@ if(typeof renderOps==='function'&&!renderOps.__mfThreatTabFix){
    MENU / SETTINGS CHROME
    ----------------------------------------------------------------------------
    galaxyui.js#mfRenameFrontNav relabels #startBtn to DEPLOY and claims it
-   opens the war table. The tap still opens the War Room. trainingUiState()
+   opens the war table. START always opens the installed War Room. Galactic
+   Campaign is Settings-only while it stays an experimental side module.
+   trainingUiState()
    lives inside tutorial.js's IIFE, so meta.js's War Room card never receives
    SKIPS WAR TABLE. Settings copy in meta.js names engine internals (#grade,
    film-grain). Audio now exposes the four independent Stage 8 buses named by
@@ -714,8 +870,8 @@ if(typeof renderOps==='function'&&!renderOps.__mfThreatTabFix){
 function mfPatchHomeChrome(){
   const start=document.getElementById('startBtn');
   if(start){
-    start.innerHTML='▶&nbsp;WAR ROOM';
-    start.setAttribute('aria-label','Open the War Room');
+    start.innerHTML='▶&nbsp;START MASSFRONT';
+    start.setAttribute('aria-label','Start MASSFRONT');
   }
   const sub=document.querySelector('#settingsScr .subMenuHead span');
   if(sub) sub.textContent='Audio · Gameplay · Display · Command · System';
@@ -723,10 +879,10 @@ function mfPatchHomeChrome(){
 function mfPolishSettingsCopy(){
   const setDs=(sel,tx)=>{ const el=document.querySelector(sel); if(el) el.textContent=tx; };
   setDs('#setGroup-audio .setGroupDs','Effects, ambience, music, and voice are independent. Tap a volume row to cycle 25–100%.');
-  setDs('[data-set="sfxVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
-  setDs('[data-set="ambVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
-  setDs('[data-set="musicVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
-  setDs('[data-set="voiceVol"] .sDs','Tap to cycle 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="sfxVol"] .sDs','Tap to cycle 0%, 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="ambVol"] .sDs','Tap to cycle 0%, 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="musicVol"] .sDs','Tap to cycle 0%, 25%, 50%, 75%, or 100%.');
+  setDs('[data-set="voiceVol"] .sDs','Tap to cycle 0%, 25%, 50%, 75%, or 100%.');
   setDs('[data-set="cine"] .sDs','Warm sun wash and the color overlay. Not bloom — that is Advanced. Not the Screen Grade filter.');
   setDs('[data-set="screenGrade"] .sDs','No screen filter. Shows lighting, bloom, and vignette as authored.');
   setDs('[data-set="gfxAdvOpen"] .sDs','Independent overrides. Changing Graphics Quality resets these to that preset. Screen Grade stays on the row above.');
@@ -741,6 +897,13 @@ function mfPolishWarRoomCopy(){
   const train=document.querySelector('.warCard[data-mode="training"]');
   if(train){
     const body=train.querySelector('.warBody');
+    const desc=train.querySelector('.warDs');
+    if(desc){
+      const raw=desc.textContent.trim().replace(/^UGA\s*·\s*KEEL SHIP LIAISON\s*·\s*/i,'');
+      desc.textContent='UGA · KEEL SHIP LIAISON · '+raw;
+      train.dataset.affiliation='uga';
+      train.setAttribute('aria-label','Training — UGA KEEL ship liaison. '+raw);
+    }
     let foot=train.querySelector('.warFootTx');
     if(body&&(!foot||!foot.textContent.trim())){
       if(!foot){ foot=document.createElement('span'); foot.className='warFootTx'; body.appendChild(foot); }

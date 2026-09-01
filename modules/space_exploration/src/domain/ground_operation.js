@@ -15,13 +15,37 @@ import { deepClone, deepFreeze, deterministicId, hash32, stableStringify } from 
 import { DomainValidationError, issue } from './errors.js';
 import { calculateFacilityCapabilities } from './construction.js';
 import {
+  COMMANDER1_BY_CAMPAIGN_FACTION,
+  COMMANDER_ROSTER_IDS,
+  isSelectableCommanderIdV1
+} from './commander_roster_contract.js';
+import {
+  DOMAIN_COMMANDER_ROSTER_FINGERPRINT,
   assertDomainState,
   getReadyCommanderIds,
   getReadySpecialistIds,
   validateDomainState
 } from './state_store.js';
 
-export const GROUND_OPERATION_SCHEMA_VERSION = 2;
+export const LEGACY_GROUND_OPERATION_SCHEMA_VERSION = 2;
+export const GROUND_OPERATION_SCHEMA_VERSION = 3;
+export const GROUND_OPERATION_KIND_V3 = 'GroundOperationV3';
+
+export function groundOperationCommanderIdentityV3(commanderId) {
+  const commander = COMMANDER_CATALOG[commanderId];
+  if (!commander || !isSelectableCommanderIdV1(commanderId)) return null;
+  return {
+    id: commander.id,
+    sourceFactionId: commander.sourceFactionId,
+    campaignFactionId: commander.factionId,
+    name: commander.name,
+    rank: commander.rank,
+    shortName: commander.shortName,
+    callsign: commander.callsign,
+    role: commander.role,
+    trait: commander.trait
+  };
+}
 
 function mergeCosts(...costs) {
   const result = {};
@@ -33,7 +57,7 @@ function mergeCosts(...costs) {
 
 function operationIdentity(fields) {
   const identity = {
-    schemaVersion: GROUND_OPERATION_SCHEMA_VERSION,
+    schemaVersion: fields.schemaVersion,
     profileId: fields.profileId,
     sequence: fields.sequence,
     launchRevision: fields.launchRevision,
@@ -58,6 +82,10 @@ function operationIdentity(fields) {
     deploymentCost: fields.deploymentCost,
     returnRoute: fields.returnRoute
   };
+  if (fields.schemaVersion === GROUND_OPERATION_SCHEMA_VERSION) {
+    identity.commanderRosterFingerprint = fields.commanderRosterFingerprint;
+    identity.commanderIdentity = fields.commanderIdentity;
+  }
   // Preserve deterministic IDs for already-saved schema-v2 operations while
   // making the new sized manifest authoritative for every new launch.
   if (fields.deploymentManifest) identity.deploymentManifest = fields.deploymentManifest;
@@ -158,6 +186,15 @@ function resolveRequest(state, mission, request) {
 }
 
 function pushEligibilityLocks(state, mission, resolved, locks) {
+  const commissioning = state.commissioning;
+  if (!commissioning?.completed
+    || !RESIDENT_FACTION_IDS.includes(commissioning.factionId)
+    || COMMANDER1_BY_CAMPAIGN_FACTION[commissioning.factionId] !== commissioning.commanderId
+    || !isSelectableCommanderIdV1(commissioning.commanderId)
+    || !state.factions?.[commissioning.factionId]?.resident
+    || !state.personnel?.commanders?.[commissioning.commanderId]?.unlocked) {
+    locks.push(issue('CAREER_COMMISSIONING_REQUIRED', 'Commission a playable faction and its Commander 1 before launching ground operations.', 'commissioning'));
+  }
   if (state.operations?.pending) locks.push(issue('OPERATION_ALREADY_PENDING', 'Resolve or cancel the pending operation before launching another.', 'operations.pending'));
   if (state.ship?.districts?.mission_ops?.commissioned === false) locks.push(issue('MISSION_OPS_NOT_COMMISSIONED', 'Mission Operations must be commissioned.', 'ship.districts.mission_ops.commissioned'));
   if (state.ship?.districts?.hangar?.commissioned === false) locks.push(issue('HANGAR_NOT_COMMISSIONED', 'Strike Bay must be commissioned.', 'ship.districts.hangar.commissioned'));
@@ -181,7 +218,8 @@ function pushEligibilityLocks(state, mission, resolved, locks) {
 
   const commanderDefinition = COMMANDER_CATALOG[resolved.commanderId];
   const commanderState = state.personnel?.commanders?.[resolved.commanderId];
-  if (!commanderDefinition || commanderDefinition.factionId !== resolved.proxyFactionId) locks.push(issue('COMMANDER_INVALID', 'Select a commander belonging to the proxy faction.', 'commanderId'));
+  if (!isSelectableCommanderIdV1(resolved.commanderId) || !COMMANDER_ROSTER_IDS.includes(resolved.commanderId) || !commanderDefinition || commanderDefinition.factionId !== resolved.proxyFactionId) locks.push(issue('COMMANDER_INVALID', 'Select an unlocked canonical commander belonging to the proxy faction; aliases and KEEL are not personnel.', 'commanderId'));
+  else if (!commanderState?.unlocked || commanderState.status === 'locked') locks.push(issue('COMMANDER_LOCKED', 'Selected commander has not been unlocked.', `personnel.commanders.${resolved.commanderId}`));
   else if (commanderState?.status !== 'ready' || commanderState.injury) locks.push(issue('COMMANDER_NOT_READY', 'Selected commander is deployed, injured, or recovering.', `personnel.commanders.${resolved.commanderId}`));
   else {
     if (commanderState.readiness < mission.requiredReadiness) locks.push(issue('COMMANDER_READINESS_REQUIRED', `Commander requires ${mission.requiredReadiness} readiness.`, `personnel.commanders.${resolved.commanderId}.readiness`));
@@ -260,7 +298,7 @@ export function validateGroundOperationRequest(state, request = {}) {
   };
 }
 
-export function createGroundOperation(state, request = {}) {
+function createGroundOperationForSchema(state, request, schemaVersion) {
   const validation = validateGroundOperationRequest(state, request);
   if (!validation.ok) throw new DomainValidationError('Ground operation request is invalid.', validation.issues, 'GROUND_OPERATION_REQUEST_INVALID');
   const { mission, proxyFactionId, commanderId, specialistIds, doctrineId, supportId, landingZoneId, deploymentManifest } = validation.resolved;
@@ -287,8 +325,8 @@ export function createGroundOperation(state, request = {}) {
     }))
   };
   const operation = {
-    schemaVersion: GROUND_OPERATION_SCHEMA_VERSION,
-    kind: 'GroundOperation',
+    schemaVersion,
+    kind: schemaVersion === GROUND_OPERATION_SCHEMA_VERSION ? GROUND_OPERATION_KIND_V3 : 'GroundOperation',
     profileId: state.profileId,
     sequence: state.operations.nextSequence,
     launchRevision: state.revision,
@@ -344,6 +382,10 @@ export function createGroundOperation(state, request = {}) {
     rewardPlan: deepClone(mission.rewards),
     returnRoute: deepClone(state.route)
   };
+  if (schemaVersion === GROUND_OPERATION_SCHEMA_VERSION) {
+    operation.commanderRosterFingerprint = DOMAIN_COMMANDER_ROSTER_FINGERPRINT;
+    operation.commanderIdentity = groundOperationCommanderIdentityV3(commanderId);
+  }
   operation.operationId = expectedOperationId(operation);
   operation.resultSeed = expectedResultSeed(operation);
   operation.returnToken = expectedReturnToken(operation);
@@ -352,12 +394,22 @@ export function createGroundOperation(state, request = {}) {
   return deepFreeze(operation);
 }
 
+export function createGroundOperation(state, request = {}) {
+  return createGroundOperationForSchema(state, request, GROUND_OPERATION_SCHEMA_VERSION);
+}
+
+export function createGroundOperationV2(state, request = {}) {
+  return createGroundOperationForSchema(state, request, LEGACY_GROUND_OPERATION_SCHEMA_VERSION);
+}
+
 export function validateGroundOperation(operation) {
   const issues = [];
   if (!operation || typeof operation !== 'object' || Array.isArray(operation)) return { ok: false, issues: [issue('GROUND_OPERATION_NOT_OBJECT', 'GroundOperation must be an object.')] };
   const mission = MISSION_CATALOG[operation.missionId];
   const site = SITE_CATALOG[operation.siteId];
-  if (operation.schemaVersion !== GROUND_OPERATION_SCHEMA_VERSION || operation.kind !== 'GroundOperation') issues.push(issue('GROUND_OPERATION_VERSION_INVALID', 'GroundOperation schema or kind is invalid.'));
+  const legacyV2 = operation.schemaVersion === LEGACY_GROUND_OPERATION_SCHEMA_VERSION && operation.kind === 'GroundOperation';
+  const currentV3 = operation.schemaVersion === GROUND_OPERATION_SCHEMA_VERSION && operation.kind === GROUND_OPERATION_KIND_V3;
+  if (!legacyV2 && !currentV3) issues.push(issue('GROUND_OPERATION_VERSION_INVALID', 'GroundOperation schema or kind is invalid.'));
   if (!mission) issues.push(issue('MISSION_UNKNOWN', 'GroundOperation mission is unknown.', 'missionId'));
   if (!site) issues.push(issue('SITE_UNKNOWN', 'GroundOperation site is unknown.', 'siteId'));
   if (!Number.isInteger(operation.sequence) || operation.sequence < 1) issues.push(issue('OPERATION_SEQUENCE_INVALID', 'GroundOperation sequence must be positive.', 'sequence'));
@@ -396,7 +448,13 @@ export function validateGroundOperation(operation) {
     }
   }
   const commander = COMMANDER_CATALOG[operation.commanderId];
-  if (!commander || commander.factionId !== operation.proxyFactionId) issues.push(issue('COMMANDER_INVALID', 'Operation commander does not belong to its proxy faction.', 'commanderId'));
+  if (!isSelectableCommanderIdV1(operation.commanderId) || !commander || commander.factionId !== operation.proxyFactionId) issues.push(issue('COMMANDER_INVALID', 'Operation commander must be a canonical selectable commander belonging to its proxy faction.', 'commanderId'));
+  if (currentV3) {
+    if (operation.commanderRosterFingerprint !== DOMAIN_COMMANDER_ROSTER_FINGERPRINT) issues.push(issue('COMMANDER_ROSTER_FINGERPRINT_INVALID', 'GroundOperationV3 is bound to an absent or stale commander roster.', 'commanderRosterFingerprint'));
+    const expectedIdentity = groundOperationCommanderIdentityV3(operation.commanderId);
+    if (!expectedIdentity || stableStringify(operation.commanderIdentity) !== stableStringify(expectedIdentity)) issues.push(issue('COMMANDER_IDENTITY_INVALID', 'GroundOperationV3 commander identity does not match the canonical roster.', 'commanderIdentity'));
+    if (operation.personnelSnapshot?.commander?.id !== operation.commanderId) issues.push(issue('COMMANDER_SNAPSHOT_INVALID', 'GroundOperationV3 personnel snapshot does not identify its exact commander.', 'personnelSnapshot.commander.id'));
+  }
   if (!Array.isArray(operation.specialistIds) || operation.specialistIds.length !== 3 || new Set(operation.specialistIds).size !== 3) issues.push(issue('SPECIALIST_COUNT_INVALID', 'Operation requires exactly three unique specialists.', 'specialistIds'));
   else {
     const outsiderCount = operation.specialistIds.filter(id => SPECIALIST_CATALOG[id]?.factionId !== operation.proxyFactionId).length;
@@ -415,6 +473,15 @@ export function validateGroundOperation(operation) {
 
 export function beginGroundOperation(state, request = {}) {
   const operation = createGroundOperation(state, request);
+  return beginGroundOperationWithPayload(state, operation);
+}
+
+export function beginGroundOperationV2(state, request = {}) {
+  const operation = createGroundOperationV2(state, request);
+  return beginGroundOperationWithPayload(state, operation);
+}
+
+function beginGroundOperationWithPayload(state, operation) {
   const next = deepClone(state);
   for (const [key, amount] of Object.entries(operation.deploymentCost)) next.resources[key] -= amount;
   next.operations.pending = deepClone(operation);

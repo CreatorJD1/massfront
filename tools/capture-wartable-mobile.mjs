@@ -12,23 +12,13 @@ const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const outDir = join(root, '.tmp', process.argv[2] || 'wartable-mobile-2026-08-14');
 await mkdir(outDir, { recursive: true });
 
-const [androidManifest, iosInfo, webManifestText] = await Promise.all([
+const [androidManifest, webManifestText] = await Promise.all([
   readFile(join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml'), 'utf8'),
-  readFile(join(root, 'ios', 'App', 'App', 'Info.plist'), 'utf8'),
   readFile(join(root, 'assets', 'app.webmanifest'), 'utf8')
 ]);
-const iosPhoneOrientations = (iosInfo.match(/<key>UISupportedInterfaceOrientations<\/key>[\s\S]*?<\/array>/) || [''])[0];
-const iosTabletOrientations = (iosInfo.match(/<key>UISupportedInterfaceOrientations~ipad<\/key>[\s\S]*?<\/array>/) || [''])[0];
 const webManifest = JSON.parse(webManifestText);
-const nativeOrientationPolicy = {
+const platformOrientationPolicy = {
   androidRespectsUserRotation: /android:screenOrientation="fullUser"/.test(androidManifest),
-  iosPhonePortrait: /UIInterfaceOrientationPortrait/.test(iosPhoneOrientations),
-  iosPhoneLandscapeLeft: /UIInterfaceOrientationLandscapeLeft/.test(iosPhoneOrientations),
-  iosPhoneLandscapeRight: /UIInterfaceOrientationLandscapeRight/.test(iosPhoneOrientations),
-  iosTabletPortrait: /UIInterfaceOrientationPortrait/.test(iosTabletOrientations),
-  iosTabletPortraitUpsideDown: /UIInterfaceOrientationPortraitUpsideDown/.test(iosTabletOrientations),
-  iosTabletLandscapeLeft: /UIInterfaceOrientationLandscapeLeft/.test(iosTabletOrientations),
-  iosTabletLandscapeRight: /UIInterfaceOrientationLandscapeRight/.test(iosTabletOrientations),
   pwaAllowsAnyOrientation: webManifest.orientation === 'any'
 };
 
@@ -624,7 +614,7 @@ try {
   const report = {
     gpu: gpu.renderer,
     viewport: { w: 412, h: 915 },
-    nativeOrientationPolicy,
+    platformOrientationPolicy,
     errs: errs.slice(0, 12), consoleErrs: consoleErrs.slice(0, 12), resourceConsoleErrs: resourceConsoleErrs.slice(0, 12), requestFails: requestFails.slice(0, 12), pngChecks,
     galaxy, system, planet, portraitGalaxyLayout, portraitPlanetLayout,
     portraitRegionTopLayout, portraitMapLayout, portraitDeployLayout,
@@ -672,7 +662,7 @@ try {
       tapTargetsAtLeast44: [portraitGalaxyLayout, portraitPlanetLayout, portraitRegionTopLayout, portraitMapLayout, portraitDeployLayout,
         landscapeGalaxy, landscapeSystem, landscapePlanet, landscapeRegion, landscapeDeploy].every(m => m.tapTargets.under44.length === 0),
       galaxyDossierSafe: landscapeGalaxy.dossierPointerEvents === 'none' && landscapeGalaxy.dossierTargetOverlaps === 0,
-      nativeOrientationPolicy: Object.values(nativeOrientationPolicy).every(Boolean),
+      platformOrientationPolicy: Object.values(platformOrientationPolicy).every(Boolean),
       consoleClean: errs.length === 0 && consoleErrs.length === 0
     }
   };

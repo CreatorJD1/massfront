@@ -1,0 +1,135 @@
+{
+  "vw": 412,
+  "vh": 900,
+  "dockOn": true,
+  "mmSize": "min(84px,22vw,24vmin)",
+  "mmBay": "calc(min(84px,22vw,24vmin) + 6px)",
+  "mmDockPad": "max(calc(0px + 6px),38px)",
+  "wrap": {
+    "x": 6,
+    "y": 681.9,
+    "w": 104.8,
+    "h": 104.8,
+    "bottom": 786.6,
+    "right": 110.8,
+    "display": "block"
+  },
+  "map": {
+    "x": 11,
+    "y": 686.9,
+    "w": 94.8,
+    "h": 94.8,
+    "bottom": 781.6,
+    "right": 105.8,
+    "display": "block"
+  },
+  "dock": {
+    "x": 6,
+    "y": 786.9,
+    "w": 400,
+    "h": 107.1,
+    "bottom": 894,
+    "right": 406,
+    "display": "flex"
+  },
+  "tabs": {
+    "x": 8,
+    "y": 788.9,
+    "w": 396,
+    "h": 50,
+    "bottom": 838.9,
+    "right": 404,
+    "display": "flex"
+  },
+  "orders": {
+    "x": 12,
+    "y": 791.9,
+    "w": 76.8,
+    "h": 44,
+    "bottom": 835.9,
+    "right": 88.8,
+    "display": "flex"
+  },
+  "army": {
+    "x": 12,
+    "y": 845,
+    "w": 76.8,
+    "h": 44,
+    "bottom": 889,
+    "right": 88.8,
+    "display": "flex"
+  },
+  "primary": {
+    "x": 8,
+    "y": 842,
+    "w": 396,
+    "h": 50,
+    "bottom": 892,
+    "right": 404,
+    "display": "flex"
+  },
+  "topbar": {
+    "x": 66.8,
+    "y": 32,
+    "w": 339.2,
+    "h": 75.1,
+    "bottom": 107.1,
+    "right": 406,
+    "display": "grid"
+  },
+  "goal": {
+    "x": 66.8,
+    "y": 79.1,
+    "w": 339.2,
+    "h": 28,
+    "bottom": 107.1,
+    "right": 406,
+    "display": "flex"
+  },
+  "hero": {
+    "x": 6,
+    "y": 32,
+    "w": 61.8,
+    "h": 75.1,
+    "bottom": 107.1,
+    "right": 67.8,
+    "display": "flex"
+  },
+  "haz": {
+    "x": 277.5,
+    "y": 113,
+    "w": 128.5,
+    "h": 44,
+    "bottom": 157,
+    "right": 406,
+    "display": "flex"
+  },
+  "fps": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0,
+    "bottom": 0,
+    "right": 0,
+    "display": "none"
+  },
+  "res": {
+    "x": 66.8,
+    "y": 32,
+    "w": 63.9,
+    "h": 44,
+    "bottom": 76,
+    "right": 130.7,
+    "display": "flex"
+  },
+  "goalParent": "topbar",
+  "overlapOrders": 0,
+  "overlapArmy": 0,
+  "overlapGoalHero": 28,
+  "overlapGoalHaz": 0,
+  "overlapResGoal": 0,
+  "mapVsDockBottom": -107.4,
+  "mapVsArmyBottom": -102.4,
+  "mapVsDockTop": null,
+  "mapVsOrdersLeft": -98.8
+}

@@ -113,7 +113,7 @@ test('menu validator accepts DOM absence plus exact default-off flag', () => {
     html: '<main id="startScreen"></main>',
     meta: 'const META={settings:{experimentalExploration:false}};',
     main: "const wanted=()=>META.settings.experimentalExploration; const URL_='./modules/space_exploration/index.html'; fetch(URL_,{method:'HEAD',cache:'no-store'}); if(!present){ return false; } location.href=URL_;",
-    pack: "if(existsSync(join(www,'modules'))) missing.push('must not ship');"
+    pack: "const includeExploration = false; if (!includeExploration && existsSync(join(www,'modules'))) missing.push('must not ship');"
   });
   equal(checkStatus(result, 'menu:no-entry-in-dom-while-off'), STATUS.PASS);
   equal(checkStatus(result, 'feature-flag:required-key-default-off'), STATUS.PASS);
@@ -160,7 +160,7 @@ test('runtime allowlist excludes source code outside the standalone entry graph'
     { path: 'src/main.js' },
     { path: 'src/unused.js' },
     { path: 'src/ui/main.css' },
-    { path: 'assets/textures/personnel/commander.png' }
+    { path: 'assets/runtime/personnel/commander.webp' }
   ];
   const paths = expectedAllowlistPaths(records, {
     reachableCode: ['index.html', 'src/main.js', 'src/ui/main.css']
@@ -168,7 +168,7 @@ test('runtime allowlist excludes source code outside the standalone entry graph'
   ok(paths.includes('src/main.js'));
   ok(paths.includes('src/ui/main.css'));
   ok(!paths.includes('src/unused.js'));
-  ok(paths.includes('assets/textures/personnel/commander.png'));
+  ok(paths.includes('assets/runtime/personnel/commander.webp'));
 });
 
 test('missing runtime manifest is UNKNOWN', () => {

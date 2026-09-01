@@ -29,10 +29,10 @@ function extractFunction(name){
 }
 
 const functionNames=[
-  'pickUnit','mfPointerPickAllowance','mfPointerSegDist2','mfPointerHull',
+  'pickUnit','mfPointerPickAllowance','mfPointerMaxSpan','mfPickerDiagnostics','mfPointerSegDist2','mfPointerHull',
   'mfPointerHullHit','mfPointerUnitGround','mfPointerUnitMetric',
   'mfPointerStackMetric','pickUnitPointer','bldPickFoot','bldWorldPick',
-  'screenQuadHit','bldScreenPick','pickBld','pickPointerEntities'
+  'screenQuadHit','bldScreenPick','mfForBldsNear','pickBld','pickPointerEntities'
 ];
 
 const context={
@@ -75,7 +75,10 @@ context.s2w=(sx,sy)=>{
   return [(sx-context.VW*.5)/scale,-(sy-context.VH*.5)/(scale*Math.sin(context.camPitch))];
 };
 vm.createContext(context);
-vm.runInContext(functionNames.map(extractFunction).join('\n'),context,{filename:'src/ui/input.js#screen-picker'});
+vm.runInContext("let mfPointerMaxSpanValue=48,mfPointerMaxSpanTypes=-1;"+
+  "const mfPickerPerf={calls:0,lastMs:0,maxMs:0,totalMs:0,buildingCandidates:0};"+
+  "let mfBldPickMarks=new Uint32Array(0),mfBldPickSerial=0;\n"+
+  functionNames.map(extractFunction).join('\n'),context,{filename:'src/ui/input.js#screen-picker'});
 
 const viewports=[
   {id:'phone-portrait',w:412,h:915},

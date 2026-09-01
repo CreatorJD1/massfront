@@ -13,7 +13,7 @@
     "lathe (revolve a radius/height profile)"
   ],
   "contract": {
-    "placementGridM": 32.0,
+    "placementGridM": 32,
     "partyJointM": 0.06,
     "notes": [
       "Nothing crosses the party plane.",
@@ -38,8 +38,8 @@
     "form",
     "industry"
   ],
-  "moduleCount": 72,
-  "tallestM": 158.0,
+  "moduleCount": 68,
+  "tallestM": 158,
   "triangleSummary": {
     "lod0Total": 353256,
     "lod0Min": 476,
@@ -105,10 +105,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 96.0,
+      "heightM": 96,
       "edges": {
         "N": "street",
         "E": "service",
@@ -178,7 +178,12 @@
         "lod1": 447,
         "lod2": 43
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 9,
+        "lod2": 1
+      }
     },
     {
       "id": "colonial_drum_tower_tall",
@@ -191,10 +196,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 158.0,
+      "heightM": 158,
       "edges": {
         "N": "street",
         "E": "service",
@@ -263,7 +268,12 @@
         "lod1": 639,
         "lod2": 43
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 11,
+        "lod2": 1
+      }
     },
     {
       "id": "colonial_drum_cluster",
@@ -276,10 +286,10 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 132.0,
+      "heightM": 132,
       "edges": {
         "N": "service",
         "E": "service",
@@ -331,7 +341,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 12050
+          "triangles": 12046
         },
         {
           "lod": 1,
@@ -356,16 +366,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 12050,
+        "lod0": 12046,
         "lod1": 2632,
         "lod2": 160
       },
       "polys": {
-        "lod0": 4244,
+        "lod0": 4228,
         "lod1": 1288,
         "lod2": 64
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 18,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_hex_tower",
@@ -378,10 +393,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 112.0,
+      "heightM": 112,
       "edges": {
         "N": "street",
         "E": "service",
@@ -449,7 +464,12 @@
         "lod1": 155,
         "lod2": 15
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 1
+      }
     },
     {
       "id": "colonial_blade_tower",
@@ -462,10 +482,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 140.0,
+      "heightM": 140,
       "edges": {
         "N": "street",
         "E": "service",
@@ -497,7 +517,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 13936
+          "triangles": 13917
         },
         {
           "lod": 1,
@@ -524,16 +544,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 13936,
+        "lod0": 13917,
         "lod1": 650,
         "lod2": 134
       },
       "polys": {
-        "lod0": 4843,
+        "lod0": 4865,
         "lod1": 247,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 76,
+        "lod1": 27,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_dome_small",
@@ -546,8 +571,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 28.4,
       "edges": {
@@ -581,7 +606,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 14648
+          "triangles": 14602
         },
         {
           "lod": 1,
@@ -604,16 +629,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 14648,
+        "lod0": 14602,
         "lod1": 760,
         "lod2": 86
       },
       "polys": {
-        "lod0": 5857,
+        "lod0": 5852,
         "lod1": 364,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 25,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_dome_large",
@@ -626,8 +656,8 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 50.4,
       "edges": {
@@ -681,7 +711,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 14082
+          "triangles": 14038
         },
         {
           "lod": 1,
@@ -704,16 +734,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 14082,
+        "lod0": 14038,
         "lod1": 760,
         "lod2": 86
       },
       "polys": {
-        "lod0": 5614,
+        "lod0": 5615,
         "lod1": 364,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 25,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_mega_slab",
@@ -726,10 +761,10 @@
         3
       ],
       "footprintM": [
-        96.0,
-        96.0
+        96,
+        96
       ],
-      "heightM": 62.0,
+      "heightM": 62,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -801,7 +836,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 15658
+          "triangles": 15697
         },
         {
           "lod": 1,
@@ -836,16 +871,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 15658,
+        "lod0": 15697,
         "lod1": 890,
         "lod2": 134
       },
       "polys": {
-        "lod0": 4771,
+        "lod0": 4787,
         "lod1": 361,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 64,
+        "lod1": 45,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_mega_slab_stepped",
@@ -858,10 +898,10 @@
         4
       ],
       "footprintM": [
-        128.0,
-        128.0
+        128,
+        128
       ],
-      "heightM": 96.0,
+      "heightM": 96,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -991,11 +1031,16 @@
         "lod2": 346
       },
       "polys": {
-        "lod0": 3848,
+        "lod0": 3850,
         "lod1": 505,
         "lod2": 127
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 47,
+        "lod1": 48,
+        "lod2": 10
+      }
     },
     {
       "id": "colonial_podium_block",
@@ -1008,10 +1053,10 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 34.0,
+      "heightM": 34,
       "edges": {
         "N": "street",
         "E": "street",
@@ -1100,11 +1145,16 @@
         "lod2": 134
       },
       "polys": {
-        "lod0": 1157,
+        "lod0": 1149,
         "lod1": 275,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 35,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_stack_terraced",
@@ -1117,10 +1167,10 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 84.0,
+      "heightM": 84,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -1172,7 +1222,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 6544
+          "triangles": 6538
         },
         {
           "lod": 1,
@@ -1198,7 +1248,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 6544,
+        "lod0": 6538,
         "lod1": 548,
         "lod2": 134
       },
@@ -1207,7 +1257,12 @@
         "lod1": 198,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 8,
+        "lod1": 18,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_bridge_block",
@@ -1220,10 +1275,10 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
-      "heightM": 104.0,
+      "heightM": 104,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -1301,7 +1356,12 @@
         "lod1": 324,
         "lod2": 88
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 123,
+        "lod1": 31,
+        "lod2": 7
+      }
     },
     {
       "id": "colonial_cooling_tower",
@@ -1314,10 +1374,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 78.0,
+      "heightM": 78,
       "edges": {
         "N": "service",
         "E": "service",
@@ -1349,7 +1409,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2802
+          "triangles": 2690
         },
         {
           "lod": 1,
@@ -1371,16 +1431,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2802,
+        "lod0": 2690,
         "lod1": 576,
         "lod2": 80
       },
       "polys": {
-        "lod0": 952,
+        "lod0": 934,
         "lod1": 288,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 10,
+        "lod2": 1
+      }
     },
     {
       "id": "colonial_chimney_stack",
@@ -1393,10 +1458,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 125.0,
+      "heightM": 125,
       "edges": {
         "N": "service",
         "E": "service",
@@ -1460,7 +1525,12 @@
         "lod1": 279,
         "lod2": 27
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 9,
+        "lod2": 1
+      }
     },
     {
       "id": "colonial_flare_stack",
@@ -1473,8 +1543,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 74.4,
       "edges": {
@@ -1538,7 +1608,12 @@
         "lod1": 170,
         "lod2": 50
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 23,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_silo_bank",
@@ -1551,10 +1626,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 42.0,
+      "heightM": 42,
       "edges": {
         "N": "service",
         "E": "service",
@@ -1616,7 +1691,12 @@
         "lod1": 372,
         "lod2": 78
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 12,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_tank_cluster",
@@ -1629,10 +1709,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 26.0,
+      "heightM": 26,
       "edges": {
         "N": "service",
         "E": "service",
@@ -1694,7 +1774,12 @@
         "lod1": 218,
         "lod2": 164
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 13,
+        "lod1": 16,
+        "lod2": 12
+      }
     },
     {
       "id": "colonial_substation",
@@ -1707,10 +1792,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 22.0,
+      "heightM": 22,
       "edges": {
         "N": "service",
         "E": "service",
@@ -1773,7 +1858,12 @@
         "lod1": 162,
         "lod2": 60
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 16,
+        "lod1": 20,
+        "lod2": 6
+      }
     },
     {
       "id": "colonial_pipe_trestle",
@@ -1786,10 +1876,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 16.0,
+      "heightM": 16,
       "edges": {
         "N": "service",
         "E": "open",
@@ -1821,7 +1911,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1394
+          "triangles": 1372
         },
         {
           "lod": 1,
@@ -1843,7 +1933,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1394,
+        "lod0": 1372,
         "lod1": 300,
         "lod2": 208
       },
@@ -1852,7 +1942,12 @@
         "lod1": 114,
         "lod2": 76
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 13,
+        "lod2": 8
+      }
     },
     {
       "id": "colonial_pipe_corner",
@@ -1865,8 +1960,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 16.4,
       "edges": {
@@ -1929,7 +2024,12 @@
         "lod1": 110,
         "lod2": 110
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 13,
+        "lod2": 13
+      }
     },
     {
       "id": "colonial_conveyor",
@@ -1942,8 +2042,8 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 33.4,
       "edges": {
@@ -2017,7 +2117,12 @@
         "lod1": 102,
         "lod2": 66
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 18,
+        "lod1": 13,
+        "lod2": 7
+      }
     },
     {
       "id": "colonial_gantry_crane",
@@ -2030,8 +2135,8 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 40.2,
       "edges": {
@@ -2075,7 +2180,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1535
+          "triangles": 1634
         },
         {
           "lod": 1,
@@ -2099,16 +2204,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1535,
+        "lod0": 1634,
         "lod1": 260,
         "lod2": 148
       },
       "polys": {
-        "lod0": 526,
+        "lod0": 554,
         "lod1": 110,
         "lod2": 58
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 15,
+        "lod2": 7
+      }
     },
     {
       "id": "colonial_antenna_farm",
@@ -2121,8 +2231,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 44.8,
       "edges": {
@@ -2156,7 +2266,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 848
+          "triangles": 843
         },
         {
           "lod": 1,
@@ -2178,16 +2288,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 848,
+        "lod0": 843,
         "lod1": 298,
         "lod2": 56
       },
       "polys": {
-        "lod0": 315,
+        "lod0": 314,
         "lod1": 127,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_container_yard",
@@ -2200,10 +2315,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 14.0,
+      "heightM": 14,
       "edges": {
         "N": "service",
         "E": "service",
@@ -2264,7 +2379,12 @@
         "lod1": 82,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 13,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_drum_tower",
@@ -2277,10 +2397,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 96.0,
+      "heightM": 96,
       "edges": {
         "N": "street",
         "E": "service",
@@ -2350,7 +2470,12 @@
         "lod1": 447,
         "lod2": 43
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 9,
+        "lod2": 1
+      }
     },
     {
       "id": "brutalist_drum_tower_tall",
@@ -2363,10 +2488,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 158.0,
+      "heightM": 158,
       "edges": {
         "N": "street",
         "E": "service",
@@ -2436,7 +2561,12 @@
         "lod1": 639,
         "lod2": 43
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 11,
+        "lod2": 1
+      }
     },
     {
       "id": "brutalist_drum_cluster",
@@ -2449,10 +2579,10 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 132.0,
+      "heightM": 132,
       "edges": {
         "N": "service",
         "E": "service",
@@ -2534,11 +2664,16 @@
         "lod2": 160
       },
       "polys": {
-        "lod0": 4255,
+        "lod0": 4231,
         "lod1": 1288,
         "lod2": 64
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 18,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_hex_tower",
@@ -2551,10 +2686,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 112.0,
+      "heightM": 112,
       "edges": {
         "N": "street",
         "E": "service",
@@ -2586,7 +2721,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2202
+          "triangles": 2198
         },
         {
           "lod": 1,
@@ -2612,7 +2747,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2202,
+        "lod0": 2198,
         "lod1": 332,
         "lod2": 36
       },
@@ -2621,91 +2756,12 @@
         "lod1": 155,
         "lod2": 15
       },
-      "objectsPerModule": 3
-    },
-    {
-      "id": "brutalist_blade_tower",
-      "archetype": "blade_tower",
-      "style": "brutalist",
-      "formClass": "form",
-      "form": "blade",
-      "cells": [
-        1,
-        1
-      ],
-      "footprintM": [
-        32.0,
-        32.0
-      ],
-      "heightM": 140.0,
-      "edges": {
-        "N": "street",
-        "E": "service",
-        "S": "service",
-        "W": "service"
-      },
-      "sockets": [
-        {
-          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_N",
-          "direction": "N",
-          "type": "street"
-        },
-        {
-          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_E",
-          "direction": "E",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_S",
-          "direction": "S",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_BRUTALIST_BLADE_TOWER_SOCKET_W",
-          "direction": "W",
-          "type": "service"
-        }
-      ],
-      "lods": [
-        {
-          "lod": 0,
-          "triangles": 12172
-        },
-        {
-          "lod": 1,
-          "triangles": 626
-        },
-        {
-          "lod": 2,
-          "triangles": 134
-        }
-      ],
-      "geometryRoleTriangles": {
-        "base_block": 220,
-        "coping": 220,
-        "cornice_reveal": 28,
-        "fin": 648,
-        "panel_detail": 1344,
-        "parapet_wall": 296,
-        "spandrel": 3300,
-        "window_drum": 3080,
-        "window_emissive": 276,
-        "window_glass": 672
-      },
-      "collision": {
-        "triangles": 12
-      },
-      "tris": {
-        "lod0": 12172,
-        "lod1": 626,
-        "lod2": 134
-      },
-      "polys": {
-        "lod0": 4599,
-        "lod1": 235,
-        "lod2": 49
-      },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 1
+      }
     },
     {
       "id": "brutalist_dome_small",
@@ -2718,8 +2774,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 28.4,
       "edges": {
@@ -2753,7 +2809,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 14948
+          "triangles": 14860
         },
         {
           "lod": 1,
@@ -2776,16 +2832,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 14948,
+        "lod0": 14860,
         "lod1": 760,
         "lod2": 86
       },
       "polys": {
-        "lod0": 5777,
+        "lod0": 5764,
         "lod1": 364,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 25,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_dome_large",
@@ -2798,8 +2859,8 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 50.4,
       "edges": {
@@ -2853,7 +2914,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 14178
+          "triangles": 14106
         },
         {
           "lod": 1,
@@ -2876,16 +2937,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 14178,
+        "lod0": 14106,
         "lod1": 760,
         "lod2": 86
       },
       "polys": {
-        "lod0": 5511,
+        "lod0": 5512,
         "lod1": 364,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 25,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_mega_slab",
@@ -2898,10 +2964,10 @@
         3
       ],
       "footprintM": [
-        96.0,
-        96.0
+        96,
+        96
       ],
-      "heightM": 62.0,
+      "heightM": 62,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -3011,11 +3077,16 @@
         "lod2": 134
       },
       "polys": {
-        "lod0": 4383,
+        "lod0": 4384,
         "lod1": 341,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 55,
+        "lod1": 42,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_mega_slab_stepped",
@@ -3028,10 +3099,10 @@
         4
       ],
       "footprintM": [
-        128.0,
-        128.0
+        128,
+        128
       ],
-      "heightM": 96.0,
+      "heightM": 96,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -3162,11 +3233,16 @@
         "lod2": 346
       },
       "polys": {
-        "lod0": 3310,
+        "lod0": 3314,
         "lod1": 435,
         "lod2": 127
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 41,
+        "lod1": 41,
+        "lod2": 10
+      }
     },
     {
       "id": "brutalist_podium_block",
@@ -3179,10 +3255,10 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 34.0,
+      "heightM": 34,
       "edges": {
         "N": "street",
         "E": "street",
@@ -3234,7 +3310,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 3004
+          "triangles": 2988
         },
         {
           "lod": 1,
@@ -3266,16 +3342,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3004,
+        "lod0": 2988,
         "lod1": 666,
         "lod2": 134
       },
       "polys": {
-        "lod0": 1158,
+        "lod0": 1156,
         "lod1": 275,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 35,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_stack_terraced",
@@ -3288,10 +3369,10 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
-      "heightM": 84.0,
+      "heightM": 84,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -3343,7 +3424,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 6720
+          "triangles": 6718
         },
         {
           "lod": 1,
@@ -3369,16 +3450,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 6720,
+        "lod0": 6718,
         "lod1": 548,
         "lod2": 134
       },
       "polys": {
-        "lod0": 3098,
+        "lod0": 3100,
         "lod1": 198,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 8,
+        "lod1": 18,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_bridge_block",
@@ -3391,10 +3477,10 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
-      "heightM": 104.0,
+      "heightM": 104,
       "edges": {
         "N": "street",
         "E": "party_wall",
@@ -3472,7 +3558,12 @@
         "lod1": 324,
         "lod2": 88
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 110,
+        "lod1": 31,
+        "lod2": 7
+      }
     },
     {
       "id": "brutalist_cooling_tower",
@@ -3485,10 +3576,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 78.0,
+      "heightM": 78,
       "edges": {
         "N": "service",
         "E": "service",
@@ -3520,7 +3611,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2744
+          "triangles": 2726
         },
         {
           "lod": 1,
@@ -3542,16 +3633,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2744,
+        "lod0": 2726,
         "lod1": 576,
         "lod2": 80
       },
       "polys": {
-        "lod0": 962,
+        "lod0": 964,
         "lod1": 288,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 10,
+        "lod2": 1
+      }
     },
     {
       "id": "brutalist_chimney_stack",
@@ -3564,10 +3660,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 125.0,
+      "heightM": 125,
       "edges": {
         "N": "service",
         "E": "service",
@@ -3631,7 +3727,12 @@
         "lod1": 279,
         "lod2": 27
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 9,
+        "lod2": 1
+      }
     },
     {
       "id": "brutalist_flare_stack",
@@ -3644,8 +3745,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 74.4,
       "edges": {
@@ -3679,7 +3780,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1996
+          "triangles": 1992
         },
         {
           "lod": 1,
@@ -3700,7 +3801,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1996,
+        "lod0": 1992,
         "lod1": 404,
         "lod2": 140
       },
@@ -3709,7 +3810,12 @@
         "lod1": 170,
         "lod2": 50
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 23,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_silo_bank",
@@ -3722,10 +3828,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 42.0,
+      "heightM": 42,
       "edges": {
         "N": "service",
         "E": "service",
@@ -3787,7 +3893,12 @@
         "lod1": 372,
         "lod2": 78
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 12,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_tank_cluster",
@@ -3800,10 +3911,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 26.0,
+      "heightM": 26,
       "edges": {
         "N": "service",
         "E": "service",
@@ -3865,7 +3976,12 @@
         "lod1": 218,
         "lod2": 164
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 13,
+        "lod1": 16,
+        "lod2": 12
+      }
     },
     {
       "id": "brutalist_substation",
@@ -3878,10 +3994,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 22.0,
+      "heightM": 22,
       "edges": {
         "N": "service",
         "E": "service",
@@ -3944,7 +4060,12 @@
         "lod1": 162,
         "lod2": 60
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 16,
+        "lod1": 20,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_pipe_trestle",
@@ -3957,10 +4078,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 16.0,
+      "heightM": 16,
       "edges": {
         "N": "service",
         "E": "open",
@@ -3992,7 +4113,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 909
+          "triangles": 951
         },
         {
           "lod": 1,
@@ -4014,16 +4135,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 909,
+        "lod0": 951,
         "lod1": 300,
         "lod2": 208
       },
       "polys": {
-        "lod0": 337,
+        "lod0": 345,
         "lod1": 114,
         "lod2": 76
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 13,
+        "lod2": 8
+      }
     },
     {
       "id": "brutalist_pipe_corner",
@@ -4036,8 +4162,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 16.4,
       "edges": {
@@ -4100,7 +4226,12 @@
         "lod1": 110,
         "lod2": 110
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 13,
+        "lod2": 13
+      }
     },
     {
       "id": "brutalist_conveyor",
@@ -4113,8 +4244,8 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 33.4,
       "edges": {
@@ -4188,7 +4319,12 @@
         "lod1": 102,
         "lod2": 66
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 18,
+        "lod1": 13,
+        "lod2": 7
+      }
     },
     {
       "id": "brutalist_gantry_crane",
@@ -4201,8 +4337,8 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 40.2,
       "edges": {
@@ -4246,7 +4382,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1920
+          "triangles": 1900
         },
         {
           "lod": 1,
@@ -4270,7 +4406,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1920,
+        "lod0": 1900,
         "lod1": 260,
         "lod2": 148
       },
@@ -4279,7 +4415,12 @@
         "lod1": 110,
         "lod2": 58
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 15,
+        "lod2": 7
+      }
     },
     {
       "id": "brutalist_antenna_farm",
@@ -4292,8 +4433,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 44.8,
       "edges": {
@@ -4327,7 +4468,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 818
+          "triangles": 838
         },
         {
           "lod": 1,
@@ -4349,7 +4490,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 818,
+        "lod0": 838,
         "lod1": 298,
         "lod2": 56
       },
@@ -4358,7 +4499,12 @@
         "lod1": 127,
         "lod2": 20
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 13,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_container_yard",
@@ -4371,10 +4517,10 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
-      "heightM": 14.0,
+      "heightM": 14,
       "edges": {
         "N": "service",
         "E": "service",
@@ -4406,7 +4552,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1976
+          "triangles": 1818
         },
         {
           "lod": 1,
@@ -4426,16 +4572,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1976,
+        "lod0": 1818,
         "lod1": 232,
         "lod2": 108
       },
       "polys": {
-        "lod0": 695,
+        "lod0": 564,
         "lod1": 112,
         "lod2": 54
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 18,
+        "lod2": 9
+      }
     },
     {
       "id": "ruined_drum_tower",
@@ -4448,8 +4599,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 62.76,
       "edges": {
@@ -4519,7 +4670,12 @@
         "lod1": 351,
         "lod2": 43
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 1
+      }
     },
     {
       "id": "ruined_drum_tower_tall",
@@ -4532,8 +4688,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 85.71,
       "edges": {
@@ -4603,7 +4759,12 @@
         "lod1": 447,
         "lod2": 43
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 9,
+        "lod2": 1
+      }
     },
     {
       "id": "ruined_drum_cluster",
@@ -4616,8 +4777,8 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 88.79,
       "edges": {
@@ -4671,7 +4832,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 6132
+          "triangles": 6126
         },
         {
           "lod": 1,
@@ -4695,16 +4856,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 6132,
+        "lod0": 6126,
         "lod1": 1864,
         "lod2": 160
       },
       "polys": {
-        "lod0": 2058,
+        "lod0": 2042,
         "lod1": 904,
         "lod2": 64
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 14,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_hex_tower",
@@ -4717,8 +4883,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 71.96,
       "edges": {
@@ -4752,7 +4918,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2910
+          "triangles": 2906
         },
         {
           "lod": 1,
@@ -4777,7 +4943,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2910,
+        "lod0": 2906,
         "lod1": 284,
         "lod2": 36
       },
@@ -4786,7 +4952,12 @@
         "lod1": 131,
         "lod2": 15
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 7,
+        "lod2": 1
+      }
     },
     {
       "id": "ruined_blade_tower",
@@ -4799,8 +4970,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 88.48,
       "edges": {
@@ -4865,11 +5036,16 @@
         "lod2": 134
       },
       "polys": {
-        "lod0": 1821,
+        "lod0": 1823,
         "lod1": 175,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 46,
+        "lod1": 19,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_dome_small",
@@ -4882,8 +5058,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 22.41,
       "edges": {
@@ -4917,7 +5093,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 8326
+          "triangles": 8294
         },
         {
           "lod": 1,
@@ -4939,16 +5115,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 8326,
+        "lod0": 8294,
         "lod1": 632,
         "lod2": 86
       },
       "polys": {
-        "lod0": 3472,
+        "lod0": 3428,
         "lod1": 300,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 24,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_dome_large",
@@ -4961,8 +5142,8 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 32.96,
       "edges": {
@@ -5047,7 +5228,12 @@
         "lod1": 300,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 24,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_mega_slab",
@@ -5060,8 +5246,8 @@
         3
       ],
       "footprintM": [
-        96.0,
-        96.0
+        96,
+        96
       ],
       "heightM": 40.52,
       "edges": {
@@ -5172,160 +5358,16 @@
         "lod2": 134
       },
       "polys": {
-        "lod0": 2508,
+        "lod0": 2514,
         "lod1": 321,
         "lod2": 49
       },
-      "objectsPerModule": 3
-    },
-    {
-      "id": "ruined_mega_slab_stepped",
-      "archetype": "mega_slab_stepped",
-      "style": "ruined",
-      "formClass": "form",
-      "form": "mega_stepped",
-      "cells": [
-        4,
-        4
-      ],
-      "footprintM": [
-        128.0,
-        128.0
-      ],
-      "heightM": 68.37,
-      "edges": {
-        "N": "street",
-        "E": "party_wall",
-        "S": "party_wall",
-        "W": "party_wall"
-      },
-      "sockets": [
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_0",
-          "direction": "N",
-          "type": "street"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_1",
-          "direction": "N",
-          "type": "street"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_2",
-          "direction": "N",
-          "type": "street"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_N_3",
-          "direction": "N",
-          "type": "street"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_0",
-          "direction": "E",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_1",
-          "direction": "E",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_2",
-          "direction": "E",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_E_3",
-          "direction": "E",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_0",
-          "direction": "S",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_1",
-          "direction": "S",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_2",
-          "direction": "S",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_S_3",
-          "direction": "S",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_0",
-          "direction": "W",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_1",
-          "direction": "W",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_2",
-          "direction": "W",
-          "type": "party_wall"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_MEGA_SLAB_STEPPED_SOCKET_W_3",
-          "direction": "W",
-          "type": "party_wall"
-        }
-      ],
-      "lods": [
-        {
-          "lod": 0,
-          "triangles": 5662
-        },
-        {
-          "lod": 1,
-          "triangles": 1234
-        },
-        {
-          "lod": 2,
-          "triangles": 346
-        }
-      ],
-      "geometryRoleTriangles": {
-        "base_block": 92,
-        "coping": 276,
-        "cornice_reveal": 84,
-        "louvre_bank": 600,
-        "louvre_fin": 2100,
-        "mast_antenna": 56,
-        "panel_detail": 648,
-        "parapet_wall": 408,
-        "riser_stack": 60,
-        "roof_duct": 252,
-        "roof_plant": 2632,
-        "spandrel": 736,
-        "vent_bank": 48,
-        "window_drum": 460,
-        "window_glass": 60
-      },
-      "collision": {
-        "triangles": 12
-      },
-      "tris": {
-        "lod0": 5662,
-        "lod1": 1234,
-        "lod2": 346
-      },
-      "polys": {
-        "lod0": 1870,
-        "lod1": 445,
-        "lod2": 127
-      },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 40,
+        "lod1": 40,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_podium_block",
@@ -5338,8 +5380,8 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 21.3,
       "edges": {
@@ -5393,7 +5435,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1308
+          "triangles": 1292
         },
         {
           "lod": 1,
@@ -5422,16 +5464,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1308,
+        "lod0": 1292,
         "lod1": 610,
         "lod2": 134
       },
       "polys": {
-        "lod0": 488,
+        "lod0": 484,
         "lod1": 255,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 33,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_stack_terraced",
@@ -5444,8 +5491,8 @@
         2
       ],
       "footprintM": [
-        64.0,
-        64.0
+        64,
+        64
       ],
       "heightM": 41.71,
       "edges": {
@@ -5529,11 +5576,16 @@
         "lod2": 134
       },
       "polys": {
-        "lod0": 1033,
+        "lod0": 1034,
         "lod1": 158,
         "lod2": 49
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 14,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_bridge_block",
@@ -5546,8 +5598,8 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 64.89,
       "edges": {
@@ -5591,7 +5643,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 3748
+          "triangles": 3744
         },
         {
           "lod": 1,
@@ -5617,7 +5669,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 3748,
+        "lod0": 3744,
         "lod1": 672,
         "lod2": 240
       },
@@ -5626,7 +5678,12 @@
         "lod1": 244,
         "lod2": 88
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 75,
+        "lod1": 23,
+        "lod2": 7
+      }
     },
     {
       "id": "ruined_cooling_tower",
@@ -5639,8 +5696,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 45.34,
       "edges": {
@@ -5704,7 +5761,12 @@
         "lod1": 232,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 9,
+        "lod2": 1
+      }
     },
     {
       "id": "ruined_chimney_stack",
@@ -5717,8 +5779,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 60.24,
       "edges": {
@@ -5783,85 +5845,12 @@
         "lod1": 237,
         "lod2": 27
       },
-      "objectsPerModule": 3
-    },
-    {
-      "id": "ruined_flare_stack",
-      "archetype": "flare_stack",
-      "style": "ruined",
-      "formClass": "industry",
-      "form": "flare",
-      "cells": [
-        1,
-        1
-      ],
-      "footprintM": [
-        32.0,
-        32.0
-      ],
-      "heightM": 48.0,
-      "edges": {
-        "N": "service",
-        "E": "service",
-        "S": "service",
-        "W": "service"
-      },
-      "sockets": [
-        {
-          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_N",
-          "direction": "N",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_E",
-          "direction": "E",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_S",
-          "direction": "S",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_FLARE_STACK_SOCKET_W",
-          "direction": "W",
-          "type": "service"
-        }
-      ],
-      "lods": [
-        {
-          "lod": 0,
-          "triangles": 1226
-        },
-        {
-          "lod": 1,
-          "triangles": 404
-        },
-        {
-          "lod": 2,
-          "triangles": 140
-        }
-      ],
-      "geometryRoleTriangles": {
-        "base_block": 92,
-        "flare_tip": 72,
-        "mast_brace": 384,
-        "mast_leg": 368
-      },
-      "collision": {
-        "triangles": 12
-      },
-      "tris": {
-        "lod0": 1226,
-        "lod1": 404,
-        "lod2": 140
-      },
-      "polys": {
-        "lod0": 359,
-        "lod1": 170,
-        "lod2": 50
-      },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 6,
+        "lod2": 1
+      }
     },
     {
       "id": "ruined_silo_bank",
@@ -5874,8 +5863,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 24.48,
       "edges": {
@@ -5909,7 +5898,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2234
+          "triangles": 2232
         },
         {
           "lod": 1,
@@ -5930,7 +5919,7 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 2234,
+        "lod0": 2232,
         "lod1": 804,
         "lod2": 180
       },
@@ -5939,7 +5928,12 @@
         "lod1": 372,
         "lod2": 78
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 12,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_tank_cluster",
@@ -5952,8 +5946,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 15.03,
       "edges": {
@@ -6017,7 +6011,12 @@
         "lod1": 218,
         "lod2": 164
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 13,
+        "lod1": 16,
+        "lod2": 12
+      }
     },
     {
       "id": "ruined_substation",
@@ -6030,8 +6029,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 13.07,
       "edges": {
@@ -6095,7 +6094,12 @@
         "lod1": 156,
         "lod2": 60
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 15,
+        "lod1": 19,
+        "lod2": 6
+      }
     },
     {
       "id": "ruined_pipe_trestle",
@@ -6108,8 +6112,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 10.71,
       "edges": {
@@ -6173,7 +6177,12 @@
         "lod1": 108,
         "lod2": 76
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 12,
+        "lod2": 8
+      }
     },
     {
       "id": "ruined_pipe_corner",
@@ -6186,8 +6195,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 8.48,
       "edges": {
@@ -6221,7 +6230,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 462
+          "triangles": 460
         },
         {
           "lod": 1,
@@ -6241,16 +6250,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 462,
+        "lod0": 460,
         "lod1": 284,
         "lod2": 284
       },
       "polys": {
-        "lod0": 208,
+        "lod0": 207,
         "lod1": 110,
         "lod2": 110
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 13,
+        "lod2": 13
+      }
     },
     {
       "id": "ruined_conveyor",
@@ -6263,8 +6277,8 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 21.81,
       "edges": {
@@ -6338,7 +6352,12 @@
         "lod1": 102,
         "lod2": 66
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 18,
+        "lod1": 13,
+        "lod2": 7
+      }
     },
     {
       "id": "ruined_gantry_crane",
@@ -6351,8 +6370,8 @@
         1
       ],
       "footprintM": [
-        64.0,
-        32.0
+        64,
+        32
       ],
       "heightM": 27.9,
       "edges": {
@@ -6428,7 +6447,12 @@
         "lod1": 102,
         "lod2": 58
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 14,
+        "lod2": 7
+      }
     },
     {
       "id": "ruined_antenna_farm",
@@ -6441,8 +6465,8 @@
         1
       ],
       "footprintM": [
-        32.0,
-        32.0
+        32,
+        32
       ],
       "heightM": 33.7,
       "edges": {
@@ -6476,7 +6500,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 687
+          "triangles": 685
         },
         {
           "lod": 1,
@@ -6497,93 +6521,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 687,
+        "lod0": 685,
         "lod1": 278,
         "lod2": 56
       },
       "polys": {
-        "lod0": 252,
+        "lod0": 251,
         "lod1": 119,
         "lod2": 20
       },
-      "objectsPerModule": 3
-    },
-    {
-      "id": "ruined_container_yard",
-      "archetype": "container_yard",
-      "style": "ruined",
-      "formClass": "industry",
-      "form": "containers",
-      "cells": [
-        1,
-        1
-      ],
-      "footprintM": [
-        32.0,
-        32.0
-      ],
-      "heightM": 6.62,
-      "edges": {
-        "N": "service",
-        "E": "service",
-        "S": "service",
-        "W": "service"
-      },
-      "sockets": [
-        {
-          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_N",
-          "direction": "N",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_E",
-          "direction": "E",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_S",
-          "direction": "S",
-          "type": "service"
-        },
-        {
-          "name": "MF_FORMS_V1_RUINED_CONTAINER_YARD_SOCKET_W",
-          "direction": "W",
-          "type": "service"
-        }
-      ],
-      "lods": [
-        {
-          "lod": 0,
-          "triangles": 940
-        },
-        {
-          "lod": 1,
-          "triangles": 232
-        },
-        {
-          "lod": 2,
-          "triangles": 108
-        }
-      ],
-      "geometryRoleTriangles": {
-        "container": 1188,
-        "yard_barrier": 88,
-        "yard_office": 92
-      },
-      "collision": {
-        "triangles": 12
-      },
-      "tris": {
-        "lod0": 940,
-        "lod1": 232,
-        "lod2": 108
-      },
-      "polys": {
-        "lod0": 398,
-        "lod1": 112,
-        "lod2": 54
-      },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 12,
+        "lod2": 2
+      }
     }
   ],
   "exports": [
@@ -6700,10 +6652,6 @@
       "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-hex-tower.glb"
     },
     {
-      "module": "brutalist_blade_tower",
-      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-blade-tower.glb"
-    },
-    {
       "module": "brutalist_dome_small",
       "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-brutalist-dome-small.glb"
     },
@@ -6812,10 +6760,6 @@
       "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-mega-slab.glb"
     },
     {
-      "module": "ruined_mega_slab_stepped",
-      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-mega-slab-stepped.glb"
-    },
-    {
       "module": "ruined_podium_block",
       "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-podium-block.glb"
     },
@@ -6834,10 +6778,6 @@
     {
       "module": "ruined_chimney_stack",
       "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-chimney-stack.glb"
-    },
-    {
-      "module": "ruined_flare_stack",
-      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-flare-stack.glb"
     },
     {
       "module": "ruined_silo_bank",
@@ -6870,10 +6810,6 @@
     {
       "module": "ruined_antenna_farm",
       "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-antenna-farm.glb"
-    },
-    {
-      "module": "ruined_container_yard",
-      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/exports/mf-frm-ruined-container-yard.glb"
     }
   ],
   "evidenceRenders": [
@@ -6964,9 +6900,6 @@
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-hex-tower-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-hex-tower-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-hex-tower-entry.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-blade-tower-iso_ne.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-blade-tower-top.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-blade-tower-entry.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-small-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-small-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-brutalist-dome-small-entry.png",
@@ -7048,9 +6981,6 @@
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-entry.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-stepped-iso_ne.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-stepped-top.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-mega-slab-stepped-entry.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-podium-block-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-podium-block-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-podium-block-entry.png",
@@ -7066,9 +6996,6 @@
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-chimney-stack-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-chimney-stack-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-chimney-stack-entry.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-flare-stack-iso_ne.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-flare-stack-top.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-flare-stack-entry.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-silo-bank-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-silo-bank-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-silo-bank-entry.png",
@@ -7093,9 +7020,6 @@
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-antenna-farm-iso_ne.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-antenna-farm-top.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-antenna-farm-entry.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-container-yard-iso_ne.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-container-yard-top.png",
-    "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-frm-ruined-container-yard-entry.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-drum-district-iso.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-drum-district-elevation.png",
     "modules/space_exploration/assets/source/blender/world-kits/mf-cityforms-kit-v1/evidence/mf-tiling-mega-district-iso.png",

@@ -39,6 +39,16 @@ const FIXTURE_SCENARIOS = Object.freeze({
       { faction: 'syndicate', team: 1, slot: 1 },
       { faction: 'horde', team: 2, slot: 2 }
     ]
+  },
+  '1v4_continental_conquest': {
+    name: '1v4 Continental War (fixture)',
+    seats: [
+      { faction: 'nova', team: 0, slot: -1 },
+      { faction: 'legion', team: 1, slot: 0 },
+      { faction: 'syndicate', team: 1, slot: 1 },
+      { faction: 'legion', team: 1, slot: 2 },
+      { faction: 'horde', team: 2, slot: 3 }
+    ]
   }
 });
 

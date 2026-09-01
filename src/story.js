@@ -1196,15 +1196,37 @@ function storyCampaignSpawnBrood(count,caster){
   if(typeof setWaveWarning==='function')setWaveWarning(from.x,from.y,tx,ty,9,2+(storyCampaignRuntime?storyCampaignRuntime.beat:0),count);
   if(typeof showAlert==='function')showAlert(from.x,from.y,'new_enemy');
 }
+/* Campaign KEEL warnings use the same minimap receiver as tutorial guidance.
+   A commander transmission may already own that bay, so retry briefly before
+   falling back to an explicitly UGA-labelled text warning. */
+function storyCampaignKeelCue(hintId,text,attempt){
+  attempt=attempt|0;
+  if(typeof matchLive!=='undefined'&&!matchLive) return;
+  if(typeof gameEnded!=='undefined'&&gameEnded) return;
+  const detail={schema:'massfront.keel-hint.v1',hintId:hintId,context:'story-campaign',surface:'battle-minimap',
+    speaker:'KEEL',speakerId:'keel',affiliation:'uga',speakerRole:'UGA SHIP LIAISON',channel:'UGA TACTICAL LINK',
+    voiceId:'keen',profileId:'uga-keel-expedition-guide',animationId:'keel-tactical-link',text:text,
+    durationMs:5200,priority:90,issuedAt:Date.now(),handled:false};
+  try{
+    if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function'){
+      window.dispatchEvent(new CustomEvent('massfront:keel-hint',{detail:detail,cancelable:true}));
+      if(detail.handled) return;
+    }
+  }catch(e){}
+  if(typeof document!=='undefined'&&document.getElementById('cmdrTx')&&attempt<28){
+    setTimeout(function(){storyCampaignKeelCue(hintId,text,attempt+1);},180);return;
+  }
+  toast('KEEL · UGA LIAISON: '+text);
+}
 function storyCampaignTick(){
   const R=storyCampaignRuntime,m=storyCampaignMission();
   if(!R||!m||!matchLive||m.script!=='mosswatch')return;
   if(R.beat===0&&stats.t>=75){
     R.beat=1;storyCampaignSpawnBrood(12,false);
-    toast('KEEL: Reality fracture on the north approach. Hold the causeway.');
+    storyCampaignKeelCue('mosswatch-fracture','Reality fracture on the north approach. Hold the causeway.');
   }else if(R.beat===1&&stats.t>=190){
     R.beat=2;storyCampaignSpawnBrood(29,true);
-    toast('KEEL: Critical biomass detected — Tidecaster assault inbound.');
+    storyCampaignKeelCue('mosswatch-tidecaster','Critical biomass detected — Tidecaster assault inbound.');
   }
 }
 const STORY_CAMPAIGN_APPLY_CRATE_BASE=applyCrate;

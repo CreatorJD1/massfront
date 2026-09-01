@@ -1,8 +1,9 @@
 /*
- * Resource-drop presentation guard
+ * Resource-drop static source contract
  *
  * Landed caches are gameplay pickups.  This deliberately checks the renderer
- * ownership boundary rather than launching a GPU capture: it makes sure a
+ * ownership boundary rather than launching a GPU capture. It is not visual
+ * proof: it makes sure a
  * future visual polish pass cannot quietly turn a cache back into an impact
  * disc/ring stack, while preserving its one compact cool locator, physical
  * crate, and fog/airborne gates.
@@ -10,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import {evidenceClassification,validateEvidenceClassification} from './evidence-classification.mjs';
 
 const root=process.cwd();
 const file=path.join(root,'src','ui','render3d.js');
@@ -20,8 +22,8 @@ const beaconStart=source.indexOf('/* Pickup identity is carried above the physic
 const beaconEnd=source.indexOf('/* Fault shelves and impact cells',beaconStart);
 
 function requireIt(ok,label){
-  if(!ok){ console.error('resource-drop presentation: FAIL — '+label); process.exitCode=1; }
-  else console.log('resource-drop presentation: PASS — '+label);
+  if(!ok){ console.error('resource-drop static source contract: FAIL — '+label); process.exitCode=1; }
+  else console.log('resource-drop static source contract: PASS — '+label);
 }
 
 requireIt(meshStart>=0&&meshEnd>meshStart,'physical FX.crate queue is present');
@@ -43,4 +45,7 @@ for(const forbidden of ['sprites.glow','addParticle(','spawnExplosion(','addGrou
 }
 requireIt(!/Cc\.site\s*\)/.test(beacon)&&!beacon.includes('Cc.site?'),'site caches share the same non-impact presentation');
 
-if(!process.exitCode) console.log('resource-drop presentation: COMPLETE');
+const evidence=evidenceClassification('staticSource',{source:'src/ui/render3d.js',execution:'source-text-patterns',gpuCapture:false,production:false});
+validateEvidenceClassification(evidence,'staticSource');
+console.log(JSON.stringify({ok:!process.exitCode,...evidence},null,2));
+if(!process.exitCode) console.log('resource-drop static source contract: COMPLETE — visual inspection still required');

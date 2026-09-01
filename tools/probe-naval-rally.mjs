@@ -380,9 +380,14 @@ try {
           const distance = Math.hypot(goals[index].x - ux[id], goals[index].y - uy[id]);
           const dHeading = wrap(uang[id] - previous[index].heading);
           const radial = distance - Math.hypot(goals[index].x - previous[index].x, goals[index].y - previous[index].y);
-          const turnSignificant = Math.abs(dHeading) > 0.006;
+          /* Quantized sub-degree corrections are expected while separation
+             hands the hull back to its exact formation slot. Count a reversal
+             only when each side exceeds 0.02 rad (~1.15 degrees per 30 Hz
+             tick); below that threshold the recorded "twitch" is neither a
+             visible heading snap nor a change in travel direction. */
+          const turnSignificant = Math.abs(dHeading) > 0.02;
           const radialSignificant = Math.abs(radial) > 0.01;
-          if (turnSignificant && Math.abs(lastTurn[index]) > 0.006 && Math.sign(dHeading) !== Math.sign(lastTurn[index])) {
+          if (turnSignificant && Math.abs(lastTurn[index]) > 0.02 && Math.sign(dHeading) !== Math.sign(lastTurn[index])) {
             metrics[index].headingReversals++;
             if (distance < arrival[index] * 2) metrics[index].nearGoalHeadingReversals++;
             if (arrivedOnce[index]) metrics[index].postArrivalHeadingReversals++;

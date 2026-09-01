@@ -39,6 +39,7 @@ HS = runpy.run_path(str(TOOLS / "mf_hardsurface.py"), run_name="mf_hardsurface")
 finalize = HS["finalize"]
 mesh_stats = HS["mesh_stats"]
 purge_orphans = HS["purge_orphans"]
+count_shells = HS["count_shells"]
 
 # kit directory -> export filename stem, taken from what each kit already wrote
 KITS = [
@@ -217,8 +218,16 @@ def consolidate(kit_dir, stem):
             break
 
         produced = []
+        source_counts = {}
         for lod in sorted(lods):
             source = lods[lod]
+            # Count SHELLS, not objects. The array kits pack many disjoint
+            # boxes into a single mesh per role, so one source object routinely
+            # holds a dozen shells; "shells <= objects" was never a valid
+            # contract for that architecture and failed 192 healthy modules.
+            # A union can only ever reduce the shell count, so the sum of the
+            # source shells is the honest ceiling.
+            source_counts[lod] = sum(count_shells(o.data) for o in source)
             stats["polysBefore"] += sum(len(o.data.polygons) for o in source)
             joined = join_group(source, "%s_JOINED_LOD%d" % (key, lod),
                                 collection, parent)
@@ -254,6 +263,8 @@ def consolidate(kit_dir, stem):
         for joined in produced:
             joined.name = joined.name.replace("_JOINED", "")
             joined.data.name = joined.name + "_MESH"
+            # how many objects this LOD was built from -- the shell contract
+            joined["mf_source_shells"] = source_counts.get(joined.get("mf_lod", 0), 0)
 
         collision = [o for o in bpy.data.objects
                      if o.type == "MESH" and "COLLISION" in o.name.upper()
@@ -324,6 +335,8 @@ def refresh_report(kit_dir):
             if key in tris:
                 record["triangles"] = tris[key]
         module["objectsPerModule"] = len(found)
+        module["sourceShells"] = {("lod%d" % lod): int(obj.get("mf_source_shells") or 0)
+                                  for lod, obj in found.items()}
         touched += 1
 
     data["consolidated"] = {
@@ -372,9 +385,10 @@ def main():
         print("report: %s" % out)
 
 
-try:
-    main()
-except Exception:
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception:
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)

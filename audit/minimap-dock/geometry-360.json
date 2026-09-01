@@ -1,0 +1,135 @@
+{
+  "vw": 360,
+  "vh": 800,
+  "dockOn": true,
+  "mmSize": "56px",
+  "mmBay": "calc(56px + 6px)",
+  "mmDockPad": "max(calc(0px + 6px),38px)",
+  "wrap": {
+    "x": 2,
+    "y": 615,
+    "w": 80,
+    "h": 80,
+    "bottom": 695,
+    "right": 82,
+    "display": "block"
+  },
+  "map": {
+    "x": 7,
+    "y": 620,
+    "w": 70,
+    "h": 70,
+    "bottom": 690,
+    "right": 77,
+    "display": "block"
+  },
+  "dock": {
+    "x": 2,
+    "y": 692,
+    "w": 356,
+    "h": 106,
+    "bottom": 798,
+    "right": 358,
+    "display": "flex"
+  },
+  "tabs": {
+    "x": 5,
+    "y": 694,
+    "w": 350,
+    "h": 50,
+    "bottom": 744,
+    "right": 355,
+    "display": "flex"
+  },
+  "orders": {
+    "x": 9,
+    "y": 697,
+    "w": 67.6,
+    "h": 44,
+    "bottom": 741,
+    "right": 76.6,
+    "display": "flex"
+  },
+  "army": {
+    "x": 9,
+    "y": 749,
+    "w": 67.6,
+    "h": 44,
+    "bottom": 793,
+    "right": 76.6,
+    "display": "flex"
+  },
+  "primary": {
+    "x": 5,
+    "y": 746,
+    "w": 350,
+    "h": 50,
+    "bottom": 796,
+    "right": 355,
+    "display": "flex"
+  },
+  "topbar": {
+    "x": 45,
+    "y": 28,
+    "w": 313,
+    "h": 74,
+    "bottom": 102,
+    "right": 358,
+    "display": "grid"
+  },
+  "goal": {
+    "x": 45,
+    "y": 74,
+    "w": 313,
+    "h": 28,
+    "bottom": 102,
+    "right": 358,
+    "display": "flex"
+  },
+  "hero": {
+    "x": 2,
+    "y": 28,
+    "w": 44,
+    "h": 74,
+    "bottom": 102,
+    "right": 46,
+    "display": "flex"
+  },
+  "haz": {
+    "x": 229.5,
+    "y": 108,
+    "w": 128.5,
+    "h": 44,
+    "bottom": 152,
+    "right": 358,
+    "display": "flex"
+  },
+  "fps": {
+    "x": 0,
+    "y": 0,
+    "w": 0,
+    "h": 0,
+    "bottom": 0,
+    "right": 0,
+    "display": "none"
+  },
+  "res": {
+    "x": 45,
+    "y": 28,
+    "w": 57,
+    "h": 44,
+    "bottom": 72,
+    "right": 102,
+    "display": "flex"
+  },
+  "goalParent": "topbar",
+  "overlapOrders": 0,
+  "overlapArmy": 0,
+  "overlapGoalHero": 28,
+  "overlapGoalHaz": 0,
+  "overlapResGoal": 0,
+  "mapVsDockBottom": -103,
+  "mapVsArmyBottom": -98,
+  "mapVsDockTop": null,
+  "mapVsOrdersLeft": -73
+}

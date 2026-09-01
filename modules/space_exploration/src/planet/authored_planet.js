@@ -12,7 +12,7 @@ const MAP_NAMES = Object.freeze([
 
 function textureUrl(planetId, mapName) {
   const shortId = String(planetId).split('_').pop();
-  return new URL(`../../assets/textures/planets/${shortId}-${mapName}.png`, import.meta.url).href;
+  return new URL(`../../assets/runtime/planets/${shortId}-${mapName}.webp`, import.meta.url).href;
 }
 
 function loadTexture(loader, url, attempt = 0) {

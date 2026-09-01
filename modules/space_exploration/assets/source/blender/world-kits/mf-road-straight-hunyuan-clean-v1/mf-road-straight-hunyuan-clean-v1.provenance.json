@@ -4,12 +4,12 @@
   "runtimeAccepted": false,
   "visualAccepted": false,
   "source": {
-    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\huggingface\\world-kits\\mf-road-straight-hunyuan3d21-v1\\mf-road-straight-hunyuan3d21-v1.glb",
+    "path": "modules/space_exploration/assets/source/huggingface/world-kits/mf-road-straight-hunyuan3d21-v1/mf-road-straight-hunyuan3d21-v1.glb",
     "sha256": "62EC702437FAC75D3651B0130BE094DD8A824FB559A97A46319B131F6225B166",
     "bytes": 6300544
   },
   "sourceGenerationReport": {
-    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\huggingface\\world-kits\\mf-road-straight-hunyuan3d21-v1\\mf-road-straight-hunyuan3d21-v1.report.json",
+    "path": "modules/space_exploration/assets/source/huggingface/world-kits/mf-road-straight-hunyuan3d21-v1/mf-road-straight-hunyuan3d21-v1.report.json",
     "sha256": "3CD8837446FC36872DAB20FC41F478861BF179D4F110F94229A9AE2398D4FB3C",
     "bytes": 1510
   },
@@ -2906,40 +2906,40 @@
   ],
   "exports": {
     "reference": {
-      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-normalized-reference-review.glb",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/review-exports/mf-road-straight-hunyuan-normalized-reference-review.glb",
       "sha256": "63ACE22BBABE25B29A7E716453ABABC4F1168D0CF6231BB28871AEFD6CF5B235",
       "bytes": 6073328
     },
     "lods": [
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-lod0-review.glb",
-        "sha256": "69D406836DB64BAF6154761332E04260DA8EF0A95C29FB006317834178EDC2F9",
-        "bytes": 6114376,
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/review-exports/mf-road-straight-hunyuan-clean-v1-lod0-review.glb",
+        "sha256": "21905B1C35A3F7C13FEBC390067FE9C08A51518413BCAC4CBD851A109C8B1779",
+        "bytes": 6324732,
         "lod": 0,
         "triangles": 40708
       },
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-lod1-review.glb",
-        "sha256": "47C30026409A8B298B8BE1AE331EBCCDD4C6229CEA06575045F727740A0C5475",
-        "bytes": 5599916,
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/review-exports/mf-road-straight-hunyuan-clean-v1-lod1-review.glb",
+        "sha256": "BB32CEC5C33E52C6695E47E06F5022F72F78F6A9A7D14259F7798DA34A94778C",
+        "bytes": 5740448,
         "lod": 1,
         "triangles": 18648
       },
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-lod2-review.glb",
-        "sha256": "1E11A36B891F70573B3019E69C81F78D026817893863CFF7054890F7491E294C",
-        "bytes": 5258916,
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/review-exports/mf-road-straight-hunyuan-clean-v1-lod2-review.glb",
+        "sha256": "9AF98D63F728C177E25DC3F91E5079FA1C79AC262C9F2BA1F0771658F7520F58",
+        "bytes": 5318072,
         "lod": 2,
         "triangles": 6527
       }
     ],
     "collision": {
-      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-collision-review.glb",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/review-exports/mf-road-straight-hunyuan-clean-v1-collision-review.glb",
       "sha256": "F07D38C8AF5891E05A89EA60CEA388AFA54931B84D3A4AD3718D91CB6F79C41F",
       "bytes": 2160
     },
     "nav": {
-      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\review-exports\\mf-road-straight-hunyuan-clean-v1-nav-review.glb",
+      "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/review-exports/mf-road-straight-hunyuan-clean-v1-nav-review.glb",
       "sha256": "60DD3536707FDB93006D09F6486E6B11D7B108E688F8B987D2F53C257C9D7C33",
       "bytes": 2804
     }
@@ -2952,8 +2952,8 @@
     "sameCameraPairs": true,
     "renders": [
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-reference-iso-1024.png",
-        "sha256": "5EE6F9FAFDB654316D278D70375406AC19AD98C4AB8C26845A43C0E28E600EC1",
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/evidence/mf-road-straight-hunyuan-reference-iso-1024.png",
+        "sha256": "862873DBBB8A03781B17B30CD0F3832CCA939D2A0751B7F8B175E3F8A7442A21",
         "bytes": 1116064,
         "view": "iso",
         "mode": "reference",
@@ -2974,9 +2974,9 @@
         }
       },
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-clean-iso-1024.png",
-        "sha256": "C47199128CEB2DC5E20F4279C344D660EA07EE4BF627A59A43B0206358500711",
-        "bytes": 1131747,
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/evidence/mf-road-straight-hunyuan-clean-iso-1024.png",
+        "sha256": "DAC6B0AD195F27C5DEE4D5CD2D2BD55A9CEB0A4150C2217799C063F596107168",
+        "bytes": 1218477,
         "view": "iso",
         "mode": "clean",
         "width": 1024,
@@ -2996,8 +2996,8 @@
         }
       },
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-reference-top-1024.png",
-        "sha256": "79E40F6F05DF36275B89B44BB2F7D8943DABE670A49FDCD11613208DA2F5E4F9",
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/evidence/mf-road-straight-hunyuan-reference-top-1024.png",
+        "sha256": "64FB6161DF196D492B02076914D5E71F619229E7932515EF5C760BAFAD53056A",
         "bytes": 1242067,
         "view": "top",
         "mode": "reference",
@@ -3018,9 +3018,9 @@
         }
       },
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-clean-top-1024.png",
-        "sha256": "AC82DF094931C337A727747A8BE5AB48009DAB363C8BADB323FC40EF3755386C",
-        "bytes": 1241338,
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/evidence/mf-road-straight-hunyuan-clean-top-1024.png",
+        "sha256": "E0184ECB368A0A763A01B68467B0734A384F71C5AE35BBE52A3DB02A0D1BE026",
+        "bytes": 1433180,
         "view": "top",
         "mode": "clean",
         "width": 1024,
@@ -3040,8 +3040,8 @@
         }
       },
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-reference-low_entry-1024.png",
-        "sha256": "873E130325AE346DE7D95B32F751886B7BE0B6FDD7C3850A94EBBE262B63B11B",
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/evidence/mf-road-straight-hunyuan-reference-low_entry-1024.png",
+        "sha256": "84D3625B1A4FDA83B030D8789B8D8B11D67F4F2680D26903D5DCCF191D3E35D1",
         "bytes": 1021711,
         "view": "low_entry",
         "mode": "reference",
@@ -3062,9 +3062,9 @@
         }
       },
       {
-        "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\evidence\\mf-road-straight-hunyuan-clean-low_entry-1024.png",
-        "sha256": "DF1D20F065BE5FD492403D3BB86765160E57A5A43BC463434349DDF40A227488",
-        "bytes": 1023080,
+        "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/evidence/mf-road-straight-hunyuan-clean-low_entry-1024.png",
+        "sha256": "4871D21987AA2980A4CCDFE0BBD0BD182B9D886F7F6702421545EAFA9543A4C5",
+        "bytes": 1056734,
         "view": "low_entry",
         "mode": "clean",
         "width": 1024,
@@ -3086,9 +3086,9 @@
     ]
   },
   "blend": {
-    "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-road-straight-hunyuan-clean-v1\\mf-road-straight-hunyuan-clean-v1.blend",
-    "sha256": "DA90BE947C26623DE13926C78CB93D3E7C886CC0A476C38E07A4826D3A14A666",
-    "bytes": 9907428
+    "path": "modules/space_exploration/assets/source/blender/world-kits/mf-road-straight-hunyuan-clean-v1/mf-road-straight-hunyuan-clean-v1.blend",
+    "sha256": "BD19123FAD82701050F468948774C2FD91D7D802B13B37D2231D1375D49B5273",
+    "bytes": 9930244
   },
   "requiredNextSteps": [
     "human review of strict micro-island removal against rail silhouette and decorative detail",

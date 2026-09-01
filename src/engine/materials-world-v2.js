@@ -282,7 +282,10 @@ function mfWorld2Placeholder(r,g,b,a){
   return t;
 }
 function mfWorld2Load(tex,file,srgb,epoch,repeat){
-  const img=new Image();img.onload=()=>{
+  const img=new Image();
+  /* Static Spaces may redirect LFS assets to a different origin. Request CORS
+     before assigning src so decoded pixels remain legal WebGL texture input. */
+  img.crossOrigin='anonymous';img.onload=()=>{
     if(epoch!==glEpoch)return;
     const align=gl.getParameter(gl.UNPACK_ALIGNMENT),flip=gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL);
     mfWorld2TexScratch(()=>{

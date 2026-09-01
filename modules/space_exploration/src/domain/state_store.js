@@ -14,6 +14,12 @@ import {
   SYSTEM_CATALOG
 } from './catalog.js';
 import {
+  COMMANDER1_BY_CAMPAIGN_FACTION,
+  COMMANDER_LEGACY_ALIASES,
+  resolveCommanderIdAtMigrationBoundaryV1
+} from './commander_roster_contract.js';
+import { validateCommanderCatalogContextV1 } from './commander_catalog.js';
+import {
   CONSTRUCTION_FACILITY_CATALOG,
   CONSTRUCTION_QUEUE_LIMIT,
   INITIAL_COMMISSIONED_DISTRICTS,
@@ -23,9 +29,10 @@ import {
 import { clamp, deepClone, stableStringify } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 
-export const DOMAIN_STATE_SCHEMA_VERSION = 4;
+export const DOMAIN_STATE_SCHEMA_VERSION = 5;
 export const DOMAIN_STORAGE_FORMAT_VERSION = 2;
 export const DOMAIN_STORAGE_KEY = 'massfront.space_exploration.domain_state';
+export const DOMAIN_COMMANDER_ROSTER_FINGERPRINT = 'fnv1a32:0aadcd2d';
 
 const ROUTE_SCENES = new Set(['galaxy', 'system', 'orbit', 'survey', 'uga', 'deployment', 'classic', 'results']);
 const FACTION_STATUSES = new Set(['nonresident', 'ready', 'deployed', 'recovering']);
@@ -38,6 +45,78 @@ function integer(value, fallback = 0, minimum = 0, maximum = Number.MAX_SAFE_INT
 
 function uniqueKnown(values, catalog) {
   return [...new Set(Array.isArray(values) ? values.filter(id => typeof id === 'string' && catalog[id]) : [])];
+}
+
+function commanderCatalogForContext(context = null) {
+  if (!context) return COMMANDER_CATALOG;
+  const validation = validateCommanderCatalogContextV1(context, { requireProduction: true });
+  if (!validation.ok || context.snapshotFingerprint !== DOMAIN_COMMANDER_ROSTER_FINGERPRINT) {
+    throw new DomainValidationError(
+      'The commander catalog context does not match this campaign schema.',
+      validation.ok
+        ? [issue('COMMANDER_ROSTER_FINGERPRINT_MISMATCH', 'The commander roster fingerprint is stale.', 'snapshotFingerprint')]
+        : validation.issues,
+      'COMMANDER_CATALOG_CONTEXT_INVALID'
+    );
+  }
+  return context.catalog;
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function mergeForwardData(older, newer, field = '') {
+  if (newer === undefined) return deepClone(older);
+  if (older === undefined) return deepClone(newer);
+  if (Array.isArray(older) && Array.isArray(newer)) {
+    const merged = [];
+    const seen = new Set();
+    for (const value of [...older, ...newer]) {
+      let key;
+      try { key = stableStringify(value); } catch (_) { key = String(value); }
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(deepClone(value));
+    }
+    return merged;
+  }
+  if (isRecord(older) && isRecord(newer)) {
+    const merged = {};
+    for (const key of new Set([...Object.keys(older), ...Object.keys(newer)])) {
+      merged[key] = mergeForwardData(older[key], newer[key], key);
+    }
+    return merged;
+  }
+  if (field === 'unlocked' && typeof older === 'boolean' && typeof newer === 'boolean') return older || newer;
+  if (typeof older === 'number' && typeof newer === 'number' && /(?:level|experience|xp|readiness|loyalty|operationsCompleted|revision|timestamp|At|Cycle)$/i.test(field)) {
+    return Math.max(older, newer);
+  }
+  if (newer === null && older !== null && /(?:injury|deployment|status|timestamp|At)$/i.test(field)) return deepClone(older);
+  return deepClone(newer);
+}
+
+function migrateCommanderRecords(source, catalog) {
+  const records = isRecord(source) ? source : {};
+  const migrated = {};
+  for (const id of Object.keys(catalog)) {
+    let merged;
+    for (const [legacyId, canonicalId] of Object.entries(COMMANDER_LEGACY_ALIASES)) {
+      if (canonicalId === id && isRecord(records[legacyId])) merged = mergeForwardData(merged, records[legacyId]);
+    }
+    if (isRecord(records[id])) merged = mergeForwardData(merged, records[id]);
+    if (merged !== undefined) migrated[id] = merged;
+  }
+  return migrated;
+}
+
+function migrateCommanderReferences(value) {
+  if (typeof value === 'string') return COMMANDER_LEGACY_ALIASES[value] || value;
+  if (Array.isArray(value)) return value.map(migrateCommanderReferences);
+  if (!isRecord(value)) return deepClone(value);
+  const migrated = {};
+  for (const [key, child] of Object.entries(value)) migrated[key] = migrateCommanderReferences(child);
+  return migrated;
 }
 
 function createDistrictState(definition) {
@@ -68,42 +147,39 @@ function createDistrictState(definition) {
 }
 
 function createFactionState(factionId) {
-  const resident = factionId === 'nova';
   return {
-    resident,
-    recruitmentComplete: resident,
-    status: resident ? 'ready' : 'nonresident',
-    reputation: resident ? 12 : 0,
-    loyalty: resident ? 58 : 40,
-    readiness: resident ? 100 : 0,
+    resident: false,
+    recruitmentComplete: false,
+    status: 'nonresident',
+    reputation: 0,
+    loyalty: 40,
+    readiness: 0,
     recoveryCycles: 0,
     operationsCompleted: 0,
-    residentSinceRevision: resident ? 0 : null
+    residentSinceRevision: null
   };
 }
 
 function createCommanderState(definition) {
-  const resident = definition.factionId === 'nova';
   return {
-    unlocked: resident,
-    status: resident ? 'ready' : 'locked',
+    unlocked: false,
+    status: 'locked',
     level: definition.initialLevel,
     experience: 0,
-    readiness: resident ? 100 : 0,
-    loyalty: resident ? 62 : 45,
+    readiness: 0,
+    loyalty: 45,
     injury: null,
     operationsCompleted: 0
   };
 }
 
 function createSpecialistState(definition) {
-  const resident = definition.factionId === 'nova';
   return {
-    unlocked: resident,
-    status: resident ? 'ready' : 'locked',
+    unlocked: false,
+    status: 'locked',
     experience: 0,
-    readiness: resident ? 100 : 0,
-    loyalty: resident ? 58 : 42,
+    readiness: 0,
+    loyalty: 42,
     injury: null,
     operationsCompleted: 0
   };
@@ -134,7 +210,8 @@ function createWorldState() {
   };
 }
 
-export function createInitialDomainState() {
+export function createInitialDomainState(commanderCatalogContext = null) {
+  const commanderCatalog = commanderCatalogForContext(commanderCatalogContext);
   const districts = {};
   for (const definition of Object.values(DISTRICT_CATALOG)) districts[definition.id] = createDistrictState(definition);
 
@@ -142,7 +219,7 @@ export function createInitialDomainState() {
   for (const factionId of RESIDENT_FACTION_IDS) factions[factionId] = createFactionState(factionId);
 
   const commanders = {};
-  for (const definition of Object.values(COMMANDER_CATALOG)) commanders[definition.id] = createCommanderState(definition);
+  for (const definition of Object.values(commanderCatalog)) commanders[definition.id] = createCommanderState(definition);
   const specialists = {};
   for (const definition of Object.values(SPECIALIST_CATALOG)) specialists[definition.id] = createSpecialistState(definition);
 
@@ -165,6 +242,7 @@ export function createInitialDomainState() {
   return {
     schemaVersion: DOMAIN_STATE_SCHEMA_VERSION,
     catalogVersion: CATALOG_VERSION,
+    commanderRosterFingerprint: DOMAIN_COMMANDER_ROSTER_FINGERPRINT,
     profileId: 'local_expedition',
     seed: 'massfront-cinematic-test-room-v1',
     revision: 0,
@@ -196,6 +274,7 @@ export function createInitialDomainState() {
       completedIds: []
     },
     factions,
+    commissioning: { factionId: null, commanderId: null, completed: false, completedRevision: null },
     personnel: { commanders, specialists },
     surveys,
     discoveries: { foundIds: [], depletedSurveyIds: [] },
@@ -208,8 +287,8 @@ export function createInitialDomainState() {
   };
 }
 
-function unlockResidentPersonnel(state, factionId) {
-  for (const [commanderId, definition] of Object.entries(COMMANDER_CATALOG)) {
+function unlockResidentPersonnel(state, factionId, commanderCatalog = COMMANDER_CATALOG) {
+  for (const [commanderId, definition] of Object.entries(commanderCatalog)) {
     if (definition.factionId !== factionId) continue;
     const commander = state.personnel.commanders[commanderId];
     commander.unlocked = true;
@@ -225,8 +304,15 @@ function unlockResidentPersonnel(state, factionId) {
   }
 }
 
-export function createShowcaseReadyDomainState() {
-  const state = createInitialDomainState();
+export function createShowcaseReadyDomainState(commanderCatalogContext = null) {
+  const commanderCatalog = commanderCatalogForContext(commanderCatalogContext);
+  const state = createInitialDomainState(commanderCatalogContext);
+  state.commissioning = {
+    factionId: 'nova',
+    commanderId: COMMANDER1_BY_CAMPAIGN_FACTION.nova,
+    completed: true,
+    completedRevision: 0
+  };
   state.resources = { credits: 18000, alloys: 1400, components: 1200, bioSamples: 120, researchPoints: 1200, fuel: 260, probes: 24 };
   state.ship.districts.factions.level = 3;
   state.ship.districts.survey.level = 3;
@@ -252,7 +338,7 @@ export function createShowcaseReadyDomainState() {
     faction.readiness = 100;
     faction.reputation = Math.max(15, faction.reputation);
     faction.residentSinceRevision = 0;
-    unlockResidentPersonnel(state, factionId);
+    unlockResidentPersonnel(state, factionId, commanderCatalog);
   }
   for (const systemId of Object.keys(SYSTEM_CATALOG)) state.world.systems[systemId].discovered = true;
   for (const [surveyId, surveyState] of Object.entries(state.surveys)) {
@@ -282,19 +368,19 @@ function normalizeInjury(value) {
   if (!value || typeof value !== 'object') return null;
   const recoveryCycles = integer(value.recoveryCycles, 0, 0, 12);
   if (!recoveryCycles) return null;
-  return {
-    type: typeof value.type === 'string' && value.type ? value.type : 'operational_trauma',
-    severity: ['light', 'moderate', 'severe'].includes(value.severity) ? value.severity : 'light',
-    recoveryCycles
-  };
+  const injury = deepClone(value);
+  injury.type = typeof value.type === 'string' && value.type ? value.type : 'operational_trauma';
+  injury.severity = ['light', 'moderate', 'severe'].includes(value.severity) ? value.severity : 'light';
+  injury.recoveryCycles = recoveryCycles;
+  return injury;
 }
 
-function normalizePersonnelState(target, source, catalog, residentFactions) {
+function normalizePersonnelState(target, source, catalog, residentFactions, { unlockWithResidency = true, preserveUnknown = false } = {}) {
   for (const [id, definition] of Object.entries(catalog)) {
     const incoming = source?.[id];
     if (!incoming || typeof incoming !== 'object') continue;
-    const person = target[id];
-    const shouldUnlock = residentFactions.has(definition.factionId) || Boolean(incoming.unlocked);
+    const person = preserveUnknown ? Object.assign(target[id], deepClone(incoming)) : target[id];
+    const shouldUnlock = (unlockWithResidency && residentFactions.has(definition.factionId)) || Boolean(incoming.unlocked);
     person.unlocked = shouldUnlock;
     if (person.level !== undefined) person.level = integer(incoming.level, person.level, 1, 20);
     person.experience = integer(incoming.experience, person.experience, 0);
@@ -309,10 +395,123 @@ function normalizePersonnelState(target, source, catalog, residentFactions) {
   }
 }
 
-export function normalizeDomainState(source) {
-  const state = createInitialDomainState();
+function legacyCommanderHasProgress(record, definition) {
+  if (!isRecord(record)) return false;
+  const resident = definition?.factionId === 'nova';
+  if (integer(record.level, 1, 1) > 1 || integer(record.experience ?? record.xp, 0) > 0) return true;
+  if (integer(record.operationsCompleted, 0) > 0 || record.injury) return true;
+  if (Array.isArray(record.scars) && record.scars.length) return true;
+  if (record.readiness !== undefined && integer(record.readiness, resident ? 100 : 0, 0, 100) !== (resident ? 100 : 0)) return true;
+  if (record.loyalty !== undefined && integer(record.loyalty, resident ? 62 : 45, 0, 100) !== (resident ? 62 : 45)) return true;
+  if (record.status !== undefined && record.status !== (resident ? 'ready' : 'locked')) return true;
+  return Object.keys(record).some(key => !['unlocked', 'status', 'level', 'experience', 'xp', 'readiness', 'loyalty', 'injury', 'operationsCompleted', 'scars'].includes(key));
+}
+
+function hasLegacyCareerProgress(source, commanderCatalog) {
+  if (integer(source?.revision, 0) > 0) return true;
+  const defaultResources = { credits: 7200, alloys: 360, components: 420, bioSamples: 0, researchPoints: 260, fuel: 90, probes: 8 };
+  if (Object.entries(defaultResources).some(([key, value]) => source?.resources?.[key] !== undefined && integer(source.resources[key], value) !== value)) return true;
+  if (integer(source?.ship?.expeditionCycle, 0) > 0 || source?.ship?.constructionQueue?.length || source?.ship?.constructionHistory?.length) return true;
+  if (integer(source?.research?.sharedBankSpent, 0) > 0 || source?.research?.completedIds?.length || Object.values(source?.research?.progressById || {}).some(value => integer(value, 0) > 0)) return true;
+  if (source?.discoveries?.foundIds?.length || source?.discoveries?.depletedSurveyIds?.length || source?.story?.completedStepIds?.length) return true;
+  if (integer(source?.operations?.nextSequence ?? source?.operationSequence, 1, 1) > 1 || source?.operations?.pending || source?.operations?.history?.length) return true;
+  if (Object.values(source?.missions || {}).some(mission => integer(mission?.attempts, 0) > 0 || integer(mission?.completions, 0) > 0)) return true;
+  if (source?.world?.systems?.veyra?.discovered || source?.world?.systems?.karak?.discovered) return true;
+  for (const factionId of RESIDENT_FACTION_IDS) {
+    const faction = source?.factions?.[factionId];
+    if (factionId !== 'nova' && (faction?.resident || faction === 'ready')) return true;
+    if (isRecord(faction) && (integer(faction.operationsCompleted, 0) > 0 || integer(faction.reputation, factionId === 'nova' ? 12 : 0) !== (factionId === 'nova' ? 12 : 0))) return true;
+  }
+  const records = source?.personnel?.commanders || source?.commanders || {};
+  for (const [rawId, record] of Object.entries(records)) {
+    const id = resolveCommanderIdAtMigrationBoundaryV1(rawId);
+    if (id && legacyCommanderHasProgress(record, commanderCatalog[id])) return true;
+  }
+  return false;
+}
+
+function inferLegacyCommissioning(source, commanderCatalog) {
+  const directFaction = RESIDENT_FACTION_IDS.includes(source?.factionIdentity) ? source.factionIdentity : null;
+  const directCommanderId = resolveCommanderIdAtMigrationBoundaryV1(source?.commanderId);
+  const directCommanderFaction = directCommanderId ? commanderCatalog[directCommanderId]?.factionId : null;
+  const factionId = directFaction || directCommanderFaction || 'nova';
+  return {
+    factionId,
+    commanderId: COMMANDER1_BY_CAMPAIGN_FACTION[factionId],
+    completed: true,
+    completedRevision: integer(source?.revision, 0)
+  };
+}
+
+function clearUncommissionedPersonnel(state) {
+  for (const faction of Object.values(state.factions)) {
+    faction.resident = false;
+    faction.recruitmentComplete = false;
+    faction.status = 'nonresident';
+    faction.readiness = 0;
+    faction.residentSinceRevision = null;
+  }
+  for (const commander of Object.values(state.personnel.commanders)) {
+    commander.unlocked = false;
+    commander.status = 'locked';
+    commander.readiness = 0;
+  }
+  for (const specialist of Object.values(state.personnel.specialists)) {
+    specialist.unlocked = false;
+    specialist.status = 'locked';
+    specialist.readiness = 0;
+  }
+}
+
+function applyCommissioningState(state, commissioning, commanderCatalog, { unlockSpecialists = true } = {}) {
+  const factionId = RESIDENT_FACTION_IDS.includes(commissioning?.factionId) ? commissioning.factionId : null;
+  const resolvedCommanderId = resolveCommanderIdAtMigrationBoundaryV1(commissioning?.commanderId);
+  const commanderId = resolvedCommanderId && commanderCatalog[resolvedCommanderId]?.factionId === factionId
+    ? resolvedCommanderId
+    : factionId ? COMMANDER1_BY_CAMPAIGN_FACTION[factionId] : null;
+  if (!commissioning?.completed || !factionId || commanderId !== COMMANDER1_BY_CAMPAIGN_FACTION[factionId]) {
+    state.commissioning = { factionId: null, commanderId: null, completed: false, completedRevision: null };
+    clearUncommissionedPersonnel(state);
+    return;
+  }
+  state.commissioning = {
+    factionId,
+    commanderId,
+    completed: true,
+    completedRevision: commissioning.completedRevision === null || commissioning.completedRevision === undefined
+      ? state.revision
+      : integer(commissioning.completedRevision, state.revision)
+  };
+  const faction = state.factions[factionId];
+  faction.resident = true;
+  faction.recruitmentComplete = true;
+  if (faction.status === 'nonresident') faction.status = 'ready';
+  faction.readiness = Math.max(85, faction.readiness);
+  faction.loyalty = Math.max(50, faction.loyalty);
+  faction.residentSinceRevision ??= state.commissioning.completedRevision;
+  const commander = state.personnel.commanders[commanderId];
+  commander.unlocked = true;
+  if (commander.status === 'locked') commander.status = commander.injury ? 'recovering' : 'ready';
+  commander.readiness = Math.max(85, commander.readiness);
+  if (unlockSpecialists) {
+    for (const [specialistId, definition] of Object.entries(SPECIALIST_CATALOG)) {
+      if (definition.factionId !== factionId) continue;
+      const specialist = state.personnel.specialists[specialistId];
+      specialist.unlocked = true;
+      if (specialist.status === 'locked') specialist.status = specialist.injury ? 'recovering' : 'ready';
+      specialist.readiness = Math.max(85, specialist.readiness);
+    }
+  }
+}
+
+export function normalizeDomainState(source, commanderCatalogContext = null) {
+  const commanderCatalog = commanderCatalogForContext(commanderCatalogContext);
+  const state = createInitialDomainState(commanderCatalogContext);
   if (!source || typeof source !== 'object' || Array.isArray(source)) return state;
+  const sourceSchemaVersion = integer(source.schemaVersion, 0);
   const preConstructionSchema = integer(source.schemaVersion, 0) > 0 && integer(source.schemaVersion, 0) < 4;
+  const inferLegacyCommission = sourceSchemaVersion < DOMAIN_STATE_SCHEMA_VERSION && !isRecord(source.commissioning) && hasLegacyCareerProgress(source, commanderCatalog);
+  state.commanderRosterFingerprint = DOMAIN_COMMANDER_ROSTER_FINGERPRINT;
   state.profileId = typeof source.profileId === 'string' && source.profileId ? source.profileId : state.profileId;
   state.seed = typeof source.seed === 'string' && source.seed ? source.seed : state.seed;
   state.revision = integer(source.revision, 0);
@@ -383,8 +582,15 @@ export function normalizeDomainState(source) {
     else if (faction.status === 'nonresident' || faction.status === 'recovering') faction.status = 'ready';
   }
   const residentFactions = new Set(RESIDENT_FACTION_IDS.filter(id => state.factions[id].resident));
-  normalizePersonnelState(state.personnel.commanders, source.personnel?.commanders, COMMANDER_CATALOG, residentFactions);
+  const migratedCommanderRecords = migrateCommanderRecords(source.personnel?.commanders || source.commanders, commanderCatalog);
+  normalizePersonnelState(state.personnel.commanders, migratedCommanderRecords, commanderCatalog, residentFactions, { unlockWithResidency: false, preserveUnknown: true });
   normalizePersonnelState(state.personnel.specialists, source.personnel?.specialists, SPECIALIST_CATALOG, residentFactions);
+  applyCommissioningState(
+    state,
+    inferLegacyCommission ? inferLegacyCommissioning(source, commanderCatalog) : source.commissioning,
+    commanderCatalog,
+    { unlockSpecialists: true }
+  );
 
   state.research.completedIds = uniqueKnown(source.research?.completedIds, RESEARCH_CATALOG);
   state.research.sharedBankSpent = integer(source.research?.sharedBankSpent, 0);
@@ -437,10 +643,10 @@ export function normalizeDomainState(source) {
   }
 
   state.operations.nextSequence = integer(source.operations?.nextSequence, 1, 1);
-  state.operations.pending = source.operations?.pending && typeof source.operations.pending === 'object' ? deepClone(source.operations.pending) : null;
+  state.operations.pending = source.operations?.pending && typeof source.operations.pending === 'object' ? migrateCommanderReferences(source.operations.pending) : null;
   state.operations.appliedResultIds = [...new Set(Array.isArray(source.operations?.appliedResultIds) ? source.operations.appliedResultIds.filter(id => typeof id === 'string' && id) : [])];
-  state.operations.history = Array.isArray(source.operations?.history) ? deepClone(source.operations.history.filter(entry => entry && typeof entry === 'object')) : [];
-  state.classicModes.lastSimulation = source.classicModes?.lastSimulation && typeof source.classicModes.lastSimulation === 'object' ? deepClone(source.classicModes.lastSimulation) : null;
+  state.operations.history = Array.isArray(source.operations?.history) ? migrateCommanderReferences(source.operations.history.filter(entry => entry && typeof entry === 'object')) : [];
+  state.classicModes.lastSimulation = source.classicModes?.lastSimulation && typeof source.classicModes.lastSimulation === 'object' ? migrateCommanderReferences(source.classicModes.lastSimulation) : null;
 
   const pendingFactionId = state.operations.pending?.proxyFactionId || state.operations.pending?.playerFactionId;
   if (pendingFactionId && state.factions[pendingFactionId]?.resident) {
@@ -456,11 +662,13 @@ export function normalizeDomainState(source) {
 
   state.schemaVersion = DOMAIN_STATE_SCHEMA_VERSION;
   state.catalogVersion = CATALOG_VERSION;
+  state.commanderRosterFingerprint = DOMAIN_COMMANDER_ROSTER_FINGERPRINT;
   return state;
 }
 
-function migrateLegacyState(source) {
-  const state = createInitialDomainState();
+function migrateLegacyState(source, commanderCatalogContext = null) {
+  const commanderCatalog = commanderCatalogForContext(commanderCatalogContext);
+  const state = createInitialDomainState(commanderCatalogContext);
   const legacySystem = source.location?.systemId || source.currentSystemId || source.systemId;
   const systemMap = { sombrero_i: 'aelos', orion_arc: 'aelos', andromeda_iv: 'veyra', nordhall: 'karak' };
   const systemId = SYSTEM_CATALOG[legacySystem] ? legacySystem : systemMap[legacySystem];
@@ -485,7 +693,7 @@ function migrateLegacyState(source) {
       state.factions[factionId].reputation = integer(incoming.reputation, 0);
       state.factions[factionId].operationsCompleted = integer(incoming.operationsCompleted, 0);
     }
-    unlockResidentPersonnel(state, factionId);
+    unlockResidentPersonnel(state, factionId, commanderCatalog);
   }
   const residentCount = RESIDENT_FACTION_IDS.filter(factionId => state.factions[factionId].resident).length;
   const factionDistrict = state.ship.districts.factions;
@@ -508,10 +716,18 @@ function migrateLegacyState(source) {
       if (district.level >= tier) district.facilities[`tier${tier}`] = getFacilityChoices(districtId, tier)[0]?.id || null;
     }
   }
+  const migratedCommanderRecords = migrateCommanderRecords(source.personnel?.commanders || source.commanders, commanderCatalog);
+  const residentFactions = new Set(RESIDENT_FACTION_IDS.filter(id => state.factions[id].resident));
+  normalizePersonnelState(state.personnel.commanders, migratedCommanderRecords, commanderCatalog, residentFactions, { unlockWithResidency: false, preserveUnknown: true });
+  if (hasLegacyCareerProgress(source, commanderCatalog)) {
+    applyCommissioningState(state, inferLegacyCommissioning(source, commanderCatalog), commanderCatalog, { unlockSpecialists: true });
+  } else {
+    applyCommissioningState(state, null, commanderCatalog);
+  }
   return state;
 }
 
-export function migrateDomainState(payload) {
+export function migrateDomainState(payload, commanderCatalogContext = null) {
   let source = payload;
   if (typeof source === 'string') source = JSON.parse(source);
   if (source?.storageFormatVersion !== undefined && source?.state) {
@@ -524,7 +740,7 @@ export function migrateDomainState(payload) {
     }
     source = source.state;
   }
-  if (!source || typeof source !== 'object' || Array.isArray(source)) return createInitialDomainState();
+  if (!source || typeof source !== 'object' || Array.isArray(source)) return createInitialDomainState(commanderCatalogContext);
   const version = integer(source.schemaVersion, 0);
   if (version > DOMAIN_STATE_SCHEMA_VERSION) {
     throw new DomainValidationError(
@@ -533,14 +749,18 @@ export function migrateDomainState(payload) {
       'STATE_VERSION_UNSUPPORTED'
     );
   }
-  if (version >= 3) return normalizeDomainState(source);
-  return version < DOMAIN_STATE_SCHEMA_VERSION ? migrateLegacyState(deepClone(source)) : normalizeDomainState(source);
+  if (version >= 3) return normalizeDomainState(source, commanderCatalogContext);
+  return version < DOMAIN_STATE_SCHEMA_VERSION
+    ? migrateLegacyState(deepClone(source), commanderCatalogContext)
+    : normalizeDomainState(source, commanderCatalogContext);
 }
 
-export function validateDomainState(state) {
+export function validateDomainState(state, commanderCatalogContext = null) {
+  const commanderCatalog = commanderCatalogForContext(commanderCatalogContext);
   const issues = [];
   if (!state || typeof state !== 'object' || Array.isArray(state)) return { ok: false, issues: [issue('STATE_NOT_OBJECT', 'Domain state must be an object.')] };
   if (state.schemaVersion !== DOMAIN_STATE_SCHEMA_VERSION) issues.push(issue('STATE_VERSION_INVALID', `Expected schema ${DOMAIN_STATE_SCHEMA_VERSION}.`, 'schemaVersion'));
+  if (state.commanderRosterFingerprint !== DOMAIN_COMMANDER_ROSTER_FINGERPRINT) issues.push(issue('COMMANDER_ROSTER_FINGERPRINT_INVALID', 'Campaign state is not bound to the canonical commander roster.', 'commanderRosterFingerprint'));
   if (!ROUTE_SCENES.has(state.route?.scene)) issues.push(issue('ROUTE_SCENE_INVALID', 'Current route scene is invalid.', 'route.scene'));
   if (!SYSTEM_CATALOG[state.route?.systemId]) issues.push(issue('SYSTEM_UNKNOWN', 'Current route system is not in the catalog.', 'route.systemId'));
   for (const key of RESOURCE_KEYS) {
@@ -595,7 +815,24 @@ export function validateDomainState(state) {
   }
   const factionTier = DISTRICT_CATALOG.factions.tiers[(state.ship?.districts?.factions?.level || 1) - 1];
   if (factionTier && residentCount > factionTier.capacity.residentCapacity) issues.push(issue('RESIDENT_CAPACITY_EXCEEDED', 'Faction Quarters cannot support the current resident roster.', 'factions'));
-  for (const [commanderId, definition] of Object.entries(COMMANDER_CATALOG)) {
+  const commissioning = state.commissioning;
+  if (!isRecord(commissioning) || typeof commissioning.completed !== 'boolean') {
+    issues.push(issue('COMMISSIONING_STATE_INVALID', 'Career commissioning state is missing.', 'commissioning'));
+  } else if (!commissioning.completed) {
+    if (commissioning.factionId !== null || commissioning.commanderId !== null || commissioning.completedRevision !== null) issues.push(issue('COMMISSIONING_STATE_INVALID', 'An uncommissioned career cannot persist a faction or commander.', 'commissioning'));
+    if (RESIDENT_FACTION_IDS.some(factionId => state.factions?.[factionId]?.resident)) issues.push(issue('HIDDEN_FACTION_PRECHOICE', 'An uncommissioned career cannot have a resident player faction.', 'factions'));
+    if (Object.values(state.personnel?.commanders || {}).some(commander => commander?.unlocked)) issues.push(issue('HIDDEN_COMMANDER_PRECHOICE', 'An uncommissioned career cannot have an unlocked selectable commander.', 'personnel.commanders'));
+  } else {
+    if (!RESIDENT_FACTION_IDS.includes(commissioning.factionId)) issues.push(issue('COMMISSIONING_FACTION_INVALID', 'Commissioning requires a playable campaign faction.', 'commissioning.factionId'));
+    if (commissioning.commanderId !== COMMANDER1_BY_CAMPAIGN_FACTION[commissioning.factionId]) issues.push(issue('COMMISSIONING_COMMANDER_INVALID', 'Commissioning must assign that faction\'s Commander 1.', 'commissioning.commanderId'));
+    if (!Number.isInteger(commissioning.completedRevision) || commissioning.completedRevision < 0) issues.push(issue('COMMISSIONING_REVISION_INVALID', 'Commissioning revision must be a non-negative integer.', 'commissioning.completedRevision'));
+    if (!state.factions?.[commissioning.factionId]?.resident) issues.push(issue('COMMISSIONING_RESIDENCY_INVALID', 'The commissioned faction must be resident.', `factions.${commissioning.factionId}.resident`));
+    if (!state.personnel?.commanders?.[commissioning.commanderId]?.unlocked) issues.push(issue('COMMISSIONING_COMMANDER_LOCKED', 'The commissioned Commander 1 must be unlocked.', `personnel.commanders.${commissioning.commanderId}.unlocked`));
+  }
+  const commanderIds = Object.keys(state.personnel?.commanders || {});
+  const invalidCommanderIds = commanderIds.filter(id => !commanderCatalog[id]);
+  if (invalidCommanderIds.length) issues.push(issue('COMMANDER_ALIAS_OR_UNKNOWN_PERSISTED', `Non-canonical commander records are forbidden: ${invalidCommanderIds.join(', ')}.`, 'personnel.commanders'));
+  for (const [commanderId, definition] of Object.entries(commanderCatalog)) {
     const person = state.personnel?.commanders?.[commanderId];
     if (!person || !PERSONNEL_STATUSES.has(person.status)) issues.push(issue('COMMANDER_STATE_INVALID', `${commanderId} has an invalid state.`, `personnel.commanders.${commanderId}`));
     else if (person.unlocked && !state.factions[definition.factionId].resident) issues.push(issue('COMMANDER_RESIDENCY_INVALID', `${commanderId} is unlocked without faction residency.`, `personnel.commanders.${commanderId}.unlocked`));
@@ -633,21 +870,21 @@ export function validateDomainState(state) {
   return { ok: issues.length === 0, issues };
 }
 
-export function assertDomainState(state) {
-  const validation = validateDomainState(state);
+export function assertDomainState(state, commanderCatalogContext = null) {
+  const validation = validateDomainState(state, commanderCatalogContext);
   if (!validation.ok) throw new DomainValidationError('Domain state is invalid.', validation.issues);
   return state;
 }
 
-export function serializeDomainState(state) {
-  const normalized = normalizeDomainState(state);
-  assertDomainState(normalized);
+export function serializeDomainState(state, commanderCatalogContext = null) {
+  const normalized = normalizeDomainState(state, commanderCatalogContext);
+  assertDomainState(normalized, commanderCatalogContext);
   return stableStringify({ storageFormatVersion: DOMAIN_STORAGE_FORMAT_VERSION, state: normalized });
 }
 
-export function deserializeDomainState(serialized) {
-  const state = migrateDomainState(serialized);
-  assertDomainState(state);
+export function deserializeDomainState(serialized, commanderCatalogContext = null) {
+  const state = migrateDomainState(serialized, commanderCatalogContext);
+  assertDomainState(state, commanderCatalogContext);
   return state;
 }
 
@@ -673,11 +910,13 @@ function defaultStorage() {
 }
 
 export class LocalDomainStore {
-  constructor({ storage = defaultStorage(), key = DOMAIN_STORAGE_KEY, initialState = null } = {}) {
+  constructor({ storage = defaultStorage(), key = DOMAIN_STORAGE_KEY, initialState = null, commanderCatalogContext = null } = {}) {
     if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function') throw new TypeError('LocalDomainStore requires a Storage-compatible object.');
+    commanderCatalogForContext(commanderCatalogContext);
     this.storage = storage;
     this.key = key;
-    this.initialState = initialState ? normalizeDomainState(initialState) : null;
+    this.commanderCatalogContext = commanderCatalogContext;
+    this.initialState = initialState ? normalizeDomainState(initialState, commanderCatalogContext) : null;
     this.lastLoadError = null;
     this.listeners = new Set();
     this.current = null;
@@ -686,17 +925,17 @@ export class LocalDomainStore {
   load({ recover = true } = {}) {
     const serialized = this.storage.getItem(this.key);
     if (serialized === null) {
-      this.current = deepClone(this.initialState || createInitialDomainState());
+      this.current = deepClone(this.initialState || createInitialDomainState(this.commanderCatalogContext));
       return deepClone(this.current);
     }
     try {
-      this.current = deserializeDomainState(serialized);
+      this.current = deserializeDomainState(serialized, this.commanderCatalogContext);
       this.lastLoadError = null;
       return deepClone(this.current);
     } catch (error) {
       this.lastLoadError = error;
       if (!recover) throw error;
-      this.current = deepClone(this.initialState || createInitialDomainState());
+      this.current = deepClone(this.initialState || createInitialDomainState(this.commanderCatalogContext));
       return deepClone(this.current);
     }
   }
@@ -719,9 +958,9 @@ export class LocalDomainStore {
 
   save(state, { type = 'save' } = {}) {
     const previous = this.current ? deepClone(this.current) : null;
-    const normalized = normalizeDomainState(state);
-    assertDomainState(normalized);
-    this.storage.setItem(this.key, serializeDomainState(normalized));
+    const normalized = normalizeDomainState(state, this.commanderCatalogContext);
+    assertDomainState(normalized, this.commanderCatalogContext);
+    this.storage.setItem(this.key, serializeDomainState(normalized, this.commanderCatalogContext));
     this.current = deepClone(normalized);
     this.lastLoadError = null;
     this.notify(this.current, type, previous);
@@ -740,7 +979,9 @@ export class LocalDomainStore {
   }
 
   reset({ showcaseReady = false } = {}) {
-    const state = showcaseReady ? createShowcaseReadyDomainState() : createInitialDomainState();
+    const state = showcaseReady
+      ? createShowcaseReadyDomainState(this.commanderCatalogContext)
+      : createInitialDomainState(this.commanderCatalogContext);
     return this.save(state, { type: 'reset' });
   }
 
@@ -762,8 +1003,9 @@ export function getResidentFactionIds(state) {
   return RESIDENT_FACTION_IDS.filter(factionId => state.factions?.[factionId]?.resident);
 }
 
-export function getReadyCommanderIds(state, factionId) {
-  return Object.keys(COMMANDER_CATALOG).filter(id => COMMANDER_CATALOG[id].factionId === factionId && state.personnel?.commanders?.[id]?.status === 'ready' && !state.personnel.commanders[id].injury);
+export function getReadyCommanderIds(state, factionId, commanderCatalogContext = null) {
+  const commanderCatalog = commanderCatalogForContext(commanderCatalogContext);
+  return Object.keys(commanderCatalog).filter(id => commanderCatalog[id].factionId === factionId && state.personnel?.commanders?.[id]?.status === 'ready' && !state.personnel.commanders[id].injury);
 }
 
 export function getReadySpecialistIds(state, factionId) {

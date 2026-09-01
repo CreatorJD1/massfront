@@ -13,6 +13,10 @@ const WWW = resolve(ROOT, 'www');
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.wasm': 'application/wasm', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4' };
 
 if (!existsSync(resolve(WWW, 'sw.js'))) throw new Error('PWA_PACKAGE_MISSING: run node tools/pack-www.mjs first');
+const serviceWorkerSource = await readFile(resolve(WWW, 'sw.js'), 'utf8');
+const serviceWorkerVersion = serviceWorkerSource.match(/const\s+MF_SW_VERSION\s*=\s*['"]([^'"]+)['"]/u)?.[1];
+if (!serviceWorkerVersion) throw new Error('PWA_CACHE_VERSION_UNREADABLE');
+const expectedCacheName = `massfront-pwa-${serviceWorkerVersion}`;
 
 async function dismissLaunchIntro(page) {
   await page.waitForFunction(() => !document.getElementById('mfBootCover') || !!document.getElementById('mfIntroSkip'), null, { timeout: 120000 });
@@ -62,7 +66,7 @@ try {
     };
   });
   if (!online.controlled) throw new Error('PWA_NOT_CONTROLLED_AFTER_RELOAD');
-  if (!online.cacheNames.some(name => name === 'massfront-pwa-1.33.48-shell1')) throw new Error(`PWA_CACHE_VERSION_MISSING: ${online.cacheNames.join(', ')}`);
+  if (!online.cacheNames.some(name => name === expectedCacheName)) throw new Error(`PWA_CACHE_VERSION_MISSING: expected ${expectedCacheName}; found ${online.cacheNames.join(', ')}`);
   if (online.cachedUrls.some(item => /(?:update(?:-preview)?\.json|assets\/update-config\.json)(?:\?|$)/.test(item))) throw new Error('PWA_UPDATER_MANIFEST_WAS_CACHED');
   if (online.missingRuntimePaths.length) throw new Error(`PWA_RUNTIME_CACHE_INCOMPLETE: ${online.missingRuntimePaths.join(', ')}`);
 

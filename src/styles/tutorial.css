@@ -20,6 +20,60 @@
   --keelB:linear-gradient(160deg,#bdeeff 0%,#6fd0ff 26%,#0c3a52 58%,#1a6f99 80%,#bdeeff 100%);
 }
 
+/* ============================================================================
+   NEW-CAREER ORIENTATION
+   ----------------------------------------------------------------------------
+   One calm decision surface over the approach view: arrival, optional basics,
+   required faction commissioning, then Commander 1. It is intentionally not
+   attached to START or the War Table, so the current main menu stays intact.
+   ============================================================================ */
+body.mfOnboardingOpen{overflow:hidden}
+#mfOnboardingChoice{
+  position:fixed;inset:0;z-index:2200;display:grid;place-items:center;overflow:auto;
+  padding:max(12px,calc(var(--sat,0px) + 8px)) max(10px,env(safe-area-inset-right)) max(12px,calc(var(--sab,0px) + 8px)) max(10px,env(safe-area-inset-left));
+  box-sizing:border-box;color:#eefaff;font-family:var(--fU,system-ui,sans-serif);
+  background:radial-gradient(circle at 72% 22%,rgba(68,164,204,.20),transparent 30%),linear-gradient(180deg,rgba(1,7,13,.92),rgba(2,10,16,.985));
+}
+#mfOnboardingChoice[hidden]{display:none!important}
+.mfOnboardingFrame{
+  width:min(1120px,100%);min-height:min(760px,calc(100dvh - 28px));display:grid;grid-template-columns:minmax(280px,.78fr) minmax(520px,1.22fr);
+  overflow:hidden;border:1px solid rgba(105,211,247,.35);border-radius:22px;
+  background:#06121b;box-shadow:0 34px 110px rgba(0,0,0,.86),0 0 65px rgba(67,191,235,.10);
+}
+#mfOnboardingChoice[data-flow="default"] .mfOnboardingFrame{grid-template-columns:minmax(0,760px);min-height:0;width:min(760px,100%)}
+#mfOnboardingChoice[data-flow="default"] .mfOnboardingScene{display:none}
+.mfOnboardingScene{
+  position:relative;min-height:360px;overflow:hidden;padding:22px;
+  background:
+    radial-gradient(circle at 18% 17%,#dffaff 0 1px,transparent 2px),radial-gradient(circle at 76% 28%,#8ceaff 0 1px,transparent 2px),
+    radial-gradient(circle at 31% 62%,#9ed9ed 0 1px,transparent 2px),radial-gradient(circle at 88% 73%,#fff 0 1px,transparent 2px),
+    linear-gradient(150deg,#061626,#02070c 68%);
+}
+.mfOnboardingScene::before{content:"";position:absolute;inset:0;opacity:.26;background-image:linear-gradient(rgba(96,206,244,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(96,206,244,.06) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 88%)}
+.mfOnboardingPlanet{position:absolute;left:15%;bottom:-9%;width:112%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 38% 31%,#c5e5e4 0 3%,#548aa1 19%,#203e56 45%,#071522 69%);box-shadow:-28px -22px 76px rgba(83,216,255,.24),0 0 0 2px rgba(141,230,255,.16)}
+.mfOnboardingPlanet::after{content:"";position:absolute;inset:-2%;border-radius:50%;border-top:2px solid rgba(162,238,255,.7);filter:blur(1px)}
+.mfOnboardingMoon{position:absolute;right:13%;top:20%;width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 38% 33%,#d5edf0,#506a76 72%);box-shadow:0 0 18px rgba(137,223,246,.15)}
+.mfOnboardingVector{position:absolute;left:20%;top:25%;width:56%;height:46%;border-top:1px solid rgba(101,225,255,.52);border-right:1px solid rgba(101,225,255,.3);transform:skew(-28deg) rotate(13deg)}
+.mfOnboardingVector::before{content:"";position:absolute;right:-5px;top:-5px;width:9px;height:9px;border:1px solid #95edff;background:#0a2736;transform:rotate(45deg);box-shadow:0 0 14px #5fe1ff}
+.mfOnboardingScene>b,.mfOnboardingScene>i{position:relative;z-index:2;display:block;font-family:var(--fT,system-ui);font-style:normal;letter-spacing:.15em}
+.mfOnboardingScene>b{color:#a9efff;font-size:10px}.mfOnboardingScene>i{margin-top:6px;color:#638797;font-size:8px}
+.mfOnboardingCard{min-width:0;background:linear-gradient(155deg,rgba(10,29,42,.99),rgba(3,12,19,.995) 62%)}
+.mfOnboardingHeader{display:flex;align-items:center;gap:12px;min-height:66px;padding:11px clamp(15px,3vw,28px);border-bottom:1px solid rgba(105,211,247,.18);background:rgba(7,24,34,.82)}
+.mfOnboardingKeel{position:relative;display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border:1px solid rgba(105,224,255,.58);border-radius:50%;color:#c5f6ff;background:radial-gradient(circle,rgba(80,218,255,.22),transparent 68%);font:900 17px/1 var(--fT);box-shadow:0 0 17px rgba(73,213,255,.13)}
+.mfOnboardingHeader>span:last-child b,.mfOnboardingHeader>span:last-child small{display:block}.mfOnboardingHeader>span:last-child b{color:#baf3ff;font:900 12px/1 var(--fT);letter-spacing:.16em}.mfOnboardingHeader>span:last-child small{margin-top:5px;color:#7897a6;font:800 8px/1.2 var(--fT);letter-spacing:.12em}
+.mfOnboardingPath{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid rgba(105,211,247,.14)}
+.mfOnboardingPath>span{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;min-height:42px;padding:6px 4px;color:#58717e;font:800 7px/1.2 var(--fT);letter-spacing:.08em;text-align:center}.mfOnboardingPath>span:not(:last-child)::after{content:"";position:absolute;right:0;width:1px;height:18px;background:rgba(112,206,235,.13)}
+.mfOnboardingPath b{display:grid;place-items:center;width:19px;height:19px;border:1px solid #435e6a;border-radius:50%;font-size:7px}.mfOnboardingPath .done{color:#81a4b2}.mfOnboardingPath .done b{color:#8be8ff;border-color:#55b9d7}.mfOnboardingPath .on{color:#e6faff;background:linear-gradient(90deg,rgba(60,190,232,.11),transparent)}.mfOnboardingPath .on b{color:#eaffff;border-color:#70e3ff;background:#16495e;box-shadow:0 0 12px rgba(87,220,255,.2)}
+.mfOnboardingCard>main{padding:clamp(20px,3.5vw,35px)}
+.mfOnboardingEyebrow{color:#68dcff;font:900 9px/1.2 var(--fT);letter-spacing:.19em}.mfOnboardingCard h2{max-width:680px;margin:8px 0 8px;font:900 clamp(27px,4.5vw,48px)/1 var(--fT);letter-spacing:.012em}.mfOnboardingLead{max-width:690px;margin:0;color:#a7bdc8;font:600 11px/1.55 var(--fU)}
+.mfOnboardingTracks{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0 12px}.mfOnboardingTrack{min-width:0;padding:13px;border:1px solid rgba(104,186,217,.22);border-radius:11px;background:rgba(10,32,45,.63)}.mfOnboardingTrack.recommended{border-color:rgba(91,218,255,.48);background:linear-gradient(150deg,rgba(31,105,132,.30),rgba(7,28,40,.78))}.mfOnboardingTrack small,.mfOnboardingTrack b,.mfOnboardingTrack span{display:block}.mfOnboardingTrack small{color:#6ddfff;font:900 7px/1 var(--fT);letter-spacing:.14em}.mfOnboardingTrack b{margin-top:7px;color:#e9faff;font:900 12px/1.2 var(--fT);letter-spacing:.035em}.mfOnboardingTrack span{margin-top:6px;color:#91aab7;font:600 9px/1.45 var(--fU)}
+.mfOnboardingSteps{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 18px}.mfOnboardingSteps span{padding:5px 7px;border:1px solid rgba(91,198,232,.24);border-radius:999px;color:#9bc8d8;background:rgba(22,74,93,.16);font:800 7px/1 var(--fT);letter-spacing:.06em}
+.mfOnboardingActions{display:grid;grid-template-columns:1.15fr 1fr;gap:9px}.mfOnboardingActions button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:58px;padding:10px 14px;border:1px solid #6ce2ff;border-radius:9px;color:white;background:linear-gradient(180deg,#187a9d,#0c435b);box-shadow:inset 0 1px rgba(255,255,255,.12),0 7px 20px rgba(0,0,0,.28);font:900 10px/1.2 var(--fT);letter-spacing:.075em;text-align:left;touch-action:manipulation}.mfOnboardingActions button small{display:block;margin-bottom:5px;color:#a9edff;font-size:7px;letter-spacing:.14em}.mfOnboardingActions .quiet{border-color:#385765;color:#b8ccd5;background:#081923;box-shadow:none}.mfOnboardingActions .quiet small{color:#6f8d99}.mfOnboardingActions button:focus-visible{outline:2px solid #d7f8ff;outline-offset:3px}.mfOnboardingActions button:active{transform:translateY(1px);filter:brightness(1.15)}
+.mfOnboardingFoot{margin:12px 2px 0;color:#708996;font:700 8px/1.45 var(--fU);text-align:center}
+@media(max-width:860px){.mfOnboardingFrame{grid-template-columns:1fr;min-height:0}.mfOnboardingScene{min-height:190px}.mfOnboardingPlanet{left:35%;bottom:-115%;width:90%}.mfOnboardingMoon{top:18%;right:18%}.mfOnboardingVector{left:35%;top:30%;width:43%;height:55%}}
+@media(max-width:540px){#mfOnboardingChoice{place-items:start center}.mfOnboardingFrame{border-radius:15px}.mfOnboardingScene{min-height:132px;padding:14px}.mfOnboardingPlanet{left:39%;bottom:-150%;width:92%}.mfOnboardingMoon{width:25px;height:25px}.mfOnboardingHeader{min-height:58px;padding:9px 13px}.mfOnboardingKeel{width:36px;height:36px;flex-basis:36px}.mfOnboardingHeader>span:last-child small{font-size:7px}.mfOnboardingPath>span{font-size:0;min-height:38px}.mfOnboardingPath b{font-size:7px}.mfOnboardingCard>main{padding:19px 14px 15px}.mfOnboardingCard h2{font-size:30px}.mfOnboardingTracks,.mfOnboardingActions{grid-template-columns:1fr}.mfOnboardingTracks{gap:7px;margin-top:15px}.mfOnboardingTrack{padding:11px}.mfOnboardingSteps{margin-bottom:14px}.mfOnboardingActions button{min-height:60px}.mfOnboardingFoot{text-align:left}}
+@media(prefers-reduced-motion:reduce){.mfOnboardingActions button:active{transform:none}}
+
 #keelWrap{
   position:absolute; left:50%; top:calc(var(--sat) + 204px);
   transform:translateX(-50%);
@@ -48,11 +102,12 @@
   100%{ transform:scale(1); box-shadow:0 6px 20px rgba(0,0,0,.55), 0 0 0 8px rgba(120,220,255,0); }
 }
 
-/* ---------- avatar: supplied Nova commander profile under a live signal
-   treatment, so tutorial dialogue has a recognizable speaker ---------- */
+/* ---------- KEEL: neutral UGA signal identity, never a faction portrait ---- */
 #keelBadge{ position:relative; width:42px; height:42px; flex:0 0 42px; margin-top:1px;
-  border-radius:9px;background:url('../../assets/factions/nova_192.jpg') center/cover no-repeat;
+  display:grid;place-items:center;border-radius:9px;background:radial-gradient(circle at 50% 46%,rgba(79,218,255,.22),transparent 58%),linear-gradient(145deg,#0b2a3a,#030b12);
   border:1px solid rgba(120,220,255,.78);box-shadow:0 0 12px rgba(70,190,245,.24);overflow:hidden; }
+#keelBadge::before{content:'K';position:relative;z-index:2;color:#bcefff;font:900 17px/1 var(--fT);letter-spacing:.04em;text-shadow:0 0 8px rgba(80,220,255,.8)}
+#keelBadge::after{content:'UGA';position:absolute;z-index:3;left:0;right:0;bottom:3px;color:#ffe079;font:900 5px/1 var(--fT);letter-spacing:.15em;text-align:center}
 #keelBadge .kr{
   position:absolute; inset:4px; border-radius:50%;
   border:1.5px solid rgba(120,220,255,.55);
@@ -194,6 +249,11 @@ body.trainingOperation #keelModeBadge,body.trainingOperation #toast{display:none
 .ktoHero{position:relative;z-index:1;display:grid;grid-template-columns:82px 1fr;gap:10px;align-items:center}.ktoPortrait{position:relative;width:82px;height:82px;border-radius:11px;overflow:hidden;border:1px solid rgba(117,214,255,.62);background:#07131e;box-shadow:0 0 15px rgba(66,190,247,.16)}
 .ktoPortrait>img{width:100%;height:100%;display:block;object-fit:cover}.ktoPortrait>span{position:absolute;right:4px;bottom:4px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(3,12,20,.88);border:1px solid rgba(116,214,255,.48)}
 .ktoPortrait .facIc{width:28px!important;height:28px!important;object-fit:contain}.ktoIdentity{min-width:0}.ktoIdentity small{display:block;color:#77d8ff;font:900 9px/1 var(--fT);letter-spacing:.14em}.ktoIdentity>b{display:block;margin:4px 0;color:#fff;font:900 14px/1.05 var(--fT);letter-spacing:.07em}.ktoIdentity i{display:block;color:#d8ecf8;font:800 9px/1.2 var(--fT);font-style:normal}.ktoIdentity p{margin:5px 0 0;color:#91adbf;font-size:9px;line-height:1.35;font-weight:650}
+.ktoUgaPortrait{display:grid;place-items:center;background:radial-gradient(circle at 50% 42%,rgba(80,219,255,.2),transparent 44%),linear-gradient(145deg,#0a2638,#030b12);box-shadow:0 0 18px rgba(66,190,247,.2),inset 0 0 0 1px rgba(164,231,255,.1)}
+.ktoUgaPortrait::before,.ktoUgaPortrait::after{content:'';position:absolute;border:1px solid rgba(110,224,255,.42);border-radius:50%;transform:rotate(-24deg)}
+.ktoUgaPortrait::before{width:58px;height:58px}.ktoUgaPortrait::after{width:70px;height:28px;border-left-color:transparent;border-right-color:transparent}
+.ktoPortrait>span.ktoUgaSeal{position:relative;right:auto;bottom:auto;z-index:1;width:auto;height:auto;display:grid;gap:4px;padding:0;border:0;border-radius:0;background:none;text-align:center}
+.ktoUgaSeal b{color:#a9ecff;font:900 19px/1 var(--fT);letter-spacing:.16em;text-shadow:0 0 9px rgba(74,213,255,.7)}.ktoUgaSeal i{color:#ffe079;font:900 8px/1 var(--fT);font-style:normal;letter-spacing:.2em}
 .ktoTeach{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}.ktoTeach span{flex:1 1 29%;min-width:82px;padding:6px 5px;border-radius:7px;text-align:center;color:#a9c8da;background:rgba(3,12,20,.55);border:1px solid rgba(116,167,200,.2);font:850 9px/1 var(--fT);letter-spacing:.06em}
 .ktoProgress{position:relative;z-index:1;margin-top:9px;padding:8px 9px;border-radius:9px;background:rgba(3,11,18,.58);border:1px solid rgba(119,177,212,.22)}.ktoProgress>div:first-child{display:flex;align-items:center;justify-content:space-between}.ktoProgress span{color:#8aa9bf;font:900 9px/1 var(--fT);letter-spacing:.11em}.ktoProgress b{color:var(--ktoAccent);font:900 10px/1 var(--fT)}
 .ktoProgressTrack{height:5px;margin-top:6px;border-radius:5px;overflow:hidden;background:#07121d!important}.ktoProgressTrack i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#2bb9ef,var(--ktoAccent));box-shadow:0 0 8px var(--ktoAccent)}.ktoProgress small{display:block;margin-top:5px;color:#809aad;font-size:9px;line-height:1.25;font-weight:700}

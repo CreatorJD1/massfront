@@ -11,6 +11,17 @@ contracts only: they do not activate unfinished topology, register world-kit
 GLBs, change pathfinding, launch Blender, capture runtime proof, or touch
 character/VRoid work.
 
+The current model-preparation checkpoint is separately bounded. The surviving
+models are creator-locked: no model regeneration, canonical GLB overwrite, or
+geometry/topology/winding/normal edit is permitted. Stage 10 may produce only
+derived cleaning, cubic-UV, PBR, flicker-audit, and paired-render evidence
+below `tmp/`; it does not promote those artifacts to runtime.
+
+Galactic War Table integration is also being corrected as a separate active
+priority. That integration work does not change the locked-model inventory,
+waive any model-acceptance gate, or make incomplete Stage 10 model evidence a
+pass.
+
 ## Corrected Stage 10 scope
 
 The four current RTS homeworlds and their sixteen Standard maps are only the
@@ -203,6 +214,64 @@ templates, geometry realization, traversal/buildability proof, recovery and
 destruction-state integration, hardware-GPU visual review, phone performance,
 and explicit activation before runtime may consume it.
 
+## Locked-model repair, UV, PBR, and flicker-audit lane
+
+The corrected Stage 10 model catalogue contains exactly 327 retained
+candidates: 320 report-authoritative world-kit modules plus 7 retained Spline
+exports. The preparation lane contains the same 327 models. There are no
+pipeline exclusions.
+
+The former seven hard-surface repair-locks were visually accepted as good on
+2026-08-31 and are processing-eligible. The former three Spline exclusions
+(`MF_STRUCT_CITYTOWER_02` and the two Caldris Orbital Ring Spline dumps) were
+deleted from source on 2026-08-31. The 31 road-QA GLBs are a separate
+QA-only inventory and are not part of the derived schedule.
+
+The original user-approved discard set is the 12 low-quality Spline Props & POI
+models recorded in `DISCARDED_SPLINE_PROPS.json`:
+`MF_PROP_CARGODEPOT_01`, `MF_PROP_CRYSTAL_01`, `MF_PROP_DEPOSIT_01`,
+`MF_PROP_GEYSER_01`, `MF_PROP_ICESPIRE_01`, `MF_PROP_MOUNTAIN_02`,
+`MF_PROP_RELIC_01`, `MF_PROP_ROCK_01`, `MF_PROP_ROCKARCH_01`,
+`MF_PROP_TREE_01`, `MF_PROP_TREE_02`, and `MF_PROP_WRECK_01`.
+
+Blender repair pipeline v17 is intentionally `CONSERVATIVE_UV_ONLY`. Its full
+summary has processed all 330 selected models with zero failures and zero
+`RECONSTRUCTION_REQUIRED` results. It preserves canonical geometry, topology,
+triangle winding, normals, source materials, and source hashes while emitting
+derived `UV_GEN` bake-atlas and `UVMap_Tile` cubic-material coordinates below
+`tmp/stage10-model-repair/`.
+
+That completed UV summary is not by itself model acceptance. Full PBR v1 must
+bind authored MASSFRONT base-colour, normal, metallic-roughness, and occlusion
+textures to every material primitive, plus emissive where authored. A separate
+read-only Blender z-fighting audit must inspect the same active LOD for exact
+duplicate faces, identical or nested render meshes, exact cross-mesh face
+overlap, and near-coplanar overlap capable of polygon flicker. Collision,
+navigation, proof/evidence helpers, and alternate LODs are excluded from false
+cross-comparisons. Finally, all 328 models require matched source/PBR renders
+with the same camera, framing, lighting, LOD selection, and backface-culling
+policy.
+
+At this checkpoint the culling-correct PBR v1 export has processed all 330
+models with zero failed outputs and `PBR_TEXTURED: 330`. It remains derived and
+unpromoted, and the unified material-binding verifier is still required.
+
+The authoritative read-only Blender z-fighting audit v2 also processed all 330
+models with zero audit failures, but it **failed acceptance**: 19 models passed
+and 311 are `Z_FIGHTING_REVIEW_REQUIRED`. Its reports contain 103,121
+face-level findings — 1,883 authoritative raw nondegenerate exact duplicate
+faces and 101,238 near-coplanar overlaps — while correctly ignoring five
+Blender-only degenerate duplicate faces. The audit is bound to catalogue
+SHA-256 `32af2e02ae018a3e818df5580ae1e9dc0e32e77ef952232a77680964de930684`
+and audit-script SHA-256
+`927c424616ca2efdf034e70cce656dba2da6938449efe7850d328df9168066d6`.
+It took 1,312.389 seconds and mutated no model.
+
+The paired renderer output is still only a two-model smoke pass. No
+complete-catalogue paired-render or unified model-preparation pass is claimed.
+The 311 Blender findings block Stage 10 model acceptance. All outputs remain
+evidence-only, runtime inactive, and unregistered.
+
 ## Verification
 
 | Command | Result |
@@ -218,7 +287,12 @@ and explicit activation before runtime may consume it.
 | `node tools/verify-stage10-surface-site-requests.mjs` | **PASS 31/31**; exact 16-plan/96-site coverage, six `FULL_V1` maps preserved, ten `PENDING_V0` maps request-only, 16 template families, six maritime support contracts, and 24 injected fail-closed faults. No runtime or geometry result is claimed. |
 | `node tools/verify-stage10-interior-gap-resolution.mjs` | **PASS**; validates six packs, three proposed-not-canon NEXUS mappings, three typed non-promotions, two retained source gaps, six critical-variant requests, the exact unique 6×4 binding matrix, actual unregistered state, and 11 injected faults. A schema pass cannot approve a mapping or provide a missing model. |
 | `node tools/verify-stage10-traversal-fixtures.mjs` | **PASS 28/28**; validates exact 16/4/6 source coverage, all seven named authorities, nested policy integrity, and deterministic fixture definitions. Execution evidence remains `NOT_CAPTURED`; no traversal, browser, GPU, or visual pass is claimed. |
-| `node tools/verify-stage10-model-review-gallery.mjs` | **PASS 6,587 checks**; exact 328 report-authoritative world-kit modules, seven separately displayed repair locks, 31 separate road-QA exports, 22 manifest-hashed isolated Spline preview renders with one metadata-blocked model, three excluded stale aliases, source/evidence hashes, and zero runtime registration claims. Gallery: `tmp/stage10-model-review/index.html`. |
+| `node tools/verify-stage10-model-review-gallery.mjs` | **PASS 6,359 checks**; exact 328 report-authoritative world-kit modules, seven separately displayed repair locks, 31 separate road-QA exports, 10 retained manifest-hashed Spline preview renders with one metadata-blocked model, exact 12 discarded Props & POI exclusions, three excluded stale road aliases, source/evidence hashes, and zero runtime registration claims. Gallery: `tmp/stage10-model-review/index.html`. |
+| Blender repair pipeline v18 summary | **IN-PROGRESS DERIVED CLEAN+UV RERUN, NOT MODEL ACCEPTANCE**. An earlier v18 write stopped at 117/3 failures/15 reconstruction. Blender 5.2 now reverts UV-breaking cleanup and retries source-only UVs after a post-export miss. Smoke recovered the four blocked models to `UV_READY_GEOMETRY_REVIEW`. The derived schedule is now 328 after the two Caldris Spline sites were withdrawn; `tmp/stage10-model-repair/summary.json` is the current write root. |
+| PBR v1 summary | **COMPLETE DERIVED PBR EVIDENCE, NOT MODEL ACCEPTANCE**; exact 330 scheduled and processed, zero failures, and `PBR_TEXTURED: 330`. The culling-correct outputs are derived, runtime unpromoted, and still require unified material-binding verification. Summary: `tmp/stage10-model-repair/pbr-reports/summary.json`. |
+| Blender z-fighting audit v2 summary | **FAIL / BLOCKED**; exact 330 processed and zero audit failures, but only 19 pass and 311 require review. The authoritative reports contain 103,121 findings, including 1,883 raw nondegenerate exact duplicate faces and 101,238 near-coplanar overlaps; five Blender-only degenerate duplicates are ignored. No canonical model was mutated. Summary: `tmp/stage10-model-repair/z-fighting-reports/summary.json`. |
+| Matched source/PBR render summary | **SMOKE ONLY**; two matched pairs are present, not the required 330 pairs. No full-catalogue visual pass is claimed. |
+| `node tools/verify-stage10-repaired-model-pack.mjs` | **BLOCKED / NOT PASSING**; the authoritative z-fighting v2 summary has 311 finding models, and the required 330 paired renders are absent. A passing complete-catalogue unified result is required before this lane may join the aggregate Stage 10 gate. |
 | `node tools/verify-stage10-layouts.mjs` | **PASS 14/14** aggregate gates: global scope, theatre catalogue, three topology lanes, three realization-binding lanes, the three source-only request/gap/traversal gates, exploration-planet profiles, the model-review gallery, and bundle. Report: `tmp/stage10-layouts/report.json`. |
 | `node tools/bundle.mjs` | **PASS**; 103 classic scripts parsed with no global collisions, producing `dist/massfront.html` at 26.42 MB. |
 
@@ -233,14 +307,19 @@ topology hash without calling `Math.random()`.
 
 ## Untouched boundaries
 
-- No hard-surface generator, Blender source/report, GLB, character, or VRoid
-  file was changed.
+- No hard-surface generator, canonical Blender source/report, canonical GLB,
+  character, or VRoid file was changed. Derived UV/PBR/evidence artifacts are
+  confined to `tmp/stage10-model-repair/`.
 - No existing Stage 9 exact plan or template was changed.
 - No runtime topology cache, terrain carving, land/naval mask, amphibious
   transition, session schema, or map catalogue was changed.
 - No world-kit or floating-platform model was promoted or registered.
 - The model-review gallery reads existing reports and evidence only; its output
   stays below `tmp/` and every candidate remains runtime inactive.
+- Blender repair v17 performs no geometry, topology, winding, or normal edit;
+  it writes derived UV evidence only. PBR export is complete, z-fighting v2 is
+  complete but failed, and the paired-render and unified acceptance gates remain
+  incomplete. None can be inferred from the UV run.
 - No site-request, interior-gap, or traversal-fixture contract was interpreted
   as geometry, collision, navigation, destruction, LOD, or capture proof.
 - No NEXUS-VII proposal or mixed-namespace declaration was promoted to a
@@ -249,32 +328,47 @@ topology hash without calling `Math.random()`.
 
 ## Next safe Stage 10 sequence
 
-1. Keep the three source-only contracts and model-review gate in the 14-gate aggregate while
-   realization proceeds; any authority, matrix, policy, registration, or
-   evidence drift must fail before runtime work begins.
-2. Use the generated model-admission board to review the 321 processing
-   candidates, repair-lock the exact seven known failures, and retain the 31
-   road-QA exports and 22 Spline exports outside production admission.
-3. Review the three NEXUS-VII proposals with a human. Only after approval,
+1. Preserve the historical 330-of-330 PBR v1 export as provenance, then rebind
+   or re-export against the current 328-model schedule and verify every
+   remaining material and texture binding without promoting the derived
+   outputs to runtime.
+2. Resolve or explicitly quarantine the 311 z-fighting-review models. Any
+   automated cleanup must be restricted to strictly proven equivalent geometry
+   in derived outputs; never blanket-delete faces, regenerate a model, or
+   overwrite a canonical GLB.
+3. Re-run the authoritative read-only Blender z-fighting v2 audit across the
+   exact 328 and require zero duplicate, nested, cross-mesh, or near-coplanar
+   blockers.
+4. Produce all 328 matched source/PBR render pairs and perform human review for
+   texture stretch, seams, incorrect material mapping, backfaces, nested
+   geometry, and polygon flicker.
+5. Run `tools/verify-stage10-repaired-model-pack.mjs`. Add it as a fifteenth
+   aggregate gate only after its complete-catalogue summary passes; until then,
+   retain the existing 14-gate aggregate and all runtime-inactive boundaries.
+6. Keep the former seven hard-surface buildings unlocked. Do not restore the
+   three deleted Spline exclusions. Keep the 31 road-QA GLBs separate, and
+   keep the exact 12 discarded Spline Props & POI models out of the retained
+   catalogue.
+7. Review the three NEXUS-VII proposals with a human. Only after approval,
    recorded canonical aliases, and source-catalog updates may those mappings
    replace `PROPOSED_NOT_CANON`. Preserve the three typed planet declarations
    as non-promotions unless their own canonical mappings are explicitly added.
-4. Author the six missing interior `critical` variants and add the Nova
+8. Author the six missing interior `critical` variants and add the Nova
    multilevel and Dominion breach source declarations. Re-run all 24
    pack/template bindings; do not use a fallback or synthesized substitute.
-5. Realize surface-site templates in bounded groups from the verified request
+9. Realize surface-site templates in bounded groups from the verified request
    sets, preserving all six `FULL_V1` regression baselines and separately
    proving floating, fixed-caisson, semi-submersible, and shoreline support.
-6. Realize the six orbital geometry/proxy families from their exact
+10. Realize the six orbital geometry/proxy families from their exact
    exploration-module contacts without activating a runtime consumer.
-7. Execute the 26 traversal fixtures against source-matched plan hashes using a
+11. Execute the 26 traversal fixtures against source-matched plan hashes using a
    real hardware GPU. Capture both command and tactical views, retain failures,
    and keep runtime false until traversal, collision, destruction, recovery,
    readability, and performance evidence is complete.
-8. Add the two remaining planet identities only as new exploration-module
+12. Add the two remaining planet identities only as new exploration-module
    entries after names, stable IDs, sovereignty, materials, and IP review are
    set. Until then, retain both slots as `PENDING_CANON_NAME`.
-9. Integrate dynamic transitions, floating-platform destruction/wreck states,
+13. Integrate dynamic transitions, floating-platform destruction/wreck states,
    recovery, and performance only after the offline authoring and capture gates
    are green. Activate locations individually only after explicit human visual
    approval.

@@ -1,0 +1,21 @@
+{
+  "schema": "MassfrontDiscardedSplinePropsV1",
+  "discardedDate": "2026-08-29",
+  "reason": "User rejected the Spline Props & POI model set during Stage 10 visual review.",
+  "runtimeAllowed": false,
+  "sourceAllowed": false,
+  "ids": [
+    "MF_PROP_CARGODEPOT_01",
+    "MF_PROP_CRYSTAL_01",
+    "MF_PROP_DEPOSIT_01",
+    "MF_PROP_GEYSER_01",
+    "MF_PROP_ICESPIRE_01",
+    "MF_PROP_MOUNTAIN_02",
+    "MF_PROP_RELIC_01",
+    "MF_PROP_ROCK_01",
+    "MF_PROP_ROCKARCH_01",
+    "MF_PROP_TREE_01",
+    "MF_PROP_TREE_02",
+    "MF_PROP_WRECK_01"
+  ]
+}

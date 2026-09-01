@@ -1,17 +1,24 @@
 # MASSFRONT
 
 A Supreme-Commander-style mobile RTS. Hand-written WebGL2 engine in plain
-JavaScript — no framework, no runtime dependencies — packaged for Android and
-iOS with Capacitor, backed by Cloudflare Workers.
+JavaScript — no framework, no runtime dependencies — packaged for Android with
+Capacitor and installable on iPhone/iPad from Safari as a PWA, backed by
+Cloudflare Workers.
 
-**Start here:** [`AGENTS.md`](AGENTS.md) for the rules that will save you time,
-then [`docs/HANDOFF.md`](docs/HANDOFF.md) for architecture, current state and
-open work.
+Apple is a fully supported browser-install platform. Open the hosted game in
+Safari, use **Share → Add to Home Screen**, and launch it from the Home Screen.
+Native iOS/IPA/Xcode/TestFlight/App Store delivery is permanently retired and
+is not a build or release gate. See [`BUILD_IOS.md`](docs/BUILD_IOS.md) for the
+current Apple install and compatibility contract.
+
+**Start here:** [`AGENTS.md`](AGENTS.md) for the repository rules, then the
+[`master plan`](docs/MASTER_PLAN.md), [`18-stage status`](docs/MASTER_PLAN_STATUS.md),
+and [`current handoff`](docs/HANDOFF.md).
 
 ## Run it
 
 ```bash
-python3 -m http.server 8901        # then open http://127.0.0.1:8901/
+python3 -m http.server 8901 --directory www   # then open http://127.0.0.1:8901/
 ```
 
 No build step. `index.html` loads `boot.js`, which loads the source files in
@@ -57,7 +64,8 @@ regenerable, none are code.
 
 | Missing | Why | Restore with |
 |---|---|---|
-| `android/`, `ios/` (except config) | generated Capacitor scaffolding, ~150 MB of it | `npx cap add android && npx cap add ios` — the customised `AndroidManifest.xml`, `build.gradle`, `Info.plist` and `project.pbxproj` **are** included, so copy them back over |
+| `android/` (except config) | generated Capacitor scaffolding | `npx cap add android` — the customised `AndroidManifest.xml` and `build.gradle` are included, so copy them back over |
+| `ios/` (except retained config/history) | retired native Capacitor scaffold | No restore is required. Apple delivery is the Safari-installed PWA; retained `Info.plist`/Xcode material is historical reference, not a release lane. |
 | `assets/audio/music/` | vocal/lyric playlist songs removed; instrumental `mus_*` beds stay in `assets/audio/` | supply instrumental-only source and run `python3 tools/ingest-music.py <dir> --apply` |
 | `node_modules/`, `www/`, `dist/`, `*.apk` | build output | `npm install`, then the build commands above |
 

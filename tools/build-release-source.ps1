@@ -84,7 +84,7 @@ Need ($commits.Count -eq 1) "update.json files/full URLs must use one immutable 
 $PinnedCommit=$commits[0]
 
 # Check the independently consumed version authorities. Matching only
-# package.json is insufficient: Web OTA, Android and iOS can otherwise ship
+# package.json is insufficient: Web OTA and Android can otherwise ship
 # different builds under the same release label.
 $packageVersion=[string]((Read-Utf8 (Join-Path $Root 'package.json') | ConvertFrom-Json).version)
 Require-OneVersion 'package.json' @($packageVersion)
@@ -111,19 +111,10 @@ $androidCodes=[regex]::Matches($gradleText,'(?m)^\s*versionCode\s+(\d+)')
 Need ($androidCodes.Count -eq 1) "Android must declare exactly one versionCode; found $($androidCodes.Count)"
 Need ([int]$androidCodes[0].Groups[1].Value -eq $expectedCode) "Android versionCode $($androidCodes[0].Groups[1].Value) does not match expected $expectedCode"
 
-$pbxText=Read-Utf8 (Join-Path $Root 'ios/App/App.xcodeproj/project.pbxproj')
-$iosNames=[regex]::Matches($pbxText,'MARKETING_VERSION\s*=\s*([^;\s]+)\s*;')
-Require-OneVersion 'iOS MARKETING_VERSION' @($iosNames | ForEach-Object { $_.Groups[1].Value.Trim('"') })
-$iosCodes=[regex]::Matches($pbxText,'CURRENT_PROJECT_VERSION\s*=\s*([^;\s]+)\s*;')
-Need ($iosCodes.Count -gt 0) 'iOS CURRENT_PROJECT_VERSION was not found'
-$iosCodeValues=@($iosCodes | ForEach-Object { $_.Groups[1].Value.Trim('"') } | Sort-Object -Unique)
-Need ($iosCodeValues.Count -eq 1) "iOS contains conflicting build numbers: $($iosCodeValues -join ', ')"
-Need ([int]$iosCodeValues[0] -eq $expectedCode) "iOS build number $($iosCodeValues[0]) does not match expected $expectedCode"
-
 $keep=@(
   'AGENTS.md','README.md','package.json','package-lock.json','index.html','boot.js',
   'capacitor.config.json','capacitor.config.ts','PUBLISH_HF_RELEASE.bat','update.json',
-  '.github','assets','src','tools','android','ios','cloudflare','docs','design','audit'
+  '.github','assets','src','tools','android','cloudflare','docs','design','audit'
 )
 $excludedSegments=@(
   '.git','node_modules','build','.gradle','.cache','cache','caches','.npm-cache',
@@ -134,7 +125,6 @@ $secretExtensions=@('.keystore','.jks','.p12','.pfx','.pem','.key','.mobileprovi
 function Is-Excluded([string]$Relative,[IO.FileInfo]$File){
   $normalized=$Relative.Replace('/','\')
   if($normalized -match '(?i)^android\\app\\src\\main\\assets\\public(?:\\|$)'){ return $true }
-  if($normalized -match '(?i)^ios\\App\\App\\public(?:\\|$)'){ return $true }
   foreach($segment in $normalized.Split('\')){
     if($excludedSegments -contains $segment){ return $true }
   }

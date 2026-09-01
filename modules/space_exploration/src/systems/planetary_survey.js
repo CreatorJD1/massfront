@@ -20,6 +20,8 @@ export class PlanetarySurvey {
     this.surveyPct = 0;
     this.signalPct = 0;
     this.probesCount = 12;
+    this.sensorRange = 1;
+    this.sensorThreshold = 76;
 
     // Scan Reticle Coordinates
     this.scanLat = 0;
@@ -380,23 +382,33 @@ export class PlanetarySurvey {
       ];
     }
 
-    // Add 3D Glowing Anomaly Beacons onto the planet surface
+    /* Sensors only move the spectrogram. Painting every deposit at open()
+       turned Launch Probe into a confirm button. Reveal a site after a hit. */
     this.deposits.forEach(d => {
-      const bGeo = new THREE.OctahedronGeometry(1.1, 0);
-      const bMat = new THREE.MeshBasicMaterial({ color: 0x00f0ff, wireframe: true });
-      const bMesh = new THREE.Mesh(bGeo, bMat);
-
-      const r = radius * 1.018;
-      bMesh.position.set(
-        r * Math.cos(d.lat) * Math.sin(d.lon),
-        r * Math.sin(d.lat),
-        r * Math.cos(d.lat) * Math.cos(d.lon)
-      );
-      this.planetGroup.add(bMesh);
-      d.mesh = bMesh;
+      d.mesh = null;
+      if (d.extracted) this._revealDeposit(d, radius);
     });
 
     this.calculateSignalStrength();
+  }
+
+  setSensorProfile(profile) {
+    const next = profile || {};
+    this.sensorRange = Math.max(0.35, Number(next.range) || 1);
+    this.sensorThreshold = Math.max(40, Math.min(92, Number(next.threshold) || 76));
+    if (Number.isFinite(Number(next.probes))) this.probesCount = Math.max(0, Number(next.probes) | 0);
+    this.calculateSignalStrength();
+    return this.sensorSnapshot();
+  }
+
+  sensorSnapshot() {
+    return {
+      range: this.sensorRange,
+      threshold: this.sensorThreshold,
+      signal: this.signalPct,
+      lat: this.scanLat,
+      lon: this.scanLon
+    };
   }
 
   close() {
@@ -414,40 +426,77 @@ export class PlanetarySurvey {
     this.onExtract = null;
   }
 
-  calculateSignalStrength() {
-    let maxSignal = 0;
+  _depositPosition(d, radius = 22) {
+    const r = radius * 1.018;
+    return {
+      x: r * Math.cos(d.lat) * Math.sin(d.lon),
+      y: r * Math.sin(d.lat),
+      z: r * Math.cos(d.lat) * Math.cos(d.lon)
+    };
+  }
+
+  _revealDeposit(d, radius = 22) {
+    if (!this.planetGroup || d.mesh) return;
+    const bGeo = new THREE.OctahedronGeometry(1.1, 0);
+    const bMat = new THREE.MeshBasicMaterial({ color: 0x7dff9a, wireframe: true });
+    const bMesh = new THREE.Mesh(bGeo, bMat);
+    const p = this._depositPosition(d, radius);
+    bMesh.position.set(p.x, p.y, p.z);
+    this.planetGroup.add(bMesh);
+    d.mesh = bMesh;
+  }
+
+  nearestDeposit() {
+    if (!this.planetGroup) return null;
     const curLat = this.planetGroup.rotation.x;
     const curLon = ((this.planetGroup.rotation.y % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    let best = null;
+    for (const d of this.deposits) {
+      if (d.extracted) continue;
+      const dLat = Math.abs(d.lat - curLat);
+      let dLon = Math.abs(d.lon - curLon);
+      dLon = Math.min(dLon, Math.PI * 2 - dLon);
+      const dist = Math.hypot(dLat, dLon);
+      const sig = Math.max(0, 100 - dist * (120 / this.sensorRange));
+      if (!best || sig > best.signal) best = { deposit: d, signal: sig, dist };
+    }
+    return best;
+  }
 
-    this.deposits.forEach(d => {
-      if (!d.extracted) {
-        const dLat = Math.abs(d.lat - curLat);
-        const dLon = Math.abs(d.lon - curLon);
-        const dist = Math.hypot(dLat, dLon);
-        const sig = Math.max(0, 100 - dist * 120);
-        if (sig > maxSignal) maxSignal = sig;
-      }
-    });
+  calculateSignalStrength() {
+    if (!this.active || !this.planetGroup) {
+      this.signalPct = 0;
+      return 0;
+    }
+    const nearest = this.nearestDeposit();
+    this.signalPct = Math.round(nearest ? nearest.signal : 0);
+    return this.signalPct;
+  }
 
-    this.signalPct = Math.round(maxSignal);
+  evaluateAim() {
+    this.calculateSignalStrength();
+    const nearest = this.nearestDeposit();
+    const hit = !!(nearest && nearest.signal >= this.sensorThreshold);
+    return {
+      hit,
+      miss: !hit,
+      signal: this.signalPct,
+      threshold: this.sensorThreshold,
+      deposit: hit ? nearest.deposit : null
+    };
   }
 
   launchProbe() {
-    if (!this.active || !this.scene || this.probesCount <= 0) return null;
-    this.probesCount--;
+    if (!this.active || !this.scene) return null;
+    const aim = this.evaluateAim();
+    const hit = aim.hit ? aim.deposit : null;
+    if (hit) {
+      hit.extracted = true;
+      this._revealDeposit(hit);
+    }
 
-    let hit = null;
-    this.deposits.forEach(d => {
-      if (!d.extracted && this.signalPct > 50) {
-        hit = d;
-        d.extracted = true;
-        if (d.mesh) d.mesh.material.color.setHex(0x7dff9a);
-      }
-    });
-
-    // 3D Probe Projectile Launch Animation
     const pMeshGeo = new THREE.ConeGeometry(0.35, 1.2, 8);
-    const pMeshMat = new THREE.MeshBasicMaterial({ color: 0xffd066 });
+    const pMeshMat = new THREE.MeshBasicMaterial({ color: hit ? 0x7dff9a : 0xffd066 });
     const pMesh = new THREE.Mesh(pMeshGeo, pMeshMat);
     pMesh.position.set(0, 0, 55);
     pMesh.rotation.x = Math.PI / 2;
@@ -456,19 +505,25 @@ export class PlanetarySurvey {
     this.probesInFlight.push({
       mesh: pMesh,
       progress: 0,
-      hit: hit
+      hit
     });
 
-    const yieldAmount = hit ? hit.amount : Math.round(150 + Math.random() * 200);
-    const yieldType = hit ? hit.type : (this.planet ? (this.planet.depositType || 'platinum') : 'platinum');
+    const remaining = this.deposits.filter(d => !d.extracted).length;
+    const found = this.deposits.length - remaining;
+    this.surveyPct = this.deposits.length ? Math.round(found / this.deposits.length * 100) : 100;
+    this.calculateSignalStrength();
 
-    this.surveyPct = Math.min(100, this.surveyPct + (hit ? 34 : 12));
-
-    if (this.onExtract) {
-      this.onExtract(yieldType, yieldAmount);
-    }
-
-    return { type: yieldType || 'minerals', amount: yieldAmount };
+    return {
+      hit: !!hit,
+      miss: !hit,
+      signal: aim.signal,
+      threshold: aim.threshold,
+      deposit: hit,
+      type: hit ? hit.type : null,
+      amount: hit ? hit.amount : 0,
+      id: hit && hit.id,
+      remaining
+    };
   }
 
   _spawnImpactRing(position, isHit) {

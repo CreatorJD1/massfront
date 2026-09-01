@@ -26,7 +26,7 @@ ok(/Corvette[\s\S]{0,240}vscale:\.66/.test(sim)&&/Dreadnought[\s\S]{0,240}vscale
 ok(hot.includes('HOT_CORE')&&hot.includes("kind:'utility'")&&hot.includes('hotUtilityPanel'),'Commander combat strip must expose four core actions plus one utility drawer');
 ok(main.includes("abilities:'hotSlots'")&&hot.includes('hotTabState')&&hot.includes("hudDeck==='abilities'"),'Abilities must live in a selection-gated command tab');
 ok(main.includes("classList.toggle('hudTacticalDock',!!on)"),'Live command dock must own minimap placement state');
-ok(css.includes('body.hudTacticalDock #minimapWrap')&&css.includes('padding-left:96px'),'Minimap needs a reserved lower-left tactical bay');
+ok(css.includes('body.hudTacticalDock #minimapWrap')&&css.includes('--mmBay')&&css.includes('--mmDockPad'),'Minimap needs a reserved lower-left tactical bay');
 ok(flow.includes("mfNoticeSubmit(MF_N_INFO,'coach:'")&&!flow.includes('mfFlowBaseShowCoach(msg);'),'Economy coaching must use the compact event rail');
 ok(galaxy.includes("const MF_GALAXY_STAGES=['galaxy','planet','region','deploy']"),'Standard War Table must be a four-stage journey');
 for(const world of ['aelos','pyraeth','nordhall','vespera'])ok(galaxy.includes(world+':{x:'),'Galaxy is missing '+world);

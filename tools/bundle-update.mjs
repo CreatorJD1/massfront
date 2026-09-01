@@ -6,6 +6,8 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {buildRuntimeCompatibility, BALANCE_AUTHORITY_V1,
+        RUNTIME_COMPATIBILITY_GLOBAL} from './runtime-compatibility.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
 const version=process.argv[2];
@@ -45,6 +47,11 @@ const otaBinaryAssets=[
   'assets/factions/commanders/syndicate_renn.jpg',
   'assets/factions/commanders/syndicate_nyx.jpg',
   'assets/factions/commanders/syndicate_voss.jpg',
+  /* The cinematic command skin is referenced from ui.css. Include it in the
+     atomic shell so OTA-only players do not render an unskinned fallback when
+     their original installer predates the HUD overhaul. */
+  'assets/textures/ui/mf-hud-panel-material-v1.webp',
+  'assets/textures/ui/mf-keel-uga-portrait-v1.webp',
   'assets/textures/mat-albedo-building-v3.png',
   'assets/textures/mat-normal-building-v3.png',
   'assets/textures/mat-orm-building-v3.png',
@@ -111,6 +118,17 @@ const OTA_RUNTIME_PATHS=[
   'assets/textures/materials/mf2-carbon-cracks-v1.png',
   'assets/textures/materials/mf_mechanical_microdetail_v2.webp',
   'assets/textures/ui/tacticons-faction.png',
+  /* The cinematic command dock and faction build cards are runtime-decoded.
+     Older installers do not contain these sheets, and the faction filenames
+     come from icon-index.json rather than complete source string literals, so
+     all six belong in the OTA resolver table instead of relying on CSS/source
+     substitution. */
+  'assets/textures/ui/cmdicons.png',
+  'assets/textures/ui/icon-index.json',
+  'assets/textures/ui/icons-nova.png',
+  'assets/textures/ui/icons-legion.png',
+  'assets/textures/ui/icons-syndicate.png',
+  'assets/textures/ui/icons-horde.png',
   'assets/textures/materials/nova-rhino-v2-baseao.png',
   'assets/textures/materials/nova-rhino-v2-nre.png',
   'assets/textures/materials/nova-rhino-v2-masks.png',
@@ -137,7 +155,10 @@ for(const path of OTA_RUNTIME_PATHS){
 const inlineOtaBinaryRefs=text=>{
   let out=text;
   for(const asset of otaBinaryAssets){
-    const refs=['./'+asset.path,'../../'+asset.path,asset.path];
+    /* Longest first. `./assets/...` is a suffix of `../../assets/...`; doing
+       the short replacement first used to create the invalid `../.data:` URL
+       in every retained OTA stylesheet. */
+    const refs=['../../'+asset.path,'./'+asset.path,asset.path];
     for(const ref of refs) out=out.split(ref).join(asset.uri);
   }
   return out;
@@ -149,7 +170,11 @@ const shellBody=bodyMatch[1].replace(/\s*<script\s+src=["']\.\/boot\.js["']><\/s
 const stylePaths=Array.from(html.matchAll(/<link\s+rel=["']stylesheet["']\s+href=["']([^"']+)["'][^>]*>/gi),m=>m[1].split('?')[0].replace(/^\.\//,''));
 const shell={version,title:(html.match(/<title>([\s\S]*?)<\/title>/i)||[])[1]||'MASSFRONT',body:shellBody,
   styles:stylePaths.map(path=>({path,css:inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))}))};
-const preludeRuntime=`(function(){
+const shellCss=shell.styles.map(file=>file.css).join('\n');
+if(shellCss.includes('../.data:')) throw new Error('OTA shell contains corrupt ../.data: asset URL');
+const panelAsset=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-hud-panel-material-v1.webp');
+if(!panelAsset||!shellCss.includes(panelAsset.uri)) throw new Error('OTA shell did not inline cinematic HUD panel material');
+const preludeRuntimeBase=`(function(){
   /* The shell object lives in the shell artifact only. Keeping a copy here
      too duplicated ~4.5 MB of markup and inlined CSS into an artifact that
      never reads it, and would have made every stylesheet tweak re-send both. */
@@ -251,34 +276,74 @@ const preludeShell=`(function(){
    state deleted. The counter is the last statement on purpose - a file that
    threw halfway must not count itself. */
 const sources=order.map(path=>({path, text:inlineOtaBinaryRefs(readFileSync(join(root,path),'utf8'))}));
+const sourceText=sources.map(row=>row.text).join('\n');
+const keelAsset=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-keel-uga-portrait-v1.webp');
+if(!keelAsset||!sourceText.includes(keelAsset.uri)) throw new Error('OTA source did not inline KEEL portrait');
+const artifactCount=2+sources.length;
+const stampWithCount=(a,i)=>(i===0?'window.__MF_OTA_EXPECT='+artifactCount+';\n':'')
+  +a.text+'\n;window.__MF_OTA_RAN=(window.__MF_OTA_RAN|0)+1;\n';
+
+/* 00-runtime carries the descriptor and is therefore the one artifact that
+   cannot hash itself. Every other leaf is the exact final stamped byte stream
+   that boot executes, including the shell and per-file completion counter. */
+const compatibleArtifacts=[{path:'ota/01-shell.js',text:preludeShell},...sources]
+  .map((a,i)=>({path:a.path,bytes:Buffer.from(stampWithCount(a,i+1),'utf8')}));
+const runtimeCompatibility=buildRuntimeCompatibility({
+  buildVersion:version,
+  channel:'ota',
+  manifestArtifacts:compatibleArtifacts,
+  balancePaths:BALANCE_AUTHORITY_V1,
+  excluded:['ota/00-runtime.js (descriptor carrier; self-reference)','artifacts.json (transport index)']
+});
+const preludeRuntime='window.'+RUNTIME_COMPATIBILITY_GLOBAL+'='+JSON.stringify(runtimeCompatibility)+';\n'
+  +preludeRuntimeBase;
 const artifacts=[
   {path:'ota/00-runtime.js', text:preludeRuntime},
   {path:'ota/01-shell.js',   text:preludeShell},
   ...sources,
 ];
-const stamp=(a,i)=>(i===0?'window.__MF_OTA_EXPECT='+artifacts.length+';\n':'')
-  +a.text+'\n;window.__MF_OTA_RAN=(window.__MF_OTA_RAN|0)+1;\n';
+const stamp=(a,i)=>stampWithCount(a,i);
 
 /* Syntax gate over the WHOLE payload concatenated in execution order, exactly
    as the browser will run it. Built in memory and thrown away - the blob is no
    longer published. A parse error in any artifact fails the release here rather
    than on a device. */
 const body=artifacts.map(stamp).join('\n;\n');
+if(body.includes('../.data:')) throw new Error('OTA payload contains corrupt ../.data: asset URL');
 new Function(body);
 
-const stage=join(root,'releases','staging-v'+version);
+const stage=process.env.MASSFRONT_UPDATE_STAGE_DIR
+  ?join(root,process.env.MASSFRONT_UPDATE_STAGE_DIR)
+  :join(root,'releases','staging-v'+version);
 rmSync(stage,{recursive:true,force:true});
 const index=[];
+/* A release is already split into independently addressable source artifacts.
+   Add a second, bounded layer for unreliable mobile networks: clients can
+   resume a large artifact by HTTP range and prove every retained range before
+   it is trusted. Four MiB keeps one verification allocation well below the
+   largest generated source while avoiding hundreds of requests for a normal
+   full update. The whole-file SHA remains authoritative after reassembly. */
+const OTA_CHUNK_BYTES=4*1024*1024;
 for(let i=0;i<artifacts.length;i++){
   const text=stamp(artifacts[i],i);
+  const bytes=Buffer.from(text,'utf8');
   const dest=join(stage,artifacts[i].path);
   mkdirSync(dirname(dest),{recursive:true});
-  writeFileSync(dest,text);
-  index.push({path:artifacts[i].path, size:Buffer.byteLength(text),
-              sha256:createHash('sha256').update(text).digest('hex')});
+  writeFileSync(dest,bytes);
+  const chunks=[];
+  for(let offset=0;offset<bytes.length;offset+=OTA_CHUNK_BYTES){
+    const part=bytes.subarray(offset,Math.min(bytes.length,offset+OTA_CHUNK_BYTES));
+    chunks.push({offset,size:part.length,
+      sha256:createHash('sha256').update(part).digest('hex')});
+  }
+  index.push({path:artifacts[i].path,size:bytes.length,
+              sha256:createHash('sha256').update(bytes).digest('hex'),chunks});
 }
 writeFileSync(join(stage,'artifacts.json'),JSON.stringify(index,null,1));
+writeFileSync(join(stage,'runtime-compatibility.json'),JSON.stringify(runtimeCompatibility,null,2)+'\n');
 const total=index.reduce((n,f)=>n+f.size,0);
 console.log(artifacts.length+' artifacts -> '+stage+' ('+(total/1048576).toFixed(2)+' MB total)');
 console.log('  largest: '+index.slice().sort((a,b)=>b.size-a.size).slice(0,3)
   .map(f=>f.path+' '+(f.size/1048576).toFixed(2)+'MB').join(', '));
+console.log('  runtime compatibility '+runtimeCompatibility.manifestHash.slice(0,12)
+  +' / balance '+runtimeCompatibility.balanceHash.slice(0,12));

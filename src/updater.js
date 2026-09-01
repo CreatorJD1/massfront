@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.52';
+const APP_VERSION = '1.33.68';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "1.33.52 includes Galactic Exploration in this install (~542 MiB runtime pack with Stage 10 GLBs). Enable Experimental: Galactic Campaign, then Open Experimental Galactic. Also includes the 1.33.51 hotfix: High/Cinematic clouds as separate puffs, commander minimap voice, minimap dock and intel layout, softer rank marks, and map-edge camera clamp.";
+const APP_NOTES = "Hotfix — Features: Galactic Exploration installs from the launcher as an optional expansion, downloaded on demand with resume, per-file verification and a free-storage check. Bug fixes: the in-game interface no longer flickers, because the top commander rail and the bottom command dock stopped rewriting themselves every frame. The launcher keeps an offline route available while identity resolves and settles instead of waiting forever. A deliberate update retry always reaches the update service even when the device wrongly reports itself offline. Updates now install on older app shells that previously refused them. The command deck tabs no longer clip their labels. Upcoming: streamlined War Table and an imagery-first mobile interface overhaul.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
@@ -254,25 +254,100 @@ function updNormalizeManifest(raw){
   m.channel=updChannelName(m.channel||'stable');
   m.severity=['critical','recommended','optional'].includes(m.severity)
     ? m.severity : 'recommended';
-  m.files=Array.isArray(m.files)?m.files:(Array.isArray(m.core)?m.core:[]);
+  const category=String(m.category||'').toLowerCase();
+  m.category=['system','hotfix','content','overhaul'].includes(category)?category:'';
+  /* Release presentation is deliberately normalized beside (not instead of)
+     the transport contract. Old manifests only carried one notes string;
+     launcher-era publishers may carry a structured release object. Keeping a
+     small, text-only descriptor here lets every consumer use one contract
+     without ever exposing the manifest's executable file list. */
+  m.release=updReleaseDescriptor(raw,{version:m.version,channel:m.channel,
+                                      category:m.category,kind:m.kind});
+  m.notes=m.release.legacyNotes||m.release.summary||'';
+  /* Some interrupted/legacy publishers emitted an explicit empty files[]
+     beside the complete full[] recovery list. Empty is not authoritative: use
+     the first non-empty executable list so off-base clients can still take the
+     verified full payload. */
+  m.files=Array.isArray(m.files)&&m.files.length?m.files:
+    (Array.isArray(m.core)&&m.core.length?m.core:
+      (Array.isArray(m.full)?m.full:[]));
   if(!m.packs||typeof m.packs!=='object') m.packs={};
   return m;
 }
 function updValidManifest(m){
   return !!(m&&/^\d+\.\d+\.\d+$/.test(String(m.version||''))&&
-    Array.isArray(m.files)&&m.files.length>0&&m.files.every(f=>f&&typeof f.path==='string'&&
-      /* sha256 and size are REQUIRED, not optional. updVerifyHash returns early
-         on a falsy hash and the size check is guarded by `if(f.size && ...)`, so
-         a manifest that simply omitted both downloaded and APPLIED executable
-         JavaScript with no verification at all - the integrity checks were
-         opt-in by the very document an attacker would control. The publisher
-         always emits both (publish-hf-release.ps1) and the live 1.33.47
-         manifest carries them, so requiring them rejects nothing genuine. */
-      typeof f.sha256==='string'&&/^[0-9a-f]{64}$/i.test(f.sha256)&&
-      Number.isFinite(f.size)&&f.size>0)&&
+    /* sha256 and size are REQUIRED, not optional. Chunk tables are optional
+       only for legacy manifests; when present they must cover the file exactly
+       with no gaps or overlaps. */
+    Array.isArray(m.files)&&m.files.length>0&&m.files.every(updValidFile)&&
+    new Set(m.files.map(f=>f.path)).size===m.files.length&&
+    ['manifestRoot','payloadRoot','fullRoot'].every(k=>
+      !m[k]||(typeof m[k]==='string'&&/^[0-9a-f]{64}$/i.test(m[k])))&&
+    (m.schema<3||(
+      ['manifestRoot','payloadRoot','fullRoot','runtimeRoot'].every(k=>
+        typeof m[k]==='string'&&/^[0-9a-f]{64}$/i.test(m[k]))&&
+      Array.isArray(m.full)&&m.full.length>0&&m.full.every(updValidFullFile)))&&
     /* A patch that does not say what it patches is unapplicable by
        construction - reject it here rather than merging onto the wrong build. */
     (String(m.kind||'').toLowerCase()!=='patch'||/^\d+\.\d+\.\d+$/.test(String(m.patchFrom||''))));
+}
+function updManifestFingerprint(entries){
+  if(!Array.isArray(entries)||!entries.length) return '';
+  const seen=new Set(),rows=[];
+  for(const file of entries){
+    if(!updValidFile(file)||seen.has(file.path)) return '';
+    seen.add(file.path);
+    let chunks='-';
+    if(file.chunks!=null){
+      if(!updValidChunks(file)) return '';
+      chunks=file.chunks.map(c=>c.offset+'|'+c.size+'|'+String(c.sha256).toLowerCase()).join(',');
+    }
+    /* Do not sort. Classic scripts share one global scope, so changing order
+       changes executable meaning even when every individual byte is equal. */
+    rows.push(file.path+'|'+file.size+'|'+String(file.sha256).toLowerCase()+'|'+chunks);
+  }
+  return rows.join('\n');
+}
+function updRuntimeFingerprint(entries){
+  if(!Array.isArray(entries)||!entries.length) return '';
+  const seen=new Set(),rows=[];
+  for(const file of entries){
+    if(!updValidFile(file)||seen.has(file.path)) return '';
+    seen.add(file.path);
+    rows.push(file.path+'|'+file.size+'|'+String(file.sha256).toLowerCase());
+  }
+  return rows.join('\n');
+}
+async function updValidateManifestRoots(m){
+  const hasRoots=!!(m&&(m.manifestRoot||m.payloadRoot||m.fullRoot));
+  if(!hasRoots&&Number(m&&m.schema||1)<3) return true;
+  if(!updValidManifest(m)) return false;
+  const payload=await updHashText(updManifestFingerprint(m.files));
+  const full=await updHashText(updManifestFingerprint(m.full));
+  const runtime=await updHashText(updRuntimeFingerprint(m.full));
+  const contract=[
+    'schema='+m.schema,'channel='+updChannelName(m.channel),'version='+m.version,
+    'kind='+(m.kind||''),'category='+(m.category||''),'patchFrom='+(m.patchFrom||''),
+    'payload='+payload,'full='+full,'runtime='+runtime
+  ].join('\n');
+  const root=await updHashText(contract);
+  return payload===String(m.payloadRoot).toLowerCase()&&
+    full===String(m.fullRoot).toLowerCase()&&
+    runtime===String(m.runtimeRoot).toLowerCase()&&root===String(m.manifestRoot).toLowerCase();
+}
+function updManifestSameRelease(a,b){
+  if(!a||!b||String(a.version)!==String(b.version)||
+     updChannelName(a.channel)!==updChannelName(b.channel)) return false;
+  const ah=!!a.manifestRoot,bh=!!b.manifestRoot;
+  if(ah||bh) return !!(ah&&bh&&
+    String(a.manifestRoot).toLowerCase()===String(b.manifestRoot).toLowerCase());
+  const af=Array.isArray(a.full)&&a.full.length?a.full:a.files;
+  const bf=Array.isArray(b.full)&&b.full.length?b.full:b.files;
+  return updManifestFingerprint(a.files)===updManifestFingerprint(b.files)&&
+    updManifestFingerprint(af)===updManifestFingerprint(bf)&&
+    String(a.kind||'')===String(b.kind||'')&&
+    String(a.category||'')===String(b.category||'')&&
+    String(a.patchFrom||'')===String(b.patchFrom||'');
 }
 function updManifestForChannel(m){
   /* A schema-v1 manifest has no channel and is Stable by definition. This is
@@ -293,7 +368,7 @@ function updExposePacks(m){
 }
 async function updLoadManifest(){
   const errors=[];
-  let best=null, source='';
+  let best=null, source='',equivocation=null;
   const seen=[];
   const consider=async(url,label)=>{
     if(!url||seen.includes(url)) return;
@@ -301,7 +376,12 @@ async function updLoadManifest(){
     try{
       const m=updNormalizeManifest(await updRequestJson(url));
       if(!updValidManifest(m)) throw new Error('bad manifest');
+      if(!await updValidateManifestRoots(m)) throw new Error('bad manifest identity');
       if(!updManifestForChannel(m)) throw new Error('wrong update channel');
+      if(best&&String(m.version)===String(best.version)&&!updManifestSameRelease(best,m)){
+        equivocation=new Error('Update mirrors disagree on the bytes for v'+m.version);
+        return;
+      }
       if(!best||verNewer(m.version,best.version)){
         best=m;
         if(label) source=label;
@@ -333,6 +413,7 @@ async function updLoadManifest(){
   await consider(UPD_OFFICIAL_MANIFEST,'');
   await consider('https://huggingface.co/datasets/'+UPD_OFFICIAL_REPO+
                  '/raw/main/update.json','');
+  if(equivocation) throw equivocation;
   if(best) return {manifest:best,source};
   throw errors[errors.length-1]||new Error('update service unavailable');
 }
@@ -351,9 +432,20 @@ function updIdb(){
 }
 function updBundleMeta(value){
   if(!value) return null;
-  return {version:value.version,channel:value.channel||'stable',at:value.at,
+  const meta={version:value.version,channel:value.channel||'stable',at:value.at,
     notes:value.notes||'',severity:value.severity||'recommended',
-    kind:value.kind||'full',patchedFrom:value.patchedFrom||''};
+    kind:value.kind||'full',category:value.category||'',
+    patchedFrom:value.patchedFrom||'',manifestRoot:value.manifestRoot||'',
+    payloadRoot:value.payloadRoot||'',targetRoot:value.targetRoot||'',
+    sourcePayloadRoot:value.sourcePayloadRoot||'',fullRoot:value.fullRoot||'',
+    runtimeRoot:value.runtimeRoot||'',manifestKind:value.manifestKind||'',
+    manifestCategory:value.manifestCategory||'',
+    manifestPatchFrom:value.manifestPatchFrom||'',storage:value.storage||''};
+  /* Preserve the exact legacy metadata shape for old bundles. New bundles opt
+     into the descriptor only when they actually carry one. */
+  if(value.release) meta.release=updReleaseDescriptor(value.release,{version:value.version,
+    channel:value.channel,notes:value.notes});
+  return meta;
 }
 function updMetaKey(key){ return key+'Meta'; }
 function updPreviousSlot(key){
@@ -492,7 +584,7 @@ async function updPreparePrevious(expected,lease){
   const db=await updIdb();
   return new Promise((res,rej)=>{
     const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
-    let conflict=null,result=null,ready=0;
+    let conflict=null,result=null,runningIdentity=null,ready=0;
     const operation=store.get(UPD_OPERATION_KEY);
     const meta=store.get('activeMeta');
     const previousRef=store.get('previousRef');
@@ -504,23 +596,22 @@ async function updPreparePrevious(expected,lease){
         try{ tx.abort(); }catch(e){ rej(conflict); }
         return;
       }
-      if(meta.result&&!updSamePending(meta.result,expected)){
-        conflict=new Error('The installed update changed before rollback preservation');
-        conflict.code='MF_UPDATE_ACTIVE_CHANGED';
-        try{ tx.abort(); }catch(e){ rej(conflict); }
-        return;
-      }
       /* Read the one known-good active payload BEFORE pending is materialized.
          This keeps an OTA-to-OTA Apply at one large JS value at a time instead
-         of cloning active plus pending twice in the promotion transaction. */
+         of cloning active plus pending twice in the promotion transaction.
+         activeMeta is only an index and old/interrupted writers can leave it
+         stale. The payload executing this document is authoritative only when
+         its exact identity matches `expected`; repair that index in the same
+         lease-owned transaction while preserving the validated bytes. */
       const active=store.get('active');
       active.onsuccess=()=>{
-        if(!updSamePending(active.result,expected)){
+        if(!updStoredMatchesLegacyBoot(active.result,expected)){
           conflict=new Error('The installed update changed before rollback preservation');
           conflict.code='MF_UPDATE_ACTIVE_CHANGED';
           try{ tx.abort(); }catch(e){ rej(conflict); }
           return;
         }
+        runningIdentity=updPendingIdentity(active.result);
         /* The currently referenced rollback remains untouched until promotion
            succeeds. A failed/quota-aborted Apply can therefore discard only
            its inactive preparation slot, never the last validated recovery. */
@@ -531,7 +622,7 @@ async function updPreparePrevious(expected,lease){
         store.put(Object.assign({},operation.result,{at:Date.now()}),UPD_OPERATION_KEY);
         store.put(active.result,key);
         store.put(activeMeta,updMetaKey(key));
-        if(!meta.result) store.put(activeMeta,'activeMeta');
+        if(!updSamePending(meta.result,activeMeta)) store.put(activeMeta,'activeMeta');
       };
       active.onerror=()=>rej(active.error||new Error('could not inspect installed rollback copy'));
     };
@@ -540,8 +631,17 @@ async function updPreparePrevious(expected,lease){
     meta.onerror=()=>rej(meta.error||new Error('could not inspect installed update metadata'));
     previousRef.onerror=()=>rej(previousRef.error||new Error('could not inspect rollback pointer'));
     tx.oncomplete=()=>res(result);
-    tx.onerror=()=>rej(conflict||tx.error||new Error('could not save rollback copy'));
-    tx.onabort=()=>rej(conflict||tx.error||new Error('rollback-copy write aborted'));
+    const fail=message=>{
+      const original=conflict||tx.error||new Error(message);
+      if(!conflict&&runningIdentity){
+        const wrapped=new Error(original&&original.message||message);
+        wrapped.name=original&&original.name||'Error';
+        wrapped.mfRunningIdentity=runningIdentity;
+        rej(wrapped);
+      }else rej(original);
+    };
+    tx.onerror=()=>fail('could not save rollback copy');
+    tx.onabort=()=>fail('rollback-copy write aborted');
   });
 }
 async function updClearPreviousOwned(prepared,lease){
@@ -619,10 +719,23 @@ async function updCommitPending(value){
       const sameVersion=prior&&String(prior.version)===String(value.version);
       const sameChannel=prior&&updChannelName(prior.channel||'stable')===
         updChannelName(value.channel||'stable');
+      const sameRoot=sameVersion&&sameChannel&&updIdentityRootsMatch(prior,value);
+      if(sameRoot){
+        /* Resume/Retry of an already staged immutable identity is success, not
+           the old "already staged" dead end. Preserve its attempt timestamp so
+           Apply still owns exactly the record boot will place on probation.
+           Recommit the freshly verified payload too: metadata can outlive a
+           missing/corrupt pending value after quota pressure or process death. */
+        value.at=prior.at;
+        store.put(value,'pending');
+        store.put(updBundleMeta(value),'pendingMeta');
+        store.delete('applyFailure');
+        return;
+      }
       if(sameChannel&&(newer||sameVersion)){
         abortConflict(newer?'A newer update is already staged'
-                           :'This update version is already staged',
-                      'MF_UPDATE_PENDING_SUPERSEDED');
+                           :'This version is staged with different verified bytes',
+                      sameVersion?'MF_UPDATE_VERSION_CONFLICT':'MF_UPDATE_PENDING_SUPERSEDED');
         return;
       }
       store.put(value,'pending');
@@ -655,20 +768,61 @@ async function updCommitPending(value){
 function updSamePending(a,b){
   return !!(a&&b&&String(a.version)===String(b.version)&&
     updChannelName(a.channel||'stable')===updChannelName(b.channel||'stable')&&
+    updIdentityRootsMatch(a,b)&&
     String(a.at==null?'':a.at)===String(b.at==null?'':b.at));
 }
+function updStoredMatchesLegacyBoot(stored,running){
+  if(updSamePending(stored,running)) return true;
+  if(!stored||!running) return false;
+  /* APK boot loaders through v1.33.56 predate schema-3 roots. They can execute
+     a fully rooted OTA record, but expose only version/channel/attempt to its
+     updater. Accept that one immutable-shell compatibility shape only while
+     reading the authoritative active payload; a descriptor-capable boot, a
+     partially populated running identity, or an unrooted stored record still
+     fails closed. The exact attempt token prevents a same-version rebuild from
+     borrowing consent from different staged bytes. */
+  if(typeof window!=='undefined'&&window.__MF_ARTIFACT_BOOT_V1) return false;
+  if(running.manifestRoot||running.targetRoot||running.runtimeRoot) return false;
+  const rooted=['manifestRoot','targetRoot','runtimeRoot'].every(key=>
+    /^[0-9a-f]{64}$/i.test(String(stored[key]||'')));
+  return !!(rooted&&String(stored.version)===String(running.version)&&
+    updChannelName(stored.channel||'stable')===updChannelName(running.channel||'stable')&&
+    String(stored.at==null?'':stored.at)===String(running.at==null?'':running.at));
+}
+function updIdentityRootsMatch(a,b){
+  if(!a||!b) return false;
+  const ah=!!(a.manifestRoot||a.targetRoot),bh=!!(b.manifestRoot||b.targetRoot);
+  /* Existing schema-1/2 installs have neither root and retain their exact
+     version/channel/attempt behavior. Once either side is schema 3, both roots
+     are mandatory so a timestamp can never stand in for byte identity. */
+  if(!ah&&!bh) return true;
+  const runtimeOK=(!a.runtimeRoot&&!b.runtimeRoot)||!!(a.runtimeRoot&&b.runtimeRoot&&
+    String(a.runtimeRoot).toLowerCase()===String(b.runtimeRoot).toLowerCase());
+  return !!(a.manifestRoot&&b.manifestRoot&&a.targetRoot&&b.targetRoot&&runtimeOK&&
+    String(a.manifestRoot).toLowerCase()===String(b.manifestRoot).toLowerCase()&&
+    String(a.targetRoot).toLowerCase()===String(b.targetRoot).toLowerCase());
+}
 function updPendingIdentity(value){
-  return value?{version:value.version,channel:value.channel||'stable',at:value.at}:null;
+  if(!value) return null;
+  const identity={version:value.version,channel:value.channel||'stable',at:value.at,
+    manifestRoot:value.manifestRoot||'',targetRoot:value.targetRoot||'',
+    runtimeRoot:value.runtimeRoot||''};
+  return identity;
 }
 function updRunningIdentity(){
   if(typeof window==='undefined'||!window.__MASSFRONT_PATCHED) return null;
-  return {version:String(window.__MASSFRONT_PATCHED),
+  const identity={version:String(window.__MASSFRONT_PATCHED),
     channel:window.__MASSFRONT_PATCH_CHANNEL||'stable',
-    at:window.__MASSFRONT_PATCH_AT};
+    at:window.__MASSFRONT_PATCH_AT,
+    manifestRoot:window.__MASSFRONT_PATCH_MANIFEST_ROOT||'',
+    targetRoot:window.__MASSFRONT_PATCH_TARGET_ROOT||'',
+    runtimeRoot:window.__MASSFRONT_PATCH_RUNTIME_ROOT||''};
+  return identity;
 }
 function updProbationOwns(probation,bundle){
   return !!(probation&&bundle&&String(probation.version)===String(bundle.version)&&
     updChannelName(probation.channel||'stable')===updChannelName(bundle.channel||'stable')&&
+    updIdentityRootsMatch(probation,bundle)&&
     (probation.pendingAt==null||
      String(probation.pendingAt)===String(bundle.at==null?'':bundle.at)));
 }
@@ -735,6 +889,8 @@ async function updCommitApply(value,lease,expected,running,prepared){
         return;
       }
       store.put({version:value.version,channel:value.channel||'stable',
+                 manifestRoot:value.manifestRoot||'',targetRoot:value.targetRoot||'',
+                 runtimeRoot:value.runtimeRoot||'',
                  pendingAt:value.at,at:Date.now(),tries:0},'probation');
       store.put(value,'active');
       store.put(updBundleMeta(value),'activeMeta');
@@ -806,9 +962,13 @@ async function updCommitRollback(lease,expected){
         abort('Update rollback ownership changed','MF_UPDATE_OPERATION_CHANGED');
         return;
       }
-      const current=records.activeMeta||(activeLegacy&&activeLegacy.result)||null;
+      /* activeMeta is a lightweight index, not authoritative bytes. When that
+         index does not name the build executing this Rollback, accept only a
+         full active payload whose exact identity does. This repairs the same
+         stale-metadata deadlock as Apply without weakening the lease check. */
+      const current=activeLegacy?updBundleMeta(activeLegacy.result):records.activeMeta;
       const pending=records.pendingMeta||(pendingLegacy&&pendingLegacy.result)||null;
-      if(expected&&!updSamePending(current,expected)){
+      if(expected&&!updStoredMatchesLegacyBoot(current,expected)){
         abort('The installed update changed before rollback','MF_UPDATE_ACTIVE_CHANGED');
         return;
       }
@@ -817,7 +977,7 @@ async function updCommitRollback(lease,expected){
         return;
       }
       const good=prior&&prior.files&&verNewer(prior.version,APP_VERSION)&&
-        Array.isArray(prior.order)&&prior.order.every(p=>typeof prior.files[p]==='string')&&
+        Array.isArray(prior.order)&&prior.order.every(p=>updValidStoredArtifact(prior.files[p]))&&
         (!selected.meta||updSamePending(selected.meta,prior))&&
         (!selected.ref||updSamePending(selected.ref,prior));
       if(good){
@@ -825,6 +985,8 @@ async function updCommitRollback(lease,expected){
         store.put(prior,'active'); store.put(updBundleMeta(prior),'activeMeta');
         clearPrevious();
         store.put({version:prior.version,channel:prior.channel||'stable',
+                   manifestRoot:prior.manifestRoot||'',targetRoot:prior.targetRoot||'',
+                   runtimeRoot:prior.runtimeRoot||'',
                    pendingAt:prior.at,at:Date.now(),tries:0},'probation');
       }else{
         result={version:'',recovered:false};
@@ -858,7 +1020,7 @@ async function updCommitRollback(lease,expected){
         abort('Update rollback ownership changed','MF_UPDATE_OPERATION_CHANGED');
         return;
       }
-      if(!records.activeMeta){
+      if(!records.activeMeta||(expected&&!updSamePending(records.activeMeta,expected))){
         legacyLeft++; activeLegacy=store.get('active');
         activeLegacy.onsuccess=legacyDone;
         activeLegacy.onerror=()=>rej(activeLegacy.error||new Error('could not inspect installed update'));
@@ -901,24 +1063,130 @@ async function updCommitRollback(lease,expected){
 const UPD_LOG_KEY='mf_update_log';
 const UPD_NOTES_KEY='mf_update_notes';
 const UPD_NOTES_MAX=2000;
+const UPD_PUBLISHED_KEY='mf_update_published_history_v1';
+const UPD_DEVICE_HISTORY_MAX=40, UPD_PUBLISHED_HISTORY_MAX=24, UPD_EVENT_HISTORY_MAX=12;
+
+/* ---- LAUNCHER-SAFE RELEASE DESCRIPTORS -----------------------------------
+   Remote manifests are executable supply-chain input, while launcher cards
+   are presentation data. Never hand the former to UI code. These helpers
+   reduce both legacy and structured notes to bounded plain strings, safe
+   internal/HTTPS hero references, and short arrays. */
+function updSafeText(value,max){
+  if(value==null) return '';
+  return String(value).replace(/<[^>]*>/g,' ').replace(/[<>]/g,' ')
+    .replace(/[\u0000-\u001f\u007f]+/g,' ')
+    .replace(/\s+/g,' ').trim().slice(0,max||240);
+}
+function updSafeList(value){
+  const source=Array.isArray(value)?value:(typeof value==='string'?value.split(/\r?\n|\s*;\s*/):[]);
+  const out=[];
+  for(const item of source){
+    const raw=item&&typeof item==='object'?(item.title||item.summary||item.text):item;
+    const text=updSafeText(raw,180);
+    if(text&&!out.includes(text)) out.push(text);
+    if(out.length>=8) break;
+  }
+  return out;
+}
+function updSafeHero(value){
+  let hero=updSafeText(value,512);
+  if(!hero) return '';
+  if(/^https:\/\//i.test(hero)){
+    try{
+      const u=new URL(hero);
+      if(u.protocol!=='https:'||u.username||u.password) return '';
+      u.search=''; u.hash=''; return u.href.slice(0,512);
+    }catch(e){ return ''; }
+  }
+  hero=hero.split(/[?#]/)[0].replace(/\\/g,'/');
+  if(hero.startsWith('./')) hero=hero.slice(2);
+  return /^(?:\/)?assets\/[a-z0-9_./-]+$/i.test(hero)&&!hero.includes('../')?hero:'';
+}
+function updCategoryFromLegacy(notes){
+  const s=String(notes||'');
+  if(/^\s*hotfix\b/i.test(s)) return 'hotfix';
+  if(/^\s*content(?:\s+update)?\b/i.test(s)) return 'content';
+  if(/^\s*overhaul\b/i.test(s)) return 'overhaul';
+  if(/^\s*system(?:\s+update)?\b/i.test(s)) return 'system';
+  return '';
+}
+function updReleaseDescriptor(input,fallback){
+  const root=input&&typeof input==='object'?input:{};
+  const noteObject=root.notes&&typeof root.notes==='object'&&!Array.isArray(root.notes)?root.notes:{};
+  const releaseObject=root.release&&typeof root.release==='object'&&!Array.isArray(root.release)?root.release:{};
+  const src=Object.assign({},fallback||{},root,noteObject,releaseObject);
+  const legacy=updSafeText(typeof root.notes==='string'?root.notes:
+    (typeof src.legacyNotes==='string'?src.legacyNotes:''),UPD_NOTES_MAX);
+  const version=/^\d+\.\d+\.\d+$/.test(String(src.version||''))?String(src.version):'';
+  const channel=updChannelName(src.channel||'stable');
+  const transport=String(src.kind||'').toLowerCase();
+  let category=String(src.category||'').toLowerCase();
+  if(!['system','hotfix','content','overhaul'].includes(category))
+    category=['system','hotfix','content','overhaul'].includes(transport)
+      ?transport:updCategoryFromLegacy(legacy);
+  const label=category?category.charAt(0).toUpperCase()+category.slice(1):'Game Update';
+  let summary=updSafeText(src.summary,360)||legacy;
+  summary=summary.replace(/^\s*(?:system update|content update|hotfix|overhaul)\s*:\s*/i,'');
+  const published=Date.parse(src.publishedAt||src.published||'');
+  return {version,publishedAt:Number.isFinite(published)?new Date(published).toISOString():'',
+    channel,kind:['patch','full'].includes(transport)?transport:'',category,
+    title:updSafeText(src.title,100)||(label+(version?' · v'+version:'')),summary,
+    hero:updSafeHero(src.hero||src.heroUrl||src.image),
+    features:updSafeList(src.features),fixes:updSafeList(src.fixes),
+    upcoming:updSafeList(src.upcoming),legacyNotes:legacy||summary};
+}
+function updPublishedRead(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(UPD_PUBLISHED_KEY)||'[]');
+    if(!Array.isArray(raw)) return [];
+    return raw.slice(0,UPD_PUBLISHED_HISTORY_MAX).map(e=>updReleaseDescriptor(e)).filter(e=>e.version);
+  }catch(e){ return []; }
+}
+function updPublishedWrite(entries){
+  try{
+    localStorage.setItem(UPD_PUBLISHED_KEY,JSON.stringify(entries.slice(0,UPD_PUBLISHED_HISTORY_MAX)));
+    return true;
+  }catch(e){ return false; }
+}
+/* Public ingestion is useful to a future immutable release-catalog fetch, but
+   remains presentation-only: callers cannot smuggle file URLs, hashes, auth
+   data, or manifest blobs into launcher state. */
+function mfUpdaterIngestRelease(value){
+  const release=updReleaseDescriptor(value);
+  if(!release.version) return null;
+  let history=updPublishedRead();
+  history=history.filter(e=>!(release.version&&e.version===release.version&&e.channel===release.channel));
+  history.unshift(release);
+  updPublishedWrite(history);
+  return Object.assign({},release,{features:release.features.slice(),fixes:release.fixes.slice(),
+                                    upcoming:release.upcoming.slice()});
+}
+function updIngestManifestHistory(m){
+  if(!m) return;
+  const rows=Array.isArray(m.history)?m.history:
+    (Array.isArray(m.releaseHistory)?m.releaseHistory:(Array.isArray(m.releases)?m.releases:[]));
+  for(let i=Math.min(rows.length,UPD_PUBLISHED_HISTORY_MAX)-1;i>=0;i--) mfUpdaterIngestRelease(rows[i]);
+  mfUpdaterIngestRelease(m.release||m);
+}
 
 function updLogRead(){
   try{
     const a=JSON.parse(localStorage.getItem(UPD_LOG_KEY)||'[]');
-    return Array.isArray(a)? a.filter(e=>e&&e.version) : [];
+    return Array.isArray(a)? a.filter(e=>e&&e.version).slice(0,UPD_DEVICE_HISTORY_MAX) : [];
   }catch(e){ return []; }
 }
 function updLogWrite(log){
-  try{ localStorage.setItem(UPD_LOG_KEY,JSON.stringify(log.slice(0,40))); return true; }
+  try{ localStorage.setItem(UPD_LOG_KEY,JSON.stringify(log.slice(0,UPD_DEVICE_HISTORY_MAX))); return true; }
   catch(e){ return false; }
 }
-function updStageNotes(version,notes){
+function updStageNotes(version,notes,release){
   if(!version) return;
   try{
     let a=JSON.parse(localStorage.getItem(UPD_NOTES_KEY)||'[]');
     if(!Array.isArray(a)) a=[];
     a=a.filter(e=>e&&e.version!==String(version));
-    a.unshift({version:String(version),notes:String(notes||'').slice(0,UPD_NOTES_MAX)});
+    a.unshift({version:String(version),notes:updSafeText(notes,UPD_NOTES_MAX),
+      release:updReleaseDescriptor(release||{version,notes},{version})});
     localStorage.setItem(UPD_NOTES_KEY,JSON.stringify(a.slice(0,6)));
   }catch(e){}
 }
@@ -929,6 +1197,13 @@ function updNotesFor(version){
     return (e&&e.notes)||'';
   }catch(e){ return ''; }
 }
+function updStagedReleaseFor(version){
+  try{
+    const a=JSON.parse(localStorage.getItem(UPD_NOTES_KEY)||'[]');
+    const e=Array.isArray(a)&&a.find(x=>x&&x.version===String(version));
+    return e&&e.release?updReleaseDescriptor(e.release):null;
+  }catch(e){ return null; }
+}
 /* The ONE place that appends to the log, so the install path, the packaged seed
    and any future writer cannot disagree about an entry's shape. Version is the
    dedupe key. Returns true only when an entry was really added. */
@@ -936,8 +1211,13 @@ function updLogPost(version,notes,extra){
   if(!version) return false;
   const v=String(version), log=updLogRead();
   if(log.some(e=>String(e.version)===v)) return false;
-  log.unshift(Object.assign({version:v,at:Date.now(),
-    notes:String(notes||'').slice(0,UPD_NOTES_MAX),read:false},extra||{}));
+  const add=extra&&typeof extra==='object'?extra:{};
+  const release=updReleaseDescriptor(add.release||Object.assign({version:v,notes},add),{version:v});
+  log.unshift({version:v,at:Date.now(),notes:updSafeText(notes,UPD_NOTES_MAX),
+    channel:release.channel,kind:release.kind,category:release.category,title:release.title,
+    summary:release.summary,hero:release.hero,features:release.features,fixes:release.fixes,
+    upcoming:release.upcoming,publishedAt:release.publishedAt,
+    read:add.read===true,packaged:add.packaged===true,rolledBack:add.rolledBack===true});
   return updLogWrite(log);
 }
 /* Stamp fields onto an existing entry: read state, and the rollback marker.
@@ -958,11 +1238,18 @@ function updLogMark(version,patch){
    normally ahead of the device, and pasting the next release's notes onto the
    installed one is worse than leaving it blank. */
 function updBackfillNotes(m){
-  if(!m||!m.notes||!m.version) return;
+  if(!m||!m.version) return;
   const log=updLogRead();
   const e=log.find(x=>String(x.version)===String(m.version));
-  if(!e||e.notes) return;
-  e.notes=String(m.notes).slice(0,UPD_NOTES_MAX);
+  if(!e) return;
+  const release=updReleaseDescriptor(m.release||m,{version:m.version,notes:m.notes});
+  let dirty=false;
+  if(!e.notes&&m.notes){ e.notes=updSafeText(m.notes,UPD_NOTES_MAX); dirty=true; }
+  for(const key of ['channel','kind','category','title','summary','hero','publishedAt'])
+    if(!e[key]&&release[key]){ e[key]=release[key]; dirty=true; }
+  for(const key of ['features','fixes','upcoming'])
+    if((!Array.isArray(e[key])||!e[key].length)&&release[key].length){ e[key]=release[key]; dirty=true; }
+  if(!dirty) return;
   if(updLogWrite(log)&&typeof renderInboxUpdates==='function')
     try{ renderInboxUpdates(); }catch(err){}
 }
@@ -1011,16 +1298,668 @@ async function updVerifyHash(bytes,want,path,run,ac){
   if(got.toLowerCase()!==String(want).toLowerCase()) throw new Error(path+': integrity check failed');
 }
 
+/* ---- RESUMABLE LARGE TRANSFERS -------------------------------------------
+   boot.js on existing installs consumes the legacy complete bundle record, so
+   the final promotion remains backward compatible. Network work no longer has
+   to be repeated, though: verified ranges and completed decoded artifacts are
+   journaled under content-derived keys until the final atomic stage succeeds.
+   A future packaged boot loader can consume these records directly; this
+   compatibility layer already removes the most painful mobile failure mode. */
+const UPD_TRANSFER_PREFIX='transfer-v1:', UPD_STORAGE_MARGIN=32*1024*1024;
+/* A cancelled transfer remains resumable for a week. After that, keeping its
+   unreferenced ranges forever is more dangerous than asking for those bytes
+   again: repeated large releases otherwise consume the origin quota until no
+   future update can pass preflight. A transfer being retried right now is
+   protected explicitly, regardless of age. */
+const UPD_TRANSFER_STALE_MS=7*24*60*60*1000;
+const UPD_RANGE_IGNORE_MAX_BYTES=32*1024*1024;
+/* Mobile radios and Android WebView redirect hand-offs occasionally drop one
+   range even though the immutable object is healthy. Three bounded attempts
+   repair that transient transport failure without turning a bad status,
+   incorrect range, or failed hash into an infinite download loop. */
+const UPD_FETCH_ATTEMPTS=3, UPD_FETCH_BACKOFF_MS=220, UPD_FETCH_BACKOFF_CAP_MS=1100;
+function updTransferJournalKey(identity){ return UPD_TRANSFER_PREFIX+identity+':journal'; }
+function updTransferFileKey(identity,path){ return UPD_TRANSFER_PREFIX+identity+':file:'+path; }
+function updTransferChunkKey(identity,path,index){
+  return UPD_TRANSFER_PREFIX+identity+':chunk:'+index+':'+path;
+}
+async function updStorePut(key,value){
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite');
+    tx.objectStore(UPD_STORE).put(value,key);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error||new Error('update storage write failed'));
+    tx.onabort=()=>rej(tx.error||new Error('update storage write aborted'));
+  });
+}
+async function updStoreDelete(keys){
+  keys=Array.from(new Set((keys||[]).filter(Boolean)));
+  if(!keys.length) return;
+  const db=await updIdb();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    for(const key of keys) store.delete(key);
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error||new Error('update storage cleanup failed'));
+    tx.onabort=()=>rej(tx.error||new Error('update storage cleanup aborted'));
+  });
+}
+function updTransferProtectPrefix(identity){
+  identity=String(identity&&identity.identity||identity||'');
+  return identity?UPD_TRANSFER_PREFIX+identity+':':'';
+}
+function updTransferMarkBundle(bundle,marked){
+  const files=bundle&&bundle.files;
+  if(!files||typeof files!=='object') return;
+  for(const path of Object.keys(files)){
+    const ref=files[path];
+    if(ref&&typeof ref==='object'&&typeof ref.key==='string'&&
+       ref.key.startsWith(UPD_TRANSFER_PREFIX)) marked.add(ref.key);
+  }
+}
+/* One serialized mark-and-sweep owns both its authority snapshot and deletes.
+   A staging transaction queued before this one commits first and is therefore
+   visible to the marks; one queued after it cannot write records until the
+   sweep commits. Fresh journals cover the separate file -> pending handoff.
+
+   Metadata is deliberately read before payloads. Explicit bundle-v1 (and the
+   empty storage marker written for pre-descriptor releases) proves that a
+   payload contains source strings, so maintenance never deserialises that
+   ~90 MiB legacy object merely to discover it has no artifact references. A
+   payload with missing/unknown metadata makes the sweep fail closed. */
+async function updTransferMaintenance(currentIdentity){
+  const db=await updIdb(),now=Date.now();
+  const payloads=[
+    {key:'pending',meta:'pendingMeta'},
+    {key:'active',meta:'activeMeta'},
+    {key:'previousA',meta:'previousAMeta'},
+    {key:'previousB',meta:'previousBMeta'},
+    {key:'previous',meta:'previousMeta'}
+  ];
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    if(typeof store.getAllKeys!=='function'){
+      res({supported:false,scanned:0,deleted:0,protected:0,skipped:'key-enumeration'});
+      return;
+    }
+    const keysRequest=store.getAllKeys();
+    const metaRequests=payloads.map(entry=>store.get(entry.meta));
+    const marked=new Set(),protectedPrefixes=new Set();
+    const currentPrefix=updTransferProtectPrefix(currentIdentity);
+    if(currentPrefix) protectedPrefixes.add(currentPrefix);
+    let initialReady=0,result={supported:true,scanned:0,deleted:0,protected:0,skipped:''};
+    const fail=error=>rej(error||new Error('update storage maintenance failed'));
+    const sweep=(keys)=>{
+      result.scanned=keys.filter(key=>typeof key==='string'&&
+        key.startsWith(UPD_TRANSFER_PREFIX)).length;
+      for(const key of keys){
+        if(typeof key!=='string'||!key.startsWith(UPD_TRANSFER_PREFIX)) continue;
+        let keep=marked.has(key);
+        if(!keep) for(const prefix of protectedPrefixes){
+          if(key.startsWith(prefix)){ keep=true;break; }
+        }
+        if(keep){ result.protected++;continue; }
+        store.delete(key); result.deleted++;
+      }
+    };
+    const inspectInitial=()=>{
+      if(++initialReady<1+metaRequests.length) return;
+      const keys=(keysRequest.result||[]).map(String),keySet=new Set(keys);
+      const follow=[];
+      for(let i=0;i<payloads.length;i++){
+        const entry=payloads[i];
+        if(!keySet.has(entry.key)) continue;
+        const meta=metaRequests[i].result,storage=String(meta&&meta.storage||'');
+        if(!meta||(storage&&storage!=='bundle-v1'&&storage!=='artifact-v1')){
+          result.skipped='unknown-bundle-metadata';
+          return;
+        }
+        if(storage==='artifact-v1') follow.push({kind:'bundle',request:store.get(entry.key)});
+      }
+      for(const key of keys){
+        if(key.startsWith(UPD_TRANSFER_PREFIX)&&key.endsWith(':journal'))
+          follow.push({kind:'journal',key,request:store.get(key)});
+      }
+      if(!follow.length){ sweep(keys);return; }
+      let followReady=0;
+      const inspectFollow=()=>{
+        if(++followReady<follow.length) return;
+        for(const item of follow){
+          if(item.kind==='bundle') updTransferMarkBundle(item.request.result,marked);
+          else {
+            const journal=item.request.result,rawAt=journal&&journal.at;
+            const at=Number(rawAt),age=now-at;
+            /* Missing or unparseable time is protected rather than guessed at.
+               Only a positively old journal is eligible for reclamation. */
+            if(rawAt==null||!Number.isFinite(at)||age<0||age<=UPD_TRANSFER_STALE_MS)
+              protectedPrefixes.add(item.key.slice(0,-'journal'.length));
+          }
+        }
+        sweep(keys);
+      };
+      for(const item of follow){
+        item.request.onsuccess=inspectFollow;
+        item.request.onerror=()=>fail(item.request.error);
+      }
+    };
+    keysRequest.onsuccess=inspectInitial;
+    keysRequest.onerror=()=>fail(keysRequest.error);
+    for(const request of metaRequests){
+      request.onsuccess=inspectInitial;
+      request.onerror=()=>fail(request.error);
+    }
+    tx.oncomplete=()=>res(result);
+    tx.onerror=()=>fail(tx.error);
+    tx.onabort=()=>fail(tx.error||new Error('update storage maintenance aborted'));
+  });
+}
+async function updHashText(text){
+  if(typeof crypto==='undefined'||!crypto.subtle) throw new Error('Update identity checks unavailable');
+  return updHex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(text))));
+}
+function updChunkTable(file){
+  return Array.isArray(file&&file.chunks)&&file.chunks.length
+    ? file.chunks.map(c=>({offset:c.offset,size:c.size,sha256:String(c.sha256).toLowerCase()}))
+    : [{offset:0,size:file.size,sha256:String(file.sha256).toLowerCase()}];
+}
+function updPayloadFingerprint(files){
+  return (files||[]).map(f=>{
+    const chunks=updChunkTable(f).map(c=>c.offset+':'+c.size+':'+c.sha256).join(',');
+    return f.path+'\0'+f.size+'\0'+String(f.sha256).toLowerCase()+'\0'+chunks;
+  }).join('\n');
+}
+async function updTransferIdentity(m,plan){
+  const mode=plan&&plan.fallback?'full':'payload';
+  let payloadRoot=String(mode==='full'?m.fullRoot:m.payloadRoot||'').toLowerCase();
+  if(!/^[0-9a-f]{64}$/.test(payloadRoot)) payloadRoot=await updHashText(updPayloadFingerprint(plan.files));
+  let manifestRoot=String(m.manifestRoot||'').toLowerCase();
+  if(!/^[0-9a-f]{64}$/.test(manifestRoot)) manifestRoot=payloadRoot;
+  return {identity:updChannelName(m.channel)+'-'+m.version+'-'+manifestRoot+'-'+mode,
+    manifestRoot,payloadRoot,mode};
+}
+function updBundleByteEstimate(bundle){
+  let n=0;
+  const files=bundle&&bundle.files;
+  if(files) for(const path in files){
+    const file=files[path];
+    n+=typeof file==='string'?new TextEncoder().encode(file).byteLength:
+      (file&&Number.isFinite(file.size)?file.size:0);
+  }
+  return n;
+}
+async function updStoragePreflight(plan,directArtifacts,resume){
+  const download=(plan.files||[]).reduce((sum,f)=>sum+(f.size||0),0);
+  const remaining=Math.max(0,download-Number(resume&&resume.bytes||0));
+  const base=plan.patching?updBundleByteEstimate(plan.priorRec):0;
+  const target=Math.max(download,base+download);
+  const largest=Number(resume&&resume.largestIncomplete)||
+    (plan.files||[]).reduce((max,f)=>Math.max(max,f.size||0),0);
+  const legacyBase=!!(directArtifacts&&plan.patching&&plan.priorRec&&
+    Object.values(plan.priorRec.files||{}).some(file=>typeof file==='string'));
+  /* Descriptor bundles share immutable artifact records between pending,
+     active and rollback slots. They therefore need one physical download plus
+     temporary room for the largest chunk-to-file transaction. A mixed first
+     migration from a legacy string bundle also needs room to clone that base.
+     Legacy boots still receive the conservative whole-bundle allowance. */
+  const required=directArtifacts
+    ? remaining+largest+(legacyBase?base:0)+UPD_STORAGE_MARGIN
+    : remaining+target*2+UPD_STORAGE_MARGIN;
+  const storage=typeof navigator!=='undefined'&&navigator.storage;
+  if(!storage||typeof storage.estimate!=='function') return {supported:false,required};
+  let estimate;
+  try{ estimate=await storage.estimate(); }
+  catch(e){ return {supported:false,required}; }
+  const quota=Number(estimate&&estimate.quota),usage=Number(estimate&&estimate.usage)||0;
+  const free=Number.isFinite(quota)?Math.max(0,quota-usage):Infinity;
+  if(free<required){
+    const e=new Error('Not enough storage for this update — '+fmtBytes(required)+
+      ' required, '+fmtBytes(free)+' available');
+    e.code='MF_UPDATE_STORAGE'; e.required=required; e.free=free; throw e;
+  }
+  return {supported:true,required,free,quota,usage};
+}
+async function updTransferJournal(transfer,m,files){
+  const key=updTransferJournalKey(transfer.identity);
+  let journal=await updGet(key);
+  if(!journal||journal.identity!==transfer.identity||journal.payloadRoot!==transfer.payloadRoot){
+    journal={identity:transfer.identity,manifestRoot:transfer.manifestRoot,
+      payloadRoot:transfer.payloadRoot,version:m.version,channel:m.channel||'stable',
+      mode:transfer.mode,total:files.reduce((s,f)=>s+f.size,0),files:{},at:Date.now()};
+    await updStorePut(key,journal);
+  }
+  return journal;
+}
+async function updTransferPutChunk(transfer,file,index,bytes,journal){
+  const db=await updIdb(),key=updTransferChunkKey(transfer.identity,file.path,index);
+  const copy=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
+  journal.at=Date.now();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    store.put({size:bytes.byteLength,sha256:updChunkTable(file)[index].sha256,bytes:copy},key);
+    store.put(journal,updTransferJournalKey(transfer.identity));
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error||new Error('could not save update range'));
+    tx.onabort=()=>rej(tx.error||new Error('update range write aborted'));
+  });
+}
+async function updTransferGetChunk(transfer,file,index,run,ac){
+  const chunk=updChunkTable(file)[index],key=updTransferChunkKey(transfer.identity,file.path,index);
+  const rec=await updGet(key); updAssertDownload(run,ac);
+  if(!rec||rec.size!==chunk.size||String(rec.sha256).toLowerCase()!==chunk.sha256||!rec.bytes) return null;
+  let bytes;
+  try{ bytes=rec.bytes&&typeof rec.bytes.arrayBuffer==='function'
+      ?new Uint8Array(await rec.bytes.arrayBuffer()):new Uint8Array(rec.bytes); }
+  catch(e){ bytes=null; }
+  updAssertDownload(run,ac);
+  if(!bytes||bytes.byteLength!==chunk.size){ await updStoreDelete([key]); return null; }
+  try{ await updVerifyHash(bytes,chunk.sha256,file.path+' range '+index,run,ac); }
+  catch(e){ await updStoreDelete([key]); return null; }
+  return bytes;
+}
+async function updTransferGetFile(transfer,file,run,ac){
+  const key=updTransferFileKey(transfer.identity,file.path),rec=await updGet(key);
+  updAssertDownload(run,ac);
+  if(!rec||rec.size!==file.size||String(rec.sha256).toLowerCase()!==String(file.sha256).toLowerCase()||
+     typeof rec.text!=='string') return null;
+  const bytes=new TextEncoder().encode(rec.text);
+  if(bytes.byteLength!==file.size){ await updStoreDelete([key]); return null; }
+  try{ await updVerifyHash(bytes,file.sha256,file.path,run,ac); }
+  catch(e){ await updStoreDelete([key]); return null; }
+  return rec.text;
+}
+async function updTransferStoredBytes(transfer,files,run,ac){
+  let bytes=0,largestIncomplete=0;
+  for(const file of files){
+    const complete=await updTransferGetFile(transfer,file,run,ac);
+    if(complete!=null){ bytes+=file.size;continue; }
+    largestIncomplete=Math.max(largestIncomplete,file.size||0);
+    const table=updChunkTable(file);
+    for(let i=0;i<table.length;i++){
+      const chunk=await updTransferGetChunk(transfer,file,i,run,ac);
+      if(chunk) bytes+=chunk.byteLength;
+    }
+  }
+  return {bytes,largestIncomplete};
+}
+async function updTransferPutFile(transfer,file,text,journal){
+  const db=await updIdb(),table=updChunkTable(file);
+  journal.files[file.path]={size:file.size,sha256:String(file.sha256).toLowerCase()};
+  journal.at=Date.now();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction(UPD_STORE,'readwrite'),store=tx.objectStore(UPD_STORE);
+    store.put({size:file.size,sha256:String(file.sha256).toLowerCase(),text},
+              updTransferFileKey(transfer.identity,file.path));
+    for(let i=0;i<table.length;i++) store.delete(updTransferChunkKey(transfer.identity,file.path,i));
+    store.put(journal,updTransferJournalKey(transfer.identity));
+    tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error||new Error('could not save verified update file'));
+    tx.onabort=()=>rej(tx.error||new Error('verified update file write aborted'));
+  });
+}
+async function updTransferCleanup(transfer,files,keepFiles){
+  const keys=[updTransferJournalKey(transfer.identity)];
+  for(const file of files){
+    if(!keepFiles) keys.push(updTransferFileKey(transfer.identity,file.path));
+    const table=updChunkTable(file);
+    for(let i=0;i<table.length;i++) keys.push(updTransferChunkKey(transfer.identity,file.path,i));
+  }
+  await updStoreDelete(keys);
+}
+async function updReadResponseBytes(response,limit,path,run,ac,onRead){
+  const parts=[]; let n=0;
+  if(response.body&&response.body.getReader){
+    const reader=response.body.getReader();
+    for(;;){
+      let result;
+      try{ result=await reader.read(); }
+      catch(error){
+        updAssertDownload(run,ac);
+        throw updTransportFailure(path+': network read failed','MF_UPDATE_NETWORK_READ',true);
+      }
+      updAssertDownload(run,ac);
+      if(result.done) break;
+      n+=result.value.byteLength;
+      if(n>limit) throw new Error(path+': download exceeded its declared size ('+
+        fmtBytes(n)+' of '+fmtBytes(limit)+')');
+      parts.push(result.value);
+      if(onRead) onRead(result.value.byteLength);
+    }
+  }else{
+    let buffer;
+    try{ buffer=await response.arrayBuffer(); }
+    catch(error){
+      updAssertDownload(run,ac);
+      throw updTransportFailure(path+': network read failed','MF_UPDATE_NETWORK_READ',true);
+    }
+    const bytes=new Uint8Array(buffer); updAssertDownload(run,ac);
+    if(bytes.byteLength>limit) throw new Error(path+': download exceeded its declared size ('+
+      fmtBytes(bytes.byteLength)+' of '+fmtBytes(limit)+')');
+    parts.push(bytes); n=bytes.byteLength;
+    if(onRead) onRead(bytes.byteLength);
+  }
+  const out=new Uint8Array(n); let at=0;
+  for(const part of parts){ out.set(part,at); at+=part.byteLength; }
+  return out;
+}
+function updTransportFailure(message,code,retryable,status){
+  const error=new Error(message); error.code=code;
+  error.retryable=retryable===true;
+  if(Number.isFinite(status)) error.status=status;
+  return error;
+}
+function updRetryableHttp(status){
+  return status===408||status===425||status===429||(status>=500&&status<=599);
+}
+function updArtifactHost(src){
+  try{
+    const base=typeof location!=='undefined'&&location.href?location.href:'https://local.invalid/';
+    return (new URL(String(src),base).host||'local').slice(0,160);
+  }catch(error){ return 'invalid-host'; }
+}
+function updSignedArtifactUrl(url){
+  return /[?&](?:x-amz-[^=]*|x-goog-[^=]*|signature|sig|token|expires|policy|key-pair-id|awsaccesskeyid|googleaccessid|credential)=/i.test(url);
+}
+function updArtifactAttemptUrl(src,m,attempt){
+  const signed=updSignedArtifactUrl(src);
+  let url=signed?src:src+(src.includes('?')?'&':'?')+'v='+encodeURIComponent(m.version);
+  /* A fresh query makes an immutable HF/Cloudflare URL resolve through the CDN
+     again after a dropped redirect. Never append to an already signed URL:
+     changing its query would invalidate the signature rather than retry it. */
+  if(attempt>1&&!signed)
+    url+=(url.includes('?')?'&':'?')+'mf_retry='+attempt+'-'+Date.now().toString(36);
+  return url;
+}
+function updArtifactDiagnostic(src,chunk,index,count,attempt,error,outcome){
+  const status=Number(error&&error.status);
+  return Object.freeze({schema:1,outcome,attempt,maxAttempts:UPD_FETCH_ATTEMPTS,
+    host:updArtifactHost(src),range:Object.freeze({index:index+1,count,
+      start:chunk.offset,end:chunk.offset+chunk.size-1}),
+    status:Number.isFinite(status)?status:null,
+    online:typeof navigator==='undefined'||navigator.onLine!==false,
+    code:String(error&&error.code||'MF_UPDATE_RESPONSE').slice(0,64)});
+}
+function updRememberTransferDiagnostic(diagnostic,warn){
+  if(typeof UPD!=='undefined') UPD.transferDiagnostic=diagnostic;
+  if(warn&&typeof console!=='undefined'&&typeof console.warn==='function')
+    console.warn('MASSFRONT updater transport',diagnostic);
+}
+function updAttachTransferDiagnostic(error,diagnostic){
+  try{ Object.defineProperty(error,'updateDiagnostic',{value:diagnostic,enumerable:true}); }
+  catch(defineError){ try{ error.updateDiagnostic=diagnostic; }catch(assignError){} }
+  return error;
+}
+function updRetryDelayMs(attempt){
+  const base=Math.min(UPD_FETCH_BACKOFF_CAP_MS,UPD_FETCH_BACKOFF_MS*Math.pow(2,attempt-1));
+  const room=Math.max(0,UPD_FETCH_BACKOFF_CAP_MS-base);
+  return Math.round(base+Math.random()*Math.min(UPD_FETCH_BACKOFF_MS,room));
+}
+function updRetryDelay(ms,run,ac){
+  updAssertDownload(run,ac);
+  return new Promise((resolve,reject)=>{
+    let settled=false,timer;
+    const finish=(fn,value)=>{
+      if(settled) return; settled=true;
+      if(timer) clearTimeout(timer);
+      if(ac&&ac.signal&&typeof ac.signal.removeEventListener==='function')
+        ac.signal.removeEventListener('abort',cancel);
+      fn(value);
+    };
+    const cancel=()=>finish(reject,updDownloadAbort());
+    if(ac&&ac.signal&&typeof ac.signal.addEventListener==='function')
+      ac.signal.addEventListener('abort',cancel,{once:true});
+    timer=setTimeout(()=>{
+      try{ updAssertDownload(run,ac); finish(resolve); }
+      catch(error){ finish(reject,error); }
+    },Math.max(0,ms));
+  });
+}
+async function updFetchArtifactPartOnce(url,file,chunk,index,count,run,ac,onRead){
+  const headers={};
+  if(count>1) headers.Range='bytes='+chunk.offset+'-'+(chunk.offset+chunk.size-1);
+  let response;
+  try{ response=await fetch(url,{cache:'no-store',signal:ac.signal,headers}); }
+  catch(error){
+    updAssertDownload(run,ac);
+    throw updTransportFailure(file.path+': network request failed','MF_UPDATE_NETWORK_FETCH',true);
+  }
+  updAssertDownload(run,ac);
+  if(!response.ok) throw updTransportFailure(file.path+': HTTP '+response.status,
+    'MF_UPDATE_HTTP',updRetryableHttp(response.status),response.status);
+  const type=String(response.headers&&response.headers.get?response.headers.get('content-type')||'':'').toLowerCase();
+  if(count>1&&response.status===206){
+    const range=String(response.headers.get('content-range')||'');
+    const expected='bytes '+chunk.offset+'-'+(chunk.offset+chunk.size-1)+'/'+file.size;
+    if(range.toLowerCase()!==expected.toLowerCase())
+      throw new Error(file.path+': server returned the wrong byte range');
+    const bytes=await updReadResponseBytes(response,chunk.size,file.path,run,ac,onRead);
+    if(bytes.byteLength!==chunk.size) throw updTransportFailure(
+      file.path+': range download was incomplete ('+fmtBytes(bytes.byteLength)+' of '+
+      fmtBytes(chunk.size)+')','MF_UPDATE_INCOMPLETE',true);
+    await updVerifyHash(bytes,chunk.sha256,file.path+' range '+index,run,ac);
+    return {bytes,whole:false,status:response.status};
+  }
+  if(count>1&&file.size>UPD_RANGE_IGNORE_MAX_BYTES)
+    throw new Error(file.path+': download server must support byte ranges for artifacts over '+
+      fmtBytes(UPD_RANGE_IGNORE_MAX_BYTES));
+  /* Some legacy mirrors ignore Range and answer 200 with the complete object.
+     Accept it once, verify the authoritative whole-file hash, then seed every
+     declared range locally. Never issue N complete downloads for N ranges. */
+  const limit=count>1?file.size:chunk.size;
+  const bytes=await updReadResponseBytes(response,limit,file.path,run,ac,onRead);
+  if(bytes.byteLength!==limit){
+    const hostPage=type.includes('text/html')||type.includes('application/xhtml');
+    const reason=bytes.byteLength===0?'download host returned no data':
+      hostPage?'download host returned a web page instead of update data':'download was incomplete';
+    throw updTransportFailure(file.path+': '+reason+' ('+fmtBytes(bytes.byteLength)+' of '+
+      fmtBytes(limit)+')',hostPage?'MF_UPDATE_HOST_PAGE':'MF_UPDATE_INCOMPLETE',!hostPage);
+  }
+  if(count>1){
+    await updVerifyHash(bytes,file.sha256,file.path,run,ac);
+    return {bytes,whole:true,status:response.status};
+  }
+  await updVerifyHash(bytes,chunk.sha256,file.path,run,ac);
+  return {bytes,whole:false,status:response.status};
+}
+async function updFetchArtifactPart(src,m,file,chunk,index,count,run,ac,onRead){
+  for(let attempt=1;attempt<=UPD_FETCH_ATTEMPTS;attempt++){
+    let attemptRead=0;
+    try{
+      const result=await updFetchArtifactPartOnce(updArtifactAttemptUrl(src,m,attempt),file,
+        chunk,index,count,run,ac,n=>{
+          const credited=onRead?onRead(n):n;
+          /* A whole-file legacy response can arrive after earlier ranges were
+             resumed, so the UI may legitimately credit fewer bytes than the
+             socket delivered. Roll back exactly that retained-progress delta,
+             never the already durable ranges from a prior attempt. */
+          attemptRead+=Number.isFinite(credited)?Math.max(0,credited):n;
+        });
+      if(attempt>1) updRememberTransferDiagnostic(
+        updArtifactDiagnostic(src,chunk,index,count,attempt,
+          {status:result.status,code:'MF_UPDATE_RECOVERED'},'recovered'),false);
+      return result;
+    }catch(error){
+      /* A player cancellation is never converted into a retry. It also skips
+         the backoff immediately through the shared AbortSignal. */
+      updAssertDownload(run,ac);
+      if(attemptRead&&onRead) onRead(-attemptRead);
+      const retry=error&&error.retryable===true&&attempt<UPD_FETCH_ATTEMPTS;
+      const diagnostic=updArtifactDiagnostic(src,chunk,index,count,attempt,error,
+        retry?'retrying':'failed');
+      updRememberTransferDiagnostic(diagnostic,true);
+      if(!retry) throw updAttachTransferDiagnostic(error,diagnostic);
+      await updRetryDelay(updRetryDelayMs(attempt),run,ac);
+    }
+  }
+  throw new Error(file.path+': update transfer failed');
+}
+async function updDownloadArtifact(m,file,transfer,journal,src,run,ac,onBytes){
+  const saved=await updTransferGetFile(transfer,file,run,ac);
+  if(saved!=null){ onBytes(file.size,true); return saved; }
+  const table=updChunkTable(file),parts=new Array(table.length);
+  for(let i=0;i<table.length;i++){
+    let bytes=await updTransferGetChunk(transfer,file,i,run,ac);
+    if(bytes){ parts[i]=bytes; onBytes(table[i].size,true); continue; }
+    const fetched=await updFetchArtifactPart(src,m,file,table[i],i,table.length,run,ac,
+      n=>onBytes(n,false));
+    if(fetched.whole){
+      for(let j=0;j<table.length;j++){
+        const c=table[j],part=fetched.bytes.slice(c.offset,c.offset+c.size);
+        await updVerifyHash(part,c.sha256,file.path+' range '+j,run,ac);
+        parts[j]=part;
+        await updTransferPutChunk(transfer,file,j,part,journal);
+      }
+      break;
+    }
+    parts[i]=fetched.bytes;
+    await updTransferPutChunk(transfer,file,i,fetched.bytes,journal);
+  }
+  const all=new Uint8Array(file.size); let at=0;
+  for(let i=0;i<parts.length;i++){
+    if(!parts[i]) throw new Error(file.path+': verified range is missing');
+    all.set(parts[i],at); at+=parts[i].byteLength;
+  }
+  await updVerifyHash(all,file.sha256,file.path,run,ac);
+  const text=new TextDecoder().decode(all);
+  await updTransferPutFile(transfer,file,text,journal); updAssertDownload(run,ac);
+  return text;
+}
+
 const UPD={ state:'idle', manifest:null, pct:0, got:0, total:0, rate:0, err:null,
              abort:null, lastCheck:0, checkedVersion:null, source:null, channel:'stable',
              downloadSeq:0,downloadRun:0,retryDownload:false,
-             offerBytes:null,offerKind:null,offerFallback:false,transferKind:null,
-             readyIdentity:null,
+             offerBytes:null,offerKind:null,offerFallback:false,transferKind:null,storage:null,
+             readyIdentity:null,transferDiagnostic:null,
             /* Per-file feed. The download loop has always walked m.files, but only
                aggregate bytes were ever surfaced, so a multi-file patch looked
                identical to one big blob and a stall gave no clue which object was
                stuck. feed[] carries one row per file: name, size, and state. */
             feed:[], fileIdx:-1 };
+
+/* ---- EXPLICIT LAUNCHER CONTRACT ------------------------------------------
+   The launcher must never infer updater state from English text or DOM
+   classes. This snapshot is intentionally boring, bounded and JSON-safe. It
+   excludes endpoints, hashes, file lists, payloads, abort handles and storage
+   records; those are implementation details and in some deployments may carry
+   sensitive query material. */
+let UPD_EVENT_SEQ=0, updEventAt=0, updEventBytes=-1, updEventPct=-1;
+function updDeviceHistorySnapshot(limit){
+  return updLogRead().slice(0,limit||UPD_EVENT_HISTORY_MAX).map(entry=>{
+    const release=updReleaseDescriptor(entry,{version:entry.version,notes:entry.notes});
+    return {version:release.version,at:Number(entry.at)||0,publishedAt:release.publishedAt,
+      channel:release.channel,kind:release.kind,category:release.category,title:release.title,
+      summary:release.summary,hero:release.hero,features:release.features.slice(),
+      fixes:release.fixes.slice(),upcoming:release.upcoming.slice(),
+      installed:true,packaged:entry.packaged===true,rolledBack:entry.rolledBack===true,
+      read:entry.read===true};
+  });
+}
+function mfUpdaterHistory(){
+  return {device:updDeviceHistorySnapshot(UPD_DEVICE_HISTORY_MAX),
+    published:updPublishedRead().slice(0,UPD_PUBLISHED_HISTORY_MAX).map(release=>Object.assign({},release,
+      {features:release.features.slice(),fixes:release.fixes.slice(),
+       upcoming:release.upcoming.slice()}))};
+}
+/* Safe support/debug surface. It deliberately returns only transport shape,
+   never the signed URL, query, hash, manifest, or executable file name. */
+function mfUpdaterTransferDiagnostic(){
+  const value=UPD.transferDiagnostic;
+  if(!value) return null;
+  return Object.assign({},value,{range:value.range?Object.assign({},value.range):null});
+}
+if(typeof window!=='undefined') window.mfUpdaterTransferDiagnostic=mfUpdaterTransferDiagnostic;
+function updStatusLabel(state){
+  const labels={idle:'Ready',unset:'Update service unavailable',offline:'Offline',
+    channeling:'Switching channel',checking:'Checking for updates',
+    available:'Update available',downloading:'Downloading update',
+    staging:'Saving verified update',ready:'Ready to install',applying:'Installing update',
+    rollingBack:'Reverting update',applyError:'Install needs attention',
+    installed:'Update installed',current:'Up to date',stale:'Local build ahead',error:'Update failed'};
+  return labels[state]||'Ready';
+}
+function updLauncherAction(state){
+  if(state==='available') return {id:'download',label:'DOWNLOAD UPDATE',enabled:!!UPD.manifest};
+  if(state==='downloading') return {id:'cancel',label:'CANCEL DOWNLOAD',enabled:!!UPD.abort};
+  if(state==='ready') return {id:'apply',label:'RESTART & INSTALL',enabled:!!UPD.manifest};
+  if(state==='applyError') return {id:'apply',label:'RETRY INSTALL',enabled:!!UPD.manifest};
+  if(state==='error') return UPD.retryDownload&&UPD.manifest
+    ?{id:'download',label:'RETRY DOWNLOAD',enabled:true}
+    :{id:'check',label:'CHECK AGAIN',enabled:true};
+  if(['channeling','checking','staging','applying','rollingBack'].includes(state))
+    return {id:'wait',label:'PLEASE WAIT',enabled:false};
+  return {id:'play',label:'PLAY MASSFRONT',enabled:true};
+}
+function mfUpdaterSnapshot(){
+  const m=UPD.manifest;
+  const installed=String(updVerShown||APP_VERSION);
+  let release=m?updReleaseDescriptor(m.release||m,{version:m.version,notes:m.notes}):null;
+  if(!release||!release.version){
+    const logged=updLogRead().find(entry=>String(entry.version)===installed);
+    release=updReleaseDescriptor(logged||{version:installed,notes:APP_NOTES},{version:installed});
+  }
+  const state=String(UPD.state||'idle'), busy=updOperationBusy();
+  const transferState=['downloading','staging','ready','applying','applyError'].includes(state);
+  const total=state==='available'?Math.max(0,Number(UPD.offerBytes)||0):
+    (transferState?Math.max(0,Number(UPD.total)||0):0);
+  const bytes=state==='available'?0:(transferState?Math.max(0,Number(UPD.got)||0):0);
+  const ratio=(state==='staging'||state==='ready'||state==='applying'||state==='applyError')?1:
+    (total?Math.max(0,Math.min(1,bytes/total)):
+      (transferState?Math.max(0,Math.min(1,(Number(UPD.pct)||0)/100)):0));
+  let online=true;
+  try{
+    if(typeof navigator!=='undefined'&&navigator.onLine===false) online=false;
+    if(typeof netAllowed==='function'&&!netAllowed()) online=false;
+  }catch(e){}
+  const staged=state==='ready'||state==='applyError';
+  const history=mfUpdaterHistory();
+  return {schema:1,sequence:UPD_EVENT_SEQ,updatedAt:new Date().toISOString(),
+    state,status:updStatusLabel(state),error:updSafeText(UPD.err,280),
+    appVersion:APP_VERSION,installedVersion:installed,
+    serverVersion:m&&m.version?String(m.version):String(UPD.checkedVersion||''),
+    channel:updChannelName((m&&m.channel)||UPD.channel||updChannel()),
+    kind:release.kind||((m&&['patch','full'].includes(String(m.kind).toLowerCase()))
+      ?String(m.kind).toLowerCase():''),category:release.category,
+    title:release.title,summary:release.summary,hero:release.hero,
+    features:release.features.slice(),fixes:release.fixes.slice(),
+    upcoming:release.upcoming.slice(),severity:updSafeText(m&&m.severity,24),
+    progress:{bytes:Math.min(bytes,total||bytes),total,ratio,percent:ratio*100,
+      speedBps:Math.max(0,Number(UPD.rate)||0)},
+    offerBytes:Math.max(0,Number(UPD.offerBytes)||0),
+    readiness:{playable:!['applying','rollingBack'].includes(state),online,busy,
+      current:state==='current'||state==='installed',
+      updateAvailable:state==='available',updateStaged:staged},
+    action:updLauncherAction(state),
+    history:{device:history.device.slice(0,UPD_EVENT_HISTORY_MAX),
+             published:history.published.slice(0,UPD_EVENT_HISTORY_MAX)}};
+}
+function updPublishSnapshot(force){
+  if(typeof window==='undefined'||typeof window.dispatchEvent!=='function') return;
+  const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
+  const got=Math.max(0,Number(UPD.got)||0), pct=Math.max(0,Number(UPD.pct)||0);
+  /* Streaming readers may report tiny chunks many times in one frame. One
+     event per 160 ms, 256 KiB, or whole percentage point remains responsive
+     while avoiding a localStorage/history clone for every network callback. */
+  if(!force&&now-updEventAt<160&&got-updEventBytes<262144&&pct-updEventPct<1) return;
+  updEventAt=now; updEventBytes=got; updEventPct=pct; UPD_EVENT_SEQ++;
+  const detail=mfUpdaterSnapshot();
+  try{
+    const C=window.CustomEvent||(typeof CustomEvent!=='undefined'?CustomEvent:null);
+    if(C) window.dispatchEvent(new C('massfront:update-state',{detail}));
+    else if(typeof document!=='undefined'&&document.createEvent){
+      const ev=document.createEvent('CustomEvent'); ev.initCustomEvent('massfront:update-state',false,false,detail);
+      window.dispatchEvent(ev);
+    }
+  }catch(e){}
+}
+function mfUpdaterAction(action){
+  const id=String(action||'').toLowerCase();
+  if(id==='check'){ updCheck(true); return true; }
+  if(id==='download'){
+    if(UPD.state==='error'&&UPD.retryDownload&&UPD.manifest) updRetryDownload();
+    else updDownload();
+    return true;
+  }
+  if(id==='cancel'){ updCancel(); return true; }
+  if(id==='apply'){ updApply(); return true; }
+  if(id==='rollback'){ updRollback(); return true; }
+  return false;
+}
 
 /* One synchronous lock for every updater operation that owns async state.
    Without it, each function acquired its visible state after a different
@@ -1034,6 +1973,7 @@ function updSet(st,extra){
   UPD.state=st;
   if(extra) Object.assign(UPD,extra);
   if(typeof renderUpdatePanel==='function') renderUpdatePanel();
+  updPublishSnapshot(true);
 }
 
 /* ---- CHECK ---------------------------------------------------------------- */
@@ -1041,10 +1981,22 @@ async function updCheck(manual){
   if(updOperationBusy()) return;
   /* Offline is a normal state, not a failure. Say so and stop — do not attempt
      a request that cannot succeed and then report an error for it. */
-  if(typeof netAllowed==='function' && !netAllowed()){
+  if(typeof netForcedOffline==='function'?netForcedOffline()
+     :(typeof netAllowed==='function'&&!netAllowed())){
     updSet('unset',{err:null});
     if(manual&&typeof toast==='function')
       toast('✈ Offline mode — turn it off in Settings to check for updates');
+    return;
+  }
+  /* navigator.onLine is a hint, not an authority. An Android WebView can
+     report it as false on a connected device, and gating every attempt on it
+     meant RETRY did nothing, forever, with no error to explain why. An
+     automatic pass still skips the request so a genuinely offline device is
+     not made to churn, but a deliberate tap always attempts the check and
+     reports a real result. Every request below carries its own connect/read
+     timeout, so an attempt with no network fails fast instead of hanging. */
+  if(!manual&&typeof netBrowserOffline==='function'&&netBrowserOffline()){
+    updSet('unset',{err:null});
     return;
   }
   /* Claim the check before endpoint resolution, which itself awaits local
@@ -1079,6 +2031,7 @@ async function updCheck(manual){
     UPD.source=found.source;
     UPD.channel=m.channel;
     updExposePacks(m);
+    updIngestManifestHistory(m);
     updBackfillNotes(m);          // repair a note-less log entry for THIS version only
     /* Compare against the version actually running. A live-patched client can
        be newer than its packaged APP_VERSION; comparing only to the package
@@ -1092,7 +2045,7 @@ async function updCheck(manual){
       if(plan.error){ next='error'; extra={err:plan.error}; }
       else{
         UPD.offerBytes=plan.files.reduce((sum,f)=>sum+(f.size||0),0);
-        UPD.offerKind=updKindForFiles(plan.files);
+        UPD.offerKind=updKind(m,plan.files);
         UPD.offerFallback=plan.fallback;
       }
     } else {
@@ -1118,6 +2071,38 @@ async function updCheck(manual){
 /* Resolve the payload shape before consent as well as before transfer. Patch
    manifests carry a tiny delta and an optional full fallback; showing only the
    delta size to a fresh packaged client concealed the actual mobile-data cost. */
+async function updPatchStoredFileMatches(stored,target){
+  if(!target) return false;
+  if(typeof stored==='string'){
+    const bytes=new TextEncoder().encode(stored);
+    if(bytes.byteLength!==target.size) return false;
+    return await updHashText(stored)===String(target.sha256).toLowerCase();
+  }
+  return !!(updValidStoredArtifact(stored)&&stored.size===target.size&&
+    String(stored.sha256).toLowerCase()===String(target.sha256).toLowerCase());
+}
+async function updPatchTargetContract(m,files,priorFiles){
+  const full=updFullEntry(m);
+  /* Schema 1/2 publishers were allowed to omit full[]. Preserve that legacy
+     adjacent-patch path; schema 3 always has the signed complete inventory. */
+  if(!full) return {full:null,ok:Number(m&&m.schema||1)<3};
+  const targetBy=new Map(full.map(file=>[file.path,file]));
+  const changedBy=new Map(files.map(file=>[file.path,file]));
+  if(targetBy.size!==full.length||changedBy.size!==files.length) return {full,ok:false};
+  for(const changed of files){
+    const target=targetBy.get(changed.path);
+    if(!target||changed.size!==target.size||
+       String(changed.sha256).toLowerCase()!==String(target.sha256).toLowerCase())
+      return {full,ok:false};
+  }
+  for(const target of full){
+    if(changedBy.has(target.path)) continue;
+    if(!Object.prototype.hasOwnProperty.call(priorFiles||{},target.path)||
+       !await updPatchStoredFileMatches(priorFiles[target.path],target))
+      return {full,ok:false};
+  }
+  return {full,ok:true};
+}
 async function updTransferPlan(m){
   const files=Array.isArray(m&&m.files)?m.files:[];
   if(!updIsPatch(m)) return {files,patching:false,priorRec:null,fallback:false};
@@ -1127,14 +2112,23 @@ async function updTransferPlan(m){
                     error:'Could not inspect the installed update'}; }
   const priorFiles=(priorRec&&priorRec.files)||null;
   const sameBase=!!priorRec&&String(priorRec.version)===String(m.patchFrom);
-  const shapeOK=!!priorFiles&&files.every(f=>
-    Object.prototype.hasOwnProperty.call(priorFiles,f.path));
-  if(sameBase&&shapeOK) return {files,patching:true,priorRec,fallback:false};
-  const full=updFullEntry(m);
+  const signedTarget=Number(m&&m.schema||1)>=3&&!!updFullEntry(m);
+  /* A schema-3 delta may add a path while full[] removes another one. Its
+     signed complete inventory makes that safe; legacy patches have no such
+     target contract, so retain their historical replace-existing-only rule. */
+  const shapeOK=!!priorFiles&&(signedTarget||files.every(f=>
+    Object.prototype.hasOwnProperty.call(priorFiles,f.path)));
+  let target=null;
+  if(sameBase&&shapeOK){
+    target=await updPatchTargetContract(m,files,priorFiles);
+    if(target.ok) return {files,patching:true,priorRec,fallback:false,target:target.full};
+  }
+  const full=target&&target.full||updFullEntry(m);
   if(full) return {files:full,patching:false,priorRec,fallback:true};
   const why=!priorRec ? 'there is no installed update to patch'
             : !sameBase ? ('it patches '+m.patchFrom+' and you have '+priorRec.version)
-            : 'it patches files your installed build does not contain';
+            : !shapeOK ? 'it patches files your installed build does not contain'
+            : 'the installed patch-base bytes do not match the signed target';
   return {files:[],patching:false,priorRec,fallback:false,
           error:'This update cannot be applied because '+why+
                 ', and no full payload was published'};
@@ -1153,11 +2147,12 @@ async function updDownload(){
   const run=++UPD.downloadSeq, ac=new AbortController();
   UPD.downloadRun=run;
   let patching=false, files=Array.isArray(m.files)?m.files:[], priorRec=null;
+  let transfer=null,journal=null;
   const initialTotal=files.reduce((s,f)=>s+(f.size||0),0)||1;
   UPD.feed=files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
   UPD.fileIdx=-1;
   updSet('downloading',{pct:0,got:0,total:initialTotal,rate:0,err:null,abort:ac,
-                        retryDownload:false,readyIdentity:null});
+                        retryDownload:false,readyIdentity:null,transferDiagnostic:null});
   const base=m.base||'';
   const t0=performance.now();
   const out={};
@@ -1172,71 +2167,71 @@ async function updDownload(){
     files=plan.files; patching=plan.patching; priorRec=plan.priorRec;
     const total=files.reduce((s,f)=>s+(f.size||0),0)||1;
     UPD.total=total;
-    UPD.transferKind=updKindForFiles(files);
+    UPD.transferKind=updKind(m,files);
+    transfer=await updTransferIdentity(m,plan); updAssertDownload(run,ac);
+    /* Only a packaged boot advertises descriptor support. Old installed APKs
+       keep receiving their exact legacy bundle shape, so this updater change
+       can ship safely before every device has the new immutable boot loader. */
+    const directArtifacts=!!(typeof window!=='undefined'&&window.__MF_ARTIFACT_BOOT_V1===true);
+    /* Reclaim superseded releases before asking the browser how much space is
+       free. Protect this exact identity even when its resumable journal is old:
+       the player has explicitly resumed it now. The sweep is best-effort; a
+       failed maintenance pass must not turn a valid download into an error. */
+    try{ await updTransferMaintenance(transfer.identity); }catch(e){}
+    updAssertDownload(run,ac);
+    const resume=await updTransferStoredBytes(transfer,files,run,ac); updAssertDownload(run,ac);
+    const storage=await updStoragePreflight(plan,directArtifacts,resume); updAssertDownload(run,ac);
+    UPD.storage=storage;
+    journal=await updTransferJournal(transfer,m,files); updAssertDownload(run,ac);
     /* Rebuild after patch-base selection so a full fallback never inherits the
        delta's rows. Every retry also receives new row objects and counters. */
     UPD.feed=files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
     UPD.fileIdx=-1;
     if(typeof renderUpdatePanel==='function') renderUpdatePanel();
-    let got=0;
+    updPublishSnapshot(true);
+    let got=0,networkGot=0;
     for(let fi=0;fi<files.length;fi++){
       const f=files[fi];
       UPD.fileIdx=fi;
       if(UPD.feed[fi]) UPD.feed[fi].state='downloading';
       const src=f.url||base+f.path;
-      const r=await fetch(src+(src.includes('?')?'&':'?')+'v='+encodeURIComponent(m.version),
-                          {cache:'no-store',signal:ac.signal});
-      updAssertDownload(run,ac);
-      if(!r.ok) throw new Error(f.path+': HTTP '+r.status);
-      const contentType=String(r.headers&&r.headers.get?r.headers.get('content-type')||'':'').toLowerCase();
-      const chunks=[]; let n=0;
-      if(r.body&&r.body.getReader){
-        const rd=r.body.getReader();
-        for(;;){
-          const {done,value}=await rd.read();
-          updAssertDownload(run,ac);
-          if(done) break;
-          chunks.push(value); n+=value.length; got+=value.length;
-          if(UPD.feed[fi]) UPD.feed[fi].got=n;
-          const el=(performance.now()-t0)/1000;
-          UPD.got=got; UPD.pct=Math.min(99,got/total*100);
-          UPD.rate=el>0.25? got/el : 0;
-          if(typeof renderUpdatePanel==='function') renderUpdatePanel();
+      let fileGot=0;
+      const text=await updDownloadArtifact(m,f,transfer,journal,src,run,ac,(n,resumed)=>{
+        /* A failed network attempt streamed bytes that were never retained.
+           The range wrapper reports their negative delta before retrying so
+           the progress bar cannot reach 100% on duplicate transient reads. */
+        let credited=0;
+        if(n<0){
+          const remove=Math.min(fileGot,-n);
+          fileGot-=remove; got=Math.max(0,got-remove);
+          credited=-remove;
+        }else{
+          const add=Math.max(0,Math.min(n,f.size-fileGot));
+          fileGot+=add; got+=add;
+          credited=add;
+          if(!resumed) networkGot+=n;
         }
-      } else {                                  // no streaming body: still works
-        const buf=new Uint8Array(await r.arrayBuffer());
-        updAssertDownload(run,ac);
-        chunks.push(buf); n=buf.length; got+=n;
-        UPD.got=got; UPD.pct=Math.min(99,got/total*100);
+        if(UPD.feed[fi]) UPD.feed[fi].got=Math.min(f.size,fileGot);
+        const elapsed=(performance.now()-t0)/1000;
+        UPD.got=Math.min(total,got); UPD.pct=Math.min(99,UPD.got/total*100);
+        UPD.rate=elapsed>0.25?networkGot/elapsed:0;
         if(typeof renderUpdatePanel==='function') renderUpdatePanel();
-      }
-      /* Size catches truncation. SHA-256 (present on current manifests) catches
-         a wrong or corrupted object that happens to have the same length. */
-      if(f.size && Math.abs(n-f.size) > Math.max(64, f.size*0.02)){
-        /* File-share services commonly answer a nominally successful request
-           with a login/confirmation HTML page. Surface that real cause, and
-           always include both byte counts so a publisher can diagnose a stale
-           manifest without needing device logs. */
-        const hostPage=contentType.includes('text/html')||contentType.includes('application/xhtml');
-        const reason=n===0 ? 'download host returned no data'
-                    : hostPage ? 'download host returned a web page instead of update data'
-                    : 'download was incomplete';
-        throw new Error(f.path+': '+reason+' ('+fmtBytes(n)+' of '+fmtBytes(f.size)+')');
-      }
-      const bytes=new Uint8Array(n); let at=0;
-      for(const c of chunks){ bytes.set(c,at); at+=c.length; }
-      await updVerifyHash(bytes,f.sha256,f.path,run,ac);
+        updPublishSnapshot(false);
+        return credited;
+      });
+      out[f.path]=directArtifacts
+        ?{key:updTransferFileKey(transfer.identity,f.path),size:f.size,
+          sha256:String(f.sha256).toLowerCase()}
+        :text;
       updAssertDownload(run,ac);
       /* Only after BOTH the size check and the sha256 — a green row must mean
          verified, not merely received. */
-      if(UPD.feed[fi]){ UPD.feed[fi].state='ok'; UPD.feed[fi].got=n; }
-      out[f.path]=new TextDecoder().decode(bytes);
+      if(UPD.feed[fi]){ UPD.feed[fi].state='ok'; UPD.feed[fi].got=f.size; }
     }
     /* Commit only once every file is present and accounted for. */
-    /* MERGE, do not replace, when this was a delta. The cached payload is the
-       whole build; the patch is a handful of files to overwrite inside it.
-       Order matters as much as content - boot.js concatenates in manifest
-       order - so keep the base order and append only genuinely new paths. */
+    /* MERGE, do not replace, when this was a delta. Schema-3 full[] is the
+       signed target, including executable order and removals: never let stale
+       prior order/extra paths survive under that target's runtimeRoot. */
     let commitFiles=out, commitOrder=files.map(f=>f.path);
     if(patching){
       /* Already fetched and validated in the decision block above, so this
@@ -1255,18 +2250,36 @@ async function updDownload(){
                         retryDownload:false});
         return;
       }
-      commitFiles=Object.assign({},priorFiles,out);
-      const priorOrder=(prior&&Array.isArray(prior.order)&&prior.order.length)
-                        ? prior.order.slice() : Object.keys(priorFiles);
-      for(const path of commitOrder) if(priorOrder.indexOf(path)<0) priorOrder.push(path);
-      commitOrder=priorOrder;
+      if(plan.target&&plan.target.length){
+        commitFiles={}; commitOrder=plan.target.map(file=>file.path);
+        for(const path of commitOrder)
+          commitFiles[path]=Object.prototype.hasOwnProperty.call(out,path)?out[path]:priorFiles[path];
+      }else{
+        /* Pre-schema-3 patches could omit full[]. They retain the historical
+           merge contract because no signed target order exists to replace it. */
+        commitFiles=Object.assign({},priorFiles,out);
+        const priorOrder=(prior&&Array.isArray(prior.order)&&prior.order.length)
+                          ? prior.order.slice() : Object.keys(priorFiles);
+        for(const path of commitOrder) if(priorOrder.indexOf(path)<0) priorOrder.push(path);
+        commitOrder=priorOrder;
+      }
     }
     updAssertDownload(run,ac);
-    const pending={version:m.version, notes:m.notes||'', at:Date.now(),
+    const pending={version:m.version, notes:m.notes||'', release:m.release||null, at:Date.now(),
                    schema:m.schema||1,channel:m.channel||'stable',
                    severity:m.severity||'recommended',
                    kind:plan.fallback?'full':(updIsPatch(m)?'patch':(m.kind||'full')),
+                   category:updKind(m)||'',
                    patchedFrom:patching?String(m.patchFrom):'',
+                   manifestRoot:transfer.manifestRoot,payloadRoot:transfer.payloadRoot,
+                   sourcePayloadRoot:String(m.payloadRoot||'').toLowerCase(),
+                   fullRoot:String(m.fullRoot||'').toLowerCase(),
+                   targetRoot:String(m.fullRoot||transfer.payloadRoot||'').toLowerCase(),
+                   runtimeRoot:String(m.runtimeRoot||'').toLowerCase(),
+                   manifestKind:String(m.kind||''),
+                   manifestCategory:String(m.category||''),
+                   manifestPatchFrom:String(m.patchFrom||''),
+                   storage:directArtifacts?'artifact-v1':'bundle-v1',
                    order:commitOrder, files:commitFiles};
     /* This is the explicit cancellation boundary. All network and integrity
        work is complete. From here the tiny atomic IDB transaction must finish
@@ -1274,10 +2287,14 @@ async function updDownload(){
     updSet('staging',{pct:100,abort:null,retryDownload:false});
     await updCommitPending(pending);
     updAssertDownload(run,ac);
+    /* A fully staged bundle is now the durable source of truth. Temporary
+       ranges can be reclaimed; a cleanup failure is harmless and is retried by
+       storage maintenance rather than turning a successful stage into error. */
+    try{ await updTransferCleanup(transfer,files,directArtifacts); }catch(e){}
     /* Stage the notes where the NEXT document can read them without touching
        the megabytes of source sitting in the record above. This is deliberately
        after the atomic IDB commit, so a failed transaction cannot alter notes. */
-    updStageNotes(m.version,m.notes);
+    updStageNotes(m.version,m.notes,m.release);
     updSet('ready',{pct:100,abort:null,retryDownload:false,
                     readyIdentity:updPendingIdentity(pending)});
   }catch(e){
@@ -1293,23 +2310,39 @@ async function updDownload(){
       return;
     }
     const superseded=e&&['MF_UPDATE_PENDING_SUPERSEDED','MF_UPDATE_CHANNEL_CHANGED',
-      'MF_UPDATE_INSTALL_ACTIVE','MF_UPDATE_OPERATION_BUSY'].includes(e.code);
+      'MF_UPDATE_INSTALL_ACTIVE','MF_UPDATE_OPERATION_BUSY','MF_UPDATE_VERSION_CONFLICT'].includes(e.code);
     updSet('error',{err:(e&&e.message)||'Download failed',abort:null,
                     retryDownload:!superseded});
   }finally{
     if(UPD.downloadRun===run){
       UPD.downloadRun=0;
       if(typeof renderUpdatePanel==='function') renderUpdatePanel();
+      updPublishSnapshot(true);
     }
   }
 }
 function updCancel(){ if(UPD.state==='downloading'&&UPD.abort) UPD.abort.abort(); }
+/* RETRY is fresh consent to continue the same immutable release, not consent to
+   trust yesterday's CDN URLs forever. Re-check the channel first so a delivery
+   repair can repoint those URLs. Identity roots and ordered byte fingerprints
+   exclude URL location but bind executable content: only that exact release
+   may resume automatically. A newly published release remains AVAILABLE and
+   waits for its own explicit DOWNLOAD action. */
+async function updRetryDownload(){
+  if(UPD.state!=='error'||!UPD.retryDownload||!UPD.manifest||updOperationBusy()) return false;
+  const failedManifest=UPD.manifest;
+  await updCheck(true);
+  if(UPD.state!=='available'||!UPD.manifest||
+     !updManifestSameRelease(failedManifest,UPD.manifest)) return false;
+  await updDownload();
+  return true;
+}
 
 /* ---- APPLY / ROLLBACK ------------------------------------------------------ */
 async function updApply(){
   if(updOperationBusy()) return;
   const expected=UPD.readyIdentity;
-  const running=updRunningIdentity();
+  let running=updRunningIdentity();
   /* Applying owns storage from its first read onward. Acquiring this state
      after `updGet('pending')` allowed a channel tap to clear the manifest while
      the old channel's payload was already on its way to `active`. */
@@ -1327,7 +2360,13 @@ async function updApply(){
        The copy is best-effort and lease-owned: quota failure cannot block the
        install, while lost ownership cannot delete a newer window's copy. */
     if(running&&!updSamePending(running,expected)){
-      try{ preparedPrevious=await updPreparePrevious(running,lease); }
+      try{
+        preparedPrevious=await updPreparePrevious(running,lease);
+        /* Preparation read the authoritative active payload. Replace the
+           root-less legacy boot report with that exact stored identity so the
+           later promotion transaction remains root-strict. */
+        if(preparedPrevious) running=updPendingIdentity(preparedPrevious);
+      }
       catch(e){
         if(e&&['MF_UPDATE_OPERATION_CHANGED','MF_UPDATE_ACTIVE_CHANGED'].includes(e.code))
           throw e;
@@ -1440,9 +2479,27 @@ function updIsPatch(m){ return !!(m&&String(m.kind||'').toLowerCase()==='patch')
 function updPatchApplies(m,installed){
   return updIsPatch(m)&&!!m.patchFrom&&String(m.patchFrom)===String(installed);
 }
+function updValidChunks(f){
+  if(!f||f.chunks==null) return true;       // schema 1/2 legacy whole-file transfer
+  if(!Array.isArray(f.chunks)||!f.chunks.length) return false;
+  let at=0;
+  for(const c of f.chunks){
+    if(!c||!Number.isFinite(c.offset)||c.offset!==at||
+       !Number.isFinite(c.size)||c.size<=0||
+       typeof c.sha256!=='string'||!/^[0-9a-f]{64}$/i.test(c.sha256)) return false;
+    at+=c.size;
+  }
+  return at===f.size;
+}
 function updValidFile(f){
   return !!(f&&typeof f.path==='string'&&typeof f.sha256==='string'&&
-            /^[0-9a-f]{64}$/i.test(f.sha256)&&Number.isFinite(f.size)&&f.size>0);
+            /^[0-9a-f]{64}$/i.test(f.sha256)&&Number.isFinite(f.size)&&f.size>0&&
+            updValidChunks(f));
+}
+function updValidStoredArtifact(file){
+  return typeof file==='string'||!!(file&&typeof file==='object'&&
+    typeof file.key==='string'&&file.key&&Number.isFinite(file.size)&&file.size>0&&
+    typeof file.sha256==='string'&&/^[0-9a-f]{64}$/i.test(file.sha256));
 }
 /* A `full` entry must carry an ABSOLUTE url of its own, and this is not
    pedantry. updDownload resolves a bare path as `base + f.path` using the
@@ -1615,12 +2672,13 @@ async function updInstalledVersion(){
    collapses to a single version line and opens itself only when it has real
    news — a patch found, a download running, or a failure worth reading. */
 let updVerShown=APP_VERSION, updOpen=false;
-/* Patch taxonomy. A manifest may declare `kind` explicitly; otherwise infer it
-   from payload size so existing manifests get a sensible label with no publisher
-   change. HOTFIX is a handful of files a player should take immediately;
-   OVERHAUL is a full payload replacement worth warning about on mobile data. */
-const UPD_KINDS={hotfix:{nm:'HOTFIX',ds:'Small fix — installs in seconds'},
-                 content:{nm:'CONTENT PATCH',ds:'New content and fixes'},
+/* `kind` is the transport contract (`patch` or `full`); `category` is what the
+   player sees. These cannot share one field: a 27 MiB delta can still be an
+   urgent HOTFIX. Legacy manifests that put a presentation value in `kind`, or
+   omit it entirely, keep their old size-based fallback. */
+const UPD_KINDS={system:{nm:'SYSTEM',ds:'Updater and platform improvements'},
+                 hotfix:{nm:'HOTFIX',ds:'Urgent focused repair'},
+                 content:{nm:'CONTENT',ds:'New content and fixes'},
                  overhaul:{nm:'OVERHAUL',ds:'Full rebuild — large download'}};
 function updKindForFiles(files){
   const bytes=(files||[]).reduce((a,f)=>a+(f.size||0),0);
@@ -1628,11 +2686,13 @@ function updKindForFiles(files){
   if(bytes<=20*1024*1024) return 'content';
   return 'overhaul';
 }
-function updKind(m){
+function updKind(m,files){
   if(!m) return null;
-  const declared=String(m.kind||'').toLowerCase();
-  if(UPD_KINDS[declared]) return declared;
-  return updKindForFiles(m.files||[]);
+  const category=String(m.category||'').toLowerCase();
+  if(UPD_KINDS[category]) return category;
+  const legacy=String(m.kind||'').toLowerCase();
+  if(UPD_KINDS[legacy]) return legacy;
+  return updKindForFiles(Array.isArray(files)?files:(m.files||[]));
 }
 function updKindLabel(m){ const k=updKind(m); return k?UPD_KINDS[k]:null; }
 function updWants(){
@@ -1870,7 +2930,7 @@ function updButton(){
      should never be in, and updDownload() silently returns on one, so route it
      to a fresh check instead of giving the player a button that does nothing. */
   if(UPD.state==='available'&&UPD.manifest) updDownload();
-  else if(UPD.state==='error'&&UPD.retryDownload&&UPD.manifest) updDownload();
+  else if(UPD.state==='error'&&UPD.retryDownload&&UPD.manifest) updRetryDownload();
   else if(UPD.state==='ready'||UPD.state==='applyError') updApply();
   else updCheck(true);
 }
@@ -1909,18 +2969,19 @@ async function initUpdater(){
        UPD.manifest here, as this did, always produced an empty body: this is a
        fresh document, UPD is the literal declared above with manifest:null, and
        the first updCheck that would fill it in is still 1.4 seconds away. */
-    if(updLogPost(running,updNotesFor(running))&&typeof storyRefreshBadge==='function')
+    if(updLogPost(running,updNotesFor(running),{release:updStagedReleaseFor(running)})&&
+       typeof storyRefreshBadge==='function')
       try{ storyRefreshBadge(); }catch(e){}
     updSet('installed');
   } else if(fail&&fail.quarantined&&verNewer(fail.version,updVerShown)){
     updSet('error',{err:'v'+fail.version+' failed to start twice and was removed - check again to download a fresh copy'});
   } else if(pendingHere&&fail&&fail.version===pend.version&&verNewer(pend.version,updVerShown)){
-    UPD.manifest={version:pend.version,notes:pend.notes,files:[],
+    UPD.manifest={version:pend.version,notes:pend.notes,release:pend.release||null,files:[],
                   channel:pend.channel||'stable',severity:pend.severity||'recommended'};
     updSet('applyError',{err:fail.reason||'Downloaded update kept safely — retry install',
                          readyIdentity:updPendingIdentity(pend)});
   } else if(pendingHere&&verNewer(pend.version,updVerShown)){
-    UPD.manifest={version:pend.version,notes:pend.notes,files:[],
+    UPD.manifest={version:pend.version,notes:pend.notes,release:pend.release||null,files:[],
                   channel:pend.channel||'stable',severity:pend.severity||'recommended'};
     updSet('ready',{readyIdentity:updPendingIdentity(pend)});
   } else if(!UPDATE_URL) updSet('unset');
@@ -1937,7 +2998,9 @@ async function initUpdater(){
      that is already logged posts nothing. */
   if(!running&&APP_NOTES){
     const empty=!updLogRead().length;
-    if(updLogPost(APP_VERSION,APP_NOTES,{packaged:true,read:empty})&&!empty&&
+    const packagedRelease=updReleaseDescriptor({version:APP_VERSION,notes:APP_NOTES,channel:'stable'});
+    mfUpdaterIngestRelease(packagedRelease);
+    if(updLogPost(APP_VERSION,APP_NOTES,{packaged:true,read:empty,release:packagedRelease})&&!empty&&
        typeof storyRefreshBadge==='function') try{ storyRefreshBadge(); }catch(e){}
   }
 
@@ -2007,4 +3070,5 @@ async function initUpdater(){
      top of whatever state the first had just settled into. The surviving timer
      is also the better of the two: it re-tests netAllowed() when it FIRES,
      rather than reading it once at wiring time. */
+  updPublishSnapshot(true);
 }

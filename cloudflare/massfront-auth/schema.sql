@@ -182,6 +182,19 @@ CREATE INDEX IF NOT EXISTS idx_messages_inbox ON messages(to_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_messages_from ON messages(from_id, created_at, id);
 CREATE INDEX IF NOT EXISTS idx_messages_to_page ON messages(to_id, created_at, id);
 
+-- Authenticated global chat. Public feed rows deliberately contain only a
+-- message, timestamp and the sender's public username (joined at read time).
+CREATE TABLE IF NOT EXISTS world_messages (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  body       TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_world_messages_page
+  ON world_messages(created_at DESC,id DESC);
+CREATE INDEX IF NOT EXISTS idx_world_messages_user
+  ON world_messages(user_id,created_at DESC,id DESC);
+
 -- Ephemeral friend presence. `offline` is represented by no live row, so the
 -- database never becomes a long-term activity log. Reads join through the
 -- friendships table and filter blocks in both directions; there is no route
@@ -193,6 +206,16 @@ CREATE TABLE IF NOT EXISTS presence (
   expires_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_presence_expires ON presence(expires_at);
+
+-- Aggregate-only activity heartbeat. Responses count these rows but never
+-- select or expose the attached account identity.
+CREATE TABLE IF NOT EXISTS online_heartbeats (
+  user_id    INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  updated_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_online_heartbeats_expires
+  ON online_heartbeats(expires_at);
 
 -- Disabled-by-default authenticated staging lobbies. This is roster/invite
 -- coordination only; it does not claim a realtime deterministic match relay.
@@ -222,3 +245,116 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_multiplayer_invite_pending
   ON multiplayer_invites(lobby_id,to_id) WHERE status='pending';
 CREATE INDEX IF NOT EXISTS idx_multiplayer_invite_inbox
   ON multiplayer_invites(to_id,status,expires_at);
+
+-- ----------------------------------------------------------------------------
+-- MODERATION OPERATIONS FOUNDATION. This snapshot mirrors ledger migration
+-- 0004. It creates no public capability and does not enable chat or realtime.
+-- Retained evidence uses opaque subject_ref values; account deletion removes
+-- the user_id mapping without erasing the append-only moderation record.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS moderation_subjects (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  subject_ref TEXT NOT NULL UNIQUE,
+  created_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS moderation_cases (
+  id TEXT PRIMARY KEY, report_id INTEGER UNIQUE,
+  reporter_ref TEXT NOT NULL, subject_ref TEXT NOT NULL,
+  evidence_snapshot TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'open' CHECK(state IN ('open','claimed','resolved')),
+  claimed_by TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+  resolved_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_queue ON moderation_cases(state,created_at,id);
+CREATE INDEX IF NOT EXISTS idx_moderation_cases_subject ON moderation_cases(subject_ref,created_at);
+CREATE TABLE IF NOT EXISTS moderation_sanctions (
+  id TEXT PRIMARY KEY, case_id TEXT, subject_ref TEXT NOT NULL, user_id INTEGER,
+  kind TEXT NOT NULL CHECK(kind IN ('warning','suspend','ban')),
+  status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active','revoked','expired')),
+  reason TEXT NOT NULL, actor_ref TEXT NOT NULL, created_at INTEGER NOT NULL,
+  expires_at INTEGER, revoked_at INTEGER, revoked_by TEXT, revoke_reason TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_moderation_sanctions_active_user
+  ON moderation_sanctions(user_id,status,expires_at);
+CREATE INDEX IF NOT EXISTS idx_moderation_sanctions_subject
+  ON moderation_sanctions(subject_ref,created_at);
+CREATE TABLE IF NOT EXISTS moderation_appeals (
+  id TEXT PRIMARY KEY, sanction_id TEXT NOT NULL, appellant_ref TEXT NOT NULL,
+  state TEXT NOT NULL DEFAULT 'open' CHECK(state IN ('open','accepted','denied')),
+  reason TEXT NOT NULL, created_at INTEGER NOT NULL, resolved_at INTEGER,
+  resolver_ref TEXT, resolution_reason TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_moderation_appeals_one_open
+  ON moderation_appeals(sanction_id,appellant_ref) WHERE state='open';
+CREATE INDEX IF NOT EXISTS idx_moderation_appeals_queue
+  ON moderation_appeals(state,created_at,id);
+CREATE TABLE IF NOT EXISTS moderation_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, case_id TEXT, subject_ref TEXT NOT NULL,
+  actor_kind TEXT NOT NULL CHECK(actor_kind IN ('player','operator','system')),
+  actor_ref TEXT NOT NULL, action TEXT NOT NULL, reason TEXT NOT NULL,
+  details_json TEXT, created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_moderation_events_case ON moderation_events(case_id,created_at,id);
+CREATE INDEX IF NOT EXISTS idx_moderation_events_subject ON moderation_events(subject_ref,created_at,id);
+CREATE TRIGGER IF NOT EXISTS moderation_events_no_update
+BEFORE UPDATE ON moderation_events
+BEGIN
+  SELECT RAISE(ABORT,'moderation_events is append-only');
+END;
+CREATE TRIGGER IF NOT EXISTS moderation_events_no_delete
+BEFORE DELETE ON moderation_events
+BEGIN
+  SELECT RAISE(ABORT,'moderation_events is append-only');
+END;
+
+-- Disabled-by-default match launch compatibility foundation. This records a
+-- ready lobby's immutable inputs and one deterministic credential seat per
+-- player; realtime command transport remains a separate, unavailable feature.
+CREATE TABLE IF NOT EXISTS multiplayer_lobby_compatibility (
+  lobby_id       TEXT NOT NULL REFERENCES multiplayer_lobbies(id) ON DELETE CASCADE,
+  user_id        INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  lobby_revision INTEGER NOT NULL,
+  build_version  TEXT NOT NULL,
+  manifest_hash  TEXT NOT NULL,
+  balance_hash   TEXT NOT NULL,
+  rules_hash     TEXT NOT NULL,
+  submitted_at   INTEGER NOT NULL,
+  PRIMARY KEY(lobby_id,user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_multiplayer_compatibility_revision
+  ON multiplayer_lobby_compatibility(lobby_id,lobby_revision);
+
+CREATE TABLE IF NOT EXISTS multiplayer_matches (
+  id              TEXT PRIMARY KEY,
+  lobby_id        TEXT NOT NULL UNIQUE REFERENCES multiplayer_lobbies(id) ON DELETE CASCADE,
+  launch_revision INTEGER NOT NULL,
+  host_user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  build_version   TEXT NOT NULL,
+  manifest_hash   TEXT NOT NULL,
+  balance_hash    TEXT NOT NULL,
+  rules_hash      TEXT NOT NULL,
+  roster_size     INTEGER NOT NULL,
+  created_at      INTEGER NOT NULL,
+  expires_at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_multiplayer_matches_expiry
+  ON multiplayer_matches(expires_at);
+
+CREATE TABLE IF NOT EXISTS multiplayer_match_seats (
+  match_id          TEXT NOT NULL REFERENCES multiplayer_matches(id) ON DELETE CASCADE,
+  lobby_id          TEXT NOT NULL,
+  user_id           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  seat_number       INTEGER NOT NULL,
+  build_version     TEXT NOT NULL,
+  manifest_hash     TEXT NOT NULL,
+  balance_hash      TEXT NOT NULL,
+  rules_hash        TEXT NOT NULL,
+  token_hash        TEXT UNIQUE,
+  token_issued_at   INTEGER,
+  token_expires_at  INTEGER,
+  token_consumed_at INTEGER,
+  PRIMARY KEY(match_id,user_id),
+  UNIQUE(match_id,seat_number)
+);
+CREATE INDEX IF NOT EXISTS idx_multiplayer_match_seats_user
+  ON multiplayer_match_seats(user_id,match_id);

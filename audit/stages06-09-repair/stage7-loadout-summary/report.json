@@ -1,0 +1,1217 @@
+{
+  "schema": "MassfrontStage7LoadoutSummaryEvidenceV1",
+  "generatedAt": "2026-08-31T00:42:54.501Z",
+  "startedAt": "2026-08-31T00:41:25.205Z",
+  "sourceMode": "current-source",
+  "url": "http://127.0.0.1:63542/?stage7LoadoutProbe=1",
+  "port": 63542,
+  "launchPreset": {
+    "launcher": "tools/pw-browser.mjs",
+    "ownershipMode": "isolated",
+    "headless": true,
+    "angle": "d3d11",
+    "softwareGpuForbidden": true
+  },
+  "identity": {
+    "before": {
+      "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+      "dirty": true,
+      "dirtyFingerprint": "85671b8926c0a58780584e4280b953cdad8583171335c68d7bad58417cef55d1",
+      "dirtyBytes": 30499,
+      "trackedPatchBytes": 2668738,
+      "files": {
+        "index.html": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+        "boot.js": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+        "assets/data/manifest.json": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95",
+        "src/galaxyui.js": "7c75720caa24d7379bbe7515527795ac99d776d95eccda2c06fce192b696c411",
+        "src/game/meta.js": "9e56f9c533f4c9b33c3f584dfee522a8a0755081b134c7028c9fd59651cd15ca",
+        "src/develop.js": "a71d838f5d663c79f7fd145e97088d7f030ec2dc5809d6269a87cc599d9238b3",
+        "src/storeui.js": "010dcf99b9039ec25ab0d9919a6a834ced71c054f57dbbb7d59f895137d93878",
+        "src/game/commander.js": "2dfa3dcdfff60ff1437f96477fb469db0101d45968d12e21cecc3ecb3dd3bee3",
+        "src/main.js": "303187b46d4c5c55ed81949e64b616f63ec92f4d9e2ba6804c9dd53f444592e5",
+        "src/onboarding.js": "83dae7bbf69b9d796b39fc54dc087c8ef64a4400ab20efcae1b4a59fa31b8222",
+        "tools/pw-browser.mjs": "59ff800022f922a848b456e60e2fd61dfc88dde5e1d35aa04672c37c57aa45d5",
+        "tools/chrome-gpu.mjs": "006ac2d5e01466301c74bf4c78a1f089f7bcf6c7625298e27f0d4047152fdad2",
+        "tools/probe-stage7-loadout-summary.mjs": "228a6c962a5afcc34c75ae6921ad17d0179b0b697c86322d9e118659f6ab31a2"
+      }
+    },
+    "after": {
+      "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+      "dirty": true,
+      "dirtyFingerprint": "85671b8926c0a58780584e4280b953cdad8583171335c68d7bad58417cef55d1",
+      "dirtyBytes": 30499,
+      "trackedPatchBytes": 2668738,
+      "files": {
+        "index.html": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+        "boot.js": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+        "assets/data/manifest.json": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95",
+        "src/galaxyui.js": "7c75720caa24d7379bbe7515527795ac99d776d95eccda2c06fce192b696c411",
+        "src/game/meta.js": "9e56f9c533f4c9b33c3f584dfee522a8a0755081b134c7028c9fd59651cd15ca",
+        "src/develop.js": "a71d838f5d663c79f7fd145e97088d7f030ec2dc5809d6269a87cc599d9238b3",
+        "src/storeui.js": "010dcf99b9039ec25ab0d9919a6a834ced71c054f57dbbb7d59f895137d93878",
+        "src/game/commander.js": "2dfa3dcdfff60ff1437f96477fb469db0101d45968d12e21cecc3ecb3dd3bee3",
+        "src/main.js": "303187b46d4c5c55ed81949e64b616f63ec92f4d9e2ba6804c9dd53f444592e5",
+        "src/onboarding.js": "83dae7bbf69b9d796b39fc54dc087c8ef64a4400ab20efcae1b4a59fa31b8222",
+        "tools/pw-browser.mjs": "59ff800022f922a848b456e60e2fd61dfc88dde5e1d35aa04672c37c57aa45d5",
+        "tools/chrome-gpu.mjs": "006ac2d5e01466301c74bf4c78a1f089f7bcf6c7625298e27f0d4047152fdad2",
+        "tools/probe-stage7-loadout-summary.mjs": "228a6c962a5afcc34c75ae6921ad17d0179b0b697c86322d9e118659f6ab31a2"
+      }
+    },
+    "stable": true
+  },
+  "servedFiles": {
+    "index.html": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+      "localSha256": "162141235290f8e4ff762e69335279f3936b4b513db7dba69868ca7ea69abf68",
+      "match": true
+    },
+    "boot.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+      "localSha256": "a6ec2282721227596c4c017dcc010e290be0a605ea70ac14d674319bfb9b83a9",
+      "match": true
+    },
+    "assets/data/manifest.json": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95",
+      "localSha256": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95",
+      "match": true
+    },
+    "src/galaxyui.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "7c75720caa24d7379bbe7515527795ac99d776d95eccda2c06fce192b696c411",
+      "localSha256": "7c75720caa24d7379bbe7515527795ac99d776d95eccda2c06fce192b696c411",
+      "match": true
+    },
+    "src/game/meta.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "9e56f9c533f4c9b33c3f584dfee522a8a0755081b134c7028c9fd59651cd15ca",
+      "localSha256": "9e56f9c533f4c9b33c3f584dfee522a8a0755081b134c7028c9fd59651cd15ca",
+      "match": true
+    },
+    "src/develop.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "a71d838f5d663c79f7fd145e97088d7f030ec2dc5809d6269a87cc599d9238b3",
+      "localSha256": "a71d838f5d663c79f7fd145e97088d7f030ec2dc5809d6269a87cc599d9238b3",
+      "match": true
+    },
+    "src/storeui.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "010dcf99b9039ec25ab0d9919a6a834ced71c054f57dbbb7d59f895137d93878",
+      "localSha256": "010dcf99b9039ec25ab0d9919a6a834ced71c054f57dbbb7d59f895137d93878",
+      "match": true
+    },
+    "src/game/commander.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "2dfa3dcdfff60ff1437f96477fb469db0101d45968d12e21cecc3ecb3dd3bee3",
+      "localSha256": "2dfa3dcdfff60ff1437f96477fb469db0101d45968d12e21cecc3ecb3dd3bee3",
+      "match": true
+    },
+    "src/main.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "303187b46d4c5c55ed81949e64b616f63ec92f4d9e2ba6804c9dd53f444592e5",
+      "localSha256": "303187b46d4c5c55ed81949e64b616f63ec92f4d9e2ba6804c9dd53f444592e5",
+      "match": true
+    },
+    "src/onboarding.js": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "83dae7bbf69b9d796b39fc54dc087c8ef64a4400ab20efcae1b4a59fa31b8222",
+      "localSha256": "83dae7bbf69b9d796b39fc54dc087c8ef64a4400ab20efcae1b4a59fa31b8222",
+      "match": true
+    },
+    "tools/pw-browser.mjs": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "59ff800022f922a848b456e60e2fd61dfc88dde5e1d35aa04672c37c57aa45d5",
+      "localSha256": "59ff800022f922a848b456e60e2fd61dfc88dde5e1d35aa04672c37c57aa45d5",
+      "match": true
+    },
+    "tools/chrome-gpu.mjs": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "006ac2d5e01466301c74bf4c78a1f089f7bcf6c7625298e27f0d4047152fdad2",
+      "localSha256": "006ac2d5e01466301c74bf4c78a1f089f7bcf6c7625298e27f0d4047152fdad2",
+      "match": true
+    },
+    "tools/probe-stage7-loadout-summary.mjs": {
+      "status": 200,
+      "sourceHeader": "source",
+      "sha256": "228a6c962a5afcc34c75ae6921ad17d0179b0b697c86322d9e118659f6ab31a2",
+      "localSha256": "228a6c962a5afcc34c75ae6921ad17d0179b0b697c86322d9e118659f6ab31a2",
+      "match": true
+    }
+  },
+  "browser": {
+    "schema": "MassfrontOwnedBrowserEvidenceV1",
+    "launchMode": "owned-isolated",
+    "owned": true,
+    "reused": false,
+    "token": "a24c0ae0-f97e-4c62-821a-0d9c4d1c8dd8",
+    "pid": 517568,
+    "spawnPid": 517568,
+    "port": 63545,
+    "profile": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\.tmp\\pw-owned-Sj2NCL",
+    "endpoint": "http://127.0.0.1:63545",
+    "startedAt": "2026-08-31T00:41:26.065Z",
+    "gpu": {
+      "renderer": "ANGLE (AMD, AMD Radeon(TM) 610M (0x0000164E) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (AMD)",
+      "recordedAt": "2026-08-31T00:42:36.605Z"
+    },
+    "ownership": {
+      "status": "PROVEN",
+      "verifiedAt": "2026-08-31T00:41:31.573Z",
+      "processMatches": [
+        517568
+      ],
+      "cdpAlive": true,
+      "commandLineSha256": "67c5a1d6b21578ad1585a88e6e34162ee7b4f38f0385f10966a01636b9b28b98"
+    },
+    "cleanup": {
+      "attempted": false,
+      "success": false,
+      "processExited": false,
+      "portReleased": false,
+      "profileRemoved": false
+    },
+    "manifest": {
+      "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\.tmp\\pw-owned-sessions\\a24c0ae0-f97e-4c62-821a-0d9c4d1c8dd8.json",
+      "sha256": "ff4e3f34172405d7b6614cb56456ea2e9c62728487355e35adf4f685971edf8b",
+      "written": true,
+      "removed": false
+    }
+  },
+  "profiles": [
+    {
+      "profile": {
+        "id": "phone-412x900",
+        "width": 412,
+        "height": 900,
+        "launch": true
+      },
+      "url": "http://127.0.0.1:63542/?stage7LoadoutProbe=1",
+      "startedAt": "2026-08-31T00:41:31.737Z",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "badSourceResponses": [],
+      "failures": [],
+      "status": "PASS",
+      "onboarding": {
+        "present": true,
+        "action": "skip-via-ui"
+      },
+      "runtime": {
+        "sourceMarker": "http://127.0.0.1:63542/src/engine/gl.js?v=1.33.48-boot5",
+        "viewport": {
+          "width": 412,
+          "height": 900,
+          "dpr": 1
+        },
+        "initMissing": [],
+        "glLosses": 0
+      },
+      "seed": {
+        "perks": {
+          "cache": 1,
+          "targeting": 2
+        },
+        "module": {
+          "id": "plate",
+          "durability": 7.5
+        },
+        "gear": [
+          "w_rangefinder",
+          "u_fluxcell"
+        ],
+        "supplies": [
+          "c_supply",
+          "c_nanites"
+        ],
+        "supplyLock": 0,
+        "commander": "nova_kai"
+      },
+      "route": [
+        "galaxy",
+        "system",
+        "planet",
+        "region",
+        "deploy"
+      ],
+      "initial": {
+        "expected": {
+          "perks": [
+            {
+              "id": "cache",
+              "name": "Supply Cache",
+              "detail": "+300 mass, +1200 energy at match start",
+              "meta": "TIER 1 / 1"
+            }
+          ],
+          "modules": [
+            {
+              "id": "plate",
+              "name": "Reactive Plating",
+              "detail": "Your units +10% health",
+              "meta": "7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+            }
+          ],
+          "gear": [
+            {
+              "id": "w_rangefinder",
+              "name": "Ballistic Rangefinder",
+              "detail": "UNIT DAMAGE +3%",
+              "meta": "WEAPON · ACTIVE WHILE FITTED"
+            },
+            {
+              "id": "u_fluxcell",
+              "name": "Flux Cell",
+              "detail": "ENERGY INCOME +7%",
+              "meta": "UTILITY · ACTIVE WHILE FITTED"
+            }
+          ],
+          "supplies": [
+            {
+              "id": "c_supply",
+              "name": "Supply Pack",
+              "detail": "Next match: +220 starting mass",
+              "meta": "STOCK 3 · ARMY-WIDE · CONSUMES 1"
+            },
+            {
+              "id": "c_nanites",
+              "name": "Repair Nanites",
+              "detail": "Next match: +26% health, locked to one chassis",
+              "meta": "STOCK 2 · LOCKED · Striker · CONSUMES 1"
+            }
+          ],
+          "ownership": {
+            "permanent": {
+              "kind": "permanent",
+              "label": "PERMANENT"
+            },
+            "modules": {
+              "kind": "crafted",
+              "label": "WEARS"
+            },
+            "gear": {
+              "kind": "equipped",
+              "label": "EQUIPPED"
+            },
+            "supplies": {
+              "kind": "match",
+              "label": "ONE MATCH"
+            }
+          },
+          "commander": {
+            "id": "nova_kai",
+            "rank": "Captain",
+            "name": "Captain Elara Kai",
+            "callsign": "LANTERN",
+            "role": "VANGUARD",
+            "passive": "Fire-Control · Commander damage +12%",
+            "signature": "Skybreaker Salvo"
+          },
+          "contract": {
+            "id": "standard",
+            "nm": "STANDARD",
+            "rule": "1 PLAYER · AI ALLIES OPTIONAL",
+            "xp": 1.1
+          },
+          "plan": {
+            "id": "first",
+            "name": "FIRST COMMAND"
+          },
+          "team": "SOLO COMMAND"
+        },
+        "actual": {
+          "present": true,
+          "visible": true,
+          "plan": "first",
+          "mode": "standard",
+          "team": "SOLO COMMAND",
+          "commander": "nova_kai",
+          "text": "DEPLOYMENT LOADOUTWHAT ENTERS THIS MATCHSTANDARDFIRST COMMANDSOLO COMMANDBATTLE COMMANDERCaptain Captain Elara Kai · “LANTERN”VANGUARD · Fire-Control · Commander damage +12% · SIGNATURE · Skybreaker SalvoMODE CONTRACTSTANDARD · FIRST COMMAND1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XPSTORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFTACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTEDREADIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1",
+          "items": {
+            "permanent": [
+              {
+                "id": "cache",
+                "text": "Supply Cache+300 mass, +1200 energy at match startTIER 1 / 1"
+              }
+            ],
+            "module": [
+              {
+                "id": "plate",
+                "text": "Reactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+              }
+            ],
+            "gear": [
+              {
+                "id": "w_rangefinder",
+                "text": "Ballistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTED"
+              },
+              {
+                "id": "u_fluxcell",
+                "text": "Flux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED"
+              }
+            ],
+            "supply": [
+              {
+                "id": "c_supply",
+                "text": "Supply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1"
+              },
+              {
+                "id": "c_nanites",
+                "text": "Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+              }
+            ]
+          },
+          "badges": {
+            "permanent": {
+              "ownership": "permanent",
+              "scope": "permanent",
+              "text": "PERMANENT"
+            },
+            "modules": {
+              "ownership": "crafted",
+              "scope": "crafted",
+              "text": "WEARS"
+            },
+            "gear": {
+              "ownership": "equipped",
+              "scope": "equipped",
+              "text": "EQUIPPED"
+            },
+            "supplies": {
+              "ownership": "match",
+              "scope": "match",
+              "text": "ONE MATCH"
+            }
+          },
+          "lanes": {
+            "commander": "BATTLE COMMANDERCaptain Captain Elara Kai · “LANTERN”VANGUARD · Fire-Control · Commander damage +12% · SIGNATURE · Skybreaker Salvo",
+            "mode": "MODE CONTRACTSTANDARD · FIRST COMMAND1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XP",
+            "permanent": "STORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1",
+            "modules": "DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT",
+            "gear": "ACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED",
+            "supplies": "READIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+          }
+        }
+      },
+      "empty": {
+        "texts": [
+          "No permanent STORE perks retained.",
+          "No wearing Development modules fitted.",
+          "No account gear fitted.",
+          "No ONE MATCH supplies readied."
+        ],
+        "expected": [
+          "No permanent STORE perks retained.",
+          "No wearing Development modules fitted.",
+          "No account gear fitted.",
+          "No ONE MATCH supplies readied."
+        ],
+        "status": true
+      },
+      "commanderRefresh": {
+        "before": "nova_kai",
+        "after": "nova_holt",
+        "expected": {
+          "id": "nova_holt",
+          "rank": "Major",
+          "name": "Major Rowan Holt",
+          "callsign": "ANVIL",
+          "role": "ENGINEER",
+          "passive": "Forward Engineering · build speed +15%",
+          "signature": "Field Workshop"
+        }
+      },
+      "planRefresh": {
+        "after": "fortress",
+        "expected": {
+          "id": "fortress",
+          "name": "FORTRESS"
+        }
+      },
+      "teamRefresh": {
+        "after": "ALLIED STRIKE",
+        "expected": "ALLIED STRIKE"
+      },
+      "advancedRefresh": {
+        "after": "custom",
+        "expected": {
+          "id": "custom",
+          "name": "CUSTOM PLAN"
+        }
+      },
+      "final": {
+        "expected": {
+          "perks": [
+            {
+              "id": "cache",
+              "name": "Supply Cache",
+              "detail": "+300 mass, +1200 energy at match start",
+              "meta": "TIER 1 / 1"
+            }
+          ],
+          "modules": [
+            {
+              "id": "plate",
+              "name": "Reactive Plating",
+              "detail": "Your units +10% health",
+              "meta": "7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+            }
+          ],
+          "gear": [
+            {
+              "id": "w_rangefinder",
+              "name": "Ballistic Rangefinder",
+              "detail": "UNIT DAMAGE +3%",
+              "meta": "WEAPON · ACTIVE WHILE FITTED"
+            },
+            {
+              "id": "u_fluxcell",
+              "name": "Flux Cell",
+              "detail": "ENERGY INCOME +7%",
+              "meta": "UTILITY · ACTIVE WHILE FITTED"
+            }
+          ],
+          "supplies": [
+            {
+              "id": "c_supply",
+              "name": "Supply Pack",
+              "detail": "Next match: +220 starting mass",
+              "meta": "STOCK 3 · ARMY-WIDE · CONSUMES 1"
+            },
+            {
+              "id": "c_nanites",
+              "name": "Repair Nanites",
+              "detail": "Next match: +26% health, locked to one chassis",
+              "meta": "STOCK 2 · LOCKED · Striker · CONSUMES 1"
+            }
+          ],
+          "ownership": {
+            "permanent": {
+              "kind": "permanent",
+              "label": "PERMANENT"
+            },
+            "modules": {
+              "kind": "crafted",
+              "label": "WEARS"
+            },
+            "gear": {
+              "kind": "equipped",
+              "label": "EQUIPPED"
+            },
+            "supplies": {
+              "kind": "match",
+              "label": "ONE MATCH"
+            }
+          },
+          "commander": {
+            "id": "nova_holt",
+            "rank": "Major",
+            "name": "Major Rowan Holt",
+            "callsign": "ANVIL",
+            "role": "ENGINEER",
+            "passive": "Forward Engineering · build speed +15%",
+            "signature": "Field Workshop"
+          },
+          "contract": {
+            "id": "standard",
+            "nm": "STANDARD",
+            "rule": "1 PLAYER · AI ALLIES OPTIONAL",
+            "xp": 1.1
+          },
+          "plan": {
+            "id": "fortress",
+            "name": "FORTRESS"
+          },
+          "team": "ALLIED STRIKE"
+        },
+        "actual": {
+          "present": true,
+          "visible": true,
+          "plan": "fortress",
+          "mode": "standard",
+          "team": "ALLIED STRIKE",
+          "commander": "nova_holt",
+          "text": "DEPLOYMENT LOADOUTWHAT ENTERS THIS MATCHSTANDARDFORTRESSALLIED STRIKEBATTLE COMMANDERMajor Major Rowan Holt · “ANVIL”ENGINEER · Forward Engineering · build speed +15% · SIGNATURE · Field WorkshopMODE CONTRACTSTANDARD · FORTRESS1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XPSTORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFTACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTEDREADIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1",
+          "items": {
+            "permanent": [
+              {
+                "id": "cache",
+                "text": "Supply Cache+300 mass, +1200 energy at match startTIER 1 / 1"
+              }
+            ],
+            "module": [
+              {
+                "id": "plate",
+                "text": "Reactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+              }
+            ],
+            "gear": [
+              {
+                "id": "w_rangefinder",
+                "text": "Ballistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTED"
+              },
+              {
+                "id": "u_fluxcell",
+                "text": "Flux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED"
+              }
+            ],
+            "supply": [
+              {
+                "id": "c_supply",
+                "text": "Supply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1"
+              },
+              {
+                "id": "c_nanites",
+                "text": "Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+              }
+            ]
+          },
+          "badges": {
+            "permanent": {
+              "ownership": "permanent",
+              "scope": "permanent",
+              "text": "PERMANENT"
+            },
+            "modules": {
+              "ownership": "crafted",
+              "scope": "crafted",
+              "text": "WEARS"
+            },
+            "gear": {
+              "ownership": "equipped",
+              "scope": "equipped",
+              "text": "EQUIPPED"
+            },
+            "supplies": {
+              "ownership": "match",
+              "scope": "match",
+              "text": "ONE MATCH"
+            }
+          },
+          "lanes": {
+            "commander": "BATTLE COMMANDERMajor Major Rowan Holt · “ANVIL”ENGINEER · Forward Engineering · build speed +15% · SIGNATURE · Field Workshop",
+            "mode": "MODE CONTRACTSTANDARD · FORTRESS1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XP",
+            "permanent": "STORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1",
+            "modules": "DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT",
+            "gear": "ACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED",
+            "supplies": "READIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+          }
+        }
+      },
+      "layout": {
+        "rect": {
+          "left": 8,
+          "top": 140.90625,
+          "right": 404,
+          "bottom": 577.375,
+          "width": 396,
+          "height": 436.46875
+        },
+        "scrollRect": {
+          "left": 0,
+          "top": 74,
+          "right": 412,
+          "bottom": 818
+        },
+        "footerRect": {
+          "top": 818,
+          "bottom": 900
+        },
+        "stepperHeight": 59,
+        "viewport": {
+          "width": 412,
+          "height": 900
+        },
+        "documentOverflow": false,
+        "summaryOverflow": false,
+        "horizontalOverflow": [],
+        "obstructions": [],
+        "footerClearsScroller": true,
+        "headerBelowSticky": true,
+        "headerHit": true
+      },
+      "screenshots": {
+        "viewport": {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-loadout-summary\\phone-412x900-deploy.png",
+          "relativePath": "tmp/stage7-loadout-summary/phone-412x900-deploy.png",
+          "sha256": "196b05a6a5573819328681b3dac43421207cc9f0e2de0ce2de74daa2167f314b",
+          "bytes": 171061,
+          "dimensions": {
+            "width": 412,
+            "height": 900
+          },
+          "expected": {
+            "width": 412,
+            "height": 900
+          },
+          "valid": true
+        },
+        "summary": {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-loadout-summary\\phone-412x900-summary.png",
+          "relativePath": "tmp/stage7-loadout-summary/phone-412x900-summary.png",
+          "sha256": "8d74e081fca6d370dd5024c2675f061410f3ecae50a5b4b36a40ba8f3c2b44d0",
+          "bytes": 78270,
+          "dimensions": {
+            "width": 396,
+            "height": 438
+          },
+          "valid": true
+        }
+      },
+      "launch": {
+        "startedAt": "2026-08-31T00:42:05.400Z",
+        "finishedAt": "2026-08-31T00:42:14.756Z",
+        "before": {
+          "stage": "deploy",
+          "commander": "nova_holt",
+          "ready": [
+            "c_supply",
+            "c_nanites"
+          ],
+          "gear": [
+            "w_rangefinder",
+            "u_fluxcell"
+          ]
+        },
+        "after": {
+          "running": true,
+          "matchLive": true,
+          "stage": "deploy",
+          "setupVisible": false,
+          "commander": "nova_holt",
+          "matchConsumables": [
+            "c_supply",
+            "c_nanites"
+          ],
+          "matchGear": [
+            "w_rangefinder",
+            "u_fluxcell"
+          ],
+          "ready": []
+        },
+        "failures": [],
+        "status": "PASS"
+      },
+      "webgl": {
+        "contextLosses": 0,
+        "mainContextLost": false,
+        "mainError": 0
+      },
+      "finishedAt": "2026-08-31T00:42:14.758Z"
+    },
+    {
+      "profile": {
+        "id": "narrow-344x760",
+        "width": 344,
+        "height": 760,
+        "launch": false
+      },
+      "url": "http://127.0.0.1:63542/?stage7LoadoutProbe=1",
+      "startedAt": "2026-08-31T00:42:15.018Z",
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "badSourceResponses": [],
+      "failures": [],
+      "status": "PASS",
+      "onboarding": {
+        "present": true,
+        "action": "skip-via-ui"
+      },
+      "runtime": {
+        "sourceMarker": "http://127.0.0.1:63542/src/engine/gl.js?v=1.33.48-boot5",
+        "viewport": {
+          "width": 344,
+          "height": 760,
+          "dpr": 1
+        },
+        "initMissing": [],
+        "glLosses": 0
+      },
+      "seed": {
+        "perks": {
+          "cache": 1,
+          "targeting": 2
+        },
+        "module": {
+          "id": "plate",
+          "durability": 7.5
+        },
+        "gear": [
+          "w_rangefinder",
+          "u_fluxcell"
+        ],
+        "supplies": [
+          "c_supply",
+          "c_nanites"
+        ],
+        "supplyLock": 0,
+        "commander": "nova_kai"
+      },
+      "route": [
+        "galaxy",
+        "system",
+        "planet",
+        "region",
+        "deploy"
+      ],
+      "initial": {
+        "expected": {
+          "perks": [
+            {
+              "id": "cache",
+              "name": "Supply Cache",
+              "detail": "+300 mass, +1200 energy at match start",
+              "meta": "TIER 1 / 1"
+            }
+          ],
+          "modules": [
+            {
+              "id": "plate",
+              "name": "Reactive Plating",
+              "detail": "Your units +10% health",
+              "meta": "7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+            }
+          ],
+          "gear": [
+            {
+              "id": "w_rangefinder",
+              "name": "Ballistic Rangefinder",
+              "detail": "UNIT DAMAGE +3%",
+              "meta": "WEAPON · ACTIVE WHILE FITTED"
+            },
+            {
+              "id": "u_fluxcell",
+              "name": "Flux Cell",
+              "detail": "ENERGY INCOME +7%",
+              "meta": "UTILITY · ACTIVE WHILE FITTED"
+            }
+          ],
+          "supplies": [
+            {
+              "id": "c_supply",
+              "name": "Supply Pack",
+              "detail": "Next match: +220 starting mass",
+              "meta": "STOCK 3 · ARMY-WIDE · CONSUMES 1"
+            },
+            {
+              "id": "c_nanites",
+              "name": "Repair Nanites",
+              "detail": "Next match: +26% health, locked to one chassis",
+              "meta": "STOCK 2 · LOCKED · Striker · CONSUMES 1"
+            }
+          ],
+          "ownership": {
+            "permanent": {
+              "kind": "permanent",
+              "label": "PERMANENT"
+            },
+            "modules": {
+              "kind": "crafted",
+              "label": "WEARS"
+            },
+            "gear": {
+              "kind": "equipped",
+              "label": "EQUIPPED"
+            },
+            "supplies": {
+              "kind": "match",
+              "label": "ONE MATCH"
+            }
+          },
+          "commander": {
+            "id": "nova_kai",
+            "rank": "Captain",
+            "name": "Captain Elara Kai",
+            "callsign": "LANTERN",
+            "role": "VANGUARD",
+            "passive": "Fire-Control · Commander damage +12%",
+            "signature": "Skybreaker Salvo"
+          },
+          "contract": {
+            "id": "standard",
+            "nm": "STANDARD",
+            "rule": "1 PLAYER · AI ALLIES OPTIONAL",
+            "xp": 1.1
+          },
+          "plan": {
+            "id": "first",
+            "name": "FIRST COMMAND"
+          },
+          "team": "SOLO COMMAND"
+        },
+        "actual": {
+          "present": true,
+          "visible": true,
+          "plan": "first",
+          "mode": "standard",
+          "team": "SOLO COMMAND",
+          "commander": "nova_kai",
+          "text": "DEPLOYMENT LOADOUTWHAT ENTERS THIS MATCHSTANDARDFIRST COMMANDSOLO COMMANDBATTLE COMMANDERCaptain Captain Elara Kai · “LANTERN”VANGUARD · Fire-Control · Commander damage +12% · SIGNATURE · Skybreaker SalvoMODE CONTRACTSTANDARD · FIRST COMMAND1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XPSTORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFTACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTEDREADIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1",
+          "items": {
+            "permanent": [
+              {
+                "id": "cache",
+                "text": "Supply Cache+300 mass, +1200 energy at match startTIER 1 / 1"
+              }
+            ],
+            "module": [
+              {
+                "id": "plate",
+                "text": "Reactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+              }
+            ],
+            "gear": [
+              {
+                "id": "w_rangefinder",
+                "text": "Ballistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTED"
+              },
+              {
+                "id": "u_fluxcell",
+                "text": "Flux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED"
+              }
+            ],
+            "supply": [
+              {
+                "id": "c_supply",
+                "text": "Supply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1"
+              },
+              {
+                "id": "c_nanites",
+                "text": "Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+              }
+            ]
+          },
+          "badges": {
+            "permanent": {
+              "ownership": "permanent",
+              "scope": "permanent",
+              "text": "PERMANENT"
+            },
+            "modules": {
+              "ownership": "crafted",
+              "scope": "crafted",
+              "text": "WEARS"
+            },
+            "gear": {
+              "ownership": "equipped",
+              "scope": "equipped",
+              "text": "EQUIPPED"
+            },
+            "supplies": {
+              "ownership": "match",
+              "scope": "match",
+              "text": "ONE MATCH"
+            }
+          },
+          "lanes": {
+            "commander": "BATTLE COMMANDERCaptain Captain Elara Kai · “LANTERN”VANGUARD · Fire-Control · Commander damage +12% · SIGNATURE · Skybreaker Salvo",
+            "mode": "MODE CONTRACTSTANDARD · FIRST COMMAND1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XP",
+            "permanent": "STORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1",
+            "modules": "DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT",
+            "gear": "ACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED",
+            "supplies": "READIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+          }
+        }
+      },
+      "empty": {
+        "texts": [
+          "No permanent STORE perks retained.",
+          "No wearing Development modules fitted.",
+          "No account gear fitted.",
+          "No ONE MATCH supplies readied."
+        ],
+        "expected": [
+          "No permanent STORE perks retained.",
+          "No wearing Development modules fitted.",
+          "No account gear fitted.",
+          "No ONE MATCH supplies readied."
+        ],
+        "status": true
+      },
+      "commanderRefresh": {
+        "before": "nova_kai",
+        "after": "nova_holt",
+        "expected": {
+          "id": "nova_holt",
+          "rank": "Major",
+          "name": "Major Rowan Holt",
+          "callsign": "ANVIL",
+          "role": "ENGINEER",
+          "passive": "Forward Engineering · build speed +15%",
+          "signature": "Field Workshop"
+        }
+      },
+      "planRefresh": {
+        "after": "fortress",
+        "expected": {
+          "id": "fortress",
+          "name": "FORTRESS"
+        }
+      },
+      "teamRefresh": {
+        "after": "ALLIED STRIKE",
+        "expected": "ALLIED STRIKE"
+      },
+      "advancedRefresh": {
+        "after": "custom",
+        "expected": {
+          "id": "custom",
+          "name": "CUSTOM PLAN"
+        }
+      },
+      "final": {
+        "expected": {
+          "perks": [
+            {
+              "id": "cache",
+              "name": "Supply Cache",
+              "detail": "+300 mass, +1200 energy at match start",
+              "meta": "TIER 1 / 1"
+            }
+          ],
+          "modules": [
+            {
+              "id": "plate",
+              "name": "Reactive Plating",
+              "detail": "Your units +10% health",
+              "meta": "7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+            }
+          ],
+          "gear": [
+            {
+              "id": "w_rangefinder",
+              "name": "Ballistic Rangefinder",
+              "detail": "UNIT DAMAGE +3%",
+              "meta": "WEAPON · ACTIVE WHILE FITTED"
+            },
+            {
+              "id": "u_fluxcell",
+              "name": "Flux Cell",
+              "detail": "ENERGY INCOME +7%",
+              "meta": "UTILITY · ACTIVE WHILE FITTED"
+            }
+          ],
+          "supplies": [
+            {
+              "id": "c_supply",
+              "name": "Supply Pack",
+              "detail": "Next match: +220 starting mass",
+              "meta": "STOCK 3 · ARMY-WIDE · CONSUMES 1"
+            },
+            {
+              "id": "c_nanites",
+              "name": "Repair Nanites",
+              "detail": "Next match: +26% health, locked to one chassis",
+              "meta": "STOCK 2 · LOCKED · Striker · CONSUMES 1"
+            }
+          ],
+          "ownership": {
+            "permanent": {
+              "kind": "permanent",
+              "label": "PERMANENT"
+            },
+            "modules": {
+              "kind": "crafted",
+              "label": "WEARS"
+            },
+            "gear": {
+              "kind": "equipped",
+              "label": "EQUIPPED"
+            },
+            "supplies": {
+              "kind": "match",
+              "label": "ONE MATCH"
+            }
+          },
+          "commander": {
+            "id": "nova_holt",
+            "rank": "Major",
+            "name": "Major Rowan Holt",
+            "callsign": "ANVIL",
+            "role": "ENGINEER",
+            "passive": "Forward Engineering · build speed +15%",
+            "signature": "Field Workshop"
+          },
+          "contract": {
+            "id": "standard",
+            "nm": "STANDARD",
+            "rule": "1 PLAYER · AI ALLIES OPTIONAL",
+            "xp": 1.1
+          },
+          "plan": {
+            "id": "fortress",
+            "name": "FORTRESS"
+          },
+          "team": "ALLIED STRIKE"
+        },
+        "actual": {
+          "present": true,
+          "visible": true,
+          "plan": "fortress",
+          "mode": "standard",
+          "team": "ALLIED STRIKE",
+          "commander": "nova_holt",
+          "text": "DEPLOYMENT LOADOUTWHAT ENTERS THIS MATCHSTANDARDFORTRESSALLIED STRIKEBATTLE COMMANDERMajor Major Rowan Holt · “ANVIL”ENGINEER · Forward Engineering · build speed +15% · SIGNATURE · Field WorkshopMODE CONTRACTSTANDARD · FORTRESS1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XPSTORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFTACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTEDREADIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1",
+          "items": {
+            "permanent": [
+              {
+                "id": "cache",
+                "text": "Supply Cache+300 mass, +1200 energy at match startTIER 1 / 1"
+              }
+            ],
+            "module": [
+              {
+                "id": "plate",
+                "text": "Reactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT"
+              }
+            ],
+            "gear": [
+              {
+                "id": "w_rangefinder",
+                "text": "Ballistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTED"
+              },
+              {
+                "id": "u_fluxcell",
+                "text": "Flux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED"
+              }
+            ],
+            "supply": [
+              {
+                "id": "c_supply",
+                "text": "Supply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1"
+              },
+              {
+                "id": "c_nanites",
+                "text": "Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+              }
+            ]
+          },
+          "badges": {
+            "permanent": {
+              "ownership": "permanent",
+              "scope": "permanent",
+              "text": "PERMANENT"
+            },
+            "modules": {
+              "ownership": "crafted",
+              "scope": "crafted",
+              "text": "WEARS"
+            },
+            "gear": {
+              "ownership": "equipped",
+              "scope": "equipped",
+              "text": "EQUIPPED"
+            },
+            "supplies": {
+              "ownership": "match",
+              "scope": "match",
+              "text": "ONE MATCH"
+            }
+          },
+          "lanes": {
+            "commander": "BATTLE COMMANDERMajor Major Rowan Holt · “ANVIL”ENGINEER · Forward Engineering · build speed +15% · SIGNATURE · Field Workshop",
+            "mode": "MODE CONTRACTSTANDARD · FORTRESS1 PLAYER · AI ALLIES OPTIONAL · ×1.10 XP",
+            "permanent": "STORE PERKSPERMANENTSupply Cache+300 mass, +1200 energy at match startTIER 1 / 1",
+            "modules": "DEVELOPMENT MODULESWEARSReactive PlatingYour units +10% health7.5 / 24 DUR · -0.8 / MATCH · ~10 LEFT",
+            "gear": "ACCOUNT GEAREQUIPPEDBallistic RangefinderUNIT DAMAGE +3%WEAPON · ACTIVE WHILE FITTEDFlux CellENERGY INCOME +7%UTILITY · ACTIVE WHILE FITTED",
+            "supplies": "READIED SUPPLIESONE MATCHSupply PackNext match: +220 starting massSTOCK 3 · ARMY-WIDE · CONSUMES 1Repair NanitesNext match: +26% health, locked to one chassisSTOCK 2 · LOCKED · Striker · CONSUMES 1"
+          }
+        }
+      },
+      "layout": {
+        "rect": {
+          "left": 8,
+          "top": 136.78125,
+          "right": 336,
+          "bottom": 819.21875,
+          "width": 328,
+          "height": 682.4375
+        },
+        "scrollRect": {
+          "left": 0,
+          "top": 70,
+          "right": 344,
+          "bottom": 678
+        },
+        "footerRect": {
+          "top": 678,
+          "bottom": 760
+        },
+        "stepperHeight": 59,
+        "viewport": {
+          "width": 344,
+          "height": 760
+        },
+        "documentOverflow": false,
+        "summaryOverflow": false,
+        "horizontalOverflow": [],
+        "obstructions": [],
+        "footerClearsScroller": true,
+        "headerBelowSticky": true,
+        "headerHit": true
+      },
+      "screenshots": {
+        "viewport": {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-loadout-summary\\narrow-344x760-deploy.png",
+          "relativePath": "tmp/stage7-loadout-summary/narrow-344x760-deploy.png",
+          "sha256": "5d5b30270dd35a906cbf5ee52611d1689085d5de3e41f3555b89ef686faaf3f6",
+          "bytes": 98616,
+          "dimensions": {
+            "width": 344,
+            "height": 760
+          },
+          "expected": {
+            "width": 344,
+            "height": 760
+          },
+          "valid": true
+        },
+        "summary": {
+          "path": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tmp\\stage7-loadout-summary\\narrow-344x760-summary.png",
+          "relativePath": "tmp/stage7-loadout-summary/narrow-344x760-summary.png",
+          "sha256": "ed9215e397a342b518b397a1213d1e947a6f2e7a8c4a4f37daa8692e35b1b50a",
+          "bytes": 77193,
+          "dimensions": {
+            "width": 328,
+            "height": 684
+          },
+          "valid": true
+        }
+      },
+      "launch": {
+        "status": "SKIP",
+        "reason": "One full source-matched setupStart + carrier deployment is performed in the 412x900 profile; this profile is the independent narrow responsive acceptance."
+      },
+      "webgl": {
+        "contextLosses": 0,
+        "mainContextLost": false,
+        "mainError": 0
+      },
+      "finishedAt": "2026-08-31T00:42:45.141Z"
+    }
+  ],
+  "summary": {
+    "requested": 2,
+    "accepted": 2,
+    "rejected": 0,
+    "blockerCount": 0
+  },
+  "blockers": [],
+  "status": "PASS"
+}

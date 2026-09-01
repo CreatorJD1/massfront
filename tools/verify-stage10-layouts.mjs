@@ -19,7 +19,8 @@ const commands=[
   ['traversal-fixtures','node',['tools/verify-stage10-traversal-fixtures.mjs']],
   ['exploration-planet-profiles','node',['tools/verify-stage10-exploration-planet-layout-profiles.mjs']],
   ['model-review-gallery','node',['tools/verify-stage10-model-review-gallery.mjs']],
-  ['bundle','node',['tools/bundle.mjs']]
+  ['bundle','node',['tools/bundle.mjs']],
+  ['repaired-model-pack','node',['tools/verify-stage10-repaired-model-pack.mjs']]
 ];
 const results=[];
 for(const [id,exe,args] of commands){
@@ -33,7 +34,7 @@ for(const [id,exe,args] of commands){
   if(!result.ok) break;
 }
 const passed=results.filter(R=>R.ok).length,failed=results.filter(R=>!R.ok).length;
-const report={schema:'Stage10LayoutAggregateVerificationV4',generatedAt:new Date().toISOString(),
+const report={schema:'Stage10LayoutAggregateVerificationV5',generatedAt:new Date().toISOString(),
   passed,failed,complete:results.length===commands.length&&failed===0,results};
 const out=path.join(ROOT,'tmp','stage10-layouts','report.json');
 fs.mkdirSync(path.dirname(out),{recursive:true});

@@ -40,7 +40,7 @@
    ============================================================================ */
 import { execFileSync } from 'node:child_process';
 import { writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = resolve(fileURLToPath(new URL('..', import.meta.url)));
@@ -48,7 +48,10 @@ const HERE = resolve(fileURLToPath(new URL('..', import.meta.url)));
    refuses to spawnSync it without a shell (EINVAL, CVE-2024-27980). */
 const WRANGLER_JS = join(HERE, 'node_modules', 'wrangler', 'bin', 'wrangler.js');
 const DB_NAME = 'massfront-accounts';
-const EVIDENCE_DIR = join(HERE, '.migration-evidence');
+const REPO_ROOT = resolve(HERE, '..', '..');
+const WORKSPACE_TMP = join(REPO_ROOT, 'tmp');
+const CLOUDFLARE_SOURCE_ROOT = join(REPO_ROOT, 'cloudflare');
+export const EVIDENCE_DIR = join(WORKSPACE_TMP, 'migration-evidence', 'massfront-auth');
 
 /* The Aug-19 production shape. Sorted, and compared as a set. */
 export const EXPECTED_BASELINE_TABLES = [
@@ -61,7 +64,57 @@ export const LEDGER_MIGRATIONS = [
   '0001-production-baseline.sql',
   '0002-chat-presence.sql',
   '0003-lobbies-invites.sql',
+  '0004-moderation-foundation.sql',
+  '0005-match-launch-compatibility.sql',
+  '0006-online-aggregate.sql',
+  '0007-world-chat.sql',
 ];
+
+function isWithin(parent, target) {
+  const rel = relative(resolve(parent), resolve(target));
+  return rel === '' || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith('..\\') && !rel.startsWith('../'));
+}
+
+function isGitIgnored(path, repoRoot = REPO_ROOT) {
+  try {
+    execFileSync('git', ['check-ignore', '--quiet', '--no-index', '--', resolve(path)], {
+      cwd: repoRoot, stdio: 'ignore', windowsHide: true,
+    });
+    return true;
+  } catch (e) {
+    if (e && e.status === 1) return false;
+    throw e;
+  }
+}
+
+/**
+ * Rollback evidence contains a production export and bookmark. It must stay in
+ * ignored workspace scratch storage, outside the Worker source tree, so source
+ * archive staging and blanket Git adds cannot ingest it.
+ */
+export function checkEvidenceDirectorySafety({
+  evidenceDir = EVIDENCE_DIR,
+  repoRoot = REPO_ROOT,
+  cloudflareSourceDir = CLOUDFLARE_SOURCE_ROOT,
+  checkIgnored = path => isGitIgnored(path, repoRoot),
+} = {}) {
+  const resolvedEvidence = resolve(evidenceDir);
+  const problems = [];
+  if (!isWithin(join(resolve(repoRoot), 'tmp'), resolvedEvidence)) {
+    problems.push('rollback evidence destination is outside the workspace tmp directory.');
+  }
+  if (isWithin(resolve(cloudflareSourceDir), resolvedEvidence)) {
+    problems.push('rollback evidence destination is inside the Cloudflare source tree.');
+  }
+  try {
+    if (!checkIgnored(resolvedEvidence)) {
+      problems.push('rollback evidence destination is not excluded by Git ignore rules.');
+    }
+  } catch (e) {
+    problems.push('could not prove rollback evidence destination is Git-ignored: ' + (e.message || e));
+  }
+  return { ok: problems.length === 0, problems, evidenceDir: resolvedEvidence };
+}
 
 /* ---------------------------------------------------------------------------
    PURE PRECONDITION LOGIC
@@ -169,6 +222,12 @@ function d1Query(sql) {
    predicates (which the tests do) must never touch the network. */
 const invokedDirectly = process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url));
 if (invokedDirectly) {
+  const evidenceSafety = checkEvidenceDirectorySafety();
+  if (!evidenceSafety.ok) {
+    console.error('unsafe rollback evidence configuration — refusing.');
+    for (const problem of evidenceSafety.problems) console.error('  - ' + problem);
+    process.exit(2);
+  }
   const confirmProduction = process.argv.includes('--confirm-production');
   console.log('inspecting production database ' + DB_NAME + ' (read-only) ...');
 

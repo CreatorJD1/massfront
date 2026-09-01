@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import {
+  applyAccountProfile,
   beginGroundOperation,
   createGroundOperationRequestV1,
   createGroundOperationResultV1,
   createMemoryStorage,
   createShowcaseReadyDomainState,
+  deserializeAccountProfile,
+  deserializeDomainState,
   setDomainRoute,
   simulateGroundResult,
   validateExplorationHostV1
@@ -203,7 +206,11 @@ async function verifyClassicIsolationAndSaveCompatibility() {
     nonceFactory: () => 'ccccccccccccccccdddddddddddddddd',
     contentVersion: 'exploration-host-test-v1'
   });
-  assert.deepEqual(reloaded.loadCampaignSnapshot(), test.state, 'existing standalone campaign save must remain readable');
+  const expectedReload = applyAccountProfile(
+    deserializeDomainState(campaignBefore),
+    deserializeAccountProfile(profileBefore)
+  );
+  assert.deepEqual(reloaded.loadCampaignSnapshot(), expectedReload, 'existing standalone campaign save must remain readable through canonical profile projection');
 }
 
 async function verifyFallbackStorageLedger() {

@@ -450,12 +450,20 @@ def form_fly_merge(buf, spec, style, mats, lod, rng, scale):
     hx, hy = footprint(spec)
     ringed_pylon(buf, style, mats, 0.0, 0.0, FLYOVER_Z - 3.0, lod, radius=4.4)
     road_deck(buf, style, mats, -hx, hx, 0.0, FLYOVER_Z, lod, axis="x")
-    # slip road peeling off to the north
-    arc_run(buf, "road_deck", mats["deck"], hx * 0.30, hy * 0.62, hy * 0.62,
-            math.pi * 1.5, math.pi * 2.0, FLYOVER_Z - 1.5, ROAD_HALF * 0.62, 3.0,
+    # Slip road peeling off to the north. Every number here is bounded by the
+    # ONE cell this archetype declares: the arc's outer edge, the north deck's
+    # centreline and that deck's half width plus its barrier must all land
+    # inside hx. The previous values put the outer barrier at x=20.9 on a 16 m
+    # cell, so all three styles intruded 4.9 m into the neighbouring tile.
+    slip_half = ROAD_HALF * 0.38          # 3.8 m, + 0.5 m barrier
+    slip_cx = hx * 0.22                   # arc centre
+    slip_r = hy * 0.49                    # arc radius; cx + r is the junction x
+    slip_x = slip_cx + slip_r             # 11.4 m -> outer edge 15.7 m < 16 m
+    arc_run(buf, "road_deck", mats["deck"], slip_cx, hy * 0.62, slip_r,
+            math.pi * 1.5, math.pi * 2.0, FLYOVER_Z - 1.5, slip_half, 3.0,
             6 if lod == 0 else 3)
-    road_deck(buf, style, mats, hy * 0.62, hy, hx * 0.92, FLYOVER_Z, lod, axis="y",
-              half_w=ROAD_HALF * 0.62)
+    road_deck(buf, style, mats, hy * 0.62, hy, slip_x, FLYOVER_Z, lod, axis="y",
+              half_w=slip_half)
     return FLYOVER_Z + 1.8
 
 
@@ -1078,6 +1086,7 @@ def build_report(config, modules, proof_rows, exports, renders):
             "id": module["key"], "archetype": spec["id"], "style": module["style"],
             "transitClass": spec["class"], "form": spec["form"],
             "cells": list(spec["cells"]),
+            "edges": dict(spec.get("edges") or {}),
             "topZ": round(module["topZ"], 2), "bottomZ": round(module["bottomZ"], 2),
             "sockets": [{"name": s.name, "direction": s["mf_direction"],
                          "type": s["mf_socket_type"],

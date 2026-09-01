@@ -70,9 +70,11 @@ const guardAt = runnerMain.indexOf('workspaceGuard = await acquireVerificationFr
 const outputPrepAt = runnerMain.indexOf('await prepareCurrentPerfOutput');
 check(mainAt >= 0 && guardAt >= 0 && guardAt < outputPrepAt,
   'performance runner acquires the workspace freeze before any output mutation');
-check(runnerMain.includes('allowedPaths: [CURRENT_PERF_ROOT]') &&
-  runnerSource.includes("const CURRENT_PERF_ROOT = join(LEGACY_PERF_ROOT, 'current')"),
-  'performance runner limits new output to tmp/perf-lab/current');
+check(runnerMain.includes('allowedPaths: [LEGACY_PERF_ROOT, ...CONCURRENT_STAGE10_AUTHORING.map') &&
+  runnerSource.includes("const CURRENT_PERF_ROOT = join(LEGACY_PERF_ROOT, 'current')") &&
+  runnerSource.includes('collectConcurrentStage10Snapshot()') &&
+  runnerSource.includes('inputClosureFingerprint'),
+  'performance runner limits output to tmp and records excluded Stage 10 authoring writes while binding executing inputs');
 const reporterSource = await readFile(join(HERE, 'benchmark-report-generator.mjs'), 'utf8');
 check(reporterSource.includes("const CURRENT_PERF_ROOT = join(ROOT, 'tmp/perf-lab/current')") &&
   !reporterSource.includes("join(ROOT, 'tmp/perf-lab/metrics')"),
@@ -124,14 +126,11 @@ check(supportedZero.sampleCount === 2 && supportedZero.p50 === 0,
   'supported zero measurements remain distinguishable from missing telemetry');
 
 const rosterScenario = BENCHMARK_SCENARIOS['1v4_continental_conquest'];
-check(benchmarkScenarioSupport(rosterScenario).status === 'unsupported',
-  '1v4/2500 is explicitly UNSUPPORTED until a fifth-seat adapter exists');
-let unsupportedRosterBlocked = false;
-try { buildExpectedPopulation(rosterScenario, 500); }
-catch (error) { unsupportedRosterBlocked = error.code === 'MASSFRONT_PERF_SCENARIO_UNSUPPORTED'; }
-check(unsupportedRosterBlocked, 'unsupported 1v4 cannot generate a roster or alias slot 3');
+check(benchmarkScenarioSupport(rosterScenario).status === 'supported' && buildExpectedPopulation(rosterScenario, 500).total === 2500,
+  '1v4/2500 uses the supported fifth participant and fourth AI slot');
 const supportedMatrix = [
-  ['1v1_duel_verdant', 1000], ['1v2_flank_arctic', 1500], ['1v3_crossfire_ashland', 2000]
+  ['1v1_duel_verdant', 1000], ['1v2_flank_arctic', 1500], ['1v3_crossfire_ashland', 2000],
+  ['1v4_continental_conquest', 2500]
 ];
 for (const [scenarioId, total] of supportedMatrix) {
   const scenario = BENCHMARK_SCENARIOS[scenarioId];
@@ -152,15 +151,15 @@ check(validDecision.valid && validDecision.status === 'accepted' &&
   'exact 500/faction fixture passes the p99 33.3 ms short-run gate without a sustained-device claim');
 
 const requiredMatrixEntries = [
-  '1v1_duel_verdant', '1v2_flank_arctic', '1v3_crossfire_ashland'
+  '1v1_duel_verdant', '1v2_flank_arctic', '1v3_crossfire_ashland', '1v4_continental_conquest'
 ].map((scenarioId, index) => ({ file: `required-${index}.json`, record: validEvidenceFixture({ scenarioId }) }));
 const oneRowMatrix = validateStage8DesktopMatrix(requiredMatrixEntries.slice(0, 1).map(entry => entry.record));
-check(!oneRowMatrix.valid && oneRowMatrix.missingScenarioIds.length === 2,
+check(!oneRowMatrix.valid && oneRowMatrix.missingScenarioIds.length === 3,
   'one scenario-level PASS is not a complete Stage 8 desktop matrix');
 const exactMatrix = validateStage8DesktopMatrix(requiredMatrixEntries.map(entry => entry.record));
 check(exactMatrix.valid && !exactMatrix.missingScenarioIds.length &&
   !exactMatrix.duplicateScenarioIds.length && !exactMatrix.unexpectedScenarioIds.length,
-  'exactly one valid row for each required 1v1/1v2/1v3 scenario completes the matrix');
+  'exactly one valid row for each required 1v1 through 1v4 scenario completes the matrix');
 const oneRowBatch = validateEvidenceBatch([requiredMatrixEntries[0].record]);
 const exactMatrixBatch = validateEvidenceBatch(requiredMatrixEntries.map(entry => entry.record));
 check(oneRowBatch.contractValidBatch && !oneRowBatch.stage8Pass && exactMatrixBatch.stage8Pass,
@@ -292,7 +291,7 @@ try {
     metricsDir: currentMetricsDir, capturesDir: currentCapturesDir, reportsDir: currentReportsDir, throwOnReject: true
   });
   check(!laneAccepted.stage8Pass && laneAccepted.contractValid && laneAccepted.accepted.length === 1 &&
-    laneAccepted.matrixGate.missingScenarioIds.length === 2 && laneAccepted.rejected.length === 0 &&
+    laneAccepted.matrixGate.missingScenarioIds.length === 3 && laneAccepted.rejected.length === 0 &&
     existsSync(legacyRejectedPath),
   'current-lane report isolates legacy JSON while one scenario-level PASS remains matrix-incomplete');
 
@@ -315,28 +314,30 @@ try {
   await writeFile(validMetricPath, JSON.stringify(artifactRecord, null, 2));
   const accepted = await generateBenchmarkReports({ metricsDir, capturesDir, reportsDir, throwOnReject: true });
   check(!accepted.stage8Pass && accepted.contractValid && accepted.accepted.length === 1 &&
-    accepted.matrixGate.missingScenarioIds.length === 2 && accepted.rejected.length === 0,
+    accepted.matrixGate.missingScenarioIds.length === 3 && accepted.rejected.length === 0,
     'one decoded, dimension-matched scenario PASS remains an incomplete Stage 8 matrix');
   const acceptedMarkdown = await readFile(join(reportsDir, 'BENCHMARK_MATRIX_REPORT.md'), 'utf8');
   check(acceptedMarkdown.includes('Frame p95') && acceptedMarkdown.includes('Frame p99') &&
     acceptedMarkdown.includes('33.3 ms') && acceptedMarkdown.includes('not a physical sustained-device pass') &&
     acceptedMarkdown.includes('1v2_flank_arctic') && acceptedMarkdown.includes('1v3_crossfire_ashland') &&
+    acceptedMarkdown.includes('1v4_continental_conquest') &&
     acceptedMarkdown.includes('Outcome: **INCOMPLETE**'),
     'report surfaces p95/p99/scope and the exact missing matrix scenarios');
 
   const matrixFixtureFiles = [
     ['required-1v2.json', '1v2_flank_arctic'],
-    ['required-1v3.json', '1v3_crossfire_ashland']
+    ['required-1v3.json', '1v3_crossfire_ashland'],
+    ['required-1v4.json', '1v4_continental_conquest']
   ];
   for (const [file, scenarioId] of matrixFixtureFiles) {
     await writeFile(join(metricsDir, file), JSON.stringify(validEvidenceFixture({ captureSha256: captureSha, scenarioId }), null, 2));
   }
   const exactAccepted = await generateBenchmarkReports({ metricsDir, capturesDir, reportsDir, throwOnReject: true });
-  check(exactAccepted.stage8Pass && exactAccepted.accepted.length === 3 && exactAccepted.matrixGate.valid,
+  check(exactAccepted.stage8Pass && exactAccepted.accepted.length === 4 && exactAccepted.matrixGate.valid,
     'report reaches Stage 8 matrix PASS only with one valid row for each exact required scenario');
   await writeFile(join(metricsDir, 'unsupported.json'), JSON.stringify(evidenceFixtureCase('unsupported-1v4'), null, 2));
   const withUnsupported = await generateBenchmarkReports({ metricsDir, capturesDir, reportsDir, throwOnReject: true });
-  check(withUnsupported.stage8Pass && withUnsupported.accepted.length === 3 &&
+  check(withUnsupported.stage8Pass && withUnsupported.accepted.length === 4 &&
     withUnsupported.unsupported.length === 1 && withUnsupported.rejected.length === 0,
     'report marks 1v4 UNSUPPORTED without accepting or failing it');
 
@@ -390,7 +391,7 @@ try {
   const diagnosticRecord = validEvidenceFixture({ captureSha256: captureSha, unitsPerFaction: 250 });
   await writeFile(validMetricPath, JSON.stringify(diagnosticRecord, null, 2));
   const diagnosticReport = await generateBenchmarkReports({ metricsDir, capturesDir, reportsDir, throwOnReject: true });
-  check(!diagnosticReport.stage8Pass && diagnosticReport.contractValid && diagnosticReport.accepted.length === 2 &&
+  check(!diagnosticReport.stage8Pass && diagnosticReport.contractValid && diagnosticReport.accepted.length === 3 &&
     diagnosticReport.diagnostic.length === 1 && diagnosticReport.performanceFailed.length === 0,
     'report keeps non-500 evidence DIAGNOSTIC/INCOMPLETE instead of accepted');
 

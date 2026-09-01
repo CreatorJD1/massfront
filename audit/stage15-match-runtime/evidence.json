@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-09-01T05:17:21.930Z",
+  "sourceHash": "906face8283ca5cf2ba416c79e11e22ce61afcedf6d39eba75907e5de169bd55",
+  "passed": 22,
+  "total": 22,
+  "checks": [
+    {
+      "name": "launch token enters only exact initial WebSocket subprotocol",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "launch credential is scrubbed immediately",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "commands remain locked before welcome/start",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "strict welcome selects massfront.v1 and exposes no resume token",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "submitCommands assigns monotonic seq and +2/+3 ticks",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "outbound command bounds reject oversized/chat/bad-delay frames",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "outbound frames use exact versioned command envelope",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "authoritative tick reaches only registered frozen consumer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "ack and authoritative tick dispatch frozen events",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "real deterministic hash is sent exactly at tick 30",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "out-of-order authoritative tick fails closed with protocol close",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "server subprotocol omission is rejected before welcome",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "welcome seat mismatch fails closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "account change during welcome is rejected",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "runtime tuple drift during welcome is rejected",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "reconnect uses seat-bound closure-only resume token",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "resume token rotates on every accepted welcome",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "resume attempts fail closed after the server grace deadline",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "non-64-hex gameplay hash fails closed instead of being fabricated",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "gameplay snapshot rejection fails closed without sending a hash",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "oversized inbound frame closes with 1009",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "expired launch credential is rejected before socket creation",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

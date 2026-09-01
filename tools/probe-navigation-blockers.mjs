@@ -67,6 +67,7 @@ try{
   await page.goto(`http://127.0.0.1:${port}/?navigationblockerprobe=1`,{waitUntil:'domcontentloaded',timeout:90000});
   gpu=await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof computeField==='function'&&typeof requestField==='function'&&
+    typeof mfNavSectorWaypoint==='function'&&
     typeof resetWorld==='function'&&typeof unitTick==='function'&&typeof orderMove==='function'&&
     typeof addBld==='function'&&typeof rebuildBGrid==='function'&&typeof PGS==='number'&&PASS,
     null,{timeout:120000});
@@ -370,15 +371,122 @@ try{
     for(let y=ug[1]-3;y<=ug[1]+3;y++)for(let x=ug[0]-3;x<=ug[0]+3;x++)PASS[idx(x,y)]=1;
     const ui=spawnUnit(0,0,world(us[0]),world(us[1]),-1);usel[ui]=1;rebuildGrid();
     const issued=orderMove(world(ug[0]),world(ug[1]),false,true),assigned=ufield[ui];
-    const startDir=assigned>=0&&fields[assigned]?fields[assigned].dirs[idx(us[0],us[1])]:null;
-    const x0=ux[ui],y0=uy[ui];let maxDelta=0;
-    for(let n=0;n<120;n++){tick++;unitTick(1/30);maxDelta=Math.max(maxDelta,Math.hypot(ux[ui]-x0,uy[ui]-y0));}
+    /* Player-authored cohort fields are intentionally deferred so pointer-up
+       never pays the full-grid build. Advance one fixed tick before reading
+       the field; the first member deterministically admits that build. */
+    const x0=ux[ui],y0=uy[ui];let maxDelta=0;tick++;unitTick(1/30);
+    const startDir=assigned>=0&&fields[assigned]&&fields[assigned].dirs?fields[assigned].dirs[idx(us[0],us[1])]:null;
+    maxDelta=Math.max(maxDelta,Math.hypot(ux[ui]-x0,uy[ui]-y0));
+    for(let n=1;n<120;n++){tick++;unitTick(1/30);maxDelta=Math.max(maxDelta,Math.hypot(ux[ui]-x0,uy[ui]-y0));}
     const unreachableStopped=startDir===8&&maxDelta<=0.05;
     cases.push(caseResult('unreachable-cell-no-direct-steer',unreachableStopped?'PASS':'FAIL',
       'a unit on an unreachable field cell does not substitute a direct vector toward the disconnected goal',
       {issued,unit:ui,field:assigned,startDirection:startDir,displacement:round(Math.hypot(ux[ui]-x0,uy[ui]-y0)),
         maxDisplacement:round(maxDelta),state:ustate[ui],position:[round(ux[ui]),round(uy[ui])],goal:[round(utx[ui]),round(uty[ui])]},
       'Runs the real player orderMove and fixed-step unitTick path.'));
+
+    /* The pointer path must author a full army order without synchronously
+       flooding one 384x384 field per formation slot. Use the real selection,
+       formation/cohort assignment and UI acknowledgement path. */
+    for(let i=0;i<unitHigh;i++)ualive[i]=0;
+    unitHigh=0;freeList.length=0;teamCount[0]=teamCount[1]=teamCount[2]=0;usel.fill(0);ufield.fill(-1);
+    moveCohorts.fill(null);moveCohortNext=0;flat();clearObjects();clearFields();
+    const groundTypes=[];
+    for(let c=0;c<4;c++){
+      let type=-1;
+      for(let t=0;t<TYPES.length;t++)if(TYPES[t]&&!TYPES[t].air&&!TYPES[t].naval&&TYPES[t].spd>0&&mfNavUnitClearance(TYPES[t])===c){type=t;break;}
+      if(type>=0)groundTypes.push(type);
+    }
+    const army=[];
+    for(let n=0;n<500;n++){
+      const type=groundTypes[n%Math.max(1,groundTypes.length)]||0,
+        i=spawnUnit(type,0,world(70)+(n%25)*2.4,world(300)+((n/25)|0)*2.4,-1);
+      usel[i]=1;utgt[i]=-1;ufield[i]=-1;army.push(i);
+    }
+    rebuildGrid();selFormation=3;
+    const authorMs=[],fieldCounts=[];
+    for(let pass=0;pass<9;pass++){
+      fields.length=0;ffNext=0;ufield.fill(-1);moveCohorts.fill(null);moveCohortNext=0;
+      const at=performance.now(),ok=orderMove(world(300-pass%2*14),world(92+pass%2*18),false,false),ms=performance.now()-at;
+      if(pass)authorMs.push(ms);
+      fieldCounts.push(new Set(army.map(i=>ufield[i]).filter(f=>f>=0)).size);
+      if(!ok)break;
+    }
+    authorMs.sort((a,b)=>a-b);
+    const authorP95=authorMs[Math.min(authorMs.length-1,Math.floor((authorMs.length-1)*.95))]||Infinity,
+      maxFields=Math.max(...fieldCounts),diag=typeof mfNavDiagnostics==='function'?mfNavDiagnostics():null;
+    cases.push(caseResult('five-hundred-unit-authoring',authorP95<=16&&maxFields<=4?'PASS':'FAIL',
+      '500 selected units author and acknowledge in <=16ms p95 while sharing no more than one deferred field per ground clearance cohort',
+      {samples:authorMs.map(v=>round(v,3)),p95:round(authorP95,3),fieldCounts,maxFields,groundTypes,diagnostics:diag},
+      'Measures the real orderMove path on the source-matched hardware browser; field construction occurs later on deterministic simulation ticks.'));
+
+    /* Saturating the bounded pool must fail the new request rather than
+       detaching a live march from a recycled slot. */
+    fields.length=0;ffNext=0;ufield.fill(-1);
+    const protectedSlots=[];
+    for(let f=0;f<FF_MAX;f++){
+      const x=260+(f%4)*1040,y=260+((f/4)|0)*1040,
+        slot=requestField(Math.min(MAP-260,x),Math.min(MAP-260,y),false,MF_NAV_CLEARANCE.infantry,true);
+      protectedSlots.push(slot);ufield[army[f]]=slot;
+    }
+    const protectedBefore=army.slice(0,FF_MAX).map(i=>ufield[i]),
+      overflowSlot=requestField(MAP*.5,MAP*.5,false,MF_NAV_CLEARANCE.infantry,true),
+      protectedAfter=army.slice(0,FF_MAX).map(i=>ufield[i]),
+      activePreserved=protectedBefore.every((v,i)=>v===protectedAfter[i]&&v>=0);
+    cases.push(caseResult('active-field-retention',overflowSlot===-1&&activePreserved?'PASS':'FAIL',
+      'a saturated field pool preserves every actively referenced route and fails closed instead of recycling one',
+      {slots:protectedSlots,overflowSlot,protectedBefore,protectedAfter,diagnostics:mfNavDiagnostics()},
+      'Uses deferred fields so this contract measures ownership/eviction rather than flood time.'));
+    ufield.fill(-1);fields.length=0;ffNext=0;
+
+    /* Source-bound picker load: 500 live units, 300 indexed structures and
+       exact projected-hull arbitration on a real camera matrix. */
+    for(let n=0;n<army.length;n++){
+      const i=army[n];ux[i]=160+(n%25)*(MAP-320)/24;uy[i]=160+((n/25)|0)*(MAP-320)/19;uang[i]=Math.PI;
+    }
+    const pickUnitId=army[262];ux[pickUnitId]=MAP*.5;uy[pickUnitId]=MAP*.5;rebuildGrid();
+    blds.length=0;
+    for(let n=0;n<300;n++){
+      let x=120+(n%20)*(MAP-240)/19,y=120+((n/20)|0)*(MAP-240)/14;
+      if(Math.hypot(x-MAP*.5,y-MAP*.5)<300)x=Math.max(80,x-420);
+      blds.push({alive:true,team:n%2,type:n%3?'wall':'fac',x,y,r:n%3?18:38,rot:(n%8)*Math.PI/8,prog:1,fac:'nova'});
+    }
+    bGrid=new Array(BGW*BGW);
+    for(let b=0;b<blds.length;b++){const B=blds[b],c=(B.y/BCS|0)*BGW+(B.x/BCS|0);(bGrid[c]||(bGrid[c]=[])).push(b);}
+    cam.x=MAP*.5;cam.y=MAP*.5;camFollow=-1;camYaw=yawTarget=.08;camPitch=pitchTarget=1.28;
+    orthoSpan=distTarget=760;clampCam();camUpdateMatrices();fogOn=false;
+    mfPickerPerf.calls=mfPickerPerf.lastMs=mfPickerPerf.maxMs=mfPickerPerf.totalMs=mfPickerPerf.buildingCandidates=0;
+    const pickScreen=w2s(ux[pickUnitId],uy[pickUnitId],terrainH(ux[pickUnitId],uy[pickUnitId])+TYPES[utype[pickUnitId]].size*.5),
+      pickSamples=[];let pickCorrect=0;
+    for(let n=0;n<40;n++){
+      const at=performance.now(),P=pickPointerEntities(ux[pickUnitId],uy[pickUnitId],pickScreen[0],pickScreen[1],'touch');
+      pickSamples.push(performance.now()-at);if(P.own===pickUnitId)pickCorrect++;
+    }
+    pickSamples.sort((a,b)=>a-b);
+    const pickP95=pickSamples[Math.floor((pickSamples.length-1)*.95)],pickMax=pickSamples[pickSamples.length-1];
+    cases.push(caseResult('picker-five-hundred-units-three-hundred-buildings',pickCorrect===40&&pickP95<=4&&pickMax<=12?'PASS':'FAIL',
+      '40/40 projected taps resolve the intended unit with p95 <=4ms and no picker task above 12ms at 500 units / 300 structures',
+      {correct:pickCorrect,samples:pickSamples.map(v=>round(v,3)),p95:round(pickP95,3),max:round(pickMax,3),diagnostics:mfPickerDiagnostics()},
+      'Uses the real spatial unit grid, structure grid, camera projection and pointer picker in hardware Chromium.'));
+
+    /* Long routes use a coarse sector field before consulting the tactical
+       flow field. Prove that the live selector returns a passable portal in a
+       sector exactly one strategic step nearer the goal. */
+    flat();clearObjects();clearFields();
+    const sectorGoal=[330,58],sectorStart=[54,328],sectorDirs=computeField(world(sectorGoal[0]),world(sectorGoal[1]),false,'light');
+    const sectorField={sectorDist:sectorDirs.mfSectorDist,naval:false,clearance:'light'};
+    const strategicWaypoint=mfNavSectorWaypoint(sectorField,world(sectorStart[0]),world(sectorStart[1]));
+    const sectorCells=MF_NAV_SECTOR_CELLS,sectorWidth=Math.ceil(N/sectorCells);
+    const sectorOf=(x,y)=>((y/cell|0)/sectorCells|0)*sectorWidth+((x/cell|0)/sectorCells|0);
+    const startSector=sectorOf(world(sectorStart[0]),world(sectorStart[1])),startSectorDistance=sectorField.sectorDist[startSector];
+    const waypointSector=strategicWaypoint?sectorOf(strategicWaypoint.x,strategicWaypoint.y):-1;
+    const waypointSectorDistance=waypointSector>=0?sectorField.sectorDist[waypointSector]:-1;
+    const waypointCell=strategicWaypoint?idx(clamp(strategicWaypoint.x/cell|0,0,N-1),clamp(strategicWaypoint.y/cell|0,0,N-1)):-1;
+    const strategicAccepted=!!strategicWaypoint&&startSectorDistance>0&&waypointSectorDistance===startSectorDistance-1&&waypointCell>=0&&PASS[waypointCell]===1;
+    cases.push(caseResult('strategic-sector-routing',strategicAccepted?'PASS':'FAIL',
+      'a long route selects a passable adjacent-sector portal whose strategic distance is exactly one step nearer the goal',
+      {goalCell:sectorGoal,startCell:sectorStart,startSector,startSectorDistance,waypoint:strategicWaypoint&&{x:round(strategicWaypoint.x),y:round(strategicWaypoint.y)},waypointSector,waypointSectorDistance,waypointPassable:waypointCell>=0?PASS[waypointCell]===1:false},
+      'Exercises computeField.mfSectorDist and mfNavSectorWaypoint from the current runtime.'));
 
     flat();clearObjects();clearFields();
     for(let x=60;x<325;x++)if(x<182||x>187)PASS[idx(x,190)]=0;

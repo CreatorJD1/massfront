@@ -233,7 +233,8 @@ class Platform:
                            "solidEmbankment": True,
                            "kerbH": round(RAMP_KERB_H if kerb else 0.0, 2),
                            "underside": round(base, 2),
-                           "toeM": RAMP_TOE_M, "overlapM": round(overlap, 2),
+                           "toeM": (RAMP_TOE_M if min(from_z, to_z) <= 0.01 else 0.0),
+                           "overlapM": round(overlap, 2),
                            "riseDir": rise_dir,
                            "centre": [round(cx, 2), round(cy, 2)]})
         return self.ramps[-1]
@@ -308,11 +309,18 @@ class Platform:
         def pt(t, w, z):
             return (cx + t, cy + w, z) if axis == "x" else (cx + w, cy + t, z)
 
+        # The toe apron is how a unit drives on from GRADE. A ramp that starts
+        # on a deck has nothing to drive on from, and the 5 m apron simply
+        # hangs off the module: it put ramp_core 19.30 m out on a 16 m cell and
+        # the gantry frame 33.35 m out on a 32 m one. So the apron is only laid
+        # where the ramp actually meets the ground.
+        toe = RAMP_TOE_M if lo <= 0.01 else 0.0
+
         # stations: (t, running-surface z, kerb height at this station).
         # flat toe apron, then the slope, then the overlap onto the deck --
         # where the kerb dies out so the mouth is flush with the deck rather
         # than leaving two fins standing on it.
-        stations = [(-run * 0.5 - RAMP_TOE_M, lo, kh)]
+        stations = [(-run * 0.5 - toe, lo, kh)]
         for i in range(segments + 1):
             u = i / float(segments)
             stations.append((-run * 0.5 + run * u, lo + (hi - lo) * u, kh))
@@ -952,6 +960,9 @@ def main():
         records.append({
             "id": m["key"], "archetype": m["spec"]["id"], "style": m["style"],
             "cells": list(m["spec"]["cells"]), "heightM": round(m["top"], 2),
+            # the footprint contract is per edge: only street/service edges may
+            # carry a cantilever, so the check needs the declared types
+            "edges": dict(m["spec"].get("edges") or {}),
             "walkableDecks": m["decks"], "buildPads": m["pads"], "rampLinks": m["ramps"],
             "deckCount": len(m["decks"]), "padCount": len(m["pads"]),
             "buildableAreaM2": round(sum(x["areaM2"] for x in m["pads"]), 1),

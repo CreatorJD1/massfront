@@ -21,7 +21,9 @@ import {
   serializeAccountProfile,
   serializeDomainState,
   validateGroundOperationRequestV1,
+  validateGroundOperationRequestV2,
   validateGroundOperationResultV1,
+  validateGroundOperationResultV2,
   validateGroundResult
 } from '../domain/index.js';
 import { createHostDatabase } from './host_database.js';
@@ -70,6 +72,26 @@ function ensureOpaqueNonce(nonce) {
 function ensureValidation(validation, code, message) {
   if (validation?.ok) return;
   throw new ExplorationHostError(code, message, { issues: validation?.issues || [] });
+}
+
+function requestEnvelopeContract(envelope) {
+  if (envelope?.schemaVersion === 1 && envelope.kind === 'GroundOperationRequestV1') return { validate: validateGroundOperationRequestV1, version: 1 };
+  if (envelope?.schemaVersion === 2 && envelope.kind === 'GroundOperationRequestV2') return { validate: validateGroundOperationRequestV2, version: 2 };
+  return null;
+}
+
+function resultEnvelopeContract(envelope) {
+  if (envelope?.schemaVersion === 1 && envelope.kind === 'GroundOperationResultV1') return { validate: validateGroundOperationResultV1, version: 1 };
+  if (envelope?.schemaVersion === 2 && envelope.kind === 'GroundOperationResultV2') return { validate: validateGroundOperationResultV2, version: 2 };
+  return null;
+}
+
+function isRequestEnvelopeCandidate(value) {
+  return value?.kind === 'GroundOperationRequestV1' || value?.kind === 'GroundOperationRequestV2';
+}
+
+function isResultEnvelopeCandidate(value) {
+  return value?.kind === 'GroundOperationResultV1' || value?.kind === 'GroundOperationResultV2';
 }
 
 export class ExplorationHostError extends Error {
@@ -178,7 +200,7 @@ export class LocalSandboxHost {
   async prepareGroundOperation(operationOrEnvelope) {
     const issuedAt = integerTime(this.now(), Date.now());
     let request;
-    if (operationOrEnvelope?.kind === 'GroundOperationRequestV1') {
+    if (isRequestEnvelopeCandidate(operationOrEnvelope)) {
       request = operationOrEnvelope;
     } else {
       const nonce = ensureOpaqueNonce(this.nonceFactory());
@@ -191,7 +213,10 @@ export class LocalSandboxHost {
       });
     }
     ensureOpaqueNonce(request.nonce);
-    const validation = validateGroundOperationRequestV1(request, { accountId: this.accountId, now: issuedAt });
+    const requestContract = requestEnvelopeContract(request);
+    const validation = requestContract
+      ? requestContract.validate(request, { accountId: this.accountId, now: issuedAt })
+      : { ok: false, issues: [{ code: 'REQUEST_ENVELOPE_VERSION_INVALID' }] };
     ensureValidation(validation, 'GROUND_REQUEST_REJECTED', `Ground operation request was rejected: ${errorCodes(validation).join(', ') || 'invalid request'}.`);
     if (request.contentVersion !== this.contentVersion) throw new ExplorationHostError('REQUEST_CONTENT_VERSION_MISMATCH', 'Ground operation request targets incompatible exploration content.');
 
@@ -238,7 +263,10 @@ export class LocalSandboxHost {
     const record = await this.database.getRequest(nonce);
     if (!record) return null;
     this.validateBridgeRecord(record);
-    const validation = validateGroundOperationRequestV1(record.request, { accountId: this.accountId, now: integerTime(this.now(), Date.now()) });
+    const requestContract = requestEnvelopeContract(record.request);
+    const validation = requestContract
+      ? requestContract.validate(record.request, { accountId: this.accountId, now: integerTime(this.now(), Date.now()) })
+      : { ok: false, issues: [{ code: 'REQUEST_ENVELOPE_VERSION_INVALID' }] };
     ensureValidation(validation, 'GROUND_REQUEST_REJECTED', `Stored ground operation request was rejected: ${errorCodes(validation).join(', ') || 'invalid request'}.`);
     return clone(record.request);
   }
@@ -252,9 +280,16 @@ export class LocalSandboxHost {
   createResultReceipt(record, envelope, { targetNonce, ledgerKey, consumedAt }) {
     this.validateBridgeRecord(record);
     const request = record.request;
-    const requestValidation = validateGroundOperationRequestV1(request, { accountId: this.accountId, now: consumedAt });
+    const requestContract = requestEnvelopeContract(request);
+    const resultContract = resultEnvelopeContract(envelope);
+    const sameVersion = requestContract && resultContract && requestContract.version === resultContract.version;
+    const requestValidation = requestContract
+      ? requestContract.validate(request, { accountId: this.accountId, now: consumedAt })
+      : { ok: false, issues: [{ code: 'REQUEST_ENVELOPE_VERSION_INVALID' }] };
     ensureValidation(requestValidation, 'GROUND_REQUEST_REJECTED', `Ground operation request was rejected: ${errorCodes(requestValidation).join(', ') || 'invalid request'}.`);
-    const resultValidation = validateGroundOperationResultV1(envelope, request, { accountId: this.accountId });
+    const resultValidation = sameVersion
+      ? resultContract.validate(envelope, request, { accountId: this.accountId })
+      : { ok: false, issues: [{ code: 'RESULT_ENVELOPE_VERSION_INVALID' }] };
     ensureValidation(resultValidation, 'GROUND_RESULT_REJECTED', `Ground operation result was rejected: ${errorCodes(resultValidation).join(', ') || 'invalid result'}.`);
     if (!Number.isInteger(envelope.issuedAt) || envelope.issuedAt < request.issuedAt || envelope.issuedAt > request.expiresAt || consumedAt > request.expiresAt) throw new ExplorationHostError('RESULT_EXPIRED', 'Ground operation result is outside its request validity window.');
     const groundValidation = validateGroundResult(request.operation, envelope.result);
@@ -274,12 +309,13 @@ export class LocalSandboxHost {
 
   async consumeGroundResult(resultOrEnvelope, { nonce = null } = {}) {
     const consumedAt = integerTime(this.now(), Date.now());
-    const targetNonce = ensureOpaqueNonce(resultOrEnvelope?.kind === 'GroundOperationResultV1'
+    const suppliedEnvelope = isResultEnvelopeCandidate(resultOrEnvelope);
+    const targetNonce = ensureOpaqueNonce(suppliedEnvelope
       ? resultOrEnvelope.nonce
       : (nonce || this.pendingNonce));
     const pendingPersistence = this.pendingPersistence.get(targetNonce);
     if (pendingPersistence) await pendingPersistence;
-    const envelope = resultOrEnvelope?.kind === 'GroundOperationResultV1'
+    const envelope = suppliedEnvelope
       ? resultOrEnvelope
       : createGroundOperationResultV1(resultOrEnvelope, {
           nonce: targetNonce,

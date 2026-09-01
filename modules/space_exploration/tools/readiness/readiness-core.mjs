@@ -268,8 +268,8 @@ export function analyzeMenuSources({ html = '', meta = '', main = '', pack = '' 
   checks.push(check('menu:module-availability-gate', availabilityProbe ? STATUS.PASS : STATUS.FAIL,
     availabilityProbe ? 'The Settings preview checks module availability before same-tab navigation.' : 'The module-availability gate is missing.',
     { availabilityHeadProbe, availabilityBlocksNavigation }));
-  const coreExclusion = /if\s*\(existsSync\(join\(www\s*,\s*["']modules["']\)\)\)/.test(pack)
-    && /must not ship/i.test(pack);
+  const coreExclusion = /existsSync\(join\(www\s*,\s*["']modules["']\)\)/.test(pack)
+    && /includeExploration/.test(pack) && /must not ship/i.test(pack);
   checks.push(check('packaging:core-excludes-module-tree', coreExclusion ? STATUS.PASS : STATUS.FAIL,
     coreExclusion ? 'Core www packaging rejects the exploration module tree.' : 'Core www packaging does not visibly reject the exploration module tree.'));
   return { checks, diagnostics: { buttonPresent, hiddenByDefault, requiredFlagInMeta, requiredFlagUsed, legacyDefaultOff, legacyUsedByRuntimeRoute, authoritativeGateCoherent, separateRoute, availabilityHeadProbe, availabilityBlocksNavigation, availabilityProbe, coreExclusion } };
@@ -343,16 +343,21 @@ export function expectedAllowlistPaths(moduleRecords, options = {}) {
     'index.html',
     'lib/three.min.js',
     'lib/GLTFLoader.js',
-    'assets/models/nexus-vii-civilization-ship.glb',
-    'assets/models/uga-command-cutaway.glb',
-    'assets/models/massfront-showcase-contacts.glb'
+    'lib/DRACOLoader.js',
+    'lib/draco/gltf/draco_decoder.js',
+    'lib/draco/gltf/draco_decoder.wasm',
+    'lib/draco/gltf/draco_wasm_wrapper.js',
+    'assets/runtime/models/nexus-vii-civilization-ship.glb',
+    'assets/runtime/models/uga-command-cutaway.glb',
+    'assets/runtime/models/massfront-showcase-contacts.glb'
   ]);
   for (const record of moduleRecords) {
     const path = record.path;
     if (path.startsWith('src/') && !path.startsWith('src/combat/') && /\.(?:js|css)$/.test(path)
       && (!reachableCode || reachableCode.has(path))) explicit.add(path);
-    if (/^assets\/textures\/planets\/[^/]+-(?:basecolor|normal|orm|height|emissive|clouds)\.png$/.test(path)) explicit.add(path);
-    if (/^assets\/textures\/personnel\/[^/]+\.png$/.test(path)) explicit.add(path);
+    if (/^assets\/runtime\/planets\/[^/]+-(?:basecolor|normal|orm|height|emissive|clouds)\.webp$/.test(path)) explicit.add(path);
+    if (/^assets\/runtime\/personnel\/[^/]+\.webp$/.test(path)) explicit.add(path);
+    if (/^assets\/runtime\/world-models\/(?:world-model-catalog-v1\.json|[^/]+\/[^/]+\.glb)$/.test(path)) explicit.add(path);
   }
   return [...explicit].sort();
 }

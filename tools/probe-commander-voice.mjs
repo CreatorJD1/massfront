@@ -222,6 +222,11 @@ const EXPECTED_PLAYABLE_IDS = [
 const rosterJsonA = run(main.ctx, 'JSON.stringify(commanderRosterSnapshotV1())');
 const rosterJsonB = run(main.ctx, 'JSON.stringify(commanderRosterSnapshotV1())');
 const roster = JSON.parse(rosterJsonA);
+const rosterFreeze = JSON.parse(run(main.ctx, `(()=>{
+  const root=commanderRosterSnapshotV1();let objects=0,unfrozen=0;
+  const visit=value=>{if(!value||typeof value!=='object')return;objects++;if(!Object.isFrozen(value))unfrozen++;for(const child of Object.values(value))visit(child);};
+  visit(root);return JSON.stringify({objects,unfrozen});
+})()`));
 check('base exports CommanderRosterSnapshotV1',
   roster.kind === 'CommanderRosterSnapshotV1' && roster.schemaVersion === 1 && roster.source === 'massfront-base',
   `${roster.kind}@${roster.schemaVersion} from ${roster.source}`);
@@ -236,6 +241,16 @@ const factionMappingProblems = roster.commanders.filter((entry) => expectedCampa
 check('roster snapshot carries explicit Galactic faction mapping',
   factionMappingProblems.length === 0,
   factionMappingProblems.map((entry) => `${entry.id}:${entry.sourceFactionId}->${entry.campaignFactionId}`).join(',') || 'legion->dominion explicit');
+check('roster snapshot carries exact Commander 1 assignments',
+  JSON.stringify(roster.commander1ByCampaignFaction) === JSON.stringify({ nova: 'nova_kai', dominion: 'legion_vex', syndicate: 'syndicate_renn' }),
+  Object.entries(roster.commander1ByCampaignFaction || {}).map(([faction, id]) => `${faction}:${id}`).join(','));
+check('roster snapshot is recursively frozen at the base seam',
+  rosterFreeze.objects > 1 && rosterFreeze.unfrozen === 0,
+  `${rosterFreeze.objects} objects, ${rosterFreeze.unfrozen} mutable`);
+const rennSourceArt = roster.commanders.find(entry => entry.id === 'syndicate_renn')?.sourceArt;
+check('Renn source package remains metadata-only and runtime-unregistered',
+  rennSourceArt?.status === 'SOURCE_ACCEPTED_RUNTIME_UNREGISTERED' && rennSourceArt.runtimeReady === false && rennSourceArt.runtimeRegistered === false && !/\.vrm(?:$|[?#])/i.test(rennSourceArt.manifestPath || ''),
+  rennSourceArt ? `${rennSourceArt.assetId}:${rennSourceArt.status}` : 'missing');
 check('roster snapshot is byte-stable across calls', rosterJsonA === rosterJsonB, sha256(rosterJsonA).slice(0, 16));
 const rosterFingerprint = run(main.ctx, `commanderRosterSnapshotFingerprintV1(${rosterJsonA})`);
 check('roster fingerprint matches its deterministic payload',

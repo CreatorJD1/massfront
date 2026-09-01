@@ -11,7 +11,7 @@ import {startStaticServer} from './perf-lab/perf-probe-runner.mjs';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
 const sha256=value=>createHash('sha256').update(value).digest('hex');
-const sourcePaths=['src/intel.js','boot.js','assets/data/manifest.json'];
+const sourcePaths=['src/intel.js','src/game/commander.js','src/game/sim.js','boot.js','assets/data/manifest.json'];
 async function sourceIdentity(){
   const files=[];
   for(const path of sourcePaths){
@@ -105,6 +105,32 @@ try{
       ugen[radarTarget]=(oldGeneration+1)|0;
       const generationMismatch=intelContactGet(0,radarTarget,oldGeneration);
 
+      /* Exercise the shipped consumer, not only the contact API. A selected
+         artillery unit must accept a decayed radar record, carry its source
+         and confidence into the charge, and derive deterministic scatter from
+         the sampled contact coordinates. Clearing the record must then reject
+         the same request instead of reading the hidden live unit position. */
+      baseReset();artBarrageReset();
+      const artilleryType=TYPES.findIndex(T=>T&&T.cat==='art');
+      const batteryPos=findLand(MAP*.44,MAP*.48),targetPos=findLand(batteryPos[0]+260,batteryPos[1]+40);
+      const battery=spawnUnit(artilleryType,0,batteryPos[0],batteryPos[1],-1);
+      const contactTarget=spawnUnit(groundType,1,targetPos[0],targetPos[1],-1);
+      usel.fill(0);usel[battery]=1;resE[0]=1e6;
+      intelContactUpdate(0,contactTarget,'radar',.72,18,targetPos[0],targetPos[1],ugen[contactTarget],0);
+      stats.t=7;intelContactTick();
+      const solution=intelArtillerySolution(0,{target:contactTarget,generation:ugen[contactTarget]},stats.t);
+      const scatterA=[0,1,2].map(n=>intelArtilleryScatterPoint(solution,108,n,991));
+      const scatterB=[0,1,2].map(n=>intelArtilleryScatterPoint(solution,108,n,991));
+      const accepted=beginArtilleryBarrageContact(contactTarget,ugen[contactTarget]);
+      const charge=artBarrageCharge?{x:artBarrageCharge.x,y:artBarrageCharge.y,
+        intelSource:artBarrageCharge.intelSource,intelConfidence:snap(artBarrageCharge.intelConfidence),
+        intelAge:snap(artBarrageCharge.intelAge),members:artBarrageCharge.members.length,
+        pattern:artBarrageCharge.pattern.map(P=>({x:snap(P.x),y:snap(P.y)}))}:null;
+      artBarrageReset();intelContactReset();
+      const rejectedWithoutContact=!beginArtilleryBarrageContact(contactTarget,ugen[contactTarget]);
+      const artilleryConsumer={artilleryType,battery,contactTarget,accepted,rejectedWithoutContact,
+        solution,charge,scatterDeterministic:JSON.stringify(scatterA)===JSON.stringify(scatterB),scatterA};
+
       /* Pressure and repeatability use the actual global API with explicit
          dead-slot observations so spawning randomness cannot contaminate the
          deterministic contact contract. */
@@ -120,12 +146,13 @@ try{
       return {groundType,capacity:INTEL_CONTACT_CAP,visualCoverage,visual,
         persistence:{lastKnown,persisted,rewind,hiddenCoverage,expired},radar:radarEvidence,
         generation:{oldGeneration,current:ugen[radarTarget],oldRecord:generationMismatch},
+        artilleryConsumer,
         bounded:{attempted:INTEL_CONTACT_CAP+44,countA:boundedA.length,countB:boundedB.length,
           firstTarget:boundedA[0]?.target??null,lastTarget:boundedA.at(-1)?.target??null,
           jsonA:JSON.stringify(boundedA),jsonB:JSON.stringify(boundedB)}};
     });
     await page.close();
-  }finally{await closePwBrowser().catch(()=>{});}
+  }finally{await closePwBrowser(browser).catch(()=>{});}
 }finally{await server.close().catch(()=>{});}
 
 const endSource=await sourceIdentity();
@@ -151,12 +178,18 @@ const requirements={
   boundedCapacity:{status:runtime?.bounded?.countA===runtime?.capacity&&runtime?.bounded?.countB===runtime?.capacity&&
     runtime?.bounded?.attempted>runtime?.capacity?'PASS':'FAIL',evidence:{...runtime?.bounded,jsonA:undefined,jsonB:undefined}},
   deterministicRepeat:{status:hashA!==null&&hashA===hashB?'PASS':'FAIL',evidence:{hashA,hashB}},
+  artilleryContactConsumer:{status:runtime?.artilleryConsumer?.accepted&&
+    runtime?.artilleryConsumer?.rejectedWithoutContact&&runtime?.artilleryConsumer?.scatterDeterministic&&
+    runtime?.artilleryConsumer?.charge?.intelSource==='radar'&&runtime?.artilleryConsumer?.charge?.intelConfidence>0&&
+    runtime?.artilleryConsumer?.charge?.intelConfidence<.72&&runtime?.artilleryConsumer?.charge?.members>0?'PASS':'FAIL',
+    evidence:runtime?.artilleryConsumer},
   sourceStable:{status:startSource.setSha256===endSource.setSha256?'PASS':'FAIL',
     evidence:{start:startSource.setSha256,end:endSource.setSha256}},
   pageRuntime:{status:pageErrors.length===0?'PASS':'FAIL',evidence:pageErrors}
 };
-const report={schema:'MassfrontIntelContactsProbeV1',source:startSource,requirements,
-  integration:{artilleryContactConsumer:{status:'UNSUPPORTED_NOT_WIRED',reason:'This lane intentionally exposes contact APIs but does not modify artillery callers.'}},
+const report={schema:'MassfrontIntelContactsProbeV2',source:startSource,requirements,
+  integration:{artilleryContactConsumer:{status:requirements.artilleryContactConsumer.status,
+    reason:'beginArtilleryBarrageContact consumes the sampled IntelContact and fails closed when that record is absent.'}},
   runtime:{...runtime,bounded:runtime?{...runtime.bounded,jsonA:undefined,jsonB:undefined}:null,
     deterministicHashes:{a:hashA,b:hashB}},pass:Object.values(requirements).every(R=>R.status==='PASS')};
 console.log(JSON.stringify(report,null,2));

@@ -1,11 +1,17 @@
 import { DOCTRINE_CATALOG, MISSION_CATALOG, RESOURCE_KEYS, SUPPORT_CATALOG } from './catalog.js';
 import { clamp, deepClone, deepFreeze, deterministicUnit, hash32, stableStringify } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
-import { validateGroundOperation } from './ground_operation.js';
-import { assertDomainState } from './state_store.js';
+import {
+  GROUND_OPERATION_SCHEMA_VERSION,
+  groundOperationCommanderIdentityV3,
+  validateGroundOperation
+} from './ground_operation.js';
+import { DOMAIN_COMMANDER_ROSTER_FINGERPRINT, assertDomainState } from './state_store.js';
 import { advanceExpeditionCycles } from './construction.js';
 
-export const GROUND_RESULT_SCHEMA_VERSION = 2;
+export const LEGACY_GROUND_RESULT_SCHEMA_VERSION = 2;
+export const GROUND_RESULT_SCHEMA_VERSION = 3;
+export const GROUND_RESULT_KIND_V3 = 'GroundResultV3';
 
 const OUTCOMES = new Set(['victory', 'partial', 'setback']);
 const INJURY_BANDS = new Set(['none', 'light', 'moderate', 'severe']);
@@ -137,9 +143,10 @@ function buildWorldDelta(operation, report) {
 }
 
 function buildGroundResult(operation, report) {
+  const currentV3 = operation.schemaVersion === GROUND_OPERATION_SCHEMA_VERSION;
   const result = {
-    schemaVersion: GROUND_RESULT_SCHEMA_VERSION,
-    kind: 'GroundResult',
+    schemaVersion: currentV3 ? GROUND_RESULT_SCHEMA_VERSION : LEGACY_GROUND_RESULT_SCHEMA_VERSION,
+    kind: currentV3 ? GROUND_RESULT_KIND_V3 : 'GroundResult',
     operationId: operation.operationId,
     returnToken: operation.returnToken,
     returnRoute: deepClone(operation.returnRoute),
@@ -164,6 +171,10 @@ function buildGroundResult(operation, report) {
     worldDelta: buildWorldDelta(operation, report),
     missionDelta: { completed: report.outcome === 'victory' }
   };
+  if (currentV3) {
+    result.commanderRosterFingerprint = operation.commanderRosterFingerprint;
+    result.commanderIdentity = deepClone(operation.commanderIdentity);
+  }
   result.resultId = `gr_${String(operation.sequence).padStart(4, '0')}_${hash32({ resultSeed: operation.resultSeed, result })}`;
   return result;
 }
@@ -221,11 +232,23 @@ export function validateGroundResult(operation, result) {
     issues.push(issue('GROUND_RESULT_NOT_OBJECT', 'GroundResult must be an object.'));
     return { ok: false, issues };
   }
-  if (result.schemaVersion !== GROUND_RESULT_SCHEMA_VERSION || result.kind !== 'GroundResult') issues.push(issue('GROUND_RESULT_VERSION_INVALID', 'GroundResult schema or kind is invalid.'));
+  const currentV3 = operation.schemaVersion === GROUND_OPERATION_SCHEMA_VERSION;
+  const expectedSchemaVersion = currentV3 ? GROUND_RESULT_SCHEMA_VERSION : LEGACY_GROUND_RESULT_SCHEMA_VERSION;
+  const expectedKind = currentV3 ? GROUND_RESULT_KIND_V3 : 'GroundResult';
+  if (result.schemaVersion !== expectedSchemaVersion || result.kind !== expectedKind) issues.push(issue('GROUND_RESULT_VERSION_INVALID', 'GroundResult schema or kind does not match its operation.'));
   const report = normalizedReport(result);
   issues.push(...validateReport(operation, report).issues);
   if (result.operationId !== operation.operationId || result.returnToken !== operation.returnToken || stableStringify(result.returnRoute) !== stableStringify(operation.returnRoute)) issues.push(issue('RESULT_OPERATION_MISMATCH', 'GroundResult does not carry the operation identity and exact return route.', 'operationId'));
   if (result.sponsorId !== 'uga' || result.proxyFactionId !== operation.proxyFactionId || result.playerFactionId !== operation.proxyFactionId || result.opponentFactionId !== operation.opponentFactionId) issues.push(issue('RESULT_PARTICIPANTS_INVALID', 'GroundResult participants do not match the operation.', 'proxyFactionId'));
+  if (result.commanderId !== operation.commanderId || result.personnelDelta?.commander?.id !== operation.commanderId) issues.push(issue('RESULT_COMMANDER_MISMATCH', 'GroundResult must credit the exact operation commander.', 'commanderId'));
+  if (currentV3) {
+    const expectedIdentity = groundOperationCommanderIdentityV3(operation.commanderId);
+    if (result.commanderRosterFingerprint !== DOMAIN_COMMANDER_ROSTER_FINGERPRINT
+      || result.commanderRosterFingerprint !== operation.commanderRosterFingerprint) issues.push(issue('RESULT_COMMANDER_ROSTER_INVALID', 'GroundResultV3 roster fingerprint does not match its operation.', 'commanderRosterFingerprint'));
+    if (!expectedIdentity
+      || stableStringify(result.commanderIdentity) !== stableStringify(expectedIdentity)
+      || stableStringify(result.commanderIdentity) !== stableStringify(operation.commanderIdentity)) issues.push(issue('RESULT_COMMANDER_IDENTITY_INVALID', 'GroundResultV3 commander identity does not match its exact operation commander.', 'commanderIdentity'));
+  }
   if (Array.isArray(result.deadPersonnelIds) && result.deadPersonnelIds.length) issues.push(issue('PERMANENT_DEATH_UNSUPPORTED', 'Permanent personnel death is excluded from this experiment.', 'deadPersonnelIds'));
   if (!issues.length) {
     const expected = buildGroundResult(operation, report);
@@ -262,7 +285,9 @@ export function applyGroundResult(state, result) {
   faction.status = faction.recoveryCycles > 0 ? 'recovering' : 'ready';
   if (result.missionDelta.completed) faction.operationsCompleted += 1;
 
-  applyPersonnelDelta(next.personnel.commanders[result.personnelDelta.commander.id], result.personnelDelta.commander);
+  const operationCommander = next.personnel.commanders[operation.commanderId];
+  if (!operationCommander) throw new DomainValidationError('GroundResult commander is absent from campaign personnel.', [issue('RESULT_COMMANDER_MISSING', 'The exact operation commander no longer exists in campaign personnel.', 'commanderId')], 'GROUND_RESULT_INVALID');
+  applyPersonnelDelta(operationCommander, result.personnelDelta.commander);
   for (const delta of result.personnelDelta.specialists) applyPersonnelDelta(next.personnel.specialists[delta.id], delta);
 
   const mission = next.missions[result.missionId];

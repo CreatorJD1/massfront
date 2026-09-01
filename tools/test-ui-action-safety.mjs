@@ -29,7 +29,7 @@ try{
     fire(ab,'pointerdown',20,20,2);fire(ab,'pointermove',45,20,2);fire(ab,'pointerup',45,20,2);const afterDrag=abilities;
     mfUiMarkPanelDismiss();fire(ab,'pointerdown',20,20,3);fire(ab,'pointerup',20,20,3);const afterTapThrough=abilities;
     await new Promise(r=>setTimeout(r,240));fire(ab,'pointerdown',20,20,4);fire(ab,'pointerup',20,20,4);const afterFreshTap=abilities;
-    const x=document.createElement('button'),y=document.createElement('button');x.id='mfProbeA';y.id='mfProbeB';document.body.append(x,y);x.addEventListener('pointerdown',()=>a++);y.addEventListener('pointerdown',()=>b++);
+    const x=document.createElement('button'),y=document.createElement('button');x.id='mfProbeA';y.id='mfProbeB';x.className='abtn';y.className='abtn';document.body.append(x,y);x.addEventListener('pointerdown',()=>a++);y.addEventListener('pointerdown',()=>b++);
     await new Promise(r=>setTimeout(r,190));fire(x,'pointerdown',5,5,5);fire(x,'pointerup',5,5,5);fire(y,'pointerdown',5,5,6);fire(y,'pointerup',5,5,6);
     const oldConfirm=accConfirm;accConfirm=(msg,yes)=>{confirmations++;};
     await new Promise(r=>setTimeout(r,190));const roll=document.getElementById('updRoll');fire(roll,'pointerdown',5,5,7);fire(roll,'pointerup',5,5,7);accConfirm=oldConfirm;

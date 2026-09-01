@@ -4,11 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#02070d">
-  <title>MASSFRONT — Strategic Exploration Test Room</title>
+  <title>MASSFRONT — UGA Expedition</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2302070d' d='M0 0h32v32H0z'/%3E%3Cpath fill='none' stroke='%2355dfff' stroke-width='2' d='m16 3 11 7v12l-11 7-11-7V10zM10 21l6-13 6 13-6-4z'/%3E%3C/svg%3E">
-  <link rel="stylesheet" href="src/ui/space_module.css?v=20260823-transit1">
+  <link rel="stylesheet" href="src/ui/space_module.css?v=20260829-entryintro2">
+  <link rel="stylesheet" href="src/ui/space_presentation.css?v=20260829-polish2">
   <script src="lib/three.min.js"></script>
   <script src="lib/GLTFLoader.js"></script>
+  <script src="lib/DRACOLoader.js"></script>
 </head>
 <body>
   <svg class="mf-symbols" aria-hidden="true">
@@ -45,11 +47,35 @@
       </nav>
     </header>
 
-    <aside id="storyRail" class="story-rail">
-      <div class="eyebrow">EXPEDITION DIRECTIVE</div><h1 id="storyTitle">Departure Window</h1>
-      <p id="storyBody">Inspect NEXUS-VII, establish a resident-faction liaison, then plot the frontier route toward Veyra.</p>
-      <ol id="storySteps" class="story-steps"><li class="active"><span>01</span><b>Inspect NEXUS-VII</b></li><li><span>02</span><b>Survey Aelos</b></li><li><span>03</span><b>Plot Veyra route</b></li></ol>
-      <div class="system-tone"><span class="pulse"></span><b>LIVE SYSTEM TELEMETRY</b><small id="systemActivity">428 CIVILIAN TRANSPONDERS</small></div>
+    <aside id="storyRail" class="story-rail" aria-label="Expedition story and transmissions">
+      <div class="story-rail-default" data-story-default>
+        <div class="eyebrow">EXPEDITION DIRECTIVE</div><h1 id="storyTitle">Departure Window</h1>
+        <p id="storyBody">Inspect NEXUS-VII, establish a resident-faction liaison, then plot the frontier route toward Veyra.</p>
+        <ol id="storySteps" class="story-steps"><li class="active"><span>01</span><b>Inspect NEXUS-VII</b></li><li><span>02</span><b>Survey Aelos</b></li><li><span>03</span><b>Plot Veyra route</b></li></ol>
+        <div class="system-tone"><span class="pulse"></span><b>LIVE SYSTEM TELEMETRY</b><small id="systemActivity">428 CIVILIAN TRANSPONDERS</small></div>
+      </div>
+      <section id="storyTransmission" class="story-transmission" aria-live="polite" aria-atomic="true" hidden>
+        <div class="story-transmission-signal">
+          <span><i aria-hidden="true"></i><b id="storyTransmissionChannel">UGA PERSONNEL LINK</b></span>
+          <small id="storyTransmissionStage">ENTRY BRIEF</small>
+        </div>
+        <div class="story-transmission-main">
+          <figure id="storyTransmissionMedia" class="story-transmission-media" hidden>
+            <video id="storyTransmissionVideo" muted autoplay playsinline loop hidden></video>
+            <img id="storyTransmissionPortrait" alt="" hidden>
+          </figure>
+          <div class="story-transmission-copy">
+            <div class="story-transmission-identity">
+              <span><small id="storyTransmissionRole">UGA EXPEDITION GUIDE</small><strong id="storyTransmissionSpeaker">KEEL</strong></span>
+              <b id="storyTransmissionAffiliation">UGA PERSONNEL</b>
+            </div>
+            <h2 id="storyTransmissionTitle">FIRST COMMAND DECISION</h2>
+            <p id="storyTransmissionText"></p>
+          </div>
+        </div>
+        <div id="storyTransmissionProgress" class="story-transmission-progress" aria-hidden="true"></div>
+        <div id="storyTransmissionActions" class="story-transmission-actions"></div>
+      </section>
     </aside>
 
     <section id="targetCard" class="target-console" aria-live="polite">
@@ -119,8 +145,8 @@
     <button id="btnResetRoom" class="test-reset" type="button" title="Reset the isolated test-room save"><svg><use href="#i-reset"/></svg><span>RESET TEST ROOM</span></button><div id="toastBanner" class="toast-banner" role="status"></div>
     <div id="renderVeil" class="render-veil">
       <div class="loader-mark"><span></span><i></i></div>
-      <b>ASSEMBLING UGA EXPEDITION</b>
-      <small id="loadStatus">INITIALIZING WEBGL2 RUNTIME</small>
+      <b>OPENING UGA EXPEDITION LINK</b>
+      <small id="loadStatus">CALIBRATING EXTERIOR NAVIGATION</small>
       <div class="load-meter" aria-label="Expedition loading progress">
         <span id="loadProgressBar"></span>
       </div>
@@ -152,6 +178,6 @@
       }, 500);
     })();
   </script>
-  <script type="module" src="src/space_module.js?v=20260828-stage9ops2"></script>
+  <script type="module" src="src/space_module.js?v=20260830-sessionroutes4"></script>
 </body>
 </html>

@@ -11,11 +11,13 @@
  * node tools/mirror-release-to-cloudflare.mjs --version 1.33.48 --apply --retire-current
  */
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import {
+  releaseInventory,buildMirrorManifest,assertManifestExact,rangeProbeEntries,verifyEntryRanges
+} from './mirror-release-contract.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const workerDir=path.join(root,'cloudflare','massfront-update');
@@ -34,22 +36,20 @@ if(!apply) throw new Error('This prepares remote storage; rerun with --apply aft
 
 const source=JSON.parse(fs.readFileSync(path.join(root,'update.json'),'utf8'));
 if(String(source.version)!==version) throw new Error(`Local release manifest is v${source.version}, not v${version}`);
-if(!Array.isArray(source.files)||!source.files.length) throw new Error('Release manifest has no payload');
-for(const f of source.files){
-  if(!f||typeof f.path!=='string'||typeof f.url!=='string'||!/^[0-9a-f]{64}$/i.test(f.sha256||'')||!Number.isFinite(f.size)||f.size<=0)
-    throw new Error(`Invalid immutable release entry: ${f?.path||'(unknown)'}`);
-  if(f.path.startsWith('/')||f.path.includes('..')) throw new Error(`Unsafe release path: ${f.path}`);
-}
+const inventory=releaseInventory(source);
+const {entries:complete}=inventory;
 
 const priorResponse=await fetch(`${host}/update.json?mf_mirror_probe=${Date.now()}`,{cache:'no-store'});
 if(!priorResponse.ok) throw new Error(`Cloudflare current manifest is unavailable: HTTP ${priorResponse.status}`);
 const prior=await priorResponse.json();
 if(!/^\d+\.\d+\.\d+$/.test(String(prior.version||''))||!Array.isArray(prior.files))
   throw new Error('Cloudflare current manifest is malformed; refusing to overwrite it');
-console.log(`SOURCE=v${source.version} (${source.files.length} files)`);
+console.log(`SOURCE=v${source.version} (${source.files.length} payload / ${complete.length} complete files)`);
 console.log(`CLOUDFLARE_CURRENT=v${prior.version} (${prior.files.length} files)`);
 
-const tmp=fs.mkdtempSync(path.join(os.tmpdir(),`massfront-r2-v${version}-`));
+const scratchRoot=path.join(root,'.tmp','ota-delivery-repair');
+fs.mkdirSync(scratchRoot,{recursive:true});
+const tmp=fs.mkdtempSync(path.join(scratchRoot,`massfront-r2-v${version}-`));
 function run(args){
   /* .cmd launchers require a shell when spawned by Node on Windows. Without
      this, the source phase succeeds and the first R2 put fails with EINVAL. */
@@ -66,8 +66,8 @@ function runAsync(args){
 }
 try{
   const local=[];
-  for(let i=0;i<source.files.length;i++){
-    const f=source.files[i];
+  for(let i=0;i<complete.length;i++){
+    const f=complete[i];
     const response=await fetch(f.url,{cache:'no-store'});
     if(!response.ok) throw new Error(`Immutable source failed ${f.path}: HTTP ${response.status}`);
     const bytes=Buffer.from(await response.arrayBuffer());
@@ -76,7 +76,7 @@ try{
     const file=path.join(tmp,...f.path.split('/'));
     fs.mkdirSync(path.dirname(file),{recursive:true}); fs.writeFileSync(file,bytes);
     local.push({f,file});
-    process.stdout.write(`DOWNLOADED ${i+1}/${source.files.length} ${f.path}\r`);
+    process.stdout.write(`DOWNLOADED ${i+1}/${complete.length} ${f.path}\r`);
   }
   console.log('\nSOURCE_HASHES_VERIFIED');
 
@@ -105,10 +105,28 @@ try{
   }
   console.log('\nR2_PUBLIC_HASHES_VERIFIED');
 
-  const r2File=f=>({path:f.path,size:f.size,sha256:f.sha256});
-  const mirror={...source,base:`${host}/f/${version}/`,files:source.files.map(r2File)};
-  if(Array.isArray(source.full)) mirror.full=source.full.map(r2File);
-  else if(source.full&&Array.isArray(source.full.files)) mirror.full={...source.full,files:source.full.files.map(r2File)};
+  /* The updater ranges every multi-chunk file. Prove both object edges are
+     served as exact 206 responses before latest.json can point clients here. */
+  const rangeEntries=rangeProbeEntries(complete);
+  for(let i=0;i<rangeEntries.length;i++){
+    const f=rangeEntries[i],record=local.find(item=>item.f.path===f.path);
+    if(!record) throw new Error(`Range verification has no local source: ${f.path}`);
+    const publicFile=`${host}/f/${version}/${f.path.split('/').map(encodeURIComponent).join('/')}`;
+    await verifyEntryRanges(fetch,publicFile,f,fs.readFileSync(record.file),Date.now());
+    process.stdout.write(`RANGE_VERIFIED ${i+1}/${rangeEntries.length} ${f.path}\r`);
+  }
+  console.log('\nR2_PUBLIC_RANGES_VERIFIED');
+
+  /* URLs are delivery metadata, not signed payload identity. Preserve every
+     chunk and schema field byte-for-byte while replacing only the transport,
+     so the existing manifestRoot/payloadRoot/fullRoot/runtimeRoot remain the
+     authority clients already trust. */
+  const mirror=buildMirrorManifest(source,{host,version});
+  const evidenceDir=path.join(root,'.tmp','ota-delivery-repair');
+  fs.mkdirSync(evidenceDir,{recursive:true});
+  const repairManifest=path.join(evidenceDir,`update-v${version}-cloudflare.json`);
+  fs.writeFileSync(repairManifest,JSON.stringify(mirror,null,2)+'\n');
+  console.log(`REPAIRED_MANIFEST=${repairManifest}`);
   const manifestFile=path.join(tmp,'latest.json');
   fs.writeFileSync(manifestFile,JSON.stringify(mirror,null,2)+'\n');
   run(['r2','object','put',`${bucket}/massfront/latest.json`,
@@ -116,9 +134,7 @@ try{
   const live=await fetch(`${host}/update.json?mf_activate=${Date.now()}`,{cache:'no-store'});
   if(!live.ok) throw new Error(`Cloudflare activation verification failed: HTTP ${live.status}`);
   const activated=await live.json();
-  if(String(activated.version)!==version||activated.files?.length!==source.files.length||
-     activated.files.some((f,i)=>f.path!==source.files[i].path||f.sha256!==source.files[i].sha256))
-    throw new Error('Cloudflare activation verification failed: manifest differs');
+  assertManifestExact(activated,mirror,'Cloudflare activation verification failed: manifest differs');
   console.log(`CLOUDFLARE_ACTIVATED=v${version}`);
 
   if(retireCurrent&&String(prior.version)!==version){

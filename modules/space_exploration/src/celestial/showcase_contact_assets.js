@@ -6,8 +6,9 @@
    system transition can dispose them without invalidating the immutable cache
    or another contact that happens to use the same material atlas.
    -------------------------------------------------------------------------- */
+import { createRuntimeGltfLoader } from '../core/gltf_runtime_loader.js';
 
-const PACK_URL = new URL('../../assets/models/massfront-showcase-contacts.glb', import.meta.url).href;
+const PACK_URL = new URL('../../assets/runtime/models/massfront-showcase-contacts.glb?v=20260830-draco1', import.meta.url).href;
 const CONTACT_IDS = Object.freeze([
   'aelos_embassy_spindle',
   'aelos_logistics_array',
@@ -117,7 +118,7 @@ function loadMaster() {
       reject(new Error('The pinned local GLTFLoader must be ready before loading showcase contacts.'));
       return;
     }
-    const loader = new THREE.GLTFLoader();
+    const loader = createRuntimeGltfLoader();
     loader.load(PACK_URL, gltf => {
       const pack = gltf.scene.getObjectByName('MASSFRONT_SHOWCASE_CONTACT_PACK') || gltf.scene;
       const roots = new Map();

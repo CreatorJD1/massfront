@@ -14,6 +14,32 @@ let deploymentPackage='prepared'; // supported opening for newcomers; classic st
    and its primary action may hand the War Table off to the module. */
 let mfOpenExploration=null;
 let hudDeck='orders';           // one secondary command row at a time on phones
+/* OTA source can run inside an older packaged HTML shell. Upgrade the two new
+   HUD surfaces before binding controls so the patch remains usable without an
+   APK reinstall. New packages already contain this markup, making these no-ops. */
+function ensureCommanderLocatorShell(){
+  const bar=$('heroBar');if(!bar||$('heroPortraitImg'))return;
+  bar.innerHTML='<span id="heroPortrait" aria-hidden="true"><img id="heroPortraitImg" alt=""><i id="heroPortraitFallback">C</i><b id="heroRankEm">🎗</b></span>'
+    +'<span class="heroProfileBody"><span class="heroProfileHead"><strong id="heroNameTxt">COMMANDER</strong><b id="heroLvlTxt">LV 1</b></span>'
+    +'<span id="heroCallsignTxt">FIELD COMMAND</span><span class="heroVital"><small>HP</small><span class="heroBarOuter"><i id="heroHpFill"></i></span><b id="heroHpTxt">100%</b></span>'
+    +'<span class="heroVital heroXp"><small>XP</small><span id="xpOuter"><i id="xpFill"></i></span><b id="heroXpTxt">0%</b></span></span>';
+}
+function ensureBuildingsDeckShell(){
+  const tabs=$('hudDeckTabs');if(!tabs)return;
+  tabs.setAttribute('role','tablist');
+  let b=tabs.querySelector('[data-deck="buildings"]');
+  if(!b){
+    b=document.createElement('button');b.className='hudDeckBtn';b.dataset.deck='buildings';b.innerHTML='<span>⌂</span>BUILDINGS';
+    tabs.insertBefore(b,tabs.querySelector('[data-deck="abilities"]')||tabs.lastElementChild);
+  }
+  for(const tab of tabs.querySelectorAll('.hudDeckBtn')){
+    tab.setAttribute('role','tab');tab.setAttribute('aria-selected',tab.dataset.deck===hudDeck?'true':'false');
+  }
+  /* Old shells still carry the ambiguous BASE action. The first-class tab owns
+     navigation now; leaving both visible would make the same feature appear to
+     behave two different ways. */
+  const legacy=$('baseFindBtn');if(legacy){legacy.hidden=true;legacy.setAttribute('aria-hidden','true');}
+}
 /* Phone command dock is platoon-first (4 groups, deck tabs). Army/box/rings
    still treat the army as one blob. Stage A HUD (after Stage 0 screenshots,
    not this slice): ring LOD, hologram sampling, box-select via spatial hash.
@@ -46,16 +72,28 @@ function startFirstContactGuide(){
 }
 
 function setHudDeck(deck,quiet){
-  const valid=['orders','platoons','abilities','view'];
+  const valid=['orders','platoons','buildings','abilities','view'];
   hudDeck=valid.includes(deck)?deck:'orders';
+  if(hudDeck!=='abilities'&&typeof hotUtilityClose==='function')hotUtilityClose(true);
   document.body.classList.toggle('hudViewDeck',hudDeck==='view');
-  document.querySelectorAll('.hudDeckBtn').forEach(b=>b.classList.toggle('on',b.dataset.deck===hudDeck));
+  let activeTab=null;
+  document.querySelectorAll('.hudDeckBtn').forEach(b=>{
+    const on=b.dataset.deck===hudDeck;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false');
+    if(on)activeTab=b;
+  });
+  /* Scaled labels can make the tab row horizontally scrollable. Keep the
+     newly selected tab inside that scroller instead of leaving its hit target
+     painted under the battlefield canvas at the clipped edge. */
+  if(activeTab)requestAnimationFrame(()=>activeTab.scrollIntoView({block:'nearest',inline:'nearest'}));
   for(const id of ['camRow','tacRow','grpRow','hotSlots']){
     const row=$(id); if(row) row.style.display='none';
   }
   const rowId={orders:'tacRow',platoons:'grpRow',abilities:'hotSlots',view:'camRow'}[hudDeck];
   const row=$(rowId);
   if(row) row.style.display=hudDeck==='abilities'?(row.children.length?'flex':'none'):'flex';
+  if(hudDeck==='buildings'){
+    if(typeof openBaseFinder==='function')openBaseFinder();
+  }else if(typeof closeBaseFinder==='function')closeBaseFinder(false);
   if(hudDeck==='abilities'&&typeof hotSlotSync==='function') hotSlotSync(true);
   if(typeof updateSelInfo==='function') updateSelInfo();
   if(typeof hotSlotPlace==='function') requestAnimationFrame(hotSlotPlace);
@@ -66,7 +104,11 @@ function showHudDock(on,deck){
   const tabs=$('hudDeckTabs'); if(tabs) tabs.style.display=on?'flex':'none';
   const primary=$('primaryRow'); if(primary) primary.style.display=on?'flex':'none';
   if(on) setHudDeck(deck||hudDeck,true);
-  else for(const id of ['tacRow','grpRow','hotSlots']){const row=$(id);if(row)row.style.display='none';}
+  else {
+    if(typeof hotUtilityClose==='function')hotUtilityClose(true);
+    if(typeof closeBaseFinder==='function')closeBaseFinder(false);
+    for(const id of ['tacRow','grpRow','hotSlots']){const row=$(id);if(row)row.style.display='none';}
+  }
 }
 
 /* Nine authored deployment plateaus. They are deliberately inset rather
@@ -1314,6 +1356,12 @@ function applyMenuBackdrop(){
   if(!attractOn) setupAttract();
 }
 function setupAttract(){
+  /* Cold launch now passes through the visual updater before the main menu.
+     Building the terrain diorama behind a download wastes memory, heat and GPU
+     time, so the launcher keeps this function dormant until PLAY hands off. */
+  if(typeof mfLauncherShouldDeferAttract==='function'&&mfLauncherShouldDeferAttract()){
+    attractOn=false;document.body.classList.add('menuMode');return;
+  }
   if(typeof trainingMissionActive==='function'&&trainingMissionActive()){
     stopAttract();
     return;
@@ -2216,7 +2264,7 @@ function handleNativeBack(AppPlugin){
   if(nativeLayerVisible('buildMenu')||nativeLayerVisible('bldMenu2')||nativeLayerVisible('prodMenu')){
     closeMenus();sfx('ui');return;
   }
-  if(nativeLayerVisible('baseFinder')){ $('baseFinder').style.display='none';sfx('ui');return; }
+  if(nativeLayerVisible('baseFinder')){if(typeof closeBaseFinder==='function')closeBaseFinder(true);else $('baseFinder').style.display='none';sfx('ui');return;}
   /* Drafted map commands outrank Pause. Leaving either mode armed while opening
      the overlay makes the first tap after Resume execute an old instruction. */
   if(typeof armQueue!=='undefined'&&armQueue){cancelQueueDraft(false);return;}
@@ -2370,7 +2418,94 @@ function mfLoadScreenFill(){
               'RAISING SETTLEMENTS…','SEEDING FLORA…'];
   setT('loadSub',subs[(Math.random()*subs.length)|0]);
 }
+function mfBuildingServiceFailure(code){
+  const copy={
+    'building-not-owned':'STRUCTURE CONTROL DENIED',
+    'building-gone':'STRUCTURE NO LONGER AVAILABLE',
+    'invalid-building':'STRUCTURE NO LONGER AVAILABLE',
+    'full-health':'FULL HEALTH',
+    'under-construction':'REPAIR UNAVAILABLE DURING CONSTRUCTION',
+    'zero-investment':'THIS STRUCTURE CANNOT SELF-REPAIR',
+    'unsupported-owner':'STRUCTURE OWNER UNSUPPORTED',
+    'service-unavailable':'STRUCTURE SERVICE UNAVAILABLE',
+    'network-service-unavailable':'NETWORK STRUCTURE SERVICE UNAVAILABLE',
+    'network-service-error':'NETWORK STRUCTURE SERVICE REJECTED'
+  };
+  return copy[code]||'STRUCTURE SERVICE REJECTED';
+}
+/* Realtime owns every mutation once its match is active. The public consumer
+   returns false only when there is no realtime match, which is the sole case
+   allowed to continue into the deterministic offline service. */
+function mfRequestBuildingService(kind,B,active){
+  if(!B||!B.alive)return {ok:false,code:'building-gone'};
+  if(typeof mfLocalOwnsBuilding==='function'&&!mfLocalOwnsBuilding(B))return {ok:false,code:'building-not-owned'};
+  const id=blds.indexOf(B);if(id<0)return {ok:false,code:'invalid-building'};
+  const C=window.MFMatchCommandConsumer,target=C&&typeof C.buildingRef==='function'?C.buildingRef(id):{id,type:B.type},
+    method=kind==='repair'?'submitRepair':'submitRecycle';
+  if(C&&typeof C[method]==='function'){
+    try{
+      const handled=kind==='repair'?C[method](target,!!active):C[method](target);
+      if(handled!==false)return {ok:true,network:true,pending:true};
+    }catch(e){
+      const st=window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
+      if(st&&st.state==='running')return {ok:false,code:'network-service-error'};
+    }
+  }
+  const st=window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
+  if(st&&st.state==='running')return {ok:false,code:'network-service-unavailable'};
+  const S=window.MFBuildingService;
+  if(!S)return {ok:false,code:'service-unavailable'};
+  return kind==='repair'&&typeof S.setRepair==='function'?S.setRepair(id,!!active):
+    kind==='recycle'&&typeof S.recycle==='function'?S.recycle(id):{ok:false,code:'service-unavailable'};
+}
+function mfRefreshBuildingServiceControls(B){
+  if(typeof mfRenderBuildingServiceControls!=='function')return;
+  const row=$('mfBldServiceActions'),panel=row&&row.parentElement&&row.parentElement.id==='prodMenu'?'prodMenu':'bldMenu2';
+  mfRenderBuildingServiceControls(B,panel);
+}
+function mfBuildingRepairPress(){
+  if(openBld<0||!blds[openBld]||!blds[openBld].alive)return;
+  const B=blds[openBld],S=window.MFBuildingService,Q=S&&typeof S.quote==='function'?S.quote(B):null;
+  if(!Q){toast(mfBuildingServiceFailure('service-unavailable'));sfx('reject');return;}
+  const enable=!Q.active,R=mfRequestBuildingService('repair',B,enable);
+  if(!R||!R.ok){toast(mfBuildingServiceFailure(R&&R.code));sfx('reject');mfRefreshBuildingServiceControls(B);return;}
+  if(!R.network){toast(enable?'REPAIR ENABLED':'REPAIR CANCELLED');sfx('ui');}
+  mfRefreshBuildingServiceControls(B);
+}
+function mfBuildingRecyclePress(){
+  if(openBld<0||!blds[openBld]||!blds[openBld].alive)return;
+  const B=blds[openBld],now=Date.now(),refund=bldRecycleMass(B);
+  /* First release arms, second release inside three seconds submits exactly one
+     authoritative recycle command. No refund or death mutation lives here. */
+  if(!(B.recycleConfirmAt>now)){
+    const armedUntil=B.recycleConfirmAt=now+3000,armedIndex=openBld;
+    /* The timestamp already makes a late second tap safe, but leaving the red
+       CONFIRM label mounted after that timestamp expired made the UI promise a
+       destructive action the next tap could not perform. Expire only the same
+       arm token and only repaint while this exact building is still open; a
+       confirmed command, a re-arm after timer throttling, or another selected
+       building must never be overwritten by the old callback. */
+    const expireArm=()=>{
+      if(B.recycleConfirmAt!==armedUntil)return;
+      const remaining=armedUntil-Date.now();
+      if(remaining>0){setTimeout(expireArm,remaining+1);return;}
+      B.recycleConfirmAt=0;
+      if(openBld===armedIndex&&blds[armedIndex]===B&&B.alive)mfRefreshBuildingServiceControls(B);
+    };
+    setTimeout(expireArm,3001);
+    toast('RECYCLE '+BT[B.type].name.toUpperCase()+' · +'+refund+' MASS · TAP AGAIN');
+    mfRefreshBuildingServiceControls(B);sfx('ui');return;
+  }
+  B.recycleConfirmAt=0;
+  const R=mfRequestBuildingService('recycle',B);
+  if(!R||!R.ok){toast(mfBuildingServiceFailure(R&&R.code));sfx('reject');mfRefreshBuildingServiceControls(B);return;}
+  if(R.network){mfRefreshBuildingServiceControls(B);return;}
+  addParticle(3,B.x,B.y,0,0,.5,BT[B.type].size,120,230,255);
+  toast(BT[B.type].name+' recycled · +'+R.refund+' mass');closeMenus();sfx('ui');
+}
 function wire(){
+  ensureCommanderLocatorShell();ensureBuildingsDeckShell();
+  if(typeof mfEnsureBuildingServiceControls==='function')mfEnsureBuildingServiceControls('bldMenu2');
   if(typeof window!=='undefined'&&!window.__mfPauseFocusTrapReady){
     window.__mfPauseFocusTrapReady=true;
     window.addEventListener('keydown',mfPauseTrapKeydown,true);
@@ -2702,6 +2837,7 @@ function wire(){
   mfBindNativePress($('spdBtn'),()=>{
     gameSpeed=gameSpeed===1?1.5:gameSpeed===1.5?2:1;
     $('spdBtn').textContent=gameSpeed+'×';
+    $('spdBtn').setAttribute('aria-label','Game speed '+gameSpeed+' times. Activate to change speed');
     toast('⏩ Game speed '+gameSpeed+'×'); sfx('ui');
   });
   /* The header is a tap target for Profile, but it now CONTAINS buttons — the
@@ -2756,11 +2892,15 @@ function wire(){
     /* The full Game Version screen is already the detail view. Leaving the
        updater in its menu-sized collapsed state hid the Stable/Preview
        selector and rollback controls even though there was ample room. */
-    if(typeof updOpen!=='undefined') updOpen=true;
-    if(typeof renderUpdatePanel==='function') renderUpdatePanel();
-    showFrontScreen('updScr');
+    if(typeof mfLauncherOpenDetails==='function') mfLauncherOpenDetails();
+    else {
+      if(typeof updOpen!=='undefined') updOpen=true;
+      if(typeof renderUpdatePanel==='function') renderUpdatePanel();
+      showFrontScreen('updScr');
+    }
   });
   mfBindTap($('updBack'),()=>{ sfx('ui');
+    if(typeof mfLauncherHandleBack==='function'&&mfLauncherHandleBack())return;
     renderMetaHead(); showFrontScreen('startScreen'); });
   mfBindTap($('inboxBtn'),()=>{
     initAudio(); sfx('ui');
@@ -2854,40 +2994,8 @@ function wire(){
     if(err) toast(err); else sfx('ui');
     renderBldPanel();
   });
-  mfBindTap($('bp_sell'),()=>{
-    if(openBld<0) return;
-    const B=blds[openBld];
-    if(!B.alive) return;
-    /* Recycling is irreversible, so a first tap arms it and states the exact
-       recovered mass. This is safer than a browser confirm dialog (which is
-       often obscured or suppressed by Android WebViews) while remaining a
-       two-tap action in the same reachable control. */
-    const now=Date.now(), refund=bldRecycleMass(B);
-    if(!(B.recycleConfirmAt>now)){
-      B.recycleConfirmAt=now+3000;
-      toast('♻ RECYCLE '+BT[B.type].name.toUpperCase()+' — +'+refund+' MASS · TAP AGAIN TO CONFIRM');
-      renderBldPanel(); sfx('ui');
-      return;
-    }
-    /* Same theft primitive as the production-cancel refund: the refund
-       lands in the wallet of the seat that owns the structure. */
-    credit(0,refund,0,typeof commanderSlotForBuilding==='function'?commanderSlotForBuilding(B):null);
-    B.alive=false; rebuildBGrid();
-    if(B.type==='mex'){
-      if(B.dep>=0) redirectProspectorsFromNode(B.dep,B.team);
-      /* Same fix as sim.js: release by the claiming index. Recycling a mex
-         bound by proximity used to leak its deposit permanently. */
-      if(B.dep>=0&&deposits[B.dep]){ deposits[B.dep].taken=false; B.dep=-1; }
-      else for(const D of deposits) if(D.x===B.x&&D.y===B.y) D.taken=false;
-    }
-    if(B.type==='geo'){
-      if(B.geo>=0&&geysers[B.geo]){ geysers[B.geo].taken=false; B.geo=-1; }
-      else for(const G of geysers) if(G.x===B.x&&G.y===B.y) G.taken=false;
-    }
-    addParticle(3,B.x,B.y,0,0,.5,BT[B.type].size, 120,230,255);
-    toast('♻ '+BT[B.type].name+' recycled · +'+refund+' mass');
-    closeMenus(); sfx('ui');
-  });
+  mfBindTap($('bp_repair'),mfBuildingRepairPress);
+  mfBindTap($('bp_sell'),mfBuildingRecyclePress);
   mfBindNativePress($('armyBtn'),()=>{ selectArmy(); });
   if($('idleBuilderBtn')) mfBindNativePress($('idleBuilderBtn'),()=>{ selectIdleBuilders(); });
   // ---- tactics bar: patrol / hold / formation ----
@@ -2960,6 +3068,8 @@ function wire(){
   mfBindNativePress($('moveBtn'),()=>{ toggleMoveMode(); });
   mfBindNativePress($('clearBtn'),()=>{ clearSel(); updateSelInfo(); sfx('ui'); });
   mfBindNativePress($('buildBtn'),()=>{
+    if(typeof closeBaseFinder==='function')closeBaseFinder(false);
+    if(hudDeck==='buildings')setHudDeck('orders',true);
     if(placing) cancelPlace();                 // never overlap menu with placement mode
     const bm=$('buildMenu');
     if(bm.style.display==='block'){ bm.style.display='none'; }
@@ -2989,15 +3099,21 @@ function wire(){
   mfBindNativePress($('abBarrage'),()=>tryArtilleryBarrage());
   if($('abClass')) mfBindNativePress($('abClass'),()=>tryClassAbility());
   mfBindNativePress($('abHero'),()=>selectHero());
-  if($('baseFindBtn')) mfBindNativePress($('baseFindBtn'),()=>toggleBaseFinder());
-  mfBindTap($('heroBar'),()=>{
+  if($('baseFindBtn')) mfBindNativePress($('baseFindBtn'),()=>setHudDeck('buildings'));
+  const focusCommander=()=>{
+    const h=typeof mfLocalCommander==='function'?mfLocalCommander():heroIdx;
+    if(h<0||!ualive[h]){toast('Commander is down');sfx('reject');return;}
     selectHero();
-    if(heroIdx>=0) toast('★ COMMANDER — selected and centered');
-  });
+    /* selectHero owns selection and camera centring. Reassert the camera target
+       after it returns so a stale follow target cannot pull the view away on the
+       next frame. */
+    camFollow=-1;cam.x=ux[h];cam.y=uy[h];clampCam();camUpdateMatrices();
+    toast('★ COMMANDER — selected and centered');
+  };
+  mfBindTap($('heroBar'),focusCommander);
   $('heroBar').addEventListener('keydown',ev=>{
     if(ev.key!=='Enter'&&ev.key!==' ') return;
-    ev.preventDefault(); selectHero();
-    if(heroIdx>=0) toast('★ COMMANDER — selected and centered');
+    ev.preventDefault(); focusCommander();
   });
   document.body.addEventListener('pointerdown',initAudio,{once:true});
   setInterval(()=>{
@@ -3184,7 +3300,7 @@ async function boot(){
     sfx('ui'); });
   /* New subsystems. Each lives in its own module and registers its own UI, so
      none of them need to touch index.html or this file beyond this line. */
-  for(const fn of ['initOffline','initSampleAudio','initAssetPacks','initAuthPortal','initSocialUI','initTutorial','initAdBoards','initStoreUI','initResTree3D','initEconomyNet','initIntro','initGalaxyUI','initWarPrimer'])
+  for(const fn of ['initOffline','initSampleAudio','initAssetPacks','initAuthPortal','initSocialUI','initTutorial','initAdBoards','initStoreUI','initResTree3D','initEconomyNet','initIntro','initLauncherGateway','initGalaxyUI','initWarPrimer'])
     /* NEVER skip in silence. A function belonging to a file that loads AFTER
        main.js does not exist yet, and this guard used to drop it with no
        error - the feature was simply absent at runtime. That is how the War

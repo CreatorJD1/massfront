@@ -190,20 +190,20 @@ export async function acquireVerificationFreeze({
   const allowed=[resolve(workspace.gitDir),resolve(workspace.root,'.tmp'),...allowedPaths.map(path=>resolve(path))];
   const watchStartedAt=Date.now();
   const changes=new Map();
-  const unknownScopes=new Set();
+  const unknownScopes=new Map();
   let closed=false;
   const watchers=[];
   function recordChange(scope,filename){
     if(closed)return;
-    if(filename==null){unknownScopes.add(relative(workspace.root,scope).split(sep).join('/')||'.');return;}
+    if(filename==null){unknownScopes.set(relative(workspace.root,scope).split(sep).join('/')||'.',scope);return;}
     const changed=resolve(scope,String(filename));
-    if(!inside(changed,workspace.root)){unknownScopes.add(`outside:${changed}`);return;}
+    if(!inside(changed,workspace.root)){unknownScopes.set(`outside:${changed}`,changed);return;}
     if(allowed.some(parent=>inside(changed,parent)))return;
     changes.set(relative(workspace.root,changed).split(sep).join('/'),changed);
   }
   function attachWatcher(scope,recursive){
     const watcher=watch(scope,{recursive},(_event,filename)=>recordChange(scope,filename));
-    watcher.on('error',()=>{unknownScopes.add(`watch-error:${relative(workspace.root,scope).split(sep).join('/')||'.'}`);});
+    watcher.on('error',()=>{unknownScopes.set(`watch-error:${relative(workspace.root,scope).split(sep).join('/')||'.'}`,scope);});
     watchers.push(watcher);
   }
   async function attachInputTree(scope){
@@ -311,9 +311,38 @@ export async function acquireVerificationFreeze({
       }catch{}
       paths.push(display);
     }
+    /* A recursive Windows watcher can emit filename=null for an old queued
+       directory notification. Do not blindly accept it, but do not blindly
+       fail a clean multi-minute GPU run either: walk only that reported scope
+       and require recent file/directory metadata. A real create, delete or
+       content write updates at least one descendant mtime/ctime; a stale
+       anonymous notification does not. */
+    const anonymous=[...unknownScopes.entries()];unknownScopes.clear();
+    const unresolved=[];
+    for(const [display,scope] of anonymous){
+      if(display.startsWith('outside:')||display.startsWith('watch-error:')){unresolved.push(display);continue;}
+      const queue=[scope];let found=0;
+      try{
+        const scopeInfo=await lstat(scope);
+        if(Math.max(scopeInfo.mtimeMs,scopeInfo.ctimeMs)>=watchStartedAt-1000){paths.push(display);found++;}
+        while(queue.length&&found<20){
+          const dir=queue.pop(),entries=await readdir(dir,{withFileTypes:true});
+          for(const entry of entries){
+            const absolute=resolve(dir,entry.name);
+            if(allowed.some(parent=>inside(absolute,parent)))continue;
+            let info;try{info=await lstat(absolute);}catch{paths.push(relative(workspace.root,absolute).split(sep).join('/'));found++;continue;}
+            if(Math.max(info.mtimeMs,info.ctimeMs)>=watchStartedAt-1000){
+              paths.push(relative(workspace.root,absolute).split(sep).join('/'));found++;
+            }
+            if(entry.isDirectory()&&!entry.isSymbolicLink())queue.push(absolute);
+            if(found>=20)break;
+          }
+        }
+      }catch{unresolved.push(display);}
+    }
     paths.sort();
     changes.clear();
-    const unknown=[...unknownScopes].sort();unknownScopes.clear();
+    const unknown=unresolved.sort();
     if(unknown.length===0&&paths.length===0)return {name,stable:true,staleNotificationsIgnored:true};
     throw new Error(`SOURCE_WRITE_DURING_VERIFICATION: ${name}${unknown.length?` reported an unknown path in ${unknown.join(', ')}`:''}${paths.length?` changed ${paths.slice(0,20).join(', ')}${paths.length>20?` (+${paths.length-20} more)`:''}`:''}`);
   }

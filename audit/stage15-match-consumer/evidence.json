@@ -1,0 +1,192 @@
+{
+  "generatedAt": "2026-09-01T06:45:06.866Z",
+  "evidenceClass": "browser-functional",
+  "visualProof": false,
+  "releaseProof": false,
+  "source": "src/game/matchconsumer.js",
+  "sourceHash": "6a4769c4c6c618a86f1f1819bd848532f1b4d9bc734fdbc67edfaf20c06111be",
+  "passed": 35,
+  "total": 35,
+  "checks": [
+    {
+      "name": "consumer registers through the real MFMatchRuntime seam",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "adapter exposes only the explicit versioned command vocabulary",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "skirmish seats resolve to distinct simulation authorities",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "public Repair and Recycle helpers submit exact stable building identities",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "public building helpers fall through only when realtime is inactive",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "authoritative multi-seat tick applies through the browser consumer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "identical clients produce byte-identical command state",
+      "ok": true,
+      "detail": "84a7912c0b1f33616e42de468fb919e2565e4e8b833ff2478865018a318e587a"
+    },
+    {
+      "name": "move, guard, attack and hold mutate only named units",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "empty authoritative tick is accepted without mutation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "authoritative Repair and Recycle use exact seat-owned building handles",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "stale building type identity rejects before service mutation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "seat cannot service another commander slot building",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "duplicate Repair/Recycle intent for one building rejects the whole tick",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "service seam {ok:false} is visible and restores building intent atomically",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Repair exact schema rejects extra fields before mutation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "unsupported command rejects the complete tick before mutation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "stale generation rejects before mutation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "seat cannot command another seat unit",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "extra command fields fail the exact schema",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "fractional coordinates fail deterministic integer schema",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "consumer fails closed outside a live match",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "500-unit local order is one atomic realtime submission",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "500-unit local author and enqueue stays below 16 ms",
+      "ok": true,
+      "detail": "2.40 ms"
+    },
+    {
+      "name": "atomic split preserves every generation-checked handle exactly once",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "every split command stays inside the live protocol byte and array bounds",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "split row reassembles before one full-selection formation is applied",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "500-unit formation application is byte-deterministic across clients",
+      "ok": true,
+      "detail": "1cf5d1380cf838e4449debdf7bbe388a034c4191f4927d19409aead511748a8d"
+    },
+    {
+      "name": "one stale handle rejects every chunk before any unit mutates",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "the structural maximum carries exactly 512 refs in eight commands",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "orders beyond the atomic 512-ref bound fail closed with a visible reason",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "bundle manifest loads consumer immediately after social runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "boot manifest loads consumer immediately after social runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "release configuration activates realtime only through server capability discovery",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Worker validates every command before accepting or enqueuing any part",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Worker transport exposes the audited 8-command / 64-ref structural bound",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "knownBlockers": [
+    "The deterministic clock/RNG contract is verified separately; this probe covers command ingestion only.",
+    "Skirmish supports only the engine-representable two-seat layout; 3-4 player PvP still requires a broader simulation seat/team model.",
+    "Production remains unchanged until the approved release is uploaded and deployed."
+  ]
+}

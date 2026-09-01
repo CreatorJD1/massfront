@@ -174,7 +174,7 @@ function mfApplyTextScale(value){
 }
 const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:true,dayNight:true,
                       haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
-                      godMode:false,tutorialVoice:true,sfxVol:3,ambVol:3,musicVol:2,voiceVol:3,
+                      godMode:false,tutorialVoice:true,sfxVol:4,ambVol:4,musicVol:3,voiceVol:4,audioLevelSteps:2,
                       perf:'auto',menubg:'dim',healthBars:'select',teamIdMode:false,textScale:100,
                      quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false,
                      /* EXPERIMENTAL, OFF BY DEFAULT AND NEVER DEFAULTED ON.
@@ -314,6 +314,13 @@ function metaFresh(){
     settings:{...DEF_SETTINGS}};
 }
 let META=metaFresh();
+/* Runtime provenance for the active career. A save with zero matches is not
+   necessarily new, so onboarding takeovers must never infer freshness from
+   counters. metaLoad() is the one place that knows whether this profile had a
+   career record before the current boot. Keep the answer transient: persisting
+   it would turn the next launch into a false "existing career" signal. */
+let mfMetaCareerLoadedFromStorage=false;
+function metaCareerLoadedFromStorage(){ return mfMetaCareerLoadedFromStorage; }
 function metaKey(){ return 'massfront_meta_'+PROFILES.active; }
 function metaHarden(){
   if(!META.owned||typeof META.owned!=='object') META.owned={};
@@ -336,6 +343,14 @@ function metaHarden(){
   if(!Array.isArray(META.equip)) META.equip=[];
   META.researchData=Math.max(0,META.researchData|0);
   const priorSettings=META.settings||{};
+  /* v2 adds a real 0% step without changing anybody's audible level. Values
+     0..3 previously meant 25..100%, so old saves move up one position exactly
+     once; fresh careers already carry audioLevelSteps:2. */
+  if(priorSettings.audioLevelSteps!==2){
+    for(const key of ['sfxVol','ambVol','musicVol','voiceVol'])
+      priorSettings[key]=clamp((priorSettings[key]|0)+1,1,4);
+    priorSettings.audioLevelSteps=2;
+  }
   const migrateExploration=!Object.prototype.hasOwnProperty.call(priorSettings,'experimentalExploration')
     &&Object.prototype.hasOwnProperty.call(priorSettings,'expExploration');
   META.settings={...DEF_SETTINGS,...priorSettings};
@@ -392,6 +407,15 @@ function metaLoad(){
       loadedCareer=true;loadedStandardCount=Object.prototype.hasOwnProperty.call(o,'standardMatches');Object.assign(META,o);
     } }
   }catch(e){}
+  mfMetaCareerLoadedFromStorage=loadedCareer;
+  /* Seed only careers whose storage record was genuinely absent. The late
+     Galactic takeover cannot recover this fact after metaSave() creates the
+     first record, so retain an inert eligibility marker across a reload. It
+     does not gate ordinary MASSFRONT play and carries no faction/commander
+     choice; the takeover promotes it only on an integrated system entry. */
+  const needNewCareerGateSeed=!loadedCareer&&!META.newCareerFactionGate;
+  if(needNewCareerGateSeed)META.newCareerFactionGate={version:1,profileId:PROFILES.active,
+    phase:'eligible',createdAt:Date.now()};
   /* Careers created before the protected-opening counter are veterans, not
      brand-new players. Migrating from completed matches prevents an update
      from forcing their next three battles back through onboarding defaults. */
@@ -402,9 +426,10 @@ function metaLoad(){
     &&Object.prototype.hasOwnProperty.call(META.settings,'expExploration'));
   const needCoreGrantRepair=Array.isArray(META.coreGrantPending)&&META.coreGrantPending.some(grant=>
     !grant||!Number.isFinite(Number(grant.amount))||Number(grant.amount)<=0||!grant.idemKey);
+  const needAudioLevelV2=!(META.settings&&META.settings.audioLevelSteps===2);
   metaHarden();
   const overlapMigration=armoryRetireOverlaps();
-  if(needGfxMed||needExplorationKey||needCoreGrantRepair||overlapMigration.changed) metaSave();
+  if(needGfxMed||needExplorationKey||needCoreGrantRepair||needAudioLevelV2||needNewCareerGateSeed||overlapMigration.changed) metaSave();
 }
 /* Local save is the source of truth for progress on THIS device. Harden it so a
    transient write failure (quota pressure, a WebView hiccup) does not silently
@@ -1963,9 +1988,9 @@ function renderSettings(){
        +'<button class="screenTabBtn" id="setTab-display" type="button" role="tab" data-mf-tab="display" aria-controls="setGroup-display"><span class="tabGlyph">◇</span><span>DISPLAY</span></button>'
        +'<button class="screenTabBtn" id="setTab-command" type="button" role="tab" data-mf-tab="command" aria-controls="setGroup-command"><span class="tabGlyph">⌁</span><span>COMMAND</span></button>'
        +'<button class="screenTabBtn" id="setTab-system" type="button" role="tab" data-mf-tab="system" aria-controls="setExtras"><span class="tabGlyph">⚙</span><span>SYSTEM</span></button></div>';
-  const VL=['25%','50%','75%','100%'];
-  const sv=clamp(META.settings.sfxVol|0,0,3), av=clamp(META.settings.ambVol|0,0,3);
-  const mv=clamp(META.settings.musicVol|0,0,3), vv=clamp(META.settings.voiceVol|0,0,3);
+  const VL=['0%','25%','50%','75%','100%'];
+  const sv=clamp(META.settings.sfxVol|0,0,4), av=clamp(META.settings.ambVol|0,0,4);
+  const mv=clamp(META.settings.musicVol|0,0,4), vv=clamp(META.settings.voiceVol|0,0,4);
   h+=group('audio','AUDIO MIX','Independent effects, ambience, music, and voice levels.',
        '<div class="audNowPlaying" id="audNowPlaying" role="status" aria-live="polite" aria-atomic="true" data-scene="menu" data-phase="locked">'
       +'<div class="audNowHead"><span>NOW PLAYING</span><b id="audNowScene">COMMAND MENU</b></div>'
@@ -1987,8 +2012,8 @@ function renderSettings(){
   const explorationOn=!!META.settings.experimentalExploration;
   const textScale=mfTextScaleValue(META.settings.textScale);
   const explorationOpen=explorationOn
-    ?'<div class="sItem setRow" data-set="openExperimentalExploration" role="button" tabindex="0"><div class="sTx"><b>Open Galactic Campaign Preview</b>'
-      +'<div class="sDs">Launch the isolated converted menu, War Table, ship hub, and campaign systems in this tab.</div></div>'
+    ?'<div class="sItem setRow" data-set="openExperimentalExploration" role="button" tabindex="0"><div class="sTx"><b>Open Experimental Galactic</b>'
+      +'<div class="sDs">Side preview only. Home, START, and the Standard war table stay where they are.</div></div>'
       +'<div class="sBuy togB onT">OPEN</div></div>'
     :'';
   h+=group('battle','GAMEPLAY & BATTLEFIELD','Information shown while commanding units and optional experimental experiences.',
@@ -1998,8 +2023,8 @@ function renderSettings(){
      +tog('shake','Impact Camera Shake','Recoil and explosions move the camera')
      +tog('haptics','Haptic Feedback','Short vibration cues for confirmations and impacts')
       +tog('experimentalExploration','Experimental: Galactic Campaign',
-           'Isolated preview. Converts the menu, War Table, and campaign systems inside the module; '
-          +'Classic saves and live matches stay separate.')
+           'Optional side experiment. Does not replace the home menu, START, or the Standard war table. '
+          +'Open it from the row below when you want the preview.')
       +explorationOpen);
 
   const perf=META.settings.perf;
@@ -2078,11 +2103,14 @@ function renderSettings(){
      +tog('cine','Cinematic Lighting','In-engine sun wash and the #grade overlay. Not bloom — that is Advanced. Not the Screen Grade filter.')
      +cyc('screenGrade','Screen Grade',sgDef.ds,sgDef.label,sgk!=='neutral')
      +tog('teamIdMode','Tactical Team Identification','Color-vision-safe allegiance palette. Minimap markers use friendly circles, hostile triangles, and unaligned crosses; faction silhouettes, crests, and weapon effects stay authored.')
-     +tog('dayNight','Day / Night Cycle','Animated time of day. OFF locks battles to clear daylight and overrides night-only modifiers')
-     +cyc('perf','Effects Budget','AUTO lets the live effect scaler follow frame rate. LOW pins it to 0.45 or below on every preset — a second cap on top of Graphics Quality, for older phones.',perf==='auto'?'AUTO':'LOW',perf==='auto')
-     +tog('fps','FPS Counter','Show the live frame-rate diagnostic')
-     +cyc('menubg','Menu Backdrop',BGD[bg],BGL[bg],bg!=='off')
-     +adv);
+      +tog('dayNight','Day / Night Cycle','Animated time of day. OFF locks battles to clear daylight and overrides night-only modifiers')
+      +cyc('perf','Effects Budget','AUTO lets the live effect scaler follow frame rate. LOW pins it to 0.45 or below on every preset — a second cap on top of Graphics Quality, for older phones.',perf==='auto'?'AUTO':'LOW',perf==='auto')
+      +tog('fps','FPS Counter','Show the live frame-rate diagnostic')
+      +cyc('perfDiagnostics','Performance Diagnostics','Open the live engine profiler: frame pacing, simulation and render CPU, safe GPU timers, scene load, memory pressure, spikes, and bottleneck analysis.',
+        (typeof mfPerfDashboardOpen==='function'&&mfPerfDashboardOpen())?'RUNNING':'OPEN',
+        typeof mfPerfDashboardOpen==='function'&&mfPerfDashboardOpen())
+      +cyc('menubg','Menu Backdrop',BGD[bg],BGL[bg],bg!=='off')
+      +adv);
 
   h+=group('command','COMMAND INTERFACE','Planning aids for formations, platoons, and patrol routes.',
       tog('formationPreview','Formation Preview','Outline where the platoon will end up, on every move order, before it commits')
@@ -2104,7 +2132,7 @@ function renderSettings(){
         return;
       }
       if(k==='sfxVol'||k==='ambVol'||k==='musicVol'||k==='voiceVol')
-        META.settings[k]=((META.settings[k]|0)+1)%4;
+        META.settings[k]=((META.settings[k]|0)+1)%5;
       else if(k==='quality'){
         const o=['low','medium','high','cinematic'];
         META.settings.quality=o[(o.indexOf(qualityKey())+1)%4];
@@ -2165,6 +2193,13 @@ function renderSettings(){
         const snap=mfGfxLive();
         try{ console.log('[mfGfx]', snap); }catch(e){}
         if(typeof toast==='function') toast('Live GFX: AO '+(snap.gfx.ao?'on':'off')+' bloom '+(snap.gfx.bloom?'on':'off')+' sh'+snap.gfx.shadowQ);
+      }
+      else if(k==='perfDiagnostics'){
+        if(typeof mfPerfOpenDashboard==='function') mfPerfOpenDashboard();
+        else if(typeof toast==='function') toast('Performance diagnostics are unavailable');
+        if(typeof sfx==='function') sfx('ui');
+        const state=el.querySelector('.sBuy');if(state){state.textContent='RUNNING';state.classList.add('onT');}
+        return;
       }
       else if(k==='gfxDiagRow'){ /* status only */ }
       else if(k==='openExperimentalExploration'){
@@ -2234,4 +2269,3 @@ function renderArmory(){
     renderMetaHead(); renderArmory();
   });
 }
-

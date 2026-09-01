@@ -43,6 +43,6 @@ Rather than an external ground surface base, the Command Base represents the **i
 
 ## 3. Interactive Mockup Location
 
-The interactive mockup is located at [`docs/command-ship-hub-mockup.html`](file:///c:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/docs/command-ship-hub-mockup.html).
+The interactive mockup is located at [`docs/command-ship-hub-mockup.html`](command-ship-hub-mockup.html).
 
 It provides a 1:1 pixel-perfect implementation of the concept UI, rendering the central perimeter area as an isometric spaceship interior deck with internal module bays and glowing reactor conduits.

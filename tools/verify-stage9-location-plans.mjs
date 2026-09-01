@@ -188,7 +188,11 @@ try{
     manifestUnique.size===manifestOrder.length&&bootUnique.size===bootOrder.length,
   {manifestCount:manifestOrder.length,bootCount:bootOrder.length,
     manifestUnique:manifestUnique.size,bootUnique:bootUnique.size});
-  const chain=[REL.grammar,REL.templates,REL.stage9,REL.plans,'src/engine/worldsites.js'].map(normalizedScript);
+  /* Stage 10 extends the Stage 9 planner before worldsites consumes it. The
+     old contiguous Stage 9-only expectation rejected this valid takeover even
+     though both manifests agreed and execution order was dependency-safe. */
+  const chain=[REL.grammar,REL.templates,REL.stage9,REL.plans,
+    'assets/data/battlefieldtopology-stage10.js','src/engine/worldsites.js'].map(normalizedScript);
   const chainAt=manifestOrder.indexOf(chain[0]);
   record('source.stage9-runtime-chain',chainAt>=0&&sameList(manifestOrder.slice(chainAt,chainAt+chain.length),chain)&&
     sameList(bootOrder.slice(chainAt,chainAt+chain.length),chain),{index:chainAt,chain:chain});

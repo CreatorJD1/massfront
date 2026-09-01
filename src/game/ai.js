@@ -75,7 +75,7 @@ function aiFactionBias(){
 }
 function aiWeightedPick(pool,bias){
   if(!pool||!pool.length) return -1;
-  if(!bias) return pool[Math.random()*pool.length|0];
+  if(!bias) return pool[mfSimRandom()*pool.length|0];
   let tot=0;
   const w=new Array(pool.length);
   for(let i=0;i<pool.length;i++){
@@ -83,7 +83,7 @@ function aiWeightedPick(pool,bias){
     w[i]=b>0?b:1;
     tot+=w[i];
   }
-  let r=Math.random()*tot;
+  let r=mfSimRandom()*tot;
   for(let i=0;i<pool.length;i++){ r-=w[i]; if(r<=0) return pool[i]; }
   return pool[pool.length-1];
 }
@@ -161,7 +161,7 @@ function aiPickFaction(){
   const pool=(typeof enemyFactions==='function'?enemyFactions():['nova','legion','syndicate','horde'])
     .filter(k=>typeof FACTIONS!=='undefined'&&FACTIONS[k]);
   const keys=pool.length?pool:['legion','syndicate','horde'];
-  let fac=aiFactionSel==='random'?keys[Math.random()*keys.length|0]:aiFactionSel;
+  let fac=aiFactionSel==='random'?keys[mfSimRandom()*keys.length|0]:aiFactionSel;
   if(!FACTIONS[fac]) fac=keys[0]||'legion';
   AI.fac=fac;
   aiFacPicked=true;
@@ -271,14 +271,14 @@ function aiAllyTick(dt){
            units, so the setup label and the battlefield doctrine disagreed. */
         if(typeof factionDoctrineRoster==='function')pool=factionDoctrineRoster(pool,facility,0).filter(t=>TYPES[t]&&TYPES[t].bt>0);
         if(!pool.length)pool=[0];
-        const t=pool[Math.random()*pool.length|0]||0,T=TYPES[t];
+        const t=pool[mfSimRandom()*pool.length|0]||0,T=TYPES[t];
         if(A.mass>=T.cm&&A.energy>=T.ce){
-          const i=spawnUnit(t,0,F.x+rr(-18,18),F.y+F.r+20,A.slot);
-          if(i>=0){A.mass-=T.cm;A.energy-=T.ce;uAllyBase[i]=A.slot;ustate[i]=2;aiSetMoveGoal(i,A.x+rr(-90,90),A.y+rr(-90,90));}
+          const i=spawnUnit(t,0,F.x+mfSimRange(-18,18),F.y+F.r+20,A.slot);
+          if(i>=0){A.mass-=T.cm;A.energy-=T.ce;uAllyBase[i]=A.slot;ustate[i]=2;aiSetMoveGoal(i,A.x+mfSimRange(-90,90),A.y+mfSimRange(-90,90));}
         }
       }
       const cadence=behavior==='rush'?.64:behavior==='turtle'?1.3:behavior==='air'?.92:1;
-      A.spawnT=(Math.max(5,13-A.diff*2)+Math.random()*5)*cadence;
+      A.spawnT=(Math.max(5,13-A.diff*2)+mfSimRandom()*5)*cadence;
     }
     if(A.orderT<=0){
       A.orderT=4.5;
@@ -286,8 +286,8 @@ function aiAllyTick(dt){
         if(!ualive[i]||uteam[i]!==0||uAllyBase[i]!==A.slot||ustate[i]!==0)continue;
         const hero=TYPES[utype[i]].cat==='hero',e=findEnemy(ux[i],uy[i],0,hero?300:520);
         if(e>=0){ustate[i]=2;aiSetMoveGoal(i,ux[e],uy[e]);}
-        else if(hero||behavior==='turtle'){ustate[i]=2;aiSetMoveGoal(i,A.x+rr(-100,100),A.y+rr(-100,100));}
-        else if(AI.t>AI.openingGrace*(behavior==='rush'?.55:1)){ustate[i]=2;aiSetMoveGoal(i,AI.base.x+rr(-130,130),AI.base.y+rr(-130,130));}
+        else if(hero||behavior==='turtle'){ustate[i]=2;aiSetMoveGoal(i,A.x+mfSimRange(-100,100),A.y+mfSimRange(-100,100));}
+        else if(AI.t>AI.openingGrace*(behavior==='rush'?.55:1)){ustate[i]=2;aiSetMoveGoal(i,AI.base.x+mfSimRange(-130,130),AI.base.y+mfSimRange(-130,130));}
       }
     }
   }
@@ -410,7 +410,7 @@ function aiFreeSpot(type){
      building. Use the same authored OBB as player placement. Forty attempts
      offsets the larger honest plots without granting the AI illegal ground. */
   for(let t=0;t<40;t++){
-    const a=Math.random()*TAU, d=70+Math.random()*320;
+    const a=mfSimRandom()*TAU, d=70+mfSimRandom()*320;
     const x=clamp(AI.base.x+Math.cos(a)*d,edge,MAP-edge);
     const y=clamp(AI.base.y+Math.sin(a)*d,edge,MAP-edge);
     if(typeof battlefieldContains==='function'&&!battlefieldContains(x,y,edge))continue;
@@ -427,7 +427,7 @@ function aiFreeWaterSpot(type){
   if(typeof battlefieldNavalEnabled!=='function'||!battlefieldNavalEnabled())return null;
   const fac=AI.fac||'legion',f=bldFoot(type,fac),edge=Math.max(f[0],f[1])*.5+12;
   for(let t=0;t<72;t++){
-    const a=Math.random()*TAU,d=120+Math.random()*760;
+    const a=mfSimRandom()*TAU,d=120+mfSimRandom()*760;
     const x=clamp(AI.base.x+Math.cos(a)*d,edge,MAP-edge),y=clamp(AI.base.y+Math.sin(a)*d,edge,MAP-edge);
     if(footOnWater(type,x,y,0,fac)&&!footBlocked(type,x,y,0,null,fac))return [x,y];
   }
@@ -680,7 +680,7 @@ function aiTick(dt){
       for(const [i,g] of AI.waveUnits){
         if(!ualive[i]||ugen[i]!==g||uteam[i]!==1) continue;
         ustate[i]=2; utgt[i]=-1; umarch[i]=1;
-        aiSetMoveGoal(i,rb.x+rr(-120,120),rb.y+rr(-120,120));
+        aiSetMoveGoal(i,rb.x+mfSimRange(-120,120),rb.y+mfSimRange(-120,120));
       }
       AI.waveUnits=[]; aiWaveDirty();
     } else if(alive===0){ AI.waveUnits=[]; aiWaveDirty(); }
@@ -707,7 +707,7 @@ function aiTick(dt){
         for(const i of squad){
           const T=TYPES[utype[i]];
           ustate[i]=2; utgt[i]=-1; ufield[i]=requestField(tgt.x,tgt.y,false,mfNavUnitClearance(T)); umarch[i]=1;
-          utx[i]=tgt.x+rr(-40,40); uty[i]=tgt.y+rr(-40,40);
+          utx[i]=tgt.x+mfSimRange(-40,40); uty[i]=tgt.y+mfSimRange(-40,40);
         }
         if(fogOn?covAt(AI.base.x,AI.base.y):true){} // silent unless scouted
       }
@@ -731,7 +731,7 @@ function aiTick(dt){
       const pool=aiBehaviorUnitPool(aiBuildingBehavior(B),B.tier,'airfield');
       if(!B.queue.length && !atCap){
         const t=aiWeightedPick(pool,aiFactionBias());
-        B.queue.push(t>=0?t:pool[Math.random()*pool.length|0]);
+        B.queue.push(t>=0?t:pool[mfSimRandom()*pool.length|0]);
       }
       continue;
     }
@@ -740,7 +740,7 @@ function aiTick(dt){
       const pool=aiBehaviorUnitPool(aiBuildingBehavior(B),B.tier,'harbor');
       if(!B.queue.length&&!atCap){
         const t=aiWeightedPick(pool,aiFactionBias());
-        B.queue.push(t>=0?t:pool[Math.random()*pool.length|0]);
+        B.queue.push(t>=0?t:pool[mfSimRandom()*pool.length|0]);
       }
       continue;
     }
@@ -751,11 +751,11 @@ function aiTick(dt){
     if((seat.mass||0)>(seat.mcap||MCAP0)*0.72 && B.queue.length<4){
       const dump=B.tier===2?[1,2,3,9,16]:[0,1,9];
       const biased=aiFactionBiasOverride(dump);
-      B.queue.push(biased>=0?biased:dump[Math.random()*dump.length|0]);
+      B.queue.push(biased>=0?biased:dump[mfSimRandom()*dump.length|0]);
     }
     if(!B.queue.length){
       let t=0;
-      const r=Math.random();
+      const r=mfSimRandom();
       // war footing advances with BOTH match time and the player's commander level
       const phase=Math.max(AI.t, (heroLvl-1)*75);
       if(B.tier===1){
@@ -775,10 +775,10 @@ function aiTick(dt){
          AI still fields Dominion escorts and a Syndicate Turtle cannot roll a
          chassis its faction does not own. */
       const behavior=aiBuildingBehavior(B),focus=aiBehaviorUnitPool(behavior,B.tier,'fac');
-      if(focus&&Math.random()<(behavior==='balanced'?0:behavior==='rush'?.9:.76))t=focus[Math.random()*focus.length|0];
+      if(focus&&mfSimRandom()<(behavior==='balanced'?0:behavior==='rush'?.9:.76))t=focus[mfSimRandom()*focus.length|0];
       /* This guard makes future wildlife/hero additions fail safe instead of
          turning one bad doctrine entry into a permanent production deadlock. */
-      if(!TYPES[t]||TYPES[t].bt<=0) t=B.tier===2?(Math.random()<0.6?21:20):(Math.random()<0.5?0:9);
+      if(!TYPES[t]||TYPES[t].bt<=0) t=B.tier===2?(mfSimRandom()<0.6?21:20):(mfSimRandom()<0.5?0:9);
       /* The same arsenal seam drives player cards and enemy factories. A bias
          alone still lets a Dominion line randomly field Coalition shields or
          a Coalition plant roll Dominion siege; filter the final choice, then
@@ -787,7 +787,7 @@ function aiTick(dt){
       if(typeof factionDoctrineRoster==='function'){
         const basePool=B.tier===2?[0,1,9,18,10,2,3,6,7,11,16,19,20,21,22,23,24,27,32]:[0,1,9,10,19,24,32];
         legal=factionDoctrineRoster(basePool,B.type||'fac',1).filter(q=>TYPES[q]&&TYPES[q].bt>0);
-        if(legal.length&&legal.indexOf(t)<0) t=legal[Math.random()*legal.length|0];
+        if(legal.length&&legal.indexOf(t)<0) t=legal[mfSimRandom()*legal.length|0];
       }
       /* Faction identity used to be three hardcoded pools that disagreed with
          FACTIONS[k].bias (Legion never rolled Harbinger). 0.45 matches the old
@@ -795,7 +795,7 @@ function aiTick(dt){
          often enough that the design-DB weights are a real production lever. */
       if(legal&&legal.length){
         const themed=aiFactionBiasOverride(legal);
-        if(themed>=0&&Math.random()<0.45) t=themed;
+        if(themed>=0&&mfSimRandom()<0.45) t=themed;
       }
       /* Vultures remain pure AA even if bias or the phase roll named one. */
       if(t===10&&playerAirCount()<=0) t=legal&&legal.indexOf(23)>=0?23:(B.tier===2&&legal&&legal.indexOf(2)>=0?2:1);
@@ -890,7 +890,7 @@ function aiTick(dt){
     for(let i=0;i<unitHigh;i++){
       if(!aiCombatAI(i)||!aiUnitBelongsToBase(i,waveBase)) continue;
       if(aiIsRetasked(i)) continue;
-      if(Math.random()<sendFrac){
+      if(mfSimRandom()<sendFrac){
         const T=TYPES[utype[i]];
         if(T.air&&typeof mfAirIssueMission==='function'){
           /* Generic wave orders are ground flow-field state. Feeding aircraft
@@ -913,7 +913,7 @@ function aiTick(dt){
           AI.waveUnits.push([i,ugen[i]]);n++;continue;
         }
         const nav=T.naval&&typeof findWater==='function'?findWater(tx,ty):null;
-        const qx=nav?nav[0]:clamp(tx+rr(-90,90),20,MAP-20),qy=nav?nav[1]:clamp(ty+rr(-90,90),20,MAP-20);
+        const qx=nav?nav[0]:clamp(tx+mfSimRange(-90,90),20,MAP-20),qy=nav?nav[1]:clamp(ty+mfSimRange(-90,90),20,MAP-20);
         ustate[i]=2; utgt[i]=-1; ufield[i]=requestField(qx,qy,!!T.naval,mfNavUnitClearance(T));
         utx[i]=qx;uty[i]=qy;
         umarch[i]=1;                       // march order: walk, don't skirmish
@@ -950,7 +950,7 @@ function aiTick(dt){
           if(aiWaveHas(i)) continue;
           if(aiIsRetasked(i)) continue;
           ustate[i]=2; utgt[i]=-1; umarch[i]=0;
-          aiSetMoveGoal(i,ux[heroIdx]+rr(-45,45),uy[heroIdx]+rr(-45,45));sent++;
+          aiSetMoveGoal(i,ux[heroIdx]+mfSimRange(-45,45),uy[heroIdx]+mfSimRange(-45,45));sent++;
         }
         break;
       }
@@ -1213,7 +1213,7 @@ function aiDefendTick(dt){
   for(const i of pick){
     aiDropSnap(AI.peelSnap,i);
     R.push(aiSnapOrder(i));
-    aiIssueFocus(i,hx+rr(-40,40),hy+rr(-40,40),e);
+    aiIssueFocus(i,hx+mfSimRange(-40,40),hy+mfSimRange(-40,40),e);
   }
 }
 

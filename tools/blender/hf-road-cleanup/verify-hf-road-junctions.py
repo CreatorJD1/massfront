@@ -18,7 +18,11 @@ STRAIGHT = (
     OUTPUT_ROOT.parent / "mf-road-straight-hunyuan-clean-v1" / "review-exports"
     / "mf-road-straight-hunyuan-clean-v1-lod0-review.glb"
 )
-STRAIGHT_SHA = "69D406836DB64BAF6154761332E04260DA8EF0A95C29FB006317834178EDC2F9"
+# Repinned 2026-08-28 alongside build-hf-road-junctions.py: the straight was
+# rebuilt to give its production meshes UVs and hard-surface shading. The pin
+# tracks the reviewed source; it does not accept it. Both kits stay
+# runtimeAccepted: false / visualAccepted: false.
+STRAIGHT_SHA = "21905B1C35A3F7C13FEBC390067FE9C08A51518413BCAC4CBD851A109C8B1779"
 EXPECTED_CONNECTIONS = {
     "corner_90": {"S": 20.0, "E": 20.0},
     "t_junction": {"S": 20.0, "E": 20.0, "W": 20.0},

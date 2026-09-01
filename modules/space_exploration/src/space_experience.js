@@ -8,10 +8,16 @@
 
 import { ThreeSpaceEngine } from './core/three_space_engine.js?v=20260822-phone2';
 import { FlightPhysics } from './core/flight_physics.js';
-import { UgaCommandScene } from './core/uga_command_scene.js?v=20260823-transit1';
+import { SpaceAudio } from './audio/space_audio.js?v=20260830-sharedmix1';
+import { UgaCommandScene } from './core/uga_command_scene.js?v=20260830-profilegrade1';
 import { GalaxyMapEngine } from './galaxy/galaxy_map_engine.js';
 import { SpaceHud } from './ui/space_hud.js';
-import { createUgaCommand } from './ui/uga_command.js?v=20260828-stage9ops2';
+import {
+  KEEL_HINT_EVENT,
+  STORY_TRANSMISSION_EVENT,
+  createStoryTransmissionController
+} from './ui/story_transmission_controller.js?v=20260829-entryintro2';
+import { createUgaCommand } from './ui/uga_command.js?v=20260830-sessionroutes4';
 import { createUgaDeploymentArena } from './ui/uga_scene.js?v=20260827-stage6-hq-carrier';
 import { PlanetarySurvey } from './systems/planetary_survey.js';
 import { SHOWCASE_LAYOUT, SHOWCASE_SYSTEMS } from './systems/showcase_systems.js';
@@ -78,6 +84,15 @@ const STORAGE_KEY = LOCAL_EXPLORATION_CAMPAIGN_STORAGE_KEY;
 const SCENES = new Set(['system', 'survey', 'galaxy', 'uga']);
 const SPACE_INSTANCE_KEY = Symbol.for('massfront.space_exploration.instance');
 const CONTEXT_RESTORE_TIMEOUT_MS = 6000;
+export const SPACE_FIRST_ENTRY_CONTINUATION = Object.freeze({
+  schema: 'massfront.new-career-sequence.v1',
+  required: true,
+  moduleImplemented: true,
+  nextStep: 'faction-selection',
+  afterTraining: 'faction-selection',
+  sequence: Object.freeze(['faction-selection', 'starter-commander-1', 'full-uga-space']),
+  catalogAuthority: 'base-game-faction-and-commander-catalog'
+});
 
 function gpuFailureCopy(error) {
   const code = error && error.code;
@@ -216,6 +231,18 @@ export function createSpaceExperience(container, options = {}) {
   const camState = { yaw: 0, pitch: 0.3, dist: 1 };
   let raycaster = null;
   let pointerNdc = null;
+  let firstEntryIntroStarted = false;
+  let firstEntryChoicePending = false;
+  let firstEntryChoice = '';
+  const spaceAudio = new SpaceAudio({
+    profileId: state.profileId,
+    allowDocumentFallback: true
+  });
+  const storyTransmissions = createStoryTransmissionController($('storyRail'), {
+    onPresent: cue => spaceAudio.playStory(cue),
+    onDismiss: () => spaceAudio.endStory(),
+    onError: error => showToast(`TRANSMISSION ACTION FAILED · ${issueText(error)}`, true)
+  });
 
   const spatialHud = $('spatialHudLayer');
   let engine = null;
@@ -413,6 +440,147 @@ export function createSpaceExperience(container, options = {}) {
     toastTimer = setTimeout(() => toast.classList.remove('show'), 3300);
   }
 
+  function signalFirstEntryChoice(choice, outcome, routeId) {
+    const detail = {
+      schema: 'massfront.space-first-entry-choice.v1',
+      profileId: state.profileId,
+      choice,
+      outcome,
+      routeId,
+      nextStep: choice === 'training' ? 'protected-planetary-training' : 'faction-selection',
+      continuation: SPACE_FIRST_ENTRY_CONTINUATION
+    };
+    window.__MASSFRONT_SPACE_ONBOARDING_CHOICE__ = detail;
+    try {
+      window.dispatchEvent(new CustomEvent('massfront:space-first-entry-choice', { detail }));
+    } catch (_) {}
+    return detail;
+  }
+
+  async function routeFirstEntryChoice(choice) {
+    if (firstEntryChoicePending) return false;
+    const training = choice === 'training';
+    const outcome = training ? 'protected-planetary-training' : 'required-faction-selection';
+    const routeId = training ? 'mode-training' : 'new-career-faction';
+    firstEntryChoicePending = true;
+    firstEntryChoice = choice;
+    signalFirstEntryChoice(choice, outcome, routeId);
+    try {
+      await host.openBaseRoute(routeId);
+      firstEntryChoicePending = false;
+      return true;
+    } catch (error) {
+      firstEntryChoicePending = false;
+      firstEntryChoice = '';
+      showToast(`CAREER ROUTE UNAVAILABLE · ${issueText(error)}`, true);
+      storyTransmissions.present(firstEntryChoiceCue(), { replace: true });
+      return false;
+    }
+  }
+
+  function firstEntryChoiceCue() {
+    return {
+      id: 'first-entry-choice',
+      context: 'space-intro',
+      surface: 'space-story-rail',
+      speaker: 'KEEL',
+      speakerId: 'keel',
+      affiliation: 'uga',
+      speakerRole: 'UGA EXPEDITION GUIDE',
+      channel: 'UGA PERSONNEL LINK',
+      voiceId: 'keel',
+      profileId: 'uga-keel-expedition-guide',
+      animationId: 'keel-space-link',
+      title: 'SELECT YOUR STARTING PATH',
+      stageLabel: 'COMMAND DECISION',
+      text: 'Both paths lead to faction commissioning. Full UGA-space access follows your faction choice and that faction\'s Commander 1 assignment.',
+      durationMs: 0,
+      priority: 90,
+      meta: { continuation: SPACE_FIRST_ENTRY_CONTINUATION },
+      actions: [
+        {
+          id: 'begin-planetary-training',
+          choice: 'training',
+          label: 'BEGIN BASIC TUTORIAL',
+          kind: 'primary',
+          description: 'Protected planetary mission covering navigation, selection, economy, construction and combat.',
+          metaLabel: 'RECOMMENDED · PROTECTED',
+          outcome: 'protected-planetary-training',
+          nextStep: 'protected-planetary-training',
+          continuation: SPACE_FIRST_ENTRY_CONTINUATION,
+          onSelect: () => routeFirstEntryChoice('training')
+        },
+        {
+          id: 'skip-to-faction-selection',
+          choice: 'skipped',
+          label: 'SKIP TO FACTION SELECTION',
+          kind: 'secondary',
+          description: 'For experienced RTS players. Choose a faction, then receive that faction\'s Commander 1.',
+          metaLabel: 'NO TRAINING MISSION',
+          outcome: 'required-faction-selection',
+          nextStep: 'faction-selection',
+          continuation: SPACE_FIRST_ENTRY_CONTINUATION,
+          onSelect: () => routeFirstEntryChoice('skipped')
+        }
+      ]
+    };
+  }
+
+  function firstEntrySequence() {
+    return [
+      {
+        id: 'first-entry-aelos',
+        context: 'space-intro',
+        surface: 'space-story-rail',
+        speaker: 'KEEL',
+        speakerId: 'keel',
+        affiliation: 'uga',
+        speakerRole: 'UGA EXPEDITION GUIDE',
+        channel: 'UGA PERSONNEL LINK',
+        voiceId: 'keel',
+        voiceAction: 'greeting',
+        profileId: 'uga-keel-expedition-guide',
+        animationId: 'keel-space-link',
+        title: 'WELCOME TO THE AELOS ANCHORAGE',
+        stageLabel: 'ARRIVAL BRIEF',
+        text: 'NEXUS-VII is holding off your bow. I am KEEL, your UGA expedition guide, and I will walk you through this first command decision.',
+        durationMs: 3300,
+        priority: 90
+      },
+      {
+        id: 'first-entry-keel',
+        context: 'space-intro',
+        surface: 'space-story-rail',
+        speaker: 'KEEL',
+        speakerId: 'keel',
+        affiliation: 'uga',
+        speakerRole: 'UGA EXPEDITION GUIDE',
+        channel: 'UGA PERSONNEL LINK',
+        voiceId: 'keel',
+        profileId: 'uga-keel-expedition-guide',
+        animationId: 'keel-space-link',
+        title: 'YOUR FIRST COMMAND DECISION',
+        stageLabel: 'PATH SELECTION',
+        text: 'Deploy to protected planetary training for the RTS fundamentals, or continue directly to required faction commissioning if you already know them.',
+        durationMs: 3800,
+        priority: 90
+      },
+      firstEntryChoiceCue()
+    ];
+  }
+
+  async function startFirstEntryIntro() {
+    const entryView = host.ticket?.entryView || 'system';
+    if (disposed || firstEntryIntroStarted || host.productionIntegrated !== true || entryView !== 'system') return false;
+    if (!assetsReady) await ready;
+    if (disposed || firstEntryIntroStarted) return false;
+    firstEntryIntroStarted = true;
+    setScene('system', { persist: false });
+    const played = storyTransmissions.playSequence(firstEntrySequence(), { replace: true, priority: 90 });
+    if (!played) firstEntryIntroStarted = false;
+    return played;
+  }
+
   function refreshResources() {
     $('statFuelVal').textContent = `${state.resources.fuel}`;
     $('statProbesVal').textContent = `${state.resources.probes}`;
@@ -563,7 +731,12 @@ export function createSpaceExperience(container, options = {}) {
       deploymentArena?.setDraft(draft);
     },
     onDeploy: payload => launchOperation(payload),
-    onClassicMode: (modeId, setup) => launchClassicSimulation(modeId, setup),
+    /* Production modes belong to the base game. The isolated host deliberately
+       receives no callback, which keeps every host-owned route visibly locked
+       instead of turning a menu choice into a simulated success. */
+    onHostRoute: typeof host.openBaseRoute === 'function'
+      ? routeId => host.openBaseRoute(routeId)
+      : null,
     onOpenGalaxy: () => openGalaxy(),
     onExit: () => openSystem(),
   });
@@ -587,7 +760,9 @@ export function createSpaceExperience(container, options = {}) {
       else if (mode === 'galaxy' && galaxyMap?.scene) engine.restoreSceneResources(galaxyMap.scene);
     }
     sceneMode = mode;
+    spaceAudio.setScene(mode === 'system' ? 'galactic' : mode === 'uga' ? 'rooms' : mode);
     frame.dataset.scene = mode;
+    storyTransmissions.setScene(mode);
     $('surveyModal').classList.toggle('active', mode === 'survey');
     $('surveyModal').setAttribute('aria-hidden', mode === 'survey' ? 'false' : 'true');
     $('galaxyModal').classList.toggle('active', mode === 'galaxy');
@@ -653,6 +828,12 @@ export function createSpaceExperience(container, options = {}) {
       commandScene.focusOverview();
     }
     if (!contextRecovering) setRenderVeil(frame, 'ready');
+  }
+
+  async function openCampaignHub() {
+    await openUga();
+    if (disposed) return;
+    ugaUi.openView('campaign_hub');
   }
 
   function selectTarget(target) {
@@ -1376,6 +1557,18 @@ export function createSpaceExperience(container, options = {}) {
   }
 
   function bindControls() {
+    /* Every Galactic/room control enters through one shared effects bus. The
+       first real tap also unlocks the standalone test-room fallback; integrated
+       MASSFRONT delegates to the already-installed base bridge. */
+    listen(frame, 'click', event => {
+      if (event.target?.closest?.('button')) spaceAudio.play('click');
+    });
+    listen(window, STORY_TRANSMISSION_EVENT, event => storyTransmissions.receiveEvent(event));
+    listen(window, KEEL_HINT_EVENT, event => {
+      const surface = event.detail?.surface || '';
+      if (surface && surface !== 'space-hud' && surface !== 'space-story-rail') return;
+      storyTransmissions.receiveEvent(event);
+    });
     listen($('btnUgaCommand'), 'click', () => openUga());
     listen($('btnGalaxyMap'), 'click', openGalaxy);
     listen($('btnAutopilotMap'), 'click', openGalaxy);
@@ -1562,6 +1755,8 @@ export function createSpaceExperience(container, options = {}) {
     activeSurveyPlanet = null;
     $('surveyPlanetSelector')?.replaceChildren();
     destroyGalaxyMap();
+    storyTransmissions.destroy();
+    spaceAudio.dispose();
     ugaUi.destroy();
     deploymentArena?.dispose();
     deploymentArena = null;
@@ -1635,15 +1830,27 @@ export function createSpaceExperience(container, options = {}) {
     get recovering() { return contextRecovering; },
     get scene() { return sceneMode; },
     get engine() { return engine; },
+    get audio() { return spaceAudio; },
     get commandScene() { return commandScene; },
     get deploymentArena() { return deploymentArena; },
+    get transmissions() { return storyTransmissions; },
+    get firstEntryIntro() {
+      return {
+        started: firstEntryIntroStarted,
+        choice: firstEntryChoice,
+        choicePending: firstEntryChoicePending,
+        continuation: SPACE_FIRST_ENTRY_CONTINUATION
+      };
+    },
     previewGroundOperation,
     recoverGroundOperation,
     get galaxyMap() { return galaxyMap; },
     openUga,
+    openCampaignHub,
     openGalaxy,
     openSurvey,
-    openSystem
+    openSystem,
+    startFirstEntryIntro
   };
   frame[SPACE_INSTANCE_KEY] = api;
   scheduleFrame();

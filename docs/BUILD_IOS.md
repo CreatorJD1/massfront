@@ -1,127 +1,83 @@
-# Building MASSFRONT for iPhone and iPad
+# MASSFRONT on iPhone and iPad
 
-Everything that can be prepared off a Mac is prepared. The Xcode project exists,
-the icons and launch images are in the asset catalogue, `Info.plist` is
-configured, and the web layer carries the WKWebView fixes. What remains is the
-compile itself, which Apple only permits on macOS.
+MASSFRONT fully supports Apple devices through the Safari-installed Progressive
+Web App (PWA). This is the sole current Apple delivery route, not a fallback.
 
-There are two ways to get the game onto an Apple device, and one of them needs
-nothing but Safari.
+Native iOS/IPA/Xcode/TestFlight/App Store delivery is permanently retired. Do
+not sync an iOS wrapper, build or sign an IPA, configure Apple credentials,
+submit to a store, or make any of those actions a release gate.
 
----
+## Install from Safari
 
-## Option A — install from Safari, right now (no Mac, no account)
+1. Open the current hosted game in **Safari** on the iPhone or iPad. The
+   official playtest is
+   `https://creatorjd-massfront-playtest.static.hf.space/`.
+2. Open the Share sheet and choose **Add to Home Screen**.
+3. Confirm **Add**, then launch MASSFRONT from its Home Screen icon.
+4. Use the first real tap in the game to unlock audio when prompted by WebKit.
 
-The game ships as an installable web app. On the iPhone or iPad:
+The installed game launches in standalone mode from the same packed web bytes
+used by the browser and HF Space release channels. Updates arrive through the
+service-worker/web release and the in-game Hugging Face OTA path; Apple does
+not have a separate native version number or package.
 
-1. Open the hosted `index.html` in **Safari** (it must be Safari — Chrome on iOS
-   cannot install to the Home Screen).
-2. Share sheet → **Add to Home Screen**.
-3. Launch it from the Home Screen icon.
+## Supported Apple browser contract
 
-It runs full screen with no browser chrome, keeps its own icon and splash
-screen, stores progress locally, and behaves like an installed app. This is a
-genuine iOS build path, not a fallback — it is how a large number of mobile web
-games ship — and it is the fastest way to play on a phone today.
+A release must preserve and verify:
 
-Its one real limitation is the App Store: a Home Screen web app cannot be listed
-there, and cannot use StoreKit.
+- Safari/WebKit WebGL2 rendering and the complete gameplay/UI path;
+- PWA manifest, icons, service worker, Add-to-Home-Screen installation and
+  standalone launch;
+- `.m4a`/AAC audio for Safari, first-gesture `AudioContext` unlock, and resume
+  after interruption; keep `.ogg` effects for browsers without AAC support;
+- `viewport-fit=cover`, `env(safe-area-inset-*)`, home-indicator/notch spacing,
+  orientation changes and `visualViewport` resizing;
+- device-pixel-ratio limits and readable phone/tablet layouts;
+- `localStorage`/IndexedDB saves, OTA shadow staging, activation and rollback;
+- offline relaunch of the installed version and a clear recovery path when an
+  update fails.
 
----
+## Apple acceptance checklist
 
-## Option B — a native `.ipa` through Xcode
+Use the exact packed bytes intended for HF Space.
 
-Requirements: a Mac running macOS 13 or later, Xcode 15+, Node 18+, and an
-Apple ID. No CocoaPods needed — this project uses Swift Package Manager
-(`ios/App/CapApp-SPM`), which Xcode resolves automatically on first open. A
-free Apple ID is enough to run on your own device; a paid Apple Developer
-account ($99/yr) is required for TestFlight and the App Store.
+1. Verify the local packed preview and inspect real screenshots; a clean
+   console is not a visual pass.
+2. Publish only with explicit authorization, then open the exact live Space URL
+   in Safari on a real iPhone or iPad.
+3. Add it to the Home Screen and launch from the icon. Confirm standalone mode,
+   icon/splash, first frame and WebGL2 renderer.
+4. Check portrait and landscape layouts, notch/home-indicator safe areas,
+   scrolling panels and touch gestures.
+5. Start a real match, unlock and resume AAC audio, save progress, close and
+   relaunch, exercise OTA activation/rollback, and test the documented offline
+   path.
+6. Record device, OS, Space commit/URL, version, screenshots and pass/fail for
+   each check in the release handoff.
 
-    git clone <this project>          # or unpack the tarball
-    cd massfront-game
-    npm install
-    npm run ios:sync                  # stages www/ and copies it into the Xcode project
-    npx cap open ios                  # opens ios/App/App.xcodeproj in Xcode
+This Apple acceptance belongs to the packed-preview/HF Space/PWA surfaces. It
+never creates a sixth release channel and never requires a native artifact.
 
-In Xcode:
+## Browser-platform limits
 
-1. Select the **App** target → **Signing & Capabilities**.
-2. Tick *Automatically manage signing* and choose your Team. Xcode will
-   provision `com.creatorjd.massfront`; change the bundle identifier if that one
-   is taken.
-3. Pick your device from the run destination menu and press **Run**.
+- There is no App Store listing, TestFlight build, IPA or StoreKit integration.
+- Native-only capabilities such as unrestricted background execution, native
+  push, and native haptics are outside the supported product contract.
+- Safari may evict site storage under device pressure or after extended disuse.
+  Cloud saves and exported saves remain the recovery choices where available;
+  the release must not promise that local browser storage is permanent.
+- Public installation requires a reachable HTTPS host. Local HTTP is useful for
+  development but is not the release/install surface.
 
-To produce a distributable build: **Product → Archive**, then *Distribute App*.
-Choose *TestFlight & App Store* for the store, or *Ad Hoc* / *Development* for
-direct device installs.
+## Retained native history
 
-After any change to the game, `npm run ios:sync` and build again. Nothing in
-`ios/` needs editing by hand — it is generated, and `sync` refreshes the web
-payload inside it.
+Before the native lane was retired, the repository carried a Capacitor/Xcode
+scaffold with a full icon set, a 2732px splash, Swift Package Manager wiring,
+and `Info.plist` settings for arm64/Metal, fullscreen presentation, status/home
+indicator behavior, orientation and export-compliance metadata. Those files
+also documented why a native build required macOS/Xcode and Apple signing.
 
----
-
-## What is already configured
-
-**Icons and launch images.** `assets/icons/` holds the full set, generated from
-one 1024px master, and every required iOS size (20/29/40/58/60/76/80/87/120/
-152/167/180/1024px) plus the 2732 splash are populated in
-`ios/App/App/Assets.xcassets` as an explicit appiconset — safe for any Xcode
-version and command-line builds, not dependent on the single-size
-auto-generation feature. Regenerate any of them at any size from the master
-if the artwork changes.
-
-**`Info.plist`.**
-- Required capabilities are `arm64` + `metal` rather than the default `armv7`,
-  which is a 32-bit capability that would refuse to build against a modern-only
-  deployment target.
-- Portrait and both landscape directions are supported on iPhone; iPad also
-  supports upside-down portrait. The real War Table and tactical HUD are
-  captured in both phone orientations, and the canvas re-measures after each
-  rotation instead of retaining the old aspect ratio.
-- Status bar hidden, light content, full screen, home indicator auto-hidden —
-  the HUD owns the bottom edge.
-- `ITSAppUsesNonExemptEncryption = false`, so App Store Connect stops asking the
-  export-compliance question on every upload. The game ships no cryptography.
-
-**WKWebView behaviour.** Safari needs several things stated that Chrome infers,
-and any one of them missing turns a game gesture into a browser gesture:
-long-press callout, text selection, tap highlight, rubber-band scrolling and
-double-tap zoom are all disabled, with selection re-enabled only on text inputs
-and `pan-y` restored inside the scrolling panels.
-
-**Audio.** iOS creates every `AudioContext` suspended and will only resume it
-inside a real user gesture — and can suspend it again afterwards for a call or
-the ring switch. A one-shot unlock listener stays armed for the whole session
-and plays the silent buffer WebKit actually wants.
-
-**Resolution.** Device pixel ratio is capped at 2.0, and at 1.75 on the larger
-iPhone panels. A Pro Max at DPR 3 asks for roughly two and a half times the
-pixels of the same scene on a typical Android phone for no visible gain at
-command-view zoom, and fill rate is this renderer's bottleneck.
-
-**Viewport.** `viewport-fit=cover` plus `env(safe-area-inset-*)` throughout, and
-the canvas re-measures on `orientationchange` and on `visualViewport` resize —
-Safari fires the former before layout settles, and WKWebView resizes again when
-the home indicator area animates.
-
----
-
-## App Store notes
-
-If you take it to review, three things matter for this game specifically.
-
-*Age rating* — fantasy machine-on-machine violence with no blood and no human
-figures. 9+ is the usual outcome; 12+ if you describe it conservatively.
-
-*Privacy* — the game collects nothing and makes no network requests. Declare
-"Data Not Collected", which is the simplest possible nutrition label.
-
-*Screenshots* — 6.7" and 6.5" iPhone sizes are required. The base-building view
-is the one that communicates what the game is; for the action frame, capture a
-live match at command zoom with a full army engaged.
-
-The Mega Battle / SANDBOX mode was removed in 1.33.45 — it was a 10,000-unit
-bench that no longer represented the game, and it sat on the front strip as if
-it were a mode. It used to be the recommended screenshot source, so capture
-from a real match instead.
+That material may remain for provenance and for Safari/WebKit lessons that also
+apply to the PWA. It is not current build guidance. See
+[`IOS-BUILD.md`](IOS-BUILD.md) and [`IOS-IPA.md`](IOS-IPA.md) for the explicit
+native-path tombstones.

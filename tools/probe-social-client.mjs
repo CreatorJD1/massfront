@@ -51,7 +51,7 @@ function makeHarness({fastTimeout=false}={}){
     AP_SESSION={token:'${which.repeat(64)}',email:'${which.toLowerCase()}@probe.invalid',
       username:'User_${which}',ageOk:true,expiresAt:Date.now()+60000};`,context);
   const session=()=>vm.runInContext(`({token:AP_SESSION&&AP_SESSION.token,
-    email:AP_SESSION&&AP_SESSION.email,epoch:AP_SESSION_EPOCH})`,context);
+    email:AP_SESSION&&AP_SESSION.email,username:AP_SESSION&&AP_SESSION.username,epoch:AP_SESSION_EPOCH})`,context);
   return {context,calls,setSession,session,setHandler:fn=>{handler=fn;}};
 }
 
@@ -62,9 +62,46 @@ check('worker exposes abuse-report route',WORKER.includes("path === '/social/rep
 check('worker exposes capability handshake route',WORKER.includes("path === '/social/capabilities'"));
 check('worker exposes friend message routes',WORKER.includes("path === '/social/message/send'")&&
   WORKER.includes("path === '/social/messages'")&&WORKER.includes("path === '/social/message/report'"));
+check('worker exposes World Chat routes',WORKER.includes("path === '/social/world/send'")&&
+  WORKER.includes("path === '/social/world/messages'")&&WORKER.includes("path === '/social/world/report'"));
 check('worker exposes presence route',WORKER.includes("path === '/social/presence'"));
 check('client removed obsolete social mutation paths',
   !CLIENT.includes("'/social/request'")&&!CLIENT.includes("'/social/respond'"));
+{
+  const h=makeHarness();
+  const gates=vm.runInContext(`({legacy:mfSocialGate({code:'unverified'}),allowed:mfSocialGate({ok:true})})`,h.context);
+  check('client never turns email verification into a Social access gate',
+    gates.legacy==='ok'&&gates.allowed==='ok');
+}
+
+{
+  const h=makeHarness();
+  h.setHandler(async url=>{
+    const path=new URL(url).pathname;
+    if(path==='/login')return response(200,{ok:true,token:'L'.repeat(64),expiresAt:Date.now()+60000,
+      user:{email:'persisted@probe.invalid',createdAt:1}});
+    if(path==='/me')return response(200,{ok:true,user:{email:'persisted@probe.invalid',username:'Persisted_7',ageOk:true}});
+    return response(404,{error:'route_not_found'});
+  });
+  await vm.runInContext(`apLogin('persisted@probe.invalid','correct horse battery')`,h.context);
+  check('fresh login hydrates persisted username through backward-compatible /me',
+    h.calls.map(x=>x.path).join(',')==='/login,/me'&&h.session().username==='Persisted_7',
+    h.calls.map(x=>x.path).join(',')+' username='+h.session().username);
+}
+
+{
+  const h=makeHarness();h.setSession();
+  vm.runInContext(`AP_SESSION.username=null;`,h.context);
+  h.setHandler(async(url,opts)=>new URL(url).pathname==='/username'
+    ?response(200,{ok:true,username:JSON.parse(opts.body).username})
+    :response(500,{error:'unexpected'}));
+  const blocked=await h.context.window.MFSocial.request('Target_3');
+  check('username-less client blocks Social writes without network traffic',
+    !blocked.ok&&blocked.code==='username_required'&&h.calls.length===0);
+  const claimed=await h.context.window.MFSocial.claimUsername('Cloud_8');
+  check('one-time Social chooser writes canonical account username',claimed.ok&&
+    h.context.window.MFSocial.identity().username==='Cloud_8'&&h.calls.length===1&&h.calls[0].path==='/username');
+}
 
 {
   const h=makeHarness(); h.setSession();
@@ -199,7 +236,7 @@ check('client removed obsolete social mutation paths',
   check('unsafe remote username is dropped',!result.friends.some(x=>x.username.includes('<')));
   const caps=h.context.window.MFSocial.capabilities();
   check('capabilities start false before an explicit handshake',caps.handshake===false&&caps.version===0&&
-    caps.friends===false&&caps.chat===false&&caps.presence===false&&caps.multiplayer===false);
+    caps.friends===false&&caps.chat===false&&caps.worldChat===false&&caps.presence===false&&caps.multiplayer===false);
 }
 
 {
@@ -215,10 +252,10 @@ check('client removed obsolete social mutation paths',
 {
   const h=makeHarness();h.setSession();
   h.setHandler(async()=>response(200,{protocol:'massfront-social',version:1,
-    capabilities:{friends:true,blocking:true,reporting:true,chat:1,presence:'true'}}));
+    capabilities:{friends:true,blocking:true,reporting:true,chat:1,worldChat:'true',presence:'true'}}));
   const result=await h.context.window.MFSocial.handshake();
   check('capability flags require literal true',result.ok&&result.capabilities.handshake===true&&
-    result.capabilities.friends===true&&result.capabilities.chat===false&&result.capabilities.presence===false);
+    result.capabilities.friends===true&&result.capabilities.chat===false&&result.capabilities.worldChat===false&&result.capabilities.presence===false);
 }
 
 {
@@ -226,7 +263,7 @@ check('client removed obsolete social mutation paths',
   h.setHandler(async(url,opts)=>{
     const u=new URL(url),path=u.pathname;
     if(path==='/social/capabilities')return response(200,{protocol:'massfront-social',version:1,
-      capabilities:{friends:true,blocking:true,reporting:true,chat:true,presence:true}});
+      capabilities:{friends:true,blocking:true,reporting:true,chat:true,worldChat:true,presence:true}});
     if(path==='/social/message/send')return response(201,{message:{id:7,to:'Target_3',body:opts.body?JSON.parse(opts.body).body:'',at:123}});
     if(path==='/social/messages')return response(200,{messages:[
       {id:7,from:'User_A',to:'Target_3',body:'hello',at:123,mine:true,readAt:null},
@@ -235,6 +272,9 @@ check('client removed obsolete social mutation paths',
     if(path==='/social/presence'&&opts.method==='POST')return response(200,{state:'online',expiresAt:Date.now()+120000});
     if(path==='/social/presence')return response(200,{friends:[{username:'Target_3',state:'away',at:99}],truncated:false});
     if(path==='/social/message/report')return response(201,{reported:true,id:3,messageId:7});
+    if(path==='/social/world/send')return response(201,{message:{id:9,username:'User_A',body:opts.body?JSON.parse(opts.body).body:'',at:125,self:true,friend:false}});
+    if(path==='/social/world/messages')return response(200,{messages:[{id:9,username:'User_A',body:'world hello',at:125,self:true,friend:false},{id:8,username:'Target_3',body:'world reply',at:124,self:false,friend:true}],hasMore:false,nextBefore:null});
+    if(path==='/social/world/report')return response(201,{reported:true,id:4,messageId:8});
     return response(404,{error:'route_not_found'});
   });
   const sent=await h.context.window.MFSocial.sendMessage(' Target_3 ','  hello\r\n');
@@ -242,6 +282,9 @@ check('client removed obsolete social mutation paths',
   const set=await h.context.window.MFSocial.setPresence('ONLINE');
   const presence=await h.context.window.MFSocial.presence();
   const reported=await h.context.window.MFSocial.reportMessage(7,'harassment');
+  const worldSent=await h.context.window.MFSocial.sendWorldMessage('  world hello\r\n');
+  const worldPage=await h.context.window.MFSocial.worldMessages(null,20);
+  const worldReported=await h.context.window.MFSocial.reportWorldMessage(8,'spam');
   const caps=h.context.window.MFSocial.capabilities(),paths=h.calls.map(x=>x.path);
   check('first communication call performs explicit handshake',paths[0]==='/social/capabilities'&&caps.handshake&&caps.chat&&caps.presence,paths.join(','));
   check('message receipt is normalized and bounded',sent.ok&&sent.message?.id===7&&sent.message?.to==='Target_3'&&sent.message?.body==='hello');
@@ -251,9 +294,11 @@ check('client removed obsolete social mutation paths',
   check('presence wrapper has no arbitrary-user query',set.ok&&presence.ok&&presence.friends[0]?.username==='Target_3'&&
     h.calls.find(x=>x.path==='/social/presence'&&x.opts.method==='GET')?.url.endsWith('/social/presence'));
   check('message report uses participant-evidence route',reported.ok&&h.calls.some(x=>x.path==='/social/message/report'&&x.body?.messageId===7));
+  check('World Chat wrappers keep public row contract',worldSent.ok&&worldSent.message?.username==='User_A'&&worldPage.ok&&worldPage.messages[1]?.friend===true&&worldReported.ok);
+  check('World Chat report uses message-specific evidence route',h.calls.some(x=>x.path==='/social/world/report'&&x.body?.messageId===8));
   check('communication requests keep initiating bearer token',h.calls.every(x=>x.opts.headers?.authorization==='Bearer '+'A'.repeat(64)));
   const probe=h.context.window.MFSocial.probe();
-  check('communication telemetry is explicit',probe.handshakes===1&&probe.messagesSent===1&&probe.presenceWrites===1);
+  check('communication telemetry is explicit',probe.handshakes===1&&probe.messagesSent===2&&probe.presenceWrites===1);
 }
 
 {

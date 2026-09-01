@@ -1,0 +1,18 @@
+{
+  "schema": "MassfrontUserAcceptedStage10RepairUnlocksV1",
+  "acceptedDate": "2026-08-31",
+  "verdict": "GOOD",
+  "sourceAllowed": true,
+  "runtimeAllowed": false,
+  "processingEligible": true,
+  "reason": "Creator reviewed the seven former repair-locked hard-surface evidence PNGs and judged every model good. Lift the catalog repair locks. Do not treat these as broken, unfinished, or discard candidates.",
+  "ids": [
+    "mf-building-hs-v1/colonial_gatehouse",
+    "mf-building-hs-v1/colonial_depot_shed",
+    "mf-building-hs-v1/colonial_industrial_hall",
+    "mf-building-hs-v1/brutalist_tank_farm",
+    "mf-building-hs-v1/ruined_depot_shed",
+    "mf-building-hs-v1/ruined_tower_slab",
+    "mf-building-hs-v1/ruined_tower_spire"
+  ]
+}

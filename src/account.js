@@ -5,13 +5,12 @@
    ----------------------------------------------------------------------------
    Three things live here, and they are deliberately independent:
 
-     IDENTITY   who you are — a device profile, or a Google / Facebook account
-     LINKING    attaching one of those accounts to a local profile you already
-                have, so signing in never costs you your progress
+     IDENTITY   who you are — a device profile or a MASSFRONT account
+     LINKING    preserving older linked-account saves without reactivating their
+                retired external-provider login path
      TRANSFER   getting a save from one device to another
 
-   They are separate because only the first two need a sign-in provider and only
-   the third needs to work when there is no server at all. Portable .mfsave
+   Portable .mfsave
    files therefore do the whole job offline: save one to Files or Drive, then
    load that actual game-save file on another device.
 
@@ -20,15 +19,15 @@
    "not configured" message rendered behind the profile overlay, so they looked
    broken rather than unavailable. Save files cover the actual need (moving a
    career between devices) with no server, no login, and nothing that can go
-   down. The sign-in machinery below is kept but unreferenced by the UI, so a
-   future build with real credentials can switch it back on by restoring the
-   provider buttons in renderAccount().
+   down. The unreachable provider SDK loaders are removed. Legacy linked-account
+   records still load, render, sign out and use their configured sync endpoint;
+   that compatibility is save migration, not a dormant login feature.
 
    `assets/auth.json` is still read at boot for `syncUrl`, and an account that
    was linked by an older build still loads and still syncs.
    ============================================================================ */
 
-let AUTH_CFG={googleClientId:'',facebookAppId:'',syncUrl:''};
+let AUTH_CFG={syncUrl:''};
 let ACCOUNT=null;                       // {provider,id,name,email,picture,at}
 let SYNC={state:'off', last:0, err:''};
 let ACC_IMPORT_TXN=false;
@@ -40,122 +39,14 @@ function accSave(){
 function accLoad(){
   try{ const s=localStorage.getItem(ACC_KEY); if(s) ACCOUNT=JSON.parse(s); }catch(e){ ACCOUNT=null; }
 }
-function accProviderReady(p){
-  return p==='google' ? !!AUTH_CFG.googleClientId
-       : p==='facebook' ? !!AUTH_CFG.facebookAppId : true;
-}
-function loadScript(src,id){
-  return new Promise((res,rej)=>{
-    if(document.getElementById(id)) return res();
-    const s=document.createElement('script');
-    s.src=src; s.id=id; s.async=true; s.defer=true;
-    s.onload=()=>res(); s.onerror=()=>rej(new Error('blocked'));
-    document.head.appendChild(s);
-  });
-}
-/* An ID token is a JWT. The payload is readable without the signature, which is
-   all the client needs to show a name and a picture — but it is NOT proof of
-   anything. Only the server may treat this token as an identity, and only after
-   verifying the signature against the provider's keys. */
-function jwtPayload(t){
-  try{
-    const p=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
-    return JSON.parse(decodeURIComponent(escape(atob(p))));
-  }catch(e){ return null; }
-}
-
-/* ---- SIGN IN --------------------------------------------------------------- */
-/* ---- ON-DEVICE PROVIDER SETUP --------------------------------------------
-   Google and Facebook sign-in need an OAuth client ID, and a packaged build has
-   no way to learn one — so the buttons could only ever say "not configured" and
-   stop. Worse, they said it through a toast that was rendering behind the
-   profile screen, so they read as broken rather than unconfigured.
-
-   Credentials can now be supplied on the device, the same way the update server
-   can. These are PUBLIC identifiers, not secrets: a Google Client ID and a
-   Facebook App ID are compiled into every web and mobile client that uses them
-   and are safe to hold in localStorage. The OAuth flow still authenticates
-   against the provider, so a wrong ID fails at Google's end, not ours.        */
-const AUTH_KEYS={google:'massfront_auth_google', facebook:'massfront_auth_fb', sync:'massfront_sync_url'};
-function authSet(kind,val){
-  try{
-    if(val&&val.trim()) localStorage.setItem(AUTH_KEYS[kind],val.trim());
-    else localStorage.removeItem(AUTH_KEYS[kind]);
-  }catch(e){}
-  if(kind==='google') AUTH_CFG.googleClientId=(val||'').trim();
-  else if(kind==='facebook') AUTH_CFG.facebookAppId=(val||'').trim();
-  else AUTH_CFG.syncUrl=(val||'').trim();
-  renderAccount();
-}
+/* The previous Google/Facebook button path was unreachable and still carried
+   remote SDK URLs plus credential prompts. Keep only the local sync override;
+   old ACCOUNT records remain readable below for save migration. */
+const AUTH_KEYS={sync:'massfront_sync_url'};
 function authLoadDevice(){
   try{
-    const g=localStorage.getItem(AUTH_KEYS.google); if(g) AUTH_CFG.googleClientId=g;
-    const f=localStorage.getItem(AUTH_KEYS.facebook); if(f) AUTH_CFG.facebookAppId=f;
     const s=localStorage.getItem(AUTH_KEYS.sync); if(s) AUTH_CFG.syncUrl=s;
   }catch(e){}
-}
-function authPrompt(kind){
-  const cur = kind==='google'?AUTH_CFG.googleClientId
-            : kind==='facebook'?AUTH_CFG.facebookAppId : AUTH_CFG.syncUrl;
-  const msg = kind==='google'
-      ? 'Google Client ID\n\nFrom Google Cloud Console → Credentials → OAuth 2.0 Client IDs (Web application).\nLooks like 1234-abc.apps.googleusercontent.com\n\nLeave blank to clear.'
-      : kind==='facebook'
-      ? 'Facebook App ID\n\nFrom developers.facebook.com → your app → Settings → Basic.\nA numeric ID.\n\nLeave blank to clear.'
-      : 'Cloud save server URL\n\nThe https:// base address of your save endpoint.\n\nLeave blank to clear.';
-  let v=null;
-  try{ v=prompt(msg,cur||''); }catch(e){}
-  if(v===null) return;
-  authSet(kind,v);
-  accToast(v.trim()?'Saved — try signing in now':'Cleared');
-}
-
-async function signInGoogle(){
-  if(!AUTH_CFG.googleClientId){ authPrompt('google'); return; }
-  accBusy(true);
-  try{
-    await loadScript('https://accounts.google.com/gsi/client','gsiSdk');
-    await new Promise((res,rej)=>{
-      google.accounts.id.initialize({
-        client_id:AUTH_CFG.googleClientId,
-        callback:r=>{
-          const p=jwtPayload(r.credential);
-          if(!p){ rej(new Error('bad token')); return; }
-          linkAccount({provider:'google', id:p.sub, name:p.name||p.email||'Commander',
-                       email:p.email||'', picture:p.picture||'', token:r.credential});
-          res();
-        }
-      });
-      /* One Tap first; if the browser suppresses it, fall back to the button
-         flow rather than leaving the player staring at nothing. */
-      google.accounts.id.prompt(n=>{
-        if(n.isNotDisplayed&&n.isNotDisplayed()||n.isSkippedMoment&&n.isSkippedMoment()){
-          const host=document.getElementById('gsiBtn');
-          if(host){ host.innerHTML=''; host.style.display='block';
-            google.accounts.id.renderButton(host,{theme:'filled_black',size:'large',width:260}); }
-        }
-      });
-    });
-  }catch(e){
-    accToast('Could not reach Google sign-in');
-  }
-  accBusy(false);
-}
-async function signInFacebook(){
-  if(!AUTH_CFG.facebookAppId){ authPrompt('facebook'); return; }
-  accBusy(true);
-  try{
-    await loadScript('https://connect.facebook.net/en_US/sdk.js','fbSdk');
-    FB.init({appId:AUTH_CFG.facebookAppId, version:'v19.0', xfbml:false, cookie:true});
-    const r=await new Promise(res=>FB.login(res,{scope:'public_profile,email'}));
-    if(!r||!r.authResponse) throw new Error('cancelled');
-    const me=await new Promise(res=>FB.api('/me',{fields:'id,name,email,picture.width(128)'},res));
-    linkAccount({provider:'facebook', id:me.id, name:me.name||'Commander',
-                 email:me.email||'', picture:(me.picture&&me.picture.data&&me.picture.data.url)||'',
-                 token:r.authResponse.accessToken});
-  }catch(e){
-    accToast('Facebook sign-in did not complete');
-  }
-  accBusy(false);
 }
 function signOut(){
   ACCOUNT=null; accSave();

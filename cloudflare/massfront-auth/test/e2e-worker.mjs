@@ -37,6 +37,7 @@ const argv = process.argv.slice(2);
 const optOf = (n, d) => { const i = argv.indexOf('--' + n); return i >= 0 && argv[i + 1] ? argv[i + 1] : d; };
 const BASE = optOf('base', 'http://127.0.0.1:8799').replace(/\/+$/, '');
 const EXPECT_CHAT = optOf('expect-chat', 'off').toLowerCase();
+const EXPECT_REALTIME = optOf('expect-realtime', 'off').toLowerCase();
 const ROOT = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 const RUN = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
@@ -206,8 +207,8 @@ try {
   /* ---- 7. BLOCK / REPORT ------------------------------------------------- */
   /* Create pending lobby invites in both directions BEFORE blocking. The
      block must revoke both live reachability paths, not merely hide friends. */
-  const preBlockA = await call('POST', '/multiplayer/lobbies', { token: A.token, body: { rules: { slots: 4 } } });
-  const preBlockB = await call('POST', '/multiplayer/lobbies', { token: B.token, body: { rules: { slots: 4 } } });
+  const preBlockA = await call('POST', '/multiplayer/lobbies', { token: A.token, body: { rules: { mode: 'coop', slots: 4 } } });
+  const preBlockB = await call('POST', '/multiplayer/lobbies', { token: B.token, body: { rules: { mode: 'coop', slots: 4 } } });
   const preInviteAB = await call('POST', '/multiplayer/invites', {
     token: A.token, body: { lobbyId: preBlockA.json && preBlockA.json.lobby && preBlockA.json.lobby.id, username: B.username },
   });
@@ -342,6 +343,57 @@ try {
   const gone = await call('GET', '/multiplayer/lobbies/' + lobby.id, { token: B.token });
   check('closed lobby is really gone', gone.status === 404, gone.status);
 
+  /* The launch foundation is exercised through real workerd + D1 as well as
+     the adversarial node:sqlite suite. It still does not imply realtime: this
+     stops at one short-lived credential per deterministic seat. */
+  const launchCreate = await call('POST', '/multiplayer/lobbies', {
+    token: A.token, body: { rules: { mode: 'skirmish', slots: 2, map: 'e2e-launch' } },
+  });
+  const launchLobby = launchCreate.json && launchCreate.json.lobby;
+  const launchJoin = await call('POST', '/multiplayer/lobbies/join', {
+    token: B.token, body: { code: launchLobby.code },
+  });
+  const launchReadyA = await call('POST', `/multiplayer/lobbies/${launchLobby.id}/ready`, {
+    token: A.token, body: { ready: true, revision: launchJoin.json.lobby.revision },
+  });
+  const launchReadyB = await call('POST', `/multiplayer/lobbies/${launchLobby.id}/ready`, {
+    token: B.token, body: { ready: true, revision: launchReadyA.json.lobby.revision },
+  });
+  const launchRevision = launchReadyB.json.lobby.revision;
+  const rulesHash = Buffer.from(await crypto.subtle.digest('SHA-256',
+    new TextEncoder().encode(JSON.stringify(launchLobby.rules)))).toString('hex');
+  const compatibility = {
+    revision: launchRevision, buildVersion: '1.33.35',
+    manifestHash: '1'.repeat(64), balanceHash: '2'.repeat(64), rulesHash,
+  };
+  const compatA = await call('POST', `/multiplayer/lobbies/${launchLobby.id}/compatibility`, {
+    token: A.token, body: compatibility,
+  });
+  const compatB = await call('POST', `/multiplayer/lobbies/${launchLobby.id}/compatibility`, {
+    token: B.token, body: compatibility,
+  });
+  check('real D1 accepts compatibility for every current seat',
+    compatA.status === 200 && compatB.status === 200, compatA.status + '/' + compatB.status);
+  const launched = await call('POST', `/multiplayer/lobbies/${launchLobby.id}/launch`, {
+    token: A.token, body: { revision: launchRevision },
+  });
+  const match = launched.json && launched.json.match;
+  check('real D1 atomically materializes the launch record',launched.status === 201 && match
+    && match.rosterSize === 2 && match.rulesHash === rulesHash,launched.status + ' ' + JSON.stringify(match));
+  const tokenA = await call('POST', `/multiplayer/matches/${match.id}/token`, { token: A.token });
+  const tokenB = await call('POST', `/multiplayer/matches/${match.id}/token`, { token: B.token });
+  check('real D1 issues one opaque credential per deterministic seat',tokenA.status === 201&&tokenB.status === 201
+    &&/^[a-f0-9]{64}$/.test(tokenA.json.credential.token)&&/^[a-f0-9]{64}$/.test(tokenB.json.credential.token)
+    &&tokenA.json.credential.seat===1&&tokenB.json.credential.seat===2
+    &&tokenA.json.credential.token!==tokenB.json.credential.token,tokenA.status+'/'+tokenB.status);
+  const tokenAgain = await call('POST', `/multiplayer/matches/${match.id}/token`, { token: A.token });
+  check('real D1 refuses a second credential claim for the same seat',tokenAgain.status===409
+    &&tokenAgain.json&&tokenAgain.json.error==='token_already_claimed',tokenAgain.status+' '+(tokenAgain.json&&tokenAgain.json.error));
+  const postLaunchCaps = (await call('GET', '/social/capabilities', { token: A.token })).json.capabilities;
+  check('realtime capability matches the explicit release expectation',
+    EXPECT_REALTIME==='on'?postLaunchCaps.realtimeMatch===true:postLaunchCaps.realtimeMatch===false,
+    'expect='+EXPECT_REALTIME+' actual='+postLaunchCaps.realtimeMatch);
+
   /* Four requests race one remaining slot over real HTTP/workerd/D1. A
      sequential third-player check cannot expose COUNT-then-INSERT races. */
   const raceCreate = await call('POST', '/multiplayer/lobbies', {
@@ -382,7 +434,7 @@ try {
     'before=' + sharedRevision + ' after=' + (revisionAfter.json && revisionAfter.json.lobby && revisionAfter.json.lobby.revision));
 
   /* ---- 9. INVITES -------------------------------------------------------- */
-  const mk2 = await call('POST', '/multiplayer/lobbies', { token: A.token, body: { rules: { slots: 4 } } });
+  const mk2 = await call('POST', '/multiplayer/lobbies', { token: A.token, body: { rules: { mode: 'coop', slots: 4 } } });
   const lob2 = mk2.json && mk2.json.lobby;
   check('second lobby created for invite tests', !!(lob2 && lob2.id), mk2.status);
 

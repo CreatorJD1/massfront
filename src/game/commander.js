@@ -63,8 +63,8 @@ function commanderStampAiSeats(){
         (S.fac&&typeof COMMANDER_WEAPON_PROFILES!=='undefined'&&COMMANDER_WEAPON_PROFILES[S.fac])||null;
       if(!P) continue;
       S.primary=P.primary; S.secondary=P.secondary;
-      if(S.activeCool==null) S.activeCool=8+Math.random()*6;
-      if(!S.weaponCool) S.weaponCool=[0,4+Math.random()*6];
+      if(S.activeCool==null) S.activeCool=8+mfSimRandom()*6;
+      if(!S.weaponCool) S.weaponCool=[0,4+mfSimRandom()*6];
     }
   };
   stamp(AI.bases); stamp(AI.allies);
@@ -257,7 +257,12 @@ function commanderActiveDamageCircle(x,y,r,unitDmg,bldDmg,team){
   for(let bi=0;bi<blds.length;bi++){const B=blds[bi];if(B.alive&&B.team!==team&&dist2(x,y,B.x,B.y)<=r*r){damageBld(bi,bldDmg,team);n++;}}
   return n;
 }
-function fireCommanderActive(wx,wy){ return fireCommanderActiveAt(heroIdx,wx,wy,false); }
+function fireCommanderActive(wx,wy){
+  if(heroIdx>=0&&ualive[heroIdx]&&window.MFMatchCommandConsumer&&typeof MFMatchCommandConsumer.takeover==='function'&&
+     MFMatchCommandConsumer.takeover({type:'commander',commander:{id:heroIdx,generation:ugen[heroIdx]},action:'active',
+       x:Math.round(wx),y:Math.round(wy)}))return true;
+  return fireCommanderActiveAt(heroIdx,wx,wy,false);
+}
 function fireCommanderActiveAt(idx,wx,wy,quiet){
   const C=commanderDefForUnit(idx),A=C&&C.active;
   if(!A||idx<0||!ualive[idx]){if(!quiet)aiming=-1;return false;}
@@ -715,7 +720,7 @@ function showLevelUp(){
   const pool=UPGRADES.map((u,i)=>i);
   const upKit=(typeof factionTextKit==='function')?factionTextKit(0):undefined;
   for(let k=0;k<2;k++){
-    const gi=pool.splice(Math.floor(Math.random()*pool.length),1)[0];
+    const gi=pool.splice(Math.floor(mfSimRandom()*pool.length),1)[0];
     const pick=UPGRADES[gi];
     const upEm=(typeof factionUpgradeEm==='function')?factionUpgradeEm(gi,upKit)||pick.em:pick.em;
     const upNm=(typeof factionUpgradeName==='function')?factionUpgradeName(gi,upKit)||pick.nm:pick.nm;
@@ -1063,7 +1068,7 @@ function abilTick(dt){
 function fireLance(wx,wy){
   abCool[3]=commanderCool(AB_CD[3]);
   aiming=-1;
-  const ang=Math.random()*TAU, LEN=560, W=64;
+  const ang=mfSimRandom()*TAU, LEN=560, W=64;
   const dxl=Math.cos(ang), dyl=Math.sin(ang);
   for(let k=0;k<9;k++){
     const px2=wx+dxl*(k-4)*(LEN/9), py2=wy+dyl*(k-4)*(LEN/9);
@@ -1292,6 +1297,35 @@ function commanderIdentityAll(){ return commanderIdentityIds().map(commanderIden
    change with load timing. */
 const COMMANDER_ROSTER_SNAPSHOT_VERSION=1;
 const COMMANDER_CAMPAIGN_FACTION={nova:'nova',legion:'dominion',syndicate:'syndicate'};
+const COMMANDER_ROSTER_AUTHORED_IDS_V1=Object.freeze([
+  'nova_kai','nova_holt','nova_vale',
+  'legion_vex','legion_korr','legion_dravik',
+  'syndicate_renn','syndicate_nyx','syndicate_voss'
+]);
+const COMMANDER1_BY_CAMPAIGN_FACTION_V1=Object.freeze({
+  nova:'nova_kai',dominion:'legion_vex',syndicate:'syndicate_renn'
+});
+/* This is source-package metadata, not a runtime asset registration. In
+   particular it carries no VRM/GLB URL and keeps both runtime flags false.
+   The accepted Broker Lys Renn source may therefore be audited and displayed
+   in development metadata without accidentally entering a runtime loader. */
+const COMMANDER_SOURCE_ART_BINDING_V1=Object.freeze({
+  syndicate_renn:Object.freeze({
+    assetId:'syndicate-broker-lys-renn-v1',
+    assetType:'character-source',
+    status:'SOURCE_ACCEPTED_RUNTIME_UNREGISTERED',
+    runtimeReady:false,
+    runtimeRegistered:false,
+    canonicalPath:'modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1',
+    manifestPath:'modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1/syndicate-broker-lys-renn-v1.asset-manifest.json'
+  })
+});
+function commanderRosterDeepFreezeV1(value){
+  if(!value||typeof value!=='object'||Object.isFrozen(value))return value;
+  Object.freeze(value);
+  for(const child of Object.values(value))commanderRosterDeepFreezeV1(child);
+  return value;
+}
 function commanderRosterStableValueV1(value){
   if(value===null||typeof value==='string'||typeof value==='boolean')return value;
   if(typeof value==='number'){
@@ -1331,18 +1365,32 @@ function commanderRosterSnapshotV1(){
     signature:d.signature?{id:d.signature.id,label:d.signature.label,em:d.signature.em}:null,
     weapons:{primary:d.weapons.primary,secondary:d.weapons.secondary},
     portrait:{resolver:d.portrait.resolver,fallback:d.portrait.fallback,alt:d.portrait.alt},
-    voice:{bank:d.voice.bank,channel:d.voice.channel,slotPrefix:d.voice.slotPrefix}
+    voice:{bank:d.voice.bank,channel:d.voice.channel,slotPrefix:d.voice.slotPrefix},
+    sourceArt:COMMANDER_SOURCE_ART_BINDING_V1[d.id]?Object.assign({},COMMANDER_SOURCE_ART_BINDING_V1[d.id]):null
   }));
+  const ids=commanders.map(c=>c.id);
+  if(ids.length!==COMMANDER_ROSTER_AUTHORED_IDS_V1.length||ids.some((id,i)=>id!==COMMANDER_ROSTER_AUTHORED_IDS_V1[i]))
+    throw new TypeError('Commander roster authority order changed');
+  for(const commander of commanders){
+    if(COMMANDER_CAMPAIGN_FACTION[commander.sourceFactionId]!==commander.campaignFactionId)
+      throw new TypeError('Commander roster faction mapping changed for '+commander.id);
+  }
+  for(const faction of Object.keys(COMMANDER1_BY_CAMPAIGN_FACTION_V1)){
+    const id=COMMANDER1_BY_CAMPAIGN_FACTION_V1[faction],commander=commanders.find(c=>c.id===id);
+    if(!commander||commander.campaignFactionId!==faction)
+      throw new TypeError('Commander 1 authority changed for '+faction);
+  }
   const snapshot={
     schemaVersion:COMMANDER_ROSTER_SNAPSHOT_VERSION,
     kind:'CommanderRosterSnapshotV1',
     source:'massfront-base',
     sourceVersion:COMMANDER_IDENTITY_VERSION,
     commanderCount:commanders.length,
+    commander1ByCampaignFaction:Object.assign({},COMMANDER1_BY_CAMPAIGN_FACTION_V1),
     commanders:commanders
   };
   snapshot.fingerprint=commanderRosterSnapshotFingerprintV1(snapshot);
-  return snapshot;
+  return commanderRosterDeepFreezeV1(snapshot);
 }
 /* The identity of whoever the player is currently commanding. Falls back
    through playerCommanderDef() so a save with an unknown id still resolves to
@@ -1506,14 +1554,10 @@ function commanderDialogueTrainingAllows(category){
 /* The single speech funnel for anything in this lane that wants to hand a raw
    line to the existing voice system rather than raise a cue.
 
-   src/tutorial.js declares speakVoice() INSIDE its own IIFE (src/tutorial.js:35
-   opens it, :618 declares the function) and exports initTutorial,
-   cancelTrainingMission, trainingMissionActive, trainingUiState and
-   resumeTrainingMission — but not speakVoice. So on the shipped build the first
-   branch below does not resolve and the call goes straight to voPlay, which is
-   the same pipeline speakVoice would have used anyway. The branch stays because
-   it is the one line to change if tutorial.js ever exports it, and because a
-   probe can then prove which path ran. Never falls through to speechSynthesis:
+   src/tutorial.js declares speakVoice() inside its IIFE and assigns
+   window.speakVoice so this lane, and the minimap transmission overlay, share
+   the same voice pipeline. The first branch is the live path; voPlay remains
+   the fallback if the export is missing. Never falls through to speechSynthesis:
    a synthesised commander is worse than a quiet one. */
 function commanderVoiceLegacySpeak(text,faction,action,idx,wx,wy){
   try{

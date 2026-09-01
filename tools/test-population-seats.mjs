@@ -1,4 +1,4 @@
-/* Literal 500-per-faction population contract.
+/* Literal 500-per-participant population contract.
    Usage: node tools/test-population-seats.mjs [URL] */
 import { launchPwBrowser, closePwBrowser } from './pw-browser.mjs';
 import { createServer } from 'node:http';
@@ -43,10 +43,19 @@ try{
     const hero=TYPES.findIndex(T=>T&&T.cat==='hero'),L=land();if(hero<0)throw Error('no hero');
 
     wipe();AI.allies=[];AI.bases=[0,1,2].map((slot,n)=>({slot,x:L[0]+n*180,y:L[1]+n*120}));AI.base=AI.bases[0];
-    const heroes=AI.bases.map(B=>spawnUnit(hero,1,B.x,B.y,B.slot)),ordinary=[];
-    for(let n=0;n<600;n++){const B=AI.bases[n%3],id=spawnUnit(0,1,B.x,B.y,B.slot);if(id<0)break;ordinary.push(id);}
-    const aggregate={heroes,ordinary:ordinary.length,used:populationUsedFor(1),cap:populationCapFor(1),ceiling:populationTeamCeiling(1),
+    const heroes=AI.bases.map(B=>spawnUnit(hero,1,B.x,B.y,B.slot));
+    const ordinary=AI.bases.map(B=>fill(1,B.slot,600,[B.x,B.y]));
+    const aggregate={heroes,ordinary,used:populationUsedFor(1),cap:populationCapFor(1),ceiling:populationTeamCeiling(1),
       seats:[0,1,2].map(populationUsedForCommander),blocked:AI.bases.map(B=>spawnUnit(0,1,B.x,B.y,B.slot))};
+
+    wipe();battlefieldPreset='large';for(let i=0;i<aiSlots.length;i++){aiSlots[i].on=true;aiSlots[i].ally=false;}
+    normalizeAiSlotsForBattlefield();const topology=skirmishSpawnPoints(),distances=[];
+    for(let i=0;i<topology.length;i++)for(let j=i+1;j<topology.length;j++)distances.push(Math.hypot(topology[i].x-topology[j].x,topology[i].y-topology[j].y));
+    const P5=topology[0];AI.allies=[];AI.bases=topology.slice(1).map(S=>({slot:S.slot,x:S.x,y:S.y}));AI.base=AI.bases[0];
+    const player5={hero:spawnUnit(hero,0,P5.x,P5.y,-1),ordinary:fill(0,-1,600,[P5.x,P5.y])};
+    const enemies5=AI.bases.map(B=>({slot:B.slot,hero:spawnUnit(hero,1,B.x,B.y,B.slot),ordinary:fill(1,B.slot,600,[B.x,B.y])}));
+    const oneVFour={topology:topology.map(S=>({slot:S.slot,zone:S.zone})),minDistance:Math.min(...distances),playerUsed:populationUsedForCommander(-1),
+      enemySeats:[0,1,2,3].map(populationUsedForCommander),teamUsed:[populationUsedFor(0),populationUsedFor(1)],player5,enemies5};
 
     wipe();const P=[L[0],L[1]],E=[L[0]+500,L[1]+300];AI.allies=[];AI.bases=[{slot:0,x:E[0],y:E[1]}];AI.base=AI.bases[0];
     const pHero=spawnUnit(hero,0,P[0],P[1],-1),pOrdinary=fill(0,-1,600,P),player=populationFactionLedger(0),hud=hudPlayerPop();
@@ -57,22 +66,29 @@ try{
     const before=populationUsedForCommander(-1),invalid={index:popCmdIndex(99),resolved:populationResolveSlot(0,99,L[0],L[1]),
       allowed:populationCanSpawn(0,0,99,L[0],L[1]),spawned:spawnUnit(0,0,L[0],L[1],99)};
     invalid.after=populationUsedForCommander(-1);invalid.before=before;
-    return {constant:FACTION_POP_CAP,aggregate,independent,invalid};
+    const capFallback={invalidCap:populationCapFor(99),invalidCeiling:populationTeamCeiling(99),neutralCap:populationCapFor(2)};
+    return {constant:FACTION_POP_CAP,aggregate,oneVFour,independent,invalid,capFallback};
   });
 
   assert(out.constant===500,'FACTION_POP_CAP must be literal 500, got '+out.constant);
   assert(out.aggregate.heroes.length===3&&out.aggregate.heroes.every(i=>i>=0),'1v3 commanders must all be admitted');
-  assert(out.aggregate.ordinary===497&&out.aggregate.used===500,'same-faction 1v3 must stop at 500 total');
-  assert(out.aggregate.cap===500&&out.aggregate.ceiling===500,'commander count must not multiply faction cap');
-  assert(out.aggregate.blocked.every(i=>i<0),'every same-faction seat must reject after aggregate 500');
-  assert(out.aggregate.seats.reduce((a,b)=>a+b,0)===500,'seat diagnostics must reconcile to faction total');
+  assert(out.aggregate.ordinary.every(n=>n===499)&&out.aggregate.used===1500,'same-team 1v3 must admit 500 per participant');
+  assert(out.aggregate.cap===1500&&out.aggregate.ceiling===1500,'team diagnostics must expose the three-seat 1500 ceiling');
+  assert(out.aggregate.blocked.every(i=>i<0),'every full participant seat must reject its 501st body');
+  assert(out.aggregate.seats.every(n=>n===500),'participant ledgers must each stop at 500');
+  assert(out.oneVFour.topology.length===5&&out.oneVFour.topology.some(S=>S.slot===3&&S.zone==='c'),'large 1v4 must expose the fourth AI at center');
+  assert(out.oneVFour.minDistance>=1400,'large 1v4 spawn spacing fell below 1400 m: '+out.oneVFour.minDistance);
+  assert(out.oneVFour.playerUsed===500&&out.oneVFour.enemySeats.every(n=>n===500)
+    &&out.oneVFour.teamUsed[0]===500&&out.oneVFour.teamUsed[1]===2000,'1v4 must admit exactly 2500 bodies across five seats');
   assert(out.independent.pHero>=0&&out.independent.pOrdinary===499&&out.independent.player.used===500,'player faction did not independently reach 500');
   assert(out.independent.eHero>=0&&out.independent.eOrdinary===499&&out.independent.enemy.used===500,'opposing faction did not independently reach 500');
   assert(out.independent.hud.used===500&&out.independent.hud.cap===500,'HUD must read faction-wide 500');
   assert(out.invalid.index===-1&&out.invalid.resolved===-2&&!out.invalid.allowed&&out.invalid.spawned<0&&out.invalid.before===out.invalid.after,
     'invalid commander slot aliased a valid population bucket');
+  assert(out.capFallback.invalidCap===0&&out.capFallback.invalidCeiling===0&&Number.isFinite(out.capFallback.neutralCap)&&out.capFallback.neutralCap>=0,
+    'team-cap fallback must fail closed without recursion while preserving the neutral budget');
   assert(errors.length===0,'page errors:\n'+errors.join('\n'));
-  console.log(JSON.stringify({ok:true,contract:'500-per-faction',...out},null,2));
+  console.log(JSON.stringify({ok:true,contract:'500-per-participant',...out},null,2));
 }finally{
   await browser.close().catch(()=>{});await closePwBrowser().catch(()=>{});
   if(server)await new Promise(ok=>server.close(ok));

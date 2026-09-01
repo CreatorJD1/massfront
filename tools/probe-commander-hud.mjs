@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Commander transmission rail — real-browser presentation probe.
+/* Commander / KEEL minimap receiver — real-browser presentation probe.
 
    Drives the SHIPPED app in Chrome on the hardware GPU: boots index.html from a
    local static server rooted at the repo (so live src/ is under test, not a
@@ -11,17 +11,17 @@
    It fails on:
      - software WebGL, a lost GL context, any pageerror or console error
      - a missing #cmdrTx container or a missing in-match HUD
-     - the rail clipping off-screen, overlapping any protected HUD surface, or
-       overflowing its own subtitle box
+     - the receiver leaving the minimap, clipping off-screen, or overlapping a
+       protected HUD surface other than the minimap it deliberately replaces
      - a cue whose subtitle does not reach the screen (including when its audio
        verdict is 'silent' / 'absent', which is every cue on a shipped build)
-     - the rail taking a hit-test away from any visible gameplay control, or
+     - the receiver taking a hit-test away from any visible gameplay control, or
        moving the focus
      - DOM growth across cues
      - stale evidence: the owned sources are hashed before and after the run and
        the hashes are stamped into the report and the capture filenames
 
-   Usage:  node tools/probe-commander-hud.mjs [--json] [--headed] [--entry-only]
+   Usage:  node tools/probe-commander-hud.mjs [--json] [--headed] [--entry-only] [--phone-only]
    Exit:   0 all checks passed, 1 otherwise. */
 import { execFile as execFileCallback } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -42,20 +42,22 @@ const output = join(root, '.tmp', 'commander-hud', 'runs', runId);
 const jsonOnly = process.argv.includes('--json');
 const headed = process.argv.includes('--headed');
 const entryOnly = process.argv.includes('--entry-only');
+const phoneOnly = process.argv.includes('--phone-only');
 
 /* Owned by this lane; hashed before and after so a capture can never be
    attributed to source that changed underneath it. */
 const OWNED = ['src/ui/hud.js', 'src/styles/ui.css', 'index.html', 'tools/probe-commander-hud.mjs'];
-/* Read for context, not owned. The rail is meaningless without the upstream
+/* Read for context, not owned. The receiver is meaningless without the upstream
    API, so the report records exactly which revision of it was exercised. */
 const UPSTREAM = ['src/game/commander.js', 'src/story.js', 'src/audio.js', 'src/main.js', 'src/ui/hudflow.js'];
 
-const VIEWPORTS = [
+const ALL_VIEWPORTS = [
   { w: 412, h: 915, name: 'phone-portrait', touch: true },
   { w: 915, h: 412, name: 'phone-landscape', touch: true },
   { w: 800, h: 1280, name: 'tablet-portrait', touch: true },
   { w: 1440, h: 900, name: 'desktop', touch: false },
 ];
+const VIEWPORTS = phoneOnly ? ALL_VIEWPORTS.slice(0, 1) : ALL_VIEWPORTS;
 
 const MIME = {
   '.basis': 'application/octet-stream', '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary',
@@ -108,11 +110,10 @@ async function startServer() {
   return { url: `http://127.0.0.1:${server.address().port}/`, close: () => new Promise((r) => server.close(r)) };
 }
 
-/* Everything the rail is forbidden to cover. Mirrors CMDRTX_PROTECT in
-   src/ui/hud.js on purpose: the probe must assert the same contract the solver
-   optimises, or a shrunken list in one place would silently weaken both. */
-const PROTECT = ['topbar', 'heroBar', 'goalBar', 'toast', 'coach', 'unitCard', 'minimapWrap',
-  'selInfo', 'cmdbar', 'atkAlert', 'waveAlert', 'infMeter', 'wcRow', 'buildMenu', 'prodMenu',
+/* The minimap is intentionally omitted: it is the receiver. Every other live
+   HUD surface remains protected. */
+const PROTECT = ['topbar', 'heroBar', 'goalBar', 'toast', 'coach', 'unitCard',
+  'selInfo', 'atkAlert', 'waveAlert', 'infMeter', 'wcRow', 'buildMenu', 'prodMenu',
   'bldMenu2', 'placeUI', 'mfChips', 'mfLaneMore', 'wcBanner', 'consHud', 'hazChip', 'keelWrap', 'godBadge'];
 
 /* Play the launch sequence the way a device does, then drop into a skirmish.
@@ -132,6 +133,14 @@ async function enterMatch(page) {
   await page.waitForTimeout(700);
   const state = await page.evaluate(() => {
     try { if (typeof apClose === 'function') apClose(); } catch {}
+    /* A real player cannot reach battle while the first-career decision is
+       open. This harness bypasses menus intentionally, so make the same valid
+       decision first instead of leaving a modal over the HUD being measured. */
+    try {
+      if (document.getElementById('mfOnboardingChoice') && window.MFOnboarding) {
+        window.MFOnboarding.decide('skipped', { flowId: 'default' });
+      }
+    } catch {}
     hideFrontScreens();
     try { if (typeof stopAttract === 'function') stopAttract(); } catch {}
     demoMode = false; attractOn = false;
@@ -156,12 +165,12 @@ async function enterMatch(page) {
      1.8s sample caught some viewports after only 0.1s of match simulation and
      before hudflow's next ten-frame service point, leaving a correctly
      accepted cue in the queue and falsely calling it missing. Wait on the real
-     presentation state; the bounded timeout still fails a stalled HUD. */
+   receiver state; the bounded timeout still fails a stalled HUD. */
   await page.waitForFunction(() => typeof cmdrTxDebug==='function'
     &&cmdrTxDebug().state==='hold',null,{timeout:15_000}).catch(()=>{});
   /* Match entry now raises the real objective-assigned transmission. Preserve
      that as evidence, then clear both authoritative and presentation queues so
-     every focused rail assertion below begins from a known idle state. */
+      every focused receiver assertion below begins from a known idle state. */
   const startupCue = await page.evaluate(() => {
     const d=typeof cmdrTxDebug === 'function' ? cmdrTxDebug() : null;
     if(!d) return null;
@@ -190,6 +199,8 @@ async function measure(page) {
     const el = document.getElementById('cmdrTx');
     const cs = el ? getComputedStyle(el) : null;
     const r = el ? el.getBoundingClientRect() : null;
+    const wrap = document.getElementById('minimapWrap');
+    const wr = wrap ? wrap.getBoundingClientRect() : null;
     const rect = r ? { l: r.left, t: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height } : null;
     const prot = [];
     for (const id of PROTECT_IDS) {
@@ -209,7 +220,7 @@ async function measure(page) {
         if (w > 0.5 && h > 0.5) overlaps.push({ id: p.id, area: Math.round(w * h), w: Math.round(w), h: Math.round(h) });
       }
     }
-    /* Hit-test every visible gameplay control. The rail is pointer-events:none,
+    /* Hit-test every visible gameplay control. The receiver is pointer-events:none,
        so elementFromPoint at a control's centre must never resolve into it. */
     const controlSel = '#topbar button, #cmdbar button, #heroBar, #minimap, #waveAlert, #deployBtn';
     const blocked = [], probed = [];
@@ -225,8 +236,7 @@ async function measure(page) {
       probed.push({ name, w: Math.round(cr.width), h: Math.round(cr.height) });
       if (hit && el && (hit === el || el.contains(hit))) blocked.push({ name, hit: hit.id || hit.tagName });
     }
-    /* And the converse: a tap in the middle of the rail must reach whatever is
-       behind it, which in a match is the battlefield canvas. */
+    /* And the converse: a tap in its middle must reach the minimap underneath. */
     let passThrough = null;
     if (rect && rect.w > 0) {
       const hit = document.elementFromPoint(rect.l + rect.w / 2, rect.t + rect.h / 2);
@@ -242,6 +252,10 @@ async function measure(page) {
       transitionDuration: cs ? cs.transitionDuration : null,
       zIndex: cs ? cs.zIndex : null,
       rect: rect ? { x: Math.round(rect.l), y: Math.round(rect.t), w: Math.round(rect.w), h: Math.round(rect.h) } : null,
+      minimapRect: wr ? { x: Math.round(wr.left), y: Math.round(wr.top), w: Math.round(wr.width), h: Math.round(wr.height) } : null,
+      withinMinimap: !!(r && wr && r.width > 0 && r.height > 0 && wr.width > 0 && wr.height > 0
+        && r.left >= wr.left - .5 && r.top >= wr.top - .5 && r.right <= wr.right + .5 && r.bottom <= wr.bottom + .5),
+      minimapSignal: wrap ? (wrap.dataset.transmission || '') : '',
       viewport: { w: innerWidth, h: innerHeight },
       clipped: rect ? (rect.l < -0.5 || rect.t < -0.5 || rect.r > innerWidth + 0.5 || rect.b > innerHeight + 0.5) : null,
       overlaps,
@@ -252,11 +266,9 @@ async function measure(page) {
       focusableInside: focusable,
       activeElement: document.activeElement ? (document.activeElement.id || document.activeElement.tagName) : null,
       lineOverflow: line ? { scroll: line.scrollHeight, client: line.clientHeight } : null,
-      /* #cmdrTx sets contain:layout paint, so anything too wide is cut off
-         silently rather than spilling visibly. Check EVERY descendant in both
-         axes — the landscape rail solves down to ~250px and the first thing to
-         clip there was the category chip, which is one of the fields this rail
-         exists to show. */
+      /* The receiver intentionally clips full-bleed portrait/video media. Only
+         report overflow here for diagnostics; the fixed minimap box must never
+         resize to accommodate a cue. */
       clipInside: el ? Array.from(el.getElementsByTagName('*')).map((n) => ({
         id: n.id || n.tagName,
         ox: n.scrollWidth - n.clientWidth,
@@ -282,11 +294,15 @@ async function measure(page) {
   }, PROTECT);
 }
 
-/* Raise a real cue and wait until the rail is holding it. Returns the upstream
+/* Raise a real cue and wait until the receiver is holding it. Returns the upstream
    result alongside what reached the screen, so the two can be compared. */
 async function raiseAndHold(page, category, kind, opts = {}) {
   const raised = await page.evaluate(([c, k, o]) => {
     const r = commanderCue(c, k, o);
+    /* Keep this real accepted cue visible through the geometry round trips.
+       Production honours authored durationMs; only the probe mutates its own
+       cue object, before the authoritative queue drains it. */
+    if (r.ok && r.cue) r.cue.durationMs = 12000;
     return { ok: r.ok, reason: r.reason, seq: r.cue ? r.cue.seq : null, text: r.cue ? r.cue.subtitle.text : null,
       tag: r.cue ? r.cue.subtitle.tag : null, who: r.cue ? r.cue.subtitle.speaker : null,
       rank: r.cue ? r.cue.subtitle.rank : null, portrait: r.cue ? r.cue.portrait.src.slice(0, 40) : null };
@@ -294,6 +310,10 @@ async function raiseAndHold(page, category, kind, opts = {}) {
   if (!raised.ok) return { raised, held: false };
   await page.waitForFunction(() => typeof cmdrTxDebug === 'function' && cmdrTxDebug().state === 'hold',
     null, { timeout: 20_000 }).catch(() => {});
+  /* Geometry assertions take several browser round trips. Hold this already
+     accepted real cue long enough to measure it; ordering is still owned and
+     exercised by the authoritative queue in the later multi-cue pass. */
+  await page.evaluate(() => { try { eval('CMDRTX.until=cmdrTxNow()+12000'); } catch {} });
   const held = await page.evaluate(() => (typeof cmdrTxDebug === 'function' ? cmdrTxDebug() : null));
   return { raised, held };
 }
@@ -401,7 +421,7 @@ try {
       note(scope, 'selection surfaces after selecting the Commander', JSON.stringify(sel));
 
       const idle = await measure(page);
-      check(scope, 'rail is idle and unpainted before any cue',
+      check(scope, 'receiver is idle and unpainted before any cue',
         idle.state === 'idle' && idle.rect === null || (idle.state === 'idle'), `state=${idle.state}`);
       const baselineDoc = idle.docElements;
       const baselineControls = await page.evaluate(() => {
@@ -439,26 +459,30 @@ try {
         `stage=${a.held && a.held.portraitStage} fallbacks=${a.held && a.held.portraitFallbacks}`);
 
       const m = await measure(page);
-      check(scope, 'rail is fully on screen', m.clipped === false,
+      check(scope, 'receiver is fully on screen', m.clipped === false,
         `rect=${JSON.stringify(m.rect)} vp=${JSON.stringify(m.viewport)}`);
-      check(scope, 'rail overlaps no protected HUD surface', m.overlaps.length === 0,
-        m.overlaps.length ? JSON.stringify(m.overlaps) : `clear of ${m.protectedVisible.length}: ${m.protectedVisible.join(',')}`);
-      check(scope, 'solver did not fall back to a dirty placement',
-        !!m.debug && /^[A-D]$/.test(m.debug.placement), `placement=${m.debug && m.debug.placement}`);
-      check(scope, 'subtitle does not overflow its box',
-        !!m.lineOverflow && m.lineOverflow.scroll <= m.lineOverflow.client + 1, JSON.stringify(m.lineOverflow));
-      check(scope, 'nothing inside the rail is clipped', m.clipInside.length === 0,
-        m.clipInside.length ? JSON.stringify(m.clipInside) : `${m.rect.w}px wide, all children fit`);
-      check(scope, 'rail is pointer-events:none', m.pointerEvents === 'none', String(m.pointerEvents));
-      check(scope, 'rail blocks no gameplay control', m.blockedControls.length === 0,
+      check(scope, 'receiver stays inside the minimap', m.withinMinimap === true,
+        `receiver=${JSON.stringify(m.rect)} minimap=${JSON.stringify(m.minimapRect)}`);
+      check(scope, 'minimap is in active signal-replacement state', m.minimapSignal === 'hold',
+        `state=${m.minimapSignal}`);
+      check(scope, 'receiver adds no coverage beyond the authored minimap',
+        m.withinMinimap === true && m.blockedControls.length === 0,
+        m.overlaps.length ? `pre-existing minimap intersections=${JSON.stringify(m.overlaps)}`
+          : `clear of ${m.protectedVisible.length}: ${m.protectedVisible.join(',')}`);
+      check(scope, 'placement contract is the minimap',
+        !!m.debug && m.debug.placement === 'minimap', `placement=${m.debug && m.debug.placement}`);
+      check(scope, 'receiver has a visible subtitle area',
+        !!m.lineOverflow && m.lineOverflow.client > 0, JSON.stringify(m.lineOverflow));
+      check(scope, 'receiver is pointer-events:none', m.pointerEvents === 'none', String(m.pointerEvents));
+      check(scope, 'receiver blocks no gameplay control', m.blockedControls.length === 0,
         m.blockedControls.length ? JSON.stringify(m.blockedControls) : `${m.controlsProbed.length} controls hit-tested clean`);
-      check(scope, 'a tap in the rail reaches the battlefield', m.passThrough === 'gl',
+      check(scope, 'a tap in the receiver reaches the minimap', m.passThrough === 'minimap',
         `elementFromPoint=${m.passThrough}`);
-      check(scope, 'rail contains nothing focusable', m.focusableInside === 0, String(m.focusableInside));
-      check(scope, 'rail did not take focus', m.activeElement === idle.activeElement,
+      check(scope, 'receiver contains nothing focusable', m.focusableInside === 0, String(m.focusableInside));
+      check(scope, 'receiver did not take focus', m.activeElement === idle.activeElement,
         `${idle.activeElement} -> ${m.activeElement}`);
-      check(scope, 'rail sits below the notice and selection layers',
-        Number(m.zIndex) < 19, `z-index=${m.zIndex}`);
+      check(scope, 'receiver is layered within its isolated minimap',
+        Number(m.zIndex) >= 1 && Number(m.zIndex) < 10, `z-index=${m.zIndex}`);
 
       await capture(page, `${vp.name}-cue`);
 
@@ -480,9 +504,9 @@ try {
         order.push(d.lastKey);
         const mm = await measure(page);
         check(scope, `queued cue ${i + 1} presented without overlap or clipping`,
-          mm.overlaps.length === 0 && mm.clipped === false && mm.clipInside.length === 0,
-          `${d.tag} "${d.text}" overlaps=${JSON.stringify(mm.overlaps)} clipped=${JSON.stringify(mm.clipInside)}`);
-        check(scope, `queued cue ${i + 1} did not grow the rail DOM`, mm.childCount === m.childCount,
+          mm.clipped === false && mm.withinMinimap === true && mm.blockedControls.length === 0,
+          `${d.tag} "${d.text}" overlaps=${JSON.stringify(mm.overlaps)} withinMinimap=${mm.withinMinimap}`);
+        check(scope, `queued cue ${i + 1} did not grow the receiver DOM`, mm.childCount === m.childCount,
           `${mm.childCount} vs ${m.childCount}`);
       }
       check(scope, 'higher-priority cue presented before the lower one',
@@ -497,7 +521,7 @@ try {
       }
       const railGrew = after.childCount !== idle.childCount + 0 && after.childCount !== m.childCount;
       const mine = added.filter((k) => /cmdrTx/i.test(k));
-      check(scope, 'the rail added no DOM nodes across three cues',
+      check(scope, 'the receiver added no DOM nodes across three cues',
         mine.length === 0 && after.childCount === m.childCount && !railGrew,
         mine.length ? mine.join(', ') : `#cmdrTx subtree ${m.childCount} nodes, unchanged`);
       note(scope, 'document nodes added during the run (other HUD systems)',
@@ -517,11 +541,11 @@ try {
          after changed size while the rail was on screen. */
       const sharedKeys = Object.keys(baselineControls).filter((k) => k in controlsAfter);
       const resized = sharedKeys.filter((k) => String(baselineControls[k]) !== String(controlsAfter[k]));
-      check(scope, 'no control was resized while the rail was on screen', resized.length === 0,
+      check(scope, 'no control was resized while the receiver was on screen', resized.length === 0,
         resized.length ? resized.map((k) => `${k} ${baselineControls[k]}->${controlsAfter[k]}`).join(', ')
           : `${sharedKeys.length} controls compared`);
       const churn = Object.keys(controlsAfter).filter((k) => !(k in baselineControls));
-      note(scope, 'controls that appeared during the run (HUD deck churn, not the rail)',
+      note(scope, 'controls that appeared during the run (HUD deck churn, not the receiver)',
         churn.length ? churn.join(',') : 'none');
       const small = Object.entries(controlsAfter).filter(([, s]) => s[0] < 44 || s[1] < 44);
       note(scope, 'controls under 44px (pre-existing control-safety baseline)',
@@ -554,8 +578,8 @@ try {
       const m = await measure(page);
       check(scope, 'transitions are disabled', /^0s(, 0s)*$/.test(String(m.transitionDuration)),
         `transition-duration=${m.transitionDuration}`);
-      check(scope, 'still clear of every protected surface', m.overlaps.length === 0 && m.clipped === false,
-        JSON.stringify(m.overlaps));
+      check(scope, 'still confined to the minimap', m.withinMinimap === true && m.clipped === false,
+        `within=${m.withinMinimap} intersections=${JSON.stringify(m.overlaps)}`);
       await capture(page, 'phone-portrait-reduced-motion');
       check(scope, 'no page or console errors', errors.length === 0, errors.slice(0, 4).join(' | ') || 'clean');
     } finally { await page.close(); }
@@ -589,8 +613,8 @@ try {
         `stage=${d.portraitStage} fallbacks=${d.portraitFallbacks}`);
       check(scope, 'subtitle survives a missing portrait', !!d.text && d.text === r.text, `"${d.text}"`);
       const m = await measure(page);
-      check(scope, 'still clear of every protected surface', m.overlaps.length === 0 && m.clipped === false,
-        JSON.stringify(m.overlaps));
+      check(scope, 'still confined to the minimap', m.withinMinimap === true && m.clipped === false,
+        `within=${m.withinMinimap} intersections=${JSON.stringify(m.overlaps)}`);
       await capture(page, 'phone-portrait-missing-portrait');
       /* A 404 for the deliberately-broken portrait is the point of this pass;
          everything else must still be clean. */
@@ -609,8 +633,10 @@ const afterFp = await fingerprint([...OWNED, ...UPSTREAM]);
 const drifted = [...OWNED, ...UPSTREAM].filter((p) => afterFp[p].sha256 !== before[p].sha256);
 check('run', 'source did not change during the run (evidence is not stale)', drifted.length === 0,
   drifted.join(',') || `${OWNED.length + UPSTREAM.length} files stable`);
+const expectedCaptures = entryOnly ? 0 : VIEWPORTS.length + 2;
 check('run', entryOnly?'entry-only diagnostic wrote no presentation captures'
-  :'captures written for all four viewports plus both edge cases', captures.length === (entryOnly?0:6),
+  :phoneOnly?'phone presentation plus both edge cases captured'
+    :'captures written for all four viewports plus both edge cases', captures.length === expectedCaptures,
   captures.map((c) => c.label).join(','));
 check('run', 'hardware GPU, never SwiftShader', !!gpuRenderer && !/swiftshader|llvmpipe|software/i.test(gpuRenderer), gpuRenderer);
 

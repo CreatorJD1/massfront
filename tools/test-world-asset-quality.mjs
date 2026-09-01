@@ -12,6 +12,15 @@ const sourceDir=path.join(root,'source-media','world-asset-rebuilds','engine-jso
 const generated=fs.readFileSync(path.join(root,'src','engine','models-world-data.js'),'utf8');
 const ctx=vm.createContext({});vm.runInContext(generated.replace('const WORLD_MODELS=','globalThis.WORLD_MODELS='),ctx);
 const live=ctx.WORLD_MODELS,files=fs.readdirSync(sourceDir).filter(f=>f.endsWith('.engine.json'));
+const kitSource=fs.readFileSync(path.join(root,'assets','data','worldkit.js'),'utf8');
+const kitCtx=vm.createContext({});vm.runInContext(kitSource.replace('const WORLD_KIT_DATA=','globalThis.WORLD_KIT_DATA='),kitCtx);
+const liveKit=kitCtx.WORLD_KIT_DATA||{};
+/* These ignored engine-json files are later high-density authoring candidates,
+   not the runtime authority. Their semantic roles already ship through the
+   compact quantized world kit. Refusing to inflate the installer with an
+   11k-vertex no-LOD duplicate is part of the mobile quality gate. */
+const CANDIDATE_ROLE={mdlGatehouse:'gatehouse',mdlWatchtower:'watchtower',
+  mdlBarracks:'barracks',mdlGaussCannon:'gauss',mdlDepot:'depot'};
 const MATERIAL_COUNT=25,UV_STRETCH_MAX=1.82;
 function fail(msg){throw new Error(msg);}
 function bounds(P){const lo=[Infinity,Infinity,Infinity],hi=[-Infinity,-Infinity,-Infinity];for(const p of P)for(let q=0;q<3;q++){lo[q]=Math.min(lo[q],p[q]);hi[q]=Math.max(hi[q],p[q]);}return {lo,hi,size:hi.map((v,q)=>v-lo[q])};}
@@ -62,7 +71,18 @@ function inspectRuntime(name,D,S){
   if(S.indices.length/3>2000&&!Array.isArray(S.lods))fail(`${name}: >2000 triangles requires authored LODs`);
   return {asset:name,triangles:D.indexCount/3,materials:new Set(D.mat).size,components:parts.count,uvWorst:+worst.toFixed(3)};
 }
-const rows=[];
-for(const file of files){const S=JSON.parse(fs.readFileSync(path.join(sourceDir,file),'utf8'));if(!live[S.name])fail(`${S.name}: missing generated runtime payload`);rows.push(inspectRuntime(S.name,live[S.name],S));}
+const rows=[],candidates=[];
+for(const file of files){
+  const S=JSON.parse(fs.readFileSync(path.join(sourceDir,file),'utf8'));
+  if(live[S.name]){rows.push(inspectRuntime(S.name,live[S.name],S));continue;}
+  const role=CANDIDATE_ROLE[S.name],K=role&&liveKit[role];
+  if(!K)fail(`${S.name}: missing generated runtime payload and compact role replacement`);
+  if(!Number.isFinite(K.tris)||K.tris<=0||K.tris>2000||!Number.isFinite(K.verts)||K.verts<=0||
+    typeof K.b64!=='string'||K.b64.length<64)
+    fail(`${S.name}: compact ${role} role exceeds mobile geometry contract`);
+  candidates.push({candidate:S.name,status:'NOT_SELECTED',reason:'no authored LOD',
+    candidateTriangles:S.indices.length/3,runtimeRole:role,runtimeTriangles:K.tris,runtimeVertices:K.verts});
+}
 for(const name of Object.keys(live))if(!rows.some(r=>r.asset===name))fail(`${name}: generated payload has no curated source`);
-console.table(rows);console.log(`World asset QA passed: ${rows.length} curated models; contact, component, winding, UV, material, bounds and mobile LOD gates clean.`);
+console.table(rows);if(candidates.length)console.table(candidates);
+console.log(`World asset QA passed: ${rows.length} curated models plus ${candidates.length} explicit compact-role replacements; contact, component, winding, UV, material, bounds and mobile LOD gates clean.`);

@@ -15,15 +15,15 @@
     "LOD1/LOD2 by DECIMATE of the finished LOD0"
   ],
   "blenderVersion": "5.2.0 LTS",
-  "moduleCount": 36,
+  "moduleCount": 33,
   "objectsPerModule": 1,
   "polySummary": {
-    "lod0Total": 140173,
-    "lod0Mean": 3893.7,
-    "lod0Min": 756,
-    "lod0Max": 15764,
-    "lod1Total": 113197,
-    "lod2Total": 67334
+    "lod0Total": 113203,
+    "lod0Mean": 3430.4,
+    "lod0Min": 724,
+    "lod0Max": 15510,
+    "lod1Total": 89437,
+    "lod2Total": 46809
   },
   "modules": [
     {
@@ -35,16 +35,22 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 2629,
-        "lod1": 2013,
-        "lod2": 1120
+        "lod0": 2626,
+        "lod1": 2023,
+        "lod2": 1250
       },
       "tris": {
-        "lod0": 5955,
-        "lod1": 2013,
-        "lod2": 1120
+        "lod0": 5975,
+        "lod1": 2023,
+        "lod2": 1250
       },
       "objects": 1,
       "materialSlots": 8
@@ -58,16 +64,22 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "open",
+        "E": "party_wall",
+        "S": "open",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 3942,
-        "lod1": 2901,
-        "lod2": 1841
+        "lod0": 3135,
+        "lod1": 2204,
+        "lod2": 626
       },
       "tris": {
-        "lod0": 8611,
-        "lod1": 2901,
-        "lod2": 1841
+        "lod0": 6492,
+        "lod1": 2204,
+        "lod2": 626
       },
       "objects": 1,
       "materialSlots": 8
@@ -81,16 +93,22 @@
         1
       ],
       "floors": 8,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
       "heightM": 32.6,
       "polys": {
-        "lod0": 1011,
-        "lod1": 1016,
-        "lod2": 1014
+        "lod0": 997,
+        "lod1": 981,
+        "lod2": 983
       },
       "tris": {
-        "lod0": 2826,
-        "lod1": 1016,
-        "lod2": 1014
+        "lod0": 2782,
+        "lod1": 981,
+        "lod2": 983
       },
       "objects": 1,
       "materialSlots": 8
@@ -104,16 +122,22 @@
         1
       ],
       "floors": 3,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
       "heightM": 12.6,
       "polys": {
-        "lod0": 4057,
-        "lod1": 2986,
-        "lod2": 1485
+        "lod0": 3903,
+        "lod1": 2829,
+        "lod2": 1225
       },
       "tris": {
-        "lod0": 8840,
-        "lod1": 2986,
-        "lod2": 1485
+        "lod0": 8339,
+        "lod1": 2829,
+        "lod2": 1225
       },
       "objects": 1,
       "materialSlots": 8
@@ -127,16 +151,22 @@
         1
       ],
       "floors": 13,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
       "heightM": 52.6,
       "polys": {
-        "lod0": 1418,
-        "lod1": 1357,
-        "lod2": 1221
+        "lod0": 1349,
+        "lod1": 1290,
+        "lod2": 1057
       },
       "tris": {
-        "lod0": 4112,
-        "lod1": 1357,
-        "lod2": 1221
+        "lod0": 3906,
+        "lod1": 1290,
+        "lod2": 1057
       },
       "objects": 1,
       "materialSlots": 8
@@ -150,16 +180,22 @@
         1
       ],
       "floors": 18,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 72.6,
       "polys": {
-        "lod0": 15764,
-        "lod1": 10929,
-        "lod2": 3228
+        "lod0": 15510,
+        "lod1": 10696,
+        "lod2": 2927
       },
       "tris": {
-        "lod0": 32418,
-        "lod1": 10929,
-        "lod2": 3228
+        "lod0": 31724,
+        "lod1": 10696,
+        "lod2": 2927
       },
       "objects": 1,
       "materialSlots": 8
@@ -173,39 +209,22 @@
         2
       ],
       "floors": 5,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 20.6,
       "polys": {
-        "lod0": 5901,
-        "lod1": 4615,
-        "lod2": 2310
+        "lod0": 5812,
+        "lod1": 4498,
+        "lod2": 2086
       },
       "tris": {
-        "lod0": 13658,
-        "lod1": 4615,
-        "lod2": 2310
-      },
-      "objects": 1,
-      "materialSlots": 8
-    },
-    {
-      "id": "colonial_arcology_stack",
-      "archetype": "arcology_stack",
-      "style": "colonial",
-      "cells": [
-        2,
-        2
-      ],
-      "floors": 15,
-      "heightM": 60.6,
-      "polys": {
-        "lod0": 2929,
-        "lod1": 2824,
-        "lod2": 2601
-      },
-      "tris": {
-        "lod0": 8460,
-        "lod1": 2824,
-        "lod2": 2601
+        "lod0": 13317,
+        "lod1": 4498,
+        "lod2": 2086
       },
       "objects": 1,
       "materialSlots": 8
@@ -219,16 +238,22 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "service",
+        "E": "party_wall",
+        "S": "street",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 3685,
-        "lod1": 2942,
-        "lod2": 1489
+        "lod0": 3569,
+        "lod1": 2835,
+        "lod2": 1281
       },
       "tris": {
-        "lod0": 8694,
-        "lod1": 2942,
-        "lod2": 1489
+        "lod0": 8375,
+        "lod1": 2835,
+        "lod2": 1281
       },
       "objects": 1,
       "materialSlots": 8
@@ -242,16 +267,22 @@
         1
       ],
       "floors": 2,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "heightM": 8.6,
       "polys": {
         "lod0": 2050,
-        "lod1": 1740,
-        "lod2": 1602
+        "lod1": 1743,
+        "lod2": 1613
       },
       "tris": {
         "lod0": 4743,
-        "lod1": 1740,
-        "lod2": 1602
+        "lod1": 1743,
+        "lod2": 1613
       },
       "objects": 1,
       "materialSlots": 8
@@ -265,16 +296,22 @@
         1
       ],
       "floors": 3,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "street",
+        "W": "service"
+      },
       "heightM": 12.6,
       "polys": {
         "lod0": 2749,
         "lod1": 2042,
-        "lod2": 1363
+        "lod2": 1352
       },
       "tris": {
         "lod0": 6038,
         "lod1": 2042,
-        "lod2": 1363
+        "lod2": 1352
       },
       "objects": 1,
       "materialSlots": 8
@@ -288,16 +325,22 @@
         1
       ],
       "floors": 6,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
       "heightM": 24.6,
       "polys": {
-        "lod0": 4530,
-        "lod1": 3424,
-        "lod2": 1772
+        "lod0": 4566,
+        "lod1": 3537,
+        "lod2": 2180
       },
       "tris": {
-        "lod0": 10138,
-        "lod1": 3424,
-        "lod2": 1772
+        "lod0": 10472,
+        "lod1": 3537,
+        "lod2": 2180
       },
       "objects": 1,
       "materialSlots": 8
@@ -311,16 +354,22 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 3708,
-        "lod1": 2954,
-        "lod2": 1864
+        "lod0": 3362,
+        "lod1": 2631,
+        "lod2": 1343
       },
       "tris": {
-        "lod0": 8746,
-        "lod1": 2954,
-        "lod2": 1864
+        "lod0": 7765,
+        "lod1": 2631,
+        "lod2": 1343
       },
       "objects": 1,
       "materialSlots": 8
@@ -334,16 +383,22 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "open",
+        "E": "party_wall",
+        "S": "open",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 2534,
-        "lod1": 2054,
-        "lod2": 1116
+        "lod0": 2478,
+        "lod1": 2000,
+        "lod2": 1084
       },
       "tris": {
-        "lod0": 6058,
-        "lod1": 2054,
-        "lod2": 1116
+        "lod0": 5895,
+        "lod1": 2000,
+        "lod2": 1084
       },
       "objects": 1,
       "materialSlots": 8
@@ -357,16 +412,22 @@
         1
       ],
       "floors": 8,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
       "heightM": 32.6,
       "polys": {
-        "lod0": 6892,
-        "lod1": 5075,
-        "lod2": 1982
+        "lod0": 6466,
+        "lod1": 4664,
+        "lod2": 1431
       },
       "tris": {
-        "lod0": 14985,
-        "lod1": 5075,
-        "lod2": 1982
+        "lod0": 13777,
+        "lod1": 4664,
+        "lod2": 1431
       },
       "objects": 1,
       "materialSlots": 8
@@ -380,16 +441,22 @@
         1
       ],
       "floors": 3,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
       "heightM": 12.6,
       "polys": {
-        "lod0": 3463,
-        "lod1": 2626,
-        "lod2": 1787
+        "lod0": 3247,
+        "lod1": 2391,
+        "lod2": 1208
       },
       "tris": {
-        "lod0": 7765,
-        "lod1": 2626,
-        "lod2": 1787
+        "lod0": 7052,
+        "lod1": 2391,
+        "lod2": 1208
       },
       "objects": 1,
       "materialSlots": 8
@@ -403,16 +470,22 @@
         1
       ],
       "floors": 13,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
       "heightM": 52.6,
       "polys": {
-        "lod0": 1339,
-        "lod1": 1191,
-        "lod2": 944
+        "lod0": 1318,
+        "lod1": 1155,
+        "lod2": 806
       },
       "tris": {
-        "lod0": 3534,
-        "lod1": 1191,
-        "lod2": 944
+        "lod0": 3429,
+        "lod1": 1155,
+        "lod2": 806
       },
       "objects": 1,
       "materialSlots": 8
@@ -426,16 +499,22 @@
         1
       ],
       "floors": 18,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 72.6,
       "polys": {
-        "lod0": 1652,
-        "lod1": 1591,
-        "lod2": 1289
+        "lod0": 1610,
+        "lod1": 1544,
+        "lod2": 1144
       },
       "tris": {
-        "lod0": 4791,
-        "lod1": 1591,
-        "lod2": 1289
+        "lod0": 4648,
+        "lod1": 1544,
+        "lod2": 1144
       },
       "objects": 1,
       "materialSlots": 8
@@ -449,39 +528,22 @@
         2
       ],
       "floors": 5,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 20.6,
       "polys": {
-        "lod0": 5996,
-        "lod1": 4739,
-        "lod2": 2186
+        "lod0": 5956,
+        "lod1": 4673,
+        "lod2": 1951
       },
       "tris": {
-        "lod0": 13998,
-        "lod1": 4739,
-        "lod2": 2186
-      },
-      "objects": 1,
-      "materialSlots": 8
-    },
-    {
-      "id": "brutalist_arcology_stack",
-      "archetype": "arcology_stack",
-      "style": "brutalist",
-      "cells": [
-        2,
-        2
-      ],
-      "floors": 15,
-      "heightM": 60.6,
-      "polys": {
-        "lod0": 8289,
-        "lod1": 7032,
-        "lod2": 4362
-      },
-      "tris": {
-        "lod0": 21150,
-        "lod1": 7032,
-        "lod2": 4362
+        "lod0": 13811,
+        "lod1": 4673,
+        "lod2": 1951
       },
       "objects": 1,
       "materialSlots": 8
@@ -495,16 +557,22 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "service",
+        "E": "party_wall",
+        "S": "street",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 756,
-        "lod1": 1105,
-        "lod2": 1071
+        "lod0": 724,
+        "lod1": 1011,
+        "lod2": 977
       },
       "tris": {
-        "lod0": 2269,
-        "lod1": 1105,
-        "lod2": 1071
+        "lod0": 2199,
+        "lod1": 1011,
+        "lod2": 977
       },
       "objects": 1,
       "materialSlots": 8
@@ -518,16 +586,22 @@
         1
       ],
       "floors": 2,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "heightM": 8.6,
       "polys": {
-        "lod0": 1750,
-        "lod1": 1410,
-        "lod2": 1163
+        "lod0": 1488,
+        "lod1": 1135,
+        "lod2": 662
       },
       "tris": {
-        "lod0": 4175,
-        "lod1": 1410,
-        "lod2": 1163
+        "lod0": 3353,
+        "lod1": 1135,
+        "lod2": 662
       },
       "objects": 1,
       "materialSlots": 8
@@ -541,16 +615,22 @@
         1
       ],
       "floors": 3,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "street",
+        "W": "service"
+      },
       "heightM": 12.6,
       "polys": {
-        "lod0": 2980,
-        "lod1": 2330,
-        "lod2": 1689
+        "lod0": 2646,
+        "lod1": 2012,
+        "lod2": 1091
       },
       "tris": {
-        "lod0": 6875,
-        "lod1": 2330,
-        "lod2": 1689
+        "lod0": 5945,
+        "lod1": 2012,
+        "lod2": 1091
       },
       "objects": 1,
       "materialSlots": 8
@@ -564,16 +644,22 @@
         1
       ],
       "floors": 6,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
       "heightM": 24.6,
       "polys": {
-        "lod0": 4084,
-        "lod1": 3128,
-        "lod2": 1461
+        "lod0": 3831,
+        "lod1": 2923,
+        "lod2": 1178
       },
       "tris": {
-        "lod0": 9252,
-        "lod1": 3128,
-        "lod2": 1461
+        "lod0": 8645,
+        "lod1": 2923,
+        "lod2": 1178
       },
       "objects": 1,
       "materialSlots": 8
@@ -587,16 +673,22 @@
         1
       ],
       "floors": 2,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 8.6,
       "polys": {
-        "lod0": 1811,
-        "lod1": 1589,
-        "lod2": 1468
+        "lod0": 1648,
+        "lod1": 1284,
+        "lod2": 1162
       },
       "tris": {
-        "lod0": 4272,
-        "lod1": 1589,
-        "lod2": 1468
+        "lod0": 3802,
+        "lod1": 1284,
+        "lod2": 1162
       },
       "objects": 1,
       "materialSlots": 8
@@ -610,16 +702,22 @@
         1
       ],
       "floors": 2,
+      "edges": {
+        "N": "open",
+        "E": "party_wall",
+        "S": "open",
+        "W": "party_wall"
+      },
       "heightM": 8.6,
       "polys": {
         "lod0": 1763,
         "lod1": 1304,
-        "lod2": 796
+        "lod2": 788
       },
       "tris": {
         "lod0": 3858,
         "lod1": 1304,
-        "lod2": 796
+        "lod2": 788
       },
       "objects": 1,
       "materialSlots": 8
@@ -633,16 +731,22 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "street",
+        "E": "service",
+        "S": "service",
+        "W": "service"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 4040,
-        "lod1": 3117,
-        "lod2": 1999
+        "lod0": 3422,
+        "lod1": 2498,
+        "lod2": 949
       },
       "tris": {
-        "lod0": 9246,
-        "lod1": 3117,
-        "lod2": 1999
+        "lod0": 7358,
+        "lod1": 2498,
+        "lod2": 949
       },
       "objects": 1,
       "materialSlots": 8
@@ -656,16 +760,22 @@
         1
       ],
       "floors": 1,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "street",
+        "W": "open"
+      },
       "heightM": 4.6,
       "polys": {
-        "lod0": 2499,
-        "lod1": 2925,
-        "lod2": 2629
+        "lod0": 2293,
+        "lod1": 2427,
+        "lod2": 2132
       },
       "tris": {
-        "lod0": 7110,
-        "lod1": 2925,
-        "lod2": 2629
+        "lod0": 6373,
+        "lod1": 2427,
+        "lod2": 2132
       },
       "objects": 1,
       "materialSlots": 8
@@ -679,16 +789,22 @@
         1
       ],
       "floors": 8,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
       "heightM": 32.6,
       "polys": {
-        "lod0": 1854,
-        "lod1": 1891,
-        "lod2": 1880
+        "lod0": 1678,
+        "lod1": 1357,
+        "lod2": 1191
       },
       "tris": {
-        "lod0": 4777,
-        "lod1": 1891,
-        "lod2": 1880
+        "lod0": 4083,
+        "lod1": 1357,
+        "lod2": 1191
       },
       "objects": 1,
       "materialSlots": 8
@@ -702,16 +818,22 @@
         1
       ],
       "floors": 13,
+      "edges": {
+        "N": "street",
+        "E": "party_wall",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 52.6,
       "polys": {
-        "lod0": 8918,
-        "lod1": 6750,
-        "lod2": 2522
+        "lod0": 8287,
+        "lod1": 6174,
+        "lod2": 1642
       },
       "tris": {
-        "lod0": 19954,
-        "lod1": 6750,
-        "lod2": 2522
+        "lod0": 18252,
+        "lod1": 6174,
+        "lod2": 1642
       },
       "objects": 1,
       "materialSlots": 8
@@ -725,39 +847,22 @@
         2
       ],
       "floors": 4,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "service",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 4718,
-        "lod1": 3719,
-        "lod2": 2300
+        "lod0": 4490,
+        "lod1": 3487,
+        "lod2": 1629
       },
       "tris": {
-        "lod0": 11021,
-        "lod1": 3719,
-        "lod2": 2300
-      },
-      "objects": 1,
-      "materialSlots": 8
-    },
-    {
-      "id": "ruined_arcology_stack",
-      "archetype": "arcology_stack",
-      "style": "ruined",
-      "cells": [
-        2,
-        2
-      ],
-      "floors": 8,
-      "heightM": 32.6,
-      "polys": {
-        "lod0": 9855,
-        "lod1": 7404,
-        "lod2": 3113
-      },
-      "tris": {
-        "lod0": 21924,
-        "lod1": 7404,
-        "lod2": 3113
+        "lod0": 10319,
+        "lod1": 3487,
+        "lod2": 1629
       },
       "objects": 1,
       "materialSlots": 8
@@ -771,16 +876,22 @@
         1
       ],
       "floors": 3,
+      "edges": {
+        "N": "service",
+        "E": "party_wall",
+        "S": "street",
+        "W": "party_wall"
+      },
       "heightM": 12.6,
       "polys": {
-        "lod0": 2431,
-        "lod1": 1972,
-        "lod2": 1429
+        "lod0": 2391,
+        "lod1": 1913,
+        "lod2": 1224
       },
       "tris": {
-        "lod0": 5818,
-        "lod1": 1972,
-        "lod2": 1429
+        "lod0": 5646,
+        "lod1": 1913,
+        "lod2": 1224
       },
       "objects": 1,
       "materialSlots": 8
@@ -794,16 +905,22 @@
         1
       ],
       "floors": 1,
+      "edges": {
+        "N": "service",
+        "E": "open",
+        "S": "service",
+        "W": "open"
+      },
       "heightM": 4.6,
       "polys": {
         "lod0": 3343,
-        "lod1": 4670,
-        "lod2": 4412
+        "lod1": 4655,
+        "lod2": 4398
       },
       "tris": {
-        "lod0": 9389,
-        "lod1": 4670,
-        "lod2": 4412
+        "lod0": 9388,
+        "lod1": 4655,
+        "lod2": 4398
       },
       "objects": 1,
       "materialSlots": 8
@@ -817,16 +934,22 @@
         1
       ],
       "floors": 2,
+      "edges": {
+        "N": "service",
+        "E": "service",
+        "S": "street",
+        "W": "service"
+      },
       "heightM": 8.6,
       "polys": {
         "lod0": 1583,
         "lod1": 1194,
-        "lod2": 916
+        "lod2": 904
       },
       "tris": {
-        "lod0": 3542,
+        "lod0": 3544,
         "lod1": 1194,
-        "lod2": 916
+        "lod2": 904
       },
       "objects": 1,
       "materialSlots": 8
@@ -840,58 +963,61 @@
         1
       ],
       "floors": 4,
+      "edges": {
+        "N": "street",
+        "E": "street",
+        "S": "party_wall",
+        "W": "party_wall"
+      },
       "heightM": 16.6,
       "polys": {
-        "lod0": 3250,
-        "lod1": 2638,
-        "lod2": 1910
+        "lod0": 2913,
+        "lod1": 2327,
+        "lod2": 1335
       },
       "tris": {
-        "lod0": 7858,
-        "lod1": 2638,
-        "lod2": 1910
+        "lod0": 6886,
+        "lod1": 2327,
+        "lod2": 1335
       },
       "objects": 1,
       "materialSlots": 8
     }
   ],
   "evidenceRenders": [
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-hab-block-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-gatehouse-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-watchtower-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-depot-shed-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-tower-slab-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-tower-spire-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-civic-hall-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-arcology-stack-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-industrial-hall-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-tank-farm-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-power-relay-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-colonial-corner-infill-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-hab-block-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-gatehouse-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-watchtower-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-depot-shed-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-tower-slab-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-tower-spire-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-civic-hall-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-arcology-stack-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-industrial-hall-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-tank-farm-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-power-relay-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-brutalist-corner-infill-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-hab-block-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-gatehouse-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-watchtower-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-depot-shed-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-tower-slab-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-tower-spire-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-civic-hall-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-arcology-stack-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-industrial-hall-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-tank-farm-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-power-relay-iso_ne.png",
-    "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\modules\\space_exploration\\assets\\source\\blender\\world-kits\\mf-building-hs-v1\\evidence\\mf-bldhs-ruined-corner-infill-iso_ne.png"
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-hab-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-gatehouse-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-watchtower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-depot-shed-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-tower-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-tower-spire-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-civic-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-industrial-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-tank-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-power-relay-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-colonial-corner-infill-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-hab-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-gatehouse-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-watchtower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-depot-shed-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-tower-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-tower-spire-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-civic-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-industrial-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-tank-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-power-relay-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-brutalist-corner-infill-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-hab-block-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-gatehouse-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-watchtower-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-depot-shed-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-tower-slab-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-tower-spire-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-civic-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-industrial-hall-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-tank-farm-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-power-relay-iso_ne.png",
+    "modules/space_exploration/assets/source/blender/world-kits/mf-building-hs-v1/evidence/mf-bldhs-ruined-corner-infill-iso_ne.png"
   ],
   "runtimeIntegration": {
     "state": "SOURCE_CANDIDATE"

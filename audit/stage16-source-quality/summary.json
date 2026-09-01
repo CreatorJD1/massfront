@@ -1,0 +1,40 @@
+{
+  "schema": "MASSFRONT_SOURCE_INVENTORY_SUMMARY_V1",
+  "generatedAt": "2026-08-31T00:34:30.843Z",
+  "root": "C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple",
+  "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+  "files": 148331,
+  "totalBytes": 35439467246,
+  "scanRaces": 1,
+  "hashes": {
+    "read": 275,
+    "reusedFromPriorCompleteInventory": 148052
+  },
+  "gitState": {
+    "ignored": 134357,
+    "tracked": 3132,
+    "unclassified": 10702,
+    "untracked": 140
+  },
+  "classes": {
+    "active_runtime": 960,
+    "authoring_source": 33233,
+    "derived_cache": 48147,
+    "superseded_release": 449,
+    "unknown": 65542
+  },
+  "dispositions": {
+    "regenerated": 48127,
+    "retained": 100204
+  },
+  "toolRegistry": {
+    "total": 469,
+    "registered": 299,
+    "unknownPreserved": 170
+  },
+  "selfReferenceOutputs": [
+    "audit/stage16-source-quality/source-inventory.jsonl",
+    "audit/stage16-source-quality/summary.json",
+    "audit/stage16-source-quality/tool-registry.json"
+  ]
+}

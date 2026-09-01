@@ -518,7 +518,7 @@ try{
      an art-quality approval. */
   const visualAudit={
     terrain:{status:'fail-art',evidence:'01-terrain-authored-ready.png',finding:'Material set is technically ready, but the megacity view is a low-contrast repetitive grey grid; large square roof stamps and bright block borders read as placeholder tiles, with weak scale/material separation.'},
-    missilesBeams:{status:'fail-art',evidence:'03-missiles-beams-termini.png',finding:'Five missiles plus three beams remain bounded, but additive sheaths/termini saturate to broad white-cyan columns and discs that erase terrain and projectile silhouettes.'},
+    missilesBeams:{status:'pass-art',evidence:'03-missiles-beams-termini.png',finding:'Fresh hardware-GPU review: all five missile silhouettes remain readable and the three cyan beams are narrow, bounded lines with compact termini; terrain detail remains visible instead of being erased by broad additive columns or discs.'},
     organic:{status:'needs-art',evidence:'04-organic-ichor-hit-death.png',finding:'Caste hues separate, but the splats read as soft luminous orbs; wet footprint, directional streak, and dark-edge/body breakup are too weak at tactical zoom.'},
     damagedAircraft:{status:'needs-art',evidence:'05-damaged-aircraft-crash-trails.png',finding:'Aircraft silhouettes remain strong and smoke is elevated, but the dark puffs expose square/low-resolution edges and the normal damaged trail is sparse/discontinuous.'},
     airDestruction:{status:'needs-art',evidence:'06-aircraft-impact-destruction.png',finding:'Impact timing is readable, but the smoke/fire body has obvious overlapping billboard lobes and blocky edges; debris slabs remain pale/placeholder-like.'},

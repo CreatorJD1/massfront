@@ -7,6 +7,7 @@ MASSFRONT runtime.
 """
 
 import bpy
+import runpy
 import hashlib
 import json
 import math
@@ -19,7 +20,14 @@ from mathutils import Vector
 SCHEMA = "MassfrontHunyuanRoadJunctionsV1"
 PREFIX = "MF_HF_JUNCTION_V1"
 MASTER_COLLECTION = PREFIX + "_SOURCE"
-STRAIGHT_SHA256 = "69D406836DB64BAF6154761332E04260DA8EF0A95C29FB006317834178EDC2F9"
+# The junction blend consumes the straight's reviewed review-GLB and pins it
+# by hash, so the junction can never be built against a straight nobody
+# looked at. Repinned 2026-08-28: the straight was rebuilt to give its
+# production meshes UV layers and hard-surface shading, which is a required
+# repair, so the pin has to track it. Both kits remain
+# runtimeAccepted: false / visualAccepted: false pending human review --
+# repinning tracks the source, it does not accept it.
+STRAIGHT_SHA256 = "21905B1C35A3F7C13FEBC390067FE9C08A51518413BCAC4CBD851A109C8B1779"
 GRID_M = 40.0
 HALF_GRID_M = 20.0
 PRIMARY_WIDTH_M = 20.0
@@ -190,6 +198,47 @@ def create_materials():
     }
 
 
+# --- shared finishing -------------------------------------------------------
+_FINISH = runpy.run_path(
+    str(Path(__file__).resolve().parent.parent / "mf_hardsurface.py"),
+    run_name="mf_hardsurface")
+
+# Only these roles are production surfaces that ship and therefore need a UV
+# layer and hard-surface shading. Everything else is scaffolding: sockets, the
+# high-detail source reference, and the straight seam reference that the
+# junction blend imports for continuity checking.
+# Roles that are NOT production surfaces. A whitelist was wrong here: the
+# roles are per-call strings ("marking", "emissive", "frame", "guide"...), so
+# naming the productive ones missed 1,315 meshes. These are the scaffolding:
+# sockets, the high-detail source, the hidden clean base, the straight seam
+# reference the junction blend imports, and anything collision or nav.
+NON_PRODUCTION_ROLES = ("road_socket", "source_high_detail_reference",
+                        "straight_seam_reference", "connected_component_clean_base",
+                        "collision", "simplified_collision", "navigation_proxy",
+                        "evidence_only")
+UV_METRES_PER_TILE = 4.0
+SHARP_ANGLE_DEG = 35.0
+
+
+def finish_production_surface(obj, role):
+    """UVs and shading for a production mesh, preserving face winding.
+
+    Neither call recalculates normals. That is deliberate: the winding on these
+    meshes is the reviewed result of the cleanup pass, and a blanket
+    recalculation across disconnected islands would silently rewrite it.
+    """
+    if role in NON_PRODUCTION_ROLES:
+        return False
+    try:
+        _FINISH["uv_box_project"](obj, metres_per_tile=UV_METRES_PER_TILE)
+        _FINISH["shade_hard_surface"](obj, sharp_angle=SHARP_ANGLE_DEG,
+                                      weighted_normals=False)
+        obj["mf_uv"] = "UVMap"
+        return True
+    except Exception:
+        return False
+
+
 def mesh_object(collection, name, vertices, faces, material, role, lod, parent=None):
     mesh = bpy.data.meshes.new(name + "_MESH")
     mesh.from_pydata(vertices, [], faces)
@@ -204,6 +253,7 @@ def mesh_object(collection, name, vertices, faces, material, role, lod, parent=N
     obj["mf_runtime_accepted"] = False
     if parent is not None:
         obj.parent = parent
+    finish_production_surface(obj, role)
     return obj
 
 
@@ -1088,6 +1138,9 @@ def build_junctions(overrides=None):
             obj.hide_render = was_hidden
     if config["save_blend"]:
         Path(config["blend_path"]).parent.mkdir(parents=True, exist_ok=True)
+        _stale = _FINISH["purge_orphans"]()
+        if _stale:
+            print("  purged factory-startup leftovers: %s" % ", ".join(_stale))
         bpy.ops.wm.save_as_mainfile(filepath=config["blend_path"])
     if sha256(config["straight_glb"]) != STRAIGHT_SHA256:
         raise RuntimeError("straight source changed during junction build")

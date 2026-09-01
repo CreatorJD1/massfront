@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "assetId": "syndicate-broker-lys-renn-v1",
+  "assetType": "character-source",
+  "character": "Broker Lys Renn",
+  "faction": "Syndicate Coalition",
+  "role": "Synthetic Prime",
+  "status": "SOURCE_ACCEPTED_RUNTIME_UNREGISTERED",
+  "runtimeReady": false,
+  "canonicalPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1",
+  "acceptedConfiguration": {
+    "characterAndHair": "Stage08 hair silhouette strict",
+    "body": "Stage04c width-only correction",
+    "face": "Stage07 strict face",
+    "neuralDevice": "V4 six-mesh library",
+    "footwear": "V2 removable eight-mesh flats",
+    "canonicalHeightM": 1.8034
+  },
+  "primaryArtifacts": [
+    {
+      "role": "authoringMaster",
+      "file": "syndicate-broker-lys-renn-v1.blend",
+      "bytes": 8847769,
+      "sha256": "b593c84cfc6016ac4c44f644c50e3d9694810bae11734d9b9213bd05179e4e24",
+      "lfs": true
+    },
+    {
+      "role": "vrmDeliverable",
+      "file": "deliverables/syndicate-broker-lys-renn-v1.vrm",
+      "bytes": 12959184,
+      "sha256": "6a331b132f43c7b6e8b4cfd9d52ad442e5a13ddb8b9fe785c7652ee74ed41407",
+      "lfs": true
+    },
+    {
+      "role": "derivedRestPoseStage",
+      "file": "derived/syndicate-broker-lys-renn-v1-stage.glb",
+      "bytes": 7197512,
+      "sha256": "a3b56f7d0edbe2887ca04a2c6a91558d7c74a2b66a89fda8f43d976e0fb5cb39",
+      "lfs": true
+    }
+  ],
+  "textures": [
+    {
+      "role": "bodySkin",
+      "file": "textures/body/LYS_STAGE06_BodySkin_RoseIvory.png",
+      "bytes": 650784,
+      "sha256": "75574be582c330a45606f3dfe5be4e0fcee934aed3a5ad98e242fb524eae1222",
+      "dimensions": [2048, 2048],
+      "mode": "RGBA"
+    },
+    {
+      "role": "suitBase",
+      "file": "textures/body/lys_renn_suit_base_4k.png",
+      "bytes": 74006,
+      "sha256": "0b004b7d33847ca26c2e30e131ebd80d8d228dffa35c2d734b4beafbb893a7b8",
+      "dimensions": [4096, 4096],
+      "mode": "RGBA"
+    },
+    {
+      "role": "circuitEmission",
+      "file": "textures/body/lys_renn_circuit_emission_4k.png",
+      "bytes": 1520171,
+      "sha256": "6f410e1fcdcf7f5ad8c2d103190eacff35631f3ff7a8fef29eb50a4f62bed1a4",
+      "dimensions": [4096, 4096],
+      "mode": "RGBA"
+    },
+    {
+      "role": "circuitMask",
+      "file": "textures/body/lys_renn_circuit_mask_4k.png",
+      "bytes": 528475,
+      "sha256": "e0e074c50f26ac6668e1ab6200184b6c297dcfeccfdff52d2288c5a29c283641",
+      "dimensions": [4096, 4096],
+      "mode": "L"
+    },
+    {
+      "role": "hairBack",
+      "file": "textures/hair/LYS_STAGE06_HairBack_MauveBrown.png",
+      "bytes": 164557,
+      "sha256": "6385e96c97c507d3b74478650c5dfc7098ae1a242b56358804e1898e85c69ee3",
+      "dimensions": [1024, 1024],
+      "mode": "RGBA"
+    },
+    {
+      "role": "ponytail",
+      "file": "textures/hair/LYS_STAGE06_Ponytail_MauveBrown.png",
+      "bytes": 146127,
+      "sha256": "9e9df2c45fd3100f4c3cb0c3a83578d3055a8519186b8b7bf3c2265de4bc71fa",
+      "dimensions": [512, 1024],
+      "mode": "RGBA"
+    },
+    {
+      "role": "faceSkinAndLips",
+      "file": "textures/face/LysRenn_Stage02c_SkinLips.png",
+      "bytes": 159653,
+      "sha256": "c93a19451e1742e86182e908ea411cd674d5ec0af6c972475ffc1445125ed077",
+      "dimensions": [1024, 1024],
+      "mode": "RGBA"
+    },
+    {
+      "role": "iris",
+      "file": "textures/face/LysRenn_Stage02c_Iris.png",
+      "bytes": 49840,
+      "sha256": "8abc069ee80fdf7d14a4961ee76d30bd49579f7bb89bc1045e96846c7ccd2a26",
+      "dimensions": [1024, 512],
+      "mode": "RGBA"
+    },
+    {
+      "role": "eyeHighlight",
+      "file": "textures/face/LysRenn_Stage02c_Highlight.png",
+      "bytes": 3049,
+      "sha256": "bee44ed997c02ca7981c4ace64be1a58f10831d0d8726f4b710ca4b2cd4676a7",
+      "dimensions": [1024, 512],
+      "mode": "RGBA"
+    },
+    {
+      "role": "brow",
+      "file": "textures/face/LysRenn_Stage02c_Brow.png",
+      "bytes": 4375,
+      "sha256": "0283d8cc25def6151b0c25584732a92f2a71f0f242dcc67941bfc946361de664",
+      "dimensions": [1024, 256],
+      "mode": "RGBA"
+    },
+    {
+      "role": "eyelash",
+      "file": "textures/face/LysRenn_Stage02c_Eyelash.png",
+      "bytes": 16062,
+      "sha256": "94b7002e40bceee7e50f84b48270b2cf5f51a588f34761dbb7bca1e3dff143cc",
+      "dimensions": [1024, 256],
+      "mode": "RGBA"
+    },
+    {
+      "role": "eyeline",
+      "file": "textures/face/LysRenn_Stage02c_Eyeline.png",
+      "bytes": 22918,
+      "sha256": "8eb305bc2a2890a342a9d5fdcb4a4a3ef6f55dad64623af1fb828982741f5c89",
+      "dimensions": [1024, 256],
+      "mode": "RGBA"
+    },
+    {
+      "role": "originalMouth",
+      "file": "textures/face/Original_Mouth_00_01.png",
+      "bytes": 46064,
+      "sha256": "2c80a4a3c10825836aaa1f9dc5547bd2d2b899384a4b224166bb5455e52393f7",
+      "dimensions": [512, 512],
+      "mode": "RGBA"
+    },
+    {
+      "role": "originalEyeWhite",
+      "file": "textures/face/Original_EyeWhite_07_06.png",
+      "bytes": 257295,
+      "sha256": "c4f5335865e1bd9bfceb3aa138b9a974aedcd47d2822af57aab88eab3970c5ea",
+      "dimensions": [1024, 512],
+      "mode": "RGBA"
+    }
+  ],
+  "validation": [
+    {
+      "role": "authoringValidation",
+      "file": "validation/syndicate-broker-lys-renn-v1-validation.json",
+      "bytes": 3399,
+      "sha256": "ed17d2f902b812ca4c059d731855d72056cca9e62270292e1537e128cc5ae7ee"
+    },
+    {
+      "role": "vrmRoundtripValidation",
+      "file": "validation/syndicate-broker-lys-renn-v1-vrm-roundtrip.json",
+      "bytes": 3191,
+      "sha256": "6f7911af375a816430c4c7209a1d54e37b623b25baec9ae2b800399271b29d9e"
+    },
+    {
+      "role": "proofSheet",
+      "file": "validation/syndicate-broker-lys-renn-v1-proof-sheet.png",
+      "bytes": 6356141,
+      "sha256": "ac3c8483ecbe9f932d17c5b39a2d0cf4b6e95c8488f3a3e0e75eb878ca4003d1",
+      "dimensions": [4096, 6448]
+    },
+    {
+      "role": "proofSheetSourceManifest",
+      "file": "validation/syndicate-broker-lys-renn-v1-proof-sheet.json",
+      "bytes": 6333,
+      "sha256": "f9ae0275767b7f01bd1dac01a60a87011690ded73a1337c784b9f29870f3b131"
+    }
+  ],
+  "documentation": {
+    "file": "README.md",
+    "bytes": 1682,
+    "sha256": "3fbbbbdc719163190528fface39a3854af547e44511b0319f355af4f37e4e2ee"
+  },
+  "packageFileCountExcludingManifest": 22,
+  "storage": {
+    "gitLfsExtensions": [".blend", ".vrm", ".glb", ".png"],
+    "vrmRule": "*.vrm filter=lfs diff=lfs merge=lfs -text"
+  },
+  "excluded": [
+    ".blend1 backups",
+    "Stage09 hair experiments",
+    "rejected neural-device revisions",
+    "superseded model stages",
+    "temporary and smoketest renders",
+    "UV previews and non-production texture variants"
+  ]
+}

@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "generator": "build_final_character_proof_sheet.py",
+  "deterministic": true,
+  "sourceDirectoryName": "Broker_Lys_Renn_FINAL_master",
+  "sourceCount": 24,
+  "sources": [
+    {
+      "file": "final_full_front.png",
+      "label": "FRONT",
+      "sha256": "d9efebe164f798a42a0263c8e71fadbc9e487d49e8e459e3ea285be926090eac",
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "file": "final_full_three_quarter.png",
+      "label": "THREE-QUARTER",
+      "sha256": "615a9584576b1af04beee29b23fb2f1254e0252ca4ec6d63d2a944d7afb988f8",
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "file": "final_full_back.png",
+      "label": "BACK",
+      "sha256": "4d2d1d5b6faede283a4bb9e6e1dc9a0a8885c64238f927148a705d3a312441b7",
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "file": "final_full_left.png",
+      "label": "LEFT PROFILE",
+      "sha256": "1783e13040488db6f148f7df667d3f1198f380d7b980bd4d45d2497992418219",
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "file": "final_full_right.png",
+      "label": "RIGHT PROFILE",
+      "sha256": "5079cea19ec2e2a79605a5238ec8fa1df5c0f6cda7e566e7083db30fcdf258f1",
+      "dimensions": [
+        1024,
+        1536
+      ]
+    },
+    {
+      "file": "final_head_front.png",
+      "label": "HEAD FRONT",
+      "sha256": "b1eab4ceeb70b0af39c5e315aa1096d215c6e863da21343ccd11d9bd10a07fbb",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_head_three_quarter.png",
+      "label": "HEAD THREE-QUARTER",
+      "sha256": "d34edf570231021db1a5e896e06242309cb0005a296bd55869447819fdd4e83b",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_head_back.png",
+      "label": "HEAD BACK",
+      "sha256": "291f4994b89737d1fa72cbd9a05a7a8c564a8139b15ac57aef7feb558b8deedd",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_device_profile.png",
+      "label": "NEURAL DEVICE PROFILE",
+      "sha256": "7a87660550d7994b359eb0a979b8854de939f17b67d2fbccc7cd97d8c564ef01",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_flats_front.png",
+      "label": "FLATS FRONT",
+      "sha256": "4a8015b3c7f6db3d39a649c4c73551e56acc48e0f9ed2e8e57d5a457c48bc5b5",
+      "dimensions": [
+        1200,
+        900
+      ]
+    },
+    {
+      "file": "final_flats_three_quarter.png",
+      "label": "FLATS THREE-QUARTER",
+      "sha256": "d1e3a4fc4e3d496524be946a379f2571a5f6c542e42e045cf928cdeb827888df",
+      "dimensions": [
+        1200,
+        900
+      ]
+    },
+    {
+      "file": "final_flats_side.png",
+      "label": "FLATS SIDE",
+      "sha256": "efce7c2bf84bb86242f56c8f4db511f1b2a59c024b9254eea78bc80e1176a9a0",
+      "dimensions": [
+        1200,
+        900
+      ]
+    },
+    {
+      "file": "final_expression_neutral.png",
+      "label": "01  NEUTRAL",
+      "sha256": "d91965e568ce511b2ca1c9b5c57a9650a7393c39557c0e9c0851ecffb4f58edb",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_angry.png",
+      "label": "02  ANGRY",
+      "sha256": "ea663026ad78e624dda9ffa5737ad4ac116557ce9a4e9f2a0635681104787441",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_focused.png",
+      "label": "03  FOCUSED",
+      "sha256": "cb041e83efd833a4ee7d007db5f16a23976f175a3ef507fd4f39e9cd71581c07",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_determined.png",
+      "label": "04  DETERMINED",
+      "sha256": "a63a1907e46fc418ea637d7f797eaa1a6a0fc43f28947ea70e242395cf17f8a4",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_surprised.png",
+      "label": "05  SURPRISED",
+      "sha256": "a035863993dadb5c50fbfa2433a767b95522ad227ab352d773900863626039f2",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_smirk.png",
+      "label": "06  SMIRK",
+      "sha256": "da01305ad81762d77b4705086abcba9a922d59665f373a65ec9be4625af967ad",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_tired.png",
+      "label": "07  TIRED",
+      "sha256": "7af38c315139c96f675429b2ea4eecfa3404b803f54bd21f27eddf9347b1021e",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_shocked.png",
+      "label": "08  SHOCKED",
+      "sha256": "f48900e0cf226f3bf47b32be8346603bf690706a22176747a2a601a9f36eb115",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_worried.png",
+      "label": "09  WORRIED",
+      "sha256": "224c4b2eae8ead052f35606fede7191a023213f5c96b18ef9f4d8e4ed2ec9d89",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_commanding.png",
+      "label": "10  COMMANDING",
+      "sha256": "383fa359b34b45d7bfe8858989f53890de95e4977c6813ab5c2d7659e5f2b95e",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_soft_smile.png",
+      "label": "11  SOFT SMILE",
+      "sha256": "24aca3ca9b601b6924610e6c35784f922016e69d848a1d0a62fc4fe23a6d2f9e",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    },
+    {
+      "file": "final_expression_pain.png",
+      "label": "12  PAIN",
+      "sha256": "956d906a68967e57860a0dfd00db7392389f45b5459a820e2ad10fbe65f3ee47",
+      "dimensions": [
+        1200,
+        1200
+      ]
+    }
+  ],
+  "output": {
+    "file": "Broker_Lys_Renn_FINAL_proof_sheet.png",
+    "sha256": "ac3c8483ecbe9f932d17c5b39a2d0cf4b6e95c8488f3a3e0e75eb878ca4003d1",
+    "dimensions": [
+      4096,
+      6448
+    ],
+    "mode": "RGB"
+  },
+  "checks": {
+    "all24RequiredRendersPresent": true,
+    "fiveBodyViews": true,
+    "fourHeadDeviceViews": true,
+    "threeFootwearViews": true,
+    "twelveExpressions": true
+  },
+  "status": "PASS"
+}

@@ -151,7 +151,12 @@
         "lod1": 650,
         "lod2": 482
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 44,
+        "lod1": 47,
+        "lod2": 19
+      }
     },
     {
       "id": "corner",
@@ -245,7 +250,12 @@
         "lod1": 608,
         "lod2": 482
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 36,
+        "lod1": 40,
+        "lod2": 19
+      }
     },
     {
       "id": "t_junction",
@@ -351,7 +361,12 @@
         "lod1": 870,
         "lod2": 564
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 62,
+        "lod1": 73,
+        "lod2": 22
+      }
     },
     {
       "id": "x_plaza",
@@ -469,7 +484,12 @@
         "lod1": 1024,
         "lod2": 646
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 60,
+        "lod1": 88,
+        "lod2": 25
+      }
     },
     {
       "id": "endcap",
@@ -551,7 +571,12 @@
         "lod1": 532,
         "lod2": 400
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 40,
+        "lod1": 38,
+        "lod2": 16
+      }
     },
     {
       "id": "primary_local_adapter",
@@ -588,7 +613,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 4492,
+          "triangles": 4480,
           "rejectedGreyboxTriangles": 340,
           "triangleDelta": 3368
         },
@@ -635,7 +660,7 @@
       "collisionTriangles": 28,
       "gateClearanceM": null,
       "tris": {
-        "lod0": 4492,
+        "lod0": 4480,
         "lod1": 1144,
         "lod2": 820
       },
@@ -644,7 +669,12 @@
         "lod1": 640,
         "lod2": 478
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 45,
+        "lod1": 46,
+        "lod2": 19
+      }
     },
     {
       "id": "gate",
@@ -744,7 +774,12 @@
         "lod1": 958,
         "lod2": 560
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 51,
+        "lod1": 65,
+        "lod2": 22
+      }
     }
   ],
   "exports": [

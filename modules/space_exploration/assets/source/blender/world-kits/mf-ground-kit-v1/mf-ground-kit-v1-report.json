@@ -166,7 +166,12 @@
         "lod1": 6,
         "lod2": 6
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 1,
+        "lod2": 1
+      }
     },
     {
       "id": "colonial_plaza_corner",
@@ -209,7 +214,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 512
+          "triangles": 544
         },
         {
           "lod": 1,
@@ -232,16 +237,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 512,
+        "lod0": 544,
         "lod1": 172,
         "lod2": 92
       },
       "polys": {
-        "lod0": 190,
+        "lod0": 191,
         "lod1": 70,
         "lod2": 38
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_plaza_edge",
@@ -317,7 +327,12 @@
         "lod1": 68,
         "lod2": 22
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 3
+      }
     },
     {
       "id": "colonial_plaza_steps",
@@ -360,7 +375,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1056
+          "triangles": 1043
         },
         {
           "lod": 1,
@@ -386,16 +401,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1056,
+        "lod0": 1043,
         "lod1": 252,
         "lod2": 160
       },
       "polys": {
-        "lod0": 400,
+        "lod0": 395,
         "lod1": 102,
         "lod2": 64
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 13,
+        "lod2": 8
+      }
     },
     {
       "id": "colonial_plaza_ramp",
@@ -470,7 +490,12 @@
         "lod1": 54,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 9,
+        "lod2": 7
+      }
     },
     {
       "id": "colonial_plaza_vent",
@@ -513,7 +538,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 198
+          "triangles": 92
         },
         {
           "lod": 1,
@@ -539,16 +564,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 198,
+        "lod0": 92,
         "lod1": 36,
         "lod2": 24
       },
       "polys": {
-        "lod0": 43,
+        "lod0": 33,
         "lod1": 18,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 3,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_road_straight",
@@ -622,7 +652,12 @@
         "lod1": 119,
         "lod2": 35
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 19,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_road_corner",
@@ -696,7 +731,12 @@
         "lod1": 120,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 20,
+        "lod2": 6
+      }
     },
     {
       "id": "colonial_road_tee",
@@ -770,7 +810,12 @@
         "lod1": 137,
         "lod2": 35
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 22,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_road_cross",
@@ -843,7 +888,12 @@
         "lod1": 154,
         "lod2": 34
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 24,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_service_trench",
@@ -886,7 +936,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 521
+          "triangles": 279
         },
         {
           "lod": 1,
@@ -911,16 +961,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 521,
+        "lod0": 279,
         "lod1": 168,
         "lod2": 24
       },
       "polys": {
-        "lod0": 116,
+        "lod0": 90,
         "lod1": 72,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 10,
+        "lod2": 2
+      }
     },
     {
       "id": "colonial_landing_pad",
@@ -995,7 +1050,12 @@
         "lod1": 72,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 12,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_plaza_deck",
@@ -1068,7 +1128,12 @@
         "lod1": 6,
         "lod2": 6
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 1,
+        "lod2": 1
+      }
     },
     {
       "id": "brutalist_plaza_corner",
@@ -1144,7 +1209,12 @@
         "lod1": 70,
         "lod2": 38
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_plaza_edge",
@@ -1219,7 +1289,12 @@
         "lod1": 68,
         "lod2": 22
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 3
+      }
     },
     {
       "id": "brutalist_plaza_steps",
@@ -1262,7 +1337,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1056
+          "triangles": 1043
         },
         {
           "lod": 1,
@@ -1288,16 +1363,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 1056,
+        "lod0": 1043,
         "lod1": 252,
         "lod2": 160
       },
       "polys": {
-        "lod0": 402,
+        "lod0": 397,
         "lod1": 102,
         "lod2": 64
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 13,
+        "lod2": 8
+      }
     },
     {
       "id": "brutalist_plaza_ramp",
@@ -1372,7 +1452,12 @@
         "lod1": 54,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 9,
+        "lod2": 7
+      }
     },
     {
       "id": "brutalist_plaza_vent",
@@ -1415,7 +1500,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 166
+          "triangles": 78
         },
         {
           "lod": 1,
@@ -1441,16 +1526,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 166,
+        "lod0": 78,
         "lod1": 36,
         "lod2": 24
       },
       "polys": {
-        "lod0": 47,
+        "lod0": 34,
         "lod1": 18,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 3,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_road_straight",
@@ -1524,7 +1614,12 @@
         "lod1": 119,
         "lod2": 35
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 19,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_road_corner",
@@ -1598,7 +1693,12 @@
         "lod1": 120,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 20,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_road_tee",
@@ -1672,7 +1772,12 @@
         "lod1": 137,
         "lod2": 35
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 22,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_road_cross",
@@ -1715,7 +1820,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 368
+          "triangles": 397
         },
         {
           "lod": 1,
@@ -1736,16 +1841,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 368,
+        "lod0": 397,
         "lod1": 308,
         "lod2": 68
       },
       "polys": {
-        "lod0": 134,
+        "lod0": 136,
         "lod1": 154,
         "lod2": 34
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 24,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_service_trench",
@@ -1788,7 +1898,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 453
+          "triangles": 283
         },
         {
           "lod": 1,
@@ -1813,16 +1923,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 453,
+        "lod0": 283,
         "lod1": 168,
         "lod2": 24
       },
       "polys": {
-        "lod0": 102,
+        "lod0": 90,
         "lod1": 72,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 10,
+        "lod2": 2
+      }
     },
     {
       "id": "brutalist_landing_pad",
@@ -1897,7 +2012,12 @@
         "lod1": 72,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 12,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_plaza_deck",
@@ -1970,7 +2090,12 @@
         "lod1": 6,
         "lod2": 6
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 1,
+        "lod2": 1
+      }
     },
     {
       "id": "ruined_plaza_corner",
@@ -2013,7 +2138,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 592
+          "triangles": 589
         },
         {
           "lod": 1,
@@ -2036,16 +2161,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 592,
+        "lod0": 589,
         "lod1": 172,
         "lod2": 92
       },
       "polys": {
-        "lod0": 192,
+        "lod0": 190,
         "lod1": 70,
         "lod2": 38
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_plaza_edge",
@@ -2120,7 +2250,12 @@
         "lod1": 68,
         "lod2": 22
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 8,
+        "lod2": 3
+      }
     },
     {
       "id": "ruined_plaza_steps",
@@ -2163,7 +2298,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 998
+          "triangles": 983
         },
         {
           "lod": 1,
@@ -2189,16 +2324,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 998,
+        "lod0": 983,
         "lod1": 252,
         "lod2": 160
       },
       "polys": {
-        "lod0": 394,
+        "lod0": 389,
         "lod1": 102,
         "lod2": 64
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 13,
+        "lod2": 8
+      }
     },
     {
       "id": "ruined_plaza_ramp",
@@ -2241,7 +2381,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 743
+          "triangles": 734
         },
         {
           "lod": 1,
@@ -2264,16 +2404,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 743,
+        "lod0": 734,
         "lod1": 108,
         "lod2": 84
       },
       "polys": {
-        "lod0": 275,
+        "lod0": 274,
         "lod1": 54,
         "lod2": 42
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 9,
+        "lod2": 7
+      }
     },
     {
       "id": "ruined_plaza_vent",
@@ -2316,7 +2461,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 220
+          "triangles": 112
         },
         {
           "lod": 1,
@@ -2342,16 +2487,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 220,
+        "lod0": 112,
         "lod1": 36,
         "lod2": 24
       },
       "polys": {
-        "lod0": 50,
+        "lod0": 39,
         "lod1": 18,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 3,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_road_straight",
@@ -2425,7 +2575,12 @@
         "lod1": 119,
         "lod2": 35
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 19,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_road_corner",
@@ -2499,7 +2654,12 @@
         "lod1": 120,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 20,
+        "lod2": 6
+      }
     },
     {
       "id": "ruined_road_tee",
@@ -2573,7 +2733,12 @@
         "lod1": 137,
         "lod2": 35
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 22,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_road_cross",
@@ -2616,7 +2781,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 385
+          "triangles": 415
         },
         {
           "lod": 1,
@@ -2637,16 +2802,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 385,
+        "lod0": 415,
         "lod1": 308,
         "lod2": 68
       },
       "polys": {
-        "lod0": 135,
+        "lod0": 137,
         "lod1": 154,
         "lod2": 34
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 24,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_service_trench",
@@ -2689,7 +2859,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 406
+          "triangles": 283
         },
         {
           "lod": 1,
@@ -2714,16 +2884,21 @@
         "triangles": 12
       },
       "tris": {
-        "lod0": 406,
+        "lod0": 283,
         "lod1": 168,
         "lod2": 24
       },
       "polys": {
-        "lod0": 109,
+        "lod0": 91,
         "lod1": 72,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 10,
+        "lod2": 2
+      }
     },
     {
       "id": "ruined_landing_pad",
@@ -2798,7 +2973,12 @@
         "lod1": 72,
         "lod2": 12
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 12,
+        "lod2": 2
+      }
     }
   ],
   "exports": [

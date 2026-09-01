@@ -97,7 +97,11 @@ mfUiEventRoot.addEventListener('pointerdown',ev=>{
   /* Destructive two-step actions still need two COMPLETED taps. A second
      pointerdown inside the hardware-bounce window is never confirmation, even
      on the same control; the normal 2.6-3s confirmation window remains intact. */
-  if(mfUiLastTarget&&now-mfUiLastAt<180&&(el!==mfUiLastTarget||risk==='destructive')){
+  /* Never spend a benign menu/navigation tap on the debounce window left by
+     another control. That made a fast FEED-close → BUILD tap appear dead even
+     though neither action could damage state. Risky actions still require a
+     clean contact, and destructive confirmation can never be hardware bounce. */
+  if(mfUiLastTarget&&now-mfUiLastAt<180&&risk!=='benign'){
     mfUiBlockedPointers.add(pid);mfUiSafetyAudit.bounceBlocks++;ev.preventDefault();ev.stopImmediatePropagation();return;
   }
   /* Production/build cards own a release/drag contract in hud.js (build cards
@@ -426,7 +430,7 @@ function orderMove(wx,wy,patrol,retreat){
   /* Retreat/move-only is ustate 1: sim skips acquisition and will not chase a
      leftover lock. Attack-move stays ustate 2. Double-tap ground passes
      `retreat` so the A-MOVE toggle is not required to break contact. */
-  const moveOnly=!patrol&&(retreat||moveMode);let routeField=-1;
+  const moveOnly=!patrol&&(retreat||moveMode),routeFields={};let routeField=-1;
   for(let k=0;k<sel.length;k++){
     const i=sel[k],T=TYPES[utype[i]],rawx=targets[k].x,rawy=targets[k].y;
     const legal=T.naval?(findWater(rawx,rawy)||[ux[i],uy[i]]):T.air?[rawx,rawy]:findLand(rawx,rawy);
@@ -436,7 +440,16 @@ function orderMove(wx,wy,patrol,retreat){
     /* A-MOVE/patrol keep the click as hull goal while shooting. Retreat/MOVE
        must not: umarch is fire-on-the-move, the opposite of breaking contact. */
     umarch[i]=moveOnly?0:1;
-    ufield[i]=T.air?-1:requestField(tx,ty,!!T.naval,mfNavUnitClearance(T)); uhold[i]=0;
+    /* One strategic route per movement/clearance cohort. Exact formation
+       slots stay in utx/uty and take over only for the measured final approach.
+       Deferred creation makes pointer release acknowledgement independent of
+       the 15-25ms full-grid flood measured on target hardware. */
+    const clear=mfNavUnitClearance(T),routeKey=(T.naval?'w':'g')+clear;
+    if(!T.air&&routeFields[routeKey]==null){
+      const strategic=T.naval?(findWater(wx,wy)||legal):findLand(wx,wy);
+      routeFields[routeKey]=requestField(strategic[0],strategic[1],!!T.naval,clear,true);
+    }
+    ufield[i]=T.air?-1:routeFields[routeKey]; uhold[i]=0;
     if(routeField<0&&ufield[i]>=0)routeField=ufield[i];
     uPatrolRoute[i]=-1;uPatrolStep[i]=0;
     /* A direct order replaces the plan, it does not append to it. Appending is
@@ -512,11 +525,21 @@ function patrolTargetRows(sel,pts,formId){
   }
   return targets;
 }
-function domainOrderPoint(i,P){
+function domainOrderPoint(i,P,strategic,routeFields){
   const T=TYPES[utype[i]];
   if(T.air)return {x:P.x,y:P.y,field:-1};
   const L=T.naval?(findWater(P.x,P.y)||[ux[i],uy[i]]):findLand(P.x,P.y);
-  return {x:L[0],y:L[1],field:requestField(L[0],L[1],!!T.naval,mfNavUnitClearance(T))};
+  const clear=mfNavUnitClearance(T);
+  let field=-1;
+  if(routeFields){
+    const key=(T.naval?'w':'g')+clear;
+    if(routeFields[key]==null){
+      const S=strategic||P,SL=T.naval?(findWater(S.x,S.y)||L):findLand(S.x,S.y);
+      routeFields[key]=requestField(SL[0],SL[1],!!T.naval,clear,true);
+    }
+    field=routeFields[key];
+  }else field=requestField(L[0],L[1],!!T.naval,clear);
+  return {x:L[0],y:L[1],field};
 }
 /* Prune generation-stale handles and compact the remaining slots. Leaving a
    dead unit's hole in every waypoint gradually turns a damaged platoon into a
@@ -527,9 +550,9 @@ function refreshPatrolRoute(ri,force){
   if(!live.length){patrolRoutes[ri]=null;return false;}
   if(force||live.length!==R.members.length){
     const sel=live.map(e=>e[0]);R.members=live;R.targets=patrolTargetRows(sel,R.pts,R.form);
-    const step=R.step==null?1:R.step;
+    const step=R.step==null?1:R.step,routeFields={};
     for(let k=0;k<sel.length;k++){
-      const i=sel[k],P=domainOrderPoint(i,R.targets[step][k]);uPatrolSlot[i]=k;uPatrolStep[i]=step;
+      const i=sel[k],P=domainOrderPoint(i,R.targets[step][k],R.pts[step],routeFields);uPatrolSlot[i]=k;uPatrolStep[i]=step;
       utx[i]=P.x;uty[i]=P.y;ufield[i]=P.field;
     }
   }
@@ -566,11 +589,11 @@ function tickPatrolRoutes(dt){
     R.waitT=arrived>=need?(R.waitT||0)+dt:0;
     if(arrived===live||R.waitT>=1.1||(R.legT>22&&arrived>=Math.ceil(live*.6))){
       R.step=(step+1)%R.targets.length;R.legT=0;R.waitT=0;
-      const next=R.targets[R.step];
+      const next=R.targets[R.step],routeFields={};
       for(const e of R.members){
         const i=e[0];if(!ualive[i]||ugen[i]!==e[1]||uPatrolRoute[i]!==ri)continue;
         const raw=next[uPatrolSlot[i]];if(!raw)continue;
-        const P=domainOrderPoint(i,raw);
+        const P=domainOrderPoint(i,raw,R.pts[R.step],routeFields);
         uPatrolStep[i]=R.step;utx[i]=P.x;uty[i]=P.y;ufield[i]=P.field;
       }
       R.pulse=performance.now()+1100;
@@ -587,8 +610,9 @@ function commitPatrolDraft(){
   const pts=patrolDraft.pts.slice(),targets=patrolTargetRows(sel,pts,patrolDraft.form);
   const ri=patrolRoutes.length;
   patrolRoutes.push({pts,targets,form:patrolDraft.form,members:refs,step:1,legT:0,waitT:0,gcT:.45,created:performance.now()});
+  const routeFields={};
   for(let k=0;k<sel.length;k++){
-    const i=sel[k],P=domainOrderPoint(i,targets[1][k]);
+    const i=sel[k],P=domainOrderPoint(i,targets[1][k],pts[1],routeFields);
     uPatrolRoute[i]=ri;uPatrolStep[i]=1;uPatrolSlot[i]=k;uMoveCohort[i]=-1;
     queueClear(i);uGuard[i]=-1;
     ustate[i]=5;utgt[i]=-1;utgtg[i]=-1;uhold[i]=0;umarch[i]=1;ufield[i]=P.field;utx[i]=P.x;uty[i]=P.y;
@@ -936,6 +960,17 @@ function pickUnit(wx,wy){
 function mfPointerPickAllowance(pointerType){
   return pointerType==='mouse'?6:pointerType==='pen'?8:10;
 }
+let mfPointerMaxSpanValue=48,mfPointerMaxSpanTypes=-1;
+const mfPickerPerf={calls:0,lastMs:0,maxMs:0,totalMs:0,buildingCandidates:0};
+function mfPointerMaxSpan(){
+  if(mfPointerMaxSpanTypes===TYPES.length)return mfPointerMaxSpanValue;
+  let span=48;
+  for(let k=0;k<TYPES.length;k++)if(TYPES[k])span=Math.max(span,TYPES[k].size*(TYPES[k].vscale||1)*3.4);
+  mfPointerMaxSpanTypes=TYPES.length;mfPointerMaxSpanValue=span;return span;
+}
+function mfPickerDiagnostics(){
+  return {...mfPickerPerf,averageMs:mfPickerPerf.calls?mfPickerPerf.totalMs/mfPickerPerf.calls:0};
+}
 function mfPointerSegDist2(px,py,ax,ay,bx,by){
   const dx=bx-ax,dy=by-ay,dd=dx*dx+dy*dy;
   const t=dd>1e-8?clamp(((px-ax)*dx+(py-ay)*dy)/dd,0,1):0;
@@ -1004,19 +1039,17 @@ function mfPointerStackMetric(lead,sx,sy,allow){
 }
 function pickUnitPointer(wx,wy,sx,sy,pointerType){
   const allow=mfPointerPickAllowance(pointerType),wp=Math.max(.01,orthoSpan/Math.max(1,VH));
-  let maxSpan=48;
-  for(let k=0;k<TYPES.length;k++) if(TYPES[k]) maxSpan=Math.max(maxSpan,TYPES[k].size*(TYPES[k].vscale||1)*3.4);
   /* Broad only: the result cannot be accepted until its projected hull hits. */
-  const broad=maxSpan+allow*wp+48;
+  const broad=mfPointerMaxSpan()+allow*wp+48;
   let own=-1,enemy=-1,om=Infinity,em=Infinity;
-  const stackTeams=new Set([typeof mfLocalTeam==='function'?mfLocalTeam():0]);
+  const stackTeams=[typeof mfLocalTeam==='function'?mfLocalTeam():0];
   const take=(j,m)=>{
     if(!isFinite(m)) return;
     if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0){ if(m<om-1e-9||(Math.abs(m-om)<=1e-9&&(own<0||j<own))){om=m;own=j;} }
     else if(fogEntityVisible(uteam[j],ux[j],uy[j])&&(m<em-1e-9||(Math.abs(m-em)<=1e-9&&(enemy<0||j<enemy)))){em=m;enemy=j;}
   };
   forUnitsIn(wx,wy,broad,j=>{
-    stackTeams.add(uteam[j]);
+    if(stackTeams.indexOf(uteam[j])<0)stackTeams.push(uteam[j]);
     if(!(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0)&&!fogEntityVisible(uteam[j],ux[j],uy[j])) return;
     if(typeof mfIconStackSkip==='function'&&mfIconStackSkip(j)) return;
     take(j,mfPointerUnitMetric(j,sx,sy,allow));
@@ -1033,9 +1066,12 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
    their established precedence over parked friendly units; a visible enemy
    unit remains attackable over a structure when a force is selected. */
 function pickPointerEntities(wx,wy,sx,sy,pointerType){
+  const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
   const pk=pickUnitPointer(wx,wy,sx,sy,pointerType),b=pickBld(wx,wy,sx,sy);
   if(b>=0&&blds[b]&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[b]):blds[b].team===0)) pk.own=-1;
   pk.bld=b;
+  if(t0){const ms=performance.now()-t0;mfPickerPerf.calls++;mfPickerPerf.lastMs=ms;
+    mfPickerPerf.totalMs+=ms;mfPickerPerf.maxMs=Math.max(mfPickerPerf.maxMs,ms);}
   return pk;
 }
 /* Structure placement is rectangle/rotation aware, but selection used the
@@ -1091,23 +1127,41 @@ function bldScreenPick(B,sx,sy){
   for(let i=0;i<4;i++) if(screenQuadHit(sx,sy,[base[i],base[(i+1)&3],top[(i+1)&3],top[i]])) return true;
   return false;
 }
+let mfBldPickMarks=new Uint32Array(0),mfBldPickSerial=0;
+function mfForBldsNear(x,y,rad,fn){
+  if(typeof bGrid==='undefined'||typeof BCS!=='number'||typeof BGW!=='number'||!bGrid){
+    for(let b=0;b<blds.length;b++)fn(b);return;
+  }
+  if(mfBldPickMarks.length<blds.length)mfBldPickMarks=new Uint32Array(Math.max(64,blds.length*2));
+  mfBldPickSerial=(mfBldPickSerial+1)>>>0;
+  if(!mfBldPickSerial){mfBldPickMarks.fill(0);mfBldPickSerial=1;}
+  const x0=clamp((x-rad)/BCS|0,0,BGW-1),x1=clamp((x+rad)/BCS|0,0,BGW-1),
+    y0=clamp((y-rad)/BCS|0,0,BGW-1),y1=clamp((y+rad)/BCS|0,0,BGW-1);
+  for(let gy=y0;gy<=y1;gy++)for(let gx=x0;gx<=x1;gx++){
+    const cell=bGrid[gy*BGW+gx];if(!cell)continue;
+    for(const b of cell)if(b>=0&&b<blds.length&&mfBldPickMarks[b]!==mfBldPickSerial){
+      mfBldPickMarks[b]=mfBldPickSerial;mfPickerPerf.buildingCandidates++;fn(b);
+    }
+  }
+}
 function pickBld(wx,wy,sx,sy){
   const pad=clamp((orthoSpan||800)*.01,10,22);
   let world=-1,worldD=Infinity,screen=-1,screenD=Infinity;
-  for(let b=0;b<blds.length;b++){
+  const broad=pad+Math.max(260,(orthoSpan||800)*.04);
+  mfForBldsNear(wx,wy,broad,b=>{
     const B=blds[b];
-    if(!B||!B.alive||!fogEntityVisible(B.team,B.x,B.y)) continue;
+    if(!B||!B.alive||!fogEntityVisible(B.team,B.x,B.y)) return;
     const d=dist2(wx,wy,B.x,B.y);
     if(bldWorldPick(B,wx,wy,pad)){
       if(d<worldD){ world=b; worldD=d; }
-      continue;
+      return;
     }
     if(sx!=null&&sy!=null&&bldScreenPick(B,sx,sy)){
       const P=w2s(B.x,B.y,(typeof terrainH==='function'?terrainH(B.x,B.y):0)+((BT[B.type]||{}).size||B.r*2||24)*.68);
       const sd=dist2(sx,sy,P[0],P[1]);
       if(sd<screenD){ screen=b; screenD=sd; }
     }
-  }
+  });
   return world>=0?world:screen;
 }
 
@@ -1278,7 +1332,8 @@ const TAP_JITTER_MS=220, TAP_JITTER_PX=28;
 cv.addEventListener('pointerdown',e=>{
   try{ cv.setPointerCapture(e.pointerId); }catch(_){}
   const rec={x:e.clientX,y:e.clientY,sx:e.clientX,sy:e.clientY,moved:false,held:false,
-             shift:!!e.shiftKey,pointerType:e.pointerType||'touch',t:performance.now()};
+             shift:!!e.shiftKey,pointerType:e.pointerType||'touch',t:performance.now(),
+             eventT:isFinite(e.timeStamp)?e.timeStamp:performance.now()};
   ptrs.set(e.pointerId,rec);
   if(aiming===5&&ptrs.size===1){
     const [bwx,bwy]=s2w(e.clientX,e.clientY);setArtBarragePreview(bwx,bwy);
@@ -1516,14 +1571,18 @@ function endPtr(e){
       const additive=boxAdd; boxAdd=false;
       if(!additive) clearSel();
       let n=0;
-      /* Stage 0: walk every live slot and project to screen. At cap this is
-         the army-select cost. Stage 1 should query a spatial hash for the
-         world AABB of the box instead of testing unitHigh. */
-      for(let i=0;i<unitHigh;i++){
-        if(!ualive[i]||!(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0)) continue;
+      /* Query the unit grid with a conservative world circle, then keep the
+         exact screen rectangle as the final authority. Full-screen drags may
+         still visit the army; ordinary boxes no longer scan 2,500 slots. */
+      const wc=[s2w(sx0,sy0),s2w(sx1,sy0),s2w(sx1,sy1),s2w(sx0,sy1)];
+      let minx=Infinity,maxx=-Infinity,miny=Infinity,maxy=-Infinity;
+      for(const q of wc){minx=Math.min(minx,q[0]);maxx=Math.max(maxx,q[0]);miny=Math.min(miny,q[1]);maxy=Math.max(maxy,q[1]);}
+      const qx=(minx+maxx)*.5,qy=(miny+maxy)*.5,qr=Math.hypot(maxx-minx,maxy-miny)*.5+mfPointerMaxSpan();
+      forUnitsIn(qx,qy,qr,i=>{
+        if(!ualive[i]||!(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0)) return;
         const sp=w2s(ux[i],uy[i],terrainH(ux[i],uy[i])+TYPES[utype[i]].size*0.5);
         if(sp[0]>=sx0&&sp[0]<=sx1&&sp[1]>=sy0&&sp[1]<=sy1){ if(!usel[i]) n++; usel[i]=1; }
-      }
+      });
       if(n) uiCommandAck('select',n);
       updateSelInfo();
       return;
@@ -1534,8 +1593,8 @@ function endPtr(e){
      tap could only ever be a single attack-move. A short press that drifted
      less than a fingertip is still a tap. Real pans are longer strokes.
      `performance.now()-p.t<HOLD_MS` stays the tap/hold gate (tools/test-input-hold-ms.mjs). */
-  const dt=performance.now()-p.t;
-  const withinHold=performance.now()-p.t<HOLD_MS;
+  const dt=isFinite(e.timeStamp)&&isFinite(p.eventT)?Math.max(0,e.timeStamp-p.eventT):performance.now()-p.t;
+  const withinHold=dt<HOLD_MS;
   const slop=Math.hypot(p.x-p.sx,p.y-p.sy);
   if(e.type!=='pointercancel' && !wasMulti && !p.held && withinHold && ptrs.size===0 && (!p.moved || (dt<TAP_JITTER_MS && slop<TAP_JITTER_PX))){
     if(placing){
@@ -1642,6 +1701,9 @@ ensureQueueBtn(); queueButtonState();
 
 // ---------- minimap ----------
 const mmc=document.getElementById('minimap');
+mmc.setAttribute('role','application');mmc.tabIndex=0;
+mmc.setAttribute('aria-label','Tactical minimap. Use arrow keys to pan the camera and Home to center the map');
+mmc.setAttribute('aria-keyshortcuts','ArrowUp ArrowDown ArrowLeft ArrowRight Home');
 function mmNav(e){
   const r=mmc.getBoundingClientRect();
   cam.x=(e.clientX-r.left)/r.width*MAP;
@@ -1650,4 +1712,16 @@ function mmNav(e){
 }
 mmc.addEventListener('pointerdown',e=>{ e.stopPropagation(); mmNav(e); mmc.setPointerCapture(e.pointerId); });
 mmc.addEventListener('pointermove',e=>{ if(e.buttons) mmNav(e); });
+mmc.addEventListener('keydown',e=>{
+  const arrows=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+  if(!arrows.includes(e.key)&&e.key!=='Home')return;
+  e.preventDefault();e.stopPropagation();
+  if(e.key==='Home'){cam.x=MAP*.5;cam.y=MAP*.5;}
+  else {
+    const step=Math.max(18,(typeof orthoSpan==='number'?orthoSpan:80)*.28)*(e.shiftKey?3:1);
+    if(e.key==='ArrowLeft')cam.x-=step;if(e.key==='ArrowRight')cam.x+=step;
+    if(e.key==='ArrowUp')cam.y-=step;if(e.key==='ArrowDown')cam.y+=step;
+  }
+  camFollow=-1;camUser();clampCam();camUpdateMatrices();
+});
 

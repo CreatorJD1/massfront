@@ -1,5 +1,8 @@
 # MASSFRONT — Expert Game, Level and Visual Design Plan
 
+Status: subordinate design reference. Its numbered phases are not the
+authoritative 18-stage delivery schedule in [`MASTER_PLAN.md`](MASTER_PLAN.md).
+
 ## North star
 
 MASSFRONT should feel like a readable large-scale RTS on a phone, not a PC RTS
@@ -15,7 +18,7 @@ It needs one complete, stable path from first launch through tutorial, skirmish,
 rewards, research, saving, updating and replay. Multiplayer is a separate
 production milestone after this is dependable on target phones.
 
-## Stage 0 — Release gates
+## Local phase 0 — Release gates
 
 1. Every menu action has one clear result, a reachable back action, and a
    44px-or-larger touch target.
@@ -27,7 +30,7 @@ production milestone after this is dependable on target phones.
 4. Label all unavailable modes as in development. Never make a card look
    playable when it opens local skirmish instead.
 
-## Stage 1 — Art/material language
+## Local phase 1 — Art/material language
 
 ### Material rules
 
@@ -55,7 +58,7 @@ production milestone after this is dependable on target phones.
 Do not add these as unrestricted particle spam. Use persistent decals for
 history, short particles for impact, and volumetric smoke only for large events.
 
-## Stage 2 — Map and level design
+## Local phase 2 — Map and level design
 
 Build three map-size bands around match length and decision density.
 
@@ -78,7 +81,7 @@ Each map needs:
    occlusion or phase fog. Never stack more than two modifiers in a first-run
    mission.
 
-## Stage 3 — Combat and faction design
+## Local phase 3 — Combat and faction design
 
 Give every combat role a simple answer to “what does this win against, and what
 punishes it?”
@@ -97,7 +100,7 @@ each faction to three unmistakable signature systems in the first release.
 Examples: Ascendancy siege discipline, Syndicate phase network, Brood
 Tidecaster/Massflesh. Tooltips must show strong-against and weak-against icons.
 
-## Stage 4 — Mobile RTS interface
+## Local phase 4 — Mobile RTS interface
 
 The command dock has three jobs only: select, issue orders, inspect. It must not
 become a second strategy game.
@@ -113,7 +116,7 @@ become a second strategy game.
    or command controls.
 6. Hide optional visual detail at strategic zoom before hiding tactical state.
 
-## Stage 5 — First-time player flow
+## Local phase 5 — First-time player flow
 
 The tutorial is a protected mission, not a string of tips.
 
@@ -129,7 +132,7 @@ The tutorial is a protected mission, not a string of tips.
 Every instruction highlights the target control or world object and waits for
 the player action. No step may silently return to the front menu.
 
-## Stage 6 — Progression and retention
+## Local phase 6 — Progression and retention
 
 - Session inventory: temporary pickups, consumables and recovered modules.
 - Account inventory: crafted gear, cosmetics and unlocked module slots.
@@ -140,7 +143,7 @@ the player action. No step may silently return to the front menu.
 - Building upgrades show the complete path, costs, timing and resulting stat
   difference. Recycle shows its exact refund before confirmation.
 
-## Stage 7 — Co-op and versus, after single-player release
+## Local phase 7 — Co-op and versus, after single-player release
 
 Do not build multiplayer UI first. Build the service spine first:
 

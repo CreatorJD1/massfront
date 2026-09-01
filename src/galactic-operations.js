@@ -13,10 +13,27 @@
   const ENTRY_KEY='massfront.galactic.entry.v1';
   const REQUEST_PREFIX='massfront.galactic.request.v1.';
   const RESULT_PREFIX='massfront.galactic.result.v1.';
+  const ROUTE_PREFIX='massfront.galactic.route.v1.';
   const CONTENT_VERSION='catalog-6';
   const NONCE_RE=/^[A-Za-z0-9_-]{16,128}$/;
+  const BASE_ROUTE_IDS=new Set(['home','operations','development','armory','orders','intel',
+    'profile','inbox','social','settings','game-version','mode-training','mode-standard',
+    'mode-campaign','mode-weekly','new-career-faction']);
   const PROXY_MAP={nova:'nova',dominion:'legion',syndicate:'syndicate'};
-  const COMMANDER_MAP={nova:'nova_kai',dominion:'legion_vex',syndicate:'syndicate_renn'};
+  const COMMANDER_ROSTER_FINGERPRINT='fnv1a32:0aadcd2d';
+  const COMMANDER1_BY_FACTION={nova:'nova_kai',dominion:'legion_vex',syndicate:'syndicate_renn'};
+  const COMMANDER_AUTHORITY=[
+    ['nova_kai','nova','nova','Captain Elara Kai','Captain','Kai','LANTERN','VANGUARD','kai'],
+    ['nova_holt','nova','nova','Major Rowan Holt','Major','Holt','ANVIL','ENGINEER','holt'],
+    ['nova_vale','nova','nova','Cmdr. Sera Vale','Commander','Vale','LONGSIGHT','TACTICIAN','vale'],
+    ['legion_vex','legion','dominion','Lord Darion Vex','Lord','Vex','ASCENDANT','JUGGERNAUT','vex'],
+    ['legion_korr','legion','dominion','Marshal Rhea Korr','Marshal','Korr','CADENCE','WARMASTER','korr'],
+    ['legion_dravik','legion','dominion','Prefect Amon Dravik','Prefect','Dravik','REDOUBT','FORTIFIER','dravik'],
+    ['syndicate_renn','syndicate','syndicate','Broker Lys Renn','Broker','Renn','LEDGER','BROKER','renn'],
+    ['syndicate_nyx','syndicate','syndicate','Operative Nyx Calder','Operative','Calder','GHOST','INFILTRATOR','nyx'],
+    ['syndicate_voss','syndicate','syndicate','Director Oren Voss','Director','Voss','CORE','CONTROLLER','voss']
+  ];
+  const COMMANDER_BY_ID=Object.fromEntries(COMMANDER_AUTHORITY.map(row=>[row[0],row]));
   const DEPLOY_UNIT_SPEC={
     recon_team:{slotCost:1,type:'Striker',perGroup:1},
     line_section:{slotCost:2,type:'Striker',perGroup:2},
@@ -40,7 +57,7 @@
                 sandboxMeta:null,returning:false,isolated:false,packageApplied:false,
                 packageSummary:null,reportCandidate:null,reportCandidateBytes:'',
                 operationEffects:null,naniteUnits:[],suppressedPersistentCrates:0,
-                suppressedPostMatchAds:0,suppressedBillboardImpressions:0};
+                suppressedPostMatchAds:0,suppressedBillboardImpressions:0,menuRouteActive:false};
 
   function clone(value){
     return value===undefined?undefined:JSON.parse(JSON.stringify(value));
@@ -59,7 +76,8 @@
       return Object.is(value,-0)?0:value;
     }
     if(Array.isArray(value))return value.map(normalizeStable);
-    if(typeof value==='object'&&Object.getPrototypeOf(value)===PLAIN_OBJECT){
+    if(typeof value==='object'&&(Object.getPrototypeOf(value)===PLAIN_OBJECT
+       ||Object.prototype.toString.call(value)==='[object Object]')){
       const normalized={};
       for(const key of Object.keys(value).sort())if(value[key]!==undefined)normalized[key]=normalizeStable(value[key]);
       return normalized;
@@ -81,6 +99,36 @@
   function issue(issues,code){issues.push(code);}
   function result(ok,issues){return Object.freeze({ok,issues:Object.freeze(issues.slice())});}
   function text(value){return typeof value==='string'?value.trim():'';}
+
+  function exactKeys(value,keys){
+    return !!value&&typeof value==='object'&&!Array.isArray(value)
+      &&stableStringify(Object.keys(value).sort())===stableStringify(keys.slice().sort());
+  }
+  function commanderIdentityFromRoster(entry){
+    return entry&&{
+      id:entry.id,sourceFactionId:entry.sourceFactionId,campaignFactionId:entry.campaignFactionId,
+      name:entry.name,rank:entry.rank,shortName:entry.shortName,callsign:entry.callsign,
+      role:entry.role,trait:entry.passive&&entry.passive.perk
+    };
+  }
+  function validateCommanderRosterSnapshot(snapshot){
+    const issues=[];
+    if(!snapshot||typeof snapshot!=='object'||Array.isArray(snapshot))return result(false,['COMMANDER_ROSTER_NOT_OBJECT']);
+    if(!exactKeys(snapshot,['schemaVersion','kind','source','sourceVersion','commanderCount','commander1ByCampaignFaction','commanders','fingerprint']))issue(issues,'COMMANDER_ROSTER_SCHEMA_INVALID');
+    if(snapshot.schemaVersion!==1||snapshot.kind!=='CommanderRosterSnapshotV1'||snapshot.source!=='massfront-base'||!Number.isInteger(snapshot.sourceVersion)||snapshot.sourceVersion<1)issue(issues,'COMMANDER_ROSTER_VERSION_INVALID');
+    if(stableStringify(snapshot.commander1ByCampaignFaction)!==stableStringify(COMMANDER1_BY_FACTION))issue(issues,'COMMANDER_ROSTER_COMMANDER1_INVALID');
+    if(!Array.isArray(snapshot.commanders)||snapshot.commanders.length!==9||snapshot.commanderCount!==9)issue(issues,'COMMANDER_ROSTER_COUNT_INVALID');
+    else snapshot.commanders.forEach((entry,index)=>{
+      const row=COMMANDER_AUTHORITY[index];
+      if(!entry||entry.id!==row[0]||entry.sourceFactionId!==row[1]||entry.campaignFactionId!==row[2]
+         ||entry.name!==row[3]||entry.rank!==row[4]||entry.shortName!==row[5]||entry.callsign!==row[6]
+         ||entry.role!==row[7]||entry.passive?.perk!==row[8])issue(issues,'COMMANDER_ROSTER_AUTHORITY_MISMATCH');
+    });
+    let computed='';
+    try{const payload=clone(snapshot);delete payload.fingerprint;computed='fnv1a32:'+hash32(payload);}catch(e){}
+    if(snapshot.fingerprint!==COMMANDER_ROSTER_FINGERPRINT||computed!==COMMANDER_ROSTER_FINGERPRINT)issue(issues,'COMMANDER_ROSTER_FINGERPRINT_INVALID');
+    return result(!issues.length,issues);
+  }
 
   function describeOperationEffects(operation){
     const doctrineId=operation&&operation.doctrineId,supportId=operation&&operation.supportId;
@@ -104,11 +152,39 @@
   function validateEntryTicket(ticket,now,profileId){
     const issues=[],at=Math.max(0,Math.floor(Number(now)||Date.now()));
     if(!ticket||typeof ticket!=='object'||Array.isArray(ticket))return result(false,['ENTRY_NOT_OBJECT']);
-    if(ticket.schemaVersion!==1||ticket.kind!=='MassfrontGalacticEntryV1'||ticket.source!=='massfront-base')issue(issues,'ENTRY_SCHEMA_INVALID');
+    if(!exactKeys(ticket,['schemaVersion','kind','profileId','issuedAt','expiresAt','source','entryView','introRequired','commanderRosterSnapshot','commanderRosterFingerprint','commissioning']))issue(issues,'ENTRY_FIELDS_INVALID');
+    if(ticket.schemaVersion!==2||ticket.kind!=='MassfrontGalacticEntryV2'||ticket.source!=='massfront-base')issue(issues,'ENTRY_SCHEMA_INVALID');
+    if(ticket.entryView!=='system'&&ticket.entryView!=='campaign_hub')issue(issues,'ENTRY_VIEW_INVALID');
+    if(typeof ticket.introRequired!=='boolean')issue(issues,'ENTRY_INTRO_INVALID');
     if(!text(ticket.profileId)||ticket.profileId!==profileId)issue(issues,'ENTRY_PROFILE_MISMATCH');
     if(!Number.isInteger(ticket.issuedAt)||!Number.isInteger(ticket.expiresAt)
        ||ticket.issuedAt<0||ticket.expiresAt<=ticket.issuedAt
+       ||ticket.expiresAt-ticket.issuedAt>7*24*60*60*1000
        ||ticket.expiresAt<=at||ticket.issuedAt>at)issue(issues,'ENTRY_EXPIRED');
+    issues.push(...validateCommanderRosterSnapshot(ticket.commanderRosterSnapshot).issues);
+    if(ticket.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT
+       ||ticket.commanderRosterFingerprint!==ticket.commanderRosterSnapshot?.fingerprint)issue(issues,'ENTRY_COMMANDER_ROSTER_STALE');
+    const commissioning=ticket.commissioning;
+    if(!exactKeys(commissioning,['factionId','commanderId']))issue(issues,'ENTRY_COMMISSIONING_INVALID');
+    else if(commissioning.factionId===null&&commissioning.commanderId===null){}
+    else if(!Object.prototype.hasOwnProperty.call(COMMANDER1_BY_FACTION,commissioning.factionId)
+       ||!Object.prototype.hasOwnProperty.call(COMMANDER_BY_ID,commissioning.commanderId)
+       ||COMMANDER1_BY_FACTION[commissioning.factionId]!==commissioning.commanderId)issue(issues,'ENTRY_COMMISSIONING_INVALID');
+    return result(!issues.length,issues);
+  }
+  function validateRouteRequest(request,nonce,profileId,now){
+    const issues=[],at=Math.max(0,Math.floor(Number(now)||Date.now()));
+    if(!request||typeof request!=='object'||Array.isArray(request))return result(false,['ROUTE_NOT_OBJECT']);
+    if(request.schemaVersion!==1||request.kind!=='MassfrontGalacticRouteRequestV1'
+       ||request.source!=='massfront-exploration')issue(issues,'ROUTE_SCHEMA_INVALID');
+    if(!NONCE_RE.test(text(nonce))||request.nonce!==nonce)issue(issues,'ROUTE_NONCE_INVALID');
+    if(!text(profileId)||request.profileId!==profileId)issue(issues,'ROUTE_PROFILE_MISMATCH');
+    if(!BASE_ROUTE_IDS.has(request.routeId))issue(issues,'ROUTE_TARGET_INVALID');
+    if(!Number.isInteger(request.issuedAt)||!Number.isInteger(request.expiresAt)
+       ||request.expiresAt<=request.issuedAt||request.expiresAt-request.issuedAt>2*60*1000
+       ||request.expiresAt<=at||request.issuedAt>at+30000)issue(issues,'ROUTE_EXPIRED');
+    try{if(request.checksum!==envelopeChecksum(request))issue(issues,'ROUTE_CHECKSUM_INVALID');}
+    catch(e){issue(issues,'ROUTE_CHECKSUM_INVALID');}
     return result(!issues.length,issues);
   }
   function validateTacticalReport(reportValue,operation){
@@ -175,11 +251,14 @@
     catch(e){issue(issues,'OPERATION_MANIFEST_CONFIGURATION_MISMATCH');}
     return result(!issues.length,issues);
   }
-  function validateRequest(envelope,nonce,profileId,now){
+  function validateRequest(envelope,nonce,profileId,now,ticket){
     const issues=[],at=Math.max(0,Math.floor(Number(now)||Date.now()));
     if(!envelope||typeof envelope!=='object'||Array.isArray(envelope))return result(false,['REQUEST_NOT_OBJECT']);
     const operation=envelope.operation;
-    if(envelope.schemaVersion!==1||envelope.kind!=='GroundOperationRequestV1')issue(issues,'REQUEST_SCHEMA_INVALID');
+    if(!exactKeys(envelope,['schemaVersion','kind','nonce','accountId','contentVersion','issuedAt','expiresAt','adapter','commanderRosterFingerprint','operation','checksum']))issue(issues,'REQUEST_FIELDS_INVALID');
+    if(envelope.schemaVersion!==2||envelope.kind!=='GroundOperationRequestV2')issue(issues,'REQUEST_SCHEMA_INVALID');
+    if(envelope.adapter!=='massfront-solo-v2')issue(issues,'REQUEST_ADAPTER_INVALID');
+    if(envelope.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT)issue(issues,'REQUEST_COMMANDER_ROSTER_INVALID');
     if(!NONCE_RE.test(text(nonce))||envelope.nonce!==nonce)issue(issues,'REQUEST_NONCE_INVALID');
     if(!text(profileId)||envelope.accountId!==profileId||operation?.profileId!==profileId)issue(issues,'REQUEST_PROFILE_MISMATCH');
     if(envelope.contentVersion!==CONTENT_VERSION)issue(issues,'REQUEST_CONTENT_VERSION_INVALID');
@@ -189,7 +268,9 @@
     catch(e){issue(issues,'REQUEST_CHECKSUM_INVALID');}
     if(!operation||typeof operation!=='object'||Array.isArray(operation))issue(issues,'OPERATION_NOT_OBJECT');
     else {
-      if(operation.schemaVersion!==2||operation.kind!=='GroundOperation')issue(issues,'OPERATION_SCHEMA_INVALID');
+      if(operation.schemaVersion!==3||operation.kind!=='GroundOperationV3')issue(issues,'OPERATION_SCHEMA_INVALID');
+      if(operation.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT
+         ||operation.commanderRosterFingerprint!==envelope.commanderRosterFingerprint)issue(issues,'OPERATION_COMMANDER_ROSTER_INVALID');
       if(operation.missionId!=='uga_pale_bloom'||operation.missionType!=='uga_brood_purge')issue(issues,'OPERATION_MISSION_INVALID');
       if(operation.sponsorId!=='uga'||operation.contractFactionId!==null)issue(issues,'OPERATION_SPONSOR_INVALID');
       if(operation.opponentFactionId!=='brood')issue(issues,'OPERATION_OPPONENT_INVALID');
@@ -200,6 +281,13 @@
       if(operation.battlefield?.infestationActive!==true
          ||stableStringify(operation.battlefield?.hiveTargetIds||[])!==stableStringify(operation.objective?.hiveTargetIds||[]))issue(issues,'OPERATION_INFESTATION_INVALID');
       if(!text(operation.operationId)||!text(operation.resultSeed)||!text(operation.returnToken))issue(issues,'OPERATION_IDENTITY_INVALID');
+      const commanderRow=COMMANDER_BY_ID[operation.commanderId];
+      const rosterCommander=Array.isArray(ticket?.commanderRosterSnapshot?.commanders)
+        ?ticket.commanderRosterSnapshot.commanders.find(entry=>entry.id===operation.commanderId):null;
+      const expectedIdentity=commanderIdentityFromRoster(rosterCommander);
+      if(!commanderRow||commanderRow[2]!==operation.proxyFactionId
+         ||!expectedIdentity||stableStringify(operation.commanderIdentity)!==stableStringify(expectedIdentity)
+         ||operation.personnelSnapshot?.commander?.id!==operation.commanderId)issue(issues,'OPERATION_COMMANDER_INVALID');
       if(!text(operation.commanderId)||!Array.isArray(operation.specialistIds)
          ||operation.specialistIds.length!==3||new Set(operation.specialistIds).size!==3)issue(issues,'OPERATION_TEAM_INVALID');
       if(operation.playerCount!==undefined&&operation.playerCount!==1)issue(issues,'OPERATION_PLAYER_COUNT_INVALID');
@@ -207,15 +295,23 @@
       if(Array.isArray(operation.allies)&&operation.allies.length)issue(issues,'OPERATION_ALLIES_INVALID');
       issues.push(...validateDeploymentContract(operation).issues);
     }
+    const commissioning=ticket&&ticket.commissioning;
+    issues.push(...validateEntryTicket(ticket,now,profileId).issues);
+    if(!commissioning||commissioning.factionId===null||commissioning.commanderId===null
+       ||COMMANDER1_BY_FACTION[commissioning.factionId]!==commissioning.commanderId)issue(issues,'REQUEST_COMMISSIONING_REQUIRED');
+    if(ticket?.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT)issue(issues,'REQUEST_ENTRY_ROSTER_INVALID');
     return result(!issues.length,issues);
   }
-  function validateRequestMirror(mirror,nonce,profileId,now){
+  function validateRequestMirror(mirror,nonce,profileId,now,ticket){
     const issues=[];
     if(!mirror||typeof mirror!=='object'||Array.isArray(mirror))return result(false,['REQUEST_MIRROR_NOT_OBJECT']);
-    if(mirror.schemaVersion!==1||mirror.kind!=='MassfrontGalacticRequestMirrorV1')issue(issues,'REQUEST_MIRROR_SCHEMA_INVALID');
+    if(!exactKeys(mirror,['schemaVersion','kind','adapter','commanderRosterFingerprint','nonce','accountId','operationId','request']))issue(issues,'REQUEST_MIRROR_FIELDS_INVALID');
+    if(mirror.schemaVersion!==2||mirror.kind!=='MassfrontGalacticRequestMirrorV2')issue(issues,'REQUEST_MIRROR_SCHEMA_INVALID');
+    if(mirror.adapter!=='massfront-solo-v2')issue(issues,'REQUEST_MIRROR_ADAPTER_INVALID');
+    if(mirror.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT)issue(issues,'REQUEST_MIRROR_ROSTER_INVALID');
     if(mirror.nonce!==nonce||mirror.accountId!==profileId
        ||mirror.operationId!==mirror.request?.operation?.operationId)issue(issues,'REQUEST_MIRROR_IDENTITY_INVALID');
-    const requestValidation=validateRequest(mirror.request,nonce,profileId,now);
+    const requestValidation=validateRequest(mirror.request,nonce,profileId,now,ticket);
     issues.push(...requestValidation.issues);
     return result(!issues.length,issues);
   }
@@ -237,6 +333,119 @@
   }
   function currentFlagOn(){
     return !!(typeof META!=='undefined'&&META&&META.settings&&META.settings.experimentalExploration===true);
+  }
+  function stripBridgeQuery(){
+    if(typeof history==='undefined'||typeof history.replaceState!=='function')return;
+    try{history.replaceState(history.state,'',(location.pathname||'./index.html')+(location.hash||''));}catch(e){}
+  }
+  function consumeRouteRecord(nonce){
+    try{
+      sessionStorage.removeItem(ROUTE_PREFIX+nonce);
+      return sessionStorage.getItem(ROUTE_PREFIX+nonce)===null;
+    }catch(e){return false;}
+  }
+  function openBaseRoute(routeId){
+    const show=id=>typeof showFrontScreen==='function'&&showFrontScreen(id);
+    if(typeof initAudio==='function')initAudio();
+    if(typeof sfx==='function')sfx('ui');
+    if(routeId==='home'){
+      bridge.menuRouteActive=false;
+      if(typeof renderMetaHead==='function')renderMetaHead();
+      return show('startScreen');
+    }
+    bridge.menuRouteActive=true;
+    if(routeId==='operations'||routeId==='mode-weekly'||routeId==='mode-campaign'){
+      if(typeof MF_TAB_STATE!=='undefined')MF_TAB_STATE.opsScr=routeId==='mode-campaign'?'campaign':'weekly';
+      if(typeof renderOps==='function')renderOps();
+      return show('opsScr');
+    }
+    if(routeId==='development'){
+      if(typeof renderDevelop==='function')renderDevelop();
+      return show('devScr');
+    }
+    if(routeId==='armory'){
+      if(typeof renderMetaHead==='function')renderMetaHead();
+      if(typeof renderArmory==='function')renderArmory();
+      return show('armory');
+    }
+    if(routeId==='orders'){
+      if(typeof renderDaily==='function')renderDaily();
+      return show('dailyScr');
+    }
+    if(routeId==='intel'){
+      if(typeof renderCodex==='function')renderCodex();
+      return show('dossierScr');
+    }
+    if(routeId==='profile'){
+      if(typeof renderProfile==='function')renderProfile();
+      return show('profileScr');
+    }
+    if(routeId==='inbox'){
+      if(typeof renderInbox==='function')renderInbox();
+      return show('inboxScr');
+    }
+    if(routeId==='social'){
+      if(typeof MFSocialUI!=='undefined'&&MFSocialUI&&typeof MFSocialUI.open==='function'){
+        MFSocialUI.open();return true;
+      }
+      bridge.menuRouteActive=false;
+      if(typeof toast==='function')toast('Social Command is not available in this build');
+      return show('startScreen');
+    }
+    if(routeId==='settings'){
+      if(typeof openSettings==='function'){openSettings('menu');return true;}
+      return false;
+    }
+    if(routeId==='game-version'){
+      if(typeof updOpen!=='undefined')updOpen=true;
+      if(typeof renderUpdatePanel==='function')renderUpdatePanel();
+      return show('updScr');
+    }
+    if(routeId==='mode-standard'){
+      if(typeof openSkirmishSetup==='function'){openSkirmishSetup();return true;}
+      return false;
+    }
+    if(routeId==='mode-training'){
+      if(window.MFNewCareerFactionGate&&typeof window.MFNewCareerFactionGate.afterOnboardingChoice==='function'){
+        window.MFNewCareerFactionGate.afterOnboardingChoice({choice:'training',source:'secured-base-route'});
+      }
+      if(typeof resumeTrainingMission==='function'){resumeTrainingMission();return true;}
+      return false;
+    }
+    if(routeId==='new-career-faction'){
+      /* Both the tutorial-complete and tutorial-skip paths converge here. The
+         career gate owns the real faction/Commander 1 grant and continuation;
+         this bridge only authenticates and delivers the same-tab destination. */
+      bridge.menuRouteActive=false;
+      if(window.MFNewCareerFactionGate&&typeof window.MFNewCareerFactionGate.openFromRoute==='function'){
+        return window.MFNewCareerFactionGate.openFromRoute({choice:'skipped'})!==false;
+      }
+      return false;
+    }
+    return false;
+  }
+  function baseRouteTargetReady(routeId){
+    /* galactic-operations.js is intentionally loaded before the new-career
+       takeover. A secured same-tab return can reach bootConfirmed in that
+       narrow gap, so do not consume its one-time nonce until the late owner is
+       actually mounted. Otherwise a valid tutorial/skip return is rejected
+       before career-faction-gate.js has a chance to receive it. */
+    if(routeId==='new-career-faction')
+      return !!(window.MFNewCareerFactionGate
+        &&typeof window.MFNewCareerFactionGate.openFromRoute==='function');
+    if(routeId==='mode-training')
+      return !!(window.MFNewCareerFactionGate
+        &&typeof window.MFNewCareerFactionGate.afterOnboardingChoice==='function'
+        &&typeof resumeTrainingMission==='function');
+    return true;
+  }
+  function rejectMenuRoute(code,nonce){
+    bridge.status='menu-route-rejected';bridge.reason=code||'ROUTE_REJECTED';bridge.menuRouteActive=false;
+    stripBridgeQuery();
+    if(NONCE_RE.test(nonce||''))consumeRouteRecord(nonce);
+    if(typeof toast==='function')toast('Galactic destination rejected — returned to MASSFRONT home');
+    if(typeof renderMetaHead==='function')renderMetaHead();
+    if(typeof showFrontScreen==='function')showFrontScreen('startScreen');
   }
   function rejectBridge(code){
     bridge.status='rejected';bridge.reason=code||'REJECTED';bridge.active=false;
@@ -369,7 +578,7 @@
   function configureBattle(){
     const operation=bridge.request.operation,proxy=operation.proxyFactionId;
     activeWarMode='galactic';
-    playerFaction=PROXY_MAP[proxy];playerCommanderId=COMMANDER_MAP[proxy];
+    playerFaction=PROXY_MAP[proxy];playerCommanderId=operation.commanderId;
     curMap='vespera_spire_medium';curTheme=MAPDEFS[curMap]?.theme||'ashland';curRegionId='vespera_spire';
     battlefieldPreset='standard';deploymentPackage='expedition';playerStartZone='sw';spawnPick='player';
     goalSel='purge';infestationOn=true;difficulty=2;defenseFocus=0;timeLimit=1200;
@@ -628,7 +837,7 @@
     };
   }
 
-  const api={validateEntryTicket,validateRequest,validateRequestMirror,validateTacticalReport,validateResultMirror,
+  const api={validateEntryTicket,validateRouteRequest,validateRequest,validateRequestMirror,validateTacticalReport,validateResultMirror,
              validateDeploymentContract,describeOperationEffects,checksum:envelopeChecksum};
   Object.defineProperties(api,{
     active:{enumerable:true,get:()=>bridge.active},
@@ -639,13 +848,68 @@
     operationEffects:{enumerable:true,get:()=>clone(bridge.operationEffects)},
     packageApplied:{enumerable:true,get:()=>bridge.packageApplied},
     packageSummary:{enumerable:true,get:()=>clone(bridge.packageSummary)},
+    menuRouteActive:{enumerable:true,get:()=>bridge.menuRouteActive},
     isolation:{enumerable:true,get:()=>Object.freeze({active:bridge.isolated,droppedSessionPreserved:true,
       persistentCratesSuppressed:bridge.suppressedPersistentCrates,postMatchAdsSuppressed:bridge.suppressedPostMatchAds,
       billboardImpressionsSuppressed:bridge.suppressedBillboardImpressions})}
   });
   window.__MF_GALACTIC_BRIDGE=Object.freeze(api);
 
+  /* Base submenus keep their ordinary Back controls. When one was entered
+     from UGA Command, only a route back to home/the obsolete base War Room is
+     intercepted and returned to the Galactic Campaign Hub. The flag is
+     in-memory and cleared before navigation, so reloads and failed module
+     probes cannot form a redirect loop. */
+  if(typeof showFrontScreen==='function'&&!showFrontScreen.__mfGalacticWarTable){
+    const baseShowFrontScreen=showFrontScreen;
+    showFrontScreen=function(id){
+      if(bridge.menuRouteActive&&(id==='startScreen'||id==='warScr')){
+        bridge.menuRouteActive=false;
+        if(currentFlagOn()&&typeof mfOpenExploration==='function'){
+          Promise.resolve(mfOpenExploration('campaign_hub')).then(opened=>{
+            if(!opened)baseShowFrontScreen.call(this,id);
+          });
+          return true;
+        }
+      }
+      return baseShowFrontScreen.apply(this,arguments);
+    };
+    showFrontScreen.__mfGalacticWarTable=true;
+  }
+
   const search=String(location.search||'');
+  const routeMatch=search.match(/^\?galacticRoute=([A-Za-z0-9_-]{16,128})$/);
+  if(routeMatch){
+    bridge.nonce=routeMatch[1];bridge.status='waiting-for-base-route';
+    let routeTries=0;
+    const routeTick=function(){
+      if(++routeTries>1200){rejectMenuRoute('BASE_BOOT_TIMEOUT',bridge.nonce);return;}
+      if(typeof bootConfirmed==='undefined'||!bootConfirmed){setTimeout(routeTick,50);return;}
+      const profileId=currentProfileId(),now=Date.now(),ticket=readSessionJson(ENTRY_KEY);
+      if(!currentFlagOn()){rejectMenuRoute('EXPERIMENT_DISABLED',bridge.nonce);return;}
+      const entryValidation=validateEntryTicket(ticket,now,profileId);
+      if(!entryValidation.ok){rejectMenuRoute(entryValidation.issues.join(','),bridge.nonce);return;}
+      const request=readSessionJson(ROUTE_PREFIX+bridge.nonce);
+      const routeValidation=validateRouteRequest(request,bridge.nonce,profileId,now);
+      if(!routeValidation.ok){rejectMenuRoute(routeValidation.issues.join(','),bridge.nonce);return;}
+      if(!baseRouteTargetReady(request.routeId)){setTimeout(routeTick,50);return;}
+      if(!consumeRouteRecord(bridge.nonce)){rejectMenuRoute('ROUTE_CONSUME_FAILED',bridge.nonce);return;}
+      /* A validated same-tab submenu handoff is navigation inside one game,
+         not a fresh launch. Dismiss the cinematic only after consuming the
+         secured record so an arbitrary query string cannot suppress it. */
+      if(typeof mfDismissIntroForGalacticRoute==='function')mfDismissIntroForGalacticRoute();
+      stripBridgeQuery();
+      bridge.status='menu-route';bridge.reason='';
+      if(!openBaseRoute(request.routeId))rejectMenuRoute('ROUTE_TARGET_UNAVAILABLE',bridge.nonce);
+    };
+    setTimeout(routeTick,0);
+    return;
+  }
+  if(/(?:^\?|&)galacticRoute=/.test(search)){
+    stripBridgeQuery();
+    bridge.status='menu-route-rejected';bridge.reason='ROUTE_NONCE_INVALID';
+    return;
+  }
   const match=search.match(/^\?groundOperation=([A-Za-z0-9_-]{16,128})$/);
   if(!match){
     if(/(?:^\?|&)groundOperation=/.test(search))rejectBridge('NONCE_INVALID');
@@ -661,7 +925,7 @@
     const entryValidation=validateEntryTicket(ticket,now,profileId);
     if(!entryValidation.ok){rejectBridge(entryValidation.issues.join(','));return;}
     const requestMirror=readSessionJson(REQUEST_PREFIX+bridge.nonce);
-    const requestValidation=validateRequestMirror(requestMirror,bridge.nonce,profileId,now);
+    const requestValidation=validateRequestMirror(requestMirror,bridge.nonce,profileId,now,ticket);
     if(!requestValidation.ok){rejectBridge(requestValidation.issues.join(','));return;}
     const request=requestMirror.request,storedResult=readSessionRecord(RESULT_PREFIX+bridge.nonce);
     bridge.operationEffects=describeOperationEffects(request.operation);

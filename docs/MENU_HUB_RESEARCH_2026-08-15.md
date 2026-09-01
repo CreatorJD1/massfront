@@ -95,7 +95,7 @@ above.
 | War Room as base-node graph | Spatial index of bases | `galaxyui.js`: `#mfGalaxyCanvas` (2D), stages galaxy → system → planet → region → deploy, locks via `mfConquest*` | Later restyle of `mfGalaxyDraw*` / chips only. Same 48 `MAPDEFS` sites | Second map catalog; WebGL on the hologram; treating the graph as a different 48 |
 | Research-as-minigame | Short phone session that shortcuts an MMO grind | Two live graphs: match `RESEARCH[]` (`sim.js`) and account `DEVTREE` (`develop.js` + `restree3d.js`) | After ship gate only. Pays into those graphs. See §3 | Third tree; `applyResearch` from the menu; MMO scout that writes `META.mapWins` |
 
-`docs/MASSFRONT-STAGED-DESIGN-PLAN-2026-08-02.md` already said “do not add tabs”
+`docs/archive/plans/MASSFRONT-STAGED-DESIGN-PLAN-2026-08-02.md` already said “do not add tabs”
 on home, then a later four-hub IA (Play / Command / Loadout / Profile). The
 concept-shot tab bar is that later pass. First slice is five **navigation**
 tabs that call existing screens — not a new IA and not a ninth equally weighted

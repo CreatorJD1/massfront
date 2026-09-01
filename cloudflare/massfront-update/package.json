@@ -1,10 +1,12 @@
 {
   "name": "massfront-update",
   "private": true,
+  "type": "module",
   "version": "1.0.0",
   "scripts": {
     "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "test": "node test/range-compat.test.mjs"
   },
   "devDependencies": { "wrangler": "^3" }
 }

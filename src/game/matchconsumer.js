@@ -17,8 +17,11 @@
   const MC_INT=(v,min,max)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
   const MC_KEYS=(v,keys)=>!!v&&typeof v==='object'&&!Array.isArray(v)&&
     Object.keys(v).length===keys.length&&Object.keys(v).every(k=>keys.includes(k));
-  const MC_TYPES=Object.freeze(['move','stop','hold','attack','guard','build','produce','research','commander']);
-  let mcRules=null,mcWelcome=null,mcStart=null,mcLaunchStarted=false;
+  const MC_TYPES=Object.freeze(['move','stop','hold','attack','guard','build','produce','research','commander','repair','recycle']);
+  const MC_UNIT_COMMAND_MAX=64,MC_BATCH_COMMAND_MAX=8,MC_COMMAND_BYTES_MAX=2048,
+    MC_LOGICAL_UNIT_MAX=MC_UNIT_COMMAND_MAX*MC_BATCH_COMMAND_MAX,
+    MC_FORM_IDS=Object.freeze(['spread','line','wedge','box','column','arc']);
+  let mcRules=null,mcWelcome=null,mcStart=null,mcLaunchStarted=false,mcSubmitFailure='',mcApplyFailure='';
 
   function mcLobbyRules(){
     const live=window.MFSocialUI&&MFSocialUI.state&&MFSocialUI.state.lobby,
@@ -100,11 +103,27 @@
        uteam[i]!==authority.team||uCmd[i]!==authority.slot)return null;
     return i;
   }
-  function mcUnits(v,authority){
-    if(!Array.isArray(v)||!v.length||v.length>64)return null;
+  function mcUnits(v,authority,limit){
+    const cap=limit==null?MC_UNIT_COMMAND_MAX:limit;
+    if(!Array.isArray(v)||!v.length||v.length>cap)return null;
     const out=[],seen=new Set();
     for(const ref of v){const i=mcUnitRef(ref,authority);if(i==null||seen.has(i))return null;seen.add(i);out.push(i);}
     return out;
+  }
+  function mcChunkMeta(command){
+    const own=k=>Object.prototype.hasOwnProperty.call(command,k),has=[own('part'),own('parts'),own('total')];
+    if(!has.some(Boolean))return null;
+    if(!has.every(Boolean)||!MC_INT(command.part,0,MC_BATCH_COMMAND_MAX-1)||
+       !MC_INT(command.parts,2,MC_BATCH_COMMAND_MAX)||command.part>=command.parts||
+       !MC_INT(command.total,2,MC_LOGICAL_UNIT_MAX))return false;
+    return {part:command.part,parts:command.parts,total:command.total};
+  }
+  function mcUnitSchema(command,baseKeys,allowFormation){
+    const chunk=mcChunkMeta(command);if(chunk===false)return false;
+    const hasFormation=Object.prototype.hasOwnProperty.call(command,'formation');
+    if(hasFormation&&(!allowFormation||!MC_INT(command.formation,0,MC_FORM_IDS.length-1)))return false;
+    const keys=baseKeys.concat(hasFormation?['formation']:[],chunk?['part','parts','total']:[]);
+    return MC_KEYS(command,keys)?{chunk,formation:hasFormation?command.formation:0}:false;
   }
   function mcTarget(v,authority,friendly){
     if(!MC_KEYS(v,['id','generation'])||!MC_INT(v.id,0,typeof MAXU==='number'?MAXU-1:9999)||
@@ -138,27 +157,27 @@
     const i=mcUnitRef(v,authority);
     return i!=null&&TYPES[utype[i]]&&TYPES[utype[i]].cat==='hero'?i:null;
   }
-  function mcPlan(command,authority){
+  function mcPlan(command,authority,unitLimit){
     if(!command||typeof command!=='object'||Array.isArray(command)||!MC_TYPES.includes(command.type))return null;
-    let units,target,point;
+    let units,target,point,schema;
     if(command.type==='move'){
-      if(!MC_KEYS(command,['type','units','x','y','mode'])||!['attack','direct'].includes(command.mode)||
-         !(units=mcUnits(command.units,authority))||!(point=mcPoint(command)))return null;
-      return {type:'move',units,point,mode:command.mode};
+      if(!(schema=mcUnitSchema(command,['type','units','x','y','mode'],true))||!['attack','direct'].includes(command.mode)||
+         !(units=mcUnits(command.units,authority,unitLimit))||!(point=mcPoint(command)))return null;
+      return {type:'move',units,point,mode:command.mode,formation:schema.formation,chunk:schema.chunk,authority};
     }
     if(command.type==='stop'||command.type==='hold'){
-      if(!MC_KEYS(command,['type','units'])||!(units=mcUnits(command.units,authority)))return null;
-      return {type:command.type,units};
+      if(!(schema=mcUnitSchema(command,['type','units'],false))||!(units=mcUnits(command.units,authority,unitLimit)))return null;
+      return {type:command.type,units,chunk:schema.chunk};
     }
     if(command.type==='attack'){
-      if(!MC_KEYS(command,['type','units','target'])||!(units=mcUnits(command.units,authority))||
+      if(!(schema=mcUnitSchema(command,['type','units','target'],false))||!(units=mcUnits(command.units,authority,unitLimit))||
          (target=mcTarget(command.target,authority,false))==null)return null;
-      return {type:'attack',units,target};
+      return {type:'attack',units,target,chunk:schema.chunk};
     }
     if(command.type==='guard'){
-      if(!MC_KEYS(command,['type','units','target'])||!(units=mcUnits(command.units,authority))||
+      if(!(schema=mcUnitSchema(command,['type','units','target'],false))||!(units=mcUnits(command.units,authority,unitLimit))||
          (target=mcTarget(command.target,authority,true))==null||units.includes(target))return null;
-      return {type:'guard',units,target};
+      return {type:'guard',units,target,chunk:schema.chunk};
     }
     if(command.type==='build'){
       if(!MC_KEYS(command,['type','building','x','y','turn'])||typeof command.building!=='string'||
@@ -191,18 +210,60 @@
       if(!ref||!R||ref.B.res>=0||researched[R.id]||R.req&&!researched[R.req]||R.clvl&&heroLvl<R.clvl)return null;
       return {type:'research',building:ref.id,study:idx};
     }
+    if(command.type==='repair'){
+      if(!MC_KEYS(command,['type','building','active'])||typeof command.active!=='boolean')return null;
+      const ref=mcBuildingRef(command.building,authority);
+      if(!ref||typeof mfSetBuildingRepair!=='function')return null;
+      /* Enabling repair can fail for a full, unfinished or zero-value structure.
+         Ask the pure quote seam during preflight so the authoritative mutation
+         cannot discover that rejection after another command has applied. */
+      if(command.active){
+        const service=window.MFBuildingService,q=service&&typeof service.quote==='function'?service.quote(ref.B):null;
+        if(!q||q.eligible!==true)return null;
+      }
+      return {type:'repair',building:ref.id,active:command.active,authority};
+    }
+    if(command.type==='recycle'){
+      if(!MC_KEYS(command,['type','building']))return null;
+      const ref=mcBuildingRef(command.building,authority);
+      if(!ref||typeof mfRecycleBuilding!=='function'||typeof bldRecycleMass!=='function'||typeof credit!=='function')return null;
+      return {type:'recycle',building:ref.id,authority};
+    }
     if(!MC_KEYS(command,['type','commander','action','x','y'])||command.action!=='active'||!(point=mcPoint(command)))return null;
     const commander=mcCommanderRef(command.commander,authority);
     if(commander==null||typeof fireCommanderActiveAt!=='function')return null;
     return {type:'commander',commander,point,authority};
   }
+  function mcJoinRowPlans(row){
+    const chunked=row.some(P=>P.chunk);
+    if(!chunked)return row;
+    /* A realtime row is the atomic transport unit. A split order owns the whole
+       row so every generation/team handle can be checked before one unit moves. */
+    if(!row.every(P=>P.chunk)||row.length!==row[0].chunk.parts)return null;
+    const first=row[0],units=[],seen=new Set(),parts=first.chunk.parts,total=first.chunk.total;
+    for(let p=0;p<row.length;p++){
+      const P=row[p],C=P.chunk;
+      if(C.part!==p||C.parts!==parts||C.total!==total||P.type!==first.type)return null;
+      if(P.type==='move'&&(P.mode!==first.mode||P.formation!==first.formation||
+         P.point[0]!==first.point[0]||P.point[1]!==first.point[1]))return null;
+      if((P.type==='attack'||P.type==='guard')&&P.target!==first.target)return null;
+      for(const i of P.units){if(seen.has(i))return null;seen.add(i);units.push(i);}
+    }
+    if(units.length!==total||units.length>MC_LOGICAL_UNIT_MAX||first.type==='guard'&&units.includes(first.target))return null;
+    return [Object.assign({},first,{units,chunk:null})];
+  }
   function mcBatchValid(plans){
-    const prod=new Map(),labs=new Set(),studies=new Set(),commanders=new Set(),builds=[],escrow=new Map();
+    const prod=new Map(),labs=new Set(),studies=new Set(),commanders=new Set(),builds=[],escrow=new Map(),services=new Set();
+    for(const P of plans)if(P.type==='repair'||P.type==='recycle'){
+      if(services.has(P.building))return false;services.add(P.building);
+    }
     for(const P of plans){
       if(P.type==='produce'){
+        if(services.has(P.building))return false;
         const n=(prod.get(P.building)||0)+P.count,B=blds[P.building];prod.set(P.building,n);
         if(B.queue.length+n>(typeof MF_PRODUCTION_QUEUE_CAP==='number'?MF_PRODUCTION_QUEUE_CAP:20))return false;
       }else if(P.type==='research'){
+        if(services.has(P.building))return false;
         const id=RESEARCH[P.study].id;if(labs.has(P.building)||studies.has(id))return false;labs.add(P.building);studies.add(id);
       }else if(P.type==='commander'){
         if(commanders.has(P.commander))return false;commanders.add(P.commander);
@@ -233,15 +294,82 @@
     if(TYPES[utype[i]]&&TYPES[utype[i]].air&&typeof mfAirIssueMission==='function')
       mfAirIssueMission(i,kind,detail);
   }
+  /* Keep authoritative formation math inside the consumer. The UI solver reads
+     local selection/team-0 globals, so calling it for a remote seat would make
+     the same frozen tick resolve differently on different clients. */
+  function mcFormationOffsets(n,form,spacing){
+    const out=[],sp=spacing||31;
+    if(form==='line'){
+      const perRow=Math.max(2,Math.min(18,Math.ceil(n/2)));
+      for(let k=0;k<n;k++){const r=(k/perRow)|0,f=k%perRow;
+        out.push([(f-(Math.min(perRow,n-r*perRow)-1)/2)*sp,r*sp*1.10]);}
+    }else if(form==='wedge'){
+      let k=0,r=0;while(k<n){for(let f=0;f<r+1&&k<n;f++,k++)out.push([(f-r/2)*sp,r*sp*.94]);r++;}
+    }else if(form==='box'){
+      const perRow=Math.max(2,Math.ceil(Math.sqrt(n)));
+      for(let k=0;k<n;k++){const r=(k/perRow)|0,f=k%perRow;out.push([(f-(perRow-1)/2)*sp,r*sp]);}
+    }else if(form==='column'){
+      const perRow=Math.min(3,Math.max(1,n));
+      for(let k=0;k<n;k++){const r=(k/perRow)|0,f=k%perRow,here=Math.min(perRow,n-r*perRow);
+        out.push([(f-(here-1)/2)*sp,r*sp*1.12]);}
+    }else if(form==='arc'){
+      const perRow=Math.max(3,Math.ceil(n/2));
+      for(let k=0;k<n;k++){const r=(k/perRow)|0,f=k%perRow,here=Math.min(perRow,n-r*perRow),
+        q=here<=1?0:(f/(here-1)-.5)*2,rad=sp*2+here*sp*.16+r*sp*1.12;
+        out.push([Math.sin(q*.92)*rad,(1-Math.cos(q*.92))*rad+r*sp*1.08]);}
+    }else{
+      const spread=Math.max(sp*.66,Math.sqrt(n)*sp*.42);
+      for(let k=0;k<n;k++){const a=k*2.399963,d=spread*Math.sqrt((k+.5)/Math.max(1,n));out.push([Math.cos(a)*d,Math.sin(a)*d]);}
+    }
+    return out;
+  }
+  function mcFormationTargets(plan){
+    const sel=plan.units,n=sel.length,wx=plan.point[0],wy=plan.point[1];
+    if(n===1)return [{x:wx,y:wy}];
+    let spacing=31,cx=0,cy=0;
+    for(const i of sel){const T=TYPES[utype[i]]||{},r=Number(T.r)||4,size=Number(T.size)||r*2;
+      spacing=Math.max(spacing,Math.max(r*2+7,size*1.8+8));cx+=ux[i];cy+=uy[i];}
+    cx/=n;cy/=n;
+    let near=false;
+    for(let i=0;i<unitHigh&&!near;i++)if(ualive[i]&&uteam[i]!==plan.authority.team&&
+      (ux[i]-cx)*(ux[i]-cx)+(uy[i]-cy)*(uy[i]-cy)<=170*170)near=true;
+    spacing=Math.max(near?24:31,Math.min(92,spacing*(near?.72:1)));
+    const angle=Math.atan2(wy-cy,wx-cx),ct=Math.cos(angle),st=Math.sin(angle),
+      offsets=mcFormationOffsets(n,MC_FORM_IDS[plan.formation]||MC_FORM_IDS[0],spacing),targets=[];
+    for(const o of offsets){
+      let x=Math.max(15,Math.min(MAP-15,wx-o[1]*ct-o[0]*st)),
+        y=Math.max(15,Math.min(MAP-15,wy-o[1]*st+o[0]*ct));
+      if(typeof battlefieldClampPoint==='function'){const p=battlefieldClampPoint(x,y,15);x=p[0];y=p[1];}
+      targets.push({x,y});
+    }
+    /* Match source and destination shells once for the complete logical order.
+       Doing this after transport reassembly prevents eight overlapping mini
+       formations when a 500-unit selection crosses the protocol boundary. */
+    const src=sel.map((i,k)=>({k,key:i,a:Math.atan2(uy[i]-cy,ux[i]-cx),r:(ux[i]-cx)*(ux[i]-cx)+(uy[i]-cy)*(uy[i]-cy)}));
+    let tx=0,ty=0;for(const P of targets){tx+=P.x;ty+=P.y;}tx/=n;ty/=n;
+    const dst=targets.map((P,k)=>({k,key:k,a:Math.atan2(P.y-ty,P.x-tx),r:(P.x-tx)*(P.x-tx)+(P.y-ty)*(P.y-ty)})),
+      rank=(a,b)=>a.a-b.a||a.r-b.r||a.key-b.key;
+    src.sort(rank);dst.sort(rank);
+    const assigned=targets.slice();for(let q=0;q<n;q++)assigned[src[q].k]=targets[dst[q].k];
+    return assigned;
+  }
   function mcApply(plan){
     if(plan.type==='move'){
-      for(const i of plan.units){
-        const T=TYPES[utype[i]],raw=plan.point;
-        let goal=T.naval?(findWater(raw[0],raw[1])||[ux[i],uy[i]]):T.air?raw:findLand(raw[0],raw[1]);
+      const targets=mcFormationTargets(plan),routeFields={},cohort=typeof allocMoveCohort==='function'?
+        allocMoveCohort(plan.units,targets,plan.formation,true):-1;
+      for(let k=0;k<plan.units.length;k++){
+        const i=plan.units[k],T=TYPES[utype[i]],raw=targets[k];
+        let goal=T.naval?(findWater(raw.x,raw.y)||[ux[i],uy[i]]):T.air?[raw.x,raw.y]:findLand(raw.x,raw.y);
         if(typeof battlefieldClampPoint==='function')goal=battlefieldClampPoint(goal[0],goal[1],Math.max(8,(T.r||4)+4));
         const x=goal[0],y=goal[1];mcResetOrder(i);ustate[i]=plan.mode==='direct'?1:2;
         utgt[i]=-1;utgtg[i]=-1;uhold[i]=0;umarch[i]=plan.mode==='direct'?0:1;utx[i]=x;uty[i]=y;
-        ufield[i]=T.air?-1:requestField(x,y,!!T.naval,mfNavUnitClearance(T));
+        const clear=mfNavUnitClearance(T),routeKey=(T.naval?'w':'g')+clear;
+        if(!T.air&&routeFields[routeKey]==null){
+          const strategic=T.naval?(findWater(plan.point[0],plan.point[1])||goal):findLand(plan.point[0],plan.point[1]);
+          routeFields[routeKey]=requestField(strategic[0],strategic[1],!!T.naval,clear,cohort>=0);
+        }
+        ufield[i]=T.air?-1:(cohort>=0?routeFields[routeKey]:requestField(x,y,!!T.naval,clear));
+        if(typeof uMoveCohort!=='undefined')uMoveCohort[i]=cohort;
         mcAir(i,plan.mode==='attack'?'cap':'none',{x,y});
       }
       return;
@@ -267,6 +395,22 @@
     if(plan.type==='research'){
       const B=blds[plan.building],R=RESEARCH[plan.study];B.res=plan.study;B.resT=Math.min(R.t-.01,researchResumeTime(R.id));return;
     }
+    if(plan.type==='repair'){
+      const B=blds[plan.building],wasOn=B.repairOn,wasStalled=B.repairStalled,
+        result=mfSetBuildingRepair(plan.building,plan.active,{team:plan.authority.team,slot:plan.authority.slot});
+      if(!result||result.ok!==true){
+        /* The service seam may clear an ineligible toggle while explaining its
+           rejection. Restore that local intent before rejecting the frozen tick. */
+        B.repairOn=wasOn;B.repairStalled=wasStalled;
+        throw new Error('repair_'+String(result&&result.code||'rejected'));
+      }
+      return;
+    }
+    if(plan.type==='recycle'){
+      const result=mfRecycleBuilding(plan.building,{team:plan.authority.team,slot:plan.authority.slot});
+      if(!result||result.ok!==true)throw new Error('recycle_'+String(result&&result.code||'rejected'));
+      return;
+    }
     if(plan.type==='commander'){fireCommanderActiveAt(plan.commander,plan.point[0],plan.point[1],true);return;}
     const h=plan.target;
     if(plan.type==='attack'){
@@ -280,19 +424,32 @@
       mcAir(i,'escort',{x:ux[h],y:uy[h],escort:h,escortGeneration:ugen[h]});}
   }
   async function mcApplyTick(packet){
+    mcApplyFailure='';
     if(!MC_KEYS(packet,['tick','commands'])||!MC_INT(packet.tick,1,2147483647)||!Array.isArray(packet.commands)||
        packet.commands.length>32||typeof matchLive!=='boolean'||!matchLive)return false;
     const plans=[];
     for(const row of packet.commands){
       if(!MC_KEYS(row,['seat','seq','commands'])||!MC_INT(row.seat,1,4)||!MC_INT(row.seq,1,2147483647)||
-         !Array.isArray(row.commands)||!row.commands.length||row.commands.length>8)return false;
+         !Array.isArray(row.commands)||!row.commands.length||row.commands.length>MC_BATCH_COMMAND_MAX)return false;
       const authority=mcSeatAuthority(row.seat);if(!authority)return false;
-      for(const command of row.commands){const plan=mcPlan(command,authority);if(!plan)return false;plans.push(plan);}
+      const rowPlans=[];
+      for(const command of row.commands){const plan=mcPlan(command,authority);if(!plan)return false;rowPlans.push(plan);}
+      const joined=mcJoinRowPlans(rowPlans);if(!joined)return false;plans.push(...joined);
     }
     if(!mcBatchValid(plans))return false;
     /* Every row, handle and within-tick reservation has now passed. No command can partially apply
        before a later unsupported command is discovered. */
-    try{for(const plan of plans)mcApply(plan);}catch(e){return false;}
+    /* Service commands run first. Their pure preflight above makes failure a
+       protocol/runtime fault, and placing that fault before movement, queues or
+       build mutations keeps a rejected service tick visibly fail-closed. */
+    try{
+      for(const plan of plans)if(plan.type==='repair'||plan.type==='recycle')mcApply(plan);
+      for(const plan of plans)if(plan.type!=='repair'&&plan.type!=='recycle')mcApply(plan);
+    }catch(e){
+      mcApplyFailure='MATCH COMMAND APPLY FAILED — '+String(e&&e.message||'building service rejected');
+      if(typeof toast==='function')toast(mcApplyFailure);
+      return false;
+    }
     return true;
   }
   function mcRuntimeActive(){
@@ -342,17 +499,75 @@
     };
     aiTick._mfHumanSeatTakeover=true;
   }
+  function mcCommandBytes(command){
+    try{return new TextEncoder().encode(JSON.stringify(command)).byteLength;}catch(e){return Infinity;}
+  }
+  function mcSubmissionCommands(command,authority){
+    const unitType=command&&['move','stop','hold','attack','guard'].includes(command.type);
+    if(!unitType)return mcPlan(command,authority)?[command]:null;
+    if(mcChunkMeta(command)!==null){mcSubmitFailure='NETWORK ORDER INVALID — split metadata is transport-owned';return null;}
+    const plan=mcPlan(command,authority,MC_LOGICAL_UNIT_MAX);
+    if(!plan){
+      mcSubmitFailure=Array.isArray(command.units)&&command.units.length>MC_LOGICAL_UNIT_MAX?
+        'NETWORK ORDER LIMIT — 512 units maximum; no units were commanded':
+        'NETWORK ORDER INVALID — simulation unchanged';
+      return null;
+    }
+    if(command.units.length<=MC_UNIT_COMMAND_MAX&&mcCommandBytes(command)<=MC_COMMAND_BYTES_MAX)return [command];
+    const chunks=[];let at=0;
+    while(at<command.units.length&&chunks.length<MC_BATCH_COMMAND_MAX){
+      let end=Math.min(command.units.length,at+MC_UNIT_COMMAND_MAX),refs=null;
+      /* Reserve the largest legal metadata values while packing so replacing
+         them with the real part count cannot push a command past 2048 bytes. */
+      while(end>at){
+        const candidate=Object.assign({},command,{units:command.units.slice(at,end),part:7,parts:8,total:command.units.length});
+        if(mcCommandBytes(candidate)<=MC_COMMAND_BYTES_MAX){refs=candidate.units;break;}
+        end--;
+      }
+      if(!refs)break;chunks.push(refs);at=end;
+    }
+    if(at!==command.units.length||chunks.length<2||chunks.length>MC_BATCH_COMMAND_MAX){
+      mcSubmitFailure='NETWORK ORDER TOO LARGE FOR ONE ATOMIC TICK — no units were commanded';return null;
+    }
+    const commands=chunks.map((units,part)=>Object.assign({},command,{units,part,parts:chunks.length,total:command.units.length})),
+      plans=commands.map(c=>mcPlan(c,authority));
+    if(plans.some(P=>!P)||!mcJoinRowPlans(plans)){
+      mcSubmitFailure='NETWORK ORDER VALIDATION FAILED — simulation unchanged';return null;
+    }
+    return commands;
+  }
   function mcSubmit(command,delay){
-    const s=mcRuntimeActive();if(!s)return null;
-    const authority=mcSeatAuthority(s.seat),plan=authority&&mcPlan(command,authority);
-    if(!plan)return null;
-    return MFMatchRuntime.submitCommands([command],delay);
+    mcSubmitFailure='';mcApplyFailure='';
+    const s=mcRuntimeActive();if(!s){mcSubmitFailure='NETWORK MATCH IS NOT RUNNING';return null;}
+    const authority=mcSeatAuthority(s.seat),commands=authority&&mcSubmissionCommands(command,authority);
+    if(!commands){if(!mcSubmitFailure)mcSubmitFailure='NETWORK COMMAND REJECTED — simulation unchanged';return null;}
+    const receipt=MFMatchRuntime.submitCommands(commands,delay);
+    if(!receipt)mcSubmitFailure='NETWORK TRANSPORT REJECTED THE COMPLETE ORDER — simulation unchanged';
+    return receipt;
   }
   function mcTakeover(command,delay){
     if(!mcRuntimeActive())return false;
     const receipt=mcSubmit(command,delay);
-    if(!receipt&&typeof toast==='function')toast('NETWORK COMMAND REJECTED — simulation unchanged');
+    if(!receipt&&typeof toast==='function')toast(mcSubmitFailure||'NETWORK COMMAND REJECTED — simulation unchanged');
     return true;
+  }
+  function mcBuildingHandle(target){
+    const id=Number.isInteger(target)?target:target&&Number.isInteger(target.id)?target.id:-1,
+      B=typeof blds!=='undefined'&&blds&&blds[id];
+    if(!B||!B.alive||target&&typeof target==='object'&&typeof target.type==='string'&&target.type!==B.type)return null;
+    return {id,type:B.type};
+  }
+  /* These return false only when realtime is inactive, allowing the UI to use
+     the same controls offline. In a live match even a rejected proposal is
+     consumed here and explained by mcTakeover instead of falling through to a
+     local-only mutation that would desynchronise the other clients. */
+  function mcSubmitRepair(target,active,delay){
+    if(!mcRuntimeActive())return false;
+    return mcTakeover({type:'repair',building:mcBuildingHandle(target),active},delay);
+  }
+  function mcSubmitRecycle(target,delay){
+    if(!mcRuntimeActive())return false;
+    return mcTakeover({type:'recycle',building:mcBuildingHandle(target)},delay);
   }
   function mcUnitRefs(indices){return indices.map(i=>({id:i,generation:ugen[i]}));}
   function mcSelected(){const out=[];for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i])out.push(i);return out;}
@@ -363,7 +578,10 @@
   }
   mcWrap('stopSelected',()=>{const u=mcSelected();return u.length?{type:'stop',units:mcUnitRefs(u)}:null;});
   mcWrap('orderHold',()=>{const u=mcSelected();return u.length?{type:'hold',units:mcUnitRefs(u)}:null;});
-  mcWrap('orderMove',(x,y,patrol,retreat)=>{const u=mcSelected();return !patrol&&u.length?{type:'move',units:mcUnitRefs(u),x:Math.round(x),y:Math.round(y),mode:retreat||typeof moveMode==='number'&&moveMode?'direct':'attack'}:null;});
+  mcWrap('orderMove',(x,y,patrol,retreat)=>{const u=typeof formationMembers==='function'?formationMembers():mcSelected();
+    return !patrol&&u.length?{type:'move',units:mcUnitRefs(u),x:Math.round(x),y:Math.round(y),
+      mode:retreat||typeof moveMode==='number'&&moveMode?'direct':'attack',
+      formation:typeof selFormation==='number'&&MC_INT(selFormation,0,MC_FORM_IDS.length-1)?selFormation:0}:null;});
   mcWrap('orderAttack',target=>{const u=mcSelected();return u.length&&target>=0?{type:'attack',units:mcUnitRefs(u),target:{id:target,generation:ugen[target]}}:null;});
   mcWrap('orderGuard',target=>{const u=mcSelected();return u.length&&target>=0?{type:'guard',units:mcUnitRefs(u),target:{id:target,generation:ugen[target]}}:null;});
 
@@ -409,7 +627,8 @@
   window.mfLocalOwnsUnit=mcLocalOwnsUnit;window.mfLocalOwnsBuilding=mcLocalOwnsBuilding;
   window.mfLocalTeam=mcLocalTeam;window.mfLocalCommander=mcLocalCommander;window.mfLocalBank=mcLocalBank;
   const api=Object.freeze({schemaVersion:1,supported:MC_TYPES.slice(),applyTick:mcApplyTick,submit:mcSubmit,takeover:mcTakeover,
-    buildingRef:id=>{const B=typeof blds!=='undefined'&&blds&&blds[id];return B&&B.alive?{id,type:B.type}:null;},
+    submitRepair:mcSubmitRepair,submitRecycle:mcSubmitRecycle,buildingRef:mcBuildingHandle,
+    lastFailure:()=>mcApplyFailure||mcSubmitFailure,
     bootstrap:()=>Object.freeze({localSeat:mcWelcome&&mcWelcome.seat||0,seats:mcStart&&Array.isArray(mcStart.seats)?mcStart.seats.slice():[],rules:mcLobbyRules()}),seatAuthority:seat=>{
     const a=mcSeatAuthority(seat);return a?Object.freeze({seat:a.seat,team:a.team,slot:a.slot}):null;
   }});

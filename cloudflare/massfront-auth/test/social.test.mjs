@@ -122,6 +122,18 @@ function openDb() {
   const chatMigration = readFileSync(join(ROOT, 'migrations-ledger', '0002-chat-presence.sql'), 'utf8');
   db.exec(chatMigration);
   db.exec(chatMigration);
+  const moderationMigration = readFileSync(join(ROOT, 'migrations-ledger', '0004-moderation-foundation.sql'), 'utf8');
+  db.exec(moderationMigration);
+  db.exec(moderationMigration);
+  const launchMigration = readFileSync(join(ROOT, 'migrations-ledger', '0005-match-launch-compatibility.sql'), 'utf8');
+  db.exec(launchMigration);
+  db.exec(launchMigration);
+  const onlineMigration = readFileSync(join(ROOT, 'migrations-ledger', '0006-online-aggregate.sql'), 'utf8');
+  db.exec(onlineMigration);
+  db.exec(onlineMigration);
+  const worldMigration = readFileSync(join(ROOT, 'migrations-ledger', '0007-world-chat.sql'), 'utf8');
+  db.exec(worldMigration);
+  db.exec(worldMigration);
   return db;
 }
 
@@ -132,6 +144,10 @@ async function loadWorker(source) {
   const b64 = Buffer.from(source, 'utf8').toString('base64');
   const mod = await import('data:text/javascript;base64,' + b64);
   return mod.default;
+}
+async function loadWorkerModule(source) {
+  const b64 = Buffer.from(source, 'utf8').toString('base64');
+  return import('data:text/javascript;base64,' + b64);
 }
 
 /* ---- harness ---------------------------------------------------------------- */
@@ -174,6 +190,7 @@ function request(method, path, opts) {
   const o = opts || {};
   const headers = { 'content-type': 'application/json' };
   if (o.token) headers.authorization = 'Bearer ' + o.token;
+  if (o.moderator) headers.authorization = 'Moderator ' + o.moderator;
   headers['cf-connecting-ip'] = o.ip || '198.51.100.1';
   const init = { method, headers };
   if (o.body !== undefined) init.body = JSON.stringify(o.body);
@@ -221,8 +238,13 @@ const SOCIAL_ROUTES = [
   ['POST', '/social/message/send', { username: 'somebody', body: 'hello' }],
   ['GET', '/social/messages?with=somebody', undefined],
   ['POST', '/social/message/report', { messageId: 1, reason: 'spam' }],
+  ['POST', '/social/world/send', { body: 'hello world' }],
+  ['GET', '/social/world/messages', undefined],
+  ['POST', '/social/world/report', { messageId: 1, reason: 'spam' }],
   ['POST', '/social/presence', { state: 'online' }],
   ['GET', '/social/presence', undefined],
+  ['POST', '/social/online/heartbeat', {}],
+  ['GET', '/social/online', undefined],
 ];
 const NEW_ROUTES = [['POST', '/verify/request', undefined], ['POST', '/verify/confirm', { code: '123456' }]]
   .concat(SOCIAL_ROUTES);
@@ -254,12 +276,28 @@ const NORMALIZATION_ONLY_SAFETY = {
 };
 const envSocialOn = {
   DB: new MockD1(db), DEV_ECHO_CODE: '1',
-  SOCIAL_CHAT_ENABLED: '1', SOCIAL_PRESENCE_ENABLED: '1', CONTENT_SAFETY,
+  SOCIAL_CHAT_ENABLED: '1', SOCIAL_WORLD_CHAT_ENABLED:'1', SOCIAL_PRESENCE_ENABLED: '1', ONLINE_COUNT_ENABLED:'1', CONTENT_SAFETY,
+};
+const TEST_MATCH_ROOMS = {
+  idFromName(name) { return String(name); },
+  get() { return { fetch() { throw new Error('socket path is tested by the realtime suite'); } }; },
 };
 const envLobbyOn = {
-  ...envSocialOn, MULTIPLAYER_LOBBIES_ENABLED:'1', MULTIPLAYER_INVITES_ENABLED:'1',
+  ...envSocialOn, MATCH_ROOMS:TEST_MATCH_ROOMS,
+  MULTIPLAYER_LOBBIES_ENABLED:'1', MULTIPLAYER_INVITES_ENABLED:'1',
 };
-const worker = await loadWorker(SRC);
+const envPreAlpha = {
+  ...envLobbyOn, DEV_ECHO_CODE:undefined, EMAIL:undefined, MAIL_FROM:undefined,
+  SOCIAL_EMAIL_VERIFICATION_REQUIRED:'0', MULTIPLAYER_REALTIME_ENABLED:'1',
+};
+const MODERATOR_TOKEN = 'moderator-test-token-0123456789abcdef';
+const envModeration = {
+  DB: new MockD1(db), DEV_ECHO_CODE: '1',
+  MODERATION_OPERATOR_KEYS_JSON: JSON.stringify({ 'reviewer-a': MODERATOR_TOKEN }),
+};
+const workerModule = await loadWorkerModule(SRC);
+const worker = workerModule.default;
+const consumeMatchLaunchToken = workerModule.consumeMatchLaunchToken;
 const count = (sql, ...a) => Number(db.prepare(sql).get(...a).n);
 
 /* ---- 1. schema + constraints ------------------------------------------------ */
@@ -267,10 +305,15 @@ const count = (sql, ...a) => Number(db.prepare(sql).get(...a).n);
   const tables = db.prepare(
     "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map((r) => r.name);
   for (const t of ['blocks', 'email_verifications', 'friend_requests', 'friendships', 'messages', 'presence', 'reports',
-    'multiplayer_lobbies','multiplayer_lobby_members','multiplayer_invites'])
+    'multiplayer_lobbies','multiplayer_lobby_members','multiplayer_invites','moderation_subjects','moderation_cases',
+    'moderation_sanctions','moderation_appeals','moderation_events','multiplayer_lobby_compatibility',
+    'multiplayer_matches','multiplayer_match_seats','online_heartbeats','world_messages'])
     check('schema: table ' + t + ' exists', tables.indexOf(t) >= 0, tables.join(','));
   const indexes = db.prepare("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name").all().map((r) => r.name);
-  for (const i of ['idx_messages_from', 'idx_messages_to_page', 'idx_presence_expires'])
+  for (const i of ['idx_messages_from', 'idx_messages_to_page', 'idx_presence_expires','idx_moderation_cases_queue',
+    'idx_moderation_sanctions_active_user','idx_moderation_appeals_queue','idx_moderation_events_subject',
+    'idx_multiplayer_compatibility_revision','idx_multiplayer_matches_expiry','idx_multiplayer_match_seats_user',
+    'idx_online_heartbeats_expires','idx_world_messages_page','idx_world_messages_user'])
     check('schema: index ' + i + ' exists', indexes.indexOf(i) >= 0, indexes.join(','));
   const cols = db.prepare("SELECT name FROM pragma_table_info('users')").all().map((r) => r.name);
   check('migration: users.verified_at exists', cols.indexOf('verified_at') >= 0, cols.join(','));
@@ -318,6 +361,18 @@ const msgb = await makeUser(worker, env, db, 'msgb');
 const lurker = await makeUser(worker, env, db, 'lurker');
 const mailok = await makeUser(worker, env, db, 'mailok');
 const mailbad = await makeUser(worker, env, db, 'mailbad');
+const namelessIp=nextIp(),namelessEmail='nameless@example.test';
+const namelessReg=await call(worker,env,'POST','/register',{ip:namelessIp,
+  body:{email:namelessEmail,password:'correct horse battery',ageOk:true}});
+check('legacy account can still register before choosing username',namelessReg.status===201&&namelessReg.body.user.username===null,namelessReg.text);
+const nameless={name:'nameless',ip:namelessIp,email:namelessEmail,token:namelessReg.body.token,
+  id:Number(db.prepare('SELECT id FROM users WHERE email=?').get(namelessEmail).id)};
+
+{
+  const login=await call(worker,env,'POST','/login',{ip:nextIp(),body:{email:alice.email,password:'correct horse battery'}});
+  check('fresh login returns persisted canonical username and age state',login.status===200&&
+    login.body.user.username==='alice'&&login.body.user.ageOk===true,login.text);
+}
 
 /* ---- 3. every new route 401s without a token -------------------------------- */
 for (const [method, path, body] of NEW_ROUTES) {
@@ -419,8 +474,21 @@ await verifyUser(worker, env, zed);
 await verifyUser(worker, env, msga);
 await verifyUser(worker, env, msgb);
 await verifyUser(worker, env, lurker);
+await verifyUser(worker, env, nameless);
 db.prepare('UPDATE users SET social_banned=1 WHERE id=?').run(banned.id);
 db.prepare('UPDATE users SET age_ok=0 WHERE id=?').run(noage.id);
+
+{
+  const denied=await call(worker,env,'GET','/social/capabilities',{token:nameless.token,ip:nameless.ip});
+  check('username-less account cannot enter Social',denied.status===403&&denied.body.error==='username_required',denied.text);
+  const deniedWorld=await call(worker,env,'POST','/social/world/send',{token:nameless.token,ip:nameless.ip,body:{body:'anonymous'}});
+  check('username-less account cannot create anonymous World Chat rows',deniedWorld.status===403&&deniedWorld.body.error==='username_required'&&
+    count('SELECT COUNT(*) AS n FROM world_messages WHERE user_id=?',nameless.id)===0,deniedWorld.text);
+  const claim=await call(worker,env,'POST','/username',{token:nameless.token,ip:nameless.ip,body:{username:'named_later'}});
+  const allowed=await call(worker,env,'GET','/social/capabilities',{token:nameless.token,ip:nameless.ip});
+  check('one canonical username claim unlocks Social without another account',claim.status===200&&claim.body.username==='named_later'&&allowed.status===200,
+    claim.text+' / '+allowed.text);
+}
 
 /* attempt cap: five wrong guesses, then the row is destroyed */
 {
@@ -456,10 +524,40 @@ db.prepare('UPDATE users SET age_ok=0 WHERE id=?').run(noage.id);
 }
 
 /* ---- 5. the gate ------------------------------------------------------------- */
-for (const [method, path, body] of SOCIAL_ROUTES) {
-  const r = await call(worker, env, method, path, { token: unv.token, body });
-  check('unverified 403 on ' + method + ' ' + path,
-        r.status === 403 && r.body && r.body.error === 'unverified', r.status + ' ' + r.text);
+{
+  const baseFriends=await call(worker,env,
+    'GET','/social/friends',{token:unv.token});
+  check('unverified account reaches Social because e-mail is not an access gate',
+    baseFriends.status===200&&Array.isArray(baseFriends.body.friends),baseFriends.text);
+  const obsoleteFlag=await call(worker,{...env,SOCIAL_EMAIL_VERIFICATION_REQUIRED:'1'},
+    'GET','/social/friends',{token:unv.token});
+  check('obsolete deployment flag cannot restore the e-mail verification blocker',
+    obsoleteFlag.status===200&&Array.isArray(obsoleteFlag.body.friends),obsoleteFlag.text);
+  const caps=await call(worker,envPreAlpha,'GET','/social/capabilities',{token:unv.token});
+  check('authenticated account reaches social, World Chat and realtime multiplayer without verified e-mail',
+    caps.status===200&&caps.body.capabilities.friends===true&&caps.body.capabilities.worldChat===true
+      &&caps.body.capabilities.lobbies===true&&caps.body.capabilities.realtimeMatch===true,caps.text);
+  const world=await call(worker,envPreAlpha,'POST','/social/world/send',{
+    token:unv.token,body:{body:'Pre-alpha comms online.'},
+  });
+  check('unverified account reaches moderated World Chat',
+    world.status===201&&world.body.message.username==='unverified1',world.text);
+  const lobby=await call(worker,envPreAlpha,'POST','/multiplayer/lobbies',{
+    token:unv.token,body:{rules:{mode:'skirmish',slots:2,map:'prealpha'}},
+  });
+  check('unverified account can create an active multiplayer lobby',
+    lobby.status===201&&lobby.body.lobby.rules.slots===2,lobby.text);
+  const unchanged=db.prepare('SELECT verified_at FROM users WHERE id=?').get(unv.id);
+  check('Social access never falsely marks the optional address verified',unchanged.verified_at===null,JSON.stringify(unchanged));
+  const optional=await call(worker,envPreAlpha,'POST','/verify/request',{token:unv.token,ip:unv.ip});
+  check('optional verification endpoint remains live without delivery or code echo',
+    optional.status===200&&optional.body.sent===false&&!Object.hasOwn(optional.body,'code'),optional.text);
+  const ageStill=await call(worker,envPreAlpha,'GET','/social/friends',{token:noage.token});
+  check('removing the e-mail gate preserves the age gate',
+    ageStill.status===403&&ageStill.body.error==='age_restricted',ageStill.text);
+  const banStill=await call(worker,envPreAlpha,'GET','/social/friends',{token:banned.token});
+  check('removing the e-mail gate preserves account social bans',
+    banStill.status===403&&banStill.body.error==='social_banned',banStill.text);
 }
 for (const [method, path, body] of SOCIAL_ROUTES) {
   const r = await call(worker, env, method, path, { token: banned.token, body });
@@ -667,12 +765,116 @@ let reqId = 0;
   eq('self report refused', selfReport.body.error, 'self_report');
 }
 
+/* ---- 8B. moderation operations, sanctions and appeals ----------------------- */
+{
+  const unavailable = await call(worker, env, 'GET', '/moderation/reports');
+  check('moderation fails closed without operator secret', unavailable.status === 503
+    && unavailable.body.error === 'moderation_unavailable', unavailable.text);
+  const playerBearer = await call(worker, envModeration, 'GET', '/moderation/reports', { token: alice.token });
+  check('player bearer cannot enter operator realm', playerBearer.status === 401
+    && playerBearer.body.error === 'moderator_unauthorized', playerBearer.text);
+  const badModerator = await call(worker, envModeration, 'GET', '/moderation/reports', { moderator: 'x'.repeat(40) });
+  eq('invalid moderator credential refused', badModerator.status, 401);
+
+  const report = await call(worker, env, 'POST', '/social/report', {
+    token: alice.token, body: { username: 'dave', reason: 'moderation workflow evidence' },
+  });
+  eq('moderation workflow report accepted', report.status, 201);
+  check('report creates opaque case id', /^[a-f0-9]{32}$/.test(report.body.caseId), report.text);
+  const caseId = report.body.caseId;
+  const queue = await call(worker, envModeration, 'GET', '/moderation/reports?state=open', { moderator: MODERATOR_TOKEN });
+  check('operator queue reads open case', queue.status === 200
+    && queue.body.cases.some(c => c.id === caseId), queue.text);
+  const pageSeedA=await call(worker,env,'POST','/social/report',{token:alice.token,body:{username:'dave',reason:'queue page A'}});
+  const pageSeedB=await call(worker,env,'POST','/social/report',{token:alice.token,body:{username:'dave',reason:'queue page B'}});
+  db.prepare('UPDATE moderation_cases SET created_at=1000,updated_at=1000 WHERE id=?').run(pageSeedA.body.caseId);
+  db.prepare('UPDATE moderation_cases SET created_at=2000,updated_at=2000 WHERE id=?').run(pageSeedB.body.caseId);
+  const pageOne=await call(worker,envModeration,'GET','/moderation/reports?state=open&limit=1',{moderator:MODERATOR_TOKEN});
+  const pageTwo=await call(worker,envModeration,'GET','/moderation/reports?state=open&limit=1&after='+encodeURIComponent(pageOne.body.nextAfter),{moderator:MODERATOR_TOKEN});
+  check('moderation queue after-cursor pages have no overlap',pageOne.status===200&&pageTwo.status===200
+    &&pageOne.body.cases.length===1&&pageTwo.body.cases.length===1
+    &&pageOne.body.cases[0].id!==pageTwo.body.cases[0].id
+    &&pageOne.body.cases[0].id===pageSeedA.body.caseId&&pageTwo.body.cases[0].id===pageSeedB.body.caseId,
+    JSON.stringify({one:pageOne.body,two:pageTwo.body}));
+  const claim = await call(worker, envModeration, 'POST', '/moderation/reports/' + caseId + '/claim', {
+    moderator: MODERATOR_TOKEN, body: { reason: 'Assigned for review' },
+  });
+  check('operator claims case with bound actor', claim.status === 200
+    && claim.body.case.claimedBy === 'reviewer-a', claim.text);
+  const resolved = await call(worker, envModeration, 'POST', '/moderation/reports/' + caseId + '/resolve', {
+    moderator: MODERATOR_TOKEN, body: { reason: 'Evidence reviewed', outcome: 'no_action' },
+  });
+  check('operator resolves case with explicit outcome', resolved.status === 200
+    && resolved.body.case.state === 'resolved' && resolved.body.outcome === 'no_action', resolved.text);
+  const actorEvents = db.prepare('SELECT actor_ref,reason FROM moderation_events WHERE case_id=? ORDER BY id').all(caseId);
+  check('case audit trail preserves operator actor and reasons', actorEvents.some(e => e.actor_ref === 'reviewer-a'
+    && e.reason === 'Assigned for review') && actorEvents.some(e => e.actor_ref === 'reviewer-a'
+    && e.reason === 'Evidence reviewed'), JSON.stringify(actorEvents));
+
+  const expiry = Date.now() + 3600000;
+  const enforce = await call(worker, envModeration, 'POST', '/moderation/enforce', {
+    moderator: MODERATOR_TOKEN, body: { username: 'dave', kind: 'suspend', reason: 'One-hour test suspension', expiresAt: expiry, caseId },
+  });
+  check('operator creates seat-independent sanction', enforce.status === 201
+    && enforce.body.sanction.kind === 'suspend', enforce.text);
+  const sanctionId = enforce.body.sanction.id;
+  const blockedSocial = await call(worker, env, 'GET', '/social/friends', { token: dave.token });
+  check('active sanction gates ordinary social traffic', blockedSocial.status === 403
+    && blockedSocial.body.error === 'social_sanctioned', blockedSocial.text);
+  const blockedPreAlpha = await call(worker, {...env,SOCIAL_EMAIL_VERIFICATION_REQUIRED:'0'},
+    'GET', '/social/friends', { token: dave.token });
+  check('obsolete verification flag never bypasses an active sanction', blockedPreAlpha.status === 403
+    && blockedPreAlpha.body.error === 'social_sanctioned', blockedPreAlpha.text);
+  const appeal = await call(worker, env, 'POST', '/social/moderation/appeals', {
+    token: dave.token, body: { sanctionId, reason: 'Please review the context.' },
+  });
+  check('sanctioned player can still appeal', appeal.status === 201
+    && appeal.body.appeal.sanctionId === sanctionId, appeal.text);
+  const ownAppeals = await call(worker, env, 'GET', '/social/moderation/appeals', { token: dave.token });
+  check('player sees only own appeal state', ownAppeals.status === 200
+    && ownAppeals.body.appeals.some(a => a.id === appeal.body.appeal.id && a.state === 'open'), ownAppeals.text);
+  const opAppeals = await call(worker, envModeration, 'GET', '/moderation/appeals?state=open', { moderator: MODERATOR_TOKEN });
+  check('operator appeal queue includes pending appeal', opAppeals.status === 200
+    && opAppeals.body.appeals.some(a => a.id === appeal.body.appeal.id), opAppeals.text);
+  const appealResolve = await call(worker, envModeration, 'POST', '/moderation/appeals/' + appeal.body.appeal.id + '/resolve', {
+    moderator: MODERATOR_TOKEN, body: { accept: true, reason: 'Context supports reversal.' },
+  });
+  check('accepted appeal revokes sanction', appealResolve.status === 200
+    && appealResolve.body.sanctionRevoked === true, appealResolve.text);
+  const socialRestored = await call(worker, env, 'GET', '/social/friends', { token: dave.token });
+  eq('revoked sanction restores ordinary social gate', socialRestored.status, 200);
+
+  let updateBlocked = false, deleteBlocked = false;
+  try { db.prepare("UPDATE moderation_events SET reason='tampered' WHERE case_id=?").run(caseId); }
+  catch (e) { updateBlocked = /append-only/.test(e.message); }
+  try { db.prepare('DELETE FROM moderation_events WHERE case_id=?').run(caseId); }
+  catch (e) { deleteBlocked = /append-only/.test(e.message); }
+  check('moderation event UPDATE is blocked by trigger', updateBlocked);
+  check('moderation event DELETE is blocked by trigger', deleteBlocked);
+
+  const legacy = openDb();
+  legacy.exec('DROP TRIGGER moderation_events_no_update; DROP TRIGGER moderation_events_no_delete; DROP TABLE moderation_events');
+  const now = Date.now(), legacyToken = 'a'.repeat(64);
+  legacy.prepare("INSERT INTO users(id,email,pass_hash,pass_salt,pass_iter,created_at,username,age_ok,verified_at) VALUES(1,'legacy@test','h','s',100000,?,'legacy',1,?)").run(now,now);
+  legacy.prepare('INSERT INTO sessions(token,user_id,created_at,expires_at) VALUES(?,1,?,?)').run(legacyToken,now,now+60000);
+  const missingMigration = await call(worker, { DB:new MockD1(legacy) }, 'GET', '/social/friends', { token:legacyToken });
+  check('missing moderation migration fails social closed', missingMigration.status === 503
+    && missingMigration.body.error === 'moderation_unavailable', missingMigration.text);
+  legacy.close();
+
+  const toml = readFileSync(join(ROOT, 'wrangler.toml'), 'utf8');
+  check('operator key is documented but no secret value is committed', toml.includes('MODERATION_OPERATOR_KEYS_JSON')
+    && !/^\s*MODERATION_OPERATOR_KEYS_JSON\s*=/m.test(toml));
+}
+
 /* ---- 9. disabled capability handshake --------------------------------------- */
 {
   const off = await call(worker, env, 'GET', '/social/capabilities', { token: msga.token });
   eq('capability handshake 200 while disabled', off.status, 200);
   eq('chat is false without exact server flag', off.body.capabilities.chat, false);
+  eq('World Chat is false without exact server flag', off.body.capabilities.worldChat, false);
   eq('presence is false without exact server flag', off.body.capabilities.presence, false);
+  eq('online aggregate is false without exact server flag', off.body.capabilities.onlineCount, false);
   eq('capability protocol name', off.body.protocol, 'massfront-social');
   eq('capability protocol version', off.body.version, 1);
   eq('capability page max is bounded', off.body.limits.pageMax, 50);
@@ -684,14 +886,15 @@ let reqId = 0;
 
   const on = await call(worker, envSocialOn, 'GET', '/social/capabilities', { token: msga.token });
   check('exact flags + ready tables enable handshake',
-    on.body.capabilities.chat === true && on.body.capabilities.presence === true, on.text);
+    on.body.capabilities.chat === true && on.body.capabilities.worldChat === true && on.body.capabilities.presence === true
+      && on.body.capabilities.onlineCount === true, on.text);
   check('capability response has no account e-mail', on.text.indexOf('@') < 0, on.text);
 
   const flagAndTableOnly = await call(worker, {
-    DB: new MockD1(db), SOCIAL_CHAT_ENABLED: '1', SOCIAL_PRESENCE_ENABLED: '1',
+    DB: new MockD1(db), SOCIAL_CHAT_ENABLED: '1', SOCIAL_WORLD_CHAT_ENABLED:'1', SOCIAL_PRESENCE_ENABLED: '1',
   }, 'GET', '/social/capabilities', { token: msga.token });
-  check('chat capability fails closed without CONTENT_SAFETY binding',
-    flagAndTableOnly.body.capabilities.chat === false
+  check('built-in safety keeps chat available without external binding',
+    flagAndTableOnly.body.capabilities.chat === true && flagAndTableOnly.body.capabilities.worldChat === true
       && flagAndTableOnly.body.capabilities.presence === true, flagAndTableOnly.text);
 
   class MissingMessagesD1 {
@@ -711,8 +914,22 @@ let reqId = 0;
 
   const toml = readFileSync(join(ROOT, 'wrangler.toml'), 'utf8');
   const activeToml = toml.split(/\r?\n/).filter((line) => !/^\s*#/.test(line)).join('\n');
-  check('shipped wrangler has no active chat flag', activeToml.indexOf('SOCIAL_CHAT_ENABLED') < 0, activeToml);
+  check('shipped wrangler activates friend chat', /^\s*SOCIAL_CHAT_ENABLED\s*=\s*"1"/m.test(activeToml), activeToml);
+  check('shipped wrangler activates World Chat', /^\s*SOCIAL_WORLD_CHAT_ENABLED\s*=\s*"1"/m.test(activeToml), activeToml);
   check('shipped wrangler has no active presence flag', activeToml.indexOf('SOCIAL_PRESENCE_ENABLED') < 0, activeToml);
+  check('shipped wrangler activates the accepted multiplayer release flags',
+    /^\s*MULTIPLAYER_LOBBIES_ENABLED\s*=\s*"1"/m.test(activeToml)&&
+    /^\s*MULTIPLAYER_INVITES_ENABLED\s*=\s*"1"/m.test(activeToml)&&
+    /^\s*MULTIPLAYER_REALTIME_ENABLED\s*=\s*"1"/m.test(activeToml),activeToml);
+  check('shipped wrangler activates aggregate online count',
+    /^\s*ONLINE_COUNT_ENABLED\s*=\s*"1"/m.test(activeToml),activeToml);
+  check('shipped worker has no e-mail verification access-policy variable',
+    activeToml.indexOf('SOCIAL_EMAIL_VERIFICATION_REQUIRED')<0,activeToml);
+  check('worker source cannot restore the removed e-mail verification gate',
+    SRC.indexOf('SOCIAL_EMAIL_VERIFICATION_REQUIRED')<0&&
+    !/verified_at\s*==\s*null[\s\S]{0,160}friends and chat/.test(SRC),SRC.slice(0,160));
+  check('shipped pre-alpha policy never enables verification code echo',
+    !/^\s*DEV_ECHO_CODE\s*=/m.test(activeToml),activeToml);
   check('shipped wrangler has no active EMAIL binding', !/^\s*\[\[send_email\]\]/m.test(activeToml), activeToml);
 }
 
@@ -778,8 +995,11 @@ let evidenceMessageId = 0;
   const localOnly = await call(worker, missingSafetyEnv, 'POST', '/social/message/send', {
     token: msgb.token, body: { username: 'msga', body: 'local safety baseline' },
   });
-  check('flag + table without safety binding refuses chat',
-    localOnly.status === 503 && localOnly.body.error === 'feature_disabled', localOnly.text);
+  eq('built-in safety allows friend chat without external binding', localOnly.status, 201);
+  const localContact = await call(worker, missingSafetyEnv, 'POST', '/social/message/send', {
+    token: msgb.token, body: { username: 'msga', body: 'find me at pilot@example.test' },
+  });
+  eq('built-in friend-chat safety rejects contact exchange', localContact.body.error, 'unsafe_content');
   const explicitNormalizationEnv = {
     DB: new MockD1(db), SOCIAL_CHAT_ENABLED: '1', CONTENT_SAFETY: NORMALIZATION_ONLY_SAFETY,
   };
@@ -885,6 +1105,44 @@ let evidenceMessageId = 0;
 
 /* ---- 12. friend-only ephemeral presence ------------------------------------- */
 {
+  const worldEnv={DB:new MockD1(db),SOCIAL_WORLD_CHAT_ENABLED:'1'};
+  const off=await call(worker,env,'POST','/social/world/send',{token:msga.token,body:{body:'must stay off'}});
+  check('World Chat fails closed without exact release flag',off.status===503&&off.body.error==='feature_disabled',off.text);
+  const cap=await call(worker,worldEnv,'GET','/social/capabilities',{token:msga.token});
+  eq('World Chat advertises with table + exact flag + built-in safety',cap.body.capabilities.worldChat,true);
+  const a=await call(worker,worldEnv,'POST','/social/world/send',{token:msga.token,body:{body:'  Ｈｅｌｌｏ commanders\r\n  '}});
+  const b=await call(worker,worldEnv,'POST','/social/world/send',{token:msgb.token,body:{body:'Ready for co-op.'}});
+  check('verified players can post normalized World Chat messages',a.status===201&&b.status===201&&a.body.message.body==='Hello commanders',a.text+b.text);
+  check('World Chat receipt exposes only public bounded fields',Object.keys(a.body.message).sort().join(',')==='at,body,friend,id,self,username',a.text);
+  const contact=await call(worker,worldEnv,'POST','/social/world/send',{token:msga.token,body:{body:'discord.gg/example'}});
+  check('built-in World Chat safety rejects links/contact exchange',contact.status===400&&contact.body.error==='contact_info',contact.text);
+  const abuse=await call(worker,worldEnv,'POST','/social/world/send',{token:msga.token,body:{body:'go die'}});
+  check('built-in World Chat safety rejects high-severity abuse',abuse.status===400&&abuse.body.error==='unsafe_content',abuse.text);
+  const feed=await call(worker,worldEnv,'GET','/social/world/messages?limit=30',{token:msga.token});
+  check('World Chat feed is bounded newest-first with visible usernames',feed.status===200&&feed.body.messages.length>=2&&feed.body.messages[0].id>feed.body.messages[1].id&&feed.body.messages.some(x=>x.username==='msgb'),feed.text);
+  check('World Chat rows expose no private account or activity fields',feed.body.messages.every(x=>Object.keys(x).sort().join(',')==='at,body,friend,id,self,username')&&!/email|token|lastSeen|last_seen|presence|expiresAt/i.test(feed.text),feed.text);
+  const friendRow=feed.body.messages.find(x=>x.username==='msgb');
+  check('feed relationship bit enables accepted-friend actions',friendRow&&friendRow.friend===true&&!friendRow.self,JSON.stringify(friendRow));
+  db.prepare('INSERT OR IGNORE INTO blocks(blocker_id,blocked_id,created_at) VALUES(?,?,?)').run(msgb.id,msga.id,Date.now());
+  const feedA=await call(worker,worldEnv,'GET','/social/world/messages',{token:msga.token});
+  const feedB=await call(worker,worldEnv,'GET','/social/world/messages',{token:msgb.token});
+  check('World Chat block filtering is reciprocal',!feedA.body.messages.some(x=>x.username==='msgb')&&!feedB.body.messages.some(x=>x.username==='msga'),feedA.text+feedB.text);
+  db.prepare('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(msgb.id,msga.id);
+  const report=await call(worker,worldEnv,'POST','/social/world/report',{token:lurker.token,body:{messageId:a.body.message.id,reason:'public harassment'}});
+  eq('World Chat message can be reported by a viewer',report.status,201);
+  const reportRow=db.prepare('SELECT body_snapshot FROM reports WHERE id=?').get(Number(report.body.id)),snap=JSON.parse(reportRow.body_snapshot);
+  check('World Chat report preserves immutable public evidence only',snap.kind==='world_message'&&snap.messageId===a.body.message.id&&snap.message.body==='Hello commanders'&&!/@/.test(reportRow.body_snapshot),reportRow.body_snapshot);
+  const selfReport=await call(worker,worldEnv,'POST','/social/world/report',{token:msga.token,body:{messageId:a.body.message.id,reason:'self'}});
+  eq('World Chat rejects self-reporting',selfReport.body.error,'self_report');
+  db.prepare("DELETE FROM attempts WHERE bucket='world_send_user' AND akey=?").run(String(lurker.id));
+  let allowed=0;for(let i=0;i<12;i++){const r=await call(worker,worldEnv,'POST','/social/world/send',{token:lurker.token,body:{body:'world rate '+i}});if(r.status===201)allowed++;}
+  eq('World Chat send rate allows exactly 12 per minute',allowed,12);
+  const limited=await call(worker,worldEnv,'POST','/social/world/send',{token:lurker.token,body:{body:'world rate denied'}});
+  check('World Chat send rate denies the 13th',limited.status===429&&limited.body.error==='rate_limited',limited.text);
+}
+
+/* ---- 13. friend-only ephemeral presence ------------------------------------- */
+{
   const off = await call(worker, env, 'POST', '/social/presence', { token: msga.token, body: { state: 'online' } });
   check('presence disabled by default', off.status === 503 && off.body.error === 'feature_disabled', off.text);
   const invalid = await call(worker, envSocialOn, 'POST', '/social/presence', { token: msga.token, body: { state: 'invisible' } });
@@ -925,7 +1183,44 @@ let evidenceMessageId = 0;
   check('presence write rate is enforced', limited.status === 429 && limited.body.error === 'rate_limited', limited.text);
 }
 
-/* ---- 13. no e-mail address in any social response --------------------------- */
+/* ---- 13. authenticated aggregate-only online count ------------------------- */
+{
+  const off=await call(worker,env,'POST','/social/online/heartbeat',{token:msga.token,body:{}});
+  check('online heartbeat is fail-closed without exact flag',off.status===503&&off.body.error==='feature_disabled',off.text);
+  const a=await call(worker,envSocialOn,'POST','/social/online/heartbeat',{token:msga.token,body:{}});
+  const b=await call(worker,envSocialOn,'POST','/social/online/heartbeat',{token:msgb.token,body:{}});
+  const c=await call(worker,envSocialOn,'POST','/social/online/heartbeat',{token:lurker.token,body:{}});
+  check('unique authenticated heartbeats grow aggregate',a.body.count===1&&b.body.count===2&&c.body.count===3,a.text+b.text+c.text);
+  check('heartbeat response is aggregate-only',Object.keys(c.body).sort().join(',')==='count,expiresAt,ok,ttlMs',c.text);
+  check('heartbeat expiry is bounded near 120 seconds',Number(c.body.expiresAt)-Date.now()>115000&&Number(c.body.expiresAt)-Date.now()<=120000,c.text);
+  const repeat=await call(worker,envSocialOn,'POST','/social/online/heartbeat',{token:msga.token,body:{}});
+  eq('repeated heartbeat does not double-count account',repeat.body.count,3);
+  const read=await call(worker,envSocialOn,'GET','/social/online',{token:msga.token});
+  check('online read returns only count contract',read.status===200&&read.body.count===3
+    &&Object.keys(read.body).sort().join(',')==='count,ok,ttlMs',read.text);
+  db.prepare('UPDATE online_heartbeats SET expires_at=? WHERE user_id=?').run(Date.now()-1,lurker.id);
+  const expired=await call(worker,envSocialOn,'GET','/social/online',{token:msga.token});
+  check('expired heartbeat is excluded and purged',expired.body.count===2
+    &&count('SELECT COUNT(*) AS n FROM online_heartbeats WHERE user_id=?',lurker.id)===0,expired.text);
+  class MissingOnlineD1{
+    constructor(inner){this.inner=inner;}
+    prepare(sql){if(sql==='SELECT user_id FROM online_heartbeats LIMIT 1')return {async first(){throw new Error('no such table');}};return this.inner.prepare(sql);}
+  }
+  const missing=await call(worker,{DB:new MissingOnlineD1(new MockD1(db)),ONLINE_COUNT_ENABLED:'1'},'GET','/social/capabilities',{token:msga.token});
+  eq('capability fails closed when online migration is missing',missing.body.capabilities.onlineCount,false);
+  db.prepare("DELETE FROM attempts WHERE bucket='online_heartbeat_user' AND akey=?").run(String(msga.id));
+  const ins=db.prepare("INSERT INTO attempts(bucket,akey,created_at) VALUES('online_heartbeat_user',?,?)");
+  for(let i=0;i<120;i++)ins.run(String(msga.id),Date.now());
+  const limited=await call(worker,envSocialOn,'POST','/social/online/heartbeat',{token:msga.token,body:{}});
+  check('online heartbeat rate is enforced',limited.status===429&&limited.body.error==='rate_limited',limited.text);
+  db.prepare("DELETE FROM attempts WHERE bucket='online_count_user' AND akey=?").run(String(msga.id));
+  const countIns=db.prepare("INSERT INTO attempts(bucket,akey,created_at) VALUES('online_count_user',?,?)");
+  for(let i=0;i<240;i++)countIns.run(String(msga.id),Date.now());
+  const readLimited=await call(worker,envSocialOn,'GET','/social/online',{token:msga.token});
+  check('online count read rate is enforced',readLimited.status===429&&readLimited.body.error==='rate_limited',readLimited.text);
+}
+
+/* ---- 14. no e-mail address in any social response --------------------------- */
 {
   const scan = (bodies) => bodies.filter((b) => b.text.indexOf('@') >= 0);
   /* CONTROL FIRST: the scanner must object to a body that does leak. If this
@@ -964,6 +1259,35 @@ let evidenceMessageId = 0;
   check('lobbies disabled by default',off.status===503&&off.body.error==='feature_disabled',off.text);
   const caps=await call(worker,envLobbyOn,'GET','/social/capabilities',{token:loba.token});
   check('handshake independently enables lobbies and invites',caps.body.capabilities.lobbies===true&&caps.body.capabilities.invites===true&&caps.body.capabilities.realtimeMatch===false, caps.text);
+  check('launch capability requires and sees the MatchRoom binding',caps.body.capabilities.matchLaunch===true,caps.text);
+  const noRoomCaps=await call(worker,{...envLobbyOn,MATCH_ROOMS:null,MULTIPLAYER_REALTIME_ENABLED:'1'},
+    'GET','/social/capabilities',{token:loba.token});
+  check('flag cannot advertise launch or realtime without MatchRoom binding',
+    noRoomCaps.body.capabilities.matchLaunch===false&&noRoomCaps.body.capabilities.realtimeMatch===false,noRoomCaps.text);
+  const realtimeCaps=await call(worker,{...envLobbyOn,MULTIPLAYER_REALTIME_ENABLED:'1'},
+    'GET','/social/capabilities',{token:loba.token});
+  check('exact realtime flag advertises only with binding and launch tables',
+    realtimeCaps.body.capabilities.matchLaunch===true&&realtimeCaps.body.capabilities.realtimeMatch===true,realtimeCaps.text);
+  for(const slots of [2,3,4]){
+    const coop=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{
+      token:loba.token,body:{rules:{mode:'coop',slots,map:'tuple-coop-'+slots}},
+    });
+    check('Co-op vs AI accepts '+slots+' human slots',
+      coop.status===201&&coop.body.lobby.rules.mode==='coop'&&coop.body.lobby.rules.slots===slots,coop.text);
+  }
+  const skirmish2=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{
+    token:loba.token,body:{rules:{mode:'skirmish',slots:2,map:'tuple-pvp-2'}},
+  });
+  check('Skirmish accepts exactly two human slots',
+    skirmish2.status===201&&skirmish2.body.lobby.rules.mode==='skirmish'&&skirmish2.body.lobby.rules.slots===2,
+    skirmish2.text);
+  for(const slots of [3,4]){
+    const unsupported=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{
+      token:loba.token,body:{rules:{mode:'skirmish',slots,map:'tuple-pvp-'+slots}},
+    });
+    check('Skirmish rejects '+slots+' human slots even when the client bypasses UI',
+      unsupported.status===400&&unsupported.body.error==='unsupported_lobby_tuple',unsupported.text);
+  }
   const made=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:loba.token,body:{rules:{mode:'coop',slots:4,map:'aelos'}}});
   check('verified player creates bounded lobby',made.status===201&&/^[A-F0-9]{8}$/.test(made.body.lobby.code)&&made.body.lobby.members.length===1,made.text);
   const lobby=made.body.lobby;
@@ -1019,12 +1343,12 @@ let evidenceMessageId = 0;
 
   /* Inbox defense in depth: one valid friend invite remains visible while a
      nonfriend sender and an expired lobby are both hidden and revoked. */
-  const validLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:msga.token,body:{rules:{slots:4,map:'valid'}}})).body.lobby;
+  const validLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:msga.token,body:{rules:{mode:'coop',slots:4,map:'valid'}}})).body.lobby;
   const validInvite=await call(worker,envLobbyOn,'POST','/multiplayer/invites',{token:msga.token,body:{lobbyId:validLobby.id,username:'msgb'}});
-  const expiredLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:msga.token,body:{rules:{slots:4,map:'expired'}}})).body.lobby;
+  const expiredLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:msga.token,body:{rules:{mode:'coop',slots:4,map:'expired'}}})).body.lobby;
   const expiredInvite=await call(worker,envLobbyOn,'POST','/multiplayer/invites',{token:msga.token,body:{lobbyId:expiredLobby.id,username:'msgb'}});
   db.prepare('UPDATE multiplayer_lobbies SET expires_at=? WHERE id=?').run(Date.now()-1,expiredLobby.id);
-  const strangerLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:lurker.token,body:{rules:{slots:4,map:'stranger'}}})).body.lobby;
+  const strangerLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:lurker.token,body:{rules:{mode:'coop',slots:4,map:'stranger'}}})).body.lobby;
   const strangerInviteId='e4'.repeat(16);
   db.prepare("INSERT INTO multiplayer_invites(id,lobby_id,from_id,to_id,status,created_at,expires_at) VALUES (?,?,?,?,'pending',?,?)")
     .run(strangerInviteId,strangerLobby.id,lurker.id,msgb.id,Date.now(),Date.now()+600000);
@@ -1041,7 +1365,7 @@ let evidenceMessageId = 0;
   /* Preserve the friendship row and plant a block directly so this assertion
      proves the inbox query itself filters blocks, independently of the block
      handler's eager revocation test above. */
-  const blockedLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:loba.token,body:{rules:{slots:4,map:'blocked'}}})).body.lobby;
+  const blockedLobby=(await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{token:loba.token,body:{rules:{mode:'coop',slots:4,map:'blocked'}}})).body.lobby;
   const blockedInvite=await call(worker,envLobbyOn,'POST','/multiplayer/invites',{token:loba.token,body:{lobbyId:blockedLobby.id,username:'lobb'}});
   db.prepare('INSERT OR IGNORE INTO blocks(blocker_id,blocked_id,created_at) VALUES (?,?,?)').run(lobb.id,loba.id,Date.now());
   const blockedInbox=await call(worker,envLobbyOn,'GET','/multiplayer/invites',{token:lobb.token});
@@ -1052,7 +1376,221 @@ let evidenceMessageId = 0;
   db.prepare('DELETE FROM blocks WHERE blocker_id=? AND blocked_id=?').run(lobb.id,loba.id);
 }
 
-/* ---- 15. rate-limit buckets ---------------------------------------------------- */
+/* ---- 15. immutable compatibility, launch records and one-time credentials --- */
+{
+  const launchA=await makeUser(worker,env,db,'launcha');
+  const launchB=await makeUser(worker,env,db,'launchb');
+  const launchX=await makeUser(worker,env,db,'launchx');
+  await verifyUser(worker,env,launchA);await verifyUser(worker,env,launchB);await verifyUser(worker,env,launchX);
+  const digest=async value=>Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))).toString('hex');
+  const manifestHash='1'.repeat(64),balanceHash='2'.repeat(64),buildVersion='1.33.35';
+  const made=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{
+    token:launchA.token,body:{rules:{mode:'skirmish',slots:2,map:'launch-proof'}},
+  });
+  const legacyMade=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{
+    token:launchA.token,body:{rules:{mode:'skirmish',slots:2,map:'legacy-invalid'}},
+  });
+  db.prepare('UPDATE multiplayer_lobbies SET rules_json=? WHERE id=?').run(
+    JSON.stringify({mode:'skirmish',slots:3,map:'legacy-invalid'}),legacyMade.body.lobby.id);
+  const legacyLaunch=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+legacyMade.body.lobby.id+'/launch',{
+    token:launchA.token,body:{revision:legacyMade.body.lobby.revision},
+  });
+  check('launch fails closed for a persisted three-player Skirmish lobby',
+    legacyLaunch.status===409&&legacyLaunch.body.error==='unsupported_lobby_tuple',legacyLaunch.text);
+  const launchLobby=made.body.lobby,rulesHash=await digest(JSON.stringify(launchLobby.rules));
+  const base={revision:launchLobby.revision,buildVersion,manifestHash,balanceHash,rulesHash};
+  const disabled=await call(worker,env,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchA.token,body:base,
+  });
+  check('launch compatibility remains disabled with lobby flags unset',
+    disabled.status===503&&disabled.body.error==='match_launch_unavailable',disabled.text);
+  const missingLaunchDb={
+    prepare(sql){
+      if(/multiplayer_lobby_compatibility|multiplayer_matches|multiplayer_match_seats/.test(String(sql)))
+        throw new Error('missing launch migration');
+      return envLobbyOn.DB.prepare(sql);
+    },
+    batch(statements){return envLobbyOn.DB.batch(statements);},
+  };
+  const missingMigration=await call(worker,{...envLobbyOn,DB:missingLaunchDb},'POST',
+    '/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{token:launchA.token,body:base});
+  check('launch compatibility fails closed when migration 0005 is absent',
+    missingMigration.status===503&&missingMigration.body.error==='match_launch_unavailable',missingMigration.text);
+  const notFull=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchA.token,body:{revision:launchLobby.revision},
+  });
+  check('launch rejects a not-full roster',notFull.status===409&&notFull.body.error==='lobby_not_full',notFull.text);
+  const joined=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/join',{
+    token:launchB.token,body:{code:launchLobby.code},
+  });
+  const nonhost=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchB.token,body:{revision:joined.body.lobby.revision},
+  });
+  check('launch rejects a non-host member',nonhost.status===403&&nonhost.body.error==='host_only',nonhost.text);
+  const staleLaunch=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchA.token,body:{revision:launchLobby.revision},
+  });
+  check('launch rejects a stale optimistic revision',staleLaunch.status===409&&staleLaunch.body.error==='stale_revision',staleLaunch.text);
+  const notReady=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchA.token,body:{revision:joined.body.lobby.revision},
+  });
+  check('launch rejects a full but unready roster',notReady.status===409&&notReady.body.error==='lobby_not_ready',notReady.text);
+  const readyA=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/ready',{
+    token:launchA.token,body:{revision:joined.body.lobby.revision,ready:true},
+  });
+  const readyB=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/ready',{
+    token:launchB.token,body:{revision:readyA.body.lobby.revision,ready:true},
+  });
+  const revision=readyB.body.lobby.revision,compat={...base,revision};
+  const missing=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchA.token,body:{revision},
+  });
+  check('launch rejects missing seat compatibility',missing.status===409&&missing.body.error==='compatibility_missing',missing.text);
+  const nonmember=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchX.token,body:compat,
+  });
+  check('compatibility submission is roster-bound',nonmember.status===404&&nonmember.body.error==='no_such_lobby',nonmember.text);
+  const malformedVersion=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchA.token,body:{...compat,buildVersion:'latest build'},
+  });
+  const overlongVersion=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchA.token,body:{...compat,buildVersion:'12345.1.1'},
+  });
+  check('compatibility rejects malformed and overlong build versions',
+    malformedVersion.status===400&&malformedVersion.body.error==='invalid_build_version'
+      &&overlongVersion.status===400&&overlongVersion.body.error==='invalid_build_version',
+    malformedVersion.text+overlongVersion.text);
+  const malformedHash=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchA.token,body:{...compat,manifestHash:'A'.repeat(64)},
+  });
+  check('compatibility requires exactly 64 lowercase hex hash bytes',
+    malformedHash.status===400&&malformedHash.body.error==='invalid_manifest_hash',malformedHash.text);
+  const staleCompat=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchA.token,body:{...compat,revision:revision-1},
+  });
+  check('compatibility rejects a stale lobby revision',staleCompat.status===409&&staleCompat.body.error==='stale_revision',staleCompat.text);
+  const driftCompat=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchA.token,body:{...compat,rulesHash:'3'.repeat(64)},
+  });
+  check('server-canonical rules hash rejects client rules drift',driftCompat.status===409&&driftCompat.body.error==='rules_drift',driftCompat.text);
+  const compatA=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchA.token,body:compat,
+  });
+  const stillMissing=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchA.token,body:{revision},
+  });
+  check('one compatible seat is insufficient',compatA.status===200&&stillMissing.body.error==='compatibility_missing',compatA.text+stillMissing.text);
+  const mismatchB=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchB.token,body:{...compat,balanceHash:'4'.repeat(64)},
+  });
+  const mismatch=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchA.token,body:{revision},
+  });
+  check('launch rejects byte-different seat compatibility',
+    mismatchB.status===200&&mismatch.status===409&&mismatch.body.error==='compatibility_mismatch',mismatchB.text+mismatch.text);
+  await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/compatibility',{
+    token:launchB.token,body:compat,
+  });
+  const storedRules=db.prepare('SELECT rules_json FROM multiplayer_lobbies WHERE id=?').get(launchLobby.id).rules_json;
+  db.prepare('UPDATE multiplayer_lobbies SET rules_json=? WHERE id=?').run(
+    JSON.stringify({mode:'skirmish',slots:2,map:'drifted'}),launchLobby.id);
+  const rulesDrift=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{
+    token:launchA.token,body:{revision},
+  });
+  check('launch detects server rules changed after submissions',rulesDrift.status===409&&rulesDrift.body.error==='rules_drift',rulesDrift.text);
+  db.prepare('UPDATE multiplayer_lobbies SET rules_json=? WHERE id=?').run(storedRules,launchLobby.id);
+  const launches=await Promise.all([
+    call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{token:launchA.token,body:{revision}}),
+    call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+launchLobby.id+'/launch',{token:launchA.token,body:{revision}}),
+  ]);
+  const launched=launches.find(r=>r.status===201),lostLaunch=launches.find(r=>r.status!==201);
+  check('CONCURRENT launch has exactly one winner',
+    launches.filter(r=>r.status===201).length===1&&launches.filter(r=>r.status===409).length===1,
+    launches.map(r=>r.status+':'+(r.body&&r.body.error||'ok')).join(','));
+  const match=launched.body.match;
+  const memberLaunchRead=await call(worker,envLobbyOn,'GET','/multiplayer/lobbies/'+launchLobby.id,{token:launchB.token});
+  const outsiderLaunchRead=await call(worker,envLobbyOn,'GET','/multiplayer/lobbies/'+launchLobby.id,{token:launchX.token});
+  check('non-host member discovers immutable match receipt after host closes lobby',memberLaunchRead.status===200&&
+    memberLaunchRead.body.match&&memberLaunchRead.body.match.id===match.id&&memberLaunchRead.body.match.lobbyId===launchLobby.id&&
+    memberLaunchRead.body.match.launchRevision===revision,memberLaunchRead.text);
+  check('post-launch match discovery remains roster-private',outsiderLaunchRead.status===404&&
+    outsiderLaunchRead.body.error==='no_such_lobby',outsiderLaunchRead.text);
+  const record=db.prepare('SELECT * FROM multiplayer_matches WHERE id=?').get(match.id);
+  const seats=db.prepare('SELECT user_id,seat_number FROM multiplayer_match_seats WHERE match_id=? ORDER BY seat_number').all(match.id);
+  check('launch record freezes the exact compatibility tuple',record&&record.launch_revision===revision
+    &&record.build_version===buildVersion&&record.manifest_hash===manifestHash&&record.balance_hash===balanceHash
+    &&record.rules_hash===rulesHash&&record.roster_size===2,JSON.stringify(record));
+  check('seat numbering is deterministic by join order then user id',seats.length===2&&seats[0].user_id===launchA.id
+    &&seats[0].seat_number===1&&seats[1].user_id===launchB.id&&seats[1].seat_number===2,JSON.stringify(seats));
+  check('lost concurrent launch did not create a second match',lostLaunch.status===409
+    &&count('SELECT COUNT(*) AS n FROM multiplayer_matches WHERE lobby_id=?',launchLobby.id)===1,lostLaunch.text);
+  const outsiderClaim=await call(worker,envLobbyOn,'POST','/multiplayer/matches/'+match.id+'/token',{token:launchX.token});
+  check('nonmember cannot claim a match credential',outsiderClaim.status===404&&outsiderClaim.body.error==='no_such_match_seat',outsiderClaim.text);
+  const claimRace=await Promise.all([
+    call(worker,envLobbyOn,'POST','/multiplayer/matches/'+match.id+'/token',{token:launchA.token}),
+    call(worker,envLobbyOn,'POST','/multiplayer/matches/'+match.id+'/token',{token:launchA.token}),
+  ]);
+  const claimA=claimRace.find(r=>r.status===201);
+  check('CONCURRENT seat claim has exactly one winner',claimRace.filter(r=>r.status===201).length===1
+    &&claimRace.filter(r=>r.status===409&&r.body.error==='token_already_claimed').length===1,
+    claimRace.map(r=>r.status+':'+(r.body&&r.body.error||'ok')).join(','));
+  const claimB=await call(worker,envLobbyOn,'POST','/multiplayer/matches/'+match.id+'/token',{token:launchB.token});
+  const rawA=claimA.body.credential.token,rawB=claimB.body.credential.token;
+  const storedA=db.prepare('SELECT token_hash FROM multiplayer_match_seats WHERE match_id=? AND user_id=?').get(match.id,launchA.id);
+  const launchRows=JSON.stringify({matches:db.prepare('SELECT * FROM multiplayer_matches WHERE id=?').all(match.id),
+    seats:db.prepare('SELECT * FROM multiplayer_match_seats WHERE match_id=?').all(match.id)});
+  const seatColumns=db.prepare("SELECT name FROM pragma_table_info('multiplayer_match_seats')").all().map(r=>r.name);
+  check('database stores only token hash, never returned raw token',storedA.token_hash===await digest(rawA)
+    &&storedA.token_hash!==rawA&&!launchRows.includes(rawA)&&!seatColumns.includes('token'),launchRows);
+  const noPublicConsume=await call(worker,envLobbyOn,'POST','/multiplayer/matches/'+match.id+'/consume',{
+    token:launchA.token,body:{token:rawA},
+  });
+  check('token consumption has no public client route',noPublicConsume.status===404&&noPublicConsume.body.error==='route_not_found',noPublicConsume.text);
+  const expectA={...claimA.body.credential};delete expectA.token;delete expectA.expiresAt;
+  const expectB={...claimB.body.credential};delete expectB.token;delete expectB.expiresAt;
+  const crossSeat=await consumeMatchLaunchToken(envLobbyOn,rawA,expectB);
+  const crossCompatibility=await consumeMatchLaunchToken(envLobbyOn,rawA,{...expectA,manifestHash:'5'.repeat(64)});
+  check('cross-seat and compatibility replay are rejected without burning token',
+    !crossSeat.ok&&!crossCompatibility.ok,crossSeat.error+':'+crossCompatibility.error);
+  const consumedA=await consumeMatchLaunchToken(envLobbyOn,rawA,expectA);
+  const consumedAgain=await consumeMatchLaunchToken(envLobbyOn,rawA,expectA);
+  check('correct binding consumes once and double consume fails',consumedA.ok&&!consumedAgain.ok,JSON.stringify({consumedA,consumedAgain}));
+  const consumeRace=await Promise.all([
+    consumeMatchLaunchToken(envLobbyOn,rawB,expectB),consumeMatchLaunchToken(envLobbyOn,rawB,expectB),
+  ]);
+  check('CONCURRENT token consumption has exactly one winner',consumeRace.filter(r=>r.ok).length===1
+    &&consumeRace.filter(r=>!r.ok).length===1,JSON.stringify(consumeRace));
+
+  /* A second launch isolates expiry from the successful/double-consume path. */
+  const expMade=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies',{
+    token:launchA.token,body:{rules:{slots:2,map:'expiry'}},
+  });
+  const expLobby=expMade.body.lobby;
+  const expJoined=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/join',{token:launchB.token,body:{code:expLobby.code}});
+  const expReadyA=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+expLobby.id+'/ready',{
+    token:launchA.token,body:{revision:expJoined.body.lobby.revision,ready:true},
+  });
+  const expReadyB=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+expLobby.id+'/ready',{
+    token:launchB.token,body:{revision:expReadyA.body.lobby.revision,ready:true},
+  });
+  const expRevision=expReadyB.body.lobby.revision,expRulesHash=await digest(JSON.stringify(expLobby.rules));
+  const expCompat={revision:expRevision,buildVersion,manifestHash,balanceHash,rulesHash:expRulesHash};
+  await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+expLobby.id+'/compatibility',{token:launchA.token,body:expCompat});
+  await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+expLobby.id+'/compatibility',{token:launchB.token,body:expCompat});
+  const expLaunch=await call(worker,envLobbyOn,'POST','/multiplayer/lobbies/'+expLobby.id+'/launch',{
+    token:launchA.token,body:{revision:expRevision},
+  });
+  const expClaim=await call(worker,envLobbyOn,'POST','/multiplayer/matches/'+expLaunch.body.match.id+'/token',{token:launchA.token});
+  const expExpected={...expClaim.body.credential};delete expExpected.token;delete expExpected.expiresAt;
+  db.prepare('UPDATE multiplayer_match_seats SET token_expires_at=? WHERE match_id=? AND user_id=?')
+    .run(Date.now()-1,expLaunch.body.match.id,launchA.id);
+  const expired=await consumeMatchLaunchToken(envLobbyOn,expClaim.body.credential.token,expExpected);
+  check('expired credential is rejected by internal verifier',!expired.ok&&expired.error==='invalid_or_expired_token',JSON.stringify(expired));
+  check('capability response still never advertises realtime',
+    (await call(worker,envLobbyOn,'GET','/social/capabilities',{token:launchA.token})).body.capabilities.realtimeMatch===false);
+}
+
+/* ---- 16. rate-limit buckets ---------------------------------------------------- */
 {
   /* Every bucket the source asks for must be declared. This is the check that
      would have caught uname_check_ip / uname_claim_user being missing. */
@@ -1104,13 +1642,18 @@ let evidenceMessageId = 0;
   await call(worker, env, 'POST', '/social/friend/respond', { token: dave.token, body: { id: Number(zr.id), accept: true } });
   await call(worker, env, 'POST', '/social/friend/request', { token: capper.token, body: { username: 'zed' } });
   await call(worker, env, 'POST', '/social/block', { token: zed.token, body: { username: 'bob' } });
-  await call(worker, env, 'POST', '/social/report', { token: zed.token, body: { username: 'bob', reason: 'griefing' } });
+  const zedReport = await call(worker, env, 'POST', '/social/report', { token: zed.token, body: { username: 'bob', reason: 'griefing' } });
+  eq('deletion fixture report accepted', zedReport.status, 201);
   db.prepare('INSERT INTO email_verifications (user_id,code_hash,expires_at,attempts,created_at) VALUES (?,?,?,0,?)')
     .run(zed.id, 'x$y', Date.now() + 60000, Date.now());
   db.prepare('INSERT INTO messages (from_id,to_id,body,created_at) VALUES (?,?,?,?)')
     .run(zed.id, dave.id, 'deletion evidence', Date.now());
   db.prepare("INSERT INTO presence (user_id,state,updated_at,expires_at) VALUES (?,'online',?,?)")
     .run(zed.id, Date.now(), Date.now() + 120000);
+  db.prepare('INSERT INTO online_heartbeats (user_id,updated_at,expires_at) VALUES (?,?,?)')
+    .run(zed.id,Date.now(),Date.now()+120000);
+  db.prepare('INSERT INTO world_messages(user_id,body,created_at) VALUES(?,?,?)')
+    .run(zed.id,'deletion world evidence',Date.now());
   await call(worker, env, 'POST', '/login', { ip: zed.ip, body: { email: zed.email, password: 'correct horse battery' } });
   await call(worker, env, 'PUT', '/save', { token: zed.token, body: { payload: 'blob' } });
 
@@ -1134,6 +1677,23 @@ let evidenceMessageId = 0;
   insDeleteInvite.run(hostedOtherInvite,hostedLobby,dave.id,capper.id,deleteNow,deleteExpiry);
   insDeleteInvite.run(survivorOtherInvite,survivorLobby,dave.id,capper.id,deleteNow,deleteExpiry);
   insDeleteInvite.run(survivorZedInvite,survivorLobby,zed.id,bob.id,deleteNow,deleteExpiry);
+  const deleteHash='d'.repeat(64),insDeleteCompat=db.prepare(
+    'INSERT INTO multiplayer_lobby_compatibility(lobby_id,user_id,lobby_revision,build_version,manifest_hash,balance_hash,rules_hash,submitted_at) VALUES (?,?,1,?,?,?,?,?)');
+  for(const uid of [zed.id,dave.id,capper.id])insDeleteCompat.run(hostedLobby,uid,'1.0.0',deleteHash,deleteHash,deleteHash,deleteNow);
+  for(const uid of [dave.id,capper.id,zed.id])insDeleteCompat.run(survivorLobby,uid,'1.0.0',deleteHash,deleteHash,deleteHash,deleteNow);
+  const hostedMatch='f6'.repeat(16),survivorMatch='f7'.repeat(16),insDeleteMatch=db.prepare(
+    'INSERT INTO multiplayer_matches(id,lobby_id,launch_revision,host_user_id,build_version,manifest_hash,balance_hash,rules_hash,roster_size,created_at,expires_at) VALUES (?,?,1,?,?,?,?,?,3,?,?)');
+  insDeleteMatch.run(hostedMatch,hostedLobby,zed.id,'1.0.0',deleteHash,deleteHash,deleteHash,deleteNow,deleteExpiry);
+  insDeleteMatch.run(survivorMatch,survivorLobby,dave.id,'1.0.0',deleteHash,deleteHash,deleteHash,deleteNow,deleteExpiry);
+  const insDeleteSeat=db.prepare(
+    'INSERT INTO multiplayer_match_seats(match_id,lobby_id,user_id,seat_number,build_version,manifest_hash,balance_hash,rules_hash) VALUES (?,?,?,?,?,?,?,?)');
+  [zed.id,dave.id,capper.id].forEach((uid,i)=>insDeleteSeat.run(hostedMatch,hostedLobby,uid,i+1,'1.0.0',deleteHash,deleteHash,deleteHash));
+  [dave.id,capper.id,zed.id].forEach((uid,i)=>insDeleteSeat.run(survivorMatch,survivorLobby,uid,i+1,'1.0.0',deleteHash,deleteHash,deleteHash));
+  const zedSanction = await call(worker, envModeration, 'POST', '/moderation/enforce', {
+    moderator: MODERATOR_TOKEN, body: { username:'zed', kind:'ban', reason:'Deletion retention fixture' },
+  });
+  eq('deletion fixture sanction created', zedSanction.status, 201);
+  const zedSubjectBefore = db.prepare('SELECT subject_ref FROM moderation_subjects WHERE user_id=?').get(zed.id).subject_ref;
 
   const footprint = () => ({
     friendships: count('SELECT COUNT(*) AS n FROM friendships WHERE lo_id=? OR hi_id=?', zed.id, zed.id),
@@ -1143,6 +1703,8 @@ let evidenceMessageId = 0;
     email_verifications: count('SELECT COUNT(*) AS n FROM email_verifications WHERE user_id=?', zed.id),
     messages: count('SELECT COUNT(*) AS n FROM messages WHERE from_id=? OR to_id=?', zed.id, zed.id),
     presence: count('SELECT COUNT(*) AS n FROM presence WHERE user_id=?', zed.id),
+    online_heartbeats: count('SELECT COUNT(*) AS n FROM online_heartbeats WHERE user_id=?',zed.id),
+    world_messages: count('SELECT COUNT(*) AS n FROM world_messages WHERE user_id=?',zed.id),
     saves: count('SELECT COUNT(*) AS n FROM saves WHERE user_id=?', zed.id),
     sessions: count('SELECT COUNT(*) AS n FROM sessions WHERE user_id=?', zed.id),
     users: count('SELECT COUNT(*) AS n FROM users WHERE id=?', zed.id),
@@ -1153,6 +1715,11 @@ let evidenceMessageId = 0;
     hosted_lobby_invites: count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE lobby_id IN (SELECT id FROM multiplayer_lobbies WHERE host_id=?)',zed.id),
     lobby_memberships: count('SELECT COUNT(*) AS n FROM multiplayer_lobby_members WHERE user_id=?',zed.id),
     lobby_invites_personal: count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE from_id=? OR to_id=?',zed.id,zed.id),
+    hosted_compatibility: count('SELECT COUNT(*) AS n FROM multiplayer_lobby_compatibility WHERE lobby_id=?',hostedLobby),
+    personal_compatibility: count('SELECT COUNT(*) AS n FROM multiplayer_lobby_compatibility WHERE user_id=?',zed.id),
+    hosted_matches: count('SELECT COUNT(*) AS n FROM multiplayer_matches WHERE host_user_id=?',zed.id),
+    hosted_match_seats: count('SELECT COUNT(*) AS n FROM multiplayer_match_seats WHERE lobby_id=?',hostedLobby),
+    personal_match_seats: count('SELECT COUNT(*) AS n FROM multiplayer_match_seats WHERE user_id=?',zed.id),
   });
   const before = footprint();
   /* CONTROL: every counter this test is about to assert is zero must be
@@ -1179,6 +1746,26 @@ let evidenceMessageId = 0;
   eq('account delete removed every other-user row under the deleted hosted lobby',
     count('SELECT COUNT(*) AS n FROM multiplayer_lobby_members WHERE lobby_id=?',hostedLobby)
       +count('SELECT COUNT(*) AS n FROM multiplayer_invites WHERE lobby_id=?',hostedLobby),0);
+  check('account deletion preserves unrelated match while removing deleted launch seat',
+    count('SELECT COUNT(*) AS n FROM multiplayer_matches WHERE id=?',survivorMatch)===1
+      &&count('SELECT COUNT(*) AS n FROM multiplayer_match_seats WHERE match_id=?',survivorMatch)===2
+      &&count('SELECT COUNT(*) AS n FROM multiplayer_lobby_compatibility WHERE lobby_id=?',survivorLobby)===2);
+  const retainedSanction = db.prepare('SELECT user_id,subject_ref,status FROM moderation_sanctions WHERE id=?').get(zedSanction.body.sanction.id);
+  check('account deletion nulls retained sanction user id', retainedSanction && retainedSanction.user_id === null,
+    JSON.stringify(retainedSanction));
+  eq('account deletion removes subject map',
+    count('SELECT COUNT(*) AS n FROM moderation_subjects WHERE user_id=?',zed.id),0);
+  check('retained sanction keeps only opaque subject reference', retainedSanction.subject_ref === zedSubjectBefore
+    && /^[a-f0-9]{32}$/.test(String(retainedSanction.subject_ref))
+    && String(retainedSanction.subject_ref)!==String(zed.id), retainedSanction.subject_ref);
+  const retainedCase = db.prepare('SELECT evidence_snapshot,reporter_ref FROM moderation_cases WHERE id=?').get(zedReport.body.caseId);
+  check('account deletion preserves report evidence under opaque reference', retainedCase
+    && JSON.parse(retainedCase.evidence_snapshot).reason === 'griefing'
+    && retainedCase.reporter_ref === zedSubjectBefore, JSON.stringify(retainedCase));
+  check('retained case redacts the deleted structured username',
+    !JSON.stringify(JSON.parse(retainedCase.evidence_snapshot)).toLowerCase().includes('zed'),retainedCase.evidence_snapshot);
+  check('account deletion preserves append-only sanction event',
+    count("SELECT COUNT(*) AS n FROM moderation_events WHERE subject_ref=? AND action='sanction_created'",zedSubjectBefore)>=1);
   /* CONTROL: other players' rows were not collateral damage. */
   check('CONTROL other accounts survived the purge',
         count('SELECT COUNT(*) AS n FROM users') >= 8 && count('SELECT COUNT(*) AS n FROM reports') >= 1,
@@ -1192,7 +1779,10 @@ let evidenceMessageId = 0;
   const root = await worker.fetch(request('GET', '/'), env);
   const rootText = await root.text();
   const missing = ['/verify/request', '/verify/confirm', '/social/friends', '/social/block', '/social/report',
-    '/social/capabilities', '/social/message/send', '/social/messages', '/social/message/report', '/social/presence']
+    '/social/capabilities', '/social/message/send', '/social/messages', '/social/message/report', '/social/presence',
+    '/social/world/send','/social/world/messages','/social/world/report',
+    '/social/moderation/appeals','/moderation/reports','/moderation/enforce','/moderation/sanctions','/moderation/appeals',
+    '/multiplayer/lobbies/:id/compatibility|launch','/multiplayer/matches/:id/token']
     .filter((p) => rootText.indexOf(p) < 0);
   check('the index page lists the new routes', missing.length === 0, missing.join(' '));
 }

@@ -1,9 +1,19 @@
 # MASSFRONT release preflight
 
-Audited 2026-08-03. This is the release procedure for the current Hugging Face
-web/OTA channel and the side-loadable Android build. The examples use `1.31.0`
-as the version after the currently published `1.30.0`; substitute another
-semantic version only if every version source below is changed together.
+Audited 2026-08-03; Apple delivery decision reconciled 2026-08-31. This is the
+release procedure for the five current channels: canonical source, packed
+browser preview, Hugging Face OTA, Android native and Hugging Face Space. The
+browser package is also the supported Apple build: install it from Safari with
+**Share → Add to Home Screen**.
+
+Native iOS/IPA/Xcode/TestFlight/App Store delivery is permanently retired. Do
+not bump or sync an iOS project, produce/sign/upload an IPA, submit to an Apple
+store, or hold a release for any of those steps. Safari/WebKit, AAC, safe-area,
+standalone-PWA, storage, offline, OTA and rollback compatibility remain required.
+
+The examples use `1.31.0` as the version after the then-published `1.30.0`;
+substitute another semantic version only if every current version source below
+is changed together.
 
 ## Stop-ship blockers found by this audit
 
@@ -42,6 +52,7 @@ Do not publish another manifest or APK until these are closed.
 | OTA payloads and APKs | HF dataset `CREATORJD/massfront-releases` |
 | Browser playtest | HF static Space `CREATORJD/massfront-playtest` |
 | Live web URL | `https://creatorjd-massfront-playtest.static.hf.space/` |
+| Apple install route | Open the live web URL in Safari → Share → Add to Home Screen |
 | Account/cloud-save API | `https://massfront-auth.jasondixon1994.workers.dev` |
 | Obsolete update channel | `massfront-update.jasondixon1994.workers.dev` (still serves stale `1.14.0`) |
 
@@ -71,19 +82,19 @@ Change all canonical version sources together:
 | `package.json` | `version: 1.31.0` |
 | `package-lock.json` | both root/package version entries |
 | `android/app/build.gradle` | `versionName "1.31.0"`, monotonic `versionCode 13100` |
-| `ios/App/App.xcodeproj/project.pbxproj` | `MARKETING_VERSION = 1.31.0` and increment `CURRENT_PROJECT_VERSION` above 34 |
 
-Do not manually edit copies under `www/`, Android `public/`, or iOS `public/`.
-They are generated later. Review the canonical values before building:
+Do not manually edit copies under `www/` or Android `public/`. They are
+generated later. Review the canonical values before building:
 
 ```powershell
-rg -n 'APP_VERSION|PACKAGED_REV|\?v=|versionName|versionCode|MARKETING_VERSION|CURRENT_PROJECT_VERSION|"version"' `
+rg -n 'APP_VERSION|PACKAGED_REV|\?v=|versionName|versionCode|"version"' `
   src/updater.js boot.js index.html package.json package-lock.json `
-  android/app/build.gradle ios/App/App.xcodeproj/project.pbxproj
+  android/app/build.gradle
 ```
 
 `APP_VERSION` and `PACKAGED_REV` must match the release manifest. Android's
-`versionCode` and iOS's `CURRENT_PROJECT_VERSION` must only increase.
+`versionCode` must only increase. Apple PWA installs use the web/OTA version;
+there is no separate iOS marketing or build number.
 
 ## 2. Local gates and deterministic staging
 
@@ -126,7 +137,12 @@ print(f'staging verified: {len(paths)} files x 2 targets')
 ```
 
 Before going live, serve `www/` locally and visually inspect a phone viewport.
-A clean console alone is not a visual pass.
+A clean console alone is not a visual pass. For Apple compatibility, verify the
+same packed bytes through Safari/WebKit: manifest/icon installability,
+standalone Add-to-Home-Screen launch, WebGL2, `viewport-fit=cover` and safe-area
+insets, rotation/`visualViewport`, AAC playback after a user gesture, IndexedDB,
+offline relaunch, OTA activation and rollback. Apple support is a web-package
+acceptance surface, not a native build lane.
 
 ## 3. Build and inspect the Android installable APK
 
@@ -312,7 +328,7 @@ Finally fetch `resolve/main/update.json?download=true`, confirm the new version,
 and re-hash its pinned payload. Test update discovery, download, restart, first
 frame confirmation, and local-save retention from the previous Android build.
 
-## 6. Publish the browser Space, then the APK artifact
+## 6. Publish the browser Space, then the Android APK artifact
 
 Publish the already verified `www/` only after the OTA manifest and pinned
 payload are healthy. This prevents the web client from reporting the new local
@@ -336,6 +352,13 @@ node tools/test-cloud-playtest.mjs https://creatorjd-massfront-playtest.static.h
 Inspect `releases/cloud-playtest-iphone.png`, not just the script exit code.
 Confirm the live `src/updater.js`, `boot.js`, and `assets/update-config.json`
 return the new version and official HF endpoint.
+
+On a real iPhone or iPad, open that exact live URL in Safari, add it to the Home
+Screen, launch the installed icon, and repeat the Apple browser checks from
+section 2. Record the device/OS, URL/Space commit, install/standalone result,
+safe-area and rotation result, AAC unlock/resume result, offline result, and
+OTA/rollback result. Do not open Xcode or wait for an IPA, TestFlight, or App
+Store submission.
 
 Upload the final, shrunk, signed APK only after device verification:
 
@@ -371,17 +394,19 @@ SHA-256, package, version code/name, and signer digest in the release handoff.
   emergency version such as `1.31.1`, publish its payload, verify it, then
   publish its manifest last.
 - `boot.js` cannot be repaired by the current OTA payload. A boot-loader defect
-  requires a corrected web package/APK (and, later, iOS package).
+  requires corrected packed browser/Space bytes and a corrected Android APK.
 
 ## Final release record
 
 Before announcing the build, save these facts together:
 
-- source version, Android version code, iOS build number
+- source version and Android version code
 - `bundle.mjs`, focused regression tests, local visual QA results
 - OTA payload name, immutable HF commit, bytes, SHA-256
 - live manifest commit and verification timestamp
 - Space commit and cloud smoke-test screenshot
+- Apple Safari-installed PWA evidence: device/OS, install and standalone launch,
+  WebGL2, safe areas/rotation, AAC unlock/resume, storage/offline and OTA/rollback
 - APK public URL, bytes, SHA-256, package/version, signer certificate
 - previous-version Android in-place upgrade/save-retention result
 - soundtrack pack/index status (bundled-only or remotely verified)

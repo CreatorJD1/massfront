@@ -235,7 +235,12 @@
         "lod1": 203,
         "lod2": 61
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 24,
+        "lod2": 6
+      }
     },
     {
       "id": "colonial_gatehouse",
@@ -310,7 +315,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1578
+          "triangles": 1336
         },
         {
           "lod": 1,
@@ -338,16 +343,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 1578,
+        "lod0": 1336,
         "lod1": 294,
         "lod2": 174
       },
       "polys": {
-        "lod0": 494,
+        "lod0": 446,
         "lod1": 119,
         "lod2": 65
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 14,
+        "lod2": 6
+      }
     },
     {
       "id": "colonial_watchtower",
@@ -463,7 +473,12 @@
         "lod1": 228,
         "lod2": 46
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 29,
+        "lod2": 5
+      }
     },
     {
       "id": "colonial_depot_shed",
@@ -608,7 +623,12 @@
         "lod1": 288,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 40,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_tower_slab",
@@ -683,7 +703,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 9096
+          "triangles": 9072
         },
         {
           "lod": 1,
@@ -727,16 +747,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 9096,
+        "lod0": 9072,
         "lod1": 884,
         "lod2": 264
       },
       "polys": {
-        "lod0": 3596,
+        "lod0": 3590,
         "lod1": 336,
         "lod2": 100
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 14,
+        "lod1": 36,
+        "lod2": 9
+      }
     },
     {
       "id": "colonial_tower_spire",
@@ -811,7 +836,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 11362
+          "triangles": 11382
         },
         {
           "lod": 1,
@@ -851,16 +876,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 11362,
+        "lod0": 11382,
         "lod1": 1310,
         "lod2": 370
       },
       "polys": {
-        "lod0": 4676,
+        "lod0": 4679,
         "lod1": 509,
         "lod2": 139
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 25,
+        "lod1": 57,
+        "lod2": 12
+      }
     },
     {
       "id": "colonial_civic_hall",
@@ -979,7 +1009,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 11634
+          "triangles": 11624
         },
         {
           "lod": 1,
@@ -1025,16 +1055,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 11634,
+        "lod0": 11624,
         "lod1": 1034,
         "lod2": 186
       },
       "polys": {
-        "lod0": 4019,
+        "lod0": 4014,
         "lod1": 421,
         "lod2": 71
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 18,
+        "lod1": 53,
+        "lod2": 7
+      }
     },
     {
       "id": "colonial_arcology_stack",
@@ -1153,7 +1188,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 16970
+          "triangles": 16994
         },
         {
           "lod": 1,
@@ -1192,7 +1227,7 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 16970,
+        "lod0": 16994,
         "lod1": 1618,
         "lod2": 358
       },
@@ -1201,7 +1236,12 @@
         "lod1": 649,
         "lod2": 133
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 32,
+        "lod1": 78,
+        "lod2": 11
+      }
     },
     {
       "id": "colonial_industrial_hall",
@@ -1346,7 +1386,12 @@
         "lod1": 287,
         "lod2": 75
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 12,
+        "lod1": 36,
+        "lod2": 7
+      }
     },
     {
       "id": "colonial_tank_farm",
@@ -1454,7 +1499,12 @@
         "lod1": 226,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 25,
+        "lod2": 4
+      }
     },
     {
       "id": "colonial_power_relay",
@@ -1573,7 +1623,12 @@
         "lod1": 307,
         "lod2": 99
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 14,
+        "lod1": 37,
+        "lod2": 11
+      }
     },
     {
       "id": "colonial_corner_infill",
@@ -1648,7 +1703,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 8004
+          "triangles": 7994
         },
         {
           "lod": 1,
@@ -1691,16 +1746,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 8004,
+        "lod0": 7994,
         "lod1": 856,
         "lod2": 264
       },
       "polys": {
-        "lod0": 2981,
+        "lod0": 2976,
         "lod1": 326,
         "lod2": 100
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 13,
+        "lod1": 34,
+        "lod2": 8
+      }
     },
     {
       "id": "brutalist_hab_block",
@@ -1775,7 +1835,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 3774
+          "triangles": 3766
         },
         {
           "lod": 1,
@@ -1818,7 +1878,7 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 3774,
+        "lod0": 3766,
         "lod1": 486,
         "lod2": 158
       },
@@ -1827,7 +1887,12 @@
         "lod1": 191,
         "lod2": 61
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 8,
+        "lod1": 22,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_gatehouse",
@@ -1902,7 +1967,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1392
+          "triangles": 1312
         },
         {
           "lod": 1,
@@ -1931,16 +1996,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 1392,
+        "lod0": 1312,
         "lod1": 294,
         "lod2": 174
       },
       "polys": {
-        "lod0": 459,
+        "lod0": 447,
         "lod1": 119,
         "lod2": 65
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 14,
+        "lod2": 6
+      }
     },
     {
       "id": "brutalist_watchtower",
@@ -2056,7 +2126,12 @@
         "lod1": 180,
         "lod2": 46
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 21,
+        "lod2": 5
+      }
     },
     {
       "id": "brutalist_depot_shed",
@@ -2197,7 +2272,12 @@
         "lod1": 264,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 8,
+        "lod1": 36,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_tower_slab",
@@ -2323,7 +2403,12 @@
         "lod1": 330,
         "lod2": 100
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 15,
+        "lod1": 35,
+        "lod2": 9
+      }
     },
     {
       "id": "brutalist_tower_spire",
@@ -2446,7 +2531,12 @@
         "lod1": 461,
         "lod2": 139
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 31,
+        "lod1": 49,
+        "lod2": 12
+      }
     },
     {
       "id": "brutalist_civic_hall",
@@ -2619,7 +2709,12 @@
         "lod1": 393,
         "lod2": 71
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 20,
+        "lod1": 49,
+        "lod2": 7
+      }
     },
     {
       "id": "brutalist_arcology_stack",
@@ -2738,7 +2833,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 17640
+          "triangles": 17630
         },
         {
           "lod": 1,
@@ -2774,16 +2869,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 17640,
+        "lod0": 17630,
         "lod1": 1594,
         "lod2": 358
       },
       "polys": {
-        "lod0": 6989,
+        "lod0": 6986,
         "lod1": 631,
         "lod2": 133
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 43,
+        "lod1": 74,
+        "lod2": 11
+      }
     },
     {
       "id": "brutalist_industrial_hall",
@@ -2927,7 +3027,12 @@
         "lod1": 275,
         "lod2": 75
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 14,
+        "lod1": 34,
+        "lod2": 7
+      }
     },
     {
       "id": "brutalist_tank_farm",
@@ -3034,7 +3139,12 @@
         "lod1": 218,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 6,
+        "lod1": 24,
+        "lod2": 4
+      }
     },
     {
       "id": "brutalist_power_relay",
@@ -3109,7 +3219,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2168
+          "triangles": 2164
         },
         {
           "lod": 1,
@@ -3145,7 +3255,7 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 2168,
+        "lod0": 2164,
         "lod1": 710,
         "lod2": 250
       },
@@ -3154,7 +3264,12 @@
         "lod1": 277,
         "lod2": 99
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 13,
+        "lod1": 32,
+        "lod2": 11
+      }
     },
     {
       "id": "brutalist_corner_infill",
@@ -3229,7 +3344,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 6624
+          "triangles": 6622
         },
         {
           "lod": 1,
@@ -3268,7 +3383,7 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 6624,
+        "lod0": 6622,
         "lod1": 820,
         "lod2": 264
       },
@@ -3277,7 +3392,12 @@
         "lod1": 308,
         "lod2": 100
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 14,
+        "lod1": 31,
+        "lod2": 8
+      }
     },
     {
       "id": "ruined_hab_block",
@@ -3404,7 +3524,12 @@
         "lod1": 265,
         "lod2": 61
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 3,
+        "lod1": 33,
+        "lod2": 6
+      }
     },
     {
       "id": "ruined_gatehouse",
@@ -3479,7 +3604,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 914
+          "triangles": 890
         },
         {
           "lod": 1,
@@ -3509,16 +3634,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 914,
+        "lod0": 890,
         "lod1": 434,
         "lod2": 174
       },
       "polys": {
-        "lod0": 312,
+        "lod0": 291,
         "lod1": 181,
         "lod2": 65
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 1,
+        "lod1": 23,
+        "lod2": 6
+      }
     },
     {
       "id": "ruined_watchtower",
@@ -3635,7 +3765,12 @@
         "lod1": 208,
         "lod2": 46
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 2,
+        "lod1": 27,
+        "lod2": 5
+      }
     },
     {
       "id": "ruined_depot_shed",
@@ -3777,7 +3912,12 @@
         "lod1": 322,
         "lod2": 36
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 13,
+        "lod1": 46,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_tower_slab",
@@ -3903,7 +4043,12 @@
         "lod1": 338,
         "lod2": 100
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 4,
+        "lod1": 39,
+        "lod2": 9
+      }
     },
     {
       "id": "ruined_tower_spire",
@@ -3978,7 +4123,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 4900
+          "triangles": 4884
         },
         {
           "lod": 1,
@@ -4021,16 +4166,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 4900,
+        "lod0": 4884,
         "lod1": 1198,
         "lod2": 370
       },
       "polys": {
-        "lod0": 1739,
+        "lod0": 1736,
         "lod1": 469,
         "lod2": 139
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 12,
+        "lod1": 53,
+        "lod2": 12
+      }
     },
     {
       "id": "ruined_civic_hall",
@@ -4203,7 +4353,12 @@
         "lod1": 441,
         "lod2": 71
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 7,
+        "lod1": 57,
+        "lod2": 7
+      }
     },
     {
       "id": "ruined_arcology_stack",
@@ -4370,7 +4525,12 @@
         "lod1": 607,
         "lod2": 133
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 30,
+        "lod1": 79,
+        "lod2": 11
+      }
     },
     {
       "id": "ruined_industrial_hall",
@@ -4467,7 +4627,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2854
+          "triangles": 2842
         },
         {
           "lod": 1,
@@ -4505,16 +4665,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 2854,
+        "lod0": 2842,
         "lod1": 790,
         "lod2": 202
       },
       "polys": {
-        "lod0": 871,
+        "lod0": 866,
         "lod1": 333,
         "lod2": 75
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 10,
+        "lod1": 44,
+        "lod2": 7
+      }
     },
     {
       "id": "ruined_tank_farm",
@@ -4623,7 +4788,12 @@
         "lod1": 244,
         "lod2": 40
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 5,
+        "lod1": 27,
+        "lod2": 4
+      }
     },
     {
       "id": "ruined_power_relay",
@@ -4698,7 +4868,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 1290
+          "triangles": 1274
         },
         {
           "lod": 1,
@@ -4733,16 +4903,21 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 1290,
+        "lod0": 1274,
         "lod1": 770,
         "lod2": 250
       },
       "polys": {
-        "lod0": 409,
+        "lod0": 406,
         "lod1": 307,
         "lod2": 99
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 9,
+        "lod1": 37,
+        "lod2": 11
+      }
     },
     {
       "id": "ruined_corner_infill",
@@ -4817,7 +4992,7 @@
       "lods": [
         {
           "lod": 0,
-          "triangles": 2916
+          "triangles": 2914
         },
         {
           "lod": 1,
@@ -4858,7 +5033,7 @@
         "class": "static_structure"
       },
       "tris": {
-        "lod0": 2916,
+        "lod0": 2914,
         "lod1": 908,
         "lod2": 264
       },
@@ -4867,7 +5042,12 @@
         "lod1": 360,
         "lod2": 100
       },
-      "objectsPerModule": 3
+      "objectsPerModule": 3,
+      "sourceShells": {
+        "lod0": 14,
+        "lod1": 41,
+        "lod2": 8
+      }
     }
   ],
   "exports": [

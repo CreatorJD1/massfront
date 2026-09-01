@@ -675,6 +675,15 @@ function confirmPlace(){
     else toast('Blocked terrain — find open, flat ground clear of structures');
     return;
   }
+  /* A realtime client proposes the exact snapped site and waits for the
+     server-ordered tick. Offline matches still take the original path below.
+     The takeover returns true even when submission is rejected, so a socket
+     failure can never fall through and mutate only this client. */
+  if(window.MFMatchCommandConsumer&&typeof MFMatchCommandConsumer.takeover==='function'&&
+     MFMatchCommandConsumer.takeover({type:'build',building:placing.type,x:Math.round(placing.x),y:Math.round(placing.y),
+       turn:((Math.round((placing.rot||0)/(Math.PI*.5))%4)+4)%4})){
+    toast(T.name+' order transmitted');return;
+  }
   /* Hold the INDEX across the claim. The rollback below used to re-derive it
      with depositAt(), but depositAt/geyserAt both filter on !taken — so once
      the claim above set the flag they could never find the node they were

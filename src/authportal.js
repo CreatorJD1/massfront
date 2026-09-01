@@ -74,6 +74,76 @@ let AP_CONFIRM_FOCUS_TOKEN = 0;
 let AP_SYNC_KIND = 'idle';       // idle | busy | success | error
 let AP_SYNC_MESSAGE = '';
 let AP_SESSION_EPOCH = 0;        // invalidates authenticated work across account switches
+let AP_SESSION_VERIFIED = false; // cached tokens stay pending until /me confirms this process
+
+/* The launcher consumes identity as state, never by inspecting portal text or
+   account fields. Keep this payload deliberately small: identity readiness is
+   useful to every front-end surface, while an email, username or bearer token
+   in a broadcast event would be needless exposure to every script on page. */
+let AP_IDENTITY_REVISION = 0;
+let AP_IDENTITY_STATE = Object.freeze({
+  state:'pending', signedIn:false, verified:false, source:'boot', revision:0
+});
+function mfIdentitySnapshot(){
+  return {
+    state:AP_IDENTITY_STATE.state,
+    signedIn:AP_IDENTITY_STATE.signedIn,
+    verified:AP_IDENTITY_STATE.verified,
+    source:AP_IDENTITY_STATE.source,
+    revision:AP_IDENTITY_STATE.revision
+  };
+}
+/* Identity has several exits that legitimately return without reaching a
+   terminal state: a 401 clears the session, a stale epoch hands ownership to a
+   newer verification, a missing #apOverlay reports gate-unavailable, and a
+   throw reports gate-error. Each of those leaves 'pending', and nothing was
+   scheduled to revisit it, so a device could sit on VERIFYING IDENTITY for the
+   rest of the session. Offline play does not depend on the server, so an
+   unresolved identity degrades to 'offline' rather than stranding the player.
+   'awaiting-choice' is deliberately exempt: that pending state means the gate
+   is open and a person is reading it, and it must never self-dismiss. */
+const AP_IDENTITY_WAIT_MS = 15000;
+let AP_IDENTITY_WATCHDOG = null;
+function apIdentityClearWatchdog(){
+  if(AP_IDENTITY_WATCHDOG===null) return;
+  try{ clearTimeout(AP_IDENTITY_WATCHDOG); }catch(e){}
+  AP_IDENTITY_WATCHDOG=null;
+}
+function apIdentityArmWatchdog(source){
+  apIdentityClearWatchdog();
+  if(source==='awaiting-choice') return;
+  if(typeof setTimeout!=='function') return;
+  AP_IDENTITY_WATCHDOG=setTimeout(function(){
+    AP_IDENTITY_WATCHDOG=null;
+    if(AP_IDENTITY_STATE.state!=='pending') return;
+    if(typeof AP_GATE_OPEN!=='undefined'&&AP_GATE_OPEN) return;
+    apIdentitySet('offline','identity-timeout');
+  },AP_IDENTITY_WAIT_MS);
+  if(AP_IDENTITY_WATCHDOG&&typeof AP_IDENTITY_WATCHDOG.unref==='function')
+    try{ AP_IDENTITY_WATCHDOG.unref(); }catch(e){}
+}
+function apIdentitySet(state, source){
+  const cleanState=state==='connected'||state==='offline'?state:'pending';
+  const cleanSource=String(source||'unknown').replace(/[^a-z0-9_-]/gi,'').slice(0,40)||'unknown';
+  AP_IDENTITY_STATE=Object.freeze({
+    state:cleanState,
+    signedIn:!!(AP_SESSION&&AP_SESSION.token),
+    verified:cleanState==='connected'&&!!AP_SESSION_VERIFIED,
+    source:cleanSource,
+    revision:++AP_IDENTITY_REVISION
+  });
+  if(cleanState==='pending') apIdentityArmWatchdog(cleanSource);
+  else apIdentityClearWatchdog();
+  const detail=mfIdentitySnapshot();
+  try{
+    if(typeof window!=='undefined'&&typeof window.dispatchEvent==='function'&&typeof CustomEvent==='function')
+      window.dispatchEvent(new CustomEvent('massfront:identity-state',{detail}));
+  }catch(e){}
+  return detail;
+}
+if(typeof window!=='undefined') window.MFIdentity=Object.freeze({
+  event:'massfront:identity-state', snapshot:mfIdentitySnapshot
+});
 
 const AP_SESSION_KEY = 'massfront_authp_session_v1';
 const AP_URL_KEY = 'massfront_authp_url';
@@ -87,8 +157,8 @@ const AP_NET_PROBE = {
    before any communication flag can become true. */
 let AP_SOCIAL_CAPS={
   handshake:false,sessionEpoch:-1,checkedAt:0,version:0,
-  friends:false,blocking:false,reporting:false,chat:false,presence:false,
-  lobbies:false,invites:false,realtimeMatch:false,multiplayer:false,
+  friends:false,blocking:false,reporting:false,chat:false,worldChat:false,presence:false,onlineCount:false,
+  lobbies:false,invites:false,matchLaunch:false,realtimeMatch:false,multiplayer:false,
   note:'Social capabilities have not been confirmed by this server.'
 };
 
@@ -142,6 +212,7 @@ function apSaveSession(){
   }catch(e){}
 }
 function apLoadSession(){
+  AP_SESSION_VERIFIED = false;
   try{
     const s = localStorage.getItem(AP_SESSION_KEY);
     if (s){
@@ -173,6 +244,7 @@ function apLoadSession(){
 function apClearSession(){
   AP_SESSION_EPOCH++;
   AP_SESSION = null;
+  AP_SESSION_VERIFIED = false;
   apSocialResetCapabilities();
   AP_SYNC_KIND = 'idle'; AP_SYNC_MESSAGE = '';
   apSaveSession();
@@ -182,6 +254,7 @@ function apClearSession(){
      left with no launch prompt at all. Signing out is exactly the moment the
      gate should ask again. */
   try{ localStorage.removeItem(AP_GATE_KEY); }catch(e){}
+  apIdentitySet('pending','signed-out');
   if(typeof renderAccount==='function')renderAccount();
 }
 
@@ -304,11 +377,14 @@ function apSetSessionFrom(data, email){
                     paths into the same field disagreed. */
                  ageOk: (u && 'ageOk' in u) ? !!u.ageOk : null,
                  expiresAt: data.expiresAt || 0 };
+  /* register/login just returned this token from the account server, so this
+     is the one path that may become connected without a separate /me call. */
+  AP_SESSION_VERIFIED = true;
   AP_SYNC_KIND = 'idle';
   AP_SYNC_MESSAGE = '';
   apSaveSession();
   if(typeof renderAccount==='function')renderAccount();
-  apGateSatisfied();
+  apGateSatisfied('connected');
   apGreet();
 }
 /* "Welcome Commander <name>" — shown once per sign-in, on the menu the player
@@ -342,6 +418,29 @@ async function apDeleteAccount(){
 async function apLogin(email, password){
   const data = await apRequest('POST', '/login', { email, password }, false);
   apSetSessionFrom(data, email);
+  /* Backward-compatible identity hydration: older deployed Workers returned a
+     valid login token but omitted the account's persisted username. /me has
+     always returned the canonical row, so query it before the sign-in flow
+     completes. A transient second-request failure does not undo a successful
+     login; boot/session verification will retry it later. */
+  const token=AP_SESSION&&AP_SESSION.token,epoch=AP_SESSION_EPOCH;
+  try{
+    const me=await apRequest('GET','/me',undefined,true);
+    if(AP_SESSION&&AP_SESSION_EPOCH===epoch&&AP_SESSION.token===token&&me&&me.user){
+      if('username' in me.user){
+        const value=String(me.user.username==null?'':me.user.username).trim();
+        AP_SESSION.username=/^[a-z0-9_]{3,16}$/i.test(value)?value:null;
+      }
+      if('ageOk' in me.user)AP_SESSION.ageOk=!!me.user.ageOk;
+      AP_SESSION.email=String(me.user.email||AP_SESSION.email).trim().toLowerCase();
+      apSaveSession();
+    }
+  }catch(e){
+    /* apRequest already clears an actually invalid 401 session. Network and
+       old-server failures leave the authenticated session available, and the
+       next /me verification retries without asking the player to sign in. */
+    if(e&&e.status===401)throw e;
+  }
 }
 async function apLogout(){
   try{ await apRequest('POST', '/logout', undefined, true); }catch(e){ /* best-effort — clear locally regardless */ }
@@ -354,6 +453,8 @@ async function apLogout(){
 async function apVerifySession(){
   if (!AP_SESSION) return;
   const token=AP_SESSION.token, epoch=AP_SESSION_EPOCH;
+  AP_SESSION_VERIFIED = false;
+  apIdentitySet('pending','session-verification');
   try{
     const data = await apRequest('GET', '/me', undefined, true);
     if(!AP_SESSION||AP_SESSION_EPOCH!==epoch||AP_SESSION.token!==token) return;
@@ -361,7 +462,9 @@ async function apVerifySession(){
     if (data.user && 'username' in data.user) AP_SESSION.username = data.user.username;
     if (data.user && 'ageOk' in data.user) AP_SESSION.ageOk = !!data.user.ageOk;
     AP_SESSION.offline = false;
+    AP_SESSION_VERIFIED = true;
     apSaveSession();
+    apIdentitySet('connected','session-verified');
   }catch(e){
     if(e.kind==='stale_session') return;
     if (e.status === 401){
@@ -369,7 +472,12 @@ async function apVerifySession(){
          synchronous sign-in callback may already have installed a new one. */
       if(AP_SESSION&&AP_SESSION_EPOCH===epoch&&AP_SESSION.token===token) apClearSession();
       apToast('Your session expired — sign in again.');
-    }else if (AP_SESSION&&AP_SESSION_EPOCH===epoch&&AP_SESSION.token===token) AP_SESSION.offline = true;
+    }else if (AP_SESSION&&AP_SESSION_EPOCH===epoch&&AP_SESSION.token===token){
+      AP_SESSION.offline = true;
+      AP_SESSION_VERIFIED = false;
+      apSaveSession();
+      apIdentitySet('offline','session-unverified');
+    }
   }
   if(typeof renderAccount==='function')renderAccount();
   apRender();
@@ -904,6 +1012,7 @@ async function apDoClaimUsername(){
   try{
     const d = await apRequest('POST', '/username', { username: v }, true);
     if (AP_SESSION) { AP_SESSION.username = d.username || v; apSaveSession(); }
+    apSocialResetCapabilities();
     sfx('level'); apToast('✓ Username set to ' + (d.username || v));
   }catch(e){
     sfx('alarm');
@@ -1104,14 +1213,17 @@ function apClose(){
   if (!ov) return;
   /* Dismissing the gate by ✕ counts as answering it — otherwise the same modal
      returns on the next launch and reads as a bug. */
+  let gateDismissed=false;
   if (typeof AP_GATE_OPEN !== 'undefined' && AP_GATE_OPEN){
     AP_GATE_OPEN = false;
+    gateDismissed=true;
     try{ localStorage.setItem(AP_GATE_KEY, '1'); }catch(e){}
   }
   if (typeof apGateFoot === 'function') apGateFoot(false);
   ov.style.display = 'none';
   document.removeEventListener('keydown', apKeyHandler, true);
   if (AP_LAST_FOCUS && AP_LAST_FOCUS.focus) AP_LAST_FOCUS.focus();
+  if(gateDismissed) apIdentitySet('offline','gate-dismissed');
 }
 
 /* ---- build the modal DOM once (createElement/innerHTML, appended to body) --------- */
@@ -1225,9 +1337,14 @@ let AP_GATE_OPEN = false;
 function apGateSeen(){
   try{ return localStorage.getItem(AP_GATE_KEY) === '1'; }catch(e){ return true; }
 }
-function apGateSatisfied(){
+function apGateSatisfied(choice){
   try{ localStorage.setItem(AP_GATE_KEY, '1'); }catch(e){}
   if (AP_GATE_OPEN){ AP_GATE_OPEN = false; apClose(); }
+  if(choice==='offline') return apIdentitySet('offline','offline-choice');
+  if(choice==='connected'&&AP_SESSION_VERIFIED) return apIdentitySet('connected','session-server');
+  if(AP_SESSION&&AP_SESSION_VERIFIED) return apIdentitySet('connected','session-server');
+  if(AP_SESSION) return apIdentitySet('pending','session-verification');
+  return apIdentitySet('offline','offline-choice');
 }
 function apGateFoot(on){
   const box = document.querySelector('#apOverlay .apBox');
@@ -1242,22 +1359,32 @@ function apGateFoot(on){
   box.appendChild(f);
   apTapBind(document.getElementById('apOfflineBtn'), () => {
     if (typeof sfx === 'function'){ try{ sfx('ui'); }catch(e){} }
-    apGateSatisfied();
+    apGateSatisfied('offline');
   });
 }
 /* Called by intro.js the moment the launch title hands off to the front end. */
 function mfAuthGate(){
   try{
-    if (AP_SESSION) return;        // already signed in — nothing to ask
-    if (apGateSeen()) return;      // asked once; never nag again
-    if (!document.getElementById('apOverlay')) return;
+    /* A cached token is not connected merely because it survived a restart.
+       apVerifySession will advance pending to connected or offline. */
+    if (AP_SESSION){
+      if(AP_SESSION_VERIFIED) return apIdentitySet('connected','session-verified');
+      return apIdentitySet('pending','session-verification');
+    }
+    if (apGateSeen()) return apIdentitySet('offline','remembered-offline');
+    if (!document.getElementById('apOverlay')) return apIdentitySet('pending','gate-unavailable');
     AP_GATE_OPEN = true;
+    apIdentitySet('pending','awaiting-choice');
     apGateFoot(true);
     /* On the gate this modal is a welcome, not a settings panel. */
     const t = document.getElementById('apTitleTx');
     if (t) t.textContent = '\u2b21 SIGN IN OR REGISTER';
     apOpen(null);
-  }catch(e){ AP_GATE_OPEN = false; }
+    return mfIdentitySnapshot();
+  }catch(e){
+    AP_GATE_OPEN = false;
+    return apIdentitySet('pending','gate-error');
+  }
 }
 
 /* ---- boot -------------------------------------------------------------------------- */
@@ -1265,6 +1392,7 @@ function initAuthPortal(){
   apBuildUI();
   apInjectMenuButton();
   apLoadSession();
+  if(AP_SESSION) apIdentitySet('pending','session-verification');
   apResolveEndpoint().then(() => {
     apRender();
     if (AP_SESSION) apVerifySession();
@@ -1274,7 +1402,7 @@ function initAuthPortal(){
 /* ============================================================================
    SOCIAL CLIENT — thin, NON-THROWING wrappers over apRequest
    ============================================================================
-   The verification-first server exposes:
+   The authenticated Social server exposes:
 
      GET  /social/friends            -> {friends:[…]}                  (server pre-filters blocks)
      GET  /social/requests           -> {requests:[…]}
@@ -1283,11 +1411,12 @@ function initAuthPortal(){
      POST /social/block    {username}
      POST /social/unblock  {username}
      POST /social/report   {username,reason,context?}
+     POST /social/online/heartbeat       aggregate count only
+     GET  /social/online                 aggregate count only
 
-   and refuses an account that may not use social at all with 403 plus one of
-   three codes: 'unverified', 'age_restricted', 'social_banned'. apRequest
-   already lifts {error,message} off a non-2xx body onto e.kind/e.message, so
-   those three arrive here intact.
+   and refuses an account that may not use social with age, username,
+   moderation or ban codes. E-mail verification is optional account metadata
+   and is permanently outside Social and multiplayer authorization.
 
    Everything below RESOLVES. Not one of these functions rejects, because the
    caller is a mailbox section that repaints mid-match: an unhandled rejection
@@ -1320,8 +1449,8 @@ const AP_SOCIAL_MAX_MESSAGE_ROWS=50;
 function apSocialResetCapabilities(){
   AP_SOCIAL_CAPS={
     handshake:false,sessionEpoch:-1,checkedAt:0,version:0,
-    friends:false,blocking:false,reporting:false,chat:false,presence:false,
-    lobbies:false,invites:false,realtimeMatch:false,multiplayer:false,
+    friends:false,blocking:false,reporting:false,chat:false,worldChat:false,presence:false,onlineCount:false,
+    lobbies:false,invites:false,matchLaunch:false,realtimeMatch:false,multiplayer:false,
     note:'Social capabilities have not been confirmed by this server.'
   };
 }
@@ -1352,11 +1481,14 @@ function apSocialFail(e){
     return { ok:false, code:'signed_out',
              message:'Your session expired — sign in again to use friends.' };
   if (kind === 'unverified')
-    return { ok:false, code:'unverified',
-             message: raw || 'Verify your email address before using friends.' };
+    return { ok:false, code:'service_policy',
+             message:'The Social service is using an obsolete access policy — retry after it updates.' };
   if (kind === 'age_restricted')
     return { ok:false, code:'age_restricted',
              message: raw || 'Friends are not available on this account.' };
+  if (kind === 'username_required')
+    return { ok:false, code:'username_required',
+             message: raw || 'Choose your commander username before using Social Command.' };
   if (kind === 'social_banned')
     return { ok:false, code:'social_banned',
              message: raw || 'Friends have been disabled on this account.' };
@@ -1378,7 +1510,36 @@ function apSocialUsername(raw){
   }
   return {ok:true,value};
 }
+function mfSocialIdentity(){
+  let value='';
+  try{value=String(AP_SESSION&&AP_SESSION.username||'').trim();}catch(e){}
+  return {username:AP_SOCIAL_USERNAME_RE.test(value)?value:'',hasUsername:AP_SOCIAL_USERNAME_RE.test(value)};
+}
+function apSocialUsernameGate(){
+  if(!mfSocialSignedIn())return null;
+  return mfSocialIdentity().hasUsername?null:{ok:false,code:'username_required',
+    message:'Choose your commander username before using Social Command.'};
+}
+/* The Social chooser writes the same canonical account field as Account. It
+   does not create a second display name, and it never substitutes a local
+   profile label for server identity. */
+async function socialClaimUsername(raw){
+  const uv=apSocialUsername(raw);if(!uv.ok)return uv.result;
+  if(!mfSocialSignedIn())return {ok:false,code:'signed_out',message:'Sign in before choosing a commander username.'};
+  try{
+    const d=await apRequest('POST','/username',{username:uv.value},true);
+    const value=String(d&&d.username||uv.value).trim();
+    if(!AP_SOCIAL_USERNAME_RE.test(value))return {ok:false,code:'bad_response',message:'The account server returned an invalid username.'};
+    if(AP_SESSION){AP_SESSION.username=value;apSaveSession();}
+    apSocialResetCapabilities();
+    if(typeof renderAccount==='function')try{renderAccount();}catch(e){}
+    if(typeof renderMetaHead==='function')try{renderMetaHead();}catch(e){}
+    return {ok:true,username:value};
+  }catch(e){return apSocialFail(e);}
+}
 async function apSocialOnce(key,work){
+  const usernameGate=apSocialUsernameGate();
+  if(usernameGate)return usernameGate;
   const scoped=(AP_SESSION?AP_SESSION_EPOCH:'guest')+':'+key;
   if(AP_SOCIAL_PENDING.has(scoped)){
     AP_SOCIAL_PROBE.coalesced++;
@@ -1511,6 +1672,7 @@ async function socialReport(u,reason,context){
    bound to AP_SESSION_EPOCH, so it cannot carry across sign-out/sign-in. */
 async function socialHandshake(force){
   if(!mfSocialSignedIn()) return {ok:false,code:'signed_out',message:'Sign in to check social capabilities.'};
+  const usernameGate=apSocialUsernameGate();if(usernameGate)return usernameGate;
   if(!force&&AP_SOCIAL_CAPS.handshake&&AP_SOCIAL_CAPS.sessionEpoch===AP_SESSION_EPOCH&&
      Date.now()-AP_SOCIAL_CAPS.checkedAt<AP_SOCIAL_CAP_TTL_MS)
     return {ok:true,capabilities:mfSocialCapabilities()};
@@ -1533,10 +1695,11 @@ async function socialHandshake(force){
     AP_SOCIAL_CAPS={
       handshake:true,sessionEpoch:epoch,checkedAt:Date.now(),version:AP_SOCIAL_PROTOCOL_VERSION,
       friends:c.friends===true,blocking:c.blocking===true,reporting:c.reporting===true,
-      chat:c.chat===true,presence:c.presence===true,
-      lobbies:c.lobbies===true,invites:c.invites===true,realtimeMatch:c.realtimeMatch===true,
+      chat:c.chat===true,worldChat:c.worldChat===true,presence:c.presence===true,onlineCount:c.onlineCount===true,
+      lobbies:c.lobbies===true,invites:c.invites===true,matchLaunch:c.matchLaunch===true,
+      realtimeMatch:c.realtimeMatch===true,
       multiplayer:c.realtimeMatch===true,
-      note:(c.chat===true||c.presence===true||c.lobbies===true)
+      note:(c.chat===true||c.worldChat===true||c.presence===true||c.lobbies===true)
         ?'Server-confirmed social communication capabilities.'
         :'This server has not enabled chat or presence.'
     };
@@ -1551,8 +1714,10 @@ async function apSocialRequireCapability(kind){
     caps=h.capabilities;
   }
   if(caps[kind]!==true){
-    const label=kind==='chat'?'Friend chat':kind==='presence'?'Friend presence':
-      kind==='lobbies'?'Player lobbies':kind==='invites'?'Lobby invitations':kind;
+    const label=kind==='chat'?'Friend chat':kind==='worldChat'?'World Chat':kind==='presence'?'Friend presence':
+      kind==='onlineCount'?'Online player count':
+      kind==='lobbies'?'Player lobbies':kind==='invites'?'Lobby invitations':
+      kind==='matchLaunch'?'Verified match preparation':kind;
     return {ok:false,code:'feature_disabled',message:label+' is not enabled on this server.'};
   }
   return null;
@@ -1617,6 +1782,52 @@ async function socialReportMessage(messageId,reason){
     return {ok:true,data:d||null};
   });
 }
+function apSocialWorldRows(v){
+  if(!Array.isArray(v))return [];
+  const out=[],lim=Math.min(v.length,AP_SOCIAL_MAX_MESSAGE_ROWS);
+  if(v.length>lim)AP_SOCIAL_PROBE.droppedRows+=v.length-lim;
+  for(let i=0;i<lim;i++){
+    const r=v[i];if(!r||typeof r!=='object')continue;
+    const id=Number(r.id),username=apSocialUsername(r.username),text=apSocialMessageText(r.body);
+    if(!Number.isSafeInteger(id)||id<=0||!username.ok||!text.ok){AP_SOCIAL_PROBE.droppedRows++;continue;}
+    out.push({id,username:username.value,body:text.value,at:Number(r.at)||0,
+      self:r.self===true,friend:r.friend===true});
+  }
+  return out;
+}
+async function socialWorldMessages(before,limit){
+  const lim=limit==null?30:Number(limit),cursor=before==null?0:Number(before);
+  if(!Number.isSafeInteger(lim)||lim<1||lim>AP_SOCIAL_MAX_MESSAGE_ROWS||
+     (before!=null&&(!Number.isSafeInteger(cursor)||cursor<=0))){
+    AP_SOCIAL_PROBE.invalidInputs++;return {ok:false,code:'invalid_page',message:'That World Chat page is invalid.'};
+  }
+  const gate=await apSocialRequireCapability('worldChat');if(gate)return gate;
+  let path='/social/world/messages?limit='+lim;if(cursor>0)path+='&before='+cursor;
+  return apSocialOnce('world-messages:'+cursor+':'+lim,async()=>{
+    const d=await apRequest('GET',path,undefined,true),messages=apSocialWorldRows(d&&d.messages);
+    return {ok:true,messages,hasMore:d&&d.hasMore===true,
+      nextBefore:Number.isSafeInteger(Number(d&&d.nextBefore))&&Number(d.nextBefore)>0?Number(d.nextBefore):null};
+  });
+}
+async function socialSendWorldMessage(body){
+  const mv=apSocialMessageText(body);if(!mv.ok)return mv.result;
+  const gate=await apSocialRequireCapability('worldChat');if(gate)return gate;
+  return apSocialOnce('world-send:'+mv.value,async()=>{
+    AP_SOCIAL_PROBE.mutations++;AP_SOCIAL_PROBE.messagesSent++;
+    const d=await apRequest('POST','/social/world/send',{body:mv.value},true),rows=apSocialWorldRows(d&&d.message?[d.message]:[]);
+    return rows.length===1?{ok:true,message:rows[0]}:{ok:false,code:'bad_response',message:'The server returned an invalid World Chat receipt.'};
+  });
+}
+async function socialReportWorldMessage(messageId,reason){
+  const id=Number(messageId),why=String(reason==null?'':reason).trim();
+  if(!Number.isSafeInteger(id)||id<=0){AP_SOCIAL_PROBE.invalidInputs++;return {ok:false,code:'bad_request',message:'That World Chat message is unavailable.'};}
+  if(!why||Array.from(why).length>500){AP_SOCIAL_PROBE.invalidInputs++;return {ok:false,code:'invalid_reason',message:'Tell us what happened in 500 characters or fewer.'};}
+  return apSocialOnce('world-report:'+id+':'+why,async()=>{
+    AP_SOCIAL_PROBE.mutations++;AP_SOCIAL_PROBE.reports++;
+    const d=await apRequest('POST','/social/world/report',{messageId:id,reason:why},true);
+    return {ok:true,data:d||null};
+  });
+}
 async function socialSetPresence(state){
   const value=String(state==null?'':state).trim().toLowerCase();
   if(value!=='online'&&value!=='away'&&value!=='offline'){
@@ -1648,11 +1859,30 @@ async function socialPresence(){
     return {ok:true,friends:apSocialPresenceRows(d&&d.friends),truncated:d&&d.truncated===true};
   });
 }
+function apSocialOnlineResult(d){
+  const count=Number(d&&d.count),ttlMs=Number(d&&d.ttlMs),expiresAt=Number(d&&d.expiresAt||0);
+  if(!Number.isSafeInteger(count)||count<0||count>100000000||!Number.isSafeInteger(ttlMs)||ttlMs<30000||ttlMs>600000)
+    return {ok:false,code:'bad_response',message:'The server returned an invalid online count.'};
+  return {ok:true,count,ttlMs,expiresAt:Number.isFinite(expiresAt)&&expiresAt>0?expiresAt:0};
+}
+async function socialOnlineHeartbeat(){
+  const gate=await apSocialRequireCapability('onlineCount');if(gate)return gate;
+  return apSocialOnce('online-heartbeat',async()=>apSocialOnlineResult(await apRequest('POST','/social/online/heartbeat',{},true)));
+}
+async function socialOnlineCount(){
+  const gate=await apSocialRequireCapability('onlineCount');if(gate)return gate;
+  return apSocialOnce('online-count',async()=>apSocialOnlineResult(await apRequest('GET','/social/online',undefined,true)));
+}
 function apSocialLobby(raw){
   if(!raw||typeof raw!=='object')return null;
   const id=String(raw.id||''),code=String(raw.code||'').toUpperCase(),rev=Number(raw.revision);
   if(!/^[a-f0-9]{32}$/i.test(id)||!/^[A-F0-9]{8}$/.test(code)||!Number.isSafeInteger(rev)||rev<1)return null;
-  const members=[];for(const r of Array.isArray(raw.members)?raw.members.slice(0,4):[]){const u=apSocialUsername(r&&r.username);if(u.ok)members.push({username:u.value,ready:r.ready===true,host:r.host===true,self:r.self===true});}
+  const members=[];for(const r of Array.isArray(raw.members)?raw.members.slice(0,4):[]){const u=apSocialUsername(r&&r.username);if(u.ok){
+    const compatibilityRevision=Number(r&&r.compatibilityRevision);
+    members.push({username:u.value,ready:r.ready===true,host:r.host===true,self:r.self===true,
+      compatible:r.compatible===true&&Number.isSafeInteger(compatibilityRevision)&&compatibilityRevision===rev,
+      compatibilityRevision:Number.isSafeInteger(compatibilityRevision)&&compatibilityRevision>0?compatibilityRevision:null});
+  }}
   const rules=raw.rules&&typeof raw.rules==='object'?raw.rules:{};
   return {id,code,revision:rev,state:'waiting',expiresAt:Number(raw.expiresAt)||0,
     rules:{mode:rules.mode==='coop'?'coop':'skirmish',slots:Math.max(2,Math.min(4,Number(rules.slots)||2)),map:String(rules.map||'auto').slice(0,64)},members};
@@ -1669,7 +1899,9 @@ async function socialLobbyJoin(code){
 async function socialLobbyGet(id){
   const value=String(id||'');if(!/^[a-f0-9]{32}$/i.test(value))return {ok:false,code:'invalid_lobby',message:'That lobby is invalid.'};
   const gate=await apSocialRequireCapability('lobbies');if(gate)return gate;
-  const d=await apRequest('GET','/multiplayer/lobbies/'+value,undefined,true),lobby=apSocialLobby(d&&d.lobby);return lobby?{ok:true,lobby}:{ok:false,code:'bad_response',message:'The server returned an invalid lobby.'};
+  const d=await apRequest('GET','/multiplayer/lobbies/'+value,undefined,true),lobby=apSocialLobby(d&&d.lobby),raw=d&&d.match,
+    match=raw&&apSocialMatch(raw,value,apSocialPositiveInt(raw.launchRevision));
+  return lobby?{ok:true,lobby}:match?{ok:true,lobby:null,match}:{ok:false,code:'bad_response',message:'The server returned an invalid lobby or launch receipt.'};
 }
 async function socialLobbyReady(id,revision,ready){
   const gate=await apSocialRequireCapability('lobbies');if(gate)return gate;
@@ -1692,6 +1924,120 @@ async function socialLobbyInviteRespond(id,accept){
   const value=String(id||'');if(!/^[a-f0-9]{32}$/i.test(value))return {ok:false,code:'invalid_invite',message:'That invitation is invalid.'};
   const gate=await apSocialRequireCapability('invites');if(gate)return gate;const d=await apRequest('POST','/multiplayer/invites/'+value+'/respond',{accept:accept===true},true);return {ok:true,accepted:d&&d.accepted===true,lobby:apSocialLobby(d&&d.lobby)};
 }
+
+/* ---- fail-closed match preparation -----------------------------------------
+   These wrappers coordinate an immutable roster; they do not enable realtime
+   simulation. Fingerprints must describe the executing package/OTA bytes, so
+   authportal never derives them from source, a version label, or Git state. */
+const AP_MATCH_ID_RE=/^[a-f0-9]{32}$/i;
+const AP_MATCH_HASH_RE=/^[a-f0-9]{64}$/;
+const AP_MATCH_BUILD_RE=/^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(?:-[a-z0-9](?:[a-z0-9.-]{0,30}[a-z0-9])?)?$/i;
+function apSocialMatchRules(raw){
+  const r=raw&&typeof raw==='object'?raw:{};
+  const mode=r.mode==='coop'?'coop':'skirmish';
+  const slots=Math.max(2,Math.min(4,Number(r.slots)||2));
+  const map=String(r.map||'auto').replace(/[^a-z0-9_-]/gi,'').slice(0,64)||'auto';
+  return {mode,slots,map};
+}
+async function apSocialRulesHash(raw){
+  if(typeof crypto==='undefined'||!crypto.subtle||typeof TextEncoder==='undefined')
+    throw Object.assign(new Error('Secure compatibility hashing is unavailable in this runtime.'),{kind:'compatibility_unavailable'});
+  const bytes=new TextEncoder().encode(JSON.stringify(apSocialMatchRules(raw)));
+  const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+  let out='';for(const n of digest)out+=n.toString(16).padStart(2,'0');return out;
+}
+function apSocialRuntimeTuple(raw){
+  if(!raw||typeof raw!=='object')return null;
+  const buildVersion=raw.buildVersion,manifestHash=raw.manifestHash,balanceHash=raw.balanceHash;
+  if(typeof buildVersion!=='string'||!AP_MATCH_BUILD_RE.test(buildVersion)||
+     typeof manifestHash!=='string'||!AP_MATCH_HASH_RE.test(manifestHash)||
+     typeof balanceHash!=='string'||!AP_MATCH_HASH_RE.test(balanceHash))return null;
+  return {buildVersion,manifestHash,balanceHash};
+}
+async function apSocialRuntimeCompatibility(){
+  if(typeof mfRuntimeCompatibility!=='function')return {ok:false,code:'compatibility_unavailable',message:'This build has no trustworthy runtime fingerprint.'};
+  let raw;try{raw=await mfRuntimeCompatibility();}catch(e){return {ok:false,code:'compatibility_unavailable',message:'The executing game package could not be verified.'};}
+  const value=apSocialRuntimeTuple(raw);
+  return value?{ok:true,value}:{ok:false,code:'compatibility_unavailable',message:'The executing game package returned an invalid fingerprint.'};
+}
+function apSocialPositiveInt(value){const n=Number(value);return Number.isSafeInteger(n)&&n>0?n:0;}
+function socialMatchSocketUrl(id){
+  const matchId=String(id||'');if(!AP_MATCH_ID_RE.test(matchId))return '';
+  try{
+    const base=new URL(apEndpoint().replace(/\/+$/,'')+'/multiplayer/matches/'+matchId+'/socket');
+    if(base.protocol==='https:')base.protocol='wss:';else if(base.protocol==='http:')base.protocol='ws:';else return '';
+    return base.href;
+  }catch(e){return '';}
+}
+function apSocialMatch(raw,id,revision){
+  if(!raw||typeof raw!=='object')return null;
+  const value={id:String(raw.id||''),lobbyId:String(raw.lobbyId||''),launchRevision:apSocialPositiveInt(raw.launchRevision),
+    rosterSize:apSocialPositiveInt(raw.rosterSize),buildVersion:raw.buildVersion,
+    manifestHash:raw.manifestHash,balanceHash:raw.balanceHash,rulesHash:raw.rulesHash,expiresAt:Number(raw.expiresAt)||0};
+  if(!AP_MATCH_ID_RE.test(value.id)||value.lobbyId!==id||value.launchRevision!==revision||
+     value.rosterSize<2||value.rosterSize>4||!apSocialRuntimeTuple(value)||
+     typeof value.rulesHash!=='string'||!AP_MATCH_HASH_RE.test(value.rulesHash)||value.expiresAt<=Date.now())return null;
+  return value;
+}
+async function socialLobbyCompatibility(id,revision,rules){
+  const lobbyId=String(id||''),rev=apSocialPositiveInt(revision);
+  if(!AP_MATCH_ID_RE.test(lobbyId)||!rev)return {ok:false,code:'invalid_lobby',message:'Refresh the lobby before verifying this build.'};
+  const gate=await apSocialRequireCapability('matchLaunch');if(gate)return gate;
+  return apSocialOnce('compatibility:'+lobbyId+':'+rev,async()=>{
+    const runtime=await apSocialRuntimeCompatibility();if(!runtime.ok)return runtime;
+    const rulesHash=await apSocialRulesHash(rules),body={revision:rev,...runtime.value,rulesHash};
+    const d=await apRequest('POST','/multiplayer/lobbies/'+lobbyId+'/compatibility',body,true),c=d&&d.compatibility;
+    if(!c||String(c.lobbyId||'')!==lobbyId||Number(c.revision)!==rev||c.buildVersion!==body.buildVersion||
+       c.manifestHash!==body.manifestHash||c.balanceHash!==body.balanceHash||c.rulesHash!==rulesHash||
+       !Number.isFinite(Number(c.submittedAt))||Number(c.submittedAt)<=0)
+      return {ok:false,code:'bad_response',message:'The server did not confirm this exact lobby fingerprint.'};
+    return {ok:true,compatibility:{lobbyId,revision:rev,buildVersion:body.buildVersion,
+      manifestHash:body.manifestHash,balanceHash:body.balanceHash,rulesHash,submittedAt:Number(c.submittedAt)}};
+  });
+}
+async function socialLobbyLaunch(id,revision,rules){
+  const lobbyId=String(id||''),rev=apSocialPositiveInt(revision);
+  if(!AP_MATCH_ID_RE.test(lobbyId)||!rev)return {ok:false,code:'invalid_lobby',message:'Refresh the lobby before preparing a match.'};
+  const gate=await apSocialRequireCapability('matchLaunch');if(gate)return gate;
+  return apSocialOnce('launch:'+lobbyId+':'+rev,async()=>{
+    const runtime=await apSocialRuntimeCompatibility();if(!runtime.ok)return runtime;
+    const rulesHash=await apSocialRulesHash(rules);
+    const d=await apRequest('POST','/multiplayer/lobbies/'+lobbyId+'/launch',{revision:rev},true);
+    const match=apSocialMatch(d&&d.match,lobbyId,rev);
+    if(!match||match.buildVersion!==runtime.value.buildVersion||match.manifestHash!==runtime.value.manifestHash||
+       match.balanceHash!==runtime.value.balanceHash||match.rulesHash!==rulesHash)
+      return {ok:false,code:'compatibility_mismatch',message:'The prepared match does not match this executing game build.'};
+    return {ok:true,match};
+  });
+}
+async function socialMatchCredential(match,rules,handoff){
+  if(typeof handoff!=='function')return {ok:false,code:'handoff_unavailable',message:'The realtime match handoff is not connected.'};
+  const lobbyId=String(match&&match.lobbyId||''),revision=apSocialPositiveInt(match&&match.launchRevision);
+  const expected=apSocialMatch(match,lobbyId,revision);
+  if(!expected)return {ok:false,code:'invalid_match',message:'That match preparation receipt is invalid or expired.'};
+  const gate=await apSocialRequireCapability('matchLaunch');if(gate)return gate;
+  return apSocialOnce('credential:'+expected.id,async()=>{
+    const runtime=await apSocialRuntimeCompatibility();if(!runtime.ok)return runtime;
+    const rulesHash=await apSocialRulesHash(rules);
+    if(expected.buildVersion!==runtime.value.buildVersion||expected.manifestHash!==runtime.value.manifestHash||
+       expected.balanceHash!==runtime.value.balanceHash||expected.rulesHash!==rulesHash)
+      return {ok:false,code:'compatibility_mismatch',message:'That credential belongs to a different game build or ruleset.'};
+    const d=await apRequest('POST','/multiplayer/matches/'+expected.id+'/token',undefined,true),c=d&&d.credential;
+    const seat=apSocialPositiveInt(c&&c.seat),userId=apSocialPositiveInt(c&&c.userId),expiresAt=Number(c&&c.expiresAt)||0;
+    if(!c||typeof c.token!=='string'||!AP_MATCH_HASH_RE.test(c.token)||String(c.matchId||'')!==expected.id||
+       String(c.lobbyId||'')!==expected.lobbyId||seat<1||seat>expected.rosterSize||!userId||
+       c.buildVersion!==expected.buildVersion||c.manifestHash!==expected.manifestHash||
+       c.balanceHash!==expected.balanceHash||c.rulesHash!==expected.rulesHash||
+       expiresAt<=Date.now()||expiresAt>expected.expiresAt)
+      return {ok:false,code:'bad_response',message:'The server returned an invalid launch credential.'};
+    const credential={token:c.token,matchId:expected.id,lobbyId:expected.lobbyId,seat,userId,
+      buildVersion:expected.buildVersion,manifestHash:expected.manifestHash,balanceHash:expected.balanceHash,
+      rulesHash:expected.rulesHash,expiresAt};
+    try{await handoff(credential);}catch(e){return {ok:false,code:'handoff_failed',message:'The match runtime rejected its launch credential.'};}
+    finally{credential.token='';}
+    return {ok:true,receipt:{matchId:expected.id,lobbyId:expected.lobbyId,seat,userId,expiresAt}};
+  });
+}
 /* ---- gates ------------------------------------------------------------------
    mfSocialGate answers ONE question — "is this account allowed to use social at
    all?" — and nothing else. A network failure is not a gate, so it answers
@@ -1699,24 +2045,15 @@ async function socialLobbyInviteRespond(id,accept){
    Accepts either a wrapper result or a bare code string. */
 function mfSocialGate(x){
   const code = (x && typeof x === 'object') ? (x.code || x.kind || '') : String(x || '');
-  if (code === 'unverified'     || code === 'email_unverified') return 'unverified';
   if (code === 'age_restricted' || code === 'age')              return 'age';
   if (code === 'social_banned'  || code === 'banned')           return 'banned';
+  if (code === 'username_required' || code === 'username')      return 'username';
   return 'ok';
 }
-/* The nudge that goes with each gate. Only ONE of the three is actionable —
-   an unverified email is fixed by the player, from the account portal, which
-   is why this lives in the file that owns the portal rather than in the
-   mailbox. Age and ban are stated plainly and offer no button, because
-   offering a button that cannot help is worse than offering none. */
+/* Age and ban are stated plainly and offer no button because account e-mail
+   verification is not, and must never become, a Social access action. */
 function mfSocialNudge(gate){
   const g = mfSocialGate(gate);
-  if (g === 'unverified')
-    return { gate:g,
-             text:'Verify your email address to send and accept friend requests. '+
-                  'Everything else in the game keeps working.',
-             cta:'OPEN ACCOUNT',
-             act:(trigger)=>{ try{ if (typeof apOpen === 'function') apOpen(trigger || null); }catch(e){} } };
   if (g === 'age')
     return { gate:g, text:'Friends are not available on this account.', cta:'', act:null };
   if (g === 'banned')
@@ -1736,13 +2073,13 @@ function mfSocialCapabilities(){
   if(!mfSocialSignedIn()||!AP_SOCIAL_CAPS.handshake||AP_SOCIAL_CAPS.sessionEpoch!==AP_SESSION_EPOCH||
      Date.now()-AP_SOCIAL_CAPS.checkedAt>=AP_SOCIAL_CAP_TTL_MS){
     return {handshake:false,version:0,friends:false,blocking:false,reporting:false,
-      chat:false,presence:false,lobbies:false,invites:false,realtimeMatch:false,multiplayer:false,
+      chat:false,worldChat:false,presence:false,onlineCount:false,lobbies:false,invites:false,matchLaunch:false,realtimeMatch:false,multiplayer:false,
       note:'Social capabilities have not been confirmed by this server.'};
   }
   return {handshake:true,version:AP_SOCIAL_CAPS.version,
     friends:AP_SOCIAL_CAPS.friends,blocking:AP_SOCIAL_CAPS.blocking,reporting:AP_SOCIAL_CAPS.reporting,
-    chat:AP_SOCIAL_CAPS.chat,presence:AP_SOCIAL_CAPS.presence,
-    lobbies:AP_SOCIAL_CAPS.lobbies,invites:AP_SOCIAL_CAPS.invites,
+    chat:AP_SOCIAL_CAPS.chat,worldChat:AP_SOCIAL_CAPS.worldChat,presence:AP_SOCIAL_CAPS.presence,onlineCount:AP_SOCIAL_CAPS.onlineCount,
+    lobbies:AP_SOCIAL_CAPS.lobbies,invites:AP_SOCIAL_CAPS.invites,matchLaunch:AP_SOCIAL_CAPS.matchLaunch,
     realtimeMatch:AP_SOCIAL_CAPS.realtimeMatch,multiplayer:AP_SOCIAL_CAPS.realtimeMatch,
     note:AP_SOCIAL_CAPS.note};
 }
@@ -1770,9 +2107,14 @@ if(typeof window!=='undefined') window.MFSocial={
   block:socialBlock,unblock:socialUnblock,report:socialReport,
   handshake:socialHandshake,sendMessage:socialSendMessage,messages:socialMessages,
   reportMessage:socialReportMessage,setPresence:socialSetPresence,presence:socialPresence,
+  worldMessages:socialWorldMessages,sendWorldMessage:socialSendWorldMessage,reportWorldMessage:socialReportWorldMessage,
+  onlineHeartbeat:socialOnlineHeartbeat,onlineCount:socialOnlineCount,
   createLobby:socialLobbyCreate,joinLobby:socialLobbyJoin,getLobby:socialLobbyGet,
   readyLobby:socialLobbyReady,leaveLobby:socialLobbyLeave,inviteLobby:socialLobbyInvite,
   lobbyInvites:socialLobbyInvites,respondLobbyInvite:socialLobbyInviteRespond,
-  signedIn:mfSocialSignedIn,capabilities:mfSocialCapabilities,probe:mfSocialProbe
+  verifyLobbyCompatibility:socialLobbyCompatibility,launchLobby:socialLobbyLaunch,
+  claimMatchCredential:socialMatchCredential,rulesHash:apSocialRulesHash,matchSocketUrl:socialMatchSocketUrl,
+  signedIn:mfSocialSignedIn,identity:mfSocialIdentity,claimUsername:socialClaimUsername,
+  capabilities:mfSocialCapabilities,probe:mfSocialProbe
 };
 /* ---- end social client ---- */

@@ -60,6 +60,7 @@ const manifest = {
     'three referenced GLB runtime models',
     'six aligned runtime PBR maps per authored planet',
     'approved personnel portraits',
+    'creator-accepted Stage 10 world-model catalog and lazy-loaded GLBs',
     'Three.js runtime libraries'
   ],
   excludedWithoutDeletion: [

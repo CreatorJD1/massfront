@@ -8,15 +8,19 @@
    one WebGL context.
    -------------------------------------------------------------------------- */
 
-import { createSpaceExperience } from './space_experience.js?v=20260828-stage9ops2';
+import { createSpaceExperience } from './space_experience.js?v=20260830-sessionroutes4';
+import { MASSFRONT_WORLD_MODEL_LIBRARY } from './core/world_model_catalog.js';
 import { LocalSandboxHost } from './host/local_sandbox_host.js?v=20260825-host1';
 import {
   MASSFRONT_GALACTIC_ENTRY_TICKET_KEY,
   MassfrontSoloHost,
   readMassfrontGalacticEntryTicket
-} from './host/massfront_solo_host.js?v=20260828-stage9host2';
+} from './host/massfront_solo_host.js?v=20260829-careergate1';
 
-export { createSpaceExperience } from './space_experience.js?v=20260828-stage9ops2';
+export {
+  SPACE_FIRST_ENTRY_CONTINUATION,
+  createSpaceExperience
+} from './space_experience.js?v=20260830-sessionroutes4';
 export {
   ExplorationHostError,
   LocalSandboxHost,
@@ -29,7 +33,7 @@ export {
   createMassfrontSoloHost,
   readMassfrontGalacticEntryTicket,
   validateMassfrontGalacticEntryTicket
-} from './host/massfront_solo_host.js?v=20260828-stage9host2';
+} from './host/massfront_solo_host.js?v=20260829-careergate1';
 
 let gpuRebuilds = 0;
 let gpuRebuildPending = false;
@@ -129,6 +133,11 @@ function boot() {
   if (!container || window.__MASSFRONT_SPACE__) return;
   try {
     const host = chooseHost();
+    const integrated = host.productionIntegrated === true;
+    container.dataset.runtime = integrated ? 'massfront' : 'sandbox';
+    container.dataset.entryView = host.ticket?.entryView || 'system';
+    const reset = container.querySelector('#btnResetRoom');
+    if (reset) reset.hidden = integrated;
     const experience = createSpaceExperience(container, {
       host,
       seed: 'massfront-cinematic-test-room-v1'
@@ -136,6 +145,32 @@ function boot() {
     window.__MASSFRONT_SPACE__ = experience;
     window.__MASSFRONT_SPACE_HOST__ = host;
     window.__MASSFRONT_SPACE_ERROR__ = null;
+    window.__MASSFRONT_STORY_RAIL__ = experience.transmissions;
+    window.__MASSFRONT_WORLD_MODELS__ = MASSFRONT_WORLD_MODEL_LIBRARY;
+    window.__MASSFRONT_SPACE_ENTRY__ = {
+      getState: () => experience.firstEntryIntro,
+      start: () => experience.startFirstEntryIntro()
+    };
+    const entryView = host.ticket?.entryView || 'system';
+    const introRequired = host.ticket?.introRequired !== false;
+    if (host.productionIntegrated === true && entryView === 'system' && introRequired && !hasIntegratedReturnQuery()) {
+      /* A new experimental career first sees the real exterior scene. The
+         story rail then offers the protected tutorial or the required faction
+         gate without ever routing through the ship cutaway. */
+      experience.ready.then(() => experience.startFirstEntryIntro()).catch(error => {
+        window.__MASSFRONT_SPACE_ERROR__ = error;
+        console.error('[MASSFRONT GALACTIC FIRST ENTRY]', error);
+      });
+    } else if (host.productionIntegrated === true && entryView === 'campaign_hub') {
+      /* START MASSFRONT is a strategic entry, not an orbital-camera shortcut.
+         Wait for the exterior bootstrap so its real GPU/asset failure state is
+         still authoritative, then let an already commissioned career enter the
+         UGA Campaign Hub. */
+      experience.ready.then(() => experience.openCampaignHub()).catch(error => {
+        window.__MASSFRONT_SPACE_ERROR__ = error;
+        console.error('[MASSFRONT GALACTIC ENTRY]', error);
+      });
+    }
     experience.ready.catch(error => {
       window.__MASSFRONT_SPACE_ERROR__ = error;
       console.error('[MASSFRONT SPACE]', error);

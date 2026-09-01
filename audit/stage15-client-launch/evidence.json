@@ -1,0 +1,87 @@
+{
+  "generatedAt": "2026-08-31T02:09:00.363Z",
+  "viewport": {
+    "width": 412,
+    "height": 900,
+    "touch": true
+  },
+  "sourceHashes": {
+    "src/authportal.js": "cabb4dae7574f1621a5a2d0f98c5d659aae51c4be0b49b796ae47a89bea4d9ad",
+    "src/socialui.js": "613db99c6b12a18a05e747658a72cbd989f388d2fdfa57214b97c0bc5f8fc818"
+  },
+  "screenshot": "audit/stage15-client-launch/host-launch-prepared-412x900.png",
+  "passed": 14,
+  "total": 14,
+  "checks": [
+    {
+      "name": "every current roster seat shows server verification",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "host sees enabled preparation control",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "registered dispatcher exposes realtime readiness",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "stale compatibility response is ignored",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "revision drift revokes all visible verification",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "non-host sees host-only preparation state",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "non-host cannot invoke prepare",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "missing deterministic consumer disables preparation",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "host preparation launches then claims only its seat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "UI stores only sanitized receipt",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "successful callback handoff is visible without token",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "all visible launch controls retain 44px touch floor",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "non-host polling discovers launch and claims its own assigned seat",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "non-host launch receipt is handed off without exposing its token",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

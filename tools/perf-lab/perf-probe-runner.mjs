@@ -42,6 +42,35 @@ const METRICS_DIR = join(CURRENT_PERF_ROOT, 'metrics');
 const CAPTURES_DIR = join(CURRENT_PERF_ROOT, 'captures');
 const LEGACY_CAPTURES_DIR = join(LEGACY_PERF_ROOT, 'captures');
 const DEFAULT_VIEWPORT = S25_VIEWPORT;
+/* Cursor owns Stage 10 and may save these authoring-only utilities while the
+   game performance lane is running. They are not loaded by index/boot or by
+   this probe. Keep watching every other repository path, bind evidence to the
+   complete executing input closure below, and record any concurrent saves. */
+const CONCURRENT_STAGE10_AUTHORING = [
+  'tools/blender/audit-stage10-z-fighting.py',
+  'tools/blender/render-stage10-repaired-model-pack.py',
+  'tools/blender/repair-stage10-model-pack.py',
+  'tools/blender/texture-stage10-model-pack.py',
+  'tools/build-stage10-repair-review-gallery.mjs',
+  'tools/verify-stage10-repaired-model-pack.mjs',
+  'docs/MASTER_PLAN_STAGE10_LAYOUT_PROCESSING_MANIFEST_2026-08-29.json',
+  'docs/MASTER_PLAN_STAGE10_LAYOUT_PROCESSING_PREP_2026-08-29.md',
+  'docs/MASTER_PLAN_STAGE10_LAYOUT_PROGRESS_2026-08-29.md',
+  'docs/STAGE10_MODEL_REVIEW_LEDGER_2026-08-29.md',
+  'docs/MASTER_PLAN_STATUS.md'
+];
+const PERF_PROBE_INPUTS = [
+  'tools/perf-lab/perf-probe-runner.mjs',
+  'tools/perf-lab/scenario-manifests.mjs',
+  'tools/perf-lab/seeded-load-generator.mjs',
+  'tools/perf-lab/evidence-contract.mjs',
+  'tools/pw-browser.mjs',
+  'tools/chrome-gpu.mjs',
+  'tools/offline-network-isolation.mjs',
+  'tools/mobile-device-profile.mjs',
+  'tools/evidence-foundation/workspace-guard.mjs',
+  'tools/evidence-foundation/png-evidence.mjs'
+];
 
 function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
@@ -166,29 +195,6 @@ export async function collectSourceIdentity() {
   const gitHead = (await gitOutput(['rev-parse', 'HEAD'])).trim();
   const status = await gitOutput(['status', '--porcelain=v1', '--untracked-files=all']);
   const dirty = status.trim().length > 0;
-  const changed = new Set();
-  for (const command of [
-    ['diff', '--name-only', '-z', 'HEAD'],
-    ['ls-files', '--others', '--exclude-standard', '-z']
-  ]) {
-    const output = await gitOutput(command);
-    for (const path of output.split('\0')) {
-      const clean = path.replace(/\\/g, '/');
-      if (clean && !clean.startsWith('tmp/perf-lab/')) changed.add(clean);
-    }
-  }
-  const worktree = createHash('sha256');
-  worktree.update(`head\0${gitHead}\0`);
-  for (const path of [...changed].sort()) {
-    const absolute = join(ROOT, path);
-    worktree.update(`path\0${path}\0`);
-    if (existsSync(absolute)) {
-      const info = await stat(absolute);
-      if (info.isFile()) worktree.update(await readFile(absolute));
-      else worktree.update(info.isDirectory() ? '<directory>' : '<non-file>');
-    } else worktree.update('<deleted>');
-    worktree.update('\0');
-  }
 
   const manifestPath = join(ROOT, 'assets/data/manifest.json');
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
@@ -205,11 +211,28 @@ export async function collectSourceIdentity() {
     runtime.update('\0');
   }
   const runtimeFingerprint = runtime.digest('hex');
+  const inputFiles = [...new Set([...runtimeFiles, ...PERF_PROBE_INPUTS])].sort();
+  const inputClosure = createHash('sha256');
+  inputClosure.update(`head\0${gitHead}\0`);
+  const inputRecords = [];
+  for (const path of inputFiles) {
+    const absolute = join(ROOT, path);
+    if (!existsSync(absolute)) throw new Error(`Performance input-closure file is missing: ${path}`);
+    const bytes = await readFile(absolute);
+    const digest = sha256(bytes);
+    inputClosure.update(`path\0${path}\0${digest}\0`);
+    inputRecords.push({ path, bytes: bytes.length, sha256: digest });
+  }
+  const inputClosureFingerprint = inputClosure.digest('hex');
   const testedEntry = 'index.html';
   return {
     gitHead,
     gitDirty: dirty,
-    worktreeFingerprint: worktree.digest('hex'),
+    /* Kept under the schema's established field name: it is now the explicit
+       executing closure rather than every unrelated dirty authoring file. */
+    worktreeFingerprint: inputClosureFingerprint,
+    inputClosureFingerprint,
+    inputClosure: inputRecords,
     runtimeFingerprint,
     testedEntry,
     testedEntrySha256: await fileSha256(join(ROOT, testedEntry)),
@@ -219,13 +242,31 @@ export async function collectSourceIdentity() {
   };
 }
 
+async function collectConcurrentStage10Snapshot() {
+  const files = [];
+  for (const path of CONCURRENT_STAGE10_AUTHORING) {
+    const absolute = join(ROOT, path);
+    if (!existsSync(absolute)) { files.push({ path, exists: false }); continue; }
+    const [info, bytes] = await Promise.all([stat(absolute), readFile(absolute)]);
+    files.push({ path, exists: true, bytes: bytes.length, mtimeMs: info.mtimeMs, sha256: sha256(bytes) });
+  }
+  return { fingerprint: sha256(JSON.stringify(files)), files };
+}
+
 export async function startStaticServer() {
+  /* Packaged verification must read www/, not the repo-root dev tree. Root
+     index.html matches byte-for-byte today, but www/ is what Capacitor, OTA
+     shell, and port-8901 acceptance actually ship — serving root hid stale
+     www/ mistakes and made screenshots look like an old build. */
+  const WWW = join(ROOT, 'www');
+  const SERVE_ROOT = existsSync(join(WWW, 'index.html')) ? WWW : ROOT;
+  if (SERVE_ROOT !== ROOT) console.log('[static-server] serving packaged www/');
   const server = createServer(async (req, res) => {
     try {
       let requestPath = decodeURIComponent((req.url || '/').split('?')[0]);
       if (requestPath === '/') requestPath = '/index.html';
-      const file = resolve(ROOT, `.${requestPath}`);
-      const rel = relative(ROOT, file);
+      const file = resolve(SERVE_ROOT, `.${requestPath}`);
+      const rel = relative(SERVE_ROOT, file);
       if (rel.startsWith(`..${sep}`) || rel === '..' || !existsSync(file)) {
         res.writeHead(404); res.end('Not Found'); return;
       }
@@ -317,18 +358,47 @@ async function clickVisible(page, selector, label, timeout = 20000) {
   return label;
 }
 
-export async function enterRealBattle(page) {
+export async function enterRealBattle(page, opts = {}) {
+  const fromMainMenu = opts.fromMainMenu === true;
   await page.waitForFunction(() => !document.getElementById('mfBootCover'), null, { timeout: 90000 });
   const intro = page.locator('#mfIntroStart');
   if (await intro.isVisible().catch(() => false)) {
-    await intro.click();
+    /* The title can finish its own dismissal between the visibility probe and
+       Playwright's actionability retry.  That is already the desired state,
+       so a disappearing intro must not strand an otherwise valid probe. */
+    await intro.click({ timeout: 3000 }).catch(() => {});
   }
   /* Each of these swaps a full-screen panel with a transition. Clicking the
      next control the instant it reports visible lands the tap mid-transition
      and it is swallowed, leaving the run stranded on the previous screen.
      Let each panel settle first. */
-  await clickVisible(page, '#apOfflineBtn', 'PLAY OFFLINE', 30000);
-  await page.waitForTimeout(700);
+  if (!fromMainMenu) {
+    await clickVisible(page, '#apOfflineBtn', 'PLAY OFFLINE', 30000);
+    await page.waitForTimeout(700);
+    /* The account gate now hands control to the visual launcher.  Entering
+       offline mode there is a separate, authoritative step; bypassing it left
+       #startBtn correctly hidden behind the launcher and made every older
+       gameplay probe time out. */
+    const launcherOffline = page.locator('#mfLaunchOffline');
+    if (await launcherOffline.isVisible().catch(() => false)) {
+      await launcherOffline.click();
+    } else {
+      await page.waitForFunction(() => {
+        const button=document.getElementById('mfLaunchPlay');
+        return button&&getComputedStyle(button).display!=='none'&&!button.disabled&&/OFFLINE/i.test(button.textContent||'');
+      }, null, { timeout: 30000 });
+      await page.locator('#mfLaunchPlay').click();
+    }
+    await page.waitForTimeout(700);
+    /* Fresh careers now make an explicit tutorial decision before War Room.
+       Performance evidence follows the real experienced-player path instead of
+       force-hiding the modal: choose KEEP CURRENT MAIN MENU, then continue. */
+    const onboardingSkip = page.locator('#mfOnboardingSkip');
+    if (await onboardingSkip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)) {
+      await onboardingSkip.click();
+      await page.waitForTimeout(350);
+    }
+  }
   await clickVisible(page, '#startBtn', 'War Room', 30000);
   await page.waitForTimeout(700);
   await clickVisible(page, '.warCard[data-mode="standard"]', 'Standard match card', 30000);
@@ -825,12 +895,20 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
 async function main() {
   const args = process.argv.slice(2);
   const runAll = args.includes('--all');
+  const runRequired = args.includes('--required');
   const runLadder = args.includes('--ladder');
+  if (runAll && runRequired) throw new Error('--all and --required are mutually exclusive');
   const scenarioKey = valueAfter(args, '--scenario') || '1v1_duel_verdant';
   const preset = valueAfter(args, '--preset') || 'high';
   const frameValue = Number.parseInt(valueAfter(args, '--frames') || '240', 10);
   if (!Number.isInteger(frameValue) || frameValue < 3) throw new Error('--frames must be an integer >= 3');
-  const scenarios = runAll ? Object.values(BENCHMARK_SCENARIOS) : [BENCHMARK_SCENARIOS[scenarioKey]];
+  const requiredScenarioIds = [
+    '1v1_duel_verdant', '1v2_flank_arctic',
+    '1v3_crossfire_ashland', '1v4_continental_conquest'
+  ];
+  const scenarios = runAll ? Object.values(BENCHMARK_SCENARIOS)
+    : runRequired ? requiredScenarioIds.map(id => BENCHMARK_SCENARIOS[id])
+      : [BENCHMARK_SCENARIOS[scenarioKey]];
   if (scenarios.some(value => !value)) throw new Error(`Unknown scenario: ${scenarioKey}`);
   const populations = parsePerformancePopulations(args);
   const unsupportedUnits = runLadder ? 500 : populations[0];
@@ -845,15 +923,21 @@ async function main() {
   let hasPerformanceFailure = false;
   let sourceIdentity = null;
   let workspaceGuard = null;
+  let concurrentStage10Start = null;
   let server = null;
   let browser = null;
   let failure = null;
   try {
+    concurrentStage10Start = await collectConcurrentStage10Snapshot();
     workspaceGuard = await acquireVerificationFreeze({
       root: ROOT,
       label: 'Stage 8 performance evidence matrix',
       quietMs: Number(process.env.MF_QUIET_PREFLIGHT_MS || 15000),
-      allowedPaths: [CURRENT_PERF_ROOT]
+      /* Watchers on Windows may report the parent directory without a child
+         filename when current/ is created. The producer still writes only to
+         CURRENT_PERF_ROOT; allowing its dedicated perf-lab parent prevents an
+         anonymous self-write from masquerading as source drift. */
+      allowedPaths: [LEGACY_PERF_ROOT, ...CONCURRENT_STAGE10_AUTHORING.map(path => join(ROOT, path))]
     });
     await workspaceGuard.checkpoint('before bounded performance-output preparation');
     await prepareCurrentPerfOutput({ scenarios, populations });
@@ -980,6 +1064,14 @@ async function main() {
       throw new Error('Performance matrix source identity changed before final evidence release');
     }
     await workspaceGuard.checkpoint('performance matrix completion');
+    const concurrentStage10End = await collectConcurrentStage10Snapshot();
+    const concurrentStage10 = {
+      scope: 'excluded authoring-only Stage 10 utilities; absent from runtime/probe input closure',
+      start: concurrentStage10Start,
+      end: concurrentStage10End,
+      changed: concurrentStage10Start.fingerprint !== concurrentStage10End.fingerprint
+    };
+    for (const result of results) result.provenance.concurrentOutOfScopeWrites = concurrentStage10;
     queuedOutputs.push({
       path: join(METRICS_DIR, `summary_matrix_${sourceIdentity.runtimeFingerprint.slice(0, 12)}_v3.json`),
       record: [...results, ...unsupportedResults]

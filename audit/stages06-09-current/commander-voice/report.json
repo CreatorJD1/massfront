@@ -1,0 +1,529 @@
+{
+  "probe": "commander-voice",
+  "startedUtc": "2026-08-31T00:18:25.370Z",
+  "finishedUtc": "2026-08-31T00:18:26.303Z",
+  "snapshot": {
+    "startedUtc": "2026-08-31T00:18:25.370Z",
+    "head": "0ea4e1ed9d99df55b4088e812736400cca8bff69",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true,
+    "files": [
+      {
+        "path": "src/game/commander.js",
+        "bytes": 94520,
+        "sha256": "2dfa3dcdfff60ff1437f96477fb469db0101d45968d12e21cecc3ecb3dd3bee3"
+      },
+      {
+        "path": "src/story.js",
+        "bytes": 1085548,
+        "sha256": "15b9e547c1d0a9f209c8ef2e3f9b7c175b4f78c6e38104c26e076f5500f1e6f7"
+      },
+      {
+        "path": "src/audio.js",
+        "bytes": 156368,
+        "sha256": "3a9fc6dd4228ffe8128f0dad9d9369e0a501d0ef6521fb486c47b396b56396fe"
+      },
+      {
+        "path": "src/factions.js",
+        "bytes": 335178,
+        "sha256": "d77ae66fc078126018d4a4e05cacf2128417119884457b6dee79980d81aedaf3"
+      },
+      {
+        "path": "src/tutorial.js",
+        "bytes": 129992,
+        "sha256": "e2ca0140de7d3a18acf12334d118745ed97c73ff4f1f2f04f55f47526157f286"
+      },
+      {
+        "path": "src/game/sim.js",
+        "bytes": 522210,
+        "sha256": "ce4cdf71ecafef10fcdf5ec75b6b1ba99df211a4cc135843e628a212dd0b6a48"
+      },
+      {
+        "path": "assets/data/manifest.json",
+        "bytes": 3192,
+        "sha256": "af6dd89e4955b8d571a734c0f9420a1aa44515773702cde01ac77beaec59ce95"
+      },
+      {
+        "path": "modules/space_exploration/src/domain/commander_roster_contract.js",
+        "bytes": 13827,
+        "sha256": "ac94bbae8f21dca7a2d872621559e939b8047aed7ab88a6eb54b208d5ac0f06f"
+      },
+      {
+        "path": "modules/space_exploration/src/domain/deterministic.js",
+        "bytes": 2030,
+        "sha256": "61de88b6a867a8a5ac51f356a6fa2ea0b2a403387a929a3ddc2dc7f571c958f3"
+      },
+      {
+        "path": "modules/space_exploration/src/domain/errors.js",
+        "bytes": 326,
+        "sha256": "f3d2181aa176a476f877750de96edbea5916155493324257f90b1c4bc25f5986"
+      },
+      {
+        "path": "tools/probe-commander-voice.mjs",
+        "bytes": 40871,
+        "sha256": "39781bcc23c612127991230da9b61edec243f1c7f3f42d2b033b7e643b1d6d0f"
+      }
+    ]
+  },
+  "seededGlobals": {
+    "econTick": "declared in src/game/economy.js (manifest index 49), wrapped at src/game/commander.js top level",
+    "sfx": "declared in src/ui/hud.js (manifest index 55), reassigned inside initSampleAudio()",
+    "applyCrate/aiTick/metaGrant/renderOps/renderOpsBrief": "src/story.js wraps these at its own top level (story.js:1210,1223,1229,1254,1260); they come from src/game/sim.js, src/game/ai.js, src/game/meta.js and src/endgame.js, none of which this lane touches",
+    "window": "browser global; src/tutorial.js reads it at load",
+    "document": "browser global; DOM helpers are never called by this probe",
+    "performance": "browser global; the dialogue API takes an explicit `now`, so this is only a default",
+    "fetch": "used by audLoadVoiceBank() to read the embedded data: URL manifest",
+    "localStorage": "browser global"
+  },
+  "before": {
+    "bankSpeakers": [
+      "ascendancy",
+      "horde",
+      "keen",
+      "nova",
+      "syndicate"
+    ],
+    "bankActionsPerFaction": [
+      "ability",
+      "attack",
+      "build",
+      "deploy",
+      "hold",
+      "move",
+      "patrol",
+      "select",
+      "stop"
+    ],
+    "bankTakes": 162,
+    "keenLineIds": 54,
+    "commanderTakes": 0,
+    "speechCallSites": {
+      "trainingOnly": 1,
+      "unitRadioVoPlay": 1
+    },
+    "speakVoiceIsGlobal": false
+  },
+  "after": {
+    "commanders": 9,
+    "descriptorFields": 20,
+    "taxonomyKinds": 17,
+    "commanderVoiceSlotsPerCommander": 17,
+    "commanderTakesShipped": 0,
+    "commanderRosterFingerprint": "fnv1a32:0aadcd2d",
+    "commanderRosterBytes": 9962
+  },
+  "transcriptSha256": "f88df2305056e86101c9a74ce2e181490648437623fb4a20641e1bf71ac13c9e",
+  "transcript": [
+    "0 cue sighting.first -> ok #0",
+    "10 cue research.complete -> ok #1",
+    "20 cue casualty.unit -> ok #2",
+    "30 emit #2 casualty.unit p=70 audio=silent take=1 | TERRAN FRONTLINE COMMAND // CASUALTY | Casualties taken. Pull the wounded back.",
+    "40 cue strategic.ready -> ok #3",
+    "50 cue objective.assigned -> ok #4",
+    "4000 emit #3 strategic.ready p=85 audio=silent take=0 | TERRAN FRONTLINE COMMAND // STRATEGIC | Strategic weapon is charged and waiting.",
+    "4100 cue casualty.unit -> dedupe",
+    "8000 emit #4 objective.assigned p=60 audio=silent take=2 | TERRAN FRONTLINE COMMAND // OBJECTIVE | New objective on the board. Move when ready.",
+    "12000 emit -",
+    "16000 emit -",
+    "20000 cue outcome.victory -> ok #5",
+    "20100 emit #5 outcome.victory p=100 audio=silent take=3 | TERRAN FRONTLINE COMMAND // OUTCOME | Held what we took, and took it clean. Log it.",
+    "24000 emit -"
+  ],
+  "checks": [
+    {
+      "name": "harness: manifest order loaded",
+      "ok": true,
+      "info": true,
+      "detail": "src/game/commander.js -> src/factions.js -> src/audio.js -> src/tutorial.js -> src/story.js"
+    },
+    {
+      "name": "harness: seeded globals",
+      "ok": true,
+      "info": true,
+      "detail": "econTick, sfx, applyCrate/aiTick/metaGrant/renderOps/renderOpsBrief, window, document, performance, fetch, localStorage"
+    },
+    {
+      "name": "voice bank decodes through the shipped loader",
+      "ok": true,
+      "detail": "chain=kokoro-comms-1 generated=2026-08-09T03:08:13Z"
+    },
+    {
+      "name": "bank inventory",
+      "ok": true,
+      "info": true,
+      "detail": "speakers=ascendancy/horde/keen/nova/syndicate takes=162 keenLines=54 factionActions=9"
+    },
+    {
+      "name": "nine playable commander identities",
+      "ok": true,
+      "detail": "nova_kai,nova_holt,nova_vale,legion_vex,legion_korr,legion_dravik,syndicate_renn,syndicate_nyx,syndicate_voss"
+    },
+    {
+      "name": "descriptor built for every id",
+      "ok": true,
+      "detail": "9/9"
+    },
+    {
+      "name": "every required descriptor field present",
+      "ok": true,
+      "detail": "none missing"
+    },
+    {
+      "name": "no required descriptor field empty",
+      "ok": true,
+      "detail": "none empty"
+    },
+    {
+      "name": "base exports CommanderRosterSnapshotV1",
+      "ok": true,
+      "detail": "CommanderRosterSnapshotV1@1 from massfront-base"
+    },
+    {
+      "name": "roster snapshot preserves stable authored ID order",
+      "ok": true,
+      "detail": "nova_kai,nova_holt,nova_vale,legion_vex,legion_korr,legion_dravik,syndicate_renn,syndicate_nyx,syndicate_voss"
+    },
+    {
+      "name": "roster snapshot excludes Brood leaders",
+      "ok": true,
+      "detail": "9 playable rows"
+    },
+    {
+      "name": "roster snapshot carries explicit Galactic faction mapping",
+      "ok": true,
+      "detail": "legion->dominion explicit"
+    },
+    {
+      "name": "roster snapshot carries exact Commander 1 assignments",
+      "ok": true,
+      "detail": "nova:nova_kai,dominion:legion_vex,syndicate:syndicate_renn"
+    },
+    {
+      "name": "roster snapshot is recursively frozen at the base seam",
+      "ok": true,
+      "detail": "85 objects, 0 mutable"
+    },
+    {
+      "name": "Renn source package remains metadata-only and runtime-unregistered",
+      "ok": true,
+      "detail": "syndicate-broker-lys-renn-v1:SOURCE_ACCEPTED_RUNTIME_UNREGISTERED"
+    },
+    {
+      "name": "roster snapshot is byte-stable across calls",
+      "ok": true,
+      "detail": "5d5872b2087ef42f"
+    },
+    {
+      "name": "roster fingerprint matches its deterministic payload",
+      "ok": true,
+      "detail": "fnv1a32:0aadcd2d"
+    },
+    {
+      "name": "Galactic contract validates the real base snapshot",
+      "ok": true,
+      "detail": "cross-runtime contract match"
+    },
+    {
+      "name": "roster snapshot contains data only and no embedded portrait payload",
+      "ok": true,
+      "detail": "9962 JSON bytes"
+    },
+    {
+      "name": "chassis binding matches the real TYPES table",
+      "ok": true,
+      "detail": "9 rows verified"
+    },
+    {
+      "name": "readiness/fatigue/injury declared but inert",
+      "ok": true,
+      "detail": "applied=false on all nine"
+    },
+    {
+      "name": "descriptor carries labels, not balance numbers",
+      "ok": true,
+      "detail": "no cooldown/energy copied"
+    },
+    {
+      "name": "save shape unchanged (META.setup.pc is still the id)",
+      "ok": true,
+      "detail": "persistCommanderPick writes the id only"
+    },
+    {
+      "name": "identity descriptor is never written to META",
+      "ok": true,
+      "detail": "derived at runtime, cached in memory"
+    },
+    {
+      "name": "no commander takes ship today (subtitle-only is the shipped state)",
+      "ok": true,
+      "detail": "0/9 have recordings"
+    },
+    {
+      "name": "commander cues never alias onto unit radio",
+      "ok": true,
+      "detail": "aliasesUnitRadio=false on all nine"
+    },
+    {
+      "name": "slot naming a future pack must provide",
+      "ok": true,
+      "info": true,
+      "detail": "17 per commander, e.g. vo_cmdr_nova_kai_objective_assigned, vo_cmdr_nova_kai_objective_complete"
+    },
+    {
+      "name": "every taxonomy kind has copy",
+      "ok": true,
+      "detail": "17 kinds"
+    },
+    {
+      "name": "no orphan copy without a taxonomy kind",
+      "ok": true,
+      "detail": "none"
+    },
+    {
+      "name": "every commander resolves a non-empty line for every kind",
+      "ok": true,
+      "detail": "153 combinations"
+    },
+    {
+      "name": "all six required event categories exist",
+      "ok": true,
+      "detail": "objective,sighting,research,casualty,strategic,outcome"
+    },
+    {
+      "name": "identical event sequence produces an identical transcript",
+      "ok": true,
+      "detail": "f88df2305056e861"
+    },
+    {
+      "name": "a freshly loaded context produces the same transcript",
+      "ok": true,
+      "detail": "cross-context stable"
+    },
+    {
+      "name": "variant selection differs by commander",
+      "ok": true,
+      "detail": "kai != vex"
+    },
+    {
+      "name": "the identity/dialogue lane was located in commander.js",
+      "ok": true,
+      "detail": "20635 chars of code after comment stripping"
+    },
+    {
+      "name": "no Math.random in the commander dialogue lane",
+      "ok": true,
+      "detail": "deterministic"
+    },
+    {
+      "name": "no Date.now in the commander dialogue lane",
+      "ok": true,
+      "detail": "clock is an argument"
+    },
+    {
+      "name": "dedupe rejects the same event/subject while queued",
+      "ok": true,
+      "detail": "queued then dedupe-queued"
+    },
+    {
+      "name": "dedupe window holds for 30s then releases",
+      "ok": true,
+      "detail": "29s=dedupe 60s=queued"
+    },
+    {
+      "name": "a different subject is a different event",
+      "ok": true,
+      "detail": "subject y -> cooldown"
+    },
+    {
+      "name": "per-category cooldown gates a different kind in the same category",
+      "ok": true,
+      "detail": "5s=cooldown 9s=queued"
+    },
+    {
+      "name": "highest priority emits first regardless of raise order",
+      "ok": true,
+      "detail": "queued=research.complete>sighting.first>outcome.victory>casualty.unit emitted=outcome.victory"
+    },
+    {
+      "name": "queue bound refuses a weaker cue and evicts for a stronger one",
+      "ok": true,
+      "detail": "full=4 weaker=queue-full stronger=queued size=4"
+    },
+    {
+      "name": "global spacing holds a second cue for 3.5s",
+      "ok": true,
+      "detail": "t0=1 t1s=0 t4s=1"
+    },
+    {
+      "name": "a stale cue is dropped rather than spoken late",
+      "ok": true,
+      "detail": "emitted=0 dropped=1"
+    },
+    {
+      "name": "an unknown category or kind is refused, not guessed",
+      "ok": true,
+      "detail": "unknown-event/unknown-event"
+    },
+    {
+      "name": "listeners receive emitted cues and can unsubscribe",
+      "ok": true,
+      "detail": "outcome.victory"
+    },
+    {
+      "name": "a throwing listener cannot silence the others",
+      "ok": true,
+      "detail": "good ran=1"
+    },
+    {
+      "name": "no AudioContext: cue still emits with a subtitle",
+      "ok": true,
+      "detail": "audio=silent text=\"Held what we took, and took it clean. Log it.\""
+    },
+    {
+      "name": "no AudioContext: portrait metadata still present",
+      "ok": true,
+      "detail": "vo_cmdr_nova_kai_outcome_victory"
+    },
+    {
+      "name": "no-audio context loaded",
+      "ok": true,
+      "info": true,
+      "detail": "src/game/commander.js -> src/factions.js -> src/tutorial.js -> src/story.js"
+    },
+    {
+      "name": "no audio module: cue still emits, marked absent",
+      "ok": true,
+      "detail": "audio=absent text=\"Held what we took, and took it clean. Log it.\""
+    },
+    {
+      "name": "no audio module: descriptor still resolves a voice binding",
+      "ok": true,
+      "detail": "bank=cmdr_nova_kai"
+    },
+    {
+      "name": "no audio module: all nine descriptors still build",
+      "ok": true,
+      "detail": "9/9"
+    },
+    {
+      "name": "a descriptor cached before the bank loaded corrects itself afterwards",
+      "ok": true,
+      "detail": "cold=false warm=true present=vo_cmdr_nova_kai_outcome_victory"
+    },
+    {
+      "name": "a commander take becomes a slot through the shipped bank loader",
+      "ok": true,
+      "detail": "vo_cmdr_nova_kai_outcome_victory"
+    },
+    {
+      "name": "commander lines get their own mixer channel",
+      "ok": true,
+      "detail": "channel=cmdr"
+    },
+    {
+      "name": "a commander speaker key is never collapsed onto a faction speaker",
+      "ok": true,
+      "detail": "voBankFac=cmdr_nova_kai"
+    },
+    {
+      "name": "with a pack present the cue actually plays",
+      "ok": true,
+      "detail": "audio=played"
+    },
+    {
+      "name": "playback reuses voPlay/sfx — no second voice system",
+      "ok": true,
+      "detail": "vo_cmdr_nova_kai_outcome_victory"
+    },
+    {
+      "name": "audio.js buffer-source construction sites (unchanged by this lane)",
+      "ok": true,
+      "info": true,
+      "detail": "7"
+    },
+    {
+      "name": "the commander playback block was located in audio.js",
+      "ok": true,
+      "detail": "3911 chars of code after comment stripping"
+    },
+    {
+      "name": "the commander block adds no decoder, buffer source or fetch of its own",
+      "ok": true,
+      "detail": "delegates to voPlay/audMapList"
+    },
+    {
+      "name": "the commander block never reaches speechSynthesis",
+      "ok": true,
+      "detail": "no synthesised commander"
+    },
+    {
+      "name": "KEEN bank path is untouched",
+      "ok": true,
+      "detail": "{\"has\":\"vo_keen_greeting\",\"channel\":\"keen\",\"graduation\":\"vo_keen_graduation\",\"count\":1}"
+    },
+    {
+      "name": "unit radio path is untouched",
+      "ok": true,
+      "detail": "{\"nova\":\"vo_nova_move\",\"legion\":\"vo_ascendancy_attack\",\"brood\":\"vo_brood_call\",\"channel\":\"radio\"}"
+    },
+    {
+      "name": "during training, low-stakes commander chatter is refused",
+      "ok": true,
+      "detail": "{\"research\":\"training\",\"sighting\":\"training\",\"objective\":\"training\",\"casualty\":\"queued\",\"outcome\":\"queued\",\"strategic\":\"queued\"}"
+    },
+    {
+      "name": "during training, cues about the player are still allowed",
+      "ok": true,
+      "detail": "{\"research\":\"training\",\"sighting\":\"training\",\"objective\":\"training\",\"casualty\":\"queued\",\"outcome\":\"queued\",\"strategic\":\"queued\"}"
+    },
+    {
+      "name": "outside training every category is admitted again",
+      "ok": true,
+      "detail": "queued"
+    },
+    {
+      "name": "audio gate yields while KEEN is on the air",
+      "ok": true,
+      "detail": "{\"ok\":false,\"reason\":\"busy\"}"
+    },
+    {
+      "name": "audio gate enforces its own playback spacing",
+      "ok": true,
+      "detail": "{\"ok\":false,\"reason\":\"spacing\"}"
+    },
+    {
+      "name": "src/tutorial.js speakVoice reachable as a global",
+      "ok": true,
+      "info": true,
+      "detail": "false"
+    },
+    {
+      "name": "the legacy speech wrapper resolves to the shared pipeline, never to TTS",
+      "ok": true,
+      "detail": "path=silent"
+    },
+    {
+      "name": "working-tree files changed since HEAD (shared, pre-existing)",
+      "ok": true,
+      "info": true,
+      "detail": "217"
+    },
+    {
+      "name": "no out-of-lane file references a symbol this lane introduces",
+      "ok": true,
+      "detail": "src/game/ai.js + assets/data/manifest.json"
+    },
+    {
+      "name": "normal gameplay events are wired into the commander cue funnel",
+      "ok": true,
+      "detail": "sim sightings, casualties, research, strategic and objective transitions call the guarded funnel"
+    },
+    {
+      "name": "integration points are documented in commander.js",
+      "ok": true,
+      "detail": "named call sites present"
+    }
+  ],
+  "passed": 69,
+  "failed": 0
+}

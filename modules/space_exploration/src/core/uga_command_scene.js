@@ -1,13 +1,35 @@
 import { loadUgaCommandCutaway } from '../ship/uga_blender_assets.js';
 import { createUgaWindowEmissiveBloom } from './window_emissive_bloom.js?v=20260823-transit1';
+import { fitUgaManagementProfile, UGA_MANAGEMENT_PROFILE_CAMERA } from './uga_management_profile_camera.js?v=20260829-profile1';
 
-// Frame the player-facing open pressure-bay side. The tighter, lower angle
-// keeps the authored compartments readable between the two management rails.
-const OVERVIEW_CAMERA = new THREE.Vector3(36, -68, 50);
-const OVERVIEW_TARGET = new THREE.Vector3(0, 0, 5.2);
-const OVERVIEW_UP = new THREE.Vector3(0, 1, 0);
+// The management overview is a technical cutaway, so it stays square to the
+// open pressure-bay side. District and deployment close-ups retain their own
+// purpose-built framing; only the full-ship management pose is axis-aligned.
+const FALLBACK_OVERVIEW_BOUNDS = Object.freeze({
+  min: Object.freeze({ x: -30, y: -4.5, z: -1 }),
+  max: Object.freeze({ x: 30, y: 4.5, z: 11 })
+});
+const INITIAL_OVERVIEW = fitUgaManagementProfile(FALLBACK_OVERVIEW_BOUNDS, 42, 1);
+const OVERVIEW_CAMERA = new THREE.Vector3(...INITIAL_OVERVIEW.position);
+const OVERVIEW_TARGET = new THREE.Vector3(...INITIAL_OVERVIEW.target);
+const OVERVIEW_UP = new THREE.Vector3(...UGA_MANAGEMENT_PROFILE_CAMERA.upAxis);
+const DISTRICT_FOCUS_UP = new THREE.Vector3(0, 1, 0);
 const LANDSCAPE_FOCUS_UP = new THREE.Vector3(0, 0, 1);
-const COMMAND_EXPOSURE = 1.02;
+// The authored hull is intentionally dark, but the management overview must
+// still read as a technical side elevation on phone OLEDs. These values lift
+// only the cutaway scene; exterior flight and planetary lighting keep their
+// own exposure rigs.
+const COMMAND_EXPOSURE = 1.45;
+const MANAGEMENT_HEMISPHERE_INTENSITY = 1.75;
+const MANAGEMENT_KEY_INTENSITY = 4.80;
+const MANAGEMENT_RIM_INTENSITY = 3.40;
+const MANAGEMENT_PROFILE_FILL_INTENSITY = 5.80;
+const MANAGEMENT_PROFILE_RIM_INTENSITY = 4.40;
+const MANAGEMENT_ROOM_FOG_DENSITY = 0.009;
+// Portrait framing backs the camera far away to fit the vessel's full length.
+// Room-scale exponential fog at that distance erased the locked dark hull on
+// phone OLEDs even though the same material was healthy in landscape.
+const MANAGEMENT_PROFILE_FOG_DENSITY = 0.001;
 
 const CARRIER_CONTEXT_NAME = /^(?:NexusVII_(?:Keel|MidDeck|CeilingSpine|FarHullPanel|WindowRibbon|AftDriveTunnel|InteriorDrive(?:Throat|Glow))|TransitPod_)/;
 
@@ -76,7 +98,7 @@ export class UgaCommandScene {
     this.pointer = new THREE.Vector2();
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x01040a);
-    this.scene.fog = new THREE.FogExp2(0x020713, 0.009);
+    this.scene.fog = new THREE.FogExp2(0x020713, MANAGEMENT_ROOM_FOG_DENSITY);
     this.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 300);
     this.camera.up.copy(OVERVIEW_UP);
     this.camera.position.copy(OVERVIEW_CAMERA);
@@ -97,19 +119,30 @@ export class UgaCommandScene {
       maxBloomPixels: 262144
     });
 
-    this.scene.add(new THREE.HemisphereLight(0x83c6e8, 0x202735, 0.95));
-    const key = new THREE.DirectionalLight(0xdaf2ff, 1.85);
+    this.scene.add(new THREE.HemisphereLight(0x83c6e8, 0x202735, MANAGEMENT_HEMISPHERE_INTENSITY));
+    const key = new THREE.DirectionalLight(0xdaf2ff, MANAGEMENT_KEY_INTENSITY);
     key.position.set(18, -22, 38);
     // AO/normal/roughness are authored into the district materials. Keep the
     // dynamic shadow permutation out of the embedded-browser restore path.
     key.castShadow = false;
     this.scene.add(key);
-    const rim = new THREE.DirectionalLight(0x178dde, 1.20);
+    const rim = new THREE.DirectionalLight(0x42b9ff, MANAGEMENT_RIM_INTENSITY);
     rim.position.set(-30, 20, 18);
     this.scene.add(rim);
     const warm = new THREE.PointLight(0xff8b3d, 1.0, 70, 1.2);
     warm.position.set(13, 16, 12);
     this.scene.add(warm);
+    // The full vessel is much farther from the camera than a focused room.
+    // These two lights are enabled only for the side elevation; focused room
+    // PBR therefore keeps the local authored contrast seen at close range.
+    this.profileFill = new THREE.DirectionalLight(0xc7edff, MANAGEMENT_PROFILE_FILL_INTENSITY);
+    this.profileFill.position.set(0, -42, 9);
+    this.profileFill.visible = false;
+    this.scene.add(this.profileFill);
+    this.profileRim = new THREE.DirectionalLight(0x50c8ff, MANAGEMENT_PROFILE_RIM_INTENSITY);
+    this.profileRim.position.set(-38, 24, 16);
+    this.profileRim.visible = false;
+    this.scene.add(this.profileRim);
 
     this._loadPromise = null;
   }
@@ -216,6 +249,57 @@ export class UgaCommandScene {
           });
         }
       }
+    });
+    this._captureProfileMaterials();
+  }
+
+  _captureProfileMaterials() {
+    this.profileMaterialStates = new Map();
+    this.deckTopologyRoot?.traverse(obj => {
+      if (!obj.isMesh || !obj.material) return;
+      const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+      const windowMaterial = obj.userData?.render_role === 'window_emissive'
+        || /Window Glazing/i.test(obj.name || '');
+      materials.forEach(material => {
+        if (!material || (!material.isMeshStandardMaterial && !material.isMeshPhysicalMaterial)) return;
+        const prior = this.profileMaterialStates.get(material);
+        if (prior) {
+          prior.windowMaterial = prior.windowMaterial || windowMaterial;
+          return;
+        }
+        this.profileMaterialStates.set(material, {
+          color: material.color?.clone() || null,
+          emissive: material.emissive?.clone() || null,
+          emissiveIntensity: Number(material.emissiveIntensity) || 0,
+          metalness: Number(material.metalness),
+          roughness: Number(material.roughness),
+          windowMaterial
+        });
+      });
+    });
+  }
+
+  _setProfileMaterialLift(active) {
+    if (!this.profileMaterialStates) return;
+    const albedoFloor = new THREE.Color(0x6f91aa);
+    const emissiveFloor = new THREE.Color(0x163c58);
+    this.profileMaterialStates.forEach((base, material) => {
+      if (base.color && material.color) material.color.copy(base.color);
+      if (base.emissive && material.emissive) material.emissive.copy(base.emissive);
+      material.emissiveIntensity = base.emissiveIntensity;
+      if (Number.isFinite(base.metalness)) material.metalness = base.metalness;
+      if (Number.isFinite(base.roughness)) material.roughness = base.roughness;
+      if (!active || base.windowMaterial) return;
+      // The carrier's near-black metallic base color looked correct in a room
+      // close-up but collapsed to a navy silhouette at the full-ship distance.
+      // An overview-only material grade raises its diffuse floor and a small
+      // cyan emissive floor; focusDistrict restores the exact authored values.
+      if (material.color) material.color.lerp(albedoFloor, 0.38);
+      if (material.emissive) material.emissive.lerp(emissiveFloor, 0.72);
+      material.emissiveIntensity = Math.max(0.82, base.emissiveIntensity);
+      if (Number.isFinite(base.metalness)) material.metalness = Math.min(0.72, base.metalness);
+      if (Number.isFinite(base.roughness)) material.roughness = Math.max(0.38, base.roughness);
+      material.needsUpdate = true;
     });
   }
 
@@ -1130,13 +1214,13 @@ export class UgaCommandScene {
       // allow the pressure walls to extend beyond the narrow side edges.
       lookTarget.add(new THREE.Vector3(0, -1.6, 1.0));
       viewDirection = new THREE.Vector3(0.174, -0.934, 1.0).normalize();
-      up = OVERVIEW_UP.clone();
+      up = DISTRICT_FOCUS_UP.clone();
       maxWidthFraction = 1.38;
       maxHeightFraction = 0.535;
     } else {
       lookTarget.z += 1.0;
       viewDirection = new THREE.Vector3(0.12, -0.72, 0.722).normalize();
-      up = OVERVIEW_UP.clone();
+      up = DISTRICT_FOCUS_UP.clone();
       maxWidthFraction = 0.47;
       maxHeightFraction = 0.62;
     }
@@ -1266,28 +1350,53 @@ export class UgaCommandScene {
     this.camera.aspect = this.viewportWidth / this.viewportHeight;
     this.camera.updateProjectionMatrix();
     this.windowBloom.resize();
-    if (this.loaded && this.active && this.selectedDistrictId) this.focusDistrict(this.selectedDistrictId, false);
+    if (this.loaded && this.active) {
+      if (this.selectedDistrictId) this.focusDistrict(this.selectedDistrictId, false);
+      else this.focusOverview(false);
+    }
   }
 
   handleContextRestored() {
     this.windowBloom.invalidate('webgl-context-restored');
   }
 
+  _managementProfileFraming() {
+    const bounds = this.deckTopologyRoot
+      ? new THREE.Box3().setFromObject(this.deckTopologyRoot)
+      : null;
+    const framing = fitUgaManagementProfile(
+      bounds && !bounds.isEmpty() ? bounds : FALLBACK_OVERVIEW_BOUNDS,
+      this.camera.fov,
+      this.camera.aspect
+    );
+    return {
+      position: new THREE.Vector3(...framing.position),
+      target: new THREE.Vector3(...framing.target),
+      up: new THREE.Vector3(...framing.up)
+    };
+  }
+
   focusOverview(animate = true) {
     this.selectedDistrictId = null;
     this._setHighlight(null);
+    this._setProfileMaterialLift(true);
+    this.profileFill.visible = true;
+    this.profileRim.visible = true;
+    this.scene.fog.density = MANAGEMENT_PROFILE_FOG_DENSITY;
     this.districtRoots.forEach(root => { root.visible = true; });
     this._showOverviewCarrierContext();
-    const isPortrait = this.camera && this.camera.aspect < 0.9;
-    const camPos = isPortrait ? new THREE.Vector3(OVERVIEW_CAMERA.x * 1.2, OVERVIEW_CAMERA.y * 1.2, OVERVIEW_CAMERA.z * 1.25) : OVERVIEW_CAMERA;
-    const camTarget = isPortrait ? new THREE.Vector3(OVERVIEW_TARGET.x, OVERVIEW_TARGET.y, OVERVIEW_TARGET.z + 1.5) : OVERVIEW_TARGET;
-    this._moveCamera(camPos, camTarget, animate ? 0.82 : 0, OVERVIEW_UP);
+    const framing = this._managementProfileFraming();
+    this._moveCamera(framing.position, framing.target, animate ? 0.82 : 0, framing.up);
   }
 
   focusDistrict(id, animate = true) {
     const anchor = this.focusAnchors.get(id);
     const district = this.districtRoots.get(id);
     if (!anchor || !district) return false;
+    this._setProfileMaterialLift(false);
+    this.profileFill.visible = false;
+    this.profileRim.visible = false;
+    this.scene.fog.density = MANAGEMENT_ROOM_FOG_DENSITY;
     const target = new THREE.Vector3();
     anchor.getWorldPosition(target);
     this.selectedDistrictId = id;

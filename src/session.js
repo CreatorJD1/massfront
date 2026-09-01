@@ -140,7 +140,12 @@ function sessCaptureBuildings(){
               /* Completion grants are historical state, not a function of a
                  surviving unit. A dead package Prospector must stay dead, and
                  a 99.96%-complete Extractor must still grant one on completion. */
-              B.type==='mex'?(B.freeMiner?1:0):null]);
+              B.type==='mex'?(B.freeMiner?1:0):null,
+              /* Paid maintenance intent and its hostile-fire gate are gameplay
+                 state. Persist both so a recovery neither spends without the
+                 player's order nor bypasses the four-second repair lockout. */
+              B.repairOn?1:0,
+              +Math.max(0,B.dmgT||0).toFixed(3)]);
   }
   return out;
 }
@@ -223,6 +228,7 @@ function sessCheckCoreState(s){
       if(!nullableInt(dep)||!nullableInt(geo)||(dep!=null&&(dep<0||B[0]!=='mex'||depClaims.has(dep)))||
          (geo!=null&&(geo<0||B[0]!=='geo'||geoClaims.has(geo)))||
          (B[0]==='mex'&&(grant!==0&&grant!==1))||(B[0]!=='mex'&&grant!=null))return bad();
+      if((B.length>17&&B[17]!==0&&B[17]!==1)||(B.length>18&&(!finite(B[18])||B[18]<0||B[18]>60)))return bad();
       if(dep!=null)depClaims.add(dep);if(geo!=null)geoClaims.add(geo);
     }
   }
@@ -860,7 +866,7 @@ function sessRestoreInto(s){
 
     const bMap=new Map();
     for(const b of s.blds){
-      const [type,team,x,y,hp,prog,lvl,paidM,paidE,oldBi,allyAI,aiBaseSlot,bfac,bBehavior,depRef,geoRef,freeMiner]=b;
+      const [type,team,x,y,hp,prog,lvl,paidM,paidE,oldBi,allyAI,aiBaseSlot,bfac,bBehavior,depRef,geoRef,freeMiner,repairOn,dmgT]=b;
       /* Structures are restored before the captured unit roster. Suppress
          instant package grants here or each Extractor creates a fresh
          Prospector before its saved one is replayed below. */
@@ -874,6 +880,7 @@ function sessRestoreInto(s){
       B.lvl=lvl||1;
       if(type==='mex')B.freeMiner=freeMiner==null?B.prog>=1:!!freeMiner;
       if(paidM!=null)B.buildPaidM=paidM;if(paidE!=null)B.buildPaidE=paidE;
+      B.repairOn=repairOn===1;B.repairStalled=false;B.dmgT=dmgT==null?0:dmgT;
       bMap.set(oldBi,blds.length-1);
       if(allyAI!=null)B.allyAI=allyAI; if(aiBaseSlot!=null)B.aiBaseSlot=aiBaseSlot;
       if(bfac!=null)B.fac=bfac; if(bBehavior!=null)B.aiBehavior=bBehavior;

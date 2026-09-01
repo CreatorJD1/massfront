@@ -3,10 +3,9 @@
    MASSFRONT PERFORMANCE LABORATORY — DETERMINISTIC SCENARIO MANIFESTS
    ----------------------------------------------------------------------------
    Provides deterministic, seeded scenario configurations for performance
-   benchmarking across the current 1v1, 1v2 and 1v3 match topology at
+   benchmarking across the current 1v1 through 1v4 match topology at
    population ladders of 100, 250, 500, 750, and 1000 units per faction.
-   The authored 1v4 case remains visible but explicitly UNSUPPORTED until the
-   runtime has a fifth seat; slot 3 must never be aliased onto the player.
+   The 1v4 case uses the runtime's fourth AI seat (slot 3) at center.
 
    Strict constraint: ZERO unseeded Math.random in scenario definition or
    spawn generation. Every coordinate, unit type, and combat directive is
@@ -103,8 +102,8 @@ export const FACTION_CONFIGS = {
  */
 export const POPULATION_LADDERS = [100, 250, 500, 750, 1000];
 export const PERF_ACCEPTANCE_UNITS_PER_FACTION = 500;
-export const PERF_CURRENT_MAX_SEATS = 4;
-export const PERF_CURRENT_MAX_AI_SLOT = 2;
+export const PERF_CURRENT_MAX_SEATS = 5;
+export const PERF_CURRENT_MAX_AI_SLOT = 3;
 
 export function benchmarkScenarioSupport(scenario) {
   const factions = Array.isArray(scenario?.factions) ? scenario.factions : [];
@@ -214,10 +213,7 @@ export const BENCHMARK_SCENARIOS = {
     id: '1v4_continental_conquest',
     name: '1v4 Continental War (Veridian Prime)',
     theatre: 'large',
-    support: {
-      status: 'unsupported',
-      reason: 'Requires a fifth-seat/commander adapter; current runtime supports player plus three AI seats.'
-    },
+    support: { status: 'supported', reason: null },
     mapSeed: 99412,
     theme: 'verdant',
     mapSpan: 3200,

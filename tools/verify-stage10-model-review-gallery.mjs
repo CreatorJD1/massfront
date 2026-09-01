@@ -14,19 +14,11 @@ const EXPECTED_FAMILIES = new Map([
   ['mf-transit-kit-v1', 54],
   ['mf-platform-hs-v1', 30],
   ['mf-modular-building-v1', 36],
-  ['mf-building-hs-v1', 36],
-  ['mf-cityforms-kit-v1', 72],
-  ['mf-superstructure-v1', 57],
+  ['mf-building-hs-v1', 33],
+  ['mf-cityforms-kit-v1', 68],
+  ['mf-superstructure-v1', 56],
 ]);
-const EXPECTED_REPAIR_LOCKED = [
-  'brutalist_tank_farm',
-  'colonial_depot_shed',
-  'colonial_gatehouse',
-  'colonial_industrial_hall',
-  'ruined_depot_shed',
-  'ruined_tower_slab',
-  'ruined_tower_spire',
-];
+const EXPECTED_REPAIR_LOCKED = [];
 const EXPECTED_STALE_ALIASES = [
   'mf-road-primary-local-adapter.glb',
   'mf-road-t-junction.glb',
@@ -111,13 +103,13 @@ for (const family of catalog.worldKits) {
     allWorldModules.push(item);
   }
 }
-check(allWorldModules.length === 328 && catalog.counts.worldKitModules === 328, '328 report-authoritative world-kit modules');
-check(new Set(allWorldModules.map((item) => item.key)).size === 328, 'world-kit keys are unique');
+check(allWorldModules.length === 320 && catalog.counts.worldKitModules === 320, '320 report-authoritative world-kit modules');
+check(new Set(allWorldModules.map((item) => item.key)).size === 320, 'world-kit keys are unique');
 const actualRepairLocked = allWorldModules.filter((item) => item.repairLocked).map((item) => item.id);
-sameMembers(actualRepairLocked, EXPECTED_REPAIR_LOCKED, 'seven repair-locked building IDs');
+sameMembers(actualRepairLocked, EXPECTED_REPAIR_LOCKED, 'zero repair-locked building IDs');
 sameMembers(catalog.repairLockedIds, EXPECTED_REPAIR_LOCKED, 'repair-lock catalog declaration');
-check(actualRepairLocked.length === 7 && catalog.counts.repairLocked === 7, 'repair-lock count is seven');
-check(catalog.counts.worldKitProcessingEligible === 321, '321 world-kit modules remain processing candidates');
+check(actualRepairLocked.length === 0 && catalog.counts.repairLocked === 0, 'repair-lock count is zero');
+check(catalog.counts.worldKitProcessingEligible === 320, '320 world-kit modules remain processing candidates');
 
 const expectedRoadQa = ROAD_QA_DIRS.flatMap(currentGlbs);
 check(expectedRoadQa.length === 31 && catalog.roadQa.length === 31 && catalog.counts.roadQaGlbs === 31, '31 road-QA GLBs are separate');
@@ -135,7 +127,7 @@ check(catalog.splineManifest.path === SPLINE_MANIFEST, 'Spline manifest path is 
 const splineManifest = JSON.parse(fs.readFileSync(full(SPLINE_MANIFEST), 'utf8'));
 check(String(splineManifest.status || '').startsWith('SOURCE_AUTHORING_ONLY'), 'Spline manifest remains source-authoring-only');
 sameMembers(splineManifest.files.map((entry) => posix(entry.file)), expectedSpline, 'Spline manifest and disk inventory match');
-check(expectedSpline.length === 22 && catalog.splineExports.length === 22 && catalog.counts.splineExports === 22, '22 Spline exports');
+check(expectedSpline.length === 7 && catalog.splineExports.length === 7 && catalog.counts.splineExports === 7, '7 retained Spline exports');
 sameMembers(catalog.splineExports.map((item) => item.model.path), expectedSpline, 'Spline export inventory');
 for (const item of catalog.splineExports) {
   const expectedLifecycle = item.metadataBlocked ? 'METADATA_BLOCKED_VISUAL_REVIEW' :
@@ -154,11 +146,27 @@ for (const item of catalog.splineExports) {
   check(manifestEntry?.bytes === item.model.bytes && manifestEntry?.sha256 === item.model.sha256, `${item.key} matches Spline manifest hash and size`);
 }
 check(catalog.counts.splineRendered === catalog.splineExports.filter((item) => item.preview).length, 'Spline rendered count matches current scratch evidence');
-check(catalog.counts.splineMetadataBlocked === 1, 'one Spline export is metadata blocked');
-check(catalog.splineExports.find((item) => item.id === 'MF_STRUCT_CITYTOWER_02')?.metadataBlocked === true, 'MF_STRUCT_CITYTOWER_02 is metadata blocked');
+check(catalog.counts.splineMetadataBlocked === 0, 'no Spline export is metadata blocked');
+check(!catalog.splineExports.some((item) => item.id === 'MF_STRUCT_CITYTOWER_02'), 'MF_STRUCT_CITYTOWER_02 is absent from catalogue');
 
 const staleGroup = catalog.exclusions.find((group) => group.label === 'Stale road aliases');
 sameMembers(staleGroup?.entries || [], EXPECTED_STALE_ALIASES, 'three stale road aliases');
+const discardedPack = JSON.parse(fs.readFileSync(full('modules/space_exploration/assets/source/blender/world-kits/DISCARDED_STAGE10_PACK_FAILURES.json'), 'utf8'));
+const discardedGroup = catalog.exclusions.find((group) => group.label === 'Discarded Stage 10 pack failures');
+sameMembers(discardedGroup?.entries || [], discardedPack.ids, 'eight discarded Stage 10 pack failures');
+check(discardedPack.sourceAllowed === false && discardedPack.runtimeAllowed === false && discardedPack.ids.length === 8, 'pack-failure discard ledger is closed');
+for (const key of discardedPack.ids) check(!allWorldModules.some((item) => item.key === key), `discarded pack failure absent from catalogue: ${key}`);
+const discardedSpline = JSON.parse(fs.readFileSync(full('modules/space_exploration/assets/source/spline/world-prefabs/DISCARDED_STAGE10_SPLINE_EXCLUSIONS.json'), 'utf8'));
+const discardedSplineGroup = catalog.exclusions.find((group) => group.label === 'Discarded Stage 10 Spline exclusions');
+sameMembers(discardedSplineGroup?.entries || [], discardedSpline.ids, 'three discarded Stage 10 Spline exclusions');
+check(discardedSpline.sourceAllowed === false && discardedSpline.runtimeAllowed === false && discardedSpline.ids.length === 3, 'Spline-exclusion discard ledger is closed');
+for (const key of discardedSpline.ids) check(!catalog.splineExports.some((item) => item.key === key), `discarded Spline exclusion absent from catalogue: ${key}`);
+const acceptedUnlocks = JSON.parse(fs.readFileSync(full('modules/space_exploration/assets/source/blender/world-kits/USER_ACCEPTED_STAGE10_REPAIR_UNLOCKS.json'), 'utf8'));
+check(acceptedUnlocks.verdict === 'GOOD' && acceptedUnlocks.processingEligible === true && acceptedUnlocks.ids.length === 7, 'former seven repair-locks are user-accepted as good');
+for (const key of acceptedUnlocks.ids) {
+  const item = allWorldModules.find((entry) => entry.key === key);
+  check(item && item.repairLocked === false && item.processingEligible === true, `user-accepted unlock remains processing-eligible: ${key}`);
+}
 const canonicalRoadModels = new Set(allWorldModules.filter((item) => item.family === 'mf-modular-road-v1').map((item) => path.basename(item.model.path)));
 for (const staleAlias of EXPECTED_STALE_ALIASES) {
   const stalePath = `modules/space_exploration/assets/source/blender/world-kits/mf-modular-road-v1/exports/${staleAlias}`;
@@ -192,10 +200,10 @@ check(runtimeReferences.length === 0, 'no catalog model basename is referenced b
 check(html.includes('MODEL<br>ADMISSION BOARD'), 'HTML has review-board identity');
 check(html.includes('Everything shown is runtime inactive and unregistered.'), 'HTML states runtime boundary');
 check(html.includes('Unfinished models / repair required'), 'HTML separates model-wise unfinished repair queue');
-check(html.includes('Known geometry failures only.'), 'HTML distinguishes geometry failures from review status');
+check(html.includes('The creator visually accepted the former seven hard-surface buildings as good'), 'HTML records the former seven as user-accepted');
 check(html.includes('Metadata blocked'), 'HTML separates metadata-blocked models');
-for (const count of ['328', '31', '22', '7']) check(html.includes(`>${count}<`), `HTML displays ${count}`);
-for (const lockedId of EXPECTED_REPAIR_LOCKED) check(html.includes(lockedId.replaceAll('_', ' ')) || html.includes(lockedId), `HTML displays repair-locked ${lockedId}`);
+for (const count of ['320', '31', '7']) check(html.includes(`>${count}<`), `HTML displays ${count}`);
+check(html.includes('>0<') && html.includes('repair-locked'), 'HTML displays zero repair-locked');
 check(!html.includes('mf-road-primary-local-adapter.glb</code>'), 'HTML does not present stale primary/local adapter alias');
 check(!html.includes('mf-road-t-junction.glb</code>'), 'HTML does not present stale T-junction alias');
 check(!html.includes('mf-road-x-plaza.glb</code>'), 'HTML does not present stale X-plaza alias');

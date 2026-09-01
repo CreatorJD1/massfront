@@ -4,8 +4,9 @@ Read this before touching anything. It is short on purpose; the long version is
 `docs/HANDOFF.md`.
 
 MASSFRONT is a Supreme-Commander-style mobile RTS: a hand-written WebGL2 engine
-in plain JavaScript, packaged for Android and iOS with Capacitor, with a
-Cloudflare Workers backend for accounts, patches and asset delivery.
+in plain JavaScript, packaged for Android with Capacitor and installed on Apple
+devices from Safari as a PWA, with a Cloudflare Workers backend for accounts,
+patches and asset delivery.
 
 ---
 
@@ -59,6 +60,19 @@ lossy codec Safari/iOS decodes; open-source Chromium builds have **no AAC
 decoder at all**, so every asset fails there. Effects ship `.ogg` + `.m4a` and
 the engine asks `canPlayType`. Music is AAC-only for size, with a fallback that
 abandons the playlist after three consecutive decode failures.
+
+## Apple support decision
+
+Apple remains a fully supported platform through the Safari-installed PWA
+(Share → Add to Home Screen). Native iOS/IPA/Xcode/TestFlight/App Store release
+work is permanently retired: do not version, sync, build, sign, upload, or gate
+a release on a native iOS artifact. Historical files under `ios/` and the
+native-build tombstone documents are reference material only.
+
+Do preserve and verify the Apple browser contract: Safari/WebKit behavior,
+WebGL2, standalone PWA install/launch, AAC playback and gesture unlock,
+`viewport-fit=cover`, safe-area insets, rotation/`visualViewport`, IndexedDB,
+offline behavior, OTA update and rollback.
 
 ---
 
@@ -159,7 +173,10 @@ container. A clean console proves nothing about a renderer.
 Shipping a change to only the browser, or only the OTA, or only the APK, is how
 1.33.35 became two different builds with the same number. The checklist is
 `docs/FIVE_CHANNEL_UPDATE.md`. Bump every version field together, pack `www/`,
-verify 8901, then OTA / native / Space — or name the channel you skipped.
+verify 8901, then move the five channels: canonical source, packed preview, HF
+OTA, Android native, and HF Space — or name the channel you skipped. Apple
+Safari installation rides the browser/PWA channels; it is not a sixth native
+channel.
 
 ---
 

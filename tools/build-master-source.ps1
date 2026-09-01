@@ -107,6 +107,7 @@ $rootFiles = @(
 )
 $rootDirs = @(
   '.github','src','assets','source-media','tools','docs','design',
+  # Retained only as frozen historical source; native iOS is not a release channel.
   'audit','cloudflare','android','ios'
 )
 
@@ -213,10 +214,13 @@ $buildRecord = [ordered]@{
     signerSha256='D61AAF77C171F0F1E7841394EB0ADAED196E146AD90226A0F07854C29EE073F0'
   }
   ota = [ordered]@{ payload="deliverables/ota/payload"; payloadSha256=($null); immutableCommit=$immutableCommit }
-  ios = [ordered]@{ wrapperIncluded=$true; signedIpaIncluded=$false }
+  retiredNativeIos = [ordered]@{
+    historicalSourceRetained=$true
+    releaseChannel=$false
+    buildSyncVersionAndPublishGates=$false
+  }
   tests = @($testEvidence.tests)
   knownIssues = @(
-    'No signed IPA is included; Apple signing still requires an authenticated macOS/cloud build.',
     'Nova, Legion and Syndicate still retain shared base chassis in part of the unit roster; see design/faction-production-matrix.md.'
   )
 }
@@ -238,7 +242,7 @@ Public downloads:
 - Android APK: $apkPublic
 - Complete web ZIP: $webZipPublic
 - Single-file HTML: $htmlPublic
-- Live iPhone/browser playtest: $liveWeb
+- Live Safari PWA/browser playtest: $liveWeb
 
 Canonical factions: Terran Frontline Command = Nova; Crimson Dominion =
 Legion/Ascendancy; Emerald Triad = Syndicate Coalition/Machine Ascendancy;
@@ -246,8 +250,8 @@ Void Swarm = Brood/Infestation Swarm. Brood technology is biological, while
 Syndicate identity is advanced precision energy technology.
 
 The Android APK uses `com.creatorjd.massfront.mobile` and the established test
-certificate. iOS wrapper source is included, but there is no signed IPA because
-Apple requires an authenticated macOS/cloud signing workflow.
+certificate. Apple devices install the Safari PWA. The retained iOS wrapper is
+historical source only and is not versioned, synced, built, signed, or published.
 
 Rebuild from `source/` with locked npm dependencies, Node, Java 21, the Android
 SDK, and Capacitor. Toolchains and caches are intentionally excluded. See
@@ -256,7 +260,8 @@ packaging the game.
 
 Remote-chat attachment caches and historical release binaries are excluded for
 privacy and to avoid duplicating generated files. All canonical game assets,
-source media, design art, native wrappers, and current deliverables are included.
+source media, design art, the Android wrapper, the retired historical iOS
+wrapper, and current deliverables are included.
 "@
 $readme | Set-Content -LiteralPath (Join-Path $stage 'README-FIRST.md') -Encoding utf8
 

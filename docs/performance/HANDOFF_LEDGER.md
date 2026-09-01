@@ -34,14 +34,14 @@
 
 ## 2. Master Architecture Documentation (`docs/performance/**`)
 
-1. **[`PERFORMANCE_AUDIT_AND_SCALING_PLAN.md`](file:///c:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/docs/performance/PERFORMANCE_AUDIT_AND_SCALING_PLAN.md):**
+1. **[`PERFORMANCE_AUDIT_AND_SCALING_PLAN.md`](PERFORMANCE_AUDIT_AND_SCALING_PLAN.md):**
    - Ranked no-quality-loss optimization plan for 500–1,000 units/faction on Samsung Galaxy S25 Ultra (Snapdragon 8 Elite / Adreno 830).
    - In-depth audits: SoA dense buffers, 2-tier spatial binning, worker-offloaded flowfields, TBDR GMEM bandwidth optimization (`R11F_G11F_B10F`, depth invalidation), KTX2/Basis Universal texture transcoding, mesh LOD rings, and WebGPU future evolution.
-2. **[`PACKAGE_AND_UPDATE_ARCHITECTURE.md`](file:///c:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/docs/performance/PACKAGE_AND_UPDATE_ARCHITECTURE.md):**
+2. **[`PACKAGE_AND_UPDATE_ARCHITECTURE.md`](PACKAGE_AND_UPDATE_ARCHITECTURE.md):**
    - Content-addressed chunking, RFC 3284 VCDIFF binary delta OTA (99.1% transfer reduction for balance patches), HTTP Range resumable downloads, and atomic IndexedDB version swap with automatic crash rollback.
-3. **[`CREATIVE_TOOLCHAIN_INTEGRATION.md`](file:///c:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/docs/performance/CREATIVE_TOOLCHAIN_INTEGRATION.md):**
+3. **[`CREATIVE_TOOLCHAIN_INTEGRATION.md`](CREATIVE_TOOLCHAIN_INTEGRATION.md):**
    - Clean integration contract for Blender exporters, PBR texture bakes, VFX flipbooks, and audio DSP synthesis feeding runtime allowlists without polluting player packages.
-4. **[`TAXONOMY_AND_MIGRATION_MAP.md`](file:///c:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/docs/performance/TAXONOMY_AND_MIGRATION_MAP.md):**
+4. **[`TAXONOMY_AND_MIGRATION_MAP.md`](TAXONOMY_AND_MIGRATION_MAP.md):**
    - Proposed repository taxonomy and 4-phase zero-risk migration playbook with forwarding shims.
 
 ---

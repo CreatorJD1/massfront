@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "assetId": "syndicate-broker-lys-renn-v1",
+  "status": "PASS",
+  "runtimeState": "SOURCE_ACCEPTED_RUNTIME_UNREGISTERED",
+  "runtimeReady": false,
+  "toolchain": {
+    "blender": "4.2.23 LTS",
+    "format": "VRM 1.0"
+  },
+  "deliverables": {
+    "vrm": {
+      "file": "../deliverables/syndicate-broker-lys-renn-v1.vrm",
+      "bytes": 12959184,
+      "sha256": "6a331b132f43c7b6e8b4cfd9d52ad442e5a13ddb8b9fe785c7652ee74ed41407"
+    },
+    "stageGlb": {
+      "file": "../derived/syndicate-broker-lys-renn-v1-stage.glb",
+      "bytes": 7197512,
+      "sha256": "a3b56f7d0edbe2887ca04a2c6a91558d7c74a2b66a89fda8f43d976e0fb5cb39"
+    }
+  },
+  "roundtripStructure": {
+    "armature": "Armature",
+    "boneCount": 112,
+    "meshCount": 17,
+    "faceShapeKeyCount": 60,
+    "neuralDeviceMeshCount": 6,
+    "flatsMeshCount": 8,
+    "springChainCount": 3,
+    "springChains": [
+      ["J_Sec_L_Bust1", "J_Sec_L_Bust2", "J_Sec_L_Bust2_end"],
+      ["J_Sec_R_Bust1", "J_Sec_R_Bust2", "J_Sec_R_Bust2_end"],
+      ["J_Sec_Hair1_12", "J_Sec_Hair2_12", "J_Sec_Hair3_12", "J_Sec_Hair4_12", "J_Sec_Hair5_12", "J_Sec_Hair5_12_end"]
+    ]
+  },
+  "expressions": {
+    "presetSlotCount": 18,
+    "boundPresetCount": 14,
+    "managedCustomCount": 9,
+    "managedCustomNames": [
+      "focused",
+      "determined",
+      "smirk",
+      "tired",
+      "shocked",
+      "worried",
+      "commanding",
+      "softSmile",
+      "pain"
+    ]
+  },
+  "roundtripRenders": [
+    {
+      "name": "front",
+      "bytes": 1191590,
+      "sha256": "f15f8f39be288cba8b850925b53275345f5be679f446369127aa8cdce75eac46"
+    },
+    {
+      "name": "back",
+      "bytes": 1200237,
+      "sha256": "4c2c65105fdd1a39d224fe0b192f5b085ed383589beebd12e8ef70acafb08558"
+    },
+    {
+      "name": "left",
+      "bytes": 1172870,
+      "sha256": "0e7a32cd1f1b64e1b4aff5f292bba5eb44100563e50d7cd244a7db38303d9b6e"
+    },
+    {
+      "name": "right",
+      "bytes": 1183267,
+      "sha256": "75575ca3428498e35410c3c19c5109a6a03e8266c24c0e33d065ce8a7441ec01"
+    },
+    {
+      "name": "faceFront",
+      "bytes": 1037126,
+      "sha256": "d5802f2df9e755f31781ce24004e0817ca34cdb81b5cc6c3a19f7288af8489f2"
+    },
+    {
+      "name": "faceThreeQuarter",
+      "bytes": 1064067,
+      "sha256": "0be9d1937f1b8ad3697dd60c0b9d996452382b3cdba92c154ef4ac54b36cd12d"
+    }
+  ],
+  "validationInputs": {
+    "vrmManifestSha256": "ece0963da5d63d18e3c1cc035a9925c5e94af838b08c90988bb1ac3934e68a7c",
+    "stageGlbManifestSha256": "32be7c3a02f9285941732b75f392caea663b2f63d48813e92c143865fa6b540f",
+    "expressionRoundtripReportSha256": "be0c19b8ab46eab7538dd33629c122082984567cb7aa0eeddf460de8148832d4",
+    "roundtripRenderReportSha256": "c3ca8212e81c4f82290914270585c3ef2047075d83763ff283530d30d9249307",
+    "reimportBlendSha256": "30476afaf7c890170fa0e2a7f5d277ec8f9406d4484ee5f57296eaf1167501f1"
+  },
+  "checks": {
+    "vrm10Reimported": true,
+    "allManagedCustomNamesSurvived": true,
+    "managedCustomBindsSurvived": true,
+    "allCustomExpressionsSurvived": true,
+    "presetBindsSurvived": true,
+    "threeSpringChainsPreserved": true,
+    "sixRoundtripViewsRendered": true,
+    "vrmAndGlbHashesMatched": true
+  }
+}

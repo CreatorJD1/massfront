@@ -1,7 +1,7 @@
 import { execFile as execFileCallback } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import {
@@ -310,6 +310,44 @@ async function inspectGlb(path) {
   };
 }
 
+async function verifyOptimizationEvidence(report, snapshot, moduleByPath) {
+  const reasons = [];
+  if (!report || report.status !== 'PASS') reasons.push('Optimization verifier did not record PASS.');
+  if (report?.source?.head !== snapshot.head) reasons.push('Optimization evidence HEAD differs from the active HEAD.');
+  const verifier = report?.verifier || {};
+  const verifierRecord = moduleByPath.get(verifier.path);
+  if (!verifier.path || !verifierRecord || verifierRecord.sha256 !== verifier.sha256) {
+    reasons.push('Optimization verifier identity is missing or stale.');
+  }
+  const rows = [...(report?.images || []), ...(report?.glbs || [])];
+  if (!rows.length) reasons.push('Optimization evidence contains no compared assets.');
+  for (const row of rows) {
+    if (row?.pass !== true) reasons.push(`Optimization comparison failed for ${row?.runtime || row?.source || 'UNKNOWN'}.`);
+    for (const side of ['source', 'runtime']) {
+      const path = row?.[side];
+      const record = moduleByPath.get(path);
+      if (!path || !record || record.bytes !== row?.[`${side}Bytes`] || record.sha256 !== row?.[`${side}Sha256`]) {
+        reasons.push(`Optimization ${side} binding is stale for ${path || 'UNKNOWN'}.`);
+      }
+    }
+  }
+  const visual = report?.visualReview || {};
+  const visualAbsolute = typeof visual.screenshot === 'string'
+    ? resolve(repoRoot, ...visual.screenshot.replace(/\\/g, '/').split('/')) : '';
+  const visualSafe = Boolean(visualAbsolute) && (visualAbsolute === repoRoot || visualAbsolute.startsWith(`${repoRoot}${sep}`));
+  if (visual.status !== 'PASS' || !visualSafe || !existsSync(visualAbsolute)
+    || await hashFile(visualAbsolute).catch(() => '') !== visual.sha256) {
+    reasons.push('Optimization visual-review screenshot is missing, unsafe, or hash-mismatched.');
+  }
+  return {
+    pass: reasons.length === 0,
+    reasons,
+    imageCount: report?.images?.length || 0,
+    glbCount: report?.glbs?.length || 0,
+    glbsPassDraco: Boolean(report?.glbs?.length) && report.glbs.every(row => row?.pass === true && row?.checks?.dracoPresent === true)
+  };
+}
+
 function setEquals(actual, expected) {
   const a = [...new Set(actual)].sort();
   const b = [...new Set(expected)].sort();
@@ -319,6 +357,60 @@ function setEquals(actual, expected) {
 function listFromConstArray(source, name) {
   const match = source.match(new RegExp(`(?:const|export\\s+const)\\s+${name}\\s*=\\s*(?:deepFreeze\\s*\\()?\\s*\\[([\\s\\S]*?)\\]`));
   return match ? [...match[1].matchAll(/["']([^"']+)["']/g)].map(item => item[1]) : [];
+}
+
+async function verifyStage11AllRoomEvidence() {
+  const evidencePath = join(repoRoot, 'audit', 'stage11-space-ux', 'evidence.json');
+  const evidenceRead = await readJson(evidencePath);
+  if (!evidenceRead.ok) {
+    return check('districts:approved-all-room-captures', STATUS.UNKNOWN,
+      'No readable source-bound Stage 11 all-room evidence exists.',
+      { evidence: relativePosix(repoRoot, evidencePath) });
+  }
+  const evidence = evidenceRead.value;
+  const captureByDistrict = new Map((evidence.captures || [])
+    .filter(capture => capture?.state?.districtId)
+    .map(capture => [capture.state.districtId, capture]));
+  const missingDistricts = [];
+  const invalidDistricts = [];
+  const missingCaptures = [];
+  const captureHashMismatches = [];
+  for (const districtId of EXPECTED_DISTRICTS) {
+    const capture = captureByDistrict.get(districtId);
+    if (!capture) {
+      missingDistricts.push(districtId);
+      continue;
+    }
+    const state = capture.state || {};
+    if (state.commissioned !== true || state.sheetExpanded !== true
+      || state.horizontalOverflow > 0 || state.managementProfile?.selectedDistrictId !== districtId
+      || state.telemetry?.contained !== true || state.telemetry?.overlap !== false) {
+      invalidDistricts.push(districtId);
+    }
+    const absolute = join(dirname(evidencePath), ...String(capture.path || '').split('/'));
+    if (!capture.path || !existsSync(absolute)) missingCaptures.push(capture.path || districtId);
+    else if (await hashFile(absolute) !== capture.sha256) captureHashMismatches.push(capture.path);
+  }
+  const sourceHashMismatches = [];
+  for (const [path, binding] of Object.entries(evidence.sources || {})) {
+    const absolute = join(repoRoot, ...path.split('/'));
+    if (!existsSync(absolute) || await hashFile(absolute) !== binding.sha256) sourceHashMismatches.push(path);
+  }
+  const summary = evidence.summary || {};
+  const summaryPass = evidence.schema === 'massfront.stage11-space-ux-acceptance.v2'
+    && summary.failed === 0 && summary.captures >= 26 && summary.pageErrors === 0
+    && summary.consoleErrors === 0 && summary.localRequestFailures === 0;
+  const complete = summaryPass && Object.keys(evidence.sources || {}).length > 0
+    && !missingDistricts.length && !invalidDistricts.length && !missingCaptures.length
+    && !captureHashMismatches.length && !sourceHashMismatches.length;
+  return check('districts:approved-all-room-captures', complete ? STATUS.PASS : STATUS.FAIL,
+    complete
+      ? 'Source-bound hardware-GPU captures prove every commissioned room controller, matching 3D focus, mobile containment, and collision-free telemetry.'
+      : 'Stage 11 all-room evidence is incomplete, stale, or failed.',
+    {
+      evidence: relativePosix(repoRoot, evidencePath), summary, missingDistricts,
+      invalidDistricts, missingCaptures, captureHashMismatches, sourceHashMismatches
+    });
 }
 
 async function buildAudit() {
@@ -428,8 +520,8 @@ async function buildAudit() {
   let exterior = null;
   let cutawayError = null;
   try {
-    cutaway = await inspectGlb(join(moduleRoot, 'assets', 'models', 'uga-command-cutaway.glb'));
-    exterior = await inspectGlb(join(moduleRoot, 'assets', 'models', 'nexus-vii-civilization-ship.glb'));
+    cutaway = await inspectGlb(join(moduleRoot, 'assets', 'runtime', 'models', 'uga-command-cutaway.glb'));
+    exterior = await inspectGlb(join(moduleRoot, 'assets', 'runtime', 'models', 'nexus-vii-civilization-ship.glb'));
   } catch (error) { cutawayError = error?.message || String(error); }
   const glbCoverage = cutaway ? glbDistrictCoverage(cutaway.json) : { missingDistrict: [...EXPECTED_DISTRICTS], missingFocus: [...EXPECTED_DISTRICTS], district: [], focus: [] };
   const facilities = Object.values(constructionModule?.CONSTRUCTION_FACILITY_CATALOG || {});
@@ -457,6 +549,7 @@ async function buildAudit() {
     facility: materialNames.some(name => /surface/i.test(name)),
     exteriorHull: materialNames.some(name => /ship hull/i.test(name))
   };
+  const allRoomEvidence = await verifyStage11AllRoomEvidence();
   const roomChecks = [
     check('districts:catalog-complete', setEquals(catalogIds, EXPECTED_DISTRICTS) && setEquals(catalogObjectIds, EXPECTED_DISTRICTS) ? STATUS.PASS : STATUS.FAIL,
       setEquals(catalogIds, EXPECTED_DISTRICTS) && setEquals(catalogObjectIds, EXPECTED_DISTRICTS) ? 'The domain catalog contains all 11 required UGA functions.' : 'The domain catalog does not contain the exact 11 required UGA functions.',
@@ -476,8 +569,7 @@ async function buildAudit() {
     check('districts:separate-material-roles', Object.values(materialRoles).every(Boolean) ? STATUS.PASS : STATUS.FAIL,
       Object.values(materialRoles).every(Boolean) ? 'Interior/exterior GLBs expose distinct floor, wall, transit, glazing, machinery, facility, and hull material roles.' : 'Required interior/exterior material roles are not all distinguishable.',
       { materialRoles, materialNames }),
-    check('districts:approved-all-room-captures', STATUS.UNKNOWN,
-      'No source-matched, approved phone-first capture set proves every one of the 11 rooms and direct 3D selection paths.')
+    allRoomEvidence
   ];
   sections.push(section('room-district-coverage', 'NEXUS-VII room and district coverage', roomChecks, {
     diagnostics: { catalogIds, uiIds, glbCoverage, missingFacilityTiers, topologyMarkers, materialRoles }
@@ -499,8 +591,8 @@ async function buildAudit() {
   const expectedPaths = expectedAllowlistPaths(start.moduleRecords, {
     reachableCode: reachability.reachableCode
   });
-  const planetPaths = expectedPaths.filter(path => /^assets\/textures\/planets\//.test(path));
-  const personnelPaths = expectedPaths.filter(path => /^assets\/textures\/personnel\//.test(path));
+  const planetPaths = expectedPaths.filter(path => /^assets\/runtime\/planets\//.test(path));
+  const personnelPaths = expectedPaths.filter(path => /^assets\/runtime\/personnel\//.test(path));
   const referencedPaths = [...new Set([...reachability.reachableAssets, ...planetPaths, ...personnelPaths])].sort();
   const manifestPath = join(moduleRoot, 'dist', 'exploration-content-manifest-v1.json');
   const manifestRead = await readJson(manifestPath);
@@ -559,12 +651,15 @@ async function buildAudit() {
   const expectedRuntimeBytes = expectedRuntimeRecords.reduce((sum, record) => sum + record.bytes, 0);
   const optimizationEvidencePath = join(moduleRoot, 'tmp', 'optimization-evidence', 'latest.json');
   const optimizationEvidence = await readJson(optimizationEvidencePath);
+  const optimizationVerification = optimizationEvidence.ok
+    ? await verifyOptimizationEvidence(optimizationEvidence.value, start, moduleByPath)
+    : { pass: false, reasons: ['No optimization evidence report exists.'], imageCount: 0, glbCount: 0, glbsPassDraco: false };
   const compressedGlbs = [cutaway, exterior].filter(Boolean).map(entry => ({
     path: entry.path,
     extensions: entry.extensionsUsed,
     meshCompression: entry.extensionsUsed.some(name => /meshopt|draco/i.test(name))
   }));
-  const runtimeTextureRecords = expectedRuntimeRecords.filter(record => /^assets\/textures\//.test(record.path));
+  const runtimeTextureRecords = expectedRuntimeRecords.filter(record => /^assets\/runtime\/(?:planets|personnel)\//.test(record.path));
   const compressedTextureCount = runtimeTextureRecords.filter(record => /\.(?:ktx2|basis|webp|avif)$/i.test(record.path)).length;
   const optimizationChecks = [
     check('asset-size:below-known-rejected-bound', expectedRuntimeBytes < KNOWN_TOO_LARGE_RUNTIME_BYTES ? STATUS.UNKNOWN : STATUS.FAIL,
@@ -576,15 +671,17 @@ async function buildAudit() {
       manifestRead.value?.approvedBudgetBytes && expectedRuntimeBytes <= manifestRead.value.approvedBudgetBytes
         ? 'The runtime subset fits an explicit approved optional-pack budget.'
         : 'No explicit approved optional-pack byte budget is bound to the manifest.'),
-    check('optimization:quality-matched-evidence', optimizationEvidence.ok && optimizationEvidence.value?.status === 'PASS'
-      && optimizationEvidence.value?.source?.head === start.head
-      && optimizationEvidence.value?.source?.dirtyFingerprint === start.dirtyFingerprint ? STATUS.PASS : STATUS.UNKNOWN,
-    optimizationEvidence.ok ? 'Optimization evidence is missing PASS status or does not match the active source.' : 'No source-matched optimization evidence manifest exists.'),
-    check('optimization:glb-compression-proof', STATUS.UNKNOWN,
-      compressedGlbs.length && compressedGlbs.every(entry => entry.meshCompression)
-        ? 'Compressed GLB extensions are present, but matched visual/triangle approval remains unproven.'
-        : 'Meshopt/Draco compression is not present on all inspected runtime GLBs, and no quality-matched optimization approval exists.',
-      { glbs: compressedGlbs }),
+    check('optimization:quality-matched-evidence', optimizationVerification.pass ? STATUS.PASS : STATUS.UNKNOWN,
+      optimizationVerification.pass
+        ? 'Decoded source/runtime comparisons and the reviewed hardware-GPU screenshot are hash-bound to the active assets and verifier.'
+        : 'Optimization evidence is absent, failed, or stale for one or more active inputs.',
+      { reasons: optimizationVerification.reasons, imageCount: optimizationVerification.imageCount, glbCount: optimizationVerification.glbCount }),
+    check('optimization:glb-compression-proof', optimizationVerification.pass && optimizationVerification.glbsPassDraco
+      && compressedGlbs.length && compressedGlbs.every(entry => entry.meshCompression) ? STATUS.PASS : STATUS.UNKNOWN,
+      optimizationVerification.pass && optimizationVerification.glbsPassDraco
+        ? 'Every optimized GLB preserves the inspected scene contract, uses Draco, shrinks bytes, and is covered by reviewed hardware-GPU evidence.'
+        : 'Meshopt/Draco compression is not present on all inspected runtime GLBs, or quality-matched optimization evidence is absent.',
+      { glbs: compressedGlbs, evidenceGlbCount: optimizationVerification.glbCount }),
     check('optimization:texture-streaming-proof', STATUS.UNKNOWN,
       compressedTextureCount === runtimeTextureRecords.length && runtimeTextureRecords.length > 0
         ? 'Compressed texture candidates exist, but residency/fallback quality proof is absent.'
@@ -592,7 +689,7 @@ async function buildAudit() {
       { runtimeTextureCount: runtimeTextureRecords.length, compressedTextureCount })
   ];
   sections.push(section('asset-size-optimization', 'Asset sizes and optimization evidence', optimizationChecks, {
-    diagnostics: { expectedRuntimeBytes, knownTooLargeBytes: KNOWN_TOO_LARGE_RUNTIME_BYTES, compressedGlbs, runtimeTextureCount: runtimeTextureRecords.length, compressedTextureCount, optimizationEvidence: optimizationEvidence.ok ? relativePosix(moduleRoot, optimizationEvidencePath) : null }
+    diagnostics: { expectedRuntimeBytes, knownTooLargeBytes: KNOWN_TOO_LARGE_RUNTIME_BYTES, compressedGlbs, runtimeTextureCount: runtimeTextureRecords.length, compressedTextureCount, optimizationEvidence: optimizationEvidence.ok ? relativePosix(moduleRoot, optimizationEvidencePath) : null, optimizationVerification }
   }));
 
   sections.push(section('auditor-self-tests', 'Readiness auditor self-tests', [

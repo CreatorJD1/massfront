@@ -1,9 +1,10 @@
 /* Blender-authored UGA assets.  GLTFLoader is pinned to the same local
    Three.js r128 runtime in index.html; no network request is made. */
+import { createRuntimeGltfLoader } from '../core/gltf_runtime_loader.js';
 
 const cache = new Map();
-const SHIP_URL = new URL('../../assets/models/nexus-vii-civilization-ship.glb?v=20260823-city2', import.meta.url).href;
-const COMMAND_URL = new URL('../../assets/models/uga-command-cutaway.glb?v=20260823-transit1', import.meta.url).href;
+const SHIP_URL = new URL('../../assets/runtime/models/nexus-vii-civilization-ship.glb?v=20260830-draco1', import.meta.url).href;
+const COMMAND_URL = new URL('../../assets/runtime/models/uga-command-cutaway.glb?v=20260830-draco1', import.meta.url).href;
 
 function cloneUniformValue(value, textures) {
   if (value && value.isTexture) return cloneTexture(value, textures);
@@ -127,7 +128,7 @@ function loadGlb(url) {
         reject(new Error('THREE.GLTFLoader is not available; load lib/GLTFLoader.js before the module entry.'));
         return;
       }
-      const loader = new THREE.GLTFLoader();
+      const loader = createRuntimeGltfLoader();
       loader.load(url, gltf => resolve(gltf.scene), undefined, reject);
     });
     cache.set(url, promise);
