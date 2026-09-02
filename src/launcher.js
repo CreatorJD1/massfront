@@ -247,7 +247,16 @@
     }
     if(busy){L.primary='wait';primary.textContent=String(action.label||'PLEASE WAIT');primary.disabled=true;return;}
     if(id.state==='offline'||!connected||state==='unset'||state==='offline'){
-      L.primary='play-offline';primary.textContent='PLAY OFFLINE';primary.disabled=false;return;
+      /* This is the only enabled control at the gate when identity cannot be
+         confirmed, so its label has to be honest about what it does. It no
+         longer switches the device to Offline Mode, so calling it PLAY OFFLINE
+         told the player they were choosing a mode they were not choosing.
+         Reserve that wording for someone who actually turned Offline Mode on;
+         otherwise this is simply how you continue into the game. */
+      var deliberateOffline=(typeof netForcedOffline==='function')&&netForcedOffline();
+      L.primary='play-offline';
+      primary.textContent=deliberateOffline?'PLAY OFFLINE':'CONTINUE';
+      primary.disabled=false;return;
     }
     if(state==='idle'){
       L.primary='wait';primary.textContent='CHECKING GAME…';primary.disabled=true;return;
@@ -296,8 +305,19 @@
     var sc=byId('mfLauncherScroll');if(sc)sc.scrollTop=0;renderAll();
   }
   function enterGame(forceOffline){
-    if(forceOffline){try{if(typeof netSetOffline==='function')netSetOffline(true);}catch(e){}}
-    else {try{if(typeof netSetOffline==='function')netSetOffline(false);}catch(e){}}
+    /* PLAY OFFLINE means "start now without waiting for the network", not
+       "disable networking on this device from now on". It used to latch
+       netSetOffline(true), which persists to localStorage, and since the
+       updater treats that switch as the one authoritative offline gate the
+       player silently lost update checks forever with no sign a setting had
+       changed. That is a trap: when identity stalls, PLAY OFFLINE is the only
+       enabled control, so the single reachable action disabled the very path
+       that would deliver the fix. Entering offline changes nothing persistent;
+       real connectivity still decides what the updater can do, and Settings
+       still owns the deliberate Offline Mode toggle.
+       Choosing connected play still clears the switch, because that is an
+       explicit request to be online. */
+    if(!forceOffline){try{if(typeof netSetOffline==='function')netSetOffline(false);}catch(e){}}
     L.gate=false;L.passed=true;document.body.classList.remove('mfLauncherGate');
     if(typeof showFrontScreen==='function')showFrontScreen('startScreen');
     if(typeof renderMetaHead==='function')try{renderMetaHead();}catch(e){}

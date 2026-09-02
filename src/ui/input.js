@@ -662,10 +662,18 @@ function recallGroup(n,focus){
 function updateGroupBadges(){
   for(let n=0;n<4;n++){
     const live=groupLive(ctrlGroups[n]);ctrlGroups[n]=live;
+    /* These run on every selection change and sit inside the watched command
+       dock. textContent and classList.toggle mutate even when the value is
+       unchanged, so four idle platoon slots kept waking the HUD observers. */
     const b=document.getElementById('grp'+(n+1)+'N');
-    if(b)b.textContent=live.length||'—';
+    const badge=String(live.length||'—');
+    if(b&&b.textContent!==badge)b.textContent=badge;
     const btn=document.getElementById('grpBtn'+(n+1));
-    if(btn){btn.classList.toggle('saved',!!live.length);btn.classList.toggle('active',activePlatoon===n&&!!live.length);}
+    if(btn){
+      const saved=!!live.length,active=activePlatoon===n&&!!live.length;
+      if(btn.classList.contains('saved')!==saved)btn.classList.toggle('saved',saved);
+      if(btn.classList.contains('active')!==active)btn.classList.toggle('active',active);
+    }
   }
 }
 function orderHold(){

@@ -1,4 +1,19 @@
 ;(function(){
+  /* Every write below used to be unconditional. Re-adding a class an element
+     already carries, or re-setting an attribute to the value it already holds,
+     still emits a MutationObserver record — and mfCinematicWatch reacts to
+     those by queueing another sync, which performs the same writes again. With
+     ~20 surfaces decorated per pass that self-sustaining loop measured 2140
+     HUD mutations/sec, which players see as text and icons changing at random.
+     Guarding at the point of write breaks the cycle at its source; note that
+     el.style.x = same is skipped by the browser for free, but class and
+     attribute writes are not. */
+  function mfCinSetClass(el,name){ if(el&&name&&!el.classList.contains(name)) el.classList.add(name); }
+  function mfCinSetClasses(el){ for(var i=1;i<arguments.length;i++) mfCinSetClass(el,arguments[i]); }
+  function mfCinSetAttr(el,key,value){
+    if(!el) return; var next=String(value);
+    if(el.getAttribute(key)!==next) el.setAttribute(key,next);
+  }
   /* OTA shells can re-evaluate the takeover without reloading the document.
      Retire the previous observer first so one HUD owns one synchronization
      loop for the lifetime of the page. */
@@ -9,7 +24,7 @@
      their listeners, IDs and simulation authority intact; copying markup here
      would create a second recycle button and bypass its confirmation guard. */
   function mfCinematicSetRole(el,role){
-    if(el)el.setAttribute('data-mf-hud-role',role);
+    if(el)mfCinSetAttr(el,'data-mf-hud-role',role);
     return el;
   }
   function mfCinematicWrap(id,before,nodes,role,label){
@@ -20,7 +35,7 @@
       else document.body.appendChild(wrap);
     }
     mfCinematicSetRole(wrap,role);
-    if(label&&!wrap.getAttribute('aria-label'))wrap.setAttribute('aria-label',label);
+    if(label&&!wrap.getAttribute('aria-label'))mfCinSetAttr(wrap,'aria-label',label);
     for(var i=0;i<nodes.length;i++){
       var node=document.getElementById(nodes[i]);
       if(node&&node.parentNode!==wrap)wrap.appendChild(node);
@@ -29,15 +44,15 @@
   }
   function mfCinematicLabelPanel(panel,label,surface){
     if(!panel)return;
-    panel.classList.add('mfCinematicSurface');
-    panel.setAttribute('data-mf-hud-role','context-surface');
-    panel.setAttribute('data-mf-surface',surface);
-    if(!panel.getAttribute('role'))panel.setAttribute('role','region');
+    mfCinSetClass(panel,'mfCinematicSurface');
+    mfCinSetAttr(panel,'data-mf-hud-role','context-surface');
+    mfCinSetAttr(panel,'data-mf-surface',surface);
+    if(!panel.getAttribute('role'))mfCinSetAttr(panel,'role','region');
     var title=panel.querySelector('.mfPanelChrome > span');
     if(title){
       if(!title.id)title.id='mfCinematic'+surface.charAt(0).toUpperCase()+surface.slice(1)+'Title';
-      panel.setAttribute('aria-labelledby',title.id);
-    }else if(!panel.getAttribute('aria-label'))panel.setAttribute('aria-label',label);
+      mfCinSetAttr(panel,'aria-labelledby',title.id);
+    }else if(!panel.getAttribute('aria-label'))mfCinSetAttr(panel,'aria-label',label);
   }
   function mfCinematicMarkIcon(el,icon){
     if(!el)return;
@@ -46,7 +61,7 @@
     if(!mark&&!direct){
       if(el.tagName==='SPAN')mark=el;
       else{
-        mark=document.createElement('span');mark.className='em mfCinematicInjectedIcon';mark.setAttribute('aria-hidden','true');
+        mark=document.createElement('span');mark.className='em mfCinematicInjectedIcon';mfCinSetAttr(mark,'aria-hidden','true');
         el.insertBefore(mark,el.firstChild);
         for(var n=mark.nextSibling;n;n=n.nextSibling){
           if(n.nodeType===3)n.nodeValue=n.nodeValue.replace(/^\s*[⟲⟳✓✗⚑⇩▸]\s*/,'');
@@ -59,9 +74,9 @@
         mark.removeAttribute('data-mf-vector-icon');mark.classList.remove('mfCinematicVectorIcon');
         mark.textContent=fallback;
       }
-      mark.classList.add('em');mark.setAttribute('data-icon',icon);
+      mfCinSetClass(mark,'em');mfCinSetAttr(mark,'data-icon',icon);
     }
-    else el.setAttribute('data-icon',icon);
+    else mfCinSetAttr(el,'data-icon',icon);
     if(typeof cmdIconsRefresh==='function')cmdIconsRefresh(mark||el);
   }
   /* The shipped command atlas intentionally stops at its authored cells. These
@@ -155,26 +170,36 @@
     if(!mark){
       if(el.tagName==='SPAN')mark=el;
       else{
-        mark=document.createElement('span');mark.className='em mfCinematicInjectedIcon';mark.setAttribute('aria-hidden','true');
+        mark=document.createElement('span');mark.className='em mfCinematicInjectedIcon';mfCinSetAttr(mark,'aria-hidden','true');
         el.insertBefore(mark,el.firstChild);
         for(var n=mark.nextSibling;n;n=n.nextSibling){
-          if(n.nodeType===3)n.nodeValue=n.nodeValue.replace(/^\s*(?:✉|⏸|⛰|☷|✓|⬆|‹|›|×|⚠|ⓘ|🔒|🐛|◈|☠|☄|⚡|♒)\s*/u,'');
+          /* Assigning nodeValue fires a characterData mutation even when the
+             string is unchanged, and these nodes sit inside the watched command
+             dock, so stripping a glyph that was never there still woke the HUD
+             observers on every pass. Only write a real change. */
+          if(n.nodeType===3){
+            var strippedLead=n.nodeValue.replace(/^\s*(?:✉|⏸|⛰|☷|✓|⬆|‹|›|×|⚠|ⓘ|🔒|🐛|◈|☠|☄|⚡|♒)\s*/u,'');
+            if(strippedLead!==n.nodeValue) n.nodeValue=strippedLead;
+          }
         }
       }
     }
     if(mark.getAttribute('data-mf-vector-icon')===icon&&mark.firstElementChild){
       mark.removeAttribute('data-icon');mark.removeAttribute('data-icon-ready');return;
     }
-    if(!mark.hasAttribute('data-mf-icon-fallback'))mark.setAttribute('data-mf-icon-fallback',(mark.textContent||'').trim());
-    mark.classList.add('em','mfCinematicVectorIcon');mark.setAttribute('data-mf-vector-icon',icon);
-    mark.removeAttribute('data-icon');mark.removeAttribute('data-icon-ready');mark.setAttribute('aria-hidden','true');
+    if(!mark.hasAttribute('data-mf-icon-fallback'))mfCinSetAttr(mark,'data-mf-icon-fallback',(mark.textContent||'').trim());
+    mfCinSetClasses(mark,'em','mfCinematicVectorIcon');mfCinSetAttr(mark,'data-mf-vector-icon',icon);
+    mark.removeAttribute('data-icon');mark.removeAttribute('data-icon-ready');mfCinSetAttr(mark,'aria-hidden','true');
     mark.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false" aria-hidden="true">'+MF_CINEMATIC_VECTOR[icon]+'</svg>';
   }
   function mfCinematicStripLeadingGlyph(el,re){
     if(!el)return;
     for(var i=0;i<el.childNodes.length;i++){
       var node=el.childNodes[i];
-      if(node.nodeType===3)node.nodeValue=node.nodeValue.replace(re,'');
+      if(node.nodeType!==3) continue;
+      /* Same reason as above: assign only when the text actually changes. */
+      var stripped=node.nodeValue.replace(re,'');
+      if(stripped!==node.nodeValue) node.nodeValue=stripped;
     }
   }
   function mfCinematicIntelOwnText(el){
@@ -191,7 +216,7 @@
       var found=node.nodeValue.match(/^\s*([✦⛭⌾◆⚔▰◇ϟ⟲☄⚠🔒✓⌁])\s*/u);
       if(found){fallback=found[1];node.nodeValue=node.nodeValue.slice(found[0].length);break;}
     }
-    mark=document.createElement('span');mark.className='em mfCinematicIntelLead';mark.setAttribute('aria-hidden','true');
+    mark=document.createElement('span');mark.className='em mfCinematicIntelLead';mfCinSetAttr(mark,'aria-hidden','true');
     mark.textContent=fallback;el.insertBefore(mark,el.firstChild);return mark;
   }
   function mfCinematicDecorateUnitIntel(){
@@ -205,13 +230,13 @@
     card.querySelectorAll('.ucChips .ucChip').forEach(function(chip){
       var mark=chip.querySelector('i'),label=mfCinematicIntelOwnText(chip);if(!mark||!label)return;
       var chipVector=MF_CINEMATIC_INTEL_CHIP_VECTOR[label]||(/\bHP$/.test(label)?'shield':'info');
-      mark.classList.add('em');mfCinematicMarkVector(mark,chipVector);
+      mfCinSetClass(mark,'em');mfCinematicMarkVector(mark,chipVector);
     });
     card.querySelectorAll('.ucMatchChip').forEach(function(chip){
       var mark=chip.querySelector('i'),label=((chip.querySelector('b')||{}).textContent||'').trim().toUpperCase();
       if(!mark||!label)return;
       var matchVector=MF_CINEMATIC_INTEL_MATCH_VECTOR[label]||'target';
-      mark.classList.add('em');mfCinematicMarkVector(mark,matchVector);
+      mfCinSetClass(mark,'em');mfCinematicMarkVector(mark,matchVector);
     });
     card.querySelectorAll('.ucCounter.caution,.ucCounter .caution').forEach(function(line){
       var label=(line.textContent||'').trim().toUpperCase();
@@ -248,7 +273,7 @@
          node; mission, enemy and clock copy must remain in the status chip. */
       mfCinematicStripLeadingGlyph(chip,/^\s*[◈☠🐛]\s*/u);
       mark=document.createElement('span');mark.className='em mfCinematicGoalIcon';
-      mark.setAttribute('aria-hidden','true');chip.insertBefore(mark,chip.firstChild);
+      mfCinSetAttr(mark,'aria-hidden','true');chip.insertBefore(mark,chip.firstChild);
     }
     return mark;
   }
@@ -348,15 +373,15 @@
   }
   function mfCinematicEnsureStructure(){
     var body=document.body;
-    body.classList.add('mf-cinematic-hud');
-    body.setAttribute('data-mf-hud','cinematic-v1');
+    mfCinSetClass(body,'mf-cinematic-hud');
+    mfCinSetAttr(body,'data-mf-hud','cinematic-v1');
     var top=mfCinematicWrap('mfCinematicTopRail','topbar',['heroBar','topbar'],'top-rail','Commander and battle resources');
     var hero=mfCinematicSetRole(document.getElementById('heroBar'),'commander-profile');
     var resources=mfCinematicSetRole(document.getElementById('topbar'),'resource-rail');
-    if(top)top.classList.add('mfCinematicRail');
+    if(top)mfCinSetClass(top,'mfCinematicRail');
     if(resources){
-      if(!resources.getAttribute('role'))resources.setAttribute('role','region');
-      if(!resources.getAttribute('aria-label'))resources.setAttribute('aria-label','Battle resources and controls');
+      if(!resources.getAttribute('role'))mfCinSetAttr(resources,'role','region');
+      if(!resources.getAttribute('aria-label'))mfCinSetAttr(resources,'aria-label','Battle resources and controls');
       var tiles=[
         {el:document.getElementById('massV'),label:'MASS'},
         {el:document.getElementById('enV'),label:'ENERGY'},
@@ -366,33 +391,33 @@
         var tile=tiles[i].el;
         if(tile&&tile.id!=='unitRes')tile=tile.parentElement;
         if(!tile)continue;
-        tile.classList.add('mfCinematicResource');tile.setAttribute('data-label',tiles[i].label);
-        tile.setAttribute('data-mf-resource',tiles[i].label.toLowerCase());
-        if(!tile.getAttribute('role'))tile.setAttribute('role','group');
-        if(!tile.getAttribute('aria-label'))tile.setAttribute('aria-label',tiles[i].label+' resource');
+        mfCinSetClass(tile,'mfCinematicResource');mfCinSetAttr(tile,'data-label',tiles[i].label);
+        mfCinSetAttr(tile,'data-mf-resource',tiles[i].label.toLowerCase());
+        if(!tile.getAttribute('role'))mfCinSetAttr(tile,'role','group');
+        if(!tile.getAttribute('aria-label'))mfCinSetAttr(tile,'aria-label',tiles[i].label+' resource');
       }
     }
-    if(hero&&!hero.classList.contains('mfCinematicCommander'))hero.classList.add('mfCinematicCommander');
+    if(hero&&!hero.classList.contains('mfCinematicCommander'))mfCinSetClass(hero,'mfCinematicCommander');
 
     var context=mfCinematicWrap('mfCinematicContext','buildMenu',['buildMenu','prodMenu','bldMenu2'],'context','Context controls');
-    if(context)context.classList.add('mfCinematicContext');
+    if(context)mfCinSetClass(context,'mfCinematicContext');
     mfCinematicLabelPanel(document.getElementById('buildMenu'),'Structures','build');
     mfCinematicLabelPanel(document.getElementById('prodMenu'),'Production','production');
     mfCinematicLabelPanel(document.getElementById('bldMenu2'),'Structure control','structure');
 
     var cmd=mfCinematicSetRole(document.getElementById('cmdbar'),'command-dock');
     if(cmd){
-      if(!cmd.classList.contains('mfCinematicCommandDock'))cmd.classList.add('mfCinematicCommandDock');
-      if(!cmd.getAttribute('role'))cmd.setAttribute('role','region');
-      if(!cmd.getAttribute('aria-label'))cmd.setAttribute('aria-label','Tactical command dock');
+      if(!cmd.classList.contains('mfCinematicCommandDock'))mfCinSetClass(cmd,'mfCinematicCommandDock');
+      if(!cmd.getAttribute('role'))mfCinSetAttr(cmd,'role','region');
+      if(!cmd.getAttribute('aria-label'))mfCinSetAttr(cmd,'aria-label','Tactical command dock');
     }
     var minimapWrap=mfCinematicSetRole(document.getElementById('minimapWrap'),'minimap-receiver');
     if(minimapWrap){
-      if(!minimapWrap.getAttribute('role'))minimapWrap.setAttribute('role','region');
-      if(!minimapWrap.getAttribute('aria-label'))minimapWrap.setAttribute('aria-label','Tactical minimap and command transmissions');
+      if(!minimapWrap.getAttribute('role'))mfCinSetAttr(minimapWrap,'role','region');
+      if(!minimapWrap.getAttribute('aria-label'))mfCinSetAttr(minimapWrap,'aria-label','Tactical minimap and command transmissions');
     }
     var minimap=mfCinematicSetRole(document.getElementById('minimap'),'minimap-command');
-    if(minimap&&!minimap.getAttribute('aria-label'))minimap.setAttribute('aria-label','Tactical minimap');
+    if(minimap&&!minimap.getAttribute('aria-label'))mfCinSetAttr(minimap,'aria-label','Tactical minimap');
     mfCinematicSetRole(document.getElementById('cmdrTx'),'command-transmission');
     mfCinematicSetRole(document.getElementById('hudDeckTabs'),'deck-tabs');
     mfCinematicSetRole(document.getElementById('goalBar'),'mission-status');
@@ -413,16 +438,16 @@
       mfNoticeDock:'event-feed-dock',mfNoticeHistory:'event-feed',hotUtilityPanel:'utility-drawer'};
     for(var authorityId in authorityRoles)mfCinematicSetRole(document.getElementById(authorityId),authorityRoles[authorityId]);
     var heroRow=mfCinematicSetRole(document.getElementById('heroRow'),'ability-authority');
-    if(heroRow)heroRow.classList.add('mfCinematicAuthoritySource');
+    if(heroRow)mfCinSetClass(heroRow,'mfCinematicAuthoritySource');
 
     var groups=mfCinematicWrap('mfCinematicGroupPalette','grpRow',['grpRow'],'group-palette','Match command groups');
     var grpRow=mfCinematicSetRole(document.getElementById('grpRow'),'match-command-palette');
-    if(groups)groups.classList.add('mfCinematicGroupPalette');
+    if(groups)mfCinSetClass(groups,'mfCinematicGroupPalette');
     if(grpRow){
-      grpRow.setAttribute('data-mf-persistence','match-memory');
+      mfCinSetAttr(grpRow,'data-mf-persistence','match-memory');
       for(var g=1;g<=4;g++){
         var btn=document.getElementById('grpBtn'+g);
-        if(btn){btn.classList.add('mfCinematicGroupSlot');btn.setAttribute('data-mf-group-slot',String(g));}
+        if(btn){mfCinSetClass(btn,'mfCinematicGroupSlot');mfCinSetAttr(btn,'data-mf-group-slot',String(g));}
       }
     }
   }
@@ -435,11 +460,11 @@
       if(on&&active==='none')active=surfaces[i][1];
       if(panel){
         panel.classList.toggle('mfCinematicSurfaceActive',on);
-        panel.setAttribute('data-mf-active',on?'true':'false');
+        mfCinSetAttr(panel,'data-mf-active',on?'true':'false');
       }
     }
-    if(context)context.setAttribute('data-active-surface',active);
-    body.setAttribute('data-mf-hud-surface',active);
+    if(context)mfCinSetAttr(context,'data-active-surface',active);
+    mfCinSetAttr(body,'data-mf-hud-surface',active);
     body.classList.toggle('mfCinematicContextOpen',active!=='none');
   }
   function mfCinematicSyncDeck(){
@@ -448,27 +473,27 @@
     for(var i=0;i<buttons.length;i++){
       var on=buttons[i].getAttribute('aria-selected')==='true'||buttons[i].classList.contains('on');
       buttons[i].classList.toggle('mfCinematicDeckActive',on);
-      buttons[i].setAttribute('data-mf-active',on?'true':'false');
+      mfCinSetAttr(buttons[i],'data-mf-active',on?'true':'false');
       if(on)active=buttons[i].getAttribute('data-deck')||active;
     }
-    tabs.setAttribute('data-active-deck',active);
-    document.body.setAttribute('data-mf-hud-deck',active);
+    mfCinSetAttr(tabs,'data-active-deck',active);
+    mfCinSetAttr(document.body,'data-mf-hud-deck',active);
   }
   function mfCinematicSyncService(){
     var row=document.getElementById('mfBldServiceActions'),repair=document.getElementById('bp_repair');
     var recycle=document.getElementById('bp_sell'),panels=[document.getElementById('prodMenu'),document.getElementById('bldMenu2')];
     if(row){
-      row.classList.add('mfCinematicServiceStrip');
-      row.setAttribute('data-mf-hud-role','service-controls');
-      row.setAttribute('data-mf-service-state',repair&&repair.getAttribute('data-state')||'unavailable');
-      row.setAttribute('data-mf-recycle-armed',recycle&&recycle.getAttribute('data-armed')||'false');
+      mfCinSetClass(row,'mfCinematicServiceStrip');
+      mfCinSetAttr(row,'data-mf-hud-role','service-controls');
+      mfCinSetAttr(row,'data-mf-service-state',repair&&repair.getAttribute('data-state')||'unavailable');
+      mfCinSetAttr(row,'data-mf-recycle-armed',recycle&&recycle.getAttribute('data-armed')||'false');
     }
-    if(repair){repair.classList.add('mfCinematicServiceRepair');repair.setAttribute('data-mf-hud-role','service-repair');}
-    if(recycle){recycle.classList.add('mfCinematicServiceRecycle');recycle.setAttribute('data-mf-hud-role','service-recycle');}
+    if(repair){mfCinSetClass(repair,'mfCinematicServiceRepair');mfCinSetAttr(repair,'data-mf-hud-role','service-repair');}
+    if(recycle){mfCinSetClass(recycle,'mfCinematicServiceRecycle');mfCinSetAttr(recycle,'data-mf-hud-role','service-recycle');}
     for(var i=0;i<panels.length;i++){
       if(!panels[i])continue;
       panels[i].removeAttribute('data-mf-service-state');
-      if(row&&row.parentElement===panels[i])panels[i].setAttribute('data-mf-service-state',row.getAttribute('data-mf-service-state'));
+      if(row&&row.parentElement===panels[i])mfCinSetAttr(panels[i],'data-mf-service-state',row.getAttribute('data-mf-service-state'));
     }
   }
   function mfCinematicSyncTransmission(){
@@ -476,12 +501,12 @@
     /* Commander portraits belong to their own faction. Only the neutral UGA
        guide may put UGA in the shared receiver chrome. */
     var link=who&&String(who.textContent||'').trim().toUpperCase()==='KEEL'?'uga-keel':'command';
-    if(tx.getAttribute('data-mf-link')!==link)tx.setAttribute('data-mf-link',link);
+    if(tx.getAttribute('data-mf-link')!==link)mfCinSetAttr(tx,'data-mf-link',link);
   }
   function mfCinematicDecorateBaseFinder(){
     var panel=document.getElementById('baseFinder');if(!panel)return;
-    panel.classList.add('mfCinematicDecorated');panel.setAttribute('data-mf-hud-role','base-finder');
-    var tabs=panel.querySelector('.baseFindTabs');if(tabs)tabs.setAttribute('data-mf-hud-role','base-finder-tabs');
+    mfCinSetClass(panel,'mfCinematicDecorated');mfCinSetAttr(panel,'data-mf-hud-role','base-finder');
+    var tabs=panel.querySelector('.baseFindTabs');if(tabs)mfCinSetAttr(tabs,'data-mf-hud-role','base-finder-tabs');
     mfCinematicMarkVector(panel.querySelector('.baseFindBack'),'prev');
     var finderIcons={all:'buildings',economy:'economy',production:'factory',defence:'shield',support:'support'};
     panel.querySelectorAll('.baseFindTabs [data-f]').forEach(function(btn){
@@ -490,14 +515,14 @@
     var cards=panel.querySelectorAll('.baseFindCard:not(.mfCinematicDecorated)');
     for(var i=0;i<cards.length;i++){
       var card=cards[i],type=card.getAttribute('data-btype'),art=card.querySelector('.baseFindIcon'),copy=card.querySelector('.baseFindCopy');
-      card.classList.add('mfCinematicDecorated');card.setAttribute('data-mf-hud-role','base-building-card');
-      if(copy)copy.classList.add('mfBaseFinderCopy');
+      mfCinSetClass(card,'mfCinematicDecorated');mfCinSetAttr(card,'data-mf-hud-role','base-building-card');
+      if(copy)mfCinSetClass(copy,'mfBaseFinderCopy');
       if(!art)continue;
-      art.classList.add('mfBaseFinderArt');art.setAttribute('aria-hidden','true');
+      mfCinSetClass(art,'mfBaseFinderArt');mfCinSetAttr(art,'aria-hidden','true');
       if(typeof bldIconEl!=='function'||!type)continue;
       try{
         var icon=bldIconEl(type,52,typeof playerKitKey==='function'?playerKitKey():undefined);
-        if(icon){icon.classList.add('mfBaseFinderModel');art.replaceChildren(icon);}
+        if(icon){mfCinSetClass(icon,'mfBaseFinderModel');art.replaceChildren(icon);}
       }catch(e){/* Keep the authored emoji when runtime art is unavailable. */}
     }
   }
@@ -510,8 +535,8 @@
       var atStart=row.scrollLeft<=2,atEnd=row.scrollLeft+row.clientWidth>=row.scrollWidth-2;
       state=atStart?'start':atEnd?'end':'middle';
     }
-    row.setAttribute('data-mf-overflow',state);
-    if(!row.getAttribute('aria-label'))row.setAttribute('aria-label',row.id==='prodTabs'?'Production categories':'Structure categories');
+    mfCinSetAttr(row,'data-mf-overflow',state);
+    if(!row.getAttribute('aria-label'))mfCinSetAttr(row,'aria-label',row.id==='prodTabs'?'Production categories':'Structure categories');
   }
   function mfCinematicSyncCategoryOverflow(){
     ['buildTabs','prodTabs'].forEach(function(id){

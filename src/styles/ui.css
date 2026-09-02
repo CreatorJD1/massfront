@@ -805,7 +805,16 @@ html.cmdIcons body.mf-cinematic-hud [data-mf-hud-role="service-controls"] button
   .menuRoleCopy>p{font-size:9px}.menuRoleCopy>small{display:none}
 }
 @media(max-width:600px) and (orientation:portrait){
+  /* Measured at 412x900 in a live match: the panel resolved to 306px while the
+     sticky header (44px) and the role brief (105px) consumed 149px of it, so
+     only one 84px row of structures was reachable without scrolling. Give the
+     deck more of the screen and stop the brief from taking half the panel:
+     it is context for the cards, not a substitute for seeing them. */
   #buildMenu,#prodMenu{width:calc(100vw - var(--sal) - var(--sar) - 12px);max-width:398px}
+  #buildMenu .menuRoleBrief,#prodMenu .menuRoleBrief{min-height:0;margin:5px 0 7px;
+    grid-template-columns:76px minmax(0,1fr)}
+  #buildMenu .menuRoleBrief .menuRoleCopy>p,#prodMenu .menuRoleBrief .menuRoleCopy>p{
+    -webkit-line-clamp:2;line-clamp:2}
   #buildMenu .grid,#prodMenu .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:stretch}
   #buildMenu .bcard,#prodMenu .bcard{width:auto;min-width:0;align-items:stretch;padding:8px;gap:4px;text-align:left}
   #buildMenu .bcard .icw,#prodMenu .bcard .icw{align-self:center}
@@ -3915,7 +3924,12 @@ body.mf-cinematic-hud:has(#cmdbar #grpRow[style*="display: flex"]) #selInfo{disp
 body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{
   position:fixed;z-index:22;left:auto;right:calc(var(--sar) + var(--mfHudEdge));transform:none;
   bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));width:var(--mfHudContextW);max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudMap) - 10px - var(--mfHudGap) - var(--mfHudEdge) * 3);
-  max-height:min(36dvh,390px);padding:8px;border-radius:11px;overflow-x:hidden;overflow-y:auto;
+  /* Measured at 412x900 in a live match: 36dvh resolved to 306px, and the
+     sticky header (44px) plus the role brief (~105px) consumed 149px of it,
+     leaving room for exactly one 84px row of structures. This is the rule that
+     governs the deck in the cinematic HUD, so it is the one that has to give.
+     Capped so the deck still cannot swallow the battlefield. */
+  max-height:min(62dvh,520px);padding:8px;border-radius:11px;overflow-x:hidden;overflow-y:auto;
   border:1px solid transparent;background:var(--mfHudPanelMaterial) padding-box,var(--steelB) border-box;
   box-shadow:var(--mfHudShadow);clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)
 }
@@ -3931,7 +3945,8 @@ body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface].mfCinematicSurfaceAc
 body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface][data-mf-active="true"]{isolation:isolate}
 body.mf-cinematic-hud #mfCinematicContext .mfPanelChrome{top:-8px;height:44px;margin:-8px -8px 6px;padding-left:10px;
   background:linear-gradient(180deg,rgba(13,31,46,.99),rgba(4,13,22,.99))}
-body.mf-cinematic-hud #mfCinematicContext .menuRoleBrief{grid-template-columns:76px minmax(0,1fr);min-height:76px;margin:5px 0 7px}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleBrief{grid-template-columns:68px minmax(0,1fr);min-height:0;margin:4px 0 6px}
+body.mf-cinematic-hud #mfCinematicContext .menuRoleBrief .menuRoleCopy>p{-webkit-line-clamp:2;line-clamp:2}
 body.mf-cinematic-hud #mfCinematicContext .menuRoleVisual,
 body.mf-cinematic-hud #mfCinematicContext .menuRoleVisual .mfIntelPreview{min-height:76px}
 /* The live model is the visual label here; repeating TACTICAL PREVIEW over its
@@ -4153,7 +4168,7 @@ body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #hotSlots{display:none!important}
   /* The history drawer is a glanceable MMO feed, not a modal log covering the
      centre of the battlefield. The full history remains internally scrollable. */
   body.mf-cinematic-hud #mfNoticeHistory{width:min(60vw,280px);max-height:min(20dvh,190px)}
-  body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));max-height:min(34dvh,320px)}
+  body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{bottom:calc(var(--mfHudDockClear) + var(--mfHudGap));max-height:min(58dvh,480px)}
   /* Explicit About intel is a compact contextual instrument, not a centre
      modal. hudflow writes top/max-height inline for the legacy banner lane, so
      only this pinned phone state deliberately outranks those two coordinates.

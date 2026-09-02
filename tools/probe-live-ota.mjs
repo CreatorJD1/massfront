@@ -144,7 +144,15 @@ try {
     step('apply completed without error', applied.state !== 'applyError' && applied.state !== 'error',
       `state=${applied.state}${applied.err ? ` err=${applied.err}` : ''}`);
 
-    await page.goto(server.url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
+    /* Apply restarts the document itself (it navigates to ?mf_restart=...).
+       Racing that with our own goto() aborts the real restart and reports a
+       navigation error for what is actually the success path. Wait for the
+       app's own reload, and only navigate ourselves if it never happens. */
+    await page.waitForFunction(() => /mf_restart=/.test(location.search),
+      null, { timeout: 30_000 }).catch(() => {});
+    await page.waitForLoadState('domcontentloaded').catch(() => {});
+    const restarted = await page.evaluate(() => /mf_restart=/.test(location.search)).catch(() => false);
+    if (!restarted) await page.goto(server.url, { waitUntil: 'domcontentloaded', timeout: 120_000 });
     await page.waitForFunction(() => typeof updateHUD === 'function', null, { timeout: 120_000 }).catch(() => {});
     const running = await page.evaluate(() => ({
       patched: window.__MASSFRONT_PATCHED ? String(window.__MASSFRONT_PATCHED) : '',

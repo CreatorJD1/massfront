@@ -340,6 +340,7 @@ function makeHarness({records={},storage={},fetchImpl,cryptoImpl,navigatorImpl,
       updManifestFingerprint,updRuntimeFingerprint,updValidateManifestRoots,updManifestSameRelease,
       updTransferIdentity,updStoragePreflight,updDownloadArtifact,
       updTransferMaintenance,UPD_TRANSFER_STALE_MS,
+      updTransferStoredBytes,updTransferStoredSize,updTransferFileKey,
       setEndpoint(url){UPDATE_URL=url;updResolved=true;},
       setLoadManifest(fn){updLoadManifest=fn;},
       setResolveEndpoint(fn){updResolveEndpoint=fn;}};`,context,{filename:'src/updater.js'});
@@ -2010,6 +2011,82 @@ for(const variant of [
     'a deliberate retry was refused by the browser hint and never reached the service');
   assert.notEqual(h.api.UPD.state,'unset',
     'a failed deliberate retry must report a real error, not a silent unavailable service');
+}
+
+/* The resume scan runs before the first network byte and its only consumer is
+   the storage preflight, which wants a byte estimate. It used to call
+   updTransferGetFile() per file, which decodes the record and SHA-256s the
+   whole thing — so every retry re-hashed everything already on disk while the
+   panel truthfully showed 0 bytes and no speed, which is indistinguishable
+   from a dead transfer. Counting sizes must not hash. */
+{
+  const entry=file('runtime.js','abcdefghijklmnopqrstuvwxyz'),rootHash='c'.repeat(64);
+  let digests=0;
+  const transfer={identity:'t-resume'};
+  /* A completed file already on disk, exactly as an interrupted attempt left it. */
+  const key='transfer-v1:'+transfer.identity+':file:'+entry.path;
+  const h=makeHarness({
+    records:{[key]:{size:entry.size,sha256:entry.sha256,text:entry.text}},
+    cryptoImpl:{subtle:{digest:async(algorithm,bytes)=>{ digests++; return digestBytes(bytes); }}},
+    fetchImpl:async()=>{ throw new Error('the resume scan must not reach the network'); }
+  });
+  const before=digests;
+  const resume=await h.api.updTransferStoredBytes(transfer,[entry],0,null);
+  assert.equal(resume.bytes,entry.size,
+    'the resume scan did not credit a file that is already fully stored');
+  assert.equal(digests-before,0,
+    `the resume scan hashed stored content ${digests-before} time(s); it only needs sizes`);
+}
+
+/* A record whose declared identity does not match the manifest is not credited,
+   so a corrupt or superseded leftover cannot shrink the storage estimate. */
+{
+  const entry=file('runtime.js','abcdefghijklmnopqrstuvwxyz');
+  const transfer={identity:'t-resume-2'};
+  const key='transfer-v1:'+transfer.identity+':file:'+entry.path;
+  const h=makeHarness({
+    records:{[key]:{size:entry.size,sha256:'9'.repeat(64),text:entry.text}},
+    fetchImpl:async()=>{ throw new Error('no network'); }});
+  const resume=await h.api.updTransferStoredBytes(transfer,[entry],0,null);
+  assert.equal(resume.bytes,0,'a record with the wrong hash was counted as already downloaded');
+  assert.equal(resume.largestIncomplete,entry.size);
+}
+
+/* PLAY OFFLINE used to latch the persistent Offline Mode switch, and the
+   updater treats that switch as its one authoritative gate. When identity
+   stalls, PLAY OFFLINE is the only enabled control, so the single reachable
+   action permanently disabled the path that would deliver the fix. The launcher
+   no longer latches it, and a deliberate tap on the update control now leaves
+   Offline Mode rather than refusing with a dead RETRY. */
+{
+  let loads=0,cleared=0;
+  const h=makeHarness({fetchImpl:async()=>{ throw new Error('no network expected'); }});
+  h.api.setEndpoint('https://updates.invalid/update.json');
+  h.api.setResolveEndpoint(async()=>'https://updates.invalid/update.json');
+  h.api.setLoadManifest(async()=>{ loads++; throw new Error('unreachable'); });
+  let forced=true;
+  h.context.netForcedOffline=()=>forced;
+  h.context.netSetOffline=(v)=>{ forced=!!v; if(!v) cleared++; };
+  h.context.netBrowserOffline=()=>false;
+  await h.api.updCheck(true);
+  assert.equal(cleared,1,'a deliberate update tap did not leave Offline Mode');
+  assert.equal(forced,false,'Offline Mode was still latched after an explicit check');
+  assert.equal(loads,1,'the check did not proceed after leaving Offline Mode');
+}
+{
+  /* An automatic pass must never change a setting the player chose. */
+  let loads=0,changed=0,forced=true;
+  const h=makeHarness({fetchImpl:async()=>{ throw new Error('no network expected'); }});
+  h.api.setEndpoint('https://updates.invalid/update.json');
+  h.api.setResolveEndpoint(async()=>'https://updates.invalid/update.json');
+  h.api.setLoadManifest(async()=>{ loads++; throw new Error('unreachable'); });
+  h.context.netForcedOffline=()=>forced;
+  h.context.netSetOffline=()=>{ changed++; };
+  h.context.netBrowserOffline=()=>false;
+  await h.api.updCheck(false);
+  assert.equal(changed,0,'an automatic pass changed the Offline Mode setting');
+  assert.equal(loads,0,'an automatic pass reached the service while Offline Mode was on');
+  assert.equal(h.api.UPD.state,'unset');
 }
 
 console.log('PASS Stage 8 updater interruption: check/channel ownership, truthful fallback size, resumable verified ranges, descriptor staging, reachability GC, storage preflight, idempotent same-root staging, cancellation, metadata-first staging/init, Apply/rollback, and serialized cross-document ownership guards');

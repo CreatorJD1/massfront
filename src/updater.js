@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.68';
+const APP_VERSION = '1.33.71';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Hotfix — Features: Galactic Exploration installs from the launcher as an optional expansion, downloaded on demand with resume, per-file verification and a free-storage check. Bug fixes: the in-game interface no longer flickers, because the top commander rail and the bottom command dock stopped rewriting themselves every frame. The launcher keeps an offline route available while identity resolves and settles instead of waiting forever. A deliberate update retry always reaches the update service even when the device wrongly reports itself offline. Updates now install on older app shells that previously refused them. The command deck tabs no longer clip their labels. Upcoming: streamlined War Table and an imagery-first mobile interface overhaul.";
+const APP_NOTES = "Hotfix — Bug fixes: the in-game interface no longer flickers or swaps its text and icons at random. Around twenty HUD surfaces were rewriting values they already held on every frame, which measured 2140 interface changes per second and now measures 30. The structures deck shows twice as many buildings at once instead of a single row. Update preparation reports PREPARING UPDATE while it checks what is already downloaded, and a transfer that has not finished its first chunk reads 0 B rather than a dash. Galactic Exploration installs from the launcher as an optional expansion. Upcoming: streamlined War Table and per-structure upgrades.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
@@ -89,6 +89,8 @@ let updResolved = false;
 let updMirrors = [];
 let updChannelUrls = {};
 const UPD_CHANNEL_KEY='mf_update_channel';
+/* Ceiling for any single pre-network preparation step. */
+const UPD_PREPARE_BUDGET_MS=8000;
 /* Set when PREVIEW was requested but no preview endpoint exists, so the
    channel check knows to accept the Stable manifest we deliberately fell back
    to instead of rejecting every update as "wrong update channel". */
@@ -1565,11 +1567,30 @@ async function updTransferGetFile(transfer,file,run,ac){
   catch(e){ await updStoreDelete([key]); return null; }
   return rec.text;
 }
+/* Size-only presence check. updTransferGetFile() decodes the record to bytes
+   and SHA-256s the whole thing, which is right when the content is about to be
+   used and pure waste when all we need is a byte count. */
+async function updTransferStoredSize(transfer,file,run,ac){
+  const rec=await updGet(updTransferFileKey(transfer.identity,file.path));
+  updAssertDownload(run,ac);
+  if(!rec||rec.size!==file.size||typeof rec.text!=='string') return null;
+  if(String(rec.sha256||'').toLowerCase()!==String(file.sha256).toLowerCase()) return null;
+  return file.size;
+}
+/* This runs before the first network byte and its only consumer is the storage
+   preflight, which wants an estimate of what is already on disk. It used to
+   call updTransferGetFile() per file, decoding and re-hashing every completed
+   file on every retry: on a device carrying staged data from earlier attempts
+   that is tens of megabytes of hashing before anything is requested, with the
+   panel truthfully reporting 0 bytes and no speed the whole time, which is
+   indistinguishable from a dead transfer. Count sizes instead. Nothing is
+   weakened: every byte is still verified in updDownloadArtifact() when it is
+   actually used, and a record that lies about its size or hash is not counted. */
 async function updTransferStoredBytes(transfer,files,run,ac){
   let bytes=0,largestIncomplete=0;
   for(const file of files){
-    const complete=await updTransferGetFile(transfer,file,run,ac);
-    if(complete!=null){ bytes+=file.size;continue; }
+    const complete=await updTransferStoredSize(transfer,file,run,ac);
+    if(complete!=null){ bytes+=complete;continue; }
     largestIncomplete=Math.max(largestIncomplete,file.size||0);
     const table=updChunkTable(file);
     for(let i=0;i<table.length;i++){
@@ -1981,12 +2002,24 @@ async function updCheck(manual){
   if(updOperationBusy()) return;
   /* Offline is a normal state, not a failure. Say so and stop — do not attempt
      a request that cannot succeed and then report an error for it. */
-  if(typeof netForcedOffline==='function'?netForcedOffline()
-     :(typeof netAllowed==='function'&&!netAllowed())){
-    updSet('unset',{err:null});
-    if(manual&&typeof toast==='function')
-      toast('✈ Offline mode — turn it off in Settings to check for updates');
-    return;
+  const forcedOff=typeof netForcedOffline==='function'?netForcedOffline()
+    :(typeof netAllowed==='function'&&!netAllowed());
+  if(forcedOff){
+    /* A deliberate tap on the update control is a request to check, so honour
+       it by leaving Offline Mode rather than refusing and pointing at Settings.
+       The button is labelled GO ONLINE in this state, so the player is told
+       what the tap will do before they make it. An automatic pass still
+       respects the switch and changes nothing. */
+    if(!manual){ updSet('unset',{err:null}); return; }
+    if(typeof netSetOffline==='function'){
+      try{ netSetOffline(false); }catch(e){}
+      if(typeof toast==='function') toast('Offline mode off — checking for updates');
+    }else{
+      updSet('unset',{err:null});
+      if(typeof toast==='function')
+        toast('✈ Offline mode — turn it off in Settings to check for updates');
+      return;
+    }
   }
   /* navigator.onLine is a hint, not an authority. An Android WebView can
      report it as false on a connected device, and gating every attempt on it
@@ -2151,8 +2184,13 @@ async function updDownload(){
   const initialTotal=files.reduce((s,f)=>s+(f.size||0),0)||1;
   UPD.feed=files.map(f=>({path:f.path,size:f.size||0,state:'pending',got:0}));
   UPD.fileIdx=-1;
+  /* Everything between here and the first byte is local storage work:
+     patch-base discovery, the maintenance sweep, the resume scan and the
+     storage preflight. It is honestly 0 bytes and 0 B/s, and reporting it as
+     DOWNLOADING 0% made a working update look stalled. Name the phase. */
   updSet('downloading',{pct:0,got:0,total:initialTotal,rate:0,err:null,abort:ac,
-                        retryDownload:false,readyIdentity:null,transferDiagnostic:null});
+                        retryDownload:false,readyIdentity:null,transferDiagnostic:null,
+                        preparing:true});
   const base=m.base||'';
   const t0=performance.now();
   const out={};
@@ -2177,7 +2215,17 @@ async function updDownload(){
        free. Protect this exact identity even when its resumable journal is old:
        the player has explicitly resumed it now. The sweep is best-effort; a
        failed maintenance pass must not turn a valid download into an error. */
-    try{ await updTransferMaintenance(transfer.identity); }catch(e){}
+    /* Best-effort, and now bounded. The sweep walks and deletes superseded
+       release records; on a device with a large update store that can take
+       long enough to look like a stalled download. Losing a maintenance pass
+       only costs disk that the next pass reclaims, so a slow one must never
+       hold the transfer. */
+    try{
+      await Promise.race([
+        updTransferMaintenance(transfer.identity),
+        new Promise(resolveRace=>setTimeout(resolveRace,UPD_PREPARE_BUDGET_MS))
+      ]);
+    }catch(e){}
     updAssertDownload(run,ac);
     const resume=await updTransferStoredBytes(transfer,files,run,ac); updAssertDownload(run,ac);
     const storage=await updStoragePreflight(plan,directArtifacts,resume); updAssertDownload(run,ac);
@@ -2189,6 +2237,7 @@ async function updDownload(){
     UPD.fileIdx=-1;
     if(typeof renderUpdatePanel==='function') renderUpdatePanel();
     updPublishSnapshot(true);
+    UPD.preparing=false;
     let got=0,networkGot=0;
     for(let fi=0;fi<files.length;fi++){
       const f=files[fi];
@@ -2843,6 +2892,14 @@ function renderUpdatePanel(){
       bar.style.width='0%'; btn.textContent='DOWNLOAD'; btn.disabled=false; break; }
     case 'downloading':{
       const KD=UPD.transferKind?UPD_KINDS[UPD.transferKind]:updKindLabel(m);
+      /* The pre-network phase is local storage work and reports 0 bytes
+         honestly. Calling that DOWNLOADING 0% told the player a transfer was
+         running and getting nowhere; say what is actually happening. */
+      if(UPD.preparing){
+        txt.textContent='PREPARING UPDATE'+(KD?('  ·  '+KD.nm):'');
+        sub.textContent='Checking what is already downloaded and free space';
+        bar.style.width='2%'; btn.textContent='…'; btn.disabled=true; break;
+      }
       txt.textContent='DOWNLOADING  '+UPD.pct.toFixed(0)+'%'+(KD?('  ·  '+KD.nm):'');
       const sp=UPD.rate? '  ·  '+fmtBytes(UPD.rate)+'/s' : '';
       sub.textContent=fmtBytes(UPD.got)+' of '+fmtBytes(UPD.total)+sp;
@@ -2887,10 +2944,15 @@ function renderUpdatePanel(){
       txt.textContent='LOCAL BUILD AHEAD';
       sub.textContent='Installed v'+updVerShown+' · update server is v'+(m?m.version:'?');
       bar.style.width='0%'; btn.textContent='CHECK AGAIN'; btn.disabled=false; break;
-    case 'unset':
-      txt.textContent='UPDATE SERVICE UNAVAILABLE';
-      sub.textContent='v'+updVerShown+'  ·  reconnect and try again';
-      bar.style.width='0%'; btn.textContent='RETRY'; btn.disabled=false; break;
+    case 'unset':{
+      /* Offline Mode and an unreachable service are different problems and
+         need different words. A RETRY that silently cannot succeed is what
+         made this state feel broken. */
+      const off=typeof netForcedOffline==='function'&&netForcedOffline();
+      txt.textContent=off?'OFFLINE MODE IS ON':'UPDATE SERVICE UNAVAILABLE';
+      sub.textContent=off?'v'+updVerShown+'  ·  go online to check for updates'
+                         :'v'+updVerShown+'  ·  reconnect and try again';
+      bar.style.width='0%'; btn.textContent=off?'GO ONLINE':'RETRY'; btn.disabled=false; break; }
     default:
       txt.textContent='GAME VERSION';
       sub.textContent='v'+updVerShown+updWhen();

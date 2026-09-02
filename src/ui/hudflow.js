@@ -169,6 +169,8 @@ function mfFlowLayout(){
        tools/probe-hud-flicker.mjs, removing this drain changes nothing
        (3/s either way). That was mfCinematicEnsureStructure() re-adding a
        class it already had. Kept because the guard should do what it says. */
+    if(typeof mfFlowWatch!=='undefined'&&mfFlowWatch&&
+       typeof mfFlowWatch.takeRecords==='function') mfFlowWatch.takeRecords();
     mfFlowMute--;
   }
 }

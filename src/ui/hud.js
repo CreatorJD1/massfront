@@ -842,19 +842,22 @@ function updateHUD(fps){
   for(let k=0;k<btns.length;k++){
     const cd=btns[k].querySelector('.cdring');
     if(!abUnlock[k]){
-      btns[k].classList.add('cd');
+      if(!btns[k].classList.contains('cd'))btns[k].classList.add('cd');
       if(cd.style.display!=='flex') cd.style.display='flex';
       hudTxt(cd,'🔒');
     } else if(abCool[k]>0){
-      btns[k].classList.add('cd');
+      if(!btns[k].classList.contains('cd'))btns[k].classList.add('cd');
       if(cd.style.display!=='flex') cd.style.display='flex';
       hudTxt(cd, String(Math.ceil(abCool[k])));
     } else {
-      btns[k].classList.remove('cd');
+      if(btns[k].classList.contains('cd'))btns[k].classList.remove('cd');
       if(cd.style.display!=='none') cd.style.display='none';
     }
   }
-  if(aiming===0) $('abOver').classList.add('on'); else $('abOver').classList.remove('on');
+  /* classList add/remove emit a record even when the class state is already
+     correct, and these buttons are serviced every HUD pass. */
+  const overBtn=$('abOver'),wantOver=aiming===0;
+  if(overBtn&&overBtn.classList.contains('on')!==wantOver) overBtn.classList.toggle('on',wantOver);
   if(typeof commanderActiveButtonState==='function') commanderActiveButtonState();
   if(typeof commanderJumpButtonState==='function') commanderJumpButtonState();
   if(typeof artBarrageButtonState==='function') artBarrageButtonState();
@@ -866,8 +869,12 @@ function updateHUD(fps){
       const okd=carrierCanDeploy();
       const cityN=okd?carrierLandingBlockCount():0;
       db.style.display='block';
-      db.classList.toggle('bad',!okd);
-      db.textContent=okd?(cityN?'⚠  DEPLOY + CLEAR '+cityN+' BLOCK'+(cityN===1?'':'S'):'⚓  DEPLOY BASE HERE'):'⛔  BAD GROUND — FLY ON';
+      /* Assigning textContent replaces the text node even when the string is
+         identical, so this ran as a childList mutation on every HUD service
+         point and fed the observers watching #cmdbar. hudTxt() is the guarded
+         setter this file already uses everywhere else. */
+      if(db.classList.contains('bad')!==!okd) db.classList.toggle('bad',!okd);
+      hudTxt(db,okd?(cityN?'⚠  DEPLOY + CLEAR '+cityN+' BLOCK'+(cityN===1?'':'S'):'⚓  DEPLOY BASE HERE'):'⛔  BAD GROUND — FLY ON');
     } else if(db.style.display!=='none'&&!(carrier.active&&carrier.phase===1)) db.style.display='none';
   }
   // objective + match clock

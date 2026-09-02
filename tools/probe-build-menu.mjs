@@ -142,79 +142,65 @@ try {
   if (!match.matchLive || !match.running) throw new Error('did not reach a live match — measurement would be meaningless');
   await page.waitForTimeout(1500);
 
-  const result = await page.evaluate(async (seconds) => {
-    const IDS = ['cmdbar','topbar','heroBar','selInfo','hudDeckTabs','goalBar','primaryRow','toast','coach','unitCard','hazChip','buildMenu','prodMenu','bldMenu2','mfCinematicContext','cmdrTx','minimapWrap'];
-    const els = IDS.map((i) => document.getElementById(i)).filter(Boolean);
-    let total = 0; const perSec = []; const perEl = {}; const byKind = {};
-    const samples = [];
-    const mo = new MutationObserver((recs) => {
-      total += recs.length;
-      for (const r of recs) {
-        /* Content churn happens on unnamed child nodes, so attribute the
-           record to the nearest identifiable ancestor instead of "?". */
-        let owner = r.target.nodeType === 1 ? r.target : r.target.parentElement;
-        let label = '';
-        for (let hop = 0; owner && hop < 6; hop++) {
-          if (owner.id) { label = '#' + owner.id; break; }
-          const cls = String(owner.className || '').split(' ').filter(Boolean)[0];
-          if (cls) { label = '.' + cls; break; }
-          owner = owner.parentElement;
-        }
-        const k = label || (r.target.nodeName || '?'); perEl[k] = (perEl[k] || 0) + 1;
-        const kind = r.type;
-        byKind[kind] = (byKind[kind] || 0) + 1;
-        if (samples.length < 40) samples.push({
-          id: k, kind, attr: r.attributeName || '',
-          from: kind === 'attributes'
-            ? (r.oldValue == null ? '' : String(r.oldValue)).slice(0, 120)
-            : (r.oldValue == null ? '' : String(r.oldValue)).slice(0, 120),
-          to: kind === 'attributes'
-            ? String(r.target.getAttribute(r.attributeName) || '').slice(0, 120)
-            : String(r.target.textContent || '').replace(/\s+/g, ' ').slice(0, 120)
-        });
-      }
-    });
-    /* Attribute-only observation misses the failure players describe as "text
-       and icons changing randomly": that is content churn inside these
-       elements, not restyling of the elements themselves. Watch the subtree so
-       childList and characterData rewrites are counted too. */
-    els.forEach((e) => mo.observe(e, { attributes: true, attributeOldValue: true,
-      attributeFilter: ['style', 'class'], subtree: true, childList: true, characterData: true }));
-    for (let s = 0; s < seconds; s++) {
-      const before = total;
-      await new Promise((r) => setTimeout(r, 1000));
-      perSec.push(total - before);
+  const result = await page.evaluate(async () => {
+    /* Open the structures deck the way a player does, then measure what is
+       actually reachable without scrolling. */
+    try { if (typeof openBuild === 'function') openBuild(); } catch {}
+    const bm = document.getElementById('buildMenu');
+    if (bm && getComputedStyle(bm).display === 'none') bm.style.display = 'block';
+    await new Promise((r) => setTimeout(r, 600));
+    if (!bm) return { error: 'no buildMenu' };
+    const box = bm.getBoundingClientRect(), cs = getComputedStyle(bm);
+    const chrome = bm.querySelector('.mfPanelChrome');
+    const brief = bm.querySelector('.menuRoleBrief');
+    const grid = bm.querySelector('.grid');
+    const cards = [...bm.querySelectorAll('.bcard')];
+    const h = (el) => (el ? +el.getBoundingClientRect().height.toFixed(0) : 0);
+    /* A card counts as reachable if it is inside the menu's visible box. */
+    const fullyVisible = cards.filter((c) => {
+      const b = c.getBoundingClientRect();
+      return b.top >= box.top - 1 && b.bottom <= box.bottom + 1;
+    }).length;
+    /* Stop guessing which stylesheet rule owns the height: ask the page. */
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let list; try { list = sheet.cssRules; } catch { continue; }
+      const walk = (rs, media) => { for (const r of rs || []) {
+        if (r.media) { walk(r.cssRules, r.conditionText || r.media.mediaText); continue; }
+        if (r.cssRules && !r.selectorText) { walk(r.cssRules, media); continue; }
+        if (!r.selectorText || !r.style) continue;
+        const mh = r.style.getPropertyValue('max-height');
+        if (!mh) continue;
+        try { if (bm.matches(r.selectorText)) rules.push({ sel: r.selectorText, mh,
+          media: media || '', active: media ? matchMedia(media).matches : true }); } catch {}
+      } };
+      walk(list, '');
     }
-    mo.disconnect();
-    return { watched: els.map((e) => e.id), total, perSec, perEl, byKind, samples,
-             matchLive: typeof matchLive !== 'undefined' ? matchLive : null };
-  }, SAMPLE_SECONDS);
-
-  const peak = Math.max(...result.perSec);
-  const mean = Math.round(result.total / SAMPLE_SECONDS);
-  console.log(`watched ${result.watched.length} HUD elements: ${result.watched.join(', ')}`);
-  console.log(`mutations/sec by second: ${result.perSec.join(', ')}`);
-  console.log(`mean ${mean}/s   peak ${peak}/s   total ${result.total} over ${SAMPLE_SECONDS}s`);
-  console.log('by mutation kind: ' + Object.entries(result.byKind).map(([k, v]) => `${k}=${v}`).join('  '));
-  const busiest = Object.entries(result.perEl).sort((a, b) => b[1] - a[1]).slice(0, 6);
-  if (busiest.length) console.log('busiest: ' + busiest.map(([k, v]) => `${k}=${v}`).join('  '));
-  if (pageErrors.length) console.log('page errors: ' + pageErrors.slice(0, 3).join(' | '));
-  if (argv.includes('--detail')) {
-    console.log('');
-    console.log('--- sample mutations (what actually changes) ---');
-    for (const m of result.samples.slice(0, 16)) {
-      console.log('  ' + m.id + '.' + m.attr);
-      console.log('      from: ' + m.from);
-      console.log('      to  : ' + m.to);
-    }
-  }
-
-
-  if (peak >= RUNAWAY_PER_SEC) {
-    console.log(`\nRUNAWAY RELAYOUT MEASURED — the HUD rewrites itself every frame (peak ${peak}/s).`);
-    failed = true;
-  } else {
-    console.log(`\nHUD SETTLED — peak ${peak}/s, well under the ${RUNAWAY_PER_SEC}/s runaway threshold.`);
+    return {
+      surfaceAttr: bm.getAttribute('data-mf-surface'),
+      parentId: bm.parentElement ? (bm.parentElement.id || bm.parentElement.className) : '',
+      maxHeightRules: rules,
+      viewport: { w: innerWidth, h: innerHeight },
+      menuH: +box.height.toFixed(0), maxHeight: cs.maxHeight, scrollH: bm.scrollHeight,
+      chromeH: h(chrome), briefH: h(brief),
+      gridCols: grid ? getComputedStyle(grid).gridTemplateColumns : '',
+      cardCount: cards.length,
+      cardH: cards.slice(0, 6).map(h),
+      fullyVisible
+    };
+  });
+  if (result.error) { console.log('FAIL ' + result.error); }
+  else {
+    console.log(`viewport ${result.viewport.w}x${result.viewport.h}`);
+    console.log(`menu ${result.menuH}px (max ${result.maxHeight}), content ${result.scrollH}px`);
+    console.log(`  sticky header ${result.chromeH}px + role brief ${result.briefH}px = ${result.chromeH + result.briefH}px before any card`);
+    console.log(`  grid columns: ${result.gridCols}`);
+    console.log(`  ${result.cardCount} cards, heights ${result.cardH.join(', ')}`);
+    console.log(`  FULLY VISIBLE WITHOUT SCROLLING: ${result.fullyVisible}`);
+    console.log(`  data-mf-surface=${result.surfaceAttr} parent=${result.parentId}`);
+    console.log('  max-height rules matching #buildMenu (last active wins):');
+    for (const r of result.maxHeightRules)
+      console.log(`    ${r.active ? 'ACTIVE ' : '  --   '} ${r.mh.padEnd(22)} ${r.sel}${r.media ? '   @' + r.media : ''}`);
   }
   await context.close();
 } finally {

@@ -940,10 +940,21 @@ function mfMassArmSelected(){
 function mfMassSelected(){let found=-1;for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i]&&mfTransportKindByType(utype[i])==='massflesh'){if(found>=0)return -1;found=i;}return found;}
 function mfMassUpdateUI(){
   const b=$('mfMassActionBtn');if(!b)return;const i=mfMassSelected(),H=i>=0?mfMassHold(i,true):null,air=i>=0&&utype[i]===MF_UT_MASSFLESH_AIR;
-  b.style.display=i>=0?'flex':'none';b.disabled=!H||!H.cargo.length;
-  const label=b.querySelector('.lbl');if(label)label.textContent=air?'BIRTH '+Math.ceil(H.flight)+'s':'TAKE FLIGHT';
-  b.classList.toggle('on',!!(mfMassBirthAim&&i===mfMassBirthAim.i));
-  b.setAttribute('aria-label',air?'Set Massflesh birth site; airborne counter is anti-air':'Take flight; landed Massflesh counter is anti-tank');
+  /* This runs on every selection service point. textContent, disabled and
+     setAttribute all mutate even when the value is unchanged, and #tacRow sits
+     inside the watched command dock, so re-writing the same label kept waking
+     the HUD observers. Only write on a real change. */
+  const wantDisplay=i>=0?'flex':'none';
+  if(b.style.display!==wantDisplay) b.style.display=wantDisplay;
+  const wantDisabled=!H||!H.cargo.length;
+  if(b.disabled!==wantDisabled) b.disabled=wantDisabled;
+  const label=b.querySelector('.lbl');
+  const wantLabel=air?'BIRTH '+Math.ceil(H.flight)+'s':'TAKE FLIGHT';
+  if(label&&label.textContent!==wantLabel) label.textContent=wantLabel;
+  const wantOn=!!(mfMassBirthAim&&i===mfMassBirthAim.i);
+  if(b.classList.contains('on')!==wantOn) b.classList.toggle('on',wantOn);
+  const wantAria=air?'Set Massflesh birth site; airborne counter is anti-air':'Take flight; landed Massflesh counter is anti-tank';
+  if(b.getAttribute('aria-label')!==wantAria) b.setAttribute('aria-label',wantAria);
 }
 const mfMassUpdateSelBase=updateSelInfo;
 updateSelInfo=function(){
