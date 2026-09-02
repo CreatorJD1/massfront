@@ -1,6 +1,6 @@
 {
   "name": "massfront",
-  "version": "1.33.71",
+  "version": "1.33.72",
   "description": "MASSFRONT — a large-scale mobile RTS",
   "private": true,
   "type": "module",

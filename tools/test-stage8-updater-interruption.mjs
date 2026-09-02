@@ -341,6 +341,7 @@ function makeHarness({records={},storage={},fetchImpl,cryptoImpl,navigatorImpl,
       updTransferIdentity,updStoragePreflight,updDownloadArtifact,
       updTransferMaintenance,UPD_TRANSFER_STALE_MS,
       updTransferStoredBytes,updTransferStoredSize,updTransferFileKey,
+      updNativeArtifactResponse,updFetchArtifactPartOnce,
       setEndpoint(url){UPDATE_URL=url;updResolved=true;},
       setLoadManifest(fn){updLoadManifest=fn;},
       setResolveEndpoint(fn){updResolveEndpoint=fn;}};`,context,{filename:'src/updater.js'});
@@ -2087,6 +2088,75 @@ for(const variant of [
   assert.equal(changed,0,'an automatic pass changed the Offline Mode setting');
   assert.equal(loads,0,'an automatic pass reached the service while Offline Mode was on');
   assert.equal(h.api.UPD.state,'unset');
+}
+
+/* A device can find an update and then fail every attempt to download it,
+   because the manifest has a native transport and artifacts do not: WebView
+   fetch() rejects outright, the error is retryable, and all three bounded
+   attempts reuse the transport that just refused. Artifacts now fall back to
+   the same native client. Nothing is trusted because it came from that client:
+   the response still has to satisfy every range, size and hash check. */
+{
+  const entry=chunkedFile('rescue.js','abcdefghijkl',4),rootHash='e'.repeat(64);
+  let fetchCalls=0,nativeCalls=0;
+  const h=makeHarness({fetchImpl:async()=>{ fetchCalls++; throw new TypeError('Failed to fetch'); }});
+  const table=h.api.updChunkTable(entry);
+  h.context.atob=(b64)=>Buffer.from(b64,'base64').toString('binary');
+  h.context.Response=class{
+    constructor(body,init){ this._b=body; this.status=(init&&init.status)||200; this.ok=this.status>=200&&this.status<300;
+      const bag={}; for(const k in ((init&&init.headers)||{})) bag[String(k).toLowerCase()]=String(init.headers[k]);
+      this.headers={get:(n)=>bag[String(n).toLowerCase()]??null}; }
+    async arrayBuffer(){ return this._b.buffer.slice(this._b.byteOffset,this._b.byteOffset+this._b.byteLength); }
+  };
+  h.context.window.Capacitor={
+    isNativePlatform:()=>true, isPluginAvailable:()=>true,
+    Plugins:{CapacitorHttp:{ get:async({url,headers})=>{
+      nativeCalls++;
+      const m=/bytes=(\d+)-(\d+)/.exec((headers&&headers.Range)||'');
+      const start=m?Number(m[1]):0,end=m?Number(m[2]):entry.bytes.byteLength-1;
+      const slice=entry.bytes.slice(start,end+1);
+      return { status:m?206:200,
+        headers:{'Content-Range':'bytes '+start+'-'+end+'/'+entry.bytes.byteLength,
+                 'Content-Type':'application/javascript'},
+        data:Buffer.from(slice).toString('base64') };
+    }}}
+  };
+  const got=await h.api.updFetchArtifactPartOnce('https://updates.invalid/rescue.js',
+    entry,table[0],0,table.length,0,new AbortController(),()=>{});
+  assert.ok(fetchCalls>0,'the WebView transport was never attempted first');
+  assert.ok(nativeCalls>0,'the native transport was never used to rescue a refused fetch');
+  assert.equal(got.bytes.byteLength,table[0].size,'the rescued range was the wrong size');
+  assert.deepEqual(Array.from(got.bytes),Array.from(entry.bytes.slice(0,table[0].size)),
+    'the rescued range did not carry the advertised bytes');
+}
+
+/* A rescued response that lies about its bytes must still be refused. */
+{
+  const entry=chunkedFile('tamper.js','abcdefghijkl',4);
+  const h=makeHarness({fetchImpl:async()=>{ throw new TypeError('Failed to fetch'); }});
+  const table=h.api.updChunkTable(entry);
+  h.context.atob=(b64)=>Buffer.from(b64,'base64').toString('binary');
+  h.context.Response=class{
+    constructor(body,init){ this._b=body; this.status=(init&&init.status)||200; this.ok=this.status>=200&&this.status<300;
+      const bag={}; for(const k in ((init&&init.headers)||{})) bag[String(k).toLowerCase()]=String(init.headers[k]);
+      this.headers={get:(n)=>bag[String(n).toLowerCase()]??null}; }
+    async arrayBuffer(){ return this._b.buffer.slice(this._b.byteOffset,this._b.byteOffset+this._b.byteLength); }
+  };
+  h.context.window.Capacitor={
+    isNativePlatform:()=>true, isPluginAvailable:()=>true,
+    Plugins:{CapacitorHttp:{ get:async({headers})=>{
+      const m=/bytes=(\d+)-(\d+)/.exec((headers&&headers.Range)||'');
+      const start=m?Number(m[1]):0,end=m?Number(m[2]):entry.bytes.byteLength-1;
+      const wrong=new Uint8Array(end-start+1).fill(0x21);
+      return { status:206,
+        headers:{'Content-Range':'bytes '+start+'-'+end+'/'+entry.bytes.byteLength},
+        data:Buffer.from(wrong).toString('base64') };
+    }}}
+  };
+  await assert.rejects(
+    h.api.updFetchArtifactPartOnce('https://updates.invalid/tamper.js',
+      entry,table[0],0,table.length,0,new AbortController(),()=>{}),
+    'a rescued range with the wrong bytes was accepted');
 }
 
 console.log('PASS Stage 8 updater interruption: check/channel ownership, truthful fallback size, resumable verified ranges, descriptor staging, reachability GC, storage preflight, idempotent same-root staging, cancellation, metadata-first staging/init, Apply/rollback, and serialized cross-document ownership guards');

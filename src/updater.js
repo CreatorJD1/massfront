@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.71';
+const APP_VERSION = '1.33.72';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Hotfix — Bug fixes: the in-game interface no longer flickers or swaps its text and icons at random. Around twenty HUD surfaces were rewriting values they already held on every frame, which measured 2140 interface changes per second and now measures 30. The structures deck shows twice as many buildings at once instead of a single row. Update preparation reports PREPARING UPDATE while it checks what is already downloaded, and a transfer that has not finished its first chunk reads 0 B rather than a dash. Galactic Exploration installs from the launcher as an optional expansion. Upcoming: streamlined War Table and per-structure upgrades.";
+const APP_NOTES = "Hotfix — Bug fixes: update files are no longer fetched only through the web view. On some Android devices the web view refuses the request outright, and all three retries reused the same refused path, so the game could find a new version and never download it. Downloads now fall back to the same native connection the update check already uses, and every byte is still size- and hash-checked before it is kept. When a download does fail, the panel now shows the real reason instead of a flat network error. Upcoming: per-structure upgrades.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
@@ -1731,6 +1731,46 @@ function updRetryDelay(ms,run,ac){
     },Math.max(0,ms));
   });
 }
+/* The manifest has two transports and the payload has one. updRequestJson()
+   falls back to the native HTTP plugin precisely because it has no WebView
+   CORS or cache state, but every artifact byte still goes through WebView
+   fetch(). That asymmetry is exactly what a device reports as finding an
+   update and then failing to download it: fetch() itself rejects, the error is
+   marked retryable, and all three bounded attempts reuse the transport that
+   just refused. Give artifacts the same second transport.
+   The native result is handed back as an ordinary Response so every downstream
+   check - 206 status, Content-Range agreement, declared size, per-range and
+   whole-file SHA-256 - runs unchanged. Nothing is trusted because it came from
+   the native client. Web builds get null here and keep their existing error. */
+async function updNativeArtifactResponse(url,headers){
+  const cap=typeof window!=='undefined'?window.Capacitor:null;
+  const native=cap&&typeof cap.isNativePlatform==='function'&&cap.isNativePlatform()&&
+    typeof cap.isPluginAvailable==='function'&&cap.isPluginAvailable('CapacitorHttp')&&
+    cap.Plugins&&cap.Plugins.CapacitorHttp;
+  if(!native||typeof native.get!=='function'||typeof Response==='undefined') return null;
+  const r=await native.get({
+    url,
+    headers:Object.assign({'Cache-Control':'no-cache, no-store, max-age=0'},headers||{}),
+    connectTimeout:15000,readTimeout:60000,responseType:'arraybuffer'
+  });
+  const status=Number(r&&r.status)||0;
+  if(status<200||status>=600) return null;
+  let body=r&&r.data;
+  /* Android returns arraybuffer payloads base64-encoded through the bridge. */
+  if(typeof body==='string'){
+    let binary;
+    try{ binary=atob(body); }catch(e){ return null; }
+    const out=new Uint8Array(binary.length);
+    for(let i=0;i<binary.length;i++) out[i]=binary.charCodeAt(i);
+    body=out;
+  }else if(body instanceof ArrayBuffer) body=new Uint8Array(body);
+  else if(!(body&&body.byteLength!==undefined)) return null;
+  const headerBag={};
+  const raw=(r&&r.headers)||{};
+  for(const key in raw){ if(raw[key]!=null) headerBag[String(key)]=String(raw[key]); }
+  try{ return new Response(body,{status,headers:headerBag}); }
+  catch(e){ return null; }
+}
 async function updFetchArtifactPartOnce(url,file,chunk,index,count,run,ac,onRead){
   const headers={};
   if(count>1) headers.Range='bytes='+chunk.offset+'-'+(chunk.offset+chunk.size-1);
@@ -1738,7 +1778,18 @@ async function updFetchArtifactPartOnce(url,file,chunk,index,count,run,ac,onRead
   try{ response=await fetch(url,{cache:'no-store',signal:ac.signal,headers}); }
   catch(error){
     updAssertDownload(run,ac);
-    throw updTransportFailure(file.path+': network request failed','MF_UPDATE_NETWORK_FETCH',true);
+    /* fetch() refused outright. Before burning a retry on the same transport,
+       try the native client the manifest already relies on. */
+    try{ response=await updNativeArtifactResponse(url,headers); }
+    catch(nativeError){ response=null; }
+    updAssertDownload(run,ac);
+    /* The flat message is deliberate. The signed URL carries credentials and
+       the underlying rejection usually quotes it, so this must not be widened
+       to include the cause; tools/test-updater-range-retry.mjs gates exactly
+       that. The actionable detail already travels safely on
+       error.updateDiagnostic as host, range and attempt. */
+    if(!response)
+      throw updTransportFailure(file.path+': network request failed','MF_UPDATE_NETWORK_FETCH',true);
   }
   updAssertDownload(run,ac);
   if(!response.ok) throw updTransportFailure(file.path+': HTTP '+response.status,
