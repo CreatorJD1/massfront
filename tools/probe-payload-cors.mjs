@@ -129,3 +129,8 @@ if (failures) {
   process.exit(1);
 }
 console.log('PAYLOAD DELIVERY VERIFIED — every sampled payload is fetchable without an off-origin redirect.');
+/* Explicit, because the failure path exits and the success path did not: undici
+   holds its keep-alive sockets open, so this hung for the full timeout after
+   printing a pass. A publish gate that never returns is worse than one that
+   fails -- it stalls the release instead of reporting on it. */
+process.exit(0);

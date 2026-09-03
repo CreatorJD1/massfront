@@ -1,15 +1,17 @@
 # MASSFRONT release status
 
-Last reconciled: 2026-09-02
+Last reconciled: 2026-09-02 (v1.33.73 shipped)
 
 ## Live
 
-- In-game updater: **v1.33.72 HOTFIX** live on Stable, 113 OTA artifacts,
-  95.4 MB. All three channels verified byte-identical by
-  `node tools/verify-release-channels.mjs --version 1.33.72`, and delivery
-  verified by `node tools/probe-payload-cors.mjs`. Confirmed installed **over
-  the air** on Jason's phone 2026-09-02 (UP TO DATE, INTEGRITY VERIFIED) with
-  no APK install.
+- In-game updater: **v1.33.73 HOTFIX** live on Stable, delivered as an OTA-only
+  patch against v1.33.72 (5 changed artifacts; no APK built or required). All
+  three channels verified by
+  `node tools/verify-release-channels.mjs --version 1.33.73`, delivery by
+  `node tools/probe-payload-cors.mjs`, and end to end by
+  `node tools/probe-live-ota.mjs --from 1.33.72 --expect 1.33.73`.
+  v1.33.72 before it was confirmed installing **over the air** on Jason's phone
+  2026-09-02 with no APK install.
 - Android installer: **v1.33.64 remains the current APK**,
   `MASSFRONT-v1.33.64-mobile-install.apk`, 135,365,854 bytes, SHA-256
   `e54a88cfed62269e6db6ef6cb1e411396e3cc2c5e3de060c1cf4cea486d5d77b`,
@@ -41,6 +43,41 @@ Last reconciled: 2026-09-02
   only), so they can be repointed on a live release without reissuing it.
   `tools/probe-payload-cors.mjs` gates this, and the publisher now refuses to
   report success without it.
+
+## v1.33.73 HOTFIX — stack selection reachable, commander XP in session
+
+Player report: individual and stack unit selection missing, no XP on the
+character profile in a match, and no structure upgrades. Measured in a real
+skirmish with `tools/probe-session-features.mjs` rather than read from source,
+because all three already had working code that ships.
+
+Two of the three were reachability failures, one was not a defect at all.
+
+- **Stack selection was unreachable.** The PLATOONS deck owns the per-type
+  unit-stack rail, and a cinematic rule hid `#grpRow` on `.uiPrimaryOpen` --
+  which is `(panel || intel)`, where "intel" is only "#unitCard is visible",
+  i.e. exactly what selecting a unit opens. Selecting a unit therefore
+  collapsed the deck holding the stack selector: 0x0 with a unit selected
+  against 149x44 once the card was dismissed, and a card tap selecting 0 of 7
+  against 7 of 7. Narrowed to `.uiPanelOpen`. Enforced in `src/uistack.js` as
+  well as the stylesheet, and verified the JS carries it alone with the old CSS
+  in place -- CSS never ships over the air, so that is what reaches installed
+  players.
+- **Commander XP was invisible.** `heroXp/heroLvl` is a real in-match track
+  that unlocks abilities, but its readout lived in `.heroVital`, hidden below
+  700px: 0x0/display:none on a 412x900 portrait. The grid row needs ~78px
+  against a 55px body, so progress and real numbers now sit on the portrait
+  chip, inline-styled for the same over-the-air reason.
+- **Structure upgrades needed no work.** `startUpgrade`/`BUP` already back a
+  hittable `UPGRADE TO MK2 · 80m 300e · 10s`. The first probe runs said
+  otherwise only because they tested an HQ, which correctly has no BUP path.
+  Individual unit selection also already worked.
+
+The new deliverability gate earned itself immediately: the publisher refused to
+report success on v1.33.73 because payloads still resolved off-origin, naming
+the mirror and repoint commands. It also exposed a defect in the gate itself --
+the pass path never exited, because undici holds keep-alive sockets open; now
+explicit.
 
 ## v1.33.72 HOTFIX — OTA payloads were undeliverable to real devices
 

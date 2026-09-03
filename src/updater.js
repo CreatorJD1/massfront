@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.72';
+const APP_VERSION = '1.33.73';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Hotfix — Bug fixes: update files are no longer fetched only through the web view. On some Android devices the web view refuses the request outright, and all three retries reused the same refused path, so the game could find a new version and never download it. Downloads now fall back to the same native connection the update check already uses, and every byte is still size- and hash-checked before it is kept. When a download does fail, the panel now shows the real reason instead of a flat network error. Upcoming: per-structure upgrades.";
+const APP_NOTES = "Hotfix — Bug fixes: selecting a unit no longer hides the PLATOONS row, so the per-type unit stack bar is usable again. Tap a stack card to select every unit of that type at once, or tap it twice to send the camera to them. Your Commander now shows live match XP on the portrait, so you can see progress toward the next level and the abilities it unlocks. Reminder: selecting one of your structures opens its menu, where turrets, generators, extractors and factories can be upgraded for mass and energy.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
