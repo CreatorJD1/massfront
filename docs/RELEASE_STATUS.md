@@ -1,13 +1,15 @@
 # MASSFRONT release status
 
-Last reconciled: 2026-09-01
+Last reconciled: 2026-09-02
 
 ## Live
 
-- In-game updater: **v1.33.65 HOTFIX** live on Stable, delivered as an OTA-only
-  delta against v1.33.64 (5 changed artifacts; no APK was built or required).
-  All three channels verified byte-identical by
-  `node tools/verify-release-channels.mjs --version 1.33.65`.
+- In-game updater: **v1.33.72 HOTFIX** live on Stable, 113 OTA artifacts,
+  95.4 MB. All three channels verified byte-identical by
+  `node tools/verify-release-channels.mjs --version 1.33.72`, and delivery
+  verified by `node tools/probe-payload-cors.mjs`. Confirmed installed **over
+  the air** on Jason's phone 2026-09-02 (UP TO DATE, INTEGRITY VERIFIED) with
+  no APK install.
 - Android installer: **v1.33.64 remains the current APK**,
   `MASSFRONT-v1.33.64-mobile-install.apk`, 135,365,854 bytes, SHA-256
   `e54a88cfed62269e6db6ef6cb1e411396e3cc2c5e3de060c1cf4cea486d5d77b`,
@@ -17,13 +19,60 @@ Last reconciled: 2026-09-01
 - The OTA channel carries **JavaScript only** — 113 files, all `.js`. CSS,
   `index.html`, `boot.js`, `sw.js` and `update-config.json` ship in the APK and
   the Space alone, so any styling or DOM change needs a new installer.
-- **Publishing is three steps.** `tools/publish-hf-release.ps1` writes Hugging
+- **Publishing is four steps.** `tools/publish-hf-release.ps1` writes Hugging
   Face; `tools/mirror-release-to-cloudflare.mjs --version X --apply` copies the
-  verified bytes into R2 and moves the worker pointer; `hf upload
+  verified bytes into R2 and moves the worker pointer;
+  `node tools/repoint-manifests-to-mirror.mjs --apply` points the published
+  manifests at those redirect-free urls; `hf upload
   CREATORJD/massfront-playtest www . --repo-type space` publishes the browser
-  build. The publisher exits 0 without the other two. Run
-  `node tools/verify-release-channels.mjs --version X` after every publish.
+  build. Run `node tools/verify-release-channels.mjs --version X` and
+  `node tools/probe-payload-cors.mjs` after every publish.
   The mirror has no retry and failed twice on 1.33.65 before succeeding.
+- **A release is not shipped until a device can download it.** Hugging Face
+  answers small files with a same-origin 307 but LFS-backed payloads with a 302
+  to a signed CDN on another origin. Every chunked file carries a `Range`
+  header, which makes the request non-simple and forces a preflight, and a
+  strict engine will not follow a preflighted request off-origin: Android
+  WebView refuses it, desktop Chrome follows it. The device reports NETWORK
+  READY, finds the update, and dies on the first chunked file with a flat
+  `network request failed`. Because every check ran in Chrome, the channel
+  verified clean while no device could download a byte. Payload urls are **not**
+  part of manifest identity (the client hashes path, size, sha256 and chunks
+  only), so they can be repointed on a live release without reissuing it.
+  `tools/probe-payload-cors.mjs` gates this, and the publisher now refuses to
+  report success without it.
+
+## v1.33.72 HOTFIX — OTA payloads were undeliverable to real devices
+
+Devices on v1.33.70 could check for updates, find v1.33.72, and fail every
+download attempt with a flat `network request failed` on `ota/00-runtime.js`,
+while the launcher still showed COMMANDER VERIFIED and NETWORK READY. Root cause
+was transport shape, not the client: the manifest advertised
+`huggingface.co/.../resolve/<sha>/...` urls, which 302 off-origin for LFS-backed
+files, and the `Range` header on every chunked file makes that redirect fatal in
+a strict WebView.
+
+Fixed **server-side with no reissue and no APK**: the three published manifests
+(`update.json`, `MASSFRONT-update.json`, `update-v1.33.72.json`) were repointed
+at the Cloudflare mirror, which serves the identical bytes as 206 with no
+redirect. Identity was asserted unchanged before upload; every byte is still
+sha256-checked on arrival.
+
+Verified: `tools/probe-live-ota.mjs --from 1.33.70 --expect 1.33.72` took
+95.4 MB from the live channel, verified, applied and restarted on the new build;
+then confirmed on Jason's phone over the air.
+
+Guards added, both mutation-tested against the pre-fix v1.33.71 manifest:
+- `tools/probe-payload-cors.mjs` — fails on any off-origin payload redirect.
+  Its in-page phase reports 4/4 PASS on the broken manifest, which is precisely
+  why a Chrome-based check could not have caught this.
+- `tools/repoint-manifests-to-mirror.mjs` — repeatable, refuses to write if
+  manifest identity moves, skips no-op republishes.
+- `publish-hf-release.ps1` now exits 1 with the remediation commands rather than
+  reporting a published release that devices cannot download.
+
+Local `update.json` carried the publisher-minted Hugging Face urls and would
+have reintroduced the bug on the next publish; repointed.
 
 ## v1.33.65 HOTFIX — whole-HUD flicker
 

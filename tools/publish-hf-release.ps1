@@ -1062,3 +1062,25 @@ if($PatchFrom){
   if($IncludeSourceArchive){ Write-Host "Source: https://huggingface.co/datasets/$Repo/resolve/main/MASSFRONT-v$Version-source.zip?download=true" }
   else { Write-Host 'Source: skipped (opt-in channel)' }
 }
+
+# A release is not shipped until a device can download it. This used to stop at
+# "uploaded to Hugging Face", which is not the same thing: the Hub answers
+# LFS-backed payloads with a 302 to a signed CDN on another origin, and the Range
+# header every chunked file carries makes that redirect fatal in a strict WebView.
+# v1.33.70 and v1.33.71 shipped undeliverable for exactly this reason while every
+# Chrome-based check passed, so this gate runs the transport-shape probe, which
+# does not depend on one engine's tolerance.
+Write-Host ''
+Write-Host 'Verifying the published release is actually downloadable...' -ForegroundColor Cyan
+& node (Join-Path $PSScriptRoot 'probe-payload-cors.mjs') '--no-browser'
+if($LASTEXITCODE -ne 0){
+  Write-Host ''
+  Write-Host "v$Version IS PUBLISHED BUT NOT YET DELIVERABLE." -ForegroundColor Red
+  Write-Host 'Payloads still resolve off-origin, so devices fail with a flat network error'
+  Write-Host 'while the launcher still reports NETWORK READY. Finish the release:' -ForegroundColor Yellow
+  Write-Host "  node tools/mirror-release-to-cloudflare.mjs --version $Version --apply"
+  Write-Host '  node tools/repoint-manifests-to-mirror.mjs --apply'
+  Write-Host '  node tools/probe-payload-cors.mjs'
+  exit 1
+}
+Write-Host "v$Version is deliverable: payloads serve with no off-origin redirect." -ForegroundColor Green
