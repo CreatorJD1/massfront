@@ -12,7 +12,16 @@ Last reconciled: 2026-09-02 (v1.33.73 shipped)
   `node tools/probe-live-ota.mjs --from 1.33.72 --expect 1.33.73`.
   v1.33.72 before it was confirmed installing **over the air** on Jason's phone
   2026-09-02 with no APK install.
-- Android installer: **v1.33.64 remains the current APK**,
+- Android installer: **v1.33.73 is the current APK**,
+  `MASSFRONT-v1.33.73-mobile-install.apk`, 138,091,701 bytes, SHA-256
+  `4341372131bdf5a4e9619ac6c6fb028da4d440aa8d87594dc53a6158b9c21371`,
+  versionCode 13373. Built from the packed v1.33.73 tree and verified before
+  upload to contain PACKAGED_REV 1.33.73, the commander XP chip, the uistack
+  rail enforcement and the ui.css `.uiPanelOpen` fix; the published LFS oid
+  matches the local hash byte for byte. It is the only surface that carries the
+  CSS half of the stack-rail fix natively -- installed players get the same
+  behaviour from the JS enforcement over the air.
+- Superseded: v1.33.64 APK,
   `MASSFRONT-v1.33.64-mobile-install.apk`, 135,365,854 bytes, SHA-256
   `e54a88cfed62269e6db6ef6cb1e411396e3cc2c5e3de060c1cf4cea486d5d77b`,
   versionCode 13364. Installed and confirmed booting on Jason's phone.
