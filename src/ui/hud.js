@@ -831,8 +831,41 @@ function updateHUD(fps){
     const xpEl=$('xpFill');if(xpEl&&xpEl._mfW!==xpW){xpEl._mfW=xpW;xpEl.style.width=xpW;}
     const hpEl=$('heroHpFill');if(hpEl&&hpEl._mfW!==hpW){hpEl._mfW=hpW;hpEl.style.width=hpW;}
     hudTxt($('heroHpTxt'),hpPct+'%');hudTxt($('heroXpTxt'),xpPct+'%');hudTxt($('heroLvlBadge'),String(heroLvl));
+    /* In-session commander XP, on the chip itself.
+       heroXp/heroLvl is a real in-match progression -- it unlocks abilities --
+       but the only readout for it lived in .heroVital, which the cinematic HUD
+       hides outright below 700px: measured 0x0 / display:none on a 412x900
+       portrait, with #heroNameTxt hidden too and the whole profile head only
+       24px wide. So a phone player levelled up with nothing on screen to show
+       it. There is no room for the grid row (it needs ~78px against a 55px
+       body), so the progress and the real numbers go on the portrait chip.
+       Styled inline on purpose: CSS ships only in the APK and the Space, never
+       over the air, and this has to reach installed players. */
+    let xpChip=$('heroXpChip');
+    if(!xpChip&&heroBar){
+      xpChip=document.createElement('span');xpChip.id='heroXpChip';
+      xpChip.setAttribute('aria-hidden','true');
+      xpChip.style.cssText='position:absolute;left:3px;right:3px;bottom:2px;height:8px;'+
+        'display:flex;align-items:center;justify-content:center;border-radius:3px;'+
+        'border:1px solid rgba(101,162,193,.35);background:rgba(0,0,0,.72);'+
+        'overflow:hidden;pointer-events:none;z-index:2';
+      const xf=document.createElement('i');xf.id='heroXpChipFill';
+      xf.style.cssText='position:absolute;left:0;top:0;bottom:0;width:0%;'+
+        'background:linear-gradient(90deg,#c9973b,#ffd257,#ffef9a);transition:width .16s linear';
+      const xt=document.createElement('b');xt.id='heroXpChipTxt';
+      xt.style.cssText='position:relative;font:800 6px/1 var(--fT,monospace);'+
+        'color:#ffefc2;letter-spacing:.02em;text-shadow:0 1px 2px rgba(0,0,0,.9)';
+      xpChip.appendChild(xf);xpChip.appendChild(xt);
+      if(getComputedStyle(heroBar).position==='static') heroBar.style.position='relative';
+      heroBar.appendChild(xpChip);
+    }
+    if(xpChip){
+      const xf=$('heroXpChipFill');
+      if(xf&&xf._mfW!==xpW){xf._mfW=xpW;xf.style.width=xpW;}
+      hudTxt($('heroXpChipTxt'),heroXp+'/'+heroXpNext+' XP');
+    }
     heroBar.classList.toggle('heroCritical',hpPct<=25);
-    const commanderLabel='Commander '+heroName+', callsign '+heroCall+', level '+heroLvl+', health '+hpPct+' percent, XP '+xpPct+' percent. Activate to select and center.';
+    const commanderLabel='Commander '+heroName+', callsign '+heroCall+', level '+heroLvl+', health '+hpPct+' percent, XP '+heroXp+' of '+heroXpNext+'. Activate to select and center.';
     if(heroBar.getAttribute('aria-label')!==commanderLabel)heroBar.setAttribute('aria-label',commanderLabel);
     if(heroBar.title!==commanderLabel)heroBar.title=commanderLabel;
   } else hudDisp($('heroBar'),'none');

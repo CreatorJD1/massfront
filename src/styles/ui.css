@@ -3906,8 +3906,16 @@ body.mf-cinematic-hud.uiPrimaryOpen #minimapWrap[data-mf-hud-role="minimap-recei
 /* Reparenting #grpRow through a display:contents semantic wrapper changes its
    DOM ancestry even though it does not change layout. Preserve primary-panel
    focus explicitly; otherwise a previously open Platoons row remains live
-   behind production/service controls. */
-body.mf-cinematic-hud.uiPrimaryOpen #mfCinematicGroupPalette #grpRow{display:none!important}
+   behind production/service controls.
+   uiPanelOpen, NOT uiPrimaryOpen. uiPrimaryOpen is (panel || intel), and
+   "intel" is only "#unitCard is visible" -- which is what selecting a unit
+   opens. That made this rule fire on selection and collapse the whole PLATOONS
+   deck, including the per-type unit-stack rail inside it, to 0x0 at the exact
+   moment a player wants it: measured 0x0 with a unit selected, 145x44 the
+   instant the card was dismissed. Production/service panels are the surfaces
+   this was written to protect, and a separate rule below already hides
+   #unitCard whenever one of those opens, so the two cannot collide. */
+body.mf-cinematic-hud.uiPanelOpen #mfCinematicGroupPalette #grpRow{display:none!important}
 /* Context, placement, feed and transmissions are higher-priority surfaces.
    A first-seen unit card must never survive behind them as a second panel. */
 body.mf-cinematic-hud:is(.mfCinematicContextOpen,.uiPanelOpen,.uiPlacing,.mfNoticeFeedOpen) #unitCard,

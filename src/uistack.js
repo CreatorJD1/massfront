@@ -74,6 +74,25 @@ function mfUiSync(){
   body.classList.toggle('uiPrimaryOpen',panel||intel);
   body.classList.toggle('uiWaveOpen',wave);
   body.classList.toggle('uiAttackOpen',attack);
+  /* PLATOONS owns the per-type unit-stack rail, and that deck is the only way
+     to select a whole stack by type. A cinematic rule hid #grpRow on
+     .uiPrimaryOpen, which is (panel || intel) -- and "intel" is only "#unitCard
+     is visible", which is what selecting a unit opens. So selecting a unit
+     collapsed the deck the player had deliberately opened, rail included, to
+     0x0: measured 0x0 with a unit selected against 149x44 without.
+     The stylesheet is fixed too, but CSS ships only in the APK and the Space,
+     never over the air, so this enforcement is what actually reaches installed
+     players. Inline important beats the stylesheet's important; a real
+     production/service panel still hides the row, because that is the focus
+     this was written to protect. */
+  const grp=document.getElementById('grpRow');
+  if(grp&&typeof hudDeck!=='undefined'&&hudDeck==='platoons'){
+    if(panel) grp.style.removeProperty('display');
+    else if(grp.style.getPropertyPriority('display')!=='important'||grp.style.display!=='flex')
+      grp.style.setProperty('display','flex','important');
+  }else if(grp&&grp.style.getPropertyPriority('display')==='important'){
+    grp.style.removeProperty('display');
+  }
   for(const id of ['buildMenu','prodMenu','bldMenu2']){
     const el=document.getElementById(id);if(el)el.setAttribute('aria-hidden',intel?'true':'false');
   }
