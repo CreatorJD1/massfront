@@ -3818,6 +3818,11 @@ function buildTerrain(themeKey,locationPreflight){
   }
   // ---- pass 1: height field ----
   heightF=new Float32Array(TS*TS);
+  /* A new heightfield is a new world. Creep relief is keyed to the old one, so
+     leaving it allocated grows last match's biomass out of this map's ground —
+     and it must be released, not just zeroed, so a match without the Brood
+     carries no cost. */
+  creepF=null;
   // land-guarantee bumps: bases, deposits, diagonal corridor
   const bumps=[[MAP*SP_LO,MAP*SP_HI,420,0.17],[MAP*SP_HI,MAP*SP_LO,420,0.17],[MAP*0.5,MAP*0.5,360,0.12]];
   if(typeof START_ZONES!=='undefined') for(const Z of START_ZONES) bumps.push([MAP*Z.x,MAP*Z.y,310,0.14]);
@@ -6041,6 +6046,102 @@ function makeOrganicFoundation(B){
 /* How far a single organism colonises, and how far a vein will reach for a
    neighbour. Both in world units. */
 const ORGANIC_SPREAD_MUL=1.75, ORGANIC_VEIN_R=340;
+/* CREEP RELIEF — biomass with volume, through the sheet the ground already
+   lights itself with.
+ *
+ * Painted creep is a tattoo: correct colour, no thickness, no light response.
+ * The ground shader already derives per-pixel normals by central-differencing
+ * uHeight (see terrain.js uHexelW), and terrainDirty already re-uploads that
+ * sheet for exactly the window a foundation touches. So creep only has to
+ * contribute height and it gets real relief, a rolled rim where coverage falls
+ * off, and correct lighting — with no shader change and no texture unit, of
+ * which the terrain program has none free.
+ *
+ * Held in its own field, never in heightF. heightF drives PASS and slope, and
+ * a mat this wide would carve plateaus and re-open the passability problems
+ * foundations already fight. Creep is something grown ON the ground, so it
+ * belongs in what the ground is LIT by, not in what it is walked on — which is
+ * also how the reference implementations treat it.
+ *
+ * Uint16, not Uint8: normals come from the DERIVATIVE of this field, so
+ * quantisation is amplified. 256 levels band visibly across a gentle rim
+ * bulge, which is precisely where the shape reads. Allocated on first Brood
+ * foundation, so a match without the Brood pays nothing. */
+let creepF=null;
+const CREEP_RELIEF=0.62;                      // world units of mat thickness
+const CREEP_STEP=CREEP_RELIEF/65535;
+function creepFieldEnsure(){
+  if(!creepF&&typeof TS==='number') creepF=new Uint16Array(TS*TS);
+  return creepF;
+}
+function creepReliefAt(x,y){
+  if(!creepF) return 0;
+  return creepF[y*TS+x]*CREEP_STEP;
+}
+/* Rasterise the creep's own outline into the relief field.
+ *
+ * Drawn with the SAME path the albedo uses, so relief and colour cannot drift
+ * apart; a gradient fill gives an interior plateau that falls off at the rim,
+ * which is what produces the rolled lip once the shader differences it. Veins
+ * are drawn brighter so they stand proud as ridges rather than colour alone.
+ * max-combined into the field so overlapping colonies merge into one mat
+ * instead of stacking into a step. */
+function creepStampRelief(cx,cy,rx,ry,seedA,seedI,links,k){
+  if(!creepFieldEnsure()) return;
+  const pad=Math.ceil(Math.max(rx,ry)*1.35)+3;
+  const sx=clamp(Math.floor(cx-pad),0,TS-1),sy=clamp(Math.floor(cy-pad),0,TS-1);
+  const ex=clamp(Math.ceil(cx+pad),0,TS-1),ey=clamp(Math.ceil(cy+pad),0,TS-1);
+  const w=ex-sx+1,h=ey-sy+1;
+  if(w<=0||h<=0) return;
+  let cv;
+  try{
+    cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  }catch(e){ return; }
+  const c=cv.getContext('2d',{willReadFrequently:true});
+  if(!c) return;
+  c.translate(-sx,-sy);
+  organicRimPath(c,cx,cy,rx,ry,organicRnd(seedI),seedA);
+  c.save();c.clip();
+  /* A MAT, not a dome. Ramping from the centre to the rim inflates the whole
+     field into a balloon; biomass lies at near-constant thickness and rolls
+     over only at its edge, and that roll is the whole silhouette read. */
+  const g=c.createRadialGradient(cx,cy,rx*0.06,cx,cy,rx);
+  g.addColorStop(0,'#f2f2f2');
+  g.addColorStop(.62,'#ffffff');
+  g.addColorStop(.82,'#f0f0f0');
+  g.addColorStop(.93,'#9a9a9a');
+  g.addColorStop(1,'#000');
+  c.fillStyle=g;c.fillRect(cx-rx*2,cy-ry*2,rx*4,ry*4);
+  c.lineCap='round';
+  c.strokeStyle='rgba(255,255,255,.55)';
+  const vr=organicRnd(seedI^0x2545f491);
+  for(let n=0;n<9;n++)
+    organicVein(c,cx+Math.cos(n/9*TAU)*rx*.14,cy+Math.sin(n/9*TAU)*ry*.12,
+      n/9*TAU+(vr()-.5)*.5,rx*(.30+vr()*.26),Math.max(1.2,rx*.045),3,vr);
+  c.restore();
+  /* Vein trunks to neighbours stand proud outside the field too — a link that
+     is only colour reads as a painted line the moment the light moves. */
+  if(links&&links.length){
+    c.lineCap='round';c.strokeStyle='rgba(255,255,255,.50)';
+    c.lineWidth=Math.max(2,rx*.11);
+    for(const [d,O] of links){
+      const ox=O.x*k,oy=O.y*k;
+      c.beginPath();c.moveTo(cx,cy);c.lineTo(ox,oy);c.stroke();
+    }
+  }
+  let img;
+  try{ img=c.getImageData(sx,sy,w,h).data; }catch(e){ return; }
+  for(let y=0;y<h;y++){
+    const row=(sy+y)*TS;
+    for(let x=0;x<w;x++){
+      const a=img[(y*w+x)*4+3];
+      if(!a) continue;
+      const v=(img[(y*w+x)*4]*a/255)*257;
+      const i=row+sx+x;
+      if(v>creepF[i]) creepF[i]=v>65535?65535:v;
+    }
+  }
+}
 /* An organism does not stop at its own skirt.
  *
  * Every Brood structure colonises the soil around it and grows veins toward
@@ -6170,6 +6271,9 @@ function organicSpreadPaint(B,bedRad){
   /* Claim the ground first, then paint it: the stamp is what lets the creep
      read past whatever plaza the map happened to put here. */
   organicStampMask(cx,cy,rr,rr*.86,seq*0.0011,rimSeed);
+  /* Relief goes in before the paint so a single terrainDirty below carries the
+     colour AND the height sheet for the same window. */
+  creepStampRelief(cx,cy,rr,rr*.86,seq*0.0011,rimSeed,links,k);
   if(terrainBase) paint(terrainBase.getContext('2d'));
   paint(terrainCanvas.getContext('2d'));
   out.world=Math.max(out.world,far*1.1);

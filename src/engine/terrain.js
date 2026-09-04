@@ -106,7 +106,23 @@ function uploadHeightTex(x0,y0,x1,y1){
   x0=clamp(x0|0,0,TS); y0=clamp(y0|0,0,TS); x1=clamp(Math.ceil(x1),0,TS); y1=clamp(Math.ceil(y1),0,TS);
   const w=x1-x0, h=y1-y0; if(w<=0||h<=0) return;
   const buf=new Float32Array(w*h);
-  for(let y=0;y<h;y++) for(let x=0;x<w;x++) buf[y*w+x]=terrainWorldH(x0+x,y0+y);
+  /* Creep rides on top of the terrain's own height, never inside heightF: this
+     sheet is what the ground shader central-differences for per-pixel normals,
+     so adding here gives Brood biomass real relief and a rolled rim while PASS,
+     slope and pathing keep reading clean ground. */
+  /* Two loops, not one with a branch: this runs for every combat crater as
+     well as every foundation, and a match with no Brood should not pay a
+     per-texel test for a field it never allocated. */
+  const cf=(typeof creepF!=='undefined')?creepF:null;
+  if(cf){
+    const st=CREEP_STEP;
+    for(let y=0;y<h;y++){
+      const row=(y0+y)*TS;
+      for(let x=0;x<w;x++) buf[y*w+x]=terrainWorldH(x0+x,y0+y)+cf[row+x0+x]*st;
+    }
+  }else{
+    for(let y=0;y<h;y++) for(let x=0;x<w;x++) buf[y*w+x]=terrainWorldH(x0+x,y0+y);
+  }
   /* Height lives on unit 10 in the terrain pass. Combat craters upload from
      the sim tick, which can land while TEXTURE0 still holds the material
      atlas. bindTexture(null) on the active unit was the adboards strobe:
