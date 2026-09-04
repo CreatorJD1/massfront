@@ -5838,6 +5838,90 @@ function makeFoundation(B){
    Production used to share one 9-vein ellipse. At tactical zoom that skirt
    WAS the silhouette — birth-maw, U-slip and runway all read as mounds.
    Per-type beds keep the soil colonised without unifying the plan. */
+/* A corrupted rim, not a jittered circle.
+ *
+ * Three harmonics give real lobes; a notch chance bites chunks out of the rim;
+ * a rarer spike throws a tendril well past the radius. Radii are precomputed
+ * so the first and last vertex agree and the shape closes without a seam, then
+ * smoothed once — raw per-vertex spikes read as static, a smoothed rim reads as
+ * grown tissue while keeping the tendrils. */
+function organicRimPath(ctx,ox,oy,rx,ry,rnd,seedA){
+  const N=72,r=new Float32Array(N),s=new Float32Array(N);
+  for(let n=0;n<N;n++){
+    const a=n/N*TAU;
+    let v=1
+      +Math.sin(a*2.0+seedA)*0.19
+      +Math.sin(a*3.7-seedA*1.7)*0.12
+      +Math.sin(a*7.3+seedA*0.6)*0.06;
+    const d=rnd();
+    if(d>0.90) v-=0.18+rnd()*0.18;
+    else if(d>0.855) v+=0.30+rnd()*0.50;
+    r[n]=Math.max(0.28,v);
+  }
+  for(let n=0;n<N;n++) s[n]=(r[(n+N-1)%N]+r[n]*2+r[(n+1)%N])*0.25;
+  ctx.beginPath();
+  for(let n=0;n<=N;n++){
+    const i=n%N,a=i/N*TAU;
+    const x=ox+Math.cos(a)*rx*s[i],y=oy+Math.sin(a)*ry*s[i];
+    if(!n)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+  }
+  ctx.closePath();
+}
+/* Seeded generator, so a shape can be regenerated identically — the creep rim
+   and the mask cut it eats have to be the same outline. */
+function organicRnd(s){let v=s|0;return()=>{v=(Math.imul(v,1664525)+1013904223)|0;return(v>>>8)/16777216;};}
+/* Claim the ground the creep covers, in the creep's own shape.
+ *
+ * The hardscape mask decides where the painted terrain is what you see: inside
+ * it the procedural grass, relief and crack layers stand down; outside it they
+ * re-assert and wash painted ground out. Brood structures pour nothing, so the
+ * only masked ground under a colony was whatever plaza the map already had —
+ * and that is why the infestation kept ending on straight edges however
+ * organic the paint was. It was not the creep's outline being boxy; it was the
+ * creep only being visible inside somebody else's rectangle.
+ *
+ * (Cutting the mask instead was tried first and is exactly wrong: it hands the
+ * ground back to the procedural layers and erases the creep with it.)
+ *
+ * Stamped with the same corrupted rim the field is painted with, so the
+ * infestation ends where the tissue ends. Visual only — paveCanvas, the
+ * authoritative record of poured surfaces, is untouched, so nothing here
+ * changes buildability or pathing. */
+function organicStampMask(cx,cy,rx,ry,seedA,seedI){
+  if(!groundMaskCanvas) return;
+  const pad=Math.ceil(Math.max(rx,ry)*1.8)+4;
+  const sx=clamp(Math.floor(cx-pad),0,TS-1),sy=clamp(Math.floor(cy-pad),0,TS-1);
+  const w=Math.max(1,Math.min(TS-sx,Math.ceil(pad*2))),h=Math.max(1,Math.min(TS-sy,Math.ceil(pad*2)));
+  const g=groundMaskCanvas.getContext('2d');
+  g.save();
+  g.globalCompositeOperation='lighten';
+  organicRimPath(g,cx,cy,rx,ry,organicRnd(seedI),seedA);
+  g.fillStyle='#fff';g.fill();
+  g.restore();
+  if(typeof mmBg!=='undefined') mmBg=null;
+  if(groundMaskTex){
+    const t2=document.createElement('canvas');t2.width=w;t2.height=h;
+    t2.getContext('2d').drawImage(groundMaskCanvas,sx,sy,w,h,0,0,w,h);
+    gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
+    gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RED,gl.UNSIGNED_BYTE,t2);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
+  }
+}
+/* Branching tendrils. Veins taper and fork rather than radiating as straight
+   spokes, which is the difference between tissue and a sunburst. */
+function organicVein(ctx,x,y,a,len,w,depth,rnd){
+  if(depth<=0||len<2.5) return;
+  const bend=a+(rnd()-0.5)*0.85;
+  const x2=x+Math.cos(a)*len,y2=y+Math.sin(a)*len*0.86;
+  ctx.lineWidth=Math.max(0.45,w);
+  ctx.beginPath();ctx.moveTo(x,y);
+  ctx.quadraticCurveTo(x+Math.cos(bend)*len*0.55,y+Math.sin(bend)*len*0.5,x2,y2);
+  ctx.stroke();
+  const forks=rnd()>0.48?2:1;
+  for(let i=0;i<forks;i++)
+    organicVein(ctx,x2,y2,a+(rnd()-0.5)*1.2,len*(0.48+rnd()*0.24),w*0.62,depth-1,rnd);
+}
 function makeOrganicFoundation(B){
   const fr=foundationRect(B),kind=B.type;
   const rad=kind==='airfield'?Math.max(fr[0],fr[1])*.22
@@ -5846,7 +5930,12 @@ function makeOrganicFoundation(B){
            :Math.max(fr[0],fr[1])*.48;
   const hw=kind==='airfield'?fr[0]*.18:kind==='harbor'?fr[0]*.28:kind==='fac'?fr[0]*.24:fr[0]*.32;
   const hh=kind==='airfield'?fr[1]*.12:kind==='harbor'?fr[1]*.30:kind==='fac'?fr[1]*.24:fr[1]*.32;
-  flattenGroundRect(B.x,B.y,hw,hh,rad*.30);
+  /* Radial, not rectangular. flattenGroundRect stamped a flat RECTANGLE into
+     heightF, and lighting across that plateau drew a hard box under every
+     Brood structure no matter how organic the paint on top of it was. The
+     Brood does not pour a pad; it settles into the soil, so level a disc with
+     a wide feather and let the ground keep its shape around it. */
+  flattenGround(B.x,B.y,Math.max(hw,hh)*0.86,rad*0.95);
   if(!terrainCanvas) return;
   const k=TS/MAP,cx=B.x*k,cy=B.y*k,rr=Math.max(8,rad*k);
   const seed=((B.x*19+B.y*31+B.type.length*97)|0)>>>0,rot=B.rot||0;
@@ -5854,18 +5943,31 @@ function makeOrganicFoundation(B){
     ctx.save();
     let bs=seed|0;const brn=()=>{bs=(Math.imul(bs,1664525)+1013904223)|0;return(bs>>>8)/16777216;};
     ctx.translate(cx,cy);ctx.rotate(rot);
+    /* The old bed was a 16-segment ring at +/-16% jitter whose gradient was
+       then filled with a literal ctx.ellipse, so whatever the colour did the
+       silhouette stayed a disc. Now the rim is genuinely corrupted and the
+       gradient is CLIPPED to that rim, so the shape drives the shading instead
+       of a circle being laid over it. Veins are drawn last, inside the clip,
+       because tissue is what separates a growth from a stain. */
     const bed=(ox,oy,rx,ry,a0)=>{
-      ctx.fillStyle='rgba(38,36,28,.42)';ctx.beginPath();
-      for(let n=0;n<=16;n++){
-        const a=n/16*TAU,r=1.0+brn()*.16,x=ox+Math.cos(a)*rx*r,y=oy+Math.sin(a)*ry*r;
-        if(!n)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-      }
-      ctx.closePath();ctx.fill();
-      const g=ctx.createRadialGradient(ox,oy,Math.min(rx,ry)*.14,ox,oy,Math.max(rx,ry)*1.12);
-      g.addColorStop(0,'rgba(108,48,70,'+(a0||.72)+')');
-      g.addColorStop(.55,'rgba(74,54,42,.52)');
+      ctx.save();
+      organicRimPath(ctx,ox,oy,rx,ry,brn,seed*0.0007+ox*0.01);
+      ctx.fillStyle='rgba(38,36,28,.42)';ctx.fill();
+      ctx.clip();
+      const g=ctx.createRadialGradient(ox,oy,Math.min(rx,ry)*.12,ox,oy,Math.max(rx,ry)*1.22);
+      g.addColorStop(0,'rgba(112,44,70,'+(a0||.72)+')');
+      g.addColorStop(.42,'rgba(88,44,58,.58)');
+      g.addColorStop(.74,'rgba(72,56,42,.42)');
       g.addColorStop(1,'rgba(54,72,38,0)');
-      ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(ox,oy,rx,ry,0,0,TAU);ctx.fill();
+      ctx.fillStyle=g;ctx.fillRect(ox-rx*2,oy-ry*2,rx*4,ry*4);
+      ctx.strokeStyle='rgba(44,18,30,.40)';ctx.lineCap='round';
+      const R=Math.max(rx,ry);
+      for(let v=0;v<7;v++)
+        organicVein(ctx,ox,oy,brn()*TAU,R*(.34+brn()*.30),Math.max(.9,R*.055),3,brn);
+      ctx.strokeStyle='rgba(152,190,76,.20)';
+      for(let v=0;v<4;v++)
+        organicVein(ctx,ox,oy,brn()*TAU,R*(.30+brn()*.26),Math.max(.6,R*.022),2,brn);
+      ctx.restore();
     };
     const spots=(n,ox,oy,spread)=>{
       for(let i=0;i<n;i++){
@@ -5977,32 +6079,37 @@ function organicSpreadPaint(B,bedRad){
   /* Seeded off position and type so a rebuilt structure grows the same creep
      it had before, rather than reshuffling the ground under the player. */
   const seq=((B.x*7919+B.y*104729+String(B.type).length*613)|0)>>>0;
+  /* One seed for the rim, separate from the scatter, so the mask cut below can
+     reproduce exactly the outline the creep was painted with. */
+  const rimSeed=(seq^0x5bf03635)|0;
   const paint=ctx=>{
-    let s2=seq|0;const r2=()=>{s2=(Math.imul(s2,1664525)+1013904223)|0;return(s2>>>8)/16777216;};
+    const r2=organicRnd(seq|0);
     ctx.save();
     /* Colonised field: an irregular lobed edge, never a circle. A ring of
        discs reads as a stamp the moment two of them overlap. */
-    ctx.beginPath();
-    for(let n=0;n<=28;n++){
-      const a=n/28*TAU;
-      const lobe=1+Math.sin(a*3+seq*.001)*.13+Math.sin(a*5.5+seq*.003)*.07+r2()*.09;
-      const x=cx+Math.cos(a)*rr*lobe,y=cy+Math.sin(a)*rr*lobe*.86;
-      if(!n)ctx.moveTo(x,y);else ctx.lineTo(x,y);
-    }
-    ctx.closePath();
+    /* Same corrupted rim as the bed, and the gradient is clipped to it rather
+       than painted as a disc over the top — the field's edge is the first
+       thing that reads at command zoom, and a smooth ellipse there undoes
+       every irregular detail inside it. */
+    organicRimPath(ctx,cx,cy,rr,rr*.86,organicRnd(rimSeed),seq*0.0011);
+    ctx.clip();
     const g=ctx.createRadialGradient(cx,cy,rr*.10,cx,cy,rr);
     /* Dense at the organism, thin at the rim. A flat wash across the whole
        radius tinted the ground pink and left the plaza grid reading straight
        through it, which looks like painted concrete rather than tissue. */
-    g.addColorStop(0,'rgba(88,34,54,.70)');
-    g.addColorStop(.30,'rgba(80,40,52,.52)');
-    g.addColorStop(.62,'rgba(66,54,44,.26)');
-    g.addColorStop(.88,'rgba(58,68,40,.10)');
+    /* Near-opaque at the core. The hardscape mask has to stay — inside it the
+       procedural grass and relief layers stand down and the painted terrain is
+       what shows, so cutting the mask erased the creep instead of the plaza.
+       That means the grid underneath is consumed by paint or not at all. */
+    g.addColorStop(0,'rgba(78,26,46,.97)');
+    g.addColorStop(.34,'rgba(72,30,46,.90)');
+    g.addColorStop(.66,'rgba(64,44,42,.62)');
+    g.addColorStop(.88,'rgba(58,64,40,.22)');
     g.addColorStop(1,'rgba(54,72,38,0)');
-    ctx.fillStyle=g;ctx.fill();
+    ctx.fillStyle=g;ctx.fillRect(cx-rr*2,cy-rr*2,rr*4,rr*4);
     /* Irregular darker plaques over the inner field. These are what break up
        any straight edge underneath -- a gradient alone cannot hide a grid. */
-    for(let i=0;i<14;i++){
+    for(let i=0;i<22;i++){
       const a=r2()*TAU,t=Math.pow(r2(),.55),dd=rr*t*.72;
       const px=cx+Math.cos(a)*dd,py=cy+Math.sin(a)*dd*.86;
       const px2=rr*(.13+r2()*.20),py2=px2*(.62+r2()*.5);
@@ -6029,15 +6136,16 @@ function organicSpreadPaint(B,bedRad){
       }
     }
     /* Capillaries: short veins crawling outward from the core. */
-    for(let n=0;n<11;n++){
-      const a=n/11*TAU+r2()*.34,reachN=rr*(.46+r2()*.48),bend=a+(r2()-.5)*.9;
-      ctx.strokeStyle='rgba(58,26,40,'+(.26+r2()*.14).toFixed(3)+')';
-      ctx.lineWidth=Math.max(.8,rr*(.008+r2()*.010));
-      ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*rr*.12,cy+Math.sin(a)*rr*.10);
-      ctx.quadraticCurveTo(cx+Math.cos(bend)*reachN*.55,cy+Math.sin(bend)*reachN*.48,
-                           cx+Math.cos(a)*reachN,cy+Math.sin(a)*reachN*.86);
-      ctx.stroke();
-    }
+    /* Branching capillaries across the field. Straight spokes read as a
+       sunburst; forked tendrils read as something that grew outward. */
+    ctx.lineCap='round';
+    ctx.strokeStyle='rgba(52,22,36,.34)';
+    for(let n=0;n<9;n++)
+      organicVein(ctx,cx+Math.cos(n/9*TAU)*rr*.14,cy+Math.sin(n/9*TAU)*rr*.12,
+        n/9*TAU+(r2()-.5)*.5,rr*(.30+r2()*.26),Math.max(.9,rr*.030),3,r2);
+    ctx.strokeStyle='rgba(150,188,74,.16)';
+    for(let n=0;n<5;n++)
+      organicVein(ctx,cx,cy,r2()*TAU,rr*(.28+r2()*.24),Math.max(.6,rr*.013),3,r2);
     /* Veins to neighbours: a dark fleshy sheath, then a bright living core, so
        the link reads as tissue rather than as a drawn line. */
     for(const [d,O] of links){
@@ -6059,6 +6167,9 @@ function organicSpreadPaint(B,bedRad){
     }
     ctx.restore();
   };
+  /* Claim the ground first, then paint it: the stamp is what lets the creep
+     read past whatever plaza the map happened to put here. */
+  organicStampMask(cx,cy,rr,rr*.86,seq*0.0011,rimSeed);
   if(terrainBase) paint(terrainBase.getContext('2d'));
   paint(terrainCanvas.getContext('2d'));
   out.world=Math.max(out.world,far*1.1);
