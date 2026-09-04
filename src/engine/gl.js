@@ -5919,14 +5919,151 @@ function makeOrganicFoundation(B){
     }
     ctx.restore();
   };
+  /* Colonised soil goes down FIRST so the bed above reads as the dense core of
+     an infested patch rather than a separate disc sitting on top of it. */
+  const spread=organicSpreadPaint(B,rad);
   if(terrainBase) paint(terrainBase.getContext('2d'));
   paint(terrainCanvas.getContext('2d'));
   restampResourceNodesInTex(clamp(Math.floor(cx-rr*1.4),0,TS-1),clamp(Math.floor(cy-rr*1.4),0,TS-1),
     Math.min(TS,rr*2.8),Math.min(TS,rr*2.8));
   const ext=kind==='harbor'?1.55:kind==='airfield'?1.15:1.25;
-  const sx=clamp(Math.floor(cx-rr*ext),0,TS-1),sy=clamp(Math.floor(cy-rr*ext),0,TS-1);
-  uploadTerrainTexRegion(sx,sy,Math.min(TS-sx,rr*ext*2),Math.min(TS-sy,rr*ext*2),MF_TERRAIN_MIP_FOUNDATION);
-  terrainDirty(B.x,B.y,rad*1.35);
+  /* The upload window has to cover the colonised field and any vein reaching a
+     neighbour, or the creep paints into the canvas and never reaches the GPU —
+     visible as infestation that only appears after some unrelated terrain
+     event happens to re-upload that tile. */
+  const wantPx=Math.max(rr*ext,spread.px);
+  const sx=clamp(Math.floor(cx-wantPx),0,TS-1),sy=clamp(Math.floor(cy-wantPx),0,TS-1);
+  uploadTerrainTexRegion(sx,sy,Math.min(TS-sx,wantPx*2),Math.min(TS-sy,wantPx*2),MF_TERRAIN_MIP_FOUNDATION);
+  terrainDirty(B.x,B.y,Math.max(rad*1.35,spread.world));
+}
+/* How far a single organism colonises, and how far a vein will reach for a
+   neighbour. Both in world units. */
+const ORGANIC_SPREAD_MUL=1.75, ORGANIC_VEIN_R=340;
+/* An organism does not stop at its own skirt.
+ *
+ * Every Brood structure colonises the soil around it and grows veins toward
+ * its nearest neighbours, so a Brood base reads as one infested territory
+ * instead of flesh mounds parked on somebody else's grey apron — which is
+ * exactly how it looked next to the shared concrete pad every other faction
+ * pours.
+ *
+ * Painted once at placement into terrainBase as well as the live canvas, so a
+ * later crater rebuilds infested ground rather than clean soil. Nothing here
+ * runs per frame. Nothing here touches heightF or PASS either: creep is a
+ * surface the Brood grows over the ground, not terrain the pathfinder has to
+ * re-solve, and flattening a radius this wide would carve visible plateaus out
+ * of the landscape and re-open the passability problems foundations already
+ * fight. Returns the painted extent so the caller can size its upload window.
+ */
+function organicSpreadPaint(B,bedRad){
+  const out={world:bedRad*1.35,px:0};
+  if(!terrainCanvas) return out;
+  const fr=foundationRect(B);
+  const reach=Math.max(fr[0],fr[1])*ORGANIC_SPREAD_MUL;
+  const k=TS/MAP,cx=B.x*k,cy=B.y*k,rr=Math.max(12,reach*k);
+  /* Nearest two, the same rule the conduit spine uses: linking every organism
+     to every other draws a lattice, and a colony grows as a spine with spurs. */
+  const cands=[];
+  for(const O of blds){
+    if(O===B||!O.alive||O.team!==B.team) continue;
+    if(String(O.fac||'')!=='horde') continue;
+    const d=Math.sqrt(dist2(B.x,B.y,O.x,O.y));
+    if(d>1&&d<=ORGANIC_VEIN_R) cands.push([d,O]);
+  }
+  cands.sort((a,b2)=>a[0]-b2[0]);
+  const links=cands.slice(0,2);
+  let far=reach;
+  for(const [d] of links) far=Math.max(far,d+reach*0.35);
+  /* Seeded off position and type so a rebuilt structure grows the same creep
+     it had before, rather than reshuffling the ground under the player. */
+  const seq=((B.x*7919+B.y*104729+String(B.type).length*613)|0)>>>0;
+  const paint=ctx=>{
+    let s2=seq|0;const r2=()=>{s2=(Math.imul(s2,1664525)+1013904223)|0;return(s2>>>8)/16777216;};
+    ctx.save();
+    /* Colonised field: an irregular lobed edge, never a circle. A ring of
+       discs reads as a stamp the moment two of them overlap. */
+    ctx.beginPath();
+    for(let n=0;n<=28;n++){
+      const a=n/28*TAU;
+      const lobe=1+Math.sin(a*3+seq*.001)*.13+Math.sin(a*5.5+seq*.003)*.07+r2()*.09;
+      const x=cx+Math.cos(a)*rr*lobe,y=cy+Math.sin(a)*rr*lobe*.86;
+      if(!n)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    const g=ctx.createRadialGradient(cx,cy,rr*.10,cx,cy,rr);
+    /* Dense at the organism, thin at the rim. A flat wash across the whole
+       radius tinted the ground pink and left the plaza grid reading straight
+       through it, which looks like painted concrete rather than tissue. */
+    g.addColorStop(0,'rgba(88,34,54,.70)');
+    g.addColorStop(.30,'rgba(80,40,52,.52)');
+    g.addColorStop(.62,'rgba(66,54,44,.26)');
+    g.addColorStop(.88,'rgba(58,68,40,.10)');
+    g.addColorStop(1,'rgba(54,72,38,0)');
+    ctx.fillStyle=g;ctx.fill();
+    /* Irregular darker plaques over the inner field. These are what break up
+       any straight edge underneath -- a gradient alone cannot hide a grid. */
+    for(let i=0;i<14;i++){
+      const a=r2()*TAU,t=Math.pow(r2(),.55),dd=rr*t*.72;
+      const px=cx+Math.cos(a)*dd,py=cy+Math.sin(a)*dd*.86;
+      const px2=rr*(.13+r2()*.20),py2=px2*(.62+r2()*.5);
+      ctx.fillStyle='rgba(74,30,48,'+(.30-t*.16).toFixed(3)+')';
+      ctx.beginPath();
+      for(let n=0;n<=12;n++){
+        const aa=n/12*TAU,wob=1+Math.sin(aa*3+i)*.22+r2()*.14;
+        const qx=px+Math.cos(aa)*px2*wob,qy=py+Math.sin(aa)*py2*wob;
+        if(!n)ctx.moveTo(qx,qy);else ctx.lineTo(qx,qy);
+      }
+      ctx.closePath();ctx.fill();
+    }
+    /* Pustules and pores, denser toward the organism. */
+    for(let i=0;i<46;i++){
+      const a=r2()*TAU,t=Math.pow(r2(),.7),dd=rr*t*.95;
+      const px=cx+Math.cos(a)*dd,py=cy+Math.sin(a)*dd*.86;
+      const sz=rr*(.006+r2()*.022)*(1.25-t*.5);
+      ctx.fillStyle='rgba(126,64,88,'+(.30-t*.16).toFixed(3)+')';
+      ctx.beginPath();ctx.arc(px,py,sz,0,TAU);ctx.fill();
+      if(r2()>.72){
+        ctx.strokeStyle='rgba(178,224,92,'+(.20-t*.10).toFixed(3)+')';
+        ctx.lineWidth=Math.max(.5,sz*.22);
+        ctx.beginPath();ctx.arc(px,py,sz*1.5,0,TAU);ctx.stroke();
+      }
+    }
+    /* Capillaries: short veins crawling outward from the core. */
+    for(let n=0;n<11;n++){
+      const a=n/11*TAU+r2()*.34,reachN=rr*(.46+r2()*.48),bend=a+(r2()-.5)*.9;
+      ctx.strokeStyle='rgba(58,26,40,'+(.26+r2()*.14).toFixed(3)+')';
+      ctx.lineWidth=Math.max(.8,rr*(.008+r2()*.010));
+      ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*rr*.12,cy+Math.sin(a)*rr*.10);
+      ctx.quadraticCurveTo(cx+Math.cos(bend)*reachN*.55,cy+Math.sin(bend)*reachN*.48,
+                           cx+Math.cos(a)*reachN,cy+Math.sin(a)*reachN*.86);
+      ctx.stroke();
+    }
+    /* Veins to neighbours: a dark fleshy sheath, then a bright living core, so
+       the link reads as tissue rather than as a drawn line. */
+    for(const [d,O] of links){
+      const ox=O.x*k,oy=O.y*k;
+      const mx=(cx+ox)/2,my=(cy+oy)/2;
+      const nx=-(oy-cy),ny=(ox-cx),nl=Math.hypot(nx,ny)||1;
+      const sag=(r2()-.5)*d*k*.22;
+      const bx=mx+nx/nl*sag,by=my+ny/nl*sag;
+      const w=Math.max(2.5,rr*.13);
+      ctx.lineCap='round';
+      /* Sheath, muscle, then a thin living core. Screen blending the core blew
+         it out to white rope over pale ground and read as a stray UI line. */
+      ctx.strokeStyle='rgba(44,20,32,.52)';ctx.lineWidth=w;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(bx,by,ox,oy);ctx.stroke();
+      ctx.strokeStyle='rgba(104,42,64,.46)';ctx.lineWidth=w*.58;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(bx,by,ox,oy);ctx.stroke();
+      ctx.strokeStyle='rgba(146,182,74,.22)';ctx.lineWidth=Math.max(.8,w*.14);
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(bx,by,ox,oy);ctx.stroke();
+    }
+    ctx.restore();
+  };
+  if(terrainBase) paint(terrainBase.getContext('2d'));
+  paint(terrainCanvas.getContext('2d'));
+  out.world=Math.max(out.world,far*1.1);
+  out.px=Math.max(rr*1.25,far*k*1.1);
+  return out;
 }
 /* Rectangular levelling to match the rectangular apron: dead flat across the
    pad, feathered outside it so the platform meets the surrounding slope
