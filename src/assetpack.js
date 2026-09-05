@@ -320,22 +320,77 @@ async function packAdoptInstalledOffers(){
   if(changed) await packPersistActive(raw);
   return changed;
 }
+/* The mirror's pack catalog can drift from the origin's.
+ *
+ * packEndpoint() is derived from UPDATE_URL, which now points at the Cloudflare
+ * worker. The worker mirrors release payloads; its packs.json is maintained
+ * separately and had fallen behind -- it listed music (15 files) and no voice
+ * pack at all, while the origin listed music (11 files) AND voice (324 files,
+ * 5.2 MB). The launcher advertised "voices + music, 21 MB" from the combined
+ * total, so a player was offered content the client could not even see, and the
+ * download did nothing.
+ *
+ * Merge, do not replace: an endpoint entry stays authoritative for its id
+ * (it is the faster mirror), and packs the endpoint has never heard of are
+ * added with an explicit baseUrl so their bytes are fetched from the place
+ * that actually has them. packFileUrl already honours a per-pack baseUrl --
+ * the exploration pack uses the same mechanism -- and the origin serves the
+ * same <base>/pack/<id>/<file> layout the generic fallback builds.
+ *
+ * Best-effort and non-fatal: a failure here leaves the endpoint catalog
+ * exactly as it was. */
+const PACK_ORIGIN_BASE='https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main';
+const PACK_ORIGIN_QUERY='?download=true';
+async function packMergeOriginCatalog(merged){
+  try{
+    const endpoint=(typeof packEndpoint==='function'&&packEndpoint())||'';
+    if(endpoint&&endpoint.replace(/\/$/,'')===PACK_ORIGIN_BASE) return merged;
+    const r=await fetch(PACK_ORIGIN_BASE+'/packs.json'+PACK_ORIGIN_QUERY+'&t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return merged;
+    const origin=await r.json();
+    const have=(merged&&merged.packs)||{};
+    const theirs=(origin&&origin.packs)||{};
+    const add={};
+    for(const id in theirs){
+      if(have[id]||!packValidId(id)) continue;
+      const pack=theirs[id];
+      if(!pack||!Array.isArray(pack.files)||!pack.files.length) continue;
+      add[id]={...pack,
+        baseUrl:PACK_ORIGIN_BASE+'/pack/'+encodeURIComponent(id)+'/',
+        downloadQuery:PACK_ORIGIN_QUERY};
+    }
+    const ids=Object.keys(add);
+    if(!ids.length) return merged;
+    if(typeof console!=='undefined'&&console.info)
+      console.info('[pack] origin supplied '+ids.length+' pack(s) the endpoint does not list: '+ids.join(', '));
+    return {...merged,packs:{...add,...have}};
+  }catch(e){ return merged; }
+}
 async function packLoadIndex(){
   if(PACK.busy&&PACK.idx) return PACK.idx;
   const cached=await packLoadCachedIndex();
   if(typeof netAllowed==='function' && !netAllowed()) return cached;
   const base = packEndpoint();
-  if(!base) return cached;
   try{
-    const r = await fetch(base + '/packs.json?t=' + Date.now(), {cache:'no-store'});
-    if(!r.ok) return cached;
-    const j = await r.json();
+    /* No endpoint is not the same as no catalog. packEndpoint() is derived from
+       UPDATE_URL, which is null until the updater resolves a channel, and it
+       stays null for a build with no update service at all -- both cases used
+       to return here and leave the player with no optional content whatsoever.
+       The origin merge below can supply the whole catalog on its own. */
+    let j=null;
+    if(base){
+      const r = await fetch(base + '/packs.json?t=' + Date.now(), {cache:'no-store'});
+      if(r.ok) j = await r.json();
+    }
+    if(!j) j={packs:{}};
     let merged=j;
     try{
       const prior=PACK.rawIndex&&PACK.rawIndex.packs?PACK.rawIndex.packs:{};
       const local=Object.fromEntries(Object.entries(prior).filter(([,pack])=>pack&&pack.localRegistration));
       merged={...j,packs:{...local,...j.packs}}; // an official endpoint entry supersedes a local registration.
     }catch(e){}
+    merged=await packMergeOriginCatalog(merged);
+    if(!merged||!merged.packs||!Object.keys(merged.packs).length) return cached;
     PACK.idx = packNormalizeIndex(merged);PACK.rawIndex=merged;
     /* The offer is durable for interrupted downloads, but it is not the mount
        pointer. packPersistActive() is the sole authority transition. */
@@ -459,11 +514,15 @@ async function packStoredChunk(pack,file,chunk){
   const value=await packStoreGet(PACK_CHUNK_STORE,packChunkKey(pack,file,chunk));
   const blob=packStoredBlob(value);
   if(!blob||blob.size!==chunk.size) return null;
-  if(chunk.sha256){
+  const expected=chunk.sha256||packHash(value&&value.sha256);
+  if(expected){
     /* IDB is durable, not an integrity oracle. A killed or externally damaged
        record can retain its old metadata, so always re-hash persisted chunks
-       before resuming instead of trusting value.sha256. */
-    if(await packHashBlob(blob,chunk.size)!==chunk.sha256) return null;
+       before resuming. Format-1 manifests have only a whole-file authority;
+       their locally recorded chunk hash still lets us discard one damaged
+       partial instead of assembling it, failing the whole hash, and throwing
+       away every otherwise-good chunk in a large download. */
+    if(await packHashBlob(blob,chunk.size)!==expected) return null;
   }
   return blob;
 }
@@ -518,6 +577,19 @@ async function packStoragePreflight(pack,missing){
     const available=Number.isFinite(quota)?Math.max(0,quota-usage):null;
     return {ok:available===null||available>=required,supported:true,pack,required,available,quota,usage};
   }catch(e){return {ok:true,supported:false,pack,required,available:null,quota:null,usage:null};}
+}
+async function packRequestPersistence(preflight){
+  const storage=typeof navigator!=='undefined'&&navigator.storage;
+  if(!storage) return {...preflight,persisted:null};
+  let persisted=null;
+  try{
+    if(typeof storage.persisted==='function') persisted=!!(await storage.persisted());
+    /* Pack installation is initiated by the player's explicit download action,
+       the best opportunity browsers provide to protect a large verified pack
+       from pressure eviction. Denial is advisory and never blocks offline play. */
+    if(!persisted&&typeof storage.persist==='function') persisted=!!(await storage.persist());
+  }catch(e){}
+  return {...preflight,persisted};
 }
 async function packClearChunks(pack,file){await packDeletePrefix(PACK_CHUNK_STORE,packChunkPrefix(pack,file));}
 function packDropURL(pack,name){
@@ -720,7 +792,7 @@ async function packInstallPack(pack,options={}){
       PACK.state='error';PACK.err='Optional content is unavailable while offline';
       return {ok:false,reason:'offline'};
     }
-    const storage=await packStoragePreflight(pack,plan);PACK.storage=storage;
+    const storage=await packRequestPersistence(await packStoragePreflight(pack,plan));PACK.storage=storage;
     if(!storage.ok){
       PACK.state='error';PACK.err='Not enough storage for this optional pack';
       return {ok:false,reason:'storage',storage};
@@ -1049,6 +1121,15 @@ function expPackJoin(base, rel){
   const path=String(rel||'').replace(/^\/+/,'');
   return root+path.split('/').map(encodeURIComponent).join('/');
 }
+/* Directory of a manifest URL, query stripped. Files listed by a manifest are
+   siblings of it, so this is how the two are kept on one origin. */
+function expPackBaseOf(u){
+  const str=String(u||'');
+  if(!str) return '';
+  const cut=str.indexOf('?'),path=cut<0?str:str.slice(0,cut);
+  const slash=path.lastIndexOf('/');
+  return slash<0?'':path.slice(0,slash+1);
+}
 async function mfExplorationRemoteSpec(){
   let stub=null;
   try{
@@ -1056,11 +1137,18 @@ async function mfExplorationRemoteSpec(){
     if(r.ok) stub=await r.json();
   }catch(e){}
   const endpoint=(typeof packEndpoint==='function'&&packEndpoint())||'';
-  const base=endpoint
-    ? endpoint.replace(/\/$/,'')+'/exploration-pack/'
-    : String(stub&&stub.base||'');
+  const endpointBase=endpoint?endpoint.replace(/\/$/,'')+'/exploration-pack/':'';
+  /* The manifest and the files it lists MUST come from the same place.
+     These two lines used to disagree: manifest preferred the stub while base
+     preferred packEndpoint(), which is derived from UPDATE_URL. Once UPDATE_URL
+     moved to the Cloudflare worker, base became a worker path that returns 404
+     for this pack -- the worker mirrors release payloads, not optional content.
+     The manifest still loaded from the stub's Hugging Face URL, so the install
+     registered and then failed on its first byte. Deriving base from the
+     manifest that actually resolved makes the two incapable of disagreeing. */
   const manifest=String(stub&&stub.manifest||'')
-    || (base?expPackJoin(base,'exploration-content-manifest-v1.json'):'');
+    || (endpointBase?expPackJoin(endpointBase,'exploration-content-manifest-v1.json'):'');
+  const base=expPackBaseOf(manifest)||String(stub&&stub.base||'')||endpointBase;
   const q=String(stub&&stub.downloadQuery||'');
   return {base,manifest,downloadQuery:q};
 }

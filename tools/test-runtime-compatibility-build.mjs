@@ -11,9 +11,11 @@ const www=join(root,'www');
 const packagedPath=join(www,'assets/data/runtime-compatibility.json');
 const otaPath=join(stage,'runtime-compatibility.json');
 
-function validateDescriptor(descriptor,readArtifact,label){
+function validateDescriptor(descriptor,readCanonical,readTransport,label){
   assert.equal(descriptor.schema,'massfront.runtime-compatibility',label+' schema');
   assert.equal(descriptor.schemaVersion,1,label+' schema version');
+  assert.equal(descriptor.identityScheme,'massfront.canonical-source.v1',label+' identity scheme');
+  assert.equal(descriptor.transportScheme,'massfront.emitted-bytes.v1',label+' transport scheme');
   assert.match(descriptor.buildVersion,/^\d+\.\d+\.\d+$/,label+' build version');
   assert.match(descriptor.manifestHash,/^[0-9a-f]{64}$/,label+' manifest hash');
   assert.match(descriptor.balanceHash,/^[0-9a-f]{64}$/,label+' balance hash');
@@ -23,30 +25,38 @@ function validateDescriptor(descriptor,readArtifact,label){
   for(const row of descriptor.manifestEntries){
     assert.ok(!paths.has(row.path),label+' duplicate '+row.path);
     paths.add(row.path);
-    assert.deepEqual(compatibilityEntry(row.path,readArtifact(row.path)),row,
-      label+' exact bytes '+row.path);
+    assert.deepEqual(compatibilityEntry(row.path,readCanonical(row.path)),row,
+      label+' canonical bytes '+row.path);
   }
   assert.equal(compatibilityRoot('massfront.runtime-manifest.v1',descriptor.manifestEntries),
     descriptor.manifestHash,label+' canonical manifest root');
   for(const row of descriptor.balanceEntries){
     assert.ok(paths.has(row.path),label+' balance path outside manifest '+row.path);
-    assert.deepEqual(compatibilityEntry(row.path,readArtifact(row.path)),row,
-      label+' exact balance bytes '+row.path);
+    assert.deepEqual(compatibilityEntry(row.path,readCanonical(row.path)),row,
+      label+' canonical balance bytes '+row.path);
   }
   assert.equal(compatibilityRoot('massfront.balance-authority.v1',descriptor.balanceEntries),
     descriptor.balanceHash,label+' canonical balance root');
+  for(const row of descriptor.transportManifestEntries)
+    assert.deepEqual(compatibilityEntry(row.path,readTransport(row.path)),row,label+' exact transport bytes '+row.path);
+  assert.equal(compatibilityRoot('massfront.runtime-manifest.v1',descriptor.transportManifestEntries),
+    descriptor.transportManifestHash,label+' transport manifest root');
+  for(const row of descriptor.transportBalanceEntries)
+    assert.deepEqual(compatibilityEntry(row.path,readTransport(row.path)),row,label+' exact transport balance bytes '+row.path);
+  assert.equal(compatibilityRoot('massfront.balance-authority.v1',descriptor.transportBalanceEntries),
+    descriptor.transportBalanceHash,label+' transport balance root');
 }
 
 assert.ok(existsSync(packagedPath),'run node tools/pack-www.mjs before this test');
 assert.ok(existsSync(otaPath),'run bundle-update with MASSFRONT_UPDATE_STAGE_DIR='+stage+' before this test');
 
 const packaged=JSON.parse(readFileSync(packagedPath,'utf8'));
-validateDescriptor(packaged,path=>readFileSync(join(www,path)),'packaged');
+validateDescriptor(packaged,path=>readFileSync(join(root,path)),path=>readFileSync(join(www,path)),'packaged');
 assert.ok(!packaged.manifestEntries.some(row=>row.path==='assets/data/runtime-compatibility.json'),
   'packaged descriptor must not hash itself');
 
 const ota=JSON.parse(readFileSync(otaPath,'utf8'));
-validateDescriptor(ota,path=>readFileSync(join(stage,path)),'ota');
+validateDescriptor(ota,path=>readFileSync(join(root,path)),path=>readFileSync(join(stage,path)),'ota');
 assert.ok(!ota.manifestEntries.some(row=>row.path==='ota/00-runtime.js'),
   'OTA descriptor carrier must not hash itself');
 const runtime=readFileSync(join(stage,'ota/00-runtime.js'),'utf8');
@@ -56,6 +66,10 @@ const end=runtime.indexOf(';\n(function(){',start);
 assert.ok(start>=0&&end>start,'OTA runtime global assignment missing');
 assert.deepEqual(JSON.parse(runtime.slice(start+prefix.length,end)),ota,
   'OTA runtime global and reproducibility sidecar differ');
+assert.equal(ota.manifestHash,packaged.manifestHash,'package and OTA must share canonical runtime identity');
+assert.equal(ota.balanceHash,packaged.balanceHash,'package and OTA must share canonical balance identity');
+assert.notEqual(ota.transportManifestHash,packaged.transportManifestHash,
+  'distinct package and OTA byte transports remain independently identified');
 
 /* Adversarial properties: order and every byte are binding; a presentation
    artifact cannot perturb the explicit balance authority, while an authority
@@ -80,6 +94,11 @@ const simTamper=buildRuntimeCompatibility({...spec,manifestArtifacts:[fixture[0]
   {path:'src/game/sim.js',bytes:Buffer.from('authoritY')}]});
 assert.notEqual(simTamper.manifestHash,a.manifestHash,'authority tamper must alter manifest');
 assert.notEqual(simTamper.balanceHash,a.balanceHash,'authority tamper must alter balance');
+const decorated=buildRuntimeCompatibility({...spec,canonicalArtifacts:fixture,manifestArtifacts:fixture.map(row=>({
+  path:row.path,bytes:Buffer.concat([row.bytes,Buffer.from('\ntransport stamp')])}))});
+assert.equal(decorated.manifestHash,a.manifestHash,'transport decoration cannot split canonical matchmaking identity');
+assert.equal(decorated.balanceHash,a.balanceHash,'transport decoration cannot split canonical balance identity');
+assert.notEqual(decorated.transportManifestHash,a.transportManifestHash,'transport decoration remains byte-visible');
 assert.throws(()=>compatibilityRoot('x',[compatibilityEntry('a',Buffer.from('1')),
   compatibilityEntry('a',Buffer.from('2'))]),/duplicate/,'duplicate path must fail closed');
 assert.throws(()=>compatibilityEntry('../escape',Buffer.alloc(0)),/normalized/,

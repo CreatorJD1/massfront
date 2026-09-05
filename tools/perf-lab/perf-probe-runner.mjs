@@ -15,14 +15,18 @@ import { join, resolve, extname, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { freemem, totalmem } from 'node:os';
 import {
   BENCHMARK_SCENARIOS,
+  BROOD_PROXY_DENSITY_PRESETS,
   POPULATION_LADDERS,
   benchmarkScenarioSupport
 } from './scenario-manifests.mjs';
 import {
   setupDeterministicScenario,
   collectAuthoritativePopulation,
+  collectBattlefieldTelemetry,
+  frameEvidenceCamera,
   injectCombatDirective
 } from './seeded-load-generator.mjs';
 import {
@@ -40,8 +44,11 @@ const LEGACY_PERF_ROOT = join(ROOT, 'tmp/perf-lab');
 const CURRENT_PERF_ROOT = join(LEGACY_PERF_ROOT, 'current');
 const METRICS_DIR = join(CURRENT_PERF_ROOT, 'metrics');
 const CAPTURES_DIR = join(CURRENT_PERF_ROOT, 'captures');
+const DIAGNOSTICS_DIR = join(CURRENT_PERF_ROOT, 'diagnostics');
 const LEGACY_CAPTURES_DIR = join(LEGACY_PERF_ROOT, 'captures');
 const DEFAULT_VIEWPORT = S25_VIEWPORT;
+const HOST_MEMORY_POINT_CAP = 600;
+const HOST_MEMORY_SAMPLE_INTERVAL_MS = 1000;
 /* Cursor owns Stage 10 and may save these authoring-only utilities while the
    game performance lane is running. They are not loaded by index/boot or by
    this probe. Keep watching every other repository path, bind evidence to the
@@ -114,6 +121,154 @@ export function parsePerformancePopulations(args = []) {
   return args.includes('--ladder') ? [...POPULATION_LADDERS] : [units];
 }
 
+export function parseBroodProxyDensity(args = []) {
+  const raw = valueAfter(args, '--proxy-density') || 'high';
+  if (!Object.prototype.hasOwnProperty.call(BROOD_PROXY_DENSITY_PRESETS, raw)) {
+    throw new Error(`--proxy-density must be one of: ${Object.keys(BROOD_PROXY_DENSITY_PRESETS).join(', ')}`);
+  }
+  return raw;
+}
+
+export function summarizeHostMemoryPressure({
+  before = null,
+  after = null,
+  points = [],
+  totalPointCount = points.length,
+  totalBytes = null,
+  observedFreeMinBytes = null,
+  observedFreeMaxBytes = null
+} = {}) {
+  const total = Number(totalBytes);
+  const retained = [before, ...points, after].filter(row => Number.isFinite(row?.freeBytes));
+  const retainedValues = retained.map(row => Number(row.freeBytes));
+  const freeMin = Number.isFinite(observedFreeMinBytes) ? Number(observedFreeMinBytes)
+    : (retainedValues.length ? Math.min(...retainedValues) : null);
+  const freeMax = Number.isFinite(observedFreeMaxBytes) ? Number(observedFreeMaxBytes)
+    : (retainedValues.length ? Math.max(...retainedValues) : null);
+  const threshold = Number.isFinite(total) && total > 0
+    ? Math.max(512 * 1024 * 1024, Math.round(total * 0.10)) : null;
+  return {
+    schema: 'massfront-host-memory-pressure-v1',
+    source: 'Node os.freemem()/os.totalmem() on the benchmark host',
+    sampleIntervalMs: HOST_MEMORY_SAMPLE_INTERVAL_MS,
+    pointCapacity: HOST_MEMORY_POINT_CAP,
+    periodicTotalCount: totalPointCount,
+    retainedPointCount: points.length,
+    totalBytes: Number.isFinite(total) ? total : null,
+    freeMinBytes: freeMin,
+    freeMaxBytes: freeMax,
+    pressureThresholdBytes: threshold,
+    pressure: Number.isFinite(freeMin) && Number.isFinite(threshold) ? freeMin < threshold : null,
+    before,
+    after,
+    points,
+    limitation: 'Host-wide free memory is a confounder signal, not Android-device memory, process RSS, GPU memory, or hardware emulation. OS cache accounting may change independently of MASSFRONT.'
+  };
+}
+
+function startHostMemoryMonitor() {
+  const startedAt = performance.now();
+  const totalBytes = totalmem();
+  const points = [];
+  let pointCursor = 0, totalPointCount = 0, freeMinBytes = Infinity, freeMaxBytes = -Infinity, stopped = false;
+  const read = kind => {
+    const freeBytes = freemem();
+    freeMinBytes = Math.min(freeMinBytes, freeBytes);
+    freeMaxBytes = Math.max(freeMaxBytes, freeBytes);
+    return { kind, elapsedMs: Math.round((performance.now() - startedAt) * 100) / 100, freeBytes };
+  };
+  const before = read('before');
+  const sample = () => {
+    const row = read('periodic');
+    totalPointCount++;
+    if (points.length < HOST_MEMORY_POINT_CAP) points.push(row);
+    else { points[pointCursor] = row; pointCursor = (pointCursor + 1) % HOST_MEMORY_POINT_CAP; }
+  };
+  const timer = setInterval(sample, HOST_MEMORY_SAMPLE_INTERVAL_MS);
+  timer.unref?.();
+  return {
+    stop() {
+      if (stopped) throw new Error('Host memory monitor was already stopped');
+      stopped = true; clearInterval(timer);
+      const after = read('after');
+      const ordered = points.length === HOST_MEMORY_POINT_CAP && totalPointCount > HOST_MEMORY_POINT_CAP
+        ? [...points.slice(pointCursor), ...points.slice(0, pointCursor)] : [...points];
+      return summarizeHostMemoryPressure({
+        before, after, points: ordered, totalPointCount, totalBytes,
+        observedFreeMinBytes: freeMinBytes, observedFreeMaxBytes: freeMaxBytes
+      });
+    }
+  };
+}
+
+function finiteRange(values) {
+  const finite = Array.isArray(values) ? values.filter(Number.isFinite) : [];
+  return {
+    sampleCount: finite.length,
+    min: finite.length ? Math.min(...finite) : null,
+    max: finite.length ? Math.max(...finite) : null
+  };
+}
+
+export function summarizeMeasurementCoverage(samples = {}, expectedTotal = null, admission = {}) {
+  const requested = Number(expectedTotal);
+  const attempted = Number(admission.attempted?.total);
+  const accepted = Number(admission.accepted?.total);
+  const postSettle = Number(admission.postSettle?.total);
+  const exact = Number.isFinite(requested) && attempted === requested && accepted === requested &&
+    postSettle === requested && admission.postSettle?.unmatched === 0;
+  const brood = {
+    realBodies: finiteRange(samples.realBroodUnits),
+    cameraVisibleBodies: finiteRange(samples.cameraVisibleBroodUnits),
+    visibleBodies: finiteRange(samples.visibleBroodUnits),
+    proxyBodies: finiteRange(samples.proxyBodies),
+    proxyClusters: finiteRange(samples.proxyClusters)
+  };
+  return {
+    admission: {
+      label: 'exact-authoritative-admission-before-measurement',
+      exact,
+      requested: Number.isFinite(requested) ? requested : null,
+      attempted: Number.isFinite(attempted) ? attempted : null,
+      accepted: Number.isFinite(accepted) ? accepted : null,
+      postSettle: Number.isFinite(postSettle) ? postSettle : null,
+      unmatched: Number.isFinite(admission.postSettle?.unmatched) ? admission.postSettle.unmatched : null
+    },
+    liveSample: {
+      label: 'live-authoritative-population-during-presented-frame-sample',
+      total: finiteRange(samples.totalUnits)
+    },
+    brood: {
+      label: 'live-brood-and-proxy-coverage-during-presented-frame-sample',
+      ...brood,
+      visibleRealBroodCovered: brood.visibleBodies.sampleCount > 0 && brood.visibleBodies.max > 0,
+      proxyTelemetryCovered: brood.proxyBodies.sampleCount > 0 || brood.proxyClusters.sampleCount > 0
+    }
+  };
+}
+
+export function cleanupDiagnosticCandidate(record, error) {
+  const measurement = JSON.parse(JSON.stringify(record));
+  const originalOutcome = measurement?.performanceGate?.outcome || null;
+  measurement.evidenceStatus = 'diagnostic';
+  measurement.evidenceClass = 'diagnostic-incomplete';
+  measurement.performanceGate = {
+    ...(measurement.performanceGate || {}),
+    outcome: 'DIAGNOSTIC/INCOMPLETE', evidenceStatus: 'diagnostic', evidenceClass: 'diagnostic-incomplete',
+    acceptancePopulationEligible: false, thresholdPassed: false, cleanupQualified: false,
+    originalMeasuredOutcome: originalOutcome
+  };
+  return {
+    schema: 'massfront-perf-cleanup-diagnostic-v1',
+    evidenceStatus: 'diagnostic', evidenceClass: 'diagnostic-incomplete', acceptanceEligible: false,
+    invalidation: {
+      stage: 'owned-browser-cleanup', code: 'PW_OWNED_CLEANUP_INCOMPLETE',
+      message: error?.message || String(error)
+    },
+    measurement
+  };
+}
+
 async function prepareScenarioOutput(scenarioId, unitsPerFaction, metricsDir, capturesDir) {
   const stem = scenarioStem(scenarioId, unitsPerFaction);
   const removed = [];
@@ -142,10 +297,12 @@ export async function prepareCurrentPerfOutput({
   const metricsDir = join(currentRoot, 'metrics');
   const capturesDir = join(currentRoot, 'captures');
   const reportsDir = join(currentRoot, 'reports');
+  const diagnosticsDir = join(currentRoot, 'diagnostics');
   await Promise.all([
     mkdir(metricsDir, { recursive: true }),
     mkdir(capturesDir, { recursive: true }),
-    mkdir(reportsDir, { recursive: true })
+    mkdir(reportsDir, { recursive: true }),
+    mkdir(diagnosticsDir, { recursive: true })
   ]);
   const removed = [];
   for (const scenario of scenarios) {
@@ -155,6 +312,18 @@ export async function prepareCurrentPerfOutput({
         removed.push(...(await prepareScenarioOutput(
           scenario.id, unitsPerFaction, metricsDir, capturesDir
         )).removed);
+        const diagnosticPath = join(diagnosticsDir, `${scenarioStem(scenario.id, unitsPerFaction)}_cleanup_incomplete_v3.json`);
+        if (existsSync(diagnosticPath)) {
+          await rm(diagnosticPath, { force: true });
+          removed.push(relative(ROOT, diagnosticPath).replace(/\\/g, '/'));
+        }
+        const profilePattern = new RegExp(`^${escapeRegExp(scenarioStem(scenario.id, unitsPerFaction))}_[a-z0-9-]+_sample[12]\\.cpuprofile$`);
+        for (const file of await readdir(diagnosticsDir)) {
+          if (!profilePattern.test(file)) continue;
+          const profilePath = join(diagnosticsDir, file);
+          await rm(profilePath, { force: true });
+          removed.push(relative(ROOT, profilePath).replace(/\\/g, '/'));
+        }
       }
       continue;
     }
@@ -182,8 +351,20 @@ export async function prepareCurrentPerfOutput({
     metricsDir,
     capturesDir,
     reportsDir,
+    diagnosticsDir,
     removed
   };
+}
+
+async function preserveCleanupDiagnostics(results, error) {
+  await mkdir(DIAGNOSTICS_DIR, { recursive: true });
+  const paths = [];
+  for (const result of results) {
+    const path = join(DIAGNOSTICS_DIR, `${scenarioStem(result.scenarioId, result.unitsPerFaction)}_cleanup_incomplete_v3.json`);
+    await writeFile(path, `${JSON.stringify(cleanupDiagnosticCandidate(result, error), null, 2)}\n`, 'utf8');
+    paths.push(path);
+  }
+  return paths;
 }
 
 async function gitOutput(args) {
@@ -191,27 +372,69 @@ async function gitOutput(args) {
   return stdout;
 }
 
+async function runtimeTree(base, prefix = '') {
+  const manifest = JSON.parse(await readFile(join(base, 'assets/data/manifest.json'), 'utf8'));
+  const entryText = await readFile(join(base, 'index.html'), 'utf8');
+  const linkedFiles = [...entryText.matchAll(/(?:src|href)=["']\.\/?([^"'?#]+)(?:\?[^"']*)?["']/g)]
+    .map(match => match[1]).filter(path => existsSync(join(base, path)));
+  const descriptor = 'assets/data/runtime-compatibility.json';
+  const files = [...new Set([
+    'index.html', 'boot.js', 'assets/data/manifest.json', ...linkedFiles, ...(manifest.order || []),
+    ...(existsSync(join(base, descriptor)) ? [descriptor] : [])
+  ])];
+  const hash = createHash('sha256');
+  const records = [];
+  for (const path of files) {
+    const absolute = join(base, path);
+    if (!existsSync(absolute)) throw new Error(`Runtime fingerprint input is missing: ${prefix}${path}`);
+    const bytes = await readFile(absolute), digest = sha256(bytes);
+    hash.update(`path\0${prefix}${path}\0`); hash.update(bytes); hash.update('\0');
+    records.push({ path: `${prefix}${path}`, bytes: bytes.length, sha256: digest });
+  }
+  return { manifest, files, records, fingerprint: hash.digest('hex') };
+}
+
+function parityBytes(path, bytes) {
+  if (path !== 'boot.js') return bytes;
+  /* pack-www deliberately changes only this capability bit in its copied
+     boot.js when the optional Galactic pack is omitted. Compare every other
+     byte so the intentional package transform cannot hide stale runtime JS. */
+  return Buffer.from(bytes.toString('utf8').replace(
+    /window\.__MF_BUILD_HAS_GALACTIC_EXPLORATION=(?:true|false);/,
+    'window.__MF_BUILD_HAS_GALACTIC_EXPLORATION=__PACKAGED_CAPABILITY__;'
+  ));
+}
+
+async function assertPackedJsParity(sourceTree, packedTree, packedRoot) {
+  const sourceOrder = sourceTree.manifest.order || [], packedOrder = packedTree.manifest.order || [];
+  if (JSON.stringify(sourceOrder) !== JSON.stringify(packedOrder)) {
+    throw new Error('Packed www runtime JavaScript is stale: manifest order differs; run node tools/pack-www.mjs');
+  }
+  const paths = ['boot.js', ...sourceOrder.filter(path => path.endsWith('.js'))];
+  const mismatches = [];
+  for (const path of paths) {
+    const packedPath = join(packedRoot, path);
+    if (!existsSync(packedPath)) { mismatches.push(`${path} (missing)`); continue; }
+    const [sourceBytes, packedBytes] = await Promise.all([readFile(join(ROOT, path)), readFile(packedPath)]);
+    if (!parityBytes(path, sourceBytes).equals(parityBytes(path, packedBytes))) mismatches.push(path);
+  }
+  if (mismatches.length) {
+    throw new Error(`Packed www runtime JavaScript is stale (${mismatches.slice(0, 8).join(', ')}); run node tools/pack-www.mjs`);
+  }
+}
+
 export async function collectSourceIdentity() {
   const gitHead = (await gitOutput(['rev-parse', 'HEAD'])).trim();
   const status = await gitOutput(['status', '--porcelain=v1', '--untracked-files=all']);
   const dirty = status.trim().length > 0;
 
-  const manifestPath = join(ROOT, 'assets/data/manifest.json');
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
-  const entryText = await readFile(join(ROOT, 'index.html'), 'utf8');
-  const linkedFiles = [...entryText.matchAll(/(?:src|href)=["']\.\/?([^"'?#]+)(?:\?[^"']*)?["']/g)]
-    .map(match => match[1]).filter(path => existsSync(join(ROOT, path)));
-  const runtimeFiles = [...new Set(['index.html', 'boot.js', 'assets/data/manifest.json', ...linkedFiles, ...(manifest.order || [])])];
-  const runtime = createHash('sha256');
-  for (const path of runtimeFiles) {
-    const absolute = join(ROOT, path);
-    if (!existsSync(absolute)) throw new Error(`Runtime fingerprint input is missing: ${path}`);
-    runtime.update(`path\0${path}\0`);
-    runtime.update(await readFile(absolute));
-    runtime.update('\0');
-  }
-  const runtimeFingerprint = runtime.digest('hex');
-  const inputFiles = [...new Set([...runtimeFiles, ...PERF_PROBE_INPUTS])].sort();
+  const sourceTree = await runtimeTree(ROOT);
+  const packedRoot = join(ROOT, 'www');
+  const servingPacked = existsSync(join(packedRoot, 'index.html'));
+  const servedTree = servingPacked ? await runtimeTree(packedRoot, 'www/') : sourceTree;
+  if (servingPacked) await assertPackedJsParity(sourceTree, servedTree, packedRoot);
+  const runtimeFingerprint = servedTree.fingerprint;
+  const inputFiles = [...new Set([...sourceTree.files, ...PERF_PROBE_INPUTS])].sort();
   const inputClosure = createHash('sha256');
   inputClosure.update(`head\0${gitHead}\0`);
   const inputRecords = [];
@@ -223,8 +446,14 @@ export async function collectSourceIdentity() {
     inputClosure.update(`path\0${path}\0${digest}\0`);
     inputRecords.push({ path, bytes: bytes.length, sha256: digest });
   }
+  if (servingPacked) {
+    for (const record of servedTree.records) {
+      inputClosure.update(`path\0${record.path}\0${record.sha256}\0`);
+      inputRecords.push(record);
+    }
+  }
   const inputClosureFingerprint = inputClosure.digest('hex');
-  const testedEntry = 'index.html';
+  const testedEntry = servingPacked ? 'www/index.html' : 'index.html';
   return {
     gitHead,
     gitDirty: dirty,
@@ -234,10 +463,12 @@ export async function collectSourceIdentity() {
     inputClosureFingerprint,
     inputClosure: inputRecords,
     runtimeFingerprint,
+    sourceRuntimeFingerprint: sourceTree.fingerprint,
+    servedRuntimeRoot: servingPacked ? 'www/' : './',
     testedEntry,
     testedEntrySha256: await fileSha256(join(ROOT, testedEntry)),
-    /* Source-mode QA serves the entry plus the exact manifest-ordered runtime.
-       This package digest therefore equals that deterministic payload digest. */
+    /* This hashes the entry, linked manifests/styles, boot, manifest-ordered
+       scripts, and the pack-generated compatibility descriptor when present. */
     testedPackageSha256: runtimeFingerprint
   };
 }
@@ -308,12 +539,16 @@ export async function installTelemetryInit(page) {
     window.__mfProbe = {
       resourceCounts: { textures: 0, buffers: 0, programs: 0, vaos: 0, fbos: 0 },
       longTasks: [],
+      longTaskTotalCount: 0,
       contextLossEvents: 0
     };
     try {
       const observer = new PerformanceObserver(list => {
         for (const entry of list.getEntries()) {
-          window.__mfProbe.longTasks.push({ name: entry.name, startTime: entry.startTime, duration: entry.duration });
+          const probe = window.__mfProbe;
+          probe.longTaskTotalCount++;
+          if (probe.longTasks.length >= 256) probe.longTasks.shift();
+          probe.longTasks.push({ name: entry.name, startTime: entry.startTime, duration: entry.duration });
         }
       });
       observer.observe({ entryTypes: ['longtask'] });
@@ -390,14 +625,14 @@ export async function enterRealBattle(page, opts = {}) {
       await page.locator('#mfLaunchPlay').click();
     }
     await page.waitForTimeout(700);
-    /* Fresh careers now make an explicit tutorial decision before War Room.
-       Performance evidence follows the real experienced-player path instead of
-       force-hiding the modal: choose KEEP CURRENT MAIN MENU, then continue. */
-    const onboardingSkip = page.locator('#mfOnboardingSkip');
-    if (await onboardingSkip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)) {
-      await onboardingSkip.click();
-      await page.waitForTimeout(350);
-    }
+  }
+  /* Fresh careers can offer onboarding after either the launcher path or a
+     probe's pre-seeded main-menu path. Follow the real experienced-player
+     choice in both cases instead of letting the modal intercept War Room. */
+  const onboardingSkip = page.locator('#mfOnboardingSkip');
+  if (await onboardingSkip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)) {
+    await onboardingSkip.click();
+    await page.waitForTimeout(350);
   }
   await clickVisible(page, '#startBtn', 'War Room', 30000);
   await page.waitForTimeout(700);
@@ -517,6 +752,7 @@ export async function enterRealBattle(page, opts = {}) {
 
 async function runtimeState(page) {
   return page.evaluate(() => {
+    const atPerformanceMs = performance.now();
     const visible = element => {
       if (!element) return false;
       const style = getComputedStyle(element), rect = element.getBoundingClientRect();
@@ -530,10 +766,16 @@ async function runtimeState(page) {
       for (let index = 0; index < unitHigh; index++) if (ualive[index]) authoritativeUnits++;
     }
     const menuUiVisible = [...document.querySelectorAll('.overlay')].some(visible);
-    const simStepSec = authoritativeUnits > 22000 ? 1 / 12 : authoritativeUnits > 13000 ? 1 / 16
-      : authoritativeUnits > 6500 ? 1 / 22 : authoritativeUnits > 900 ? 1 / 26 : 1 / 30;
+    const simStepSec = typeof MF_SIM_DT !== 'undefined' && Number.isFinite(MF_SIM_DT) && MF_SIM_DT > 0
+      ? Number(MF_SIM_DT) : null;
+    const simTick = typeof mfDetTick !== 'undefined' && Number.isInteger(mfDetTick)
+      ? Number(mfDetTick)
+      : (typeof tick !== 'undefined' && Number.isInteger(tick) ? Number(tick) : null);
+    const simTickSource = typeof mfDetTick !== 'undefined' && Number.isInteger(mfDetTick) ? 'mfDetTick'
+      : (typeof tick !== 'undefined' && Number.isInteger(tick) ? 'tick' : null);
     const simTimeSec = typeof stats !== 'undefined' && Number.isFinite(stats?.t) ? stats.t : null;
     return {
+      atPerformanceMs,
       authUiVisible: visible(document.getElementById('apOverlay')) || visible(document.getElementById('apForm')) ||
         visible(document.getElementById('authPortal')) || visible(document.getElementById('apOfflineBtn')),
       menuUiVisible,
@@ -545,9 +787,11 @@ async function runtimeState(page) {
       contextIsLost: typeof gl !== 'undefined' && gl && typeof gl.isContextLost === 'function' ? gl.isContextLost() : null,
       simTimeSec,
       simStepSec,
-      simTick: simTimeSec == null ? null : Math.round(simTimeSec / simStepSec),
+      simTick,
+      simTickSource,
       simAccumulatorSec: typeof acc !== 'undefined' && Number.isFinite(acc) ? Number(acc) : null,
-      simBacklogSteps: typeof acc !== 'undefined' && Number.isFinite(acc) ? Number(acc) / simStepSec : null,
+      simBacklogSteps: typeof acc !== 'undefined' && Number.isFinite(acc) && simStepSec != null
+        ? Number(acc) / simStepSec : null,
       gameSpeed: typeof gameSpeed !== 'undefined' && Number.isFinite(gameSpeed) ? Number(gameSpeed) : null,
       authoritativeUnits,
       camera: typeof cam !== 'undefined' ? {
@@ -568,6 +812,8 @@ function assertRuntimeState(state, label) {
   if (!state.battleHudVisible) failures.push('battle HUD absent');
   if (!state.matchLive) failures.push('matchLive false');
   if (!state.running) failures.push('running false');
+  if (!Number.isFinite(state.simStepSec) || state.simStepSec <= 0) failures.push('MF_SIM_DT unavailable');
+  if (!Number.isInteger(state.simTick) || !state.simTickSource) failures.push('authority tick (mfDetTick/tick) unavailable');
   if (state.contextLossCount !== 0) failures.push(`context loss count ${state.contextLossCount}`);
   if (state.contextIsLost) failures.push('WebGL context is lost');
   if (failures.length) throw new Error(`${label} runtime gate failed: ${failures.join(', ')}`);
@@ -585,55 +831,146 @@ async function takePerfCheckpoint(page, label) {
   }, label);
 }
 
-async function sampleFrames(page, totalFrames) {
-  return page.evaluate(async frameCount => {
+async function sampleFrames(page, totalFrames, initialGpuSampleSerial = null) {
+  return page.evaluate(async ({ frameCount, initialGpuSampleSerial: initialSerial }) => {
     const probe = {
-      frameDts: [], simTimes: [], renderTimes: [], gpuTimes: [], drawCalls: [], triangles: [],
-      totalUnits: [], visibleUnits: [], culledUnits: [], particleCounts: [], projectileCounts: [], heapUsed: [],
+      frameDts: [], rafCallbackDts: [], presentationFrames: [], simTicks: [],
+      simTimes: [], renderTimes: [], gpuTimes: [], gpuSampleSerials: [],
+      gpuResultAges: [], gpuQueryLatencies: [], gpuDisjointFlags: [], drawCalls: [], triangles: [],
+      totalUnits: [], visibleUnits: [], culledUnits: [], visibilityValidity: [], particleCounts: [], projectileCounts: [], heapUsed: [],
+      realBroodUnits: [], cameraVisibleBroodUnits: [], visibleBroodUnits: [], proxyBodies: [], proxyClusters: [],
       simBacklogSteps: [], reconciliation: []
     };
     const push = (array, value) => { if (Number.isFinite(value)) array.push(value); };
     if (typeof mfPerfLatest !== 'function') throw new Error('Cheap mfPerfLatest telemetry is unavailable');
+    if (typeof MF_SIM_DT === 'undefined' || !Number.isFinite(MF_SIM_DT) || MF_SIM_DT <= 0) {
+      throw new Error('Authoritative MF_SIM_DT is unavailable during performance sampling');
+    }
+    if (typeof mfPresentationFrames === 'undefined' || !Number.isInteger(mfPresentationFrames)) {
+      throw new Error('mfPresentationFrames is unavailable during performance sampling');
+    }
     const latest = {};
-    let last = performance.now();
-    for (let frame = 0; frame < frameCount; frame++) {
+    /* Establish a fresh baseline for each measured half. A query that retired
+       during the mid capture is not a sample from either measured window. */
+    const baseline = mfPerfLatest(latest);
+    const baselineSerial = Number(baseline?.gpuSampleSerial);
+    let lastGpuSampleSerial = Number.isInteger(baselineSerial) ? baselineSerial
+      : (Number.isInteger(initialSerial) ? initialSerial : null);
+    let lastRaf = performance.now(), lastPresentationAt = null;
+    let observedPresentationFrame = Number(mfPresentationFrames), rafCallbacks = 0;
+    const maxRafCallbacks = (frameCount + 1) * 8 + 120;
+    while (probe.frameDts.length < frameCount) {
       await new Promise(resolveFrame => requestAnimationFrame(resolveFrame));
       const now = performance.now();
-      push(probe.frameDts, now - last); last = now;
+      push(probe.rafCallbackDts, now - lastRaf); lastRaf = now;
+      if (++rafCallbacks > maxRafCallbacks) {
+        throw new Error(`Presentation sampling stalled: ${probe.frameDts.length}/${frameCount} frames after ${rafCallbacks} RAF callbacks`);
+      }
+      const presented = Number(mfPresentationFrames);
+      if (!Number.isInteger(presented) || presented < observedPresentationFrame) {
+        throw new Error('mfPresentationFrames became invalid or moved backwards during performance sampling');
+      }
+      if (presented === observedPresentationFrame) continue;
+      observedPresentationFrame = presented;
+      if (lastPresentationAt == null) { lastPresentationAt = now; continue; }
+      const presentationInterval = now - lastPresentationAt;
+      lastPresentationAt = now;
+      push(probe.frameDts, presentationInterval);
+      push(probe.presentationFrames, presented);
+      const authorityTick = typeof mfDetTick !== 'undefined' && Number.isInteger(mfDetTick)
+        ? Number(mfDetTick)
+        : (typeof tick !== 'undefined' && Number.isInteger(tick) ? Number(tick) : null);
+      if (!Number.isInteger(authorityTick)) throw new Error('Authority tick is unavailable during performance sampling');
+      push(probe.simTicks, authorityTick);
+      const frame = probe.frameDts.length - 1;
       const current = mfPerfLatest(latest);
       push(probe.simTimes, current?.cpu?.sim);
       push(probe.renderTimes, current?.cpu?.render);
-      push(probe.gpuTimes, current?.gpu?.render);
+      /* mfPerfLatest exposes the last resolved query until another one retires.
+         Count that driver result once, not once per presented frame. */
+      const gpuSerial = Number(current?.gpuSampleSerial);
+      if (current?.gpuTimer && Number.isInteger(gpuSerial) && gpuSerial > 0 && gpuSerial !== lastGpuSampleSerial) {
+        lastGpuSampleSerial = gpuSerial;
+        probe.gpuSampleSerials.push(gpuSerial);
+        push(probe.gpuResultAges, current?.gpuResultAgeFrames);
+        push(probe.gpuQueryLatencies, current?.gpuQueryLatencyMs);
+        probe.gpuDisjointFlags.push(current?.gpuDisjoint ? 1 : 0);
+        if (!current?.gpuDisjoint) push(probe.gpuTimes, current?.gpu?.render);
+      }
       if (typeof drawCalls !== 'undefined') push(probe.drawCalls, Number(drawCalls));
       if (typeof triCount !== 'undefined') push(probe.triangles, Number(triCount));
       const counterTotal = typeof teamCount !== 'undefined' && teamCount && teamCount.length >= 3
         ? Number(teamCount[0]) + Number(teamCount[1]) + Number(teamCount[2]) : null;
       push(probe.totalUnits, counterTotal);
       if (typeof acc !== 'undefined' && Number.isFinite(acc)) {
-        const step = counterTotal > 22000 ? 1 / 12 : counterTotal > 13000 ? 1 / 16
-          : counterTotal > 6500 ? 1 / 22 : counterTotal > 900 ? 1 / 26 : 1 / 30;
-        push(probe.simBacklogSteps, Number(acc) / step);
+        push(probe.simBacklogSteps, Number(acc) / Number(MF_SIM_DT));
       }
       /* A complete authoritative/camera reconciliation is deliberately bounded
          to checkpoints. Scanning every unit every RAF would measure the probe. */
       if (frame === 0 || frame === frameCount - 1 || (frame + 1) % 30 === 0) {
-        let scannedTotal = 0, visibleCount = 0;
-        const bounds = typeof camBounds === 'function' ? camBounds() : null;
+        let scannedTotal = 0, visibleCount = 0, realBrood = 0, cameraVisibleBrood = 0, visibleBrood = 0;
+        const rawBounds = typeof camBounds === 'function' ? camBounds() : null;
+        const boundsValid = !!rawBounds && Number.isFinite(rawBounds.x0) && Number.isFinite(rawBounds.x1) &&
+          Number.isFinite(rawBounds.y0) && Number.isFinite(rawBounds.y1) &&
+          rawBounds.x0 <= rawBounds.x1 && rawBounds.y0 <= rawBounds.y1;
+        const width = typeof VW === 'number' ? VW : innerWidth, height = typeof VH === 'number' ? VH : innerHeight;
+        const viewportValid = Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0;
+        const projectionSupported = typeof w2s === 'function';
+        let projectionValid = true;
         if (typeof ualive !== 'undefined' && typeof unitHigh !== 'undefined') {
           for (let index = 0; index < unitHigh; index++) {
             if (!ualive[index]) continue;
             scannedTotal++;
-            if (bounds && typeof ux !== 'undefined' && typeof uy !== 'undefined' &&
-                ux[index] >= bounds.x0 && ux[index] <= bounds.x1 && uy[index] >= bounds.y0 && uy[index] <= bounds.y1) visibleCount++;
+            const team = typeof uteam !== 'undefined' ? Number(uteam[index]) : -1;
+            const x = Number(ux[index]), y = Number(uy[index]);
+            if (team === 2) realBrood++;
+            /* Preserve the live predicate's derived intel-cache refresh. Only
+               projection moves behind the cheap, validated world-space gate. */
+            const renderVisible = typeof fogEntityVisible !== 'function' || fogEntityVisible(team, x, y);
+            if (!boundsValid || !viewportValid || !projectionSupported) continue;
+            const inBounds = x >= rawBounds.x0 && x <= rawBounds.x1 && y >= rawBounds.y0 && y <= rawBounds.y1;
+            if (!inBounds) continue;
+            const projected = w2s(x, y);
+            const projectedValid = !!projected && Number.isFinite(projected[0]) && Number.isFinite(projected[1]);
+            if (!projectedValid) { projectionValid = false; continue; }
+            const onScreen =
+              projected[0] >= -24 && projected[0] <= width + 24 && projected[1] >= -24 && projected[1] <= height + 24;
+            if (!onScreen) continue;
+            if (team === 2) cameraVisibleBrood++;
+            if (renderVisible) visibleCount++;
+            if (team === 2 && renderVisible) visibleBrood++;
           }
         }
-        const culled = scannedTotal - visibleCount;
-        push(probe.visibleUnits, bounds ? visibleCount : NaN);
-        push(probe.culledUnits, bounds ? culled : NaN);
+        const visibilitySupported = boundsValid && viewportValid && projectionSupported && projectionValid;
+        const visibilityUnavailableReason = !boundsValid ? 'camera-bounds-invalid'
+          : !viewportValid ? 'viewport-invalid'
+          : !projectionSupported ? 'projection-unavailable'
+          : !projectionValid ? 'projection-invalid' : null;
+        const culled = visibilitySupported ? scannedTotal - visibleCount : null;
+        probe.visibilityValidity.push(visibilitySupported ? 1 : 0);
+        push(probe.visibleUnits, visibilitySupported ? visibleCount : NaN);
+        push(probe.culledUnits, visibilitySupported ? culled : NaN);
+        push(probe.realBroodUnits, realBrood);
+        push(probe.cameraVisibleBroodUnits, visibilitySupported ? cameraVisibleBrood : NaN);
+        push(probe.visibleBroodUnits, visibilitySupported ? visibleBrood : NaN);
+        let proxy = null;
+        try {
+          if (typeof mfBroodCrowdStats === 'function') proxy = mfBroodCrowdStats();
+          else if (typeof window.mfBroodCrowdTelemetry === 'function') proxy = window.mfBroodCrowdTelemetry();
+          else proxy = window.__mfBroodCrowdTelemetry || window.MF_BROOD_CROWD_TELEMETRY || null;
+        } catch (error) { proxy = null; }
+        const proxyBodies = Number(proxy?.proxyBodies ?? proxy?.visualBodies ?? proxy?.bodies ?? proxy?.instances);
+        const proxyClusters = Number(proxy?.proxyClusters ?? proxy?.clusterInstances ?? proxy?.clusters);
+        push(probe.proxyBodies, proxyBodies); push(probe.proxyClusters, proxyClusters);
         probe.reconciliation.push({
           frame, counterTotal: Number.isFinite(counterTotal) ? counterTotal : null,
-          scannedTotal, visible: bounds ? visibleCount : null, culled: bounds ? culled : null,
-          hasCameraBounds: !!bounds
+          scannedTotal, visible: visibilitySupported ? visibleCount : null, culled,
+          realBrood, cameraVisibleBrood: visibilitySupported ? cameraVisibleBrood : null,
+          visibleBrood: visibilitySupported ? visibleBrood : null,
+          proxyBodies: Number.isFinite(proxyBodies) ? proxyBodies : null,
+          proxyClusters: Number.isFinite(proxyClusters) ? proxyClusters : null,
+          hasCameraBounds: !!rawBounds, cameraBoundsValid: boundsValid, viewportValid,
+          projectionSupported, visibilitySupported, visibilityUnavailableReason
         });
       }
       if (typeof nPart !== 'undefined') push(probe.particleCounts, Number(nPart));
@@ -643,20 +980,71 @@ async function sampleFrames(page, totalFrames) {
       }
     }
     return probe;
-  }, totalFrames);
+  }, { frameCount: totalFrames, initialGpuSampleSerial });
+}
+
+async function sampleFramesWithCpuProfile(page, totalFrames, {
+  enabled = false,
+  path = null,
+  initialGpuSampleSerial = null
+} = {}) {
+  if (!enabled) return { samples: await sampleFrames(page, totalFrames, initialGpuSampleSerial), cpuProfile: null };
+  if (!path || extname(path) !== '.cpuprofile') throw new Error('CPU profile requires a deterministic .cpuprofile path');
+  const session = await page.context().newCDPSession(page);
+  let samples = null, profile = null, failure = null, started = false;
+  try {
+    await session.send('Profiler.enable');
+    await session.send('Profiler.setSamplingInterval', { interval: 1000 });
+    await session.send('Profiler.start');
+    started = true;
+    samples = await sampleFrames(page, totalFrames, initialGpuSampleSerial);
+  } catch (error) {
+    failure = error;
+  } finally {
+    if (started) {
+      try { profile = (await session.send('Profiler.stop')).profile; }
+      catch (error) { failure = failure ? new AggregateError([failure, error], 'Frame sample and CPU profiler stop failed') : error; }
+    }
+    await session.send('Profiler.disable').catch(() => {});
+    await session.detach().catch(() => {});
+  }
+  let cpuProfile = null;
+  if (profile) {
+    await mkdir(dirname(path), { recursive: true });
+    const body = `${JSON.stringify(profile)}\n`;
+    await writeFile(path, body, 'utf8');
+    cpuProfile = {
+      path: relative(ROOT, path).replace(/\\/g, '/'),
+      sha256: sha256(body),
+      bytes: Buffer.byteLength(body),
+      samplingIntervalUs: 1000,
+      scope: 'only the requested presented-frame sample; setup, captures and report generation excluded'
+    };
+  }
+  if (failure) throw failure;
+  return { samples, cpuProfile };
 }
 
 function appendProbe(target, source) {
   for (const key of Object.keys(target)) target[key].push(...(source[key] || []));
 }
 
-async function captureBattlefield(page, scenario, unitsPerFaction, stage, captureLane, authoritative, capturesDir) {
+async function captureBattlefield(page, scenario, unitsPerFaction, stage, captureLane, authoritative, capturesDir, proxyPlan) {
   if (!/^[a-z0-9-]+$/.test(captureLane) || !['start', 'mid', 'end'].includes(stage)) {
     throw new Error(`Unsafe performance-capture identity: ${captureLane}/${stage}`);
   }
+  const framing = await frameEvidenceCamera(page, scenario, stage);
+  await page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(() => requestAnimationFrame(resolveFrame))));
   const state = await runtimeState(page);
   assertRuntimeState(state, `${stage} capture`);
-  await page.evaluate(({ label, counts }) => {
+  const battlefield = await collectBattlefieldTelemetry(page);
+  if (!battlefield.visibilitySupported) {
+    throw new Error(`${stage} capture rejected: battlefield visibility unavailable (${battlefield.visibilityUnavailableReason || 'unknown'})`);
+  }
+  if (battlefield.total > 0 && battlefield.visible < 1) {
+    throw new Error(`${stage} capture rejected: evidence camera projected zero render-visible authoritative units`);
+  }
+  await page.evaluate(({ label, counts, battlefield: field, proxy }) => {
     let overlay = document.getElementById('__mfPerfEvidenceHud');
     if (!overlay) {
       overlay = document.createElement('div');
@@ -668,8 +1056,16 @@ async function captureBattlefield(page, scenario, unitsPerFaction, stage, captur
       });
       document.body.appendChild(overlay);
     }
-    overlay.textContent = `${label}\nAUTHORITATIVE ${counts.total}\nFACTIONS ${JSON.stringify(counts.byFaction)}\nTEAMS ${JSON.stringify(counts.byTeam)}`;
-  }, { label: `${scenario.id} ${unitsPerFaction}/FACTION ${stage.toUpperCase()}`, counts: authoritative });
+    const proxyText = field.proxyTelemetrySupported
+      ? `${field.proxyBodies} / ${field.proxyClusters}`
+      : `UNAVAILABLE (REQUEST ${proxy?.requestedProxyBodies ?? 0} / ${proxy?.requestedProxyClusters ?? 0})`;
+    overlay.textContent = `${label}\nAUTHORITATIVE ${counts.total} · VISIBLE ${field.visible}\n` +
+      `BROOD REAL ${field.realBrood} · CAMERA ${field.cameraVisibleBrood} · FOG ${field.visibleBrood}\nPROXY BODIES / CLUSTERS ${proxyText}\n` +
+      `NORMAL / SYSTEM ${counts.byAuthorityKind?.['normal-participant'] || 0} / ${counts.byAuthorityKind?.['system-force'] || 0}`;
+  }, {
+    label: `${scenario.id} ${unitsPerFaction}/AUTHORITY ${stage.toUpperCase()}`,
+    counts: authoritative, battlefield, proxy: proxyPlan
+  });
   const file = `${scenarioStem(scenario.id, unitsPerFaction)}_${captureLane}_${stage}.png`;
   const path = join(capturesDir, file);
   await page.screenshot({ path });
@@ -684,6 +1080,14 @@ async function captureBattlefield(page, scenario, unitsPerFaction, stage, captur
     authoritativeTotal: authoritative.total,
     byFaction: authoritative.byFaction,
     byTeam: authoritative.byTeam,
+    byAuthorityKind: authoritative.byAuthorityKind,
+    realBrood: battlefield.realBrood,
+    cameraVisibleBrood: battlefield.cameraVisibleBrood,
+    visibleBrood: battlefield.visibleBrood,
+    proxyBodies: battlefield.proxyBodies,
+    proxyClusters: battlefield.proxyClusters,
+    proxyTelemetrySupported: battlefield.proxyTelemetrySupported,
+    framing,
     simTimeSec: state.simTimeSec
   };
 }
@@ -706,8 +1110,11 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
     preset,
     viewport,
     url,
+    proxyDensity = 'high',
     captureLane = 'device-v3',
     capturesDir = LEGACY_CAPTURES_DIR,
+    cpuProfile = false,
+    cpuProfileDir = DIAGNOSTICS_DIR,
     evidenceScope = 'physical-device-short-run',
     checkpoint = async () => {}
   } = options;
@@ -722,8 +1129,13 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
   await checkpoint('before deterministic load');
   const preState = await runtimeState(page);
   assertRuntimeState(preState, 'pre-load');
-  const setup = await setupDeterministicScenario(page, scenario, unitsPerFaction);
+  const setup = await setupDeterministicScenario(page, scenario, unitsPerFaction, { proxyDensity });
+  await frameEvidenceCamera(page, scenario, 'settle');
 
+  /* Admission reconciliation must not double as an unmeasured combat sample.
+     Freeze authority only for these 30 visual-settle frames, then resume
+     before runtime-state validation and the measured directive. */
+  await page.evaluate(() => { if (typeof paused !== 'undefined') paused = true; });
   for (let frame = 0; frame < 30; frame++) await page.evaluate(() => new Promise(resolveFrame => requestAnimationFrame(resolveFrame)));
   const postSettle = await collectAuthoritativePopulation(page, scenario);
   if (!postSettle.supported) throw new Error('Authoritative population arrays are unavailable');
@@ -733,37 +1145,85 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
     throw new Error(`Population gate failed: attempted=${setup.attempted.total}, accepted=${setup.accepted.total}, ` +
       `postSettle=${postSettle.total}, unmatched=${postSettle.unmatched}, requested=${expectedTotal}`);
   }
+  await page.evaluate(() => { if (typeof paused !== 'undefined') paused = false; });
   await checkpoint('after population settle');
 
   const sampleStartState = await runtimeState(page);
   assertRuntimeState(sampleStartState, 'post-settle');
   const captures = [];
   captures.push(await captureBattlefield(
-    page, scenario, unitsPerFaction, 'start', captureLane, postSettle, capturesDir
+    page, scenario, unitsPerFaction, 'start', captureLane, postSettle, capturesDir, setup.expected.broodWildcard?.proxy || null
   ));
   await checkpoint('after start capture');
   await injectCombatDirective(page, 'advance_to_center');
   const nativeCheckpoints = [await takePerfCheckpoint(page, 'start')];
   const samples = {
-    frameDts: [], simTimes: [], renderTimes: [], gpuTimes: [], drawCalls: [], triangles: [],
-    totalUnits: [], visibleUnits: [], culledUnits: [], particleCounts: [], projectileCounts: [], heapUsed: [],
+    frameDts: [], rafCallbackDts: [], presentationFrames: [], simTicks: [],
+    simTimes: [], renderTimes: [], gpuTimes: [], gpuSampleSerials: [],
+    gpuResultAges: [], gpuQueryLatencies: [], gpuDisjointFlags: [], drawCalls: [], triangles: [],
+    totalUnits: [], visibleUnits: [], culledUnits: [], visibilityValidity: [], particleCounts: [], projectileCounts: [], heapUsed: [],
+    realBroodUnits: [], cameraVisibleBroodUnits: [], visibleBroodUnits: [], proxyBodies: [], proxyClusters: [],
     simBacklogSteps: [], reconciliation: []
   };
   const firstFrames = Math.max(1, Math.floor(durationFrames / 2));
-  const wallStart = performance.now();
-  appendProbe(samples, await sampleFrames(page, firstFrames));
-  nativeCheckpoints.push(await takePerfCheckpoint(page, 'mid'));
-  const midPopulation = await collectAuthoritativePopulation(page, scenario);
-  captures.push(await captureBattlefield(
-    page, scenario, unitsPerFaction, 'mid', captureLane, midPopulation, capturesDir
-  ));
-  await checkpoint('after mid capture');
-  appendProbe(samples, await sampleFrames(page, Math.max(1, durationFrames - firstFrames)));
-  const wallDurationMs = performance.now() - wallStart;
+  /* The wall clock and authority tick must describe the identical interval.
+     Capture each pair inside one page callback; host-side performance.now()
+     cannot be compared tightly with state read through a later CDP call. */
+  const measurementStartState = await runtimeState(page);
+  assertRuntimeState(measurementStartState, 'measurement start');
+  const memoryMonitor = startHostMemoryMonitor();
+  const cpuProfiles = [];
+  let measurementEndState, postSampleDiagnostics, hostMemory;
+  try {
+    const stem = scenarioStem(scenario.id, unitsPerFaction);
+    const firstSample = await sampleFramesWithCpuProfile(page, firstFrames, {
+      enabled: cpuProfile,
+      path: join(cpuProfileDir, `${stem}_${captureLane}_sample1.cpuprofile`)
+    });
+    appendProbe(samples, firstSample.samples);
+    if (firstSample.cpuProfile) cpuProfiles.push(firstSample.cpuProfile);
+    nativeCheckpoints.push(await takePerfCheckpoint(page, 'mid'));
+    const midPopulation = await collectAuthoritativePopulation(page, scenario);
+    captures.push(await captureBattlefield(
+      page, scenario, unitsPerFaction, 'mid', captureLane, midPopulation, capturesDir, setup.expected.broodWildcard?.proxy || null
+    ));
+    await checkpoint('after mid capture');
+    const lastGpuSerial = samples.gpuSampleSerials.length
+      ? samples.gpuSampleSerials[samples.gpuSampleSerials.length - 1] : null;
+    const secondSample = await sampleFramesWithCpuProfile(page, Math.max(1, durationFrames - firstFrames), {
+      enabled: cpuProfile,
+      path: join(cpuProfileDir, `${stem}_${captureLane}_sample2.cpuprofile`),
+      initialGpuSampleSerial: lastGpuSerial
+    });
+    appendProbe(samples, secondSample.samples);
+    if (secondSample.cpuProfile) cpuProfiles.push(secondSample.cpuProfile);
+    /* One bounded copy after sampling. Calling this in RAF would make the
+       profiler itself a frame-time contributor. */
+    postSampleDiagnostics = await page.evaluate(() => {
+      if (typeof window.mfPerfTraceSnapshot !== 'function') {
+        throw new Error('Required window.mfPerfTraceSnapshot() is unavailable in the current runtime source');
+      }
+      const probe = window.__mfProbe;
+      return {
+        hitchTrace: window.mfPerfTraceSnapshot(),
+        longTasks: {
+          totalCount: Number(probe?.longTaskTotalCount || 0),
+          retainedCount: Array.isArray(probe?.longTasks) ? probe.longTasks.length : 0,
+          capacity: 256,
+          records: Array.isArray(probe?.longTasks) ? probe.longTasks.map(row => ({ ...row })) : []
+        }
+      };
+    });
+    measurementEndState = await runtimeState(page);
+  } finally {
+    hostMemory = memoryMonitor.stop();
+  }
+  assertRuntimeState(measurementEndState, 'measurement end');
+  const wallDurationMs = measurementEndState.atPerformanceMs - measurementStartState.atPerformanceMs;
   nativeCheckpoints.push(await takePerfCheckpoint(page, 'end'));
   const endPopulation = await collectAuthoritativePopulation(page, scenario);
   captures.push(await captureBattlefield(
-    page, scenario, unitsPerFaction, 'end', captureLane, endPopulation, capturesDir
+    page, scenario, unitsPerFaction, 'end', captureLane, endPopulation, capturesDir, setup.expected.broodWildcard?.proxy || null
   ));
   await checkpoint('after end capture');
 
@@ -774,10 +1234,23 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
   const endSourceIdentity = await collectSourceIdentity();
   const sourceStable = sameSourceIdentity(sourceIdentity, endSourceIdentity);
   await checkpoint('after end source identity');
-  const frameTimeMs = telemetryStats(samples.frameDts, { supported: true, source: 'requestAnimationFrame' });
-  const simulatedDurationSec = endState.simTimeSec - sampleStartState.simTimeSec;
+  const frameTimeMs = telemetryStats(samples.frameDts, {
+    supported: samples.frameDts.length > 0,
+    source: 'mfPresentationFrames transitions / performance.now presentationInterval'
+  });
+  if (measurementEndState.simStepSec !== measurementStartState.simStepSec) {
+    throw new Error(`Authoritative MF_SIM_DT changed during sample: ${measurementStartState.simStepSec} -> ${measurementEndState.simStepSec}`);
+  }
+  const simulatedTicks = measurementEndState.simTick - measurementStartState.simTick;
+  if (!Number.isInteger(simulatedTicks) || simulatedTicks < 0) {
+    throw new Error(`Authority tick moved backwards during sample: ${measurementStartState.simTick} -> ${measurementEndState.simTick}`);
+  }
+  const simulatedDurationSec = simulatedTicks * measurementStartState.simStepSec;
   const wallTimeRatio = simulatedDurationSec / (wallDurationMs / 1000);
   const maxBacklogSteps = samples.simBacklogSteps.length ? Math.max(...samples.simBacklogSteps) : null;
+  const measurementCoverage = summarizeMeasurementCoverage(samples, expectedTotal, {
+    attempted: setup.attempted, accepted: setup.accepted, postSettle
+  });
   const performanceGate = deriveStage8PerformanceGate({
     scenarioId: scenario.id,
     unitsPerFaction,
@@ -795,9 +1268,11 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
     scenarioName: scenario.name,
     theatre: scenario.theatre,
     unitsPerFaction,
-    factionsCount: scenario.factions.length,
+    factionsCount: topology.authorityCount,
+    normalParticipantCount: topology.normalParticipantCount,
+    systemForceCount: topology.systemForceCount,
     evidenceClass: performanceGate.evidenceClass,
-    topology: { ...topology, seatCount: scenario.factions.length },
+    topology: { ...topology, seatCount: topology.authorityCount },
     timestamp: new Date().toISOString(),
     performanceGate,
     runtimeGate: {
@@ -814,10 +1289,33 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
     },
     population: {
       requestedPerFaction: unitsPerFaction,
-      expected: { seats: setup.expected.seats, total: setup.expected.total },
+      expected: {
+        seats: setup.expected.seats, total: setup.expected.total,
+        byAuthorityKind: setup.expected.byAuthorityKind,
+        normalParticipantCount: setup.expected.normalParticipantCount,
+        systemForceCount: setup.expected.systemForceCount,
+        broodWildcard: setup.expected.broodWildcard
+      },
       attempted: setup.attempted,
       accepted: setup.accepted,
-      postSettle
+      postSettle,
+      admission: measurementCoverage.admission,
+      liveSample: measurementCoverage.liveSample
+    },
+    broodWildcard: setup.expected.broodWildcard ? {
+      present: true,
+      authorityKind: 'system-force',
+      expectedRealBodies: setup.expected.broodWildcard.realBodies,
+      observedRealBodies: postSettle.realBrood,
+      proxyDensity: setup.expected.broodWildcard.proxy,
+      coverage: measurementCoverage.brood
+    } : {
+      present: false,
+      authorityKind: 'system-force',
+      expectedRealBodies: 0,
+      observedRealBodies: 0,
+      proxyDensity: null,
+      coverage: measurementCoverage.brood
     },
     provenance: {
       ...sourceIdentity,
@@ -834,40 +1332,93 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
       seed: scenario.mapSeed,
       camera: { start: sampleStartState.camera, end: endState.camera },
       simulation: {
-        startTimeSec: sampleStartState.simTimeSec,
-        endTimeSec: endState.simTimeSec,
-        startTick: sampleStartState.simTick,
-        endTick: endState.simTick,
-        startStepSec: sampleStartState.simStepSec,
-        endStepSec: endState.simStepSec,
+        startTimeSec: measurementStartState.simTimeSec,
+        endTimeSec: measurementEndState.simTimeSec,
+        startTick: measurementStartState.simTick,
+        endTick: measurementEndState.simTick,
+        startTickSource: measurementStartState.simTickSource,
+        endTickSource: measurementEndState.simTickSource,
+        startStepSec: measurementStartState.simStepSec,
+        endStepSec: measurementEndState.simStepSec,
+        simulatedTicks,
         durationFrames,
+        presentedIntervalSampleCount: samples.frameDts.length,
+        rafCallbackSampleCount: samples.rafCallbackDts.length,
         wallDurationMs: Math.round(wallDurationMs * 100) / 100,
         simulatedDurationSec: Math.round(simulatedDurationSec * 100000) / 100000,
         wallTimeRatio: Math.round(wallTimeRatio * 10000) / 10000,
-        startBacklogSec: sampleStartState.simAccumulatorSec,
-        endBacklogSec: endState.simAccumulatorSec,
+        startBacklogSec: measurementStartState.simAccumulatorSec,
+        endBacklogSec: measurementEndState.simAccumulatorSec,
         maxBacklogSteps: maxBacklogSteps == null ? null : Math.round(maxBacklogSteps * 10000) / 10000,
         backlogSampleCount: samples.simBacklogSteps.length,
-        gameSpeed: endState.gameSpeed
+        gameSpeed: measurementEndState.gameSpeed
       }
     },
     captures,
     metrics: {
       fpsEstimated: frameTimeMs.mean > 0 ? Math.round((1000 / frameTimeMs.mean) * 10) / 10 : null,
       frameTimeMs,
+      rafCallbackTimeMs: telemetryStats(samples.rafCallbackDts, {
+        supported: samples.rafCallbackDts.length > 0, source: 'raw requestAnimationFrame callback cadence (diagnostic only)'
+      }),
       simPhaseMs: telemetryStats(samples.simTimes, { supported: samples.simTimes.length > 0, source: 'mfPerfLatest.cpu.sim' }),
       renderCpuMs: telemetryStats(samples.renderTimes, { supported: samples.renderTimes.length > 0, source: 'mfPerfLatest.cpu.render' }),
       gpuTimeMs: telemetryStats(samples.gpuTimes, { supported: samples.gpuTimes.length > 0, source: 'EXT_disjoint_timer_query_webgl2/mfPerf' }),
+      gpuResultAgeFrames: telemetryStats(samples.gpuResultAges, {
+        supported: samples.gpuResultAges.length > 0, source: 'mfPerfLatest.gpuResultAgeFrames on each newly resolved query'
+      }),
+      gpuQueryLatencyMs: telemetryStats(samples.gpuQueryLatencies, {
+        supported: samples.gpuQueryLatencies.length > 0, source: 'mfPerfLatest.gpuQueryLatencyMs on each newly resolved query'
+      }),
+      gpuResultIdentity: {
+        supported: samples.gpuSampleSerials.length > 0,
+        uniqueResultCount: samples.gpuSampleSerials.length,
+        firstSerial: samples.gpuSampleSerials.length ? samples.gpuSampleSerials[0] : null,
+        lastSerial: samples.gpuSampleSerials.length ? samples.gpuSampleSerials[samples.gpuSampleSerials.length - 1] : null,
+        disjointCount: samples.gpuDisjointFlags.length
+          ? samples.gpuDisjointFlags.reduce((sum, value) => sum + value, 0) : null,
+        disjointObserved: samples.gpuDisjointFlags.length ? samples.gpuDisjointFlags.some(Boolean) : null,
+        limitation: 'mfPerfLatest is sampled at presentation boundaries; a serial jump greater than one would mean an intermediate resolved result was not individually observable.'
+      },
       drawCalls: telemetryStats(samples.drawCalls, { supported: samples.drawCalls.length > 0, source: 'drawCalls' }),
       triangles: telemetryStats(samples.triangles, { supported: samples.triangles.length > 0, source: 'triCount' }),
       visibility: {
         total: telemetryStats(samples.totalUnits, { supported: samples.totalUnits.length > 0, source: 'teamCount authoritative counter' }),
-        visible: telemetryStats(samples.visibleUnits, { supported: samples.visibleUnits.length > 0, source: 'bounded camBounds reconciliation scan' }),
-        culled: telemetryStats(samples.culledUnits, { supported: samples.culledUnits.length > 0, source: 'bounded total-visible reconciliation' }),
+        visible: telemetryStats(samples.visibleUnits, {
+          supported: samples.visibilityValidity.length > 0 && samples.visibilityValidity.every(Boolean) &&
+            samples.visibleUnits.length === samples.visibilityValidity.length,
+          source: 'validated bounds + projection + fogEntityVisible reconciliation'
+        }),
+        culled: telemetryStats(samples.culledUnits, {
+          supported: samples.visibilityValidity.length > 0 && samples.visibilityValidity.every(Boolean) &&
+            samples.culledUnits.length === samples.visibilityValidity.length,
+          source: 'authoritative total minus camera-and-fog-visible reconciliation'
+        }),
         reconciliation: samples.reconciliation
       },
+      brood: {
+        realBodies: telemetryStats(samples.realBroodUnits, {
+          supported: samples.realBroodUnits.length > 0, source: 'authoritative team-2 unit arrays'
+        }),
+        cameraVisibleBodies: telemetryStats(samples.cameraVisibleBroodUnits, {
+          supported: samples.visibilityValidity.length > 0 && samples.visibilityValidity.every(Boolean) &&
+            samples.cameraVisibleBroodUnits.length === samples.visibilityValidity.length,
+          source: 'validated bounds + projection reconciliation before fog'
+        }),
+        visibleBodies: telemetryStats(samples.visibleBroodUnits, {
+          supported: samples.visibilityValidity.length > 0 && samples.visibilityValidity.every(Boolean) &&
+            samples.visibleBroodUnits.length === samples.visibilityValidity.length,
+          source: 'projection + fogEntityVisible reconciliation'
+        }),
+        proxyBodies: telemetryStats(samples.proxyBodies, {
+          supported: samples.proxyBodies.length > 0, source: samples.proxyBodies.length ? 'Brood crowd runtime telemetry' : 'unimplemented runtime hook'
+        }),
+        proxyClusters: telemetryStats(samples.proxyClusters, {
+          supported: samples.proxyClusters.length > 0, source: samples.proxyClusters.length ? 'Brood crowd runtime telemetry' : 'unimplemented runtime hook'
+        })
+      },
       simBacklogSteps: telemetryStats(samples.simBacklogSteps, {
-        supported: samples.simBacklogSteps.length > 0, source: 'fixed-step accumulator/simStep'
+        supported: samples.simBacklogSteps.length > 0, source: 'fixed-step accumulator/MF_SIM_DT'
       }),
       nativeCheckpoints,
       vfx: {
@@ -880,7 +1431,16 @@ export async function runScenarioBenchmark(page, scenario, unitsPerFaction, opti
         values: await page.evaluate(() => window.__mfProbe?.resourceCounts || null)
       },
       jsHeapMB: telemetryStats(samples.heapUsed, { supported: samples.heapUsed.length > 0, source: 'performance.memory.usedJSHeapSize' }),
-      longTaskCount: await page.evaluate(() => window.__mfProbe?.longTasks?.length ?? null),
+      hitchTrace: postSampleDiagnostics.hitchTrace,
+      longTaskCount: postSampleDiagnostics.longTasks.totalCount,
+      longTasks: postSampleDiagnostics.longTasks,
+      hostMemory,
+      cpuProfiles: {
+        enabled: cpuProfile,
+        artifactCount: cpuProfiles.length,
+        artifacts: cpuProfiles,
+        limitation: 'CDP statistical CPU profiles are opt-in and cover only the two presented-frame sample windows; they are not generated by default.'
+      },
       contextLossCount: endState.contextLossCount
     }
   };
@@ -897,9 +1457,11 @@ async function main() {
   const runAll = args.includes('--all');
   const runRequired = args.includes('--required');
   const runLadder = args.includes('--ladder');
+  const cpuProfile = args.includes('--cpu-profile');
   if (runAll && runRequired) throw new Error('--all and --required are mutually exclusive');
   const scenarioKey = valueAfter(args, '--scenario') || '1v1_duel_verdant';
   const preset = valueAfter(args, '--preset') || 'high';
+  const proxyDensity = parseBroodProxyDensity(args);
   const frameValue = Number.parseInt(valueAfter(args, '--frames') || '240', 10);
   if (!Number.isInteger(frameValue) || frameValue < 3) throw new Error('--frames must be an integer >= 3');
   const requiredScenarioIds = [
@@ -956,8 +1518,10 @@ async function main() {
         scenarioId: scenario.id,
         scenarioName: scenario.name,
         unitsPerFaction: unsupportedUnits,
-        factionsCount: scenario.factions.length,
-        topology: { ...topology, seatCount: scenario.factions.length },
+        factionsCount: topology.authorityCount,
+        normalParticipantCount: topology.normalParticipantCount,
+        systemForceCount: topology.systemForceCount,
+        topology: { ...topology, seatCount: topology.authorityCount },
         timestamp: new Date().toISOString()
       };
       unsupportedResults.push(result);
@@ -966,10 +1530,10 @@ async function main() {
 
     if (supportedScenarios.length) {
       server = await startStaticServer();
-      browser = await launchPwBrowser({ headless: true });
+      browser = await launchPwBrowser({ headless: true, ownershipMode: 'isolated' });
       for (const scenario of supportedScenarios) {
         for (const unitsPerFaction of populations) {
-          const runLabel = `${scenario.id} ${unitsPerFaction}/faction`;
+          const runLabel = `${scenario.id} ${unitsPerFaction}/authority proxy=${proxyDensity}`;
           await workspaceGuard.checkpoint(`before performance scenario ${runLabel}`);
           const page = await browser.newPage({
             viewport: { width: DEFAULT_VIEWPORT.width, height: DEFAULT_VIEWPORT.height },
@@ -1004,10 +1568,13 @@ async function main() {
               issues,
               deploymentProof,
               preset: livePreset,
+              proxyDensity,
               viewport: DEFAULT_VIEWPORT,
               url,
               captureLane: 'desktop-v3',
               capturesDir: CAPTURES_DIR,
+              cpuProfile,
+              cpuProfileDir: DIAGNOSTICS_DIR,
               evidenceScope: 'desktop-short-run',
               checkpoint: name => workspaceGuard.checkpoint(`${runLabel}: ${name}`)
             });
@@ -1052,7 +1619,7 @@ async function main() {
     }
 
     if (browser) {
-      await closePwBrowser();
+      await closePwBrowser(browser);
       browser = null;
     }
     if (server) {
@@ -1079,7 +1646,7 @@ async function main() {
   } catch (error) {
     failure = error;
   } finally {
-    if (browser) await closePwBrowser().catch(error => { failure ??= error; });
+    if (browser) await closePwBrowser(browser).catch(error => { failure ??= error; });
     if (server) await server.close().catch(error => { failure ??= error; });
     if (workspaceGuard) {
       try {
@@ -1091,7 +1658,18 @@ async function main() {
     }
   }
 
-  if (failure) throw failure;
+  if (failure) {
+    if (/PW_OWNED_CLEANUP_INCOMPLETE/.test(String(failure?.message || failure)) && results.length) {
+      try {
+        const paths = await preserveCleanupDiagnostics(results, failure);
+        console.error(`DIAGNOSTIC/INCOMPLETE preserved after browser cleanup failure: ${paths.map(path => relative(ROOT, path).replace(/\\/g, '/')).join(', ')}`);
+      } catch (diagnosticError) {
+        throw new AggregateError([failure, diagnosticError],
+          `Browser cleanup failed and diagnostic preservation also failed: ${diagnosticError.message}`);
+      }
+    }
+    throw failure;
+  }
   try {
     for (const output of queuedOutputs) {
       await writeFile(output.path, `${JSON.stringify(output.record, null, 2)}\n`, 'utf8');

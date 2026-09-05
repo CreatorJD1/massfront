@@ -282,7 +282,8 @@ function updateFog(){
 
 // ---------- minimap ----------
 const mm=document.getElementById('minimap').getContext('2d',{willReadFrequently:true});
-let mmBg=null, mmFrame=0, mmBgGen=0;
+let mmBg=null, mmFrame=0, mmBgGen=0, mmNextPaint=0, mmFogLayer=null, mmFogCtx=null, mmFogImg=null, mmFogNext=0;
+let mmPaints=0,mmFogPaints=0,mmTransmissionSkips=0;
 function mmBgIsLive(cv){
   if(!cv||cv.width<8) return false;
   try{
@@ -355,7 +356,7 @@ function mmTeamIdFlush(batch){
   mm.restore();
 }
 function mmFactionCrest(fac,x,y,size,stroke,team){
-  const I=typeof facIconCanvas==='function'?facIconCanvas(fac,()=>{mmFrame=0;}):null,s=size||12,h=s*.5;
+  const I=typeof facIconCanvas==='function'?facIconCanvas(fac,()=>{mmNextPaint=0;}):null,s=size||12,h=s*.5;
   mm.save();
   if(typeof mfTeamIdEnabled==='function'&&mfTeamIdEnabled()&&team!=null){
     const allegiance=mfTeamIdAllegiance(team), P=typeof Path2D==='function'?new Path2D():null;
@@ -370,8 +371,32 @@ function mmFactionCrest(fac,x,y,size,stroke,team){
   else{mm.fillStyle=stroke||'#dff6ff';mm.font='900 '+Math.max(7,s*.65)+'px sans-serif';mm.textAlign='center';mm.textBaseline='middle';mm.fillText('\u25c8',x,y+.5);}
   mm.restore();
 }
+function mmFogComposite(S,now){
+  const active=typeof fogGameplayActive==='function'?fogGameplayActive()&&!demoMode:fogOn&&!demoMode;
+  if(!active){mmFogLayer=null;mmFogCtx=null;mmFogImg=null;mmFogNext=0;return false;}
+  if(mmFogLayer&&mmFogLayer.width===S&&now<mmFogNext)return true;
+  if(!mmFogLayer||mmFogLayer.width!==S){
+    mmFogLayer=document.createElement('canvas');mmFogLayer.width=S;mmFogLayer.height=S;
+    mmFogCtx=mmFogLayer.getContext('2d');mmFogImg=mmFogCtx.createImageData(S,S);
+  }
+  const d=mmFogImg.data;
+  for(let y=0;y<S;y++)for(let x=0;x<S;x++){
+    const a=fogBuf[((y/S*FN|0)*FN+(x/S*FN|0))*4+3],dim=a>=220?0.50:a>=80?0.72:1,mo=(y*S+x)*4;
+    d[mo]=10;d[mo+1]=12;d[mo+2]=8;d[mo+3]=Math.round((1-dim)*255);
+  }
+  mmFogCtx.putImageData(mmFogImg,0,0);mmFogNext=now+500;mmFogPaints++;return true;
+}
 function renderMinimap(){
-  if((mmFrame++)%5) return;
+  const now=typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
+  /* Older callers invalidate the tactical map by assigning mmFrame=0. Keep that
+     public contract while scheduling by elapsed time instead of refresh rate. */
+  if(mmFrame===0)mmNextPaint=0;
+  const wrap=document.getElementById('minimapWrap');
+  /* The receiver completely covers the map during Commander/KEEL speech. Keep
+     the last tactical frame instead of spending CPU on an invisible canvas. */
+  if(wrap&&wrap.dataset.transmission){mmTransmissionSkips++;return;}
+  const total=teamCount[0]+teamCount[1]+teamCount[2],paintMs=total>1500?125:100;
+  if(now<mmNextPaint)return;mmNextPaint=now+paintMs;mmFrame++;mmPaints++;
   /* 256 backing store: a 5x5 civic cell is ~10 px, so lots/streets survive
      the command-map read. CSS paints 56/84 px in portrait and uses the
      intrinsic 256 px canvas in landscape, tablet and desktop layouts. */
@@ -409,7 +434,6 @@ function renderMinimap(){
     if(teamId) mmTeamIdQueue(teamMarks,B.x*k,B.y*k,s,B.team,radarB);
     else mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);
   }
-  const total=teamCount[0]+teamCount[1]+teamCount[2];
   const step=total>3000? Math.ceil(total/1800):1;
   for(let i=0;i<unitHigh;i+=step){
     if(!ualive[i]) continue;
@@ -430,22 +454,11 @@ function renderMinimap(){
     mm.fillStyle='rgb('+cc[0]+','+cc[1]+','+cc[2]+')';
     const x=C.x*k,y=C.y*k; mm.beginPath();mm.moveTo(x,y-6);mm.lineTo(x+6,y);mm.lineTo(x,y+6);mm.lineTo(x-6,y);mm.closePath();mm.fill();
   }
-  if(typeof fogGameplayActive==='function'?fogGameplayActive()&&!demoMode:fogOn&&!demoMode){
-    /* Same fogBuf alpha the 3D shaders sample (live 0, shroud 168, unexplored
-       255). Drawing fogCanvas source-over painted unexplored as a black disc
-       and hid the theatre; dim in place so the command map still reads. */
-    const md=mm.getImageData(0,0,S,S), d=md.data;
-    for(let y=0;y<S;y++) for(let x=0;x<S;x++){
-      const a=fogBuf[((y/S*FN|0)*FN+(x/S*FN|0))*4+3];
-      if(a<8) continue;
-      /* 0.93 left 7% of night albedo — a black square on 84 px phones.
-         Unexplored stays muted so the theatre still reads; live vision
-         stays full; shroud sits between. */
-      const dim=a>=220?0.50:a>=80?0.72:1, lift=1-dim, mo=(y*S+x)*4;
-      d[mo]=d[mo]*dim+10*lift; d[mo+1]=d[mo+1]*dim+12*lift; d[mo+2]=d[mo+2]*dim+8*lift;
-    }
-    mm.putImageData(md,0,0);
-  }
+  /* Cache fog as a source-over tint. This is the same transform as
+     out=source*dim+[10,12,8]*(1-dim), but avoids getImageData plus a 65K-pixel
+     read/modify/write on every entity pass. Fog changes at human-map cadence,
+     while unit pips and the camera outline remain 8-10 Hz. */
+  if(mmFogComposite(S,now))mm.drawImage(mmFogLayer,0,0);
   if(typeof HAZ!=='undefined') for(const F of HAZ.faults||[]){
     if(F.state===2||!fogExploredAt(F.x,F.y)) continue;
     mm.strokeStyle=F.state===1?'rgba(255,174,80,.95)':'rgba(202,167,105,.48)';
@@ -505,6 +518,11 @@ function mmViewCorners(){
   }
   return [at(0,0), at(VW,0), at(VW,VH), at(0,VH)];
 }
+window.MFMinimapScheduler=Object.freeze({
+  invalidate:()=>{mmNextPaint=0;mmFogNext=0;},
+  snapshot:()=>({paints:mmPaints,fogPaints:mmFogPaints,transmissionSkips:mmTransmissionSkips,
+    nextPaint:mmNextPaint,fogNext:mmFogNext,terrainReady:!!mmBg,fogReady:!!mmFogLayer})
+});
 
 // ---------- HUD ----------
 const $=id=>document.getElementById(id);
@@ -639,13 +657,40 @@ function pickupToast(kind,reward){
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>{el.style.opacity=0;el.classList.remove('pickupReward');},3200);
 }
+const MF_UTILITY_HUD_LABEL=Object.freeze({
+  'repair-unit':'HEAL','repair-structure':'REPAIR','construction-assist':'ASSIST',
+  'production-assist':'ASSIST','salvage':'SALVAGE','mining':'MINE','survey':'SURVEY',
+  'escort':'ESCORT','return':'RETURN'
+});
+/* A utility unit may be motionless while doing real work: Wardens and
+   Prospectors use state 0 at range and Constructors use state 6. Read the
+   exact live lease instead of translating those states to READY. The board's
+   manual gate remains authoritative, so a player-issued move/hold never wears
+   an obsolete automatic-job label. */
+function mfUtilityHudOrder(i){
+  if(typeof uUtilityJob==='undefined'||typeof uUtilityAuto==='undefined'||
+     !uUtilityAuto[i]||!uUtilityJob[i]||typeof mfUtilityBoardForWorker!=='function'||
+     typeof mfUtilityWorkerRef!=='function'||typeof mfUtilityJobGet!=='function'||
+     typeof mfUtilityJobClaimForWorker!=='function')return '';
+  if(typeof mfUtilityManualOverride==='function'&&mfUtilityManualOverride(i))return '';
+  const board=mfUtilityBoardForWorker(i),worker=mfUtilityWorkerRef(i),id=uUtilityJob[i];
+  const job=board&&mfUtilityJobGet(board,id),claim=board&&mfUtilityJobClaimForWorker(board,worker);
+  if(!job||!claim||claim.jobId!==id||claim.workerGeneration!==ugen[i]||
+     claim.expiresAt<=(board.nowTick||0))return '';
+  const allowed=typeof mfUtilityWorkerKinds==='function'?mfUtilityWorkerKinds(i):null;
+  if(allowed&&allowed.indexOf(job.kind)<0)return '';
+  const label=MF_UTILITY_HUD_LABEL[job.kind]||'';
+  return label&&ustate[i]===1&&label!=='RETURN'?'TO '+label:label;
+}
 function updateSelInfo(){
   const el=$('selInfo'), tac=$('tacRow');
   const deck=typeof hudDeck==='string'?hudDeck:'orders';
-  const counts={};
-  let n=0,first=-1,modeable=0,curMode=-1,mixed=false,patrolling=0,holding=0,stopped=0,moving=0,reposition=0,guarding=0;
+  const counts={},stackSelection={};
+  let n=0,first=-1,modeable=0,curMode=-1,mixed=false,patrolling=0,holding=0,stopped=0,moving=0,reposition=0,guarding=0,
+      utilityOrder='',utilityCount=0,utilityMixed=false;
   for(let i=0;i<unitHigh;i++) if(ualive[i]&&usel[i]){
     n++; if(first<0) first=i;
+    if(typeof mfLocalOwnsUnit!=='function'||mfLocalOwnsUnit(i))stackSelection[utype[i]]=(stackSelection[utype[i]]||0)+1;
     counts[TYPES[utype[i]].name]=(counts[TYPES[utype[i]].name]||0)+1;
     if(ustate[i]===5)patrolling++;
     else if(ustate[i]===7)guarding++;
@@ -657,29 +702,33 @@ function updateSelInfo(){
     }
     else if(ustate[i]===1){moving++;reposition++;}
     else if(ustate[i]===2)moving++;
+    const utility=mfUtilityHudOrder(i);
+    if(utility){utilityCount++;if(!utilityOrder)utilityOrder=utility;else if(utilityOrder!==utility)utilityMixed=true;}
     if(unitModes(utype[i]).length>1){
       modeable++;
       if(curMode<0) curMode=umode[i]; else if(curMode!==umode[i]) mixed=true;
     }
   }
+  if(window.MFUnitStackHotbar&&typeof window.MFUnitStackHotbar.selection==='function')window.MFUnitStackHotbar.selection(stackSelection);
   if(typeof updateGroupBadges==='function')updateGroupBadges();
-  if(tac) tac.style.display=deck==='orders'&&n?'flex':'none';
+  hudDisp(tac,deck==='orders'&&n?'flex':'none');
   /* The mode button only appears when the selection can actually use it, and
      it reports the CURRENT stance so the button is a readout as well as a
      control — no guessing what a rooted artillery line is doing. */
   const mr=$('modeBtn');
   if(mr){
-    mr.style.display=deck==='platoons'&&modeable?'flex':'none';
+    hudDisp(mr,deck==='platoons'&&modeable?'flex':'none');
     if(modeable){
       const M=unitModeDef(utype[first],mixed?0:Math.max(0,curMode));
       $('modeEm').textContent=mixed?'⁇':M.em;
       $('modeNm').textContent=mixed?'Mixed':M.nm;
     }
   }
-  if(!n){ el.style.display='none'; intelPrimaryUnit=-1; return; }
-  el.style.display='flex';
+  if(!n){ hudDisp(el,'none'); intelPrimaryUnit=-1; return; }
+  hudDisp(el,'flex');
+  const utilityActive=utilityCount===n&&!utilityMixed?utilityOrder:'';
   const order=patrolling===n?'PATROL':guarding===n?'GUARD':stopped===n?'STOP':holding===n?'HOLD'
-    :(stopped+holding)===n?'HOLD/STOP':moving===n?(reposition===n?'MOVE':'A-MOVE'):'READY';
+    :(stopped+holding)===n?'HOLD/STOP':utilityActive||(moving===n?(reposition===n?'MOVE':'A-MOVE'):'READY');
   const platoon=activePlatoon>=0?'P'+(activePlatoon+1)+' · ':'';
   const primary=TYPES[utype[first]], role=UCAT[primary.cat]||UCAT.veh;
   intelPrimaryUnit=first;
@@ -957,10 +1006,10 @@ function updateHUD(fps){
       const leftCmd=/enemy commanders left: (\d+)/.exec(h);
       const inboundCmd=/enemy commanders inbound: (\d+)/.exec(h);
       const hivesLeft=/hives left: (\d+)/.exec(h);
-      if(leftCmd) bar+=hudIntelChip('goal','\u2620 '+leftCmd[1]+' left');
-      else if(inboundCmd) bar+=hudIntelChip('goal','\u2620 inbound '+inboundCmd[1]);
-      else if(hivesLeft) bar+=hudIntelChip('goal','🐛 '+hivesLeft[1]);
-      else if(h) bar+=hudIntelChip('goal',h);
+      if(leftCmd) bar+=hudIntelChip('goal','\u2620 <span class="hudIntelFull">'+leftCmd[1]+' left</span><span class="hudIntelCompact">'+leftCmd[1]+'</span>');
+      else if(inboundCmd) bar+=hudIntelChip('goal','\u2620 <span class="hudIntelFull">inbound '+inboundCmd[1]+'</span><span class="hudIntelCompact">'+inboundCmd[1]+'</span>');
+      else if(hivesLeft) bar+=hudIntelChip('goal','🐛 <span class="hudIntelFull">'+hivesLeft[1]+' hives</span><span class="hudIntelCompact">'+hivesLeft[1]+'</span>');
+      else if(h) bar+=hudIntelChip('goal','<span class="hudIntelFull">'+h+'</span><span class="hudIntelCompact">GOAL</span>');
       if(timeLimit>0){
         const m2=(matchClock/60)|0, s2=(matchClock%60)|0;
         bar+=hudIntelChip('time','<span class="clk'+(matchClock<60?' low':'')+'">'+m2+':'+(s2<10?'0':'')+s2+'</span>');
@@ -1318,9 +1367,10 @@ function intelRangeBand(r){
   return '—';
 }
 function intelUnitPurpose(T){
-  if(T.miner) return 'Mobile phase-ore miner. Cycle MINE, ASSIST and SURVEY orders to gather or accelerate production.';
+  if(T.miner) return 'Mines phase ore, assists production, or surveys fields for a discovery reward.';
   if(T.caster) return 'Critical-mass Brood leader. Its aura turns nearby creatures into a faster coordinated tide.';
-  if(T.builder) return 'Unarmed mobile engineer. Builds structures, auto-repairs nearby damage and salvages wrecks at 2× speed.';
+  if(T.builder) return 'Builds and repairs structures, assists construction, and reclaims wrecks quickly.';
+  if(T.medic) return 'Automatically heals damaged units, escorts the Commander, and returns to base when idle.';
   if(T.name==='Bulwark') return 'Mobile shield projector that reduces damage to nearby allied units.';
   if(T.scout) return 'High-speed reconnaissance aircraft for finding threats and flanking exposed targets.';
   if(T.dmg<=0) return 'Unarmed support chassis. Keep it behind the frontline and out of direct fire.';
@@ -1376,7 +1426,8 @@ function mfUnitSizeBand(T){
   const d=Math.max(1,Math.round((T&&T.r||3)*2));
   return {diameter:d,label:d>=28?'SUPERHEAVY':d>=18?'HEAVY':d>=11?'MEDIUM':'LIGHT'};
 }
-function mfFactorySpeed(B){
+function mfFactorySpeed(B,T){
+  if(typeof mfProductionSpeed==='function')return Math.max(.01,mfProductionSpeed(B,T));
   if(!B) return 1;
   const team=B.team==null?0:B.team;
   const tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1;
@@ -1394,8 +1445,11 @@ function mfUnitProductionQuote(tIdx,B){
   const queueFull=q>=MF_PRODUCTION_QUEUE_CAP;
   const facility=B&&BT[B.type]?BT[B.type].name:'compatible production facility';
   const tier=B&&B.type==='fac'?' · TECH '+(B.tier||1):'';
+  const baseSeconds=T.bt||0;
+  const effectiveSeconds=B?baseSeconds/mfFactorySpeed(B,T)
+    :(typeof mfProductionDuration==='function'?mfProductionDuration(T):baseSeconds);
   return {
-    cost,baseSeconds:T.bt||0,effectiveSeconds:(T.bt||0)/mfFactorySpeed(B),size,
+    cost,baseSeconds,effectiveSeconds,size,
     population:1,popUsed:pop.used,popCap:pop.cap,
     queueUsed:q,queueCap:MF_PRODUCTION_QUEUE_CAP,queueFull,
     queuePosition:queueFull?MF_PRODUCTION_QUEUE_CAP:q+1,
@@ -2023,6 +2077,7 @@ function showBuildingTypeCard(key,bIdx,pinned,kit){
     +'<span>BUILD <b>'+mfFmtSeconds(Q.effectiveSeconds)+'</b></span><span>FOOTPRINT <b>'+Math.round(Q.footprint[0])+'×'+Math.round(Q.footprint[1])+'m</b></span>'
     +'<span>DOMAIN <b>'+Q.placement+'</b></span><span>PAYMENT <b>2% start · '+Q.streamPercent+'% streamed</b></span></div>'
     +'<div class="ucDependency">OUTPUT · '+Q.effect+'</div>'
+    +(B&&typeof bldUpgradePlanText==='function'?'<div class="ucDependency">GRADE PATH · '+bldUpgradePlanText(B)+'</div>':'')
     +'<div class="ucMatchups" aria-label="Live structure matchup multipliers">'
     +(P?intelWeaponMatchups(P.wk):'')+intelStructureThreats()+'</div>'
     +'<div class="ucCounter"><span>✓ PURPOSE: '+(INTEL_BUILD_COPY[T.bcat]||T.desc)+'</span>'
@@ -2197,7 +2252,11 @@ function mfEnsureBuildingServiceControls(panelId){
   if(repair.parentElement!==row)row.appendChild(repair);
   if(sell.parentElement!==row)row.appendChild(sell);
   if(row.parentElement!==host){
-    if(host.id==='prodMenu')host.insertBefore(row,$('upBtn')||null);
+    if(host.id==='prodMenu'){
+      const upgrade=$('mfProdUpgradePanel'),single=$('upBtn');
+      const anchor=upgrade&&upgrade.parentElement===host?upgrade:(single&&single.parentElement===host?single:null);
+      host.insertBefore(row,anchor);
+    }
     else host.appendChild(row);
   }
   row.dataset.panel=host.id;
@@ -2223,6 +2282,130 @@ function mfRenderBuildingServiceControls(B,panelId){
   C.recycle.textContent=armed?'CONFIRM RECYCLE +'+refund+'M':'RECYCLE +'+refund+'M';
   C.recycle.setAttribute('aria-label',armed?'Confirm recycle '+BT[B.type].name+' for '+refund+' mass':'Arm recycle '+BT[B.type].name+' for '+refund+' mass');
 }
+function mfEnsureBuildingActivityControls(panelId){
+  const host=$(panelId);if(!host)return null;
+  const id=panelId==='prodMenu'?'mfProdActivity':'mfBldActivity';
+  let rail=$(id);
+  if(!rail){
+    rail=document.createElement('div');rail.id=id;rail.className='bldActivityRail';
+    rail.setAttribute('role','status');rail.setAttribute('aria-live','polite');
+    rail.innerHTML='<i class="bldActivityMark" aria-hidden="true"></i><b></b><span></span>'
+      +'<em class="bldActivityTrack" aria-hidden="true"><i></i></em>';
+  }
+  const anchor=panelId==='prodMenu'?$('prodQueue'):$('bp_stats');
+  if(rail.parentElement!==host)host.insertBefore(rail,anchor||host.firstChild);
+  return rail;
+}
+function mfRenderBuildingActivityControls(B,panelId){
+  const rail=mfEnsureBuildingActivityControls(panelId);if(!rail)return;
+  /* Queue and research contents are private tactical information. Resolve the
+     local command seat, not merely team 0: co-op allies have separate banks
+     and a PvP client may own a nonzero team. */
+  const authority=typeof mfBuildingUpgradeAuthority==='function'?mfBuildingUpgradeAuthority():null;
+  if(!B||!authority||B.team!==authority.team||typeof commanderSlotForBuilding!=='function'||
+     commanderSlotForBuilding(B)!==authority.slot||typeof mfBuildingActivity!=='function'){rail.hidden=true;return;}
+  const A=mfBuildingActivity(B),pct=Math.round(clamp(Number(A.progress)||0,0,1)*100),kind=A.kind||'idle';
+  rail.hidden=false;rail.dataset.state=A.state||kind;rail.dataset.kind=kind;
+  let label=A.label||kind.toUpperCase(),detail='READY';
+  if(kind==='constructing')detail=pct+'%';
+  else if(kind!=='idle')detail=(A.queueCount>1?A.queueCount+' QUEUED  ·  ':'')+Math.max(0,Math.ceil(A.remaining||0))+'S';
+  if(A.stalled)detail=(A.reason==='population'?'UNIT CAP':'RESOURCES')+'  ·  '+pct+'%';
+  const title=rail.querySelector('b'),meta=rail.querySelector('span'),fill=rail.querySelector('.bldActivityTrack>i');
+  if(title.textContent!==label)title.textContent=label;
+  if(meta.textContent!==detail)meta.textContent=detail;
+  const scale='scaleX('+(kind==='idle'?1:pct/100)+')';if(fill.style.transform!==scale)fill.style.transform=scale;
+  rail.setAttribute('aria-label',label+'. '+detail);
+}
+function mfUpgradeAmount(value,suffix){return Math.max(0,Math.ceil(Number(value)||0))+suffix;}
+function mfEnsureBuildingUpgradeControls(panelId){
+  const host=$(panelId),single=$(panelId==='prodMenu'?'upBtn':'bp_up');
+  if(!host||!single)return null;
+  const id=panelId==='prodMenu'?'mfProdUpgradePanel':'mfBldUpgradePanel';
+  let panel=$(id);
+  if(!panel){
+    panel=document.createElement('section');panel.id=id;panel.className='bldUpgradePanel';
+    panel.setAttribute('role','group');panel.setAttribute('aria-label','Structure upgrades');
+    panel.innerHTML='<div class="bldUpgradeHead"><span>STRUCTURE GRADE</span><b></b></div>'
+      +'<div class="bldUpgradeCensus" aria-live="polite"></div>'
+      +'<div class="bldUpgradeActions"></div><div class="bldUpgradeReason" aria-live="polite"></div>';
+    const all=document.createElement('button');all.type='button';
+    all.id=panelId==='prodMenu'?'upAllBtn':'bp_up_all';
+    all.className='bldUpgradeBtn bldUpgradeAll';
+    const activate=ev=>{
+      if(ev)ev.stopPropagation();
+      if(typeof mfBuildingUpgradePress==='function')mfBuildingUpgradePress(true);
+      else {if(typeof toast==='function')toast('Structure upgrade controls are unavailable');if(typeof sfx==='function')sfx('deny');}
+    };
+    if(typeof mfBindNativePress==='function')mfBindNativePress(all,activate);
+    else all.addEventListener('click',activate);
+    panel.querySelector('.bldUpgradeActions').appendChild(all);
+  }
+  const service=$('mfBldServiceActions'),stats=$('bp_stats'),prio=$('bp_prio');
+  const anchor=panelId==='prodMenu'?(service&&service.parentElement===host?service:null):
+    (stats&&stats.parentElement===host?stats:(prio&&prio.parentElement===host?prio:(service&&service.parentElement===host?service:null)));
+  if(panel.parentElement!==host)host.insertBefore(panel,anchor||null);
+  const actions=panel.querySelector('.bldUpgradeActions');
+  single.classList.add('bldUpgradeBtn','bldUpgradeThis');
+  if(single.parentElement!==actions)actions.insertBefore(single,actions.firstChild);
+  return {panel,single,all:panel.querySelector('.bldUpgradeAll'),head:panel.querySelector('.bldUpgradeHead'),
+    census:panel.querySelector('.bldUpgradeCensus'),reason:panel.querySelector('.bldUpgradeReason')};
+}
+function mfUpgradeReason(value,fallback){
+  const reason=String(value||fallback||'').replace(/^\s+|\s+$/g,'');
+  return reason||'Upgrade unavailable';
+}
+function mfUpgradeButtonCopy(button,label,detail){
+  let strong=button.querySelector('strong'),small=button.querySelector('small');
+  if(!strong||!small){
+    button.textContent='';strong=document.createElement('strong');small=document.createElement('small');
+    button.appendChild(strong);button.appendChild(small);
+  }
+  if(strong.textContent!==label)strong.textContent=label;
+  if(small.textContent!==detail)small.textContent=detail;
+}
+function mfRenderBuildingUpgradeControls(B,panelId){
+  const C=mfEnsureBuildingUpgradeControls(panelId);if(!C||!B)return;
+  if(typeof BUP==='undefined'||!BUP[B.type]){C.panel.hidden=true;return;}
+  C.panel.hidden=false;
+  const info=typeof mfBuildingUpgradeBatchInfo==='function'?mfBuildingUpgradeBatchInfo(openBld):null;
+  if(!info){
+    C.panel.classList.add('is-legacy');C.all.hidden=true;C.head.hidden=true;C.census.hidden=true;C.reason.hidden=true;
+    return;
+  }
+  C.panel.classList.remove('is-legacy');C.all.hidden=false;C.head.hidden=false;C.census.hidden=false;
+  const target=String(info.targetLabel||'NEXT GRADE').toUpperCase();
+  const grade=C.head.querySelector('b');if(grade.textContent!==target)grade.textContent=target;
+  const owned=Math.max(0,Number(info.ownedCount)||0),eligible=Math.max(0,Number(info.eligibleCount)||0);
+  const skipped=[];
+  if(info.busyCount>0)skipped.push(info.busyCount+' BUSY');
+  if(info.maxCount>0)skipped.push(info.maxCount+' MAX');
+  if(info.lockedCount>0)skipped.push(info.lockedCount+' LOCKED');
+  if(info.buildingCount>0)skipped.push(info.buildingCount+' BUILDING');
+  let census=eligible+' OF '+owned+' OWNED ELIGIBLE'+(skipped.length?'  ·  SKIP '+skipped.join(' · '):'');
+  const oneCost=mfUpgradeAmount(info.costM,'M')+'  '+mfUpgradeAmount(info.costE,'E');
+  const allCost=mfUpgradeAmount(info.totalCostM,'M')+'  '+mfUpgradeAmount(info.totalCostE,'E');
+  const oneDetail=info.canUpgradeSelected?target+'  ·  '+oneCost+'  ·  '+mfUpgradeAmount(info.duration,'S'):
+    String(info.selectedCode||'blocked').toUpperCase();
+  const allDetail=info.canUpgradeAll?eligible+' ELIGIBLE  ·  '+allCost:
+    (eligible?eligible+' ELIGIBLE':'NO ELIGIBLE');
+  mfUpgradeButtonCopy(C.single,'UPGRADE THIS',oneDetail);
+  mfUpgradeButtonCopy(C.all,'UPGRADE ALL','THIS TYPE  ·  '+allDetail);
+  C.single.style.display='flex';C.single.disabled=!info.canUpgradeSelected;
+  C.all.disabled=!info.canUpgradeAll;
+  C.single.dataset.state=info.canUpgradeSelected?'ready':'blocked';
+  C.all.dataset.state=info.canUpgradeAll?'ready':'blocked';
+  C.single.setAttribute('aria-label','Upgrade this '+String(info.name||BT[B.type]?.name||'structure')+'. '+oneDetail);
+  C.all.setAttribute('aria-label','Upgrade all eligible owned '+String(info.name||BT[B.type]?.name||'structures')+' of this type. '+allDetail);
+  C.single.title=oneDetail;C.all.title=allDetail;
+  const reasons=[];
+  if(!info.canUpgradeSelected)reasons.push('THIS: '+mfUpgradeReason(info.selectedReason));
+  const batchReason=mfUpgradeReason(info.batchReason);
+  if(!info.canUpgradeAll&&(!reasons.length||batchReason!==mfUpgradeReason(info.selectedReason)))reasons.push('ALL: '+batchReason);
+  C.reason.hidden=true;C.reason.textContent='';
+  census+=(reasons.length?'  ·  '+reasons.join('  ·  '):'');
+  if(C.census.textContent!==census)C.census.textContent=census;
+  C.panel.dataset.state=info.canUpgradeSelected||info.canUpgradeAll?'available':'blocked';
+}
 function renderBldPanel(){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld], T=BT[B.type];
@@ -2231,7 +2414,7 @@ function renderBldPanel(){ if(openBldGone()) return;
   const ic=bldIconEl(B.type,52,panelKit); if(ic) bi.appendChild(ic);
   bi.classList.add('intelTap');
   bi.setAttribute('role','button'); bi.setAttribute('tabindex','0');
-  bi.setAttribute('aria-label','Explain '+T.name);
+  bi.setAttribute('aria-label','Open full '+T.name+' structure intel and grade path');
   const explainBuilding=ev=>{
     if(ev)ev.stopPropagation();
     const live=openBld>=0&&blds[openBld];if(!live||!live.alive)return;
@@ -2243,27 +2426,28 @@ function renderBldPanel(){ if(openBldGone()) return;
   const bLv=typeof bldDisplayLevel==='function'?bldDisplayLevel(B):(B.type==='fac'?(B.tier===2?2:1):(B.lvl||1));
   $('bp_title').textContent=intelBldName(B.type,(typeof factionTextKit==='function')?factionTextKit(B.team):undefined)
     +'  ·  LV'+bLv+(bLv>1?' '+'★'.repeat(Math.min(3,bLv)):'');
-  $('bp_desc').textContent=intelBldLine(B.type,(typeof factionTextKit==='function')?factionTextKit(B.team):undefined)
-    +' · '+Math.ceil(B.hp)+'/'+Math.ceil(B.hpm)+' hp'
+  $('bp_desc').textContent='HP '+Math.ceil(B.hp)+' / '+Math.ceil(B.hpm)
     +(B.shieldMax?' · '+Math.ceil(B.shield)+'/'+Math.ceil(B.shieldMax)+' shield':'');
   const statsEl=$('bp_stats'),deltaEl=$('bp_delta');
   if(statsEl) statsEl.textContent=bldPanelStatText(B);
+  mfRenderBuildingActivityControls(B,'bldMenu2');
   const ub=$('bp_up'), path=BUP[B.type];
   const bLvl=B.type==='fac'?(B.tier===2?2:1):(B.lvl||1);
   if(path && (bLvl-1)<path.length && !(B.type==='fac')){
     const U=path[bLvl-1];
-    if(deltaEl){ deltaEl.style.display='block'; deltaEl.textContent=bldUpgradeDeltaText(B)+'  ·  '+bldUpgradePlanText(B); }
+    if(deltaEl){ deltaEl.style.display='none'; deltaEl.textContent=bldUpgradeDeltaText(B)+'  ·  '+bldUpgradePlanText(B); }
     ub.style.display='block';
     ub.textContent=B.upT>0? ('UPGRADING… '+Math.ceil(B.upT)+'s')
       : ('⬆ UPGRADE TO MK'+(bLvl+1)+'  ·  '+U.cm+'m '+U.ce+'e  ·  '+U.t+'s');
   } else {
     ub.style.display='none';
     if(deltaEl&&path&&!((B.type==='fac'))){
-      deltaEl.style.display='block';
+      deltaEl.style.display='none';
       deltaEl.textContent='◆ MAXIMUM STRUCTURE GRADE  ·  '+bldUpgradePlanText(B);
     } else if(deltaEl) deltaEl.style.display='none';
   }
   mfRenderBuildingServiceControls(B,'bldMenu2');
+  mfRenderBuildingUpgradeControls(B,'bldMenu2');
   const pb=$('bp_prio');
   if(pb){
     if(B.type==='turret'){
@@ -2351,7 +2535,7 @@ function renderResearchMenu(){ if(openBldGone()) return;
   $('upBtn').style.display='none';
   $('repeatBtn').style.display='none';
   const ry=$('rallyBtn'); if(ry) ry.style.display='none';
-  renderQueue();
+  renderQueue(true);
 }
 const UNIT_EM={0:'🤖',1:'🚜',2:'🦣',3:'🎯',5:'🚁',6:'🏹',7:'🚀',8:'👹',9:'🔥',10:'🛰',11:'🛡',14:'🚤',15:'🚢',16:'💣',17:'✈',18:'🌋'};
 /* ---------- baked-sprite UI icons (real 3D renders instead of emoji) ---------- */
@@ -2666,7 +2850,7 @@ function renderProdMenu(){ if(openBldGone()) return;
       : needLab? '🔒 TECH 2 — requires Tech Lab'
       : ('⬆ UPGRADE TO TECH 2 ('+BUP.fac[0].cm+'m '+BUP.fac[0].ce+'e)');
   } else ub.style.display='none';
-  renderQueue();
+  renderQueue(true);
   const rb=$('repeatBtn');
   rb.textContent='REPEAT: '+(B.repeat?'ON':'OFF');
   rb.classList.toggle('on',B.repeat);
@@ -2709,10 +2893,15 @@ function cancelQueuedUnit(B,start){
   } else B.queue.splice(last,1);
   return true;
 }
-function renderQueue(){ if(openBldGone()) return;
+function renderQueue(forceControls){ if(openBldGone()) return;
   if(openBld<0) return;
   const B=blds[openBld];
-  mfRenderBuildingServiceControls(B,'prodMenu');
+  const prodPanel=$('prodMenu'),prodVisible=!!(prodPanel&&prodPanel.style.display==='block');
+  if(forceControls||prodVisible){
+    mfRenderBuildingActivityControls(B,'prodMenu');
+    mfRenderBuildingServiceControls(B,'prodMenu');
+    mfRenderBuildingUpgradeControls(B,'prodMenu');
+  }
   const el=$('prodQueue'); if(!el) return;
   if(B.type==='techlab'){
     el._mfQ='';
@@ -2792,11 +2981,16 @@ function renderQueue(){ if(openBldGone()) return;
   let eta=el.querySelector('.qEtaLine');
   if(q.length){
     const T0=TYPES[q[0]];
-    let total=0; for(const t of q) total+=(TYPES[t].bt||0);
-    const rem=Math.max(0,total-(B.prodT||0));
-    const head=T0?Math.max(0,Math.ceil((T0.bt||0)-(B.prodT||0))):0;
+    const headSpeed=mfFactorySpeed(B,T0);
+    let rem=T0?Math.max(0,(T0.bt||0)-(B.prodT||0))/headSpeed:0;
+    for(let qi=1;qi<q.length;qi++){
+      const Tq=TYPES[q[qi]];rem+=(Tq.bt||0)/mfFactorySpeed(B,Tq);
+    }
+    const head=T0?Math.max(0,Math.ceil(((T0.bt||0)-(B.prodT||0))/headSpeed)):0;
     if(!eta){ eta=document.createElement('div'); eta.className='qAdj qEtaLine'; el.appendChild(eta); }
-    eta.textContent='▶ '+intelUnitName(q[0])+' in '+head+'s'+(q.length>1?('  ·  queue '+Math.ceil(rem)+'s'):'');
+    const stalled=B.prodStalled?(B.prodStalled==='population'?'UNIT CAP':'NEEDS RESOURCES'):'';
+    eta.textContent=stalled?('■ STALLED · '+stalled+' · '+intelUnitName(q[0])):
+      ('▶ '+intelUnitName(q[0])+' in '+head+'s'+(q.length>1?('  ·  queue '+Math.ceil(rem)+'s'):''));
   } else if(eta) eta.remove();
 }
 function renderBuildMenu(){
@@ -3444,6 +3638,9 @@ function cmdrTxReset(){
   CMDRTX.state='idle'; CMDRTX.until=0; CMDRTX.cue=null; CMDRTX.solveAt=0;
   CMDRTX.el.dataset.state='idle';
   if(CMDRTX.wrap) delete CMDRTX.wrap.dataset.transmission;
+  /* The last tactical map frame was intentionally frozen beneath the receiver.
+     Force an immediate entity/fog refresh as soon as it returns. */
+  mmNextPaint=0;mmFogNext=0;
   if(CMDRTX.video){
     try{ CMDRTX.video.pause(); }catch(e){}
     CMDRTX.video.removeAttribute('src');

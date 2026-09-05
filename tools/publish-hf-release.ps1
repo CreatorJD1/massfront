@@ -11,6 +11,12 @@ param(
   # mutation. This permits an immutable-first upload/verification pass before
   # the live update manifest is activated.
   [switch]$PrepareOnly,
+  # Upload and independently verify immutable artifacts, then emit a pinned
+  # candidate. Activation is a separate verified mirror/HF operation.
+  [switch]$UploadOnly,
+  # A failed, never-activated candidate may use a fresh immutable namespace
+  # without consuming a player release version or replacing its uploaded bytes.
+  [ValidatePattern('^(r[1-9][0-9]{0,5})?$')][string]$ArtifactRevision='',
   # A local manifest is written before uploads begin. If a build/upload process
   # is interrupted, explicit Resume rebuilds the exact version and activates
   # only after every immutable class is independently proven or uploaded.
@@ -58,6 +64,31 @@ Set-Location $Root
 
 function Need($condition,$message){ if(-not $condition){ throw $message } }
 function Run([string]$label,[scriptblock]$action){ Write-Host "`n== $label ==" -ForegroundColor Cyan; & $action; if($LASTEXITCODE -and $LASTEXITCODE -ne 0){ throw "$label failed with exit code $LASTEXITCODE" } }
+function Get-ReleaseArtifactNamespace([string]$version,[string]$revision){
+  Need ($version -match '^\d+\.\d+\.\d+$') 'Artifact namespace needs a semantic release version'
+  Need ($revision -match '^(r[1-9][0-9]{0,5})?$') 'Artifact revision must be r followed by a positive integer'
+  $suffix=if($revision){"-candidate-$revision"}else{''}
+  return [pscustomobject]@{ prefix="v$version$suffix"; stem="MASSFRONT-v$version$suffix" }
+}
+function Assert-UnpublishedManifestVersion([object]$manifest,[string]$version,[string]$label){
+  Need ($null -ne $manifest -and [string]$manifest.version -match '^\d+\.\d+\.\d+$') "Cannot prove unpublished candidate: $label is unavailable or malformed"
+  Need ([version]([string]$manifest.version) -lt [version]$version) "artifact-revision-refused: $label already advertises v$($manifest.version); candidate namespaces cannot replace an activated release"
+}
+function Assert-UnpublishedArtifactRevision([string]$version,[string]$revision){
+  if(-not $revision){return}
+  # Read Hub aliases through one authoritative commit, rather than cached main
+  # resolve responses. A missing service is not evidence that a version is free.
+  $head=Invoke-RestMethod -Uri "https://huggingface.co/api/datasets/$Repo" -TimeoutSec 60 -Headers @{'Cache-Control'='no-cache'}
+  Need ([string]$head.sha -match '^[0-9a-f]{40}$') 'Cannot prove unpublished candidate: Hub head unavailable'
+  foreach($name in @('update.json','MASSFRONT-update.json')){
+    $url="https://huggingface.co/datasets/$Repo/resolve/$($head.sha)/${name}?download=true"
+    $live=Read-RemoteJsonIfPresent $url $name
+    Assert-UnpublishedManifestVersion $live $version "HF $name"
+  }
+  $worker=Read-RemoteJsonIfPresent 'https://massfront-update.jasondixon1994.workers.dev/update.json' 'Worker update.json'
+  Assert-UnpublishedManifestVersion $worker $version 'Worker update.json'
+  Write-Host "Unpublished candidate namespace approved by live-state checks: v$version-candidate-$revision" -ForegroundColor Green
+}
 function Assert-AndroidReleaseApk([string]$path,[string]$buildTools){
   Need (Test-Path -LiteralPath $path) "APK verification target does not exist: $path"
   $zipalign=Join-Path $buildTools 'zipalign.exe'
@@ -472,6 +503,9 @@ function Assert-PinnedAdvertisedRanges([object]$releaseManifest){
 
 Need ($null -ne $HfCommand) 'Hugging Face CLI was not found. Install it or set HF_CLI, then run: hf auth login'
 Need ($Version -match '^\d+\.\d+\.\d+$') "Version '$Version' must use major.minor.patch numbers, for example 1.32.86."
+$artifactNames=Get-ReleaseArtifactNamespace $Version $ArtifactRevision
+$otaRemotePrefix=$artifactNames.prefix
+$artifactStem=$artifactNames.stem
 $current=(Get-Content package.json -Raw -Encoding utf8 | ConvertFrom-Json).version
 $releaseManifestPath=Join-Path $Root 'update.json'
 $previousManifest=Get-Content $releaseManifestPath -Raw -Encoding utf8 | ConvertFrom-Json
@@ -510,6 +544,11 @@ if($DryRun){
   Write-Host 'Dry run only: no source, release artifact, or Hugging Face file was changed.' -ForegroundColor Yellow
   exit 0
 }
+
+Need (-not ($PrepareOnly -and $UploadOnly)) 'Choose -PrepareOnly or -UploadOnly, not both.'
+Need ($PrepareOnly -or $UploadOnly) 'Use -PrepareOnly to build locally or -UploadOnly to stage immutable artifacts. Live activation uses the verified mirror and repointer phases.'
+Run 'Check artifact revision remains unpublished before build' { Assert-UnpublishedArtifactRevision $Version $ArtifactRevision }
+Run 'Check canonical workspace writer gate' { node tools/evidence-foundation/workspace-guard.mjs check-write }
 
 # Keep the bump list explicit. A partial version bump is worse than a failed release:
 # the client can endlessly offer its own update if the payload and manifest disagree.
@@ -588,7 +627,7 @@ try {
 finally { Pop-Location }
 }
 
-$apk="releases/MASSFRONT-v$Version-mobile-install.apk"
+$apk="releases/${artifactStem}-mobile-install.apk"
 if($PatchFrom){
   Write-Host "Delta: no APK is built or required. Devices keep the installer they already have." -ForegroundColor Yellow
 } else {
@@ -604,6 +643,9 @@ if($PatchFrom){
 }
 Run 'Build OTA patch' { node tools/bundle-update.mjs $Version }
 Run 'Verify OTA binary art' { node tools/test-update-binary-art.mjs $Version }
+Run 'Verify package and OTA matchmaking identity' {
+  node tools/test-runtime-compatibility-build.mjs "releases/staging-v$Version"
+}
 
 # The OTA is a per-file payload now: a staging folder plus an index carrying
 # size and sha256 for every artifact. bundle-update.mjs writes both.
@@ -649,7 +691,7 @@ Need (($stagedSources -join "|") -eq ($declaredOrder -join "|")) "Staged sources
 $otaBase="https://huggingface.co/datasets/$Repo/resolve/main"
 $fullFiles=@($otaIndex | ForEach-Object {
   $entry=[ordered]@{ path=$_.path; size=[long]$_.size; sha256=([string]$_.sha256).ToLowerInvariant()
-                     url="$otaBase/v$Version/$($_.path)?download=true"; local=(Join-Path $otaStage $_.path) }
+                     url="$otaBase/$otaRemotePrefix/$($_.path)?download=true"; local=(Join-Path $otaStage $_.path) }
   $chunks=@(Copy-ReleaseChunks $_)
   if($chunks.Count -gt 0){ $entry.chunks=$chunks }
   [pscustomobject]$entry
@@ -723,7 +765,7 @@ $manifest.manifestRoot=Get-StringSha256 ((@(
   "payload=$($manifest.payloadRoot)","full=$($manifest.fullRoot)",
   "runtime=$($manifest.runtimeRoot)"
 ) -join "`n"))
-if($PrepareOnly){
+if($PrepareOnly -or $UploadOnly){
   # A candidate proves the proposed bytes without mutating the checked-in/live
   # activation manifest. Its URLs intentionally remain unpinned until the
   # immutable HF commit has been uploaded and verified.
@@ -732,17 +774,13 @@ if($PrepareOnly){
   New-Item -ItemType Directory -Path $candidateDir -Force | Out-Null
   WriteReleaseManifest $candidate $manifest
   Write-Host "Prepared candidate manifest: $candidate" -ForegroundColor Yellow
-} else {
-  WriteReleaseManifest 'update.json' $manifest
-  WriteReleaseManifest 'releases/MASSFRONT-update.json' $manifest
-  WriteReleaseManifest "releases/update-v$Version.json" $manifest
 }
 
 # Archive only canonical project material. Build caches and old releases are
 # intentionally excluded, so collaborators get the real source/assets quickly.
 # Keep staging below the authority checkout: an interrupted publish must not
 # create another persistent MASSFRONT tree in the system temp directory.
-$source="releases/MASSFRONT-v$Version-source.zip"
+$source="releases/${artifactStem}-source.zip"
 if($PatchFrom){
   Write-Host "Delta: source staging and archive generation are skipped; the prior immutable source archive remains authoritative." -ForegroundColor Yellow
 } elseif(-not $IncludeSourceArchive){
@@ -820,18 +858,18 @@ if($PrepareOnly){
 # uploading only missing bytes; any occupied path with different bytes requires
 # a new version.
 $guardNonce=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
-$remotePaths=@($publishFiles | ForEach-Object { "v$Version/$($_.path)" })
-$remotePaths += "v$Version/artifacts.json"
+$remotePaths=@($publishFiles | ForEach-Object { "$otaRemotePrefix/$($_.path)" })
+$remotePaths += "$otaRemotePrefix/artifacts.json"
 if(-not $PatchFrom){
-  $remotePaths += "MASSFRONT-v$Version-mobile-install.apk"
-  if($IncludeSourceArchive){ $remotePaths += "MASSFRONT-v$Version-source.zip" }
+  $remotePaths += "${artifactStem}-mobile-install.apk"
+  if($IncludeSourceArchive){ $remotePaths += "${artifactStem}-source.zip" }
 }
 $remotePaths += @("update-v$Version.json",'MASSFRONT-update.json','update.json')
 $remotePathInfo=Get-RemoteDatasetPathInfoMap @($remotePaths) 'main'
 
 $otaFilesToUpload=@()
 foreach($pf in $publishFiles){
-  $remotePath="v$Version/$($pf.path)"
+  $remotePath="$otaRemotePrefix/$($pf.path)"
   $remote=if($remotePathInfo.ContainsKey($remotePath)){$remotePathInfo[$remotePath]}else{$null}
   $disposition=Get-FileImmutableDisposition $remote ([string]$pf.local) ([string]$pf.sha256) $remotePath
   if($disposition -eq 'missing'){
@@ -840,13 +878,13 @@ foreach($pf in $publishFiles){
     Write-Host "Immutable resume: OTA artifact already verified: $remotePath" -ForegroundColor Green
   }
 }
-$inventoryRemotePath="v$Version/artifacts.json"
+$inventoryRemotePath="$otaRemotePrefix/artifacts.json"
 $inventoryRemote=if($remotePathInfo.ContainsKey($inventoryRemotePath)){$remotePathInfo[$inventoryRemotePath]}else{$null}
 $inventorySha=(Get-FileHash -LiteralPath $otaIndexPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $inventoryDisposition=Get-FileImmutableDisposition $inventoryRemote $otaIndexPath $inventorySha $inventoryRemotePath
 $otaInventoryUploadNeeded=($inventoryDisposition -eq 'missing')
 if(-not $otaInventoryUploadNeeded){
-  $remoteOtaIndex=Read-RemoteJsonIfPresent "$otaBase/v$Version/artifacts.json?download=true&publish_guard=$guardNonce" $inventoryRemotePath
+  $remoteOtaIndex=Read-RemoteJsonIfPresent "$otaBase/$otaRemotePrefix/artifacts.json?download=true&publish_guard=$guardNonce" $inventoryRemotePath
   Need (@($remoteOtaIndex).Count -gt 0) "Authoritative Hub inventory says $inventoryRemotePath exists, but its JSON is unreadable; refusing to risk an immutable overwrite."
   Need (Test-ReleasePayloadMatch ([pscustomobject]@{ files=@($manifest.full) }) ([pscustomobject]@{ files=@($remoteOtaIndex) })) "require-new-version: remote $inventoryRemotePath describes different same-version payload bytes."
   Write-Host "Immutable resume: OTA inventory already verified: $inventoryRemotePath" -ForegroundColor Green
@@ -855,14 +893,14 @@ if(-not $otaInventoryUploadNeeded){
 $apkUploadNeeded=$false
 $sourceUploadNeeded=$false
 if(-not $PatchFrom){
-  $apkRemotePath="MASSFRONT-v$Version-mobile-install.apk"
+  $apkRemotePath="${artifactStem}-mobile-install.apk"
   $apkRemote=if($remotePathInfo.ContainsKey($apkRemotePath)){$remotePathInfo[$apkRemotePath]}else{$null}
   $apkSha=(Get-FileHash -LiteralPath $apk -Algorithm SHA256).Hash.ToLowerInvariant()
   $apkUploadNeeded=((Get-FileImmutableDisposition $apkRemote $apk $apkSha $apkRemotePath) -eq 'missing')
   if(-not $apkUploadNeeded){ Write-Host "Immutable resume: Android installer already verified independently." -ForegroundColor Green }
 
   if($IncludeSourceArchive){
-    $sourceRemotePath="MASSFRONT-v$Version-source.zip"
+    $sourceRemotePath="${artifactStem}-source.zip"
     $sourceRemote=if($remotePathInfo.ContainsKey($sourceRemotePath)){$remotePathInfo[$sourceRemotePath]}else{$null}
     $sourceSha=(Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
     $sourceUploadNeeded=((Get-FileImmutableDisposition $sourceRemote $source $sourceSha $sourceRemotePath) -eq 'missing')
@@ -899,6 +937,7 @@ foreach($representation in $remoteRepresentations){
 # Upgrading huggingface_hub 1.24.0 -> 1.27.0 did NOT verifiably fix it (hf-xet
 # stayed put, and the retest deduped instead of transferring), so this stays
 # until someone proves the Xet path works with genuinely new bytes.
+Run 'Recheck artifact revision remains unpublished before upload' { Assert-UnpublishedArtifactRevision $Version $ArtifactRevision }
 $env:HF_HUB_DISABLE_XET='1'
 # Upload only missing OTA bytes. Existing paths were independently proven from
 # the authoritative Hub inventory above; no other class can suppress this one.
@@ -907,27 +946,27 @@ if($otaFilesToUpload.Count -eq 0){
 } elseif($PatchFrom){
   foreach($pf in $otaFilesToUpload){
     $rel=$pf.path; $loc=$pf.local
-    Run "Publish artifact ($rel)" { & $Hf upload $Repo $loc "v$Version/$rel" --type dataset --commit-message "Publish MASSFRONT v$Version artifact $rel" }
+    Run "Publish artifact ($rel)" { & $Hf upload $Repo $loc "$otaRemotePrefix/$rel" --type dataset --commit-message "Publish MASSFRONT v$Version artifact $rel" }
   }
 } else {
   # A full folder upload is one Hub commit. Re-sending locally identical files
   # is safe and lets the CLI efficiently deduplicate/resume a large source
   # update without 100+ serial commits.
-  Run 'Publish OTA payload' { & $Hf upload $Repo $otaStage "v$Version" --type dataset --commit-message "Publish MASSFRONT v$Version OTA payload" }
+  Run 'Publish OTA payload' { & $Hf upload $Repo $otaStage $otaRemotePrefix --type dataset --commit-message "Publish MASSFRONT v$Version OTA payload ($otaRemotePrefix)" }
   $otaInventoryUploadNeeded=$false
 }
 # Commit the complete target inventory only after every independently uploaded
 # delta artifact exists. A crash before this step is safely resumable because
 # existing bytes are compared path-by-path on the next run.
 if($otaInventoryUploadNeeded){
-  Run 'Publish delta artifact inventory' { & $Hf upload $Repo $otaIndexPath "v$Version/artifacts.json" --type dataset --commit-message "Publish MASSFRONT v$Version artifact inventory" }
+  Run 'Publish delta artifact inventory' { & $Hf upload $Repo $otaIndexPath "$otaRemotePrefix/artifacts.json" --type dataset --commit-message "Publish MASSFRONT v$Version artifact inventory" }
 }
 if($PatchFrom){
   Write-Host "Delta: skipping this upload - the APK is unchanged." -ForegroundColor Yellow
 } elseif(-not $apkUploadNeeded){
   Write-Host "Immutable resume: skipping independently verified v$Version Android installer." -ForegroundColor Yellow
 } else {
-  Run 'Publish Android installer' { & $Hf upload $Repo $apk "MASSFRONT-v$Version-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer" }
+  Run 'Publish Android installer' { & $Hf upload $Repo $apk "${artifactStem}-mobile-install.apk" --type dataset --commit-message "Publish MASSFRONT v$Version Android installer ($otaRemotePrefix)" }
 }
 # Optional content is published only by the typed pack pipeline. This player
 # release never writes the old mutable `exploration-pack` namespace.
@@ -943,7 +982,7 @@ if($PatchFrom){
 } elseif(-not $sourceUploadNeeded){
   Write-Host "Immutable resume: skipping independently verified v$Version source archive." -ForegroundColor Yellow
 } else {
-  Run 'Publish source archive' { & $Hf upload $Repo $source "MASSFRONT-v$Version-source.zip" --type dataset --commit-message "Publish MASSFRONT v$Version source archive" }
+  Run 'Publish source archive' { & $Hf upload $Repo $source "${artifactStem}-source.zip" --type dataset --commit-message "Publish MASSFRONT v$Version source archive" }
 }
 
 # Pin every release URL to the exact Hub commit that now contains all immutable
@@ -956,10 +995,10 @@ try {
 }
 $pinSha=([string]$pinState.sha).ToLowerInvariant()
 Need ($pinSha -match '^[0-9a-f]{40,64}$') 'Hugging Face returned no valid immutable commit sha after artifact upload'
-$pinnedArtifactPaths=@($publishFiles | ForEach-Object { "v$Version/$($_.path)" }) + "v$Version/artifacts.json"
+$pinnedArtifactPaths=@($publishFiles | ForEach-Object { "$otaRemotePrefix/$($_.path)" }) + "$otaRemotePrefix/artifacts.json"
 if(-not $PatchFrom){
-  $pinnedArtifactPaths += "MASSFRONT-v$Version-mobile-install.apk"
-  if($IncludeSourceArchive){ $pinnedArtifactPaths += "MASSFRONT-v$Version-source.zip" }
+  $pinnedArtifactPaths += "${artifactStem}-mobile-install.apk"
+  if($IncludeSourceArchive){ $pinnedArtifactPaths += "${artifactStem}-source.zip" }
 }
 # A newly created Hub commit can resolve immediately while paths-info is still
 # serving the prior tree for that exact revision. That is eventual consistency,
@@ -990,7 +1029,7 @@ foreach($attempt in 1..6){
 Need ($missingPinnedPaths.Count -eq 0) ("Pinned Hub commit inventory did not converge; missing: " +
   ($missingPinnedPaths -join ', ') + $(if($pinnedError){"; last error: $pinnedError"}else{''}))
 foreach($pf in $publishFiles){
-  $path="v$Version/$($pf.path)"
+  $path="$otaRemotePrefix/$($pf.path)"
   $remote=if($pinnedPathInfo.ContainsKey($path)){$pinnedPathInfo[$path]}else{$null}
   Need ((Get-FileImmutableDisposition $remote ([string]$pf.local) ([string]$pf.sha256) "pinned $path") -eq 'identical') "Pinned Hub commit is missing $path after upload"
 }
@@ -1044,43 +1083,15 @@ Write-Host ("Pinned and verified " + @($manifest.files).Count + " artifact(s) at
 Assert-PinnedAdvertisedRanges $manifest
 Write-Host 'Pinned Range delivery verified for every advertised payload.' -ForegroundColor Green
 
-# Preparation writes an intentionally unpinned candidate. Rewrite all three
-# activation representations only after immutable upload + pinned verification.
-WriteReleaseManifest 'update.json' $manifest
-WriteReleaseManifest 'releases/MASSFRONT-update.json' $manifest
-WriteReleaseManifest "releases/update-v$Version.json" $manifest
-Run 'Publish historical manifest' { & $Hf upload $Repo "releases/update-v$Version.json" "update-v$Version.json" --type dataset --commit-message "Publish MASSFRONT v$Version manifest" }
-Run 'Publish release manifest mirror' { & $Hf upload $Repo 'releases/MASSFRONT-update.json' 'MASSFRONT-update.json' --type dataset --commit-message "Publish MASSFRONT v$Version updater mirror" }
-Run 'Activate live updater last' { & $Hf upload $Repo 'update.json' 'update.json' --type dataset --commit-message "Activate MASSFRONT v$Version live updater" }
-
-Write-Host "`nPublished v$Version" -ForegroundColor Green
-if($PatchFrom){
-  Write-Host "APK: unchanged from v$PatchFrom"
-  Write-Host "Source: unchanged from v$PatchFrom"
-} else {
-  Write-Host "APK: https://huggingface.co/datasets/$Repo/resolve/main/MASSFRONT-v$Version-mobile-install.apk?download=true"
-  if($IncludeSourceArchive){ Write-Host "Source: https://huggingface.co/datasets/$Repo/resolve/main/MASSFRONT-v$Version-source.zip?download=true" }
-  else { Write-Host 'Source: skipped (opt-in channel)' }
-}
-
-# A release is not shipped until a device can download it. This used to stop at
-# "uploaded to Hugging Face", which is not the same thing: the Hub answers
-# LFS-backed payloads with a 302 to a signed CDN on another origin, and the Range
-# header every chunked file carries makes that redirect fatal in a strict WebView.
-# v1.33.70 and v1.33.71 shipped undeliverable for exactly this reason while every
-# Chrome-based check passed, so this gate runs the transport-shape probe, which
-# does not depend on one engine's tolerance.
-Write-Host ''
-Write-Host 'Verifying the published release is actually downloadable...' -ForegroundColor Cyan
-& node (Join-Path $PSScriptRoot 'probe-payload-cors.mjs') '--no-browser'
-if($LASTEXITCODE -ne 0){
-  Write-Host ''
-  Write-Host "v$Version IS PUBLISHED BUT NOT YET DELIVERABLE." -ForegroundColor Red
-  Write-Host 'Payloads still resolve off-origin, so devices fail with a flat network error'
-  Write-Host 'while the launcher still reports NETWORK READY. Finish the release:' -ForegroundColor Yellow
-  Write-Host "  node tools/mirror-release-to-cloudflare.mjs --version $Version --apply"
-  Write-Host '  node tools/repoint-manifests-to-mirror.mjs --apply'
-  Write-Host '  node tools/probe-payload-cors.mjs'
-  exit 1
-}
-Write-Host "v$Version is deliverable: payloads serve with no off-origin redirect." -ForegroundColor Green
+# HF redirects are acceptable as a checked immutable source for the mirror, not
+# as the client activation transport. No live or historical manifest is changed
+# by this publisher. Complete mirrored bytes/CORS/ranges gate activation later.
+Run 'Recheck canonical workspace writer gate' { node tools/evidence-foundation/workspace-guard.mjs check-write }
+$pinnedCandidate="releases/candidates/update-v$Version.pinned.json"
+WriteReleaseManifest $pinnedCandidate $manifest
+Write-Host "`nImmutable artifacts uploaded and verified for v$Version. NO MANIFEST ACTIVATED." -ForegroundColor Green
+Write-Host "Pinned candidate: $pinnedCandidate"
+Write-Host "Artifact namespace: $otaRemotePrefix"
+if(-not $PatchFrom){ Write-Host "Installer: $pinnedBase/${artifactStem}-mobile-install.apk?download=true" }
+Write-Host "Next: node tools/mirror-release-to-cloudflare.mjs --version $Version --manifest $pinnedCandidate --prepare-only --apply"
+exit 0

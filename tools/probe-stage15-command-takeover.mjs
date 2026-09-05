@@ -29,7 +29,7 @@ try{
     const AI={allies:[],bases:[{slot:5}],fac:'legion'};
     window.MFSocialUI={state:{lobby:{rules:{mode:'skirmish',slots:2,map:'auto'}}}};
     window.__state='running';window.__seat=1;window.__sent=[];window.__registered=null;window.__baseCalls=[];window.__commander=[];
-    window.MFMatchRuntime={registerConsumer:v=>(__registered=v,true),status:()=>({state:__state,seat:__seat}),
+    window.MFMatchRuntime={registerConsumer:v=>(__registered=v,true),status:()=>({state:__state,seat:__seat,started:true,ended:false}),
       submitCommands:(commands,delay)=>{__sent.push({commands,delay});return {seq:__sent.length,targetTick:2,count:commands.length};}};
     function commanderSlotForBuilding(){return -1} function populationCanSpawn(){return true} function canAfford(){return true}
     function factionDoctrineRoster(list){return list} function canStartBuild(){return true} function inBuildRange(){return true}

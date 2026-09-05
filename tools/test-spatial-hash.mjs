@@ -84,7 +84,7 @@ try{
 
     /* Wipe-without-rebuild then spawn must not cycle (gridLink unlinks first). */
     for(let i=0;i<unitHigh;i++)ualive[i]=0;
-    unitHigh=0;freeList.length=0;
+    unitHigh=0;freeList.length=0;if(typeof activeUnitReset==='function')activeUnitReset();
     const c=spawnUnit(0,0,L[0],L[1],-1);
     const d=spawnUnit(0,1,L[0]+36,L[1],0);
     ux[c]=L[0];uy[c]=L[1];ux[d]=L[0]+36;uy[d]=L[1];
@@ -96,7 +96,7 @@ try{
       feDead,cycled,cap:FACTION_POP_CAP,civicLine};
   });
 
-  assert(out.cap===1000,'FACTION_POP_CAP must stay 1000');
+  assert(out.cap===500,'FACTION_POP_CAP must stay 500 per participant');
   assert(out.civicLine,'civic explosion cap must stay size 13');
   assert(out.incFe>=0,'incremental findEnemy missed a nearby foe');
   assert(out.proof.ok&&out.proof.feBad===0&&out.proof.sepMiss===0,

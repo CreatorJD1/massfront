@@ -311,6 +311,23 @@ const uHurtT=new Float32Array(MAXU);
    and is cleared in spawnUnit() like every other per-slot array. */
 const uheal=new Float32Array(MAXU);
 let freeList=[], unitHigh=0;
+/* Dense live-unit index. MAXU is a serialization address space, not work that
+   should be scanned every tick. Keep slot identity stable while iterating a
+   copied 2,500-entry view so deaths/spawns during combat cannot skip a unit. */
+const uActive=new Int32Array(MAXU),uActivePos=new Int32Array(MAXU),uActiveStep=new Int32Array(MAXU);
+uActivePos.fill(-1);let uActiveCount=0;
+function activeUnitAdd(i){
+  if(i<0||i>=MAXU||uActivePos[i]>=0)return;
+  uActivePos[i]=uActiveCount;uActive[uActiveCount++]=i;
+}
+function activeUnitRemove(i){
+  const p=i>=0&&i<MAXU?uActivePos[i]:-1;if(p<0)return;
+  const last=--uActiveCount,moved=uActive[last];
+  if(p!==last){uActive[p]=moved;uActivePos[moved]=p;}
+  uActivePos[i]=-1;
+}
+function activeUnitReset(){uActiveCount=0;uActivePos.fill(-1);}
+function activeUnitSnapshot(){uActiveStep.set(uActive.subarray(0,uActiveCount),0);return uActiveCount;}
 const teamCount=[0,0,0];
 /* Population is a gameplay budget AND a mobile stability budget. MAXU remains
    large because the renderer and save format need a wide slot address space.
@@ -730,11 +747,19 @@ function allocMoveCohort(sel,targets,form,preassigned){
   return ci;
 }
 function tickMoveCohorts(){
-  uCohesion.fill(1,0,unitHigh);
+  for(let n=0;n<uActiveCount;n++)uCohesion[uActive[n]]=1;
   for(let ci=0;ci<MOVE_COHORT_MAX;ci++){
     const C=moveCohorts[ci];if(!C)continue;
-    const live=C.members.filter(e=>ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===(C.team==null?0:C.team)&&uMoveCohort[e[0]]===ci);
-    C.members=live;
+    /* Compact in place. A 500-unit formation used to allocate and discard a
+       500-entry array every authoritative tick, turning sustained movement
+       into avoidable GC pressure on mobile. */
+    let liveN=0;
+    for(let n=0;n<C.members.length;n++){
+      const e=C.members[n];
+      if(ualive[e[0]]&&ugen[e[0]]===e[1]&&uteam[e[0]]===(C.team==null?0:C.team)&&uMoveCohort[e[0]]===ci)
+        C.members[liveN++]=e;
+    }
+    C.members.length=liveN;const live=C.members;
     if(!live.length){moveCohorts[ci]=null;continue;}
     let far=0,arrived=0,slowest=Infinity;
     for(const e of live){ const T0=TYPES[utype[e[0]]]; if(T0&&T0.spd>0) slowest=Math.min(slowest,T0.spd); }
@@ -1066,7 +1091,7 @@ function spawnUnit(type,team,x,y,cmdSlot){
   uCmd[i]=slot;
   uAllyBase[i]=team===0?slot:-1;
   ugen[i]=(ugen[i]+1)|0;                    // this slot is now a different unit
-  uwalk[i]=Math.random()*6.283;             // desynchronise the gait across a squad
+  uwalk[i]=mfSimRandom()*6.283;             // deterministic but visually desynchronised gait
   utgt[i]=-1; utgtg[i]=-1; ukills[i]=0; uvet[i]=0; ushielded[i]=0; uhaz[i]=0; ufireT[i]=0; ufield[i]=-1; uhold[i]=0;
   /* A recycled slot inherits every array it is not explicitly cleared from.
      umarch=1 means "walk to the goal, do not skirmish", so a unit spawned into
@@ -1084,6 +1109,7 @@ function spawnUnit(type,team,x,y,cmdSlot){
   uUtilityJob[i]='';uUtilityAuto[i]=0;uUtilityGoalX[i]=x;uUtilityGoalY[i]=y;
   umode[i]=0; umodeT[i]=0;
   teamCount[team]++;
+  activeUnitAdd(i);
   if(team<2){popCmdInc(slot);if(T.cat==='hero')popCmdHeroInc(slot);}
   else if(team===2&&slot>=0&&typeof broodIsEnemy==='function'&&broodIsEnemy()) popCmdInc(slot);
   if(type===8) titanCount[team]++;
@@ -1227,6 +1253,7 @@ function killUnit(i, silent){
   uCrash[i]=0;
   const brood=unitIsBrood(i);
   ualive[i]=0; usel[i]=0; teamCount[uteam[i]]--;
+  activeUnitRemove(i);
   if(typeof gridUnlink==='function') gridUnlink(i);
   if(uteam[i]<2){popCmdDec(uCmd[i]);if(T0&&T0.cat==='hero')popCmdHeroDec(uCmd[i]);}
   else if(uteam[i]===2&&uCmd[i]>=0) popCmdDec(uCmd[i]);
@@ -1314,8 +1341,35 @@ function killUnit(i, silent){
 const CS=44, GW=Math.ceil(MAP/CS)+2;
 const gHead=new Int32Array(GW*GW), gNext=new Int32Array(MAXU);
 const uGridCell=new Int32Array(MAXU);
+/* One bit per grid cell lets wide artillery/area queries skip empty buckets
+   without changing their authoritative y/x traversal or the LIFO unit order
+   inside a bucket. At 3840wu this costs under 1.2 KiB and is maintained by the
+   same incremental link/unlink operations that already own gHead. */
+const GWORD=(GW+31)>>5,gOcc=new Uint32Array(GW*GWORD);
 gHead.fill(-1); gNext.fill(-1); uGridCell.fill(-1);  // zeros would make cell walks cycle on unit 0
 function gCell(x,y){ return clamp(y/CS|0,0,GW-1)*GW + clamp(x/CS|0,0,GW-1); }
+function gridOccSet(c,on){
+  const gy=c/GW|0,gx=c-gy*GW,p=gy*GWORD+(gx>>>5),bit=1<<(gx&31);
+  if(on)gOcc[p]=(gOcc[p]|bit)>>>0;else gOcc[p]=(gOcc[p]&~bit)>>>0;
+}
+function gridNextOccupied(gy,gx,x1){
+  if(gx>x1)return x1+1;
+  let w=gx>>>5,bits=(gOcc[gy*GWORD+w]&(0xffffffff<<(gx&31)))>>>0;
+  const last=x1>>>5,end=x1&31;
+  for(;;){
+    if(w===last&&end<31)bits=(bits&(0xffffffff>>>(31-end)))>>>0;
+    if(bits)return (w<<5)+(31-Math.clz32((bits&-bits)>>>0));
+    if(++w>last)return x1+1;
+    bits=gOcc[gy*GWORD+w]>>>0;
+  }
+}
+function gridRowRangeFull(gy,x0,x1){
+  const w0=x0>>>5,w1=x1>>>5,base=gy*GWORD;
+  const lo=(0xffffffff<<(x0&31))>>>0,hi=(0xffffffff>>>(31-(x1&31)))>>>0;
+  if(w0===w1){const mask=(lo&hi)>>>0;return ((gOcc[base+w0]&mask)>>>0)===mask;}
+  /* Query width is capped at 29 cells, so a range can cross at most two words. */
+  return ((gOcc[base+w0]&lo)>>>0)===lo&&((gOcc[base+w1]&hi)>>>0)===hi;
+}
 function gridUnlink(i){
   const c=uGridCell[i];
   if(c<0) return;
@@ -1324,6 +1378,7 @@ function gridUnlink(i){
     if(j===i){ if(prev<0) gHead[c]=gNext[i]; else gNext[prev]=gNext[i]; break; }
     prev=j; j=gNext[j];
   }
+  if(gHead[c]<0)gridOccSet(c,false);
   gNext[i]=-1; uGridCell[i]=-1;
 }
 function gridLink(i){
@@ -1332,6 +1387,7 @@ function gridLink(i){
   if(uGridCell[i]>=0) gridUnlink(i);
   const c=gCell(ux[i],uy[i]);
   uGridCell[i]=c; gNext[i]=gHead[c]; gHead[c]=i;
+  gridOccSet(c,true);
 }
 function gridRelink(i){
   const c=gCell(ux[i],uy[i]);
@@ -1342,12 +1398,13 @@ function gridRelink(i){
    cell-change relink — filling gHead every step was O(GW²) throwaway work.
    Do not raise FACTION_POP_CAP or armyCap to "pay for" this. */
 function rebuildGrid(){
-  gHead.fill(-1);
+  gHead.fill(-1);gOcc.fill(0);
   for(let i=0;i<unitHigh;i++){
     if(!ualive[i]){ uGridCell[i]=-1; gNext[i]=-1; continue; }
     const c=gCell(ux[i],uy[i]);
     uGridCell[i]=c;
     gNext[i]=gHead[c]; gHead[c]=i;
+    gridOccSet(c,true);
   }
 }
 function gridQueryProof(){
@@ -1386,17 +1443,35 @@ function findEnemy(x,y,team,rad,mode){
   const cx=clamp(x/CS|0,0,GW-1), cy=clamp(y/CS|0,0,GW-1);
   let best=-1, bd=rad*rad;
   const x0=Math.max(0,cx-cr), x1=Math.min(GW-1,cx+cr), y0=Math.max(0,cy-cr), y1=Math.min(GW-1,cy+cr);
-  for(let gy=y0;gy<=y1;gy++) for(let gx=x0;gx<=x1;gx++){
-    let j=gHead[gy*GW+gx];
-    while(j>=0){
-      if(intelCanTarget(j,team)){
-        const air=TYPES[utype[j]].air;
-        if(!((mode===1&&!air)||(mode===2&&air))){
-          const d=dist2(x,y,ux[j],uy[j]);
-          if(d<bd){ bd=d; best=j; }
+  for(let gy=y0;gy<=y1;gy++){
+    /* Tiny windows and saturated battle rows make a bit search pure overhead.
+       Sparse rows still reread gOcc after every callback-visible cell, so a
+       callback that links a later unit retains the legacy traversal contract. */
+    const direct=cr<=1||gridRowRangeFull(gy,x0,x1);
+    if(direct)for(let gx=x0;gx<=x1;gx++){
+      let j=gHead[gy*GW+gx];
+      while(j>=0){
+        if(intelCanTarget(j,team)){
+          const air=TYPES[utype[j]].air;
+          if(!((mode===1&&!air)||(mode===2&&air))){
+            const d=dist2(x,y,ux[j],uy[j]);
+            if(d<bd){ bd=d; best=j; }
+          }
         }
+        j=gNext[j];
       }
-      j=gNext[j];
+    }else for(let gx=gridNextOccupied(gy,x0,x1);gx<=x1;gx=gridNextOccupied(gy,gx+1,x1)){
+      let j=gHead[gy*GW+gx];
+      while(j>=0){
+        if(intelCanTarget(j,team)){
+          const air=TYPES[utype[j]].air;
+          if(!((mode===1&&!air)||(mode===2&&air))){
+            const d=dist2(x,y,ux[j],uy[j]);
+            if(d<bd){ bd=d; best=j; }
+          }
+        }
+        j=gNext[j];
+      }
     }
   }
   return best;
@@ -1404,26 +1479,45 @@ function findEnemy(x,y,team,rad,mode){
 function findEnemyDomain(x,y,team,rad,mask,prefer){
   const cr=Math.min(14,Math.ceil(rad/CS)),cx=clamp(x/CS|0,0,GW-1),cy=clamp(y/CS|0,0,GW-1);
   let best=-1,bscore=rad*rad;
-  for(let gy=Math.max(0,cy-cr);gy<=Math.min(GW-1,cy+cr);gy++)for(let gx=Math.max(0,cx-cr);gx<=Math.min(GW-1,cx+cr);gx++){
-    let j=gHead[gy*GW+gx];
-    while(j>=0){
-      if(intelCanTarget(j,team)){
-        const D=mfDomainOfType(TYPES[utype[j]]);
-        if(mask&D){
-          const d=dist2(x,y,ux[j],uy[j]);
-          /* Wounded bias. hpFrac 1.0 leaves score unchanged; a target at 25%
-             health scores 0.66x, so it wins against an equal-distance healthy
-             one but does NOT beat a much closer target — deliberately mild, so
-             units do not walk past the thing shooting them to finish something
-             across the field. 0.45 was too strong in reasoning: it inverted
-             distance entirely at low health. */
-          const hpFrac=uhpm[j]>0?clamp(uhp[j]/uhpm[j],0,1):1;
-          const wounded=0.55+0.45*hpFrac;
-          const score=d*((prefer&D)?.62:1)*wounded;
-          if(score<bscore){bscore=score;best=j;}
+  const x0=Math.max(0,cx-cr),x1=Math.min(GW-1,cx+cr),y0=Math.max(0,cy-cr),y1=Math.min(GW-1,cy+cr);
+  for(let gy=y0;gy<=y1;gy++){
+    const direct=cr<=1||gridRowRangeFull(gy,x0,x1);
+    if(direct)for(let gx=x0;gx<=x1;gx++){
+      let j=gHead[gy*GW+gx];
+      while(j>=0){
+        if(intelCanTarget(j,team)){
+          const D=mfDomainOfType(TYPES[utype[j]]);
+          if(mask&D){
+            const d=dist2(x,y,ux[j],uy[j]);
+            /* Wounded bias. hpFrac 1.0 leaves score unchanged; a target at 25%
+               health scores 0.66x, so it wins against an equal-distance healthy
+               one but does NOT beat a much closer target — deliberately mild, so
+               units do not walk past the thing shooting them to finish something
+               across the field. 0.45 was too strong in reasoning: it inverted
+               distance entirely at low health. */
+            const hpFrac=uhpm[j]>0?clamp(uhp[j]/uhpm[j],0,1):1;
+            const wounded=0.55+0.45*hpFrac;
+            const score=d*((prefer&D)?.62:1)*wounded;
+            if(score<bscore){bscore=score;best=j;}
+          }
         }
+        j=gNext[j];
       }
-      j=gNext[j];
+    }else for(let gx=gridNextOccupied(gy,x0,x1);gx<=x1;gx=gridNextOccupied(gy,gx+1,x1)){
+      let j=gHead[gy*GW+gx];
+      while(j>=0){
+        if(intelCanTarget(j,team)){
+          const D=mfDomainOfType(TYPES[utype[j]]);
+          if(mask&D){
+            const d=dist2(x,y,ux[j],uy[j]);
+            const hpFrac=uhpm[j]>0?clamp(uhp[j]/uhpm[j],0,1):1;
+            const wounded=0.55+0.45*hpFrac;
+            const score=d*((prefer&D)?.62:1)*wounded;
+            if(score<bscore){bscore=score;best=j;}
+          }
+        }
+        j=gNext[j];
+      }
     }
   }
   return best;
@@ -1431,18 +1525,20 @@ function findEnemyDomain(x,y,team,rad,mask,prefer){
 
 /* ---------- flow-field pathfinding (SupCom2-style) ---------- */
 const DIRX=[1,1,0,-1,-1,-1,0,1,0], DIRY=[0,1,1,1,0,-1,-1,-1,0];
-/* Sixteen direction fields cost about 2.3 MiB at the production 384x384 grid.
-   That bounded pool is large enough for every movement/clearance cohort plus
-   normal AI traffic. More importantly, replacement is reference-aware: the
+/* Thirty-two direction fields cost about 4.7 MiB at the production 384x384
+   grid. The larger bounded pool prevents four 500-unit armies from constantly
+   rebuilding shared destinations. More importantly, replacement is reference-aware: the
    old eight-slot round robin detached units that were still marching. */
-const FF_MAX=16;
+const FF_MAX=32;
 const fields=[];              // {tx,ty,dirs:Uint8Array,rev,lastUse,pending}
 let ffNext=0,mfFieldUseClock=1,mfNavBuildTick=-1;
 const mfFieldRefs=new Uint16Array(FF_MAX);
 const mfNavPerf={requests:0,hits:0,misses:0,builds:0,deferred:0,evictions:0,
-  activeProtected:0,overflows:0,invalidations:0,lastBuildMs:0,maxBuildMs:0};
+  activeProtected:0,overflows:0,invalidations:0,lastBuildMs:0,maxBuildMs:0,
+  slices:0,cells:0,queued:0,canceled:0,lastSliceCells:0,maxSliceCells:0};
 const ffDist=new Uint16Array(0);  // replaced at init
 let ffDistA=null,ffQueue=null,ffBucketHead=null,ffBucketNext=null,ffBucketPrev=null,ffBucketCost=null;
+let mfNavJob=null,mfNavQueue=[],mfNavWork=null;
 function ffCell(wx,wy){ return clamp(wy/MAP*PGS|0,0,PGS-1)*PGS+clamp(wx/MAP*PGS|0,0,PGS-1); }
 const MF_NAV_CLEARANCE=Object.freeze({infantry:0,light:1,heavy:2,superheavy:3,naval:4});
 const MF_NAV_CLEARANCE_COST=[0,256,512,1024,512];
@@ -1467,11 +1563,17 @@ function mfNavClearanceToken(clearance,naval){
    at all. Keep one coarse, bounded mask beside PASS/NAVW. It is rebuilt only
    when blocker identity changes and is shared by all eight cached fields. */
 let mfMoveBlockMask=null,mfMoveBlockMaskKey='',mfMoveBlockRevision=1;
-let mfNavClearLand=null,mfNavClearWater=null,mfNavClearRevision=0,mfNavLastInvalidation='boot';
+let mfNavClearLand=null,mfNavClearWater=null,mfNavClearLandRev=0,mfNavClearWaterRev=0,mfNavLastInvalidation='boot';
 let mfNavPassRef=null,mfNavWaterRef=null,mfNavCompRef=null;
+function mfNavCancelBuilds(){
+  const n=mfNavQueue.length+(mfNavJob?1:0);if(n)mfNavPerf.canceled+=n;
+  mfNavQueue.length=0;mfNavJob=null;mfNavPerf.queued=0;
+  for(let f=0;f<fields.length;f++)if(fields[f]){fields[f].pending=false;fields[f]._queuedRev=0;}
+}
 function mfNavInvalidate(reason){
-  mfMoveBlockMaskKey='';mfNavClearRevision=0;mfNavLastInvalidation=reason||'dynamic';
+  mfMoveBlockMaskKey='';mfNavClearLandRev=0;mfNavClearWaterRev=0;mfNavLastInvalidation=reason||'dynamic';
   mfMoveBlockRevision=(mfMoveBlockRevision+1)>>>0||1;
+  mfNavCancelBuilds();
   mfNavPerf.invalidations++;
   return mfMoveBlockRevision;
 }
@@ -1479,10 +1581,10 @@ function mfNavRevision(){return mfMoveBlockRevision;}
 function mfNavDiagnostics(){
   let active=0,pending=0;
   mfFieldRefs.fill(0);
-  for(let i=0;i<unitHigh;i++)if(ualive[i]&&ufield[i]>=0&&ufield[i]<FF_MAX)mfFieldRefs[ufield[i]]++;
+  for(let n=0;n<uActiveCount;n++){const i=uActive[n];if(ufield[i]>=0&&ufield[i]<FF_MAX)mfFieldRefs[ufield[i]]++;}
   for(let f=0;f<fields.length;f++)if(fields[f]){if(mfFieldRefs[f])active++;if(fields[f].pending)pending++;}
   return {...mfNavPerf,slots:fields.filter(Boolean).length,active,pending,revision:mfMoveBlockRevision,
-    lastInvalidation:mfNavLastInvalidation};
+    cellsPerTick:MF_NAV_CELLS_PER_TICK,lastInvalidation:mfNavLastInvalidation};
 }
 function mfMoveBlockersDirty(){mfNavInvalidate('blockers');}
 function mfMoveStampCircle(mask,x,y,r){
@@ -1511,7 +1613,8 @@ function mfMoveBlockMaskEnsure(){
     key=bn+'|'+rn+'|'+kn+'|'+wn;
   if(mfMoveBlockMask&&mfMoveBlockMaskKey===key)return mfMoveBlockMask;
   if(mfMoveBlockMask&&mfMoveBlockMaskKey&&mfMoveBlockMaskKey!==key){
-    mfMoveBlockRevision=(mfMoveBlockRevision+1)>>>0||1;mfNavClearRevision=0;
+    mfMoveBlockRevision=(mfMoveBlockRevision+1)>>>0||1;mfNavClearLandRev=0;mfNavClearWaterRev=0;
+    mfNavCancelBuilds();
   }
   const mask=mfMoveBlockMask&&mfMoveBlockMask.length===PGS*PGS?mfMoveBlockMask:new Uint8Array(PGS*PGS);
   mask.fill(0);
@@ -1558,12 +1661,20 @@ function mfNavBuildClearance(naval){
 }
 function mfNavClearanceGrid(naval){
   mfMoveBlockMaskEnsure();
-  if(mfNavClearRevision!==mfMoveBlockRevision||!mfNavClearLand||!mfNavClearWater||
-     mfNavPassRef!==PASS||mfNavWaterRef!==NAVW||mfNavCompRef!==NAVCOMP){
-    mfNavClearLand=mfNavBuildClearance(false);mfNavClearWater=mfNavBuildClearance(true);
-    mfNavClearRevision=mfMoveBlockRevision;mfNavPassRef=PASS;mfNavWaterRef=NAVW;mfNavCompRef=NAVCOMP;
+  if(mfNavPassRef!==PASS||mfNavWaterRef!==NAVW||mfNavCompRef!==NAVCOMP){
+    mfNavClearLandRev=0;mfNavClearWaterRev=0;
+    mfNavPassRef=PASS;mfNavWaterRef=NAVW;mfNavCompRef=NAVCOMP;
   }
-  return naval?mfNavClearWater:mfNavClearLand;
+  /* A land route must not synchronously pay for a second 384x384 distance
+     transform that only ships can consume (and vice versa). Both products are
+     deterministic; they are simply materialized when their medium is first
+     requested for the current blocker revision. */
+  if(naval){
+    if(mfNavClearWaterRev!==mfMoveBlockRevision||!mfNavClearWater){mfNavClearWater=mfNavBuildClearance(true);mfNavClearWaterRev=mfMoveBlockRevision;}
+    return mfNavClearWater;
+  }
+  if(mfNavClearLandRev!==mfMoveBlockRevision||!mfNavClearLand){mfNavClearLand=mfNavBuildClearance(false);mfNavClearLandRev=mfMoveBlockRevision;}
+  return mfNavClearLand;
 }
 function mfNavPass(i,naval,clearance){
   const c=mfNavClearanceToken(clearance,naval),grid=mfNavClearanceGrid(!!naval);
@@ -1640,15 +1751,10 @@ function mfMoveFieldFresh(F){
   mfMoveBlockMaskEnsure();
   F.lastUse=++mfFieldUseClock;
   if(F.rev!==mfMoveBlockRevision||!F.dirs){
-    /* At most one expensive field build is admitted per deterministic sim
-       tick. Existing directions remain usable until their replacement lands;
-       a brand-new deferred field falls back to local steering for that tick. */
-    const buildTick=typeof tick==='number'?tick:-1;
-    if(mfNavBuildTick===buildTick){F.pending=true;return F;}
-    const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
-    F.dirs=computeField(F.tx,F.ty,F.naval,F.clearance);F.sectorDist=F.dirs.mfSectorDist;
-    F.rev=mfMoveBlockRevision;F.pending=false;mfNavBuildTick=buildTick;mfNavPerf.builds++;
-    if(t0){const ms=performance.now()-t0;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
+    /* Never rebuild 147k cells inside a movement call. A deterministic cell
+       budget advances the shared job once per fixed tick; existing directions
+       remain usable until replacement, while a new route uses local steering. */
+    mfNavQueueBuild(F);
   }
   return F;
 }
@@ -1714,9 +1820,84 @@ function computeField(tx,ty,naval,clearance){
   }
   return dirs;
 }
+/* Incremental form of computeField. Work is measured in visited cells, never
+   milliseconds, so two peers publish a field on the same authoritative tick
+   regardless of CPU speed. One job owns private arrays; synchronous tooling
+   can still call computeField without corrupting it. */
+const MF_NAV_CELLS_PER_TICK=8192;
+function mfNavQueueBuild(F){
+  if(!F||F._queuedRev===mfMoveBlockRevision)return;
+  F.pending=true;F._queuedRev=mfMoveBlockRevision;
+  mfNavQueue.push({F,rev:mfMoveBlockRevision});mfNavPerf.queued=mfNavQueue.length+(mfNavJob?1:0);
+}
+function mfNavJobPush(J,cell,cost){
+  const old=J.cost[cell];
+  if(old>=0){const p=J.prev[cell],n=J.next[cell];if(p>=0)J.next[p]=n;else J.head[old]=n;if(n>=0)J.prev[n]=p;}
+  else J.active++;
+  const h=J.head[cost];J.prev[cell]=-1;J.next[cell]=h;if(h>=0)J.prev[h]=cell;
+  J.head[cost]=cell;J.cost[cell]=cost;if(cost<J.current)J.current=cost;if(cost>J.max)J.max=cost;
+}
+function mfNavJobPop(J){
+  while(J.current<=J.max&&J.head[J.current]<0)J.current++;
+  const cell=J.head[J.current],n=J.next[cell];J.head[J.current]=n;if(n>=0)J.prev[n]=-1;
+  J.cost[cell]=-1;J.next[cell]=-1;J.prev[cell]=-1;J.active--;return cell;
+}
+function mfNavStartQueuedJob(){
+  while(mfNavQueue.length){
+    const row=mfNavQueue.shift(),F=row.F;
+    if(!F||fields.indexOf(F)<0||row.rev!==mfMoveBlockRevision||F._queuedRev!==row.rev)continue;
+    const N=PGS*PGS,clearance=mfNavClearanceToken(F.clearance,F.naval),dirs=new Uint8Array(N).fill(8);
+    if(!mfNavWork)mfNavWork={dist:new Uint16Array(N),head:new Int32Array(65536),next:new Int32Array(N),prev:new Int32Array(N),cost:new Int32Array(N)};
+    const {dist,head,next,prev,cost}=mfNavWork,
+      clearGrid=mfNavClearanceGrid(!!F.naval),clearCost=MF_NAV_CLEARANCE_COST[clearance],goal=mfNavResolveGoal(F.tx,F.ty,!!F.naval,clearance);
+    dist.fill(65535);head.fill(-1);cost.fill(-1);next.fill(-1);prev.fill(-1);
+    dirs.mfGoal=goal;dirs.mfSectorDist=mfNavSectorField(goal,!!F.naval,clearance);
+    mfNavJob={F,rev:row.rev,dirs,dist,head,next,prev,cost,clearGrid,clearCost,goal,
+      active:0,current:0,max:0,phase:goal<0?1:0,extract:0,started:typeof performance!=='undefined'?performance.now():0};
+    if(goal>=0){dist[goal]=0;mfNavJobPush(mfNavJob,goal,0);}
+    return;
+  }
+}
+function mfNavFinishJob(J){
+  const F=J.F;
+  if(fields.indexOf(F)>=0&&J.rev===mfMoveBlockRevision&&F._queuedRev===J.rev){
+    F.dirs=J.dirs;F.sectorDist=J.dirs.mfSectorDist;F.rev=J.rev;F.pending=false;F._queuedRev=0;mfNavPerf.builds++;
+    if(J.started){const ms=performance.now()-J.started;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
+  }else if(fields.indexOf(F)>=0){F._queuedRev=0;mfNavQueueBuild(F);}
+  mfNavJob=null;
+}
+function mfNavBuildSlice(budget){
+  if(!mfNavJob)mfNavStartQueuedJob();const J=mfNavJob;if(!J)return;
+  let cells=0,limit=Math.max(1,budget|0);
+  while(cells<limit){
+    if(J.phase===0){
+      if(!J.active){J.phase=1;continue;}
+      const c=mfNavJobPop(J),cx=c%PGS,cy=c/PGS|0,cd=J.dist[c];cells++;
+      for(let k=0;k<8;k++){
+        const nx=cx+DIRX[k],ny=cy+DIRY[k];if(nx<0||ny<0||nx>=PGS||ny>=PGS)continue;
+        const n=ny*PGS+nx;if(J.clearGrid[n]<=J.clearCost)continue;
+        if((k&1)&&(J.clearGrid[cy*PGS+nx]<=J.clearCost||J.clearGrid[ny*PGS+cx]<=J.clearCost))continue;
+        const nd=cd+((k&1)?3:2);if(nd>=J.dist[n])continue;J.dist[n]=nd;mfNavJobPush(J,n,nd);
+      }
+    }else{
+      if(J.extract>=J.dist.length){mfNavFinishJob(J);break;}
+      const c=J.extract++;cells++;if(J.dist[c]===65535||c===J.goal)continue;
+      const cx=c%PGS,cy=c/PGS|0;let bk=8,bd=J.dist[c];
+      for(let k=0;k<8;k++){
+        const nx=cx+DIRX[k],ny=cy+DIRY[k];if(nx<0||ny<0||nx>=PGS||ny>=PGS)continue;
+        if((k&1)&&(J.clearGrid[cy*PGS+nx]<=J.clearCost||J.clearGrid[ny*PGS+cx]<=J.clearCost))continue;
+        const dn=J.dist[ny*PGS+nx];if(dn<bd){bd=dn;bk=k;}
+      }
+      J.dirs[c]=bk;
+    }
+  }
+  mfNavPerf.slices++;mfNavPerf.cells+=cells;mfNavPerf.lastSliceCells=cells;
+  mfNavPerf.maxSliceCells=Math.max(mfNavPerf.maxSliceCells,cells);
+  mfNavPerf.queued=mfNavQueue.length+(mfNavJob?1:0);
+}
 function mfNavFieldRefCounts(){
   mfFieldRefs.fill(0);
-  for(let i=0;i<unitHigh;i++)if(ualive[i]&&ufield[i]>=0&&ufield[i]<FF_MAX)mfFieldRefs[ufield[i]]++;
+  for(let n=0;n<uActiveCount;n++){const i=uActive[n];if(ufield[i]>=0&&ufield[i]<FF_MAX)mfFieldRefs[ufield[i]]++;}
   return mfFieldRefs;
 }
 function mfNavFieldSlot(){
@@ -1732,6 +1913,7 @@ function mfNavFieldSlot(){
   mfNavPerf.activeProtected+=FF_MAX;mfNavPerf.overflows++;return -1;
 }
 function requestField(tx,ty,naval,clearance,defer){
+  if(defer==null)defer=true;
   naval=!!naval;
   clearance=mfNavClearanceToken(clearance,naval);
   mfNavPerf.requests++;
@@ -1742,12 +1924,7 @@ function requestField(tx,ty,naval,clearance,defer){
       F.lastUse=++mfFieldUseClock;mfNavPerf.hits++;
       /* Simulation/AI callers retain the historical synchronous freshness
          contract. Only explicit player-authoring calls pass defer=true. */
-      if(!defer&&(F.rev!==mfMoveBlockRevision||!F.dirs)){
-        const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
-        F.dirs=computeField(F.tx,F.ty,F.naval,F.clearance);F.sectorDist=F.dirs.mfSectorDist;
-        F.rev=mfMoveBlockRevision;F.pending=false;mfNavPerf.builds++;
-        if(t0){const ms=performance.now()-t0;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
-      }
+      if(F.rev!==mfMoveBlockRevision||!F.dirs)mfNavQueueBuild(F);
       return f;
     }
   }
@@ -1761,6 +1938,7 @@ function requestField(tx,ty,naval,clearance,defer){
   }else mfNavPerf.deferred++;
   fields[f]={tx,ty,naval,clearance,dirs,sectorDist:dirs&&dirs.mfSectorDist,
     rev,lastUse:++mfFieldUseClock,pending:!!defer};
+  if(defer)mfNavQueueBuild(fields[f]);
   return f;
 }
 function mfNavFindAttackBlocker(i,gx,gy){
@@ -1799,11 +1977,20 @@ function forUnitsIn(x,y,rad,fn){
   const cx=clamp(x/CS|0,0,GW-1), cy=clamp(y/CS|0,0,GW-1);
   const r2=rad*rad;
   const x0=Math.max(0,cx-cr), x1=Math.min(GW-1,cx+cr), y0=Math.max(0,cy-cr), y1=Math.min(GW-1,cy+cr);
-  for(let gy=y0;gy<=y1;gy++) for(let gx=x0;gx<=x1;gx++){
-    let j=gHead[gy*GW+gx];
-    while(j>=0){
-      if(ualive[j] && dist2(x,y,ux[j],uy[j])<=r2) fn(j);
-      j=gNext[j];
+  for(let gy=y0;gy<=y1;gy++){
+    const direct=cr<=1||gridRowRangeFull(gy,x0,x1);
+    if(direct)for(let gx=x0;gx<=x1;gx++){
+      let j=gHead[gy*GW+gx];
+      while(j>=0){
+        if(ualive[j] && dist2(x,y,ux[j],uy[j])<=r2) fn(j);
+        j=gNext[j];
+      }
+    }else for(let gx=gridNextOccupied(gy,x0,x1);gx<=x1;gx=gridNextOccupied(gy,gx+1,x1)){
+      let j=gHead[gy*GW+gx];
+      while(j>=0){
+        if(ualive[j] && dist2(x,y,ux[j],uy[j])<=r2) fn(j);
+        j=gNext[j];
+      }
     }
   }
 }
@@ -2149,21 +2336,190 @@ function bldRngMulAt(B,lvl){
 }
 function bldRngMul(B){ return bldRngMulAt(B,B.lvl||1); }
 function hasBld(team,type){ for(const B of bldLive) if(B.alive&&B.team===team&&B.type===type&&B.prog>=1) return true; return false; }
-function startUpgrade(b){
-  const B=blds[b], path=BUP[B.type];
-  if(!path) return 'This structure has no upgrades';
-  const lvl=B.lvl||1;
-  if(B.type==='fac'&&B.tier===2) return 'Already Tech 2';
-  if(lvl-1>=path.length) return 'Max level reached';
-  const U=path[lvl-1];
-  if(U.req && !hasBld(B.team,U.req)) return 'Requires a '+BT[U.req].name;
-  if(B.team===0 && U.clvl && heroLvl<U.clvl) return '🔒 Requires Commander level '+U.clvl;
-  if(B.upT>0) return 'Already upgrading';
-  const upSlot=commanderSlotForBuilding(B);
-  if(!canAfford(B.team,U.cm,U.ce,upSlot)) return 'Need '+U.cm+' mass, '+U.ce+' energy';
-  pay(B.team,U.cm,U.ce,upSlot);
-  B.upT=U.t; B.upMax=U.t;
+/* One quote owns both selection buttons and the network preflight. A team is
+   not an owner: allied commanders have independent buildings and wallets. */
+function mfBuildingUpgradeAuthority(){
+  const R=typeof window!=='undefined'&&window.MFMatchRuntime,
+    S=R&&typeof R.status==='function'?R.status():null,
+    C=typeof window!=='undefined'&&window.MFMatchCommandConsumer;
+  if(S&&(S.state==='running'||S.started&&!S.ended))
+    return C&&typeof C.seatAuthority==='function'?C.seatAuthority(S.seat):null;
+  return {team:0,slot:POP_PLAYER_SLOT};
+}
+function mfBuildingUpgradeQuote(index,authority){
+  const A=authority===undefined?mfBuildingUpgradeAuthority():authority,
+    B=Number.isInteger(index)&&index>=0?blds[index]:null,
+    Q={index,eligible:false,affordable:false,code:'missing',reason:'Structure is no longer available',
+      costM:0,costE:0,duration:0,targetLabel:'',remaining:0};
+  if(!B||!B.alive)return Q;
+  if(!A||B.team!==A.team||commanderSlotForBuilding(B)!==A.slot)
+    return Object.assign(Q,{code:'not-owned',reason:'Select one of your own structures'});
+  const path=BUP[B.type],lvl=B.type==='fac'?(B.tier===2?2:1):(B.lvl||1),U=path&&path[lvl-1];
+  if(U)Object.assign(Q,{costM:U.cm,costE:U.ce,duration:U.t,targetLabel:B.type==='fac'?'TECH 2':'MK'+(lvl+1)});
+  if(!(B.prog>=1))return Object.assign(Q,{code:'building',reason:'Construction must finish first'});
+  if(B.upT>0)return Object.assign(Q,{code:'busy',reason:'Already upgrading · '+Math.ceil(B.upT)+'s left',remaining:B.upT});
+  if(!path)return Object.assign(Q,{code:'unsupported',reason:'This structure has no upgrades'});
+  if(!U)return Object.assign(Q,{code:'max',reason:B.type==='fac'?'Already Tech 2':'Maximum level reached'});
+  if(U.req&&!hasBld(B.team,U.req))return Object.assign(Q,{code:'locked',reason:'Requires a '+BT[U.req].name});
+  /* Multiplayer currently has one simulation-owned match rank. Both human
+     sides obey it; an enemy human must not inherit the AI rank bypass. */
+  if((B.team===0||Number.isInteger(A.seat))&&U.clvl&&heroLvl<U.clvl)
+    return Object.assign(Q,{code:'locked',reason:'Requires Commander level '+U.clvl});
+  Q.eligible=true;Q.affordable=canAfford(B.team,U.cm,U.ce,A.slot);
+  Q.code=Q.affordable?'ready':'resources';Q.reason=Q.affordable?'':'Need '+U.cm+' mass, '+U.ce+' energy';
+  return Q;
+}
+function mfBuildingUpgradeBatchInfo(index,authority){
+  const A=authority===undefined?mfBuildingUpgradeAuthority():authority,
+    B=Number.isInteger(index)&&index>=0?blds[index]:null,Q=mfBuildingUpgradeQuote(index,A),
+    I={selectedIndex:index,type:B&&B.type||'',name:B&&BT[B.type]?BT[B.type].name:'Structure',
+      selectedEligible:Q.eligible,selectedReason:Q.reason,selectedCode:Q.code,remaining:Q.remaining,
+      costM:Q.costM,costE:Q.costE,duration:Q.duration,targetLabel:Q.targetLabel,
+      canUpgradeSelected:Q.eligible&&Q.affordable,canUpgradeAll:false,ownedCount:0,eligibleCount:0,
+      busyCount:0,maxCount:0,lockedCount:0,buildingCount:0,totalCostM:0,totalCostE:0,indices:[],batchReason:Q.reason};
+  if(!B||!B.alive||!A||B.team!==A.team||commanderSlotForBuilding(B)!==A.slot)return I;
+  for(let i=0;i<blds.length;i++){
+    const peer=blds[i];
+    if(!peer||!peer.alive||peer.type!==B.type||peer.team!==A.team||commanderSlotForBuilding(peer)!==A.slot)continue;
+    I.ownedCount++;
+    const P=mfBuildingUpgradeQuote(i,A);
+    if(P.eligible){I.indices.push(i);I.totalCostM+=P.costM;I.totalCostE+=P.costE;}
+    else if(P.code==='busy')I.busyCount++;
+    else if(P.code==='max')I.maxCount++;
+    else if(P.code==='building')I.buildingCount++;
+    else if(P.code==='locked')I.lockedCount++;
+  }
+  I.eligibleCount=I.indices.length;
+  I.canUpgradeAll=I.eligibleCount>0&&canAfford(A.team,I.totalCostM,I.totalCostE,A.slot);
+  I.batchReason=!I.eligibleCount?'No eligible structures of this type':I.canUpgradeAll?'':
+    'Need '+I.totalCostM+' mass, '+I.totalCostE+' energy for all '+I.eligibleCount;
+  const C=typeof window!=='undefined'&&window.MFMatchCommandConsumer;
+  if(authority===undefined&&C&&typeof C.upgradePending==='function'&&C.upgradePending()){
+    I.canUpgradeSelected=false;I.canUpgradeAll=false;I.selectedCode='queued';
+    I.selectedReason=I.batchReason='Waiting for the previous upgrade order';
+  }
+  return I;
+}
+function startUpgrade(b,authority){
+  const A=authority===undefined?mfBuildingUpgradeAuthority():authority,Q=mfBuildingUpgradeQuote(b,A);
+  if(!Q.eligible||!Q.affordable)return Q.reason;
+  /* Network UI must submit an order, never mutate only the caller's world. */
+  if(authority===undefined&&typeof window!=='undefined'&&window.MFMatchCommandConsumer&&
+    window.MFMatchCommandConsumer.requiresLockstep())return 'Submit upgrade through the network command controls';
+  pay(A.team,Q.costM,Q.costE,A.slot);
+  blds[b].upT=Q.duration;blds[b].upMax=Q.duration;
   return null;
+}
+function mfStartBuildingUpgradeBatch(index,authority){
+  const A=authority===undefined?mfBuildingUpgradeAuthority():authority,I=mfBuildingUpgradeBatchInfo(index,A);
+  if(!I.canUpgradeAll)return {ok:false,code:I.eligibleCount?'resources':'ineligible',message:I.batchReason};
+  if(authority===undefined&&typeof window!=='undefined'&&window.MFMatchCommandConsumer&&
+    window.MFMatchCommandConsumer.requiresLockstep())return {ok:false,code:'network',message:'Submit upgrade through the network command controls'};
+  /* Reserve the entire next-tier batch once. No await, partial spending,
+     auto-chaining to Mk3 or hidden selection of only the affordable subset. */
+  pay(A.team,I.totalCostM,I.totalCostE,A.slot);
+  for(const i of I.indices){
+    const B=blds[i],U=BUP[B.type][(B.type==='fac'?1:(B.lvl||1))-1];
+    B.upT=U.t;B.upMax=U.t;
+  }
+  return {ok:true,count:I.eligibleCount,message:'Upgrading '+I.eligibleCount+' '+I.name+' structures'};
+}
+/* Presentation reads paid simulation progress. No animation clock may advance
+   a queue, spend resources, or keep working while its simulation is paused. */
+function mfProductionDuration(T){return T&&T.bt>0?Math.max(8,4+3*T.bt):0;}
+function mfProductionSpeed(B,T){
+  if(!B||!T||!(T.bt>0))return 1;
+  const team=B.team==null?0:B.team,
+    base=team===1?(typeof aiBuildMult==='number'?aiBuildMult:1):(typeof playerBuildMult==='number'?playerBuildMult:1),
+    doctrine=typeof factionDoctrineBuildSpeedMul==='function'?factionDoctrineBuildSpeedMul(team):1,
+    tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1,
+    fort=typeof fortOf==='function'?fortOf(team).prod:1,
+    infrastructure=Math.min(1.65,(1+.12*Math.min(2,B.adj||0))*fort*tractor);
+  /* Store progress in the existing authored-work units. Changing T.bt would
+     reinterpret mid-production saves and cancellation refunds. Slower work
+     instead preserves the same fraction/price, and bills every owner alike. */
+  return Math.max(.001,Math.min(T.bt/4,base*doctrine*infrastructure*T.bt/mfProductionDuration(T)));
+}
+function mfBuildingActivity(B){
+  const idle={state:'idle',kind:'idle',progress:0,remaining:0,queueCount:0,label:'IDLE',stalled:false};
+  if(!B||!B.alive)return idle;
+  let kind='idle',progress=0,remaining=0,stalled=false,reason='',queueCount=Array.isArray(B.queue)?B.queue.length:0;
+  if(B.prog<1){
+    kind='constructing';progress=Math.max(0,Math.min(1,B.prog||0));
+    stalled=!!B.buildStalled;reason=stalled?'RESOURCES':'';
+    remaining=(BT[B.type].bt||0)*(1-progress);
+  }else if(B.upT>0){
+    kind='upgrading';progress=1-B.upT/Math.max(.001,B.upMax||B.upT);remaining=B.upT;
+  }else if(queueCount&&TYPES[B.queue[0]]){
+    kind='producing';const T=TYPES[B.queue[0]],speed=mfProductionSpeed(B,T);
+    progress=(B.prodT||0)/Math.max(.001,T.bt||1);remaining=Math.max(0,(T.bt||0)-(B.prodT||0))/speed;
+    reason=B.prodStalled||'';stalled=!!reason;
+  }else if(B.type==='techlab'&&B.res>=0&&RESEARCH[B.res]){
+    kind='researching';const R=RESEARCH[B.res];progress=(B.resT||0)/R.t;remaining=Math.max(0,R.t-(B.resT||0));
+    reason=B.researchStalled?'RESOURCES':'';stalled=!!reason;
+  }
+  if(kind==='idle')return idle;
+  return {state:stalled?'stalled':kind,kind,progress:Math.max(0,Math.min(1,progress)),remaining,
+    queueCount,stalled,reason,label:stalled?(reason==='population'?'UNIT CAP':'NEEDS RESOURCES'):kind.toUpperCase()};
+}
+/* One work recipe owns both the instanced service lights and the fixed-step
+   motes. Keep these cosmetic values out of production prices/save progress. */
+const MF_BUILDING_WORK_PROFILES=Object.freeze({
+  nova:Object.freeze({faction:'nova',color:Object.freeze([92,218,255]),accent:Object.freeze([220,249,255]),pulseSpeed:2.4,particleType:2,period:15,life:.28,size:3.2}),
+  legion:Object.freeze({faction:'legion',color:Object.freeze([255,154,66]),accent:Object.freeze([255,76,38]),pulseSpeed:3.6,particleType:2,period:12,life:.34,size:3.8}),
+  syndicate:Object.freeze({faction:'syndicate',color:Object.freeze([103,239,201]),accent:Object.freeze([168,122,255]),pulseSpeed:1.9,particleType:20,period:18,life:.38,size:3.6}),
+  horde:Object.freeze({faction:'horde',color:Object.freeze([174,230,79]),accent:Object.freeze([143,91,180]),pulseSpeed:1.35,particleType:20,period:21,life:.46,size:4.2})
+});
+function mfBuildingWorkProfile(B){
+  const faction=typeof bldFactionKey==='function'?bldFactionKey(B):'nova';
+  return MF_BUILDING_WORK_PROFILES[faction]||MF_BUILDING_WORK_PROFILES.nova;
+}
+let _mfBuildingWorkFxWorld=null,_mfBuildingWorkFxTick=-1,_mfBuildingWorkFxUsed=0,
+  _mfBuildingWorkFxSeen=new WeakMap();
+function mfBuildingWorkFxReset(){
+  _mfBuildingWorkFxWorld=null;_mfBuildingWorkFxTick=-1;_mfBuildingWorkFxUsed=0;
+  _mfBuildingWorkFxSeen=new WeakMap();
+}
+function mfBuildingWorkFx(B,index,kind,dt){
+  /* Called after paid advancement, never from render. At low quality keep
+     only the service lights; combat keeps priority over decorative motes. */
+  if(!B||!B.alive||!(dt>0)||(typeof paused!=='undefined'&&paused)||
+     typeof perfScale!=='number'||perfScale<=.5||
+     typeof tick!=='number'||!Number.isInteger(tick))return false;
+  const quality=typeof mfGfxKey==='function'?mfGfxKey():'high';
+  if(quality==='low')return false;
+  const P=mfBuildingWorkProfile(B);
+  if((tick+index*7)%P.period!==0)return false;
+  const A=mfBuildingActivity(B);
+  if(A.kind!==kind||A.kind==='idle'||A.stalled)return false;
+  const owner=mfBuildingUpgradeAuthority();
+  if(!owner||B.team!==owner.team||commanderSlotForBuilding(B)!==owner.slot)return false;
+  /* Conceal the entire source footprint, not just a bright point on its edge. */
+  const r=Math.max(1,B.r||1);
+  if(typeof fogPointVisible!=='function'||!fogPointVisible(B.x,B.y)||
+     !fogPointVisible(B.x-r,B.y)||!fogPointVisible(B.x+r,B.y)||
+     !fogPointVisible(B.x,B.y-r)||!fogPointVisible(B.x,B.y+r))return false;
+  if(_mfBuildingWorkFxWorld!==blds||tick<_mfBuildingWorkFxTick){
+    _mfBuildingWorkFxWorld=blds;_mfBuildingWorkFxSeen=new WeakMap();_mfBuildingWorkFxTick=-1;
+  }
+  if(_mfBuildingWorkFxTick!==tick){_mfBuildingWorkFxTick=tick;_mfBuildingWorkFxUsed=0;}
+  const limit=quality==='medium'?2:perfScale>=.9?4:2;
+  if(_mfBuildingWorkFxUsed>=limit||_mfBuildingWorkFxSeen.get(B)===tick)return false;
+  /* Never overwrite a combat particle, even when the ring head points at a
+     long-lived effect before the rest of the pool has filled. */
+  if(fCount>=MAXPART*.8||flife[fHead]>0)return false;
+  /* Stable phase leaves the gameplay RNG stream untouched at every quality. */
+  const phase=index*2.3999632297+tick/P.period*.83,
+    radius=r*(kind==='constructing'?.72:.38),x=B.x+Math.cos(phase)*radius,y=B.y+Math.sin(phase)*radius,
+    organic=P.faction==='horde',phaseKit=P.faction==='syndicate',
+    vx=Math.cos(phase)*(organic?1.4:phaseKit?2:8),vy=Math.sin(phase)*(organic?1.4:phaseKit?2:8),
+    slot=fHead;
+  addParticle(P.particleType,x,y,vx,vy,P.life,P.size,P.color[0],P.color[1],P.color[2]);
+  const size=typeof BT!=='undefined'&&BT[B.type]?BT[B.type].size:r*2,
+    grow=kind==='constructing'?.30+.70*Math.max(0,Math.min(1,B.prog||0)):1;
+  fzh[slot]=(typeof terrainH==='function'?terrainH(x,y):0)+Math.max(6,size*.82*grow);
+  _mfBuildingWorkFxSeen.set(B,tick);_mfBuildingWorkFxUsed++;
+  return true;
 }
 function finishUpgrade(B){
   if(B.type==='fac'){ B.tier=2; if(B.team===0) toast('🏭 Factory upgraded to TECH 2'); return; }
@@ -2443,7 +2799,7 @@ function addBld(type,team,x,y,instant,rot,suppressPackageGrant){
      completion means the site is visibly prepared while construction runs.
      Brood harbor is water, so it must not pour concrete — but it still needs
      the U-slip creep bed or the berth sits on a neighbour's veined disc. */
-  if(type!=='nest'&&(T.placement!=='water'||(fac==='horde'&&type==='harbor'))){
+  if((type!=='nest'||fac==='horde')&&(T.placement!=='water'||(fac==='horde'&&type==='harbor'))){
     if(fac==='horde'&&typeof makeOrganicFoundation==='function') makeOrganicFoundation(b);
     else if(T.placement!=='water') makeFoundation(b);
   }
@@ -3014,6 +3370,15 @@ function diffLvl(){
 function broodIsEnemy(){
   return (typeof AI!=='undefined' && AI && AI.fac === 'horde');
 }
+/* The neutral infestation is a fifth SYSTEM force, not a hidden fifth player
+   seat. It remains hostile to both alliances and owns a deterministic budget
+   that never varies by device quality. Rendering may add proxy bodies; these
+   are the real simulated caps used by combat, saves and multiplayer hashes. */
+const BROOD_SYSTEM_CAP=Object.freeze([100,250,500]);
+function broodIsSystemForce(){
+  return !broodIsEnemy()&&!(typeof infestationOn==='boolean'&&!infestationOn);
+}
+function broodSystemBudget(){return BROOD_SYSTEM_CAP[diffLvl()]||BROOD_SYSTEM_CAP[1];}
 /* One multiplier for every quantity in this section: how many spawn, how often,
    how many can stand at once. Difficulty first, then the faction rule. */
 function infQty(){
@@ -3031,6 +3396,7 @@ function planetInfestMul(){
   return fac==='horde'?1.7:fac==='nova'?0.4:fac==='legion'?0.75:0.55;
 }
 function bugCap(){
+  if(broodIsSystemForce())return broodSystemBudget();
   const D=diffLvl(),k=populationTheatre(),mapMul={compact:.78,standard:1,large:1.22}[k]||1;
   /* Hundreds still read as a tide at RTS camera distance. Thousands multiply
      pathing, targeting, fog and billboard traffic until Android reclaims the
@@ -3038,7 +3404,6 @@ function bugCap(){
      by allocating an unrenderable carpet. */
   let hard=[210,360,620][D]*mapMul*(broodIsEnemy()?1:.42)*(WC.swarm?1.22:1);
   if(typeof planetInfestMul==='function'&&planetInfestMul()>1) hard*=1.22;
-  if(typeof META!=='undefined'&&META.settings&&META.settings.perf==='low')hard=Math.min(hard,220);
   return Math.max(80,Math.min(FACTION_POP_CAP,Math.round(hard)));
 }
 function infTier(){                       // threat tier I–V, escalates with match time
@@ -3085,7 +3450,7 @@ function nestErupt(N,count,tier){
 }
 function bugQTick(){                      // pour queued broods out of the ground
   if(!bugQ.length) return;
-  let budget=(typeof fpsShow!=='undefined'&&fpsShow<22)?60:340;   // back off if the device struggles
+  let budget=32;                          // fixed per authoritative tick on every peer/device
   budget=Math.min(budget, (typeof broodIsEnemy==='function'&&broodIsEnemy())
     ?Math.max(0,populationCapForCommander(bugQ[0].seat)-populationUsedForCommander(bugQ[0].seat))
     :bugCap()-populationUsedFor(2));
@@ -3233,14 +3598,8 @@ function envTick(dt){
   }
   // pour queued broods out of the ground every tick
   bugQTick();
-  // population governor: a struggling device sheds only off-screen wildlife.
-  if(typeof fpsShow!=='undefined'&&fpsShow<22&&populationUsedFor(2)>bugCap()*.82){
-    const b2=camBounds(); let culled=0;
-    for(let i=0;i<unitHigh&&culled<24;i++){
-      if(!ualive[i]||uteam[i]!==2||((i+tick)%3)) continue;
-      if(ux[i]<b2.x0-380||ux[i]>b2.x1+380||uy[i]<b2.y0-380||uy[i]>b2.y1+380){ killUnit(i,true); culled++; }
-    }
-  }
+  /* Real Brood bodies are authority. Performance pressure may thin only the
+     render-only crowd proxies; camera position and FPS never delete units. */
   // mass eruptions — multiple hives at once, escalating 20x counts
   infestT-=dt;
   if(infestT<=0){
@@ -5962,7 +6321,7 @@ function mfUnitMuzzle(i,side){
   return [ux[i]+Math.cos(ma)*reach-Math.sin(ma)*lat,
           uy[i]+Math.sin(ma)*reach+Math.cos(ma)*lat];
 }
-function fireProj(type,team,x,y,tx,ty,speed,dmg,aoe,tgt){
+function fireProj(type,team,x,y,tx,ty,speed,dmg,aoe,tgt,sourceZ){
   let i;
   if(pFree.length) i=pFree.pop(); else { if(pHigh>=MAXP) return -1; i=pHigh++; }
   const FP=WeaponFlightProfile(type);
@@ -5999,7 +6358,7 @@ function fireProj(type,team,x,y,tx,ty,speed,dmg,aoe,tgt){
        shots interpolate muzzle-to-impact height; anti-air shots terminate at
        the target's current altitude instead of drawing a smoke ribbon on the
        terrain underneath it. */
-    pz0[i]=(typeof terrainH==='function'?terrainH(x,y):0)+16;
+    pz0[i]=Number.isFinite(sourceZ)?sourceZ:(typeof terrainH==='function'?terrainH(x,y):0)+16;
     const tgtAir=tgt>=0&&tgt<MAXU&&ualive[tgt]&&TYPES[utype[tgt]]&&TYPES[utype[tgt]].air;
     pz1[i]=(typeof terrainH==='function'?terrainH(tx,ty):0)+(tgtAir?unitAirAlt(tgt):16);
     pz[i]=pz0[i];
@@ -6395,7 +6754,8 @@ function dealDamage(j,dmg,attTeam,attacker,mu,wk){
 // types: 0 flash, 1 smoke, 2 spark, 3 ring, 4 flame, 5 hot fragment,
 //        6 explosion flipbook, 7 solid debris, 8 mushroom plume, 9 ambience,
 //        10 movement dust (separate so tactical motion survives smoke LOD),
-//        14 authored missile/air trail, 18 authored air-destruction core
+//        14 authored missile/air trail, 18 authored air-destruction core,
+//        20 moving building work mote (not a stationary impact flash)
 const fx=new Float32Array(MAXPART), fy=new Float32Array(MAXPART);
 const fvx=new Float32Array(MAXPART), fvy=new Float32Array(MAXPART);
 const flife=new Float32Array(MAXPART), fmax=new Float32Array(MAXPART), fsize=new Float32Array(MAXPART);
@@ -7310,10 +7670,10 @@ function broodCriticalMassTick(dt){
      machine from accidentally qualifying as a caster just because the enemy
      faction selector says Brood. */
   const fighters=[],casters=[];
-  for(let i=0;i<unitHigh;i++) if(ualive[i]&&uteam[i]===2){
+  for(let n=0;n<uActiveCount;n++){const i=uActive[n];if(uteam[i]===2){
     if(utype[i]===12||utype[i]===13) fighters.push(i);
     else if(utype[i]===UT_BROOD_CASTER) casters.push(i);
-  }
+  }}
   const desired=Math.min(7,Math.floor(fighters.length/BROOD_MASS));
   if(casters.length<desired){
     let seed=-1,best=0;
@@ -8019,14 +8379,8 @@ function minerUnitTick(i,dt){
   }
   return true;
 }
-/* Tick LOD. 0 Full = every simDt (commanders, selected, in-weapon-range,
-   on-screen combat). 1 March = off-screen umarch at 2×, skip sep/FX.
-   2 Idle = off-screen ustate 0, no target, at 4×, no sep/acquire.
-   Far wildlife keeps the team-2 half-rate. HP/stun/burn always use simDt.
-   Missing camBounds (boot/tests) treats the unit as on-screen so sep still runs. */
-function unitOnCam(x,y,B){
-  return !B || (x>=B.x0 && x<=B.x1 && y>=B.y0 && y<=B.y1);
-}
+/* Tick LOD is authoritative and therefore camera/selection invariant. A peer
+   panning or tapping may change rendering, never movement or combat cadence. */
 function unitInWeaponRange(i,T){
   const tg=utgt[i];
   if(tg===-1||!T) return false;
@@ -8037,21 +8391,22 @@ function unitInWeaponRange(i,T){
   const rng=(T.rng||0)+tr;
   return dist2(ux[i],uy[i],ex,ey)<=rng*rng;
 }
-function unitTickLod(i,T,onScreen){
-  if(!T||T.cat==='hero'||i===heroIdx||isEnemyCommander(i)||usel[i]) return 0;
+function unitTickLod(i,T){
+  if(!T||T.cat==='hero'||i===heroIdx||isEnemyCommander(i)) return 0;
   if(unitInWeaponRange(i,T)) return 0;
-  if(onScreen && utgt[i]!==-1) return 0;
-  if(!onScreen && umarch[i]===1) return 1;
-  if(!onScreen && ustate[i]===0 && utgt[i]===-1) return 2;
+  if(umarch[i]===1||(ustate[i]===1&&utgt[i]===-1)) return 1;
+  if(ustate[i]===0&&utgt[i]===-1) return 2;
   return 0;
 }
 function unitTick(dt){
   const _hotT0=(typeof performance!=='undefined'&&performance.now)?performance.now():0;
+  mfNavBuildSlice(MF_NAV_CELLS_PER_TICK);
   mfCommanderCueIntelTick();
   /* Teleports (jump jets, terrain rescue) write ux/uy outside this loop.
      Relink is a cell compare; no-op unless the bucket changed. Do not skip
      HP / stun / burn / commanders to "save" this pass. */
-  for(let gi=0;gi<unitHigh;gi++) if(ualive[gi]) gridRelink(gi);
+  const activeN=activeUnitSnapshot();
+  for(let ai=0;ai<activeN;ai++){const gi=uActiveStep[ai];if(ualive[gi])gridRelink(gi);}
   tickMoveCohorts();
   broodCriticalMassTick(dt);
   /* Patrol planning lives in input.js, which loads after the simulation. The
@@ -8068,25 +8423,22 @@ function unitTick(dt){
      without also retaining every ambient smoke puff. */
   const dustMod=total>4000?83:total>1400?47:19;
   const dustStride=Math.max(1,Math.round(dustMod*(perfScale<.42?2.2:1)));
-  const swarmLOD=teamCount[2]>3000;              // hiveworld: bugs half-rate, double-dt
-  const dtBase=dt, dtBug=dt*2;
-  const camB=typeof camBounds==='function'?camBounds():null;
-  for(let i=0;i<unitHigh;i++){
+  const swarmLOD=teamCount[2]>400; // deterministic separation budget only; combat remains full-rate
+  const dtBase=dt;
+  for(let ai=0;ai<activeN;ai++){
+    const i=uActiveStep[ai];
     if(!ualive[i]) continue;
     const isBug=uteam[i]===2;
     const T=TYPES[utype[i]];
     if(T&&T.air&&uhp[i]<=0&&!uCrash[i]){ beginAirCrash(i); }
     if(uCrash[i]){ airCrashTick(i,dtBase); continue; }
-    const onScreen=unitOnCam(ux[i],uy[i],camB);
     /* Air mission authority is fixed-step and camera invariant. Visual LOD may
        still cull or simplify aircraft, but camera position cannot change their
        pursuit, release, or recon timing. */
-    const lod=T&&T.air?0:unitTickLod(i,T,onScreen);
-    const farWild=isBug&&swarmLOD&&lod!==0;
+    const lod=T&&T.air?0:unitTickLod(i,T);
     if(unitIsBrood(i)&&((i+tick*13)&4095)===0)
       sfx('cre_idle',ux[i],uy[i],clamp(T.size/20,0.65,1.5));
-    if(farWild&&((i+tick)&1)) continue;          // existing team-2 half-rate
-    if(farWild) dt=dtBug; else dt=dtBase;
+    dt=dtBase;
     if(ucool[i]>0) ucool[i]-=dt;
     if(ubuff[i]>0) ubuff[i]-=dt;
     if(uclassBuffT[i]>0){uclassBuffT[i]-=dt;if(uclassBuffT[i]<=0){uclassBuffT[i]=0;uclassBuff[i]=0;}}
@@ -8110,7 +8462,7 @@ function unitTick(dt){
     if(ushielded[i]>0) ushielded[i]-=dt;
     /* March/Idle drop sep/acquire/FX, not clocks. Burn particles stay on the
        skip path so incendiary readback does not vanish off-screen. */
-    const lodSkip=!farWild&&((lod===1&&((i+tick)&1))||(lod===2&&((i+tick)&3)));
+    const lodSkip=(lod===1&&((i+tick)&1))||(lod===2&&((i+tick)&3));
     if(lodSkip){
       if(ufireT[i]>0 && (i+tick)%6===0 && perfScale>0.4){
         addParticle(4,ux[i]+rr(-T.size*.2,T.size*.2),uy[i]+rr(-T.size*.2,T.size*.2),
@@ -8120,11 +8472,11 @@ function unitTick(dt){
       }
       continue;
     }
-    if(!farWild&&lod===1) dt=dtBase*2;
-    else if(!farWild&&lod===2) dt=dtBase*4;
-    const skipSep=!farWild&&(lod===1||lod===2);
-    const skipFx=!farWild&&lod===1;
-    const skipAcq=!farWild&&lod===2;
+    if(lod===1) dt=dtBase*2;
+    else if(lod===2) dt=dtBase*4;
+    const skipSep=lod===1||lod===2;
+    const skipFx=lod===1;
+    const skipAcq=lod===2;
     /* ---- FACTION HERO BEHAVIOURS ------------------------------------------
        Each hero does something its faction's army cannot, so killing it changes
        the shape of the fight rather than just removing a big health bar. */
@@ -8150,7 +8502,7 @@ function unitTick(dt){
               :Math.max(0,populationCapForCommander(seat)-populationUsedForCommander(seat));
             const n=Math.min(3,room);
             for(let k=0;k<n;k++){
-              const a=Math.random()*TAU, d=T.r+16+Math.random()*22;
+              const a=mfSimRandom()*TAU, d=T.r+16+mfSimRandom()*22;
               const bb=spawnUnit(12,uteam[i],ux[i]+Math.cos(a)*d,uy[i]+Math.sin(a)*d,seat);
               if(bb>=0){ ustate[bb]=2; utx[bb]=utx[i]; uty[bb]=uty[i]; ubuff[bb]=4; }
             }
@@ -8415,7 +8767,8 @@ function unitTick(dt){
              expires and never returns its slot. A handful of those permanently
              exhausts the 6000-slot pool and then NOTHING in the match can fire.
              Guard here as well as in the data, because the data is easy to extend. */
-          const pk=fireProj(T.ptype,uteam[i],mx,my,ex+mfSimRange(-3,3),ey+mfSimRange(-3,3),T.psp>0?T.psp:240,dmg*pmu*(tg<=-2?(T.bldMul||1):1),T.aoe,tg);
+          const sourceZ=T.air?(typeof terrainH==='function'?terrainH(ux[i],uy[i]):0)+unitAirAlt(i):undefined;
+          const pk=fireProj(T.ptype,uteam[i],mx,my,ex+mfSimRange(-3,3),ey+mfSimRange(-3,3),T.psp>0?T.psp:240,dmg*pmu*(tg<=-2?(T.bldMul||1):1),T.aoe,tg,sourceZ);
           const commanderCannon=utype[i]===4;
           if(pk>=0){
             pmu0[pk]=pmu; pwk[pk]=T.wk||'p'; pCannon[pk]=commanderCannon?1:0;
@@ -8787,7 +9140,7 @@ function unitTick(dt){
   tick++;
   if(_hotT0){
     simHot.unitTickMs=performance.now()-_hotT0;
-    simHot.live=total;
+    simHot.live=uActiveCount;
     simHot.team0=teamCount[0]; simHot.team1=teamCount[1]; simHot.team2=teamCount[2];
   }
 }
@@ -8818,17 +9171,21 @@ function mfGuideMissile(i,t,dt){
    they visibly crossed. The segment/point distance is deterministic, bounded
    to the projectile's one assigned target and applies only to contact or
    proximity profiles after their authored arming delay. */
-function mfProjectileTargetFuse(i,x0,y0,x1,y1,FP){
+function mfProjectileTargetFuse(i,x0,y0,x1,y1,FP,z0,z1){
   const t=ptgt[i];
   if(t<0||!liveTgt(t,ptgtg[i])||uteam[t]===pteam[i]||FP.fuse==='lifetime'||
      FP.fuse==='impact'||FP.fuse==='cluster'||pAge[i]<FP.armTime) return false;
   if((pFlightId[i]|0)===8&&!TYPES[utype[t]].air) return false;
-  const sx=x1-x0,sy=y1-y0,l2=sx*sx+sy*sy;
-  const q=l2>1e-8?clamp(((ux[t]-x0)*sx+(uy[t]-y0)*sy)/l2,0,1):0;
+  const air=!!TYPES[utype[t]].air;
+  if(air&&(!Number.isFinite(z0)||!Number.isFinite(z1)))return false;
+  const tz=air?(typeof terrainH==='function'?terrainH(ux[t],uy[t]):0)+unitAirAlt(t):0,
+    sx=x1-x0,sy=y1-y0,sz=air?z1-z0:0,l2=sx*sx+sy*sy+sz*sz;
+  const q=l2>1e-8?clamp(((ux[t]-x0)*sx+(uy[t]-y0)*sy+(air?(tz-z0)*sz:0))/l2,0,1):0;
   const hx=x0+sx*q,hy=y0+sy*q;
   const rr0=(TYPES[utype[t]].r||4)+Math.max(0,FP.fuseRadius||0);
-  if(dist2(hx,hy,ux[t],uy[t])>rr0*rr0) return false;
-  px[i]=hx;py[i]=hy;return true;
+  const dz=air?z0+sz*q-tz:0;
+  if(dist2(hx,hy,ux[t],uy[t])+dz*dz>rr0*rr0) return false;
+  px[i]=hx;py[i]=hy;if(air)pz[i]=z0+sz*q;return true;
 }
 
 // ---------- projectile tick ----------
@@ -8926,7 +9283,7 @@ function projTick(dt){
           mfGuideMissile(i,t,dt);
         }
       }
-      const oldX=px[i],oldY=py[i];
+      const oldX=px[i],oldY=py[i],oldZ=pz[i];
       if(ptype[i]===4){
         // rocket wobble + smoke trail
         const wob=Math.sin(plife[i]*22+(i&7))*36;
@@ -8996,7 +9353,7 @@ function projTick(dt){
       pz[i]=pz0[i]+(zTarget-pz0[i])*flightPhase;
       if(lineTrailVolume&&typeof mfOrdnanceTrailSimSample==='function')
         mfOrdnanceTrailSimSample(i,px[i],py[i],pz[i],stats.t,lineTrailCode,pteam[i],pTurbSeed[i]);
-      if(mfProjectileTargetFuse(i,oldX,oldY,px[i],py[i],FP)){projImpact(i);continue;}
+      if(mfProjectileTargetFuse(i,oldX,oldY,px[i],py[i],FP,oldZ,pz[i])){projImpact(i);continue;}
     }
   }
 }
@@ -9115,7 +9472,7 @@ function bldTick(dt){
         if(B.team===0&&bSlot<0){ if(resM[0]<needM)stallM=.8; if(resE[0]<needE)stallE=.8; }
       }
       if(wasProg<.15&&B.prog>=.15&&typeof mfMoveBlockersDirty==='function')mfMoveBlockersDirty();
-      if((tick&7)===0) addParticle(2,B.x+rr(-B.r,B.r),B.y+rr(-B.r,B.r),rr(-4,4),rr(-10,-2),.3,3, 160,230,255);
+      if(B.prog>wasProg)mfBuildingWorkFx(B,b,'constructing',dt);
       if(wasProg<1&&B.prog>=1){
         if(B.type==='techlab') B.shield=B.shieldMax;
         if(B.type==='mex') deployExtractorMiner(B);
@@ -9125,6 +9482,7 @@ function bldTick(dt){
     }
     if(B.upT>0){
       B.upT-=dt;
+      mfBuildingWorkFx(B,b,'upgrading',dt);
       if(B.upT<=0) finishUpgrade(B);
     }
     if(B.boost>0) B.boost-=dt;
@@ -9172,11 +9530,13 @@ function bldTick(dt){
       if(B.res>=0){
         const R=RESEARCH[B.res];
         const frac=dt/R.t;
+        B.researchStalled=false;
         if(payStream(B.team, R.cm*frac, R.ce*frac, commanderSlotForBuilding(B))){
           B.resT+=dt;
+          mfBuildingWorkFx(B,b,'researching',dt);
           if(B.team===0) bankResearchProgress(R.id,B.resT);
           if(B.resT>=R.t){ applyResearch(R.id); B.res=-1; B.resT=0; }
-        }
+        }else B.researchStalled=true;
       }
     }
     else if(B.type==='bunker'){
@@ -9632,55 +9992,51 @@ function bldTick(dt){
         }
       }
       if(B.queue.length){
-        if(B.type==='fac'&&(tick%14)===0&&perfScale>0.5){
-          const szf=BT.fac.size;
-          addParticle(1,B.x+rr(0.2,0.3)*szf,B.y-szf*0.34,rr(-2,2),rr(-10,-6),.9,5, 118,118,124);
-        }
+        B.prodStalled='';
         const t=B.queue[0], T=TYPES[t];
         /* Pause BEFORE streaming payment. Previously a factory at the cap paid
            the full price, popped its queue, then spawnUnit failed and silently
-           discarded the completed unit. Progress is retained just below the
-           finish line and resumes as soon as a live slot opens. */
+           discarded the completed unit. Keep every paid work fraction intact
+           and resume as soon as a live slot opens. */
         const cmdSlot=commanderSlotForBuilding(B);
         if(!populationCanSpawn(t,B.team,cmdSlot)){
-          B.prodT=Math.min(B.prodT,Math.max(0,T.bt-.02));
+          B.prodStalled='population';
           continue;
         }
-        const tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1;
-        const facSpeed=(typeof factionDoctrineBuildSpeedMul==='function')?factionDoctrineBuildSpeedMul(B.team):1;
-        const speed=(B.team===1?aiBuildMult:playerBuildMult)*facSpeed*(1+0.12*Math.min(2,B.adj||0))*fortOf(B.team).prod*tractor;
-        const frac=dt*speed/T.bt;
+        const speed=mfProductionSpeed(B,T);
+        const work=Math.min(Math.max(0,T.bt-B.prodT),dt*speed),frac=work/T.bt;
         const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,B.team):{m:T.cm,e:T.ce};
         if(!payStream(B.team, facCost.m*frac, facCost.e*frac, cmdSlot)){
+          B.prodStalled='resources';
           if(B.team===0&&cmdSlot<0){ if(resM[0]<facCost.m*frac) stallM=0.8; if(resE[0]<facCost.e*frac) stallE=0.8; }
           continue;
         }
-        B.prodT+=dt*speed;
+        B.prodT+=work;
+        if(work>0)mfBuildingWorkFx(B,b,'producing',dt);
         if(B.prodT>=T.bt){
+          const i=spawnUnit(t,B.team,B.x+mfSimRange(-14,14),B.y+ (B.team===0?B.r+16:-(B.r+16)),cmdSlot);
+          /* Admission can still fail at the global entity pool. Keep the paid
+             item ready instead of popping it without delivering a unit. */
+          if(i<0){B.prodStalled='population';continue;}
           B.prodT=0; B.queue.shift();
           if(B.repeat) B.queue.push(t);
-          if(teamCount[B.team]<MAXU/2-10){
-            const i=spawnUnit(t,B.team,B.x+mfSimRange(-14,14),B.y+ (B.team===0?B.r+16:-(B.r+16)),cmdSlot);
-            if(i>=0){
-              ustate[i]=2;
-              let rx,ry;
-              if(B.team===0 && B.rally){          // player rally point
-                rx=clamp(B.rally.x+mfSimRange(-26,26),20,MAP-20);
-                ry=clamp(B.rally.y+mfSimRange(-26,26),20,MAP-20);
-              } else {
-                rx=clamp(B.x+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
-                ry=clamp(B.y+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
-              }
-              const L=TYPES[t].naval? (findWater(rx,ry)||[ux[i],uy[i]]) : findLand(rx,ry);
-              utx[i]=L[0]; uty[i]=L[1];
-              if(!TYPES[t].air&&dist2(ux[i],uy[i],L[0],L[1])>70*70)
-                ufield[i]=requestField(L[0],L[1],!!TYPES[t].naval,mfNavUnitClearance(TYPES[t]));
-              addParticle(0,ux[i],uy[i],0,0,.25,14, 160,230,255);
-              if(B.team===0){ sfx('deploy',ux[i],uy[i],0.75); if(T.air) sfx('flyby',ux[i],uy[i],1); }
-            }
+          ustate[i]=2;
+          let rx,ry;
+          if(B.team===0 && B.rally){          // player rally point
+            rx=clamp(B.rally.x+mfSimRange(-26,26),20,MAP-20);
+            ry=clamp(B.rally.y+mfSimRange(-26,26),20,MAP-20);
+          } else {
+            rx=clamp(B.x+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
+            ry=clamp(B.y+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
           }
+          const L=TYPES[t].naval? (findWater(rx,ry)||[ux[i],uy[i]]) : findLand(rx,ry);
+          utx[i]=L[0]; uty[i]=L[1];
+          if(!TYPES[t].air&&dist2(ux[i],uy[i],L[0],L[1])>70*70)
+            ufield[i]=requestField(L[0],L[1],!!TYPES[t].naval,mfNavUnitClearance(TYPES[t]));
+          addParticle(0,ux[i],uy[i],0,0,.25,14, 160,230,255);
+          if(B.team===0){ sfx('deploy',ux[i],uy[i],0.75); if(T.air) sfx('flyby',ux[i],uy[i],1); }
         }
-      } else B.prodT=0;
+      } else {B.prodT=0;B.prodStalled='';}
     }
   }
 }

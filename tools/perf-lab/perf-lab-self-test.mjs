@@ -16,10 +16,29 @@ import {
 import { crc32 } from '../evidence-foundation/png-evidence.mjs';
 import { generateBenchmarkReports } from './benchmark-report-generator.mjs';
 import { validEvidenceFixture, cloneFixture } from './fixtures/evidence-fixtures.mjs';
-import { BENCHMARK_SCENARIOS, benchmarkScenarioSupport, generateDeterministicRoster } from './scenario-manifests.mjs';
-import { buildExpectedPopulation } from './seeded-load-generator.mjs';
+import {
+  BENCHMARK_SCENARIOS,
+  BROOD_AUTHORITATIVE_LADDERS,
+  benchmarkScenarioSupport,
+  broodProxyDensityPlan,
+  generateDeterministicRoster,
+  scenarioAuthorities
+} from './scenario-manifests.mjs';
+import {
+  buildExpectedPopulation,
+  collectAuthoritativePopulation,
+  collectBattlefieldTelemetry,
+  frameEvidenceCamera
+} from './seeded-load-generator.mjs';
 import { PERF_FIXTURE_CASES, evidenceFixtureCase, verifyFixtureCase } from './fixture-verifier.mjs';
-import { parsePerformancePopulations, prepareCurrentPerfOutput } from './perf-probe-runner.mjs';
+import {
+  cleanupDiagnosticCandidate,
+  parseBroodProxyDensity,
+  parsePerformancePopulations,
+  prepareCurrentPerfOutput,
+  summarizeMeasurementCoverage,
+  summarizeHostMemoryPressure
+} from './perf-probe-runner.mjs';
 
 let passes = 0;
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -75,18 +94,106 @@ check(runnerMain.includes('allowedPaths: [LEGACY_PERF_ROOT, ...CONCURRENT_STAGE1
   runnerSource.includes('collectConcurrentStage10Snapshot()') &&
   runnerSource.includes('inputClosureFingerprint'),
   'performance runner limits output to tmp and records excluded Stage 10 authoring writes while binding executing inputs');
+check(runnerSource.includes("ownershipMode: 'isolated'") &&
+  (runnerSource.match(/closePwBrowser\(browser\)/g) || []).length === 2,
+  'performance runner owns and closes its isolated browser on success and failure paths');
+const runtimeStateSource = runnerSource.slice(runnerSource.indexOf('async function runtimeState'),
+  runnerSource.indexOf('export async function enableRuntimeTelemetry'));
+check(runtimeStateSource.includes("typeof MF_SIM_DT !== 'undefined'") &&
+  runtimeStateSource.includes('? Number(mfDetTick)') &&
+  !runtimeStateSource.includes('Math.round(simTimeSec /') &&
+  !runtimeStateSource.includes('authoritativeUnits > 22000'),
+  'runtime evidence uses the engine fixed step and actual authority tick without derived/adaptive timing');
+const frameSamplerSource = runnerSource.slice(runnerSource.indexOf('async function sampleFrames'),
+  runnerSource.indexOf('function appendProbe'));
+check(frameSamplerSource.includes('while (probe.frameDts.length < frameCount)') &&
+  frameSamplerSource.includes('presented === observedPresentationFrame') &&
+  frameSamplerSource.includes('presentationInterval') &&
+  frameSamplerSource.includes('Number(acc) / Number(MF_SIM_DT)'),
+  'frame evidence samples presented intervals and cannot count skipped high-refresh RAF callbacks as FPS');
+check(runnerSource.includes('const measurementStartState = await runtimeState(page)') &&
+  runnerSource.includes('measurementEndState = await runtimeState(page)') &&
+  runnerSource.includes('measurementEndState.atPerformanceMs - measurementStartState.atPerformanceMs') &&
+  runnerSource.includes('const simulatedTicks = measurementEndState.simTick - measurementStartState.simTick') &&
+  runnerSource.includes('const simulatedDurationSec = simulatedTicks * measurementStartState.simStepSec'),
+  'wall and simulated duration share exact in-page state/timestamp boundaries');
+check(frameSamplerSource.includes('gpuSerial !== lastGpuSampleSerial') &&
+  frameSamplerSource.includes('probe.gpuSampleSerials.push(gpuSerial)') &&
+  frameSamplerSource.includes("if (!current?.gpuDisjoint) push(probe.gpuTimes, current?.gpu?.render)"),
+  'GPU timing records each newly resolved non-disjoint query once instead of repeating stale latest values');
+const postSampleTraceAt = runnerSource.indexOf('hitchTrace: window.mfPerfTraceSnapshot()');
+const secondSampleAt = runnerSource.indexOf('const secondSample = await sampleFramesWithCpuProfile');
+check(secondSampleAt >= 0 && postSampleTraceAt > secondSampleAt &&
+  runnerSource.includes("throw new Error('Required window.mfPerfTraceSnapshot() is unavailable"),
+  'bounded hitch trace is required and copied once after presented-frame sampling');
+check(runnerSource.includes('longTaskTotalCount++') &&
+  runnerSource.includes('if (probe.longTasks.length >= 256) probe.longTasks.shift()') &&
+  runnerSource.includes('capacity: 256'),
+  'probe long-task records retain a total count while bounding stored records to 256');
+check(runnerSource.includes("const cpuProfile = args.includes('--cpu-profile')") &&
+  runnerSource.includes("samplingIntervalUs: 1000") &&
+  runnerSource.includes("extname(path) !== '.cpuprofile'"),
+  'optional CDP CPU profiling is explicit, 1000us, deterministic-path, and default-off');
+const hostMemory = summarizeHostMemoryPressure({
+  before: { kind: 'before', elapsedMs: 0, freeBytes: 900 },
+  after: { kind: 'after', elapsedMs: 2000, freeBytes: 700 },
+  points: [{ kind: 'periodic', elapsedMs: 1000, freeBytes: 400 }],
+  totalPointCount: 1,
+  totalBytes: 4096,
+  observedFreeMinBytes: 400,
+  observedFreeMaxBytes: 900
+});
+check(hostMemory.freeMinBytes === 400 && hostMemory.freeMaxBytes === 900 &&
+  hostMemory.pressureThresholdBytes === 512 * 1024 * 1024 && hostMemory.pressure === true &&
+  hostMemory.pointCapacity === 600 && /not Android-device memory/.test(hostMemory.limitation),
+  'host memory evidence reports bounded before/after pressure with an explicit non-device limitation');
+check(runnerSource.includes("const testedEntry = servingPacked ? 'www/index.html' : 'index.html'") &&
+  runnerSource.includes('assets/data/runtime-compatibility.json') &&
+  runnerSource.includes('await assertPackedJsParity(sourceTree, servedTree, packedRoot)') &&
+  runnerSource.includes('run node tools/pack-www.mjs'),
+  'evidence fingerprints the served package and rejects stale packed JavaScript with an actionable error');
 const reporterSource = await readFile(join(HERE, 'benchmark-report-generator.mjs'), 'utf8');
 check(reporterSource.includes("const CURRENT_PERF_ROOT = join(ROOT, 'tmp/perf-lab/current')") &&
   !reporterSource.includes("join(ROOT, 'tmp/perf-lab/metrics')"),
   'benchmark report defaults scan only the explicit current lane');
-check(JSON.stringify(parsePerformancePopulations(['--ladder'])) === JSON.stringify([100, 250, 500, 750, 1000]) &&
+check(JSON.stringify(parsePerformancePopulations(['--ladder'])) === JSON.stringify([100, 250, 500]) &&
   parsePerformancePopulations(['--units', '250'])[0] === 250,
-  'performance population selection is limited to the declared finite ladder');
+  'performance population selection stops at the authoritative 500-body ceiling');
 let invalidPopulationCount = 0;
 for (const value of ['0', '501', '1001', '500x', '--preset']) {
   try { parsePerformancePopulations(['--units', value]); } catch { invalidPopulationCount++; }
 }
 check(invalidPopulationCount === 5, 'arbitrary or malformed --units values are rejected');
+check(parseBroodProxyDensity([]) === 'high' && parseBroodProxyDensity(['--proxy-density', 'cinematic']) === 'cinematic',
+  'Brood proxy density has a stable high default and accepts declared presets');
+let invalidProxyDensity = false;
+try { parseBroodProxyDensity(['--proxy-density', 'maximum']); } catch { invalidProxyDensity = true; }
+check(invalidProxyDensity, 'unknown Brood proxy density is rejected');
+const measurementCoverage = summarizeMeasurementCoverage({
+  totalUnits: [2500, 2488, 2386],
+  realBroodUnits: [500, 493], visibleBroodUnits: [0, 41],
+  proxyBodies: [3000, 2900], proxyClusters: [38, 36]
+}, 2500, {
+  attempted: { total: 2500 }, accepted: { total: 2500 }, postSettle: { total: 2500, unmatched: 0 }
+});
+check(measurementCoverage.admission.exact && measurementCoverage.admission.postSettle === 2500 &&
+  measurementCoverage.liveSample.total.min === 2386 && measurementCoverage.liveSample.total.max === 2500,
+  'exact admission is reported separately from live measured population loss');
+check(measurementCoverage.brood.realBodies.min === 493 && measurementCoverage.brood.visibleBodies.max === 41 &&
+  measurementCoverage.brood.visibleRealBroodCovered && measurementCoverage.brood.proxyTelemetryCovered &&
+  measurementCoverage.brood.proxyBodies.max === 3000 && measurementCoverage.brood.proxyClusters.max === 38,
+  'Brood evidence labels real, visible, proxy-body, and proxy-cluster measurement coverage');
+const cleanupDiagnostic = cleanupDiagnosticCandidate({
+  scenarioId: '1v4_continental_conquest', unitsPerFaction: 500,
+  evidenceStatus: 'accepted', evidenceClass: 'stage8-scenario-pass',
+  performanceGate: { outcome: 'PASS', evidenceStatus: 'accepted', acceptancePopulationEligible: true, thresholdPassed: true }
+}, new Error('PW_OWNED_CLEANUP_INCOMPLETE: profile busy'));
+check(cleanupDiagnostic.schema === 'massfront-perf-cleanup-diagnostic-v1' &&
+  cleanupDiagnostic.acceptanceEligible === false && cleanupDiagnostic.evidenceStatus === 'diagnostic' &&
+  cleanupDiagnostic.measurement.evidenceStatus === 'diagnostic' &&
+  cleanupDiagnostic.measurement.performanceGate.outcome === 'DIAGNOSTIC/INCOMPLETE' &&
+  cleanupDiagnostic.measurement.performanceGate.originalMeasuredOutcome === 'PASS',
+  'cleanup failure preserves measurements only as an explicitly non-acceptance diagnostic');
 const invalidPopulationCli = spawnSync(process.execPath, [join(HERE, 'perf-probe-runner.mjs'), '--units', '501'], {
   encoding: 'utf8'
 });
@@ -113,10 +220,11 @@ check(runnerSource.includes("captureLane: 'desktop-v3'") && runnerSource.include
   !runnerSource.includes('runTag') && !runnerSource.includes('Date.now()'),
   'performance captures use bounded desktop/device lane names without timestamps');
 const finalReleaseAt = runnerMain.indexOf('workspaceGuard.release({ assertStable: true');
-const failureGateAt = runnerMain.indexOf('if (failure) throw failure;');
+const failureGateAt = runnerMain.indexOf('if (failure) {');
+const diagnosticPreserveAt = runnerMain.indexOf('await preserveCleanupDiagnostics(results, failure)');
 const publishAt = runnerMain.indexOf('for (const output of queuedOutputs)');
-check(finalReleaseAt >= 0 && finalReleaseAt < failureGateAt && failureGateAt < publishAt,
-  'stable final release and failure gate precede accepted evidence publication');
+check(finalReleaseAt >= 0 && finalReleaseAt < failureGateAt && failureGateAt < diagnosticPreserveAt && diagnosticPreserveAt < publishAt,
+  'stable final release and cleanup-diagnostic failure gate precede accepted evidence publication');
 
 const unsupported = telemetryStats([], { supported: false, source: 'self-test' });
 check(unsupported.sampleCount === 0 && unsupported.p50 === null && unsupported.mean === null,
@@ -126,8 +234,77 @@ check(supportedZero.sampleCount === 2 && supportedZero.p50 === 0,
   'supported zero measurements remain distinguishable from missing telemetry');
 
 const rosterScenario = BENCHMARK_SCENARIOS['1v4_continental_conquest'];
-check(benchmarkScenarioSupport(rosterScenario).status === 'supported' && buildExpectedPopulation(rosterScenario, 500).total === 2500,
-  '1v4/2500 uses the supported fifth participant and fourth AI slot');
+const rosterTopology = benchmarkScenarioSupport(rosterScenario);
+const rosterPopulation = buildExpectedPopulation(rosterScenario, 500);
+check(rosterTopology.status === 'supported' && rosterTopology.normalParticipantCount === 4 &&
+  rosterTopology.systemForceCount === 1 && rosterPopulation.total === 2500 &&
+  rosterPopulation.byAuthorityKind['normal-participant'] === 2000 &&
+  rosterPopulation.byAuthorityKind['system-force'] === 500,
+  '1v4/2500 distinguishes four normal participants from the Brood system force');
+check(JSON.stringify(BROOD_AUTHORITATIVE_LADDERS) === JSON.stringify([100, 250, 500]) &&
+  broodProxyDensityPlan(500, 'high').requestedProxyBodies === 3000 &&
+  broodProxyDensityPlan(500, 'high').requestedProxyClusters === 38,
+  'Brood authoritative ladder and deterministic High proxy-density plan are explicit');
+const broodSpec = rosterScenario.systemForces[0];
+const broodRosterA = generateDeterministicRoster(broodSpec, 250, rosterScenario.mapSeed + 404);
+const broodRosterB = generateDeterministicRoster(broodSpec, 250, rosterScenario.mapSeed + 404);
+const broodRosterC = generateDeterministicRoster(broodSpec, 250, rosterScenario.mapSeed + 405);
+check(JSON.stringify(broodRosterA) === JSON.stringify(broodRosterB) &&
+  JSON.stringify(broodRosterA) !== JSON.stringify(broodRosterC),
+  'Brood wildcard rosters preserve exact seeded repeatability and seed separation');
+const unsupportedFiveNormal = {
+  id: 'unsupported_five_normal',
+  participants: [
+    { team: 0, slot: -1 }, { team: 1, slot: 0 }, { team: 1, slot: 1 },
+    { team: 1, slot: 2 }, { team: 1, slot: 3 }
+  ],
+  systemForces: []
+};
+check(benchmarkScenarioSupport(unsupportedFiveNormal).status === 'unsupported' &&
+  benchmarkScenarioSupport(unsupportedFiveNormal).reason.includes('5 normal participants'),
+  'five normal seats are unsupported while four plus one system force remains valid');
+
+const browserGlobals = [
+  'window', 'ualive', 'unitHigh', 'uteam', 'uCmd', 'ux', 'uy', 'cam', 'camFollow', 'orthoSpan', 'distTarget',
+  'camPitch', 'pitchTarget', 'camYaw', 'yawTarget', 'clampCam', 'camUpdateMatrices', 'camBounds', 'w2s',
+  'fogEntityVisible', 'mfBroodCrowdStats', 'VW', 'VH'
+];
+const previousBrowserGlobals = new Map(browserGlobals.map(key => [key, globalThis[key]]));
+try {
+  Object.assign(globalThis, {
+    window: globalThis,
+    ualive: Uint8Array.from([1, 1, 1, 1]), unitHigh: 4,
+    uteam: Int8Array.from([0, 0, 2, 2]), uCmd: Int8Array.from([-1, -1, -1, -1]),
+    ux: Float32Array.from([440, 470, 1600, 1630]), uy: Float32Array.from([430, 460, 1600, 1630]),
+    cam: { x: 1600, y: 1600 }, camFollow: 9, orthoSpan: 2600, distTarget: 2600,
+    camPitch: 1.05, pitchTarget: 1.05, camYaw: 0.9, yawTarget: 0.9,
+    VW: 412, VH: 900
+  });
+  globalThis.clampCam = () => {};
+  globalThis.camUpdateMatrices = () => {};
+  globalThis.camBounds = () => ({ x0: globalThis.cam.x - 900, x1: globalThis.cam.x + 900,
+    y0: globalThis.cam.y - 900, y1: globalThis.cam.y + 900 });
+  globalThis.w2s = (x, y) => [206 + (x - globalThis.cam.x) * 0.5, 450 + (y - globalThis.cam.y) * 0.5];
+  globalThis.fogEntityVisible = () => true;
+  globalThis.mfBroodCrowdStats = () => ({ visualBodies: 1200, clusterInstances: 15 });
+  const fakePage = { evaluate: async (fn, arg) => fn(arg) };
+  const auth = await collectAuthoritativePopulation(fakePage, rosterScenario);
+  check(auth.total === 4 && auth.realBrood === 2 && auth.unmatched === 0 &&
+    auth.byAuthorityKind['normal-participant'] === 2 && auth.byAuthorityKind['system-force'] === 2,
+    'authoritative reconciliation assigns team-2 wildlife slots to the Brood system force');
+  const framed = await frameEvidenceCamera(fakePage, rosterScenario, 'self-test');
+  check(framed.visible === 2 && globalThis.camFollow === -1 && globalThis.camPitch === rosterScenario.camera.pitch &&
+    globalThis.camYaw === rosterScenario.camera.yaw,
+    'evidence camera frames live friendly bodies and writes the real camPitch/camYaw state');
+  const battlefield = await collectBattlefieldTelemetry(fakePage);
+  check(battlefield.total === 4 && battlefield.visible > 0 && battlefield.realBrood === 2 &&
+    battlefield.proxyBodies === 1200 && battlefield.proxyClusters === 15 && battlefield.proxyTelemetrySupported,
+    'battlefield telemetry reports real/visible Brood and render-only proxy bodies/clusters');
+} finally {
+  for (const [key, value] of previousBrowserGlobals) {
+    if (value === undefined) delete globalThis[key]; else globalThis[key] = value;
+  }
+}
 const supportedMatrix = [
   ['1v1_duel_verdant', 1000], ['1v2_flank_arctic', 1500], ['1v3_crossfire_ashland', 2000],
   ['1v4_continental_conquest', 2500]
@@ -137,7 +314,7 @@ for (const [scenarioId, total] of supportedMatrix) {
   const expectedPopulation = buildExpectedPopulation(scenario, 500);
   check(benchmarkScenarioSupport(scenario).status === 'supported' && expectedPopulation.total === total,
     `${scenarioId} supports the current ${total}-unit acceptance case`);
-  check(scenario.factions.every((spec, index) =>
+  check(scenarioAuthorities(scenario).every((spec, index) =>
     generateDeterministicRoster(spec, 500, scenario.mapSeed + index * 1013).length === 500),
     `${scenarioId} deterministic rosters attempt 500 units per seat`);
 }
@@ -257,11 +434,13 @@ try {
   const currentMetricsDir = join(currentRoot, 'metrics');
   const currentCapturesDir = join(currentRoot, 'captures');
   const currentReportsDir = join(currentRoot, 'reports');
+  const currentDiagnosticsDir = join(currentRoot, 'diagnostics');
   await Promise.all([
     mkdir(legacyMetricsDir, { recursive: true }),
     mkdir(currentMetricsDir, { recursive: true }),
     mkdir(currentCapturesDir, { recursive: true }),
-    mkdir(currentReportsDir, { recursive: true })
+    mkdir(currentReportsDir, { recursive: true }),
+    mkdir(currentDiagnosticsDir, { recursive: true })
   ]);
   const legacyRejectedPath = join(legacyMetricsDir, '1v1_duel_verdant_500u.json');
   await writeFile(legacyRejectedPath, JSON.stringify({ scenarioId: 'preserved-legacy-rejection' }));
@@ -273,7 +452,10 @@ try {
     join(currentCapturesDir, '1v1_duel_verdant_500u_abcdef123456_12345_start.png'),
     join(currentReportsDir, 'EVIDENCE_REJECTION_LEDGER.json'),
     join(currentReportsDir, 'BENCHMARK_MATRIX_REPORT.md'),
-    join(currentReportsDir, 'benchmark_matrix.csv')
+    join(currentReportsDir, 'benchmark_matrix.csv'),
+    join(currentDiagnosticsDir, '1v1_duel_verdant_500u_cleanup_incomplete_v3.json'),
+    join(currentDiagnosticsDir, '1v1_duel_verdant_500u_desktop-v3_sample1.cpuprofile'),
+    join(currentDiagnosticsDir, '1v1_duel_verdant_500u_desktop-v3_sample2.cpuprofile')
   ];
   for (const path of staleCurrentFiles) await writeFile(path, 'stale');
   const cleanup = await prepareCurrentPerfOutput({

@@ -31,7 +31,7 @@ assert.match(stack,/addEventListener\('pointercancel',mfUnitStackReleasePointer,
 assert.match(stack,/mfLocalOwnsUnit==='function'\?mfLocalOwnsUnit\(i\):uteam\[i\]===0/,
   'unit grouping is not scoped to canonical local ownership');
 assert.match(stack,/const byType=new Map\(\)/,'live units are not grouped by type');
-assert.match(stack,/row\.health=Math\.round\(row\.hp\/row\.count\*100\)/,
+assert.match(stack,/row\.health=Math\.round\(row\.hp\/Math\.max\(1,row\.count\)\*100\)/,
   'cards omit average-health state');
 assert.match(stack,/row\.ready\+=/,'cards omit readiness state');
 assert.match(stack,/unitIconEl\(type,34,kit\)/,'cards do not request existing faction-authored unit art');
@@ -51,6 +51,14 @@ assert.doesNotMatch(stack,/\b(?:ctrlGroups|saveGroup|recallGroup)\b/,
   'takeover mutates or replaces P1-P4 saved-platoon authority');
 assert.match(stack,/const mfUnitStackBaseUpdateGroupBadges=[\s\S]*updateGroupBadges=function\(\)/,
   'takeover does not extend the existing group update loop');
+assert.match(stack,/MF_UNIT_STACK_STATUS_MS=500,MF_UNIT_STACK_AUDIT_MS=2000/,
+  'unit-stack census does not separate status cadence from the slow repair audit');
+assert.match(stack,/mfUnitStackBaseSpawn[\s\S]*mfUnitStackInvalidate\(\)/,
+  'unit spawns do not invalidate the cached local-unit census');
+assert.match(stack,/mfUnitStackBaseKill[\s\S]*mfUnitStackInvalidate\(\)/,
+  'unit deaths do not invalidate the cached local-unit census');
+assert.match(stack,/selection:selectedByType=>/,
+  'selection results are not reused from the authoritative HUD selection walk');
 
 assert.match(stack,/card=document\.createElement\('button'\);card\.type='button'/,
   'unit stacks are not native keyboard/assistive-technology actions');
@@ -68,6 +76,10 @@ assert.match(css,/\.mfUnitStackCard\{[^}]*min-height:44px[^}]*scroll-snap-align:
   'unit-stack cards lack 44px targets or finger-scroll semantics');
 assert.match(css,/body\.mf-cinematic-hud #grpRow\.mfUnitStackReady\{overflow:hidden\}/,
   'cinematic takeover lets the stack rail expand the command dock');
+assert.match(css,/#mfUnitStackRail\[data-mf-overflow="middle"\]/,
+  'scrolling stack rail has no two-sided continuation affordance');
+assert.match(css,/#grpRow\.mfUnitStackReady:not\(\.mfUnitStackHasSelection\)>\.grpBtn:not\(\.saved\)/,
+  'empty platoon slots do not yield browse space to exact-model stacks');
 
 assert.match(verifier,/UNIT_STACK_SETUP_FAILED/,'live HUD verification does not exercise the unit-stack takeover');
 assert.match(verifier,/stableNode:node===window\.__mfUnitStackVerifierNode/,

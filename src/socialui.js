@@ -56,7 +56,12 @@
   const MR_PROTOCOL='massfront-match',MR_VERSION=1,MR_SUBPROTOCOL='massfront.v1';
   const MR_HASH_RE=/^[a-f0-9]{64}$/,MR_ID_RE=/^[a-f0-9]{32}$/,MR_CODE_RE=/^[a-z][a-z0-9_]{0,47}$/;
   function mrInt(v,min,max){const n=Number(v);return Number.isSafeInteger(n)&&n>=min&&n<=max?n:null;}
+  function mrInputDelayMax(buildVersion){
+    const p=String(buildVersion||'').split('-',1)[0].split('.').map(Number);
+    return p.length===3&&(p[0]>1||p[0]===1&&(p[1]>33||p[1]===33&&p[2]>=74))?18:3;
+  }
   function mrKeys(v,keys){return !!v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).every(k=>keys.includes(k));}
+  function mrExact(v,keys){return mrKeys(v,keys)&&Object.keys(v).length===keys.length;}
   function mrFreeze(v){if(v&&typeof v==='object'&&!Object.isFrozen(v)){Object.freeze(v);for(const k of Object.keys(v))mrFreeze(v[k]);}return v;}
   function mrCopy(v){return JSON.parse(JSON.stringify(v));}
   function mrBytes(v){try{return new TextEncoder().encode(typeof v==='string'?v:JSON.stringify(v)).byteLength;}catch(e){return Infinity;}}
@@ -87,9 +92,9 @@
     return out;
   }
   function createMatchRuntime(){
-    let consumer=null,socket=null,socketSerial=0,state='idle',expected=null,account='',tick=0,seq=0;
+    let consumer=null,socket=null,socketSerial=0,state='idle',expected=null,account='',tick=0,seq=0,lastAcceptedSeq=0;
     let started=false,ended=false,intentional=false,welcomeSeen=false,lastGeneration=0,resumeToken='';
-    let graceMs=10000,graceDeadline=0,reconnectAttempt=0,reconnectTimer=null,welcomeTimer=null,inbound=Promise.resolve();
+    let graceMs=10000,graceDeadline=0,reconnectAttempt=0,reconnectTimer=null,welcomeTimer=null,resumeThroughTick=-1;
     let connectResolve=null,connectReject=null,pending=new Map(),hashTicks=new Set();
     const reconnectBackoff=[120,250,500,900,1400,2000];
     function snapshot(){return mrFreeze({state,matchId:expected&&expected.matchId||'',seat:expected&&expected.seat||0,
@@ -124,23 +129,40 @@
     }
     function baseFrame(v){return mrKeys(v,Object.keys(v))&&v.protocol===MR_PROTOCOL&&v.v===MR_VERSION&&typeof v.type==='string';}
     function sameAccount(){return account&&account===sessionStamp();}
-    async function welcome(body,kind,serial){
-      if(welcomeSeen||!mrKeys(body,['protocol','v','type','matchId','seat','tick','tickRate','inputDelay','reconnectGraceMs','resumed','resumeToken','generation','compatibility']))return fatal('invalid_welcome');
-      const input=body.inputDelay,compat=body.compatibility,generation=mrInt(body.generation,1,2147483647),nextTick=mrInt(body.tick,0,2147483647);
+    async function welcome(body,kind,serial,resumeCursor){
+      const baseKeys=['protocol','v','type','matchId','seat','tick','tickRate','inputDelay','reconnectGraceMs','resumed','resumeToken','generation','compatibility'],
+        keys=kind==='resume'?baseKeys.concat(['resumeFromTick','replayThroughTick','lastSeq']):baseKeys;
+      if(welcomeSeen||!mrExact(body,keys))return fatal('invalid_welcome');
+      const input=body.inputDelay,compat=body.compatibility,generation=mrInt(body.generation,1,2147483647),nextTick=mrInt(body.tick,0,2147483647),
+        from=kind==='resume'?mrInt(body.resumeFromTick,0,2147483647):nextTick,
+        through=kind==='resume'?mrInt(body.replayThroughTick,0,2147483647):nextTick,
+        accepted=kind==='resume'?mrInt(body.lastSeq,0,2147483647):0;
+      const inputMax=mrInputDelayMax(expected.buildVersion);
       if(body.matchId!==expected.matchId||body.seat!==expected.seat||nextTick==null||body.tickRate!==30||
-         !mrKeys(input,['min','max'])||input.min!==2||input.max!==3||body.reconnectGraceMs!==10000||
+         !mrKeys(input,['min','max'])||input.min!==2||input.max!==inputMax||body.reconnectGraceMs!==10000||
          body.resumed!==(kind==='resume')||!MR_HASH_RE.test(String(body.resumeToken||''))||generation==null||generation<=lastGeneration||
          !mrKeys(compat,['buildVersion','manifestHash','balanceHash','rulesHash'])||compat.buildVersion!==expected.buildVersion||
          compat.manifestHash!==expected.manifestHash||compat.balanceHash!==expected.balanceHash||compat.rulesHash!==expected.rulesHash)return fatal('welcome_mismatch');
+      if(kind==='resume'&&(from==null||through==null||accepted==null||from!==resumeCursor||through!==nextTick||from>through||through-from>128||
+         accepted<lastAcceptedSeq||accepted>seq||!started&&through>0))return fatal(!started&&through>0?'resume_start_missing':'resume_mismatch');
       const current=await runtimeTuple();
       if(serial!==socketSerial)return;
       if(!sameAccount()||!current||current.buildVersion!==expected.buildVersion||current.manifestHash!==expected.manifestHash||
          current.balanceHash!==expected.balanceHash)return fatal('runtime_changed',1008);
-      resumeToken=body.resumeToken;body.resumeToken='';lastGeneration=generation;tick=nextTick;graceMs=10000;
-      graceDeadline=0;reconnectAttempt=0;welcomeSeen=true;if(welcomeTimer){clearTimeout(welcomeTimer);welcomeTimer=null;}
-      setState(started?'running':'welcomed',{resumed:kind==='resume'});emit('welcome',{matchId:expected.matchId,seat:expected.seat,tick,
-        tickRate:30,inputDelay:{min:2,max:3},reconnectGraceMs:graceMs,resumed:kind==='resume',generation,compatibility:mrCopy(compat)});
-      resolveConnect();
+      if(kind==='resume'){
+        if(!consumer||typeof consumer.resumeState!=='function'||consumer.resumeState({resumeFromTick:from,replayThroughTick:through,lastSeq:accepted})!==true)
+          return fatal('consumer_resume_rejected',1011);
+        pending.clear();seq=lastAcceptedSeq=accepted;tick=from;resumeThroughTick=through;
+      }
+      resumeToken=body.resumeToken;body.resumeToken='';lastGeneration=generation;graceMs=10000;welcomeSeen=true;
+      if(welcomeTimer){clearTimeout(welcomeTimer);welcomeTimer=null;}
+      if(kind==='resume')welcomeTimer=setTimeout(()=>{if(serial===socketSerial&&(state==='replaying'||state==='syncing'))fatal('resume_sync_timeout',1008);},10000);
+      else{tick=nextTick;graceDeadline=0;reconnectAttempt=0;}
+      setState(kind==='resume'?'replaying':started?'running':'welcomed',{resumed:kind==='resume'});
+      emit('welcome',{matchId:expected.matchId,seat:expected.seat,tick:nextTick,tickRate:30,inputDelay:{min:2,max:inputMax},
+        reconnectGraceMs:graceMs,resumed:kind==='resume',generation,compatibility:mrCopy(compat),
+        ...(kind==='resume'?{resumeFromTick:from,replayThroughTick:through,lastSeq:accepted}:{})});
+      if(kind!=='resume')resolveConnect();
     }
     async function sendStateHash(hashTick){
       if(typeof mfGameplayStateHash!=='function')return fatal('state_hash_unavailable',1011);
@@ -156,35 +178,57 @@
       if(body.type==='forfeit')return mrKeys(body,['protocol','v','type','seat','tick','reason'])&&body.reason==='reconnect_timeout';
       return false;
     }
-    async function handle(raw,kind,serial){
-      if(serial!==socketSerial||typeof raw!=='string'||mrBytes(raw)>262144)return fatal('invalid_frame_size',1009);
+    async function handle(raw,kind,serial,resumeCursor){
+      if(serial!==socketSerial)return;
+      if(typeof raw!=='string'||mrBytes(raw)>262144)return fatal('invalid_frame_size',1009);
       let body;try{body=JSON.parse(raw);}catch(e){return fatal('invalid_json');}
       if(!baseFrame(body))return fatal('protocol_mismatch');
-      if(!welcomeSeen){if(body.type!=='welcome')return fatal('welcome_required');return welcome(body,kind,serial);}
+      if(!welcomeSeen){if(body.type!=='welcome')return fatal('welcome_required');return welcome(body,kind,serial,resumeCursor);}
       if(!sameAccount())return fatal('account_changed',1008);
       if(body.type==='welcome')return fatal('duplicate_welcome');
       if(body.type==='start'){
         const seats=body.seats;if(!mrKeys(body,['protocol','v','type','tick','seats'])||body.tick!==0||!Array.isArray(seats)||seats.length<2||seats.length>4||
-           !seats.every((v,i)=>mrInt(v,1,4)!=null&&(i===0||v>seats[i-1]))||!seats.includes(expected.seat))return fatal('invalid_start');
+           !seats.every((v,i)=>mrInt(v,1,4)!=null&&(i===0||v>seats[i-1]))||!seats.includes(expected.seat)||started||state==='replaying'||state==='syncing')return fatal('invalid_start');
         started=true;setState('running');emit('start',{tick:0,seats:seats.slice()});return;
       }
       if(body.type==='tick'){
-        if(!started||!mrKeys(body,['protocol','v','type','tick','commands'])||mrInt(body.tick,1,2147483647)!==tick+1)return fatal('tick_order');
+        const replaying=state==='replaying';
+        if(!started||state!=='running'&&!replaying||!mrKeys(body,['protocol','v','type','tick','commands'])||
+           mrInt(body.tick,1,2147483647)!==tick+1||replaying&&body.tick>resumeThroughTick)return fatal('tick_order');
         const commands=mrBatch(body.commands);if(!commands)return fatal('invalid_tick_commands');
         if(!consumer||typeof consumer.applyTick!=='function')return fatal('consumer_unavailable',1011);
         const packet=mrFreeze({tick:body.tick,commands});
-        try{const accepted=await consumer.applyTick(packet);if(accepted===false)return fatal('consumer_rejected_tick',1011);}catch(e){return fatal('consumer_failed',1011);}
-        tick=body.tick;emit('tick',packet);if(tick%30===0)await sendStateHash(tick);return;
+        let accepted;
+        try{accepted=await (typeof consumer.enqueueTick==='function'?consumer.enqueueTick(packet):consumer.applyTick(packet));}
+        catch(e){if(serial!==socketSerial)return;return fatal('consumer_failed',1011);}
+        if(serial!==socketSerial)return;
+        if(accepted===false)return fatal('consumer_rejected_tick',1011);
+        tick=body.tick;emit('tick',packet);if(!replaying&&tick%30===0)await sendStateHash(tick);return;
+      }
+      if(body.type==='replayEnd'){
+        const at=mrInt(body.tick,0,2147483647);
+        if(state!=='replaying'||!mrExact(body,['protocol','v','type','tick'])||at!==resumeThroughTick||tick!==at)return fatal('invalid_replay_end');
+        if(!send({protocol:MR_PROTOCOL,v:MR_VERSION,type:'resumeReady',tick:at}))return fatal('resume_ready_send_failed',1011);
+        setState('syncing',{replayThroughTick:at});return;
+      }
+      if(body.type==='resumeReadyAck'){
+        const at=mrInt(body.tick,0,2147483647);
+        if(state!=='syncing'||!mrExact(body,['protocol','v','type','tick'])||at!==resumeThroughTick||tick!==at)return fatal('invalid_resume_ready_ack');
+        if(welcomeTimer){clearTimeout(welcomeTimer);welcomeTimer=null;}
+        resumeThroughTick=-1;graceDeadline=0;reconnectAttempt=0;setState(started?'running':'welcomed',{resumed:true});resolveConnect();return;
       }
       if(body.type==='ack'){
         const n=mrInt(body.seq,1,2147483647),target=mrInt(body.targetTick,1,2147483647),count=mrInt(body.count,1,8),p=n&&pending.get(n);
         if(!mrKeys(body,['protocol','v','type','seq','targetTick','count'])||!p||target!==p.targetTick||count!==p.count)return fatal('invalid_ack');
-        pending.delete(n);emit('ack',{seq:n,targetTick:target,count});return;
+        pending.delete(n);lastAcceptedSeq=Math.max(lastAcceptedSeq,n);emit('ack',{seq:n,targetTick:target,count});return;
       }
       if(body.type==='reject'){
-        const n=body.seq==null?null:mrInt(body.seq,1,2147483647),code=String(body.code||'');
-        if(!mrKeys(body,['protocol','v','type','code','seq','strikes','lastAccepted','tick'])||!MR_CODE_RE.test(code)||body.seq!=null&&n==null)return fatal('invalid_reject');
-        if(n!=null)pending.delete(n);emit('reject',{code,seq:n});return;
+        const n=body.seq==null?null:mrInt(body.seq,1,2147483647),code=String(body.code||''),
+          accepted=body.lastAccepted==null?lastAcceptedSeq:mrInt(body.lastAccepted,0,2147483647);
+        if(!mrKeys(body,['protocol','v','type','code','seq','strikes','lastAccepted','tick'])||!MR_CODE_RE.test(code)||body.seq!=null&&n==null||
+           accepted==null||accepted<lastAcceptedSeq||accepted>seq)return fatal('invalid_reject');
+        lastAcceptedSeq=accepted;for(const key of [...pending.keys()])if(key<=accepted||key===n)pending.delete(key);
+        emit('reject',{code,seq:n});return;
       }
       if(body.type==='hashAck'){
         const at=mrInt(body.tick,30,2147483647);if(!mrKeys(body,['protocol','v','type','tick'])||at==null||at%30||!hashTicks.has(at))return fatal('invalid_hash_ack');
@@ -221,23 +265,27 @@
         if(typeof WebSocket!=='function'||!expected||!MR_HASH_RE.test(String(token||''))){token='';return reject(Object.assign(new Error('Match transport unavailable.'),{code:'transport_unavailable'}));}
         const url=window.MFSocial&&typeof MFSocial.matchSocketUrl==='function'?MFSocial.matchSocketUrl(expected.matchId):'';
         if(!/^wss?:\/\//.test(url)){token='';return reject(Object.assign(new Error('Match transport unavailable.'),{code:'socket_url_unavailable'}));}
-        const serial=++socketSerial;welcomeSeen=false;let credentialProtocol=`mf-${kind}.${expected.seat}.${token}`;
-        let protocols=[MR_SUBPROTOCOL,credentialProtocol],opened=false,ws;
+      const serial=++socketSerial;welcomeSeen=false;
+      const applied=consumer&&typeof consumer.lastAppliedTick==='function'?consumer.lastAppliedTick():tick,
+        appliedTick=mrInt(applied,0,2147483647),resumeCursor=kind==='resume'?appliedTick:0;
+      if(kind==='resume'&&resumeCursor==null){fatal('resume_cursor_unavailable',1011);return reject(Object.assign(new Error('Match replay cursor unavailable.'),{code:'resume_cursor_unavailable'}));}
+      let credentialProtocol=kind==='resume'?`mf-resume.${expected.seat}.${token}.${resumeCursor}`:`mf-seat.${expected.seat}.${token}`;
+      let protocols=[MR_SUBPROTOCOL,credentialProtocol],opened=false,ws;
         try{ws=new WebSocket(url,protocols);}catch(e){credentialProtocol='';protocols[1]='';token='';return reject(Object.assign(new Error('Match transport unavailable.'),{code:'socket_create_failed'}));}
         socket=ws;credentialProtocol='';protocols[1]='';if(kind==='seat')token='';
-        ws.binaryType='arraybuffer';setState(kind==='resume'?'reconnecting':'connecting');
+        ws.binaryType='arraybuffer';setState(kind==='resume'?'reconnecting':'connecting');let socketInbound=Promise.resolve();
         ws.addEventListener('open',()=>{
           if(serial!==socketSerial)return;opened=true;if(kind==='resume')token='';
           if(ws.protocol!==MR_SUBPROTOCOL)return fatal('subprotocol_mismatch');
           welcomeTimer=setTimeout(()=>{if(serial===socketSerial&&!welcomeSeen)fatal('welcome_timeout',1008);},5000);
         });
-        ws.addEventListener('message',event=>{const value=event.data;inbound=inbound.then(()=>handle(value,kind,serial)).catch(()=>fatal('frame_handler_failed',1011));});
+        ws.addEventListener('message',event=>{const value=event.data;socketInbound=socketInbound.then(()=>handle(value,kind,serial,resumeCursor)).catch(()=>{if(serial===socketSerial)fatal('frame_handler_failed',1011);});});
         ws.addEventListener('error',()=>{});
         ws.addEventListener('close',()=>{
           if(serial!==socketSerial)return;if(welcomeTimer){clearTimeout(welcomeTimer);welcomeTimer=null;}socket=null;
           if(intentional||ended)return;
           if(!opened||!welcomeSeen){if(kind==='seat'){rejectConnect('launch_socket_closed');fatal('launch_socket_closed',1008);return;}scheduleReconnect();return;}
-          graceDeadline=Date.now()+graceMs;scheduleReconnect();
+          if(!graceDeadline)graceDeadline=Date.now()+graceMs;scheduleReconnect();
         });
         const priorResolve=connectResolve,priorReject=connectReject;
         connectResolve=value=>{resolve(value);if(priorResolve)priorResolve(value);};
@@ -259,12 +307,12 @@
          !MR_HASH_RE.test(value.rulesHash)||rulesHash!==value.rulesHash||value.expiresAt<=Date.now()){
         token='';throw Object.assign(new Error('Match compatibility rejected.'),{code:'compatibility_mismatch'});
       }
-      clearTimers();intentional=false;ended=false;started=false;tick=0;seq=0;pending.clear();hashTicks.clear();resumeToken='';
+      clearTimers();intentional=false;ended=false;started=false;tick=0;seq=0;lastAcceptedSeq=0;pending.clear();hashTicks.clear();resumeToken='';resumeThroughTick=-1;
       lastGeneration=0;expected=value;account=sessionStamp();
       return connectSocket('seat',token).finally(()=>{token='';});
     }
     function submitCommands(commands,delay){
-      const d=delay==null?2:mrInt(delay,2,3);
+      const max=mrInputDelayMax(expected&&expected.buildVersion),d=delay==null?(max>3?8:2):mrInt(delay,2,max);
       if(state!=='running'||!socketReady()||d==null||!Array.isArray(commands)||!commands.length||commands.length>8||
          !commands.every(mrCommandSafe)||pending.size>=128||seq>=2147483647)return null;
       const clean=mrCopy(commands),next=++seq,targetTick=tick+d,frame={protocol:MR_PROTOCOL,v:MR_VERSION,type:'commands',seq:next,targetTick,commands:clean};

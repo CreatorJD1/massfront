@@ -695,7 +695,7 @@ function mfIconStackGrow(n){
   _stkLead=new Int32Array(n); _stkNext=new Int32Array(n);
   _stkCnt=new Uint16Array(n); _stkSel=new Uint8Array(n);
 }
-function mfIconStackRebuild(vis,isCmd){
+function mfIconStackRebuild(vis,isCmd,renderIndices,renderCount,renderFogVisible){
   _stkQ=_mfIcoQ();
   _stkOn=mfIconStackOn(); _stkHN=0; _stkCell=mfIconStackCell();
   _stkMap.clear();
@@ -703,11 +703,16 @@ function mfIconStackRebuild(vis,isCmd){
   const n=unitHigh; mfIconStackGrow(n);
   _stkLead.fill(-1,0,n); _stkNext.fill(-1,0,n); _stkCnt.fill(0,0,n); _stkSel.fill(0,0,n);
   const cell=_stkCell;
-  for(let i=0;i<n;i++){
+  /* renderIndices is the renderer's one-per-frame camera candidate cache. The
+     fallback keeps this subsystem valid for diagnostics that invoke it alone. */
+  const cached=renderIndices&&Number.isFinite(renderCount),walkN=cached?renderCount:n;
+  for(let k=0;k<walkN;k++){
+    const i=cached?renderIndices[k]:k;
     if(!ualive[i]) continue;
     if(isCmd&&isCmd(i)) continue;
     if(vis&&!vis(ux[i],uy[i],40)) continue;
-    if(typeof fogEntityVisible==='function'&&!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
+    if(cached&&renderFogVisible){if(!renderFogVisible(i))continue;}
+    else if(typeof fogEntityVisible==='function'&&!fogEntityVisible(uteam[i],ux[i],uy[i])) continue;
     /* Numeric key, not 't,x,y' — that string was one alloc per visible unit
        every frame and the Map itself was new each rebuild. */
     const key=(uteam[i]<<22)|((((ux[i]/cell)|0)&0x7ff)<<11)|(((uy[i]/cell)|0)&0x7ff);

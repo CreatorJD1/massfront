@@ -360,7 +360,23 @@ function mfNoticeBadgeSync(){
   if(!count){count=document.createElement('i');count.id='noticeLogCount';btn.appendChild(count);}
   count.textContent=mfNUnread?String(Math.min(99,mfNUnread))+(mfNUnread>99?'+':''):'';
   btn.classList.toggle('hasUnread',mfNUnread>0);
+  const newest=mfNHistory[0];
+  btn.dataset.severity=mfNUnread&&newest?mfNoticeSeverity(newest):'quiet';
   btn.setAttribute('aria-label',mfNUnread?'Open event feed, '+mfNUnread+' unread':'Open event feed');
+}
+function mfNoticeSeverity(N){
+  if(!N)return 'info';
+  if(N.pri<=MF_N_CRIT||MF_N_URGENT.test(String(N.label||'')))return 'critical';
+  if(N.channel==='pickup')return 'reward';
+  if(N.channel==='radio'||N.pri>=MF_N_CHAT)return 'comms';
+  if(N.channel==='command'||N.pri===MF_N_ORDER)return 'order';
+  return 'info';
+}
+function mfNoticeIcon(channel){
+  return channel==='alert'?{name:'attack',fallback:'!'}:
+    channel==='command'?{name:'waypoint',fallback:'⌖'}:
+    channel==='radio'?{name:'ping',fallback:'◉'}:
+    channel==='pickup'?{name:'resource',fallback:'◆'}:{name:'minimap',fallback:'·'};
 }
 function mfNoticeHistoryAdd(pri,key,label,channel){
   if(!label)return;
@@ -400,12 +416,19 @@ function mfNoticeLogShell(){
 }
 function mfNoticeHistoryShell(){
   let el=mfFlowEl('mfNoticeHistory');if(el)return el;
-  el=document.createElement('section');el.id='mfNoticeHistory';el.setAttribute('aria-label','Battle event feed');el.setAttribute('aria-modal','false');
+  el=document.createElement('section');el.id='mfNoticeHistory';el.setAttribute('role','complementary');el.setAttribute('aria-label','Battle event feed');el.setAttribute('aria-modal','false');
   el.innerHTML='<header><div><small>TACTICAL NETWORK</small><b>EVENT FEED</b><span id="mfNoticeFeedState"></span></div><button type="button" aria-label="Close event feed">×</button></header>'+
-    '<nav role="tablist" aria-label="Event filters"><button role="tab" data-f="all" class="on">ALL</button><button role="tab" data-f="alert">ALERTS</button><button role="tab" data-f="command">ORDERS</button><button role="tab" data-f="radio">COMMS</button><button role="tab" data-f="pickup">LOOT</button></nav><div class="mfNoticeList" role="log" aria-live="off" aria-label="Recent battle events"></div>';
+    '<nav role="tablist" aria-label="Event filters">'+
+      '<button role="tab" data-f="all" class="on" aria-label="All events"><span class="em mfNoticeTabIcon" data-icon="minimap" aria-hidden="true">◎</span><span class="mfNoticeTabLabel">ALL</span></button>'+
+      '<button role="tab" data-f="alert" aria-label="Alerts"><span class="em mfNoticeTabIcon" data-icon="attack" aria-hidden="true">!</span><span class="mfNoticeTabLabel">ALERT</span></button>'+
+      '<button role="tab" data-f="command" aria-label="Orders"><span class="em mfNoticeTabIcon" data-icon="waypoint" aria-hidden="true">⌖</span><span class="mfNoticeTabLabel">ORDER</span></button>'+
+      '<button role="tab" data-f="radio" aria-label="Communications"><span class="em mfNoticeTabIcon" data-icon="ping" aria-hidden="true">◉</span><span class="mfNoticeTabLabel">COMMS</span></button>'+
+      '<button role="tab" data-f="pickup" aria-label="Loot and rewards"><span class="em mfNoticeTabIcon" data-icon="resource" aria-hidden="true">◆</span><span class="mfNoticeTabLabel">LOOT</span></button>'+
+    '</nav><div class="mfNoticeList" role="log" aria-live="off" aria-label="Recent battle events"></div>';
   document.body.appendChild(el);
   mfBindNativePress(el.querySelector('header button'),e=>{e.stopPropagation();mfNoticeHistoryClose();});
   el.querySelectorAll('nav button').forEach(b=>mfBindNativePress(b,e=>{e.stopPropagation();mfNHistoryFilter=b.dataset.f;mfNoticeHistoryRender();}));
+  if(typeof cmdIconsRefresh==='function')cmdIconsRefresh(el);
   mfFlowEls.mfNoticeHistory=el;
   return el;
 }
@@ -420,14 +443,19 @@ function mfNoticeHistoryRender(){
   if(!rows.length){const e=document.createElement('p');e.className='mfNoticeEmpty';e.textContent='No messages in this channel yet.';list.appendChild(e);return;}
   const channelLabel={command:'ORDER',alert:'ALERT',radio:'COMMS',pickup:'LOOT'};
   for(const N of rows){
-    const row=document.createElement('div');row.className='mfNoticeItem p'+N.pri+' ch-'+N.channel;row.setAttribute('role','listitem');
+    const severity=mfNoticeSeverity(N),icon=mfNoticeIcon(N.channel);
+    const row=document.createElement('div');row.className='mfNoticeItem p'+N.pri+' ch-'+N.channel;row.dataset.severity=severity;row.setAttribute('role','listitem');
+    row.setAttribute('aria-label',(channelLabel[N.channel]||N.channel)+', '+mfNoticeClock(N.at)+', '+N.label+(N.n>1?', repeated '+N.n+' times':''));
+    const glyph=document.createElement('span');glyph.className='em mfNoticeGlyph';glyph.dataset.icon=icon.name;glyph.setAttribute('aria-hidden','true');glyph.textContent=icon.fallback;
     const tm=document.createElement('time');tm.dateTime=new Date(N.at||Date.now()).toISOString();tm.textContent=mfNoticeClock(N.at);
     const tag=document.createElement('i');tag.textContent=channelLabel[N.channel]||N.channel.toUpperCase();
-    tag.setAttribute('aria-label',N.channel==='command'?'Order':tag.textContent);
+    tag.setAttribute('aria-hidden','true');
     const msg=document.createElement('span');msg.textContent=N.label;msg.title=N.label;
-    row.append(tm,tag,msg);
-    if(N.n>1){const repeat=document.createElement('b');repeat.className='mfNoticeRepeat';repeat.textContent='×'+N.n;row.appendChild(repeat);}
+    const copy=document.createElement('span');copy.className='mfNoticeCopy';copy.append(tag,msg);
+    row.append(glyph,copy,tm);
+    if(N.n>1){const repeat=document.createElement('b');repeat.className='mfNoticeRepeat';repeat.textContent='×'+N.n;copy.appendChild(repeat);}
     list.appendChild(row);
+    if(typeof cmdIconsRefresh==='function')cmdIconsRefresh(row);
   }
 }
 function mfNoticeHistoryOpen(){
@@ -730,7 +758,13 @@ mfFlowQueueLayout();
 if(typeof updateHUD==='function'){
   const mfFlowBaseHUD=updateHUD;
   updateHUD=function(fps){
-    if(typeof hudFrame==='number'&&hudFrame%10){ hudFrame++; return; }
+    if(typeof hudFrame==='number'&&hudFrame%10){
+      /* Keep the receiver state machine smooth without repainting every HUD
+         surface. It owns only guarded attribute writes and no layout scan on
+         its idle path; the full HUD remains on the shared 1-in-10 cadence. */
+      if(typeof cmdrTxTick==='function')cmdrTxTick();
+      hudFrame++;return;
+    }
     mfFlowBaseHUD(fps);
   };
 }

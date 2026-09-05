@@ -1,150 +1,128 @@
 #!/usr/bin/env node
-/* Mirror one already-published immutable MASSFRONT release into Cloudflare R2.
- *
- * This never builds from the working tree. Each source byte is downloaded from
- * the release manifest URL, checked against its published SHA-256, then copied
- * into R2 under massfront/<version>/. The mutable latest.json pointer is the
- * final write. That prevents an old Cloudflare channel from advertising files
- * that have not been uploaded or from silently serving dirty local source.
- *
- * Usage:
- * node tools/mirror-release-to-cloudflare.mjs --version 1.33.48 --apply --retire-current
- */
+/* Stage complete immutable release bytes before a separate guarded activation.
+ * Neither phase builds from source or removes a prior release. */
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync, spawn } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
-import {
-  releaseInventory,buildMirrorManifest,assertManifestExact,rangeProbeEntries,verifyEntryRanges
-} from './mirror-release-contract.mjs';
+import {execFileSync,spawn} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {buildMirrorManifest,assertManifestExact} from './mirror-release-contract.mjs';
+import {validateReleaseIdentity} from './release-delivery-contract.mjs';
+import {MIRROR_HOST,assertMirroredRelease,verifyActivationPayloads,activateWithChecks} from './release-activation-contract.mjs';
+import {assertNoVerificationFreeze} from './evidence-foundation/workspace-guard.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const workerDir=path.join(root,'cloudflare','massfront-update');
-const bucket='massfront-releases';
-const host='https://massfront-update.jasondixon1994.workers.dev';
+const bucket='massfront-releases',host=MIRROR_HOST;
 const args=new Set(process.argv.slice(2));
 const after=flag=>{const i=process.argv.indexOf(flag);return i<0?'':String(process.argv[i+1]||'');};
-const version=after('--version');
-const apply=args.has('--apply');
-const retireCurrent=args.has('--retire-current');
+const version=after('--version'),prepare=args.has('--prepare-only'),activationPath=after('--activate-prepared');
+const sourcePath=after('--manifest');
+const expected={version:after('--expected-prior-version'),manifestRoot:after('--expected-prior-root')};
 const sha=data=>crypto.createHash('sha256').update(data).digest('hex');
 const npx=process.platform==='win32'?'npx.cmd':'npx';
-
-if(!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Use --version x.y.z');
-if(!apply) throw new Error('This prepares remote storage; rerun with --apply after reviewing the requested version.');
-
-const source=JSON.parse(fs.readFileSync(path.join(root,'update.json'),'utf8'));
-if(String(source.version)!==version) throw new Error(`Local release manifest is v${source.version}, not v${version}`);
-const inventory=releaseInventory(source);
-const {entries:complete}=inventory;
-
-const priorResponse=await fetch(`${host}/update.json?mf_mirror_probe=${Date.now()}`,{cache:'no-store'});
-if(!priorResponse.ok) throw new Error(`Cloudflare current manifest is unavailable: HTTP ${priorResponse.status}`);
-const prior=await priorResponse.json();
-if(!/^\d+\.\d+\.\d+$/.test(String(prior.version||''))||!Array.isArray(prior.files))
-  throw new Error('Cloudflare current manifest is malformed; refusing to overwrite it');
-console.log(`SOURCE=v${source.version} (${source.files.length} payload / ${complete.length} complete files)`);
-console.log(`CLOUDFLARE_CURRENT=v${prior.version} (${prior.files.length} files)`);
-
 const scratchRoot=path.join(root,'.tmp','ota-delivery-repair');
-fs.mkdirSync(scratchRoot,{recursive:true});
-const tmp=fs.mkdtempSync(path.join(scratchRoot,`massfront-r2-v${version}-`));
+const readJson=file=>JSON.parse(fs.readFileSync(path.resolve(root,file),'utf8').replace(/^\uFEFF/,''));
+const progress=(done,total,file)=>console.log(`VERIFIED ${done}/${total} ${file}`);
+
+if(!/^\d+\.\d+\.\d+$/.test(version))throw new Error('Use --version x.y.z');
+if(!args.has('--apply'))throw new Error('Remote storage changes require --apply');
+if(args.has('--retire-current'))throw new Error('Release staging/activation preserves prior artifacts; --retire-current is refused');
+if(prepare===Boolean(activationPath))throw new Error('Choose --manifest <pinned candidate> --prepare-only OR --activate-prepared <mirror candidate>');
+if(prepare&&!sourcePath)throw new Error('--prepare-only requires --manifest <pinned candidate>');
+if(activationPath&&sourcePath)throw new Error('--manifest and --activate-prepared are mutually exclusive');
+const candidate=readJson(activationPath||sourcePath);
+const identity=validateReleaseIdentity(candidate,'candidate');
+if(identity.version!==version)throw new Error(`Candidate is v${identity.version}, not v${version}`);
+await assertNoVerificationFreeze(root);
+
+async function current(){
+  const response=await fetch(`${host}/update.json?mf_activation_check=${Date.now()}`,{cache:'no-store',signal:AbortSignal.timeout(60000)});
+  if(!response.ok)throw new Error(`Cloudflare current manifest unavailable: HTTP ${response.status}`);
+  return response.json();
+}
+async function writeJson(file,value){
+  await assertNoVerificationFreeze(root);
+  fs.mkdirSync(path.dirname(file),{recursive:true});
+  fs.writeFileSync(file,JSON.stringify(value,null,2)+'\n');
+}
+async function preservePrior(prior){
+  const priorIdentity=validateReleaseIdentity(prior,'rollback manifest');
+  const file=path.join(scratchRoot,`rollback-worker-v${priorIdentity.version}-${priorIdentity.manifestRoot}.json`);
+  if(fs.existsSync(file))assertManifestExact(readJson(file),prior,'Saved rollback manifest differs');
+  else await writeJson(file,prior);
+}
 function run(args){
-  /* .cmd launchers require a shell when spawned by Node on Windows. Without
-     this, the source phase succeeds and the first R2 put fails with EINVAL. */
-  execFileSync(npx,['--yes','wrangler@3',...args],{
-    cwd:workerDir,stdio:'inherit',shell:process.platform==='win32'
-  });
+  execFileSync(npx,['--yes','wrangler@3',...args],{cwd:workerDir,stdio:'inherit',windowsHide:true,shell:process.platform==='win32'});
 }
-function runAsync(args){
+function upload(args){
   return new Promise((resolve,reject)=>{
-    const child=spawn(npx,['--yes','wrangler@3',...args],{cwd:workerDir,shell:process.platform==='win32',stdio:'ignore'});
+    const child=spawn(npx,['--yes','wrangler@3',...args],{cwd:workerDir,shell:process.platform==='win32',windowsHide:true,stdio:'ignore'});
     child.once('error',reject);
-    child.once('exit',code=>code===0?resolve():reject(new Error(`Wrangler failed (${code}): ${args.join(' ')}`)));
+    child.once('exit',code=>code===0?resolve():reject(new Error(`Wrangler upload failed (${code})`)));
   });
 }
-try{
-  const local=[];
-  for(let i=0;i<complete.length;i++){
-    const f=complete[i];
-    const response=await fetch(f.url,{cache:'no-store'});
-    if(!response.ok) throw new Error(`Immutable source failed ${f.path}: HTTP ${response.status}`);
-    const bytes=Buffer.from(await response.arrayBuffer());
-    if(bytes.length!==f.size||sha(bytes)!==f.sha256.toLowerCase())
-      throw new Error(`Immutable source hash mismatch: ${f.path}`);
-    const file=path.join(tmp,...f.path.split('/'));
-    fs.mkdirSync(path.dirname(file),{recursive:true}); fs.writeFileSync(file,bytes);
-    local.push({f,file});
-    process.stdout.write(`DOWNLOADED ${i+1}/${complete.length} ${f.path}\r`);
-  }
-  console.log('\nSOURCE_HASHES_VERIFIED');
+async function wholeFile(url,entry,{allowMissing=false}={}){
+  const response=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(300000)});
+  if(allowMissing&&response.status===404){await response.body?.cancel();return null;}
+  if(!response.ok){await response.body?.cancel();throw new Error(`Immutable source failed ${entry.path}: HTTP ${response.status}`);}
+  const bytes=Buffer.from(await response.arrayBuffer());
+  if(bytes.length!==entry.size||sha(bytes)!==entry.sha256.toLowerCase())throw new Error(`Immutable bytes differ for ${entry.path}; refusing same-version overwrite`);
+  return bytes;
+}
 
-  let cursor=0;
-  const workers=Array.from({length:4},async()=>{
-    while(true){
-      const i=cursor++; if(i>=local.length) return;
-      const {f,file}=local[i];
-      await runAsync(['r2','object','put',`${bucket}/massfront/${version}/${f.path}`,
-        '--file',file,'--content-type','text/javascript']);
-      process.stdout.write(`UPLOADED ${i+1}/${local.length} ${f.path}\r`);
+if(activationPath){
+  assertMirroredRelease(candidate);
+  const result=await activateWithChecks({candidate,expected,readCurrent:current,
+    verifyPayloads:value=>verifyActivationPayloads(fetch,value,{onProgress:progress}),
+    checkpoint:()=>assertNoVerificationFreeze(root),
+    publish:async(value,prior)=>{
+      await preservePrior(prior);
+      const pointer=path.join(scratchRoot,`activate-v${version}.json`);
+      await writeJson(pointer,value);
+      run(['r2','object','put',`${bucket}/massfront/latest.json`,'--file',pointer,'--content-type','application/json']);
+    }});
+  console.log(`${result.activated?'CLOUDFLARE_ACTIVATED':'CLOUDFLARE_ALREADY_ACTIVE'}=v${version}`);
+}else{
+  const prior=await current();
+  validateReleaseIdentity(prior,'current Worker manifest');
+  const mirror=buildMirrorManifest(candidate,{host,version});
+  const delivery=assertMirroredRelease(mirror);
+  await preservePrior(prior);
+  await assertNoVerificationFreeze(root);
+  fs.mkdirSync(scratchRoot,{recursive:true});
+  const scratch=fs.mkdtempSync(path.join(scratchRoot,`massfront-r2-v${version}-`));
+  try{
+    const pending=[];
+    for(const entry of delivery.entries){
+      const original=identity.inventory.entries.find(value=>value.path===entry.path);
+      const bytes=await wholeFile(original.url,entry);
+      const existing=await wholeFile(entry.url,entry,{allowMissing:true});
+      if(existing){console.log(`IMMUTABLE_RESUME ${entry.path}`);continue;}
+      const file=path.join(scratch,...entry.path.split('/'));
+      await assertNoVerificationFreeze(root);
+      fs.mkdirSync(path.dirname(file),{recursive:true});fs.writeFileSync(file,bytes);
+      pending.push({entry,file});
     }
-  });
-  await Promise.all(workers);
-  console.log('\nR2_PAYLOAD_UPLOADED');
-
-  /* Validate every public file before changing the pointer that clients poll. */
-  for(let i=0;i<local.length;i++){
-    const {f}=local[i];
-    const response=await fetch(`${host}/f/${version}/${f.path.split('/').map(encodeURIComponent).join('/')}?mf_verify=${Date.now()}`,{cache:'no-store'});
-    if(!response.ok) throw new Error(`Cloudflare public verification failed ${f.path}: HTTP ${response.status}`);
-    const bytes=Buffer.from(await response.arrayBuffer());
-    if(bytes.length!==f.size||sha(bytes)!==f.sha256.toLowerCase())
-      throw new Error(`Cloudflare public hash mismatch: ${f.path}`);
-    process.stdout.write(`VERIFIED ${i+1}/${local.length} ${f.path}\r`);
+    let cursor=0;
+    await Promise.all(Array.from({length:Math.min(4,pending.length)},async()=>{
+      while(cursor<pending.length){
+        const {entry,file}=pending[cursor++];
+        await upload(['r2','object','put',`${bucket}/massfront/${version}/${entry.path}`,'--file',file,'--content-type','text/javascript']);
+        console.log(`UPLOADED ${entry.path}`);
+      }
+    }));
+    const verified=await verifyActivationPayloads(fetch,mirror,{onProgress:progress});
+    const prepared=path.join(scratchRoot,`update-v${version}-cloudflare.json`);
+    await writeJson(prepared,mirror);
+    await writeJson(path.join(scratchRoot,`update-v${version}-prepared-evidence.json`),{
+      version,manifestRoot:identity.manifestRoot,verified,sourceManifest:path.resolve(root,sourcePath),
+      priorVersion:prior.version,priorManifestRoot:prior.manifestRoot,preparedAt:new Date().toISOString(),activated:false});
+    console.log(`PREPARED_MIRROR=${prepared}\nNO_POINTER_ACTIVATED; prior release artifacts preserved.`);
+  }finally{
+    // Only the validated mkdtemp child can be removed; never a computed parent.
+    if(path.dirname(scratch)!==scratchRoot)throw new Error('Scratch containment failed');
+    await assertNoVerificationFreeze(root);
+    fs.rmSync(scratch,{recursive:true,force:true});
   }
-  console.log('\nR2_PUBLIC_HASHES_VERIFIED');
-
-  /* The updater ranges every multi-chunk file. Prove both object edges are
-     served as exact 206 responses before latest.json can point clients here. */
-  const rangeEntries=rangeProbeEntries(complete);
-  for(let i=0;i<rangeEntries.length;i++){
-    const f=rangeEntries[i],record=local.find(item=>item.f.path===f.path);
-    if(!record) throw new Error(`Range verification has no local source: ${f.path}`);
-    const publicFile=`${host}/f/${version}/${f.path.split('/').map(encodeURIComponent).join('/')}`;
-    await verifyEntryRanges(fetch,publicFile,f,fs.readFileSync(record.file),Date.now());
-    process.stdout.write(`RANGE_VERIFIED ${i+1}/${rangeEntries.length} ${f.path}\r`);
-  }
-  console.log('\nR2_PUBLIC_RANGES_VERIFIED');
-
-  /* URLs are delivery metadata, not signed payload identity. Preserve every
-     chunk and schema field byte-for-byte while replacing only the transport,
-     so the existing manifestRoot/payloadRoot/fullRoot/runtimeRoot remain the
-     authority clients already trust. */
-  const mirror=buildMirrorManifest(source,{host,version});
-  const evidenceDir=path.join(root,'.tmp','ota-delivery-repair');
-  fs.mkdirSync(evidenceDir,{recursive:true});
-  const repairManifest=path.join(evidenceDir,`update-v${version}-cloudflare.json`);
-  fs.writeFileSync(repairManifest,JSON.stringify(mirror,null,2)+'\n');
-  console.log(`REPAIRED_MANIFEST=${repairManifest}`);
-  const manifestFile=path.join(tmp,'latest.json');
-  fs.writeFileSync(manifestFile,JSON.stringify(mirror,null,2)+'\n');
-  run(['r2','object','put',`${bucket}/massfront/latest.json`,
-    '--file',manifestFile,'--content-type','application/json']);
-  const live=await fetch(`${host}/update.json?mf_activate=${Date.now()}`,{cache:'no-store'});
-  if(!live.ok) throw new Error(`Cloudflare activation verification failed: HTTP ${live.status}`);
-  const activated=await live.json();
-  assertManifestExact(activated,mirror,'Cloudflare activation verification failed: manifest differs');
-  console.log(`CLOUDFLARE_ACTIVATED=v${version}`);
-
-  if(retireCurrent&&String(prior.version)!==version){
-    for(const f of prior.files){
-      const rel=String(f.path||'').replace(/^\.\//,'');
-      if(!rel||rel.includes('..')) throw new Error(`Unsafe legacy path in v${prior.version}: ${f.path}`);
-      run(['r2','object','delete',`${bucket}/massfront/${prior.version}/${rel}`]);
-    }
-    const probe=await fetch(`${host}/f/${prior.version}/${String(prior.files[0]?.path||'').replace(/^\.\//,'')}?mf_retired=${Date.now()}`,{cache:'no-store'});
-    if(probe.status!==404) throw new Error(`Legacy v${prior.version} still serves after retirement: HTTP ${probe.status}`);
-    console.log(`CLOUDFLARE_RETIRED=v${prior.version} (${prior.files.length} files)`);
-  }
-} finally { fs.rmSync(tmp,{recursive:true,force:true}); }
+}

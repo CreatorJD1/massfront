@@ -49,6 +49,12 @@ h.window.__MASSFRONT_RUNTIME_COMPATIBILITY=descriptor('1.33.49');
 value=await h.window.mfRuntimeCompatibility();
 assert.equal(value.buildVersion,'1.33.49','active newer OTA metadata wins');
 
+h=harness(async()=>{ throw new Error('target-version OTA must not fetch packaged metadata'); });
+h.window.__MASSFRONT_PATCHED=APP_VERSION;
+h.window.__MASSFRONT_RUNTIME_COMPATIBILITY=descriptor(APP_VERSION);
+assert.equal((await h.window.mfRuntimeCompatibility()).buildVersion,APP_VERSION,
+  'boot-owned active marker accepts OTA source whose APP_VERSION equals its target');
+
 h=harness(async()=>{ throw new Error('prerelease OTA must not fetch packaged metadata'); });
 h.window.__MASSFRONT_PATCHED='1.33.49-preview.1';
 h.window.__MASSFRONT_RUNTIME_COMPATIBILITY=descriptor('1.33.49-preview.1');
@@ -77,7 +83,7 @@ await rejectsCode(h.window.mfRuntimeCompatibility(),'MF_RUNTIME_COMPATIBILITY_ST
 h.window.__MASSFRONT_RUNTIME_COMPATIBILITY=null;
 await rejectsCode(h.window.mfRuntimeCompatibility(),'MF_RUNTIME_COMPATIBILITY_UNAVAILABLE');
 
-for(const invalid of ['1.33','1.33.48','1.33.49+local']){
+for(const invalid of ['1.33','1.33.47','1.33.49+local']){
   h=harness();
   h.window.__MASSFRONT_PATCHED=invalid;
   h.window.__MASSFRONT_RUNTIME_COMPATIBILITY=descriptor(invalid);

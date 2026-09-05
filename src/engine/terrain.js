@@ -188,11 +188,27 @@ function rawH(wx,wy){
    held. Half the radius keeps the de-spiking role while letting the new fine
    octave actually shape the mesh; per-pixel normals carry what remains. */
 const HSM=7;
+function mfTerrainSampleCoords(x0,tx,y0,ty){
+  const i=y0*TS+x0;
+  /* Keep rawH's bilinear operation order exactly. This helper receives only
+     coordinates terrainH already calculated; height data and interpolation
+     arithmetic remain authoritative and unchanged. */
+  return (heightF[i]*(1-tx)+heightF[i+1]*tx)*(1-ty)+(heightF[i+TS]*(1-tx)+heightF[i+TS+1]*tx)*ty;
+}
 function terrainH(wx,wy){
   if(!heightF) return 0;
-  const h=(rawH(wx,wy)*2
-        + rawH(wx-HSM,wy) + rawH(wx+HSM,wy) + rawH(wx,wy-HSM) + rawH(wx,wy+HSM)
-        + rawH(wx-HSM,wy-HSM)+rawH(wx+HSM,wy+HSM)+rawH(wx-HSM,wy+HSM)+rawH(wx+HSM,wy-HSM))/10;
+  /* Nine rawH calls recomputed the same three x and y interpolation positions
+     three times each. Reuse only those scalar coordinates; the nine bilinear
+     samples and their weighted sum stay in their original evaluation order. */
+  const fx=clamp(wx/MAP*(TS-1),0,TS-1.001),fxL=clamp((wx-HSM)/MAP*(TS-1),0,TS-1.001),fxR=clamp((wx+HSM)/MAP*(TS-1),0,TS-1.001);
+  const fy=clamp(wy/MAP*(TS-1),0,TS-1.001),fyD=clamp((wy-HSM)/MAP*(TS-1),0,TS-1.001),fyU=clamp((wy+HSM)/MAP*(TS-1),0,TS-1.001);
+  const x0=fx|0,tx=fx-x0,xL=fxL|0,txL=fxL-xL,xR=fxR|0,txR=fxR-xR;
+  const y0=fy|0,ty=fy-y0,yD=fyD|0,tyD=fyD-yD,yU=fyU|0,tyU=fyU-yU;
+  const h=(mfTerrainSampleCoords(x0,tx,y0,ty)*2
+        + mfTerrainSampleCoords(xL,txL,y0,ty) + mfTerrainSampleCoords(xR,txR,y0,ty)
+        + mfTerrainSampleCoords(x0,tx,yD,tyD) + mfTerrainSampleCoords(x0,tx,yU,tyU)
+        + mfTerrainSampleCoords(xL,txL,yD,tyD)+mfTerrainSampleCoords(xR,txR,yU,tyU)
+        + mfTerrainSampleCoords(xL,txL,yU,tyU)+mfTerrainSampleCoords(xR,txR,yD,tyD))/10;
   const wet=(typeof authoredWaterAt==='function'&&authoredWaterAt(wx,wy))||waterLipAt(wx,wy);
   return (wet&&h<=WATER_H) ? Math.max(SEABED,(h-WATER_H)*HSCALE*1.4) : (h-WATER_H)*HSCALE;
 }
@@ -474,7 +490,11 @@ function uploadTerrainRegion(gx0,gz0,gx1,gz1){
 function terrainDirty(wx,wy,rad,depth){
   /* Lip + splash first so the height sheet and vertex colours see the wet
      bowl on this same upload, not a frame later. */
-  waterReactDeform(wx,wy,rad,depth);
+  /* A dirty region is not necessarily an impact. Foundations and organic
+     surface refreshes omit depth; treating their broad upload radius as a
+     crater started shoreline floods and re-shaded freshly painted ground.
+     Only a real positive deformation depth may drive hydrology. */
+  if(Number.isFinite(depth)&&depth>0) waterReactDeform(wx,wy,rad,depth);
   if(!terrVerts) return;
   const cell=MAP/TGRID, pad=2;
   const gx0=Math.floor((wx-rad)/cell)-pad, gx1=Math.ceil((wx+rad)/cell)+pad;
@@ -506,22 +526,17 @@ function terrainDirty(wx,wy,rad,depth){
    First shoreline miss does not wait here — waterSyncBowl rebuilds with
    the splash so the hole is wet when the ring reads. */
 function waterMaintain(dt){
-  /* ADVANCE ON A WALL CLOCK, NOT ON THE CALLER'S dt. Two independent per-frame
-     callers reach this throttle in the SAME frame: main's deformMaintain(dt)
-     and, inside render, drawWater -> waterFloodTick(dt') -> here. Each passed a
-     full frame's worth of time, so the countdown burned ~2 frames per frame and
-     the 0.45s / 0.14s guards expired in roughly half the intended wall time -
-     doubling how often buildWaterMesh tears down and recreates the whole water
-     VAO/VBO/IBO during exactly the shoreline bombardment it exists to damp.
-     Elapsed time is measured once here instead, so extra callers cost nothing
-     and the guard means what it says. */
-  const _now=(typeof performance!=='undefined'?performance.now()*0.001:0);
-  const _el=(waterMaintAt<0)?Math.max(0,dt||0):Math.max(0,Math.min(0.25,_now-waterMaintAt));
-  waterMaintAt=_now;
+  /* This now runs only on the fixed simulation clock. Wall time made flooding
+     depend on render FPS and let a slow frame advance both the flood and its
+     rebuild throttle by an arbitrary amount. */
+  const _el=Math.max(0,Math.min(0.25,Number(dt)||0));
   if(waterRebuildT>0) waterRebuildT-=_el;
   if(waterRebuildT<=0) waterBowlSynced=0;
   if(!waterDirty||waterRebuildT>0||!waterTH||typeof gl==='undefined'||!gl) return;
-  waterRebuildT=waterFloods.length?0.14:0.45;
+  /* Rebuilding scans the whole 320x320 sheet and recreates three GL buffers.
+     Twice a second is visually continuous for a spreading shoreline and keeps
+     bombardment from turning this maintenance pass into a CPU frame spike. */
+  waterRebuildT=waterFloods.length?0.5:0.45;
   waterBowlSynced=0;
   buildWaterMesh(waterTH);
 }
@@ -537,7 +552,7 @@ function waterFloodEnqueue(wx,wy,rad,hx,hy){
     }
   }
   if(waterFloods.length>=WATER_FLOOD_CAP) waterFloods.shift();
-  const F={x:wx,y:wy,r:r,hx:hx,hy:hy,front:0,maxFront:r*1.18+10,speed:54,age:0,fxT:0};
+  const F={x:wx,y:wy,r:r,hx:hx,hy:hy,front:0,maxFront:r*1.18+10,speed:54,age:0,fxT:0,markT:0};
   waterFloods.push(F);
   return F;
 }
@@ -589,13 +604,32 @@ function waterFloodMark(F,frontWu){
 }
 function waterFloodTick(dt){
   if(dt>0&&waterFloods.length){
-    let marked=false;
+    let marked=false, dirtyX0=TS, dirtyY0=TS, dirtyX1=-1, dirtyY1=-1;
+    const includeFloodRect=(F)=>{
+      const k=TS/MAP,cr=Math.max(6,F.r*k),reach=cr+F.front*k+4;
+      dirtyX0=Math.min(dirtyX0,clamp(Math.floor(F.x*k-reach),0,TS-1));
+      dirtyY0=Math.min(dirtyY0,clamp(Math.floor(F.y*k-reach),0,TS-1));
+      dirtyX1=Math.max(dirtyX1,clamp(Math.ceil(F.x*k+reach),0,TS-1));
+      dirtyY1=Math.max(dirtyY1,clamp(Math.ceil(F.y*k+reach),0,TS-1));
+    };
     for(let i=waterFloods.length-1;i>=0;i--){
       const F=waterFloods[i];
       F.age+=dt;
       F.front=Math.min(F.maxFront, F.front+F.speed*dt);
-      if(waterFloodMark(F,F.front)){
+      F.markT=(F.markT||0)+dt;
+      const completing=F.front>=F.maxFront-0.05||F.age>3.6;
+      /* Expansion is much slower than the 30 Hz authority clock. An 8 Hz BFS
+         looks identical but avoids allocating and rescanning its flood window
+         on every simulation step. Completion always receives a final pass. */
+      const markNow=completing||F.markT>=0.125;
+      let floodMarked=false;
+      if(markNow){
+        F.markT=0;
+        floodMarked=waterFloodMark(F,completing?F.maxFront:F.front);
+      }
+      if(floodMarked){
         marked=true;
+        includeFloodRect(F);
         if(typeof waterFxImpact==='function'){
           const ang=Math.atan2(F.y-F.hy,F.x-F.hx);
           waterFxImpact(F.hx+Math.cos(ang)*F.front*0.82, F.hy+Math.sin(ang)*F.front*0.82,
@@ -607,27 +641,19 @@ function waterFloodTick(dt){
         F.fxT=0;
         waterFxCrater(F.x,F.y,Math.max(22,F.r*0.62),0.035,F.hx,F.hy);
       }
-      if(F.front>=F.maxFront-0.05||F.age>3.6){
-        if(waterFloodMark(F,F.maxFront)) marked=true;
+      if(completing){
         waterFloods.splice(i,1);
       }
     }
     if(marked){
       waterDirty=true;
-      if(waterRebuildT>0.12) waterRebuildT=0.12;
-      const k=TS/MAP;
-      for(let i=0;i<waterFloods.length;i++){
-        const F=waterFloods[i];
-        const cr=Math.max(6,F.r*k), reach=cr+F.front*k+4;
-        waterFloodRelight(
-          clamp(Math.floor(F.x*k-reach),0,TS-1),
-          clamp(Math.floor(F.y*k-reach),0,TS-1),
-          clamp(Math.ceil(F.x*k+reach),0,TS-1),
-          clamp(Math.ceil(F.y*k+reach),0,TS-1));
-      }
+      if(waterRebuildT>0.5) waterRebuildT=0.5;
+      /* One unioned shade/upload per simulation beat replaces one upload per
+         active flood, including the final region of a flood removed above. */
+      if(dirtyX1>=dirtyX0&&dirtyY1>=dirtyY0)
+        waterFloodRelight(dirtyX0,dirtyY0,dirtyX1,dirtyY1);
     }
   }
-  waterMaintain(dt);
 }
 /* True when the live water mesh still misses a wet (authored or lip) cell
    in this crater window. Inland dry bowls stay false — only a flood that
@@ -1639,10 +1665,8 @@ function drawTerrainEdge(){
   drawCalls++; triCount+=terrEdgeIdxCount/3;
 }
 function drawWater(){
-  const now=(typeof performance!=='undefined'?performance.now():0)*0.001;
-  const dt=waterTickAt<0?0.016:Math.min(0.05,now-waterTickAt);
-  waterTickAt=now;
-  waterFloodTick(dt);
+  /* Rendering is observational. Flood authority and mesh maintenance run on
+     the fixed simulation clock so refresh rate cannot change world state. */
   if(!waterVAO||!waterIdxCount) return;
   const dummy=(typeof terrainTex!=='undefined'&&terrainTex)||null;
   /* uHeight is an R16F world-height field. Do not substitute the painted

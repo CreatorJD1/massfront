@@ -25,11 +25,13 @@ const source={schema:3,version:'9.8.7',channel:'stable',manifestRoot:hash('4'),
 /* Keep the pure contracts wired into the destructive CLI in the required
    order: complete inventory -> public Range proof -> mutable pointer. */
 const cli=fs.readFileSync(new URL('./mirror-release-to-cloudflare.mjs',import.meta.url),'utf8');
-const rangeGate=cli.indexOf('await verifyEntryRanges(');
-const activationWrite=cli.indexOf('`${bucket}/massfront/latest.json`');
-const activationCheck=cli.indexOf('assertManifestExact(activated,mirror');
-assert.match(cli,/for\(let i=0;i<complete\.length;i\+\+\)/,
+const activation=fs.readFileSync(new URL('./release-activation-contract.mjs',import.meta.url),'utf8');
+const rangeGate=activation.indexOf('await verifyPayloads(candidate)');
+const activationWrite=activation.indexOf('await publish(candidate,current)');
+const activationCheck=activation.indexOf('assertManifestExact(await readCurrent(),candidate');
+assert.match(cli,/for\(const entry of delivery\.entries\)/,
   'mirror CLI no longer iterates the complete full+payload inventory');
+assert.match(cli,/activateWithChecks\(/,'mirror pointer bypasses guarded activation');
 assert.ok(rangeGate>=0&&activationWrite>rangeGate,
   'mutable latest.json write moved ahead of public Range verification');
 assert.ok(activationCheck>activationWrite,

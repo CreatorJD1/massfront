@@ -645,70 +645,79 @@ function adScreenVerts(b) {
    bound again before returning, because render3d.js's begin3D() (which this
    is called from) is what every OTHER model draw this frame assumes is still
    current. */
-function adDrawScreens(list) {
+function adDrawScreens(list, knownState) {
   if (!adProg || !list.length) return;
-  const wasBlend = gl.getParameter(gl.BLEND);
-  const wasCull  = gl.getParameter(gl.CULL_FACE);
-  const wasDepth = gl.getParameter(gl.DEPTH_TEST);
-  const wasMask  = gl.getParameter(gl.DEPTH_WRITEMASK);
+  /* The first render begin3D follows an explicit opaque-state setup and passes
+     those exact values through the wrapper. That measured boundary avoids four
+     synchronous driver reads per frame. Unknown callers keep the full fallback
+     instead of relying on a global shadow state that optional passes can evade. */
+  const known=knownState&&typeof knownState.blend==='boolean'&&
+    typeof knownState.cull==='boolean'&&typeof knownState.depth==='boolean'&&
+    typeof knownState.depthMask==='boolean';
+  const wasBlend = known ? knownState.blend : gl.getParameter(gl.BLEND);
+  const wasCull  = known ? knownState.cull : gl.getParameter(gl.CULL_FACE);
+  const wasDepth = known ? knownState.depth : gl.getParameter(gl.DEPTH_TEST);
+  const wasMask  = known ? knownState.depthMask : gl.getParameter(gl.DEPTH_WRITEMASK);
 
-  gl.useProgram(adProg);
-  gl.uniformMatrix4fv(AD_U.uVP, false, matVP);
-  gl.uniform1i(AD_U.uTex, AD_TEX_UNIT);
-  gl.uniform1i(AD_U.uTex2, AD_TEX_UNIT2);
-  const na = (typeof nightAmt === 'function') ? nightAmt() : 0;
-  gl.uniform1f(AD_U.uBoost, 0.95 + na * 0.85);   // self-lit; brighter once the sun's down
-  gl.disable(gl.BLEND);
-  gl.disable(gl.CULL_FACE);       // the quad's winding isn't worth chasing for ~10 draws/frame
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthMask(true);
-  gl.bindVertexArray(adVAO);
-  gl.bindBuffer(gl.ARRAY_BUFFER, adVBO);
+  try {
+    gl.useProgram(adProg);
+    gl.uniformMatrix4fv(AD_U.uVP, false, matVP);
+    gl.uniform1i(AD_U.uTex, AD_TEX_UNIT);
+    gl.uniform1i(AD_U.uTex2, AD_TEX_UNIT2);
+    const na = (typeof nightAmt === 'function') ? nightAmt() : 0;
+    gl.uniform1f(AD_U.uBoost, 0.95 + na * 0.85);   // self-lit; brighter once the sun's down
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);       // the quad's winding isn't worth chasing for ~10 draws/frame
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthMask(true);
+    gl.bindVertexArray(adVAO);
+    gl.bindBuffer(gl.ARRAY_BUFFER, adVBO);
 
-  for (const b of list) {
-    const c = AD_CREATIVES[b.creative];
-    const c2 = b.creative2 ? AD_CREATIVES[b.creative2] : null;
-    // contextual texture overrides sponsor creative when available
-    const ctxTex = b._contextual ? adMakeContextualTex(b) : null;
-    // primary texture: contextual canvas, then video if playing, else poster, else fallback
-    let tex1 = ctxTex || adFallbackTex;
-    if (!ctxTex && c) tex1 = (c.videoTexPrimed && c.videoState === 'ready') ? c.videoTex : (c.posterTex || adFallbackTex);
-    // secondary texture: during crossfade it's the incoming creative
-    let tex2 = tex1;
-    let mix = 0;
-    if (b._blend > 0 && c2) {
-      tex2 = (c2.videoTexPrimed && c2.videoState === 'ready') ? c2.videoTex : (c2.posterTex || adFallbackTex);
-      mix = b._blend;
+    for (const b of list) {
+      const c = AD_CREATIVES[b.creative];
+      const c2 = b.creative2 ? AD_CREATIVES[b.creative2] : null;
+      // contextual texture overrides sponsor creative when available
+      const ctxTex = b._contextual ? adMakeContextualTex(b) : null;
+      // primary texture: contextual canvas, then video if playing, else poster, else fallback
+      let tex1 = ctxTex || adFallbackTex;
+      if (!ctxTex && c) tex1 = (c.videoTexPrimed && c.videoState === 'ready') ? c.videoTex : (c.posterTex || adFallbackTex);
+      // secondary texture: during crossfade it's the incoming creative
+      let tex2 = tex1;
+      let mix = 0;
+      if (b._blend > 0 && c2) {
+        tex2 = (c2.videoTexPrimed && c2.videoState === 'ready') ? c2.videoTex : (c2.posterTex || adFallbackTex);
+        mix = b._blend;
+      }
+      // bind both texture units up front — unit 7 for primary, unit 8 for secondary
+      gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
+      gl.bindTexture(gl.TEXTURE_2D, tex1);
+      gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT2);
+      gl.bindTexture(gl.TEXTURE_2D, tex2);
+      gl.uniform1f(AD_U.uMix, mix);
+      gl.bufferSubData(gl.ARRAY_BUFFER, 0, adScreenVerts(b));
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (typeof bbAdd !== 'undefined' && typeof sprites !== 'undefined' && sprites.glow) {
+        const chx = b.x + Math.cos(b.yaw) * AD_FACE_X * b.scale;
+        const chz = b.y + Math.sin(b.yaw) * AD_FACE_X * b.scale;
+        const chy = terrainH(b.x, b.y) + (AD_BOT_Y + AD_SCR_H * 0.5) * b.scale;
+        const ac = (c && c.accent) || [190, 220, 255];
+        bbAdd.add(sprites.glow, chx, chz, chy, AD_HALFW * b.scale * 1.15, 0, ac[0], ac[1], ac[2], Math.round(46 + na * 130));
+      }
     }
-    // bind both texture units up front — unit 7 for primary, unit 8 for secondary
-    gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
-    gl.bindTexture(gl.TEXTURE_2D, tex1);
+  } finally {
     gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT2);
-    gl.bindTexture(gl.TEXTURE_2D, tex2);
-    gl.uniform1f(AD_U.uMix, mix);
-    gl.bufferSubData(gl.ARRAY_BUFFER, 0, adScreenVerts(b));
-    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-    if (typeof bbAdd !== 'undefined' && typeof sprites !== 'undefined' && sprites.glow) {
-      const chx = b.x + Math.cos(b.yaw) * AD_FACE_X * b.scale;
-      const chz = b.y + Math.sin(b.yaw) * AD_FACE_X * b.scale;
-      const chy = terrainH(b.x, b.y) + (AD_BOT_Y + AD_SCR_H * 0.5) * b.scale;
-      const ac = (c && c.accent) || [190, 220, 255];
-      bbAdd.add(sprites.glow, chx, chz, chy, AD_HALFW * b.scale * 1.15, 0, ac[0], ac[1], ac[2], Math.round(46 + na * 130));
-    }
+    if (typeof fogTex !== 'undefined' && fogTex) gl.bindTexture(gl.TEXTURE_2D, fogTex);
+    else if (typeof matTex !== 'undefined' && matTex) gl.bindTexture(gl.TEXTURE_2D, matTex);
+    gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
+    if (typeof matDetailTex !== 'undefined' && matDetailTex) gl.bindTexture(gl.TEXTURE_2D, matDetailTex);
+    gl.activeTexture(gl.TEXTURE0);
+    if (typeof matTex !== 'undefined' && matTex) gl.bindTexture(gl.TEXTURE_2D, matTex);
+    if (wasCull) gl.enable(gl.CULL_FACE); else gl.disable(gl.CULL_FACE);
+    if (wasBlend) gl.enable(gl.BLEND); else gl.disable(gl.BLEND);
+    if (wasDepth) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
+    gl.depthMask(wasMask);
+    gl.useProgram(prog3D);    // MUST leave the model program bound — see file header
   }
-
-  gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT2);
-  if (typeof fogTex !== 'undefined' && fogTex) gl.bindTexture(gl.TEXTURE_2D, fogTex);
-  else if (typeof matTex !== 'undefined' && matTex) gl.bindTexture(gl.TEXTURE_2D, matTex);
-  gl.activeTexture(gl.TEXTURE0 + AD_TEX_UNIT);
-  if (typeof matDetailTex !== 'undefined' && matDetailTex) gl.bindTexture(gl.TEXTURE_2D, matDetailTex);
-  gl.activeTexture(gl.TEXTURE0);
-  if (typeof matTex !== 'undefined' && matTex) gl.bindTexture(gl.TEXTURE_2D, matTex);
-  if (wasCull) gl.enable(gl.CULL_FACE); else gl.disable(gl.CULL_FACE);
-  if (wasBlend) gl.enable(gl.BLEND); else gl.disable(gl.BLEND);
-  if (wasDepth) gl.enable(gl.DEPTH_TEST); else gl.disable(gl.DEPTH_TEST);
-  gl.depthMask(wasMask);
-  gl.useProgram(prog3D);    // MUST leave the model program bound — see file header
 }
 
 /* ============================================================================
@@ -1048,7 +1057,7 @@ function adClearPostMatchAd() {
 /* ============================================================================
    PER-FRAME HOOK — installed on begin3D (see adInstallHooks)
    ============================================================================ */
-function adFrameHook() {
+function adFrameHook(knownState) {
   if (!adBoards.length) return;
   const freshFrame = _adDrawnFrame !== _adFrameId;
   if (freshFrame) adFlushFrames();                     // cheap, real geometry — draw once per frame
@@ -1076,7 +1085,7 @@ function adFrameHook() {
       adUpdateImpressions(dt);
       adUpdateRotation(dt);
     }
-    if (visible.length) adDrawScreens(visible);
+    if (visible.length) adDrawScreens(visible,knownState);
     _adDrawnFrame = _adFrameId;
   }
 }
@@ -1121,9 +1130,9 @@ function adInstallHooks() {
   }
   if (typeof begin3D === 'function') {
     const orig = begin3D;
-    begin3D = function (nA) {
+    begin3D = function (nA, knownState) {
       const r = orig.apply(this, arguments);
-      try { adFrameHook(); } catch (e) { console.error('adboards: draw hook failed', e); }
+      try { adFrameHook(knownState); } catch (e) { console.error('adboards: draw hook failed', e); }
       return r;
     };
   }

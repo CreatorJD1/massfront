@@ -17,11 +17,12 @@
   const MC_INT=(v,min,max)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
   const MC_KEYS=(v,keys)=>!!v&&typeof v==='object'&&!Array.isArray(v)&&
     Object.keys(v).length===keys.length&&Object.keys(v).every(k=>keys.includes(k));
-  const MC_TYPES=Object.freeze(['move','stop','hold','attack','guard','build','produce','research','commander','repair','recycle']);
+  const MC_TYPES=Object.freeze(['move','stop','hold','attack','guard','build','produce','research','commander','repair','recycle','upgrade']);
   const MC_UNIT_COMMAND_MAX=64,MC_BATCH_COMMAND_MAX=8,MC_COMMAND_BYTES_MAX=2048,
     MC_LOGICAL_UNIT_MAX=MC_UNIT_COMMAND_MAX*MC_BATCH_COMMAND_MAX,
     MC_FORM_IDS=Object.freeze(['spread','line','wedge','box','column','arc']);
   let mcRules=null,mcWelcome=null,mcStart=null,mcLaunchStarted=false,mcSubmitFailure='',mcApplyFailure='';
+  let mcUpgradePendingTick=-1,mcUpgradePendingSeq=-1;
 
   function mcLobbyRules(){
     const live=window.MFSocialUI&&MFSocialUI.state&&MFSocialUI.state.lobby,
@@ -32,9 +33,19 @@
   }
   function mcCaptureRules(e){
     const R=mcLobbyRules();if(R)mcRules=Object.freeze(R);
-    if(e&&e.type==='massfront-match:welcome')mcWelcome=e.detail||null;
+    if(e&&e.type==='massfront-match:welcome'){
+      mcWelcome=e.detail||null;
+      /* A resumed welcome describes the server replay range; it is not a new
+         simulation epoch. Resetting here used to discard an admitted fixed-step
+         packet and the pending service receipt before replay could reconcile it. */
+      if(mcWelcome.resumed!==true){
+        mcUpgradePendingTick=mcUpgradePendingSeq=-1;
+        mcLastCommittedTick=Number.isSafeInteger(mcWelcome.tick)?mcWelcome.tick:0;mcAppliedTicks.clear();
+        if(mcQueuedTick){const Q=mcQueuedTick;mcQueuedTick=null;Q.resolve(false);}
+      }
+    }
     if(e&&e.type==='massfront-match:start'){
-      mcStart=e.detail||null;
+      mcStart=e.detail||null;mcLastCommittedTick=0;mcAppliedTicks.clear();
       if(typeof queueMicrotask==='function')queueMicrotask(mcBootstrapMatch);else setTimeout(mcBootstrapMatch,0);
     }
   }
@@ -210,6 +221,17 @@
       if(!ref||!R||ref.B.res>=0||researched[R.id]||R.req&&!researched[R.req]||R.clvl&&heroLvl<R.clvl)return null;
       return {type:'research',building:ref.id,study:idx};
     }
+    if(command.type==='upgrade'){
+      if(!MC_KEYS(command,['type','building','scope'])||!['single','same-type'].includes(command.scope))return null;
+      const ref=mcBuildingRef(command.building,authority);
+      if(!ref||typeof mfBuildingUpgradeBatchInfo!=='function')return null;
+      const Q=mfBuildingUpgradeBatchInfo(ref.id,authority),all=command.scope==='same-type';
+      if(all?!Q.canUpgradeAll:!Q.canUpgradeSelected)return null;
+      const indices=all?Q.indices:[ref.id];
+      return {type:'upgrade',building:ref.id,indices,authority,
+        costM:all?Q.totalCostM:Q.costM,costE:all?Q.totalCostE:Q.costE,
+        durations:indices.map(i=>mfBuildingUpgradeQuote(i,authority).duration)};
+    }
     if(command.type==='repair'){
       if(!MC_KEYS(command,['type','building','active'])||typeof command.active!=='boolean')return null;
       const ref=mcBuildingRef(command.building,authority);
@@ -253,12 +275,16 @@
     return [Object.assign({},first,{units,chunk:null})];
   }
   function mcBatchValid(plans){
-    const prod=new Map(),labs=new Set(),studies=new Set(),commanders=new Set(),builds=[],escrow=new Map(),services=new Set();
+    const prod=new Map(),labs=new Set(),studies=new Set(),commanders=new Set(),builds=[],escrow=new Map(),services=new Set(),upgrades=new Set();
     for(const P of plans)if(P.type==='repair'||P.type==='recycle'){
       if(services.has(P.building))return false;services.add(P.building);
     }
     for(const P of plans){
-      if(P.type==='produce'){
+      if(P.type==='upgrade'){
+        for(const i of P.indices){if(upgrades.has(i)||services.has(i))return false;upgrades.add(i);}
+        const key=P.authority.team+':'+P.authority.slot,E=escrow.get(key)||{m:0,e:0,a:P.authority};
+        E.m+=P.costM;E.e+=P.costE;escrow.set(key,E);
+      }else if(P.type==='produce'){
         if(services.has(P.building))return false;
         const n=(prod.get(P.building)||0)+P.count,B=blds[P.building];prod.set(P.building,n);
         if(B.queue.length+n>(typeof MF_PRODUCTION_QUEUE_CAP==='number'?MF_PRODUCTION_QUEUE_CAP:20))return false;
@@ -354,6 +380,15 @@
     return assigned;
   }
   function mcApply(plan){
+    if(plan.type==='upgrade'){
+      /* The complete tick's exact owners, costs and non-overlapping targets
+         passed preflight. Apply that frozen plan, not a new UI-time scan. */
+      pay(plan.authority.team,plan.costM,plan.costE,plan.authority.slot);
+      for(let n=0;n<plan.indices.length;n++){
+        const B=blds[plan.indices[n]];B.upT=plan.durations[n];B.upMax=plan.durations[n];
+      }
+      return;
+    }
     if(plan.type==='move'){
       const targets=mcFormationTargets(plan),routeFields={},cohort=typeof allocMoveCohort==='function'?
         allocMoveCohort(plan.units,targets,plan.formation,true):-1;
@@ -423,20 +458,23 @@
       utgt[i]=-1;utgtg[i]=-1;uhold[i]=0;umarch[i]=0;ufield[i]=-1;
       mcAir(i,'escort',{x:ux[h],y:uy[h],escort:h,escortGeneration:ugen[h]});}
   }
-  async function mcApplyTick(packet){
+  function mcPrepareTick(packet){
     mcApplyFailure='';
     if(!MC_KEYS(packet,['tick','commands'])||!MC_INT(packet.tick,1,2147483647)||!Array.isArray(packet.commands)||
-       packet.commands.length>32||typeof matchLive!=='boolean'||!matchLive)return false;
+       packet.commands.length>32||typeof matchLive!=='boolean'||!matchLive)return null;
     const plans=[];
     for(const row of packet.commands){
       if(!MC_KEYS(row,['seat','seq','commands'])||!MC_INT(row.seat,1,4)||!MC_INT(row.seq,1,2147483647)||
-         !Array.isArray(row.commands)||!row.commands.length||row.commands.length>MC_BATCH_COMMAND_MAX)return false;
-      const authority=mcSeatAuthority(row.seat);if(!authority)return false;
+         !Array.isArray(row.commands)||!row.commands.length||row.commands.length>MC_BATCH_COMMAND_MAX)return null;
+      const authority=mcSeatAuthority(row.seat);if(!authority)return null;
       const rowPlans=[];
-      for(const command of row.commands){const plan=mcPlan(command,authority);if(!plan)return false;rowPlans.push(plan);}
-      const joined=mcJoinRowPlans(rowPlans);if(!joined)return false;plans.push(...joined);
+      for(const command of row.commands){const plan=mcPlan(command,authority);if(!plan)return null;rowPlans.push(plan);}
+      const joined=mcJoinRowPlans(rowPlans);if(!joined)return null;plans.push(...joined);
     }
-    if(!mcBatchValid(plans))return false;
+    if(!mcBatchValid(plans))return null;
+    return plans;
+  }
+  function mcApplyPlans(plans){
     /* Every row, handle and within-tick reservation has now passed. No command can partially apply
        before a later unsupported command is discovered. */
     /* Service commands run first. Their pure preflight above makes failure a
@@ -452,8 +490,76 @@
     }
     return true;
   }
+  const MC_REPLAY_HISTORY_MAX=128;
+  const mcAppliedTicks=new Map();
+  function mcTickSignature(packet){try{return JSON.stringify(packet&&packet.commands);}catch(e){return '';}}
+  function mcRememberTick(tick,signature){
+    mcAppliedTicks.set(tick,signature);
+    while(mcAppliedTicks.size>MC_REPLAY_HISTORY_MAX)mcAppliedTicks.delete(mcAppliedTicks.keys().next().value);
+  }
+  function mcClearUpgradeAt(tick){
+    if(mcUpgradePendingTick>=0&&tick>=mcUpgradePendingTick)mcUpgradePendingTick=mcUpgradePendingSeq=-1;
+  }
+  function mcDuplicateTick(packet,signature){return mcAppliedTicks.has(packet.tick)&&mcAppliedTicks.get(packet.tick)===signature;}
+  async function mcApplyTick(packet){
+    const signature=mcTickSignature(packet);
+    if(!signature||!MC_INT(packet&&packet.tick,1,2147483647))return false;
+    if(packet.tick<=mcLastCommittedTick)return mcDuplicateTick(packet,signature);
+    if(packet.tick!==mcLastCommittedTick+1)return false;
+    const plans=mcPrepareTick(packet),accepted=!!plans&&mcApplyPlans(plans);
+    if(accepted){mcLastCommittedTick=packet.tick;mcRememberTick(packet.tick,signature);mcClearUpgradeAt(packet.tick);}
+    return accepted;
+  }
+  /* Network packets are admitted and validated on arrival, then committed at
+     the matching 30 Hz simulation boundary. This prevents websocket timing
+     from mutating authority between fixed steps. Only one packet may wait:
+     socialui deliberately reads the next frame after this promise resolves. */
+  let mcQueuedTick=null,mcLastCommittedTick=0;
+  function mcEnqueueTick(packet){
+    const signature=mcTickSignature(packet);
+    if(!signature||!MC_INT(packet&&packet.tick,1,2147483647))return Promise.resolve(false);
+    if(packet.tick<=mcLastCommittedTick)return Promise.resolve(mcDuplicateTick(packet,signature));
+    if(mcQueuedTick)return packet.tick===mcQueuedTick.tick&&signature===mcQueuedTick.signature?mcQueuedTick.promise:Promise.resolve(false);
+    const plans=mcPrepareTick(packet);
+    if(!plans||packet.tick!==mcLastCommittedTick+1)return Promise.resolve(false);
+    let resolveTick;const promise=new Promise(resolve=>{resolveTick=resolve;});
+    mcQueuedTick={tick:packet.tick,plans,signature,promise,resolve:resolveTick,applied:false,accepted:false};return promise;
+  }
+  function mcRuntimeStatus(){
+    return window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
+  }
+  function mcSessionLockstep(){
+    const s=mcRuntimeStatus();
+    /* A dropped socket is transport state, not permission to mutate the shared
+       simulation offline. Keep the match closed to local-only commands through
+       its reconnect grace period (and any non-terminal error state). */
+    return !!(s&&s.started===true&&s.ended!==true&&s.state!=='idle'&&s.state!=='closed'&&s.state!=='ended');
+  }
+  function mcRequiresLockstep(){return mcSessionLockstep();}
+  function mcCanAdvance(nextTick){return !mcRequiresLockstep()||!!(mcQueuedTick&&mcQueuedTick.tick===nextTick&&!mcQueuedTick.applied);}
+  function mcBeginTick(nextTick){
+    if(!mcRequiresLockstep())return true;
+    if(!mcQueuedTick||mcQueuedTick.tick!==nextTick||mcQueuedTick.applied)return false;
+    mcQueuedTick.applied=true;mcQueuedTick.accepted=mcApplyPlans(mcQueuedTick.plans);return mcQueuedTick.accepted;
+  }
+  function mcCommitTick(doneTick){
+    if(!mcQueuedTick||mcQueuedTick.tick!==doneTick||!mcQueuedTick.applied)return !mcRequiresLockstep();
+    const Q=mcQueuedTick;mcQueuedTick=null;
+    if(Q.accepted){mcLastCommittedTick=doneTick;mcRememberTick(doneTick,Q.signature);mcClearUpgradeAt(doneTick);}
+    Q.resolve(Q.accepted);return Q.accepted;
+  }
+  function mcResumeState(info){
+    const from=info&&info.resumeFromTick,through=info&&info.replayThroughTick,lastSeq=info&&info.lastSeq;
+    if(!MC_INT(from,0,2147483647)||!MC_INT(through,0,2147483647)||!MC_INT(lastSeq,0,2147483647)||
+       from>through||from>mcLastCommittedTick||through-from>MC_REPLAY_HISTORY_MAX)return false;
+    /* A service command above lastSeq never reached server authority. An
+       accepted one remains pending until its authoritative target tick commits. */
+    if(mcUpgradePendingSeq>=0&&(mcUpgradePendingSeq>lastSeq||mcUpgradePendingTick<=mcLastCommittedTick))
+      mcUpgradePendingTick=mcUpgradePendingSeq=-1;
+    return true;
+  }
   function mcRuntimeActive(){
-    const s=window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
+    const s=mcRuntimeStatus();
     return s&&s.state==='running'&&MC_INT(s.seat,1,4)?s:null;
   }
   function mcLocalAuthority(){
@@ -569,6 +675,13 @@
     if(!mcRuntimeActive())return false;
     return mcTakeover({type:'recycle',building:mcBuildingHandle(target)},delay);
   }
+  function mcSubmitUpgrade(target,all,delay){
+    if(!mcRuntimeActive())return null;
+    if(mcUpgradePendingTick>=0){mcSubmitFailure='Waiting for the previous upgrade order';return null;}
+    const receipt=mcSubmit({type:'upgrade',building:mcBuildingHandle(target),scope:all?'same-type':'single'},delay);
+    if(receipt){mcUpgradePendingTick=receipt.targetTick;mcUpgradePendingSeq=receipt.seq;}
+    return receipt;
+  }
   function mcUnitRefs(indices){return indices.map(i=>({id:i,generation:ugen[i]}));}
   function mcSelected(){const out=[];for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i])out.push(i);return out;}
   function mcWrap(name,make){
@@ -626,8 +739,12 @@
 
   window.mfLocalOwnsUnit=mcLocalOwnsUnit;window.mfLocalOwnsBuilding=mcLocalOwnsBuilding;
   window.mfLocalTeam=mcLocalTeam;window.mfLocalCommander=mcLocalCommander;window.mfLocalBank=mcLocalBank;
-  const api=Object.freeze({schemaVersion:1,supported:MC_TYPES.slice(),applyTick:mcApplyTick,submit:mcSubmit,takeover:mcTakeover,
-    submitRepair:mcSubmitRepair,submitRecycle:mcSubmitRecycle,buildingRef:mcBuildingHandle,
+  const api=Object.freeze({schemaVersion:1,supported:MC_TYPES.slice(),applyTick:mcApplyTick,enqueueTick:mcEnqueueTick,
+    requiresLockstep:mcRequiresLockstep,canAdvance:mcCanAdvance,beginTick:mcBeginTick,commitTick:mcCommitTick,
+    lastAppliedTick:()=>mcLastCommittedTick,resumeState:mcResumeState,
+    submit:mcSubmit,takeover:mcTakeover,
+    submitRepair:mcSubmitRepair,submitRecycle:mcSubmitRecycle,submitUpgrade:mcSubmitUpgrade,
+    upgradePending:()=>mcSessionLockstep()&&mcUpgradePendingTick>=0,buildingRef:mcBuildingHandle,
     lastFailure:()=>mcApplyFailure||mcSubmitFailure,
     bootstrap:()=>Object.freeze({localSeat:mcWelcome&&mcWelcome.seat||0,seats:mcStart&&Array.isArray(mcStart.seats)?mcStart.seats.slice():[],rules:mcLobbyRules()}),seatAuthority:seat=>{
     const a=mcSeatAuthority(seat);return a?Object.freeze({seat:a.seat,team:a.team,slot:a.slot}):null;

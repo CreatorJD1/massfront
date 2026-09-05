@@ -398,6 +398,7 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
   text-shadow:0 0 10px rgba(80,255,180,.28)}
 #goalBar .hudIntelChip.goal{color:#d7ebff}
 #goalBar .hudIntelChip.time{color:#ffe9ad;font-variant-numeric:tabular-nums}
+#goalBar .hudIntelCompact{display:none}
 #goalBar .clk{color:#ffe9ad;font-variant-numeric:tabular-nums}
 #goalBar .clk.low{color:#ff8d7a;animation:infPulse 1s ease-in-out infinite}
 
@@ -874,7 +875,52 @@ html.cmdIcons body.mf-cinematic-hud [data-mf-hud-role="service-controls"] button
   linear-gradient(145deg,#ff9b9b,#ff4653 52%,#86141d) border-box!important;box-shadow:inset 0 0 12px rgba(255,65,79,.18),0 0 14px rgba(255,50,65,.14)}
 #prodMenu>.bldServiceActions{position:sticky;bottom:-9px;z-index:3;margin:8px -1px -1px;padding:7px 1px 1px;
   background:linear-gradient(180deg,rgba(5,12,20,0),rgba(5,12,20,.97) 36%)}
+/* One selected structure and its same-type network share an upgrade rail. The
+   two actions remain distinct without turning the compact service sheet into a
+   second menu, and every reason wraps instead of disappearing into a title. */
+.bldUpgradePanel{position:relative;margin-top:8px;padding:7px 2px 8px;display:grid;gap:5px;min-width:0;
+  border-top:1px solid rgba(255,211,91,.38);border-bottom:1px solid rgba(69,180,221,.24);
+  background:linear-gradient(90deg,rgba(66,45,9,.18),rgba(4,24,36,.1) 56%,rgba(21,80,103,.13))}
+.bldUpgradePanel:before,.bldUpgradePanel:after{content:"";position:absolute;width:18px;height:8px;pointer-events:none}
+.bldUpgradePanel:before{left:0;top:-1px;border-left:2px solid #ffd75c;border-top:2px solid #ffd75c}
+.bldUpgradePanel:after{right:0;bottom:-1px;border-right:2px solid #55d7ff;border-bottom:2px solid #55d7ff}
+.bldUpgradeHead{min-width:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 5px;color:#83b9ce;
+  font:800 8px/1.1 var(--fT);letter-spacing:.13em}
+.bldUpgradeHead b{min-width:0;color:#ffe17b;font-size:10px;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bldUpgradeCensus{min-width:0;padding:0 5px;color:#a9c9d8;font:800 8px/1.3 var(--fU);letter-spacing:.035em;overflow-wrap:anywhere}
+.bldUpgradeActions{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:6px;min-width:0}
+.bldUpgradePanel .bldUpgradeBtn{box-sizing:border-box;width:auto;height:auto;min-width:0;min-height:56px;margin:0;padding:7px 6px;
+  display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;border:1px solid transparent;border-radius:7px;
+  text-align:left;white-space:normal;overflow-wrap:anywhere;overflow:hidden;touch-action:manipulation}
+.bldUpgradePanel .bldUpgradeBtn strong{max-width:100%;color:inherit;font:900 10px/1.1 var(--fT);letter-spacing:.055em;white-space:normal}
+.bldUpgradePanel .bldUpgradeBtn small{max-width:100%;color:#b8cbd5;font:800 7.5px/1.25 var(--fU);letter-spacing:.02em;white-space:normal;overflow-wrap:anywhere}
+.bldUpgradePanel #bp_up,.bldUpgradePanel #upBtn{color:#ffe17a;background:linear-gradient(150deg,rgba(83,57,10,.82),rgba(30,23,7,.72)) padding-box,
+  linear-gradient(145deg,#fff0a0,#d79c24 58%,#74500d) border-box}
+.bldUpgradePanel .bldUpgradeAll{color:#89eaff;background:linear-gradient(150deg,rgba(11,67,89,.78),rgba(4,28,43,.7)) padding-box,
+  linear-gradient(145deg,#bff8ff,#2ec9f0 56%,#0b668e) border-box}
+.bldUpgradePanel .bldUpgradeBtn:disabled{opacity:.64;filter:saturate(.48);box-shadow:none}
+.bldUpgradeReason{min-width:0;padding:0 5px;color:#f1b482;font:800 7.5px/1.3 var(--fU);letter-spacing:.025em;overflow-wrap:anywhere}
+.bldUpgradePanel.is-legacy{padding:0;border:0;background:none}.bldUpgradePanel.is-legacy:before,.bldUpgradePanel.is-legacy:after{display:none}
+.bldUpgradePanel.is-legacy .bldUpgradeActions{grid-template-columns:1fr}
+.bldActivityRail{position:relative;display:grid;grid-template-columns:7px minmax(0,1fr) auto;align-items:center;gap:6px;
+  min-width:0;margin:7px 0 5px;padding:4px 5px 8px;border-top:1px solid rgba(112,176,204,.28);
+  color:#9eb7c3;background:linear-gradient(90deg,rgba(6,22,32,.42),rgba(6,22,32,.08) 82%,transparent)}
+.bldActivityMark{width:6px;height:6px;transform:rotate(45deg);background:#758e9a;box-shadow:0 0 7px rgba(117,142,154,.45)}
+.bldActivityRail>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:900 9px/1.1 var(--fT);letter-spacing:.08em}
+.bldActivityRail>span{white-space:nowrap;font:900 8px/1 var(--fU);letter-spacing:.04em}
+.bldActivityTrack{position:absolute;left:5px;right:5px;bottom:2px;height:3px;overflow:hidden;background:rgba(3,8,13,.82)}
+.bldActivityTrack>i{display:block;width:100%;height:100%;transform-origin:left center;background:#758e9a;transition:transform .12s linear}
+.bldActivityRail[data-kind="constructing"]{color:#ffd16b}.bldActivityRail[data-kind="constructing"] .bldActivityMark,.bldActivityRail[data-kind="constructing"] .bldActivityTrack>i{background:#f0b73e}
+.bldActivityRail[data-kind="producing"]{color:#8eeaff}.bldActivityRail[data-kind="producing"] .bldActivityMark,.bldActivityRail[data-kind="producing"] .bldActivityTrack>i{background:#39c9ed}
+.bldActivityRail[data-kind="upgrading"]{color:#d6a7ff}.bldActivityRail[data-kind="upgrading"] .bldActivityMark,.bldActivityRail[data-kind="upgrading"] .bldActivityTrack>i{background:#ad72e9}
+.bldActivityRail[data-kind="researching"]{color:#9af2b9}.bldActivityRail[data-kind="researching"] .bldActivityMark,.bldActivityRail[data-kind="researching"] .bldActivityTrack>i{background:#55d984}
+.bldActivityRail[data-state="stalled"]{color:#ff9c83}.bldActivityRail[data-state="stalled"] .bldActivityMark,.bldActivityRail[data-state="stalled"] .bldActivityTrack>i{background:#ff624d}
 @media(max-width:360px){.bldServiceActions{gap:6px}.bldServiceActions .bldServiceBtn{padding:7px 6px;font-size:10px}}
+@media(max-width:360px){.bldUpgradePanel .bldUpgradeBtn strong{font-size:9px}.bldUpgradePanel .bldUpgradeBtn small,.bldUpgradeCensus,.bldUpgradeReason{font-size:7px}}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) .bldUpgradeActions{grid-template-columns:1fr}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) .bldUpgradePanel .bldUpgradeBtn{min-height:60px}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) .bldActivityRail{grid-template-columns:7px minmax(0,1fr);row-gap:3px}
+html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) .bldActivityRail>span{grid-column:2;white-space:normal;overflow-wrap:anywhere}
 
 /* ---------- COMMANDER LOCATOR ---------- */
 /* Identity, live condition and the fastest route back to the Commander share
@@ -4213,6 +4259,10 @@ body.mf-cinematic-hud.mfNoticeFeedOpen #cmdbar #hotSlots{display:none!important}
   body.mf-cinematic-hud .mfUnitStackCard{flex-basis:84px;width:84px;min-width:84px}
   body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn{min-width:44px}
   body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface]{padding:6px;max-height:31dvh}
+  /* Structure actions are primary gameplay controls, not catalogue cards. A
+     slightly taller context still leaves most of the battlefield visible and
+     keeps the grade row above the dock on 360x740 phones. */
+  body.mf-cinematic-hud #mfCinematicContext>#bldMenu2{max-height:min(44dvh,340px)}
   body.mf-cinematic-hud #mfCinematicContext .mfPanelChrome{top:-6px;margin:-6px -6px 5px}
   /* The 76px role preview cannot coexist with the 44px close target in this
      width band. Cards remain the complete visual chooser, so retire the
@@ -4384,11 +4434,43 @@ body.mf-cinematic-hud #mfNoticeHistory .mfNoticeRepeat{font-size:var(--mfHudText
 body.mf-cinematic-hud.uiPlacing #selInfo{display:none!important}
 html[data-mf-text-scale="125"] body.mf-cinematic-hud{--mfHudIntel:30px}
 html[data-mf-text-scale="150"] body.mf-cinematic-hud{--mfHudIntel:34px}
-html[data-mf-text-scale="200"] body.mf-cinematic-hud{--mfHudIntel:42px}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud{--mfHudIntel:48px}
+/* At 200% on a safe-area portrait, the measured top rail is taller than the
+   nominal row variables: the weather chip's flow fallback otherwise begins
+   about 11px inside the objective plate. This is a last-resort anchor only for
+   that constrained layout; the normal measured lane remains authoritative at
+   every other scale. */
+@media (max-width:520px) and (orientation:portrait){
+  html[data-mf-text-scale="200"] body.mf-cinematic-hud #hazChip{
+    top:calc(var(--sat) + var(--mfHudEdge) + var(--mfHudTopRow) + var(--mfHudGap) + var(--mfHudIntel) + 6px)!important
+  }
+}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #topbar{overflow:visible;touch-action:none}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #topbar>.res{flex:initial}
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #topbar #goalBar{
   min-height:var(--mfHudIntel);height:var(--mfHudIntel);max-height:var(--mfHudIntel);white-space:normal;line-height:1.12
+}
+/* Enlarged copy cannot share the compact notice's absolute title baseline.
+   Put the title in flow and let two short body lines grow downward instead of
+   painting both strings into the same 14px strip. */
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #toast.noticeBox{
+  min-height:44px;max-height:72px;padding:5px 11px 6px;white-space:normal;line-height:1.2;text-overflow:clip
+}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) #toast.noticeBox::before{
+  position:static;display:block;margin-bottom:3px;line-height:1.15
+}
+/* A narrow portrait rail and short landscape both use icons plus irreducible
+   numbers. Reserve the clock before flexible status chips; the full mission
+   sentence remains available through the same objective-detail action. */
+@media (max-width:520px), (orientation:landscape) and (max-height:520px){
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #topbar #goalBar{overflow:hidden;padding-inline:3px}
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #goalDetailBtn{gap:2px;justify-content:space-between}
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #goalBar .hudIntelChip{flex:0 1 auto;gap:2px;padding-inline:2px}
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #goalBar .hudIntelChip.contact{flex:1 1 auto}
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #goalBar .hudIntelChip.goal{flex:0 1 auto}
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #goalBar .hudIntelFull{display:none}
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #goalBar .hudIntelCompact{display:inline}
+  html:is([data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #goalBar .hudIntelChip.time{flex:0 0 auto;min-width:max-content;overflow:visible;text-overflow:clip;white-space:nowrap}
 }
 html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn{
   flex:0 0 auto;min-width:max(44px,6.4em)
@@ -4416,12 +4498,10 @@ body.mf-cinematic-hud .baseFinder .baseFindCopy b{font-size:min(var(--mfHudTextG
 body.mf-cinematic-hud #cmdrTxWho{font-size:min(var(--mfHudTextAction),10px);line-height:1.1}
 body.mf-cinematic-hud #cmdrTxLine{font-size:min(var(--mfHudTextFeed),10px);line-height:1.1;-webkit-line-clamp:3}
 
-/* Structure service is the one context whose last row is destructive. Keep
-   that row inside its own scroller at every height; production retains normal
-   flow so this never covers unit cards. */
-body.mf-cinematic-hud #bldMenu2 [data-mf-hud-role="service-controls"]{
-  position:sticky;z-index:4;bottom:0;margin-bottom:0;padding-top:4px;
-  background:linear-gradient(180deg,rgba(3,10,18,0),rgba(3,10,18,.98) 28%)
+/* Repair/recycle stays in normal scroll flow. A sticky footer covered the
+   grade actions on 360px phones and at 200% text scale. */
+body.mf-cinematic-hud #mfCinematicContext [data-mf-hud-role="service-controls"]{
+  position:static;z-index:auto;bottom:auto;margin-bottom:0;padding-top:4px;background:none
 }
 
 /* Unit-stack cards scale their useful copy while the fixed 44px target and
@@ -4555,4 +4635,321 @@ body.mf-cinematic-hud #consHud .conHudNm{
 @media (hover:none) and (pointer:coarse){
   body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn,body.mf-cinematic-hud #cmdbar .cbtn{touch-action:manipulation}
   body.mf-cinematic-hud #mfCinematicContext .bcard{touch-action:manipulation}
+}
+
+/* ==========================================================================
+   STAGE E — OPEN-FIELD COMMAND FRAME
+   Authoritative buttons stay where gameplay expects them; visual grouping is
+   carried by rails, corner marks and negative space instead of nested boxes.
+   ========================================================================== */
+body.mf-cinematic-hud #topbar>.res{
+  border:0;border-bottom:1px solid rgba(106,210,246,.28);border-radius:0;
+  background:linear-gradient(180deg,rgba(8,25,38,.38),rgba(3,12,20,.14));box-shadow:none
+}
+body.mf-cinematic-hud #inboxHudBtn,
+body.mf-cinematic-hud #spdBtn,
+body.mf-cinematic-hud #menuBtn{
+  border-radius:0;border:0;background:
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/13px 1px no-repeat,
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/1px 13px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/13px 1px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/1px 13px no-repeat,
+    linear-gradient(180deg,rgba(11,34,50,.62),rgba(3,13,22,.48));box-shadow:none
+}
+body.mf-cinematic-hud #topbar #goalBar{
+  border-radius:0;border:0;border-block:1px solid var(--mfHudLineSoft);
+  background:linear-gradient(90deg,transparent,rgba(5,22,34,.72) 8%,rgba(5,22,34,.72) 92%,transparent);box-shadow:none
+}
+body.mf-cinematic-hud #cmdbar .btnrow,
+body.mf-cinematic-hud #cmdbar #hudDeckTabs{
+  border:0;background:
+    linear-gradient(90deg,var(--mfHudLineSoft),transparent 26%,transparent 74%,var(--mfHudLineSoft)) 0 0/100% 1px no-repeat,
+    linear-gradient(90deg,transparent,rgba(4,17,28,.58) 8%,rgba(4,17,28,.58) 92%,transparent);clip-path:none
+}
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn.mfCinematicDeckActive,
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn[data-mf-active="true"],
+body.mf-cinematic-hud #hudDeckTabs .hudDeckBtn.on{
+  background:linear-gradient(180deg,rgba(18,88,128,.58),rgba(4,30,50,.42));
+  box-shadow:inset 0 -2px #38caff,0 3px 10px rgba(30,184,240,.16)
+}
+body.mf-cinematic-hud #mfCinematicContext>[data-mf-surface],
+body.mf-cinematic-hud .baseFinder.mfCinematicDecorated{
+  border-color:transparent;background:
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/22px 1px no-repeat,
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/1px 22px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/22px 1px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/1px 22px no-repeat,
+    linear-gradient(155deg,rgba(8,25,39,.72),rgba(2,10,18,.82));box-shadow:0 8px 22px rgba(0,0,0,.42)
+}
+
+/* Browse mode gives the exact-model rail the full row. Empty P-slots return as
+   soon as any unit is selected, so saving a new platoon remains one tap away;
+   saved platoons never collapse. */
+body.mf-cinematic-hud #grpRow.mfUnitStackReady:not(.mfUnitStackHasSelection)>.grpBtn:not(.saved){display:none}
+body.mf-cinematic-hud #grpRow.mfUnitStackEmpty{display:none!important;height:0!important;min-height:0!important;padding:0!important}
+body.mf-cinematic-hud #grpRow .pltLabel{display:none}
+body.mf-cinematic-hud #mfUnitStackRail{
+  --mfStackCard:clamp(92px,25vw,108px);position:relative;gap:3px;padding:0 17px 0 0;
+  scroll-padding-inline:0 17px;mask-image:none;-webkit-mask-image:none
+}
+body.mf-cinematic-hud #mfUnitStackRail[data-mf-overflow="start"]{
+  mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 18px),transparent 100%);
+  -webkit-mask-image:linear-gradient(90deg,#000 0,#000 calc(100% - 18px),transparent 100%)
+}
+body.mf-cinematic-hud #mfUnitStackRail[data-mf-overflow="middle"]{
+  mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 calc(100% - 18px),transparent)
+}
+body.mf-cinematic-hud #mfUnitStackRail[data-mf-overflow="end"]{
+  mask-image:linear-gradient(90deg,transparent,#000 18px,#000 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 18px,#000 100%)
+}
+body.mf-cinematic-hud .mfUnitStackCard{
+  flex:0 0 var(--mfStackCard);width:var(--mfStackCard);min-width:var(--mfStackCard);border:0;border-radius:0;
+  background:
+    linear-gradient(#62d8ff,#62d8ff) 0 0/12px 1px no-repeat,
+    linear-gradient(#62d8ff,#62d8ff) 0 0/1px 12px no-repeat,
+    linear-gradient(rgba(98,216,255,.3),rgba(98,216,255,.3)) 100% 100%/12px 1px no-repeat,
+    linear-gradient(rgba(98,216,255,.3),rgba(98,216,255,.3)) 100% 100%/1px 12px no-repeat,
+    linear-gradient(180deg,rgba(12,34,50,.58),rgba(3,14,24,.48));box-shadow:none
+}
+body.mf-cinematic-hud .mfUnitStackCard.selected{
+  background:
+    linear-gradient(#8ceaff,#8ceaff) 0 0/16px 2px no-repeat,
+    linear-gradient(#8ceaff,#8ceaff) 0 0/2px 16px no-repeat,
+    linear-gradient(#44cfff,#44cfff) 100% 100%/16px 2px no-repeat,
+    linear-gradient(#44cfff,#44cfff) 100% 100%/2px 16px no-repeat,
+    linear-gradient(180deg,rgba(17,90,128,.58),rgba(3,28,47,.55));box-shadow:0 0 9px rgba(61,201,248,.18)
+}
+body.mf-cinematic-hud .mfUnitStackName{
+  top:2px;height:17px;white-space:normal;line-height:1.02;overflow:hidden;text-overflow:clip;
+  display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2
+}
+body.mf-cinematic-hud .mfUnitStackIcon{width:25px;height:25px}
+body.mf-cinematic-hud .mfUnitStackIcon>*{max-width:25px;max-height:25px}
+body.mf-cinematic-hud .mfUnitStackMeta,
+body.mf-cinematic-hud .mfUnitStackHealth{left:31px}
+
+/* Enlarged tactical copy gets a dedicated first line inside PLATOONS. It is
+   better to spend one scrollable rail-height than clip a chassis name or shrink
+   four saved-group targets below 44px. */
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #grpRow.mfUnitStackReady{
+  flex-wrap:wrap;height:auto;overflow:visible
+}
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud #mfUnitStackRail{
+  order:-1;flex:1 0 100%;width:100%;min-width:100%;height:56px;--mfStackCard:168px
+}
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud .mfUnitStackCard{
+  height:56px;display:grid;grid-template-columns:32px minmax(0,1fr);align-items:center;gap:4px;padding:3px
+}
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud .mfUnitStackCopy{
+  min-width:0;height:100%;display:flex;flex-direction:column;justify-content:center;gap:2px
+}
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud .mfUnitStackName,
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud .mfUnitStackIcon,
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud .mfUnitStackMeta,
+html:is([data-mf-text-scale="125"],[data-mf-text-scale="150"],[data-mf-text-scale="200"]) body.mf-cinematic-hud .mfUnitStackHealth{
+  position:static;width:auto;height:auto
+}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfUnitStackRail,
+html[data-mf-text-scale="200"] body.mf-cinematic-hud .mfUnitStackCard{height:68px}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud #mfUnitStackRail{--mfStackCard:220px}
+html[data-mf-text-scale="125"] body.mf-cinematic-hud.mfHudPlatoonsOpen{--mfHudStackExtra:56px}
+html[data-mf-text-scale="150"] body.mf-cinematic-hud.mfHudPlatoonsOpen{--mfHudStackExtra:56px}
+html[data-mf-text-scale="200"] body.mf-cinematic-hud.mfHudPlatoonsOpen{--mfHudStackExtra:68px}
+
+/* Event-derived state replaces expensive relational selector checks on the
+   hot path. The older :has() rules remain as OTA-shell fallback. */
+body.mf-cinematic-hud.mfHudPlatoonsOpen #selInfo{display:none!important}
+@media (max-width:699px) and (orientation:portrait){
+  body.mf-cinematic-hud.mfHudSecondaryOpen #minimapWrap[data-mf-hud-role="minimap-receiver"]{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudTouch) + var(--mfHudStackExtra,0px) + var(--mfHudGap) * 2)
+  }
+  body.mf-cinematic-hud.mfHudSecondaryOpen #mfNoticeDock{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudTouch) + var(--mfHudStackExtra,0px) + var(--mfHudMap) + 10px + var(--mfHudGap) * 3)!important
+  }
+  body.mf-cinematic-hud.mfHudSecondaryOpen.mfHudConsumablesOpen #mfNoticeDock{
+    bottom:calc(var(--mfHudDockClear) + var(--mfHudMap) + var(--mfHudTouch) * 2 + var(--mfHudStackExtra,0px) + 10px + var(--mfHudGap) * 4)!important
+  }
+}
+
+/* ==========================================================================
+   MOBILE SIGNAL RAIL + EVENT FEED
+   C&C-style edge instruments use one joined rail and open corners rather than
+   one opaque card per datum. The gameplay nodes and handlers remain the same.
+   ========================================================================== */
+body.mf-cinematic-hud #topbar>.res{
+  position:relative;display:grid;grid-template-columns:clamp(15px,4vmin,19px) minmax(0,1fr);
+  grid-template-rows:minmax(20px,1fr) 10px;align-items:center;column-gap:4px;row-gap:0;
+  padding:2px 4px 3px;border:0;border-inline-start:1px solid rgba(103,210,249,.16);
+  border-bottom:1px solid rgba(103,210,249,.34);overflow:hidden;
+  background:linear-gradient(180deg,rgba(12,37,53,.47),rgba(3,13,22,.16));
+  clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px)
+}
+body.mf-cinematic-hud #topbar>.res:first-of-type{border-inline-start-color:rgba(103,210,249,.4)}
+body.mf-cinematic-hud #topbar>.res .ic{
+  grid-column:1;grid-row:1/3;width:clamp(15px,4vmin,19px);height:clamp(15px,4vmin,19px);
+  align-self:center;border-radius:50%;box-shadow:0 0 7px currentColor
+}
+body.mf-cinematic-hud #topbar>.res b{
+  grid-column:2;grid-row:1;align-self:end;min-width:0;line-height:1;letter-spacing:-.015em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#effaff;text-shadow:0 1px 3px #000
+}
+body.mf-cinematic-hud #topbar>.res::after{
+  content:attr(data-label);grid-column:2;grid-row:2;align-self:start;min-width:0;
+  overflow:hidden;text-overflow:clip;white-space:nowrap;color:#7899ad;
+  font:800 6px/1 var(--fT);letter-spacing:.055em
+}
+body.mf-cinematic-hud #topbar>.res .rate{
+  position:absolute;right:4px;bottom:3px;max-width:42%;overflow:hidden;text-overflow:clip;
+  color:#79e9ac;font:800 7px/1 var(--fU);letter-spacing:-.02em;text-align:right
+}
+body.mf-cinematic-hud #topbar>.res:has(.rate:not(:empty))::after{max-width:58%}
+body.mf-cinematic-hud #topbar::before{
+  inset:-1px;background:
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/20px 1px no-repeat,
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/1px 20px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/20px 1px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/1px 20px no-repeat,
+    linear-gradient(180deg,rgba(5,20,31,.42),rgba(2,9,16,.2));border:0;box-shadow:none
+}
+body.mf-cinematic-hud #inboxHudBtn,
+body.mf-cinematic-hud #spdBtn,
+body.mf-cinematic-hud #menuBtn{
+  border:0;border-bottom:1px solid rgba(110,213,250,.38);color:#e6f6ff;
+  background:
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/10px 1px no-repeat,
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/1px 10px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/10px 1px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/1px 10px no-repeat,
+    linear-gradient(180deg,rgba(12,38,55,.5),rgba(3,13,22,.26));box-shadow:none;
+  clip-path:polygon(5px 0,100% 0,100% calc(100% - 5px),calc(100% - 5px) 100%,0 100%,0 5px)
+}
+body.mf-cinematic-hud #inboxHudBtn:focus-visible,
+body.mf-cinematic-hud #spdBtn:focus-visible,
+body.mf-cinematic-hud #menuBtn:focus-visible{outline:2px solid #8ee5ff;outline-offset:1px}
+
+/* The closed feed is a single edge cue. Severity travels through colour and
+   the unread count; the 44px hit target never grows over the minimap. */
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn{
+  width:44px;min-width:44px;height:44px;min-height:44px;border:0;border-radius:0;
+  background:
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/15px 1px no-repeat,
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/1px 15px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/15px 1px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/1px 15px no-repeat,
+    linear-gradient(155deg,rgba(10,34,50,.7),rgba(2,11,19,.78));box-shadow:0 5px 13px rgba(0,0,0,.42);
+  clip-path:polygon(7px 0,100% 0,100% calc(100% - 7px),calc(100% - 7px) 100%,0 100%,0 7px)
+}
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn[data-severity="critical"]{color:#ff8277;--mfHudLine:#ff766b;--mfHudLineSoft:rgba(255,118,107,.34)}
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn[data-severity="order"]{color:#73dbff}
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn[data-severity="reward"]{color:#8ff0ae;--mfHudLine:#83e9a4}
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn[data-severity="comms"]{color:#c8a8ff;--mfHudLine:#b794f4}
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn .em{width:19px;height:19px;color:currentColor;text-shadow:none}
+body.mf-cinematic-hud #mfNoticeDock #noticeLogBtn>span:last-of-type{font-size:6px;line-height:1;letter-spacing:.09em;color:#a8c1d0}
+
+/* Expanded history is a short glance rail, not a modal sheet. It stays above
+   the lower command/minimap lane and uses icon + message + time rows. */
+body.mf-cinematic-hud #mfNoticeHistory{
+  box-sizing:border-box;width:min(calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2),320px);
+  height:auto;max-height:min(30dvh,220px);border:0;border-radius:0;overflow:hidden;
+  background:
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/24px 1px no-repeat,
+    linear-gradient(var(--mfHudLine),var(--mfHudLine)) 0 0/1px 24px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/24px 1px no-repeat,
+    linear-gradient(var(--mfHudLineSoft),var(--mfHudLineSoft)) 100% 100%/1px 24px no-repeat,
+    linear-gradient(150deg,rgba(8,27,41,.88),rgba(2,10,18,.91));box-shadow:0 9px 24px rgba(0,0,0,.48);
+  clip-path:polygon(9px 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%,0 9px)
+}
+body.mf-cinematic-hud #mfNoticeHistory header{
+  flex:0 0 44px;height:44px;min-height:44px;padding:0 4px 0 10px;border-bottom:1px solid rgba(104,203,241,.2);
+  background:linear-gradient(90deg,rgba(20,70,96,.38),transparent 76%)
+}
+body.mf-cinematic-hud #mfNoticeHistory header>div{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;column-gap:6px}
+body.mf-cinematic-hud #mfNoticeHistory header small{display:none}
+body.mf-cinematic-hud #mfNoticeHistory header b{min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;letter-spacing:.12em}
+body.mf-cinematic-hud #mfNoticeFeedState{font:800 7px/1 var(--fT);letter-spacing:.05em;color:#6e9bb5;white-space:nowrap}
+body.mf-cinematic-hud #mfNoticeHistory header button{
+  width:44px;min-width:44px;height:44px;min-height:44px;border:0;border-radius:0;color:#bfeeff;background:transparent;font-size:0
+}
+body.mf-cinematic-hud #mfNoticeHistory header button .mfCinematicVectorIcon,
+body.mf-cinematic-hud #mfNoticeHistory header button>svg{width:18px;height:18px}
+body.mf-cinematic-hud #mfNoticeHistory nav{
+  flex:0 0 44px;display:grid;grid-template-columns:repeat(5,minmax(44px,1fr));gap:0;height:44px;padding:0 4px;
+  overflow-x:auto;overflow-y:hidden;border-bottom:1px solid rgba(104,203,241,.16);scrollbar-width:none
+}
+body.mf-cinematic-hud #mfNoticeHistory nav::-webkit-scrollbar{display:none}
+body.mf-cinematic-hud #mfNoticeHistory nav button{
+  min-width:44px;min-height:44px;padding:3px 1px;display:grid;grid-template-rows:20px 9px;place-items:center;gap:2px;
+  border:0;border-radius:0;color:#7198af;background:transparent;font:800 6px/1 var(--fT);letter-spacing:.04em
+}
+body.mf-cinematic-hud #mfNoticeHistory nav button.on{
+  color:#dff8ff;border:0;background:linear-gradient(180deg,rgba(27,111,151,.28),transparent);
+  box-shadow:inset 0 -2px #54d1ff
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeTabIcon{width:18px;height:18px;font-size:15px;color:currentColor}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeTabLabel{overflow:hidden;max-width:100%;white-space:nowrap}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeList{min-height:0;overflow-y:auto;padding:0 7px 5px;overscroll-behavior:contain}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem{
+  position:relative;display:grid;grid-template-columns:30px minmax(0,1fr) 31px;align-items:center;gap:5px;
+  min-height:42px;padding:4px 2px;border:0;border-bottom:1px solid rgba(103,187,222,.12);font-size:var(--mfHudTextFeed)
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem::before{
+  content:'';position:absolute;left:0;top:8px;bottom:8px;width:1px;background:#66cffa;opacity:.7
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="critical"]::before{width:2px;background:#ff746b}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="reward"]::before{background:#7ee6a1}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="comms"]::before{background:#b59af3}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeGlyph{
+  grid-column:1;width:22px;height:22px;justify-self:center;display:grid;place-items:center;color:#7bdcff;font:900 15px/1 var(--fT)
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="critical"] .mfNoticeGlyph{color:#ff8278}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="reward"] .mfNoticeGlyph{color:#83e7a4}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem[data-severity="comms"] .mfNoticeGlyph{color:#c3a8ff}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeCopy{
+  grid-column:2;min-width:0;display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:5px
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeCopy i{
+  grid-column:1;color:#729cb5;font:800 6px/1 var(--fT);letter-spacing:.06em;font-style:normal
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeCopy>span{
+  grid-column:2;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#dcecf4;line-height:1.2
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeItem time{
+  grid-column:3;color:#67869a;font:700 7px/1 var(--fU);font-variant-numeric:tabular-nums;text-align:right
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeRepeat{
+  grid-column:3;padding:2px 3px;border-radius:7px;color:#d7f4ff;background:rgba(43,121,157,.36);font:800 7px/1 var(--fT)
+}
+body.mf-cinematic-hud #mfNoticeHistory .mfNoticeEmpty{margin:0;padding:20px 10px;color:#7193a8;font-size:var(--mfHudTextFeed)}
+
+/* Explicit phone contract. Three icon-led resources plus three full 44px
+   controls fit from 360 through 430 CSS px without hiding the resource icons. */
+@media (min-width:360px) and (max-width:430px) and (orientation:portrait){
+  body.mf-cinematic-hud{--mfHudTopProfile:clamp(50px,14vw,60px);--mfHudGap:3px;--mfHudEdge:4px}
+  body.mf-cinematic-hud #topbar{left:calc(var(--sal) + var(--mfHudTopProfile) + var(--mfHudEdge) - 1px);right:calc(var(--sar) + var(--mfHudEdge));grid-template-columns:repeat(3,minmax(0,1fr)) repeat(3,44px);gap:3px}
+  body.mf-cinematic-hud #topbar>.res{min-width:0;min-height:44px;padding:2px 2px 3px;grid-template-columns:14px minmax(0,1fr);column-gap:2px}
+  body.mf-cinematic-hud #topbar>.res .ic{display:block;width:14px;height:14px}
+  body.mf-cinematic-hud #topbar>.res b{font-size:max(clamp(9px,2.7vw,11px),var(--mfHudTextMeta));letter-spacing:-.035em}
+  body.mf-cinematic-hud #topbar>.res .rate{display:none}
+  body.mf-cinematic-hud #topbar>.res::after{font-size:6px;letter-spacing:0}
+  body.mf-cinematic-hud #topbar>.res[data-mf-resource="energy"]::after{content:'NRG'}
+  body.mf-cinematic-hud #topbar>.res[data-mf-resource="command"]::after{content:'CMD'}
+  body.mf-cinematic-hud #mfNoticeHistory{
+    left:calc(var(--sal) + var(--mfHudEdge));right:auto;
+    width:min(calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2),320px);
+    height:auto;max-height:min(30dvh,220px)
+  }
+}
+@media (max-width:359px) and (orientation:portrait){
+  body.mf-cinematic-hud #topbar>.res .ic{display:none}
+  body.mf-cinematic-hud #topbar>.res{grid-template-columns:minmax(0,1fr)}
+  body.mf-cinematic-hud #topbar>.res b,body.mf-cinematic-hud #topbar>.res::after{grid-column:1}
+  body.mf-cinematic-hud #topbar>.res[data-mf-resource="energy"]::after{content:'NRG'}
+  body.mf-cinematic-hud #topbar>.res[data-mf-resource="command"]::after{content:'CMD'}
+  body.mf-cinematic-hud #mfNoticeHistory{width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2)}
+}
+@media (max-height:620px){
+  body.mf-cinematic-hud #mfNoticeHistory{max-height:min(45dvh,186px)}
+  body.mf-cinematic-hud #mfNoticeHistory header{display:none}
 }

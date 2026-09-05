@@ -1,0 +1,15 @@
+{
+  "status": "INVALIDATED",
+  "acceptance": false,
+  "command": "node tools/perf-lab/perf-probe-runner.mjs --scenario 1v4_continental_conquest --units 500 --preset high --frames 240",
+  "sourceAtStart": {
+    "head": "d180831ca4eb3caffd8bb34dcf20004dbcd86b7f",
+    "worktreeFingerprint": "8cd5addaed2cd87de4d252661a003735e189376344bb86752de5633a0b8a157c",
+    "runtimeFingerprint": "2dbbdda352f2aaa75f7311d1c3f565eaf0b46bf592315e3b1f3f703431b1ac27"
+  },
+  "failure": "SOURCE_WRITE_DURING_VERIFICATION: 1v4_continental_conquest 500/authority proxy=high: after mid capture changed dist/massfront.html",
+  "cause": "An agent incorrectly assumed bundle.mjs --help was read-only. The script ignored --help and rebuilt dist/massfront.html during the explicit verification freeze.",
+  "reportedWriteTimeUtc": "2026-09-04T20:16:24Z",
+  "reportedCommand": "node tools/test-terrain-height-coordinate-reuse.mjs; node tools/bundle.mjs --help 2>$null",
+  "disposition": "The guard correctly rejected the capture, regardless of whether output bytes matched. No final performance measurements from this attempt are accepted. Freeze was released by the verifier and owned-browser cleanup completed. Another source-frozen capture is required."
+}

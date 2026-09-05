@@ -107,10 +107,10 @@ function mfAirDefaultMission(i,T){
   /* Player aircraft hold their authored position until ordered. Automatically
      orbiting them made direct move/lead commands fight the mission authority.
      AI aircraft receive CAP/recon through mfAirAiMissionTick below. */
+  if(T&&(T.airTransport||T.massfleshAir))return MF_AIR_MISSION_NONE;
   return uteam[i]===1?(T&&T.scout?MF_AIR_MISSION_RECON:MF_AIR_MISSION_CAP):MF_AIR_MISSION_NONE;
 }
-function mfAirEnsure(i,T){
-  if(uAirGen[i]===ugen[i])return;
+function mfAirInitUnit(i,T){
   uAirGen[i]=ugen[i];uAirTarget[i]=-1;uAirTargetG[i]=-1;uAirEscort[i]=-1;uAirEscortG[i]=-1;
   const m=mfAirDefaultMission(i,T);uAirMission[i]=m;uAirHomeMission[i]=m;uAirPhase[i]=MF_AIR_PHASE_HOLD;
   const b=T&&T.scout?MF_AIR_BAND_HIGH:MF_AIR_BAND_TACTICAL;
@@ -124,7 +124,19 @@ function mfAirEnsure(i,T){
   uAirFire[i]=0;uAirScanClock[i]=0;
   mfAirPropulsionHistoryResetUnit(i);
 }
-function mfAirResetUnit(i,T){uAirGen[i]=0;mfAirEnsure(i,T);}
+function mfAirEnsure(i,T){if(uAirGen[i]!==ugen[i])mfAirInitUnit(i,T);}
+function mfAirResetUnit(i,T){mfAirInitUnit(i,T);}
+/* Massflesh changes chassis without changing its unit-slot generation. Treat
+   that as a real authority boundary: a second ascent must not inherit the
+   previous sortie's target, altitude, fire release or propulsion trail. */
+function mfAirTypeTransition(i,T,active){
+  if(active){mfAirInitUnit(i,T);return;}
+  uAirGen[i]=(ugen[i]+1)|0;uAirTarget[i]=-1;uAirTargetG[i]=-1;uAirEscort[i]=-1;uAirEscortG[i]=-1;
+  uAirMission[i]=uAirHomeMission[i]=MF_AIR_MISSION_NONE;uAirPhase[i]=MF_AIR_PHASE_HOLD;
+  uAirBand[i]=uAirBandReq[i]=MF_AIR_BAND_LANDING;uAirAlt[i]=uAirPhaseT[i]=0;uAirFire[i]=uAirScanClock[i]=0;
+  uAirVx[i]=uAirVy[i]=uAirObservedVx[i]=uAirObservedVy[i]=uAirBank[i]=uAirPitch[i]=uAirYawRate[i]=0;
+  mfAirPropulsionHistoryResetUnit(i);
+}
 function mfAirReset(seed){
   if(Number.isFinite(seed))mfAirSeed=(seed|0)||0x4d465835;
   uAirGen.fill(0);uAirTarget.fill(-1);uAirTargetG.fill(-1);uAirEscort.fill(-1);uAirEscortG.fill(-1);
@@ -242,9 +254,13 @@ function mfAirFireEnvelope(i,T,I,range){
   /* Dogfights require a shared altitude layer; attack aircraft may release
      downward only from the authored low band. This makes the five bands part
      of weapon authority rather than labels consumed only by the renderer. */
-  if(I.air){if(dz>22)return false;}
-  else if(uAirAlt[i]>MF_AIR_BAND_H[MF_AIR_BAND_LOW]+10)return false;
-  return mfAirTargetDistance(i,I)<=range;
+  if(I.air){if(dz>22)return false;return mfAirTargetDistance(i,I)<=range;}
+  if(uAirAlt[i]>MF_AIR_BAND_H[MF_AIR_BAND_LOW]+10)return false;
+  /* `rng` is authored as battlefield reach. Reusing the 3D dogfight metric for
+     a downward strike made LOW (62u) exceed the Raptor's 52u range before any
+     horizontal separation was added, so small ground targets were impossible
+     to release on even when directly underneath. */
+  return Math.hypot(I.x-ux[i],I.y-uy[i])<=range;
 }
 function mfAirIssueMission(i,kind,payload){
   if(i<0||i>=unitHigh||!ualive[i])return false;
@@ -319,6 +335,8 @@ function mfAirReconSweep(i,T){
 }
 function mfAirAuthorityTick(i,T,dt){
   mfAirEnsure(i,T);uAirPhaseT[i]+=dt;uAirFire[i]=0;if(uCrash[i]){mfAirMarkCrash(i);return;}
+  const combatAir=!(T.airTransport||T.massfleshAir);
+  if(!combatAir&&uAirTarget[i]!==-1){uAirTarget[i]=-1;uAirTargetG[i]=-1;}
   let t=uAirTarget[i];
   if(t!==-1&&!mfAirTargetValid(i,t,uAirTargetG[i])){
     const completingPass=(uAirMission[i]===MF_AIR_MISSION_INTERCEPT||uAirMission[i]===MF_AIR_MISSION_STRIKE)&&
@@ -326,8 +344,8 @@ function mfAirAuthorityTick(i,T,dt){
     t=uAirTarget[i]=-1;uAirTargetG[i]=-1;utgt[i]=-1;utgtg[i]=-1;
     if(!completingPass){uAirMission[i]=uAirHomeMission[i]||mfAirDefaultMission(i,T);mfAirSetPhase(i,MF_AIR_PHASE_REFORM);}
   }
-  if(t===-1&&utgt[i]!==-1&&mfAirTargetValid(i,utgt[i],utgtg[i]))mfAirBeginTarget(i,T,utgt[i]);
-  if(uAirTarget[i]===-1){
+  if(combatAir&&t===-1&&utgt[i]!==-1&&mfAirTargetValid(i,utgt[i],utgtg[i]))mfAirBeginTarget(i,T,utgt[i]);
+  if(combatAir&&uAirTarget[i]===-1){
     if(++uAirScanClock[i]>=12){
       uAirScanClock[i]=0;const e=mfAirAcquire(i,T);if(e!==-1)mfAirBeginTarget(i,T,e);
     }
@@ -455,7 +473,7 @@ function mfAirMissionSnapshot(i){
 function mfAirAiMissionTick(dt){
   mfAirAiAcc+=dt;if(mfAirAiAcc<.75)return;mfAirAiAcc=0;
   for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]||uteam[i]!==1)continue;const T=TYPES[utype[i]];if(!T||!T.air||uCrash[i])continue;mfAirEnsure(i,T);if(uAirTarget[i]!==-1)continue;
+    if(!ualive[i]||uteam[i]!==1)continue;const T=TYPES[utype[i]];if(!T||!T.air||T.airTransport||T.massfleshAir||uCrash[i])continue;mfAirEnsure(i,T);if(uAirTarget[i]!==-1)continue;
     let bx=ux[i],by=uy[i];if(typeof AI!=='undefined'&&AI&&AI.base){bx=AI.base.x;by=AI.base.y;}
     if(T.scout){const hx=typeof heroIdx!=='undefined'&&heroIdx>=0&&ualive[heroIdx]?ux[heroIdx]:MAP*.5,hy=typeof heroIdx!=='undefined'&&heroIdx>=0&&ualive[heroIdx]?uy[heroIdx]:MAP*.5;if(uAirMission[i]!==MF_AIR_MISSION_RECON)mfAirIssueMission(i,'recon',{x:hx,y:hy});}
     else if(T.ptype===7){const e=findEnemyDomain(ux[i],uy[i],1,920,MF_DOM_LAND|MF_DOM_NAVAL,MF_DOM_LAND);if(e>=0)mfAirIssueMission(i,'strike',{x:bx,y:by,target:e,generation:ugen[e]});else if(uAirMission[i]!==MF_AIR_MISSION_CAP)mfAirIssueMission(i,'cap',{x:bx,y:by});}

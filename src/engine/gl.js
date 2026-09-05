@@ -4496,12 +4496,14 @@ function buildWater(TH){
 /* ---------- neutral tiling ground micro-normal / anti-tiling signal -------- */
 let detailTex=null;
 /* ---------------------------------------------------------------------------
-   GROUND MASK — where the city's hardscape actually is.
+   GROUND SURFACE MASK — hardscape and Brood creep stay separate.
    The painted macro map knows roads and pads only as colour, and at tactical
    zoom that colour is a 1.56 m texel smear. This single-channel mask redraws
    the SAME street segments, highway cells and plot aprons the planner owns,
    so the terrain shader can splat a real concrete material inside them with
    a one-texel edge — crisp curb lines at any zoom, no repaint, no geometry.
+   R remains that authoritative hardscape coverage. G is visual-only Brood
+   creep coverage derived from creepF; it never changes PASS or buildability.
    --------------------------------------------------------------------------- */
 let groundMaskTex=null, groundMaskCanvas=null;
 /* ---------------------------------------------------------------------------
@@ -4616,6 +4618,10 @@ const TERRAIN_LOCATION_SHEETS={
   vespera:{
     albedo:'./assets/terrain/locations/vespera-crust-albedo-v1.webp',
     normal:'./assets/terrain/locations/vespera-crust-normal-rough-v1.webp'
+  },
+  brood:{
+    albedo:'./assets/terrain/locations/brood-infested-soil-albedo-v1.webp',
+    normal:'./assets/terrain/locations/brood-infested-soil-normal-rough-v1.webp'
   }
 };
 function mfTerrainSurfaceSelection(themeKey,mapId,regionId){
@@ -4627,7 +4633,12 @@ function mfTerrainSurfaceSelection(themeKey,mapId,regionId){
      standalone `vespera` theme (Pyraeth maps) intentionally shares it. */
   const vesperaMap=map==='vespera'||map.indexOf('vespera_')===0||
                    region==='vespera'||region.indexOf('vespera_')===0;
-  const key=(vesperaMap||theme==='vespera')?'vespera':
+  /* `infest` is authored map metadata on the Brood homeworld. A wildcard
+     spawning on an ordinary battlefield does not alter this value, so its
+     local creep cannot recolour the whole planet. */
+  const mapDef=typeof MAPDEFS!=='undefined'?MAPDEFS[map]:null;
+  const broodSurface=!!(mapDef&&Number(mapDef.infest)>0);
+  const key=broodSurface?'brood':(vesperaMap||theme==='vespera')?'vespera':
             theme==='arctic'?'arctic':theme==='ashland'?'ashland':'base';
   const pair=TERRAIN_LOCATION_SHEETS[key]||null;
   return {key,
@@ -4832,20 +4843,61 @@ function reloadTerrainThemeTextures(){
   if((terrTexThemePending!==want||terrTexSlotPending!==wantSlot)&&typeof gl!=='undefined'&&gl)
     loadTerrainTextures();
 }
+/* Build one interleaved surface-mask window. Keeping creep in the G channel
+   costs four MiB at TS=2048 but no new sampler or fullscreen texture read.
+   R is copied byte-for-byte from the planner-owned hardscape canvas; G comes
+   from the high byte of the visual relief field, so colour/relief/coverage
+   share one deterministic source without a second persistent CPU bitmap. */
+function mfGroundSurfaceMaskPixels(sx,sy,w,h){
+  const rgba=groundMaskCanvas.getContext('2d').getImageData(sx,sy,w,h).data;
+  const out=new Uint8Array(w*h*2);
+  const cf=typeof creepF!=='undefined'?creepF:null;
+  for(let y=0;y<h;y++){
+    const row=(sy+y)*TS+sx;
+    for(let x=0;x<w;x++){
+      const i=y*w+x;
+      out[i*2]=rgba[i*4];
+      out[i*2+1]=cf?(cf[row+x]>>>8):0;
+    }
+  }
+  return out;
+}
+function mfUploadGroundSurfaceMaskWindow(sx,sy,w,h,full){
+  if(!groundMaskCanvas||!groundMaskTex||typeof gl==='undefined'||!gl)return false;
+  let pixels;
+  try{ pixels=mfGroundSurfaceMaskPixels(sx,sy,w,h); }catch(e){ return false; }
+  /* Surface updates can land during the sim tick while unit 0 owns the model
+     atlas. Scratch on terrain unit 9 and restore both binding and active unit;
+     borrowing unit 0 caused one-frame atlas flashes in earlier terrain work. */
+  const was=gl.getParameter(gl.ACTIVE_TEXTURE);
+  gl.activeTexture(gl.TEXTURE9);
+  const prev=gl.getParameter(gl.TEXTURE_BINDING_2D);
+  const unpack=gl.getParameter(gl.UNPACK_ALIGNMENT);
+  gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT,1);
+  if(full) gl.texImage2D(gl.TEXTURE_2D,0,gl.RG8,w,h,0,gl.RG,gl.UNSIGNED_BYTE,pixels);
+  else gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,w,h,gl.RG,gl.UNSIGNED_BYTE,pixels);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT,unpack);
+  gl.bindTexture(gl.TEXTURE_2D,prev);
+  gl.activeTexture(was);
+  return true;
+}
 function uploadGroundMaskTex(){
   if(!groundMaskCanvas||typeof gl==='undefined'||!gl)return null;
   groundMaskTex=gl.createTexture();
+  if(!mfUploadGroundSurfaceMaskWindow(0,0,TS,TS,true))return null;
+  const was=gl.getParameter(gl.ACTIVE_TEXTURE);
+  gl.activeTexture(gl.TEXTURE9);
+  const prev=gl.getParameter(gl.TEXTURE_BINDING_2D);
   gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
-  /* R8 is the WebGL2 replacement for LUMINANCE (removed in ES 3.00). Shader
-     samples .r; the 2D mask is grayscale so red equals the old luminance. */
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.R8,gl.RED,gl.UNSIGNED_BYTE,groundMaskCanvas);
-  gl.generateMipmap(gl.TEXTURE_2D);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   mfTerrainAniso();
-  gl.bindTexture(gl.TEXTURE_2D,atlasTex);
+  gl.bindTexture(gl.TEXTURE_2D,prev);
+  gl.activeTexture(was);
   return groundMaskTex;
 }
 function buildGroundMask(){
@@ -5016,7 +5068,8 @@ function shadeRegion(rx0,ry0,rw,rh,ctx,keepCivic){
   /* Deform re-shade used to fill its AABB with biome grass. That rectangle
      is the perfect green square in city pavement. keepCivic reads the
      hardscape mask so civic texels relight as cement. */
-  let civicMask=null, prevCivic=null;
+  let civicMask=null, prevCivic=null, organicBase=null, organicRead=false;
+  const organicField=keepCivic&&typeof creepF!=='undefined'?creepF:null;
   if(keepCivic&&groundMaskCanvas){
     try{ civicMask=mf2d(groundMaskCanvas).getImageData(rx0,ry0,rw,rh).data; }catch(e){}
     try{ prevCivic=c.getImageData(rx0,ry0,rw,rh).data; }catch(e){}
@@ -5033,7 +5086,21 @@ function shadeRegion(rx0,ry0,rw,rh,ctx,keepCivic){
       const moss=vnoise(grid,u*1.3+31,v*1.3+7);
       let r,g,b;
       const mCivic=civicMask?civicMask[(yy*rw+xx)*4]:0;
-      if(keepCivic&&mCivic>=22&&prevCivic){
+      const organicDry=organicField&&organicField[y*TS+x]>1966&&
+        !(h<WATER_H&&authoredWaterTexel(x,y))&&
+        !(typeof WATER_LIP!=='undefined'&&WATER_LIP&&WATER_LIP[y*TS+x]);
+      /* A relight must retain tissue just as it retains paving. Creep lives in
+         visual G, not the planner's R canvas. Read the authored base lazily
+         only for a touched dry colony; reading the live, already-scorched
+         pixel would multiply burn darkening on every maintenance pass. */
+      if(organicDry&&!organicRead){
+        organicRead=true;
+        if(terrainBase)try{organicBase=mf2d(terrainBase).getImageData(rx0,ry0,rw,rh).data;}catch(e){}
+      }
+      if(organicDry&&(organicBase||prevCivic)){
+        const po=(yy*rw+xx)*4,paint=organicBase||prevCivic;
+        r=paint[po]; g=paint[po+1]; b=paint[po+2];
+      } else if(keepCivic&&mCivic>=22&&prevCivic){
         const po=(yy*rw+xx)*4;
         r=prevCivic[po]; g=prevCivic[po+1]; b=prevCivic[po+2];
       } else if(h<WATER_H && authoredWaterTexel(x,y)){
@@ -5813,14 +5880,7 @@ function stampMaskWindow(x0,y0,x1,y1){
   g.globalCompositeOperation='lighten'; g.drawImage(tmp,sx,sy);
   g.globalCompositeOperation='source-over';
   if(typeof mmBg!=='undefined') mmBg=null;
-  if(groundMaskTex){
-    const t2=document.createElement('canvas'); t2.width=w; t2.height=h;
-    t2.getContext('2d').drawImage(groundMaskCanvas,sx,sy,w,h,0,0,w,h);
-    gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RED,gl.UNSIGNED_BYTE,t2);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
-  }
+  if(groundMaskTex) mfUploadGroundSurfaceMaskWindow(sx,sy,w,h,false);
 }
 function makeFoundation(B){
   if(!heightF) return;
@@ -5875,43 +5935,20 @@ function organicRimPath(ctx,ox,oy,rx,ry,rnd,seedA){
 /* Seeded generator, so a shape can be regenerated identically — the creep rim
    and the mask cut it eats have to be the same outline. */
 function organicRnd(s){let v=s|0;return()=>{v=(Math.imul(v,1664525)+1013904223)|0;return(v>>>8)/16777216;};}
-/* Claim the ground the creep covers, in the creep's own shape.
- *
- * The hardscape mask decides where the painted terrain is what you see: inside
- * it the procedural grass, relief and crack layers stand down; outside it they
- * re-assert and wash painted ground out. Brood structures pour nothing, so the
- * only masked ground under a colony was whatever plaza the map already had —
- * and that is why the infestation kept ending on straight edges however
- * organic the paint was. It was not the creep's outline being boxy; it was the
- * creep only being visible inside somebody else's rectangle.
- *
- * (Cutting the mask instead was tried first and is exactly wrong: it hands the
- * ground back to the procedural layers and erases the creep with it.)
- *
- * Stamped with the same corrupted rim the field is painted with, so the
- * infestation ends where the tissue ends. Visual only — paveCanvas, the
- * authoritative record of poured surfaces, is untouched, so nothing here
- * changes buildability or pathing. */
-function organicStampMask(cx,cy,rx,ry,seedA,seedI){
+/* Upload the creep coverage produced by creepStampRelief into surface-mask G.
+ * Hardscape remains exclusively in R: a living colony is not a concrete yard,
+ * must not receive kerbs/paving response, and must never alter buildability or
+ * pathing. The shader can use G to favour its already-bound SOIL PBR pair, so
+ * local creep needs no additional fullscreen sampler. */
+function organicStampMask(cx,cy,rx,ry,seedA,seedI,dirty){
   if(!groundMaskCanvas) return;
   const pad=Math.ceil(Math.max(rx,ry)*1.8)+4;
-  const sx=clamp(Math.floor(cx-pad),0,TS-1),sy=clamp(Math.floor(cy-pad),0,TS-1);
-  const w=Math.max(1,Math.min(TS-sx,Math.ceil(pad*2))),h=Math.max(1,Math.min(TS-sy,Math.ceil(pad*2)));
-  const g=groundMaskCanvas.getContext('2d');
-  g.save();
-  g.globalCompositeOperation='lighten';
-  organicRimPath(g,cx,cy,rx,ry,organicRnd(seedI),seedA);
-  g.fillStyle='#fff';g.fill();
-  g.restore();
+  const sx=dirty?dirty[0]:clamp(Math.floor(cx-pad),0,TS-1),
+    sy=dirty?dirty[1]:clamp(Math.floor(cy-pad),0,TS-1),
+    w=dirty?dirty[2]:Math.max(1,Math.min(TS-sx,Math.ceil(pad*2))),
+    h=dirty?dirty[3]:Math.max(1,Math.min(TS-sy,Math.ceil(pad*2)));
   if(typeof mmBg!=='undefined') mmBg=null;
-  if(groundMaskTex){
-    const t2=document.createElement('canvas');t2.width=w;t2.height=h;
-    t2.getContext('2d').drawImage(groundMaskCanvas,sx,sy,w,h,0,0,w,h);
-    gl.bindTexture(gl.TEXTURE_2D,groundMaskTex);
-    gl.texSubImage2D(gl.TEXTURE_2D,0,sx,sy,gl.RED,gl.UNSIGNED_BYTE,t2);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.bindTexture(gl.TEXTURE_2D,atlasTex);
-  }
+  if(groundMaskTex) mfUploadGroundSurfaceMaskWindow(sx,sy,w,h,false);
 }
 /* Branching tendrils. Veins taper and fork rather than radiating as straight
    spokes, which is the difference between tissue and a sunburst. */
@@ -5940,7 +5977,10 @@ function makeOrganicFoundation(B){
      Brood structure no matter how organic the paint on top of it was. The
      Brood does not pour a pad; it settles into the soil, so level a disc with
      a wide feather and let the ground keep its shape around it. */
-  flattenGround(B.x,B.y,Math.max(hw,hh)*0.86,rad*0.95);
+  /* Neutral infestation nests are a wildcard painted onto an existing map,
+     not a player-owned foundation. Their creep is visual territory only: do
+     not let placing a nest change PASS/slope through foundation levelling. */
+  if(kind!=='nest') flattenGround(B.x,B.y,Math.max(hw,hh)*0.86,rad*0.95);
   if(!terrainCanvas) return;
   const k=TS/MAP,cx=B.x*k,cy=B.y*k,rr=Math.max(8,rad*k);
   const seed=((B.x*19+B.y*31+B.type.length*97)|0)>>>0,rot=B.rot||0;
@@ -6086,19 +6126,45 @@ function creepReliefAt(x,y){
  * are drawn brighter so they stand proud as ridges rather than colour alone.
  * max-combined into the field so overlapping colonies merge into one mat
  * instead of stacking into a step. */
-function creepStampRelief(cx,cy,rx,ry,seedA,seedI,links,k){
-  if(!creepFieldEnsure()) return;
+function mfOrganicLinkCurve(cx,cy,rr,d,O,k,roll){
+  const ox=O.x*k,oy=O.y*k,mx=(cx+ox)/2,my=(cy+oy)/2;
+  const nx=-(oy-cy),ny=(ox-cx),nl=Math.hypot(nx,ny)||1;
+  const sag=(roll-.5)*d*k*.22;
+  return {ox,oy,bx:mx+nx/nl*sag,by:my+ny/nl*sag,w:Math.max(2.5,rr*.13)};
+}
+function mfCreepStampBounds(cx,cy,rx,ry,curves){
   const pad=Math.ceil(Math.max(rx,ry)*1.35)+3;
-  const sx=clamp(Math.floor(cx-pad),0,TS-1),sy=clamp(Math.floor(cy-pad),0,TS-1);
-  const ex=clamp(Math.ceil(cx+pad),0,TS-1),ey=clamp(Math.ceil(cy+pad),0,TS-1);
+  let sx=Math.floor(cx-pad),sy=Math.floor(cy-pad),ex=Math.ceil(cx+pad),ey=Math.ceil(cy+pad);
+  /* The relief used to allocate only the organism's local skirt. Canvas clips
+     are hard bounds, so the neighbour trunks drawn below stopped at that skirt
+     even though the macro albedo painted them all the way to the next colony.
+     At most two links exist; include their endpoints and a bounded stroke
+     gutter so colour, relief and G-channel material selection stay connected. */
+  if(curves&&curves.length)for(const L of curves){
+    if(!L)continue;
+    /* A quadratic lies inside the hull of P0/control/P1. Include the control as
+       well as the endpoint, plus more than half the widest painted sheath. */
+    const veinPad=Math.ceil(Math.max(3,L.w*.65))+3;
+    sx=Math.min(sx,Math.floor(Math.min(L.ox,L.bx)-veinPad));
+    sy=Math.min(sy,Math.floor(Math.min(L.oy,L.by)-veinPad));
+    ex=Math.max(ex,Math.ceil(Math.max(L.ox,L.bx)+veinPad));
+    ey=Math.max(ey,Math.ceil(Math.max(L.oy,L.by)+veinPad));
+  }
+  sx=clamp(sx,0,TS-1);sy=clamp(sy,0,TS-1);ex=clamp(ex,0,TS-1);ey=clamp(ey,0,TS-1);
+  return [sx,sy,ex,ey];
+}
+function creepStampRelief(cx,cy,rx,ry,seedA,seedI,curves){
+  if(!creepFieldEnsure()) return null;
+  const bounds=mfCreepStampBounds(cx,cy,rx,ry,curves);
+  const sx=bounds[0],sy=bounds[1],ex=bounds[2],ey=bounds[3];
   const w=ex-sx+1,h=ey-sy+1;
-  if(w<=0||h<=0) return;
+  if(w<=0||h<=0) return null;
   let cv;
   try{
     cv=document.createElement('canvas');cv.width=w;cv.height=h;
-  }catch(e){ return; }
+  }catch(e){ return null; }
   const c=cv.getContext('2d',{willReadFrequently:true});
-  if(!c) return;
+  if(!c) return null;
   c.translate(-sx,-sy);
   organicRimPath(c,cx,cy,rx,ry,organicRnd(seedI),seedA);
   c.save();c.clip();
@@ -6121,16 +6187,19 @@ function creepStampRelief(cx,cy,rx,ry,seedA,seedI,links,k){
   c.restore();
   /* Vein trunks to neighbours stand proud outside the field too — a link that
      is only colour reads as a painted line the moment the light moves. */
-  if(links&&links.length){
+  if(curves&&curves.length){
     c.lineCap='round';c.strokeStyle='rgba(255,255,255,.50)';
     c.lineWidth=Math.max(2,rx*.11);
-    for(const [d,O] of links){
-      const ox=O.x*k,oy=O.y*k;
-      c.beginPath();c.moveTo(cx,cy);c.lineTo(ox,oy);c.stroke();
+    for(const L of curves){
+      c.beginPath();c.moveTo(cx,cy);c.quadraticCurveTo(L.bx,L.by,L.ox,L.oy);c.stroke();
     }
   }
   let img;
-  try{ img=c.getImageData(sx,sy,w,h).data; }catch(e){ return; }
+  /* Canvas transforms affect drawing commands, never pixel reads. The crop is
+     already a w×h local canvas translated by -sx/-sy above; reading sx/sy here
+     sampled outside that canvas for almost every off-origin colony and yielded
+     transparent relief. Read the local backing store from its real origin. */
+  try{ img=c.getImageData(0,0,w,h).data; }catch(e){ return null; }
   for(let y=0;y<h;y++){
     const row=(sy+y)*TS;
     for(let x=0;x<w;x++){
@@ -6141,6 +6210,7 @@ function creepStampRelief(cx,cy,rx,ry,seedA,seedI,links,k){
       if(v>creepF[i]) creepF[i]=v>65535?65535:v;
     }
   }
+  return [sx,sy,w,h];
 }
 /* An organism does not stop at its own skirt.
  *
@@ -6183,8 +6253,10 @@ function organicSpreadPaint(B,bedRad){
   /* One seed for the rim, separate from the scatter, so the mask cut below can
      reproduce exactly the outline the creep was painted with. */
   const rimSeed=(seq^0x5bf03635)|0;
+  const linkCurves=[];
   const paint=ctx=>{
     const r2=organicRnd(seq|0);
+    ctx.save();
     ctx.save();
     /* Colonised field: an irregular lobed edge, never a circle. A ring of
        discs reads as a stamp the moment two of them overlap. */
@@ -6247,35 +6319,37 @@ function organicSpreadPaint(B,bedRad){
     ctx.strokeStyle='rgba(150,188,74,.16)';
     for(let n=0;n<5;n++)
       organicVein(ctx,cx,cy,r2()*TAU,rr*(.28+r2()*.24),Math.max(.6,rr*.013),3,r2);
+    /* The local field stays clipped to its corrupted rim; neighbour trunks do
+       not. Previously the only restore came after the links, so every curve was
+       silently cut off at the colony edge. */
+    ctx.restore();
     /* Veins to neighbours: a dark fleshy sheath, then a bright living core, so
        the link reads as tissue rather than as a drawn line. */
-    for(const [d,O] of links){
-      const ox=O.x*k,oy=O.y*k;
-      const mx=(cx+ox)/2,my=(cy+oy)/2;
-      const nx=-(oy-cy),ny=(ox-cx),nl=Math.hypot(nx,ny)||1;
-      const sag=(r2()-.5)*d*k*.22;
-      const bx=mx+nx/nl*sag,by=my+ny/nl*sag;
-      const w=Math.max(2.5,rr*.13);
+    for(let li=0;li<links.length;li++){
+      const [d,O]=links[li],roll=r2();
+      /* Consume the roll in its original order on BOTH canvas passes. Cache the
+         first descriptor so albedo, relief and material coverage share exactly
+         one curve without changing the existing seeded visual. */
+      const L=linkCurves[li]||(linkCurves[li]=mfOrganicLinkCurve(cx,cy,rr,d,O,k,roll));
       ctx.lineCap='round';
       /* Sheath, muscle, then a thin living core. Screen blending the core blew
          it out to white rope over pale ground and read as a stray UI line. */
-      ctx.strokeStyle='rgba(44,20,32,.52)';ctx.lineWidth=w;
-      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(bx,by,ox,oy);ctx.stroke();
-      ctx.strokeStyle='rgba(104,42,64,.46)';ctx.lineWidth=w*.58;
-      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(bx,by,ox,oy);ctx.stroke();
-      ctx.strokeStyle='rgba(146,182,74,.22)';ctx.lineWidth=Math.max(.8,w*.14);
-      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(bx,by,ox,oy);ctx.stroke();
+      ctx.strokeStyle='rgba(44,20,32,.52)';ctx.lineWidth=L.w;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(L.bx,L.by,L.ox,L.oy);ctx.stroke();
+      ctx.strokeStyle='rgba(104,42,64,.46)';ctx.lineWidth=L.w*.58;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(L.bx,L.by,L.ox,L.oy);ctx.stroke();
+      ctx.strokeStyle='rgba(146,182,74,.22)';ctx.lineWidth=Math.max(.8,L.w*.14);
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.quadraticCurveTo(L.bx,L.by,L.ox,L.oy);ctx.stroke();
     }
     ctx.restore();
   };
-  /* Claim the ground first, then paint it: the stamp is what lets the creep
-     read past whatever plaza the map happened to put here. */
-  organicStampMask(cx,cy,rr,rr*.86,seq*0.0011,rimSeed);
-  /* Relief goes in before the paint so a single terrainDirty below carries the
-     colour AND the height sheet for the same window. */
-  creepStampRelief(cx,cy,rr,rr*.86,seq*0.0011,rimSeed,links,k);
+  /* Relief is the authoritative local creep field. Upload its coverage only
+     after rasterisation so surface-mask G and the height sheet cannot differ
+     for one frame. Hardscape R remains untouched. */
   if(terrainBase) paint(terrainBase.getContext('2d'));
   paint(terrainCanvas.getContext('2d'));
+  const reliefDirty=creepStampRelief(cx,cy,rr,rr*.86,seq*0.0011,rimSeed,linkCurves);
+  organicStampMask(cx,cy,rr,rr*.86,seq*0.0011,rimSeed,reliefDirty);
   out.world=Math.max(out.world,far*1.1);
   out.px=Math.max(rr*1.25,far*k*1.1);
   return out;

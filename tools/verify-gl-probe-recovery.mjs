@@ -29,6 +29,7 @@ process.env.PW_CDP_PORT ||= '9497'; // dedicated: never share the artist probe p
 const { launchPwBrowser, closePwBrowser } = await import('./pw-browser.mjs');
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
+const serveRoot=join(root,'www');
 const tmpRoot=join(root,'.tmp');
 const outDir=join(tmpRoot,'gl-probe-recovery');
 const reportPath=join(outDir,'report.json');
@@ -41,6 +42,7 @@ const captureNames=[
   'actual-context-restored.png',
   'normal-after-probe.png'
 ];
+const entryFailureCapture='entry-failure.png';
 const identityKeys=['gitHead','dirtyFingerprint','runtimeFingerprint','packageFingerprint','testedEntrySha256','testedPackageSha256'];
 const MIME={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css',
   '.json':'application/json','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg',
@@ -70,7 +72,7 @@ async function prepareOutput(){
   if(!inside(tmpRoot,outDir)||relative(tmpRoot,outDir).split(sep).length!==1)
     throw new Error('REFUSED_UNBOUNDED_OUTPUT: '+outDir);
   await mkdir(outDir,{recursive:true});
-  const declared=[...captureNames,'report.json'];
+  const declared=[...captureNames,entryFailureCapture,'report.json'];
   let stalePartialsRemoved=0;
   for(const entry of await readdir(outDir,{withFileTypes:true})){
     if(!entry.isFile())continue;
@@ -82,12 +84,13 @@ async function prepareOutput(){
   return {mode:'bounded-fixed-output',root:outDir,expectedArtifacts:[...captureNames],stalePartialsRemoved};
 }
 async function startServer(){
+  if(!existsSync(join(serveRoot,'index.html')))throw new Error('PACKED_WWW_ENTRY_MISSING');
   const server=createServer(async(req,res)=>{
     try{
       let pathname=decodeURIComponent((req.url||'/').split('?')[0]);
       if(pathname==='/')pathname='/index.html';
-      const file=resolve(join(root,pathname));
-      if(!inside(root,file)||!existsSync(file)){res.writeHead(404);res.end('nf');return;}
+      const file=resolve(join(serveRoot,pathname));
+      if(!inside(serveRoot,file)||!existsSync(file)){res.writeHead(404);res.end('nf');return;}
       res.writeHead(200,{'Content-Type':MIME[extname(file).toLowerCase()]||'application/octet-stream','Cache-Control':'no-store'});
       res.end(await readFile(file));
     }catch{res.writeHead(500);res.end('server error');}
@@ -158,7 +161,7 @@ async function finalizeAllNetworkPages(){
   for(const row of networkPages)await finalizeNetworkPage(row);
 }
 async function capture(page,name){
-  if(!captureNames.includes(name))throw new Error('REFUSED_UNDECLARED_CAPTURE: '+name);
+  if(!captureNames.includes(name)&&name!==entryFailureCapture)throw new Error('REFUSED_UNDECLARED_CAPTURE: '+name);
   const path=join(outDir,name),partial=path+`.partial-${process.pid}`;
   try{
     const bytes=await page.screenshot({type:'png',timeout:10000});
@@ -180,6 +183,16 @@ async function waitForHardwareBoot(page){
     lease:localStorage.getItem('massfront.fx-probe-lease.v1')}));
 }
 async function visible(page,selector){return page.locator(selector).first().isVisible().catch(()=>false);}
+async function entryGateDiagnostics(page){return page.evaluate(()=>{
+  const shown=el=>{if(!el)return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();
+    return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity||1)!==0&&r.width>0&&r.height>0;};
+  const candidates=['mfIntroStart','apOfflineBtn','mfLaunchOffline','mfLaunchPlay','mfOnboardingSkip','startBtn'];
+  return {title:document.title,bodyClasses:[...document.body.classList],
+    controls:candidates.map(id=>{const el=document.getElementById(id);return {id,exists:!!el,visible:shown(el),
+      disabled:!!el?.disabled,text:String(el?.textContent||'').trim().slice(0,160)};}),
+    visiblePanes:[...document.querySelectorAll('.overlay,[id*="Overlay"],[id*="Screen"],[id*="Portal"],[id*="Launcher"]')]
+      .filter(shown).slice(0,24).map(el=>({id:el.id||'',classes:[...el.classList].slice(0,8)}))};
+}).catch(error=>({diagnosticError:errorText(error)}));}
 async function clickVisible(page,selector,label,timeout=30000){
   const control=page.locator(selector).first();
   await control.waitFor({state:'visible',timeout});
@@ -198,44 +211,74 @@ async function enterLocalPlayerMatch(page){
   const route=[];
   await page.waitForFunction(()=>typeof bootConfirmed!=='undefined'&&bootConfirmed===true&&
     typeof resetWorld==='function'&&typeof matchLive!=='undefined'&&document.getElementById('startBtn'),null,{timeout:180000});
-  await page.waitForFunction(()=>{
-    const shown=el=>{if(!el)return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();
-      return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity)!==0&&r.width>0&&r.height>0;};
-    return shown(document.getElementById('mfIntroStart'))||shown(document.getElementById('apOfflineBtn'))||
-      shown(document.getElementById('apCloseBtn'))||shown(document.getElementById('startBtn'));
-  },null,{timeout:90000});
-  if(await visible(page,'#mfIntroStart'))route.push(await clickVisible(page,'#mfIntroStart','intro'));
-  if(await visible(page,'#apOfflineBtn'))route.push(await clickVisible(page,'#apOfflineBtn','play-offline'));
-  else if(await visible(page,'#apCloseBtn'))route.push(await clickVisible(page,'#apCloseBtn','close-account-gate'));
+  await page.waitForFunction(()=>!document.getElementById('mfBootCover'),null,{timeout:90000});
+  const entryControls=[
+    ['#mfIntroStart','intro'],['#apOfflineBtn','play-offline'],['#mfLaunchOffline','launcher-offline'],
+    ['#mfOnboardingSkip','skip-onboarding']
+  ];
+  let entryReady=false;
+  for(let attempt=0;attempt<120&&!entryReady;attempt++){
+    let acted=false;
+    for(const [selector,label] of entryControls){
+      const control=page.locator(selector).first();
+      if(!await control.isVisible().catch(()=>false))continue;
+      await control.click({timeout:3000}).catch(()=>{});route.push(label);acted=true;
+      await page.waitForTimeout(label==='skip-onboarding'?350:700);break;
+    }
+    if(acted)continue;
+    const launchPlay=page.locator('#mfLaunchPlay').first();
+    const offlinePlay=await launchPlay.isVisible().catch(()=>false)&&
+      await launchPlay.evaluate(el=>!el.disabled&&/OFFLINE/i.test(el.textContent||'')).catch(()=>false);
+    if(offlinePlay){await launchPlay.click({timeout:3000});route.push('launcher-offline');await page.waitForTimeout(700);continue;}
+    if(await visible(page,'#startBtn')){entryReady=true;break;}
+    await page.waitForTimeout(250);
+  }
+  if(!entryReady)throw new Error('LOCAL_MATCH_ENTRY_GATE_NOT_REACHED');
   route.push(await clickVisible(page,'#startBtn','war-room'));
   route.push(await clickVisible(page,'.warCard[data-mode="standard"]','standard-match'));
 
   const expectedStages=['galaxy','system','planet','region','deploy'],stages=[];
-  for(let step=0;step<4;step++){
-    const before=await page.evaluate(()=>({stage:typeof mfGalaxyStage!=='undefined'?mfGalaxyStage:null,
-      label:(document.getElementById('setupStart')?.textContent||'').trim()}));
-    stages.push(before);
-    if(before.stage!==expectedStages[step])throw new Error('LOCAL_MATCH_STAGE_MISMATCH: '+JSON.stringify({step,before,expectedStages}));
-    route.push(await clickVisible(page,'#setupStart','setup-'+before.stage,60000));
-    await page.waitForFunction(stage=>typeof mfGalaxyStage!=='undefined'&&mfGalaxyStage===stage,
-      expectedStages[step+1],{timeout:30000});
+  const advance=['#setupStart','.mfWorldChip','.mfRegionChip','.mfQuickPlan','.mfTeamBtn','#mfConquestContinue'];
+  const stageSnapshot=()=>page.evaluate(()=>{
+    const shown=el=>{if(!el)return false;const s=getComputedStyle(el),r=el.getBoundingClientRect();
+      return s.display!=='none'&&s.visibility!=='hidden'&&Number(s.opacity||1)!==0&&r.width>0&&r.height>0;};
+    return {stage:typeof mfGalaxyStage!=='undefined'?mfGalaxyStage:null,
+      signature:[...document.querySelectorAll('[id^="mfStage"]')].filter(shown).map(el=>el.id).join(',')||
+        (shown(document.getElementById('cmdbar'))?'in-world':'unknown'),
+      label:(document.getElementById('setupStart')?.textContent||'').trim(),
+      deploy:shown(document.getElementById('deployBtn'))};
+  });
+  for(let step=0;step<20;step++){
+    const before=await stageSnapshot();
+    if(before.deploy||before.signature==='in-world')break;
+    if(!stages.some(row=>row.stage===before.stage))stages.push({stage:before.stage,label:before.label});
+    let advanced=false;
+    for(const selector of advance){
+      const control=page.locator(selector).first();
+      if(!await control.isVisible().catch(()=>false))continue;
+      for(let tap=0;tap<2&&!advanced;tap++){
+        await control.click({timeout:20000}).catch(()=>{});await page.waitForTimeout(650);
+        const after=await stageSnapshot();
+        advanced=after.signature!==before.signature||after.stage!==before.stage||after.deploy;
+      }
+      if(advanced)break;
+    }
+    if(!advanced)throw new Error('LOCAL_MATCH_SETUP_STALLED: '+JSON.stringify(before));
+    route.push(before.stage==='deploy'?'launch-battle':'setup-'+before.stage);
   }
-  const deployStage=await page.evaluate(()=>({stage:mfGalaxyStage,
+  const deployStage=await page.evaluate(()=>({stage:typeof mfGalaxyStage!=='undefined'?mfGalaxyStage:null,
     label:(document.getElementById('setupStart')?.textContent||'').trim()}));
-  stages.push(deployStage);
+  if(!stages.some(row=>row.stage===deployStage.stage))stages.push(deployStage);
   if(deployStage.stage!=='deploy')throw new Error('LOCAL_MATCH_DEPLOY_STAGE_MISSING: '+JSON.stringify(deployStage));
-  /* START BATTLE installs #loadScr during its activation; use the native
-     keyboard path so Playwright does not retry a pointer gesture whose first
-     attempt already replaced the target. */
-  route.push(await pressVisible(page,'#setupStart','launch-battle',90000));
   await page.waitForFunction(()=>typeof running!=='undefined'&&running===true,null,{timeout:180000});
   await page.locator('#deployBtn').first().waitFor({state:'visible',timeout:180000});
   const beforeDeploy=await page.evaluate(()=>({running,paused,matchLive,
     stage:typeof mfGalaxyStage!=='undefined'?mfGalaxyStage:null,
     label:(document.getElementById('deployBtn')?.textContent||'').trim()}));
-  /* Deploy deliberately commits on pointerdown and hides itself immediately.
-     Its production keyboard binding is the stable exactly-once test path. */
-  route.push(await pressVisible(page,'#deployBtn','deploy-local-player',30000));
+  const canvas=await page.locator('#gl').boundingBox().catch(()=>null);
+  if(canvas){await page.mouse.click(canvas.x+canvas.width/2,canvas.y+canvas.height*.45);await page.waitForTimeout(2500);}
+  await page.locator('#deployBtn').first().click({timeout:20000}).catch(()=>{});
+  route.push('deploy-local-player');
   await page.waitForFunction(()=>typeof matchLive!=='undefined'&&matchLive===true&&running===true&&paused===false&&
     typeof stats!=='undefined'&&Number(stats.t)>0&&document.body.classList.contains('hudTacticalDock'),null,{timeout:60000});
   const state=await page.evaluate(()=>({
@@ -442,17 +485,18 @@ async function runActualContextRecovery(page){
 async function main(){
   let guard=null,server=null,browser=null,context=null;
   let sourceBefore=null,sourceAfter=null,hardwareInfo=null,productionMatch=null,actualRecovery=null,fatal=null;
+  let entryFailureDiagnostics=null;
   let outputPreparation=null,testedHashes=null,guardReleased=false,origin=null,probeUrl=null;
   try{
     guard=await acquireVerificationFreeze({root,label:'Stage 8 GL probe and recovery acceptance',
       quietMs:Number(process.env.MF_QUIET_PREFLIGHT_MS||15000),allowedPaths:[outDir]});
     outputPreparation=await prepareOutput();
-    sourceBefore=await collectEvidenceIdentity({root});
+    sourceBefore=await collectEvidenceIdentity({root,packageRoot:serveRoot,testedEntry:'index.html'});
     testedHashes={
-      index:await sha256File(join(root,'index.html')),
-      main:await sha256File(join(root,'src','main.js')),
-      recovery:await sha256File(join(root,'src','glrecover.js')),
-      perf:await sha256File(join(root,'src','engine','perf.js')),
+      index:await sha256File(join(serveRoot,'index.html')),
+      main:await sha256File(join(serveRoot,'src','main.js')),
+      recovery:await sha256File(join(serveRoot,'src','glrecover.js')),
+      perf:await sha256File(join(serveRoot,'src','engine','perf.js')),
       verifier:await sha256File(fileURLToPath(import.meta.url)),
       bundle:existsSync(join(root,'dist','massfront.html'))?await sha256File(join(root,'dist','massfront.html')):null
     };
@@ -621,7 +665,12 @@ async function main(){
     const normalBoot=await waitForHardwareBoot(normal);
     check('normal game URL remains a hardware-WebGL2 path after a probe recovery',
       normalBoot.info.webgl2&&normalBoot.info.software===false&&!normalBoot.bootFailed,normalBoot);
-    productionMatch=await enterLocalPlayerMatch(normal);
+    try{productionMatch=await enterLocalPlayerMatch(normal);}
+    catch(error){
+      entryFailureDiagnostics=await entryGateDiagnostics(normal);
+      await capture(normal,entryFailureCapture);
+      throw new Error(errorText(error)+'\nENTRY_GATE_DIAGNOSTICS '+JSON.stringify(entryFailureDiagnostics));
+    }
     check('normal local-player UI traverses GALAXY through DEPLOY into one active match',
       JSON.stringify(productionMatch.stages.map(row=>row.stage))===JSON.stringify(productionMatch.expectedStages)&&
       productionMatch.route.includes('war-room')&&productionMatch.route.includes('standard-match')&&
@@ -739,7 +788,7 @@ async function main(){
   }
 
   if(guard){
-    try{await guard.checkpoint('before completion source identity');sourceAfter=await collectEvidenceIdentity({root});}
+    try{await guard.checkpoint('before completion source identity');sourceAfter=await collectEvidenceIdentity({root,packageRoot:serveRoot,testedEntry:'index.html'});}
     catch(error){check('completion source identity is readable under the verification freeze',false,errorText(error));}
     const identityStable=sameIdentity(sourceBefore,sourceAfter);
     check('source, dirty worktree, runtime and tested package identities stay stable',identityStable,
@@ -749,7 +798,7 @@ async function main(){
       queryFlags:['volfxprobe=1','mfProbeVerify=1'],viewport,outputPreparation,
       machineOutcome:'PENDING_FINAL_RELEASE',sourceIdentity:{before:sourceBefore,after:sourceAfter,stable:identityStable},
       workspaceGuard:{branch:guard.branch,head:guard.head,freezePath:guard.freezePath,quietMs:guard.quietMs,released:false},
-      testedHashes,hardwareInfo,productionMatch,actualRecovery,checks,unexpectedErrors,expectedDiagnostics,
+      testedHashes,hardwareInfo,productionMatch,entryFailureDiagnostics,actualRecovery,checks,unexpectedErrors,expectedDiagnostics,
       forcedContextConsole:{expectedText:expectedForcedContextConsole,...forcedContextConsole},captureErrors,
       captures:artifactValidation,networkIsolation:networkEvidence,fatal,failures
     };

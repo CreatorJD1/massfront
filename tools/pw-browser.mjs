@@ -47,6 +47,9 @@ const OWNED_MARK = '--massfront-owned-browser=';
 const SHARED_MARK = '--massfront-shared-browser=';
 const OWNED_PROFILE_PREFIX = 'pw-owned-';
 const OWNED_SESSION_DIR = join(LOCK_DIR, 'pw-owned-sessions');
+const PW_GRACEFUL_CLOSE_TIMEOUT_MS = 4000;
+const PW_PROFILE_REMOVE_ATTEMPTS = 8;
+const PW_PROFILE_REMOVE_DELAY_MS = 100;
 
 export const PW_CDP_PORT = CDP_PORT;
 export const PW_USER_DATA = USER_DATA;
@@ -472,13 +475,13 @@ export async function reapOwnedPwBrowserOrphans() {
     }
     const processExited = await waitUntil(async () => (await ownedProcessMatches(session)).length === 0, 8000, 100);
     const portReleased = await waitUntil(async () => !(await cdpAlive(session.endpoint)), 8000, 100);
-    let profileRemoved = !(await pathExists(session.profile));
-    let profileRemovalAuthorized = profileRemoved;
-    if (!profileRemoved) {
-      profileRemovalAuthorized = await pwOwnedProfileRemovalAllowed(session.profile);
-      if (profileRemovalAuthorized) await rm(session.profile, { recursive: true, force: true });
-      profileRemoved = !(await pathExists(session.profile));
-    }
+    const profile = await retryPwProfileRemovalOperation({
+      authorize: () => pwOwnedProfileRemovalAllowed(session.profile),
+      remove: () => rm(session.profile, { recursive: true, force: true }),
+      exists: () => pathExists(session.profile)
+    });
+    const profileRemoved = profile.removed;
+    const profileRemovalAuthorized = profile.authorized;
     let manifestRemoved = false;
     const success = processExited && portReleased && profileRemoved && profileRemovalAuthorized;
     if (success) {
@@ -493,7 +496,8 @@ export async function reapOwnedPwBrowserOrphans() {
       manifest: path, status: success && manifestRemoved ? 'REAPED' : 'UNKNOWN', token: record.token,
       nodePid: record.nodePid, pid: record.pid, port: record.port, profile: record.profile,
       processMatchesBefore: before.map(proc => proc.pid), cdpAliveBefore: cdpBefore, killed,
-      processExited, portReleased, profileRemovalAuthorized, profileRemoved, manifestRemoved
+      processExited, portReleased, profileRemovalAuthorized, profileRemoved, manifestRemoved,
+      profileRemovalAttempts:profile.attempts,profileRemovalErrors:profile.errors
     });
   }
   return results;
@@ -655,6 +659,62 @@ function ownedPidStillMatchesSync(session) {
   }
 }
 
+/** Bound a potentially wedged CDP close. The rejection branch is attached to
+    the original promise before the timeout races it, so a late disconnect
+    failure cannot become an unhandled rejection. */
+export async function boundedPwBrowserCloseAttempt(close, timeoutMs = PW_GRACEFUL_CLOSE_TIMEOUT_MS) {
+  if (typeof close !== 'function') throw new TypeError('PW_CLOSE_ATTEMPT_REQUIRES_FUNCTION');
+  const waitMs = Number.isFinite(timeoutMs) && timeoutMs >= 0 ? timeoutMs : PW_GRACEFUL_CLOSE_TIMEOUT_MS;
+  let timer = null;
+  const attempt = Promise.resolve().then(close).then(
+    () => ({ completed: true, timedOut: false, rejected: false, error: null }),
+    error => ({ completed: true, timedOut: false, rejected: true, error: error?.message || String(error) })
+  );
+  const timeout = new Promise(resolveTimeout => {
+    timer = setTimeout(() => resolveTimeout({
+      completed: false, timedOut: true, rejected: false,
+      error: `browser.close exceeded ${waitMs} ms`
+    }), waitMs);
+  });
+  const result = await Promise.race([attempt, timeout]);
+  if (timer) clearTimeout(timer);
+  return result;
+}
+
+/** Retry an already-authorized top-level profile removal only for transient
+    Windows filesystem errors. Callers supply the containment authorization,
+    deletion and existence operations so this orchestration is unit-testable
+    without weakening the production path checks. */
+export async function retryPwProfileRemovalOperation(operations = {}, options = {}) {
+  const { authorize, remove, exists, wait = ms => new Promise(resolveWait => setTimeout(resolveWait, ms)) } = operations;
+  if (![authorize, remove, exists, wait].every(fn => typeof fn === 'function')) {
+    throw new TypeError('PW_PROFILE_REMOVAL_OPERATIONS_INCOMPLETE');
+  }
+  const attempts = Number.isInteger(options.attempts) && options.attempts > 0
+    ? options.attempts : PW_PROFILE_REMOVE_ATTEMPTS;
+  const retryDelayMs = Number.isFinite(options.retryDelayMs) && options.retryDelayMs >= 0
+    ? options.retryDelayMs : PW_PROFILE_REMOVE_DELAY_MS;
+  const errors = [];
+  if (!(await exists())) return { authorized: true, removed: true, attempts: 0, errors };
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    if (!(await authorize())) {
+      if (!(await exists())) return { authorized: true, removed: true, attempts: attempt - 1, errors };
+      return { authorized: false, removed: false, attempts: attempt - 1, errors };
+    }
+    let transient = true;
+    try { await remove(); }
+    catch (error) {
+      const code = String(error?.code || 'UNKNOWN');
+      errors.push({ attempt, code, message: error?.message || String(error) });
+      transient = ['EBUSY', 'EPERM', 'ENOTEMPTY', 'EACCES'].includes(code);
+    }
+    if (!(await exists())) return { authorized: true, removed: true, attempts: attempt, errors };
+    if (!transient) return { authorized: true, removed: false, attempts: attempt, errors };
+    if (attempt < attempts) await wait(retryDelayMs * attempt);
+  }
+  return { authorized: true, removed: false, attempts, errors };
+}
+
 async function closeOwnedPwBrowser(browser) {
   const session = _ownedSessions.get(browser);
   if (!session) throw new Error('PW_CLOSE_UNOWNED_BROWSER');
@@ -664,7 +724,11 @@ async function closeOwnedPwBrowser(browser) {
   cleanup.attempted = true;
   cleanup.startedAt = new Date().toISOString();
   try {
-    try { await browser.close(); } catch {}
+    const graceful = await boundedPwBrowserCloseAttempt(() => browser.close());
+    cleanup.gracefulCloseCompleted = graceful.completed;
+    cleanup.gracefulCloseTimedOut = graceful.timedOut;
+    cleanup.gracefulCloseRejected = graceful.rejected;
+    cleanup.gracefulCloseError = graceful.error;
     const stillOwned = await ownedProcessMatches(session);
     cleanup.revalidatedOwnedPidsBeforeKill = stillOwned.map(proc => proc.pid);
     cleanup.killedOwnedPids = [];
@@ -679,14 +743,24 @@ async function closeOwnedPwBrowser(browser) {
     }
     cleanup.processExited = await waitUntil(async () => (await ownedProcessMatches(session)).length === 0, 8000, 100);
     cleanup.portReleased = await waitUntil(async () => !(await cdpAlive(session.endpoint)), 8000, 100);
-    const removalAllowed = await pwOwnedProfileRemovalAllowed(session.profile);
-    cleanup.profileRemovalAuthorized = removalAllowed;
-    if (removalAllowed) await rm(session.profile, { recursive: true, force: true });
-    cleanup.profileRemoved = !(await pathExists(session.profile));
-    cleanup.manifestRemoved = await unlinkOwnedManifest(session);
-    cleanup.success = cleanup.processExited && cleanup.portReleased && cleanup.profileRemoved && removalAllowed && cleanup.manifestRemoved;
+    const profile = await retryPwProfileRemovalOperation({
+      authorize: () => pwOwnedProfileRemovalAllowed(session.profile),
+      remove: () => rm(session.profile, { recursive: true, force: true }),
+      exists: () => pathExists(session.profile)
+    });
+    cleanup.profileRemovalAuthorized = profile.authorized;
+    cleanup.profileRemovalAttempts = profile.attempts;
+    cleanup.profileRemovalErrors = profile.errors;
+    cleanup.profileRemoved = profile.removed;
+    /* Preserve the manifest when removal is incomplete so the bounded orphan
+       reaper retains exact token/PID/port/profile authority for a later retry. */
+    cleanup.manifestRemoved = cleanup.profileRemoved ? await unlinkOwnedManifest(session) : false;
+    cleanup.success = cleanup.processExited && cleanup.portReleased && cleanup.profileRemoved &&
+      cleanup.profileRemovalAuthorized && cleanup.manifestRemoved;
     if (!cleanup.success) {
-      throw new Error(`processExited=${cleanup.processExited} portReleased=${cleanup.portReleased} profileRemoved=${cleanup.profileRemoved} removalAllowed=${removalAllowed} manifestRemoved=${cleanup.manifestRemoved}`);
+      throw new Error(`processExited=${cleanup.processExited} portReleased=${cleanup.portReleased} `+
+        `profileRemoved=${cleanup.profileRemoved} removalAllowed=${cleanup.profileRemovalAuthorized} `+
+        `profileAttempts=${cleanup.profileRemovalAttempts} manifestRemoved=${cleanup.manifestRemoved}`);
     }
   } catch (error) {
     cleanup.success = false;

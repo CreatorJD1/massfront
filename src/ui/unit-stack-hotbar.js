@@ -1,13 +1,17 @@
 /* ============================================================
    UNIT-STACK HOTBAR — a compact type selector inside PLATOONS
    ============================================================ */
-const MF_UNIT_STACK_SYNC_MS=220;
+const MF_UNIT_STACK_STATUS_MS=500,MF_UNIT_STACK_AUDIT_MS=2000;
 const mfUnitStackCardMap=new Map(),mfUnitStackPointers=new Set();
-let mfUnitStackRail=null,mfUnitStackNextSync=0,mfUnitStackLastType=-1,mfUnitStackLastAt=-1e9;
+const mfUnitStackRowsByType=new Map(),mfUnitStackMembersByType=new Map();
+let mfUnitStackRail=null,mfUnitStackNextStatus=0,mfUnitStackNextAudit=0,mfUnitStackDirty=true,mfUnitStackPaintNeeded=true,mfUnitStackPaintFrame=0,
+  mfUnitStackLastType=-1,mfUnitStackLastAt=-1e9;
 let mfUnitStackFocusCount=0,mfUnitStackLastFocusType=-1,mfUnitStackLastAction=null;
+let mfUnitStackTopologyScans=0,mfUnitStackStatusScans=0,mfUnitStackSelectionEpoch=0,mfUnitStackSelectionSig='';
 
 function mfUnitStackNow(){return typeof performance!=='undefined'&&performance.now?performance.now():Date.now();}
 function mfUnitStackName(value){return String(value||'UNIT').replace(/\s+/g,' ').trim();}
+function mfUnitStackToggle(el,name,on){if(el&&el.classList.contains(name)!==!!on)el.classList.toggle(name,!!on);}
 function mfUnitStackOwns(i){
   return typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(i):uteam[i]===0;
 }
@@ -15,23 +19,61 @@ function mfUnitStackKit(){
   const raw=typeof playerKitKey==='function'?playerKitKey():'nova';
   return typeof mfIntelKit==='function'?mfIntelKit(raw):raw;
 }
-function mfUnitStackRows(){
-  if(typeof running!=='boolean'||!running||typeof matchLive!=='boolean'||!matchLive)return [];
-  const byType=new Map();
-  for(let i=0;i<unitHigh;i++){
-    if(!ualive[i]||!mfUnitStackOwns(i))continue;
-    const type=utype[i],T=TYPES[type];if(!T)continue;
-    let row=byType.get(type);
-    if(!row){row={type,name:mfUnitStackName(T.name||('UNIT '+type)),count:0,selected:0,ready:0,hp:0,x:0,y:0};byType.set(type,row);}
-    row.count++;row.selected+=usel[i]?1:0;
-    row.ready+=(typeof ustun==='undefined'||ustun[i]<=0)&&(ustate[i]===0||uhold[i])?1:0;
-    row.hp+=Math.max(0,Math.min(1,uhp[i]/Math.max(1,uhpm[i])));row.x+=ux[i];row.y+=uy[i];
+function mfUnitStackRows(force){
+  const now=mfUnitStackNow();
+  if(typeof running!=='boolean'||!running||typeof matchLive!=='boolean'||!matchLive){
+    mfUnitStackRowsByType.clear();mfUnitStackMembersByType.clear();mfUnitStackDirty=true;return [];
   }
-  return [...byType.values()].map(row=>{row.health=Math.round(row.hp/row.count*100);return row;}).sort((a,b)=>{
+  /* Spawns/deaths mark topology dirty. A deliberately slow audit catches old
+     shells or unusual restore paths that mutate the packed arrays directly,
+     without returning to the former 4.5 full-unit scans per second. */
+  if(mfUnitStackDirty||now>=mfUnitStackNextAudit){
+    mfUnitStackTopologyScans++;
+    mfUnitStackRowsByType.clear();mfUnitStackMembersByType.clear();
+    const byType=new Map();
+    for(let i=0;i<unitHigh;i++){
+      if(!ualive[i]||!mfUnitStackOwns(i))continue;
+      const type=utype[i],T=TYPES[type];if(!T)continue;
+      let row=byType.get(type),members=mfUnitStackMembersByType.get(type);
+      if(!row){row={type,name:mfUnitStackName(T.name||('UNIT '+type)),count:0,selected:0,ready:0,hp:0,x:0,y:0,health:100};byType.set(type,row);mfUnitStackRowsByType.set(type,row);}
+      if(!members){members=[];mfUnitStackMembersByType.set(type,members);}members.push(i);row.count++;
+    }
+    mfUnitStackDirty=false;mfUnitStackNextAudit=now+MF_UNIT_STACK_AUDIT_MS;mfUnitStackNextStatus=0;
+  }
+  if(force||now>=mfUnitStackNextStatus){
+    mfUnitStackStatusScans++;
+    for(const row of mfUnitStackRowsByType.values())row.selected=row.ready=row.hp=row.x=row.y=0;
+    for(const [type,members] of mfUnitStackMembersByType){
+      const row=mfUnitStackRowsByType.get(type);if(!row)continue;
+      for(const i of members){
+        if(!ualive[i]||utype[i]!==type||!mfUnitStackOwns(i)){mfUnitStackDirty=true;continue;}
+        row.selected+=usel[i]?1:0;
+        row.ready+=(typeof ustun==='undefined'||ustun[i]<=0)&&(ustate[i]===0||uhold[i])?1:0;
+        row.hp+=Math.max(0,Math.min(1,uhp[i]/Math.max(1,uhpm[i])));row.x+=ux[i];row.y+=uy[i];
+      }
+      row.health=Math.round(row.hp/Math.max(1,row.count)*100);
+    }
+    mfUnitStackNextStatus=now+MF_UNIT_STACK_STATUS_MS;
+  }
+  return [...mfUnitStackRowsByType.values()].sort((a,b)=>{
     const A=TYPES[a.type],B=TYPES[b.type],ar=A&&A.cat==='hero'?-2:A&&A.builder?-1:(A&&A.tier||0),
       br=B&&B.cat==='hero'?-2:B&&B.builder?-1:(B&&B.tier||0);
     return ar-br||a.type-b.type;
   });
+}
+function mfUnitStackInvalidate(){
+  mfUnitStackDirty=true;
+  /* Coalesce a factory completion or mass-casualty burst. A per-spawn rAF can
+     become a full-census scan every frame while several factories finish. */
+  if(!mfUnitStackPaintFrame)mfUnitStackPaintFrame=setTimeout(()=>{mfUnitStackPaintFrame=0;mfUnitStackSync(false);},240);
+}
+function mfUnitStackOverflow(){
+  const rail=mfUnitStackRail;if(!rail)return;
+  const overflow=rail.scrollWidth>rail.clientWidth+2;
+  const state=!overflow?'none':rail.scrollLeft<=2?'start':rail.scrollLeft+rail.clientWidth>=rail.scrollWidth-2?'end':'middle';
+  if(rail.dataset.mfOverflow!==state)rail.dataset.mfOverflow=state;
+  const role=overflow?'scrolling unit stack selector':'unit stack selector';
+  if(rail.getAttribute('aria-roledescription')!==role)rail.setAttribute('aria-roledescription',role);
 }
 function mfUnitStackReleasePointer(ev){
   if(!mfUnitStackPointers.delete(ev.pointerId)||mfUnitStackPointers.size)return;
@@ -59,6 +101,8 @@ function mfUnitStackShell(){
       if(Math.abs(ev.deltaY)<=Math.abs(ev.deltaX))return;
       mfUnitStackRail.scrollLeft+=ev.deltaY;ev.preventDefault();
     },{passive:false});
+    mfUnitStackRail.addEventListener('scroll',mfUnitStackOverflow,{passive:true});
+    if(typeof ResizeObserver==='function')new ResizeObserver(mfUnitStackOverflow).observe(mfUnitStackRail);
   }
   return mfUnitStackRail;
 }
@@ -123,13 +167,15 @@ function mfUnitStackPaint(card,row,kit,order){
   const count='×'+row.count,ready=row.ready===row.count?'':row.ready+' RDY';
   if(view.count.textContent!==count)view.count.textContent=count;
   if(view.ready.textContent!==ready)view.ready.textContent=ready;
-  view.ready.hidden=!ready;
-  view.fill.style.width=row.health+'%';card.style.order=String(order);
+  if(view.ready.hidden===!!ready)view.ready.hidden=!ready;
+  const healthWidth=row.health+'%';if(view.fill.style.width!==healthWidth)view.fill.style.width=healthWidth;
+  if(card.style.order!==String(order))card.style.order=String(order);
   card.dataset.count=String(row.count);card.dataset.selected=String(row.selected);card.dataset.ready=String(row.ready);
-  card.dataset.health=String(row.health);card.classList.toggle('selected',row.selected===row.count);
-  card.classList.toggle('partial',row.selected>0&&row.selected<row.count);
-  card.classList.toggle('ready',row.ready===row.count);card.setAttribute('aria-pressed',
-    row.selected===row.count?'true':row.selected>0?'mixed':'false');
+  card.dataset.health=String(row.health);
+  const allSelected=row.selected===row.count,partial=row.selected>0&&row.selected<row.count,allReady=row.ready===row.count;
+  mfUnitStackToggle(card,'selected',allSelected);mfUnitStackToggle(card,'partial',partial);mfUnitStackToggle(card,'ready',allReady);
+  const pressed=row.selected===row.count?'true':row.selected>0?'mixed':'false';
+  if(card.getAttribute('aria-pressed')!==pressed)card.setAttribute('aria-pressed',pressed);
   const label='Select all '+row.count+' '+row.name+(row.count===1?'':' units')+'. '+row.ready+' ready. Average health '+row.health+
     ' percent. Activate twice to focus camera.';
   if(card.getAttribute('aria-label')!==label)card.setAttribute('aria-label',label);
@@ -138,23 +184,53 @@ function mfUnitStackPaint(card,row,kit,order){
 }
 function mfUnitStackSync(force){
   const rail=mfUnitStackShell();if(!rail)return;
-  const now=mfUnitStackNow();if(!force&&now<mfUnitStackNextSync)return;mfUnitStackNextSync=now+MF_UNIT_STACK_SYNC_MS;
-  const rows=mfUnitStackRows(),active=mfUnitStackPointers.size>0,kit=mfUnitStackKit(),seen=new Set();
+  const now=mfUnitStackNow();if(!force&&!mfUnitStackDirty&&!mfUnitStackPaintNeeded&&now<mfUnitStackNextStatus&&now<mfUnitStackNextAudit)return;
+  const rows=mfUnitStackRows(force),active=mfUnitStackPointers.size>0,kit=mfUnitStackKit(),seen=new Set();
   for(let order=0;order<rows.length;order++){
     const data=rows[order];seen.add(data.type);let card=mfUnitStackCardMap.get(data.type);
     if(!card&&!active){card=mfUnitStackCard(data.type,kit);rail.appendChild(card);}
     if(card)mfUnitStackPaint(card,data,kit,order);
   }
   if(!active)for(const [type,card] of mfUnitStackCardMap)if(!seen.has(type)){card.remove();mfUnitStackCardMap.delete(type);}
-  if(!active){rail.style.display=rows.length?'flex':'none';rail.setAttribute('aria-hidden',rows.length?'false':'true');}
-  const group=document.getElementById('grpRow');if(group)group.classList.toggle('mfUnitStackReady',rows.length>0);
+  if(!active){
+    rail.style.display=rows.length?'flex':'none';
+    const hidden=rows.length?'false':'true';if(rail.getAttribute('aria-hidden')!==hidden)rail.setAttribute('aria-hidden',hidden);
+  }
+  const group=document.getElementById('grpRow');if(group){
+    const saved=!!group.querySelector('.grpBtn.saved'),hasSelection=rows.some(row=>row.selected>0),empty=!rows.length&&!saved;
+    mfUnitStackToggle(group,'mfUnitStackReady',rows.length>0);mfUnitStackToggle(group,'mfUnitStackHasSelection',hasSelection);
+    mfUnitStackToggle(group,'mfUnitStackEmpty',empty);
+    const state=empty?'empty':hasSelection?'selected':'browse';if(group.dataset.mfStackState!==state)group.dataset.mfStackState=state;
+  }
+  mfUnitStackPaintNeeded=false;
+  requestAnimationFrame(mfUnitStackOverflow);
 }
 
 const mfUnitStackBaseUpdateGroupBadges=typeof updateGroupBadges==='function'?updateGroupBadges:null;
 if(mfUnitStackBaseUpdateGroupBadges)updateGroupBadges=function(){mfUnitStackBaseUpdateGroupBadges();mfUnitStackSync(false);};
+/* The simulation owns lifecycle truth. These late takeovers only invalidate the
+   cached census; they never alter spawn/kill results or unit ownership. */
+if(typeof spawnUnit==='function'){
+  const mfUnitStackBaseSpawn=spawnUnit;spawnUnit=function(){const out=mfUnitStackBaseSpawn.apply(this,arguments);mfUnitStackInvalidate();return out;};
+}
+if(typeof killUnit==='function'){
+  const mfUnitStackBaseKill=killUnit;killUnit=function(){const out=mfUnitStackBaseKill.apply(this,arguments);mfUnitStackInvalidate();return out;};
+}
 addEventListener('resize',()=>mfUnitStackSync(true));
 mfUnitStackShell();mfUnitStackSync(true);
-window.MFUnitStackHotbar=Object.freeze({sync:()=>mfUnitStackSync(true),snapshot:()=>({
+window.MFUnitStackHotbar=Object.freeze({
+  sync:()=>mfUnitStackSync(true),
+  selection:selectedByType=>{
+    const sig=Object.keys(selectedByType||{}).sort((a,b)=>a-b).map(type=>type+':'+selectedByType[type]).join('|');
+    if(sig===mfUnitStackSelectionSig)return;
+    mfUnitStackSelectionSig=sig;mfUnitStackPaintNeeded=true;
+    mfUnitStackSelectionEpoch++;
+    for(const row of mfUnitStackRowsByType.values())row.selected=+(selectedByType&&selectedByType[row.type]||0);
+    /* updateSelInfo already walked unitHigh. Reuse its selection result and
+       leave HP/readiness on their slower status cadence. */
+    mfUnitStackNextStatus=Math.max(mfUnitStackNextStatus,mfUnitStackNow()+80);
+  },
+  snapshot:()=>({
   railCount:document.querySelectorAll('#mfUnitStackRail').length,cardCount:mfUnitStackCardMap.size,
   cards:[...mfUnitStackCardMap.values()].map(card=>{const name=card.querySelector('.mfUnitStackName'),thumb=card.querySelector('.mfRuntimeThumb');return{
     type:+card.dataset.unitType,count:+card.dataset.count,selected:+card.dataset.selected,ready:+card.dataset.ready,
@@ -162,5 +238,8 @@ window.MFUnitStackHotbar=Object.freeze({sync:()=>mfUnitStackSync(true),snapshot:
     labelClipped:!!(name&&name.clientWidth&&name.scrollWidth>name.clientWidth+1),modelKey:thumb&&thumb.dataset.mfModelKey||'',
     thumbnailStatus:thumb&&thumb.dataset.mfThumbStatus||'',thumbnailSource:thumb&&thumb.dataset.mfThumbSource||''};}),
   pointerCount:mfUnitStackPointers.size,focusCount:mfUnitStackFocusCount,lastFocusType:mfUnitStackLastFocusType,
-  lastAction:mfUnitStackLastAction,platoonButtons:document.querySelectorAll('#grpRow>.grpBtn').length
-})});
+  lastAction:mfUnitStackLastAction,platoonButtons:document.querySelectorAll('#grpRow>.grpBtn').length,
+  topologyScans:mfUnitStackTopologyScans,statusScans:mfUnitStackStatusScans,selectionEpoch:mfUnitStackSelectionEpoch,
+  overflow:mfUnitStackRail&&mfUnitStackRail.dataset.mfOverflow||'none',stackState:document.getElementById('grpRow')&&document.getElementById('grpRow').dataset.mfStackState||''
+  })
+});

@@ -310,10 +310,9 @@ let aiSlots=[
 ];
 /* Theatre size owns participant density while every participant owns one hard
    500-unit Commander-seat cap. Authored seats: Compact duel SW–NE; second
-   enemy SE never NW; ally NW; Large 1v3 uses four corners and Large 1v4 adds
-   center. Center-to-corner is ~1448 m; adjacent cardinals (~1028 m) remain
-   crush and are never a default. */
-const BATTLEFIELD_FACTION_CAP={compact:2,standard:3,large:5};
+   enemy SE never NW; ally NW; Large 1v3 uses all four corners. The Brood may
+   appear as a fifth system force, but never consumes a participant seat. */
+const BATTLEFIELD_FACTION_CAP={compact:2,standard:3,large:4};
 const SPAWN_CORNERS=['nw','ne','se','sw'];
 const SPAWN_LARGE_FIFTH='c';
 const SPAWN_FAIR_MIN_M=1400;
@@ -340,9 +339,8 @@ function reseatSpawnPlanner(max){
   /* Stage 0 MAP contract. Compact is a SW–NE duel; extras are already off.
      On Standard/Large, allies claim NW, the second enemy is SE (never NW —
      that is the ally chair / west-edge crush vs player SW), and a third enemy
-     takes the leftover corner so Large 1v3 is four corners. A fourth enemy
-     takes center, whose four corner distances remain above 1400 m. Cardinals
-     snap off because SW–W is ~1028 m. */
+     takes the leftover corner so Large 1v3 is four corners. Brood nests use
+     neutral placement and do not claim the retired fifth center seat. */
   if(max==null) max=battlefieldAiCap();
   if((typeof populationTheatre==='function'?populationTheatre():'standard')==='compact'){
     playerStartZone='sw';
@@ -608,11 +606,15 @@ function resetWorld(){
   if(typeof cmdrTxReset==='function') cmdrTxReset();
   ualive.fill(0); usel.fill(0); ugen.fill(0); utgtg.fill(-1);
   freeList=[]; unitHigh=0; teamCount[0]=0; teamCount[1]=0;
+  if(typeof activeUnitReset==='function')activeUnitReset();
+  if(typeof tick==='number')tick=0;
+  acc=0;
   if(typeof populationResetLedgers==='function') populationResetLedgers();
   if(typeof uAllyBase!=='undefined') uAllyBase.fill(-1);
   rebuildGrid();                                   // spatial grid must never hold stale chains
   heroIdx=-1; enemyHeroIdx=-1; enemyHeroIdxs.length=0;
   blds.length=0; rebuildBGrid();
+  if(typeof mfBuildingWorkFxReset==='function')mfBuildingWorkFxReset();
   craters.length=0; wrecks.length=0; rubbles.length=0; groundBurns.length=0;
   pFree=[]; pHigh=0; palive.fill(0); pSplit.fill(0);
   pSmokeT.fill(0);pFlightCue.fill(0);artShellSmoke.length=0;
@@ -1260,6 +1262,31 @@ function endGame(win,reason){
 
 // ---------- main loop ----------
 let acc=0, lastT=0, fpsN=0, fpsT=0, fpsShow=60;
+const MF_SIM_DT=1/30,MF_SIM_MAX_STEPS=3,MF_SIM_DEBT_TICKS=8;
+let mfSimDebtClamped=0,mfSimNetworkWaitFrames=0;
+function mfMatchConsumer(){return typeof window!=='undefined'&&window.MFMatchCommandConsumer||null;}
+/* Mobile panels commonly refresh at 90/120/144 Hz, but this renderer targets
+   a stable 60 Hz presentation. Keep the authoritative 30 Hz simulation on
+   every RAF callback while suppressing only duplicate presentation work. A
+   short consecutive-sample gate avoids mistaking one early 60 Hz callback for
+   a high-refresh display, and the deadline accumulator gives 90 Hz panels the
+   correct alternating 1/2-callback cadence instead of collapsing to 45 Hz. */
+const MF_PRESENT_MS=1000/60;
+let mfRafSampleT=0,mfFastRafStreak=0,mfPresentationCapped=false;
+let mfPresentNext=0,mfPresentDt=0,mfPresentationSkips=0,mfPresentationFrames=0;
+function mfPresentationDue(ts){
+  if(!mfRafSampleT){mfRafSampleT=ts;mfPresentNext=ts;mfPresentationFrames++;return true;}
+  const gap=ts-mfRafSampleT;mfRafSampleT=ts;
+  if(gap>=4&&gap<13.5)mfFastRafStreak++;
+  else if(gap>=13.5)mfFastRafStreak=0;
+  if(!mfPresentationCapped&&mfFastRafStreak>=8){
+    mfPresentationCapped=true;mfPresentNext=ts;
+  }
+  if(!mfPresentationCapped){mfPresentationFrames++;return true;}
+  if(ts+0.75<mfPresentNext){mfPresentationSkips++;return false;}
+  const slots=Math.max(1,Math.floor((ts-mfPresentNext)/MF_PRESENT_MS)+1);
+  mfPresentNext+=slots*MF_PRESENT_MS;mfPresentationFrames++;return true;
+}
 let aiAcc=0, fogAcc=0;
 /* Tell the boot loader the patch is good. Called on the FIRST frame rather
    than at the end of setup: reaching a frame means the renderer, the sim and
@@ -1369,6 +1396,10 @@ function setupAttract(){
   if(!terrVerts) return;
   if(menuBg()==='off'){ document.body.classList.add('menuMode'); attractOn=false; return; }
   resetWorld();
+  /* A completed match leaves albedo scars and Brood relief behind. Clear the
+     old entities first, then rebuild only dirty terrain before the diorama
+     paints its own foundations; clearing creepF alone leaves purple albedo. */
+  if(mmDirty) applyTheme();
   if(typeof materialV2SetupAttract==='function'&&materialV2SetupAttract())return;
   demoMode=false; matchLive=false; fogOn=false;
   /* Somewhere scenic and reachable: the map's own player start, which is
@@ -1443,8 +1474,13 @@ function frame(ts){
   if(!lastT) lastT=ts;
   let dt=(ts-lastT)/1000; lastT=ts;
   if(dt>0.25) dt=0.25;
+  mfPresentDt=Math.min(0.25,mfPresentDt+dt);
+  const presentDue=mfPresentationDue(ts);
+  const presentDt=presentDue?mfPresentDt:0;
+  if(presentDue)mfPresentDt=0;
   // fps
-  fpsN++; fpsT+=dt;
+  if(presentDue)fpsN++;
+  fpsT+=dt;
   if(fpsT>=0.6){
     fpsShow=Math.round(fpsN/fpsT); fpsN=0; fpsT=0;
     const total=teamCount[0]+teamCount[1]+teamCount[2];
@@ -1476,11 +1512,10 @@ function frame(ts){
     perfScale=perfBand;
     /* These were 7000 and 18000 — thresholds inherited from the 10,000-unit
        Mega demo, which no longer exists. A real match caps at FACTION_POP_CAP
-       (500) per commander seat, so a four-commander large map tops out at
-       2000: BOTH old thresholds sat above the maximum reachable count and
-       could never fire. The game has effectively had no population throttle
-       in normal play. Re-scaled to the 2k reality so a genuinely heavy fight
-       is protected before the frame is already gone. */
+       (500) per commander seat, so four participants top out at 2000 real
+       units; a Hard Brood system force may add 500 more. Both old thresholds
+       sat above even that maximum and could never fire. Re-scaled so a heavy
+       fight is protected before the frame is already gone. */
     if(total>1300) perfScale=Math.min(perfScale,0.55);
     if(total>1700) perfScale=Math.min(perfScale,0.3);
     if(META.settings.perf==='low') perfScale=Math.min(perfScale,0.45);
@@ -1498,14 +1533,25 @@ function frame(ts){
        silently disabled every effect gated above 0.32. */
     if(typeof GFX!=='undefined'&&GFX.particles) perfScale*=GFX.particles;
   }
-  if(running&&!paused){
+  if(running&&!paused&&!gameEnded){
     if(typeof mfPerfBegin==='function') mfPerfBegin('sim');
-    const totAll=teamCount[0]+teamCount[1]+teamCount[2];
-    const simDt= totAll>22000?1/12 : totAll>13000?1/16 : totAll>6500?1/22 : totAll>900?1/26 : 1/30;
+    const simDt=MF_SIM_DT;
     acc+=dt*gameSpeed;
+    const debtCap=simDt*MF_SIM_DEBT_TICKS;
+    if(acc>debtCap){mfSimDebtClamped+=Math.floor((acc-debtCap)/simDt);acc=debtCap;}
     let steps=0;
-    while(acc>=simDt&&steps<3){
+    while(acc>=simDt&&steps<MF_SIM_MAX_STEPS){
+      const consumer=mfMatchConsumer(),nextTick=typeof mfDetTick==='number'?mfDetTick+1:tick+1;
+      if(consumer&&typeof consumer.requiresLockstep==='function'&&consumer.requiresLockstep()&&
+         typeof consumer.canAdvance==='function'&&!consumer.canAdvance(nextTick)){
+        mfSimNetworkWaitFrames++;break;
+      }
+      if(consumer&&typeof consumer.beginTick==='function'&&consumer.beginTick(nextTick)===false){
+        if(typeof consumer.commitTick==='function')consumer.commitTick(nextTick);break;
+      }
       acc-=simDt; steps++;
+      if(typeof mfPerfCount==='function')mfPerfCount('authoritySteps');
+      if(typeof mfDeterminismBeginStep==='function')mfDeterminismBeginStep(simDt,nextTick);
       carrierTick(simDt);
       camAuthTick(simDt);
       /* God Mode is deliberately obvious and deterministic: the gold badge
@@ -1519,41 +1565,81 @@ function frame(ts){
          screen, so the old threshold fired during ordinary panning. */
       if(carrier.active&&carrier.phase<2&&Math.hypot(carrier.x-cam.x,carrier.y-cam.y)>orthoSpan*0.55)
         carrierFollow();
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simUnits');
       unitTick(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simUnits');
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simProjectiles');
       projTick(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simProjectiles');
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simStructures');
       bldTick(simDt);
       fortTick(simDt);
       buildZoneTick(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simStructures');
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simEconomy');
       reclaimTick(simDt);
       econTick(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simEconomy');
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simCombatEffects');
       abilTick(simDt);
       beamTick(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simCombatEffects');
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simWorld');
       envTick(simDt);
       crateTick(simDt);
       sceneryTick(simDt);
       shardTick(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simWorld');
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simParticles');
       updParticles(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simParticles');
+      if(typeof mfPerfBegin==='function')mfPerfBegin('simDeformation');
+      processDeforms();
+      if(typeof waterFloodTick==='function') waterFloodTick(simDt);
+      deformMaintain(simDt);
+      if(typeof mfPerfEnd==='function')mfPerfEnd('simDeformation');
       if(!demoMode&&!matchLive){         // keep vision live while flying the carrier in
         fogAcc+=simDt;
-        if(fogAcc>=0.4){ updateFog(); fogAcc=0; }
+        if(fogAcc>=0.4){
+          if(typeof mfPerfBegin==='function')mfPerfBegin('fog');
+          updateFog();fogAcc=0;
+          if(typeof mfPerfEnd==='function')mfPerfEnd('fog');
+        }
       }
       if(matchLive&&!demoMode&&timeLimit>0&&matchClock>0) matchClock=Math.max(0,matchClock-simDt);
       if(!demoMode&&matchLive){          // the war only runs once you've planted your base
         aiAcc+=simDt;
-        if(aiAcc>=0.5){ aiTick(aiAcc); aiAcc=0; }
+        if(aiAcc>=0.5){
+          if(typeof mfPerfBegin==='function')mfPerfBegin('ai');
+          aiTick(aiAcc);aiAcc=0;
+          if(typeof mfPerfEnd==='function')mfPerfEnd('ai');
+        }
         fogAcc+=simDt;
-        if(fogAcc>=0.5){ updateFog(); fogAcc=0; }
-        if(stats.t-tlLast>=5){ tlLast=stats.t; tlRecord(); }
+        /* Fog also records explored terrain and discovered entities. Preserve
+           its authority cadence; profile the pulse before splitting it. */
+        if(fogAcc>=0.5){
+          if(typeof mfPerfBegin==='function')mfPerfBegin('fog');
+          updateFog();fogAcc=0;
+          if(typeof mfPerfEnd==='function')mfPerfEnd('fog');
+        }
+        if(stats.t-tlLast>=5){tlLast=stats.t;tlRecord();}
       }
+      if(consumer&&typeof consumer.commitTick==='function')consumer.commitTick(nextTick);
+      if(typeof mfDeterminismEndStep==='function')mfDeterminismEndStep();
+      /* Resolve the same terminal tick on fast and stalled clients. Waiting
+         until a whole render catch-up batch finishes allowed extra combat and
+         rewards during the result screen's 1.4-second presentation delay. */
+      checkVictory();
+      if(gameEnded){acc=0;break;}
     }
-    if(acc>simDt*3) acc=0;
-    checkVictory();
     if(typeof mfPerfEnd==='function') mfPerfEnd('sim');
   }
   if(!running && attractOn && attractVisible){
     attractTick(dt);
-    processDeforms();
-    render(dt);
+    if(presentDue){
+      processDeforms();
+      render(presentDt);
+    }
     musicTickFrame(dt);
     if(typeof mfPerfFrameEnd==='function') mfPerfFrameEnd();
     return;
@@ -1561,16 +1647,16 @@ function frame(ts){
   camTick(dt);
   if(running){
     if(!paused&&perfScale>0.4) weatherTick(dt);
-    processDeforms();
-    deformMaintain(dt);
-    render(dt);
-    floatTextTick(dt);
-    if(typeof mfPerfBegin==='function') mfPerfBegin('minimap');
-    renderMinimap();
-    if(typeof mfPerfEnd==='function') mfPerfEnd('minimap');
-    if(typeof mfPerfBegin==='function') mfPerfBegin('hud');
-    updateHUD(fpsShow);
-    if(typeof mfPerfEnd==='function') mfPerfEnd('hud');
+    if(presentDue){
+      render(presentDt);
+      floatTextTick(presentDt);
+      if(typeof mfPerfBegin==='function') mfPerfBegin('minimap');
+      renderMinimap();
+      if(typeof mfPerfEnd==='function') mfPerfEnd('minimap');
+      if(typeof mfPerfBegin==='function') mfPerfBegin('hud');
+      updateHUD(fpsShow);
+      if(typeof mfPerfEnd==='function') mfPerfEnd('hud');
+    }
   }
   musicTickFrame(dt);
   if(typeof mfPerfFrameEnd==='function') mfPerfFrameEnd();
@@ -1583,7 +1669,6 @@ function mfCpuBind(){
      here made runtime behavior depend on boot order and silently discarded
      blocker, clearance and replay fixes made in src/game/sim.js. Keep CPU
      tuning on the authoritative implementation instead of shadowing it. */
-  mfCpuBindSep();
   mfCpuBindMinimap();
   mfCpuBindIcons();
   mfCpuBindFx();
@@ -2118,7 +2203,7 @@ function mfPauseFocusable(){
 }
 function mfPauseTrapKeydown(ev){
   const overlay=$('pauseOverlay');
-  if(!paused||!mfFrontElementVisible(overlay)||mfPauseHigherModalVisible())return;
+  if(!mfFrontElementVisible(overlay)||mfPauseHigherModalVisible())return;
   const controls=mfPauseFocusable();if(!controls.length)return;
   if((ev.key==='Enter'||ev.key===' ')&&!overlay.contains(ev.target)){
     ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();
@@ -2136,7 +2221,10 @@ function mfOpenPause(){
   if(!running)return;
   const active=document.activeElement;
   if(active&&active!==document.body&&active.isConnected!==false)mfPauseFocusOrigin=active;
-  paused=true;$('pauseOverlay').style.display='flex';
+  const net=typeof window!=='undefined'&&window.MFMatchRuntime&&typeof MFMatchRuntime.status==='function'?MFMatchRuntime.status():null;
+  /* A local overlay may not stop a server-authoritative room. Online play
+     keeps consuming 30 Hz ticks while the menu is open. */
+  paused=!(net&&net.state==='running');$('pauseOverlay').style.display='flex';
   mfPauseSetModal(true);
   const target=$('resumeBtn');requestAnimationFrame(()=>{if(mfFrontElementVisible($('pauseOverlay'))&&target)target.focus({preventScroll:true});});
 }
@@ -2462,6 +2550,25 @@ function mfRefreshBuildingServiceControls(B){
   if(typeof mfRenderBuildingServiceControls!=='function')return;
   const row=$('mfBldServiceActions'),panel=row&&row.parentElement&&row.parentElement.id==='prodMenu'?'prodMenu':'bldMenu2';
   mfRenderBuildingServiceControls(B,panel);
+}
+function mfBuildingUpgradePress(all){
+  if(openBld<0||!blds[openBld]||!blds[openBld].alive)return;
+  const B=blds[openBld],I=mfBuildingUpgradeBatchInfo(openBld),C=window.MFMatchCommandConsumer,
+    R=window.MFMatchRuntime,S=R&&typeof R.status==='function'?R.status():null;
+  let result;
+  if(all?!I.canUpgradeAll:!I.canUpgradeSelected)result={ok:false,message:all?I.batchReason:I.selectedReason};
+  else if(S&&(S.state==='running'||S.started&&!S.ended)){
+    if(S.state!=='running'){
+      toast('Reconnecting — upgrade order not sent');sfx('reject');return {ok:false,message:'Waiting for network connection'};
+    }
+    const receipt=C&&typeof C.submitUpgrade==='function'?C.submitUpgrade(openBld,!!all):null;
+    result=receipt?{ok:true,queued:true,message:'Upgrade order sent'}:
+      {ok:false,message:C&&C.lastFailure()||'Network upgrade unavailable; no resources spent'};
+  }else if(all)result=mfStartBuildingUpgradeBatch(openBld);
+  else {const err=startUpgrade(openBld);result={ok:!err,message:err||'Upgrading '+I.name};}
+  toast(result.message);sfx(result.ok?'ui':'reject');
+  if(B.type==='fac')renderProdMenu();else renderBldPanel();
+  return result;
 }
 function mfBuildingRepairPress(){
   if(openBld<0||!blds[openBld]||!blds[openBld].alive)return;
@@ -2966,12 +3073,7 @@ function wire(){
     profSave(); switchProfile(PROFILES.list[0].id); renderProfile(); sfx('ui');
     toast('Profile deleted');
   });
-  mfBindNativePress($('upBtn'),()=>{
-    if(openBld<0) return;
-    const err=startUpgrade(openBld);
-    if(err) toast(err); else sfx('ui');
-    renderProdMenu();
-  });
+  mfBindNativePress($('upBtn'),()=>mfBuildingUpgradePress(false));
   mfBindNativePress($('bp_fire'),()=>{
     if(openBld<0) return;
     const B=blds[openBld];
@@ -2988,12 +3090,7 @@ function wire(){
     renderBldPanel(); sfx('ui');
     toast('🎯 '+BT[B.type].name+' targeting: '+['nearest enemy','air first','strongest first'][B.prio]);
   });
-  mfBindNativePress($('bp_up'),()=>{
-    if(openBld<0) return;
-    const err=startUpgrade(openBld);
-    if(err) toast(err); else sfx('ui');
-    renderBldPanel();
-  });
+  mfBindNativePress($('bp_up'),()=>mfBuildingUpgradePress(false));
   mfBindTap($('bp_repair'),mfBuildingRepairPress);
   mfBindTap($('bp_sell'),mfBuildingRecyclePress);
   mfBindNativePress($('armyBtn'),()=>{ selectArmy(); });

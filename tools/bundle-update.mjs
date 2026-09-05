@@ -6,7 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {buildRuntimeCompatibility, BALANCE_AUTHORITY_V1,
+import {buildRuntimeCompatibility,canonicalRuntimeArtifacts,BALANCE_AUTHORITY_V1,
         RUNTIME_COMPATIBILITY_GLOBAL} from './runtime-compatibility.mjs';
 
 const root=join(dirname(fileURLToPath(import.meta.url)),'..');
@@ -71,6 +71,8 @@ const otaBinaryAssets=[
   'assets/terrain/locations/ashland-basalt-normal-rough-v1.webp',
   'assets/terrain/locations/vespera-crust-albedo-v1.webp',
   'assets/terrain/locations/vespera-crust-normal-rough-v1.webp',
+  'assets/terrain/locations/brood-infested-soil-albedo-v1.webp',
+  'assets/terrain/locations/brood-infested-soil-normal-rough-v1.webp',
   'assets/textures/vfx/mf-blast-flipbook-v4.png',
   'assets/textures/vfx/mf-collapse-dust-flipbook-v1.png',
   'assets/textures/vfx/mf-wreck-fire-flipbook-v1.png',
@@ -292,6 +294,7 @@ const runtimeCompatibility=buildRuntimeCompatibility({
   buildVersion:version,
   channel:'ota',
   manifestArtifacts:compatibleArtifacts,
+  canonicalArtifacts:canonicalRuntimeArtifacts(root,version),
   balancePaths:BALANCE_AUTHORITY_V1,
   excluded:['ota/00-runtime.js (descriptor carrier; self-reference)','artifacts.json (transport index)']
 });

@@ -13,13 +13,31 @@ function Need($condition,$message){ if(-not $condition){ throw $message } }
 foreach($name in @('Get-StringSha256','Copy-ReleaseChunks','New-ManifestFileEntry',
                    'Get-ReleasePayloadFingerprint','Get-ReleaseRuntimeFingerprint',
                    'Test-ReleasePayloadMatch','New-DeltaPayloadPlan',
-                   'Get-RemoteDatasetPathInfoMap','Get-ImmutableArtifactDisposition')){
+                   'Get-RemoteDatasetPathInfoMap','Get-ImmutableArtifactDisposition',
+                   'Get-ReleaseArtifactNamespace','Assert-UnpublishedManifestVersion')){
   $definition=$ast.Find({
     param($node)
     $node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $name
   },$true)
   Need ($null -ne $definition) "Publisher is missing $name"
   Invoke-Expression $definition.Extent.Text
+}
+
+# An unpublished revision changes only immutable locations, never the player
+# release version. Existing namespace bytes remain subject to the same guards.
+$ordinary=Get-ReleaseArtifactNamespace '1.33.74' ''
+$revision=Get-ReleaseArtifactNamespace '1.33.74' 'r2'
+Need ($ordinary.prefix -ceq 'v1.33.74' -and $ordinary.stem -ceq 'MASSFRONT-v1.33.74') 'Default artifact namespace changed'
+Need ($revision.prefix -ceq 'v1.33.74-candidate-r2') 'Revision OTA namespace is not distinct'
+Need (($revision.stem+'-mobile-install.apk') -ceq 'MASSFRONT-v1.33.74-candidate-r2-mobile-install.apk') 'Revision APK path is not distinct'
+foreach($bad in @('../r2','r0','r2/other','r2;upload')){
+  $refused=$false;try{$null=Get-ReleaseArtifactNamespace '1.33.74' $bad}catch{$refused=$true}
+  Need $refused "Unsafe artifact revision accepted: $bad"
+}
+Assert-UnpublishedManifestVersion ([pscustomobject]@{version='1.33.73'}) '1.33.74' 'prior fixture'
+foreach($liveVersion in @('1.33.74','1.33.75','invalid')){
+  $refused=$false;try{Assert-UnpublishedManifestVersion ([pscustomobject]@{version=$liveVersion}) '1.33.74' 'live fixture'}catch{$refused=$true}
+  Need $refused "Already-live or malformed release accepted: $liveVersion"
 }
 
 # Regression for the PowerShell 5.1/7 Invoke-RestMethod array shape that made a
@@ -194,17 +212,24 @@ $pinStep=$text.IndexOf('$pinState=Invoke-RestMethod')
 $pinnedClassVerify=$text.IndexOf('$pinnedPathInfo=Get-RemoteDatasetPathInfoMap')
 $pinnedVerify=$text.IndexOf('Pinned remote sha256 mismatch')
 $rangeVerify=$text.IndexOf('Assert-PinnedAdvertisedRanges $manifest')
-$finalManifestWrite=$text.LastIndexOf("WriteReleaseManifest 'update.json'")
-$historicalUpload=$text.IndexOf("Run 'Publish historical manifest'")
-$mirrorUpload=$text.IndexOf("Run 'Publish release manifest mirror'")
-$liveUpload=$text.IndexOf("Run 'Activate live updater last'")
+$pinnedCandidateWrite=$text.IndexOf('WriteReleaseManifest $pinnedCandidate $manifest')
 Need ($deltaArtifactUpload -ge 0 -and $deltaInventoryUpload -gt $deltaArtifactUpload) 'Delta inventory is not committed after its changed immutable artifacts'
 Need ($pinnedClassVerify -gt $pinStep -and $pinnedClassVerify -lt $pinnedVerify) 'OTA/APK/source classes are not independently proven at the pinned commit'
 Need ($pinStep -gt $deltaInventoryUpload -and $pinnedVerify -gt $pinStep) 'Uploaded artifacts are not commit-pinned and hash-verified before activation'
-Need ($rangeVerify -gt $pinnedVerify -and $finalManifestWrite -gt $rangeVerify) 'First/last pinned Range verification does not gate final manifest writes'
-Need ($finalManifestWrite -gt $pinnedVerify -and $historicalUpload -gt $finalManifestWrite) 'Final manifests are not rewritten after pinned remote verification'
-Need ($historicalUpload -gt $deltaInventoryUpload -and $mirrorUpload -gt $historicalUpload -and $liveUpload -gt $mirrorUpload) 'Immutable-first/manifests-last ordering was lost'
-Need ($text.LastIndexOf('& $Hf upload') -ge $liveUpload) 'Live activation is not the final Hugging Face upload'
+Need ($rangeVerify -gt $pinnedVerify -and $pinnedCandidateWrite -gt $rangeVerify) 'Pinned candidate is emitted before immutable byte/range verification'
+Need ($text.Contains('[switch]$UploadOnly')) 'Explicit immutable upload phase is missing'
+Need ($text.Contains('Need ($PrepareOnly -or $UploadOnly)')) 'Legacy implicit activation is still reachable'
+Need (-not $text.Contains("WriteReleaseManifest 'update.json'")) 'Publisher modifies the live local activation pointer'
+Need (-not $text.Contains("Run 'Publish historical manifest'")) 'Publisher uploads historical manifest before mirror verification'
+Need (-not $text.Contains("Run 'Publish release manifest mirror'")) 'Publisher uploads a client-visible mirror alias'
+Need (-not $text.Contains("Run 'Activate live updater last'")) 'Publisher can activate without prepared mirror verification'
+Need ($text.IndexOf('Check canonical workspace writer gate') -lt $text.IndexOf('$plain=@(')) 'Source version writes bypass workspace freeze guard'
+Need ($text.IndexOf('Check artifact revision remains unpublished before build') -lt $text.IndexOf('$plain=@(')) 'Artifact revision live-state guard runs after source mutation'
+Need ($text.IndexOf('Recheck artifact revision remains unpublished before upload') -lt $uploadBoundary) 'Artifact revision live-state guard does not gate uploads'
+Need (-not $text.Contains('"v$Version/$')) 'OTA immutable namespace is still hardcoded to the first candidate'
+Need (-not $text.Contains('"MASSFRONT-v$Version-mobile-install.apk"')) 'APK immutable namespace is still hardcoded to the first candidate'
+Need ($text.Contains('$otaRemotePrefix/artifacts.json')) 'Artifact inventory does not follow the explicit revision namespace'
+Need ($text.Contains('$pinnedArtifactPaths=@($publishFiles | ForEach-Object { "$otaRemotePrefix/')) 'Pinned proof does not follow revision namespace'
 
 Need (-not $text.Contains('?pin_guard=')) 'Hub dataset HEAD lookup must not append an unsupported pin_guard query parameter'
 

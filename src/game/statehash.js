@@ -1,6 +1,7 @@
 /* Authoritative gameplay divergence digest. Camera, selection, particles,
    animation, audio and performance state are intentionally outside this file. */
 const MF_SH_MAGIC='massfront-gameplay-state-v1',MF_SH_HEX=/^[0-9a-f]{64}$/;
+const MF_SH_TEXT=new TextEncoder(),MF_SH_TEXT_CACHE=new Map(),MF_SH_UNITS=[],MF_SH_SHOTS=[];
 function MF_SH_error(code){const e=new Error(code);e.code=code;return e;}
 function MF_SH_writer(){
   let out=new Uint8Array(65536),view=new DataView(out.buffer),size=0,nextRef=1;const refs=new WeakMap();
@@ -17,27 +18,50 @@ function MF_SH_writer(){
   };
   return {u8(v){reserve(1);out[size++]=v&255;},u32(v){reserve(4);view.setUint32(size,v>>>0,true);size+=4;},
     f64(v){if(!Number.isFinite(v))throw MF_SH_error('gameplay_state_nonfinite');reserve(8);view.setFloat64(size,Object.is(v,-0)?0:v,true);size+=8;},
-    str(v){const a=new TextEncoder().encode(String(v));this.u32(a.length);reserve(a.length);out.set(a,size);size+=a.length;},
+    num(v){this.u8(3);this.f64(v);},
+    str(v){
+      const s=String(v);let a=MF_SH_TEXT_CACHE.get(s);
+      if(!a){a=MF_SH_TEXT.encode(s);if(s.length<=64&&MF_SH_TEXT_CACHE.size<512)MF_SH_TEXT_CACHE.set(s,a);}
+      this.u32(a.length);reserve(a.length);out.set(a,size);size+=a.length;
+    },
+    typed(v){
+      if(v.length>1000000)throw MF_SH_error('gameplay_state_array_bound');
+      this.u8(5);this.str(v.constructor.name);this.u32(v.length);
+      for(let i=0;i<v.length;i++)this.f64(v[i]);
+    },
     ref(v){if(refs.has(v))return [true,refs.get(v)];const id=nextRef++;refs.set(v,id);return [false,id];},
     finish(){return out.slice(0,size);}};
 }
 function MF_SH_value(w,v,depth=0){
   if(depth>32)throw MF_SH_error('gameplay_state_depth');
   if(v===null){w.u8(0);return;}if(typeof v==='boolean'){w.u8(v?2:1);return;}
-  if(typeof v==='number'){w.u8(3);w.f64(v);return;}if(typeof v==='string'){w.u8(4);w.str(v);return;}
-  if(ArrayBuffer.isView(v)){if(v.length>1000000)throw MF_SH_error('gameplay_state_array_bound');w.u8(5);w.str(v.constructor.name);w.u32(v.length);for(let i=0;i<v.length;i++)w.f64(v[i]);return;}
+  if(typeof v==='number'){w.num(v);return;}if(typeof v==='string'){w.u8(4);w.str(v);return;}
+  if(ArrayBuffer.isView(v)){w.typed(v);return;}
   if(Array.isArray(v)){if(v.length>65536)throw MF_SH_error('gameplay_state_array_bound');const r=w.ref(v);if(r[0]){w.u8(8);w.u32(r[1]);return;}w.u8(6);w.u32(r[1]);w.u32(v.length);for(const x of v)MF_SH_value(w,x===undefined?null:x,depth+1);return;}
   if(typeof v==='object'){const r=w.ref(v);if(r[0]){w.u8(8);w.u32(r[1]);return;}const keys=Object.keys(v).filter(k=>v[k]!==undefined&&typeof v[k]!=='function').sort();if(keys.length>512)throw MF_SH_error('gameplay_state_object_bound');w.u8(7);w.u32(r[1]);w.u32(keys.length);for(const k of keys){w.str(k);MF_SH_value(w,v[k],depth+1);}return;}
   throw MF_SH_error('gameplay_state_type');
 }
 function MF_SH_named(w,n,v){w.str(n);MF_SH_value(w,v);}
-function MF_SH_indexed(w,n,a,ids){w.str(n);w.u32(ids.length);for(const i of ids){w.u32(i);MF_SH_value(w,a[i]);}}
+function MF_SH_indexed(w,n,a,ids){
+  w.str(n);w.u32(ids.length);
+  if(ArrayBuffer.isView(a)){for(const i of ids){w.u32(i);w.num(a[i]);}return;}
+  for(const i of ids){w.u32(i);MF_SH_value(w,a[i]);}
+}
+function MF_SH_indexedRange(w,n,a,count){
+  w.str(n);w.u32(count);
+  if(ArrayBuffer.isView(a)){for(let i=0;i<count;i++){w.u32(i);w.num(a[i]);}return;}
+  for(let i=0;i<count;i++){w.u32(i);MF_SH_value(w,a[i]);}
+}
 function MF_SH_fields(o,names){const r={};if(o)for(const n of names)if(o[n]!==undefined&&typeof o[n]!=='function')r[n]=o[n];return r;}
 function MF_SH_snapshot(){
   if(typeof tick==='undefined'||typeof unitHigh==='undefined'||typeof ualive==='undefined'||typeof ugen==='undefined'||typeof blds==='undefined'||typeof pHigh==='undefined'||typeof palive==='undefined')throw MF_SH_error('gameplay_state_unavailable');
   if(!Number.isInteger(unitHigh)||unitHigh<0||unitHigh>65536||!Number.isInteger(pHigh)||pHigh<0||pHigh>65536)throw MF_SH_error('gameplay_state_pool_bound');
-  const w=MF_SH_writer(),allUnits=[],units=[],shots=[];for(let i=0;i<unitHigh;i++){allUnits.push(i);if(ualive[i])units.push(i);}for(let i=0;i<pHigh;i++)if(palive[i])shots.push(i);
-  w.str(MF_SH_MAGIC);MF_SH_named(w,'tick',tick);MF_SH_named(w,'unitHigh',unitHigh);MF_SH_named(w,'unitFree',typeof freeList!=='undefined'?freeList:[]);MF_SH_indexed(w,'ugen',ugen,allUnits);MF_SH_indexed(w,'ualive',ualive,allUnits);
+  const w=MF_SH_writer(),units=MF_SH_UNITS,shots=MF_SH_SHOTS;units.length=0;shots.length=0;
+  /* Slot generations/alive flags stay high-water and index ordered because the
+     multiplayer digest must detect dead-slot reuse. Live payloads can reuse a
+     dense scratch list without allocating two new index arrays every second. */
+  for(let i=0;i<unitHigh;i++)if(ualive[i])units.push(i);for(let i=0;i<pHigh;i++)if(palive[i])shots.push(i);
+  w.str(MF_SH_MAGIC);MF_SH_named(w,'tick',tick);MF_SH_named(w,'unitHigh',unitHigh);MF_SH_named(w,'unitFree',typeof freeList!=='undefined'?freeList:[]);MF_SH_indexedRange(w,'ugen',ugen,unitHigh);MF_SH_indexedRange(w,'ualive',ualive,unitHigh);
   const ua=[['ux',ux],['uy',uy],['uang',uang],['uturr',uturr],['ugunPitch',ugunPitch],['utx',utx],['uty',uty],['uhp',uhp],['uhpm',uhpm],['ucool',ucool],['ubuff',ubuff],['ustomp',ustomp],['ureclaim',ureclaim],['uclassBuff',uclassBuff],['uclassBuffT',uclassBuffT],['ubroodLed',ubroodLed],['uMineT',uMineT],['uMineNode',uMineNode],['utype',utype],['uteam',uteam],['uAllyBase',uAllyBase],['uCmd',uCmd],['ustate',ustate],['utgt',utgt],['utgtg',utgtg],['ukills',ukills],['uvet',uvet],['ushielded',ushielded],['ufield',ufield],['uhaz',uhaz],['ufireT',ufireT],['umarch',umarch],['ustun',ustun],['uHurtT',uHurtT],['uheal',uheal],['uStuckFor',uStuckFor],['upx1',upx1],['upy1',upy1],['upx2',upx2],['upy2',upy2],['uPatrolRoute',uPatrolRoute],['uPatrolStep',uPatrolStep],['uPatrolSlot',uPatrolSlot],['uMoveCohort',uMoveCohort],['uCohesion',uCohesion],['uhold',uhold],['uGuard',uGuard],['uGuardG',uGuardG],['uQkind',uQkind],['umode',umode],['umodeT',umodeT],['uCrash',uCrash],['uCbreak',uCbreak],['ualt',ualt],['uCvx',uCvx],['uCvy',uCvy],['uCvz',uCvz],['uCdPitch',uCdPitch],['uCdRoll',uCdRoll],['uCspin',uCspin],['uCtime',uCtime]];
   for(const x of ua)MF_SH_indexed(w,x[0],x[1],units);
   const opt=[['uUtilityJob',typeof uUtilityJob!=='undefined'?uUtilityJob:null],['uUtilityGoalX',typeof uUtilityGoalX!=='undefined'?uUtilityGoalX:null],['uUtilityGoalY',typeof uUtilityGoalY!=='undefined'?uUtilityGoalY:null],['uUtilityAuto',typeof uUtilityAuto!=='undefined'?uUtilityAuto:null],['uUtilityProgressX',typeof uUtilityProgressX!=='undefined'?uUtilityProgressX:null],['uUtilityProgressY',typeof uUtilityProgressY!=='undefined'?uUtilityProgressY:null],['uUtilityProgressAt',typeof uUtilityProgressAt!=='undefined'?uUtilityProgressAt:null],['uUtilityRetryAt',typeof uUtilityRetryAt!=='undefined'?uUtilityRetryAt:null],['uAirGen',typeof uAirGen!=='undefined'?uAirGen:null],['uAirTarget',typeof uAirTarget!=='undefined'?uAirTarget:null],['uAirTargetG',typeof uAirTargetG!=='undefined'?uAirTargetG:null],['uAirEscort',typeof uAirEscort!=='undefined'?uAirEscort:null],['uAirEscortG',typeof uAirEscortG!=='undefined'?uAirEscortG:null],['uAirBand',typeof uAirBand!=='undefined'?uAirBand:null],['uAirBandReq',typeof uAirBandReq!=='undefined'?uAirBandReq:null],['uAirMission',typeof uAirMission!=='undefined'?uAirMission:null],['uAirHomeMission',typeof uAirHomeMission!=='undefined'?uAirHomeMission:null],['uAirPhase',typeof uAirPhase!=='undefined'?uAirPhase:null],['uAirFire',typeof uAirFire!=='undefined'?uAirFire:null],['uAirScanClock',typeof uAirScanClock!=='undefined'?uAirScanClock:null],['uAirAlt',typeof uAirAlt!=='undefined'?uAirAlt:null],['uAirPhaseT',typeof uAirPhaseT!=='undefined'?uAirPhaseT:null],['uAirAnchorX',typeof uAirAnchorX!=='undefined'?uAirAnchorX:null],['uAirAnchorY',typeof uAirAnchorY!=='undefined'?uAirAnchorY:null],['uAirGoalX',typeof uAirGoalX!=='undefined'?uAirGoalX:null],['uAirGoalY',typeof uAirGoalY!=='undefined'?uAirGoalY:null],['uAirAimX',typeof uAirAimX!=='undefined'?uAirAimX:null],['uAirAimY',typeof uAirAimY!=='undefined'?uAirAimY:null],['uAirVx',typeof uAirVx!=='undefined'?uAirVx:null],['uAirVy',typeof uAirVy!=='undefined'?uAirVy:null],['uAirCourse',typeof uAirCourse!=='undefined'?uAirCourse:null],['uAirYawRate',typeof uAirYawRate!=='undefined'?uAirYawRate:null],['uAirPass',typeof uAirPass!=='undefined'?uAirPass:null],['uAirReleaseN',typeof uAirReleaseN!=='undefined'?uAirReleaseN:null],['uAirReacquireN',typeof uAirReacquireN!=='undefined'?uAirReacquireN:null],['uAirSortie',typeof uAirSortie!=='undefined'?uAirSortie:null]];

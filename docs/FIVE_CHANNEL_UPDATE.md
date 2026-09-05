@@ -85,7 +85,13 @@ signing or upload gate.
 - Upload packed `www/` (not the OTA JS).
 - `publish-hf-release.ps1` does **not** do this. Do it explicitly or write “Space skipped.”
 
-Do not POST to `7924` unless the user asks. Cloudflare Workers update path is obsolete.
+Do not POST to `7924` unless the user asks. That older local publishing bridge
+is not the current pipeline. The configured Cloudflare update Worker/R2 mirror
+is the redirect-free delivery surface for both delta and full recovery files.
+Stage immutable HF artifacts with `-UploadOnly`, prepare and verify the complete
+mirror, then activate its pointer and matching HF manifests with explicit
+expected-prior version/root guards. `-PrepareOnly` never publishes. Neither
+publisher mode implicitly activates Stable.
 
 ---
 

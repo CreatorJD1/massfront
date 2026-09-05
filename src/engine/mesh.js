@@ -2165,7 +2165,14 @@ void main(){
      that fringe looked like a translucent grey fog sheet. textureGrad keeps
      the authored road footprint, mip choice and smooth termination values,
      while the derivative-aware threshold below still controls edge width. */
-  float mRaw=textureGrad(uGMask,vMapUV,dMx,dMy).r;
+  vec2 surfaceMask=textureGrad(uGMask,vMapUV,dMx,dMy).rg;
+  float mRaw=surfaceMask.r;
+  float creepMask=smoothstep(0.03,0.72,surfaceMask.g);
+  /* Organic G is presentation precedence, not a destructive rewrite of the
+     planner-owned hardscape R. Where creep has grown over an old apron it
+     suppresses every downstream kerb/pave cue while PASS keeps its original
+     authoritative surface data. */
+  mRaw*=1.0-creepMask;
   /* A formed road edge is CRISP: the wide threshold band + strong noise that
      blended terminations also smeared every straight kerb into mush. The
      band tightens to ~1 texel and the noise bites at a third strength — ends
@@ -2322,6 +2329,10 @@ void main(){
     float yard=(1.0-smoothstep(0.012,0.055,paintGreen))*cityYard;
     grassMix*=1.0-yard;
     soilMix*=1.0-yard*0.70;
+    /* Brood creep occupies the organic G channel; hardscape remains solely R.
+       It reuses the biome's existing soil PBR pair, adding no sampler or pass. */
+    grassMix*=1.0-creepMask;
+    soilMix=mix(soilMix,1.0,creepMask);
     vec4 aGround=texture(uGroundT,uvA), aSoil=texture(uSoilT,uvA);
     vec4 aGrass=texture(uGrassT,uvA*1.35), aPave=texture(uPaveT,wxz*0.030);
     aGround.rgb*=uGroundTint; aSoil.rgb*=uSoilTint;
@@ -2354,6 +2365,12 @@ void main(){
        material profiles above. */
     float macroL=dot(base,vec3(0.2126,0.7152,0.0722));
     vec3 naturalOut=mat.rgb*(0.90+macroL*0.10);
+    /* Creep's authored purple tissue and veins live in the macro RGB. Merely
+       selecting SOIL through G turned that art back into ordinary brown Aelos
+       ground, so retain the painted colour while borrowing the soil sheet's
+       restrained PBR variation. */
+    vec3 creepOut=base*(0.82+texL*0.30)+(mat.rgb-vec3(texL))*0.12;
+    naturalOut=mix(naturalOut,creepOut,creepMask);
     vec3 hardOut=base*(0.82+texL*0.30)+(mat.rgb-vec3(texL))*0.22;
     float splat=closeG*(0.78+0.20*qMed);
     base=mix(base,mix(naturalOut,hardOut,cityHard),clamp(splat,0.0,0.98));

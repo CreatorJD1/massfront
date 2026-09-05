@@ -28,7 +28,7 @@ async function harness(){
     ];
     window.MFSocialUI={state:{lobby:{rules:{mode:'skirmish',slots:2,map:'auto'}}}};
     window.__registered=null;window.__submitted=[];window.__toasts=[];window.__matchState='running';window.__forceServiceReject='';
-    window.MFMatchRuntime={registerConsumer:v=>(window.__registered=v,true),status:()=>({state:__matchState,seat:1}),
+    window.MFMatchRuntime={registerConsumer:v=>(window.__registered=v,true),status:()=>({state:__matchState,seat:1,started:true,ended:false}),
       submitCommands:(commands,delay)=>{__submitted.push(JSON.parse(JSON.stringify(commands)));return {seq:__submitted.length,targetTick:9,count:commands.length};}};
     function findLand(x,y){return [x,y]} function findWater(x,y){return [x,y]}
     function battlefieldClampPoint(x,y){return [x,y]} function requestField(x,y,naval,clearance){return Math.round(x*3+y*5+(naval?7:0)+clearance)}
@@ -71,7 +71,7 @@ async function largeHarness(){
     const AI={allies:[],bases:[{slot:5}]};
     window.MFSocialUI={state:{lobby:{rules:{mode:'skirmish',slots:2,map:'auto'}}}};
     window.__submitted=[];window.__toasts=[];window.__baseCalls=0;window.__registered=null;
-    window.MFMatchRuntime={registerConsumer:v=>(window.__registered=v,true),status:()=>({state:'running',seat:1}),
+    window.MFMatchRuntime={registerConsumer:v=>(window.__registered=v,true),status:()=>({state:'running',seat:1,started:true,ended:false}),
       submitCommands:(commands,delay)=>{window.__submitted.push(JSON.parse(JSON.stringify(commands)));return {seq:1,targetTick:9,count:commands.length};}};
     function formationMembers(){const out=[];for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i])out.push(i);return out;}
     function orderMove(){window.__baseCalls++;return false;}
@@ -94,7 +94,7 @@ const tick={tick:9,commands:[
 try{
   const a=await harness(),b=await harness();
   check('consumer registers through the real MFMatchRuntime seam',await a.evaluate(()=>window.__registered===window.MFMatchCommandConsumer));
-  check('adapter exposes only the explicit versioned command vocabulary',await a.evaluate(()=>MFMatchCommandConsumer.schemaVersion===1&&MFMatchCommandConsumer.supported.join(',')==='move,stop,hold,attack,guard,build,produce,research,commander,repair,recycle'));
+  check('adapter exposes only the explicit versioned command vocabulary',await a.evaluate(()=>MFMatchCommandConsumer.schemaVersion===1&&MFMatchCommandConsumer.supported.join(',')==='move,stop,hold,attack,guard,build,produce,research,commander,repair,recycle,upgrade'));
   check('skirmish seats resolve to distinct simulation authorities',await a.evaluate(()=>JSON.stringify([MFMatchCommandConsumer.seatAuthority(1),MFMatchCommandConsumer.seatAuthority(2)])===JSON.stringify([{seat:1,team:0,slot:-1},{seat:2,team:1,slot:5}])));
   check('public Repair and Recycle helpers submit exact stable building identities',await a.evaluate(()=>{
     const C=MFMatchCommandConsumer,before=__submitted.length;

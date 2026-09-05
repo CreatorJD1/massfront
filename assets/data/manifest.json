@@ -51,6 +51,7 @@
     "src/engine/models-units-legion.js",
     "src/engine/models-units-syndicate.js",
     "src/engine/models-units-brood.js",
+    "src/engine/brood-crowd.js",
     "src/engine/modkit.js",
     "src/engine/physics.js",
     "src/engine/cloudfx.js",

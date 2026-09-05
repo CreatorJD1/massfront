@@ -2212,6 +2212,29 @@ function mfPackMaps(kit,slot){
     return (q==='1'||q===p.assetSkin)?p.maps:null;
   }catch(e){ return null; }
 }
+/* A weapon that fires from the middle of its own chassis does not read as
+   firing. Most unit models never declared a muzzle offset and silently took
+   the ||0 below, so their flash and tracer origin sat inside the hull rather
+   than at the barrel: brood 29/29, syndicate 19/21, legion 19/21, nova 7/16
+   model returns had no muzzle at all.
+
+   Hand-authoring ~45 numbers needs per-model barrel knowledge, but the
+   geometry already carries it: barrels are built along +X (cylX), so the
+   forward extent of the turret -- or of the hull, for a turretless chassis --
+   IS the barrel tip. Vertices are 12 floats with position first (see VFLOATS
+   / the InstMesh attribute layout), so this is one scan of data already built.
+
+   A declared muzzle always wins; this only ever replaces the zero. */
+function mfDeriveMuzzle(g){
+  const src=(g&&g.tur&&g.tur.v&&g.tur.v.length)?g.tur:(g&&g.hull);
+  const v=src&&src.v;
+  if(!v||!v.length) return 0;
+  let mx=0;
+  for(let i=0;i<v.length;i+=12) if(v[i]>mx) mx=v[i];
+  /* Just inside the tip, so the flash reads as leaving the barrel instead of
+     detaching from it. */
+  return mx>0?mx*0.92:0;
+}
 function initFactionKits(){
   mergeFactionUnitKits();
   for(const k in FAC_KIT){
@@ -2223,7 +2246,7 @@ function initFactionKits(){
         const g=fn();
         cache[fn.name]={hull:new InstMesh(gl,g.hull,900), tur:g.tur?new InstMesh(gl,g.tur,900):null,
                         s:g.s||1, turH:g.turH||0, air:g.air||0,
-                        muzzle:g.muzzle||0, muzzleZ:g.muzzleZ||0,
+                        muzzle:g.muzzle||mfDeriveMuzzle(g), muzzleZ:g.muzzleZ||0,
                         propulsion:g.propulsion||(k==='horde'&&(g.air||(typeof TYPES!=='undefined'&&TYPES[ty]&&TYPES[ty].air))
                           ?{mode:'organic-none',sockets:[]}:null)};
         /* Per-asset baked maps, when this slot declares a triplet AND the flag

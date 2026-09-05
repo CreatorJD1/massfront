@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.73';
+const APP_VERSION = '1.33.74';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "Hotfix — Bug fixes: selecting a unit no longer hides the PLATOONS row, so the per-type unit stack bar is usable again. Tap a stack card to select every unit of that type at once, or tap it twice to send the camera to them. Your Commander now shows live match XP on the portrait, so you can see progress toward the next level and the abilities it unlocks. Reminder: selecting one of your structures opens its menu, where turrets, generators, extractors and factories can be upgraded for mass and energy.";
+const APP_NOTES = "System — Features: upgrade every owned building of the selected type from its building panel. Construction and production now show progress and faction-colored activity effects. Utility units show their active support role. Bug fixes: restored Brood organic foundations and connecting infestation veins; corrected production timing, healing cadence, and terrain refreshes. Multiplayer reconnects pause and replay missed commands without charging twice. Release delivery now verifies complete recovery files before activating an update. Upcoming: further large-army performance improvements and optional content packs.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,
@@ -1624,9 +1624,9 @@ async function updTransferCleanup(transfer,files,keepFiles){
   await updStoreDelete(keys);
 }
 async function updReadResponseBytes(response,limit,path,run,ac,onRead){
-  const parts=[]; let n=0;
+  let n=0;
   if(response.body&&response.body.getReader){
-    const reader=response.body.getReader();
+    const reader=response.body.getReader(),out=new Uint8Array(limit);
     for(;;){
       let result;
       try{ result=await reader.read(); }
@@ -1639,9 +1639,12 @@ async function updReadResponseBytes(response,limit,path,run,ac,onRead){
       n+=result.value.byteLength;
       if(n>limit) throw new Error(path+': download exceeded its declared size ('+
         fmtBytes(n)+' of '+fmtBytes(limit)+')');
-      parts.push(result.value);
+      out.set(result.value,n-result.value.byteLength);
       if(onRead) onRead(result.value.byteLength);
     }
+    /* Successful responses return the one preallocated buffer. Only the error
+       path for a short response copies its partial prefix for diagnostics. */
+    return n===limit?out:out.slice(0,n);
   }else{
     let buffer;
     try{ buffer=await response.arrayBuffer(); }
@@ -1652,12 +1655,9 @@ async function updReadResponseBytes(response,limit,path,run,ac,onRead){
     const bytes=new Uint8Array(buffer); updAssertDownload(run,ac);
     if(bytes.byteLength>limit) throw new Error(path+': download exceeded its declared size ('+
       fmtBytes(bytes.byteLength)+' of '+fmtBytes(limit)+')');
-    parts.push(bytes); n=bytes.byteLength;
     if(onRead) onRead(bytes.byteLength);
+    return bytes;
   }
-  const out=new Uint8Array(n); let at=0;
-  for(const part of parts){ out.set(part,at); at+=part.byteLength; }
-  return out;
 }
 function updTransportFailure(message,code,retryable,status){
   const error=new Error(message); error.code=code;
@@ -1864,29 +1864,34 @@ async function updFetchArtifactPart(src,m,file,chunk,index,count,run,ac,onRead){
 async function updDownloadArtifact(m,file,transfer,journal,src,run,ac,onBytes){
   const saved=await updTransferGetFile(transfer,file,run,ac);
   if(saved!=null){ onBytes(file.size,true); return saved; }
-  const table=updChunkTable(file),parts=new Array(table.length);
+  const table=updChunkTable(file);let all=null;
   for(let i=0;i<table.length;i++){
     let bytes=await updTransferGetChunk(transfer,file,i,run,ac);
-    if(bytes){ parts[i]=bytes; onBytes(table[i].size,true); continue; }
+    if(bytes){
+      if(!all) all=new Uint8Array(file.size);
+      all.set(bytes,table[i].offset);onBytes(table[i].size,true);continue;
+    }
     const fetched=await updFetchArtifactPart(src,m,file,table[i],i,table.length,run,ac,
       n=>onBytes(n,false));
     if(fetched.whole){
+      /* A legacy host ignored Range, but the complete response already passed
+         its authoritative whole-file hash. Verify every declared range without
+         retaining another file-sized parts array, then promote the same bytes.
+         The old path copied the response into N slices, then copied them again
+         into `all`, briefly holding roughly three payloads before UTF-8 decode. */
       for(let j=0;j<table.length;j++){
-        const c=table[j],part=fetched.bytes.slice(c.offset,c.offset+c.size);
+        const c=table[j],part=fetched.bytes.subarray(c.offset,c.offset+c.size);
         await updVerifyHash(part,c.sha256,file.path+' range '+j,run,ac);
-        parts[j]=part;
-        await updTransferPutChunk(transfer,file,j,part,journal);
       }
-      break;
+      const text=new TextDecoder().decode(fetched.bytes);
+      await updTransferPutFile(transfer,file,text,journal);updAssertDownload(run,ac);
+      return text;
     }
-    parts[i]=fetched.bytes;
+    if(!all) all=new Uint8Array(file.size);
+    all.set(fetched.bytes,table[i].offset);
     await updTransferPutChunk(transfer,file,i,fetched.bytes,journal);
   }
-  const all=new Uint8Array(file.size); let at=0;
-  for(let i=0;i<parts.length;i++){
-    if(!parts[i]) throw new Error(file.path+': verified range is missing');
-    all.set(parts[i],at); at+=parts[i].byteLength;
-  }
+  if(!all||all.byteLength!==file.size) throw new Error(file.path+': verified range is missing');
   await updVerifyHash(all,file.sha256,file.path,run,ac);
   const text=new TextDecoder().decode(all);
   await updTransferPutFile(transfer,file,text,journal); updAssertDownload(run,ac);
@@ -2677,8 +2682,12 @@ function mfRuntimeCompatibilityState(){
   const raw=w&&w.__MASSFRONT_PATCHED;
   if(raw!=null&&String(raw)!==''){
     const version=String(raw);
+    /* boot.js sets this marker only after it has proved the installed payload
+       is newer than that device's immutable packaged revision. OTA source then
+       carries the target APP_VERSION itself, so comparing target to target here
+       incorrectly rejected every healthy active patch as "not newer". */
     if(!MF_RUNTIME_COMPAT_VERSION_RE.test(version)||
-       !mfRuntimeCompatibilityVersionNewer(version,APP_VERSION))
+       version!==APP_VERSION&&!mfRuntimeCompatibilityVersionNewer(version,APP_VERSION))
       return {kind:'invalid',version,key:'invalid:'+version};
     return {kind:'ota',version,key:'ota:'+version+':'+String(w.__MASSFRONT_PATCH_AT||'')+
       ':'+String(w.__MASSFRONT_PATCH_CHANNEL||'stable')};

@@ -136,11 +136,12 @@ function econExpectedAiPay(B,dt){
   }
   if(B.queue&&B.queue.length&&typeof TYPES!=='undefined'){
     const t=B.queue[0],T=TYPES[t]; if(!T||!T.bt) return null;
-    const tractor=B.tractorT>0?1+.22*Math.min(2,B.tractorN||1):1;
-    const facSpeed=(typeof factionDoctrineBuildSpeedMul==='function')?factionDoctrineBuildSpeedMul(1):1;
-    const fort=(typeof fortOf==='function')?fortOf(1).prod:1;
-    const speed=(typeof aiBuildMult!=='undefined'?aiBuildMult:1)*facSpeed*(1+0.12*Math.min(2,B.adj||0))*fort*tractor;
-    const frac=dt*speed/T.bt;
+    /* Predict the exact authoritative work rate used by bldTick. Keeping the
+       debit look-ahead on the same helper prevents AI wallets from approving
+       the old fast bill and then stalling a deliberately slower queue. */
+    const speed=(typeof mfProductionSpeed==='function')?mfProductionSpeed(B,T):
+      (typeof aiBuildMult!=='undefined'?aiBuildMult:1);
+    const frac=Math.min(Math.max(0,T.bt-(B.prodT||0)),dt*speed)/T.bt;
     const facCost=(typeof factionDoctrineUnitCost==='function')?factionDoctrineUnitCost(T,1):{m:T.cm,e:T.ce};
     return {m:facCost.m*frac,e:facCost.e*frac};
   }

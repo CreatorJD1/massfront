@@ -10,6 +10,7 @@
      attribute writes are not. */
   function mfCinSetClass(el,name){ if(el&&name&&!el.classList.contains(name)) el.classList.add(name); }
   function mfCinSetClasses(el){ for(var i=1;i<arguments.length;i++) mfCinSetClass(el,arguments[i]); }
+  function mfCinToggleClass(el,name,on){ if(el&&el.classList.contains(name)!==!!on)el.classList.toggle(name,!!on); }
   function mfCinSetAttr(el,key,value){
     if(!el) return; var next=String(value);
     if(el.getAttribute(key)!==next) el.setAttribute(key,next);
@@ -459,20 +460,20 @@
       var on=!!(panel&&!panel.hidden&&panel.style.display==='block');
       if(on&&active==='none')active=surfaces[i][1];
       if(panel){
-        panel.classList.toggle('mfCinematicSurfaceActive',on);
+        mfCinToggleClass(panel,'mfCinematicSurfaceActive',on);
         mfCinSetAttr(panel,'data-mf-active',on?'true':'false');
       }
     }
     if(context)mfCinSetAttr(context,'data-active-surface',active);
     mfCinSetAttr(body,'data-mf-hud-surface',active);
-    body.classList.toggle('mfCinematicContextOpen',active!=='none');
+    mfCinToggleClass(body,'mfCinematicContextOpen',active!=='none');
   }
   function mfCinematicSyncDeck(){
     var tabs=document.getElementById('hudDeckTabs');if(!tabs)return;
     var buttons=tabs.querySelectorAll('[data-deck]'),active='orders';
     for(var i=0;i<buttons.length;i++){
       var on=buttons[i].getAttribute('aria-selected')==='true'||buttons[i].classList.contains('on');
-      buttons[i].classList.toggle('mfCinematicDeckActive',on);
+      mfCinToggleClass(buttons[i],'mfCinematicDeckActive',on);
       mfCinSetAttr(buttons[i],'data-mf-active',on?'true':'false');
       if(on)active=buttons[i].getAttribute('data-deck')||active;
     }
@@ -502,6 +503,21 @@
        guide may put UGA in the shared receiver chrome. */
     var link=who&&String(who.textContent||'').trim().toUpperCase()==='KEEL'?'uga-keel':'command';
     if(tx.getAttribute('data-mf-link')!==link)mfCinSetAttr(tx,'data-mf-link',link);
+  }
+  function mfCinematicInlineVisible(id){
+    var el=document.getElementById(id);return !!(el&&!el.hidden&&el.style.display!=='none');
+  }
+  function mfCinematicSyncVisibility(){
+    var body=document.body,secondary='none',rows=['tacRow','grpRow','hotSlots','camRow'];
+    for(var i=0;i<rows.length;i++)if(mfCinematicInlineVisible(rows[i])){secondary=rows[i];break;}
+    var tx=document.getElementById('minimapWrap'),transmitting=!!(tx&&tx.dataset.transmission);
+    var consumables=mfCinematicInlineVisible('consHud'),mode=mfCinematicInlineVisible('modeBtn');
+    mfCinSetAttr(body,'data-mf-hud-secondary',secondary);
+    mfCinToggleClass(body,'mfHudSecondaryOpen',secondary!=='none');
+    mfCinToggleClass(body,'mfHudPlatoonsOpen',secondary==='grpRow');
+    mfCinToggleClass(body,'mfHudConsumablesOpen',consumables);
+    mfCinToggleClass(body,'mfHudModeOpen',mode);
+    mfCinToggleClass(body,'mfHudTransmissionOpen',transmitting);
   }
   function mfCinematicDecorateBaseFinder(){
     var panel=document.getElementById('baseFinder');if(!panel)return;
@@ -565,7 +581,7 @@
   function mfCinematicSync(){
     mfCinematicSyncFrame=0;
     mfCinematicEnsureStructure();mfCinematicSyncContext();mfCinematicSyncDeck();
-    mfCinematicSyncService();mfCinematicSyncTransmission();mfCinematicDecorateCommandIcons();mfCinematicDecorateVectorIcons();
+    mfCinematicSyncService();mfCinematicSyncTransmission();mfCinematicSyncVisibility();mfCinematicDecorateCommandIcons();mfCinematicDecorateVectorIcons();
     mfCinematicSyncModeIcon();mfCinematicDecorateBaseFinder();mfCinematicDecorateStateIcons();mfCinematicSyncCategoryOverflow();
     mfCinematicObserveDynamic();mfCinematicObserveIconHosts();
   }
@@ -588,6 +604,11 @@
   if(mfCinematicModeBtn)mfCinematicWatch.observe(mfCinematicModeBtn,{subtree:true,childList:true,characterData:true});
   mfCinematicObserveDynamic();
   mfCinematicObserveIconHosts();
+  /* Observe this target last. observe() updates an existing registration, so
+     the generic icon-host pass above must not erase the style/state filter. */
+  var mfCinematicCommandDock=document.getElementById('cmdbar');
+  if(mfCinematicCommandDock)mfCinematicWatch.observe(mfCinematicCommandDock,{subtree:true,childList:true,characterData:true,attributes:true,
+    attributeFilter:['style','class','hidden','aria-expanded','aria-selected','disabled','data-transmission','data-state']});
   function mfCinematicAuthoritySnapshot(selector,role,optional){
     var nodes=document.querySelectorAll(selector),node=nodes.length===1?nodes[0]:null;
     var actual=node&&node.getAttribute('data-mf-hud-role')||'';
@@ -661,6 +682,7 @@
       return {ready:document.body.classList.contains('mf-cinematic-hud'),
         surface:context&&context.getAttribute('data-active-surface')||'none',
         deck:tabs&&tabs.getAttribute('data-active-deck')||'orders',
+        secondary:document.body.getAttribute('data-mf-hud-secondary')||'none',
         repairCount:authority.repair.count,recycleCount:authority.recycle.count,
         buildCount:authority.build.count,rallyCount:authority.rally.count,repeatCount:authority.repeat.count,
         upgradeCount:authority.upgrade.count,heroCount:authority.hero.count,groupsCount:authority.groups.count,

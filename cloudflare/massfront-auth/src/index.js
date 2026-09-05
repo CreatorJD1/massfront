@@ -129,6 +129,7 @@ const MATCH_PROTOCOL_VERSION = 1;
 const MATCH_TICK_HZ = 30;
 const MATCH_INPUT_DELAY_MIN = 2;
 const MATCH_INPUT_DELAY_MAX = 3;
+const MATCH_INPUT_DELAY_MAX_13374 = 18;
 const MATCH_RECONNECT_GRACE_MS = 10 * 1000;
 const MATCH_MAX_MESSAGE_BYTES = 16 * 1024;
 const MATCH_MAX_COMMAND_BYTES = 2048;
@@ -136,8 +137,15 @@ const MATCH_MAX_COMMANDS_PER_BATCH = 8;
 const MATCH_MAX_MESSAGES_PER_SECOND = 45;
 const MATCH_MAX_COMMANDS_PER_SECOND = 180;
 const MATCH_MAX_BYTES_PER_SECOND = 128 * 1024;
+const MATCH_REPLAY_MAX_FRAMES = 128;
+const MATCH_REPLAY_MAX_BYTES = 4 * 1024 * 1024;
 const BUILD_VERSION_RE = /^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(?:-[a-z0-9](?:[a-z0-9.-]{0,30}[a-z0-9])?)?$/i;
 const HASH_256_RE = /^[a-f0-9]{64}$/i;
+function matchInputDelayMax(buildVersion){
+  const p=String(buildVersion||'').split('-',1)[0].split('.').map(Number);
+  return p.length===3&&(p[0]>1||p[0]===1&&(p[1]>33||p[1]===33&&p[2]>=74))
+    ?MATCH_INPUT_DELAY_MAX_13374:MATCH_INPUT_DELAY_MAX;
+}
 
 /* register: per-IP only — there is no account yet to key a second check on.
    login: per-IP AND per-email, so credential stuffing against one account
@@ -1855,10 +1863,12 @@ function matchSocketCredential(request){
   const protocols=String(request.headers.get('sec-websocket-protocol')||'')
     .split(',').map(v=>v.trim()).filter(Boolean);
   if(!protocols.includes('massfront.v1'))return null;
-  const credentials=protocols.filter(v=>/^mf-(?:seat|resume)\.[1-4]\.[a-f0-9]{64}$/.test(v));
+  const credentials=protocols.filter(v=>/^mf-(?:seat|resume)\.[1-4]\.[a-f0-9]{64}(?:\.(?:0|[1-9][0-9]{0,9}))?$/.test(v));
   if(credentials.length!==1||protocols.some(v=>v!=='massfront.v1'&&!credentials.includes(v)))return null;
-  const m=credentials[0].match(/^mf-(seat|resume)\.([1-4])\.([a-f0-9]{64})$/);
-  return m?{kind:m[1],seat:Number(m[2]),token:m[3],protocol:credentials[0]}:null;
+  const m=credentials[0].match(/^mf-(seat|resume)\.([1-4])\.([a-f0-9]{64})(?:\.(0|[1-9][0-9]{0,9}))?$/);
+  if(!m||m[4]!==undefined&&(m[1]!=='resume'||Number(m[4])>2147483647))return null;
+  return {kind:m[1],seat:Number(m[2]),token:m[3],protocol:credentials[0],
+    lastAppliedTick:m[4]===undefined?null:Number(m[4])};
 }
 async function handleMatchSocket(request,env,id){
   if(request.method!=='GET')return err(405,'method_not_allowed','Use GET with a WebSocket upgrade.');
@@ -2474,8 +2484,9 @@ async function handleModerationAppealResolve(request,env,id){
 export class MatchRoom {
   constructor(state,env){
     this.state=state;this.env=env;this.match=null;this.tick=0;this.started=false;
-    this.ended=false;this.nextTickAt=0;this.tickTimer=null;this.seats=new Map();
+    this.ended=false;this.endReason=null;this.nextTickAt=0;this.tickTimer=null;this.runningTicks=false;this.seats=new Map();
     this.commands=new Map();this.hashes=new Map();this.rates=new Map();this.strikes=new Map();
+    this.replayFrames=new Map();this.replayBytes=0;this.recoveryHistoryLost=false;
     try{
       state.storage.sql.exec('CREATE TABLE IF NOT EXISTS room_audit ('+
         'id INTEGER PRIMARY KEY AUTOINCREMENT,at INTEGER NOT NULL,event TEXT NOT NULL,'+
@@ -2485,15 +2496,26 @@ export class MatchRoom {
       let saved=null;try{saved=await state.storage.get('room');}catch(e){}
       if(saved&&saved.schema===1){
         this.match=saved.match||null;this.tick=Number(saved.tick)||0;
-        this.started=saved.started===true;this.ended=saved.ended===true;
-        for(const row of saved.seats||[])this.seats.set(Number(row.seat),Object.assign({},row,{connected:false}));
+        this.started=saved.started===true;this.ended=saved.ended===true;this.endReason=saved.endReason||null;
+        for(const row of saved.seats||[])this.seats.set(Number(row.seat),Object.assign({},row,{connected:false,resuming:false}));
         for(const row of saved.commands||[])this.commands.set(Number(row[0]),row[1]);
+        this.recoveryHistoryLost=this.started&&!this.ended;
       }
       const sockets=typeof state.getWebSockets==='function'?state.getWebSockets():[];
       for(const ws of sockets){
         let a=null;try{a=ws.deserializeAttachment();}catch(e){}
         const seat=a&&this.seats.get(Number(a.seat));
         if(seat&&Number(a.generation)===Number(seat.generation))seat.connected=true;
+      }
+      // The periodic snapshot is not an emitted-tick journal. Continuing it
+      // after eviction could repeat commands already applied by a live peer.
+      // End only this unrecoverable room; accounts and future rooms stay live.
+      if(this.recoveryHistoryLost){
+        this.ended=true;this.endReason='recovery_history_unavailable';
+        this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'matchEnd',
+          tick:this.tick,reason:this.endReason,winnerSeat:null});
+        for(const ws of sockets)this._closeAfterReject(ws,1011,'recovery history unavailable');
+        this._audit('match_end',null,this.endReason,1);this._persist();
       }
       if(this.started&&!this.ended)this._startTimer();
     });
@@ -2505,17 +2527,50 @@ export class MatchRoom {
       Date.now(),clean(event),seat==null?null:Number(seat),clean(code),Number(count)||0);}catch(e){}
   }
   _snapshot(){
-    return {schema:1,match:this.match,tick:this.tick,started:this.started,ended:this.ended,
-      seats:Array.from(this.seats.values()).map(s=>Object.assign({},s,{connected:false})),
+    return {schema:1,match:this.match,tick:this.tick,started:this.started,ended:this.ended,endReason:this.endReason,
+      seats:Array.from(this.seats.values()).map(s=>Object.assign({},s,{connected:false,resuming:false})),
       commands:Array.from(this.commands.entries())};
   }
   _persist(){
     try{const p=this.state.storage.put('room',this._snapshot());if(p&&p.catch)p.catch(()=>{});}catch(e){}
   }
   _send(ws,value){try{ws.send(JSON.stringify(value));return true;}catch(e){return false;}}
+  _sendEncoded(ws,text){try{ws.send(text);return true;}catch(e){return false;}}
   _broadcast(value){
     const sockets=typeof this.state.getWebSockets==='function'?this.state.getWebSockets():[];
     for(const ws of sockets)this._send(ws,value);
+  }
+  _recordTick(value){
+    const text=JSON.stringify(value),bytes=new TextEncoder().encode(text).byteLength;
+    this.replayFrames.set(value.tick,{text,bytes});this.replayBytes+=bytes;
+    while(this.replayFrames.size>MATCH_REPLAY_MAX_FRAMES||this.replayBytes>MATCH_REPLAY_MAX_BYTES){
+      const oldest=this.replayFrames.keys().next().value;
+      this.replayBytes-=this.replayFrames.get(oldest).bytes;this.replayFrames.delete(oldest);
+    }
+    const sockets=typeof this.state.getWebSockets==='function'?this.state.getWebSockets():[];
+    for(const ws of sockets)this._sendEncoded(ws,text);
+  }
+  _resumePlan(from){
+    if(this.recoveryHistoryLost)return {code:'resume_history_unavailable'};
+    if(from===null){
+      // An old client never reports its last applied tick. Only the unstarted
+      // zero cursor is provably gap-free; a socket welcome is not a state ack.
+      if(this.tick!==0)return {code:'resume_cursor_required'};
+      return {legacy:true,from:0,through:0,frames:[]};
+    }
+    if(!Number.isSafeInteger(from)||from<0||from>this.tick)return {code:'invalid_resume_cursor'};
+    const frames=[];
+    if(this.tick-from>MATCH_REPLAY_MAX_FRAMES)return {code:'resume_history_unavailable'};
+    for(let t=from+1;t<=this.tick;t++){
+      const frame=this.replayFrames.get(t);if(!frame)return {code:'resume_history_unavailable'};
+      frames.push(frame.text);
+    }
+    return {legacy:false,from,through:this.tick,frames};
+  }
+  _ticksHeld(){return this.recoveryHistoryLost||Array.from(this.seats.values()).some(s=>!s.forfeited&&(!s.connected||s.syncing));}
+  _pauseTicks(){
+    if(this.tickTimer){clearTimeout(this.tickTimer);this.tickTimer=null;}
+    this.nextTickAt=0;
   }
   _error(ws,code,seq,extra){
     const value={protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'reject',code};
@@ -2527,7 +2582,8 @@ export class MatchRoom {
     setTimeout(()=>{try{ws.close(code,reason);}catch(e){}},20);
   }
   _attachment(ws){try{return ws.deserializeAttachment()||null;}catch(e){return null;}}
-  _socketSeat(ws){const a=this._attachment(ws);return a&&this.seats.get(Number(a.seat));}
+  _socketSeat(ws){const a=this._attachment(ws),seat=a&&this.seats.get(Number(a.seat));
+    return seat&&Number(a.generation)===Number(seat.generation)?seat:null;}
   _validVerified(v){
     return !!(v&&typeof v==='object'&&/^[a-f0-9]{32}$/.test(String(v.matchId||''))&&
       /^[a-f0-9]{32}$/.test(String(v.lobbyId||''))&&parsePositiveInt(v.userId)&&
@@ -2549,24 +2605,36 @@ export class MatchRoom {
     return token;
   }
   _pair(){const pair=new WebSocketPair(),values=Object.values(pair);return {client:values[0],server:values[1]};}
-  async _accept(server,seat,resumeToken,resumed){
+  async _accept(server,seat,resumeToken,resumed,replay=null){
     this.state.acceptWebSocket(server);
     server.serializeAttachment({seat:seat.seat,generation:seat.generation});
-    seat.connected=true;seat.closing=false;seat.disconnectDeadline=null;
+    seat.connected=true;seat.closing=false;seat.syncing=!!(replay&&!replay.legacy);
+    if(!seat.syncing)seat.disconnectDeadline=null;
+    seat.resumeThroughTick=seat.syncing?replay.through:null;
     this._persist();
-    this._send(server,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'welcome',
+    const welcome={protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'welcome',
       matchId:this.match.matchId,seat:seat.seat,tick:this.tick,tickRate:MATCH_TICK_HZ,
-      inputDelay:{min:MATCH_INPUT_DELAY_MIN,max:MATCH_INPUT_DELAY_MAX},
+      inputDelay:{min:MATCH_INPUT_DELAY_MIN,max:matchInputDelayMax(this.match.buildVersion)},
       reconnectGraceMs:MATCH_RECONNECT_GRACE_MS,resumed:resumed===true,
       resumeToken,generation:seat.generation,compatibility:{buildVersion:this.match.buildVersion,
-        manifestHash:this.match.manifestHash,balanceHash:this.match.balanceHash,rulesHash:this.match.rulesHash}});
-    if(!this.started&&this.seats.size===this.match.rosterSize&&
-       Array.from(this.seats.values()).every(s=>s.connected&&!s.forfeited)){
+        manifestHash:this.match.manifestHash,balanceHash:this.match.balanceHash,rulesHash:this.match.rulesHash}};
+    if(seat.syncing)Object.assign(welcome,{resumeFromTick:replay.from,replayThroughTick:replay.through,lastSeq:seat.lastSeq});
+    this._send(server,welcome);
+    if(seat.syncing){
+      for(const frame of replay.frames)this._sendEncoded(server,frame);
+      this._send(server,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'replayEnd',tick:replay.through});
+      await this._scheduleAlarm();
+    }
+    this._startWhenReady();
+  }
+  _startWhenReady(){
+    if(!this.ended&&!this.started&&this.seats.size===this.match.rosterSize&&
+       Array.from(this.seats.values()).every(s=>s.connected&&!s.syncing&&!s.forfeited)){
       this.started=true;this.nextTickAt=Date.now()+1000/MATCH_TICK_HZ;
       this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'start',tick:0,
         seats:Array.from(this.seats.keys()).sort((a,b)=>a-b)});
       this._audit('match_start',null,'ready',this.match.rosterSize);this._persist();this._startTimer();
-    }
+    }else if(this.started&&!this.ended)this._startTimer();
   }
   async fetch(request){
     if(String(request.headers.get('upgrade')||'').toLowerCase()!=='websocket')
@@ -2597,18 +2665,30 @@ export class MatchRoom {
     const credential=matchSocketCredential(request);
     if(!credential||credential.kind!=='resume')return err(401,'invalid_resume','Resume credential is invalid.');
     const seat=this.seats.get(credential.seat),now=Date.now();
-    if(!seat||seat.forfeited||seat.connected||!seat.disconnectDeadline||
+    if(this.ended)return err(410,this.endReason||'match_ended','That match has ended.');
+    if(!seat||seat.forfeited||seat.connected||seat.resuming||!seat.disconnectDeadline||
        seat.disconnectDeadline<=now||seat.resumeExpiresAt<=now)
       return err(401,'invalid_resume','Resume credential is invalid or expired.');
-    const hash=await sha256Hex(credential.token);
-    if(hash!==seat.resumeHash)return err(401,'invalid_resume','Resume credential is invalid or expired.');
-    const resumeToken=await this._newResume(seat),pair=this._pair();
-    await this._accept(pair.server,seat,resumeToken,true);
-    this._audit('seat_resume',seat.seat,'rotated',1);
-    this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'reconnected',
-      seat:seat.seat,tick:this.tick});
-    return new Response(null,{status:101,webSocket:pair.client,
-      headers:{'sec-websocket-protocol':'massfront.v1'}});
+    // Claim before hashing/rotation: two valid concurrent reconnects must not
+    // both pass the disconnected check and install different generations.
+    seat.resuming=true;
+    try{
+      const hash=await sha256Hex(credential.token);
+      if(hash!==seat.resumeHash)return err(401,'invalid_resume','Resume credential is invalid or expired.');
+      if(this.ended||seat.forfeited||seat.disconnectDeadline<=Date.now())
+        return err(401,'invalid_resume','Resume credential is invalid or expired.');
+      const replay=this._resumePlan(credential.lastAppliedTick);
+      if(replay.code)return err(409,replay.code,'The room cannot prove a complete authoritative resume.');
+      const resumeToken=await this._newResume(seat),pair=this._pair();
+      if(this.ended||seat.forfeited||seat.disconnectDeadline<=Date.now())
+        return err(401,'invalid_resume','Resume credential is invalid or expired.');
+      await this._accept(pair.server,seat,resumeToken,true,replay);
+      this._audit('seat_resume',seat.seat,'rotated',1);
+      this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'reconnected',
+        seat:seat.seat,tick:this.tick});
+      return new Response(null,{status:101,webSocket:pair.client,
+        headers:{'sec-websocket-protocol':'massfront.v1'}});
+    }finally{seat.resuming=false;}
   }
   _rateAllowed(seat,bytes,commands){
     const now=Date.now();let r=this.rates.get(seat.seat);
@@ -2660,14 +2740,26 @@ export class MatchRoom {
     }
     if(!body||body.protocol!=='massfront-match'||body.v!==MATCH_PROTOCOL_VERSION)
       return this._strike(ws,seat,'protocol_mismatch',Number(body&&body.seq));
+    if(body.type==='resumeReady'){
+      if(Object.keys(body).length!==4||!Number.isSafeInteger(body.tick)||body.tick!==seat.resumeThroughTick)
+        return this._strike(ws,seat,'invalid_resume_ready',null);
+      if(!seat.syncing){
+        this._send(ws,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'resumeReadyAck',tick:body.tick});return;
+      }
+      if(body.tick!==this.tick)return this._strike(ws,seat,'invalid_resume_ready',null);
+      seat.syncing=false;seat.disconnectDeadline=null;this._persist();
+      this._send(ws,{protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'resumeReadyAck',tick:body.tick});
+      await this._scheduleAlarm();this._startWhenReady();return;
+    }
     if(body.type==='commands'){
       const seq=Number(body.seq),target=Number(body.targetTick),commands=body.commands;
+      if(seat.syncing)return this._error(ws,'resume_not_ready',seq);
       if(!Number.isSafeInteger(seq)||seq<=0||seq>2147483647)return this._strike(ws,seat,'invalid_sequence',seq);
       if(seq<=seat.lastSeq)return this._error(ws,'duplicate_or_stale_sequence',seq,{lastAccepted:seat.lastSeq});
       if(!this.started||this.ended)return this._error(ws,'match_not_running',seq);
       if(!Number.isSafeInteger(target)||target<this.tick+MATCH_INPUT_DELAY_MIN)
         return this._error(ws,'stale_target_tick',seq,{tick:this.tick});
-      if(target>this.tick+MATCH_INPUT_DELAY_MAX)
+      if(target>this.tick+matchInputDelayMax(this.match&&this.match.buildVersion))
         return this._error(ws,'future_target_tick',seq,{tick:this.tick});
       if(!Array.isArray(commands)||!commands.length||commands.length>MATCH_MAX_COMMANDS_PER_BATCH||
          !commands.every(c=>this._commandSafe(c)))return this._strike(ws,seat,'invalid_commands',seq);
@@ -2680,7 +2772,7 @@ export class MatchRoom {
     }
     if(body.type==='stateHash'){
       const tick=Number(body.tick),hash=String(body.hash||'');
-      if(!Number.isSafeInteger(tick)||tick<=0||tick%MATCH_TICK_HZ!==0||tick>this.tick||tick<this.tick-2*MATCH_TICK_HZ||
+      if(!Number.isSafeInteger(tick)||tick<=0||tick%MATCH_TICK_HZ!==0||tick>this.tick||tick<this.tick-MATCH_REPLAY_MAX_FRAMES||
          !/^[a-f0-9]{64}$/.test(hash))return this._strike(ws,seat,'invalid_state_hash',null);
       let hashes=this.hashes.get(tick);if(!hashes){hashes=new Map();this.hashes.set(tick,hashes);}
       if(hashes.has(seat.seat))return this._error(ws,hashes.get(seat.seat)===hash?'duplicate_state_hash':'state_hash_rewrite',null,{tick});
@@ -2703,8 +2795,10 @@ export class MatchRoom {
   async _disconnect(ws,code){
     const a=this._attachment(ws),seat=a&&this.seats.get(Number(a.seat));
     if(this.ended||!seat||Number(a.generation)!==Number(seat.generation)||!seat.connected)return;
-    seat.connected=false;seat.closing=false;seat.disconnectDeadline=Date.now()+MATCH_RECONNECT_GRACE_MS;
+    const deadline=seat.syncing&&seat.disconnectDeadline||Date.now()+MATCH_RECONNECT_GRACE_MS;
+    seat.connected=false;seat.closing=false;seat.syncing=false;seat.disconnectDeadline=deadline;
     seat.resumeExpiresAt=seat.disconnectDeadline;
+    this._pauseTicks();
     this._audit('seat_disconnect',seat.seat,'close_'+String(Number(code)||0),1);
     this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'disconnected',
       seat:seat.seat,tick:this.tick,graceMs:MATCH_RECONNECT_GRACE_MS});
@@ -2713,12 +2807,12 @@ export class MatchRoom {
   async webSocketClose(ws,code){await this._disconnect(ws,code);}
   async webSocketError(ws){await this._disconnect(ws,1011);}
   async _scheduleAlarm(){
-    const deadlines=Array.from(this.seats.values()).filter(s=>!s.connected&&!s.forfeited&&s.disconnectDeadline)
+    const deadlines=Array.from(this.seats.values()).filter(s=>(!s.connected||s.syncing)&&!s.forfeited&&s.disconnectDeadline)
       .map(s=>s.disconnectDeadline);
     if(deadlines.length)try{await this.state.storage.setAlarm(deadlines.reduce((a,b)=>Math.min(a,b)));}catch(e){}
   }
   async _forfeitExpired(){
-    const now=Date.now(),expired=Array.from(this.seats.values()).filter(s=>!s.connected&&!s.forfeited&&
+    const now=Date.now(),expired=Array.from(this.seats.values()).filter(s=>(!s.connected||s.syncing)&&!s.forfeited&&
       s.disconnectDeadline&&s.disconnectDeadline<=now).sort((a,b)=>a.seat-b.seat);
     for(const seat of expired){
       seat.forfeited=true;seat.resumeHash=null;seat.resumeExpiresAt=0;
@@ -2743,27 +2837,33 @@ export class MatchRoom {
     if(expired.length)this._persist();
     await this._scheduleAlarm();
   }
-  async alarm(){await this._forfeitExpired();}
+  async alarm(){await this._forfeitExpired();this._startTimer();}
   _startTimer(){
-    if(this.tickTimer||!this.started||this.ended)return;
+    if(this.tickTimer||this.runningTicks||!this.started||this.ended)return;
+    if(this._ticksHeld()){this._pauseTicks();return;}
     if(!this.nextTickAt)this.nextTickAt=Date.now()+1000/MATCH_TICK_HZ;
     const wait=Math.max(0,Math.ceil(this.nextTickAt-Date.now()));
     this.tickTimer=setTimeout(()=>{this.tickTimer=null;this._runTicks().catch(()=>{});},wait);
   }
   async _runTicks(){
-    if(!this.started||this.ended)return;
-    const interval=1000/MATCH_TICK_HZ,now=Date.now();let count=0;
-    while(now>=this.nextTickAt&&count<8&&!this.ended){
-      this.tick++;this.nextTickAt+=interval;count++;
-      const batch=(this.commands.get(this.tick)||[]).slice().sort((a,b)=>a.seat-b.seat||a.seq-b.seq);
-      this.commands.delete(this.tick);
-      this._broadcast({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'tick',tick:this.tick,commands:batch});
-      for(const old of Array.from(this.hashes.keys()))if(old<this.tick-2*MATCH_TICK_HZ)this.hashes.delete(old);
+    if(!this.started||this.ended||this.runningTicks)return;
+    this.runningTicks=true;
+    try{
       await this._forfeitExpired();
-      if(this.tick%MATCH_TICK_HZ===0)this._persist();
-    }
-    if(count===8&&Date.now()>=this.nextTickAt)this.nextTickAt=Date.now()+interval;
-    this._startTimer();
+      if(this.ended||this._ticksHeld()){this._pauseTicks();return;}
+      if(!this.nextTickAt)return;
+      const interval=1000/MATCH_TICK_HZ,now=Date.now();let count=0;
+      while(now>=this.nextTickAt&&count<8&&!this.ended&&!this._ticksHeld()){
+        this.tick++;this.nextTickAt+=interval;count++;
+        const batch=(this.commands.get(this.tick)||[]).slice().sort((a,b)=>a.seat-b.seat||a.seq-b.seq);
+        this.commands.delete(this.tick);
+        this._recordTick({protocol:'massfront-match',v:MATCH_PROTOCOL_VERSION,type:'tick',tick:this.tick,commands:batch});
+        for(const old of Array.from(this.hashes.keys()))if(old<this.tick-MATCH_REPLAY_MAX_FRAMES)this.hashes.delete(old);
+        await this._forfeitExpired();
+        if(this.tick%MATCH_TICK_HZ===0)this._persist();
+      }
+      if(count===8&&Date.now()>=this.nextTickAt)this.nextTickAt=Date.now()+interval;
+    }finally{this.runningTicks=false;this._startTimer();}
   }
 }
 

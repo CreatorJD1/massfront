@@ -3,6 +3,14 @@
 This file is the stable entry point for continuing MASSFRONT. It intentionally
 does not duplicate version numbers, stage completion claims, or release state.
 
+Latest cross-agent transfer: [Claude handoff after the published SYSTEM release](CLAUDE_HANDOFF_2026-09-04_V1.33.74.md).
+It identifies final receipts, remaining work, and stale statements in older
+status documents; read it before treating those statements as current authority.
+
+Companion art task: [ChatGPT GUI art kit brief](CHATGPT_GUI_ART_TASK_2026-09-04.md).
+It specifies transparent modular frames, menus/submenus, asset states, and the
+later coder integration contract; no assets or runtime changes are implied.
+
 Read in this order:
 
 1. [`AGENTS.md`](../AGENTS.md) — repository safety, build, runtime, and
@@ -27,7 +35,10 @@ second repository.
 - Stage 15 has verified local backend and compatibility-foundation work, but is
   not complete until the executing-runtime hashes, browser match adapter, and
   root acceptance matrix pass together.
-- Realtime multiplayer remains disabled by default.
+- The configured production realtime, lobby, invite, online-count and chat
+  flags are enabled. Do not disable them as a release workaround. See
+  `RELEASE_1.33.74_SYSTEM.md` for the current repair/deployment receipts and
+  remaining acceptance limits; individual presence remains unset.
 - Stage 18 publishing, activation, native delivery, and production mutations
   require the owner's explicit approval.
 

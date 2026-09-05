@@ -1,136 +1,153 @@
 #!/usr/bin/env node
-/* Can a device actually download the payloads the manifest advertises?
- *
- * verify-release-channels checks payload CORS with Node's fetch, which follows
- * redirects without enforcing the rule that matters, so it passed while no
- * device could download at all.
- *
- * The rule: a Range header makes the request non-simple, so the browser
- * preflights it. If the actual request then answers with a cross-origin
- * redirect, the fetch is rejected outright -- the redirect target never gets a
- * chance to allow it. Hugging Face's resolve/ endpoint answers small files with
- * a same-origin 307 but LFS-backed files with a 302 to a signed CDN host, so
- * every chunked payload died this way in a strict engine (Android WebView),
- * surfacing only as a flat "network request failed" on the first chunked file.
- * The manifest and small files are same-origin, which is why a device could
- * report NETWORK READY, find the update, and still never download it.
- *
- * Two phases, because they answer different questions:
- *   redirect audit  - is the transport SHAPE deliverable? Pure fetch, no
- *                     browser, always runs. This is the one that catches it.
- *   in-page fetch   - does it work in a real engine? Needs Playwright.
- *                     Chromium tolerates the off-origin redirect, so this alone
- *                     is NOT sufficient -- it is why the bug shipped.
- *
- * Usage:
- *   node tools/probe-payload-cors.mjs
- *   node tools/probe-payload-cors.mjs --no-browser        (publish gate; fast)
- *   node tools/probe-payload-cors.mjs --manifest <url>
- * Exit: 0 if every sampled payload is deliverable to a strict WebView. */
+/* Verify the delivery shape a strict installed WebView needs. Every entry that
+ * the updater will request with Range is checked, including full-only recovery
+ * files. Plain whole-file entries remain an explicitly labelled sample. */
 import { createServer } from 'node:http';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { releaseDeliveryInventory } from './release-delivery-contract.mjs';
 
-const argv = process.argv.slice(2);
-const after = (f) => { const i = argv.indexOf(f); return i < 0 ? '' : String(argv[i + 1] || ''); };
-const noBrowser = argv.includes('--no-browser');
-const MANIFESTS = after('--manifest') ? [['given', after('--manifest')]] : [
-  ['HF resolve (client endpoint)', 'https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/update.json?download=true'],
-  ['HF raw (mirror)', 'https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json'],
-  ['Cloudflare worker (mirror)', 'https://massfront-update.jasondixon1994.workers.dev/update.json']
+const argv=process.argv.slice(2);
+const after=flag=>{const i=argv.indexOf(flag);return i<0?'':String(argv[i+1]||'');};
+const noBrowser=argv.includes('--no-browser');
+const manifestUrl=after('--manifest'),manifestFile=after('--manifest-file');
+if(argv.includes('--manifest')&&!manifestUrl) throw new Error('--manifest requires a URL');
+if(argv.includes('--manifest-file')&&!manifestFile) throw new Error('--manifest-file requires a path');
+if(manifestUrl&&manifestFile) throw new Error('Use either --manifest or --manifest-file, not both');
+const MANIFESTS=manifestFile?[['local candidate',resolve(manifestFile),'file']]:manifestUrl?[['given',manifestUrl,'url']]:[
+  ['HF resolve (client endpoint)','https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/update.json?download=true','url'],
+  ['HF raw (mirror)','https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json','url'],
+  ['Cloudflare worker (mirror)','https://massfront-update.jasondixon1994.workers.dev/update.json','url']
 ];
-const SAMPLE = Number(after('--sample') || 6);
+const PLAIN_SAMPLE=Math.max(0,Math.min(12,Number(after('--sample')||2)|0));
+const TIMEOUT_MS=Math.max(3000,Math.min(60000,Number(after('--timeout')||15000)|0));
+const BROWSER_ORIGIN='https://creatorjd-massfront-playtest.static.hf.space';
 
-let failures = 0;
-const jobs = [];
+async function getJson(location,kind){
+  if(kind==='file') return JSON.parse((await readFile(location,'utf8')).replace(/^\uFEFF/,''));
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),TIMEOUT_MS);
+  let response;
+  try{
+    response=await fetch(location+(location.includes('?')?'&':'?')+'x='+Date.now(),{cache:'no-store',signal:controller.signal});
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    return JSON.parse((await response.text()).replace(/^\uFEFF/,''));
+  }finally{clearTimeout(timer);if(response) await cancelBody(response);}
+}
+async function fetchTimed(url,options={}){
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),TIMEOUT_MS);
+  try{return await fetch(url,{...options,signal:controller.signal});}
+  finally{clearTimeout(timer);}
+}
+async function cancelBody(response){try{await response.body?.cancel();}catch(e){}}
+function allowed(header){return header==='*'||header===BROWSER_ORIGIN;}
+function hasToken(header,token){return header==='*'||header.toLowerCase().split(',').map(x=>x.trim()).includes(token);}
 
-for (const [label, url] of MANIFESTS) {
-  let manifest;
-  try {
-    manifest = JSON.parse((await (await fetch(url + (url.includes('?') ? '&' : '?') + 'x=' + Date.now(),
-      { cache: 'no-store' })).text()).replace(/^\uFEFF/, ''));
-  } catch (e) { console.log(`FAIL  ${label}: manifest unreadable (${e.message})`); failures++; continue; }
+async function probeRanged(entry){
+  const headers={Origin:BROWSER_ORIGIN,'Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'range'};
+  const preflight=await fetchTimed(entry.url,{method:'OPTIONS',redirect:'manual',cache:'no-store',headers});
+  try{
+    if(preflight.status<200||preflight.status>=300||preflight.headers.get('location'))
+      throw new Error(`preflight answered HTTP ${preflight.status}${preflight.headers.get('location')?' with a redirect':''}`);
+    if(!allowed(preflight.headers.get('access-control-allow-origin')||'')) throw new Error('preflight does not allow the browser origin');
+    if(!hasToken(preflight.headers.get('access-control-allow-methods')||'','get')) throw new Error('preflight does not allow GET');
+    if(!hasToken(preflight.headers.get('access-control-allow-headers')||'','range')) throw new Error('preflight does not allow Range');
+  }finally{await cancelBody(preflight);}
 
-  /* Chunked files are the only ones that carry a Range header, so they are the
-     only ones that can hit this. Test those first, then a couple of plain ones
-     so a wholly broken host is still caught. */
-  const chunked = (manifest.files || []).filter((f) => Array.isArray(f.chunks) && f.chunks.length > 1);
-  const plain = (manifest.files || []).filter((f) => !(Array.isArray(f.chunks) && f.chunks.length > 1));
-  const picks = [...chunked.slice(0, SAMPLE), ...plain.slice(0, 2)];
-  if (!picks.length) { console.log(`FAIL  ${label}: manifest advertises no files`); failures++; continue; }
-
-  /* ---- phase 1: transport shape (no browser) ---- */
-  const offOrigin = [];
-  for (const f of picks) {
-    const ranged = Array.isArray(f.chunks) && f.chunks.length > 1;
-    try {
-      const r = await fetch(f.url, { redirect: 'manual', cache: 'no-store',
-        headers: ranged ? { Range: 'bytes=0-255' } : {} });
-      const loc = r.headers.get('location');
-      if (loc) {
-        const to = new URL(loc, f.url).host;
-        if (to !== new URL(f.url).host)
-          offOrigin.push(`${ranged ? 'ranged' : 'plain '} ${f.path}: ${r.status} leaves the origin for ${to}`);
-      } else if (ranged && r.status !== 206) {
-        offOrigin.push(`ranged ${f.path}: answered ${r.status}, not 206`);
-      }
-    } catch (e) { offOrigin.push(`${f.path}: unreachable (${e.message})`); }
-  }
-  const host = new URL(picks[0].url).host;
-  if (offOrigin.length) {
-    console.log(`FAIL  ${label}  v${manifest.version}  host=${host} — payloads are NOT deliverable to a strict WebView`);
-    for (const o of offOrigin.slice(0, 4)) console.log(`        ${o}`);
-    failures++;
-  } else {
-    console.log(`PASS  ${label}  v${manifest.version}  host=${host} — ${picks.length} payloads, no off-origin redirect`);
-  }
-  jobs.push({ label, picks });
+  const response=await fetchTimed(entry.url,{redirect:'manual',cache:'no-store',headers:{Origin:BROWSER_ORIGIN,Range:'bytes=0-0'}});
+  try{
+    const location=response.headers.get('location');
+    if(location){
+      const from=new URL(entry.url),to=new URL(location,entry.url);
+      throw new Error(`ranged request redirects ${response.status} ${from.origin===to.origin?'on':'off'}-origin to ${to.host}`);
+    }
+    if(response.status!==206) throw new Error(`ranged request answered HTTP ${response.status}, not 206`);
+    if(response.headers.get('content-range')!==`bytes 0-0/${entry.size}`) throw new Error('Content-Range does not match manifest size');
+    if(response.headers.get('content-length')!=='1') throw new Error('one-byte range has an invalid Content-Length');
+    if(!allowed(response.headers.get('access-control-allow-origin')||'')) throw new Error('response does not allow the browser origin');
+    if(!hasToken(response.headers.get('access-control-expose-headers')||'','content-range'))
+      throw new Error('response does not expose Content-Range');
+  }finally{await cancelBody(response);}
 }
 
-/* ---- phase 2: a real engine, from a foreign origin ---- */
-if (!noBrowser && jobs.length) {
-  const { launchPwBrowser, closePwBrowser } = await import('./pw-browser.mjs');
-  const server = createServer((_req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
-    res.end('<!doctype html><title>payload cors probe</title>');
+async function probePlain(entry){
+  const response=await fetchTimed(entry.url,{cache:'no-store',headers:{Origin:BROWSER_ORIGIN}});
+  try{
+    if(!response.ok) throw new Error(`HTTP ${response.status}`);
+    if(!allowed(response.headers.get('access-control-allow-origin')||'')) throw new Error('response does not allow the browser origin');
+  }finally{await cancelBody(response);}
+}
+
+async function runPool(entries,worker,limit=4){
+  const failures=[];let cursor=0;
+  const lanes=Array.from({length:Math.min(limit,entries.length)},async()=>{
+    while(cursor<entries.length){
+      const entry=entries[cursor++];
+      try{await worker(entry);}catch(e){failures.push(`${entry.path}: ${e.message}`);}
+    }
   });
-  await new Promise((r) => server.listen(0, '127.0.0.1', r));
-  const browser = await launchPwBrowser({ ownershipMode: 'isolated', headless: true });
-  try {
-    const page = await (await browser.newContext()).newPage();
-    await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
-    for (const { label, picks } of jobs) {
-      const results = await page.evaluate(async (files) => {
-        const out = [];
-        for (const f of files) {
-          try {
-            const r = await fetch(f.url, { cache: 'no-store', headers: f.ranged ? { Range: 'bytes=0-1023' } : {} });
-            const buf = await r.arrayBuffer();
-            out.push({ path: f.path, ok: r.status === 206 || r.status === 200, status: r.status, bytes: buf.byteLength });
-          } catch (e) { out.push({ path: f.path, ok: false, status: 0, err: String((e && e.message) || e) }); }
+  await Promise.all(lanes);return failures;
+}
+
+let failures=0;
+const jobs=[];
+for(const [label,location,kind] of MANIFESTS){
+  let manifest,inventory;
+  try{
+    manifest=await getJson(location,kind);
+    inventory=releaseDeliveryInventory(manifest,label);
+  }catch(e){console.log(`FAIL  ${label}: manifest invalid or unreadable (${e.message})`);failures++;continue;}
+  const plain=inventory.plain.slice(0,PLAIN_SAMPLE);
+  const rangedFailures=await runPool(inventory.ranged,probeRanged);
+  const plainFailures=await runPool(plain,probePlain);
+  const bad=[...rangedFailures,...plainFailures];
+  console.log(`${bad.length?'FAIL':'PASS'}  ${label}  v${manifest.version} — all ${inventory.ranged.length} ranged `+
+    `entries (${inventory.ranged.filter(entry=>entry.fullOnly).length} full-only), ${plain.length}/${inventory.plain.length} plain sampled`);
+  for(const error of bad.slice(0,8)) console.log(`        ${error}`);
+  if(bad.length) failures++;
+  jobs.push({label,picks:[...inventory.ranged,...plain]});
+}
+
+/* Optional real-engine corroboration. Do not substitute this for the manual
+   redirect/preflight gate above: Chromium can tolerate delivery that an
+   installed Android WebView rejects. */
+if(!noBrowser&&jobs.length){
+  const {launchPwBrowser,closePwBrowser}=await import('./pw-browser.mjs');
+  const server=createServer((_req,res)=>{res.writeHead(200,{'Content-Type':'text/html','Cache-Control':'no-store'});res.end('<!doctype html>');});
+  await new Promise(resolveListen=>server.listen(0,'127.0.0.1',resolveListen));
+  const browser=await launchPwBrowser({ownershipMode:'isolated',headless:true});
+  try{
+    const page=await(await browser.newContext()).newPage();
+    await page.goto(`http://127.0.0.1:${server.address().port}/`,{waitUntil:'domcontentloaded',timeout:120000});
+    for(const {label,picks} of jobs){
+      const results=await page.evaluate(async files=>{
+        const out=[];
+        for(const file of files){
+          const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+          try{
+            const response=await fetch(file.url,{cache:'no-store',signal:controller.signal,
+              headers:file.ranged?{Range:'bytes=0-0'}:{}});
+            const ok=file.ranged?response.status===206:response.ok;
+            try{await response.body?.cancel();}catch(e){}
+            out.push({path:file.path,ok,status:response.status});
+          }catch(e){out.push({path:file.path,ok:false,error:String(e?.message||e)});}
+          finally{clearTimeout(timer);}
         }
         return out;
-      }, picks.map((f) => ({ path: f.path, url: f.url, ranged: Array.isArray(f.chunks) && f.chunks.length > 1 })));
-      const bad = results.filter((r) => !r.ok);
-      console.log(`${bad.length ? 'FAIL' : 'PASS'}  ${label}  in-page fetch ${results.length - bad.length}/${results.length}` +
-        `${bad.length ? '' : '  (note: Chromium tolerates off-origin redirects; phase 1 is the real gate)'}`);
-      for (const b of bad.slice(0, 3)) console.log(`        ${b.path}: ${b.err || 'HTTP ' + b.status}`);
-      if (bad.length) failures++;
+      },picks.map(entry=>({path:entry.path,url:entry.url,ranged:entry.ranged})));
+      const bad=results.filter(result=>!result.ok);
+      console.log(`${bad.length?'FAIL':'PASS'}  ${label} in-page ${results.length-bad.length}/${results.length}`);
+      if(bad.length) failures++;
     }
-  } finally {
-    await closePwBrowser(browser).catch(() => {});
-    await new Promise((r) => server.close(r));
+  }finally{
+    await closePwBrowser(browser).catch(()=>{});
+    await new Promise(resolveClose=>server.close(resolveClose));
   }
 }
 
 console.log('');
-if (failures) {
-  console.log('PAYLOAD DELIVERY FAILED — a strict WebView cannot download this release.');
-  console.log('Fix: node tools/mirror-release-to-cloudflare.mjs --version <v> --apply');
-  console.log('     node tools/repoint-manifests-to-mirror.mjs --apply');
+if(failures){
+  console.log('PAYLOAD DELIVERY FAILED — at least one complete full+delta inventory is not deliverable.');
   process.exit(1);
 }
-console.log('PAYLOAD DELIVERY VERIFIED — every sampled payload is fetchable without an off-origin redirect.');
-/* Explicit, because the failure path exits and the success path did not: undici
-   holds its keep-alive sockets open, so this hung for the full timeout after
-   printing a pass. A publish gate that never returns is worse than one that
-   fails -- it stalls the release instead of reporting on it. */
+console.log('PAYLOAD DELIVERY VERIFIED — all range-bearing entries passed; plain whole-file coverage is sampled as labelled.');
 process.exit(0);

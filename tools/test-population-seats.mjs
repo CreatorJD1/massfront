@@ -37,7 +37,7 @@ try{
   const out=await page.evaluate(()=>{
     running=false;demoMode=false;matchLive=true;
     const land=()=>{for(let y=220;y<MAP-220;y+=31)for(let x=220;x<MAP-220;x+=31)if(isWalkable(x,y))return [x,y];throw Error('no land');};
-    const wipe=()=>{for(let i=0;i<unitHigh;i++)ualive[i]=0;unitHigh=0;freeList.length=0;
+    const wipe=()=>{for(let i=0;i<unitHigh;i++)ualive[i]=0;unitHigh=0;freeList.length=0;if(typeof activeUnitReset==='function')activeUnitReset();
       teamCount[0]=teamCount[1]=teamCount[2]=0;if(typeof populationResetLedgers==='function')populationResetLedgers();};
     const fill=(team,slot,max,P)=>{let got=0;for(let n=0;n<max;n++){if(spawnUnit(0,team,P[0],P[1],slot)<0)break;got++;}return got;};
     const hero=TYPES.findIndex(T=>T&&T.cat==='hero'),L=land();if(hero<0)throw Error('no hero');
@@ -55,7 +55,7 @@ try{
     const player5={hero:spawnUnit(hero,0,P5.x,P5.y,-1),ordinary:fill(0,-1,600,[P5.x,P5.y])};
     const enemies5=AI.bases.map(B=>({slot:B.slot,hero:spawnUnit(hero,1,B.x,B.y,B.slot),ordinary:fill(1,B.slot,600,[B.x,B.y])}));
     const oneVFour={topology:topology.map(S=>({slot:S.slot,zone:S.zone})),minDistance:Math.min(...distances),playerUsed:populationUsedForCommander(-1),
-      enemySeats:[0,1,2,3].map(populationUsedForCommander),teamUsed:[populationUsedFor(0),populationUsedFor(1)],player5,enemies5};
+      enemySeats:[0,1,2].map(populationUsedForCommander),teamUsed:[populationUsedFor(0),populationUsedFor(1)],player5,enemies5};
 
     wipe();const P=[L[0],L[1]],E=[L[0]+500,L[1]+300];AI.allies=[];AI.bases=[{slot:0,x:E[0],y:E[1]}];AI.base=AI.bases[0];
     const pHero=spawnUnit(hero,0,P[0],P[1],-1),pOrdinary=fill(0,-1,600,P),player=populationFactionLedger(0),hud=hudPlayerPop();
@@ -76,10 +76,10 @@ try{
   assert(out.aggregate.cap===1500&&out.aggregate.ceiling===1500,'team diagnostics must expose the three-seat 1500 ceiling');
   assert(out.aggregate.blocked.every(i=>i<0),'every full participant seat must reject its 501st body');
   assert(out.aggregate.seats.every(n=>n===500),'participant ledgers must each stop at 500');
-  assert(out.oneVFour.topology.length===5&&out.oneVFour.topology.some(S=>S.slot===3&&S.zone==='c'),'large 1v4 must expose the fourth AI at center');
-  assert(out.oneVFour.minDistance>=1400,'large 1v4 spawn spacing fell below 1400 m: '+out.oneVFour.minDistance);
+  assert(out.oneVFour.topology.length===4&&!out.oneVFour.topology.some(S=>S.zone==='c'),'large must expose four normal participants and reserve Brood as the fifth system force');
+  assert(out.oneVFour.minDistance>=1400,'large four-seat spawn spacing fell below 1400 m: '+out.oneVFour.minDistance);
   assert(out.oneVFour.playerUsed===500&&out.oneVFour.enemySeats.every(n=>n===500)
-    &&out.oneVFour.teamUsed[0]===500&&out.oneVFour.teamUsed[1]===2000,'1v4 must admit exactly 2500 bodies across five seats');
+    &&out.oneVFour.teamUsed[0]===500&&out.oneVFour.teamUsed[1]===1500,'four normal participants must admit exactly 2000 bodies before the Brood system force');
   assert(out.independent.pHero>=0&&out.independent.pOrdinary===499&&out.independent.player.used===500,'player faction did not independently reach 500');
   assert(out.independent.eHero>=0&&out.independent.eOrdinary===499&&out.independent.enemy.used===500,'opposing faction did not independently reach 500');
   assert(out.independent.hud.used===500&&out.independent.hud.cap===500,'HUD must read faction-wide 500');

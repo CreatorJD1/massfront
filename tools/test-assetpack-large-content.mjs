@@ -6,6 +6,24 @@ import vm from 'node:vm';
 import {buildAudioPack,buildAudioPackFileEntry} from './build-audio-pack.mjs';
 
 const sha256=data=>createHash('sha256').update(data).digest('hex');
+const MiB=1024*1024;
+
+/* Metadata-only: this proves the client can validate and plan a pack larger
+   than the current Galactic payload without allocating or pretending to
+   transfer 768 MiB in a Node contract test. */
+function logicalLargeFile(name,size,tag){
+  const chunkSize=2*MiB,chunks=[];
+  for(let offset=0,index=0;offset<size;offset+=chunkSize,index++){
+    const bytes=Math.min(chunkSize,size-offset);
+    chunks.push({offset,size:bytes,sha256:((index+tag)%16).toString(16).repeat(64)});
+  }
+  return {name,size,sha256:(tag%16).toString(16).repeat(64),chunks};
+}
+const logicalLargeFiles=[
+  logicalLargeFile('world/cityforms.bin',256*MiB,10),
+  logicalLargeFile('world/transit.bin',256*MiB,11),
+  logicalLargeFile('world/superstructures.bin',256*MiB,12)
+];
 
 function fakeIndexedDb(){
   const databases=new Map();
@@ -67,6 +85,7 @@ const content={
   'shared-core/base.bin':Buffer.from('shared dependency'),
   'dependent-a/a.bin':Buffer.from('dependent a'),
   'dependent-b/b.bin':Buffer.from('dependent b'),
+  'resume-corrupt/retry.bin':Buffer.from('persisted partial retry'),
   'legacy-hashed/retry.bin':Buffer.from('legacy retry data'),
   'galactic-exploration/section.bin':Buffer.from('sectioned galactic content'),
   'legacy/tone.ogg':Buffer.from('old')
@@ -101,6 +120,16 @@ const manifest={version:2,packs:{
     format:2,label:'Dependent B',chunkSize:4,dependencies:['shared-core'],bytes:content['dependent-b/b.bin'].length,
     files:[entry('b.bin',content['dependent-b/b.bin'])]
   },
+  'large-metadata':{
+    format:2,label:'Metadata-only 768 MiB plan',chunkSize:2*MiB,bytes:768*MiB,
+    files:logicalLargeFiles
+  },
+  'resume-corrupt':{
+    format:1,label:'Persisted partial integrity',chunkSize:4,
+    bytes:content['resume-corrupt/retry.bin'].length,
+    files:[{name:'retry.bin',size:content['resume-corrupt/retry.bin'].length,
+      sha256:sha256(content['resume-corrupt/retry.bin'])}]
+  },
   'legacy-hashed':{
     format:1,label:'Hashed v1',chunkSize:4,bytes:content['legacy-hashed/retry.bin'].length,
     files:[{name:'retry.bin',size:content['legacy-hashed/retry.bin'].length,
@@ -112,6 +141,7 @@ let activeManifest=manifest;
 
 const idb=fakeIndexedDb();
 let quota=1024*1024*1024,usage=0,active=0,maxActive=0,failSecondChunk=true,failReplacementChunk=false;
+let failResumeCorrupt=true,persistenceGranted=false,persistRequests=0;
 let networkAllowed=true,corruptLegacy=true;
 const requests=[];
 async function fetchMock(url,options={}){
@@ -164,6 +194,10 @@ async function fetchMock(url,options={}){
     }
     if(pack==='galactic-command'&&name==='runtime/core.bin'&&start===4&&failReplacementChunk)
       throw new Error('simulated replacement interruption');
+    if(pack==='resume-corrupt'&&start===4&&failResumeCorrupt){
+      failResumeCorrupt=false;
+      throw new Error('simulated persisted-partial interruption');
+    }
     const body=data.subarray(start,end+1);
     return new Response(body,{status:206,headers:{
       'content-range':`bytes ${start}-${end}/${data.length}`,
@@ -173,21 +207,29 @@ async function fetchMock(url,options={}){
 }
 
 const source=await readFile(new URL('../src/assetpack.js',import.meta.url),'utf8');
-const sandbox={
-  Blob,Response,Headers,Uint8Array,Uint32Array,Map,Set,Date,Math,Object,Array,String,Number,RegExp,Error,TypeError,
-  Promise,console,crypto:webcrypto,indexedDB:idb,fetch:fetchMock,
-  navigator:{storage:{estimate:async()=>({quota,usage})}},
-  localStorage:{getItem:()=>null,setItem:()=>{}},
-  document:{getElementById:()=>null,createElement:()=>({})},
-  URL:{createObjectURL:()=>`blob:test-${Math.random()}`,revokeObjectURL:()=>{}},
-  setTimeout,clearTimeout,
-  UPDATE_URL:'https://packs.test/update.json',
-  netAllowed:()=>networkAllowed
-};
-sandbox.window=sandbox;
-vm.createContext(sandbox);
-vm.runInContext(source,sandbox,{filename:'src/assetpack.js'});
-const packs=sandbox.MASSFRONT_ASSET_PACKS;
+function loadPackRuntime(){
+  const sandbox={
+    Blob,Response,Headers,Uint8Array,Uint32Array,Map,Set,Date,Math,Object,Array,String,Number,RegExp,Error,TypeError,
+    Promise,console,crypto:webcrypto,indexedDB:idb,fetch:fetchMock,
+    navigator:{storage:{
+      estimate:async()=>({quota,usage}),
+      persisted:async()=>persistenceGranted,
+      persist:async()=>{persistRequests++;persistenceGranted=true;return true;}
+    }},
+    localStorage:{getItem:()=>null,setItem:()=>{}},
+    document:{getElementById:()=>null,createElement:()=>({})},
+    URL:{createObjectURL:()=>`blob:test-${Math.random()}`,revokeObjectURL:()=>{}},
+    setTimeout,clearTimeout,
+    UPDATE_URL:'https://packs.test/update.json',
+    netAllowed:()=>networkAllowed
+  };
+  sandbox.window=sandbox;
+  vm.createContext(sandbox);
+  vm.runInContext(source,sandbox,{filename:'src/assetpack.js'});
+  return sandbox;
+}
+let sandbox=loadPackRuntime();
+let packs=sandbox.MASSFRONT_ASSET_PACKS;
 assert.ok(packs,'public optional-pack API was not installed');
 
 const built=buildAudioPackFileEntry('five.bin',Buffer.from('12345'),2);
@@ -196,15 +238,33 @@ assert.deepEqual(built.chunks.map(c=>c.size),[2,2,1]);
 assert.equal(built.sha256,sha256(Buffer.from('12345')));
 
 await packs.loadIndex();
+quota=2*1024*MiB;
+const logicalLargeStatus=await packs.status('large-metadata');
+assert.equal(logicalLargeStatus.remainingBytes,768*MiB);
+assert.deepEqual([...logicalLargeStatus.missingFiles],logicalLargeFiles.map(file=>file.name));
+const logicalLargePreflight=await packs.preflight('large-metadata');
+assert.equal(logicalLargePreflight.ok,true);
+assert.ok(logicalLargePreflight.required>768*MiB,
+  'preflight must include assembly headroom beyond remaining logical bytes');
+quota=1024*MiB;
 const first=await packs.install('galactic-command');
 assert.equal(first.ok,false,'interrupted install must not become active');
 assert.equal(first.reason,'download');
 assert.equal(requests.filter(r=>r.key==='galactic-command/runtime/core.bin'&&r.range==='bytes=0-3').length,1);
+assert.equal(persistRequests,1,'first player-initiated pack install should request durable storage once');
 
+/* Simulate a killed/reopened app. Only IndexedDB and the remote offer survive;
+   no in-memory PACK state or chunk map is shared with the new runtime. */
+networkAllowed=false;
+sandbox=loadPackRuntime();
+packs=sandbox.MASSFRONT_ASSET_PACKS;
+assert.ok(await packs.loadIndex(),'reopened runtime must restore the offered manifest from IndexedDB');
+networkAllowed=true;
 const resumed=await packs.install('galactic-command');
 assert.equal(resumed.ok,true);
+assert.equal(resumed.storage.persisted,true);
 assert.equal(requests.filter(r=>r.key==='galactic-command/runtime/core.bin'&&r.range==='bytes=0-3').length,1,
-  'verified first chunk must resume without another request');
+  'verified first chunk must resume after a full runtime reload without another request');
 assert.equal((await packs.status('galactic-command')).installed,true);
 assert.equal(maxActive,1,'aggregate packs must fetch only one bounded file/chunk at a time');
 
@@ -258,6 +318,24 @@ assert.equal([...chunkStore.keys()].filter(k=>String(k).startsWith('galactic-com
   'promotion must collect interrupted and stale chunk identities');
 assert.notEqual(await packs.url('galactic-command','runtime/core.bin'),v1Url,
   'the object URL may switch only after activation commits');
+
+/* Format-1 manifests do not carry per-chunk authorities. The client records
+   the fetched chunk digest locally; after a restart, a same-size damaged Blob
+   must be rejected and only that chunk fetched again. */
+const partialCorrupt=await packs.install('resume-corrupt');
+assert.equal(partialCorrupt.ok,false);
+const resumeEntry=activeManifest.packs['resume-corrupt'].files[0];
+const resumePrefix='resume-corrupt/retry.bin:'+resumeEntry.size+':'+resumeEntry.sha256+':chunk:';
+const resumeChunk0=chunkStore.get(resumePrefix+'0');
+assert.ok(resumeChunk0&&resumeChunk0.sha256);
+chunkStore.set(resumePrefix+'0',{...resumeChunk0,blob:new Blob([Buffer.alloc(4,255)])});
+const corruptChunk0Requests=requests.filter(r=>r.key==='resume-corrupt/retry.bin'&&r.range==='bytes=0-3').length;
+networkAllowed=false;
+sandbox=loadPackRuntime();packs=sandbox.MASSFRONT_ASSET_PACKS;
+assert.ok(await packs.loadIndex());networkAllowed=true;
+assert.equal((await packs.install('resume-corrupt')).ok,true);
+assert.equal(requests.filter(r=>r.key==='resume-corrupt/retry.bin'&&r.range==='bytes=0-3').length,corruptChunk0Requests+1,
+  'damaged persisted synthetic chunk must be refetched after runtime reload');
 
 const beforeIgnore=requests.length;
 const ignored=await packs.install('range-ignore');
@@ -376,6 +454,8 @@ console.log(JSON.stringify({
   rangeIgnoredRequests:1,maxConcurrentFetches:maxActive,legacyBlobPreserved:true,
   offlineManifestRestored:true,dependencyRemovalProtected:true,legacyPoisonCleared:true,
   interruptedReplacementKeptActive:true,postPromotionGc:true,
+  persistedResumeAfterReload:true,damagedPartialRefetched:true,
+  logicalLargeMetadataBytes:768*MiB,logicalLargeMetadataOnly:true,persistenceRequested:persistRequests,
   builderPreservedOtherPacks:true,explorationUsesGenericEngine:true,
   storagePreflight:'blocked-before-fetch',wholeFileSha256:built.sha256
 },null,2));

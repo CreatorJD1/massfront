@@ -1,0 +1,11 @@
+{
+  "date": "2026-09-04",
+  "observation": "Read-only Win32_OperatingSystem query after the 240-frame diagnostic; not a synchronized during-capture memory trace",
+  "units": "KiB",
+  "TotalVisibleMemorySize": 24340160,
+  "FreePhysicalMemory": 123224,
+  "TotalVirtualMemorySize": 90900160,
+  "FreeVirtualMemory": 14214828,
+  "interpretation": "Severe host memory pressure near the run. Paging/scheduling interference is plausible, not proven as the sole cause of stalls. Do not use this result as an S25 silicon forecast or a controlled before/after comparison.",
+  "otherApplicationsClosed": false
+}

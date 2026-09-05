@@ -15,7 +15,7 @@ import {cpSync, rmSync, mkdirSync, existsSync, readFileSync, readdirSync, statSy
 import {createHash} from 'node:crypto';
 import {basename, dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
-import {buildRuntimeCompatibility, BALANCE_AUTHORITY_V1} from './runtime-compatibility.mjs';
+import {buildRuntimeCompatibility,canonicalRuntimeArtifacts,BALANCE_AUTHORITY_V1} from './runtime-compatibility.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const www = join(root,'www');
@@ -273,6 +273,7 @@ if(bootList.length){
       buildVersion:version,
       channel:'packaged-www',
       manifestArtifacts:ordered.map(path=>({path,bytes:readFileSync(join(www,path))})),
+      canonicalArtifacts:canonicalRuntimeArtifacts(root,version),
       balancePaths:BALANCE_AUTHORITY_V1,
       excluded:['assets/data/runtime-compatibility.json (descriptor carrier; self-reference)']
     });
@@ -350,7 +351,8 @@ for(const name of [
 for(const name of [
   'arctic-windpack-albedo-v1.webp','arctic-windpack-normal-rough-v1.webp',
   'ashland-basalt-albedo-v1.webp','ashland-basalt-normal-rough-v1.webp',
-  'vespera-crust-albedo-v1.webp','vespera-crust-normal-rough-v1.webp'
+  'vespera-crust-albedo-v1.webp','vespera-crust-normal-rough-v1.webp',
+  'brood-infested-soil-albedo-v1.webp','brood-infested-soil-normal-rough-v1.webp'
 ]) check('assets/terrain/locations/'+name,'atomic location terrain material');
 for(const name of [
   'mf-blast-flipbook-v4.png','mf-collapse-dust-flipbook-v1.png',

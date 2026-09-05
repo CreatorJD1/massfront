@@ -1,0 +1,18 @@
+{
+  "schema": "massfront-brood-terrain-pbr-v1",
+  "source": {
+    "kind": "OpenAI image generation",
+    "sha256": "a4834657a13e4ad2d2c40f03ce434f7e4eb78d0375dd4737ce9d6d56e73f7b11",
+    "dimensions": [
+      1254,
+      1254
+    ]
+  },
+  "promptSummary": "Original neutral-lit seamless alien chitin, fibrous membrane and sparse bone-node terrain albedo; no reference pixels.",
+  "processing": {
+    "size": 1024,
+    "periodicSeamBand": 176,
+    "normalStrength": 2.45,
+    "roughnessAlpha": true
+  }
+}
