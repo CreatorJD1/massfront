@@ -1049,11 +1049,20 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
   const allow=mfPointerPickAllowance(pointerType),wp=Math.max(.01,orthoSpan/Math.max(1,VH));
   /* Broad only: the result cannot be accepted until its projected hull hits. */
   const broad=mfPointerMaxSpan()+allow*wp+48;
-  let own=-1,enemy=-1,om=Infinity,em=Infinity;
+  let own=-1,enemy=-1,om=Infinity,em=Infinity,ownStack=false;
   const stackTeams=[typeof mfLocalTeam==='function'?mfLocalTeam():0];
-  const take=(j,m)=>{
+  /* viaStack records HOW the winning own-pick was made. A finite metric from
+     the unit loop means the pointer landed inside that unit's projected hull
+     or its icon plate -- it is on the thing. A metric from the stack loop is a
+     strategic plate standing in for several units, which is a much looser
+     claim on the pixel. Structure arbitration below needs to tell them apart:
+     a plate must not outrank the building under it, and a direct hit must not
+     be thrown away by one. */
+  const take=(j,m,viaStack)=>{
     if(!isFinite(m)) return;
-    if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0){ if(m<om-1e-9||(Math.abs(m-om)<=1e-9&&(own<0||j<own))){om=m;own=j;} }
+    if(typeof mfLocalOwnsUnit==='function'?mfLocalOwnsUnit(j):uteam[j]===0){
+      if(m<om-1e-9||(Math.abs(m-om)<=1e-9&&(own<0||j<own))){om=m;own=j;ownStack=!!viaStack;}
+    }
     else if(fogEntityVisible(uteam[j],ux[j],uy[j])&&(m<em-1e-9||(Math.abs(m-em)<=1e-9&&(enemy<0||j<enemy)))){em=m;enemy=j;}
   };
   forUnitsIn(wx,wy,broad,j=>{
@@ -1065,10 +1074,10 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
   if(typeof mfIconStackPick==='function'){
     for(const team of stackTeams){
       const lead=mfIconStackPick(wx,wy,team);
-      if(lead>=0) take(lead,mfPointerStackMetric(lead,sx,sy,allow));
+      if(lead>=0) take(lead,mfPointerStackMetric(lead,sx,sy,allow),true);
     }
   }
-  return {own:own,enemy:enemy};
+  return {own:own,enemy:enemy,ownStack:ownStack,ownDirect:own>=0&&!ownStack};
 }
 /* One pointer read owns unit + structure arbitration. Friendly structures keep
    their established precedence over parked friendly units; a visible enemy
@@ -1076,7 +1085,12 @@ function pickUnitPointer(wx,wy,sx,sy,pointerType){
 function pickPointerEntities(wx,wy,sx,sy,pointerType){
   const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
   const pk=pickUnitPointer(wx,wy,sx,sy,pointerType),b=pickBld(wx,wy,sx,sy);
-  if(b>=0&&blds[b]&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[b]):blds[b].team===0)) pk.own=-1;
+  /* A friendly structure outranks a strategic STACK PLATE drawn over it --
+     that is what made a factory unreachable when constructors were parked on
+     it. It must NOT outrank a unit the player actually hit: tapping the
+     Commander standing on your own pad opened the pad instead, which is the
+     opposite of obvious intent. Keep a direct hull/icon hit; drop a plate. */
+  if(b>=0&&blds[b]&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[b]):blds[b].team===0)&&!pk.ownDirect) pk.own=-1;
   pk.bld=b;
   if(t0){const ms=performance.now()-t0;mfPickerPerf.calls++;mfPickerPerf.lastMs=ms;
     mfPickerPerf.totalMs+=ms;mfPickerPerf.maxMs=Math.max(mfPickerPerf.maxMs,ms);}
@@ -1272,7 +1286,14 @@ function onTap(sx,sy,pointerType){
      the production building directly under the finger was unreachable. Armed
      queue/patrol modes still own the tap above, while an ordinary direct hit on
      one of our structures now opens its real menu. */
-  if(b>=0&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[b]):blds[b].team===0)){
+  /* ...but a unit the player actually HIT still outranks the footprint under
+     it. pk.ownDirect means the pointer landed inside that unit's projected
+     hull or its icon plate, not on a strategic plate standing in for it, so
+     tapping the Commander parked on your own pad selects the Commander. The
+     picker already drops a mere plate here (pickPointerEntities), and without
+     this the plate rule was enforced twice: once by dropping the pick, and
+     again by this branch returning before the unit branch could run. */
+  if(b>=0&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(blds[b]):blds[b].team===0)&&!(pk.own>=0&&pk.ownDirect)){
     lastGroundT=0;
     clearSel();openBldMenu(b);return;
   }

@@ -352,19 +352,25 @@ unitTick=function(dt){mfAirliftPreTick(dt);mfAirliftUnitTickBase(dt);mfAirliftPo
 /* A board order is intentionally higher priority than ordinary friendly-unit
    selection: selected troops + tap Skycrane is the whole mobile gesture. */
 const mfAirliftOnTapBase=onTap;
-onTap=function(sx,sy){
+/* pointerType MUST be forwarded. Dropping it here silently disabled the whole
+   pointer-aware picker for every tap in the game: onTap only calls
+   pickPointerEntities when pointerType is truthy, so the base fell back to the
+   legacy world picker and projected hulls, icon plates and touch allowances
+   were never consulted. Two wrappers in this file each ate the argument. */
+onTap=function(sx,sy,pointerType){
   const W=s2w(sx,sy),wx=W[0],wy=W[1];
   if(mfAirliftAim){
     mfAirliftConfirmAim(wx,wy);
     return;
   }
-  const pk=pickUnit(wx,wy);
+  const pk=pointerType&&typeof pickPointerEntities==='function'
+    ?pickPointerEntities(wx,wy,sx,sy,pointerType):pickUnit(wx,wy);
   if(pk.own>=0&&utype[pk.own]===MF_UT_AIRLIFT&&selCount()>0&&!usel[pk.own]){
     if(mfAirliftIssueBoard(pk.own))return;
     const hasOther=(()=>{for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i]&&i!==pk.own)return true;return false;})();
     if(hasOther)return;
   }
-  return mfAirliftOnTapBase(sx,sy);
+  return mfAirliftOnTapBase(sx,sy,pointerType);
 };
 
 function mfAirliftSvgIcon(size){
@@ -725,7 +731,8 @@ function mfMassAlert(i,state){
 }
 function mfMassBeginFlight(i){
   const H=mfMassHold(i,false);if(!H||!H.cargo.length||utype[i]!==MF_UT_MASSFLESH)return false;
-  utype[i]=MF_UT_MASSFLESH_AIR;H.flight=MF_MASS_FLIGHT;H.mission=null;H.attack=.25;uhold[i]=0;ustate[i]=0;
+  utype[i]=MF_UT_MASSFLESH_AIR;if(typeof mfAirTypeTransition==='function')mfAirTypeTransition(i,TYPES[utype[i]],true);
+  H.flight=MF_MASS_FLIGHT;H.mission=null;H.attack=.25;uhold[i]=0;ustate[i]=0;
   addParticle(3,ux[i],uy[i],0,0,1.0,100,185,92,255);
   for(let k=0;k<10;k++)addParticle(4,ux[i]+rr(-12,12),uy[i]+rr(-12,12),rr(-18,18),rr(-18,18),.8,8,135,236,72);
   sfx('cre_attack',ux[i],uy[i],1.6);
@@ -761,7 +768,8 @@ function mfMassBirthNow(i,H){
     addParticle(6,ux[u],uy[u],0,0,.55,TYPES[P.type].size*1.8,150,242,82);born.push(u);
   }
   H.cargo=remaining;H.used=remaining.reduce((n,P)=>n+P.slots,0);H.mission=null;H.flight=0;
-  utype[i]=MF_UT_MASSFLESH;ustate[i]=0;utx[i]=ux[i];uty[i]=uy[i];uhold[i]=0;
+  utype[i]=MF_UT_MASSFLESH;if(typeof mfAirTypeTransition==='function')mfAirTypeTransition(i,TYPES[utype[i]],false);
+  ustate[i]=0;utx[i]=ux[i];uty[i]=uy[i];uhold[i]=0;
   addParticle(3,ux[i],uy[i],0,0,.9,86,185,92,255);sfx('deploy',ux[i],uy[i],1.25);sfx('cre_attack',ux[i],uy[i],1.1);
   if(uteam[i]===0)toast('♒ '+born.length+' ORGANISMS BORN INTO FORMATION');
   updateSelInfo();return born;
@@ -864,15 +872,18 @@ const mfMassUnitTickBase=unitTick;
 unitTick=function(dt){mfMassPreTick(dt);mfMassUnitTickBase(dt);mfMassPostTick(dt);};
 
 const mfMassOnTapBase=onTap;
-onTap=function(sx,sy){
+/* Same contract as the airlift wrapper above: forward pointerType or the base
+   loses its pointer-aware picking. */
+onTap=function(sx,sy,pointerType){
   const W=s2w(sx,sy),wx=W[0],wy=W[1];
   if(mfMassBirthAim){mfMassConfirmAim(wx,wy);return;}
-  const pk=pickUnit(wx,wy);
+  const pk=pointerType&&typeof pickPointerEntities==='function'
+    ?pickPointerEntities(wx,wy,sx,sy,pointerType):pickUnit(wx,wy);
   if(pk.own>=0&&utype[pk.own]===MF_UT_MASSFLESH&&selCount()>0&&!usel[pk.own]){
     if(mfMassIssueBoard(pk.own))return;
     for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i]&&i!==pk.own)return;
   }
-  return mfMassOnTapBase(sx,sy);
+  return mfMassOnTapBase(sx,sy,pointerType);
 };
 
 const mfMassPurposeBase=intelUnitPurpose;

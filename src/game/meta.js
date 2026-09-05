@@ -1711,13 +1711,84 @@ function mfBindTap(el,fn){
    pointer timing while adding one guarded keyboard path. Preventing the key's
    native click and suppressing a same-turn synthetic click avoids the classic
    double activation without making screen-reader click depend on key events. */
+/* Is this control inside something the player can pan?
+ *
+ * Committing on pointerdown is deliberate for the battle HUD -- an order must
+ * not wait for a finger to lift. But the same rule fires the instant a finger
+ * lands on a button in a SCROLLABLE row, so panning the build/production/
+ * command sub-menus activated whatever the pan happened to start on. Asking
+ * the live layout is better than a marker attribute: only one element in the
+ * whole HUD carries data-mf-scroll-rail, and a row only misfires while it
+ * actually overflows, which changes with content and text scale.
+ *
+ * Checked at press time, not bind time, because a row that fits four cards and
+ * later holds nine becomes pannable without ever being rebound. */
+function mfPressInsideScroller(el){
+  if(!el||typeof getComputedStyle!=='function') return false;
+  for(let p=el.parentElement,hops=0;p&&hops<8&&p!==document.body;p=p.parentElement,hops++){
+    let cs; try{ cs=getComputedStyle(p); }catch(_){ return false; }
+    const ox=cs.overflowX,oy=cs.overflowY;
+    if((ox==='auto'||ox==='scroll')&&p.scrollWidth>p.clientWidth+2) return true;
+    if((oy==='auto'||oy==='scroll')&&p.scrollHeight>p.clientHeight+2) return true;
+  }
+  return false;
+}
 function mfBindNativePress(el,fn,pointerEvent){
   if(!el||typeof fn!=='function'||(el.dataset&&el.dataset.mfNativePress==='1')) return;
   if(el.dataset) el.dataset.mfNativePress='1';
   const now=typeof mfTapNow==='function'?mfTapNow:()=>performance.now();
-  let pointerCommit=-1e9,keyCommit=-1e9;
+  let pointerCommit=-1e9,keyCommit=-1e9,pan=null;
+  /* Slop matches mfBindTap so the two binders cannot disagree about what
+     counts as a tap on the same screen. */
+  const SLOP=12;
+  /* Held-but-not-yet-committed feedback.
+   *
+   * A deferred control is silent about whether the touch still counts, so a
+   * player panning a row cannot tell the difference between "I am scrolling"
+   * and "I am about to fire this". Light it on contact and extinguish it the
+   * instant the gesture becomes a pan; that teaches the rule in one gesture.
+   *
+   * Deliberately INSTANT and STATIC. Anything that grows or fills reads as a
+   * hold-to-activate progress ring, which would promise something this control
+   * does not do. Inline styles rather than a class because CSS ships only in
+   * the APK and the Space, never over the air. */
+  const arm=on=>{
+    if(!el.style) return;
+    if(on){
+      if(el.dataset&&el.dataset.mfPressLit==='1') return;
+      if(el.dataset) el.dataset.mfPressLit='1';
+      el._mfPressF=el.style.filter; el._mfPressS=el.style.boxShadow;
+      el.style.filter=(el._mfPressF?el._mfPressF+' ':'')+'brightness(1.28)';
+      el.style.boxShadow=(el._mfPressS?el._mfPressS+',':'')+'inset 0 0 0 1px rgba(150,220,255,.85)';
+    }else{
+      if(!el.dataset||el.dataset.mfPressLit!=='1') return;
+      delete el.dataset.mfPressLit;
+      el.style.filter=el._mfPressF||''; el.style.boxShadow=el._mfPressS||'';
+    }
+  };
+  el.addEventListener('pointermove',ev=>{
+    if(!pan||ev.pointerId!==pan.id) return;
+    if(!pan.moved&&Math.hypot(ev.clientX-pan.x,ev.clientY-pan.y)>SLOP){ pan.moved=true; arm(false); }
+  },{passive:true});
+  el.addEventListener('pointercancel',ev=>{ if(pan&&ev.pointerId===pan.id){ pan=null; arm(false); } },{passive:true});
+  el.addEventListener('lostpointercapture',()=>{ if(pan){ pan=null; arm(false); } },{passive:true});
+  el.addEventListener('pointerup',ev=>{
+    if(!pan||ev.pointerId!==pan.id) return;
+    const ok=!pan.moved&&el.contains(ev.target);
+    pan=null; arm(false);
+    if(!ok||el.disabled) return;
+    pointerCommit=now(); fn(ev);
+  });
   el.addEventListener(pointerEvent||'pointerdown',ev=>{
     if(el.disabled)return;
+    /* Inside a pannable row, wait for the lift and require the finger to have
+       stayed put. Everywhere else keep the immediate commit. */
+    if(!pointerEvent&&mfPressInsideScroller(el)){
+      pan={id:ev.pointerId,x:ev.clientX,y:ev.clientY,moved:false};
+      arm(true);
+      return;
+    }
+    pan=null; arm(false);
     pointerCommit=now(); fn(ev);
   });
   el.addEventListener('keydown',ev=>{

@@ -194,6 +194,81 @@ try {
         + ' stackingOn=' + single.stacking + ' aiming=' + single.aiming
         + ' placing=' + single.placing + ' armQueue=' + single.armQueue);
 
+  /* ---- 1b. a unit standing on a friendly structure ---- */
+  const onBase = await page.evaluate(async () => {
+    const t = window.__probeOnBase;
+    if (t == null || t < 0 || !ualive[t]) return { err: 'no unit parked on the base' };
+    if (typeof clearSel === 'function') clearSel();
+    if (typeof closeMenus === 'function') closeMenus();
+    orthoSpan = distTarget = 320;
+    cam.x = ux[t]; cam.y = uy[t]; camFollow = -1;
+    for (let f = 0; f < 6; f++) {
+      orthoSpan = distTarget = 320;
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    const p = w2s(ux[t], uy[t]);
+    if (!p || p[0] < 0 || p[0] > innerWidth || p[1] < 0 || p[1] > innerHeight)
+      return { err: 'projected off-screen; probe could not aim' };
+    const bld = typeof pickBld === 'function' ? pickBld(...s2w(p[0], p[1]), p[0], p[1]) : -1;
+    const pk = typeof pickPointerEntities === 'function'
+      ? pickPointerEntities(...s2w(p[0], p[1]), p[0], p[1], 'touch') : null;
+    const raw = typeof pickUnitPointer === 'function'
+      ? pickUnitPointer(...s2w(p[0], p[1]), p[0], p[1], 'touch') : null;
+    const skipped = typeof mfIconStackSkip === 'function' ? !!mfIconStackSkip(t) : null;
+    onTap(p[0], p[1], 'touch');
+    let sel = 0, selT = false;
+    for (let i = 0; i < unitHigh; i++) if (ualive[i] && usel[i]) { sel++; if (i === t) selT = true; }
+    const menu = document.getElementById('bldMenu2') || document.getElementById('prodMenu');
+    const menuUp = !!(menu && getComputedStyle(menu).display !== 'none' && menu.getBoundingClientRect().height > 0);
+    /* Leave no panel open. A structure menu is uiPanelOpen, which correctly
+       suppresses the PLATOONS row, so forgetting this makes every later rail
+       check fail for a reason that has nothing to do with the rail. */
+    try { if (typeof closeMenus === 'function') closeMenus(); } catch (e) {}
+    await new Promise((r) => requestAnimationFrame(r));
+    return { target: t, sel, selT, bldUnderTap: bld, ownDirect: pk ? !!pk.ownDirect : null, menuUp,
+      pkOwn: pk ? pk.own : null, rawOwn: raw ? raw.own : null,
+      rawStack: raw ? !!raw.ownStack : null, stackSkip: skipped };
+  });
+  record('tapping a unit standing on your own structure selects the unit',
+    !onBase.err && onBase.selT && onBase.sel === 1,
+    onBase.err ? onBase.err
+      : 'unit #' + onBase.target + ' on building ' + onBase.bldUnderTap
+        + ': selected=' + onBase.sel + ' gotUnit=' + onBase.selT
+        + ' pk.own=' + onBase.pkOwn + ' ownDirect=' + onBase.ownDirect
+        + ' rawOwn=' + onBase.rawOwn + ' viaStack=' + onBase.rawStack
+        + ' stackSkip=' + onBase.stackSkip + ' menuOpened=' + onBase.menuUp);
+
+  /* ---- 1c. panning a scrollable row must not fire its buttons ---- */
+  const panSafe = await (async () => {
+    await page.evaluate(() => {
+      try { if (typeof showHudDock === 'function') showHudDock(true, 'platoons'); } catch (e) {}
+      try { if (typeof setHudDeck === 'function') setHudDeck('platoons', true); } catch (e) {}
+      if (window.MFUnitStackHotbar) MFUnitStackHotbar.sync();
+    });
+    await page.waitForTimeout(700);
+    const card = await page.$('#mfUnitStackRail .mfUnitStackCard');
+    if (!card) return { err: 'no stack card to pan from' };
+    await page.evaluate(() => { if (typeof clearSel === 'function') clearSel(); });
+    const box = await card.boundingBox();
+    if (!box) return { err: 'card has no box' };
+    /* Press on the card and drag well past the slop radius, as a pan does. */
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    for (let i = 1; i <= 6; i++) {
+      await page.mouse.move(box.x + box.width / 2 - i * 12, box.y + box.height / 2);
+      await page.waitForTimeout(16);
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(200);
+    const sel = await page.evaluate(() => {
+      let n = 0; for (let i = 0; i < unitHigh; i++) if (ualive[i] && usel[i]) n++; return n;
+    });
+    return { sel };
+  })();
+  record('panning across a stack card does not activate it',
+    !panSafe.err && panSafe.sel === 0,
+    panSafe.err ? panSafe.err : 'after a 72px drag: ' + panSafe.sel + ' unit(s) selected (want 0)');
+
   /* ---- 2a. per-type stack rail ---- */
   const rail = await page.evaluate(async () => {
     if (!window.MFUnitStackHotbar) return { err: 'MFUnitStackHotbar is not defined' };
