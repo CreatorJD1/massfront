@@ -20,6 +20,7 @@ import { AtmosphereShader } from '../shaders/atmosphere_shader.js';
 import { BlackHoleShader } from '../shaders/black_hole_shader.js';
 import { TacticalGridShader } from '../shaders/tactical_grid_shader.js';
 import { AsteroidFieldMesh } from '../celestial/asteroid_field_mesh.js';
+import { registerRuntimeRenderer } from './gltf_runtime_loader.js';
 
 // Maximum dt the engine will consume in a single frame. Tab-out / breakpoint
 // pauses can otherwise dump multi-second deltas and teleport the camera.
@@ -135,6 +136,9 @@ function createHardwareRenderer() {
       alpha: false,
       powerPreference: 'default'
     });
+    /* KTX2 needs a live context to probe which compressed formats this GPU
+       actually supports; until a renderer registers, Basis textures stay off. */
+    registerRuntimeRenderer(renderer);
   } catch (error) {
     const loseContext = context.getExtension('WEBGL_lose_context');
     if (loseContext) loseContext.loseContext();

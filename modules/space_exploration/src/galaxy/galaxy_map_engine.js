@@ -10,6 +10,7 @@
 
 import { SHOWCASE_LAYOUT, SHOWCASE_SYSTEMS } from '../systems/showcase_systems.js';
 import { createSeededRandom } from '../core/seeded_random.js';
+import { registerRuntimeRenderer } from '../core/gltf_runtime_loader.js';
 
 const GALAXY_EXPOSURE = 1.12;
 const GALAXY_PORTRAIT_ASPECT = 0.78;
@@ -217,6 +218,9 @@ export class GalaxyMapEngine {
 
     this._ownsRenderer = !options.renderer;
     this.renderer = options.renderer || new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+    /* KTX2 needs a live context to probe which compressed formats this GPU
+       actually supports; until a renderer registers, Basis textures stay off. */
+    registerRuntimeRenderer(this.renderer);
     if (this._ownsRenderer) {
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.setSize(this.mount.clientWidth || 400, this.mount.clientHeight || 500);

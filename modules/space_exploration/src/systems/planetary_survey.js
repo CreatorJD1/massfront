@@ -9,6 +9,7 @@ import { createAuthoredPlanetVisual } from '../planet/authored_planet.js';
 import { AtmosphereShader } from '../shaders/atmosphere_shader.js';
 import { RingShader } from '../shaders/ring_shader.js';
 import { PlanetShader } from '../shaders/planet_shader.js';
+import { registerRuntimeRenderer } from '../core/gltf_runtime_loader.js';
 
 export class PlanetarySurvey {
   constructor(viewportContainer, onExtractCallback) {
@@ -66,6 +67,9 @@ export class PlanetarySurvey {
     this.camera.position.set(0, 0, 68);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    /* KTX2 needs a live context to probe which compressed formats this GPU
+       actually supports; until a renderer registers, Basis textures stay off. */
+    registerRuntimeRenderer(this.renderer);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.outputEncoding = THREE.sRGBEncoding;
