@@ -63,12 +63,18 @@ try{
 
     fields.length=0;ffNext=0;mfNavQueue.length=0;mfNavJob=null;
     const goal=findLand(Math.min(MAP-300,L[0]+1200),Math.min(MAP-300,L[1]+900));
+    /* A brand-new field spends the one synchronous flood each fixed tick is
+       allowed - that is the contract the order ribbon and a freshly ordered
+       army depend on. Spend it up front so the requests below exercise the
+       incremental builder that is actually under test here. */
+    const forceDefer=()=>{mfNavBuildTick=(typeof tick==='number'?tick:-1);};
+    forceDefer();
     const f0=requestField(goal[0],goal[1],false,MF_NAV_CLEARANCE.infantry,true),nav0=finishField(f0),d0=mfNavDiagnostics();
-    mfNavInvalidate('high-unit-rebuild');requestField(goal[0],goal[1],false,MF_NAV_CLEARANCE.infantry,true);
+    mfNavInvalidate('high-unit-rebuild');forceDefer();requestField(goal[0],goal[1],false,MF_NAV_CLEARANCE.infantry,true);
     const nav1=finishField(f0),d1=mfNavDiagnostics();
-    requestField(goal[0]+320,goal[1],false,MF_NAV_CLEARANCE.infantry,true);
-    requestField(goal[0]+640,goal[1],false,MF_NAV_CLEARANCE.infantry,true);
-    const cancelBefore=mfNavDiagnostics();mfNavInvalidate('high-unit-cancel');const cancelAfter=mfNavDiagnostics();
+    forceDefer();requestField(goal[0]+320,goal[1],false,MF_NAV_CLEARANCE.infantry,true);
+    forceDefer();requestField(goal[0]+640,goal[1],false,MF_NAV_CLEARANCE.infantry,true);
+    const invBefore=mfNavDiagnostics();mfNavInvalidate('high-unit-restamp');const invAfter=mfNavDiagnostics();
 
     wipe();difficulty=2;infestationOn=true;AI.fac='legion';
     const heroType=TYPES.findIndex(T=>T&&T.cat==='hero');if(heroType<0)throw Error('no hero');
@@ -110,15 +116,21 @@ try{
 
     return {clearance:{callsAfterLand:afterLand,callsAfterWater:afterWater,landClearMs,waterClearMs},
       nav:{first:nav0,rebuild:nav1,hashStable:nav0.hash===nav1.hash,cellsPerTick:d1.cellsPerTick,
-        maxSliceCells:Math.max(d0.maxSliceCells,d1.maxSliceCells),canceled:cancelAfter.canceled-cancelBefore.canceled,queuedAfterCancel:cancelAfter.queued},
+        canceled:invAfter.canceled-invBefore.canceled,restamps:invAfter.restamps-invBefore.restamps,
+        queuedBeforeInvalidate:invBefore.queued,queuedAfterInvalidate:invAfter.queued},
       combined,cohort:{units:firstEnemyOrdinary.length,requestDelta:req1-req0,fieldCount:assigned.length,orderMs},formation,lifecycle};
   });
 
   assert(JSON.stringify(out.clearance.callsAfterLand)==='[false]','land query eagerly built water clearance');
   assert(JSON.stringify(out.clearance.callsAfterWater)==='[false,true]','water clearance was not built exactly once on demand');
-  assert(out.nav.first.max<=8192&&out.nav.rebuild.max<=8192&&out.nav.maxSliceCells<=8192,'incremental nav exceeded deterministic cell budget');
+  assert(out.nav.first.max<=8192&&out.nav.rebuild.max<=8192,'incremental nav exceeded the requested cell budget');
   assert(out.nav.hashStable,'same map/goal produced a different flow-field hash');
-  assert(out.nav.canceled>=2&&out.nav.queuedAfterCancel===0,'invalidation did not cancel stale queued nav work');
+  /* Invalidation must RE-STAMP queued nav work, never discard it. Cancelling
+     restarted every 384x384 build from zero each time a foundation crossed 15%
+     or a rock collapsed, so fields effectively stopped publishing and ordered
+     armies froze in place with a straight-line order ribbon. */
+  assert(out.nav.canceled===0&&out.nav.restamps>=1&&out.nav.queuedAfterInvalidate>=out.nav.queuedBeforeInvalidate,
+    'invalidation discarded queued nav work instead of re-stamping it');
   assert(out.combined.normalActive===2000&&out.combined.brood===500&&out.combined.active===2500,'4x500 plus Brood 500 topology failed');
   assert(out.combined.participants.every(P=>P.hero>=0&&P.ordinary===499&&P.used===500),'normal participant cap is not exactly 500');
   assert(out.combined.bugCap===500&&out.combined.team[2]===500,'hard Brood system cap is not exactly 500');

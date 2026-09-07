@@ -17,12 +17,14 @@
   const MC_INT=(v,min,max)=>Number.isSafeInteger(v)&&v>=min&&v<=max;
   const MC_KEYS=(v,keys)=>!!v&&typeof v==='object'&&!Array.isArray(v)&&
     Object.keys(v).length===keys.length&&Object.keys(v).every(k=>keys.includes(k));
-  const MC_TYPES=Object.freeze(['move','stop','hold','attack','guard','build','produce','research','commander','repair','recycle','upgrade']);
+  const MC_TYPES=Object.freeze(['move','stop','hold','attack','guard','build','produce','research','commander','repair','recycle','upgrade','repeat','rally','cancel_production']);
   const MC_UNIT_COMMAND_MAX=64,MC_BATCH_COMMAND_MAX=8,MC_COMMAND_BYTES_MAX=2048,
     MC_LOGICAL_UNIT_MAX=MC_UNIT_COMMAND_MAX*MC_BATCH_COMMAND_MAX,
     MC_FORM_IDS=Object.freeze(['spread','line','wedge','box','column','arc']);
   let mcRules=null,mcWelcome=null,mcStart=null,mcLaunchStarted=false,mcSubmitFailure='',mcApplyFailure='';
   let mcUpgradePendingTick=-1,mcUpgradePendingSeq=-1;
+  const mcRepeatPending=new Map();
+  const mcCancelPending=new Map();
 
   function mcLobbyRules(){
     const live=window.MFSocialUI&&MFSocialUI.state&&MFSocialUI.state.lobby,
@@ -40,12 +42,14 @@
          packet and the pending service receipt before replay could reconcile it. */
       if(mcWelcome.resumed!==true){
         mcUpgradePendingTick=mcUpgradePendingSeq=-1;
+        mcRepeatPending.clear();
+        mcCancelPending.clear();
         mcLastCommittedTick=Number.isSafeInteger(mcWelcome.tick)?mcWelcome.tick:0;mcAppliedTicks.clear();
         if(mcQueuedTick){const Q=mcQueuedTick;mcQueuedTick=null;Q.resolve(false);}
       }
     }
     if(e&&e.type==='massfront-match:start'){
-      mcStart=e.detail||null;mcLastCommittedTick=0;mcAppliedTicks.clear();
+      mcStart=e.detail||null;mcLastCommittedTick=0;mcAppliedTicks.clear();mcRepeatPending.clear();mcCancelPending.clear();
       if(typeof queueMicrotask==='function')queueMicrotask(mcBootstrapMatch);else setTimeout(mcBootstrapMatch,0);
     }
   }
@@ -214,6 +218,34 @@
       if(typeof populationCanSpawn==='function'&&!populationCanSpawn(command.unit,authority.team,authority.slot))return null;
       return {type:'produce',building:ref.id,unit:command.unit,count:command.count};
     }
+    if(command.type==='repeat'||command.type==='rally'){
+      const repeat=command.type==='repeat';
+      if(!MC_KEYS(command,repeat?['type','building','active']:['type','building','x','y'])||
+         repeat&&typeof command.active!=='boolean'||!repeat&&!(point=mcPoint(command)))return null;
+      const ref=mcBuildingRef(command.building,authority,['fac','tgate','harbor','airfield']);
+      if(!ref||!Array.isArray(ref.B.queue)||!(ref.B.prog>=1)||typeof commanderSlotForBuilding!=='function')return null;
+      if(repeat)return {type:'repeat',building:ref.id,active:command.active};
+      /* Transport carries map coordinates, not a client-resolved path. All seats
+         clamp the same marker; production later projects it for each chassis. */
+      point=point.map(v=>Math.max(20,Math.min(MAP-20,v)));
+      if(typeof battlefieldClampPoint==='function')point=battlefieldClampPoint(point[0],point[1],24);
+      if(!point||point.length!==2||!point.every(v=>Number.isFinite(v)&&v>=0&&v<=MAP))return null;
+      return {type:'rally',building:ref.id,point};
+    }
+    if(command.type==='cancel_production'){
+      const cap=typeof MF_PRODUCTION_QUEUE_CAP==='number'?MF_PRODUCTION_QUEUE_CAP:30;
+      if(!MC_KEYS(command,['type','building','start','unit','revision','queue'])||
+         !MC_INT(command.revision,0,1e9)||!Array.isArray(command.queue)||!command.queue.length||command.queue.length>cap||
+         !command.queue.every(t=>MC_INT(t,0,TYPES.length-1))||!MC_INT(command.start,0,command.queue.length-1)||
+         command.unit!==command.queue[command.start])return null;
+      const ref=mcBuildingRef(command.building,authority,['fac','tgate','harbor','airfield']);
+      if(!ref||!Array.isArray(ref.B.queue)||!(ref.B.prog>=1)||typeof commanderSlotForBuilding!=='function'||typeof credit!=='function')return null;
+      let last=command.start;while(last+1<command.queue.length&&command.queue[last+1]===command.unit)last++;
+      const T=TYPES[command.unit];if(!T||!Number.isFinite(T.bt)||T.bt<=0)return null;
+      const cost=typeof factionDoctrineUnitCost==='function'?factionDoctrineUnitCost(T,authority.team):{m:T.cm,e:T.ce};
+      if(!cost||!Number.isFinite(cost.m)||cost.m<0||!Number.isFinite(cost.e)||cost.e<0)return null;
+      return {type:'cancel_production',building:ref.id,last,revision:command.revision,queue:command.queue.slice(),cost,authority};
+    }
     if(command.type==='research'){
       if(!MC_KEYS(command,['type','building','study'])||typeof command.study!=='string')return null;
       const ref=mcBuildingRef(command.building,authority,['techlab']),idx=typeof RESEARCH!=='undefined'?
@@ -284,6 +316,8 @@
         for(const i of P.indices){if(upgrades.has(i)||services.has(i))return false;upgrades.add(i);}
         const key=P.authority.team+':'+P.authority.slot,E=escrow.get(key)||{m:0,e:0,a:P.authority};
         E.m+=P.costM;E.e+=P.costE;escrow.set(key,E);
+      }else if(P.type==='repeat'||P.type==='rally'||P.type==='cancel_production'){
+        if(services.has(P.building))return false;
       }else if(P.type==='produce'){
         if(services.has(P.building))return false;
         const n=(prod.get(P.building)||0)+P.count,B=blds[P.building];prod.set(P.building,n);
@@ -425,8 +459,30 @@
       return;
     }
     if(plan.type==='produce'){
-      const B=blds[plan.building];for(let n=0;n<plan.count;n++)B.queue.push(plan.unit);return;
+      const B=blds[plan.building];for(let n=0;n<plan.count;n++)B.queue.push(plan.unit);
+      B.queueRevision=(B.queueRevision||0)+1;return;
     }
+    if(plan.type==='cancel_production'){
+      const B=blds[plan.building];
+      /* A repeat completion can replace [unit] with an identical [unit]. The
+         revision, not just the visible stack, identifies the work being cancelled.
+         Stale clicks and duplicate proposals consume no-op instead of freezing
+         every peer or cancelling the next chassis/refunding it a second time. */
+      if((B.queueRevision||0)!==plan.revision||B.queue.length!==plan.queue.length||
+         !B.queue.every((t,i)=>t===plan.queue[i])){
+        const local=mcLocalAuthority();
+        if(local&&local.seat===plan.authority.seat&&typeof toast==='function')toast('Queue changed — cancel not applied; select the current stack again');
+        return;
+      }
+      if(plan.last===0){
+        const T=TYPES[B.queue[0]],frac=Math.min(1,Math.max(0,B.prodT||0)/T.bt);
+        if(frac>0)credit(plan.authority.team,plan.cost.m*frac,plan.cost.e*frac,plan.authority.slot);
+        B.queue.shift();B.prodT=0;
+      }else B.queue.splice(plan.last,1);
+      B.queueRevision=(B.queueRevision||0)+1;return;
+    }
+    if(plan.type==='repeat'){blds[plan.building].repeat=plan.active;return;}
+    if(plan.type==='rally'){blds[plan.building].rally={x:plan.point[0],y:plan.point[1]};return;}
     if(plan.type==='research'){
       const B=blds[plan.building],R=RESEARCH[plan.study];B.res=plan.study;B.resT=Math.min(R.t-.01,researchResumeTime(R.id));return;
     }
@@ -499,6 +555,11 @@
   }
   function mcClearUpgradeAt(tick){
     if(mcUpgradePendingTick>=0&&tick>=mcUpgradePendingTick)mcUpgradePendingTick=mcUpgradePendingSeq=-1;
+    for(const [id,rows] of mcRepeatPending){
+      const pending=rows.filter(r=>r.tick>tick);
+      if(pending.length)mcRepeatPending.set(id,pending);else mcRepeatPending.delete(id);
+    }
+    for(const [id,r] of mcCancelPending)if(r.tick<=tick)mcCancelPending.delete(id);
   }
   function mcDuplicateTick(packet,signature){return mcAppliedTicks.has(packet.tick)&&mcAppliedTicks.get(packet.tick)===signature;}
   async function mcApplyTick(packet){
@@ -556,6 +617,11 @@
        accepted one remains pending until its authoritative target tick commits. */
     if(mcUpgradePendingSeq>=0&&(mcUpgradePendingSeq>lastSeq||mcUpgradePendingTick<=mcLastCommittedTick))
       mcUpgradePendingTick=mcUpgradePendingSeq=-1;
+    for(const [id,rows] of mcRepeatPending){
+      const pending=rows.filter(r=>r.seq<=lastSeq&&r.tick>mcLastCommittedTick);
+      if(pending.length)mcRepeatPending.set(id,pending);else mcRepeatPending.delete(id);
+    }
+    for(const [id,r] of mcCancelPending)if(r.seq>lastSeq||r.tick<=mcLastCommittedTick)mcCancelPending.delete(id);
     return true;
   }
   function mcRuntimeActive(){
@@ -682,6 +748,33 @@
     if(receipt){mcUpgradePendingTick=receipt.targetTick;mcUpgradePendingSeq=receipt.seq;}
     return receipt;
   }
+  function mcRepeatIntent(target){
+    const ref=mcBuildingHandle(target),B=ref&&blds[ref.id],rows=ref&&mcSessionLockstep()&&mcRepeatPending.get(ref.id),
+      last=rows&&rows[rows.length-1],pending=!!(last&&last.type===ref.type);
+    return {active:pending?last.active:!!(B&&B.repeat),pending};
+  }
+  function mcSubmitRepeat(target,active,delay){
+    const ref=mcBuildingHandle(target),receipt=mcSubmit({type:'repeat',building:ref,active},delay);
+    if(receipt){
+      /* Keep intent outside simulation state. Rapid ON then OFF before a tick
+         must transmit two explicit states, not two toggles of stale B.repeat. */
+      const rows=mcRepeatPending.get(ref.id)||[];
+      rows.push({type:ref.type,active,tick:receipt.targetTick,seq:receipt.seq});mcRepeatPending.set(ref.id,rows);
+    }
+    return receipt;
+  }
+  function mcSubmitRally(target,x,y,delay){
+    return mcSubmit({type:'rally',building:mcBuildingHandle(target),x:Math.round(x),y:Math.round(y)},delay);
+  }
+  function mcSubmitCancelProduction(target,start,snapshot,delay){
+    const ref=mcBuildingHandle(target),B=ref&&blds[ref.id];
+    if(ref&&mcCancelPending.has(ref.id)){mcSubmitFailure='Waiting for the previous cancellation';return null;}
+    const queue=snapshot?snapshot.queue:B&&B.queue,revision=snapshot?snapshot.revision:B&&B.queueRevision||0,
+      receipt=mcSubmit({type:'cancel_production',building:ref,start,unit:Array.isArray(queue)?queue[start]:null,
+        revision,queue:Array.isArray(queue)?queue.slice():null},delay);
+    if(receipt)mcCancelPending.set(ref.id,{tick:receipt.targetTick,seq:receipt.seq});
+    return receipt;
+  }
   function mcUnitRefs(indices){return indices.map(i=>({id:i,generation:ugen[i]}));}
   function mcSelected(){const out=[];for(let i=0;i<unitHigh;i++)if(ualive[i]&&usel[i])out.push(i);return out;}
   function mcWrap(name,make){
@@ -744,6 +837,8 @@
     lastAppliedTick:()=>mcLastCommittedTick,resumeState:mcResumeState,
     submit:mcSubmit,takeover:mcTakeover,
     submitRepair:mcSubmitRepair,submitRecycle:mcSubmitRecycle,submitUpgrade:mcSubmitUpgrade,
+    submitRepeat:mcSubmitRepeat,repeatIntent:mcRepeatIntent,submitRally:mcSubmitRally,
+    submitCancelProduction:mcSubmitCancelProduction,
     upgradePending:()=>mcSessionLockstep()&&mcUpgradePendingTick>=0,buildingRef:mcBuildingHandle,
     lastFailure:()=>mcApplyFailure||mcSubmitFailure,
     bootstrap:()=>Object.freeze({localSeat:mcWelcome&&mcWelcome.seat||0,seats:mcStart&&Array.isArray(mcStart.seats)?mcStart.seats.slice():[],rules:mcLobbyRules()}),seatAuthority:seat=>{

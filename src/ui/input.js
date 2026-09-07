@@ -1230,10 +1230,19 @@ function onTap(sx,sy,pointerType){
   // rally flag placement (armed from a factory menu; armRally = building index)
   if(armRally>=0){
     const bi2=armRally; armRally=-1;
-    if(blds[bi2]&&blds[bi2].alive){
+    const B=blds[bi2];
+    if(B&&B.alive&&(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(B):B.team===0)&&Array.isArray(B.queue)){
+      const C=window.MFMatchCommandConsumer;
+      if(C&&C.requiresLockstep()){
+        if(C.submitRally(bi2,wx,wy)){
+          addParticle(3,wx,wy,0,0,.5,30,120,255,170);
+          toast('⚑ Rally point queued for the shared match tick');sfx('ui');
+        }else toast(C.lastFailure()||'Rally order could not be sent');
+        return;
+      }
       let rx=clamp(wx,20,MAP-20),ry=clamp(wy,20,MAP-20);
       if(typeof battlefieldClampPoint==='function'){const p=battlefieldClampPoint(rx,ry,24);rx=p[0];ry=p[1];}
-      blds[bi2].rally={x:rx,y:ry};
+      B.rally={x:rx,y:ry};
       addParticle(3,wx,wy,0,0,.5,30, 120,255,170);
       toast('⚑ Rally point set — new units will gather there');
       sfx('ui');
@@ -1576,8 +1585,14 @@ function endPtr(e){
       stampGroundTap(p.x,p.y,false);
       /* Keep the exact count-based placement visible briefly after release.
          On touch screens the finger otherwise covered the only preview frame,
-         making a valid formation order appear to have no visual response. */
-      orderConfirm={x:P.x,y:P.y,members:P.members.slice(),form:P.form,until:performance.now()+950};
+         making a valid formation order appear to have no visual response.
+         noLine is NOT optional here. orderMove already published a confirm
+         carrying it, precisely so the straight centroid->destination beam does
+         not fight the traced route orderfx just drew; replacing that object
+         without the flag put BOTH on the ground, which is the doubled order
+         line players see on every formation drag. */
+      orderConfirm={x:P.x,y:P.y,members:P.members.slice(),form:P.form,
+                    until:performance.now()+950,noLine:1};
     }
     return;
   }
@@ -1753,4 +1768,3 @@ mmc.addEventListener('keydown',e=>{
   }
   camFollow=-1;camUser();clampCam();camUpdateMatrices();
 });
-

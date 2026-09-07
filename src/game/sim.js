@@ -1535,7 +1535,7 @@ let ffNext=0,mfFieldUseClock=1,mfNavBuildTick=-1;
 const mfFieldRefs=new Uint16Array(FF_MAX);
 const mfNavPerf={requests:0,hits:0,misses:0,builds:0,deferred:0,evictions:0,
   activeProtected:0,overflows:0,invalidations:0,lastBuildMs:0,maxBuildMs:0,
-  slices:0,cells:0,queued:0,canceled:0,lastSliceCells:0,maxSliceCells:0};
+  slices:0,cells:0,queued:0,canceled:0,restamps:0,lastSliceCells:0,maxSliceCells:0};
 const ffDist=new Uint16Array(0);  // replaced at init
 let ffDistA=null,ffQueue=null,ffBucketHead=null,ffBucketNext=null,ffBucketPrev=null,ffBucketCost=null;
 let mfNavJob=null,mfNavQueue=[],mfNavWork=null;
@@ -1565,15 +1565,27 @@ function mfNavClearanceToken(clearance,naval){
 let mfMoveBlockMask=null,mfMoveBlockMaskKey='',mfMoveBlockRevision=1;
 let mfNavClearLand=null,mfNavClearWater=null,mfNavClearLandRev=0,mfNavClearWaterRev=0,mfNavLastInvalidation='boot';
 let mfNavPassRef=null,mfNavWaterRef=null,mfNavCompRef=null;
-function mfNavCancelBuilds(){
-  const n=mfNavQueue.length+(mfNavJob?1:0);if(n)mfNavPerf.canceled+=n;
-  mfNavQueue.length=0;mfNavJob=null;mfNavPerf.queued=0;
-  for(let f=0;f<fields.length;f++)if(fields[f]){fields[f].pending=false;fields[f]._queuedRev=0;}
+/* A blocker revision moves ON AVERAGE more often than a 384x384 field takes to
+   build, because every foundation crossing 15%, every collapsed rock and every
+   shoreline flood bumps it. Throwing the in-flight job away on each bump meant
+   the slicer restarted from zero forever and published almost nothing: a
+   measured match burned 1.59M cells across 200 ticks to publish two fields,
+   the order ribbon degraded to a straight beeline, and ordered armies moved 27
+   world units in 6.7 seconds. Each job owns a snapshot clearance grid
+   (mfNavBuildClearance allocates), so finishing against the older revision is
+   self-consistent; mfNavFinishJob publishes it and re-queues the refresh. */
+function mfNavRestampBuilds(){
+  mfNavPerf.restamps++;
+  for(let n=0;n<mfNavQueue.length;n++){
+    const row=mfNavQueue[n];row.rev=mfMoveBlockRevision;
+    if(row.F)row.F._queuedRev=mfMoveBlockRevision;
+  }
+  mfNavPerf.queued=mfNavQueue.length+(mfNavJob?1:0);
 }
 function mfNavInvalidate(reason){
   mfMoveBlockMaskKey='';mfNavClearLandRev=0;mfNavClearWaterRev=0;mfNavLastInvalidation=reason||'dynamic';
   mfMoveBlockRevision=(mfMoveBlockRevision+1)>>>0||1;
-  mfNavCancelBuilds();
+  mfNavRestampBuilds();
   mfNavPerf.invalidations++;
   return mfMoveBlockRevision;
 }
@@ -1614,7 +1626,7 @@ function mfMoveBlockMaskEnsure(){
   if(mfMoveBlockMask&&mfMoveBlockMaskKey===key)return mfMoveBlockMask;
   if(mfMoveBlockMask&&mfMoveBlockMaskKey&&mfMoveBlockMaskKey!==key){
     mfMoveBlockRevision=(mfMoveBlockRevision+1)>>>0||1;mfNavClearLandRev=0;mfNavClearWaterRev=0;
-    mfNavCancelBuilds();
+    mfNavRestampBuilds();
   }
   const mask=mfMoveBlockMask&&mfMoveBlockMask.length===PGS*PGS?mfMoveBlockMask:new Uint8Array(PGS*PGS);
   mask.fill(0);
@@ -1683,7 +1695,9 @@ function mfNavPass(i,naval,clearance){
 function mfNavDirectApproachClear(x0,y0,x1,y1,T){
   const naval=!!(T&&T.naval),clearance=mfNavUnitClearance(T),grid=mfNavClearanceGrid(naval),
     need=MF_NAV_CLEARANCE_COST[mfNavClearanceToken(clearance,naval)],cell=MAP/PGS,
-    dx=x1-x0,dy=y1-y0,steps=Math.max(1,Math.min(64,Math.ceil(Math.hypot(dx,dy)/(cell*.72))));
+    dx=x1-x0,dy=y1-y0,steps=Math.max(1,Math.ceil(Math.hypot(dx,dy)/(cell*.72)));
+  // A bounded probe must fail closed rather than skip thin walls on long legs.
+  if(steps>64)return false;
   for(let s=1;s<=steps;s++){
     const t=s/steps,c=ffCell(x0+dx*t,y0+dy*t);
     if(!grid||grid[c]<=need)return false;
@@ -1751,9 +1765,12 @@ function mfMoveFieldFresh(F){
   mfMoveBlockMaskEnsure();
   F.lastUse=++mfFieldUseClock;
   if(F.rev!==mfMoveBlockRevision||!F.dirs){
-    /* Never rebuild 147k cells inside a movement call. A deterministic cell
-       budget advances the shared job once per fixed tick; existing directions
-       remain usable until replacement, while a new route uses local steering. */
+    /* A refresh never rebuilds 147k cells inside a movement call - a
+       deterministic cell budget advances the shared job once per fixed tick and
+       the existing directions stay usable until replacement lands. A field that
+       has NO directions yet is not a refresh: nothing can follow it, so it gets
+       one synchronous flood (still capped at one per fixed tick). */
+    if(!F.dirs&&mfNavBuildNow(F))return F;
     mfNavQueueBuild(F);
   }
   return F;
@@ -1824,7 +1841,25 @@ function computeField(tx,ty,naval,clearance){
    milliseconds, so two peers publish a field on the same authoritative tick
    regardless of CPU speed. One job owns private arrays; synchronous tooling
    can still call computeField without corrupting it. */
-const MF_NAV_CELLS_PER_TICK=8192;
+const MF_NAV_CELLS_PER_TICK=32768;
+/* A field with no directions AT ALL strands every unit holding it: the movement
+   consumer has nothing to follow and the order ribbon (src/ui/orderfx.js) can
+   only draw a straight beeline. Those are cache MISSES, not refreshes, and they
+   are rare - a measured match saw two in two hundred ticks. They keep the
+   historical synchronous contract, still capped at one full flood per fixed
+   tick, so a player order answers with a real route on the frame it is given.
+   Refreshing a field that already has usable directions stays sliced. */
+function mfNavBuildNow(F){
+  if(!F)return false;
+  const buildTick=typeof tick==='number'?tick:-1;
+  if(mfNavBuildTick===buildTick)return false;
+  const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
+  F.dirs=computeField(F.tx,F.ty,F.naval,F.clearance);F.sectorDist=F.dirs.mfSectorDist;
+  F.rev=mfMoveBlockRevision;F.pending=false;F._queuedRev=0;
+  mfNavBuildTick=buildTick;mfNavPerf.builds++;
+  if(t0){const ms=performance.now()-t0;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
+  return true;
+}
 function mfNavQueueBuild(F){
   if(!F||F._queuedRev===mfMoveBlockRevision)return;
   F.pending=true;F._queuedRev=mfMoveBlockRevision;
@@ -1860,10 +1895,14 @@ function mfNavStartQueuedJob(){
 }
 function mfNavFinishJob(J){
   const F=J.F;
-  if(fields.indexOf(F)>=0&&J.rev===mfMoveBlockRevision&&F._queuedRev===J.rev){
+  if(fields.indexOf(F)>=0){
+    /* PUBLISH, THEN REFRESH. Directions one revision old are a usable route;
+       discarding them is what stranded the army. The stale rev makes the next
+       movement read queue a replacement while units keep marching on this. */
     F.dirs=J.dirs;F.sectorDist=J.dirs.mfSectorDist;F.rev=J.rev;F.pending=false;F._queuedRev=0;mfNavPerf.builds++;
     if(J.started){const ms=performance.now()-J.started;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
-  }else if(fields.indexOf(F)>=0){F._queuedRev=0;mfNavQueueBuild(F);}
+    if(J.rev!==mfMoveBlockRevision)mfNavQueueBuild(F);
+  }
   mfNavJob=null;
 }
 function mfNavBuildSlice(budget){
@@ -1930,16 +1969,63 @@ function requestField(tx,ty,naval,clearance,defer){
   }
   mfNavPerf.misses++;
   const f=mfNavFieldSlot();if(f<0)return -1;
-  let dirs=null,rev=0;
-  if(!defer){
-    const t0=typeof performance!=='undefined'&&performance.now?performance.now():0;
-    dirs=computeField(tx,ty,naval,clearance);rev=mfMoveBlockRevision;mfNavPerf.builds++;
-    if(t0){const ms=performance.now()-t0;mfNavPerf.lastBuildMs=ms;mfNavPerf.maxBuildMs=Math.max(mfNavPerf.maxBuildMs,ms);}
-  }else mfNavPerf.deferred++;
-  fields[f]={tx,ty,naval,clearance,dirs,sectorDist:dirs&&dirs.mfSectorDist,
-    rev,lastUse:++mfFieldUseClock,pending:!!defer};
-  if(defer)mfNavQueueBuild(fields[f]);
+  const F={tx,ty,naval,clearance,dirs:null,sectorDist:null,
+    rev:0,lastUse:++mfFieldUseClock,pending:true};
+  fields[f]=F;
+  /* `defer` is now a preference, not a contract: a brand-new field with no
+     directions is useless to both the simulation and the order ribbon, so it
+     floods synchronously whenever this tick has not already paid for one. */
+  if(!mfNavBuildNow(F)){mfNavPerf.deferred++;mfNavQueueBuild(F);}
   return f;
+}
+const uNavProgressGen=new Uint32Array(MAXU),uNavProgressRevision=new Uint32Array(MAXU),uNavGoalX=new Float32Array(MAXU),uNavGoalY=new Float32Array(MAXU),
+  uNavProbeX=new Float32Array(MAXU),uNavProbeY=new Float32Array(MAXU),uNavProbeAge=new Float32Array(MAXU),uNavRetryFor=new Float32Array(MAXU);
+const uNavPursuitField=new Uint8Array(MAXU);
+function mfNavProgressReset(){
+  for(const a of [uNavProgressGen,uNavProgressRevision,uNavGoalX,uNavGoalY,uNavProbeX,uNavProbeY,uNavProbeAge,uNavRetryFor,uNavPursuitField])a.fill(0);
+}
+function mfNavProgressRepath(i,T,gx,gy,dt,wantMove){
+  uNavRetryFor[i]=Math.max(0,uNavRetryFor[i]-dt);
+  const newUnit=uNavProgressGen[i]!==ugen[i],fresh=newUnit||uNavProgressRevision[i]!==mfMoveBlockRevision;
+  if(fresh||!wantMove||dist2(uNavGoalX[i],uNavGoalY[i],gx,gy)>32*32){
+    uNavProgressGen[i]=ugen[i];uNavProgressRevision[i]=mfMoveBlockRevision;uNavGoalX[i]=gx;uNavGoalY[i]=gy;
+    uNavProbeX[i]=ux[i];uNavProbeY[i]=uy[i];uNavProbeAge[i]=0;
+    if(fresh)uNavRetryFor[i]=0;
+    if(newUnit)uNavPursuitField[i]=0;
+    return false;
+  }
+  uNavProbeAge[i]+=dt;if(uNavProbeAge[i]<1.25)return false;
+  // Net displacement, not velocity intent or accumulated crowd jitter. A
+  // legitimate detour counts as progress even while it moves away from goal.
+  const moved=Math.hypot(ux[i]-uNavProbeX[i],uy[i]-uNavProbeY[i]);
+  uNavProbeAge[i]=0;uNavProbeX[i]=ux[i];uNavProbeY[i]=uy[i];
+  return moved<Math.max(.75,Math.min(4,T.spd*.08));
+}
+function mfNavFieldForMove(i,T,gx,gy,engaging,repath){
+  let F=fields[ufield[i]];
+  const resumeStrategic=!engaging&&uNavPursuitField[i]===1;
+  uNavPursuitField[i]=engaging?1:0;
+  const mismatch=resumeStrategic||!F||!!F.naval!==!!T.naval||F.clearance!==mfNavUnitClearance(T)||
+    (engaging&&dist2(F.tx,F.ty,gx,gy)>70*70);
+  if(mismatch){
+    // A completed chase must not leave the unit following that enemy's field
+    // forever. Reacquire the retained order once; requestField still coalesces
+    // nearby goals without imposing a new formation layout.
+    if(F||resumeStrategic)uNavRetryFor[i]=0;
+    ufield[i]=-1;
+    if(uNavRetryFor[i]>0)return null;
+    uNavRetryFor[i]=.75;
+    ufield[i]=requestField(gx,gy,!!T.naval,mfNavUnitClearance(T),true);
+    F=fields[ufield[i]];
+  }
+  if(!F)return null;
+  F=mfMoveFieldFresh(F);
+  // Multiple blocked units share a field. One stalled member must not restart
+  // its queued job every frame and prevent the rest of the army receiving it.
+  if(repath&&!F.pending&&(F.repathTick==null||tick<F.repathTick||tick-F.repathTick>=90)){
+    F.repathTick=tick;F.rev=0;mfNavQueueBuild(F);
+  }
+  return F;
 }
 function mfNavFindAttackBlocker(i,gx,gy){
   const T=TYPES[utype[i]];if(!T||!(T.dmg>0)||T.air)return -1;
@@ -2778,7 +2864,7 @@ function addBld(type,team,x,y,instant,rot,suppressPackageGrant){
   const hpM=(team===0?bldHpMult*doctrineHp*resBldHpMult:1);
   const shieldMax=type==='techlab'?900*labBufferMult:0;
   const b={type,team,fac,x,y,hp:(instant?T.hp:T.hp*0.1)*hpM,hpm:T.hp*hpM,r:T.r,alive:true,prog:instant?1:0,
-            cool:0,queue:[],repeat:false,prodT:0,heal:0,tier:1,lvl:1,upT:0,upMax:1,tang:team?Math.PI:0,gunPitch:0,
+            cool:0,queue:[],queueRevision:0,repeat:false,prodT:0,heal:0,tier:1,lvl:1,upT:0,upMax:1,tang:team?Math.PI:0,gunPitch:0,
             seen:false,boost:0,boostM:UPLINK_BOOST,res:-1,resT:0,rally:null,rich:false,dep:-1,geo:-1,
             shield:instant?shieldMax:0,shieldMax,shieldT:0,dmgT:0,
             repairOn:false,repairStalled:false,
@@ -8834,13 +8920,14 @@ function unitTick(dt){
                    : (umarch[i]===1) ? distGoal>arriveR
                    : (engaging ? (!inRange || er > T.rng*rngM*0.92+arriveR) : distGoal>arriveR);
     if(T.air&&typeof mfAirShouldMove==='function') wantMove=!uhold[i]&&spdM>0&&mfAirShouldMove(i);
+    const navRepath=!T.air&&mfNavProgressRepath(i,T,gx,gy,dt,wantMove);
     if(wantMove && distGoal>0.001){
       // ground units make better time on the old highways
       const rd=(!T.air&&!T.naval&&roadAt(ux[i],uy[i]))?ROAD_SPD:1;
       const sp=T.spd*spdM*classSpdMul(i)*broodSpdMul(i)*mfDomainSpeedMul(i)*(ubuff[i]>0?1.35:1)*(uhaz[i]>0?HAZ_SPD:1)*rd*uCohesion[i]*Math.min(1,distGoal/(arriveR+12)+0.25);
       moveCap=sp;
       // flow-field steering for long marches (routes armies around lakes)
-      let ffOk=false,fieldAttempted=false,fieldUnreachable=false;
+      let ffOk=false,routeUnreachable=false;
       /* Formation orders share a coarse field to the leg centre, then fan out
          early enough to settle into their own slots before the turn. */
       /* Formations fan into their assigned lanes before the last turn. At 170
@@ -8848,11 +8935,15 @@ function unitTick(dt){
          460 wu final approach preserves the shell mapping while long marches
          retain the shared field around strategic terrain. */
       const slotApproach=uMoveCohort[i]>=0?460:(uPatrolRoute[i]>=0?170:70);
-      const directApproachClear=engaging||T.air||ufield[i]<0||distGoal>slotApproach||
+      const directApproachClear=T.air||
         mfNavDirectApproachClear(ux[i],uy[i],gx,gy,T);
-      if(!engaging && !T.air && ufield[i]>=0 && (distGoal>slotApproach||!directApproachClear)){
-        fieldAttempted=true;
-        const F=mfMoveFieldFresh(fields[ufield[i]]);
+      if(!T.air && (distGoal>slotApproach||!directApproachClear||navRepath)){
+        const F=mfNavFieldForMove(i,T,gx,gy,engaging,navRepath);
+        /* PUBLISHED DIRECTIONS OUTRANK THEIR AGE. Requiring the current
+           blocker revision froze every marching unit the moment a foundation
+           crossed 15%, because the replacement field cannot land on the same
+           tick that invalidated it. A route one revision old is walked while
+           its refresh builds; local avoidance owns the new obstacle. */
         if(F&&F.dirs&&!!F.naval===!!T.naval){
           const k=F.dirs[ffCell(ux[i],uy[i])];
           if(k<8){
@@ -8860,19 +8951,28 @@ function unitTick(dt){
             mvx=DIRX[k]*inv*sp; mvy=DIRY[k]*inv*sp;
             ffOk=true;
           }else{
-            const P=mfNavSectorWaypoint(F,ux[i],uy[i]);
+            // Exact reachability outranks coarse portal links. Escape hints
+            // remain useful only for spawns outside the clearance graph.
+            const P=!mfNavPass(ffCell(ux[i],uy[i]),F.naval,F.clearance)?mfNavSectorWaypoint(F,ux[i],uy[i]):null;
             if(P){const dx=P.x-ux[i],dy=P.y-uy[i],dl=Math.hypot(dx,dy)||1;mvx=dx/dl*sp;mvy=dy/dl*sp;ffOk=true;}
-            else fieldUnreachable=true;
+            else routeUnreachable=true;
           }
-        } else if(!F||!!F.naval!==!!T.naval) ufield[i]=-1;
+        }
       }
       if(!ffOk){
-        if(fieldAttempted&&fieldUnreachable){
-          const b=ustate[i]===1?-1:mfNavFindAttackBlocker(i,gx,gy);
-          if(b>=0){
-            const B=blds[b];utgt[i]=-2-b;utgtg[i]=-1;ustate[i]=2;umarch[i]=0;utx[i]=B.x;uty[i]=B.y;ufield[i]=-1;
-          }else{ustate[i]=0;utgt[i]=-1;utgtg[i]=-1;ufield[i]=-1;umarch[i]=0;utx[i]=ux[i];uty[i]=uy[i];}
+        if(!directApproachClear){
+          // Pending, stale or disconnected is not arrival. Retain the player's
+          // destination/queue and retry after progress timeout or map revision.
           mvx=0;mvy=0;moving=false;
+          if(routeUnreachable&&ustate[i]===2){
+            const blocker=mfNavFindAttackBlocker(i,gx,gy);
+            if(blocker>=0){
+              // Breach an actual enemy obstruction only after a completed
+              // route proves disconnected. Keep the strategic order intact
+              // so destruction of this temporary target resumes the march.
+              utgt[i]=-2-blocker;utgtg[i]=-1;umarch[i]=0;
+            }
+          }
         }else{mvx=(gx-ux[i])/distGoal*sp;mvy=(gy-uy[i])/distGoal*sp;moving=true;}
       }else moving=true;
     }
@@ -9440,6 +9540,21 @@ function mfBldCachedEnemy(B,range,domain,dt){
     e=findEnemy(B.x,B.y,B.team,range,domain);B.aimU=e;B.aimG=e>=0?ugen[e]:-1;B.aimScan=.2;
   }
   return e;
+}
+function mfFactoryRallyGoal(B,T,spawnX,spawnY){
+  let rx,ry;
+  if(B.rally&&Number.isFinite(B.rally.x)&&Number.isFinite(B.rally.y)){
+    // Opposing human seats own factories too; a team-0 gate discarded their
+    // authoritative marker. AI factories without a marker retain the fallback.
+    // The marker is the order, not the centre of a random 52wu square.
+    // Collision separation and the hull-sized arrival band own final spacing.
+    rx=clamp(B.rally.x,20,MAP-20);ry=clamp(B.rally.y,20,MAP-20);
+  }else{
+    rx=clamp(B.x+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
+    ry=clamp(B.y+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
+  }
+  if(T.air)return [rx,ry];
+  return T.naval?(findWater(rx,ry)||[spawnX,spawnY]):findLand(rx,ry);
 }
 function bldTick(dt){
   for(let b=0;b<blds.length;b++){
@@ -10020,16 +10135,9 @@ function bldTick(dt){
           if(i<0){B.prodStalled='population';continue;}
           B.prodT=0; B.queue.shift();
           if(B.repeat) B.queue.push(t);
+          B.queueRevision=(B.queueRevision||0)+1;
           ustate[i]=2;
-          let rx,ry;
-          if(B.team===0 && B.rally){          // player rally point
-            rx=clamp(B.rally.x+mfSimRange(-26,26),20,MAP-20);
-            ry=clamp(B.rally.y+mfSimRange(-26,26),20,MAP-20);
-          } else {
-            rx=clamp(B.x+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
-            ry=clamp(B.y+(B.team===0?mfSimRange(60,120):mfSimRange(-120,-60)),20,MAP-20);
-          }
-          const L=TYPES[t].naval? (findWater(rx,ry)||[ux[i],uy[i]]) : findLand(rx,ry);
+          const L=mfFactoryRallyGoal(B,T,ux[i],uy[i]);
           utx[i]=L[0]; uty[i]=L[1];
           if(!TYPES[t].air&&dist2(ux[i],uy[i],L[0],L[1])>70*70)
             ufield[i]=requestField(L[0],L[1],!!TYPES[t].naval,mfNavUnitClearance(TYPES[t]));

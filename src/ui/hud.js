@@ -2851,11 +2851,19 @@ function renderProdMenu(){ if(openBldGone()) return;
       : ('⬆ UPGRADE TO TECH 2 ('+BUP.fac[0].cm+'m '+BUP.fac[0].ce+'e)');
   } else ub.style.display='none';
   renderQueue(true);
-  const rb=$('repeatBtn');
-  rb.textContent='REPEAT: '+(B.repeat?'ON':'OFF');
-  rb.classList.toggle('on',B.repeat);
+  mfRenderProductionRepeatControl(B);
   const ry=$('rallyBtn');
   if(ry){ ry.style.display='block'; ry.textContent=B.rally?'⚑ RALLY SET — TAP TO MOVE':'⚑ SET RALLY POINT'; }
+}
+function mfRenderProductionRepeatControl(B){
+  if(!B||!Array.isArray(B.queue))return;
+  const rb=$('repeatBtn');
+  if(!rb)return;
+  const repeatConsumer=window.MFMatchCommandConsumer,
+    repeatState=repeatConsumer?repeatConsumer.repeatIntent(openBld):{active:!!B.repeat,pending:false};
+  rb.textContent='REPEAT: '+(repeatState.active?'ON':'OFF')+(repeatState.pending?' — PENDING':'');
+  rb.classList.toggle('on',repeatState.active);
+  rb.setAttribute('aria-pressed',String(repeatState.active));
 }
 function queueStacks(q){
   const out=[];
@@ -2871,8 +2879,16 @@ function queueStacks(q){
   }
   return out;
 }
-function cancelQueuedUnit(B,start){
+function cancelQueuedUnit(B,start,snapshot){
   if(!B||!B.queue||start<0||start>=B.queue.length) return false;
+  const C=window.MFMatchCommandConsumer;
+  if(C&&C.requiresLockstep()){
+    const receipt=C.submitCancelProduction(blds.indexOf(B),start,snapshot);
+    if(typeof toast==='function')toast(receipt?'Cancellation queued for the shared match tick':C.lastFailure()||'Cancellation could not be sent');
+    return !!receipt;
+  }
+  if(snapshot&&((B.queueRevision||0)!==snapshot.revision||B.queue.length!==snapshot.queue.length||
+    !B.queue.every((t,i)=>t===snapshot.queue[i])))return false;
   const type=B.queue[start];
   let end=start;
   while(end<B.queue.length&&B.queue[end]===type) end++;
@@ -2891,6 +2907,7 @@ function cancelQueuedUnit(B,start){
     B.queue.shift();
     B.prodT=0;
   } else B.queue.splice(last,1);
+  B.queueRevision=(B.queueRevision||0)+1;
   return true;
 }
 function renderQueue(forceControls){ if(openBldGone()) return;
@@ -2898,6 +2915,9 @@ function renderQueue(forceControls){ if(openBldGone()) return;
   const B=blds[openBld];
   const prodPanel=$('prodMenu'),prodVisible=!!(prodPanel&&prodPanel.style.display==='block');
   if(forceControls||prodVisible){
+    // The 800ms production refresh, not menu reopening, clears pending intent
+    // after its authoritative tick (or a reconnect rejection) is acknowledged.
+    mfRenderProductionRepeatControl(B);
     mfRenderBuildingActivityControls(B,'prodMenu');
     mfRenderBuildingServiceControls(B,'prodMenu');
     mfRenderBuildingUpgradeControls(B,'prodMenu');
@@ -2915,7 +2935,7 @@ function renderQueue(forceControls){ if(openBldGone()) return;
   const q=B.queue||[];
   mfSyncProductionQueueCards(B);
   const stacks=queueStacks(q);
-  const sig=stacks.map(s=>s.t+':'+s.n+':'+s.i).join(',')+'|'+(B.adj||0);
+  const sig=stacks.map(s=>s.t+':'+s.n+':'+s.i).join(',')+'|'+(B.adj||0)+'|'+(B.queueRevision||0);
   if(el._mfQ!==sig){
     el._mfQ=sig;
     el.innerHTML='';
@@ -2927,6 +2947,7 @@ function renderQueue(forceControls){ if(openBldGone()) return;
       const row=document.createElement('div');
       row.className='qRow';
       stacks.forEach((S,si)=>{
+        const cancelSnapshot={revision:B.queueRevision||0,queue:q.slice()};
         const plate=document.createElement('button');
         plate.type='button';
         plate.className='qPlate'+(si===0?' active':'');
@@ -2955,7 +2976,7 @@ function renderQueue(forceControls){ if(openBldGone()) return;
             return;
           }
           plate._mfQCancelAt=0;
-          if(cancelQueuedUnit(Bb,S.i)){ if(typeof sfx==='function') sfx('ui'); renderQueue(); }
+          if(cancelQueuedUnit(Bb,S.i,cancelSnapshot)){ if(typeof sfx==='function') sfx('ui'); renderQueue(); }
         };
         mfHudBindQueueCancel(plate,requestCancel);
         row.appendChild(plate);
