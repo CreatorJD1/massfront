@@ -6,6 +6,15 @@
 param(
   [Parameter(Mandatory=$true)][string]$Version,
   [Parameter(Mandatory=$true)][string]$Notes,
+  # Structured release notes. The launcher has always had a three-tab notes UI
+  # (renderNotes reads release[features|fixes|upcoming] as arrays, updater.js
+  # sanitises them through updSafeList), but nothing could ever fill it: this
+  # script only emitted the single `notes` string, so every release since the
+  # feature shipped has shown "No additional items were published in this
+  # section" on all three tabs, and the one long summary got rendered twice.
+  [string[]]$Features=@(),
+  [string[]]$Fixes=@(),
+  [string[]]$Upcoming=@(),
   [switch]$DryRun,
   # Build and verify every local release artifact, but stop before any remote
   # mutation. This permits an immutable-first upload/verification pass before
@@ -727,6 +736,9 @@ $manifest=[ordered]@{
   packsIndex=if($previousManifest.packsIndex){[string]$previousManifest.packsIndex}else{'packs.json'}
   optionalPacks=@($optionalPacks)
   notes=$Notes
+  features=@($Features | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
+  fixes=@($Fixes | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
+  upcoming=@($Upcoming | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() })
   version=$Version
   base=''
   # PER-FILE DELIVERY. Every entry carries an ABSOLUTE url rather than
