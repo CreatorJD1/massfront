@@ -2366,7 +2366,8 @@
 .uga-command-shell[data-view="campaign_hub"] .uga-command-exit,
 .uga-command-shell[data-view="campaign_hub"] .uga-district-rail,
 .uga-command-shell[data-view="campaign_hub"] .uga-scene-overlay,
-.uga-command-shell[data-view="campaign_hub"] .uga-quick-actions { display: none !important; }
+.uga-command-shell[data-view="campaign_hub"] .uga-quick-actions,
+.uga-command-shell[data-view="campaign_hub"] .uga-sheet-toggle { display: none !important; }
 .uga-command-shell[data-view="campaign_hub"] .uga-context-body { inset: 0; }
 .uga-basic-access-grid button::after,
 .uga-more-shortcuts button::after,
@@ -2374,12 +2375,15 @@
 
 @media (max-width: 900px), (max-height: 620px) and (max-width: 1024px) {
   .uga-command-shell[data-view="campaign_hub"] .uga-command-header { padding-right: var(--uga-edge); }
-  /* Only the EXPANDED hub takes the full frame. Applying this to the collapsed
-     state as well left no collapsed state at all, and with the sheet toggle
-     hidden the panel could never be moved - so NEXUS-VII sat behind an opaque
-     card the player had no way to look past. The hub opens expanded (setView
-     sets sheetExpanded) so this looks unchanged; the difference is that
-     collapsing now works and gives the ship back. */
+  /* The hub takes the full frame in BOTH sheet states, and the toggle above is
+     hidden, so the panel cannot be collapsed. That is deliberate: the hub view
+     never mounts the scene - its canvas measures 0x0 - so collapsing would
+     reveal an empty black viewport rather than NEXUS-VII. test-galactic-
+     campaign-product-model.mjs holds this as "must use the available compact
+     stage instead of leaving an empty ship viewport". Unseal this only in the
+     change that makes the scene actually render here; doing it first is how you
+     ship a hole. */
+  .uga-command-shell[data-view="campaign_hub"] .uga-context-panel,
   .uga-command-shell[data-view="campaign_hub"].is-sheet-expanded .uga-context-panel {
     top: var(--uga-gap);
     right: var(--uga-edge);

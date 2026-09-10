@@ -1901,9 +1901,9 @@ export function createUgaCommand(options = {}) {
       deploymentToggle.setAttribute('aria-label', deploymentLoadoutExpanded ? 'Collapse loadout and view hangar; keep all selections' : 'Edit deployment loadout');
       deploymentToggle.querySelector('span').textContent = deploymentLoadoutExpanded ? 'VIEW HANGAR' : 'EDIT LOADOUT';
     }
-    /* The hub kept its own toggle hidden, which is what made its panel
-       immovable. Deployment mode still hides it: that view owns the frame. */
-    if (sheetToggle) sheetToggle.hidden = deploymentMode;
+    /* The hub hides its own toggle because collapsing it would expose an
+       unmounted scene. Restore this alongside the scene, not before it. */
+    if (sheetToggle) sheetToggle.hidden = deploymentMode || activeView === 'campaign_hub';
     const commandExit = root.querySelector('.uga-command-exit');
     if (commandExit) commandExit.hidden = activeView === 'campaign_hub';
     if (sheetToggle) {

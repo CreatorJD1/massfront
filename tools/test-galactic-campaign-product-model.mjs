@@ -41,7 +41,14 @@ assert.equal(mmo.status, CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE);
 assert.equal(mmo.routeId, null, 'unsupported MMO must never gain a fake target');
 assert.equal(campaignHubSessionIsReachable(classic), false, 'standalone module cannot pretend it owns base-game offline play');
 assert.equal(campaignHubSessionIsReachable(classic, { hostRoutes: true }), true);
-assert.equal(campaignHubSessionIsReachable(campaign, { hostRoutes: true }), true);
+/* TEMPORARY, paired with campaign_hub_registry.js: the Campaign route is held at
+   HOST_REQUIRED while the UGA command loop is finished, so its session is
+   unreachable even inside the base game. The Prologue itself is built and
+   unchanged. Restore this to `true` in the same commit that returns the route to
+   HOST_ROUTE - if this line is still asserting false once Campaign is unlocked,
+   the assertion is wrong, not the product. */
+assert.equal(campaignHubSessionIsReachable(campaign, { hostRoutes: true }), false,
+  'Campaign is deliberately held while the UGA command loop is completed');
 assert.equal(campaignHubSessionIsReachable(network, { hostRoutes: true }), false, 'future persistent networking stays unavailable');
 assert.equal(campaignHubSessionIsReachable(mmo, { hostRoutes: true }), false, 'future MMO authority stays unavailable');
 

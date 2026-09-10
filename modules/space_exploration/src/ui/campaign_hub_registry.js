@@ -86,9 +86,17 @@ export const CAMPAIGN_HUB_ROUTES = Object.freeze([
   route('standard', 'Standard', 'command', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
     'Open the real solo War Table setup with AI opponents and optional AI allies.',
     { kind: 'host-route', routeId: 'mode-standard' }, 'PLAYABLE MASSFRONT MODE'),
-  route('campaign', 'Campaign Prologue', 'mission_ops', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
-    'Open the existing five-mission playable Prologue and authored objectives.',
-    { kind: 'host-route', routeId: 'mode-campaign' }, 'PLAYABLE MASSFRONT MODE'),
+  /* Campaign is upcoming, not blocked. Engine, tools, features and the core
+     loop come first; authoring a campaign on top of systems still being built
+     would be work done twice. Presented as in-development rather than locked so
+     the reason reads as sequencing rather than a gate the player must open.
+     The registry audit rejects a HOST_REQUIRED route that still carries a host
+     target (falseHostTargets), so the target is cleared: a route that cannot be
+     entered must not advertise a destination. Opening it later restores
+     HOST_ROUTE together with { kind: 'host-route', routeId: 'mode-campaign' }. */
+  route('campaign', 'Campaign Prologue', 'mission_ops', CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED,
+    'In development. Engine, tools and core gameplay come first; the campaign is authored once those are settled.',
+    null, 'IN DEVELOPMENT // UPCOMING'),
   route('weekly', 'Weekly Operation', 'contracts', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
     'Open the current real weekly operation briefing and deployment action.',
     { kind: 'host-route', routeId: 'mode-weekly' }, 'PLAYABLE MASSFRONT MODE'),
