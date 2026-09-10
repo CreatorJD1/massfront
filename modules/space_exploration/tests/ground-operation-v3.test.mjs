@@ -22,6 +22,7 @@ import {
 const PROFILE_ID = 'profile/stage11:v3';
 const NONCE = '0123456789abcdef0123456789abcdef';
 const NOW = 4_000_000;
+const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_standard';
 const REPORT = Object.freeze({
   outcome: 'victory',
   score: 88,
@@ -40,7 +41,8 @@ function launch(commanderId, proxyFactionId) {
   return beginGroundOperation(showcase(), {
     missionId: 'uga_pale_bloom',
     proxyFactionId,
-    commanderId
+    commanderId,
+    mapId: PALE_BLOOM_MAP_ID
   });
 }
 

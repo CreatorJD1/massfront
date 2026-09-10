@@ -4,6 +4,7 @@ import {
   DISTRICT_ADJACENCIES,
   DISTRICT_CATALOG,
   FACTION_CATALOG,
+  MISSION_CATALOG,
   MODULE_CATALOG,
   RESEARCH_CATALOG,
   RESIDENT_FACTION_IDS,
@@ -12,7 +13,8 @@ import {
   SHIP_DISTRICT_IDS,
   SPECIALIST_CATALOG,
   SURVEY_CATALOG,
-  SYSTEM_CATALOG
+  SYSTEM_CATALOG,
+  getUgaGroundAreaOptions
 } from './catalog.js';
 import { COMMANDER1_BY_CAMPAIGN_FACTION, isSelectableCommanderIdV1 } from './commander_roster_contract.js';
 import { clamp, deepClone } from './deterministic.js';
@@ -26,6 +28,10 @@ import {
   getConstructionQuote,
   getConstructionStatus
 } from './construction.js';
+
+export const SOLO_FRONT_PRESSURE_CAP = 100;
+export const SOLO_FRONT_PRESSURE_PER_CYCLE = 2;
+export const UGA_SCAN_NEXT_ACTION_VERSION = 1;
 
 function fail(message, code, path = '') {
   throw new DomainValidationError(message, [issue(code, message, path)], code);
@@ -58,6 +64,88 @@ function unlockSystemSurveys(state, systemId) {
   for (const survey of Object.values(SURVEY_CATALOG)) {
     if (survey.systemId === systemId && !state.surveys[survey.id].depleted) state.surveys[survey.id].status = 'available';
   }
+}
+
+export function getSurveyNextAction(state, surveyId, rewards = {}) {
+  const survey = SURVEY_CATALOG[surveyId];
+  if (!survey) return null;
+  const missionIds = Object.values(MISSION_CATALOG)
+    .filter(mission => mission.systemId === survey.systemId)
+    .filter(mission => (mission.requirements.discoveryIds || []).includes(survey.discoveryId))
+    .filter(mission => (mission.requirements.discoveryIds || []).every(id => state.discoveries.foundIds.includes(id)))
+    .map(mission => mission.id);
+  const areas = missionIds.map(getUgaGroundAreaOptions).filter(Boolean);
+  const resourceKeys = Object.keys(rewards).filter(key => RESOURCE_KEYS.includes(key) && Number(rewards[key]) > 0).sort();
+  const shared = {
+    schemaVersion: UGA_SCAN_NEXT_ACTION_VERSION,
+    kind: 'UgaScanNextActionV1',
+    systemId: survey.systemId,
+    planetId: survey.planetId,
+    resourceKeys,
+    missionIds,
+    areaIds: areas.map(area => area.areaId),
+    areas
+  };
+  if (areas.length) return {
+    ...shared,
+    action: 'inspect-ground-area',
+    label: areas.length === 1 ? 'VIEW DISCOVERED AREA' : 'VIEW DISCOVERED AREAS',
+    primaryAreaId: areas[0].areaId,
+    targetSystemId: survey.systemId
+  };
+  if (survey.unlockSystemId) return {
+    ...shared,
+    action: 'plot-system-course',
+    label: `PLOT COURSE TO ${SYSTEM_CATALOG[survey.unlockSystemId].name.toUpperCase()}`,
+    primaryAreaId: null,
+    targetSystemId: survey.unlockSystemId
+  };
+  return {
+    ...shared,
+    action: 'continue-survey',
+    label: 'CONTINUE ORBITAL SURVEY',
+    primaryAreaId: null,
+    targetSystemId: survey.systemId
+  };
+}
+
+function hasUnresolvedSoloFront(state, systemId) {
+  return Object.values(MISSION_CATALOG).some(mission => (
+    mission.systemId === systemId && (state.missions[mission.id]?.completions || 0) < 1
+  ));
+}
+
+export function advanceSoloFrontPressure(state, cycles, cause = 'expedition') {
+  assertDomainState(state);
+  if (!Number.isInteger(cycles) || cycles < 1) fail('Solo-front cycles must be a positive integer.', 'SOLO_FRONT_CYCLES_INVALID', 'cycles');
+  const next = deepClone(state);
+  for (const [systemId, world] of Object.entries(next.world.systems)) {
+    const front = world.soloFront;
+    front.lastCycle = next.ship.expeditionCycle;
+    front.lastCause = cause;
+    front.lastDelta = 0;
+    if (!world.discovered || !hasUnresolvedSoloFront(next, systemId)) continue;
+    const previous = front.pressure;
+    front.pressure = clamp(previous + cycles * SOLO_FRONT_PRESSURE_PER_CYCLE, 0, SOLO_FRONT_PRESSURE_CAP);
+    front.lastDelta = front.pressure - previous;
+  }
+  assertDomainState(next);
+  return next;
+}
+
+export function applySoloFrontPressureDelta(state, systemId, delta, cause = 'mission_result') {
+  assertDomainState(state);
+  if (!SYSTEM_CATALOG[systemId]) fail('Unknown solo-front system.', 'SYSTEM_UNKNOWN', 'systemId');
+  if (!Number.isInteger(delta) || delta < -100 || delta > 100) fail('Solo-front delta must be an integer from -100 to 100.', 'SOLO_FRONT_DELTA_INVALID', 'delta');
+  const next = deepClone(state);
+  const front = next.world.systems[systemId].soloFront;
+  const previous = front.pressure;
+  front.pressure = clamp(previous + delta, 0, SOLO_FRONT_PRESSURE_CAP);
+  front.lastCycle = next.ship.expeditionCycle;
+  front.lastDelta = front.pressure - previous;
+  front.lastCause = cause;
+  assertDomainState(next);
+  return next;
 }
 
 export function setDomainRoute(state, route) {
@@ -154,7 +242,7 @@ export function grantFactionResidency(state, factionId) {
   assertDomainState(state);
   if (!state.commissioning?.completed) fail('Complete new-career faction commissioning before recruiting resident factions.', 'CAREER_COMMISSIONING_REQUIRED', 'commissioning');
   if (state.ship?.districts?.factions?.commissioned === false) fail('Coalition Embassy must be commissioned before faction residency.', 'EMBASSY_NOT_COMMISSIONED', 'ship.districts.factions.commissioned');
-  if (!RESIDENT_FACTION_IDS.includes(factionId) || !FACTION_CATALOG[factionId]?.hireable) fail('Only Nova, Dominion, or Syndicate can become residents.', 'FACTION_NOT_RESIDENT_CAPABLE', 'factionId');
+  if (!RESIDENT_FACTION_IDS.includes(factionId) || !FACTION_CATALOG[factionId]?.hireable) fail('Only the Nova Coalition, Crimson Dominion, or Syndicate Coalition can become residents.', 'FACTION_NOT_RESIDENT_CAPABLE', 'factionId');
   if (state.factions[factionId].resident) return state;
   if (!state.research.completedIds.includes('uga_resident_charter')) fail('Resident Faction Charter research is required.', 'RESIDENCY_RESEARCH_REQUIRED', 'research.completedIds');
   const capacity = DISTRICT_CATALOG.factions.tiers[state.ship.districts.factions.level - 1].capacity.residentCapacity;
@@ -189,7 +277,7 @@ export function grantFactionResidency(state, factionId) {
 
 export function commissionCareerFaction(state, factionId, commanderId = COMMANDER1_BY_CAMPAIGN_FACTION[factionId]) {
   assertDomainState(state);
-  if (!RESIDENT_FACTION_IDS.includes(factionId) || !FACTION_CATALOG[factionId]?.hireable) fail('Choose Nova, Dominion, or Syndicate for career commissioning.', 'COMMISSIONING_FACTION_INVALID', 'factionId');
+  if (!RESIDENT_FACTION_IDS.includes(factionId) || !FACTION_CATALOG[factionId]?.hireable) fail('Choose the Nova Coalition, Crimson Dominion, or Syndicate Coalition for career commissioning.', 'COMMISSIONING_FACTION_INVALID', 'factionId');
   if (!isSelectableCommanderIdV1(commanderId) || !COMMANDER_CATALOG[commanderId] || COMMANDER_CATALOG[commanderId].factionId !== factionId) fail('Commissioning commander is not selectable for this faction.', 'COMMISSIONING_COMMANDER_INVALID', 'commanderId');
   if (commanderId !== COMMANDER1_BY_CAMPAIGN_FACTION[factionId]) fail('A new career begins with that faction\'s Commander 1.', 'COMMISSIONING_COMMANDER1_REQUIRED', 'commanderId');
   if (state.commissioning?.completed) {
@@ -264,6 +352,9 @@ export function spendSurveyProbe(state) {
 
 export function recoverPlanetFind(state, find) {
   assertDomainState(state);
+  const depositId = typeof find?.id === 'string' && /^[a-z0-9_]{1,96}$/.test(find.id) ? find.id : '';
+  if (!depositId) fail('The planetary deposit identity is missing.', 'DEPOSIT_ID_INVALID', 'find.id');
+  if (state.discoveries.extractedDepositIds.includes(depositId)) fail('This planetary deposit has already been extracted.', 'DEPOSIT_DEPLETED', 'find.id');
   const next = spendSurveyProbe(state);
   const type = find?.type;
   const amount = Math.max(0, Number(find?.amount) || 0);
@@ -272,7 +363,9 @@ export function recoverPlanetFind(state, find) {
   if (discoveryId && DISCOVERY_CATALOG[discoveryId] && !next.discoveries.foundIds.includes(discoveryId)) {
     next.discoveries.foundIds.push(discoveryId);
   }
-  return next;
+  next.discoveries.extractedDepositIds.push(depositId);
+  const advanced = advanceExpeditionCycles(next, 1, `survey:deposit:${depositId}`, 'survey');
+  return advanceSoloFrontPressure(advanced.state, 1, `survey:deposit:${depositId}`);
 }
 
 export function deployProbe(state, surveyId) {
@@ -312,7 +405,15 @@ export function deployProbe(state, surveyId) {
   const completedCount = next.discoveries.depletedSurveyIds.length;
   if (capabilities.surveyProbeRefundInterval && completedCount % capabilities.surveyProbeRefundInterval === 0) next.resources.probes += 1;
   const advanced = advanceExpeditionCycles(next, 1, `survey:${surveyId}`, 'survey');
-  return { state: advanced.state, survey: deepClone(survey), discovery: deepClone(DISCOVERY_CATALOG[survey.discoveryId]), rewards: surveyRewards, construction: advanced.completedJobs };
+  const pressured = advanceSoloFrontPressure(advanced.state, 1, `survey:${surveyId}`);
+  return {
+    state: pressured,
+    survey: deepClone(survey),
+    discovery: deepClone(DISCOVERY_CATALOG[survey.discoveryId]),
+    rewards: surveyRewards,
+    construction: advanced.completedJobs,
+    nextAction: getSurveyNextAction(pressured, surveyId, surveyRewards)
+  };
 }
 
 export function plotCourse(state, systemId) {
@@ -332,7 +433,9 @@ export function plotCourse(state, systemId) {
   next.resources.fuel -= fuelCost;
   next.route = { scene: 'system', systemId, targetId: null, returnRoute: null };
   next.revision += 1;
-  return advanceExpeditionCycles(next, 2, `transit:${state.route.systemId}:${systemId}:${state.revision}`, 'transit').state;
+  const eventId = `transit:${state.route.systemId}:${systemId}:${state.revision}`;
+  const advanced = advanceExpeditionCycles(next, 2, eventId, 'transit');
+  return advanceSoloFrontPressure(advanced.state, 2, eventId);
 }
 
 export function simulateClassicModeLaunch(state, modeId, setup = {}) {

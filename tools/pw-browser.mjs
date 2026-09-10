@@ -48,8 +48,14 @@ const SHARED_MARK = '--massfront-shared-browser=';
 const OWNED_PROFILE_PREFIX = 'pw-owned-';
 const OWNED_SESSION_DIR = join(LOCK_DIR, 'pw-owned-sessions');
 const PW_GRACEFUL_CLOSE_TIMEOUT_MS = 4000;
-const PW_PROFILE_REMOVE_ATTEMPTS = 8;
-const PW_PROFILE_REMOVE_DELAY_MS = 100;
+/* On Windows the top-level Chrome process can remain in a terminating WMI
+   state after CDP has closed. Eight seconds was reproducibly too short on the
+   hardware-GPU lane: the port was gone but the profile stayed locked for a few
+   more seconds. Wait for that exact token/PID to disappear before removing its
+   already-authorized profile. */
+const PW_PROCESS_EXIT_TIMEOUT_MS = process.platform === 'win32' ? 30000 : 8000;
+const PW_PROFILE_REMOVE_ATTEMPTS = process.platform === 'win32' ? 16 : 8;
+const PW_PROFILE_REMOVE_DELAY_MS = process.platform === 'win32' ? 200 : 100;
 
 export const PW_CDP_PORT = CDP_PORT;
 export const PW_USER_DATA = USER_DATA;
@@ -473,7 +479,7 @@ export async function reapOwnedPwBrowserOrphans() {
         killed.push(proc.pid);
       }
     }
-    const processExited = await waitUntil(async () => (await ownedProcessMatches(session)).length === 0, 8000, 100);
+    const processExited = await waitUntil(async () => (await ownedProcessMatches(session)).length === 0, PW_PROCESS_EXIT_TIMEOUT_MS, 100);
     const portReleased = await waitUntil(async () => !(await cdpAlive(session.endpoint)), 8000, 100);
     const profile = await retryPwProfileRemovalOperation({
       authorize: () => pwOwnedProfileRemovalAllowed(session.profile),
@@ -741,7 +747,7 @@ async function closeOwnedPwBrowser(browser) {
         cleanup.killedOwnedPids.push(proc.pid);
       }
     }
-    cleanup.processExited = await waitUntil(async () => (await ownedProcessMatches(session)).length === 0, 8000, 100);
+    cleanup.processExited = await waitUntil(async () => (await ownedProcessMatches(session)).length === 0, PW_PROCESS_EXIT_TIMEOUT_MS, 100);
     cleanup.portReleased = await waitUntil(async () => !(await cdpAlive(session.endpoint)), 8000, 100);
     const profile = await retryPwProfileRemovalOperation({
       authorize: () => pwOwnedProfileRemovalAllowed(session.profile),

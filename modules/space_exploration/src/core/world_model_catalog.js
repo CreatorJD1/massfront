@@ -10,9 +10,9 @@ function validateCatalog(catalog) {
     || catalog.acceptedByCreator !== true
     || catalog.regenerationPerformed !== false
     || catalog.sourceGeometryLocked !== true
-    || catalog.modelCount !== 327
-    || catalog.worldKitCount !== 320
-    || catalog.splineCount !== 7
+    || catalog.modelCount !== 285
+    || catalog.worldKitCount !== 284
+    || catalog.splineCount !== 1
     || !Array.isArray(catalog.models)
     || catalog.models.length !== catalog.modelCount) {
     throw new Error('The accepted Stage 10 runtime model catalog is missing or invalid.');

@@ -19,24 +19,23 @@ const browser=await launchPwBrowser({
   args:['--use-gl=angle','--use-angle=d3d11','--ignore-gpu-blocklist','--enable-gpu','--disable-gpu-sandbox','--disable-software-rasterizer']
 });
 
+let context=null,page=null;
+const pageErrors=[],failed=[];
 try{
-  const context=await browser.newContext({
+  context=await browser.newContext({
     viewport:{width:393,height:852},
     deviceScaleFactor:2,
     hasTouch:true,
     isMobile:true,
     colorScheme:'dark'
   });
-  const page=await context.newPage();
-  const pageErrors=[];
-  const failed=[];
+  page=await context.newPage();
   page.on('pageerror',e=>pageErrors.push(e.message));
   page.on('requestfailed',r=>{
     const error=r.failure()?.errorText||'failed',requestUrl=r.url();
-    /* Galactic Exploration is an intentionally optional pack. The launcher's
-       HEAD capability probe may be aborted by a static Space/service worker;
-       the UI converts that exact result to NOT INCLUDED IN THIS BUILD. */
-    if(r.method()==='HEAD'&&/\/modules\/space_exploration\/index\.html(?:[?#]|$)/.test(requestUrl)&&error==='net::ERR_ABORTED')return;
+    /* Same-tab entry can cancel the launch document's capability request when
+       the browser commits the integrated Galactic document. */
+    if(/\/modules\/space_exploration\/index\.html(?:[?#]|$)/.test(requestUrl)&&error==='net::ERR_ABORTED')return;
     failed.push(requestUrl+': '+error);
   });
   await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
@@ -94,6 +93,11 @@ try{
   if(failed.length) throw new Error('failed requests:\n'+failed.join('\n'));
   if(!state.webgl2||!state.homeVisible||!state.launcherPassed) throw new Error('invalid boot state '+JSON.stringify(state));
   console.log(JSON.stringify({...state,screenshot:out},null,2));
+}catch(error){
+  const failureOut=join(root,'releases',local?'local-web-mobile-failure.png':'cloud-playtest-iphone-failure.png');
+  if(page)await page.screenshot({path:failureOut,fullPage:false}).catch(()=>{});
+  console.error(JSON.stringify({url,pageErrors,failed,failureScreenshot:failureOut},null,2));
+  throw error;
 }finally{
   await browser.close();
 }

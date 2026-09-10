@@ -1049,11 +1049,54 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
 .goData small{display:block;color:#7fb29c;font:600 9px var(--fU);letter-spacing:.03em}.goData.muted{color:#7f9aab;font-size:10px}
 
 /* ---------- META HEADER ---------- */
-#metaHead{display:grid;grid-template-columns:auto minmax(0,1fr) auto;grid-template-areas:'icon name mail' 'res res res';
-  align-items:center;gap:8px 10px;width:min(92vw,384px);border-radius:13px;padding:9px 12px 10px;
-  border:1px solid transparent;background:var(--panelG) padding-box,var(--steelB) border-box;
-  box-shadow:0 4px 14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);
-  clip-path:polygon(11px 0,calc(100% - 11px) 0,100% 11px,100% calc(100% - 11px),calc(100% - 11px) 100%,11px 100%,0 calc(100% - 11px),0 11px)}
+/* The progression rail and the wordmark are the other two thirds of the top
+   block. The reference carries neither at this weight: it states rank in the
+   bar and gives the wordmark about a tenth of the screen. Keep both pieces of
+   progression, but as slim rows on the pack progress track, and drop the long
+   description line - it is the same copy the destination screen opens with. */
+#startScreen #mfNextUnlockRail{margin:6px auto 0;padding:0;width:min(96vw,440px);gap:6px}
+#startScreen .mfNextCard{flex:1 1 0;padding:5px 8px 6px;gap:2px;border-radius:6px}
+#startScreen .mfNextHead{gap:5px}
+#startScreen .mfNextHead b{font-size:8.5px;letter-spacing:.1em}
+#startScreen .mfNextBadge{font-size:11px}
+#startScreen .mfNextName{font-size:10.5px}
+#startScreen .mfNextMeta{font-size:8.5px}
+#startScreen .mfNextMeta small{display:none}
+/* The bar reads the progress track from the pack rather than a flat div. */
+#startScreen .mfNextProg{height:8px;border-radius:0;background:none;border:0;
+  border-style:solid;border-width:0 4px;border-color:transparent;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/progress_track.png');border-image-slice:0 44 0 44 fill;border-image-repeat:stretch}
+#startScreen .mfNextFill{height:100%;border-radius:0;background:none;
+  border-style:solid;border-width:0 4px;border-color:transparent;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/progress_fill_gold.png');border-image-slice:0 44 0 44 fill;border-image-repeat:stretch}
+#startScreen .mfNextCard.type-armory .mfNextFill{border-image-source:url('../../assets/textures/ui/mf-ui-v3/progress_fill_cyan.png')}
+/* The wordmark: about a tenth of the screen, as the reference has it. */
+#startScreen #menuBrand{max-height:min(23vh,200px);width:auto;object-fit:contain;margin:10px auto 4px}
+/* A shorter phone cannot afford the full wordmark: at 360x780 the stack ran
+   20px past the viewport and the live model card lost its bottom edge. Clamp
+   the one decorative element rather than any control. */
+@media (orientation:portrait) and (max-height:820px){
+  #startScreen #menuBrand{max-height:min(19vh,160px);margin:6px auto 3px}
+  #startScreen #menuIntel{--bnH:88px}
+}
+/* Compact command bar, per the owner reference: ONE full-width row - hex
+   portrait and name on the left, cores and record on the right - rather than a
+   floating card with a second stacked resource row beneath it. The header, the
+   progression rail and the wordmark together were taking 422px of a 900px
+   phone, which is why the first command slice started below the halfway line.
+   The plate is the pack nine-slice, and its border is the art own 48/224 of
+   the bar height so the corners stay at the authored proportion. */
+#metaHead{--barH:78px;
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  grid-template-areas:'icon name act' 'icon xp act' 'icon res act';
+  grid-template-rows:auto auto auto;
+  align-items:center;gap:0 10px;box-sizing:border-box;
+  width:min(96vw,440px);min-height:var(--barH);margin:0 auto;
+  padding:0 4px;
+  border-style:solid;border-width:calc(var(--barH) * .13);border-color:transparent;border-radius:0;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/panel_player_info.png');
+  border-image-slice:48 fill;border-image-repeat:stretch;
+  background:none;box-shadow:none;clip-path:none}
 /* ── The menu must never compress its own controls ─────────────────────────
    #startScreen is a flex column, so every child inherited flex-shrink:1. When
    the column ran out of height the browser squashed the BUTTONS instead of
@@ -1142,7 +1185,7 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
    the top of the viewport and unreachable, which is the same "UI under the OS
    chrome" complaint in a different disguise. `safe` falls back to flex-start the
    moment the content no longer fits, so nothing is ever pushed off the top. */
-#startScreen{justify-content:safe center;padding-top:calc(var(--sat) + 10px)}
+#startScreen{justify-content:flex-start;padding-top:calc(var(--sat) + 8px)}
 #startScreen .title{margin-top:14px}
 .menuGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:min(88vw,340px);margin-top:12px}
 .gbtn{display:flex;align-items:center;justify-content:center;gap:8px;min-height:54px;padding:13px 8px;border-radius:11px;
@@ -1171,10 +1214,30 @@ body.mfDeparting #placeUI,body.mfDeparting #unitCard,body.mfDeparting #gameOver{
 
 /* A single restrained live subject gives the home screen motion and roster
    identity without adding another destination or competing with PLAY. */
-#menuIntel{width:min(88vw,340px);height:78px;display:grid;grid-template-columns:116px minmax(0,1fr);
-  gap:10px;align-items:stretch;margin-top:8px;flex:0 0 auto;overflow:hidden;border-radius:11px;text-align:left;
-  border:1px solid rgba(90,162,207,.34);background:linear-gradient(100deg,rgba(7,19,32,.95),rgba(11,27,43,.88));
-  box-shadow:0 5px 18px rgba(0,0,0,.48),inset 0 1px 0 rgba(255,255,255,.06)}
+/* The live model feed stays a bottom banner. It was briefly the reference holo
+   viewport under the wordmark, but at that size it reads as a hero panel and
+   competes with the wordmark above it and the command slices below - the menu
+   ends up with two focal points and no lead. As a banner it is the last thing
+   on the screen, which is where a rotating showcase belongs: seen, not
+   answered. The plate is the same neutral pack panel the command bar uses, so
+   the screen opens and closes on the same shape. */
+#menuIntel{--bnH:96px;
+  position:relative;box-sizing:border-box;text-align:left;
+  display:grid;grid-template-columns:104px minmax(0,1fr);gap:10px;align-items:stretch;
+  width:min(94vw,400px);height:var(--bnH);margin:9px auto 0;flex:0 0 auto;overflow:hidden;
+  border-style:solid;border-width:calc(var(--bnH) * .15);border-color:transparent;border-radius:0;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/panel_player_info.png');
+  border-image-slice:48 fill;border-image-repeat:stretch;
+  background:none;box-shadow:none}
+#menuIntel #menuIntelModel{position:static;min-width:0;width:auto;height:100%;border-radius:0}
+#menuIntel #menuIntelModel .mfIntelPreview{height:100%;width:100%;min-height:0;border:0;border-radius:0;
+  border-right:1px solid rgba(91,175,225,.24)}
+#menuIntel #menuIntelModel .mfIntelPreviewTag{display:block;font-size:8px;top:3px;left:4px}
+#menuIntel .menuIntelCopy{position:static;min-width:0;display:flex;flex-direction:column;
+  justify-content:center;gap:1px;padding:0 3px 0 0;background:none}
+#menuIntel .menuIntelCopy>b{margin-top:2px;font-size:13px}
+#menuIntel .menuIntelCopy>span{white-space:normal;overflow:hidden;overflow-wrap:anywhere;font-size:8.5px;line-height:1.3}
+
 #menuIntelModel{min-width:0;height:76px}
 #menuIntelModel .mfIntelPreview{height:100%;min-height:0;border:0;border-right:1px solid rgba(91,175,225,.27);border-radius:0}
 #menuIntelModel .mfIntelPreviewTag{font-size:9px;top:5px;left:5px}
@@ -1630,6 +1693,9 @@ input,textarea,#profName{-webkit-user-select:text;user-select:text}
    loading screen reads as a stuck transition rather than a deliberate wait,
    and the intel text below has to sit on a settled background to be read. */
 #loadScr{background:radial-gradient(120% 90% at 50% 34%,#0a1622 0%,#050b13 58%,#03070e 100%)}
+#loadScr .mfLoadBrand{position:relative;display:grid;place-items:center;width:min(68vw,410px);aspect-ratio:1280/681;margin:0 auto 2px}
+#loadScr .mfLoadBrand img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 10px 24px #000b)}
+#loadScr .mfLoadBrandFallback{font:900 clamp(34px,10vw,58px)/1 var(--fT);letter-spacing:.07em;color:#eefbff;text-shadow:0 0 28px #54dcff38;white-space:nowrap}
 #loadEyebrow{font:700 9.5px/1 var(--fT);letter-spacing:.30em;color:#5f87a6;margin-bottom:9px}
 #loadPoi{margin-top:7px;font:700 12px/1.3 var(--fT);letter-spacing:.20em;color:#5dff9a}
 #loadHook{margin-top:9px;max-width:min(86vw,470px);font:500 12px/1.6 var(--fU);color:#9fb8cc;text-align:center}
@@ -2722,10 +2788,12 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
    covers the pre-intro window and nothing else. Ship an overlay without this and
    it paints on top of the menu the instant the launch title finishes, which is
    exactly what 1.32.19/1.32.20 did: the game opened straight into the War Room. */
-#warScr{display:none;justify-content:flex-start;padding-left:0;padding-right:0}
+#warScr{display:none;justify-content:flex-start;padding-left:0;padding-right:0;overflow:hidden}
 .warScroll{flex:1 1 auto;width:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;
-  padding:2px calc(var(--sar) + 16px) 10px calc(var(--sal) + 16px)}
-.warGrid{display:flex;flex-direction:column;gap:10px;width:min(94vw,460px);margin:0 auto}
+  min-height:0;box-sizing:border-box;overscroll-behavior-y:contain;touch-action:pan-y;
+  padding:2px calc(var(--sar) + 16px) max(calc(var(--sab) + 18px),24px) calc(var(--sal) + 16px);
+  scroll-padding-block-end:max(calc(var(--sab) + 72px),82px)}
+.warGrid{display:flex;flex-direction:column;gap:10px;width:min(100%,460px);margin:0 auto;padding-bottom:4px}
 .warCard{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;column-gap:12px;row-gap:8px;width:100%;text-align:left;padding:13px 14px 16px;
   overflow:visible;box-sizing:border-box;
   border-radius:12px;cursor:pointer;position:relative;
@@ -2750,9 +2818,13 @@ button:focus-visible,[role="button"]:focus-visible,input:focus-visible,textarea:
 .warLock{grid-column:1/-1;justify-self:start;max-width:100%;font-family:var(--fT);font-size:9px;font-weight:800;
   letter-spacing:.08em;color:#ffd66f;border:1px solid rgba(255,214,111,.34);border-radius:6px;padding:4px 7px;
   background:rgba(48,36,10,.6);white-space:normal;line-height:1.25}
-.warFoot{flex:0 0 auto;width:100%;display:flex;justify-content:center;
-  padding:4px calc(var(--sar) + 16px) calc(var(--sab) + 10px) calc(var(--sal) + 16px)}
+.warFoot{flex:0 0 auto;width:100%;display:flex;justify-content:center;position:relative;z-index:2;
+  padding:4px calc(var(--sar) + 16px) calc(var(--sab) + 10px) calc(var(--sal) + 16px);
+  background:linear-gradient(180deg,rgba(3,7,14,.18),rgba(3,7,14,.97) 18px)}
 .warFoot .mbtn{margin-top:0}
+.warContinuation{margin-top:7px!important;color:#a8c6da!important;font-size:11px!important;line-height:1.3!important;letter-spacing:.045em!important}
+.warContinuation strong{color:#ffd66f;font:800 1em/1 var(--fT);letter-spacing:.08em}
+.warContinuation i{display:inline-block;margin-left:3px;color:#8be8ff;font-style:normal;font-size:13px;line-height:1}
 
 /* Hologram chrome lives under the canvas, not on top of canvas-drawn labels. */
 .mfGalaxyViewport,.mfPlanetViewport{display:flex;flex-direction:column}
@@ -2900,30 +2972,66 @@ body.menuMode #inboxHudBtn{display:none}
    Grid areas rather than a flex row, so the mailbox can sit in the header's own
    top-right corner instead of floating over the numbers, and the resources get
    a full-width row of their own. */
-#rankEm{grid-area:icon;position:relative;display:flex;align-items:center;justify-content:center}
-#rankEmGlyph{font-size:30px;line-height:1;display:block;filter:drop-shadow(0 0 6px rgba(255,210,87,.5))}
-/* The account level, as a badge on the corner of the portrait. */
-#rankLvl{position:absolute;right:-3px;bottom:-3px;min-width:19px;height:19px;padding:0 4px;
-  display:flex;align-items:center;justify-content:center;border-radius:10px;
-  font-family:var(--fT);font-size:10px;font-weight:800;line-height:1;color:#08131d;
-  background:linear-gradient(180deg,#ffe9a3,#e0b757);border:1px solid rgba(10,20,30,.65);
-  box-shadow:0 1px 4px rgba(0,0,0,.6)}
-#rankGreet{grid-area:name}
-#metaActions{grid-area:mail;display:flex;align-items:center;gap:6px}
-#inboxBtn{position:static;width:40px;height:40px;flex:0 0 auto}
-#metaRes{grid-area:res;display:grid;grid-template-columns:1fr 1fr;gap:8px;
-  padding-top:8px;border-top:1px solid rgba(120,170,205,.18)}
-.metaResCell{display:flex;align-items:baseline;justify-content:center;gap:6px;min-width:0}
-.metaResCell .lbl{font-size:9px;letter-spacing:.16em;color:#7fa8c4;font-weight:700;flex:0 0 auto}
-.metaResCell b{font-family:var(--fT);font-size:15px;color:#8be8ff;font-variant-numeric:tabular-nums;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.metaResCell:last-child b{font-size:13px;color:#cfe8ff}
-#metaRec{margin:0;font-size:inherit;color:inherit}
-#rankEm .badgePortrait{width:40px;height:40px;border-radius:50%}
+/* Children of the compact command bar. These live here, after the older
+   header rules, because those set grid-area:mail and a two-column resource
+   row - both of which belong to the stacked card the bar replaced. */
+#rankEm{grid-area:icon;grid-row:1 / span 2;position:relative;display:flex;align-items:center;justify-content:center;
+  width:40px;height:46px;min-width:0;min-height:0;padding:0;margin:0;flex:0 0 auto;font-size:inherit;filter:none;
+  background:url('../../assets/textures/ui/mf-ui-v3/frame_portrait_empty.png') center/contain no-repeat}
+#rankEmGlyph{font-size:19px;line-height:1;display:block;filter:drop-shadow(0 0 5px rgba(255,210,87,.5))}
+#rankLvl{position:absolute;right:-2px;bottom:1px;min-width:16px;height:16px;padding:0 3px;
+  display:flex;align-items:center;justify-content:center;border-radius:9px;
+  font-family:var(--fT);font-size:9px;font-weight:800;line-height:1;color:#08131d;
+  background:linear-gradient(180deg,#ffe9a3,#e0b757);border:1px solid rgba(10,20,30,.65)}
+#rankGreet{grid-area:name;display:grid;gap:1px;min-width:0;text-align:left}
+#greetLine{display:block;font-size:14px;letter-spacing:.05em;margin:0}
+#greetSub{display:block;font-size:9px;letter-spacing:.03em;margin:0}
+/* Resources move out of their own row onto the right of the same bar, with a
+   hairline where the reference splits its two plates. */
+/* The rank track, folded out of its own card and onto the banner. The bar is
+   the pack progress art rather than a flat div, so it matches the plates it
+   sits inside. */
+#metaRank{grid-area:xp;display:flex;align-items:center;gap:8px;min-width:0;padding:1px 0}
+#metaXp{flex:1 1 auto;min-width:0;height:7px;overflow:hidden;
+  border-style:solid;border-width:0 4px;border-color:transparent;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/progress_track.png');border-image-slice:0 44 0 44 fill;border-image-repeat:stretch}
+#metaXpFill{display:block;height:100%;min-width:0;
+  border-style:solid;border-width:0 4px;border-color:transparent;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/progress_fill_gold.png');border-image-slice:0 44 0 44 fill;border-image-repeat:stretch}
+#metaXpTx{flex:0 0 auto;font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.06em;color:#9fc6e0;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:64%}
+#metaRes{grid-area:res;display:flex;align-items:baseline;gap:13px;justify-content:flex-start;
+  padding:1px 0 0;border-top:0;border-left:0}
+.metaResCell{display:flex;align-items:baseline;justify-content:flex-start;gap:5px;min-width:0}
+.metaResCell .lbl{font-size:7.5px;letter-spacing:.12em;color:#7fa8c4;font-weight:700;flex:0 0 auto}
+.metaResCell b{font-family:var(--fT);font-size:12px;color:#8be8ff;font-variant-numeric:tabular-nums;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.metaResCell:last-child b{font-size:10px;color:#cfe8ff}
+#metaRec{margin:0;color:inherit}
+/* Version and inbox stay reachable but stop competing: two small stacked
+   icon buttons at the end of the bar. */
+#metaActions{grid-area:act;grid-row:1 / span 2;display:flex;align-items:center;gap:5px;padding-left:8px}
+#metaHead #updDot,#metaHead #inboxBtn{border-radius:9px}
+#metaHead #updDotGlyph{font-size:13px}
+#metaHead #inboxBtn .sEmj{font-size:14px}
+#metaHead #updDot::after{top:4px;right:4px;width:7px;height:7px}
+
+#inboxBtn{position:static;width:28px;height:28px;flex:0 0 auto}
+#rankEm .badgePortrait{width:30px;height:30px;border-radius:50%}
+/* The narrow-phone tune was written for the tall stacked card and grew the
+   resource values; on the compact banner that overflowed the row into
+   CORES [ / RECORD 0W ... at 360px. Everything here now shrinks. */
 @media (max-width:430px){
-  #rankEmGlyph{font-size:26px}
-  #rankEm .badgePortrait{width:36px;height:36px}
-  .metaResCell b{font-size:14px}
+  #rankEmGlyph{font-size:17px}
+  #rankEm{width:37px;height:43px}
+  #rankEm .badgePortrait{width:26px;height:26px}
+  #greetLine{font-size:13px}
+  #metaRes{gap:10px}
+  .metaResCell .lbl{font-size:7px;letter-spacing:.1em}
+  .metaResCell b{font-size:11px}
+  .metaResCell:last-child b{font-size:9.5px}
+  #metaXpTx{font-size:8px}
+  #metaHead #updDot,#metaHead #inboxBtn{border-radius:8px}
 }
 
 
@@ -3310,7 +3418,7 @@ body.mfLauncherGate .mfLauncherFoot{grid-template-columns:minmax(0,.78fr) minmax
    CO-OP advertised +0% XP; the resume banner had no two-line wrap. */
 #startScreen{overflow-x:hidden}
 #startScreen>*{max-width:100%;box-sizing:border-box}
-#menuIntel{height:86px}
+
 .menuIntelCopy>span{overflow-wrap:anywhere}
 .warCard.locked{opacity:.72}
 .warCard.locked .warFootTx{color:#9bb6c8}
@@ -3384,6 +3492,11 @@ body.mfLauncherGate .mfLauncherFoot{grid-template-columns:minmax(0,.78fr) minmax
 #mfNextUnlockRail{
   display:flex;
   gap:8px;
+  align-items:stretch;
+  width:min(92vw,384px);
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
   overflow-x:auto;
   padding:6px 0 10px;
   margin:8px 0;
@@ -3392,6 +3505,8 @@ body.mfLauncherGate .mfLauncherFoot{grid-template-columns:minmax(0,.78fr) minmax
 #mfNextUnlockRail::-webkit-scrollbar{display:none}
 .mfNextCard{
   flex:0 0 200px;
+  min-width:0;
+  box-sizing:border-box;
   background:linear-gradient(180deg,rgba(18,28,42,0.85),rgba(10,16,26,0.92));
   border:1px solid rgba(90,212,255,0.28);
   border-radius:8px;
@@ -3407,14 +3522,19 @@ body.mfLauncherGate .mfLauncherFoot{grid-template-columns:minmax(0,.78fr) minmax
   display:flex;
   align-items:center;
   gap:6px;
+  min-width:0;
 }
 .mfNextBadge{
   font-size:14px;
 }
 .mfNextHead b{
+  min-width:0;
   font-size:10px;
   letter-spacing:.08em;
   color:#8dc4f0;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
 }
 .mfNextName{
   font-size:12px;
@@ -3439,19 +3559,44 @@ body.mfLauncherGate .mfLauncherFoot{grid-template-columns:minmax(0,.78fr) minmax
 .mfNextCard.type-rank .mfNextFill{background:linear-gradient(90deg,#facc15,#fb923c)}
 .mfNextCard.type-conquest .mfNextFill{background:linear-gradient(90deg,#f87171,#ef4444)}
 .mfNextMeta{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  align-items:start;
+  gap:2px;
+  min-width:0;
   font-size:10px;
+  line-height:1.2;
   color:#9ab2c8;
 }
+.mfNextMeta span{
+  min-width:0;
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
 .mfNextMeta small{
+  display:block;
+  min-width:0;
   font-size:9px;
   color:#6c88a2;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
-  max-width:110px;
+  max-width:100%;
+}
+/* Two fixed 200px cards need 408px before the menu's phone gutters, which
+   pushed the Arsenal card beyond a 412px viewport. Keep the intended paired
+   glance at phone width, but size both tracks from the rail's real content
+   width. A possible third track gets one readable row instead of reintroducing
+   hidden horizontal content. */
+@media (max-width:430px){
+  #mfNextUnlockRail{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    overflow-x:hidden;
+  }
+  #mfNextUnlockRail>.mfNextCard{width:auto;max-width:100%}
+  #mfNextUnlockRail>.mfNextCard:only-child,
+  #mfNextUnlockRail>.mfNextCard:nth-child(3):last-child{grid-column:1/-1}
 }
 
 /* ---------- COMMANDER / KEEL MINIMAP RECEIVER (src/ui/hud.js) ---------------
@@ -3844,7 +3989,22 @@ body.mf-cinematic-hud #atkAlert,body.mf-cinematic-hud #waveAlert{
    actions remain the final row. No opaque full-screen-width plate is painted. */
 body.mf-cinematic-hud #cmdbar{
   position:fixed;z-index:20;left:calc(var(--sal) + var(--mfHudEdge));right:calc(var(--sar) + var(--mfHudEdge));
-  bottom:calc(var(--sab) + var(--mfHudEdge));width:auto;max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2);
+  /* Floor the home-indicator gap instead of trusting --sab outright. --sab is
+     var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)), and when
+     nothing populates either — an installed iOS PWA whose env() does not report,
+     an Android WebView that reports 0 under gesture nav — this resolved to
+     bottom:4px and the LAST dock row is DEPLOY BASE HERE. Measured in WebKit at
+     iPhone 13 geometry: 34px inset gives the row 40px of clearance, a 0px inset
+     gives it 6px, which puts a primary action underneath the home indicator and
+     shears its label. The legacy dock above already knew this and floors itself
+     at --mmDockPad: max(calc(var(--sab) + 6px),38px); this one never did. The
+     floor only bites when the inset is missing, so a correctly reporting device
+     keeps the exact 38px it has today. The floor is sized to Apple's own 34px
+     indicator rather than something merely larger than 4px: a 12px floor still
+     left the button inside the indicator band, which fixes nothing. Every phone
+     this ships to has either an indicator or a system nav bar, so the reserved
+     strip is almost never wasted. */
+  bottom:max(calc(var(--sab) + var(--mfHudEdge)),calc(var(--mfHudEdge) + 28px));width:auto;max-width:calc(100vw - var(--sal) - var(--sar) - var(--mfHudEdge) * 2);
   min-height:0;box-sizing:border-box;display:flex;align-items:stretch;gap:var(--mfHudGap);
   padding:2px;border:0;border-radius:0;background:transparent;isolation:isolate;
   /* A backdrop filter establishes a containing block for fixed descendants.
@@ -4953,3 +5113,342 @@ body.mf-cinematic-hud #mfNoticeHistory .mfNoticeEmpty{margin:0;padding:20px 10px
   body.mf-cinematic-hud #mfNoticeHistory{max-height:min(45dvh,186px)}
   body.mf-cinematic-hud #mfNoticeHistory header{display:none}
 }
+
+/* ==========================================================================
+   CREATOR GUI MATERIAL HUD
+   These are the runtime-ready neutral surrounds from the supplied GUI pack.
+   Live copy, counters, portrait art and hit targets remain DOM-owned; the PNGs
+   are only density-aware material layers, with the existing CSS as fallback.
+   ========================================================================== */
+body.mf-cinematic-hud{
+  --mfGuiPortrait:image-set(
+    url('../../modules/space_exploration/assets/runtime/ui/gui-material-v1/1x/hud/portrait_frame.png') 1x,
+    url('../../modules/space_exploration/assets/runtime/ui/gui-material-v1/2x/hud/portrait_frame.png') 2x);
+  --mfGuiResourceRail:image-set(
+    url('../../modules/space_exploration/assets/runtime/ui/gui-material-v1/1x/hud/resource_rail_frame.png') 1x,
+    url('../../modules/space_exploration/assets/runtime/ui/gui-material-v1/2x/hud/resource_rail_frame.png') 2x);
+  --mfGuiFeedRow:image-set(
+    url('../../modules/space_exploration/assets/runtime/ui/gui-material-v1/1x/hud/feed_row_frame.png') 1x,
+    url('../../modules/space_exploration/assets/runtime/ui/gui-material-v1/2x/hud/feed_row_frame.png') 2x)
+}
+
+/* The supplied 252x48 resource frame belongs only around the three resources;
+   the inbox, speed and pause buttons remain independent 44px actions. */
+body.mf-cinematic-hud #topbar::after{
+  content:'';position:absolute;z-index:0;left:0;top:0;
+  width:calc(100% - var(--mfHudTouch) * 3 - var(--mfHudGap) * 3);height:var(--mfHudTopRow);
+  box-sizing:border-box;border:12px solid transparent;border-image-source:var(--mfGuiResourceRail);
+  border-image-slice:35.4167% 6.7460%;border-image-width:12px;border-image-repeat:stretch;pointer-events:none
+}
+body.mf-cinematic-hud #topbar>*{position:relative;z-index:1}
+body.mf-cinematic-hud #topbar>.res{border-inline-start:0;background:linear-gradient(180deg,rgba(10,32,47,.6),rgba(3,13,22,.32));clip-path:none}
+
+/* The portrait frame is authored at the exact phone rail proportion. On wide
+   HUDs only the image window receives it, so the expanded identity copy stays
+   outside the portrait material. */
+@media (max-width:699px) and (orientation:portrait){
+  body.mf-cinematic-hud #heroBar::after{
+    content:'';position:absolute;z-index:3;inset:0;box-sizing:border-box;border:14px solid transparent;
+    border-image-source:var(--mfGuiPortrait);border-image-slice:25% 29.6875%;border-image-width:14px;
+    border-image-repeat:stretch;pointer-events:none
+  }
+}
+@media (min-width:700px), (orientation:landscape){
+  body.mf-cinematic-hud #heroPortrait::after{
+    content:'';position:absolute;z-index:3;inset:0;box-sizing:border-box;border:10px solid transparent;
+    border-image-source:var(--mfGuiPortrait);border-image-slice:25% 29.6875%;border-image-width:10px;
+    border-image-repeat:stretch;pointer-events:none
+  }
+}
+
+/* One readable command acknowledgement, with full history still retained in
+   EVENT FEED. The authored 288x44 row preserves its corners through nine-slice
+   instead of stretching them with viewport width. */
+body.mf-cinematic-hud #toast.noticeBox,
+body.mf-cinematic-hud.mfCombatHot #toast.noticeBox,
+body.mf-cinematic-hud.uiPlacing #toast.noticeBox{
+  box-sizing:border-box;width:min(360px,calc(100vw - var(--sal) - var(--sar) - 24px));
+  min-height:44px;max-height:72px;padding:0 4px 1px;border:10px solid transparent;border-radius:0;
+  border-image-source:var(--mfGuiFeedRow);border-image-slice:34.0909% 5.2083%;border-image-width:10px;
+  border-image-repeat:stretch;background:linear-gradient(155deg,rgba(7,27,42,.94),rgba(2,10,18,.96)) padding-box;
+  overflow:hidden;white-space:normal;text-overflow:clip;font-size:max(10.5px,var(--mfHudTextFeed));line-height:1.15;
+  box-shadow:0 7px 19px rgba(0,0,0,.58)
+}
+body.mf-cinematic-hud #toast.noticeBox::before,
+body.mf-cinematic-hud.mfCombatHot #toast.noticeBox::before,
+body.mf-cinematic-hud.uiPlacing #toast.noticeBox::before{
+  position:static;display:block;margin:0 0 2px;color:#80d8fa;font:900 8px/1 var(--fT);letter-spacing:.15em
+}
+body.mf-cinematic-hud #toast.noticeBox>.mfNoticeText{
+  display:-webkit-box;min-width:0;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;
+  overflow-wrap:anywhere
+}
+body.mf-cinematic-hud #cmdbar #hotSlots>.hotSlot.on{
+  color:#fff2b8;background:linear-gradient(180deg,rgba(89,66,13,.88),rgba(20,30,37,.92));
+  box-shadow:inset 0 0 0 2px rgba(255,215,104,.88),inset 0 -3px #ffd05d,0 0 18px rgba(255,205,82,.42)
+}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #toast.noticeBox{
+  max-height:88px;padding-block:2px;overflow:visible;overflow-wrap:anywhere
+}
+html[data-mf-text-scale]:not([data-mf-text-scale="100"]) body.mf-cinematic-hud #toast.noticeBox>.mfNoticeText{
+  -webkit-line-clamp:3;line-clamp:3
+}
+
+/* ---------- LAUNCH BUSY STATE ---------- */
+/* mfOpenExploration() has always set .is-launching and aria-busy on the pressed
+   control, but nothing ever styled it, so opening UGA Command looked like a dead
+   tap: the button did not change, and the only feedback was a toast that is easy
+   to miss while the app secures a ticket and parses a separate WebGL document.
+   Players read that as "the first tap does nothing" and press again. Give the
+   control an unmistakable working state for that window. */
+.is-launching{position:relative;pointer-events:none;cursor:progress}
+.is-launching::after{content:'';position:absolute;left:50%;bottom:6px;width:min(64%,120px);height:2px;
+  transform:translateX(-50%);border-radius:2px;background:rgba(255,255,255,.16);overflow:hidden}
+.is-launching::before{content:'';position:absolute;left:50%;bottom:6px;width:min(64%,120px);height:2px;
+  transform:translateX(-50%);border-radius:2px;z-index:1;
+  background:linear-gradient(90deg,transparent,#6be7ff,transparent);
+  animation:mfLaunchSweep 1.05s linear infinite}
+@keyframes mfLaunchSweep{0%{clip-path:inset(0 100% 0 0)}50%{clip-path:inset(0 0 0 0)}100%{clip-path:inset(0 0 0 100%)}}
+/* Reduced motion still needs a state change, just not a moving one. */
+@media(prefers-reduced-motion:reduce){
+  .is-launching::before{animation:none;background:#6be7ff;clip-path:none;opacity:.75}
+}
+
+/* ---------- FLOATING UPDATE POPUP ---------- */
+/* #updScr is the boot launcher AND the update surface the player opens from
+   the menu. As a full screen the second use reads as a second loading screen,
+   which is exactly the complaint. Floated, it is a card over the live menu and
+   collapses to a status pill, so a download can run while the player keeps
+   using the game. src/ui/hudflow.js decides which mode applies. */
+.mfFloatBar{display:none}
+#updScr.mfFloat{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;
+  gap:0;padding:0 0 max(var(--sab,0px),10px);background:none;backdrop-filter:none;
+  pointer-events:none;z-index:64}
+#updScr.mfFloat .mfLauncherBackdrop,#updScr.mfFloat .mfLauncherTop{display:none}
+#updScr.mfFloat #mfLauncherScroll{pointer-events:auto;flex:0 1 auto;
+  width:min(94vw,392px);max-height:min(56vh,470px);overflow:auto;-webkit-overflow-scrolling:touch;
+  margin:0;padding:0 12px 10px;
+  background:linear-gradient(180deg,rgba(9,18,28,.97),rgba(6,12,20,.98));
+  border:1px solid rgba(92,196,232,.42);border-bottom:0;border-radius:14px 14px 0 0;
+  box-shadow:0 18px 44px rgba(0,0,0,.62)}
+#updScr.mfFloat .mfLauncherFoot{pointer-events:auto;width:min(94vw,392px);margin:0;padding:8px 12px 10px;
+  background:linear-gradient(180deg,rgba(6,12,20,.98),rgba(5,10,17,.99));
+  border:1px solid rgba(92,196,232,.42);border-top:0;border-radius:0 0 14px 14px;
+  box-shadow:0 18px 44px rgba(0,0,0,.62)}
+/* The bar is sticky so the controls stay reachable while the card scrolls. */
+#updScr.mfFloat .mfFloatBar{display:flex;align-items:center;gap:9px;position:sticky;top:0;z-index:3;
+  margin:0 -12px 9px;padding:10px 12px;
+  background:linear-gradient(180deg,rgba(11,22,34,.99),rgba(9,18,28,.97));
+  border-bottom:1px solid rgba(92,196,232,.26)}
+#updScr.mfFloat .mfFloatTitle{color:#dff2fb;font:800 11px/1 var(--fT,system-ui);letter-spacing:.15em;flex:0 0 auto}
+#updScr.mfFloat .mfFloatState{color:#7fb0c8;font:700 9px/1.2 ui-monospace,monospace;letter-spacing:.09em;
+  flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#updScr.mfFloat .mfFloatBar button{flex:0 0 auto;width:32px;height:32px;border-radius:8px;
+  border:1px solid rgba(92,196,232,.34);background:rgba(10,26,38,.9);color:#9fd6ee;
+  font:700 15px/1 var(--fT,system-ui);display:flex;align-items:center;justify-content:center}
+#updScr.mfFloat .mfFloatBar button:active{background:rgba(20,52,72,.95);color:#dff6ff}
+/* Minimised: the pill is the bar and nothing else, hugging the bottom-right so
+   it covers as little of the live menu as possible. The title goes with it -
+   collapsed, the state IS the message, and sharing the pill with a label
+   ellipsised UPDATE FAILED down to UPDATE. */
+#updScr.mfFloat.is-min{align-items:flex-end;padding-right:10px}
+#updScr.mfFloat.is-min .mfFloatTitle{display:none}
+#updScr.mfFloat.is-min .mfFloatState{font-size:10px;color:#a8d4ea}
+#updScr.mfFloat.is-min #mfLauncherScroll{width:min(80vw,300px);max-height:none;overflow:hidden;
+  padding:0;border-bottom:1px solid rgba(92,196,232,.42);border-radius:12px}
+#updScr.mfFloat.is-min #mfLauncherScroll>:not(.mfFloatBar){display:none!important}
+#updScr.mfFloat.is-min .mfFloatBar{margin:0;border-bottom:0}
+#updScr.mfFloat.is-min .mfLauncherFoot{display:none}
+/* Floated, this is a status-and-action surface, not the boot gate. The hero is
+   marketing the player has already passed, the pack rail and version history
+   are detail views, and PLAY OFFLINE / the boot primary answer a question that
+   is settled once the game is running. What is left is readiness, the release
+   notes, and a way back. All of it only applies in .mfFloat, so the launcher
+   itself and verify-launch-home-entry.mjs are untouched. */
+#updScr.mfFloat .mfLauncherHero,
+#updScr.mfFloat .mfLauncherContent,
+#updScr.mfFloat .mfLauncherHistory,
+#updScr.mfFloat #mfLaunchOffline,
+#updScr.mfFloat #mfLaunchPlay{display:none!important}
+#updScr.mfFloat .mfLauncherFoot{display:flex;grid-template-columns:none}
+#updScr.mfFloat .mfLauncherFoot #updBack{flex:1 1 auto;width:auto;min-width:0;margin:0}
+/* Reserve the pill height at the foot of the menu while it is collapsed, so a
+   parked download never sits on top of the dock destinations. */
+body.mfUpdMin #startScreen{padding-bottom:72px}
+/* The menu behind stays interactive, so its own scroll must not be frozen. */
+body.mfUpdFloating{overflow:auto}
+
+
+/* ---------- MENU COMMAND SLICES ---------- */
+/* Angled, right-aligned command slices replacing the 2x2 tile grid. A grid of
+   equal tiles is a directory: nothing leads, so PLAY competes with Factions.
+   These are sized to their own label, so TECH & DEVELOPMENT is simply wider
+   than ARSENAL and the stagger is a consequence of the words rather than an
+   arbitrary indent — which is also why they clamp cleanly on a narrow phone
+   instead of forcing an eight-character label into a fixed column. */
+#startScreen .menuSlices{display:flex;flex-direction:column;align-items:flex-end;gap:6px;
+  width:min(94vw,420px);margin-top:14px;grid-template-columns:none}
+/* The plates are the authored production pack, not CSS. Every number here is
+   read straight out of mf-ui-v3/ASSET_MANIFEST.json: the menu button is a
+   horizontal three-slice with 144px/56px caps on a 256px-tall source, so the
+   cap widths are expressed against the control height and one rule serves
+   portrait and the shorter landscape row alike. Stretch, not repeat: the
+   middle is a flat field between two horizontal runs, and a repeated tile has
+   to be rescaled by the renderer, which rings at its own borders and draws a
+   seam at every boundary. tools/test-menu-slice-geometry.mjs fails if these
+   drift from the manifest. */
+#startScreen .menuSlices .slice{
+  --sliceH:44px;--capL:calc(var(--sliceH) * .5625);--capR:calc(var(--sliceH) * .21875);
+  position:relative;box-sizing:border-box;width:auto;max-width:100%;
+  height:var(--sliceH);min-height:var(--sliceH);max-height:var(--sliceH);
+  display:flex;align-items:center;justify-content:flex-end;gap:9px;padding:0 14px;
+  border-style:solid;border-width:0 var(--capR) 0 var(--capL);border-color:transparent;border-radius:0;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_normal.png');
+  border-image-slice:0 56 0 144 fill;border-image-repeat:stretch;
+  background:none;box-shadow:none;color:#dff2fb;text-align:right}
+#startScreen .menuSlices .slice.is-open{border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_selected.png')}
+#startScreen .menuSlices .slice:active{border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_pressed.png');transform:translateX(-3px)}
+#startScreen .menuSlices .slice[disabled],#startScreen .menuSlices .slice.locked{
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/menu_disabled.png')}
+/* The triple slash is an authored accent, so the label keeps the type and the
+   mark keeps its own weight instead of borrowing the font. */
+#startScreen .menuSlices .slice .sliceMark{flex:0 0 auto;font-size:0;line-height:0;
+  width:calc(var(--sliceH) * .40);height:calc(var(--sliceH) * .20);
+  background:url('../../assets/textures/ui/mf-ui-v3/accent_triple_slash.png') center/contain no-repeat}
+#startScreen .menuSlices .slice .sliceBody{display:grid;gap:2px;justify-items:end;min-width:0}
+#startScreen .menuSlices .slice .sliceBody b{font:800 clamp(12px,3.3vw,15px)/1.05 var(--fT,system-ui);letter-spacing:.04em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+#startScreen .menuSlices .slice .sliceBody small{display:flex;align-items:center;gap:5px;color:#8fb6c6;
+  font:700 7px/1 ui-monospace,monospace;letter-spacing:.12em;white-space:nowrap}
+/* Live faction share bar, the one piece of state worth carrying collapsed. */
+#startScreen .menuSlices .sliceBar{display:inline-flex;gap:2px;font-style:normal}
+#startScreen .menuSlices .sliceBar s{width:13px;height:4px;text-decoration:none;background:#37506010}
+#startScreen .menuSlices .sliceBar s:nth-child(1){background:#3fb9e8}
+#startScreen .menuSlices .sliceBar s:nth-child(2){background:#e0574f}
+#startScreen .menuSlices .sliceBar s:nth-child(3){background:#54707f}
+#startScreen .menuSlices .slice .gDot{position:absolute;top:4px;right:2px}
+/* The popout the tapped slice reveals. It is a sibling rather than extra
+   height on the slice, because the plate is a border-image whose caps stretch
+   to the box height - growing the button would rake its edge steeper and pull
+   the corner ticks long. Right-aligned with a cyan spine so it reads as
+   hanging off the slice above it rather than as a new row. */
+#startScreen .menuSlices .sliceOut{
+  width:min(100%,340px);max-height:0;opacity:0;overflow:hidden;
+  margin:0;padding:0 11px 0 0;border-right:2px solid rgba(107,231,255,0);
+  display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;
+  color:#9fc3d6;font:600 11.5px/1.45 var(--fT,system-ui);letter-spacing:.015em;
+  transition:max-height .22s cubic-bezier(.2,.7,.3,1),opacity .17s ease,
+    margin .22s cubic-bezier(.2,.7,.3,1),padding .22s cubic-bezier(.2,.7,.3,1),border-color .22s ease}
+#startScreen .menuSlices .sliceOut.is-out{
+  max-height:96px;opacity:1;margin:1px 0 3px;padding:7px 11px 8px 0;
+  border-right-color:rgba(107,231,255,.55)}
+#startScreen .menuSlices .sliceOutGo{color:#6be7ff;font:800 10.5px/1 var(--fT,system-ui);letter-spacing:.14em}
+@media(prefers-reduced-motion:reduce){
+  #startScreen .menuSlices .sliceOut{transition:none}
+}
+/* Narrow phones once needed the gutters and the /// mark clawed back so TECH &
+   DEVELOPMENT would not ellipsise. The lighter slice type buys that back on
+   its own - the longest label now measures 143px inside a 275px content box at
+   360 - so only the container widens, and the label keeps the same clamp it
+   has everywhere else rather than being forced back up to 17px here. */
+@media (max-width:380px){
+  #startScreen .menuSlices{width:min(97vw,420px)}
+}
+/* Short landscape: the stack has to give height back, not overflow. */
+@media (orientation:landscape) and (max-height:560px){
+  #startScreen .menuSlices{gap:5px;width:min(70vw,430px);margin-top:8px}
+  #startScreen .menuSlices .slice{--sliceH:42px}
+  #startScreen .menuSlices .slice .sliceBody b{font-size:14px}
+  #startScreen .menuSlices .slice .sliceBody small{display:none}
+}
+
+#menuNavCol{display:contents}
+/* Short landscape is two columns, not one long scroll. A rotated phone is
+   900x412: the single column spent the whole 412px of height on the identity
+   block and the brand, and pushed every command slice and the primary action
+   below the fold, while ~600px of width sat empty beside a 289px stack. The
+   left column keeps identity and brand, the right column takes the navigation
+   and the CTA. Unknown children default to the left column, so a card added to
+   the menu later stacks safely instead of landing in the middle of the nav. */
+@media (orientation:landscape) and (max-height:560px){
+  #startScreen{display:grid!important;align-content:start;justify-content:center;
+    grid-template-columns:minmax(0,1fr) minmax(280px,420px);
+    grid-template-rows:auto auto auto;
+    column-gap:22px;row-gap:6px;
+    padding:calc(var(--sat) + 8px) calc(var(--sar) + 14px) calc(var(--sab) + 8px) calc(var(--sal) + 14px)}
+  #startScreen>*{grid-column:1;min-width:0;align-self:start}
+  #startScreen #metaHead{grid-row:1}
+  #startScreen #mfNextUnlockRail{grid-row:2}
+  #startScreen #menuBrand{grid-row:3}
+  /* One spanned cell for the whole navigation, so the two columns size
+     independently instead of sharing row heights. */
+  #startScreen #menuNavCol{display:flex;flex-direction:column;align-items:stretch;gap:7px;
+    grid-column:2;grid-row:1 / span 3;align-self:start;min-width:0}
+  #startScreen #menuNavCol .menuSlices,#startScreen #menuNavCol #startBtn{width:100%;margin-top:0}
+  #startScreen #menuNavCol .menuStrip{width:100%;margin-top:2px}
+  /* The rail pairs its cards with a grid below 430px of VIEWPORT, but here it
+     lives in a 384px column beside a 900px viewport, so it fell back to the
+     horizontal scroller and hid the Arsenal card off the column edge. Same
+     treatment, keyed on the layout instead of the window. */
+  #startScreen #mfNextUnlockRail{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow-x:hidden}
+  #startScreen #mfNextUnlockRail>.mfNextCard{width:auto;max-width:100%}
+  #startScreen #mfNextUnlockRail>.mfNextCard:only-child,
+  #startScreen #mfNextUnlockRail>.mfNextCard:nth-child(3):last-child{grid-column:1/-1}
+  /* The brand is the one thing that can give height back without losing a
+     control, so it shrinks rather than the buttons. */
+  #startScreen #menuBrand{max-height:64px;width:auto;object-fit:contain;margin:2px auto}
+  #startScreen #menuIntel,#startScreen #boostRow{display:none}
+}
+/* Primary CTA: the authored gold deploy plate. 704x160 logical with 182-unit
+   hazard ends, so the caps are 1.1375 of the control height and the middle
+   stretches between them. The gradient, the border, the clip-path corners and
+   the hand-drawn hazard pseudo-element are all gone - the art carries them,
+   and .mbtn sheen sweep is switched off because it would slide across it. */
+#startScreen #startBtn{
+  --ctaH:54px;--ctaCap:calc(var(--ctaH) * 1.1375);
+  position:relative;isolation:isolate;box-sizing:border-box;width:min(94vw,420px);
+  height:var(--ctaH);min-height:var(--ctaH);max-height:var(--ctaH);
+  display:flex;align-items:center;justify-content:center;gap:9px;white-space:nowrap;
+  padding:0 calc(var(--ctaH) * .18);
+  font:900 clamp(14px,4.2vw,19px)/1 var(--fT,system-ui);letter-spacing:.045em;color:#2a1c02;
+  border-style:solid;border-width:0;border-color:transparent;border-radius:0;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/deploy_normal.png');
+  border-image-slice:0 364 0 364 fill;border-image-width:0 var(--ctaCap);border-image-repeat:stretch;
+  background:none;box-shadow:none;clip-path:none}
+#startScreen #startBtn::before{content:none}
+#startScreen #startBtn::after{display:none}
+#startScreen #startBtn .ctaChev{flex:0 0 auto;font-size:0;line-height:0;width:26px;height:13px;
+  background:url('../../assets/textures/ui/mf-ui-v3/accent_deploy_chevrons.png') center/contain no-repeat}
+#startScreen #startBtn:active{border-image-source:url('../../assets/textures/ui/mf-ui-v3/deploy_pressed.png');transform:translateY(1px)}
+@media (orientation:landscape) and (max-height:560px){
+  #startScreen #startBtn{--ctaH:48px;font-size:16px;width:min(70vw,430px)}
+}
+
+/* Dock destinations get the authored nav plate: 352x288 with a 48px border all
+   round, so this is a real nine-slice and the border width is that 48 against
+   the control height. The gradient plate and its border go with it. */
+#startScreen .menuStrip .sbtn{--navH:56px;box-sizing:border-box;min-height:var(--navH);
+  border-style:solid;border-width:calc(var(--navH) * .1667);border-color:transparent;border-radius:0;
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/nav_normal.png');
+  border-image-slice:48 fill;border-image-repeat:stretch;
+  background:none;box-shadow:none;padding:0 2px}
+#startScreen .menuStrip .sbtn.on,#startScreen .menuStrip .sbtn[aria-current]{
+  border-image-source:url('../../assets/textures/ui/mf-ui-v3/nav_selected.png')}
+#startScreen .menuStrip .sbtn:active{border-image-source:url('../../assets/textures/ui/mf-ui-v3/nav_pressed.png');transform:scale(.96)}
+/* Dock icons and slice glyphs: stroked line art sized to the label, not emoji.
+   Emoji render as a different typeface per platform and could never sit inside
+   the bracket labels the concept uses. */
+#startScreen .menuStrip .sbtn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:56px}
+/* Dock glyphs are the authored icons. The markup still carries an <svg> with a
+   <use>, so the stroke is switched off and the art rides as a background on
+   that same element - no markup churn, and galaxyui.js can keep rewriting the
+   strip without having to know about the pack. */
+#startScreen .menuStrip .sIco{width:23px;height:23px;flex:0 0 auto;fill:none;stroke:none;
+  background:var(--mfIco) center/contain no-repeat}
+#startScreen .menuStrip #profileBtn .sIco{--mfIco:url('../../assets/textures/ui/mf-ui-v3/icon_rank_star.png')}
+#startScreen .menuStrip #dailyBtn .sIco{--mfIco:url('../../assets/textures/ui/mf-ui-v3/icon_contracts.png')}
+#startScreen .menuStrip #socialBtn .sIco{--mfIco:url('../../assets/textures/ui/mf-ui-v3/icon_social.png')}
+#startScreen .menuStrip #settingsBtn .sIco{--mfIco:url('../../assets/textures/ui/mf-ui-v3/icon_settings.png')}
+#startScreen .menuStrip .sbtn span{font:700 8.5px/1 ui-monospace,monospace;letter-spacing:.06em;white-space:nowrap}
+#startScreen .menuSlices .sliceIco{width:11px;height:11px;fill:none;stroke:currentColor;stroke-width:1.9;
+  stroke-linecap:round;stroke-linejoin:round;vertical-align:-1px}

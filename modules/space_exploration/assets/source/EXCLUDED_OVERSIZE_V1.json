@@ -1,11 +1,14 @@
 {
   "schema": "MassfrontExcludedOversizeV1",
   "discardedDate": "2026-09-05",
-  "reason": "Owner excluded the Nordhall skyscraper from the shipped Galactic Exploration runtime pack. It is 46.56 MiB of raw uncompressed geometry - 368,716 triangles across 1,106,148 unindexed vertices, with no Draco or meshopt extension - against only 0.14 MiB of embedded texture. A single building carrying more geometry than most of the rest of the pack. Texture recompression cannot help it, so it is excluded from the runtime manifest rather than waiting on the texture pass.",
+  "reason": "Owner excluded the Nordhall skyscraper from the shipped Galactic Exploration runtime pack and retained the superseded monolithic UGA GLB only as source evidence. The skyscraper is 46.56 MiB of raw uncompressed geometry - 368,716 triangles across 1,106,148 unindexed vertices, with no Draco or meshopt extension - against only 0.14 MiB of embedded texture. The 72.64 MiB monolithic UGA GLB is replaced in delivery by the verified bounded uga-sections shared-resource graph without changing its rooms, transforms, geometry, materials, or texture pixels.",
   "runtimeAllowed": false,
   "sourceAllowed": true,
   "sourceDeleted": false,
   "retention": "Source files are NOT deleted. Exactly as with the Stage 10 DISCARDED_* ledgers, excluded assets stay on disk for provenance and this ledger is the record of the decision; tools/curate-exploration-pack.mjs is what enforces it on the built manifest. Unlike the Stage 10 ledgers this is a shipping-budget exclusion rather than a creative rejection, so sourceAllowed stays true - the model may return to the pack once its geometry is decimated or mesh-compressed.",
+  "runtimePaths": [
+    "assets/runtime/models/uga-authored-sections.glb"
+  ],
   "ids": [
     "spline/mf-hy3d-nordhall-skyscraper-spline-v1"
   ],
@@ -27,24 +30,7 @@
       "sourceAllowed": true
     }
   ],
-  "keptDespiteSize": [
-    {
-      "id": "uga-command-cutaway",
-      "path": "assets/runtime/models/uga-command-cutaway.glb",
-      "repoPath": "modules/space_exploration/assets/runtime/models/uga-command-cutaway.glb",
-      "bytes": 68331740,
-      "sizeMiB": 65.17,
-      "triangles": 262248,
-      "vertices": 535679,
-      "embeddedTextureBytes": 64222528,
-      "embeddedTextureMiB": 61.25,
-      "meshCompression": "KHR_draco_mesh_compression",
-      "decision": "keep",
-      "reason": "Owner explicitly keeps the ship cutaway. Its size is a texture problem, not a geometry problem: 61.25 MiB of the 65.17 MiB file is embedded PNG across 44 images, while the geometry is already Draco-compressed. It is being handled separately by texture recompression. This entry exists so a later pass does not mistake the largest file in the pack for the obvious thing to cut - do not move this path into ids.",
-      "runtimeAllowed": true,
-      "sourceAllowed": true
-    }
-  ],
+  "keptDespiteSize": [],
   "enforcedBy": "tools/curate-exploration-pack.mjs",
   "measurement": "Byte counts are the on-disk sizes of the runtime GLBs. Triangle, vertex and embedded-texture counts were read from each GLB's JSON chunk on 2026-09-05 - accessor counts per mesh primitive for geometry, image bufferView byteLengths for texture payload."
 }

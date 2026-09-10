@@ -11,6 +11,7 @@ import {
   COMMANDER1_BY_CAMPAIGN_FACTION,
   COMMANDER_ROSTER_PRODUCTION_FINGERPRINT_V1,
   EXPLORATION_PRODUCTION_HOST_SCHEMA_VERSION,
+  MISSION_CATALOG,
   applyAccountProfile,
   commissionCareerFaction,
   createGroundOperationRequestV2,
@@ -19,6 +20,7 @@ import {
   createInitialAccountProfile,
   createInitialDomainState,
   createProductionCommanderCatalogContextV1,
+  createUgaGroundLocation,
   deserializeAccountProfile,
   deserializeDomainState,
   isSelectableCommanderIdV1,
@@ -26,9 +28,12 @@ import {
   projectAccountProfile,
   serializeAccountProfile,
   serializeDomainState,
-  validateCommanderRosterSnapshotV1
+  validateCommanderRosterSnapshotV1,
+  validateGroundOperation,
+  validateGroundOperationRequestV2
 } from '../domain/index.js';
 import { deepFreeze, hash32, stableStringify } from '../domain/deterministic.js';
+import { resolveBaseRuntimeNavigation } from './base_runtime_url.js';
 import {
   ExplorationHostError,
   LocalSandboxHost
@@ -40,16 +45,16 @@ export const MASSFRONT_GALACTIC_RESULT_MIRROR_PREFIX = 'massfront.galactic.resul
 export const MASSFRONT_GALACTIC_ROUTE_REQUEST_PREFIX = 'massfront.galactic.route.v1.';
 export const MASSFRONT_SOLO_HOST_KIND = 'MassfrontSoloHostV2';
 export const MASSFRONT_BASE_ROUTE_IDS = Object.freeze([
-  'home', 'operations', 'development', 'armory', 'orders', 'intel',
+  'operations', 'development', 'armory', 'orders', 'intel',
   'profile', 'inbox', 'social', 'settings', 'game-version',
-  'mode-training', 'mode-standard', 'mode-campaign', 'mode-weekly',
+  'war-room', 'mode-training', 'mode-standard', 'mode-campaign', 'mode-weekly',
   'new-career-faction'
 ]);
 
 const ENTRY_TICKET_KIND = 'MassfrontGalacticEntryV2';
 const REQUEST_MIRROR_KIND = 'MassfrontGalacticRequestMirrorV2';
 const TACTICAL_REPORT_KIND = 'MassfrontGalacticTacticalReportV1';
-const ROUTE_REQUEST_KIND = 'MassfrontGalacticRouteRequestV1';
+const ROUTE_REQUEST_KIND = 'MassfrontGalacticRouteRequestV2';
 const ENTRY_TICKET_SOURCE = 'massfront-base';
 const ROUTE_REQUEST_SOURCE = 'massfront-exploration';
 const INTEGRATED_NAMESPACE = 'massfront.galactic.solo.v1';
@@ -59,8 +64,35 @@ const ROUTE_REQUEST_TTL_MS = 2 * 60 * 1000;
 const OPAQUE_NONCE_PATTERN = /^[A-Za-z0-9_-]{16,128}$/;
 const ALLOWED_PROXY_FACTIONS = new Set(['nova', 'dominion', 'syndicate']);
 const ALLOWED_COMMISSIONING_FACTIONS = new Set(Object.keys(COMMANDER1_BY_CAMPAIGN_FACTION));
+const ALLOWED_OPERATION_OPPONENTS = new Set(['nova', 'dominion', 'syndicate', 'brood']);
+const GROUND_RUNTIME_OBJECTIVE_MODE = Object.freeze({
+  secure_relay: 'destroy',
+  hold_infrastructure: 'destroy',
+  recover_manifest: 'destroy',
+  recover_archive: 'destroy',
+  secure_observatory: 'destroy',
+  extract_artifact: 'destroy',
+  purge_brood: 'purge'
+});
+const GROUND_OPERATION_V3_FIELDS = Object.freeze([
+  'schemaVersion', 'kind', 'profileId', 'sequence', 'launchRevision',
+  'missionId', 'missionType', 'systemId', 'siteId', 'sponsorId',
+  'contractFactionId', 'proxyFactionId', 'playerFactionId', 'opponentFactionId',
+  'commanderId', 'specialistIds', 'doctrineId', 'supportId', 'landingZoneId',
+  'configuration', 'objective', 'difficulty', 'intelligence', 'battlefield',
+  'scanTierAtLaunch', 'threatAtLaunch', 'factionSnapshot', 'personnelSnapshot',
+  'deploymentManifest', 'deploymentCost', 'rewardPlan', 'returnRoute',
+  'commanderRosterFingerprint', 'commanderIdentity', 'operationId', 'resultSeed',
+  'returnToken'
+]);
+const GROUND_OPERATION_REQUEST_V2_FIELDS = Object.freeze([
+  'schemaVersion', 'kind', 'nonce', 'accountId', 'contentVersion', 'issuedAt',
+  'expiresAt', 'adapter', 'commanderRosterFingerprint', 'operation', 'checksum'
+]);
 const ALLOWED_ENTRY_VIEWS = new Set(['system', 'campaign_hub']);
 const ALLOWED_BASE_ROUTES = new Set(MASSFRONT_BASE_ROUTE_IDS);
+const ALLOWED_LOCATION_SYSTEMS = new Set(['aelos', 'veyra', 'karak']);
+const LOCATION_ID_PATTERN = /^[a-z0-9_]{1,96}$/;
 
 function integerTime(value, fallback = Date.now()) {
   const number = Number(value);
@@ -84,8 +116,20 @@ function isRecord(value) {
 }
 
 function hasExactKeys(value, keys) {
-  return isRecord(value)
-    && stableStringify(Object.keys(value).sort()) === stableStringify([...keys].sort());
+  try {
+    return isRecord(value)
+      && stableStringify(Object.keys(value).sort()) === stableStringify([...keys].sort());
+  } catch (_) {
+    return false;
+  }
+}
+
+function matchesDeterministically(left, right) {
+  try {
+    return stableStringify(left) === stableStringify(right);
+  } catch (_) {
+    return false;
+  }
 }
 
 function browserSessionStorage() {
@@ -101,7 +145,7 @@ function defaultNavigation(url) {
   if (!globalThis.location || typeof globalThis.location.assign !== 'function') {
     throw new ExplorationHostError('GALACTIC_NAVIGATION_UNAVAILABLE', 'Same-tab MASSFRONT navigation is unavailable.');
   }
-  globalThis.location.assign(url);
+  globalThis.location.assign(resolveBaseRuntimeNavigation(url));
 }
 
 function requireStorage(storage) {
@@ -386,8 +430,8 @@ export class MassfrontSoloHost extends LocalSandboxHost {
       if (profile.profileId !== this.accountId) throw new ExplorationHostError('PROFILE_ACCOUNT_MISMATCH', 'Stored profile belongs to a different account.');
       return profile;
     } catch (error) {
-      if (error instanceof ExplorationHostError) throw error;
-      return createInitialAccountProfile(this.accountId, this.commanderCatalogContext);
+      this.lastError = error;
+      throw error;
     }
   }
 
@@ -397,14 +441,18 @@ export class MassfrontSoloHost extends LocalSandboxHost {
     try {
       const campaign = deserializeDomainState(serialized, this.commanderCatalogContext);
       if (campaign.profileId !== this.accountId) throw new ExplorationHostError('CAMPAIGN_ACCOUNT_MISMATCH', 'Stored Galactic campaign belongs to a different account.');
-      return applyAccountProfile(campaign, this.loadProfileSnapshot(), this.commanderCatalogContext);
+      const merged = applyAccountProfile(campaign, this.loadProfileSnapshot(), this.commanderCatalogContext);
+      this.lastError = null;
+      return merged;
     } catch (error) {
       this.lastError = error;
-      return null;
+      throw error;
     }
   }
 
   saveSnapshot(state) {
+    // A failed load must never turn the startup fallback into a replacement save.
+    if (this.lastError) throw this.lastError;
     if (!state || state.profileId !== this.accountId) throw new ExplorationHostError('CAMPAIGN_ACCOUNT_MISMATCH', 'Cannot save a Galactic campaign for another account.');
     this.storage.setItem(this.key, serializeDomainState(state, this.commanderCatalogContext));
     const profile = projectAccountProfile(state, this.loadProfileSnapshot(), this.commanderCatalogContext);
@@ -490,22 +538,30 @@ export class MassfrontSoloHost extends LocalSandboxHost {
     return `${MASSFRONT_GALACTIC_ROUTE_REQUEST_PREFIX}${requireOpaqueNonce(nonce)}`;
   }
 
-  async openBaseRoute(routeId) {
+  async openBaseRoute(routeId, locationContext = {}) {
     const route = String(routeId || '');
     if (!ALLOWED_BASE_ROUTES.has(route)) {
       throw new ExplorationHostError('GALACTIC_BASE_ROUTE_REJECTED', 'This MASSFRONT destination is not exposed to the Galactic strategic layer.');
     }
     const nonce = requireOpaqueNonce(this.nonceFactory());
     const issuedAt = nowFrom(this.now);
+    const systemId = String(locationContext?.systemId || '');
+    const targetId = locationContext?.targetId === null || locationContext?.targetId === undefined
+      ? null
+      : String(locationContext.targetId);
+    if (!ALLOWED_LOCATION_SYSTEMS.has(systemId) || (targetId !== null && !LOCATION_ID_PATTERN.test(targetId))) {
+      throw new ExplorationHostError('GALACTIC_BASE_LOCATION_REJECTED', 'This Galactic location cannot be carried into the MASSFRONT War Table.');
+    }
     const request = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       kind: ROUTE_REQUEST_KIND,
       nonce,
       profileId: this.accountId,
       routeId: route,
       issuedAt,
       expiresAt: issuedAt + ROUTE_REQUEST_TTL_MS,
-      source: ROUTE_REQUEST_SOURCE
+      source: ROUTE_REQUEST_SOURCE,
+      location: { systemId, targetId }
     };
     request.checksum = hash32(request);
     const restored = writeAndReadJson(
@@ -515,7 +571,9 @@ export class MassfrontSoloHost extends LocalSandboxHost {
       'GALACTIC_ROUTE_STORAGE_FAILED',
       'The MASSFRONT destination could not be secured for same-tab navigation.'
     );
-    if (restored.nonce !== nonce || restored.profileId !== this.accountId || restored.routeId !== route || restored.checksum !== hash32(withoutChecksum(restored))) {
+    if (restored.nonce !== nonce || restored.profileId !== this.accountId || restored.routeId !== route
+        || restored.location?.systemId !== systemId || restored.location?.targetId !== targetId
+        || restored.checksum !== hash32(withoutChecksum(restored))) {
       throw new ExplorationHostError('GALACTIC_ROUTE_STORAGE_FAILED', 'The MASSFRONT destination failed identity verification.');
     }
     const launchUrl = `../../../index.html?galacticRoute=${encodeURIComponent(nonce)}`;
@@ -532,27 +590,110 @@ export class MassfrontSoloHost extends LocalSandboxHost {
     if (operationOrEnvelope?.kind === 'GroundOperationRequestV1') {
       throw new ExplorationHostError('GALACTIC_REQUEST_VERSION_UNSUPPORTED', 'Production Galactic launch rejects legacy GroundOperationRequestV1 envelopes.');
     }
-    const operation = operationOrEnvelope?.kind === 'GroundOperationRequestV1'
-      || operationOrEnvelope?.kind === 'GroundOperationRequestV2'
-      ? operationOrEnvelope.operation
-      : operationOrEnvelope;
+    const requestEnvelope = operationOrEnvelope?.kind === 'GroundOperationRequestV2'
+      ? operationOrEnvelope
+      : null;
+    const operation = requestEnvelope ? requestEnvelope.operation : operationOrEnvelope;
+    let contractValidation;
+    try {
+      contractValidation = requestEnvelope
+        ? validateGroundOperationRequestV2(requestEnvelope, { accountId: this.accountId, now: nowFrom(this.now) })
+        : validateGroundOperation(operation);
+    } catch (_) {
+      // The shared domain validator assumes a generated operation after its
+      // first shape checks. Convert hostile partial objects into a rejection;
+      // never let an arbitrary bridge envelope crash the production adapter.
+      contractValidation = {
+        ok: false,
+        issues: [issue('GALACTIC_OPERATION_MALFORMED', 'The ground-operation contract is malformed.')]
+      };
+    }
+    const issues = [...contractValidation.issues];
+    if (requestEnvelope && !hasExactKeys(requestEnvelope, GROUND_OPERATION_REQUEST_V2_FIELDS)) {
+      issues.push(issue('REQUEST_ENVELOPE_FIELDS_INVALID', 'GroundOperationRequestV2 has unexpected or missing fields.'));
+    }
+    if (!hasExactKeys(operation, GROUND_OPERATION_V3_FIELDS)) {
+      issues.push(issue('GALACTIC_OPERATION_FIELDS_INVALID', 'GroundOperationV3 has unexpected or missing fields.'));
+    }
+    if (operation?.schemaVersion !== 3 || operation?.kind !== 'GroundOperationV3') {
+      issues.push(issue('GALACTIC_OPERATION_SCHEMA_INVALID', 'Production Galactic launch requires GroundOperationV3.'));
+    }
+    if (operation?.profileId !== this.accountId) {
+      issues.push(issue('GALACTIC_OPERATION_PROFILE_INVALID', 'The operation belongs to a different MASSFRONT profile.', 'profileId'));
+    }
+    if (operation?.commanderRosterFingerprint !== COMMANDER_ROSTER_PRODUCTION_FINGERPRINT_V1) {
+      issues.push(issue('GALACTIC_OPERATION_ROSTER_INVALID', 'The operation commander roster is absent or stale.', 'commanderRosterFingerprint'));
+    }
+
+    const mission = MISSION_CATALOG[operation?.missionId];
+    const objectiveMode = GROUND_RUNTIME_OBJECTIVE_MODE[operation?.objective?.type];
+    if (!mission) {
+      issues.push(issue('GALACTIC_OPERATION_MISSION_INVALID', 'The operation does not identify an authored playable mission.', 'missionId'));
+    } else {
+      if (mission.sponsorId !== 'uga' || operation.sponsorId !== mission.sponsorId
+          || operation.contractFactionId !== mission.contractFactionId
+          || operation.opponentFactionId !== mission.opponentFactionId) {
+        issues.push(issue('GALACTIC_OPERATION_FACTIONS_INVALID', 'The operation factions do not match the authored mission.', 'missionId'));
+      }
+      if (!objectiveMode || !matchesDeterministically(operation.objective, mission.objective)) {
+        issues.push(issue('GALACTIC_OPERATION_OBJECTIVE_INVALID', 'The operation objective is not an authored ground-runtime objective.', 'objective'));
+      } else if (objectiveMode === 'purge') {
+        if (mission.missionType !== 'uga_brood_purge'
+            || !hasExactKeys(operation.objective, ['type', 'infestation', 'hiveTargetIds', 'nestCount'])
+            || operation.objective.infestation !== true
+            || operation.objective.nestCount !== operation.objective.hiveTargetIds?.length
+            || operation.battlefield?.infestationActive !== true
+            || !matchesDeterministically(operation.battlefield?.hiveTargetIds, operation.objective.hiveTargetIds)) {
+          issues.push(issue('GALACTIC_OPERATION_PURGE_INVALID', 'The Brood purge objective cannot be mapped safely into the ground runtime.', 'objective'));
+        }
+      } else if (mission.missionType !== 'faction_conflict'
+          || !hasExactKeys(operation.objective, ['type', 'targetIds'])
+          || !operation.objective.targetIds.length
+          || operation.objective.targetIds.some(targetId => typeof targetId !== 'string' || !targetId)
+          || operation.battlefield?.infestationActive !== false
+          || !Array.isArray(operation.battlefield?.hiveTargetIds)
+          || operation.battlefield.hiveTargetIds.length !== 0) {
+        issues.push(issue('GALACTIC_OPERATION_CONFLICT_INVALID', 'The faction objective cannot be mapped safely into the ground runtime.', 'objective'));
+      }
+      const factionAccessValid = mission.access?.type === 'faction_exclusive'
+        ? mission.access.factionId === operation.proxyFactionId && operation.contractFactionId === operation.proxyFactionId
+        : mission.access?.type === 'uga_brood_proxy' && operation.contractFactionId === null && operation.opponentFactionId === 'brood';
+      if (!factionAccessValid) {
+        issues.push(issue('GALACTIC_OPERATION_ACCESS_INVALID', 'The operation proxy does not satisfy the authored mission access rule.', 'proxyFactionId'));
+      }
+      const battlefieldLocation = operation?.battlefield?.location;
+      const expectedLocation = battlefieldLocation?.mapId
+        ? createUgaGroundLocation(mission.id, battlefieldLocation.mapId)
+        : null;
+      if (!expectedLocation || !matchesDeterministically(battlefieldLocation, expectedLocation)) {
+        issues.push(issue(
+          'GALACTIC_OPERATION_BATTLEFIELD_INVALID',
+          'Select an authored compact, standard, or large UGA battlefield before deployment.',
+          'battlefield.location'
+        ));
+      }
+    }
+
     const commissioning = this.commissioningAssignment;
     const rosterCommander = this.commanderRosterSnapshot?.commanders?.find(entry => entry.id === operation?.commanderId);
-    const allowed = operation?.missionId === 'uga_pale_bloom'
-      && operation?.schemaVersion === 3
-      && operation?.kind === 'GroundOperationV3'
-      && operation?.commanderRosterFingerprint === COMMANDER_ROSTER_PRODUCTION_FINGERPRINT_V1
-      && operation?.sponsorId === 'uga'
-      && operation?.opponentFactionId === 'brood'
-      && ALLOWED_PROXY_FACTIONS.has(operation?.proxyFactionId)
-      && operation?.playerFactionId === operation?.proxyFactionId
-      && commissioning?.factionId !== null
-      && commissioning?.commanderId !== null
-      && rosterCommander?.campaignFactionId === operation?.proxyFactionId;
-    if (!allowed) {
+    if (!ALLOWED_PROXY_FACTIONS.has(operation?.proxyFactionId)
+        || operation?.playerFactionId !== operation?.proxyFactionId
+        || !ALLOWED_OPERATION_OPPONENTS.has(operation?.opponentFactionId)) {
+      issues.push(issue('GALACTIC_OPERATION_PROXY_INVALID', 'The operation requires a supported resident proxy and opponent.', 'proxyFactionId'));
+    }
+    if (!commissioning || !ALLOWED_COMMISSIONING_FACTIONS.has(commissioning.factionId)
+        || COMMANDER1_BY_CAMPAIGN_FACTION[commissioning.factionId] !== commissioning.commanderId) {
+      issues.push(issue('GALACTIC_OPERATION_COMMISSIONING_INVALID', 'A valid career commissioning is required before ground deployment.', 'commissioning'));
+    }
+    if (!isSelectableCommanderIdV1(operation?.commanderId)
+        || rosterCommander?.campaignFactionId !== operation?.proxyFactionId) {
+      issues.push(issue('GALACTIC_OPERATION_COMMANDER_INVALID', 'The operation commander is not bound to its resident proxy roster.', 'commanderId'));
+    }
+    if (issues.length) {
       throw new ExplorationHostError(
         'GALACTIC_OPERATION_OUT_OF_SCOPE',
-        'The integrated solo adapter accepts only UGA Pale Bloom operations against the Brood with a resident proxy faction.'
+        'The integrated solo adapter rejected an operation outside the authored Galactic ground-operation contract.',
+        { issues }
       );
     }
     return operation;

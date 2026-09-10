@@ -34,6 +34,7 @@ import { loadProductionCommanderRosterSnapshot } from './production-commander-ro
 const NOW = 4_000_000;
 const NONCE = '0123456789abcdef0123456789abcdef';
 const PROFILE_ID = 'profile/stage9:alpha';
+const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_standard';
 const PRODUCTION_ROSTER = await loadProductionCommanderRosterSnapshot();
 
 assert.equal(PRODUCTION_ROSTER.fingerprint, COMMANDER_ROSTER_PRODUCTION_FINGERPRINT_V1);
@@ -250,7 +251,8 @@ function createFixture(profileId = PROFILE_ID, commissioning = { factionId: 'nov
   state.profileId = profileId;
   const launch = beginGroundOperation(state, {
     missionId: 'uga_pale_bloom',
-    proxyFactionId: 'nova'
+    proxyFactionId: 'nova',
+    mapId: PALE_BLOOM_MAP_ID
   });
   return {
     database,
@@ -295,7 +297,7 @@ async function verifyIntegratedDefaultRequestTtl() {
   });
   const state = createShowcaseReadyDomainState();
   state.profileId = PROFILE_ID;
-  const launch = beginGroundOperation(state, { missionId: 'uga_pale_bloom', proxyFactionId: 'nova' });
+  const launch = beginGroundOperation(state, { missionId: 'uga_pale_bloom', proxyFactionId: 'nova', mapId: PALE_BLOOM_MAP_ID });
   const prepared = await host.prepareGroundOperation(launch.operation);
   const mirror = JSON.parse(sessionStorage.getItem(`${MASSFRONT_GALACTIC_REQUEST_MIRROR_PREFIX}${prepared.nonce}`));
   assert.equal(mirror.request.expiresAt - mirror.request.issuedAt, 24 * 60 * 60 * 1000, 'integrated tactical request must allow a full-day match and return window');

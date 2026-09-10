@@ -1259,9 +1259,8 @@ export class ThreeSpaceEngine {
       }
     }
 
-    // 6. Extremely Zoomed-Out High Tactical Perspective Camera (ME2 System Map)
-    // camState.dist is a user-controllable zoom multiplier; 1.0 is the default
-    // tactical view of the whole star system. The base of 100 plus dist*180
+    // 6. Wide, ship-oriented tactical camera. camState.dist is a user-controlled
+    // zoom multiplier. The base of 90 plus dist*170
     // keeps the camera outside the enlarged civilization-ark hero mesh (the
     // original `dist * 2.2` put the camera inside the hull and caused the
     // black-viewport bug).
@@ -1269,10 +1268,10 @@ export class ThreeSpaceEngine {
     const inputYaw = Number.isFinite(cameraInput.yaw) ? cameraInput.yaw : 0;
     const inputPitch = Number.isFinite(cameraInput.pitch) ? cameraInput.pitch : 0.3;
     const inputDist = Number.isFinite(cameraInput.dist) ? cameraInput.dist : 1;
-    // A wider offset presents the NEXUS-VII spine, ring cadence, and enlarged
-    // aft drives together. The former 0.72 view still projected the long hull
-    // almost edge-on in the embedded portrait viewport.
-    const camYaw = inputYaw + 1.18;
+    // Relative yaw keeps screen direction anchored to the flagship's heading.
+    // The old fixed world angle made turning the vessel visually reverse the
+    // relationship between the route, camera, and on-screen controls.
+    const camYaw = shipData.yaw + inputYaw;
     const camPitch = Math.max(-0.5, Math.min(1.0, inputPitch));
     const sinY = Math.sin(camYaw), cosY = Math.cos(camYaw);
     const sinP = Math.sin(camPitch), cosP = Math.cos(camPitch);

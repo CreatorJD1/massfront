@@ -44,10 +44,10 @@
         'Preserved rollback after the patched runtime passed probation.'],
       upcoming:['Large-update resume and clearer update categories.']}
   ];
-  var L={inited:false,gate:true,passed:false,bypass:false,identity:null,update:null,
+  var L={inited:false,gate:true,passed:false,bypass:false,phase:'updater',entering:false,identity:null,update:null,
     notesTab:'features',historyTab:'published',release:null,releaseKey:'',primary:'wait',
     packBusy:false,packTicket:0,packTimer:0,packAudioReady:false,packAudioIds:[],
-    galacticBusy:false,galacticTicket:0,galacticReady:false};
+    galacticBusy:false,galacticTicket:0,galacticReady:false,galacticCached:false};
 
   function byId(id){return document.getElementById(id);}
   function text(id,value){var el=byId(id);if(el)el.textContent=value==null?'':String(value);return el;}
@@ -74,7 +74,15 @@
     return true;
   }
   function isGalacticReturn(){
-    try{return /^\?galacticRoute=[A-Za-z0-9_-]{16,128}$/.test(String(location.search||''));}
+    try{
+      if(/^\?(?:(?:galacticRoute|groundOperation)=[A-Za-z0-9_-]{16,128}|galacticFallback=classic)$/.test(String(location.search||'')))return true;
+      /* galactic-operations consumes the visible fallback query as soon as it owns
+         the route. The launcher initializes later in boot, so the one-session
+         latch must carry the same bypass or it immediately auto-enters the
+         failed module again and destroys the recovered War Room. */
+      return typeof sessionStorage!=='undefined'
+        &&sessionStorage.getItem('massfront.galactic.classic-fallback.v1')==='1';
+    }
     catch(e){return false;}
   }
   function identitySnapshot(){
@@ -225,7 +233,7 @@
     var busy=['channeling','checking','downloading','staging','applying','rollingBack'].indexOf(state)>=0;
     var primary=byId('mfLaunchPlay'),offline=byId('mfLaunchOffline');if(!primary||!offline)return;
     offline.style.display='none';offline.disabled=true;
-    if(id.state==='pending'){
+    if(id.state==='pending'&&L.phase!=='updater'){
       /* Identity can stay pending for reasons the player cannot influence: a
          cleared 401 session that never reopened the gate, a missing gate
          overlay, or a verification request that never returned. Hiding the
@@ -246,6 +254,9 @@
       offline.style.display='block';offline.disabled=false;return;
     }
     if(busy){L.primary='wait';primary.textContent=String(action.label||'PLEASE WAIT');primary.disabled=true;return;}
+    if(L.phase==='updater'){
+      L.primary='play-offline';primary.textContent='CONTINUE TO INTRO';primary.disabled=false;return;
+    }
     if(id.state==='offline'||!connected||state==='unset'||state==='offline'){
       /* This is the only enabled control at the gate when identity cannot be
          confirmed, so its label has to be honest about what it does. It no
@@ -304,7 +315,19 @@
     if(typeof showFrontScreen==='function')showFrontScreen('updScr');
     var sc=byId('mfLauncherScroll');if(sc)sc.scrollTop=0;renderAll();
   }
+  function enterLegacyDashboard(){
+    if(typeof showFrontScreen==='function')showFrontScreen('startScreen');
+    if(typeof renderMetaHead==='function')try{renderMetaHead();}catch(e){}
+    if(typeof setupAttract==='function')try{setupAttract();}catch(e){}
+    var play=byId('startBtn');if(play)setTimeout(function(){try{play.focus({preventScroll:true});}catch(e){play.focus();}},60);
+  }
   function enterGame(forceOffline){
+    if(L.phase==='updater'){
+      L.phase='intro';L.gate=false;document.body.classList.remove('mfLauncherGate');
+      if(typeof window.showPreAlphaIntro==='function')window.showPreAlphaIntro();
+      else {L.phase='login';if(typeof mfAuthGate==='function')mfAuthGate();}
+      return;
+    }
     /* PLAY OFFLINE means "start now without waiting for the network", not
        "disable networking on this device from now on". It used to latch
        netSetOffline(true), which persists to localStorage, and since the
@@ -319,11 +342,26 @@
        explicit request to be online. */
     if(!forceOffline){try{if(typeof netSetOffline==='function')netSetOffline(false);}catch(e){}}
     L.gate=false;L.passed=true;document.body.classList.remove('mfLauncherGate');
-    if(typeof showFrontScreen==='function')showFrontScreen('startScreen');
-    if(typeof renderMetaHead==='function')try{renderMetaHead();}catch(e){}
-    if(typeof setupAttract==='function')try{setupAttract();}catch(e){}
-    var play=byId('startBtn');if(play)setTimeout(function(){try{play.focus({preventScroll:true});}catch(e){play.focus();}},60);
     try{window.dispatchEvent(new CustomEvent('massfront:launcher-exit',{detail:{mode:forceOffline?'offline':'connected'}}));}catch(e){}
+    /* A normal career launch owns one destination: the interactive UGA home.
+       Showing the retired dashboard first used its Galactic interception as an
+       accidental second launcher and raced a second `system` entry behind it.
+       Travel now begins only from the visible Depart / Return to Orbit action;
+       the legacy dashboard remains the honest fallback for slim or failed
+       Galactic installations. */
+    if(!L.bypass&&!L.entering&&typeof mfOpenExploration==='function'
+      &&(window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true)){
+      L.entering=true;L.phase='career';
+      Promise.resolve(mfOpenExploration('campaign_hub')).then(function(opened){
+        if(opened)return;
+        L.phase='dashboard';enterLegacyDashboard();
+      }).catch(function(){
+        if(typeof toast==='function')toast('Ship entry needs attention. Use START to retry.');
+        L.phase='dashboard';enterLegacyDashboard();
+      }).finally(function(){L.entering=false;});
+      return;
+    }
+    L.phase='dashboard';enterLegacyDashboard();
   }
   function primaryAction(){
     if(L.primary==='play-connected'){enterGame(false);return;}
@@ -338,21 +376,15 @@
   }
   async function renderPacks(){
     var ticket=++L.packTicket,button=byId('mfLaunchPackAudio'),state=byId('mfLaunchPackAudioState');if(!button||!state)return;
-    relocatePackPanel();var online=onlineAllowed(),api=window.MASSFRONT_ASSET_PACKS;
-    try{
-      var rows=api&&typeof api.list==='function'?await api.list():[];if(ticket!==L.packTicket)return;
-      var audio=rows.filter(function(row){return row.id==='voice'||row.id==='music';});
-      var statuses=api&&typeof api.status==='function'
-        ?await Promise.all(audio.map(function(row){return api.status(row.id);})) : audio;
-      if(ticket!==L.packTicket)return;
-      var installed=audio.length&&statuses.every(function(row){return row&&row.ok!==false&&row.installed&&!row.updateAvailable;});
-      var total=audio.reduce(function(sum,row){return sum+(Number(row.bytes)||0);},0);
-      L.packAudioReady=!!installed;L.packAudioIds=audio.map(function(row){return row.id;});
-      if(installed){state.textContent='INSTALLED · '+fmtBytes(total);button.textContent='VERIFY';button.disabled=false;}
-      else if(!online){state.textContent='REQUIRES INTERNET';button.textContent='OFFLINE';button.disabled=true;}
-      else {state.textContent=(statuses.some(function(row){return row&&((row.installed||row.partial)&&!row.updateAvailable);})?'RESUME / REPAIR · ':'OPTIONAL · ')+fmtBytes(total);button.textContent='DOWNLOAD';button.disabled=L.packBusy;}
-      button.setAttribute('aria-disabled',button.disabled?'true':'false');
-    }catch(e){state.textContent=online?'STATUS UNAVAILABLE':'REQUIRES INTERNET';button.textContent=online?'RETRY':'OFFLINE';button.disabled=!online||L.packBusy;}
+    relocatePackPanel();
+    /* The current voice bank and available score are package invariants, not
+       optional network packs. Future audio expansions use the generic startup
+       delivery lane and its shared progress panel instead of duplicating these
+       base files in IndexedDB. */
+    if(ticket!==L.packTicket)return;
+    L.packAudioReady=true;L.packAudioIds=[];
+    state.textContent='INCLUDED IN THIS BUILD';button.textContent='READY';button.disabled=true;
+    button.setAttribute('aria-disabled','true');
   }
   function schedulePackRender(delay){
     clearTimeout(L.packTimer);L.packTimer=setTimeout(function(){L.packTimer=0;renderPacks();},Math.max(0,delay||0));
@@ -375,16 +407,9 @@
     }catch(e){if(typeof toast==='function')toast(online?'Audio download needs attention — retry when connected':'Audio repair requires an Internet connection');}
     finally{L.packBusy=false;relocatePackPanel();renderPacks();}
   }
-  /* Galactic Exploration is an optional 541.8 MiB expansion. The bytes have
-     been published and current at
-     .../massfront-releases/resolve/main/exploration-pack/ the whole time, and
-     assetpack.js has carried a complete installer for them
-     (mfInstallExplorationPack: signed manifest, per-file SHA-256, storage
-     preflight, resumable chunked install, legacy-blob migration). Nothing ever
-     called it. This card only ever reported whether the *build* happened to
-     bundle the module, so a player on a slim install was told
-     "INSTALLER REQUIRED" and given no way to get content that was sitting on
-     the CDN ready to download. Offer the real install path instead. */
+  /* Cached download bytes and a launchable resource tree are different states.
+     Older native installs must finish verified staging before this card says
+     READY; the content generation is pinned by their new OTA descriptor. */
   var GALACTIC_PACK_ID='galactic-exploration';
   async function renderGalactic(){
     var state=byId('mfLaunchPackGalacticState'),button=byId('mfLaunchPackGalactic');if(!state||!button)return;
@@ -402,8 +427,18 @@
     if(ticket!==L.galacticTicket)return;
     var installed=!!(status&&status.ok!==false&&status.installed&&!status.updateAvailable);
     var partial=!!(status&&(status.partial||(status.installed&&status.updateAvailable)));
-    L.galacticReady=installed;
-    if(installed){
+    var mount=null;try{mount=window.MFNativeExplorationContent&&window.MFNativeExplorationContent.snapshot();}catch(e){}
+    var needsMount=window.__MF_OTA_HAS_GALACTIC_DELIVERY===true;
+    var mounted=!!(mount&&[mount.good,mount.prepared].some(function(candidate){
+      return candidate&&typeof APP_VERSION==='string'&&candidate.version===APP_VERSION&&candidate.generation!==mount.failed;
+    }));
+    L.galacticCached=installed;
+    L.galacticReady=installed&&(!needsMount||mounted);
+    if(installed&&needsMount&&!mounted){
+      if(card)card.classList.remove('onlineOnly');
+      state.textContent=mount&&mount.failed?'STARTUP NEEDS RETRY':'DOWNLOADED · STAGING REQUIRED';
+      button.textContent=mount&&mount.failed?'RETRY':'STAGE';button.disabled=L.galacticBusy;
+    }else if(installed){
       if(card)card.classList.remove('onlineOnly');
       state.textContent='INSTALLED'+(status&&status.bytes?' · '+fmtBytes(status.bytes):'');
       button.textContent='VERIFY';button.disabled=L.galacticBusy;
@@ -412,7 +447,7 @@
       state.textContent='REQUIRES INTERNET';button.textContent='OFFLINE';button.disabled=true;
     }else{
       if(card)card.classList.remove('onlineOnly');
-      state.textContent=(partial?'RESUME · ':'OPTIONAL · ')+'541.8 MB';
+      state.textContent=(partial?'RESUME · ':'CONTENT · ')+(status&&status.bytes?fmtBytes(status.bytes):'GALACTIC EXPLORATION');
       button.textContent=partial?'RESUME':'INSTALL';button.disabled=L.galacticBusy;
     }
     button.setAttribute('aria-disabled',button.disabled?'true':'false');
@@ -421,7 +456,15 @@
     if(L.galacticBusy)return;
     if(window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true)return;
     var verifyOnly=L.galacticReady,online=onlineAllowed(),api=window.MASSFRONT_ASSET_PACKS;
-    if(!verifyOnly&&!online)return;
+    /* A bound OTA can stage verified cached bytes without a network. The
+       installer still rejects missing/damaged bytes offline; this flag only
+       permits reaching its existing local verification/copy path. */
+    var localStage=window.__MF_OTA_HAS_GALACTIC_DELIVERY===true&&L.galacticCached;
+    if(!verifyOnly&&!online&&!localStage)return;
+    try{
+      var mountApi=window.MFNativeExplorationContent,mountState=mountApi&&mountApi.snapshot();
+      if(mountState&&mountState.failed){mountApi.retry();L.galacticReady=false;verifyOnly=false;}
+    }catch(e){}
     L.galacticBusy=true;
     var button=byId('mfLaunchPackGalactic');
     if(button){button.disabled=true;button.textContent=verifyOnly?'VERIFYING…':'PREPARING…';}
@@ -478,13 +521,14 @@
         if(typeof netSetOffline==='function'&&L.identity.state==='offline'&&explicitOffline)netSetOffline(true);
         else if(typeof netSetOffline==='function'&&L.identity.state==='connected')netSetOffline(false);
       }catch(e){}
-      renderIdentity();
+      renderAll();
       /* A cached token can expire after the title closes. Re-open the auth
          choice when /me rejects it instead of leaving PLAY disabled forever. */
-      if(L.identity.state==='pending'&&L.identity.source==='signed-out'&&typeof mfAuthGate==='function')
+      if(L.phase==='login'&&L.identity.state==='pending'&&L.identity.source==='signed-out'&&typeof mfAuthGate==='function')
         setTimeout(function(){try{mfAuthGate();}catch(e){}},0);
-      if(!L.bypass&&(L.identity.state==='connected'||L.identity.state==='offline'))enterGateway();
+      if(!L.bypass&&L.phase==='login'&&(L.identity.state==='connected'||L.identity.state==='offline'))enterGame(L.identity.state==='offline');
     });
+    window.addEventListener('massfront:intro-complete',function(){if(!L.bypass){L.phase='login';renderAll();}});
     window.addEventListener('massfront:update-state',function(event){
       var before=L.update&&L.update.state,next=event&&event.detail||updaterSnapshot();renderUpdate(next);
       /* Byte progress is deliberately frequent. Pack manifests are unrelated
@@ -492,6 +536,7 @@
          updater crosses a material state boundary. */
       if(before!==next.state)schedulePackRender(160);
     });
+    window.addEventListener('massfront:assetpack-state',function(){relocatePackPanel();});
     window.addEventListener('online',function(){
       if(L.identity&&L.identity.source==='session-unverified'&&typeof apVerifySession==='function')
         try{apVerifySession();}catch(e){}
@@ -519,12 +564,13 @@
   }
   function mfLauncherShouldDeferAttract(){return !L.bypass&&!L.passed;}
   function mfLauncherSnapshot(){
-    return {gate:L.gate,passed:L.passed,bypass:L.bypass,primary:L.primary,
+    return {gate:L.gate,passed:L.passed,bypass:L.bypass,phase:L.phase,primary:L.primary,
       identity:L.identity?Object.assign({},L.identity):null,update:L.update?{state:L.update.state,status:L.update.status}:null,
       notesTab:L.notesTab,historyTab:L.historyTab};
   }
 
   window.initLauncherGateway=initLauncherGateway;
+  window.mfLauncherAwaitingUpdateIntro=function(){return !isGalacticReturn()&&L.phase==='updater';};
   window.mfLauncherOpenDetails=mfLauncherOpenDetails;
   window.mfLauncherHandleBack=mfLauncherHandleBack;
   window.mfLauncherShouldDeferAttract=mfLauncherShouldDeferAttract;

@@ -1,4 +1,5 @@
 import { DEPLOYMENT_SHIP_GEOMETRY_V1 } from '../assets/generated/deployment_ship_geometry_v1.js';
+import { enhanceNovaDeploymentShip } from './nova_deployment_ship.js';
 
 /* --------------------------------------------------------------------------
    NEXUS-VII STRIKE BAY DEPLOYMENT ARENA
@@ -368,6 +369,8 @@ function buildDeploymentShip(profileId, materials) {
     units: 'arena-local'
   };
 
+  if (profileId === 'nova') return enhanceNovaDeploymentShip(ship, materials);
+
   // The live RTS craft closes its cargo seam before takeoff.  The deployment
   // arena shows that same hull in loading state, with one mechanically joined
   // ramp and doorway so the staged force has a believable path into the ship.
@@ -470,14 +473,14 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
   let operationalLight = null;
   let arenaHost = null;
   let selectedDeploymentShip = null;
+  let authoredPresentation = null;
+  let lastFrameSignature = '';
+  const authoredPlacements = [];
   const deploymentShips = new Map();
   const unitStagingSlots = [];
   const structureCargoSlots = [];
   const stationHalos = new Map();
   const accentMaterials = [];
-  const hiddenLegacy = [];
-  const restyledLegacy = [];
-  const restyledMaterials = new Set();
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
 
@@ -533,60 +536,22 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
     adoptInteriorPbr(structure, authored.get('NEXUS-VII Strike Bay Surfaces'));
     adoptInteriorPbr(darkStructure, authored.get('NEXUS-VII Strike Bay Surfaces'));
 
-    // The imported compartment currently arrives with white base *and*
-    // emissive colors on its deck, bulkheads and machinery.  At the focused
-    // district highlight this flattens the whole hangar into one silver card.
-    // Clone only the Strike Bay's materials and restore them on disposal so
-    // the arena has separate floor/wall/transit/machinery/glazing responses
-    // without mutating another district or the shared source materials.
-    const legacyStyles = new Map([
-      ['NEXUS-VII Interior Deck Floor', { color: 0x0b1218, emissive: 0x010203, intensity: .02, metalness: .38, roughness: .76, family: 'strike-bay-deck' }],
-      ['NEXUS-VII Pressure Wall Cladding', { color: 0x151f27, emissive: 0x010305, intensity: .025, metalness: .54, roughness: .61, family: 'strike-bay-wall' }],
-      ['NEXUS-VII Interior Transit Way', { color: 0x18303a, emissive: 0x021014, intensity: .08, metalness: .36, roughness: .58, family: 'strike-bay-transit' }],
-      ['NEXUS-VII Strike Bay Surfaces', { color: 0x101a22, emissive: 0x010406, intensity: .035, metalness: .70, roughness: .41, family: 'strike-bay-machinery' }],
-      ['NEXUS-VII Authored Window Glazing', { color: 0x071a22, emissive: 0x0b6380, intensity: .28, metalness: .08, roughness: .16, family: 'strike-bay-glazing' }]
-    ]);
-    const cloneCache = new Map();
-    const restyle = source => {
-      const style = legacyStyles.get(source?.name);
-      if (!style) return source;
-      if (cloneCache.has(source)) return cloneCache.get(source);
-      const clone = source.clone();
-      clone.name = source.name;
-      clone.color?.setHex?.(style.color);
-      clone.emissive?.setHex?.(style.emissive);
-      clone.emissiveIntensity = style.intensity;
-      clone.metalness = style.metalness;
-      clone.roughness = style.roughness;
-      clone.userData = { ...clone.userData, baseEmissiveIntensity: style.intensity, interiorMaterialFamily: style.family, exteriorHullMaterial: false };
-      clone.needsUpdate = true;
-      cloneCache.set(source, clone);
-      restyledMaterials.add(clone);
-      return clone;
-    };
-    hangar.traverse(object => {
-      if (!object.isMesh || !object.material) return;
-      const original = object.material;
-      const materials = Array.isArray(original) ? original : [original];
-      const next = materials.map(restyle);
-      if (next.every((entry, index) => entry === materials[index])) return;
-      restyledLegacy.push({ object, material: original });
-      object.material = Array.isArray(original) ? next : next[0];
-    });
+    // Keep the authored compartment, including its original PBR materials.
+    // A reversible presentation transform makes it a capital-ship flight bay;
+    // the former replacement shell discarded every visible authored mesh.
+    authoredPresentation = new THREE.Group();
+    authoredPresentation.name = 'hangar_AuthoredDeploymentPresentation';
+    for (const child of [...hangar.children]) {
+      authoredPlacements.push({ object: child, position: child.position.clone(), scale: child.scale.clone() });
+      authoredPresentation.add(child);
+    }
+    hangar.add(authoredPresentation);
 
     root = semantic(new THREE.Group(), 'deployment_arena');
     root.name = 'STAGE6_StrikeBayDeploymentArena';
-    root.position.z = .22;
-
-    // Deployment is a dedicated interior state, not the small management-room
-    // diorama. Preserve every authored object, but temporarily hide the room
-    // shell while the full carrier hangar is active; setDraft(null) restores it.
-    hangar.traverse(object => {
-      if (object.isMesh && object.visible) {
-        hiddenLegacy.push(object);
-        object.visible = false;
-      }
-    });
+    root.position.z = .56;
+    root.userData.presentation = 'authored-capital-ship-hangar';
+    root.userData.authoredCompartmentScale = [3, 5, 2];
 
     const addStrip = (name, ax, ay, bx, by, width, mat, z = .35, role = 'hangar_deck_marking', hotspot = null) => {
       const dx = bx - ax;
@@ -600,13 +565,15 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
     };
 
     const floorInlay = extrudedMesh('hangar_DeploymentArenaFloorInlay', [
-      [-12.2, -10.0], [12.2, -10.0], [12.2, 9.7], [10.8, 10.3], [-10.8, 10.3], [-12.2, 9.7]
+      [-12.2, -16.0], [12.2, -16.0], [12.2, 15.4], [10.8, 15.9], [-10.8, 15.9], [-12.2, 15.4]
     ], .03, deck, .305, 'deployment_arena_floor', null, .015);
     root.add(floorInlay);
     const aircraftBay = extrudedMesh('hangar_BaseDeployerServiceBay', [
       [-6.4, -9.55], [6.4, -9.55], [7.0, -8.75], [7.0, 8.85], [-7.0, 8.85], [-7.0, -8.75]
-    ], .018, transit, .338, 'base_deployer_service_bay', 'base_deployer', .02);
+    ], .018, transit, .318, 'base_deployer_service_bay', 'base_deployer', .02);
     root.add(aircraftBay);
+    aircraftBay.scale.set(.48, .50, 1);
+    aircraftBay.position.y = -4.0;
     const chassisBay = new THREE.Mesh(new THREE.CircleGeometry(1.12, 40), transit);
     chassisBay.name = 'hangar_CommandChassisMaintenanceBay';
     chassisBay.position.set(4.5, 1.0, .348);
@@ -615,12 +582,12 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
 
     // Strong floor hierarchy: service lanes, a deployer centerline, muster
     // boxes and alternating hazard segments around the maintenance turntable.
-    addStrip('hangar_MainServiceLanePort', -7.0, -9.45, -7.0, 8.85, .10, accent);
-    addStrip('hangar_MainServiceLaneStarboard', 7.0, -9.45, 7.0, 8.85, .10, accent);
-    addStrip('hangar_DeployerCenterline', 0, -9.65, 0, 9.05, .075, amber);
+    addStrip('hangar_MainServiceLanePort', -7.0, -15.5, -7.0, 14.9, .10, accent);
+    addStrip('hangar_MainServiceLaneStarboard', 7.0, -15.5, 7.0, 14.9, .10, accent);
+    addStrip('hangar_DeployerCenterline', 0, -15.5, 0, 14.9, .075, amber);
     addStrip('hangar_MusterBaseline', -11.4, -8.85, -7.2, -8.85, .095, amber);
     addStrip('hangar_CargoLane', 7.0, 1.75, 11.2, 1.75, .085, amber);
-    addDeckLabel(root, 'hangar_DeployerLaneLabel', 'HQ DEPLOYMENT SHIP // FLIGHT LANE', 0, 9.18, 5.6);
+    addDeckLabel(root, 'hangar_DeployerLaneLabel', 'DEPLOYMENT // BERTH 01', 0, 1.25, 4.2);
     addDeckLabel(root, 'hangar_CommandChassisLabel', 'COMMAND CHASSIS 01', 4.5, -.42, 2.15);
     addDeckLabel(root, 'hangar_MusterLaneLabel', 'MUSTER 01 // 02 // 03', -9.3, -9.25, 2.55, '#f2b34d');
     addDeckLabel(root, 'hangar_StructureCargoLabel', 'STRUCTURE CARGO', 9.15, 8.25, 2.25, '#f2b34d');
@@ -635,30 +602,15 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
       addStrip(`hangar_MusterHazardStripe_${index + 1}`, x, -6.95, x + .32, -6.35, .10, index % 2 ? hazardDark : amber, .366, 'muster_hazard_decal', 'specialist_muster');
     }
 
-    // Ship-scale pressure shell: tall bulkheads, segmented launch door and
-    // overhead trusses establish a carrier hangar large enough for the HQ
-    // lander rather than a small utility room around an aircraft prop.
+    // Service equipment augments the authored pressure shell. Do not build a
+    // second box around it, or put a lintel across the open cutaway sightline.
     const structural = semantic(new THREE.Group(), 'deployment_hangar_structure');
     structural.name = 'hangar_DeploymentArenaStructuralFrame';
-    structural.add(boxMesh('hangar_PortPressureWall', .42, 19.7, 9.5, -12.0, .10, 5.10, structure, 'hangar_pressure_wall'));
-    structural.add(boxMesh('hangar_StarboardPressureWall', .42, 19.7, 9.5, 12.0, .10, 5.10, structure, 'hangar_pressure_wall'));
-    structural.add(boxMesh('hangar_AftPressureBulkhead', 23.6, .42, 9.5, 0, 10.05, 5.10, structure, 'hangar_pressure_wall'));
-    for (const [index, x, y] of [[1, -11.75, -9.65], [2, 11.75, -9.65], [3, -11.75, 9.65], [4, 11.75, 9.65]]) {
+    for (const [index, x, y] of [[1, -11.75, 8.8], [2, 11.75, 8.8]]) {
       structural.add(cylinderBetween(`hangar_StructuralColumn_${index}`, new THREE.Vector3(x, y, .34), new THREE.Vector3(x, y, 9.62), .14, darkStructure, 'hangar_structural_column'));
     }
-    for (const [index, y] of [[1, -8.2], [2, -4.2], [3, -.2], [4, 3.8], [5, 7.8]]) {
+    for (const [index, y] of [[1, 4.8], [2, 8.4]]) {
       structural.add(cylinderBetween(`hangar_CeilingTruss_${index}`, new THREE.Vector3(-11.75, y, 9.48), new THREE.Vector3(11.75, y, 9.48), .105, darkStructure, 'hangar_ceiling_gantry'));
-    }
-    // The launch end is an aperture, not a wall disguised as a blast door.
-    // Raised segmented leaves sit above the opening while side pylons and the
-    // lintel make the pressure boundary readable from the phone camera.
-    structural.add(boxMesh('hangar_LaunchAperturePortPylon', 2.0, .62, 8.85, -10.85, -9.62, 4.77, darkStructure, 'hangar_launch_aperture'));
-    structural.add(boxMesh('hangar_LaunchApertureStarboardPylon', 2.0, .62, 8.85, 10.85, -9.62, 4.77, darkStructure, 'hangar_launch_aperture'));
-    structural.add(boxMesh('hangar_LaunchApertureLintel', 19.7, .62, .72, 0, -9.62, 9.02, darkStructure, 'hangar_launch_aperture'));
-    for (let index = 0; index < 6; index += 1) {
-      const x = -8.15 + index * 3.26;
-      structural.add(boxMesh(`hangar_RaisedBlastDoorLeaf_${index + 1}`, 3.05, .45, .58, x, -9.45, 9.46, darkStructure, 'hangar_launch_door'));
-      structural.add(boxMesh(`hangar_RaisedBlastDoorStatus_${index + 1}`, 2.55, .10, .08, x, -9.72, 9.16, accent, 'hangar_launch_door_indicator'));
     }
     // Two ship-length service gantries keep people, equipment and the carrier
     // in one physical scale while leaving the central flight lane unobstructed.
@@ -741,10 +693,9 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
     pilotHologram.position.z += 1.72;
     root.add(gantry);
 
-    // The selected commander's faction-matched HQ deployment carrier dominates
-    // the room. Its triangles are snapshots from the authoritative base-game
-    // procedural DROP_MDL builders. Missing snapshots fail closed; the earlier
-    // primitive study is retained as authoring history but is not reachable.
+    // The deployer occupies one marked service berth inside the much larger
+    // compartment. Scale all faction craft consistently, not the hangar camera
+    // around an oversized Nova preview; tactical footprints stay untouched.
     const shipMaterials = {
       nova: { armor: novaShipArmor, secondary: novaShipSecondary, dark: darkStructure, glass: canopyGlass, accent, hot: shipHot },
       dominion: { armor: dominionShipArmor, secondary: dominionShipSecondary, dark: darkStructure, glass: canopyGlass, accent: shipHot, hot: shipHot },
@@ -752,8 +703,10 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
     };
     for (const factionId of Object.keys(DEPLOYMENT_SHIP_PROFILES)) {
       const ship = buildDeploymentShip(factionId, shipMaterials[factionId]);
-      ship.position.set(0, -.25, 0);
-      ship.rotation.z = -.13;
+      ship.scale.setScalar(.42);
+      ship.position.set(0, -4.0, .356 - .39 * .42);
+      ship.rotation.z = -.10;
+      ship.userData.hangarDisplayScale = .42;
       ship.visible = false;
       deploymentShips.set(factionId, ship);
       root.add(ship);
@@ -837,16 +790,16 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
     service.add(cylinderBetween('hangar_ChassisServiceArm', new THREE.Vector3(10.4, -3.1, .42), new THREE.Vector3(9.25, -4.0, 1.32), .09, structure, 'support_service_arm', 'support_service'));
     const chief = addCrewFigure(service, 'hangar_DeckCrewChief', -7.45, 2.10, -.25, workerSuit, amber, 'deck_crew', 'support_service');
     const tech = addCrewFigure(service, 'hangar_DeckCrewTechnician', 10.35, -2.85, Math.PI * .7, workerSuit, accent, 'deck_crew', 'support_service');
-    const loadmaster = addCrewFigure(service, 'hangar_HqCarrierLoadmaster', -2.35, -8.05, .10, workerSuit, amber, 'deck_crew', 'base_deployer');
-    const rampTech = addCrewFigure(service, 'hangar_HqCarrierRampTechnician', 2.25, -7.55, -.10, workerSuit, accent, 'deck_crew', 'base_deployer');
+    const loadmaster = addCrewFigure(service, 'hangar_HqCarrierLoadmaster', -1.65, -7.8, .10, workerSuit, amber, 'deck_crew', 'base_deployer');
+    const rampTech = addCrewFigure(service, 'hangar_HqCarrierRampTechnician', 1.65, -7.6, -.10, workerSuit, accent, 'deck_crew', 'base_deployer');
     chief.scale.setScalar(.62);
     tech.scale.setScalar(.62);
-    loadmaster.scale.setScalar(1.02);
-    rampTech.scale.setScalar(1.02);
+    loadmaster.scale.setScalar(.62);
+    rampTech.scale.setScalar(.62);
     root.add(service);
 
     for (const [station, x, y, radius] of [
-      ['command_chassis', 4.5, 1.0, 1.05], ['base_deployer', 0, -.25, 5.5],
+      ['command_chassis', 4.5, 1.0, 1.05], ['base_deployer', 0, -4.0, 2.3],
       ['specialist_muster', -9.30, -8.55, .85], ['unit_staging', -8.85, -6.85, .75],
       ['structure_cargo', 8.95, 6.70, 1.15], ['support_service', -7.25, 2.25, .75]
     ]) stationHalos.set(station, addStationHalo(root, station, x, y, radius, hotspotMaterials.get(station)));
@@ -868,34 +821,78 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
 
   function frameArena(animate = false) {
     if (!arenaHost || !commandScene?.active || commandScene.selectedDistrictId !== 'hangar') return false;
-    // Deployment uses a lower three-quarter hangar camera.  The generic room
-    // fit targets the pressure-wall ceiling in portrait, pushing the aircraft,
-    // chassis and people under the bottom sheet.
-    const aspect = Number(commandScene.camera?.aspect) || 1;
-    const selectedFaction = selectedDeploymentShip?.userData?.faction_id || draft?.proxyFactionId || 'nova';
-    const portraitCamera = selectedFaction === 'dominion'
-      ? new THREE.Vector3(3.1, -43.5, 18.9)
-      : selectedFaction === 'syndicate'
-        ? new THREE.Vector3(2.7, -35.6, 13.8)
-        : new THREE.Vector3(2.7, -32.8, 14.0);
-    const landscapeCamera = selectedFaction === 'dominion'
-      ? new THREE.Vector3(9.4, -42.5, 18.8)
-      : selectedFaction === 'syndicate'
-        ? new THREE.Vector3(8.4, -35.0, 15.2)
-        : new THREE.Vector3(8.0, -32.5, 14.4);
-    const cameraLocal = aspect < .82 ? portraitCamera : landscapeCamera;
-    const position = arenaHost.localToWorld(cameraLocal);
-    const targetLocal = aspect < .82
-      ? new THREE.Vector3(0, -1.25, -2.65)
-      : new THREE.Vector3(0, -1.25, 1.0);
-    const target = arenaHost.localToWorld(targetLocal);
+    const camera = commandScene.camera;
+    const canvas = commandScene.renderer.domElement.getBoundingClientRect();
+    if (!canvas.width || !canvas.height) return false;
+    const shell = document.querySelector('.uga-command-shell:not([hidden])');
+    const panel = shell?.querySelector('.uga-context-panel')?.getBoundingClientRect();
+    const context = shell?.querySelector('.uga-deployment-context')?.getBoundingClientRect();
+    const portrait = canvas.width < canvas.height;
+    const clear = { left: canvas.left + 12, right: canvas.right - 12, top: canvas.top + 76, bottom: canvas.bottom - 16 };
+    if (context?.height) clear.top = Math.max(clear.top, context.bottom + 10);
+    if (panel?.width && panel?.height) {
+      if (portrait) clear.bottom = Math.min(clear.bottom, panel.top - 12);
+      else clear.right = Math.min(clear.right, panel.left - 12);
+    }
+    // Fit the compartment, not the craft, into the ACTUAL unobscured viewport.
+    // A below-floor fixed target made the old lander fill a phone edge to edge.
+    const bounds = commandScene._districtBounds(arenaHost);
+    if (!bounds) return false;
+    const corners = [];
+    for (const x of [bounds.min.x, bounds.max.x]) for (const y of [bounds.min.y, bounds.max.y]) for (const z of [bounds.min.z, bounds.max.z]) corners.push(new THREE.Vector3(x, y, z));
+    const direction = new THREE.Vector3(portrait ? .14 : .32, -1, portrait ? .90 : .70).transformDirection(arenaHost.matrixWorld);
     const up = new THREE.Vector3(0, 0, 1).transformDirection(arenaHost.matrixWorld).normalize();
-    commandScene._moveCamera(position, target, animate ? .38 : 0, up);
+    const target = bounds.getCenter(new THREE.Vector3());
+    const probe = camera.clone();
+    probe.up.copy(up);
+    // Portrait can crop the outer pressure walls: the bay should surround the
+    // player, not shrink into a floating dollhouse. Craft/controls stay in view.
+    const width = Math.max(.22, (clear.right - clear.left) / canvas.width) * (portrait ? 1.55 : .94);
+    const height = Math.max(.22, (clear.bottom - clear.top) / canvas.height) * .94;
+    let low = 1, high = bounds.getSize(new THREE.Vector3()).length() * 6;
+    for (let iteration = 0; iteration < 30; iteration++) {
+      const distance = (low + high) * .5;
+      probe.position.copy(target).addScaledVector(direction, distance);
+      probe.lookAt(target); probe.updateMatrixWorld(true);
+      const points = corners.map(point => point.clone().project(probe));
+      const w = (Math.max(...points.map(point => point.x)) - Math.min(...points.map(point => point.x))) * .5;
+      const h = (Math.max(...points.map(point => point.y)) - Math.min(...points.map(point => point.y))) * .5;
+      if (w <= width && h <= height) high = distance; else low = distance;
+    }
+    const tangent = Math.tan(THREE.MathUtils.degToRad(camera.fov * .5));
+    const aimX = (clear.left + clear.right - 2 * canvas.left) / canvas.width - 1;
+    const aimY = 1 - (clear.top + clear.bottom - 2 * canvas.top) / canvas.height;
+    target.addScaledVector(new THREE.Vector3().setFromMatrixColumn(probe.matrixWorld, 0), -aimX * high * tangent * camera.aspect);
+    target.addScaledVector(new THREE.Vector3().setFromMatrixColumn(probe.matrixWorld, 1), -aimY * high * tangent);
+    camera.far = Math.max(camera.far, high * 3); camera.updateProjectionMatrix();
+    commandScene._moveCamera(target.clone().addScaledVector(direction, high), target, animate ? .38 : 0, up);
+    root.userData.cameraClearRect = clear;
     return true;
   }
 
   function setDraft(nextDraft) {
     draft = nextDraft ? { ...nextDraft } : null;
+    if (authoredPresentation) {
+      authoredPresentation.scale.set(draft ? 3 : 1, draft ? 5 : 1, draft ? 2 : 1);
+      // Re-berth the existing small shuttle and construction props along the
+      // rear service edge. Their central parking pads are the Nova flight lane.
+      let shuttleIndex = 0, equipmentIndex = 0;
+      for (const entry of authoredPlacements) {
+        entry.object.position.copy(entry.position);
+        entry.object.scale.copy(entry.scale);
+        if (draft && /^hangar_(?:Shuttle_|Structure_)/.test(entry.object.name) && entry.object.geometry) {
+          const shuttle = entry.object.name.startsWith('hangar_Shuttle_');
+          const index = shuttle ? shuttleIndex++ : equipmentIndex++;
+          const berth = shuttle ? [[-7.8, 10.5], [0, 12.0], [7.8, 10.5]][index % 3]
+            : [[-9, 3.5], [9, 3.5], [9, 13.0]][index % 3];
+          entry.object.geometry.computeBoundingBox();
+          const box = entry.object.geometry.boundingBox, center = box.getCenter(new THREE.Vector3());
+          entry.object.scale.multiplyScalar(.55);
+          entry.object.position.set(berth[0] / 3 - center.x * entry.object.scale.x,
+            berth[1] / 5 - center.y * entry.object.scale.y, .90 / 2 - box.min.z * entry.object.scale.z);
+        }
+      }
+    }
     activeStation = STATIONS[draft?.station] ? draft.station : activeStation;
     const factionColor = FACTION_COLORS[draft?.proxyFactionId] || FACTION_COLORS.nova;
     const restrainedFactionColor = new THREE.Color(factionColor).multiplyScalar(.36);
@@ -926,7 +923,6 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
     if (operationalLight) operationalLight.color.setHex(factionColor);
     if (root) {
       root.visible = Boolean(draft);
-      for (const object of hiddenLegacy) object.visible = Boolean(draft) ? false : true;
       root.userData.deploymentDraft = draft ? {
         missionId: draft.missionId || null,
         proxyFactionId: draft.proxyFactionId || null,
@@ -950,16 +946,26 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
   }
 
   function pick(clientX, clientY, rect) {
-    if (!root || !commandScene?.active || commandScene.selectedDistrictId !== 'hangar') return false;
+    // Three.js raycasting includes invisible objects. A hidden deployment arena
+    // used to swallow room taps, invent a draft and hide the authored hangar.
+    if (!root?.visible || !draft || !commandScene?.active || commandScene.selectedDistrictId !== 'hangar') return false;
     pointer.x = ((clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1;
     pointer.y = -((clientY - rect.top) / Math.max(1, rect.height)) * 2 + 1;
     raycaster.setFromCamera(pointer, commandScene.camera);
-    const hit = raycaster.intersectObject(root, true).find(entry => findHotspot(entry.object));
+    const hit = raycaster.intersectObject(root, true).find(entry => {
+      for (let object = entry.object; object; object = object.parent) {
+        if (!object.visible) return false;
+      }
+      return Boolean(findHotspot(entry.object));
+    });
     return hit ? selectStation(findHotspot(hit.object), true) : false;
   }
 
   function update(dt, time) {
     if (!root?.visible || commandScene?.selectedDistrictId !== 'hangar') return;
+    const panel = document.querySelector('.uga-command-shell:not([hidden]) .uga-context-panel')?.getBoundingClientRect();
+    const signature = `${commandScene.camera.aspect}:${panel?.left}:${panel?.top}:${panel?.width}:${panel?.height}`;
+    if (signature !== lastFrameSignature) { lastFrameSignature = signature; frameArena(false); }
     if (turntable) turntable.rotation.z += Math.min(.02, Math.max(0, dt)) * .22;
     if (pilotHologram) {
       const pulse = .96 + Math.sin(time * .0042) * .04;
@@ -972,11 +978,16 @@ export function createUgaDeploymentArena(commandScene, options = {}) {
 
   function dispose() {
     if (root?.parent) root.parent.remove(root);
-    for (const object of hiddenLegacy) object.visible = true;
-    for (const entry of restyledLegacy) entry.object.material = entry.material;
-    for (const mat of restyledMaterials) mat.dispose?.();
-    restyledLegacy.length = 0;
-    restyledMaterials.clear();
+    if (authoredPresentation?.parent) {
+      for (const entry of authoredPlacements) {
+        entry.object.position.copy(entry.position);
+        entry.object.scale.copy(entry.scale);
+        authoredPresentation.parent.add(entry.object);
+      }
+      authoredPresentation.parent.remove(authoredPresentation);
+    }
+    authoredPresentation = null;
+    authoredPlacements.length = 0;
     arenaHost = null;
     const disposedGeometries = new Set();
     const disposedMaterials = new Set();

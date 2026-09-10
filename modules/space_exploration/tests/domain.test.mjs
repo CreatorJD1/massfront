@@ -17,6 +17,7 @@ import {
   SPECIALIST_CATALOG,
   SYSTEM_CATALOG,
   SUPPORT_CATALOG,
+  SURVEY_CATALOG,
   advanceRecoveryCycles,
   advanceExpeditionCycles,
   applyGroundResult,
@@ -49,6 +50,7 @@ import {
   normalizeAccountProfile,
   projectAccountProfile,
   plotCourse,
+  recoverPlanetFind,
   simulateClassicModeLaunch,
   simulateGroundResult,
   unassignSpecialist,
@@ -62,6 +64,7 @@ import {
 } from '../src/domain/index.js';
 
 let constructionEventSequence = 0;
+const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_standard';
 
 function finishConstruction(state, cycles, source = 'test') {
   constructionEventSequence += 1;
@@ -104,7 +107,11 @@ function verifyLockedCatalog() {
     'logistics'
   ]);
   assert.deepEqual(Object.keys(SYSTEM_CATALOG), ['aelos', 'veyra', 'karak']);
-  assert.equal(FACTION_CATALOG.uga.role, 'civilization_authority');
+  assert.equal(FACTION_CATALOG.nova.name, 'Nova Coalition');
+  assert.equal(FACTION_CATALOG.dominion.name, 'Crimson Dominion');
+  assert.equal(FACTION_CATALOG.syndicate.name, 'Syndicate Coalition');
+  assert.equal(FACTION_CATALOG.uga.role, 'neutral_non_sovereign_coordinator');
+  assert.equal(FACTION_CATALOG.uga.sovereign, false);
   assert.equal(FACTION_CATALOG.uga.hireable, false);
   assert.equal(FACTION_CATALOG.brood.hireable, false);
   assert.equal(FACTION_CATALOG.brood.hostile, true);
@@ -147,6 +154,62 @@ function verifyLockedCatalog() {
     assert.ok(mission.objective.hiveTargetIds.length > 0);
     assert.ok(mission.objective.hiveTargetIds.every(targetId => site.hiveTargetIds.includes(targetId)));
   }
+}
+
+function verifyPlanetSurveyOwnershipAndDepletion() {
+  assert.deepEqual(Object.fromEntries(Object.entries(SURVEY_CATALOG).map(([id, survey]) => [id, survey.planetId])), {
+    aelos_traffic_census: 'aelos_ithara',
+    aelos_phase_trace: 'aelos_caldris',
+    veyra_photon_ring: 'veyra_nacre',
+    veyra_derelict_echo: 'veyra_orison',
+    karak_silent_beacons: 'karak_meridian',
+    karak_hive_scan: 'karak_meridian'
+  });
+  const wrongPlanet = getSurveyEligibility(createInitialDomainState(), 'aelos_phase_trace', { planetId: 'aelos_ithara' });
+  assert.equal(wrongPlanet.ok, false);
+  assert.ok(codes(wrongPlanet.issues).includes('SURVEY_WRONG_PLANET'));
+
+  const initial = createInitialDomainState();
+  const probesBefore = initial.resources.probes;
+  const recovered = recoverPlanetFind(initial, { id: 'caldris_alloy_shelf', type: 'alloys', amount: 620 });
+  assert.equal(recovered.resources.probes, probesBefore - 1);
+  assert.equal(recovered.resources.alloys, initial.resources.alloys + 620);
+  assert.deepEqual(recovered.discoveries.extractedDepositIds, ['caldris_alloy_shelf']);
+  assert.equal(recovered.ship.expeditionCycle, 1, 'planet extraction consumes one deterministic expedition cycle');
+  assert.equal(recovered.world.systems.aelos.soloFront.pressure, initial.world.systems.aelos.soloFront.pressure + 2);
+  expectDomainIssue(
+    () => recoverPlanetFind(recovered, { id: 'caldris_alloy_shelf', type: 'alloys', amount: 620 }),
+    'DEPOSIT_DEPLETED'
+  );
+  const restored = migrateDomainState(JSON.parse(JSON.stringify(recovered)));
+  assert.deepEqual(restored.discoveries.extractedDepositIds, ['caldris_alloy_shelf'], 'mineral depletion must survive save normalization');
+}
+
+function verifyDeterministicSoloFrontPressure() {
+  let state = commissionCareerFaction(createInitialDomainState(), 'nova');
+  const aelosBefore = state.world.systems.aelos.soloFront.pressure;
+  const hiddenVeyraBefore = state.world.systems.veyra.soloFront.pressure;
+  state = deployProbe(state, 'aelos_traffic_census').state;
+  assert.equal(state.world.systems.aelos.soloFront.pressure, aelosBefore + 2, 'unresolved discovered fronts worsen with survey cycles');
+  assert.equal(state.world.systems.aelos.soloFront.lastDelta, 2);
+  assert.equal(state.world.systems.aelos.soloFront.lastCause, 'survey:aelos_traffic_census');
+  assert.equal(state.world.systems.veyra.soloFront.pressure, hiddenVeyraBefore, 'undiscovered fronts do not accumulate hidden punishment');
+
+  let capped = commissionCareerFaction(createInitialDomainState(), 'nova');
+  capped.world.systems.aelos.soloFront.pressure = 99;
+  capped = deployProbe(capped, 'aelos_traffic_census').state;
+  assert.equal(capped.world.systems.aelos.soloFront.pressure, 100, 'front pressure has a hard cap');
+  assert.equal(capped.world.systems.aelos.soloFront.lastDelta, 1, 'recorded delta reflects cap clamping');
+
+  let resolved = commissionCareerFaction(createInitialDomainState(), 'nova');
+  for (const mission of Object.values(MISSION_CATALOG).filter(entry => entry.systemId === 'aelos')) {
+    resolved.missions[mission.id].attempts = 1;
+    resolved.missions[mission.id].completions = 1;
+  }
+  const resolvedPressure = resolved.world.systems.aelos.soloFront.pressure;
+  resolved = deployProbe(resolved, 'aelos_traffic_census').state;
+  assert.equal(resolved.world.systems.aelos.soloFront.pressure, resolvedPressure, 'a fully resolved front stops worsening');
+  assert.equal(resolved.world.systems.aelos.soloFront.lastDelta, 0);
 }
 
 function completeAelosVeyraKarakChain() {
@@ -248,11 +311,11 @@ function verifyMissionLocksAndProxies(progressionState) {
   assert.ok(codes(overCapacity.locks).includes('DEPLOYMENT_UNIT_LIMIT'));
 
   expectDomainIssue(
-    () => beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom', factionId: 'brood' }),
+    () => beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom', factionId: 'brood', mapId: PALE_BLOOM_MAP_ID }),
     'FACTION_NOT_HIREABLE'
   );
   expectDomainIssue(
-    () => beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom', factionId: 'dominion' }),
+    () => beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom', factionId: 'dominion', mapId: PALE_BLOOM_MAP_ID }),
     'FACTION_RESIDENCY_REQUIRED'
   );
 
@@ -260,7 +323,8 @@ function verifyMissionLocksAndProxies(progressionState) {
   assert.deepEqual(validateDomainState(showcase), { ok: true, issues: [] });
   const dominion = beginGroundOperation(showcase, {
     missionId: 'uga_pale_bloom',
-    factionId: 'dominion'
+    factionId: 'dominion',
+    mapId: PALE_BLOOM_MAP_ID
   });
   assert.equal(dominion.operation.proxyFactionId, 'dominion');
   assert.equal(dominion.operation.commanderId, 'legion_vex');
@@ -270,13 +334,13 @@ function verifyMissionLocksAndProxies(progressionState) {
   assert.equal(factionLock.eligible, false);
   assert.ok(codes(factionLock.locks).includes('MISSION_FACTION_EXCLUSIVE'));
   expectDomainIssue(
-    () => beginGroundOperation(showcase, { missionId: 'nova_heliograph_wake', factionId: 'syndicate' }),
+    () => beginGroundOperation(showcase, { missionId: 'nova_heliograph_wake', factionId: 'syndicate', mapId: 'aelos_heliograph_standard' }),
     'MISSION_FACTION_EXCLUSIVE'
   );
 }
 
 function verifyHostContracts(progressionState) {
-  const launch = beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom' });
+  const launch = beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom', mapId: PALE_BLOOM_MAP_ID });
   assert.equal(launch.operation.deploymentManifest.slotsUsed, 7);
   assert.equal(launch.operation.deploymentManifest.slotCapacity, 8);
   assert.equal(launch.operation.configuration.deploymentManifest.slotsUsed, 7);
@@ -349,8 +413,8 @@ function verifyPendingPersistenceAndResults(progressionState) {
   });
   const returnRoute = structuredClone(progressionState.route);
   const resourcesBeforeLaunch = structuredClone(progressionState.resources);
-  const launchA = beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom' });
-  const launchB = beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom' });
+  const launchA = beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom', mapId: PALE_BLOOM_MAP_ID });
+  const launchB = beginGroundOperation(progressionState, { missionId: 'uga_pale_bloom', mapId: PALE_BLOOM_MAP_ID });
   assert.deepEqual(launchA.operation, launchB.operation, 'same state and request must produce the same operation');
   const { operation } = launchA;
   assert.equal(operation.sponsorId, 'uga');
@@ -403,9 +467,11 @@ function verifyPendingPersistenceAndResults(progressionState) {
     injuredPersonnelIds: [injuredSpecialistId]
   });
   assert.equal(validateGroundResult(operation, result).ok, true);
+  assert.equal(result.worldDelta.soloFrontPressure, -14, 'victory exposes deterministic front relief in the result payload');
 
   const medicalOperation = beginGroundOperation(progressionState, {
     missionId: 'uga_pale_bloom',
+    mapId: PALE_BLOOM_MAP_ID,
     supportId: 'survey_drones',
     deploymentManifest: { modIds: ['medical_cache'] }
   }).operation;
@@ -419,11 +485,13 @@ function verifyPendingPersistenceAndResults(progressionState) {
   });
   assert.equal(medicalResult.personnelDelta.specialists[0].injury.severity, 'moderate', 'medical cache must reduce canonical injury severity by one band');
   assert.equal(medicalResult.personnelDelta.specialists[0].injury.recoveryCycles, 2);
+  assert.equal(medicalResult.worldDelta.soloFrontPressure, 6, 'setbacks visibly worsen the mission front');
 
   const medevacReadyState = structuredClone(progressionState);
   medevacReadyState.ship.districts.hangar.level = 2;
   const medicalMedevacOperation = beginGroundOperation(medevacReadyState, {
     missionId: 'uga_pale_bloom',
+    mapId: PALE_BLOOM_MAP_ID,
     supportId: 'medevac',
     deploymentManifest: { modIds: ['medical_cache'] }
   }).operation;
@@ -447,6 +515,7 @@ function verifyPendingPersistenceAndResults(progressionState) {
     deadPersonnelIds: [operation.commanderId]
   }), 'PERMANENT_DEATH_UNSUPPORTED');
 
+  const frontPressureBeforeResult = reloadedPending.world.systems.karak.soloFront.pressure;
   const applied = applyGroundResult(reloadedPending, result);
   assert.equal(applied.applied, true);
   assert.equal(applied.reason, 'applied');
@@ -455,6 +524,9 @@ function verifyPendingPersistenceAndResults(progressionState) {
   assert.equal(applied.state.missions.uga_pale_bloom.completions, 1);
   assert.equal(applied.state.missions.uga_pale_bloom.lastOutcome, 'victory');
   assert.ok(applied.state.world.systems.karak.infestation.severity < 88);
+  assert.ok(applied.state.world.systems.karak.soloFront.pressure < frontPressureBeforeResult, 'mission victory relief outweighs its operation-cycle pressure');
+  assert.equal(applied.state.world.systems.karak.soloFront.lastDelta, result.worldDelta.soloFrontPressure);
+  assert.equal(applied.state.world.systems.karak.soloFront.lastCause, 'mission:uga_pale_bloom:victory');
   assert.equal(applied.state.factions.nova.status, 'recovering');
   assert.equal(applied.state.personnel.specialists[injuredSpecialistId].status, 'recovering');
   assert.equal(applied.state.personnel.specialists[injuredSpecialistId].injury.recoveryCycles, 1);
@@ -507,6 +579,17 @@ function verifyVersionedMigration() {
   assert.ok(Object.values(migrated.ship.districts).every(district => district.commissioned), 'Legacy rooms remain commissioned');
   assert.equal(migrated.ship.districts.command.level, 3);
   assert.equal(validateDomainState(migrated).ok, true);
+
+  const schemaSix = createInitialDomainState();
+  schemaSix.schemaVersion = 6;
+  schemaSix.ship.expeditionCycle = 17;
+  for (const world of Object.values(schemaSix.world.systems)) delete world.soloFront;
+  const migratedSix = migrateDomainState(schemaSix);
+  assert.equal(migratedSix.schemaVersion, DOMAIN_STATE_SCHEMA_VERSION);
+  assert.equal(migratedSix.world.systems.aelos.soloFront.pressure, 18);
+  assert.ok(Object.values(migratedSix.world.systems).every(world => world.soloFront.lastCycle === 17), 'migration starts pressure tracking at the saved deterministic cycle');
+  assert.ok(Object.values(migratedSix.world.systems).every(world => world.soloFront.lastCause === 'migration'));
+  assert.equal(validateDomainState(migratedSix).ok, true);
 
   const schemaThree = createShowcaseReadyDomainState();
   schemaThree.schemaVersion = 3;
@@ -705,6 +788,8 @@ function verifyConstructionSystem() {
 
 function run() {
   verifyLockedCatalog();
+  verifyPlanetSurveyOwnershipAndDepletion();
+  verifyDeterministicSoloFrontPressure();
   verifyBaseManagementAndStaffing();
   verifyConstructionSystem();
   const progressionState = completeAelosVeyraKarakChain();

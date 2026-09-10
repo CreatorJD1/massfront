@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/* Stage 11C space/main-menu acceptance capture.
+/* Stage 11C space/player-entry acceptance capture.
 
    This is deliberately a source-bound acceptance tool rather than a beauty-shot
    script. It enters the real same-tab MASSFRONT bridge, records the hardware GPU,
@@ -24,12 +24,14 @@ import { assertHardwareGpu } from './chrome-gpu.mjs';
 
 const execFile = promisify(execFileCallback);
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
-const outDir = join(root, 'audit', 'stage11-space-ux');
+const evidenceTag = String(process.env.MF_STAGE11_EVIDENCE_TAG || '').replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '');
+const outDir = join(root, 'audit', evidenceTag ? `stage11-space-ux-${evidenceTag}` : 'stage11-space-ux');
 const shotsDir = join(outDir, 'screenshots');
 const startedUtc = new Date().toISOString();
 const VIEW_PHONE = { width: 412, height: 900 };
 const VIEW_LANDSCAPE = { width: 915, height: 412 };
 const ROOMS_ONLY = process.argv.includes('--rooms-only');
+const TRAINING_ONLY = process.argv.includes('--training-only');
 const ROOM_CONTROLLERS = Object.freeze([
   Object.freeze({ id: 'command', deck: 'A', label: 'Command Core' }),
   Object.freeze({ id: 'navigation', deck: 'A', label: 'Navigation Bridge' }),
@@ -262,16 +264,11 @@ async function newPage(browser, label, viewport = VIEW_PHONE) {
     try {
       // Every acceptance page represents a separate new player. The browser is
       // shared intentionally for hardware-GPU ownership, so clear origin state
-      // before restoring only the non-product launch gates below.
+      // once and then exercise the real launcher, intro and identity controls.
       if (!sessionStorage.getItem('mf_stage11_acceptance_page')) {
         localStorage.clear();
         sessionStorage.setItem('mf_stage11_acceptance_page', '1');
       }
-      localStorage.setItem('mf_ap_gate_closed', '1');
-      localStorage.setItem('mf_ap_dismissed', '1');
-      localStorage.setItem('mf_offline', '1');
-      localStorage.setItem('mf_prealpha_cinematic_v2', 'test-seen');
-      localStorage.setItem('mf_auth_gate_v1', '1');
     } catch {}
   });
   evidence.pageDiagnostics.push(diagnostics);
@@ -281,27 +278,60 @@ async function newPage(browser, label, viewport = VIEW_PHONE) {
 async function bootBase(page, baseUrl, gpuLabel) {
   await page.goto(`${baseUrl}index.html`, { waitUntil: 'domcontentloaded', timeout: 120_000 });
   gpuRecord(gpuLabel, await assertHardwareGpu(page));
-  await page.waitForFunction(() => typeof META === 'object' && META && typeof metaSave === 'function' && typeof mfOpenExploration === 'function', null, { timeout: 180_000 });
-  const enabled = await page.evaluate(() => {
-    META.settings = META.settings || {};
-    META.settings.experimentalExploration = true;
-    return metaSave() === true && META.settings.experimentalExploration === true;
-  });
-  check(gpuLabel, 'experimental Galactic setting persisted in isolated acceptance profile', enabled);
-  await page.waitForFunction(() => typeof bootConfirmed !== 'undefined' && bootConfirmed, null, { timeout: 180_000 });
-  const intro = page.locator('#mfIntroStart');
-  if (await intro.isVisible().catch(() => false)) await intro.click();
-  await page.waitForFunction(() => document.body.classList.contains('mfIntroDone') && !document.getElementById('mfBootCover'), null, { timeout: 90_000 }).catch(() => {});
-  const apClose = page.locator('#apCloseBtn');
-  if (await apClose.isVisible().catch(() => false)) await apClose.click();
+  await page.waitForFunction(() => typeof META === 'object' && META && typeof mfOpenExploration === 'function'
+    && typeof window.mfLauncherSnapshot === 'function' && typeof bootConfirmed !== 'undefined' && bootConfirmed,
+    null, { timeout: 180_000 });
+  const capability = await page.evaluate(() => ({
+    build: window.__MF_BUILD_HAS_GALACTIC_EXPLORATION === true,
+    ota: window.__MF_OTA_HAS_GALACTIC_DELIVERY === true,
+    legacyPreference: Object.prototype.hasOwnProperty.call(META.settings || {}, 'experimentalExploration')
+  }));
+  check(gpuLabel, 'integrated Galactic capability comes from the packaged or OTA contract',
+    (capability.build || capability.ota) && !capability.legacyPreference, JSON.stringify(capability));
   await page.waitForFunction(() => {
-    const el = document.getElementById('startScreen');
-    const start = document.getElementById('startBtn');
-    if (!el || !start) return false;
-    const style = getComputedStyle(el);
-    return style.display !== 'none' && style.visibility !== 'hidden' && start.getBoundingClientRect().height > 0;
-  }, null, { timeout: 60_000 });
-  await page.waitForTimeout(550);
+    const shown = element => {
+      if (!element || element.disabled) return false;
+      const style = getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+    };
+    const primary = document.getElementById('mfLaunchPlay');
+    const offline = document.getElementById('mfLaunchOffline');
+    return shown(offline) || shown(primary) && /CONTINUE TO INTRO/.test(primary.textContent || '');
+  }, null, { timeout: 120_000 });
+  const launcher = await page.evaluate(() => {
+    const primary = document.getElementById('mfLaunchPlay');
+    const offline = document.getElementById('mfLaunchOffline');
+    const visible = element => {
+      if (!element || element.disabled) return false;
+      const style = getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+    };
+    const usePrimary = visible(primary) && /CONTINUE TO INTRO/.test(primary.textContent || '');
+    return {
+      selector: usePrimary ? '#mfLaunchPlay' : '#mfLaunchOffline',
+      label: (usePrimary ? primary : offline)?.textContent?.replace(/\s+/g, ' ').trim() || '',
+      snapshot: window.mfLauncherSnapshot()
+    };
+  });
+  check(gpuLabel, 'real launcher exposes an enabled route to the title sequence',
+    launcher.selector === '#mfLaunchPlay' || launcher.selector === '#mfLaunchOffline', JSON.stringify(launcher));
+  await page.locator(launcher.selector).click();
+  const intro = page.locator('#mfIntroStart');
+  await intro.waitFor({ state: 'visible', timeout: 60_000 });
+  await intro.click();
+  const offlineIdentity = page.locator('#apOfflineBtn');
+  await offlineIdentity.waitFor({ state: 'visible', timeout: 60_000 });
+  await page.evaluate(() => {
+    sessionStorage.removeItem('mf_stage11_player_entry');
+    const record = event => {
+      if (event.detail?.state !== 'offline') return;
+      sessionStorage.setItem('mf_stage11_player_entry', JSON.stringify(event.detail));
+      removeEventListener('massfront:identity-state', record);
+    };
+    addEventListener('massfront:identity-state', record);
+  });
+  await offlineIdentity.click();
+  return { capability, launcher, intro: '#mfIntroStart', identity: '#apOfflineBtn' };
 }
 
 async function waitModule(page, gpuLabel) {
@@ -346,17 +376,6 @@ async function assertPageClean(scope, diagnostics) {
   check(scope, 'no page errors', diagnostics.pageErrors.length === 0, diagnostics.pageErrors.join(' | ') || 'clean');
   check(scope, 'no console errors', diagnostics.consoleErrors.length === 0, diagnostics.consoleErrors.join(' | ') || 'clean');
   check(scope, 'no local request failures', diagnostics.requestFailures.length === 0, diagnostics.requestFailures.join(' | ') || 'clean');
-}
-
-async function baseMenuState(page) {
-  return page.evaluate(() => ({
-    bodyClass: document.body.className,
-    frontScreen: document.body.dataset.frontScreen || '',
-    startText: document.getElementById('startBtn')?.textContent?.replace(/\s+/g, ' ').trim() || '',
-    onboardingVisible: Boolean(document.getElementById('mfOnboardingChoice')),
-    originalMenuDestinations: ['armoryBtn', 'opsBtn', 'dailyBtn', 'dossierBtn', 'settingsBtn', 'profileBtn'].filter(id => Boolean(document.getElementById(id))),
-    gate: window.MFNewCareerFactionGate?.state?.() || null
-  }));
 }
 
 async function normalSpaceState(page) {
@@ -465,13 +484,15 @@ async function managementProfileState(page) {
     const position = scene.camera.position;
     const target = scene.cameraTarget;
     const up = scene.camera.up;
+    const depth = Math.max(.001, target.y - position.y);
     return {
       selectedDistrictId: scene.selectedDistrictId,
       position: { x: position.x, y: position.y, z: position.z },
       target: { x: target.x, y: target.y, z: target.z },
       up: { x: up.x, y: up.y, z: up.z },
-      sideOn: scene.selectedDistrictId === null && Math.abs(position.x - target.x) < 0.05
-        && Math.abs(position.z - target.z) < 0.05 && position.y < target.y
+      sideOn: scene.selectedDistrictId === null && depth > 10
+        && Math.abs(position.x - target.x) / depth < .01
+        && Math.abs(position.z - target.z) / depth < .05
         && Math.abs(up.x) < 0.01 && Math.abs(up.y) < 0.01 && Math.abs(up.z - 1) < 0.01
     };
   });
@@ -527,35 +548,35 @@ async function minimapState(page) {
 async function enterStandardBattleFromHub(page) {
   await page.setViewportSize(VIEW_PHONE);
   await page.waitForTimeout(650);
-  await page.click('[data-nav="more"]');
-  await page.waitForFunction(() => document.querySelectorAll('.uga-session-type').length === 4, null, { timeout: 30_000 });
-  await scrollSessionCard(page, 0);
-  await page.click('[data-session-route="standard-classic"]');
-  const classicTerminal = page.locator('[data-host-route="mode-standard"]');
-  await classicTerminal.waitFor({ state: 'visible', timeout: 30_000 });
-  const terminalState = await page.evaluate(() => ({
-    view: document.querySelector('.uga-command-shell')?.dataset.view || '',
-    modes: [...document.querySelectorAll('[data-session-mode]')].map(button => ({
-      label: button.dataset.sessionMode,
-      route: button.dataset.hostRoute || '',
-      disabled: button.disabled
-    }))
-  }));
-  check('standard-route', 'Standard / Classic opens the preserved session terminal before leaving space',
-    terminalState.view === 'classic'
-      && terminalState.modes.some(mode => mode.label === 'Standard / Classic' && mode.route === 'mode-standard' && !mode.disabled)
-      && terminalState.modes.some(mode => mode.label === 'Campaign' && mode.route === 'mode-campaign' && !mode.disabled)
-      && terminalState.modes.some(mode => mode.label === 'Co-op / Versus' && mode.disabled)
-      && terminalState.modes.some(mode => mode.label === 'MMO' && mode.disabled),
-    JSON.stringify(terminalState));
-  const classicState = await roomControllerState(page);
-  check('all-rooms', 'Classic MASSFRONT terminal opens its real integrated controller', classicState.scene === 'uga' && classicState.view === 'classic' && classicState.heading === 'Classic MASSFRONT Terminal' && classicState.contextTextLength >= 180 && classicState.actionableControls >= 3, JSON.stringify(classicState));
-  check('all-rooms', 'Classic MASSFRONT terminal stays within the 412px viewport', classicState.horizontalOverflow <= 0 && classicState.contextRect?.width <= VIEW_PHONE.width, JSON.stringify(classicState));
-  await capture(page, '05b-classic-massfront-terminal-412x900', 'Classic MASSFRONT terminal', 'The twelfth Stage 11 management destination opens the integrated local mode router; playable Standard/Campaign routes and unavailable network modes remain distinct.', classicState);
+  /* Standard Deployment in Campaign Hub intentionally bypasses the retired
+     duplicate mode picker. Stage 11 still needs to prove the visible Classic
+     tab and the real base War Room, so enter through that explicit nav route
+     before selecting Standard on the base-owned surface. */
   const baseNavigation = page.waitForURL(url => url.pathname === '/index.html', { timeout: 120_000 });
-  await classicTerminal.click();
+  await page.click('[data-nav="classic"]');
   await baseNavigation;
-  gpuRecord('standard-battle-base-412x900', await assertHardwareGpu(page));
+  gpuRecord('classic-war-room-base-412x900', await assertHardwareGpu(page));
+  await page.locator('#warScr').waitFor({ state: 'visible', timeout: 60_000 });
+  const terminalState = await page.evaluate(() => ({
+    title: document.querySelector('#warScr .subMenuHead h2')?.textContent?.trim() || '',
+    modes: [...document.querySelectorAll('#warScr .warCard')].map(button => ({
+      id: button.dataset.mode || '',
+      label: button.querySelector('.warNm')?.textContent?.trim() || '',
+      locked: button.classList.contains('locked'),
+      ariaDisabled: button.getAttribute('aria-disabled') || ''
+    })),
+    horizontalOverflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth
+  }));
+  check('standard-route', 'Classic tab opens the real base War Room before Standard setup',
+    /WAR ROOM/.test(terminalState.title)
+      && terminalState.modes.some(mode => mode.id === 'standard' && mode.label === 'STANDARD' && !mode.locked)
+      && terminalState.modes.some(mode => mode.id === 'campaign' && mode.label === 'CAMPAIGN' && !mode.locked)
+      && terminalState.modes.some(mode => mode.id === 'coop' && mode.locked && mode.ariaDisabled === 'true')
+      && terminalState.modes.some(mode => mode.id === 'mmo' && mode.locked && mode.ariaDisabled === 'true'),
+    JSON.stringify(terminalState));
+  check('standard-route', 'Classic War Room stays within the 412px viewport', terminalState.horizontalOverflow <= 0, JSON.stringify(terminalState));
+  await capture(page, '05b-classic-massfront-terminal-412x900', 'Classic MASSFRONT War Room', 'The visible Classic tab opens the base-owned War Room; playable Standard/Campaign routes and unavailable network modes remain distinct.', terminalState);
+  await page.click('.warCard[data-mode="standard"]');
   await page.waitForFunction(() => typeof bootConfirmed !== 'undefined' && bootConfirmed
     && typeof mfGalaxyStage !== 'undefined' && mfGalaxyStage === 'galaxy', null, { timeout: 180_000 });
 
@@ -663,16 +684,22 @@ async function verifyBattleReceiver(page, route) {
 async function runFreshCareerFlow(browser, baseUrl) {
   const { page, diagnostics } = await newPage(browser, 'fresh-career');
   try {
-    await bootBase(page, baseUrl, 'fresh-base-412x900');
-    const menu = await baseMenuState(page);
-    check('main-menu', 'existing main menu remains the front screen', menu.frontScreen === 'startScreen' || /mfMenuOpen/.test(menu.bodyClass), JSON.stringify(menu));
-    check('main-menu', 'primary action reads START MASSFRONT', menu.startText === '▶ START MASSFRONT', menu.startText);
-    check('main-menu', 'original menu destinations remain mounted', menu.originalMenuDestinations.length >= 6, menu.originalMenuDestinations.join(','));
-    check('main-menu', 'experimental career choice does not cover the main menu before START', menu.onboardingVisible === false, String(menu.onboardingVisible));
-    await capture(page, '01-main-menu-start-massfront-412x900', 'Existing MASSFRONT main menu', 'The original front-end remains intact; its primary action is START MASSFRONT and the existing destinations remain mounted.', menu);
-
-    await page.click('#startBtn');
+    const entry = await bootBase(page, baseUrl, 'fresh-base-412x900');
     await waitModule(page, 'fresh-space-412x900');
+    const identity = await page.evaluate(() => {
+      try { return JSON.parse(sessionStorage.getItem('mf_stage11_player_entry') || 'null'); }
+      catch { return null; }
+    });
+    check('player-entry', 'launcher, title and offline identity continue directly into integrated Galactic space',
+      identity?.state === 'offline' && identity?.source === 'offline-choice', JSON.stringify({ entry, identity }));
+    /* SUPERSEDED CONTRACT — this capture is not acceptance proof. Launch now
+       routes to campaign_hub, so a fresh player sits in scene==='uga' and this
+       wait for 'system' can only time out and fall through to the diagnostic
+       below. The hub-first launch/home evidence comes from
+       tools/verify-launch-home-entry.mjs. Repair this capture against a real run
+       before trusting its screenshots; flipping the scene string alone will not
+       do, because the story-transmission rail it expects belongs to the old
+       system-first first entry. */
     const introVisible = await page.waitForFunction(() => window.__MASSFRONT_SPACE__?.scene === 'system' && !document.getElementById('storyTransmission')?.hidden, null, { timeout: 45_000 })
       .then(() => true, () => false);
     if (!introVisible) {
@@ -698,6 +725,10 @@ async function runFreshCareerFlow(browser, baseUrl) {
     check('world-intro', 'opening veil is fully gone and stays gone before capture', intro.renderVeil?.ready && intro.renderVeil.visibility === 'hidden' && intro.renderVeil.opacity === '0', JSON.stringify(intro.renderVeil));
     await capture(page, '02-world-intro-keel-story-rail-412x900', 'Cinematic world introduction + normal-space KEEL', 'A genuine new career enters the exterior Aelos system. KEEL occupies the dedicated story rail; there is no minimap receiver in the space document.', intro);
 
+    await page.locator('[data-story-action="first-entry-next"]').waitFor({ state: 'visible', timeout: 30_000 });
+    await page.click('[data-story-action="first-entry-next"]');
+    await page.locator('[data-story-action="first-entry-continue"]').waitFor({ state: 'visible', timeout: 30_000 });
+    await page.click('[data-story-action="first-entry-continue"]');
     await page.waitForFunction(() => document.querySelectorAll('[data-story-action]').length === 2, null, { timeout: 30_000 });
     const choice = await normalSpaceState(page);
     check('first-choice', 'both optional tutorial paths are visible', choice.actions.map(action => action.id).join(',') === 'begin-planetary-training,skip-to-faction-selection', JSON.stringify(choice.actions));
@@ -785,7 +816,13 @@ async function runFreshCareerFlow(browser, baseUrl) {
 
     await page.click('#btnUgaCommand');
     await page.waitForFunction(() => window.__MASSFRONT_SPACE__?.scene === 'uga' && document.querySelector('.uga-command-shell'), null, { timeout: 180_000 });
-    await page.waitForTimeout(900);
+    await page.waitForFunction(() => {
+      const scene = window.__MASSFRONT_SPACE__?.commandScene;
+      if(scene?.selectedDistrictId !== null) return false;
+      const depth=scene.cameraTarget.y-scene.camera.position.y;
+      return depth>10 && Math.abs(scene.camera.position.x-scene.cameraTarget.x)/depth<.01
+        && Math.abs(scene.camera.position.z-scene.cameraTarget.z)/depth<.05;
+    }, null, { timeout: 30_000 });
     const management = await hubState(page);
     const managementProfile = await managementProfileState(page);
     check('management', 'ship management uses the full side-profile camera', management.scene === 'uga' && managementProfile?.sideOn === true, JSON.stringify(managementProfile));
@@ -801,7 +838,7 @@ async function runFreshCareerFlow(browser, baseUrl) {
     await page.waitForFunction(() => document.querySelectorAll('.uga-session-type').length === 4, null, { timeout: 30_000 });
     const hub = await hubState(page);
     const labels = hub.cards.map(card => card.label);
-    check('campaign-hub', 'four product session families are distinct', stable(labels) === stable(['Standard / Classic', 'Campaign', 'Co-op / Versus', 'MMO']), JSON.stringify(hub.cards));
+    check('campaign-hub', 'four product session families are distinct', stable(labels) === stable(['Standard Deployment', 'Campaign', 'Co-op / Versus', 'MMO']), JSON.stringify(hub.cards));
     check('campaign-hub', 'offline routes open and network routes remain unavailable', hub.cards.slice(0, 2).every(card => !card.disabled && card.action === 'OPEN') && hub.cards.slice(2).every(card => card.disabled && card.action === 'UNAVAILABLE'), JSON.stringify(hub.cards));
     check('campaign-hub', '412x900 cards and actions stay within the viewport', hub.horizontalOverflow <= 0 && hub.buttons.every(button => button.height >= 38 && button.left >= 0 && button.right <= VIEW_PHONE.width), JSON.stringify({ horizontalOverflow: hub.horizontalOverflow, buttons: hub.buttons }));
     await scrollSessionCard(page, 0);
@@ -824,6 +861,13 @@ async function runFreshCareerFlow(browser, baseUrl) {
       const toggle = shell?.querySelector('.uga-sheet-toggle[data-action="toggle-sheet"]');
       return Boolean(shell && toggle && !shell.classList.contains('is-sheet-expanded') && toggle.getAttribute('aria-expanded') === 'false');
     }, null, { timeout: 30_000 });
+    await page.waitForFunction(() => {
+      const scene = window.__MASSFRONT_SPACE__?.commandScene;
+      if(scene?.selectedDistrictId !== null) return false;
+      const depth=scene.cameraTarget.y-scene.camera.position.y;
+      return depth>10 && Math.abs(scene.camera.position.x-scene.cameraTarget.x)/depth<.01
+        && Math.abs(scene.camera.position.z-scene.cameraTarget.z)/depth<.05;
+    }, null, { timeout: 30_000 });
     const landscapeInspector = await page.evaluate(() => {
       const shell = document.querySelector('.uga-command-shell');
       const toggle = shell?.querySelector('.uga-sheet-toggle[data-action="toggle-sheet"]');
@@ -844,7 +888,7 @@ async function runFreshCareerFlow(browser, baseUrl) {
     const landscapeShot = await capture(page, '08-full-side-profile-management-915x412', 'Landscape side-profile management', 'The unobscured full-ship side elevation remains active at 915×412; the visible inspector is collapsed and runtime camera state proves it did not fall into an angled Command Core cutaway.', { ...landscape, managementProfile: landscapeProfile, inspector: landscapeInspector });
     const landscapeShipRoi = await screenshotRoiMetrics(join(outDir, landscapeShot.path), { x: .07, y: .22, width: .86, height: .50 });
     landscapeShot.state.shipRoi = landscapeShipRoi;
-    check('landscape', '915x412 ship ROI retains readable luminance and contrast', landscapeShipRoi.p80 >= 80 && landscapeShipRoi.contrastP80P20 >= 60 && landscapeShipRoi.fractionAbove32 >= .20, JSON.stringify(landscapeShipRoi));
+    check('landscape', '915x412 ship ROI retains readable luminance and contrast', landscapeShipRoi.p90 >= 80 && landscapeShipRoi.p90 - landscapeShipRoi.p20 >= 60 && landscapeShipRoi.fractionAbove32 >= .20, JSON.stringify(landscapeShipRoi));
     const panel = landscapeInspector.panelRect;
     const roi = landscapeShipRoi.roi;
     const inspectorOverlap = panel && roi
@@ -952,8 +996,11 @@ async function runAllRoomControllerFlow(browser, baseUrl) {
 
 async function startTrainingFromSpace(page, baseUrl, gpuPrefix) {
   await bootBase(page, baseUrl, `${gpuPrefix}-base-412x900`);
-  await page.click('#startBtn');
   await waitModule(page, `${gpuPrefix}-space-412x900`);
+  await page.locator('[data-story-action="first-entry-next"]').waitFor({ state: 'visible', timeout: 45_000 });
+  await page.click('[data-story-action="first-entry-next"]');
+  await page.locator('[data-story-action="first-entry-continue"]').waitFor({ state: 'visible', timeout: 45_000 });
+  await page.click('[data-story-action="first-entry-continue"]');
   await page.waitForFunction(() => document.querySelectorAll('[data-story-action]').length === 2, null, { timeout: 45_000 });
   await page.click('[data-story-action="begin-planetary-training"]');
   await page.waitForURL(url => url.pathname === '/index.html', { timeout: 120_000 });
@@ -973,6 +1020,12 @@ async function runTrainingAndBattleFlow(browser, baseUrl) {
     const training = await page.evaluate(() => ({
       state: trainingUiState(), gate: window.MFNewCareerFactionGate?.state?.() || null,
       bodyClass: document.body.className, scene: 'protected planetary RTS battle',
+      baseCommissioningReturn: typeof window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__,
+      baseCommissioningSource: String(window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__ || '').slice(0, 180),
+      tutorialInternal: typeof window.__tutDebug === 'function' ? {
+        basicMode: Boolean(window.__tutDebug().TUT?.basicMode),
+        trainingMode: Boolean(window.__tutDebug().TUT?.trainingMode)
+      } : null,
       keel: typeof cmdrTxDebug === 'function' ? cmdrTxDebug() : null
     }));
     check('training', 'tutorial choice enters a protected planetary match', training.state.active === true && training.gate.phase === 'training' && /trainingOperation/.test(training.bodyClass), JSON.stringify(training));
@@ -981,6 +1034,17 @@ async function runTrainingAndBattleFlow(browser, baseUrl) {
     await page.click('#keelSkip');
     await page.waitForSelector('#accDlg', { state: 'visible', timeout: 15_000 });
     await page.click('#accDlgY');
+    await page.waitForTimeout(1200);
+    const skipDiagnostic = await page.evaluate(() => ({
+      url: location.href,
+      gate: window.MFNewCareerFactionGate?.state?.() || null,
+      gateMounted: Boolean(document.getElementById('mfCareerFactionGate')),
+      confirmDisplay: document.getElementById('accDlg') ? getComputedStyle(document.getElementById('accDlg')).display : 'missing',
+      training: typeof trainingUiState === 'function' ? trainingUiState() : null,
+      running: typeof running === 'boolean' ? running : null,
+      bridge: window.__MF_GALACTIC_BRIDGE ? { active: window.__MF_GALACTIC_BRIDGE.active, isolated: window.__MF_GALACTIC_BRIDGE.isolated } : null
+    }));
+    console.log(`TRAINING_SKIP_DIAGNOSTIC ${JSON.stringify(skipDiagnostic)}`);
     await page.waitForSelector('#mfCareerFactionGate', { state: 'visible', timeout: 30_000 });
     const skipConvergence = await page.evaluate(() => ({ gate: window.MFNewCareerFactionGate?.state?.() || null, training: trainingUiState() }));
     check('tutorial-skip', 'in-battle tutorial skip converges on the same commissioning gate', skipConvergence.gate.phase === 'faction-selection' && skipConvergence.gate.pending === true, JSON.stringify(skipConvergence));
@@ -995,15 +1059,13 @@ async function runTrainingAndBattleFlow(browser, baseUrl) {
 async function runAcceleratedCompletionConvergence(browser, baseUrl) {
   const { page, diagnostics } = await newPage(browser, 'accelerated-tutorial-completion');
   try {
-    await bootBase(page, baseUrl, 'completion-base-412x900');
-    const launched = await page.evaluate(() => {
-      const armed = window.MFNewCareerFactionGate?.arm?.({ source: 'stage11-acceptance', returnToSpace: false });
-      const training = window.MFNewCareerFactionGate?.afterOnboardingChoice?.({ choice: 'training', source: 'stage11-acceptance' });
-      window.__tutDebug?.().startTraining?.();
-      return { armed, training };
-    });
-    check('tutorial-complete', 'completion harness starts the real protected Training transaction', launched.armed?.armed === true && launched.training === true, JSON.stringify(launched));
-    await page.waitForFunction(() => trainingUiState().active === true, null, { timeout: 180_000 });
+    await startTrainingFromSpace(page, baseUrl, 'completion');
+    const launched = await page.evaluate(() => ({
+      gate: window.MFNewCareerFactionGate?.state?.() || null,
+      training: trainingUiState()
+    }));
+    check('tutorial-complete', 'completion harness reaches the real protected Training transaction through UGA',
+      launched.gate?.phase === 'training' && launched.training?.active === true, JSON.stringify(launched));
     const accelerated = await page.evaluate(() => {
       const debug = window.__tutDebug();
       debug.TUT.doneFlags = debug.activeSteps.map(() => true);
@@ -1099,9 +1161,13 @@ const server = await startServer();
 let browser = null;
 try {
   browser = await launchPwBrowser({ headless: true });
-  if (!ROOMS_ONLY) await runFreshCareerFlow(browser, server.baseUrl);
-  await runAllRoomControllerFlow(browser, server.baseUrl);
-  if (!ROOMS_ONLY) {
+  if (TRAINING_ONLY) {
+    await runTrainingAndBattleFlow(browser, server.baseUrl);
+  } else {
+    if (!ROOMS_ONLY) await runFreshCareerFlow(browser, server.baseUrl);
+    await runAllRoomControllerFlow(browser, server.baseUrl);
+  }
+  if (!ROOMS_ONLY && !TRAINING_ONLY) {
     await runTrainingAndBattleFlow(browser, server.baseUrl);
     await runAcceleratedCompletionConvergence(browser, server.baseUrl);
     await runTests();

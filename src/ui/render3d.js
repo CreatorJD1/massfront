@@ -2324,7 +2324,7 @@ function render(dtDraw){
        build even though the panel button reported "RALLY SET — TAP TO MOVE".
        Ground decals, so they inherit depth and survive camera tilt. */
     for(const Bd of blds){
-      if(!Bd.alive||Bd.team!==0||!Bd.rally)continue;
+      if(!Bd.alive||!(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(Bd):Bd.team===0)||!Bd.rally)continue;
       const R2=Bd.rally;
       if(!vis(R2.x,R2.y,40))continue;
       const rh=gh(R2.x,R2.y),rp=0.55+0.45*Math.sin(t*3.1+R2.x*0.01);

@@ -76,6 +76,7 @@
     "src/offline.js",
     "src/audio.js",
     "src/assetpack.js",
+    "src/content-mount.js",
     "src/hazards.js",
     "src/game/statehash.js",
     "src/authportal.js",

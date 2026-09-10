@@ -12,10 +12,17 @@
    never synthesizes replacement speech or populates the music catalog.
    -------------------------------------------------------------------------- */
 
+import { resolveBaseRuntimeUrl } from '../host/base_runtime_url.js';
+
 export const SPACE_AUDIO_LEVELS = Object.freeze([0, 0.25, 0.5, 0.75, 1]);
 
 const PROFILE_KEY_PREFIX = 'massfront_meta_';
-const AUDIO_ROOT = new URL('../../../../assets/audio/', import.meta.url);
+const AUDIO_ROOT = resolveBaseRuntimeUrl('../../../../assets/audio/', import.meta.url);
+/* The curated long-song playlists are deliberately empty. Use the accepted,
+   dual-codec adaptive bed already included in the base installer instead. */
+const MUSIC_SCENES = new Set(['galactic', 'galaxy', 'rooms', 'survey']);
+const MUSIC_BED = 'mus_ambient';
+const MUSIC_BED_GAIN = 0.28;
 const SFX_FILES = Object.freeze({
   click: 'ui0',
   confirm: 'confirm0',
@@ -98,7 +105,13 @@ export class SpaceAudio {
     this.buffers = new Map();
     this.pending = new Map();
     this.activeVoice = null;
+    this.activeMusic = null;
+    this.retiringMusic = new Set();
+    this.musicRequest = null;
+    this.musicEpoch = 0;
+    this.musicFailed = false;
     this.duckUntil = 0;
+    this.duckTimer = null;
     this.extensions = preferredExtensions();
     this.settings = profileSettings(this.profileId);
     this.scene = 'galactic';
@@ -106,17 +119,37 @@ export class SpaceAudio {
     this.allowDocumentFallback = options.allowDocumentFallback !== false;
     this.lifecycleTarget = options.lifecycleTarget
       || (typeof window !== 'undefined' ? window : null);
+    this.documentTarget = options.documentTarget
+      || (typeof document !== 'undefined' ? document : null);
+    this.lifecycleAttached = false;
     this.handleDocumentExit = () => this.dispose();
+    this.handleVisibility = () => {
+      if (this.documentTarget?.hidden) this.stopMusic(true);
+      else this.refreshSettings();
+    };
+    this.handleStorage = event => {
+      if (!event.key || event.key === `${PROFILE_KEY_PREFIX}${this.profileId}`) this.refreshSettings();
+    };
+    this.handleContextState = () => this.syncMusic();
     /* Same-tab Galactic -> battle navigation does not call the experience's
        ordinary destroy path. Close before the document and its renderer are
        replaced so Chromium never carries an abandoned AudioContext into the
        next WebGL document. Both events are idempotent; pagehide covers normal
        navigation/BFCache and beforeunload starts teardown as early as possible. */
+    this.bindLifecycle();
+  }
+
+  bindLifecycle() {
+    if (this.lifecycleAttached) return;
+    this.lifecycleAttached = true;
     this.lifecycleTarget?.addEventListener?.('pagehide', this.handleDocumentExit);
     this.lifecycleTarget?.addEventListener?.('beforeunload', this.handleDocumentExit);
+    this.lifecycleTarget?.addEventListener?.('storage', this.handleStorage);
+    this.documentTarget?.addEventListener?.('visibilitychange', this.handleVisibility);
   }
 
   init() {
+    this.bindLifecycle();
     if (this.external) return this.external.init?.() !== false;
     /* Prefer a live host bridge. Same-tab navigation destroys the prior
        document and its AudioContext, though, so absence of that bridge means
@@ -132,6 +165,8 @@ export class SpaceAudio {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (!AudioContextClass) return false;
       this.ctx = new AudioContextClass();
+      this.musicFailed = false;
+      this.ctx.addEventListener?.('statechange', this.handleContextState);
       this.compressor = this.ctx.createDynamicsCompressor();
       this.compressor.threshold.value = -12;
       this.compressor.knee.value = 22;
@@ -173,16 +208,98 @@ export class SpaceAudio {
     const now = this.ctx.currentTime;
     this.buses.sfx.gain.setTargetAtTime(this.settings.sound ? this.settings.sfx : 0, now, 0.08);
     this.buses.ambience.gain.setTargetAtTime(this.settings.ambience, now, 0.08);
-    this.buses.music.gain.setTargetAtTime(this.settings.music ? this.settings.musicLevel : 0, now, 0.08);
+    const duck = performance.now() < this.duckUntil ? 0.58 : 1;
+    this.buses.music.gain.setTargetAtTime(this.settings.music ? this.settings.musicLevel * duck : 0, now, 0.08);
     /* Voice is intentionally independent from the Sound Effects toggle. */
     this.buses.voice.gain.setTargetAtTime(this.settings.voice, now, 0.08);
+    this.syncMusic();
     return true;
   }
 
   setScene(scene) {
     this.scene = String(scene || 'galactic');
     if (this.external) return this.external.setScene?.(this.scene) || this.scene;
+    this.syncMusic();
     return this.scene;
+  }
+
+  wantsMusic() {
+    return !this.external && this.ctx?.state === 'running' && this.buses?.music
+      && !this.documentTarget?.hidden && this.settings.music && this.settings.musicLevel > 0
+      && MUSIC_SCENES.has(this.scene);
+  }
+
+  releaseMusic(track) {
+    if (!track) return;
+    try { track.source.stop(); } catch (_) {}
+    try { track.source.disconnect(); track.gain.disconnect(); } catch (_) {}
+    this.retiringMusic.delete(track);
+    if (this.activeMusic === track) this.activeMusic = null;
+  }
+
+  stopMusic(immediate = false) {
+    if (this.musicRequest || this.activeMusic) this.musicEpoch++;
+    this.musicRequest = null;
+    for (const track of [...this.retiringMusic]) this.releaseMusic(track);
+    const track = this.activeMusic;
+    this.activeMusic = null;
+    if (!track) return;
+    if (immediate || this.ctx?.state !== 'running') return this.releaseMusic(track);
+    this.retiringMusic.add(track);
+    const now = this.ctx.currentTime;
+    track.gain.gain.cancelScheduledValues(now);
+    track.gain.gain.setTargetAtTime(0, now, 0.045);
+    try { track.source.stop(now + 0.24); } catch (_) { this.releaseMusic(track); }
+  }
+
+  syncMusic() {
+    if (!this.wantsMusic()) {
+      this.stopMusic(this.ctx?.state !== 'running' || this.documentTarget?.hidden);
+      return Promise.resolve(false);
+    }
+    if (this.activeMusic) return Promise.resolve(true);
+    if (this.musicRequest) return this.musicRequest.promise;
+    if (this.musicFailed) return Promise.resolve(false);
+    const context = this.ctx;
+    const request = { epoch: this.musicEpoch, context, promise: null };
+    /* Claim ownership before load() re-enters init()/applyLevels(). Defer the
+       actual fetch so repeated scene/UI events share this one pending start. */
+    this.musicRequest = request;
+    request.promise = Promise.resolve().then(async () => {
+      if (this.musicRequest !== request || this.ctx !== context || !this.wantsMusic()) return false;
+      const buffer = await this.load(MUSIC_BED);
+      if (this.musicRequest !== request || this.musicEpoch !== request.epoch
+        || this.ctx !== context || !this.wantsMusic()) return false;
+      if (!buffer) { this.musicFailed = true; return false; }
+      for (const previous of [...this.retiringMusic]) this.releaseMusic(previous);
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      const track = { source, gain, stem: MUSIC_BED };
+      source.buffer = buffer;
+      source.loop = true;
+      gain.gain.setValueAtTime(0, context.currentTime);
+      gain.gain.setTargetAtTime(MUSIC_BED_GAIN, context.currentTime, 0.6);
+      source.connect(gain);
+      gain.connect(this.buses.music);
+      source.onended = () => {
+        try { source.disconnect(); gain.disconnect(); } catch (_) {}
+        this.retiringMusic.delete(track);
+        if (this.activeMusic === track) this.activeMusic = null;
+      };
+      this.activeMusic = track;
+      try { source.start(); } catch (_) {
+        this.releaseMusic(track);
+        this.musicFailed = true;
+        return false;
+      }
+      return true;
+    }).catch(() => {
+      if (this.ctx === context && this.musicEpoch === request.epoch) this.musicFailed = true;
+      return false;
+    }).finally(() => {
+      if (this.musicRequest === request) this.musicRequest = null;
+    });
+    return request.promise;
   }
 
   duck(durationMs) {
@@ -194,20 +311,24 @@ export class SpaceAudio {
         ? this.settings.musicLevel * 0.58
         : 0;
       this.buses.music.gain.setTargetAtTime(target, this.ctx.currentTime, 0.06);
-      window.setTimeout(() => {
+      if (this.duckTimer !== null) window.clearTimeout(this.duckTimer);
+      this.duckTimer = window.setTimeout(() => {
+        this.duckTimer = null;
         if (!this.ctx || !this.buses || performance.now() < this.duckUntil) return;
         this.buses.music.gain.setTargetAtTime(
           this.settings.music ? this.settings.musicLevel : 0,
           this.ctx.currentTime,
           0.9
         );
-      }, hold + 30);
+      }, Math.max(0, this.duckUntil - performance.now()) + 30);
     }
     return this.duckUntil;
   }
 
   async load(stem) {
     if (!this.init()) return null;
+    const context = this.ctx;
+    if (!context) return null;
     if (this.buffers.has(stem)) return this.buffers.get(stem);
     if (this.pending.has(stem)) return this.pending.get(stem);
     const request = (async () => {
@@ -215,13 +336,20 @@ export class SpaceAudio {
         try {
           const response = await fetch(new URL(`${stem}.${extension}`, AUDIO_ROOT));
           if (!response.ok) continue;
-          const buffer = await this.ctx.decodeAudioData(await response.arrayBuffer());
+          const bytes = await response.arrayBuffer();
+          if (this.ctx !== context || context.state === 'closed') return null;
+          const buffer = await context.decodeAudioData(bytes);
+          if (this.ctx !== context || context.state === 'closed') return null;
           this.buffers.set(stem, buffer);
           return buffer;
-        } catch (_) {}
+        } catch (_) {
+          if (this.ctx !== context || context.state === 'closed') return null;
+        }
       }
       return null;
-    })().finally(() => this.pending.delete(stem));
+    })().finally(() => {
+      if (this.pending.get(stem) === request) this.pending.delete(stem);
+    });
     this.pending.set(stem, request);
     return request;
   }
@@ -230,8 +358,11 @@ export class SpaceAudio {
     if (!this.init() || !this.buses?.[busName]) return false;
     if (busName === 'sfx' && (!this.settings.sound || this.settings.sfx <= 0)) return false;
     if (busName === 'voice' && this.settings.voice <= 0) return false;
+    const context = this.ctx;
     const buffer = await this.load(stem);
-    if (!buffer || !this.ctx || !this.buses?.[busName]) return false;
+    if (!buffer || this.ctx !== context || !this.buses?.[busName]) return false;
+    if (busName === 'sfx' && (!this.settings.sound || this.settings.sfx <= 0)) return false;
+    if (busName === 'voice' && this.settings.voice <= 0) return false;
     if (busName === 'voice' && this.activeVoice) {
       try { this.activeVoice.stop(); } catch (_) {}
       this.activeVoice = null;
@@ -248,6 +379,7 @@ export class SpaceAudio {
     }
     source.onended = () => {
       if (this.activeVoice === source) this.activeVoice = null;
+      try { source.disconnect(); gain.disconnect(); } catch (_) {}
     };
     try { source.start(); } catch (_) { return false; }
     return true;
@@ -255,6 +387,7 @@ export class SpaceAudio {
 
   play(type) {
     if (this.external) return Promise.resolve(Boolean(this.external.playSfx?.(SFX_SLOTS[type] || type)));
+    this.refreshSettings();
     const stem = SFX_FILES[type];
     return stem ? this.playBuffer(stem, 'sfx') : Promise.resolve(false);
   }
@@ -280,13 +413,20 @@ export class SpaceAudio {
 
   dispose() {
     const lifecycleTarget = this.lifecycleTarget;
-    this.lifecycleTarget = null;
+    this.lifecycleAttached = false;
     lifecycleTarget?.removeEventListener?.('pagehide', this.handleDocumentExit);
     lifecycleTarget?.removeEventListener?.('beforeunload', this.handleDocumentExit);
+    lifecycleTarget?.removeEventListener?.('storage', this.handleStorage);
+    this.documentTarget?.removeEventListener?.('visibilitychange', this.handleVisibility);
     if (this.external) {
-      this.external = null;
       return;
     }
+    this.ctx?.removeEventListener?.('statechange', this.handleContextState);
+    this.stopMusic(true);
+    this.musicEpoch++;
+    if (this.duckTimer !== null) window.clearTimeout(this.duckTimer);
+    this.duckTimer = null;
+    this.duckUntil = 0;
     if (this.activeVoice) {
       try { this.activeVoice.stop(); } catch (_) {}
     }

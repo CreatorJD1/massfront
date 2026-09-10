@@ -202,7 +202,7 @@ function eligible(){
   return true;
 }
 function experimentalEnabled(){
-  return !!(typeof META!=='undefined'&&META&&META.settings&&META.settings.experimentalExploration);
+  return window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true;
 }
 function automaticEligible(){
   /* Experimental new careers make their choice after live space appears. A

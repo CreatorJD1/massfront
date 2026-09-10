@@ -16,6 +16,7 @@ const sourcePaths = [
   'src/ui/uga_command.js',
   'src/ui/uga_command.css',
   'src/space_experience.js',
+  'src/domain/catalog.js',
   'src/assets/generated/deployment_ship_geometry_v1.js',
   'tools/export-deployment-ship-geometry.mjs',
   '../../src/engine/models.js',
@@ -140,10 +141,37 @@ try {
       debugStep(viewport, 'mission-click');
       await page.evaluate(() => document.querySelector('.uga-mission-card:not([disabled])').click());
       await page.waitForSelector('.uga-deployment-planner', { timeout: 20_000 });
+      const battlefieldSelect = page.locator('.uga-deployment-planner [data-deploy="mapId"]');
+      await battlefieldSelect.waitFor({ state: 'visible', timeout: 20_000 });
+      const unselectedBattlefield = await page.evaluate(() => {
+        const planner = document.querySelector('.uga-deployment-planner');
+        return {
+          areaId: planner?.dataset.selectedAreaId || '',
+          mapId: planner?.dataset.selectedMapId || '',
+          mapSize: planner?.dataset.selectedMapSize || '',
+          sizes: [...(planner?.querySelectorAll('[data-deploy="mapId"] option[data-ground-map]') || [])].map(option => option.dataset.mapSize),
+          confirmState: planner?.querySelector('.uga-deployment-readiness')?.dataset.deploymentConfirmState || null,
+          deployDisabled: Boolean(planner?.querySelector('[data-action="deploy"]')?.disabled)
+        };
+      });
+      check('battlefield-explicit-selection-required', Boolean(unselectedBattlefield.areaId)
+        && unselectedBattlefield.mapId === '' && unselectedBattlefield.mapSize === ''
+        && JSON.stringify(unselectedBattlefield.sizes) === JSON.stringify(['compact', 'standard', 'large'])
+        && unselectedBattlefield.confirmState === 'blocked' && unselectedBattlefield.deployDisabled,
+      unselectedBattlefield);
+      const standardMapId = await battlefieldSelect.locator('option[data-map-size="standard"]').getAttribute('value');
+      check('battlefield-standard-choice-present', Boolean(standardMapId && standardMapId.endsWith('_standard')), { standardMapId });
+      await battlefieldSelect.selectOption(standardMapId);
+      await page.waitForFunction(mapId => {
+        const planner = document.querySelector('.uga-deployment-planner');
+        return planner?.dataset.selectedMapId === mapId && planner?.dataset.selectedMapSize === 'standard'
+          && planner?.querySelector('.uga-deployment-readiness')?.dataset.deploymentConfirmState === 'ready'
+          && planner?.querySelector('[data-action="deploy"]')?.disabled === false;
+      }, standardMapId, { timeout: 20_000 });
       debugStep(viewport, 'arena-draft');
       await page.waitForFunction(() => {
         const draft = window.__MASSFRONT_SPACE__?.deploymentArena?.draft;
-        return Boolean(draft?.missionId && draft?.commanderId && draft?.specialistIds?.length === 3);
+        return Boolean(draft?.missionId && draft?.commanderId && draft?.specialistIds?.length === 3 && draft?.mapId);
       }, null, { timeout: 20_000 });
       debugStep(viewport, 'capture');
       await page.waitForTimeout(180);
@@ -359,6 +387,10 @@ try {
           structureControlCount: document.querySelectorAll('[data-deploy-structure]').length,
           supportControlCount: document.querySelectorAll('[data-deploy="support"], [data-deploy-mod]').length,
           landingControlCount: document.querySelectorAll('[data-deploy="landingZone"]').length,
+          groundMapControlCount: document.querySelectorAll('[data-deploy="mapId"]').length,
+          groundAreaId: planner?.dataset.selectedAreaId || null,
+          groundMapId: planner?.dataset.selectedMapId || null,
+          groundMapSize: planner?.dataset.selectedMapSize || null,
           capacityText: capacity?.textContent?.trim() || null,
           confirmState: document.querySelector('.uga-deployment-readiness')?.dataset.deploymentConfirmState || null,
           deployEnabled: Boolean(deploy && !deploy.disabled),
@@ -402,7 +434,7 @@ try {
           },
           draft: experience.deploymentArena.draft,
           draftReady: Boolean(experience.deploymentArena.draft?.missionId && experience.deploymentArena.draft?.commanderId
-            && experience.deploymentArena.draft?.specialistIds?.length === 3),
+            && experience.deploymentArena.draft?.specialistIds?.length === 3 && experience.deploymentArena.draft?.mapId),
           contextLost: canvas.isContextLost?.() || false,
           glError: experience.engine.renderer.getContext().getError()
         };
@@ -411,9 +443,14 @@ try {
       const stationList = Object.values(stationReachability);
       check('true-deployment-route', metrics.routeView === 'deployment' && metrics.rootMode === 'deployment'
         && metrics.screenKind === 'loadout' && metrics.missionId === metrics.selectedMissionId && metrics.missionCardCount === 0, metrics);
-      check('deployment-controls-present', metrics.commanderCount === 1 && metrics.specialistCount === 3
+      check('deployment-controls-present', metrics.groundMapControlCount === 1 && metrics.commanderCount === 1 && metrics.specialistCount === 3
         && metrics.unitControlCount > 0 && metrics.structureControlCount > 0
         && metrics.supportControlCount > 0 && metrics.landingControlCount === 1, metrics);
+      check('battlefield-player-identity', Boolean(metrics.groundAreaId)
+        && metrics.groundMapId === standardMapId && metrics.groundMapSize === 'standard'
+        && metrics.draft?.mapId === standardMapId, {
+        areaId: metrics.groundAreaId, mapId: metrics.groundMapId, mapSize: metrics.groundMapSize, draft: metrics.draft
+      });
       check('six-stations-reachable', metrics.stationCardCount === 6 && stationList.length === 6
         && stationList.every(item => item.visible && item.height >= 48), stationReachability);
       check('commander-reachable', commanderReachable.visible && commanderReachable.height >= 44, commanderReachable);

@@ -29,13 +29,14 @@ class FakeCustomEvent{
   preventDefault(){if(this.cancelable)this.defaultPrevented=true;}
 }
 
-function harness({meta={},training={active:false},saveOk=true,running=false,matchLive=false}={}){
+function harness({meta={},training={active:false},saveOk=true,running=false,matchLive=false,galactic=false}={}){
   const timers=[],events=[],spoken=[];
   let saves=0,launches=0;
   const META={matches:0,standardMatches:0,tutorial:{done:false,skipped:false,version:0,progress:0},
     warPrimer:{done:false,version:0,seen:{}},...meta};
   const context={
     console,Date,CustomEvent:FakeCustomEvent,META,bootConfirmed:true,running,matchLive,gameEnded:false,
+    __MF_BUILD_HAS_GALACTIC_EXPLORATION:galactic,
     location:{search:''},
     document:{readyState:'complete',addEventListener(){},createEvent(){return null;}},
     setInterval(fn){timers.push({kind:'interval',fn});return timers.length;},
@@ -84,10 +85,10 @@ function harness({meta={},training={active:false},saveOk=true,running=false,matc
 }
 
 {
-  const H=harness({meta:{settings:{experimentalExploration:true}}});
+  const H=harness({galactic:true});
   const api=H.context.MFOnboarding,state=api.state();
-  assert.equal(api.eligible(),true,'experimental fresh career lost its post-space choice');
-  assert.equal(api.automaticEligible(),false,'experimental flow would still cover the base menu before live space');
+  assert.equal(api.eligible(),true,'integrated Galactic fresh career lost its post-space choice');
+  assert.equal(api.automaticEligible(),false,'integrated Galactic flow would still cover the base menu before live space');
   assert.equal(state.awaitingSpaceChoice,true,'host cannot tell that live space owes a tutorial choice');
   const flow=api.sequence('experimental-space');
   assert.equal(flow.entryView,'live-space');
@@ -121,7 +122,7 @@ function harness({meta={},training={active:false},saveOk=true,running=false,matc
 }
 
 {
-  const H=harness({meta:{settings:{experimentalExploration:true}}});
+  const H=harness({galactic:true});
   let routed=null;
   assert.equal(H.context.MFOnboarding.chooseTraining({flowId:'experimental-space',launchTraining:false,
     onTraining:detail=>{routed=detail;}}),true);

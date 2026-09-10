@@ -29,7 +29,7 @@ import {
 import { clamp, deepClone, stableStringify } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
 
-export const DOMAIN_STATE_SCHEMA_VERSION = 5;
+export const DOMAIN_STATE_SCHEMA_VERSION = 7;
 export const DOMAIN_STORAGE_FORMAT_VERSION = 2;
 export const DOMAIN_STORAGE_KEY = 'massfront.space_exploration.domain_state';
 export const DOMAIN_COMMANDER_ROSTER_FINGERPRINT = 'fnv1a32:0aadcd2d';
@@ -45,6 +45,10 @@ function integer(value, fallback = 0, minimum = 0, maximum = Number.MAX_SAFE_INT
 
 function uniqueKnown(values, catalog) {
   return [...new Set(Array.isArray(values) ? values.filter(id => typeof id === 'string' && catalog[id]) : [])];
+}
+
+function uniqueStableIds(values) {
+  return [...new Set(Array.isArray(values) ? values.filter(id => typeof id === 'string' && /^[a-z0-9_]{1,96}$/.test(id)) : [])];
 }
 
 function commanderCatalogForContext(context = null) {
@@ -192,19 +196,22 @@ function createWorldState() {
         discovered: true,
         trafficState: 'dense',
         populationState: 'thriving',
-        infestation: { active: false, confirmed: false, severity: 0, hiveTargetsConfirmed: false }
+        infestation: { active: false, confirmed: false, severity: 0, hiveTargetsConfirmed: false },
+        soloFront: { pressure: 18, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
       },
       veyra: {
         discovered: false,
         trafficState: 'sparse',
         populationState: 'frontier',
-        infestation: { active: false, confirmed: false, severity: 0, hiveTargetsConfirmed: false }
+        infestation: { active: false, confirmed: false, severity: 0, hiveTargetsConfirmed: false },
+        soloFront: { pressure: 36, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
       },
       karak: {
         discovered: false,
         trafficState: 'silent',
         populationState: 'unknown',
-        infestation: { active: false, confirmed: false, severity: 88, hiveTargetsConfirmed: false }
+        infestation: { active: false, confirmed: false, severity: 88, hiveTargetsConfirmed: false },
+        soloFront: { pressure: 72, lastCycle: 0, lastDelta: 0, lastCause: 'initial' }
       }
     }
   };
@@ -277,7 +284,7 @@ export function createInitialDomainState(commanderCatalogContext = null) {
     commissioning: { factionId: null, commanderId: null, completed: false, completedRevision: null },
     personnel: { commanders, specialists },
     surveys,
-    discoveries: { foundIds: [], depletedSurveyIds: [] },
+    discoveries: { foundIds: [], depletedSurveyIds: [], extractedDepositIds: [] },
     intelligence: { bySystem: { aelos: 0, veyra: 0, karak: 0 }, evidenceIds: [] },
     story: { currentStep: 'aelos_arrival', completedStepIds: [], karakInfestationRevealed: false },
     world: createWorldState(),
@@ -612,6 +619,7 @@ export function normalizeDomainState(source, commanderCatalogContext = null) {
   }
   state.discoveries.foundIds = uniqueKnown(source.discoveries?.foundIds, DISCOVERY_CATALOG);
   state.discoveries.depletedSurveyIds = uniqueKnown(source.discoveries?.depletedSurveyIds, SURVEY_CATALOG);
+  state.discoveries.extractedDepositIds = uniqueStableIds(source.discoveries?.extractedDepositIds);
   state.intelligence.evidenceIds = uniqueKnown(source.intelligence?.evidenceIds, DISCOVERY_CATALOG);
   for (const systemKey of Object.keys(SYSTEM_CATALOG)) state.intelligence.bySystem[systemKey] = integer(source.intelligence?.bySystem?.[systemKey], 0, 0, 5);
   state.story.currentStep = typeof source.story?.currentStep === 'string' ? source.story.currentStep : state.story.currentStep;
@@ -620,8 +628,11 @@ export function normalizeDomainState(source, commanderCatalogContext = null) {
 
   for (const systemKey of Object.keys(SYSTEM_CATALOG)) {
     const incoming = source.world?.systems?.[systemKey];
-    if (!incoming || typeof incoming !== 'object') continue;
     const world = state.world.systems[systemKey];
+    if (!incoming || typeof incoming !== 'object') {
+      world.soloFront.lastCycle = state.ship.expeditionCycle;
+      continue;
+    }
     world.discovered = Boolean(incoming.discovered);
     world.trafficState = typeof incoming.trafficState === 'string' ? incoming.trafficState : world.trafficState;
     world.populationState = typeof incoming.populationState === 'string' ? incoming.populationState : world.populationState;
@@ -629,6 +640,18 @@ export function normalizeDomainState(source, commanderCatalogContext = null) {
     world.infestation.confirmed = Boolean(incoming.infestation?.confirmed);
     world.infestation.severity = integer(incoming.infestation?.severity, world.infestation.severity, 0, 100);
     world.infestation.hiveTargetsConfirmed = Boolean(incoming.infestation?.hiveTargetsConfirmed);
+    if (isRecord(incoming.soloFront)) {
+      world.soloFront.pressure = integer(incoming.soloFront.pressure, world.soloFront.pressure, 0, 100);
+      world.soloFront.lastCycle = integer(incoming.soloFront.lastCycle, state.ship.expeditionCycle, 0, state.ship.expeditionCycle);
+      world.soloFront.lastDelta = integer(incoming.soloFront.lastDelta, 0, -100, 100);
+      world.soloFront.lastCause = typeof incoming.soloFront.lastCause === 'string' && incoming.soloFront.lastCause
+        ? incoming.soloFront.lastCause.slice(0, 160)
+        : 'migration';
+    } else {
+      // Old saves start tracking from their current deterministic cycle; no retroactive pressure is invented.
+      world.soloFront.lastCycle = state.ship.expeditionCycle;
+      world.soloFront.lastCause = 'migration';
+    }
   }
   state.world.systems[state.route.systemId].discovered = true;
 
@@ -850,8 +873,25 @@ export function validateDomainState(state, commanderCatalogContext = null) {
     const survey = state.surveys?.[surveyId];
     if (!survey || !['locked', 'available', 'completed'].includes(survey.status)) issues.push(issue('SURVEY_STATE_INVALID', `${surveyId} has an invalid state.`, `surveys.${surveyId}`));
   }
+  if (!Array.isArray(state.discoveries?.extractedDepositIds)
+      || new Set(state.discoveries.extractedDepositIds).size !== state.discoveries.extractedDepositIds.length
+      || state.discoveries.extractedDepositIds.some(id => typeof id !== 'string' || !/^[a-z0-9_]{1,96}$/.test(id))) {
+    issues.push(issue('DEPOSIT_LEDGER_INVALID', 'Extracted deposit IDs must be unique stable IDs.', 'discoveries.extractedDepositIds'));
+  }
   for (const systemId of Object.keys(SYSTEM_CATALOG)) {
-    if (!state.world?.systems?.[systemId]) issues.push(issue('WORLD_SYSTEM_STATE_MISSING', `${systemId} world state is missing.`, `world.systems.${systemId}`));
+    const world = state.world?.systems?.[systemId];
+    if (!world) {
+      issues.push(issue('WORLD_SYSTEM_STATE_MISSING', `${systemId} world state is missing.`, `world.systems.${systemId}`));
+      continue;
+    }
+    const front = world.soloFront;
+    if (!isRecord(front)
+        || !Number.isInteger(front.pressure) || front.pressure < 0 || front.pressure > 100
+        || !Number.isInteger(front.lastCycle) || front.lastCycle < 0 || front.lastCycle > state.ship.expeditionCycle
+        || !Number.isInteger(front.lastDelta) || front.lastDelta < -100 || front.lastDelta > 100
+        || typeof front.lastCause !== 'string' || !front.lastCause || front.lastCause.length > 160) {
+      issues.push(issue('SOLO_FRONT_STATE_INVALID', `${systemId} solo-front pressure is invalid.`, `world.systems.${systemId}.soloFront`));
+    }
   }
   const pending = state.operations?.pending;
   if (pending) {
@@ -922,7 +962,14 @@ export class LocalDomainStore {
     this.current = null;
   }
 
-  load({ recover = true } = {}) {
+  load({ recover = true, snapshot = null } = {}) {
+    // A host snapshot already merges account progress and entry commissioning.
+    // Re-reading raw campaign bytes here would silently undo that merge.
+    if (snapshot !== null) {
+      this.current = deserializeDomainState(serializeDomainState(snapshot, this.commanderCatalogContext), this.commanderCatalogContext);
+      this.lastLoadError = null;
+      return deepClone(this.current);
+    }
     const serialized = this.storage.getItem(this.key);
     if (serialized === null) {
       this.current = deepClone(this.initialState || createInitialDomainState(this.commanderCatalogContext));
@@ -957,6 +1004,7 @@ export class LocalDomainStore {
   }
 
   save(state, { type = 'save' } = {}) {
+    if (this.lastLoadError) throw this.lastLoadError;
     const previous = this.current ? deepClone(this.current) : null;
     const normalized = normalizeDomainState(state, this.commanderCatalogContext);
     assertDomainState(normalized, this.commanderCatalogContext);
@@ -982,6 +1030,7 @@ export class LocalDomainStore {
     const state = showcaseReady
       ? createShowcaseReadyDomainState(this.commanderCatalogContext)
       : createInitialDomainState(this.commanderCatalogContext);
+    this.lastLoadError = null;
     return this.save(state, { type: 'reset' });
   }
 

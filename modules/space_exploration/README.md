@@ -8,8 +8,8 @@ The default scene is non-combat capital-ship exploration. Selecting the UGA
 civilization ark opens its Blender-authored command cutaway, where each real
 district can be selected to focus the 3D camera and expose construction,
 modules, research, resident factions, contracts, personnel, and local mission
-simulation. Classic Modes is a Command Core terminal and never opens the
-production game.
+simulation. Galactic Command replaces the old main menu and War Table; its
+Command Core launches tactical deployments into the production battle runtime.
 
 ## Player-facing contract
 

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { syncStartupPackRuntime } from '../../../tools/sync-startup-pack-runtime.mjs';
 import {
   buildReachability,
   expectedAllowlistPaths
@@ -25,6 +26,7 @@ function runtimePath(absolute) {
   return relative(moduleRoot, absolute).split(sep).join('/');
 }
 
+await syncStartupPackRuntime();
 const candidates = await walk(moduleRoot);
 const moduleRecords = candidates.map(absolute => ({ path: runtimePath(absolute) }));
 const reachability = await buildReachability(moduleRoot, moduleRecords);
@@ -50,18 +52,21 @@ const manifest = {
   kind: 'ExplorationContentManifestV1',
   contentVersion: 'galactic-exploration-dev-1',
   compatibleGameRange: 'developer-builds-only',
-  optional: true,
+  delivery: 'base',
+  optional: false,
   resumable: true,
   installed: false,
   totalBytes: files.reduce((sum, file) => sum + file.bytes, 0),
   sourceArchivePreserved: true,
   allowlistRules: [
     'entrypoint-reachable runtime code excluding src/combat',
-    'three referenced GLB runtime models',
+    'two retained GLB models plus the byte-identical restored authored UGA sections',
     'six aligned runtime PBR maps per authored planet',
     'approved personnel portraits',
+    'approved 1x and 2x neutral GUI-material runtime slices',
     'creator-accepted Stage 10 world-model catalog and lazy-loaded GLBs',
-    'Three.js runtime libraries'
+    'ledgered non-runtime model exclusions with explicit keep decisions',
+    'Three.js, Draco, and KTX2/Basis runtime libraries'
   ],
   excludedWithoutDeletion: [
     'assets/source/**', 'assets/**/*.blend', 'assets/**/*.blend1', 'assets/**/source/**',

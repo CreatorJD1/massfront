@@ -56,6 +56,7 @@ export async function buildAudioPack({root}={}){
      must survive a soundtrack rebuild byte-for-byte as parsed manifest data. */
   out.packs={...out.packs,music:{
     format:2,
+    delivery:'base',
     label:'MASSFRONT faction soundtrack',
     bytes,
     chunkSize:AUDIO_PACK_CHUNK_BYTES,

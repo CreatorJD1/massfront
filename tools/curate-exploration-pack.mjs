@@ -29,12 +29,10 @@
  * from players. An exclusion you can only detect by noticing a missing file is not
  * a record of a decision. A ledger plus a curation step is.
  *
- * The oversize ledger also carries a keptDespiteSize list. uga-command-cutaway.glb
- * is the largest file in the pack at 65.17 MiB and the owner explicitly keeps it —
- * its bulk is 61.25 MiB of embedded PNG, a texture problem being handled
- * separately, sitting on already-Draco-compressed geometry. This tool hard-refuses
- * if any rule would remove a kept path, so a later ledger edit cannot quietly drop
- * the obvious-looking biggest file.
+ * The oversize ledger may also carry a keptDespiteSize list. This tool
+ * hard-refuses if any exclusion rule would remove such a protected path. The
+ * list is intentionally empty after the later visual-quality verdict rejected
+ * the former UGA cutaway exception.
  *
  * Usage:
  *   node tools/curate-exploration-pack.mjs                    # dry run, writes nothing
@@ -55,6 +53,7 @@ const OVERSIZE_LEDGER = 'modules/space_exploration/assets/source/EXCLUDED_OVERSI
    regressed and tools/verify-exploration-pack-models.mjs is about to fail too. */
 const DISCARDED_LEDGERS = [
   ['Stage 10 pack failures', 'modules/space_exploration/assets/source/blender/world-kits/DISCARDED_STAGE10_PACK_FAILURES.json'],
+  ['Visual-quality rejects', 'modules/space_exploration/assets/source/blender/world-kits/DISCARDED_VISUAL_QUALITY_2026-09-05.json'],
   ['Stage 10 Spline exclusions', 'modules/space_exploration/assets/source/spline/world-prefabs/DISCARDED_STAGE10_SPLINE_EXCLUSIONS.json'],
   ['Spline props', 'modules/space_exploration/assets/source/spline/world-prefabs/DISCARDED_SPLINE_PROPS.json']
 ];
@@ -136,6 +135,12 @@ for (const [label, rel] of DISCARDED_LEDGERS) {
   if (!existsSync(file)) { console.log(`WARN  ledger missing: ${rel}`); continue; }
   const data = await readJson(file);
   if (data.runtimeAllowed === true) { console.log(`WARN  ${label} is marked runtimeAllowed; skipping`); continue; }
+  for (const path of data.runtimePaths || []) {
+    rules.push({ kind: 'path', value: String(path).replace(/\\/g, '/'), ledger: label, reason: data.reason || '' });
+  }
+  for (const entry of data.entries || []) {
+    if (entry?.path) rules.push({ kind: 'path', value: String(entry.path).replace(/\\/g, '/'), ledger: label, reason: entry.reason || data.reason || '' });
+  }
   for (const id of data.ids || []) rules.push({ kind: 'id', value: String(id).toLowerCase(), ledger: label, reason: data.reason || '' });
 }
 console.log(`Ledgers   ${rules.length} curation rule(s); ${keptPaths.size} path(s) protected as keep-despite-size`);
@@ -146,11 +151,15 @@ console.log(`Ledgers   ${rules.length} curation rule(s); ${keptPaths.size} path(
 function ruleFor(path) {
   const low = path.toLowerCase();
   const stem = basename(low).endsWith('.glb') ? basename(low).slice(0, -4) : null;
+  const normalizedStem = stem?.replace(/_/g, '-');
+  const pathFamily = low.match(/(?:^|\/)world-models\/([^/]+)\//)?.[1] || '';
   for (const rule of rules) {
     if (rule.kind === 'path') { if (path === rule.value) return rule; continue; }
     if (!stem) continue;
-    const tail = rule.value.split('/').pop();
-    if (stem === tail || low.includes(tail) || low.includes(rule.value)) return rule;
+    const idParts = rule.value.split('/'), tail = idParts.pop();
+    if (idParts.length && pathFamily && pathFamily !== idParts[idParts.length - 1]) continue;
+    const normalizedTail = tail.replace(/_/g, '-');
+    if (stem === tail || normalizedStem.includes(normalizedTail) || low.includes(rule.value)) return rule;
   }
   return null;
 }
@@ -238,7 +247,7 @@ console.log(`Removed   ${removed.length} file(s), ${removedBytes} bytes (${mib(r
 console.log(`PASS  size invariant: ${curated.files.length} entries sum to ${assembledSum} and totalBytes reads ${curated.totalBytes} — src/assetpack.js will not reject this for reason 'size'`);
 console.log(`PASS  self-signature recomputed: ${curated.hash}`);
 
-/* ---- advisories curation cannot fix by itself ------------------------ */
+/* ---- coordinated catalog reminder ----------------------------------- */
 if (removed.length) {
   const catalogFile = resolve(root, WORLD_MODEL_CATALOG);
   if (existsSync(catalogFile)) {
@@ -246,13 +255,9 @@ if (removed.length) {
     for (const model of catalog.models || []) {
       if (!removed.some(({ entry }) => model?.runtimePath === entry.path)) continue;
       console.log(`WARN  ${WORLD_MODEL_CATALOG} still lists "${model.key}" with runtimeAccepted:${model.runtimeAccepted} pointing at the removed ${model.runtimePath}.`);
-      console.log(`      Nothing places that key today, so no authored scene breaks, but loadWorldModel('${model.key}') would now 404. Retiring the catalog entry also`);
-      console.log('      means moving the counts modules/space_exploration/src/core/world_model_catalog.js hard-asserts (327/320/7) — a coordinated change, deliberately not made here.');
+      console.log('      Run tools/sync-exploration-runtime-catalog.mjs --apply after installing the derived GLBs.');
     }
   }
-  console.log('WARN  the allowlist rules behind modules/space_exploration/tools/readiness/readiness-core.mjs still resolve to the removed path, so a plain');
-  console.log('      rebuild reintroduces it and the readiness check runtime-manifest:builder-parity reports it as missingExpected. Re-run this tool after');
-  console.log('      every rebuild, or teach the builder to read EXCLUDED_OVERSIZE_V1.json.');
 }
 
 if (!apply) {

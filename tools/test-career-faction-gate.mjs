@@ -127,12 +127,26 @@ function harness({loaded=true,gate=null,trainingDone=false,saveOk=true,lateExplo
 }
 
 {
+  const H=harness({loaded:false,saveOk:false});
+  assert.equal(await H.context.mfOpenExploration('campaign_hub'),false,
+    'unsaved new-career gate entered the separate campaign hub document');
+  assert.deepEqual(H.opens,[]);
+}
+
+{
   const H=harness({loaded:false}),api=H.context.MFNewCareerFactionGate;
-  await H.context.mfOpenExploration('system');
+  assert.equal(await H.context.mfOpenExploration('campaign_hub'),true,
+    'fresh career could not enter the persistent UGA home');
   assert.equal(H.META.newCareerFactionGate.phase,'awaiting-onboarding');
-  assert.equal(api.canEnterSpaceCareer(),false,'fresh unresolved career did not block full UGA entry');
-  assert.equal(await H.context.mfOpenExploration('campaign_hub'),false,'unresolved career bypassed the faction gate');
-  assert.deepEqual(H.opens,['system'],'blocked campaign hub still called the base exploration opener');
+  assert.equal(api.canEnterSpaceCareer(),false,'fresh unresolved career did not retain its ground-operation gate');
+  assert.deepEqual(H.opens,['campaign_hub'],'fresh campaign hub did not call the base exploration opener exactly once');
+  const returnContext={};
+  H.context.__MF_GALACTIC_BRIDGE={isMenuReturnContext:value=>value===returnContext};
+  const beforeReturn=JSON.stringify(H.META);
+  assert.equal(await H.context.mfOpenExploration('campaign_hub',{menuReturn:{}}),true,'ordinary UGA home re-entry was blocked during commissioning');
+  assert.equal(await H.context.mfOpenExploration('campaign_hub',{menuReturn:returnContext}),true,'validated Back must return a neutral career to its existing Galactic hub');
+  assert.equal(JSON.stringify(H.META),beforeReturn,'returning to the hub must not grant or advance commissioning');
+  assert.equal(api.canEnterSpaceCareer(),false,'returning to the hub must not grant ground-operation access');
   assert.equal(api.openFromRoute({choice:'skipped'}),true,'secured skip route did not converge on faction selection');
   assert.equal(H.META.newCareerFactionGate.phase,'faction-selection');
   assert.equal(api.select('brood'),false,'AI-only Brood was accepted by the player gate');
@@ -149,7 +163,8 @@ function harness({loaded=true,gate=null,trainingDone=false,saveOk=true,lateExplo
   await Promise.resolve();
   assert.ok(H.events.some(event=>event.type===api.READY_EVENT&&event.detail.commanderId==='legion_vex'),
     'post-selection UGA continuation event was not emitted');
-  assert.deepEqual(H.opens,['system','system'],'resolved career did not continue to full UGA space');
+  assert.deepEqual(H.opens,['campaign_hub','campaign_hub','campaign_hub','system'],
+    'resolved career did not continue from the persistent UGA home to full space');
 }
 
 {

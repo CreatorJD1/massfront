@@ -1539,6 +1539,16 @@ const mfNavPerf={requests:0,hits:0,misses:0,builds:0,deferred:0,evictions:0,
 const ffDist=new Uint16Array(0);  // replaced at init
 let ffDistA=null,ffQueue=null,ffBucketHead=null,ffBucketNext=null,ffBucketPrev=null,ffBucketCost=null;
 let mfNavJob=null,mfNavQueue=[],mfNavWork=null;
+/* Invalidation deliberately lets an in-flight field finish against its owned
+   blocker snapshot. A match reset is different: no queued route, scheduler
+   tick, or LRU age from the previous battlefield may influence the first order
+   of the next one. Keep mfNavWork allocated; it is only reusable scratch. */
+function mfNavReset(){
+  fields.length=0;ffNext=0;mfFieldUseClock=1;mfNavBuildTick=-1;
+  mfNavQueue.length=0;mfNavJob=null;mfNavPerf.queued=0;
+  ufield.fill(-1);
+  if(typeof mfNavProgressReset==='function')mfNavProgressReset();
+}
 function ffCell(wx,wy){ return clamp(wy/MAP*PGS|0,0,PGS-1)*PGS+clamp(wx/MAP*PGS|0,0,PGS-1); }
 const MF_NAV_CLEARANCE=Object.freeze({infantry:0,light:1,heavy:2,superheavy:3,naval:4});
 const MF_NAV_CLEARANCE_COST=[0,256,512,1024,512];
@@ -1646,7 +1656,7 @@ function mfMoveBlockMaskEnsure(){
     const R=rocks[n];if(R&&(R.s||0)>=30)mfMoveStampCircle(mask,R.x,R.y,R.s*.50+5);
   }
   if(typeof wrecks!=='undefined')for(let n=0;n<wrecks.length;n++){
-    const W=wrecks[n];if(W&&(W.kind===WRECK_RUIN||(W.s||0)>=24))mfMoveStampCircle(mask,W.x,W.y,Math.max(5,(W.s||12)*.50));
+    const W=wrecks[n];if(W&&(W.kind===WRECK_RUIN||(W.navBlock!==false&&(W.s||0)>=24)))mfMoveStampCircle(mask,W.x,W.y,Math.max(5,(W.s||12)*.50));
   }
   mfMoveBlockMask=mask;mfMoveBlockMaskKey=key;
   return mask;
@@ -2986,7 +2996,11 @@ function damageBld(b,dmg,attTeam){
     const Tb=BT[B.type], big=Tb.size>=46;
     /* A nest is grown tissue, not a fabricated building. */
     if(B.type==='nest') addWreckField(B.x,B.y, 0, Tb.size*2.2, WRECK_BIO, Tb.size*0.75, big?4:2);
-    else addWreckField(B.x,B.y, Tb.cm*0.55+18, Tb.ce*0.30, WRECK_STRUCT, Tb.size*0.75, big?4:2);
+    /* Barricades still leave visible, reclaimable scrap, but that scatter must
+       not become a second random wall. Its size roll previously reopened or
+       resealed the exact same breach depending on simulation RNG. */
+    else addWreckField(B.x,B.y, Tb.cm*0.55+18, Tb.ce*0.30, WRECK_STRUCT, Tb.size*0.75, big?4:2,
+      undefined,B.type!=='wall'&&B.type!=='gate');
       /* Release by the INDEX that claimed the node, not by coordinate equality.
          econBindResourceNode (economy.js:174/184) binds any node within 34wu
          and sets taken=true without moving the building onto it, so an exact
@@ -5731,23 +5745,23 @@ function dropRemains(i,airCrash){
     if(SC) SC.alt=0;                               // landed already, it was just killed
   }
 }
-function addWreck(x,y,mass,energy,kind,scale,style){
+function addWreck(x,y,mass,energy,kind,scale,style,navBlock){
   wrecks.push({x,y,a:mfSimRandom()*TAU,s:(scale||1)*(16+mfSimRandom()*10),
                /* `mass||20` turned an EXPLICIT zero into 20 - which quietly
                   minted metal out of every biomass pile, since biomass is
                   defined by carrying mass 0. Default only when absent. */
                mass:mass===undefined?20:mass, m0:mass===undefined?20:mass,
                en:energy||0, e0:energy||0,
-                kind:kind||0, style:style||'', life:0, glow:0, ts:stats.t});
+                kind:kind||0, style:style||'',navBlock:navBlock!==false,life:0, glow:0, ts:stats.t});
   if(wrecks.length>WRECK_CAP) wrecks.shift();
 }
 /* A convenience wrapper: scatter one big loss into several smaller piles so a
    dead factory reads as a debris FIELD rather than a single tidy token.     */
-function addWreckField(x,y,mass,energy,kind,rad,n,style){
+function addWreckField(x,y,mass,energy,kind,rad,n,style,navBlock){
   n=Math.max(1,n|0);
   for(let k=0;k<n;k++){
     const a=mfSimRandom()*TAU, d=Math.sqrt(mfSimRandom())*(rad||30);
-    addWreck(x+Math.cos(a)*d, y+Math.sin(a)*d, mass/n, energy/n, kind, 0.8+mfSimRandom()*0.6,style);
+    addWreck(x+Math.cos(a)*d, y+Math.sin(a)*d, mass/n, energy/n, kind, 0.8+mfSimRandom()*0.6,style,navBlock);
   }
 }
 let reclTip=0;

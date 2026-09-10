@@ -85,7 +85,7 @@
     grid-template-columns: minmax(132px, 1.08fr) minmax(64px, .62fr) auto;
     align-items: stretch;
     gap: 5px;
-    min-height: 48px;
+    min-height: 50px;
   }
   .mf-ident { min-width: 0; gap: 8px; padding: 5px 8px; border-radius: 11px; }
   .mf-mark { width: 30px; height: 30px; flex-basis: 30px; font-size: 10px; }
@@ -103,7 +103,7 @@
   .location-crumb small,
   .location-crumb span { display: none; }
   .top-actions { border-radius: 11px; padding: 2px; }
-  .top-actions .icon-action { min-width: 40px; min-height: 42px; padding: 5px; }
+  .top-actions .icon-action { min-width: 44px; min-height: 44px; padding: 5px; }
   .top-actions .icon-action svg { width: 16px; height: 16px; }
 
   .story-rail,
@@ -132,7 +132,7 @@
   .target-console > p { display: none; }
   .target-actions { grid-template-columns: 58px 58px 58px minmax(0, 1fr); gap: 5px; }
   .target-actions .primary { grid-column: auto; }
-  .target-actions button { min-width: 0; min-height: 42px; padding: 6px; border-radius: 8px; }
+  .target-actions button { min-width: 0; min-height: 44px; padding: 6px; border-radius: 8px; }
   .target-actions button:not(.primary) { flex-direction: column; gap: 2px; }
   .target-actions button:not(.primary) span { display: inline; font-size: 6px; line-height: 1; letter-spacing: .06em; }
   .target-actions button.primary span { font-size: 7px; line-height: 1.25; }
@@ -141,14 +141,14 @@
     left: max(8px, env(safe-area-inset-left));
     right: max(8px, env(safe-area-inset-right));
     bottom: max(8px, env(safe-area-inset-bottom));
-    height: 48px;
-    min-height: 48px;
+    height: 54px;
+    min-height: 54px;
     padding: 4px;
     border-radius: 13px;
   }
   .helm-readout { display: none; }
   .autopilot-actions { height: 100%; grid-template-columns: 1fr 1fr; gap: 5px; }
-  .autopilot-actions button { min-height: 38px; border-radius: 8px; }
+  .autopilot-actions button { min-height: 44px; border-radius: 8px; }
   .space-experience:has(.story-rail[data-transmission-id^="first-entry"]) .helm-dock { transform: translateY(20px); }
 }
 

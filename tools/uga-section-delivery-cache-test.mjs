@@ -1,0 +1,30 @@
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const context=vm.createContext({console,URL});
+vm.runInContext(await readFile('modules/space_exploration/lib/three.min.js','utf8'),context);
+let source=await readFile('modules/space_exploration/src/ship/uga_blender_assets.js','utf8');
+source=source.replace(/^import .*;$/m,'').replace(/import\.meta\.url/g,JSON.stringify(new URL('../modules/space_exploration/src/ship/uga_blender_assets.js',import.meta.url).href)).replace(/^export /gm,'');
+vm.runInContext(source+'\nglobalThis.install=installCommandImageSharing;',context);
+const manifest={schema:'massfront.uga-shared-resource-delivery.v1',resources:[{uri:'opaque.png',pngHasAlpha:false},{uri:'normal.png',pngHasAlpha:true}]};
+function owner(bitmap=true){
+  let factory,requests=0;const calls=[];
+  const imageLoader={isImageBitmapLoader:bitmap,load(url,done,progress,fail){requests++;calls.push({url,done,fail});}};
+  const parser={textureLoader:imageLoader,loadTextureImage:async()=>new context.THREE.Texture()};
+  const release=context.install({register(fn){factory=fn;}},manifest),plugin=factory(parser);
+  const load=url=>new Promise((resolve,reject)=>imageLoader.load(url,resolve,undefined,reject));
+  return{parser,calls,load,release,plugin,get requests(){return requests;}};
+}
+const a=owner(),one=a.load('same.png'),two=a.load('same.png');assert.equal(a.requests,1);
+const immutable={width:2,height:2,close(){throw Error('Shared image must not be closed during parse');}};
+a.calls.shift().done(immutable);assert.equal(await one,immutable);assert.equal(await two,immutable);
+assert.equal((await a.parser.loadTextureImage(0,{uri:'opaque.png'})).format,context.THREE.RGBFormat);
+assert.equal((await a.parser.loadTextureImage(0,{uri:'normal.png'})).format,context.THREE.RGBAFormat);
+const b=owner(),separate=b.load('same.png');assert.equal(b.requests,1);b.calls.shift().done({width:2,height:2});assert.notEqual(await separate,immutable);
+a.plugin.afterRoot();const after=a.load('same.png');assert.equal(a.requests,2,'Parse-local promises released');a.calls.shift().done(immutable);await after;
+const legacy=owner(false),l1=legacy.load('same.png'),l2=legacy.load('same.png'),master=new context.THREE.Texture(immutable);let disposed=0;master.addEventListener('dispose',()=>disposed++);
+legacy.calls.shift().done(master);const [t1,t2]=await Promise.all([l1,l2]);assert.notEqual(t1,t2);assert.notEqual(t1,master);assert.equal(t1.image,t2.image);legacy.release();await Promise.resolve();assert.equal(disposed,1);
+const failed=owner(),f1=failed.load('bad.png'),f2=failed.load('bad.png');const rejected=Promise.allSettled([f1,f2]);failed.calls.shift().fail(new Error('network'));assert((await rejected).every(x=>x.status==='rejected'));failed.release();
+assert.throws(()=>context.install({register(){}},{...manifest,resources:[{uri:'normal.png',pngHasAlpha:'false'}]}),/format metadata/);
+assert.equal(context.THREE.Cache.enabled,false,'No global cache is enabled');
+console.log(JSON.stringify({status:'PASS',oneRequestPerImagePerOwner:true,independentOwners:true,pngRgbAndNormalAlphaPreserved:true,legacyTexturesIndependent:true,parseCacheReleased:true,invalidMetadataRejected:true,noGlobalCache:true}));

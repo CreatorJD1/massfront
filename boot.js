@@ -24,20 +24,19 @@
     './assets/data/theatreprofiles-stage10.js',
     './assets/data/interiortopology-stage10.js','./assets/data/orbitaltopology-stage10.js',
     './src/game/determinism.js',
-    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./assets/data/planetart.js','./src/engine/gl.js','./src/engine/planetpreview.js','./src/engine/perf.js','./src/engine/noisegen.js','./src/engine/factionenergy.js','./src/engine/ordnancetrails.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/macrofx.js','./src/engine/shieldfx.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/volfx.js','./src/engine/shockwave.js','./src/engine/vfxlayers.js','./src/engine/organicfx.js','./assets/basis/basis_transcoder.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/locationgrammar.js','./assets/data/sitetemplates.js','./assets/data/sitetemplates-stage9.js','./assets/data/locationplans.js','./assets/data/battlefieldtopology-stage10.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/brood-crowd.js','./src/engine/modkit.js','./src/engine/physics.js','./src/engine/cloudfx.js','./src/engine/cloudpostfx.js','./src/game/utilityjobs.js','./src/game/sim.js','./src/game/airwarfare.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/hazards.js','./src/game/statehash.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/socialui.js','./src/game/matchconsumer.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/launcher.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js','./src/ui/unit-stack-hotbar.js','./src/galactic-operations.js','./src/onboarding.js','./src/career-faction-gate.js','./src/ui/cinematic-hud.js'
+    './assets/data/unitrows.js','./assets/data/unitsheet.js','./assets/data/itemart.js','./assets/data/planetart.js','./src/engine/gl.js','./src/engine/planetpreview.js','./src/engine/perf.js','./src/engine/noisegen.js','./src/engine/factionenergy.js','./src/engine/ordnancetrails.js','./src/engine/terragen.js','./src/terralab.js','./src/engine/mesh.js','./src/engine/billboard.js','./src/engine/macrofx.js','./src/engine/shieldfx.js','./src/engine/tacticons.js','./src/engine/gpufx.js','./src/engine/volfx.js','./src/engine/shockwave.js','./src/engine/vfxlayers.js','./src/engine/organicfx.js','./assets/basis/basis_transcoder.js','./src/engine/materials.js','./src/engine/materials-v2.js','./src/engine/terrain.js','./src/engine/models-world-data.js','./src/engine/models-world-loader.js','./src/engine/models.js','./assets/data/worldkit.js','./assets/data/locationgrammar.js','./assets/data/sitetemplates.js','./assets/data/sitetemplates-stage9.js','./assets/data/locationplans.js','./assets/data/battlefieldtopology-stage10.js','./src/engine/worldsites.js','./assets/data/meshes.js','./src/engine/models-legion.js','./src/engine/models-machine.js','./src/engine/models-infestation.js','./src/engine/models-civic.js','./src/engine/models-skyline.js','./src/engine/materials-world-v2.js','./src/engine/models-units-nova.js','./src/engine/models-units-legion.js','./src/engine/models-units-syndicate.js','./src/engine/models-units-brood.js','./src/engine/brood-crowd.js','./src/engine/modkit.js','./src/engine/physics.js','./src/engine/cloudfx.js','./src/engine/cloudpostfx.js','./src/game/utilityjobs.js','./src/game/sim.js','./src/game/airwarfare.js','./src/game/economy.js','./src/game/commander.js','./src/game/meta.js','./src/game/ai.js','./src/ui/input.js','./src/ui/facticons.js','./src/ui/hud.js','./src/ui/render3d.js','./src/ui/orderfx.js','./src/airlift.js','./src/airlift-factions.js','./src/rumble.js','./src/factions.js','./src/factext.js','./src/offline.js','./src/audio.js','./src/assetpack.js','./src/content-mount.js','./src/hazards.js','./src/game/statehash.js','./src/authportal.js','./src/tutorial.js','./src/adboards.js','./src/storeui.js','./src/restree3d.js','./src/develop.js','./src/factiondoctrine.js','./src/endgame.js','./src/story.js','./src/socialui.js','./src/game/matchconsumer.js','./src/daily.js','./src/account.js','./src/economy-net.js','./src/updater.js','./src/intro.js','./src/launcher.js','./src/session.js','./src/faction-id.js','./src/glrecover.js','./src/main.js','./src/intel.js','./src/repairbay.js','./src/galaxyui.js','./src/departure.js','./src/warprimer.js','./src/uistack.js','./src/ui/hudflow.js','./src/ui/hotslots.js','./src/ui/unit-stack-hotbar.js','./src/galactic-operations.js','./src/onboarding.js','./src/career-faction-gate.js','./src/ui/cinematic-hud.js'
   ];
   /* Packaged scripts need a release key. WebViews and development browsers can
      otherwise reuse a stale source even after the installer or local preview
      has changed, which made new settings appear to be missing until cache was
      cleared manually. Patch bundles keep their content-addressed Blob URLs. */
-  var PACKAGED_REV='1.33.74';
+  var PACKAGED_REV='1.33.83';
   /* Source-cache revision is deliberately independent from the user-facing
      release number. Local/hotfix rebuilds of the same release must not reuse
      an older gl.js merely because its ?v= version string is unchanged. */
-  /* shell2 changes recovery delivery only. Keep the already-verified runtime
-     source revision so a service-worker repair does not cold-fetch all 108
-     scripts from the host at once. */
-  var PACKAGED_SRC_REV=PACKAGED_REV+'-boot8';
+  /* Factory command and native content fixes change the same candidate's
+     source bytes. A new cache key prevents an earlier local preview lingering. */
+  var PACKAGED_SRC_REV=PACKAGED_REV+'-boot1';
   var DB='massfront-updates', STORE='bundles';
   /* Packaged boot capability flag. OTA source checks this before staging a
      descriptor that references per-artifact records. Old APK-bound boot
@@ -550,9 +549,29 @@
     });
   }
 
-  function bootProgress(done,total){
-    var el=document.getElementById('mfBootPct');
-    if(el) el.textContent=total?('LOADING  '+done+' / '+total):'LOADING';
+  function bootText(id,value){var el=document.getElementById(id);if(el)el.textContent=value;}
+  function bootProgress(done,total,path,stage){
+    var verifying=stage==='verify',finished=total>0&&done>=total&&!verifying;
+    var clean=String(path||'').replace(/^\.\//,'').split('?')[0];
+    var phase=finished?'STARTING MASSFRONT':verifying?'VERIFYING INSTALLED UPDATE':
+      /engine\/gl\.js/.test(clean)?'INITIALIZING GRAPHICS':
+      /engine\/|assets\/data\//.test(clean)?'PREPARING WORLD SYSTEMS':
+      /audio|factions|story|tutorial/.test(clean)?'PREPARING GAME CONTENT':
+      /ui\/|intro|launcher|main\.js/.test(clean)?'PREPARING COMMAND INTERFACE':'PREPARING COMMAND SYSTEMS';
+    bootText('mfBootPct',total?Math.max(0,Math.min(total,done))+' / '+total:'STARTING');
+    bootText('mfBootPhase',phase);
+    var detail=/glrecover/.test(clean)?'Preparing graphics recovery and reconnect controls.':
+      /engine\//.test(clean)?'Loading terrain, models and visual systems.':
+      /audio|assetpack/.test(clean)?'Preparing audio and additional-content delivery.':
+      /auth|account|session/.test(clean)?'Preparing account access and local career support.':
+      /ui\/|intro|launcher|main\.js/.test(clean)?'Preparing menus and command controls.':
+      /assets\/data\//.test(clean)?'Loading world and unit definitions.':'Preparing game rules and career systems.';
+    bootText('mfBootDetail',finished?'Preparing the first frame and launch interface.':verifying?'Checking the integrity of stored runtime files.':detail);
+    var bar=document.getElementById('mfBootBar'),fill=document.getElementById('mfBootFill');
+    if(bar&&bar.setAttribute){bar.setAttribute('aria-valuemin','0');bar.setAttribute('aria-valuemax',String(total||1));bar.setAttribute('aria-valuenow',String(done));bar.setAttribute('aria-valuetext',finished?'Game systems loaded; starting MASSFRONT':done+' of '+total+' game systems '+(verifying?'verified':'loaded'));}
+    if(fill&&fill.style)fill.style.width=(total?Math.max(0,Math.min(100,done/total*100)):0)+'%';
+    var cover=document.getElementById('mfBootCover');
+    if(cover){cover.setAttribute('data-progress','determinate');cover.setAttribute('aria-busy','true');}
   }
   function rendererGateIndex(order){
     for(var i=0;i<order.length;i++)
@@ -561,7 +580,7 @@
        appending nothing. Completeness validation will reject it separately. */
     return Math.min(3,Math.max(0,order.length-1));
   }
-  function injectScripts(makeSrc,total,gate){
+  function injectScripts(makeSrc,total,gate,order){
     /* WebGL is the one hard boot dependency. Load through gl.js as a small
        first phase, then append the remaining tags in parallel. If the browser
        cannot allocate WebGL2, gl.js raises __MF_GL_BOOT_FAILED and owns a
@@ -569,16 +588,20 @@
        errors from obscuring the real graphics-session failure. The happy path
        still requests the large remainder together and preserves classic-script
        execution order through async=false. */
-    var left=total;
+    var left=total,failedCount=0;
     gate=Math.max(0,Math.min(total-1,gate|0));
     var gateFailed=false, restStarted=false;
     function tick(i,src){
       left--;
-      bootProgress(total-left,total);
+      if(src)failedCount++;
+      bootProgress(total-left-failedCount,total,order&&order[i]);
+      if(failedCount){bootText('mfBootPhase','GAME FILE FAILED TO LOAD');bootText('mfBootDetail','Restart to retry loading installed content.');}
       if(src) console.error('boot: failed',src);
       if(i===gate){
         gateFailed=!!src||window.__MF_GL_BOOT_FAILED===true;
         if(gateFailed){
+          bootText('mfBootPhase','GRAPHICS INITIALIZATION NEEDS ATTENTION');
+          bootText('mfBootDetail','Use the graphics retry control to continue.');
           console.warn('boot: renderer phase stopped after WebGL2 initialization failed');
           clearBootShield();
           /* OTA payloads add their own temporary input guard. Leave the real
@@ -606,7 +629,7 @@
   }
   function runPackaged(){
     injectScripts(function(s,i){ s.src=MANIFEST[i]+'?v='+PACKAGED_SRC_REV; },
-                  MANIFEST.length,rendererGateIndex(MANIFEST));
+                  MANIFEST.length,rendererGateIndex(MANIFEST),MANIFEST);
   }
   function runArtifactBundle(b){
     /* Descriptor bundles keep each verified source artifact in its own IDB
@@ -617,10 +640,11 @@
     var order=b.order&&b.order.length?b.order:MANIFEST;
     var gate=rendererGateIndex(order),index=0,total=order.length,executed=0,stopped=false;
     var runtimeRows=[];
-    bootProgress(0,total);
+    bootProgress(0,total,'','verify');
     function rangeFailure(path,reason){
       if(stopped) return;
       stopped=true;
+      bootText('mfBootPhase','RECOVERING PACKAGED GAME');
       console.error('boot: failed',path,reason||'stored artifact unavailable');
       clearBootShield();
       try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
@@ -672,8 +696,9 @@
       script.onload=function(){
         URL.revokeObjectURL(blob);
         var current=index++; executed++;
-        bootProgress(index,total);
+        bootProgress(index,total,path);
         if(current===gate&&window.__MF_GL_BOOT_FAILED===true){
+          bootText('mfBootPhase','GRAPHICS INITIALIZATION NEEDS ATTENTION');
           console.warn('boot: renderer phase stopped after WebGL2 initialization failed');
           clearBootShield();
           try{if(typeof window.__MASSFRONT_CLEAR_INPUT_GUARD==='function')
@@ -734,13 +759,13 @@
           if(!Number.isSafeInteger(actual.size)||actual.size<=0)
             throw new Error('stored size mismatch');
           runtimeRows.push(path+'|'+actual.size+'|'+actual.sha256);
-          bootProgress(i+1,total);preflight(i+1);
+          bootProgress(i+1,total,path,'verify');preflight(i+1);
         }).catch(function(error){ rangeFailure(path,error&&error.message); });
         return;
       }
       readArtifact(path,ref).then(function(){
         runtimeRows.push(path+'|'+ref.size+'|'+String(ref.sha256).toLowerCase());
-        bootProgress(i+1,total);preflight(i+1);
+        bootProgress(i+1,total,path,'verify');preflight(i+1);
       }).catch(function(error){ rangeFailure(path,error&&error.message); });
     }
     function next(){
@@ -764,7 +789,7 @@
       var path=order[i], src=b.files[path];
       if(src==null) s.src=path;
       else s.src=URL.createObjectURL(new Blob([src+'\n//# sourceURL='+path],{type:'text/javascript'}));
-    }, order.length,rendererGateIndex(order));
+    }, order.length,rendererGateIndex(order),order);
   }
 
   idb().then(function(db){
@@ -840,7 +865,7 @@
   if(!secure) return;
   window.__mfPwaDiag={supported:true,registered:false,controlled:!!navigator.serviceWorker.controller,error:null,updateError:null};
   window.addEventListener('load',function(){
-    navigator.serviceWorker.register('./sw.js?v=1.33.74-shell2',{scope:'./',updateViaCache:'none'})
+    navigator.serviceWorker.register('./sw.js?v=1.33.83-shell1',{scope:'./',updateViaCache:'none'})
       .then(function(reg){
         window.__mfPwaDiag.registered=true;
         window.__mfPwaDiag.scope=reg.scope;

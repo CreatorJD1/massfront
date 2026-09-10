@@ -1,6 +1,6 @@
 /* Fresh hosted-byte + signed-out launcher acceptance, not PWA/performance QA.
    Run only after the authorized Space upload:
-   node tools/verify-live-space-release.mjs --expected-commit <40hex> --tag <unique>
+   node tools/verify-live-space-release.mjs --previous-commit <40hex> --expected-commit <40hex> --tag <unique>
    The old README is pinned to the observed pre-upload commit and preserved. */
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
@@ -15,9 +15,10 @@ import {collectEvidenceIdentity} from './evidence-foundation/fingerprints.mjs';
 const root=resolve(import.meta.dirname,'..'),www=resolve(root,'www'),args=process.argv.slice(2);
 const option=name=>{const at=args.indexOf('--'+name);return at<0?null:args[at+1];};
 const repo='CREATORJD/massfront-playtest',origin='https://creatorjd-massfront-playtest.static.hf.space';
-const previousCommit='6239214139a7205e43edd0445e0210e1a746a384',expectedCommit=option('expected-commit');
-const expected={buildVersion:'1.33.74',manifestHash:'ad9c15db798d9ca4733e0104cc500d8ecb7f8cd3b52302aaa7ac16b150570274',
-  balanceHash:'589728025661bfca37b7c2460dac69bde7fd0833b340b168e66de8d8b3d8418a'};
+const previousCommit=option('previous-commit'),expectedCommit=option('expected-commit');
+const compatibility=JSON.parse(await readFile(resolve(www,'assets/data/runtime-compatibility.json'),'utf8'));
+const expected={buildVersion:compatibility.buildVersion,manifestHash:compatibility.manifestHash,
+  balanceHash:compatibility.balanceHash};
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
 const cdnOrigin='https://us.aws.cdn.hf.co',cdnPrefix='/xet-bridge-us/6a70822c94857d39c712010a/';
 function spaceLocalPath(value){
@@ -75,20 +76,26 @@ if(args.includes('--self-test')){
 }
 const tag=option('tag')||new Date().toISOString().replace(/[:.]/g,'-');
 assert(/^[a-f0-9]{40}$/.test(expectedCommit||''),'--expected-commit must name the uploaded Space commit');
+assert(/^[a-f0-9]{40}$/.test(previousCommit||''),'--previous-commit must name the observed pre-upload Space commit');
 assert(/^[a-zA-Z0-9_-]+$/.test(tag),'Invalid evidence tag');
 const out=resolve(root,'.tmp','live-space-release',tag);
 const critical=['index.html','boot.js','sw.js','assets/data/runtime-compatibility.json','assets/data/manifest.json',
   'assets/update-config.json','assets/app.webmanifest','src/updater.js','src/socialui.js',
-  'src/game/matchconsumer.js','src/game/sim.js','src/styles/ui.css'];
+  'src/game/matchconsumer.js','src/game/sim.js','src/styles/ui.css',
+  'modules/space_exploration/index.html','modules/space_exploration/src/space_experience.js',
+  'modules/space_exploration/src/domain/catalog.js','modules/space_exploration/src/domain/state_store.js',
+  'modules/space_exploration/src/domain/progression.js','modules/space_exploration/src/systems/showcase_systems.js',
+  'modules/space_exploration/src/systems/planetary_survey.js',
+  'modules/space_exploration/src/host/massfront_solo_host.js'];
 const report={status:'FAIL',startedAt:new Date().toISOString(),origin,repo,previousCommit,expectedCommit,expected,
   scope:'Fresh hardware Chromium hosted-byte and signed-out/offline-launcher-to-menu proof only; no gameplay/performance/PWA/Apple certification',
   criticalBytes:[],browserBytes:[],pageErrors:[],requestFailures:[],httpFailures:[],redirects:[],actions:[],screenshots:[],
-  network:{serviceWorkers:'block',blockedRequests:[],blockedSockets:[],redirectRequests:[],guardErrors:[]}};
+  network:{serviceWorkers:'block',blockedRequests:[],blockedSockets:[],redirectRequests:[],guardErrors:[],navigationAborts:[]}};
 const clean=value=>{try{const url=new URL(value);return url.origin+url.pathname;}catch{return String(value).slice(0,200);}};
 const redact=value=>String(value).replace(/(?:https?|wss?):\/\/[^\s"'<>]+/g,clean).slice(0,1800);
 const tuple=value=>({buildVersion:value.buildVersion,manifestHash:value.manifestHash,balanceHash:value.balanceHash});
-let freeze,initialIdentity,browser,context,page,localIndex,cdp;
-const expectedHashes=new Map(),pendingResponses=[];
+let freeze,initialIdentity,browser,context,page,cdp;
+const expectedHashes=new Map(),expectedHostedHtml=new Map(),pendingResponses=[];
 async function getBytes(url){
   const response=await fetch(url,{cache:'no-store',redirect:'error',signal:AbortSignal.timeout(20000)});
   assert.equal(response.status,200,'Public GET failed: '+clean(url)+' HTTP '+response.status);
@@ -109,10 +116,14 @@ async function gateState(){
     const shown=id=>{const el=document.getElementById(id);if(!el)return false;const style=getComputedStyle(el);
       return style.display!=='none'&&style.visibility!=='hidden'&&!el.hidden&&el.getAttribute('aria-hidden')!=='true'&&el.getClientRects().length>0;};
     const snap=typeof window.mfLauncherSnapshot==='function'?window.mfLauncherSnapshot():null;
+    const moduleFrame=document.getElementById('moduleFrame'),moduleError=window.__MASSFRONT_SPACE_ERROR__;
     return {skip:shown('mfIntroSkip'),intro:shown('mfIntroStart')&&shown('mfPreAlphaIntro'),account:shown('apOfflineBtn'),
       onboarding:shown('mfOnboardingSkip'),primary:shown('mfLaunchPlay')&&!document.getElementById('mfLaunchPlay').disabled,
       offline:shown('mfLaunchOffline')&&!document.getElementById('mfLaunchOffline').disabled,
-      start:shown('startScreen'),passed:!!snap?.passed};
+      start:shown('startScreen'),galactic:!!document.querySelector('.uga-command-shell')&&
+        getComputedStyle(document.querySelector('.uga-command-shell')).display!=='none',passed:!!snap?.passed,
+      module:shown('moduleFrame')&&!!window.__MASSFRONT_SPACE__&&!moduleError&&moduleFrame.dataset.scene!=='loading'
+        &&!document.getElementById('renderVeil')?.classList.contains('failed')};
   });
 }
 
@@ -133,11 +144,13 @@ try{
     const [localBytes,remoteBytes]=await Promise.all([readFile(resolve(www,path)),getBytes(origin+'/'+path+'?mf_verify='+Date.now())]);
     const localSha256=sha(localBytes),remoteSha256=sha(remoteBytes);expectedHashes.set(path,localSha256);
     const result={path,size:remoteBytes.length,localSha256,remoteSha256,match:localSha256===remoteSha256};report.criticalBytes.push(result);
+    if(path.endsWith('.html')){
+      expectedHostedHtml.set(path,localBytes);result.hostedIndex=hostedIndexEvidence(localBytes,remoteBytes);
+      result.match=result.hostedIndex.normalizedSha256===localSha256;
+    }
     if(path==='index.html'){
-      localIndex=localBytes;
       const pinned=await getBytes('https://huggingface.co/spaces/'+repo+'/raw/'+expectedCommit+'/index.html');
       result.pinnedSha256=sha(pinned);assert(pinned.equals(localBytes),'Pinned uploaded index differs from www');
-      result.hostedIndex=hostedIndexEvidence(localBytes,remoteBytes);result.match=result.hostedIndex.normalizedSha256===localSha256;
     }
     assert(result.match,'Hosted critical bytes differ from www: '+path);
   }
@@ -157,22 +170,45 @@ try{
   page=await context.newPage();page.on('pageerror',error=>report.pageErrors.push(redact(error.message)));
   // Playwright routes run only on the initial request, not every redirect.
   // Chromium Fetch request-stage interception admits each real hop before send.
-  const blockedUrls=new Set(),requestOrigins=new Map();cdp=await context.newCDPSession(page);
+  const blockedUrls=new Set(),networkOrigins=new Map(),observedCdnPaths=new Set();cdp=await context.newCDPSession(page);
+  /* Static Space responses may cache their Xet redirects independently of the
+     response body. A cached redirect skips the request-stage provenance hop
+     below and makes the read-only guard reject a legitimate Space asset.
+     Force the evidence browser to observe every redirect in this run. */
+  await cdp.send('Network.enable');
+  await cdp.send('Network.setCacheDisabled',{cacheDisabled:true});
+  /* Fetch.requestPaused does not expose redirectedRequestId. Network keeps the
+     same request id across redirects, so retain the original Space URL there;
+     otherwise a legitimate Xet asset hop can race the response observer and be
+     mistaken for an unrelated CDN request. */
+  cdp.on('Network.requestWillBeSent',event=>{
+    const prior=networkOrigins.get(event.requestId);
+    networkOrigins.set(event.requestId,{rootUrl:event.redirectResponse&&prior?prior.rootUrl:event.request.url,
+      url:event.request.url});
+  });
   cdp.on('Fetch.requestPaused',event=>{void(async()=>{
-    const {requestId,request,redirectedRequestId}=event,url=new URL(request.url),previous=requestOrigins.get(redirectedRequestId);
-    const rootUrl=previous?.rootUrl||request.url,readOnly=['GET','HEAD'].includes(request.method),
+    const {requestId,request,networkId}=event,url=new URL(request.url),chain=networkOrigins.get(networkId);
+    const rootUrl=chain?.rootUrl||request.url,readOnly=['GET','HEAD'].includes(request.method),redirected=rootUrl!==request.url,
       updaterManifest=/(?:^|\/)update(?:-preview)?\.json$/.test(url.pathname),
-      allowed=readOnly&&!updaterManifest&&(redirectedRequestId?!!previous&&allowedRedirect(rootUrl,previous.url,request.url):url.origin===origin);
-    if(redirectedRequestId)report.network.redirectRequests.push({from:previous?clean(previous.url):null,to:clean(url),originPath:spaceLocalPath(rootUrl),allowed});
-    if(allowed){requestOrigins.set(requestId,{rootUrl,url:request.url});await cdp.send('Fetch.continueRequest',{requestId});}
+      observedRedirect=observedCdn(request.url)&&observedCdnPaths.has(url.pathname),
+      allowed=readOnly&&!updaterManifest&&(redirected?!!chain&&allowedRedirect(rootUrl,rootUrl,request.url):
+        url.origin===origin||observedRedirect);
+    if(redirected)report.network.redirectRequests.push({from:clean(rootUrl),to:clean(url),originPath:spaceLocalPath(rootUrl),allowed});
+    if(allowed)await cdp.send('Fetch.continueRequest',{requestId});
     else{blockedUrls.add(request.url);report.network.blockedRequests.push({url:clean(url),method:request.method});await cdp.send('Fetch.failRequest',{requestId,errorReason:'BlockedByClient'});}
   })().catch(async error=>{report.network.guardErrors.push(redact(error.message));try{await cdp.send('Fetch.failRequest',{requestId:event.requestId,errorReason:'BlockedByClient'});}catch{}});});
   await cdp.send('Fetch.enable',{patterns:[{urlPattern:'*',requestStage:'Request'}]});
   page.on('requestfailed',request=>{
     if(blockedUrls.has(request.url()))return;
     const error=request.failure()?.errorText||'failed',url=new URL(request.url());
-    if(request.method()==='HEAD'&&url.pathname==='/modules/space_exploration/index.html'&&error==='net::ERR_ABORTED')return;
-    report.requestFailures.push({url:clean(url),error});
+    /* The launcher and strategic-screen takeover can supersede one another's
+       same-target module request. Quarantine one canceled HEAD/GET only; the
+       final exact module-ready assertion below proves that navigation landed. */
+    if(['GET','HEAD'].includes(request.method())&&url.origin===origin
+      &&url.pathname==='/modules/space_exploration/index.html'&&error==='net::ERR_ABORTED'){
+      report.network.navigationAborts.push({url:clean(url),method:request.method(),resourceType:request.resourceType()});return;
+    }
+    report.requestFailures.push({url:clean(url),method:request.method(),resourceType:request.resourceType(),error});
   });
   page.on('response',response=>{
     const url=new URL(response.url()),rootUrl=requestRoot(response.request()),path=spaceLocalPath(rootUrl);
@@ -181,6 +217,7 @@ try{
     if(status>=300&&status<400){
       const location=headers.location||'',destination=location?new URL(location,url):null,allowed=!!destination&&allowedRedirect(rootUrl,url,destination);
       report.redirects.push({url:clean(url),status,location:destination?clean(destination):null,originPath:path,allowed});
+      if(allowed&&observedCdn(destination))observedCdnPaths.add(destination.pathname);
       if(!allowed)report.httpFailures.push({url:clean(url),status,error:'Redirect is outside the observed Space delivery chain'});
       return; // Redirects have no response body; the destination's 200 must match.
     }
@@ -189,7 +226,8 @@ try{
         ['date','retry-after','ratelimit','ratelimit-policy','x-ratelimit-limit','x-ratelimit-remaining','x-ratelimit-reset'].map(name=>[name,headers[name]||null]))});
     if(!expectedHashes.has(path)||response.request().method()!=='GET')return;
     pendingResponses.push((async()=>{
-      try{const bytes=await response.body(),actualSha256=sha(bytes),hostedIndex=path==='index.html'?hostedIndexEvidence(localIndex,bytes):null;
+      try{const bytes=await response.body(),actualSha256=sha(bytes),hostedIndex=path?.endsWith('.html')
+          ?hostedIndexEvidence(expectedHostedHtml.get(path),bytes):null;
         report.browserBytes.push({path,url:clean(url),redirected:!!response.request().redirectedFrom(),status:response.status(),sha256:actualSha256,hostedIndex,
           match:status===200&&(hostedIndex?.normalizedSha256||actualSha256)===expectedHashes.get(path)});}
       catch(error){report.browserBytes.push({path,match:false,error:redact(error.message)});}
@@ -198,36 +236,64 @@ try{
   await page.goto(origin+'/?mf_release_verify='+tag,{waitUntil:'domcontentloaded',timeout:90000});
   report.gpu=await assertHardwareGpu(page);
   await page.waitForFunction(()=>typeof APP_VERSION!=='undefined'&&typeof render==='function'&&typeof TYPES!=='undefined'&&typeof BT!=='undefined',null,{timeout:90000});
+  report.packageRuntime=await page.evaluate(async()=>({version:String(APP_VERSION),compatibility:await window.mfRuntimeCompatibility(),
+    patched:window.__MASSFRONT_PATCHED||null,serviceWorkerControlled:!!navigator.serviceWorker?.controller}));
+  assert.equal(report.packageRuntime.version,expected.buildVersion);assert.deepEqual(report.packageRuntime.compatibility,expected);
+  assert.equal(report.packageRuntime.patched,null,'An OTA replaced the packaged Space boot');
+  assert.equal(report.packageRuntime.serviceWorkerControlled,false);
   await screenshot('fresh-boot');
   const deadline=Date.now()+120000;let gate;
   while(Date.now()<deadline){
     gate=await gateState();
     report.gate=gate;
-    if(gate.start&&gate.passed&&!gate.onboarding&&!gate.account&&!gate.skip&&!gate.intro)break;
+    if((gate.start&&gate.passed||gate.galactic||gate.module)&&!gate.onboarding&&!gate.account&&!gate.skip&&!gate.intro)break;
     const action=gate.skip?'#mfIntroSkip':gate.onboarding?'#mfOnboardingSkip':gate.account?'#apOfflineBtn':gate.intro?'#mfIntroStart':
       gate.offline?'#mfLaunchOffline':gate.primary?'#mfLaunchPlay':null;
     if(action){
       const attempt={at:new Date().toISOString(),action};report.actions.push(attempt);
-      try{await page.locator(action).click({timeout:30000});attempt.result='clicked';}
+      try{await page.locator(action).click({timeout:5000});attempt.result='clicked';}
       catch(error){
-        if(error.name==='TimeoutError'&&!await page.locator(action).isVisible()){
+        if(error.name==='TimeoutError'){
           const next=await gateState();attempt.next=next;
-          if(next.onboarding||next.account||next.primary||next.offline||next.start&&next.passed){attempt.result='control transitioned to observed next state';continue;}
+          /* Intro and launcher callbacks render the account gate asynchronously.
+             If that modal becomes visible after we sampled the launcher, it can
+             correctly intercept the stale underlying click. Treat only a newly
+             observed higher-priority state as a transition and let the next loop
+             drive its real control; other click failures must still fail loud. */
+          if(next.onboarding||next.account&&action!=='#apOfflineBtn'||next.skip||next.intro||
+            next.start&&next.passed||next.galactic||next.module||!await page.locator(action).isVisible()){
+            attempt.result='control transitioned to observed next state';continue;
+          }
         }
         attempt.result='failed';attempt.error=redact(error.message);throw error;
       }
     }
     await page.waitForTimeout(300);
   }
-  report.gate=gate;assert(gate?.start&&gate.passed&&!gate.onboarding&&!gate.account,'Real launcher did not reach the unobstructed main menu');
-  report.runtime=await page.evaluate(async()=>({version:String(APP_VERSION),compatibility:await window.mfRuntimeCompatibility(),
-    patched:window.__MASSFRONT_PATCHED||null,webgl2:!!document.querySelector('#gl')?.getContext('webgl2'),units:TYPES.length,
-    buildings:Object.keys(BT).length,homeVisible:getComputedStyle(document.querySelector('#startScreen')).display!=='none',
-    horizontalOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),serviceWorkerControlled:!!navigator.serviceWorker?.controller}));
+  report.gate=gate;assert((gate?.start&&gate.passed||gate?.galactic||gate?.module)&&!gate.onboarding&&!gate.account,'Real launcher did not reach the strategic home');
+  report.runtime=await page.evaluate(async()=>{
+    const experience=window.__MASSFRONT_SPACE__;
+    if(experience){
+      await experience.ready;
+      const gl=experience.engine?.renderer?.getContext?.();
+      return {surface:'space-module',moduleReady:!window.__MASSFRONT_SPACE_ERROR__,moduleScene:experience.scene,
+        applicationError:window.__MASSFRONT_SPACE_ERROR__?String(window.__MASSFRONT_SPACE_ERROR__):null,
+        veilFailed:document.getElementById('renderVeil')?.classList.contains('failed')||false,
+        webgl2:!!gl&&!gl.isContextLost(),horizontalOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth)};
+    }
+    return {surface:'base',webgl2:!!document.querySelector('#gl')?.getContext('webgl2'),units:TYPES.length,
+      buildings:Object.keys(BT).length,homeVisible:getComputedStyle(document.querySelector('#startScreen')).display!=='none',
+      galacticVisible:!!document.querySelector('.uga-command-shell')&&getComputedStyle(document.querySelector('.uga-command-shell')).display!=='none',
+      horizontalOverflow:Math.max(0,document.documentElement.scrollWidth-innerWidth)};
+  });
+  if(report.runtime.surface==='space-module')await page.locator('#renderVeil').waitFor({state:'hidden',timeout:30000});
   await screenshot('main-menu');await Promise.all(pendingResponses);
-  assert.equal(report.runtime.version,expected.buildVersion);assert.deepEqual(report.runtime.compatibility,expected);
-  assert.equal(report.runtime.patched,null,'An OTA replaced the packaged Space boot');
-  assert.equal(report.runtime.serviceWorkerControlled,false);assert(report.runtime.webgl2&&report.runtime.homeVisible);
+  if(report.runtime.surface==='space-module'){
+    assert(report.runtime.moduleReady&&report.runtime.webgl2&&!report.runtime.veilFailed&&!report.runtime.applicationError);
+    assert.notEqual(report.runtime.moduleScene,'loading');
+  }else assert(report.runtime.webgl2&&(report.runtime.homeVisible||report.runtime.galacticVisible));
+  assert(report.network.navigationAborts.length<=1,'More than one Space navigation was canceled');
+  if(report.network.navigationAborts.length)assert.equal(report.runtime.surface,'space-module','Canceled Space navigation did not land');
   assert.equal(report.runtime.horizontalOverflow,0);assert.equal(report.pageErrors.length,0);
   assert.equal(report.requestFailures.length,0);assert.equal(report.httpFailures.length,0);
   assert.equal(report.network.guardErrors.length,0);assert(report.network.redirectRequests.every(hop=>hop.allowed));

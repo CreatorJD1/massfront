@@ -9,7 +9,9 @@ import {
   RESIDENT_FACTION_IDS,
   SITE_CATALOG,
   SPECIALIST_CATALOG,
-  SUPPORT_CATALOG
+  SUPPORT_CATALOG,
+  createUgaGroundLocation,
+  getUgaGroundAreaOptions
 } from './catalog.js';
 import { deepClone, deepFreeze, deterministicId, hash32, stableStringify } from './deterministic.js';
 import { DomainValidationError, issue } from './errors.js';
@@ -182,7 +184,10 @@ function resolveRequest(state, mission, request) {
   const supportId = request.supportId || request.support || mission.supportIds[0];
   const landingZoneId = request.landingZoneId || mission.landingZoneIds[0];
   const deploymentManifest = resolveDeploymentManifest(state, mission, request);
-  return { requestedFactionId, expectedFactionId, proxyFactionId, commanderId, specialistIds, doctrineId, supportId, landingZoneId, deploymentManifest };
+  const mapId = typeof request.mapId === 'string' ? request.mapId : null;
+  const groundLocation = mapId ? createUgaGroundLocation(mission.id, mapId) : null;
+  const groundArea = getUgaGroundAreaOptions(mission.id);
+  return { requestedFactionId, expectedFactionId, proxyFactionId, commanderId, specialistIds, doctrineId, supportId, landingZoneId, deploymentManifest, mapId, groundLocation, groundArea };
 }
 
 function pushEligibilityLocks(state, mission, resolved, locks) {
@@ -284,24 +289,37 @@ export function getMissionEligibility(state, missionId, request = {}) {
       doctrineId: resolved.doctrineId,
       supportId: resolved.supportId,
       landingZoneId: resolved.landingZoneId,
-      deploymentManifest: deepClone(resolved.deploymentManifest)
+      deploymentManifest: deepClone(resolved.deploymentManifest),
+      mapId: resolved.mapId,
+      groundLocation: deepClone(resolved.groundLocation),
+      groundArea: deepClone(resolved.groundArea)
     }
   };
 }
 
-export function validateGroundOperationRequest(state, request = {}) {
+export function validateGroundOperationRequest(state, request = {}, options = {}) {
   const eligibility = getMissionEligibility(state, request.missionId, request);
+  const issues = [...eligibility.locks];
+  const requireGroundLocation = options.requireGroundLocation !== false;
+  if (requireGroundLocation && eligibility.mission && !eligibility.defaults?.groundLocation) {
+    const knownMap = eligibility.defaults?.groundArea?.maps?.some(map => map.id === request.mapId);
+    issues.push(issue(
+      request.mapId && !knownMap ? 'BATTLEFIELD_MAP_INVALID' : 'BATTLEFIELD_SELECTION_REQUIRED',
+      request.mapId && !knownMap ? 'Select a playable map registered for this mission area.' : 'Select a compact, standard, or large battlefield before deployment.',
+      'mapId'
+    ));
+  }
   return {
-    ok: eligibility.ok,
-    issues: eligibility.locks,
-    resolved: eligibility.ok ? { mission: eligibility.mission, ...eligibility.defaults } : null
+    ok: issues.length === 0,
+    issues,
+    resolved: issues.length === 0 ? { mission: eligibility.mission, ...eligibility.defaults } : null
   };
 }
 
 function createGroundOperationForSchema(state, request, schemaVersion) {
-  const validation = validateGroundOperationRequest(state, request);
+  const validation = validateGroundOperationRequest(state, request, { requireGroundLocation: schemaVersion === GROUND_OPERATION_SCHEMA_VERSION });
   if (!validation.ok) throw new DomainValidationError('Ground operation request is invalid.', validation.issues, 'GROUND_OPERATION_REQUEST_INVALID');
-  const { mission, proxyFactionId, commanderId, specialistIds, doctrineId, supportId, landingZoneId, deploymentManifest } = validation.resolved;
+  const { mission, proxyFactionId, commanderId, specialistIds, doctrineId, supportId, landingZoneId, deploymentManifest, groundLocation } = validation.resolved;
   const site = SITE_CATALOG[mission.siteId];
   const faction = state.factions[proxyFactionId];
   const commander = state.personnel.commanders[commanderId];
@@ -366,7 +384,8 @@ function createGroundOperationForSchema(state, request, schemaVersion) {
       threat: mission.missionType === 'uga_brood_purge' ? infestation.severity : mission.difficulty * 14,
       infestationActive: mission.missionType === 'uga_brood_purge' ? infestation.active : false,
       hiveTargetIds: mission.missionType === 'uga_brood_purge' ? [...mission.objective.hiveTargetIds] : [],
-      landingZoneId
+      landingZoneId,
+      ...(groundLocation ? { location: deepClone(groundLocation) } : {})
     },
     scanTierAtLaunch: state.ship.districts.survey.level,
     threatAtLaunch: mission.missionType === 'uga_brood_purge' ? infestation.severity : mission.difficulty * 14,
@@ -445,6 +464,11 @@ export function validateGroundOperation(operation) {
       const targets = mission.objective.hiveTargetIds;
       if (operation.opponentFactionId !== 'brood' || operation.objective?.type !== 'purge_brood' || !operation.objective?.infestation || !operation.battlefield?.infestationActive || !targets.length || stableStringify(operation.battlefield?.hiveTargetIds) !== stableStringify(targets)) issues.push(issue('BROOD_PURGE_INVALID', 'UGA Brood operation is missing active infestation and valid hive targets.', 'battlefield'));
       if (targets.some(targetId => !site?.hiveTargetIds.includes(targetId))) issues.push(issue('HIVE_TARGET_INVALID', 'Operation contains a non-catalog hive target.', 'battlefield.hiveTargetIds'));
+    }
+    const location = operation.battlefield?.location;
+    if (location) {
+      const expectedLocation = createUgaGroundLocation(mission.id, location.mapId);
+      if (!expectedLocation || stableStringify(location) !== stableStringify(expectedLocation)) issues.push(issue('BATTLEFIELD_LOCATION_INVALID', 'Operation battlefield location does not match the selected authored UGA map.', 'battlefield.location'));
     }
   }
   const commander = COMMANDER_CATALOG[operation.commanderId];

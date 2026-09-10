@@ -1,8 +1,10 @@
 {
-  "schema": "MassfrontExplorationPackRemoteV1",
+  "schema": "MassfrontExplorationPackRemoteV2",
   "kind": "ExplorationPackRemote",
-  "note": "Galactic pack download fallback for installs that omitted modules/ (1.33.51). Player 1.33.52+ APK/www/Space include the signed runtime pack so HEAD ./modules/space_exploration/index.html succeeds locally. Clients still fetch this stub, then the signed manifest, then files from packEndpoint()/exploration-pack/ or the Hugging Face base below.",
-  "base": "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/exploration-pack/",
-  "manifest": "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/exploration-pack/exploration-content-manifest-v1.json?download=true",
-  "downloadQuery": "?download=true"
+  "version": "1.33.83",
+  "base": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.83/content-r1/",
+  "manifest": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.83/content-r1/exploration-content-manifest-v2.json",
+  "manifestSha256": "5e56b78c82b4e9a3172fc63824be00c9eb6a3a430050a36e2183c0abe78b8833",
+  "manifestBytes": 246328,
+  "downloadQuery": ""
 }

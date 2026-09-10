@@ -16,6 +16,7 @@ const sourcePaths = [
   'modules/space_exploration/src/ui/uga_command.js',
   'modules/space_exploration/src/ui/uga_command.css',
   'modules/space_exploration/src/space_experience.js',
+  'modules/space_exploration/src/domain/catalog.js',
   'modules/space_exploration/src/assets/generated/deployment_ship_geometry_v1.js',
   'modules/space_exploration/tools/export-deployment-ship-geometry.mjs',
   'modules/space_exploration/tools/verify-stage6-deployment-arena.mjs',
@@ -29,6 +30,7 @@ const maximumPhoneShipWidth = .90;
 const minimumPhoneShipAbovePanel = .90;
 const requiredRepresentation = 'exact-source-hull+arena-loading-fixtures';
 const multiFactionMissionId = 'uga_pale_bloom';
+const multiFactionBattlefieldId = 'karak_meridian_quarantine_standard';
 const servedBaseSourcePaths = Object.freeze({
   models: '/src/engine/models.js',
   mesh: '/src/engine/mesh.js',
@@ -463,6 +465,31 @@ try {
   });
   await mission.click();
   await page.waitForSelector('.uga-deployment-planner', { timeout: 20_000 });
+  const battlefieldSelect = page.locator('.uga-deployment-planner [data-deploy="mapId"]');
+  await battlefieldSelect.waitFor({ state: 'visible', timeout: 20_000 });
+  const unselectedBattlefield = await page.evaluate(() => {
+    const planner = document.querySelector('.uga-deployment-planner');
+    return {
+      areaId: planner?.dataset.selectedAreaId || '',
+      mapId: planner?.dataset.selectedMapId || '',
+      mapSize: planner?.dataset.selectedMapSize || '',
+      sizes: [...(planner?.querySelectorAll('[data-deploy="mapId"] option[data-ground-map]') || [])].map(option => option.dataset.mapSize),
+      confirmState: planner?.querySelector('.uga-deployment-readiness')?.dataset.deploymentConfirmState || null,
+      deployDisabled: Boolean(planner?.querySelector('[data-action="deploy"]')?.disabled)
+    };
+  });
+  check('battlefield-explicit-selection-required', unselectedBattlefield.areaId === 'karak_meridian_quarantine'
+    && unselectedBattlefield.mapId === '' && unselectedBattlefield.mapSize === ''
+    && JSON.stringify(unselectedBattlefield.sizes) === JSON.stringify(['compact', 'standard', 'large'])
+    && unselectedBattlefield.confirmState === 'blocked' && unselectedBattlefield.deployDisabled,
+  unselectedBattlefield);
+  await battlefieldSelect.selectOption(multiFactionBattlefieldId);
+  await page.waitForFunction(mapId => {
+    const planner = document.querySelector('.uga-deployment-planner');
+    return planner?.dataset.selectedMapId === mapId && planner?.dataset.selectedMapSize === 'standard'
+      && planner?.querySelector('.uga-deployment-readiness')?.dataset.deploymentConfirmState === 'ready'
+      && planner?.querySelector('[data-action="deploy"]')?.disabled === false;
+  }, multiFactionBattlefieldId, { timeout: 20_000 });
   await page.waitForTimeout(250);
   await page.evaluate(() => {
     const scroll = document.querySelector('.uga-context-scroll');
@@ -698,6 +725,10 @@ try {
       stationCardCount: document.querySelectorAll('.uga-deployment-station').length,
       visibleStationCards: [...document.querySelectorAll('.uga-deployment-station')].filter(visiblyContained).map(node => node.dataset.deploymentStation),
       factionOptionValues: [...(planner?.querySelector('[data-deploy="factionId"]')?.options || [])].map(option => option.value),
+      groundAreaId: planner?.dataset.selectedAreaId || null,
+      groundMapId: planner?.dataset.selectedMapId || null,
+      groundMapSize: planner?.dataset.selectedMapSize || null,
+      groundMapControlCount: planner?.querySelectorAll('[data-deploy="mapId"]').length || 0,
       commanderSelectCount: planner?.querySelectorAll('[data-deploy="commanderId"]').length || 0,
       specialistSelectCount: planner?.querySelectorAll('[data-specialist]').length || 0,
       unitControlCount: planner?.querySelectorAll('[data-deploy-unit]').length || 0,
@@ -799,7 +830,8 @@ try {
     safeSceneRect: composition?.safeSceneRect || null
   });
   check('six-responsive-station-cards', initial.stationCardCount === 6 && initial.visibleStationCards.length === 6 && initial.minStationHeight >= 48, { count: initial.stationCardCount, visible: initial.visibleStationCards, minHeight: initial.minStationHeight });
-  check('loadout-controls-present', initial.commanderSelectCount === 1 && initial.specialistSelectCount === 3 && initial.unitControlCount > 0 && initial.structureControlCount > 0 && initial.supportControlCount > 0 && initial.landingControlCount === 1, {
+  check('loadout-controls-present', initial.groundMapControlCount === 1 && initial.commanderSelectCount === 1 && initial.specialistSelectCount === 3 && initial.unitControlCount > 0 && initial.structureControlCount > 0 && initial.supportControlCount > 0 && initial.landingControlCount === 1, {
+    battlefield: { areaId: initial.groundAreaId, mapId: initial.groundMapId, mapSize: initial.groundMapSize, controls: initial.groundMapControlCount },
     commander: initial.commanderSelectCount, specialists: initial.specialistSelectCount, units: initial.unitControlCount,
     structures: initial.structureControlCount, support: initial.supportControlCount, landing: initial.landingControlCount
   });
@@ -862,7 +894,9 @@ try {
     fallbackObjects: initial.fallbackObjects,
     requiredRepresentation
   });
-  check('shared-draft-initialized', Boolean(initial.draft?.missionId && initial.draft?.commanderId && initial.draft?.specialistIds?.length === 3), initial.draft);
+  check('shared-draft-initialized', Boolean(initial.draft?.missionId && initial.draft?.commanderId
+    && initial.draft?.specialistIds?.length === 3 && initial.draft?.mapId === multiFactionBattlefieldId
+    && initial.groundAreaId === 'karak_meridian_quarantine' && initial.groundMapSize === 'standard'), initial.draft);
 
   const variantSwitch = await page.evaluate(variants => {
     const arena = window.__MASSFRONT_SPACE__?.deploymentArena;
@@ -1183,6 +1217,7 @@ try {
       landingZoneId: operation.landingZoneId,
       supportId: operation.supportId,
       doctrineId: operation.doctrineId,
+      battlefield: operation.battlefield,
       deploymentManifest: operation.deploymentManifest,
       draft
     };
@@ -1207,6 +1242,9 @@ try {
     && operationPreview.landingZoneId === operationPreview.draft.landingZoneId
     && operationPreview.supportId === operationPreview.draft.supportId
     && operationPreview.doctrineId === operationPreview.draft.doctrineId
+    && operationPreview.battlefield?.location?.areaId === 'karak_meridian_quarantine'
+    && operationPreview.battlefield?.location?.mapId === multiFactionBattlefieldId
+    && operationPreview.battlefield?.location?.size === 'standard'
     && operationPreview.deploymentManifest.slotCapacity === loadoutChange.capacity
     && JSON.stringify(operationPreview.deploymentManifest.units.map(({ id, count }) => ({ id, count }))) === JSON.stringify(operationPreview.draft.deploymentManifest.units)
     && JSON.stringify(operationPreview.deploymentManifest.structures.map(({ id, count }) => ({ id, count }))) === JSON.stringify(operationPreview.draft.deploymentManifest.structures)

@@ -11,7 +11,7 @@
 
    Only metaLoad() can distinguish a genuinely absent career record from an old
    zero-match career. Its transient provenance arms this flow on the first
-   integrated system entry; a small pending workflow marker then survives the
+   integrated UGA entry; a small pending workflow marker then survives the
    same-tab module/Training hops. The actual choice remains META.setup.pf/pc and
    persistCommanderPick(), the existing gameplay authority.
    ============================================================================ */
@@ -207,7 +207,7 @@ function continueToSpace(detail){
   var open=baseOpenExploration||(typeof mfOpenExploration==='function'?mfOpenExploration:null);
   if(typeof open!=='function')return false;
   Promise.resolve(open('system')).catch(function(e){
-    if(typeof toast==='function')toast('UGA link is unavailable — use START MASSFRONT to continue');
+    if(typeof toast==='function')toast('UGA link is unavailable — use DEPLOY MASSFRONT to continue');
   });
   return true;
 }
@@ -289,10 +289,18 @@ function tick(){
 function wrapExploration(){
   if(typeof mfOpenExploration!=='function'||mfOpenExploration.__mfCareerFactionGate)return;
   baseOpenExploration=mfOpenExploration;
-  var wrapped=function(entryView){
+  var wrapped=function(entryView,options){
     var target=entryView==='system'?'system':'campaign_hub';
-    if(target==='system'){
-      var armed=arm({source:'integrated-system-entry',returnToSpace:true});
+    var bridge=window.__MF_GALACTIC_BRIDGE;
+    var returning=target==='campaign_hub'&&options&&options.menuReturn&&bridge
+      &&typeof bridge.isMenuReturnContext==='function'&&bridge.isMenuReturnContext(options.menuReturn)===true;
+    if(target==='system'||target==='campaign_hub'&&!returning){
+      /* The persistent campaign hub is now the normal first screen. Arm the
+         real commissioning transaction before crossing documents, but keep
+         the hub itself usable: players may explore its Basic Access routes
+         and deliberately choose Training or commander hiring there. Ground
+         deployment remains blocked by the ticket/host commissioning checks. */
+      var armed=arm({source:target==='system'?'integrated-system-entry':'integrated-campaign-hub-entry',returnToSpace:true});
       /* A new career whose workflow marker cannot be saved must not enter a
          second document and lose the required gate. Existing/resolved careers
          still pass through; only the failed new-career transaction falls back
@@ -301,12 +309,6 @@ function wrapExploration(){
         if(typeof toast==='function')toast('Career setup could not be saved — Galactic entry is paused');
         return Promise.resolve(false);
       }
-    }
-    else if(pending()){
-      var G=gateMeta(false);
-      if(G&&G.phase===PHASE_FACTION)show();
-      if(typeof toast==='function')toast(G&&G.phase===PHASE_TRAINING?'Complete Training before entering full UGA operations':'Choose a faction before entering full UGA operations');
-      return Promise.resolve(false);
     }
     return baseOpenExploration.apply(this,arguments);
   };

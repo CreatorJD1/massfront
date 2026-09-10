@@ -218,7 +218,10 @@ const firstEntryBlock = experience.slice(
 );
 assert.doesNotMatch(firstEntryBlock, /openCampaignHub/, 'an unresolved new career must not bypass faction commissioning');
 assert.doesNotMatch(firstEntryBlock, /minimap|cmdrTx/i, 'normal-space first entry must stay on the dedicated story receiver');
-assert.match(firstEntryBlock, /SKIP TO FACTION SELECTION/);
+assert.match(firstEntryBlock, /ARRANGE FIRST COMMANDER/);
+assert.match(firstEntryBlock, /id: 'first-entry-next'/, 'navigation briefing requires player acknowledgement');
+assert.match(firstEntryBlock, /id: 'first-entry-continue'/, 'mission briefing requires player acknowledgement');
+assert.doesNotMatch(firstEntryBlock, /durationMs: (3300|3800)/, 'essential instructions must not auto-expire');
 assert.match(firstEntryBlock, /BEGIN BASIC TUTORIAL/);
 assert.match(firstEntryBlock, /speakerRole: 'UGA EXPEDITION GUIDE'/);
 assert.match(firstEntryBlock, /channel: 'UGA PERSONNEL LINK'/);

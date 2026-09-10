@@ -11,13 +11,17 @@ import {
   CAMPAIGN_HUB_QUICK_NAV,
   CAMPAIGN_HUB_ROUTES,
   CAMPAIGN_HUB_ROUTE_STATUS,
-  CAMPAIGN_HUB_SESSION_TYPES,
-  CAMPAIGN_HUB_SESSION_STATUS,
   campaignHubRouteIsReachable,
   campaignHubSessionIsReachable,
   getCampaignHubRoute,
   getCampaignHubSessionType
-} from './campaign_hub_registry.js?v=20260830-sessionroutes4';
+} from './campaign_hub_registry.js?v=20260908-commandhome2';
+import { commitResearch } from '../domain/progression.js';
+import { calculateFacilityCapabilities } from '../domain/construction.js';
+import { COMMANDER_ROSTER_IDS } from '../domain/commander_roster_contract.js';
+import { readAccountLedger, subscribeAccountLedger } from '../domain/account_ledger.js';
+import { deriveGroundControl, groundControlSummary } from '../domain/ground_control.js';
+import { resolveBaseRuntimeUrl } from '../host/base_runtime_url.js';
 
 const CAMPAIGN_HUB_SESSION_ROUTE_IDS = new Set([
   'classic', 'training', 'standard', 'campaign', 'weekly', 'mmo', 'coop'
@@ -164,12 +168,10 @@ const PERSONNEL_PORTRAIT_MIN_ASPECT = 0.6;
 const PERSONNEL_PORTRAIT_MAX_ASPECT = 1;
 
 // This is an allowlist, not a fallback catalog. Only final, art-approved,
-// original illustrations belong at these paths; missing or invalid files keep
-// that person sealed in both Factions and Deployment.
+// original illustrations belong at these paths. Missing cosmetic files never
+// revoke domain personnel readiness or substitute another character's face.
 export const UGA_PERSONNEL_PORTRAIT_CONTRACT = Object.freeze({
-  nova_rhea_voss: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/runtime/personnel/commander-rhea-voss.webp' }),
-  dominion_toren_vale: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/runtime/personnel/commander-toren-vale.webp' }),
-  syndicate_mara_quill: Object.freeze({ kind: 'commander', approved: true, path: '../../assets/runtime/personnel/commander-mara-quill.webp' }),
+  ...Object.fromEntries(COMMANDER_ROSTER_IDS.map(id => [id, Object.freeze({ kind: 'commander', approved: true, basePortrait: true, path: `../../../../assets/factions/commanders/${id}.jpg` })])),
   nova_scout_ilan: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-ilan-reeve.webp' }),
   nova_tech_sumi: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-sumi-kade.webp' }),
   nova_medic_orr: Object.freeze({ kind: 'specialist', approved: true, path: '../../assets/runtime/personnel/specialist-orr-sato.webp' }),
@@ -301,7 +303,7 @@ function ensureStylesheet() {
   if (document.querySelector('link[data-uga-command-style]')) return;
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = new URL('./uga_command.css?v=20260830-sessionroutes4', import.meta.url).href;
+  link.href = new URL('./uga_command.css?v=20260908-uga81r2', import.meta.url).href;
   link.dataset.ugaCommandStyle = 'true';
   document.head.appendChild(link);
 }
@@ -354,17 +356,23 @@ export function createUgaCommand(options = {}) {
   let activeHubRouteId = null;
   let confirmationKey = null;
   let sheetExpanded = false;
+  let deploymentLoadoutExpanded = false;
   const deploymentDrafts = new Map();
   let visible = options.visible !== false;
   let destroyed = false;
+  /* Read once at construction, then only when the classic shell writes. A
+     ground operation settles its Cores over there and returns, so the rail has
+     to pick that up without a reload. */
+  let accountLedger = readAccountLedger();
+  const releaseAccountLedger = subscribeAccountLedger(next => {
+    if (destroyed) return;
+    if (next.cores === accountLedger.cores && next.xp === accountLedger.xp) return;
+    accountLedger = next;
+    render();
+  });
   const portraitStatus = new Map();
   const portraitUrls = new Map();
   const portraitProbes = new Map();
-
-  function isPhonePortrait() {
-    return typeof window.matchMedia === 'function'
-      && window.matchMedia('(max-width: 760px) and (orientation: portrait)').matches;
-  }
 
   function usesCompactRoomFocus() {
     return typeof window.matchMedia === 'function'
@@ -380,9 +388,14 @@ export function createUgaCommand(options = {}) {
         <span class="uga-command-crest">${icon('crest')}</span>
         <div><strong>NEXUS-VII</strong><span>UGA CIVILIZATION SHIP // EXPEDITION COMMAND</span></div>
       </div>
-      <div class="uga-resource-ribbon" data-region="resources"></div>
+      <div class="uga-resource-ribbon" data-region="resources" tabindex="0" aria-label="Ship resources. Swipe horizontally for more."></div>
+      <span class="uga-scroll-cue uga-resource-scroll-cue" aria-hidden="true">SWIPE <b>›</b></span>
       <button type="button" class="uga-icon-button uga-command-exit" data-action="exit" aria-label="Return to space">${icon('close')}</button>
     </header>
+    <nav class="uga-deployment-context" data-deployment-context hidden aria-label="Hangar section navigation">
+      <button type="button" data-action="deployment-sections" aria-label="Return to ship sections; keep deployment draft">${icon('chevron')}<span>SHIP SECTIONS</span></button>
+      <div><small>NEXUS-VII // DECK C</small><strong>STRIKE BAY</strong></div>
+    </nav>
     <div class="uga-command-stage">
       <aside class="uga-district-rail" data-region="districts" aria-label="Ship districts"></aside>
       <div class="uga-scene-overlay" aria-hidden="true">
@@ -392,8 +405,7 @@ export function createUgaCommand(options = {}) {
       <aside class="uga-context-panel">
         <div class="uga-deployment-toolbar" data-deployment-toolbar hidden>
           <button type="button" data-action="deployment-back" aria-label="Back to missions">${icon('chevron')}<span>BACK TO MISSIONS</span></button>
-          <b>DEPLOYMENT LOADOUT</b>
-          <small>LIVE</small>
+          <button type="button" class="uga-deployment-toggle" data-action="toggle-deployment-loadout" aria-expanded="false"><span>EDIT LOADOUT</span>${icon('chevron')}</button>
         </div>
         <button type="button" class="uga-sheet-toggle" data-action="toggle-sheet" aria-expanded="true" aria-label="Collapse management inspector"><span></span><b>MANAGEMENT INSPECTOR</b>${icon('chevron')}</button>
         <div class="uga-context-body" data-region="context"></div>
@@ -445,7 +457,9 @@ export function createUgaCommand(options = {}) {
   function personnelPortraitUrl(id) {
     const definition = UGA_PERSONNEL_PORTRAIT_CONTRACT[id];
     if (!definition) return '';
-    if (!portraitUrls.has(id)) portraitUrls.set(id, new URL(definition.path, import.meta.url).href);
+    if (!portraitUrls.has(id)) portraitUrls.set(id, (definition.basePortrait
+      ? resolveBaseRuntimeUrl(definition.path, import.meta.url)
+      : new URL(definition.path, import.meta.url)).href);
     return portraitUrls.get(id);
   }
 
@@ -454,7 +468,7 @@ export function createUgaCommand(options = {}) {
   }
 
   function personnelPortraitImage(id, name = 'Personnel') {
-    if (!personnelPortraitReady(id)) return '';
+    if (!personnelPortraitReady(id)) return `<span class="uga-portrait-unavailable" role="img" aria-label="${escapeHtml(`${name}: portrait unavailable`)}" title="Portrait unavailable">${icon('staff')}</span>`;
     return `<img src="${escapeHtml(personnelPortraitUrl(id))}" alt="${escapeHtml(`${name} portrait`)}" loading="lazy" decoding="async" draggable="false" data-personnel-id="${escapeHtml(id)}">`;
   }
 
@@ -484,7 +498,7 @@ export function createUgaCommand(options = {}) {
       portraitStatus.set(id, 'pending');
       const probe = document.createElement('img');
       portraitProbes.set(id, probe);
-      probe.onload = () => settlePortraitProbe(id, portraitMeetsContract(probe) ? 'ready' : 'unavailable');
+      probe.onload = () => settlePortraitProbe(id, (definition.basePortrait ? probe.naturalWidth > 0 && probe.naturalHeight > 0 : portraitMeetsContract(probe)) ? 'ready' : 'unavailable');
       probe.onerror = () => settlePortraitProbe(id, 'unavailable');
       probe.src = personnelPortraitUrl(id);
     }
@@ -496,14 +510,15 @@ export function createUgaCommand(options = {}) {
 
   function readyPersonnel(items, state, kind, factionId) {
     return items.filter(item => item.factionId === factionId &&
-      personnelState(state, kind, item.id).status === 'ready' &&
-      personnelPortraitReady(item.id));
+      personnelState(state, kind, item.id).unlocked !== false &&
+      !personnelState(state, kind, item.id).injury &&
+      personnelState(state, kind, item.id).status === 'ready');
   }
 
   function personnelSelect(kind, items, index = 0, selectedId = '') {
     const specialist = kind === 'specialist';
     const selected = items.find(item => item.id === selectedId) || items[index] || items[0];
-    const label = specialist ? `Specialist ${index + 1}` : 'Commander';
+    const label = specialist ? `Specialist ${index + 1}` : 'Hired Commander';
     const data = specialist ? `data-specialist="${index}"` : 'data-deploy="commanderId"';
     return `<label class="uga-personnel-field"><span>${label}</span><div class="uga-personnel-select${selected ? '' : ' is-unavailable'}">
       <span class="uga-personnel-portrait uga-deployment-portrait" data-personnel-portrait ${selected ? '' : 'hidden'}>${selected ? personnelPortraitImage(selected.id, selected.name || prettyToken(selected.id)) : ''}</span>
@@ -520,6 +535,7 @@ export function createUgaCommand(options = {}) {
       proxyFactionId: defaults.proxyFactionId || '',
       commanderId: defaults.commanderId || '',
       specialistIds: [...(defaults.specialistIds || [])],
+      mapId: defaults.mapId || '',
       landingZoneId: defaults.landingZoneId || '',
       supportId: defaults.supportId || '',
       doctrineId: defaults.doctrineId || '',
@@ -544,6 +560,7 @@ export function createUgaCommand(options = {}) {
       proxyFactionId: value('factionId'),
       commanderId: value('commanderId'),
       specialistIds: [...planner.querySelectorAll('[data-specialist]')].map(select => select.value).filter(Boolean),
+      mapId: value('mapId'),
       landingZoneId: value('landingZone'),
       supportId: value('support'),
       doctrineId: value('doctrine'),
@@ -553,9 +570,86 @@ export function createUgaCommand(options = {}) {
         modIds: [...planner.querySelectorAll('[data-deploy-mod]:checked')].map(input => input.dataset.deployMod)
       }
     };
+    const selectedMap = planner.querySelector('[data-deploy="mapId"]')?.selectedOptions?.[0] || null;
+    const selectedAreaId = planner.dataset.selectedAreaId || '';
+    const selectedMapSize = selectedMap?.dataset.mapSize || '';
+    planner.dataset.selectedMapId = next.mapId;
+    planner.dataset.selectedMapSize = selectedMapSize;
+    root.dataset.groundRouteStage = planner.dataset.groundRouteStage || '';
+    root.dataset.selectedAreaId = selectedAreaId;
+    root.dataset.selectedMapId = next.mapId;
+    root.dataset.selectedMapSize = selectedMapSize;
     deploymentDrafts.set(missionId, next);
     call('onDeploymentPreview', next);
     return next;
+  }
+
+  /* Every loadout edit must ask the same domain validator that launch uses.
+     The old manifest and faction handlers each toggled the button from only
+     their local field, so a later edit could re-enable an over-capacity or
+     duplicate-personnel request and defer the rejection until deployment. */
+  function updateDeploymentReadiness(planner, payload) {
+    if (!planner || !payload) return { ready: false, message: 'Deployment loadout is unavailable.' };
+    const manifest = planner.querySelector('.uga-deployment-manifest');
+    const unitInputs = [...planner.querySelectorAll('[data-deploy-unit]')];
+    const structureInputs = [...planner.querySelectorAll('[data-deploy-structure]')];
+    const slots = [...unitInputs, ...structureInputs]
+      .reduce((sum, select) => sum + (Number(select.value) || 0) * (Number(select.dataset.slotCost) || 0), 0);
+    const capacity = Number(manifest?.dataset.slotCapacity) || 0;
+    const unitCount = unitInputs.reduce((sum, select) => sum + (Number(select.value) || 0), 0);
+    const structureCount = structureInputs.reduce((sum, select) => sum + (Number(select.value) || 0), 0);
+    const modCount = planner.querySelectorAll('[data-deploy-mod]:checked').length;
+    const unitLimit = Number(manifest?.dataset.unitLimit) || Infinity;
+    const structureLimit = Number(manifest?.dataset.structureLimit) || Infinity;
+    const modLimit = Number(manifest?.dataset.modLimit) || Infinity;
+    const requiredUnitIds = String(manifest?.dataset.requiredUnitIds || '').split(',').filter(Boolean);
+    const selectedUnitIds = new Set(unitInputs.filter(select => Number(select.value) > 0).map(select => select.dataset.deployUnit));
+    const specialistIds = payload.specialistIds || [];
+    const fieldsReady = Boolean(payload.proxyFactionId && payload.commanderId && payload.mapId && payload.landingZoneId && payload.supportId && payload.doctrineId);
+    const personnelReady = specialistIds.length === 3 && new Set(specialistIds).size === 3;
+    const manifestReady = slots > 0 && slots <= capacity && unitCount <= unitLimit
+      && structureCount <= structureLimit && modCount <= modLimit
+      && requiredUnitIds.every(id => selectedUnitIds.has(id));
+    const eligibility = typeof options.getMissionEligibility === 'function'
+      ? options.getMissionEligibility(payload.missionId, payload) : null;
+    const ready = fieldsReady && personnelReady && manifestReady && eligibility?.eligible !== false;
+    const message = eligibility?.locks?.[0]?.message
+      || (!personnelReady ? 'Select exactly three unique specialists.'
+        : slots <= 0 ? 'Select at least one starting unit group.'
+          : slots > capacity ? `Deployment uses ${slots} of ${capacity} available slots.`
+            : unitCount > unitLimit ? `Mission allows at most ${unitLimit} starting unit groups.`
+              : structureCount > structureLimit ? `Mission allows at most ${structureLimit} starting structures.`
+                : modCount > modLimit ? `Mission allows at most ${modLimit} operation mods.`
+                  : !manifestReady ? 'The required starting force is incomplete.'
+                    : !fieldsReady ? 'Choose a battlefield and complete each deployment selection.'
+                      : 'Deployment loadout is blocked.');
+    const usage = manifest?.querySelector('[data-slot-usage]');
+    if (usage) usage.textContent = `${slots} / ${capacity}`;
+    const summaryUsage = planner.querySelector('[data-slot-usage-summary]');
+    if (summaryUsage) summaryUsage.textContent = `${slots} / ${capacity} SLOTS`;
+    manifest?.classList.toggle('is-over-capacity', slots > capacity);
+    const blocker = planner.querySelector('[data-deployment-blocker]');
+    if (blocker) {
+      blocker.hidden = ready;
+      const text = blocker.querySelector('span');
+      if (text) text.textContent = message;
+    }
+    const readiness = planner.querySelector('.uga-deployment-readiness');
+    readiness?.classList.toggle('is-ready', ready);
+    readiness?.classList.toggle('is-blocked', !ready);
+    if (readiness) readiness.dataset.deploymentConfirmState = ready ? 'ready' : 'blocked';
+    const deploy = planner.querySelector('[data-action="deploy"]');
+    if (deploy) {
+      deploy.disabled = !ready;
+      if (deploy.childNodes[0]) deploy.childNodes[0].nodeValue = ready ? 'CONFIRM & DEPLOY' : 'LOADOUT BLOCKED';
+    }
+    planner.classList.toggle('is-invalid', !ready);
+    return { ready, message, eligibility };
+  }
+
+  function syncDeploymentPlanner(planner, station = null) {
+    const payload = readDeploymentPlanner(planner, station);
+    return { payload, ...updateDeploymentReadiness(planner, payload) };
   }
 
   function syncPersonnelPortrait(select) {
@@ -564,9 +658,8 @@ export function createUgaCommand(options = {}) {
     const id = select.value;
     const name = select.selectedOptions[0]?.textContent || 'Personnel';
     frame.innerHTML = personnelPortraitImage(id, name);
-    const ready = personnelPortraitReady(id);
-    frame.hidden = !ready;
-    frame.parentElement.classList.toggle('is-unavailable', !ready);
+    frame.hidden = !id;
+    frame.parentElement.classList.toggle('is-unavailable', !id);
   }
 
   function call(name, ...args) {
@@ -610,12 +703,33 @@ export function createUgaCommand(options = {}) {
   function resources() {
     const state = getState();
     const values = state.resources || state.economy || {};
-    return Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => {
+    const expedition = Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => {
       let value = values[key];
       if (value === undefined && key === 'researchPoints') value = values.research ?? values.science;
       if (value === undefined && key === 'credits') value = values.requisition;
       return `<div class="uga-resource" title="${escapeHtml(label)}"><span>${icon(iconName)}</span><b>${formatValue(value)}</b><small>${escapeHtml(label)}</small></div>`;
     }).join('');
+    /* Cores and XP lead the rail. They are the account ledger the classic menu
+       shows and the only currency a match actually pays out, so a strategic home
+       that omitted them was showing the player seven numbers they had never
+       earned and hiding the one they had. Read-only here — the classic shell
+       stays the sole writer, see domain/account_ledger.js. The seven stay as
+       expedition materials because every construction and research cost in the
+       catalog is priced in them. */
+    const ledger = accountLedger;
+    if (!ledger) return expedition;
+    /* Distinct glyphs on purpose. Cores first took 'credit' and XP took
+       'research', which put the same two icons on four different rows — Cores
+       looked like Credits and XP looked like Research Points, which is the exact
+       confusion this change exists to remove. 'crest' reads as account identity
+       and 'upgrade' as advancement, and neither is used by the seven materials. */
+    const account = [
+      ['Cores', 'crest', ledger.cores],
+      ['XP', 'upgrade', ledger.xp]
+    ].map(([label, iconName, value]) =>
+      `<div class="uga-resource is-account" title="${escapeHtml(label)} — shared with the MASSFRONT main menu"><span>${icon(iconName)}</span><b>${formatValue(value)}</b><small>${escapeHtml(label)}</small></div>`
+    ).join('');
+    return account + expedition;
   }
 
   let selectedDeckFilter = 'A';
@@ -670,7 +784,8 @@ export function createUgaCommand(options = {}) {
             ${icon('chevron', 'uga-row-chevron')}
           </button>`;
         }).join('')}
-      </div>`;
+      </div>
+      <span class="uga-scroll-cue uga-district-scroll-cue" aria-hidden="true">SWIPE <b>›</b></span>`;
   }
 
   function tierRail(tier, fixed) {
@@ -785,29 +900,51 @@ export function createUgaCommand(options = {}) {
   }
 
   function classicTerminal() {
+    const state = getState();
+    const systems = state.world?.systems || {};
+    const systemId = state.route?.systemId || Object.keys(systems).find(id => systems[id]?.discovered) || 'aelos';
+    const system = systems[systemId] || {};
+    const pressure = Number(system.soloFront?.pressure);
+    const hasPressure = Number.isFinite(pressure);
+    const infestation = system.infestation || {};
+    const frontLabel = infestation.confirmed ? 'BIO-THREAT' : !hasPressure ? 'STATUS UNKNOWN' : pressure >= 66 ? 'HIGH PRESSURE' : pressure >= 34 ? 'CONTESTED' : 'STABLE';
+    const frontTone = infestation.confirmed || (hasPressure && pressure >= 66) ? 'danger' : hasPressure && pressure >= 34 ? 'warning' : 'stable';
+    const discovered = Object.values(systems).filter(entry => entry?.discovered).length;
+    const systemCount = Object.keys(systems).length;
+    const intelligence = Number(state.intelligence?.bySystem?.[systemId]) || 0;
+    const operations = Array.isArray(state.operations?.history) ? state.operations.history.length : 0;
     const modes = [
-      ['mode-standard', 'Standard / Classic', 'Offline RTS skirmish against authored AI with optional AI allies', false],
-      ['mode-campaign', 'Campaign', 'Existing five-mission playable Prologue', false],
-      ['', 'Co-op / Versus', 'Synchronized network sessions are not implemented in this build', true],
-      ['', 'MMO', 'Persistent planetary warfront authority is not implemented in this build', true]
+      ['training', 'Guided live-fire'],
+      ['standard', 'Solo vs AI'],
+      ['campaign', 'Story missions'],
+      ['coop', 'Network unavailable'],
+      ['mmo', 'Authority unavailable']
     ];
-    const supporting = [
-      ['mode-training', 'Training', 'KEEL-guided protected live-fire operation'],
-      ['mode-weekly', 'Weekly Operation', 'Current authored weekly briefing and deployment']
-    ];
-    const hostReady = hostRoutesAvailable();
-    return `<section class="uga-classic-terminal">
-      <div class="uga-terminal-heading">${icon('terminal')}<div><small>COMMAND CORE // VALIDATED MASSFRONT LINK</small><b>SESSION TYPES</b></div><span class="uga-terminal-live">${hostReady ? 'OFFLINE READY' : 'HOST LOCKED'}</span></div>
-      <p>Available entries open the real MASSFRONT mode. Co-op / Versus and MMO remain separate locked routes until their real services exist.</p>
-      <div class="uga-mode-grid">${modes.map(([routeId, name, detail, locked]) => {
-        const enabled = Boolean(routeId && hostReady && !locked);
-        return `<button type="button" data-session-mode="${escapeHtml(name)}" ${enabled ? `data-host-route="${escapeHtml(routeId)}"` : 'disabled aria-disabled="true"'}><span>${escapeHtml(name)}</span><small>${escapeHtml(detail)} // ${enabled ? 'OFFLINE PLAYABLE' : locked ? 'NETWORK UNAVAILABLE' : 'MASSFRONT HOST REQUIRED'}</small>${enabled ? icon('chevron') : icon('lock')}</button>`;
+    return `<div class="uga-context-scroll uga-command-access">
+      <div class="uga-command-access-title"><small>PLAY // BASIC ACCESS</small><h2>Choose a deployment</h2></div>
+      <div class="uga-command-mode-row" aria-label="Playable and unavailable MASSFRONT sessions">${modes.map(([id, detail]) => {
+        const entry = getCampaignHubRoute(id);
+        const reachable = hubRouteReachable(entry);
+        const locked = entry?.status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED;
+        const status = reachable ? 'READY' : locked ? 'LOCKED' : 'BASE HOST';
+        const label = id === 'campaign' ? 'Campaign' : entry?.label || prettyToken(id);
+        return `<button type="button" class="uga-command-mode${reachable ? ' is-ready' : ' is-locked'}" data-command-mode="${escapeHtml(id)}" ${reachable ? `data-hub-route="${escapeHtml(id)}"` : 'disabled aria-disabled="true"'} aria-label="${escapeHtml(`${label}. ${status}. ${detail}`)}"><span>${icon(entry?.icon || 'terminal')}</span><small>${escapeHtml(status)}</small><strong>${escapeHtml(label)}</strong><em>${escapeHtml(detail)}</em>${icon(reachable ? 'chevron' : 'lock')}</button>`;
       }).join('')}</div>
-      <div class="uga-mode-support"><small>SUPPORTING OFFLINE PLAYLISTS</small><div class="uga-mode-grid">${supporting.map(([routeId, name, detail]) => {
-        const enabled = hostReady;
-        return `<button type="button" ${enabled ? `data-host-route="${escapeHtml(routeId)}"` : 'disabled aria-disabled="true"'}><span>${escapeHtml(name)}</span><small>${escapeHtml(detail)} // ${enabled ? 'PLAYABLE' : 'MASSFRONT HOST REQUIRED'}</small>${enabled ? icon('chevron') : icon('lock')}</button>`;
-      }).join('')}</div></div>
-    </section>`;
+      <section class="uga-command-front is-${frontTone}" aria-label="Current Galactic front status">
+        <span>${icon(infestation.confirmed ? 'warning' : 'overview')}</span>
+        <div><small>CURRENT SYSTEM</small><strong>${escapeHtml(prettyToken(systemId))}</strong><p>${escapeHtml(frontLabel)}${hasPressure ? ` · PRESSURE ${formatValue(pressure)}` : ''}</p></div>
+        <dl><div><dt>ROUTES</dt><dd>${formatValue(discovered)} / ${formatValue(systemCount)}</dd></div><div><dt>INTEL</dt><dd>${formatValue(intelligence)}</dd></div><div><dt>OPS</dt><dd>${formatValue(operations)}</dd></div></dl>
+        <button type="button" data-nav="galaxy">OPEN GALAXY${icon('chevron')}</button>
+      </section>
+      <nav class="uga-command-quick" aria-label="Command quick access">
+        <button type="button" data-command-construction="build">${icon('build')}<span>Build</span></button>
+        <button type="button" data-hub-route="galactic-research">${icon('research')}<span>Research</span></button>
+        <button type="button" data-host-route="development" ${hostRoutesAvailable() ? '' : 'disabled aria-disabled="true"'}>${icon('fabricator')}<span>Craft</span></button>
+        <button type="button" data-command-construction="upgrade">${icon('upgrade')}<span>Upgrade</span></button>
+        <button type="button" data-hub-route="inventory">${icon('inventory')}<span>Inventory</span></button>
+      </nav>
+      <button type="button" class="uga-command-war-table" data-host-route="war-room" ${hostRoutesAvailable() ? '' : 'disabled aria-disabled="true"'}>${icon('terminal')}<span>WAR TABLE</span><small>${hostRoutesAvailable() ? 'ALL BASE MODES' : 'BASE HOST REQUIRED'}</small>${icon('chevron')}</button>
+    </div>`;
   }
 
   function constructionQueueMarkup(status) {
@@ -817,6 +954,7 @@ export function createUgaCommand(options = {}) {
         <div><small>EXPEDITION CYCLE ${formatValue(status.cycle)}</small><h3>Global Construction Queue</h3></div>
         <span>${formatValue(status.active)} / ${formatValue(status.capacity)} ACTIVE · ${queue.length} / ${formatValue(status.queueLimit)} QUEUED</span>
       </header>
+      <p>Construction advances with expeditions: completed surveys add 1 cycle, travel adds 2, and returning ground operations add 2. Queued work waits for an active slot and enough power; opening this screen does not advance time.</p>
       <div class="uga-construction-power ${status.power?.surplusMW < 0 ? 'is-deficit' : ''}">
         ${icon('power')}<div><b>${status.power?.surplusMW >= 0 ? '+' : ''}${formatValue(status.power?.surplusMW)} MW FORECAST</b><small>${formatValue(status.power?.constructionPowerPerSlotMW)} MW PER ACTIVE SLOT</small></div>
       </div>
@@ -894,7 +1032,6 @@ export function createUgaCommand(options = {}) {
     const catalog = districtsCatalog(getCatalog());
     const definition = normalizeDistrict(selectedDistrictId, catalog);
     const districtState = districtTierState(getState(), selectedDistrictId, definition);
-    const cost = upgradeCost(definition, districtState.tier);
     const canUpgrade = !definition.fixed && districtState.tier < 3;
     const activeTier = definition.tiers?.find?.(entry => Number(entry.level) === districtState.tier) || definition.tiers?.[districtState.tier - 1];
     const capacity = definition.capacity || definition.population || activeTier?.capacity || null;
@@ -921,6 +1058,10 @@ export function createUgaCommand(options = {}) {
           <span class="uga-tier-badge">${definition.fixed ? 'FIXED' : `TIER ${districtState.tier}`}</span>
         </div>
       </div>
+      ${canUpgrade ? `<section class="uga-upgrade-block">
+        <div><small>CURRENT TIER ${districtState.tier} · NEXT TIER ${districtState.tier + 1}</small><b>Choose your next facility</b><p>Compare benefits, costs and power before authorizing construction.</p></div>
+        <button type="button" class="uga-primary-button" data-action="upgrade">VIEW TIER ${districtState.tier + 1} FACILITIES${icon('chevron')}</button>
+      </section>` : ''}
       ${adjacencySynergyBanner(selectedDistrictId)}
       ${tierRail(districtState.tier, definition.fixed)}
       <p class="uga-district-description">${escapeHtml(definition.description)}</p>
@@ -929,11 +1070,7 @@ export function createUgaCommand(options = {}) {
       <section class="uga-panel-section"><header><span>SPECIALIST STATIONS</span><small>02</small></header><div class="uga-staff-list">${staffRows(definition, districtState)}</div></section>
       <section class="uga-panel-section"><header><span>VISUAL UPGRADES & ARCHITECTURE</span><small>03</small></header><div class="uga-visual-list">${visualUpgradeRows(definition, districtState)}</div></section>
       <section class="uga-panel-section"><header><span>INTERNAL MODULE SOCKETS</span><small>04</small></header><div class="uga-socket-list">${socketRows(definition, districtState)}</div></section>
-      ${canUpgrade ? `<section class="uga-upgrade-block">
-        <div><small>STRUCTURAL UPGRADE AUTHORIZATION</small><b>TIER ${districtState.tier} → TIER ${districtState.tier + 1}</b></div>
-        <div class="uga-upgrade-cost">${costMarkup(cost)}</div>
-        <button type="button" class="uga-primary-button" data-action="upgrade">AUTHORIZE CONSTRUCTION${icon('chevron')}</button>
-      </section>` : definition.fixed ? classicTerminal() : '<div class="uga-max-tier">MAXIMUM AUTHORIZED TIER REACHED</div>'}
+      ${!definition.fixed && !canUpgrade ? '<div class="uga-max-tier">MAXIMUM AUTHORIZED TIER REACHED</div>' : ''}
     </div>`;
   }
 
@@ -968,7 +1105,7 @@ export function createUgaCommand(options = {}) {
     const commanders = asArray(catalog.commanders || catalog.COMMANDER_CATALOG || state.commanders)
       .filter(commander => {
         const progress = personnelState(state, 'commanders', commander.id);
-        return progress.unlocked !== false && progress.status !== 'locked' && personnelPortraitReady(commander.id);
+        return progress.unlocked !== false && progress.status !== 'locked';
       });
     if (!commanders.length) return `<section class="uga-panel-section"><header><span>COMMANDER READINESS</span><small>02</small></header><div class="uga-empty-state">${portraitAuditPending() ? 'Authenticating authored commander dossiers.' : 'Commander dossiers remain sealed until approved illustrated portraits are installed.'}</div></section>`;
     return `<section class="uga-panel-section"><header><span>COMMANDER READINESS</span><small>02</small></header><div class="uga-commander-grid">${commanders.map(commander => {
@@ -1027,6 +1164,7 @@ export function createUgaCommand(options = {}) {
     const missions = asArray(catalog.missions || catalog.MISSION_CATALOG || state.availableMissions || state.missions).filter(item => item.id);
     return `<div class="uga-context-scroll">
       <div class="uga-section-title"><small>SPONSORSHIP AND ELIGIBILITY</small><h2>Contracts</h2><p>Faction conflicts require their resident sponsor. Brood purges are issued only by UGA.</p></div>
+      ${!state.commissioning?.completed ? `<section class="uga-commission-card"><div><h3>Hire your first commander</h3><p>Choose a faction and complete commander hiring before planning ground missions. Once hired, select an available commander from that faction in the Deployment Hangar.</p></div><button type="button" class="uga-primary-button" data-host-route="new-career-faction" ${hostRoutesAvailable() ? '' : 'disabled'}>HIRE COMMANDER</button></section>` : ''}
       <div class="uga-record-list">${missions.length ? missions.map(mission => {
         const locks = missionLocks(mission, state);
         const isBrood = isBroodMission(mission);
@@ -1046,6 +1184,25 @@ export function createUgaCommand(options = {}) {
       }).join('') : '<div class="uga-empty-state">No operation packages are currently available.</div>'}</div>
       ${debriefArchive(state, catalog)}
     </div>`;
+  }
+
+  function progressPanel() {
+    const catalog = getCatalog();
+    const state = getState();
+    const missions = asArray(catalog.missions || catalog.MISSION_CATALOG || state.availableMissions || state.missions).filter(item => item.id);
+    const nextMission = missions.find(mission => missionLocks(mission, state).length === 0) || missions[0] || null;
+    const nextLocks = nextMission ? missionLocks(nextMission, state) : [];
+    const nextTitle = nextMission?.name || nextMission?.title || (nextMission ? prettyToken(nextMission.id) : 'No local objective');
+    const routes = [
+      { id: 'galactic-operations', icon: 'contracts', title: 'Expedition', detail: nextTitle, status: nextMission ? (nextLocks.length ? 'LOCKED' : 'READY') : 'STANDBY' },
+      { id: 'operations', icon: 'mission_ops', title: 'Campaign', detail: 'Missions & weekly operations', status: hostRoutesAvailable() ? 'PLAYABLE' : 'MASSFRONT HOST' },
+      { id: 'development', icon: 'research', title: 'Development', detail: 'Research, crafting & loadouts', status: hostRoutesAvailable() ? 'AVAILABLE' : 'MASSFRONT HOST' }
+    ];
+    return `<div class="uga-context-scroll uga-progress-view"><div class="uga-section-title"><small>PROGRESS</small><h2>Choose your next move</h2></div><div class="uga-progress-grid">${routes.map(route => {
+      const entry = getCampaignHubRoute(route.id);
+      const reachable = entry && hubRouteReachable(entry);
+      return `<button type="button" class="uga-progress-route${reachable ? '' : ' is-locked'}${route.status === 'LOCKED' ? ' is-objective-locked' : ''}" data-hub-route="${escapeHtml(route.id)}" ${reachable ? '' : 'disabled'}><span>${icon(route.icon)}</span><div><small>${escapeHtml(route.status)}</small><strong>${escapeHtml(route.title)}</strong><p>${escapeHtml(route.detail)}</p></div>${icon(reachable ? 'chevron' : 'lock')}</button>`;
+    }).join('')}</div></div>`;
   }
 
   function deploymentViewPanel() {
@@ -1074,13 +1231,16 @@ export function createUgaCommand(options = {}) {
     const previousDraft = deploymentDrafts.get(missionId);
     const initialFactionId = factionOptions.some(item => item.id === previousDraft?.proxyFactionId)
       ? previousDraft.proxyFactionId
-      : factionOptions[0]?.id || '';
+      : factionOptions.some(item => item.id === state.commissioning?.factionId)
+        ? state.commissioning.factionId : factionOptions[0]?.id || '';
     const commanderOptions = readyPersonnel(commanders, state, 'commanders', initialFactionId);
     const specialistOptions = readyPersonnel(specialists, state, 'specialists', initialFactionId);
     const landingZones = mission.landingZoneIds?.length ? mission.landingZoneIds : ['primary'];
-    const eligibility = typeof options.getMissionEligibility === 'function'
+    const defaultEligibility = typeof options.getMissionEligibility === 'function'
       ? options.getMissionEligibility(missionId) : null;
-    const authoritativeManifest = eligibility?.defaults?.deploymentManifest;
+    const authoritativeManifest = defaultEligibility?.defaults?.deploymentManifest;
+    const groundArea = defaultEligibility?.defaults?.groundArea || null;
+    const groundMaps = asArray(groundArea?.maps);
     const authoredCapacity = mission.deploymentCapacity || { slots: 8, unitLimit: 4, structureLimit: 2, modLimit: 2 };
     const capacity = {
       ...authoredCapacity,
@@ -1094,8 +1254,9 @@ export function createUgaCommand(options = {}) {
     const allowedMods = operationMods.filter(item => !capacity.allowedModIds || capacity.allowedModIds.includes(item.id));
     const draft = deploymentDraft(missionId, {
       proxyFactionId: initialFactionId,
-      commanderId: commanderOptions[0]?.id || '',
+      commanderId: commanderOptions.find(item => item.id === state.commissioning?.commanderId)?.id || commanderOptions[0]?.id || '',
       specialistIds: specialistOptions.slice(0, 3).map(item => item.id),
+      mapId: defaultEligibility?.defaults?.mapId || '',
       landingZoneId: landingZones[0] || '',
       supportId: support[0]?.id || '',
       doctrineId: doctrines[0]?.id || '',
@@ -1105,22 +1266,59 @@ export function createUgaCommand(options = {}) {
         modIds: allowedMods.slice(0, 1).map(item => item.id)
       }
     });
+    // Saved UI drafts are not personnel authority. Preserve cargo selections,
+    // but reconcile recovered/deployed personnel against the current roster.
+    draft.proxyFactionId = initialFactionId;
+    if (draft.mapId && !groundMaps.some(map => map.id === draft.mapId)) draft.mapId = '';
+    if (!commanderOptions.some(item => item.id === draft.commanderId)) {
+      draft.commanderId = commanderOptions.find(item => item.id === state.commissioning?.commanderId)?.id || commanderOptions[0]?.id || '';
+    }
+    const readySpecialistIds = new Set(specialistOptions.map(item => item.id));
+    draft.specialistIds = [...new Set(draft.specialistIds.filter(id => readySpecialistIds.has(id)))].slice(0, 3);
+    for (const person of specialistOptions) if (draft.specialistIds.length < 3 && !draft.specialistIds.includes(person.id)) draft.specialistIds.push(person.id);
     const unitCounts = new Map(draft.deploymentManifest.units.map(item => [item.id, Number(item.count) || 0]));
     const structureCounts = new Map(draft.deploymentManifest.structures.map(item => [item.id, Number(item.count) || 0]));
     const selectedModIds = new Set(draft.deploymentManifest.modIds);
     const slotUsage = allowedUnits.reduce((sum, item) => sum + (unitCounts.get(item.id) || 0) * item.slotCost, 0)
       + allowedStructures.reduce((sum, item) => sum + (structureCounts.get(item.id) || 0) * item.slotCost, 0);
     const deployable = Boolean(initialFactionId && commanderOptions.length && specialistOptions.length >= 3 && doctrines.length && support.length && landingZones.length);
-    const canCommit = deployable && slotUsage > 0 && slotUsage <= capacity.slots;
+    const specialistIdsReady = draft.specialistIds.length === 3 && new Set(draft.specialistIds).size === 3;
+    const unitCount = draft.deploymentManifest.units.reduce((sum, item) => sum + item.count, 0);
+    const structureCount = draft.deploymentManifest.structures.reduce((sum, item) => sum + item.count, 0);
+    const selectedUnitIds = new Set(draft.deploymentManifest.units.filter(item => item.count > 0).map(item => item.id));
+    const manifestReady = slotUsage > 0 && slotUsage <= capacity.slots
+      && unitCount <= capacity.unitLimit && structureCount <= capacity.structureLimit
+      && draft.deploymentManifest.modIds.length <= capacity.modLimit
+      && (capacity.requiredUnitIds || []).every(id => selectedUnitIds.has(id));
+    const selectedGroundMap = groundMaps.find(map => map.id === draft.mapId) || null;
+    const battlefieldReady = Boolean(groundArea && selectedGroundMap);
+    const selectionEligibility = typeof options.getMissionEligibility === 'function'
+      ? options.getMissionEligibility(missionId, draft) : null;
+    const canCommit = deployable && specialistIdsReady && manifestReady && battlefieldReady && selectionEligibility?.eligible !== false;
+    const blockerMessage = selectionEligibility?.locks?.[0]?.message
+      || (!specialistIdsReady ? 'Select exactly three unique specialists.'
+        : slotUsage <= 0 ? 'Select at least one starting unit group.'
+          : slotUsage > capacity.slots ? `Deployment uses ${slotUsage} of ${capacity.slots} available slots.`
+            : !manifestReady ? 'The required starting force is incomplete.'
+              : !battlefieldReady ? 'Choose a compact, standard, or large battlefield.'
+              : 'Deployment loadout is blocked.');
     const deploymentShipNames = { nova: 'Nova Orbital Carrier', dominion: 'Dominion Assault Lander', syndicate: 'Syndicate Phase Manta' };
     const selectedCommander = commanderOptions.find(item => item.id === draft.commanderId);
     const deploymentShipName = deploymentShipNames[draft.proxyFactionId] || 'HQ Deployment Ship';
-    return `<section class="uga-deployment-planner" data-mission-id="${escapeHtml(missionId)}" data-deployment-screen="loadout" data-route="contracts" data-deployment-state="planning">
+    return `<section class="uga-deployment-planner" data-mission-id="${escapeHtml(missionId)}" data-deployment-screen="loadout" data-route="contracts" data-deployment-state="planning" data-ground-route-stage="map" data-selected-area-id="${escapeHtml(groundArea?.areaId || groundArea?.id || '')}" data-selected-map-id="${escapeHtml(draft.mapId)}" data-selected-map-size="${escapeHtml(selectedGroundMap?.size || '')}">
+      <div class="uga-deployment-summary" aria-label="Current deployment loadout">
+        <span>${icon('hangar')}</span><div><small>HQ DEPLOYMENT CARRIER</small><strong>${escapeHtml(deploymentShipName)}</strong><p>${escapeHtml(selectedCommander?.name || 'Select a ready commander')} · ${draft.specialistIds.length} / 3 specialists</p></div>
+      </div>
+      <div class="uga-deployment-fields">
       <header><small>STRIKE BAY // HQ CARRIER LOADOUT</small><h3>Deployment Hangar</h3><p>${escapeHtml(deploymentShipName)} is the selected commander\'s HQ deployment carrier. It delivers the command chassis, starting force, packed HQ structures, and support package into the real ground operation.</p></header>
       <div class="uga-deployment-identity" aria-label="Commander and resident force selection">
         <label class="uga-deployment-faction"><span>Resident Faction</span><select data-deploy="factionId">${factionOptions.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === draft.proxyFactionId ? 'selected' : ''}>${escapeHtml(item.name || prettyToken(item.id))}</option>`).join('')}</select></label>
         ${personnelSelect('commander', commanderOptions, 0, draft.commanderId)}
       </div>
+      <section class="uga-ground-route" data-ground-route-stage="map" data-ground-area="${escapeHtml(groundArea?.areaId || groundArea?.id || '')}">
+        <div><small>${escapeHtml(groundArea?.planetName || 'PLANET')}</small><strong>${escapeHtml(groundArea?.areaName || groundArea?.name || 'Deployment area')}</strong></div>
+        <label><span>Battlefield</span><select data-deploy="mapId" aria-label="Battlefield size"><option value="">CHOOSE SIZE</option>${groundMaps.map(map => `<option value="${escapeHtml(map.id)}" data-ground-map="${escapeHtml(map.id)}" data-map-size="${escapeHtml(map.size)}" ${map.id === draft.mapId ? 'selected' : ''}>${escapeHtml(map.name)} · ${escapeHtml(prettyToken(map.size))}</option>`).join('')}</select></label>
+      </section>
       <nav class="uga-deployment-stations" aria-label="Deployment Arena stations">
         ${[
           ['base_deployer', 'HQ Deployment Ship', `${deploymentShipName}${selectedCommander ? ` // ${selectedCommander.name || prettyToken(selectedCommander.id)}` : ''}`],
@@ -1131,13 +1329,9 @@ export function createUgaCommand(options = {}) {
           ['support_service', 'Support & Service', draft.supportId ? prettyToken(draft.supportId) : 'Select support']
         ].map(([id, label, value]) => `<button type="button" class="uga-deployment-station${draft.station === id ? ' is-active' : ''}" data-deployment-station="${id}" aria-pressed="${draft.station === id}"><span>${icon(id === 'command_chassis' ? 'staff' : id === 'base_deployer' ? 'hangar' : id === 'structure_cargo' ? 'inventory' : 'build')}</span><b>${escapeHtml(label)}</b><small>${escapeHtml(value)}</small></button>`).join('')}
       </nav>
-      <div class="uga-deployment-readiness${canCommit ? ' is-ready' : ' is-blocked'}" data-deployment-confirm-state="${canCommit ? 'ready' : 'blocked'}">
-        <span><small>LANDING / DEPLOYMENT CAPACITY</small><b data-slot-usage-summary>${slotUsage} / ${capacity.slots} SLOTS</b></span>
-        <button type="button" class="uga-primary-button" data-action="deploy" ${canCommit ? '' : 'disabled'}>${canCommit ? 'CONFIRM & DEPLOY' : 'LOADOUT BLOCKED'}${icon('chevron')}</button>
-      </div>
       <fieldset data-deployment-section="specialist_muster"><legend>Three Specialists</legend>${[0, 1, 2].map(index => personnelSelect('specialist', specialistOptions, index, draft.specialistIds[index])).join('')}</fieldset>
-      <div class="uga-personnel-lock" ${deployable ? 'hidden' : ''}>${icon('lock')}<span>${portraitAuditPending() ? 'Validating authored personnel portraits.' : 'Deployment requires one commander and three specialists with approved illustrated portraits.'}</span></div>
-      <section class="uga-deployment-manifest${slotUsage > capacity.slots ? ' is-over-capacity' : ''}" data-slot-capacity="${capacity.slots}">
+      <div class="uga-personnel-lock" ${deployable ? 'hidden' : ''}>${icon('lock')}<span>Deployment requires one ready hired commander and three available specialists from your resident faction.</span></div>
+      <section class="uga-deployment-manifest${slotUsage > capacity.slots ? ' is-over-capacity' : ''}" data-slot-capacity="${capacity.slots}" data-unit-limit="${capacity.unitLimit}" data-structure-limit="${capacity.structureLimit}" data-mod-limit="${capacity.modLimit}" data-required-unit-ids="${escapeHtml((capacity.requiredUnitIds || []).join(','))}">
         <header><div><small>STARTING FORCE & STRUCTURES</small><h4>Sized Deployment Slots</h4></div><strong data-slot-usage>${slotUsage} / ${capacity.slots}</strong></header>
         <p>Large units and structures consume more capacity. These selections seed the planetary RTS match.</p>
         <div class="uga-manifest-picker" data-deployment-section="unit_staging">
@@ -1152,17 +1346,23 @@ export function createUgaCommand(options = {}) {
           }).join('')}
         </div>
         <fieldset class="uga-mod-picker" data-deployment-section="support_service"><legend>Operation Mods // max ${capacity.modLimit}</legend>${allowedMods.map(item => `<label><input type="checkbox" data-deploy-mod="${escapeHtml(item.id)}" ${selectedModIds.has(item.id) ? 'checked' : ''}><span><b>${escapeHtml(item.name)}</b><small>${escapeHtml(item.effect || '')}</small></span></label>`).join('')}</fieldset>
-        <div class="uga-slot-warning" ${slotUsage > capacity.slots ? '' : 'hidden'}>${icon('warning')}<span>Deployment exceeds the mission slot capacity.</span></div>
+        <div class="uga-slot-warning" data-deployment-blocker ${canCommit ? 'hidden' : ''}>${icon('warning')}<span>${escapeHtml(blockerMessage)}</span></div>
       </section>
       <label data-deployment-section="base_deployer"><span>HQ Ship Landing Zone</span><select data-deploy="landingZone">${landingZones.map(id => `<option value="${escapeHtml(id)}" ${id === draft.landingZoneId ? 'selected' : ''}>${escapeHtml(prettyToken(id))}</option>`).join('')}</select></label>
       <label data-deployment-section="support_service"><span>Support Package</span><select data-deploy="support">${support.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === draft.supportId ? 'selected' : ''}>${escapeHtml(item.name || prettyToken(item.id))}</option>`).join('')}</select></label>
       <label><span>Doctrine</span><select data-deploy="doctrine">${doctrines.map(item => `<option value="${escapeHtml(item.id)}" ${item.id === draft.doctrineId ? 'selected' : ''}>${escapeHtml(item.name || prettyToken(item.id))}</option>`).join('')}</select></label>
+      </div>
+      <div class="uga-deployment-readiness${canCommit ? ' is-ready' : ' is-blocked'}" data-deployment-confirm-state="${canCommit ? 'ready' : 'blocked'}">
+        <span><small>LANDING / DEPLOYMENT CAPACITY</small><b data-slot-usage-summary>${slotUsage} / ${capacity.slots} SLOTS</b></span>
+        <button type="button" class="uga-primary-button" data-action="deploy" ${canCommit ? '' : 'disabled'}>${canCommit ? 'CONFIRM & DEPLOY' : 'LOADOUT BLOCKED'}${icon('chevron')}</button>
+      </div>
     </section>`;
   }
 
   function researchPanel() {
     const catalog = getCatalog();
     const state = getState();
+    if (state.ship?.districts?.research?.commissioned === false) return `<div class="uga-context-scroll"><div class="uga-section-title"><h2>Research Directorate Offline</h2><p>Commission its Tier-1 core before assigning research points.</p></div><button type="button" class="uga-primary-button" data-action="open-research-construction">OPEN RESEARCH CONSTRUCTION</button></div>`;
     const research = asArray(catalog.research || catalog.RESEARCH_CATALOG);
     const fallback = [
       { id: 'uga_brood_containment', branch: 'UGA', name: 'Brood Containment', cost: 180 },
@@ -1170,6 +1370,7 @@ export function createUgaCommand(options = {}) {
       { id: 'nova_pathfinder_doctrine', branch: 'Nova', name: 'Proxy Doctrine Uplink', cost: 140 }
     ];
     const entries = research.length ? research : fallback;
+    const capabilities = calculateFacilityCapabilities(state);
     return `<div class="uga-context-scroll">
       <div class="uga-section-title"><small>SHARED RESEARCH BANK</small><h2>Research Allocation</h2><p>Commit points manually. UGA, universal, and faction programs never spend automatically.</p></div>
       <div class="uga-research-bank">${icon('research')}<span>AVAILABLE RESEARCH POINTS</span><b>${formatValue(state.resources?.researchPoints ?? state.resources?.research ?? state.resources?.science)}</b></div>
@@ -1180,13 +1381,25 @@ export function createUgaCommand(options = {}) {
         const completed = state.research?.completedIds?.includes(node.id) || Number(progress) >= Number(cost);
         const prerequisites = (node.prerequisites || []).map(id => entries.find(entry => entry.id === id)?.name || prettyToken(id));
         const effects = (node.effects || []).map(prettyToken);
-        const containmentReady = !node.advancedContainment || Boolean(state.ship?.districts?.research?.facilities?.tier3 === 'research_t3_containment_institute' && !state.ship?.districts?.research?.facilityOffline?.tier3);
-        const containmentDiscount = Boolean(state.ship?.districts?.research?.facilities?.tier3 === 'research_t3_containment_institute' && !state.ship?.districts?.research?.facilityOffline?.tier3);
-        const bioCost = baseBioCost ? Math.max(1, Math.floor(baseBioCost * (containmentDiscount ? 75 : 100) / 100)) : 0;
-        const available = prerequisites.every((_, index) => state.research?.completedIds?.includes(node.prerequisites[index])) && containmentReady;
+        const containmentReady = !node.advancedContainment || Boolean(capabilities.advancedContainment);
+        const bioCost = baseBioCost ? Math.max(1, Math.floor(baseBioCost * (100 + (capabilities.bioResearchCostPct || 0)) / 100)) : 0;
+        const amount = Math.max(1, Math.min(10, Math.floor(Number(state.resources?.researchPoints) || 0)));
+        // The domain command returns a new state without mutating its input.
+        // Preview the same command so residency, completion costs and facility
+        // bonuses cannot disagree with the enabled button.
+        let quote = null, blockedReason = '';
+        if (!completed) {
+          try { quote = commitResearch(state, node.id, amount); }
+          catch (error) {
+            blockedReason = error.issues?.map(issue => issue.code === 'DEPOSIT_LEDGER_INVALID'
+              ? 'Planetary survey archive requires recalibration'
+              : issue.message || issue.code).filter(Boolean).join(' · ') || error.message;
+          }
+        }
+        const available = Boolean(quote);
         const scope = node.branch === 'universal' ? 'GALACTIC + CLASSIC PROFILE' : node.branch === 'uga' ? 'GALACTIC CAMPAIGN' : 'FACTION PROFILE + GALACTIC';
-        const requirement = !containmentReady ? 'Containment Institute required' : prerequisites.length ? prerequisites.join(' · ') : 'No prerequisite';
-        return `<article class="uga-research-card${available ? '' : ' is-locked'}"><span>${escapeHtml(node.branch || node.category || 'Universal')} // ${scope}</span><h3>${escapeHtml(node.name || prettyToken(node.id))}</h3><p>${escapeHtml(node.description || effects.join(' · ') || 'Authored program capability.')}</p><dl><div><dt>REQUIRES</dt><dd>${escapeHtml(requirement)}</dd></div><div><dt>UNLOCKS</dt><dd>${escapeHtml(effects.length ? effects.join(' · ') : 'Program capability')}${bioCost ? ` · ${formatValue(bioCost)} bio-sample completion cost` : ''}</dd></div></dl><div class="uga-progress"><i style="--value:${Math.min(100, Number(progress) / Math.max(1, Number(cost)) * 100)}%"></i><b>${formatValue(progress)} / ${formatValue(cost)}</b></div><button type="button" class="uga-mini-button" data-research="${escapeHtml(node.id)}" ${completed || !available ? 'disabled' : ''}>${completed ? 'COMPLETE' : available ? 'COMMIT 10' : 'PREREQUISITE'}</button></article>`;
+        const requirement = blockedReason || (!containmentReady ? 'Containment Institute required' : prerequisites.length ? prerequisites.join(' · ') : 'No prerequisite');
+        return `<article class="uga-research-card${available ? '' : ' is-locked'}"><span>${escapeHtml(node.branch || node.category || 'Universal')} // ${scope}</span><h3>${escapeHtml(node.name || prettyToken(node.id))}</h3><p>${escapeHtml(node.description || effects.join(' · ') || 'Research capability.')}</p><dl><div><dt>REQUIRES</dt><dd>${escapeHtml(requirement)}</dd></div><div><dt>UNLOCKS</dt><dd>${escapeHtml(effects.length ? effects.join(' · ') : 'Program capability')}${bioCost ? ` · ${formatValue(bioCost)} bio-sample completion cost` : ''}</dd></div></dl><div class="uga-progress"><i style="--value:${Math.min(100, Number(progress) / Math.max(1, Number(cost)) * 100)}%"></i><b>${formatValue(progress)} / ${formatValue(cost)}</b></div><button type="button" class="uga-mini-button" data-research="${escapeHtml(node.id)}" data-research-amount="${amount}" ${completed || !available ? 'disabled' : ''}>${completed ? 'COMPLETE' : available ? `COMMIT ${quote.committed}` : 'REQUIREMENTS NOT MET'}</button></article>`;
       }).join('')}</div>
     </div>`;
   }
@@ -1218,7 +1431,20 @@ export function createUgaCommand(options = {}) {
 
   function logisticsPanel() {
     const state = getState();
-    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>IMPLEMENTED // LOCAL CAMPAIGN CONTROLLER</small><h2>Logistics & Cargo</h2><p>Authoritative fuel, probes, materials, and expedition stores. Crafting actions remain in the Fabrication district and are not simulated here.</p></div><div class="uga-logistics-grid">${Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => `<article>${icon(iconName)}<span>${escapeHtml(label)}</span><b>${formatValue(state.resources?.[key] ?? state.economy?.[key])}</b></article>`).join('')}</div><section class="uga-panel-section"><header><span>INSTALLED & STORED MODULES</span><small>01</small></header>${manifestRows(moduleManifest())}</section></div>`;
+    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>IMPLEMENTED // LOCAL CAMPAIGN CONTROLLER</small><h2>Logistics & Cargo</h2><p>Authoritative fuel, probes, materials, and expedition stores. Crafting uses the base game's Development screen; choose its Crafting tab.</p><button type="button" class="uga-primary-button" data-host-route="development" ${hostRoutesAvailable() ? '' : 'disabled'}>${hostRoutesAvailable() ? 'OPEN DEVELOPMENT · CRAFTING' : 'CRAFTING REQUIRES THE BASE GAME'}</button></div><div class="uga-logistics-grid">${Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => `<article>${icon(iconName)}<span>${escapeHtml(label)}</span><b>${formatValue(state.resources?.[key] ?? state.economy?.[key])}</b></article>`).join('')}</div><section class="uga-panel-section"><header><span>INSTALLED & STORED MODULES</span><small>01</small></header>${manifestRows(moduleManifest())}</section></div>`;
+  }
+
+  function returnServicesPanel() {
+    const hostAvailable = hostRoutesAvailable();
+    return `<div class="uga-context-scroll uga-return-services" data-return-services>
+      <div class="uga-section-title"><small>EXPEDITION COMPLETE // BACK ABOARD</small><h2>Your next command</h2><p>Your mission result is recorded. Review your ship, prepare equipment, or choose the next operation. Nothing here spends resources automatically.</p></div>
+      <button type="button" class="uga-primary-button" data-district="engineering">UPGRADE SHIP · ENGINEERING</button>
+      <button type="button" class="uga-primary-button" data-host-route="development" ${hostAvailable ? '' : 'disabled'}>CRAFT · OPEN DEVELOPMENT</button>
+      <p>${hostAvailable ? 'Choose Crafting inside Development. Equipment and available earned-core purchases remain in the existing Armory.' : 'Crafting, loadout and purchases require the integrated MASSFRONT host; the local preview cannot perform them.'}</p>
+      <button type="button" class="uga-primary-button" data-host-route="armory" ${hostAvailable ? '' : 'disabled'}>EQUIP & BROWSE · ARMORY</button>
+      <button type="button" class="uga-primary-button" data-nav="missions">NEXT EXPEDITION OBJECTIVE</button>
+      <button type="button" class="uga-primary-button" data-quick="hub">GALACTIC COMMAND · NEXT OPERATION</button>
+    </div>`;
   }
 
   function inventoryPanel() {
@@ -1235,36 +1461,147 @@ export function createUgaCommand(options = {}) {
   }
 
   function hubStatusLabel(status) {
-    if (status === CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED) return 'IMPLEMENTED';
-    if (status === CAMPAIGN_HUB_ROUTE_STATUS.LOCAL_PREVIEW) return 'LOCAL PREVIEW';
-    if (status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE) return hostRoutesAvailable() ? 'MASSFRONT LIVE' : 'HOST REQUIRED';
-    return 'HOST REQUIRED';
+    if (status === CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED) return 'AVAILABLE';
+    if (status === CAMPAIGN_HUB_ROUTE_STATUS.LOCAL_PREVIEW) return 'VIEW ONLY';
+    if (status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE) return hostRoutesAvailable() ? 'AVAILABLE' : 'OPEN FROM MASSFRONT';
+    return 'UNAVAILABLE';
   }
 
-  function hubSessionStatusLabel(entry) {
-    if (entry.status === CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE) return 'NETWORK UNAVAILABLE';
-    return hubSessionReachable(entry) ? 'OFFLINE READY' : 'MASSFRONT HOST REQUIRED';
+  function basicAccessPanel() {
+    const modes = [
+      ['standard', 'Standard'],
+      ['training', 'Training'],
+      ['campaign', 'Campaign']
+    ];
+    const warTableReady = hostRoutesAvailable();
+    return `<section class="uga-basic-access" aria-label="Basic play access"><header><small>BASIC ACCESS</small></header><div class="uga-basic-access-grid">${modes.map(([id, label]) => {
+      const entry = getCampaignHubRoute(id);
+      const reachable = hubRouteReachable(entry);
+      return `<button type="button" data-hub-route="${escapeHtml(id)}" ${reachable ? '' : 'disabled aria-disabled="true"'} aria-label="${escapeHtml(`${label}${reachable ? '' : ' unavailable'}`)}">${icon(entry?.icon || 'terminal')}<span>${escapeHtml(label)}</span>${icon(reachable ? 'chevron' : 'lock')}</button>`;
+    }).join('')}<button type="button" data-host-route="war-room" ${warTableReady ? '' : 'disabled aria-disabled="true"'} aria-label="War Table${warTableReady ? '' : ' unavailable'}">${icon('terminal')}<span>War Table</span>${icon(warTableReady ? 'chevron' : 'lock')}</button></div></section>`;
+  }
+
+  /* The single question the strategic home has to answer: what do I do next.
+     It previously answered nothing — the hub was a title, a depart button and
+     four classic-mode doors, and the deterministic next action existed only on
+     the survey result card, which the player cannot reach until they have
+     already guessed to depart and scan. This walks the real career state and
+     returns the first unmet step, so the answer is derived, never authored.
+
+     Every action reuses a handler that already exists — data-host-route,
+     data-mission and data-action="exit" — so this block adds direction without
+     adding a new control surface to keep working. */
+  /* Control is derived from settled operation history, so it is cheap but not
+     free; the hub re-renders often, so compute it once per render pass. */
+  let groundControlCache = null;
+  let groundControlCacheRevision = -1;
+  function groundControl() {
+    const state = getState();
+    const revision = Number(state?.revision);
+    if (groundControlCache && groundControlCacheRevision === revision) return groundControlCache;
+    groundControlCache = deriveGroundControl(state);
+    groundControlCacheRevision = revision;
+    return groundControlCache;
+  }
+
+  function commandObjective() {
+    const state = getState();
+    const catalog = getCatalog();
+
+    if (!state.commissioning?.completed) {
+      return {
+        step: 'commission', eyebrow: 'STEP 1 // COMMISSION',
+        title: 'Hire your first commander',
+        detail: 'Choose a faction and hire a commander. No ground operation can be prepared until a commander is on the roster.',
+        label: 'HIRE COMMANDER',
+        attrs: `data-host-route="new-career-faction" ${hostRoutesAvailable() ? '' : 'disabled'}`
+      };
+    }
+
+    const missions = asArray(catalog.missions || catalog.MISSION_CATALOG || state.availableMissions || state.missions)
+      .filter(item => item && item.id);
+    const cleared = new Set(
+      (Array.isArray(state.operations?.history) ? state.operations.history : [])
+        .filter(entry => entry?.result?.outcome === 'victory')
+        .map(entry => entry.result.missionId || entry.operation?.missionId)
+        .filter(Boolean)
+    );
+    const ready = missions.find(mission => !cleared.has(mission.id) && missionLocks(mission, state).length === 0);
+    /* Territory, not just a tally of finished contracts. A region falls when all
+       three of its maps are cleared, so this reports the map the player is
+       actually part-way through rather than treating a mission as one unit. */
+    const control = groundControl();
+
+    if (ready) {
+      const region = Object.values(control.areas).find(area => area.missionId === ready.id);
+      const remaining = region ? region.totalMaps - region.clearedMapIds.length : 0;
+      return {
+        step: 'deploy', eyebrow: 'STEP 3 // GROUND OPERATION',
+        title: `Prepare ${ready.name || ready.title || prettyToken(ready.id)}`,
+        detail: region
+          ? `${region.areaName} on ${region.planetName}. ${region.clearedMapIds.length} of ${region.totalMaps} maps cleared — take ${remaining === 1 ? 'the last one' : `${remaining} more`} and the region falls under your control.`
+          : 'Select a battlefield, an eligible commander of your faction and a deployment package, then drop into the live RTS.',
+        label: 'PREPARE DEPLOYMENT',
+        attrs: `data-mission="${escapeHtml(ready.id)}"`,
+        control
+      };
+    }
+
+    /* Everything currently reachable is cleared, or nothing is reachable yet.
+       Both resolve the same way: go out and find the next objective. */
+    const blocked = missions.filter(mission => !cleared.has(mission.id));
+    return {
+      step: 'scan', eyebrow: blocked.length ? 'STEP 2 // SURVEY' : 'FRONTIER CLEAR',
+      title: blocked.length ? 'Depart and scan for an objective' : 'Scan for the next frontier',
+      detail: blocked.length
+        ? 'Fly to a planet and run a survey. A successful scan reveals resources, a mission-bearing region, or both.'
+        : 'Every reachable operation is resolved. Survey further out to open the next region.',
+      label: 'DEPART AND SURVEY',
+      attrs: 'data-action="exit"',
+      control
+    };
+  }
+
+  function commandObjectivePanel() {
+    const objective = commandObjective();
+    /* Territory is the progress that matters — "operations cleared" counted
+       paperwork, this counts ground held. Maps are shown alongside regions so a
+       player mid-region sees movement instead of a stuck 0. */
+    const summary = objective.control ? groundControlSummary(getState()) : null;
+    const progress = summary
+      ? `<div class="uga-objective-progress">
+          <span>REGIONS HELD</span><b>${summary.areasControlled} / ${summary.areasTotal}</b>
+          <span>MAPS CLEARED</span><b>${summary.mapsCleared} / ${summary.mapsTotal}</b>
+        </div>`
+      : '';
+    /* When the objective IS "go and survey", its action is exactly what the
+       Depart control directly below already does. Rendering a second button for
+       it would be the duplicate navigation the mobile contract rules out — a
+       control that only restates another control — so the directive states the
+       step and Depart remains the single way to take it. Steps that go somewhere
+       Depart cannot reach (hiring, preparing a deployment) keep their own action. */
+    const action = objective.step === 'scan' ? ''
+      : `<button type="button" class="uga-primary-button" ${objective.attrs}>${escapeHtml(objective.label)}</button>`;
+    return `<section class="uga-objective is-${escapeHtml(objective.step)}" data-objective="${escapeHtml(objective.step)}">
+      <header><small>${escapeHtml(objective.eyebrow)}</small><h3>${escapeHtml(objective.title)}</h3></header>
+      <p>${escapeHtml(objective.detail)}</p>
+      ${progress}
+      ${action}
+    </section>`;
   }
 
   function campaignHubPanel() {
+    return `<div class="uga-context-scroll uga-campaign-hub"><div class="uga-section-title"><small>MASSFRONT STRATEGIC HOME // UGA COMMAND</small><h2>Galactic Command</h2><p>Command the expedition, deploy tactical operations, and open career services from one strategic interface.</p></div>
+      ${commandObjectivePanel()}
+      <button type="button" class="uga-campaign-depart" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>
+      ${basicAccessPanel()}</div>`;
+  }
+
+  function campaignServicesPanel() {
     const serviceRoutes = CAMPAIGN_HUB_ROUTES.filter(entry => !CAMPAIGN_HUB_SESSION_ROUTE_IDS.has(entry.id));
-    return `<div class="uga-context-scroll uga-campaign-hub"><div class="uga-section-title"><small>GALACTIC STRATEGIC WAR TABLE // UGA COMMAND</small><h2>Campaign Hub</h2><p>The shared strategic layer owns offline MASSFRONT navigation now and is structured for future persistent sectors without replacing offline play. No MMO connection is claimed in this build.</p></div>
-      <section class="uga-strategic-layer-model" aria-label="MASSFRONT strategic layer availability">
-        <header><span>${icon('overview')}</span><div><small>ONE WAR TABLE // TWO DELIVERY HORIZONS</small><b>SHARED STRATEGIC LAYER</b></div></header>
-        <div class="uga-strategic-horizons">
-          <article class="is-live"><small>CURRENT</small><b>OFFLINE COMMAND</b><span>Real local play and authored campaign routes</span></article>
-          <article class="is-future"><small>FUTURE</small><b>PERSISTENT MMO</b><span>Network authority and sector persistence not implemented</span></article>
-        </div>
-      </section>
-      <section class="uga-session-types" aria-label="MASSFRONT session types"><header><small>SESSION TYPES</small><span>REAL ROUTES ONLY</span></header><div class="uga-session-type-grid">${CAMPAIGN_HUB_SESSION_TYPES.map(entry => {
-        const reachable = hubSessionReachable(entry);
-        return `<article class="uga-session-type is-${entry.status}">
-          <span class="uga-session-type-icon">${icon(entry.icon)}</span>
-          <div><small>${escapeHtml(hubSessionStatusLabel(entry))}</small><h3>${escapeHtml(entry.label)}</h3><p>${escapeHtml(entry.description)}</p><b>${escapeHtml(entry.detail)}</b></div>
-          <button type="button" data-session-route="${escapeHtml(entry.id)}" ${reachable ? '' : 'disabled aria-disabled="true"'}>${reachable ? 'OPEN' : 'UNAVAILABLE'}</button>
-        </article>`;
-      }).join('')}</div></section>
-      <section class="uga-hub-services"><header><small>COMMAND SYSTEMS & SERVICES</small><span>SHARED NAVIGATION</span></header><div class="uga-hub-route-list">${serviceRoutes.map(entry => {
+    return `<div class="uga-context-scroll uga-campaign-services"><div class="uga-section-title"><small>MORE</small><h2>Services</h2></div>
+      ${moreNavigationShortcuts()}
+      <section class="uga-hub-services"><header><small>COMMAND SYSTEMS & SERVICES</small></header><div class="uga-hub-route-list">${serviceRoutes.map(entry => {
       const reachable = hubRouteReachable(entry);
       return `<article class="uga-hub-route is-${entry.status}${activeHubRouteId === entry.id ? ' is-selected' : ''}">
         <span class="uga-hub-route-icon">${icon(entry.icon)}</span>
@@ -1275,7 +1612,10 @@ export function createUgaCommand(options = {}) {
   }
 
   function renderContext() {
+    if (activeView === 'return-services') return returnServicesPanel();
     if (activeView === 'campaign_hub') return campaignHubPanel();
+    if (activeView === 'services') return campaignServicesPanel();
+    if (activeView === 'progress') return progressPanel();
     if (activeView === 'construction') return constructionPanel();
     if (activeView === 'factions') return factionPanel();
     if (activeView === 'contracts') return contractsPanel();
@@ -1285,7 +1625,10 @@ export function createUgaCommand(options = {}) {
     if (activeView === 'inventory') return inventoryPanel();
     if (activeView === 'crew') return crewPanel();
     if (activeView === 'logistics') return logisticsPanel();
-    if (activeView === 'classic') return `<div class="uga-context-scroll"><div class="uga-section-title"><small>IMPLEMENTED // COMMAND CORE FACILITY</small><h2>Classic MASSFRONT Terminal</h2><p>Local simulations remain isolated from Galactic resources, discoveries, personnel condition, and campaign construction.</p></div>${classicTerminal()}</div>`;
+    // The Campaign Hub is the only player-facing Play authority. Keep the
+    // legacy terminal implementation as a compatibility helper, but never
+    // render a second mode picker inside Ship or through an old view token.
+    if (activeView === 'classic') return campaignHubPanel();
     return districtPanel();
   }
 
@@ -1298,11 +1641,23 @@ export function createUgaCommand(options = {}) {
   }
 
   function navigation() {
-    const active = id => (id === 'ship' && ['command', 'construction'].includes(activeView)) ||
-      (id === 'missions' && ['contracts', 'deployment'].includes(activeView)) ||
+    const active = id => (id === 'ship' && ['command', 'construction', 'return-services'].includes(activeView)) ||
+      (id === 'missions' && ['progress', 'contracts', 'deployment'].includes(activeView)) ||
+      (id === 'classic' && ['campaign_hub', 'classic'].includes(activeView)) ||
       (id === 'crew' && activeView === 'crew') ||
-      (id === 'more' && ['campaign_hub', 'factions', 'research', 'logistics', 'inventory', 'classic'].includes(activeView));
-    return CAMPAIGN_HUB_PRIMARY_NAV.map(entry => `<button type="button" data-nav="${escapeHtml(entry.id)}" class="${active(entry.id) ? 'is-active' : ''}">${icon(entry.icon)}<span>${escapeHtml(entry.label)}</span></button>`).join('');
+      (id === 'more' && ['services', 'factions', 'research', 'logistics', 'inventory'].includes(activeView));
+    const entries = usesCompactRoomFocus()
+      ? ['classic', 'ship', 'missions', 'social', 'more'].map(id => CAMPAIGN_HUB_PRIMARY_NAV.find(entry => entry.id === id)).filter(Boolean)
+      : CAMPAIGN_HUB_PRIMARY_NAV;
+    return entries.map(entry => `<button type="button" data-nav="${escapeHtml(entry.id)}" ${entry.id === 'classic' ? 'data-nav-primary="true" ' : ''}aria-label="${escapeHtml(entry.ariaLabel || entry.label)}" class="${active(entry.id) ? 'is-active' : ''}">${icon(entry.icon)}<span>${escapeHtml(entry.label)}</span></button>`).join('');
+  }
+
+  function moreNavigationShortcuts() {
+    const ids = ['galaxy', 'crew', 'settings'];
+    return `<nav class="uga-more-shortcuts" aria-label="More command destinations">${ids.map(id => {
+      const entry = CAMPAIGN_HUB_PRIMARY_NAV.find(item => item.id === id);
+      return entry ? `<button type="button" data-nav="${escapeHtml(entry.id)}" aria-label="${escapeHtml(entry.ariaLabel || entry.label)}">${icon(entry.icon)}<span>${escapeHtml(entry.label)}</span></button>` : '';
+    }).join('')}</nav>`;
   }
 
   function openNavigationTarget(target, routeId = null) {
@@ -1323,6 +1678,10 @@ export function createUgaCommand(options = {}) {
       activeView = 'campaign_hub';
       sheetExpanded = true;
       render();
+      // The strategic home shares the complete vessel as its spatial context.
+      // Refit after rendering so the camera reserves the hub inspector's real
+      // bounds instead of retaining a cropped room pose from the previous tab.
+      call('onOverviewFocus');
       return true;
     }
     if (target.kind === 'host-action') {
@@ -1357,14 +1716,39 @@ export function createUgaCommand(options = {}) {
         sheetExpanded = true;
       }
       render();
+      if (activeView !== 'command') call('onOverviewFocus');
       return true;
     }
     return false;
   }
 
+  function openCommandConstruction(intent) {
+    const state = getState();
+    const catalog = districtsCatalog(getCatalog());
+    const candidates = DISTRICT_ORDER.filter(id => !normalizeDistrict(id, catalog).fixed);
+    const targetId = candidates.find(id => {
+      const district = districtTierState(state, id, normalizeDistrict(id, catalog));
+      return intent === 'upgrade'
+        ? district.commissioned !== false && district.tier < 3
+        : district.commissioned === false || district.tier < 3;
+    }) || 'engineering';
+    const definition = normalizeDistrict(targetId, catalog);
+    const district = districtTierState(state, targetId, definition);
+    selectedDistrictId = targetId;
+    selectedDeckFilter = definition.deck;
+    activeHubRouteId = null;
+    activeView = 'construction';
+    sheetExpanded = true;
+    confirmationKey = null;
+    selectedBuildPlotId = district.commissioned === false ? 'tier1' : `tier${Math.min(3, district.tier + 1)}`;
+    render();
+    call('onDistrictFocus', targetId);
+  }
+
   function activeViewLabel(definition) {
     if (['command', 'construction'].includes(activeView)) return definition.name;
     if (activeView === 'campaign_hub') return 'Campaign Hub';
+    if (activeView === 'services') return 'Services';
     const routeEntry = activeHubRouteId ? getCampaignHubRoute(activeHubRouteId) : null;
     return routeEntry?.label || prettyToken(activeView);
   }
@@ -1377,6 +1761,7 @@ export function createUgaCommand(options = {}) {
     current.station = station;
     deploymentDrafts.set(selectedMissionId, current);
     sheetExpanded = true;
+    deploymentLoadoutExpanded = true;
     if (emit && !planner) call('onDeploymentPreview', current);
     render();
     requestAnimationFrame(() => {
@@ -1385,6 +1770,22 @@ export function createUgaCommand(options = {}) {
       section?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
       section?.querySelector?.('select, input, button')?.focus?.({ preventScroll: true });
     });
+    return true;
+  }
+
+  function openMissionDeployment(missionId, { emit = true } = {}) {
+    const mission = asArray(getCatalog().missions || getCatalog().MISSION_CATALOG).find(item => item.id === missionId);
+    if (!mission) return false;
+    selectedMissionId = missionId;
+    selectedDistrictId = 'hangar';
+    selectedDeckFilter = 'C';
+    activeView = 'deployment';
+    sheetExpanded = true;
+    deploymentLoadoutExpanded = false;
+    call('onDistrictFocus', 'hangar');
+    if (emit) call('onMissionSelect', selectedMissionId);
+    render();
+    queueMicrotask(() => readDeploymentPlanner(root.querySelector('.uga-deployment-planner')));
     return true;
   }
 
@@ -1407,12 +1808,35 @@ export function createUgaCommand(options = {}) {
     const deploymentMode = activeView === 'deployment' && Boolean(selectedMissionId) && Boolean(root.querySelector('.uga-deployment-planner'));
     root.dataset.mode = deploymentMode ? 'deployment' : 'management';
     root.dataset.deploymentMission = deploymentMode ? selectedMissionId : '';
+    const groundPlanner = root.querySelector('.uga-deployment-planner[data-ground-route-stage]');
+    if (deploymentMode && groundPlanner) {
+      root.dataset.groundRouteStage = groundPlanner.dataset.groundRouteStage || '';
+      root.dataset.selectedAreaId = groundPlanner.dataset.selectedAreaId || '';
+      root.dataset.selectedMapId = groundPlanner.dataset.selectedMapId || '';
+      root.dataset.selectedMapSize = groundPlanner.dataset.selectedMapSize || '';
+    } else {
+      delete root.dataset.groundRouteStage;
+      delete root.dataset.selectedAreaId;
+      delete root.dataset.selectedMapId;
+      delete root.dataset.selectedMapSize;
+    }
     root.classList.toggle('is-deployment-mode', deploymentMode);
+    root.classList.toggle('is-loadout-expanded', deploymentMode && deploymentLoadoutExpanded);
     root.classList.toggle('is-sheet-expanded', sheetExpanded);
     const sheetToggle = root.querySelector('.uga-sheet-toggle');
     const deploymentToolbar = root.querySelector('[data-deployment-toolbar]');
     if (deploymentToolbar) deploymentToolbar.hidden = !deploymentMode;
-    if (sheetToggle) sheetToggle.hidden = deploymentMode;
+    const deploymentContext = root.querySelector('[data-deployment-context]');
+    if (deploymentContext) deploymentContext.hidden = !deploymentMode;
+    const deploymentToggle = root.querySelector('[data-action="toggle-deployment-loadout"]');
+    if (deploymentToggle) {
+      deploymentToggle.setAttribute('aria-expanded', String(deploymentLoadoutExpanded));
+      deploymentToggle.setAttribute('aria-label', deploymentLoadoutExpanded ? 'Collapse loadout and view hangar; keep all selections' : 'Edit deployment loadout');
+      deploymentToggle.querySelector('span').textContent = deploymentLoadoutExpanded ? 'VIEW HANGAR' : 'EDIT LOADOUT';
+    }
+    if (sheetToggle) sheetToggle.hidden = deploymentMode || activeView === 'campaign_hub';
+    const commandExit = root.querySelector('.uga-command-exit');
+    if (commandExit) commandExit.hidden = activeView === 'campaign_hub';
     if (sheetToggle) {
       sheetToggle.setAttribute('aria-expanded', String(sheetExpanded));
       sheetToggle.setAttribute('aria-label', `${sheetExpanded ? 'Collapse' : 'Expand'} management inspector`);
@@ -1440,21 +1864,16 @@ export function createUgaCommand(options = {}) {
     if (!DISTRICT_DEFAULTS[id]) return api;
     const emit = typeof settings === 'boolean' ? settings : settings.emit !== false;
     const keepConstructionOpen = activeView === 'construction';
-    const sameDistrict = selectedDistrictId === id;
-    const openDetailsOnSecondTap = usesCompactRoomFocus()
-      && sameDistrict
-      && activeView === 'command'
-      && !sheetExpanded;
     selectedDistrictId = id;
     activeHubRouteId = null;
     selectedBuildPlotId = null;
     confirmationKey = null;
     selectedDeckFilter = normalizeDistrict(id, districtsCatalog(getCatalog())).deck;
     activeView = keepConstructionOpen ? 'construction' : 'command';
-    // On compact phone layouts the first district tap is a camera action.
-    // Repeating the selected district is the deliberate second action that
-    // opens management; the 44px inspector bar remains an equivalent path.
-    sheetExpanded = keepConstructionOpen || !usesCompactRoomFocus() || openDetailsOnSecondTap;
+    // Section selection is also a management action. The camera fits the
+    // remaining room viewport, so hiding its controls behind a second tap
+    // no longer buys visibility and makes the upgrade path undiscoverable.
+    sheetExpanded = true;
     render();
     if (emit) call('onDistrictFocus', id);
     return api;
@@ -1480,11 +1899,26 @@ export function createUgaCommand(options = {}) {
       return;
     }
     if (button.dataset.action === 'deployment-back') {
+      readDeploymentPlanner(root.querySelector('.uga-deployment-planner'));
       selectedMissionId = null;
       confirmationKey = null;
       activeView = 'contracts';
       sheetExpanded = true;
       call('onDeploymentPreview', null);
+      render();
+      return;
+    }
+    if (button.dataset.action === 'deployment-sections') {
+      readDeploymentPlanner(root.querySelector('.uga-deployment-planner'));
+      call('onDeploymentPreview', null);
+      selectDistrict('hangar');
+      return;
+    }
+    if (button.dataset.action === 'toggle-deployment-loadout') {
+      // Keep one real planner and snapshot its controls before rendering. A
+      // collapsed scene view is not a reset, separate preset, or confirmation.
+      readDeploymentPlanner(root.querySelector('.uga-deployment-planner'));
+      deploymentLoadoutExpanded = !deploymentLoadoutExpanded;
       render();
       return;
     }
@@ -1503,6 +1937,10 @@ export function createUgaCommand(options = {}) {
       activeHubRouteId = entry?.id || null;
       if (entry && hubRouteReachable(entry)) openNavigationTarget(entry.target, entry.id);
       else render();
+      return;
+    }
+    if (button.dataset.commandConstruction) {
+      openCommandConstruction(button.dataset.commandConstruction);
       return;
     }
     if (button.dataset.hostRoute) {
@@ -1594,19 +2032,11 @@ export function createUgaCommand(options = {}) {
       const select = root.querySelector(`[data-module-choice="${CSS.escape(button.dataset.install)}"]`);
       return void call('onModuleInstall', selectedDistrictId, button.dataset.install, select?.value);
     }
-    if (button.dataset.research) return void call('onResearchAllocate', button.dataset.research, 10);
+    if (button.dataset.research) return void call('onResearchAllocate', button.dataset.research, Number(button.dataset.researchAmount) || 10);
     if (button.dataset.residency) return void call('onFactionResidency', button.dataset.residency);
     if (button.dataset.commander) return void call('onCommanderPrepare', button.dataset.commander);
     if (button.dataset.mission) {
-      selectedMissionId = button.dataset.mission;
-      selectedDistrictId = 'hangar';
-      selectedDeckFilter = 'C';
-      activeView = 'deployment';
-      sheetExpanded = true;
-      call('onDistrictFocus', 'hangar');
-      call('onMissionSelect', selectedMissionId);
-      render();
-      queueMicrotask(() => readDeploymentPlanner(root.querySelector('.uga-deployment-planner')));
+      openMissionDeployment(button.dataset.mission);
       return;
     }
     if (button.dataset.action === 'overview') {
@@ -1619,25 +2049,27 @@ export function createUgaCommand(options = {}) {
     if (button.dataset.action === 'toggle-sheet') {
       sheetExpanded = !sheetExpanded;
       render();
+      if (['command', 'construction'].includes(activeView)) call('onDistrictFocus', selectedDistrictId);
+      else call('onOverviewFocus');
       return;
     }
-    if (button.dataset.action === 'open-construction') {
+    if (button.dataset.action === 'open-construction' || button.dataset.action === 'open-research-construction' || button.dataset.action === 'upgrade') {
+      if (button.dataset.action === 'open-research-construction') selectedDistrictId = 'research';
+      selectedDeckFilter = normalizeDistrict(selectedDistrictId, districtsCatalog(getCatalog())).deck;
       activeView = 'construction';
-      selectedBuildPlotId = 'tier1';
+      sheetExpanded = true;
+      selectedBuildPlotId = button.dataset.action === 'upgrade' ? `tier${Math.min(3, Number(getState().ship?.districts?.[selectedDistrictId]?.level || 1) + 1)}` : 'tier1';
       confirmationKey = null;
       render();
+      // A management route must move both the inspector and the physical room.
+      call('onDistrictFocus', selectedDistrictId);
       return;
     }
-    if (button.dataset.action === 'upgrade') return void call('onDistrictUpgrade', selectedDistrictId);
     if (button.dataset.action === 'deploy') {
       const planner = button.closest('.uga-deployment-planner');
-      const payload = readDeploymentPlanner(planner);
-      const specialistIds = payload.specialistIds;
-      if (specialistIds.length !== 3 || new Set(specialistIds).size !== 3) {
-        planner.classList.add('is-invalid');
-        return void call('onDeploymentInvalid', 'Select exactly three unique specialists.');
-      }
-      return void call('onDeploy', payload);
+      const readiness = syncDeploymentPlanner(planner);
+      if (!readiness.ready) return void call('onDeploymentInvalid', readiness.message);
+      return void call('onDeploy', readiness.payload);
     }
     if (button.dataset.action === 'exit') return void call('onExit');
   });
@@ -1654,8 +2086,7 @@ export function createUgaCommand(options = {}) {
     if (personnel) {
       syncPersonnelPortrait(personnel);
       const planner = personnel.closest('.uga-deployment-planner');
-      planner?.classList.remove('is-invalid');
-      readDeploymentPlanner(planner, personnel.hasAttribute('data-specialist') ? 'specialist_muster' : 'command_chassis');
+      syncDeploymentPlanner(planner, personnel.hasAttribute('data-specialist') ? 'specialist_muster' : 'command_chassis');
       return;
     }
     const manifestControl = event.target.closest('[data-deploy-unit], [data-deploy-structure], [data-deploy-mod]');
@@ -1663,44 +2094,27 @@ export function createUgaCommand(options = {}) {
       const planner = manifestControl.closest('.uga-deployment-planner');
       const manifest = planner?.querySelector('.uga-deployment-manifest');
       if (!manifest) return;
-      const slots = [...manifest.querySelectorAll('[data-slot-cost]')].reduce((sum, select) => sum + (Number(select.value) || 0) * (Number(select.dataset.slotCost) || 0), 0);
-      const capacity = Number(manifest.dataset.slotCapacity) || 0;
-      const usage = manifest.querySelector('[data-slot-usage]');
-      if (usage) usage.textContent = `${slots} / ${capacity}`;
-      const summaryUsage = planner.querySelector('[data-slot-usage-summary]');
-      if (summaryUsage) summaryUsage.textContent = `${slots} / ${capacity} SLOTS`;
       const stagedUnits = [...manifest.querySelectorAll('[data-deploy-unit]')].reduce((sum, select) => sum + (Number(select.value) || 0), 0);
       const stagedStructures = [...manifest.querySelectorAll('[data-deploy-structure]')].reduce((sum, select) => sum + (Number(select.value) || 0), 0);
       const unitSummary = planner.querySelector('[data-deployment-station="unit_staging"] small');
       const structureSummary = planner.querySelector('[data-deployment-station="structure_cargo"] small');
       if (unitSummary) unitSummary.textContent = `${stagedUnits} elements`;
       if (structureSummary) structureSummary.textContent = `${stagedStructures} loaded`;
-      manifest.classList.toggle('is-over-capacity', slots > capacity);
-      const warning = manifest.querySelector('.uga-slot-warning');
-      if (warning) warning.hidden = slots <= capacity;
-      const modLimit = Number(manifest.querySelector('.uga-mod-picker legend')?.textContent.match(/max (\d+)/i)?.[1]) || 2;
+      const modLimit = Number(manifest.dataset.modLimit) || 0;
       const checkedMods = [...manifest.querySelectorAll('[data-deploy-mod]:checked')];
       if (checkedMods.length > modLimit) {
         manifestControl.checked = false;
       }
-      const deploy = planner.querySelector('[data-action="deploy"]');
-      if (deploy) deploy.disabled = slots > capacity || slots === 0;
-      const readiness = planner.querySelector('.uga-deployment-readiness');
-      const ready = slots > 0 && slots <= capacity;
-      readiness?.classList.toggle('is-ready', ready);
-      readiness?.classList.toggle('is-blocked', !ready);
-      if (readiness) readiness.dataset.deploymentConfirmState = ready ? 'ready' : 'blocked';
-      if (deploy) deploy.childNodes[0].nodeValue = ready ? 'CONFIRM & DEPLOY' : 'LOADOUT BLOCKED';
-      readDeploymentPlanner(planner, manifestControl.hasAttribute('data-deploy-unit') ? 'unit_staging' : manifestControl.hasAttribute('data-deploy-structure') ? 'structure_cargo' : 'support_service');
+      syncDeploymentPlanner(planner, manifestControl.hasAttribute('data-deploy-unit') ? 'unit_staging' : manifestControl.hasAttribute('data-deploy-structure') ? 'structure_cargo' : 'support_service');
       return;
     }
-    const deploymentField = event.target.closest('[data-deploy="landingZone"], [data-deploy="support"], [data-deploy="doctrine"]');
+    const deploymentField = event.target.closest('[data-deploy="mapId"], [data-deploy="landingZone"], [data-deploy="support"], [data-deploy="doctrine"]');
     if (deploymentField) {
       const planner = deploymentField.closest('.uga-deployment-planner');
-      const station = deploymentField.matches('[data-deploy="landingZone"]') ? 'base_deployer'
+      const station = deploymentField.matches('[data-deploy="mapId"], [data-deploy="landingZone"]') ? 'base_deployer'
         : deploymentField.matches('[data-deploy="support"]') ? 'support_service'
           : deploymentDrafts.get(planner.dataset.missionId)?.station || 'base_deployer';
-      readDeploymentPlanner(planner, station);
+      syncDeploymentPlanner(planner, station);
       return;
     }
     const factionSelect = event.target.closest('[data-deploy="factionId"]');
@@ -1722,13 +2136,10 @@ export function createUgaCommand(options = {}) {
       select.disabled = !specialists.length;
       syncPersonnelPortrait(select);
     });
-    const deploy = planner.querySelector('[data-action="deploy"]');
     const personnelReady = Boolean(factionId && commanders.length && specialists.length >= 3);
-    if (deploy) deploy.disabled = !personnelReady;
     const portraitLock = planner.querySelector('.uga-personnel-lock');
     if (portraitLock) portraitLock.hidden = personnelReady;
-    planner.classList.remove('is-invalid');
-    readDeploymentPlanner(planner, 'command_chassis');
+    syncDeploymentPlanner(planner, 'command_chassis');
     return;
   });
 
@@ -1747,11 +2158,11 @@ export function createUgaCommand(options = {}) {
     },
     selectDistrict,
     openView(view) {
-      const allowed = new Set(['command', 'construction', 'campaign_hub', 'factions', 'contracts', 'research', 'intel', 'logistics', 'inventory', 'crew', 'classic']);
+      const allowed = new Set(['command', 'construction', 'return-services', 'campaign_hub', 'services', 'progress', 'factions', 'contracts', 'research', 'intel', 'logistics', 'inventory', 'crew', 'classic']);
       if (allowed.has(view)) {
         activeHubRouteId = null;
-        activeView = view;
-        sheetExpanded = view !== 'command';
+        activeView = view === 'classic' ? 'campaign_hub' : view;
+        sheetExpanded = activeView !== 'command';
       }
       render();
       return api;
@@ -1773,6 +2184,10 @@ export function createUgaCommand(options = {}) {
       activateDeploymentStation(station);
       return api;
     },
+    openMission(missionId) {
+      openMissionDeployment(missionId);
+      return api;
+    },
     getDeploymentDraft(missionId = selectedMissionId) {
       const value = deploymentDrafts.get(missionId);
       return value ? {
@@ -1789,6 +2204,7 @@ export function createUgaCommand(options = {}) {
     hide() { visible = false; render(); return api; },
     destroy() {
       destroyed = true;
+      releaseAccountLedger();
       for (const probe of portraitProbes.values()) {
         probe.onload = null;
         probe.onerror = null;

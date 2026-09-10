@@ -276,7 +276,7 @@ export class PlanetarySurvey {
     this.reticleMesh = null;
   }
 
-  open(planet) {
+  open(planet, options = {}) {
     if (this._destroyed || !this._ensureRendering()) return;
     this._clearTransientEffects();
     this._clearPlanetContent();
@@ -371,19 +371,43 @@ export class PlanetarySurvey {
         const lon = (d.x || 0) * Math.PI * 2;
         return {
           id: d.id,
+          kind: d.surveyId ? 'anomaly' : 'mineral',
+          surveyId: d.surveyId || null,
+          name: d.name || null,
           lat,
           lon,
           type: d.type || 'alloys',
           amount: d.amount || 600,
-          extracted: false
+          extracted: Boolean(d.extracted)
         };
       });
     } else {
       this.deposits = [
-        { lat: 0.25, lon: 0.8, type: 'alloys', amount: 620, extracted: false },
-        { lat: -0.35, lon: 2.3, type: 'components', amount: 450, extracted: false },
-        { lat: 0.45, lon: 4.5, type: 'researchPoints', amount: 320, extracted: false }
+        { id: 'fallback_alloys', kind: 'mineral', lat: 0.25, lon: 0.8, type: 'alloys', amount: 620, extracted: false },
+        { id: 'fallback_components', kind: 'mineral', lat: -0.35, lon: 2.3, type: 'components', amount: 450, extracted: false },
+        { id: 'fallback_research', kind: 'mineral', lat: 0.45, lon: 4.5, type: 'researchPoints', amount: 320, extracted: false }
       ];
+    }
+    /* AUTHORED ANOMALIES SHARE THE SPECTROGRAM WITH THE MINERALS.
+       A peak the player hunts down must be able to resolve a story discovery,
+       not only ore - that is the difference between a scanner and a resource
+       vending machine. Sites arrive already placed by the caller so the same
+       survey id always sits at the same coordinates for every player. */
+    const authoredIds = new Set(this.deposits.map(deposit => deposit.id));
+    const sites = Array.isArray(options.sites) ? options.sites : [];
+    for (const site of sites) {
+      if (!site || site.extracted || authoredIds.has(site.id)) continue;
+      this.deposits.push({
+        id: site.id,
+        kind: 'anomaly',
+        surveyId: site.surveyId || site.id,
+        name: site.name || 'Unresolved signal',
+        lat: Number.isFinite(site.lat) ? site.lat : 0,
+        lon: Number.isFinite(site.lon) ? site.lon : 0,
+        type: null,
+        amount: 0,
+        extracted: false
+      });
     }
 
     /* Sensors only move the spectrogram. Painting every deposit at open()
@@ -393,6 +417,10 @@ export class PlanetarySurvey {
       if (d.extracted) this._revealDeposit(d, radius);
     });
 
+    // The survey opens on the whole world, not a cropped texture close-up.
+    // Reframe after the planet is known so ringed bodies also retain their
+    // silhouette and the portrait bottom sheet never hides the scan limb.
+    this.resize(this._width, this._height);
     this.calculateSignalStrength();
   }
 
@@ -441,8 +469,9 @@ export class PlanetarySurvey {
 
   _revealDeposit(d, radius = 22) {
     if (!this.planetGroup || d.mesh) return;
-    const bGeo = new THREE.OctahedronGeometry(1.1, 0);
-    const bMat = new THREE.MeshBasicMaterial({ color: 0x7dff9a, wireframe: true });
+    const anomaly = d.kind === 'anomaly';
+    const bGeo = anomaly ? new THREE.IcosahedronGeometry(1.5, 0) : new THREE.OctahedronGeometry(1.1, 0);
+    const bMat = new THREE.MeshBasicMaterial({ color: anomaly ? 0xffc466 : 0x7dff9a, wireframe: true });
     const bMesh = new THREE.Mesh(bGeo, bMat);
     const p = this._depositPosition(d, radius);
     bMesh.position.set(p.x, p.y, p.z);
@@ -486,7 +515,10 @@ export class PlanetarySurvey {
       miss: !hit,
       signal: this.signalPct,
       threshold: this.sensorThreshold,
-      deposit: hit ? nearest.deposit : null
+      deposit: hit ? nearest.deposit : null,
+      kind: hit ? nearest.deposit.kind || 'mineral' : null,
+      surveyId: hit ? nearest.deposit.surveyId || null : null,
+      name: hit ? nearest.deposit.name || null : null
     };
   }
 
@@ -523,6 +555,9 @@ export class PlanetarySurvey {
       signal: aim.signal,
       threshold: aim.threshold,
       deposit: hit,
+      kind: hit ? (hit.kind || 'mineral') : null,
+      surveyId: hit ? hit.surveyId || null : null,
+      name: hit ? hit.name || null : null,
       type: hit ? hit.type : null,
       amount: hit ? hit.amount : 0,
       id: hit && hit.id,
@@ -620,10 +655,15 @@ export class PlanetarySurvey {
     const aspect = this._width / this._height;
     this.camera.aspect = aspect;
     if (aspect < 0.9) {
-      // Mobile portrait: position globe comfortably in the upper-mid viewport
-      this.camera.position.set(0, 7.0, 76);
+      const distance = this.planet?.rings ? 310 : 205;
+      // Look straight through the fixed scanner from below the planet center.
+      // This places the complete globe above the mobile dossier without using
+      // a camera target that would pull it back under the bottom sheet.
+      this.camera.rotation.set(0, 0, 0);
+      this.camera.position.set(0, -8, distance);
     } else {
-      this.camera.position.set(0, 0, 68);
+      this.camera.rotation.set(0, 0, 0);
+      this.camera.position.set(0, 0, this.planet?.rings ? 168 : 122);
     }
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(this._width, this._height);

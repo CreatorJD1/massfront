@@ -11,6 +11,11 @@ const districtDeck = {
   research: 'B', fabricator: 'B', engineering: 'B',
   habitat: 'C', factions: 'C', hangar: 'C', logistics: 'C'
 };
+const districtFacilityDensity = {
+  command: 9, navigation: 8, survey: 8, mission_ops: 9,
+  research: 11, fabricator: 10, engineering: 10,
+  habitat: 20, factions: 12, hangar: 8, logistics: 14
+};
 const failures = [];
 const pageErrors = [];
 await mkdir(output, { recursive: true });
@@ -83,9 +88,13 @@ try {
       const landmarkNdc = landmarkCenter ? landmarkCenter.clone().project(scene.camera) : null;
       const framingDistance = landmarkNdc ? landmarkNdc.distanceTo(new THREE.Vector3(aimNdc.x, aimNdc.y, landmarkNdc.z)) : Infinity;
       const names = [];
+      const buildPlots = new Set();
       const readoutMaterials = new Set();
       root.traverse(object => {
         names.push(object.name || '');
+        if (object.name?.startsWith('BUILD_') && object.userData?.build_plot_id) {
+          buildPlots.add(object.userData.build_plot_id);
+        }
         if (object.name?.includes('StatusIndicatorBank') && object.material) readoutMaterials.add(object.material.uuid);
       });
       const crown2 = root.getObjectByName(`${districtId}_Crown_2`);
@@ -106,6 +115,8 @@ try {
         statusHousings: names.filter(name => name.includes('StatusHousing')).length,
         indicatorBanks: names.filter(name => name.includes('StatusIndicatorBank')).length,
         facilityBlocks: names.filter(name => name.includes('FacilityBlock')).length,
+        buildPlots: buildPlots.size,
+        droneInstances: scene.droneSwarm?.count || 0,
         distinctReadoutMaterials: readoutMaterials.size,
         tier2CrownVisible: crown2 ? crown2.visible : null,
         currentLevel: scene.districtLevels.get(districtId) || 1,
@@ -118,10 +129,13 @@ try {
     reports.push(report);
 
     check(report.selected === id, `${id}: selected ${report.selected}`);
+    check(report.aimHitDistrict === id, `${id}: centre ray missed the selected district`);
     check(report.landmark && report.landmarkNdc, `${id}: missing tier-one landmark`);
     check(report.framingDistance <= 0.42, `${id}: landmark outside visible focus area (${report.framingDistance})`);
     check(report.oldInsetNodes.length === 0, `${id}: legacy bright-cap nodes ${report.oldInsetNodes.join(', ')}`);
-    check(['command', 'navigation', 'mission_ops'].includes(id) || report.facilityBlocks >= 10, `${id}: insufficient authored facility density (${report.facilityBlocks})`);
+    check(report.facilityBlocks >= districtFacilityDensity[id], `${id}: insufficient procedural facility density (${report.facilityBlocks})`);
+    check(report.buildPlots === 3, `${id}: expected three procedural build plots (${report.buildPlots})`);
+    check(report.droneInstances > 0, `${id}: procedural service traffic is missing`);
     check(report.tier2CrownVisible == null || report.tier2CrownVisible === (report.currentLevel >= 2), `${id}: tier-two crown visibility mismatches level ${report.currentLevel}`);
     check(!report.contextLost && report.glError === 0, `${id}: WebGL context/error failure`);
 
@@ -133,6 +147,21 @@ try {
       timeout: 45000
     });
     console.log(`FOCUS ${id} framing=${report.framingDistance} aimHit=${report.aimHitDistrict || 'none'} calls=${report.render.calls} tris=${report.render.triangles}`);
+  }
+
+  await page.click('[data-action="overview"]');
+  await page.waitForTimeout(1200);
+  await page.screenshot({path:fileURLToPath(new URL('uga-overview-landscape.png',output))});
+  await page.setViewportSize({width:412,height:915});
+  await page.waitForTimeout(1200);
+  await page.screenshot({path:fileURLToPath(new URL('uga-overview-portrait.png',output))});
+  for (const id of districts) {
+    await page.click(`[data-deck-filter="${districtDeck[id]}"]`);
+    await page.click(`.uga-district-button[data-district="${id}"]`);
+    await page.waitForTimeout(1150);
+    await page.screenshot({path:fileURLToPath(new URL(`uga-${id}-focus-portrait.png`,output))});
+    const selected=await page.evaluate(()=>window.__MASSFRONT_SPACE__.commandScene.selectedDistrictId);
+    check(selected===id,`${id}: portrait selection failed`);
   }
 
   check(pageErrors.length === 0, `browser errors: ${pageErrors.join(' | ')}`);

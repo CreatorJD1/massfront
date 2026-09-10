@@ -28,10 +28,11 @@ const { LocalSandboxHost: DirectConsumerHost } = await import('../../src/space_e
 
 const NOW = 2_000_000;
 const NONCE = '0123456789abcdef0123456789abcdef';
+const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_standard';
 const storage = createMemoryStorage();
 const database = new FakeIndexedDbHostDatabase();
 const state = createShowcaseReadyDomainState();
-const started = beginGroundOperation(state, { missionId: 'uga_pale_bloom' });
+const started = beginGroundOperation(state, { missionId: 'uga_pale_bloom', mapId: PALE_BLOOM_MAP_ID });
 const result = simulateGroundResult(started.operation);
 const host = new DirectConsumerHost({
   storage,
@@ -83,5 +84,12 @@ assert.doesNotMatch(experienceSource, /export\s+class\s+LocalSandboxHost/, 'lega
 assert.match(experienceSource, /host\.kind === 'LocalSandboxHostV1' && host\.productionIntegrated === false/, 'local simulator needs an explicit non-production guard');
 assert.match(experienceSource, /await host\.consumeGroundResult\(result\)/, 'local simulator results must traverse the versioned host ledger');
 assert.doesNotMatch(experienceSource, /host\.emitResult\(result\)/, 'the UI must not bypass result consumption through the old event shim');
+const campaignHub = experienceSource.match(/async function openCampaignHub[\s\S]*?\n  \}/)?.[0] || '';
+assert.match(campaignHub, /await openUga\(null, \{ persist, loadVisual: false \}\)/,
+  'integrated campaign entry must mount the shared UGA War Table without preloading the optional cutaway');
+assert.match(campaignHub, /ugaUi\.openView\('campaign_hub'\)/,
+  'integrated campaign entry must expose the host-routed deployment hub');
+assert.doesNotMatch(campaignHub, /openGalaxy\(/,
+  'campaign entry must not bypass Standard, Campaign, Training and Classic host routes for the separate galaxy scene');
 
 console.log('SpaceExperience host seam: PASS');

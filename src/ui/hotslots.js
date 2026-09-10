@@ -43,6 +43,19 @@ const HOT_UTILITIES=[
   {src:'abLance', em:'🛰', nm:'LANCE', ab:3},
   {src:'abEmp',   em:'⚡', nm:'EMP',   ab:4},
 ];
+/* Phone slots use authored call signs, not accidental CSS truncation. The full
+   gameplay name remains the button's accessible name and hover title. */
+const HOT_COMPACT_LABELS={
+  'RAIL REPEATER':'RAIL',
+  'CLUSTER CANNON':'CLUSTER',
+  'SKYBREAKER SALVO':'SKY SALVO',
+  'FIELD WORKSHOP':'WORKSHOP',
+  'SEISMIC DECREE':'SEISMIC',
+  'CRIMSON ADVANCE':'ADVANCE',
+  'IRON REDOUBT':'REDOUBT',
+  'COMBAT LIQUIDATION':'LIQUIDATE',
+  'NANITE RECALL':'RECALL'
+};
 let hotSig='', hotSlots=[], hotRow=null,hotUtilityPanel=null,hotUtilityItems=[];
 /* Presentation takeovers may replace the fallback glyph with validated art.
    Remember the owner's semantic value separately so the HUD frame mirror does
@@ -61,6 +74,13 @@ function hotDataSource(def){
   if(def.kind==='mode')return 'mode:'+String(def.mode);
   if(def.kind==='utility')return 'utility:more';
   return (def.kind||'action')+':'+String(def.nm||'action').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+function hotCompactLabel(value){
+  const full=String(value||'ACTION').trim().toUpperCase();
+  if(HOT_COMPACT_LABELS[full])return HOT_COMPACT_LABELS[full];
+  if(full.length<=9)return full;
+  const words=full.split(/\s+/),fit=words.find(word=>word.length>=4&&word.length<=8);
+  return fit||full.slice(0,8);
 }
 
 function hotSlotRow(){
@@ -83,11 +103,16 @@ function hotSrcUsable(id){
 }
 function hotActivateSource(b){
   if(!b) return;
-  /* Ability owners listen for pointerdown, not click. Calling `.click()` here
-     only ran the browser's click default and silently skipped tryAbility(). */
-  /* Use a plain Event: older Android WebViews expose pointer events to the DOM
-     but do not expose the PointerEvent constructor to script. */
+  /* Forward a COMPLETE press. Ability owners normally commit on pointerdown,
+     but mfBindNativePress defers controls inside an overflowing command rail
+     until pointerup so a swipe cannot fire them. Sending only pointerdown left
+     that owner permanently pending; the next battlefield tap then issued a
+     move because no aim mode had been armed. Outside a scroller pointerup is a
+     no-op, so the pair preserves immediate legacy owners without double fire.
+     Plain Events keep older Android WebViews working even when PointerEvent is
+     exposed to the DOM but not constructible from script. */
   b.dispatchEvent(new Event('pointerdown',{bubbles:true,cancelable:true}));
+  b.dispatchEvent(new Event('pointerup',{bubbles:true,cancelable:true}));
 }
 function hotUtilityShell(){
   if(hotUtilityPanel&&hotUtilityPanel.isConnected)return hotUtilityPanel;
@@ -361,8 +386,9 @@ function hotBuild(){
     }
     b._mfHotDef=s;b.dataset.hotSrc=key;
     hotIconText(b.querySelector('.hEm'),s.em);
-    b.querySelector('.hNm').textContent=s.nm;
-    b.setAttribute('aria-label',s.nm+(s.ds?' — '+s.ds:''));
+    const fullLabel=s.nm+(s.ds?' — '+s.ds:'');
+    b.querySelector('.hNm').textContent=hotCompactLabel(s.nm);
+    b.setAttribute('aria-label',fullLabel);b.title=fullLabel;
     next.appendChild(b);
     hotSlots.push({def:s,el:b});
   }
@@ -393,15 +419,24 @@ function hotSlotSync(force){
       if(S.def.src==='abCommander'){
         const em=document.getElementById('cmdAbEm'),nm=document.getElementById('cmdAbNm');
         if(em)hotIconText(el.querySelector('.hEm'),em.textContent||'✦');
-        if(nm)el.querySelector('.hNm').textContent=nm.textContent||'SIGNATURE';
-        el.setAttribute('aria-label',src.getAttribute('aria-label')||'Commander signature ability');
+        if(nm)el.querySelector('.hNm').textContent=hotCompactLabel(nm.textContent||'SIGNATURE');
+        const fullLabel=src.getAttribute('aria-label')||'Commander signature ability';
+        el.setAttribute('aria-label',fullLabel);el.title=fullLabel;
       }else if(S.def.src==='abPrimary'||S.def.src==='abSecondary'){
         const W=typeof commanderWeaponDef==='function'?commanderWeaponDef(S.def.src==='abSecondary'?1:0):null;
-        if(W){hotIconText(el.querySelector('.hEm'),W.em||'•');el.querySelector('.hNm').textContent=W.nm.toUpperCase();}
+        if(W){
+          const full=W.nm.toUpperCase();
+          hotIconText(el.querySelector('.hEm'),W.em||'•');
+          el.querySelector('.hNm').textContent=hotCompactLabel(full);
+          const fullLabel=src.getAttribute('aria-label')||full;
+          el.setAttribute('aria-label',fullLabel);el.title=fullLabel;
+        }
       }else if(S.def.src==='abClass'){
         const em=document.getElementById('classAbEm'), nm=document.getElementById('classAbNm');
         if(em) hotIconText(el.querySelector('.hEm'),em.textContent||'✦');
-        if(nm) el.querySelector('.hNm').textContent=nm.textContent||'DOCTRINE';
+        if(nm) el.querySelector('.hNm').textContent=hotCompactLabel(nm.textContent||'DOCTRINE');
+        const fullLabel=src.getAttribute('aria-label')||'Commander doctrine ability';
+        el.setAttribute('aria-label',fullLabel);el.title=fullLabel;
       }
     }else if(S.def.kind==='local'){
       el.classList.remove('cd');cd.textContent='';

@@ -67,12 +67,20 @@
  *   node tools/verify-exploration-pack-optimized.mjs --dir <path> --json out.json
  *   node tools/verify-exploration-pack-optimized.mjs --max-pack-mb 260
  * Exit: 0 if every model and the pack total are inside budget, 1 otherwise. */
-import { open, readdir, writeFile, mkdir } from 'node:fs/promises';
+import { open, readFile, readdir, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, relative, dirname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MB = 1024 * 1024;
+const BUDGET_LEDGER = resolve(root, 'modules/space_exploration/assets/source/EXCLUDED_OVERSIZE_V1.json');
+const RUNTIME_EXCLUSION_LEDGERS = [
+  BUDGET_LEDGER,
+  resolve(root, 'modules/space_exploration/assets/source/blender/world-kits/DISCARDED_VISUAL_QUALITY_2026-09-05.json'),
+  resolve(root, 'modules/space_exploration/assets/source/blender/world-kits/DISCARDED_STAGE10_PACK_FAILURES.json'),
+  resolve(root, 'modules/space_exploration/assets/source/spline/world-prefabs/DISCARDED_STAGE10_SPLINE_EXCLUSIONS.json'),
+  resolve(root, 'modules/space_exploration/assets/source/spline/world-prefabs/DISCARDED_SPLINE_PROPS.json')
+];
 
 const argv = process.argv.slice(2);
 function flag(name, fallback) {
@@ -99,6 +107,31 @@ const LIMITS = {
   maxPackBytes: num('--max-pack-mb', 200) * MB
 };
 const topN = num('--top', 20);
+
+async function readBudgetDecisions() {
+  const excluded = new Set();
+  for (const ledger of RUNTIME_EXCLUSION_LEDGERS) {
+    const data = JSON.parse((await readFile(ledger, 'utf8')).replace(/^\uFEFF/, ''));
+    if (data.runtimeAllowed === true) continue;
+    for (const path of data.runtimePaths || []) excluded.add(String(path).replace(/^assets\/runtime\//, ''));
+    for (const entry of data.entries || []) {
+      if (entry?.runtimeAllowed === true || !entry?.path) continue;
+      excluded.add(String(entry.path).replace(/^assets\/runtime\//, ''));
+    }
+  }
+  const data = JSON.parse((await readFile(BUDGET_LEDGER, 'utf8')).replace(/^\uFEFF/, ''));
+  const exceptions = new Map();
+  for (const entry of data.keptDespiteSize || []) {
+    if (entry?.runtimeAllowed !== true || !entry?.path || !Array.isArray(entry.budgetExceptions)) continue;
+    exceptions.set(String(entry.path).replace(/^assets\/runtime\//, ''), {
+      rules: new Set(entry.budgetExceptions.map(String)),
+      reason: entry.reason || 'explicit owner keep decision'
+    });
+  }
+  return { excluded, exceptions };
+}
+
+const budgetDecisions = await readBudgetDecisions();
 
 const MESH_COMPRESSION = ['KHR_draco_mesh_compression', 'EXT_meshopt_compression'];
 const GPU_TEXTURE_EXT = ['KHR_texture_basisu'];
@@ -216,9 +249,11 @@ async function walk(d, acc = []) {
   return acc;
 }
 
-const files = (await walk(dir)).sort();
+const allFiles = (await walk(dir)).sort();
+const files = allFiles.filter(file => !budgetDecisions.excluded.has(relative(dir, file).split(sep).join('/')));
 console.log(`Exploration pack model budget — ${relative(root, dir).split(sep).join('/') || dir}`);
 console.log(`Limits: model<=${(LIMITS.maxModelBytes / MB).toFixed(1)}MB  png-share<=${(LIMITS.maxPngShare * 100).toFixed(0)}% (over ${(LIMITS.minPngBytes / 1024).toFixed(0)}KB png)  tris<=${LIMITS.maxTris} (${LIMITS.maxTrisCompressed} if mesh-compressed)  pack<=${(LIMITS.maxPackBytes / MB).toFixed(0)}MB`);
+if (allFiles.length !== files.length) console.log(`Ledger: excluded ${allFiles.length - files.length} non-runtime model(s) from the delivery scan.`);
 
 if (!files.length) { console.log(`FAIL  no .glb found under ${dir} — this gate would pass vacuously.`); process.exit(1); }
 
@@ -229,7 +264,7 @@ for (const f of files) {
   const m = await scanGlb(f);
   if (m.error) { parseErrors.push({ path: rel, error: m.error, bytes: m.fileBytes || 0 }); continue; }
   const collection = relative(dir, dirname(f)).split(sep).join('/') || '.';
-  models.push({ path: rel, name: f.split(/[\\/]/).pop(), collection, ...m });
+  models.push({ path: rel, runtimeRelativePath: relative(dir, f).split(sep).join('/'), name: f.split(/[\\/]/).pop(), collection, ...m });
 }
 
 if (parseErrors.length) {
@@ -247,23 +282,32 @@ if (packImage === 0 && packBytes > 50 * MB) { console.log('FAIL  parsed every mo
 
 /* ---- rules ------------------------------------------------------------- */
 const violations = [];
+const exceptionsApplied = [];
+function addViolation(rule, model, detail, sortBy) {
+  const decision = budgetDecisions.exceptions.get(model.runtimeRelativePath);
+  if (decision?.rules.has(rule)) {
+    exceptionsApplied.push({ rule, path: model.path, detail, reason: decision.reason });
+    return;
+  }
+  violations.push({ rule, path: model.path, detail, sortBy });
+}
 let pngFloorSkips = 0;
 for (const m of models) {
   const compressed = m.meshCompression.length > 0;
   const share = m.fileBytes ? m.pngBytes / m.fileBytes : 0;
   if (m.fileBytes > LIMITS.maxModelBytes) {
-    violations.push({ rule: 'MODEL_SIZE', path: m.path, detail: `${(m.fileBytes / MB).toFixed(1)}MB > ${(LIMITS.maxModelBytes / MB).toFixed(1)}MB`, sortBy: m.fileBytes });
+    addViolation('MODEL_SIZE', m, `${(m.fileBytes / MB).toFixed(1)}MB > ${(LIMITS.maxModelBytes / MB).toFixed(1)}MB`, m.fileBytes);
   }
   if (m.pngBytes >= LIMITS.minPngBytes) {
     if (share > LIMITS.maxPngShare) {
-      violations.push({ rule: 'RAW_PNG_SHARE', path: m.path, detail: `${(m.pngBytes / MB).toFixed(1)}MB PNG = ${(share * 100).toFixed(0)}% of ${(m.fileBytes / MB).toFixed(1)}MB > ${(LIMITS.maxPngShare * 100).toFixed(0)}%`, sortBy: m.pngBytes });
+      addViolation('RAW_PNG_SHARE', m, `${(m.pngBytes / MB).toFixed(1)}MB PNG = ${(share * 100).toFixed(0)}% of ${(m.fileBytes / MB).toFixed(1)}MB > ${(LIMITS.maxPngShare * 100).toFixed(0)}%`, m.pngBytes);
     }
   } else if (m.pngBytes > 0 && share > LIMITS.maxPngShare) pngFloorSkips += 1;
   if (!compressed && m.triangles > LIMITS.maxTris) {
-    violations.push({ rule: 'TRIANGLE_BUDGET', path: m.path, detail: `${m.triangles.toLocaleString('en-US')} tris, no mesh compression > ${LIMITS.maxTris.toLocaleString('en-US')}`, sortBy: m.triangles });
+    addViolation('TRIANGLE_BUDGET', m, `${m.triangles.toLocaleString('en-US')} tris, no mesh compression > ${LIMITS.maxTris.toLocaleString('en-US')}`, m.triangles);
   }
   if (compressed && m.triangles > LIMITS.maxTrisCompressed) {
-    violations.push({ rule: 'COMPRESSED_TRIANGLE_BUDGET', path: m.path, detail: `${m.triangles.toLocaleString('en-US')} tris with ${m.meshCompression.join('+')} > ${LIMITS.maxTrisCompressed.toLocaleString('en-US')}`, sortBy: m.triangles });
+    addViolation('COMPRESSED_TRIANGLE_BUDGET', m, `${m.triangles.toLocaleString('en-US')} tris with ${m.meshCompression.join('+')} > ${LIMITS.maxTrisCompressed.toLocaleString('en-US')}`, m.triangles);
   }
 }
 const packOver = packBytes > LIMITS.maxPackBytes;
@@ -279,6 +323,10 @@ console.log(`  no mesh compression: ${uncompressed.length}/${models.length} mode
 const mism = models.reduce((a, m) => a + m.mimeMismatches, 0);
 if (mism) console.log(`  NOTE ${mism} image(s) whose declared mimeType disagrees with the sniffed bytes (sniff wins).`);
 if (pngFloorSkips) console.log(`  NOTE ${pngFloorSkips} model(s) exceed the PNG share but sit under the ${(LIMITS.minPngBytes / 1024).toFixed(0)}KB floor, so RAW_PNG_SHARE did not fire on them.`);
+if (exceptionsApplied.length) {
+  console.log(`  NOTE ${exceptionsApplied.length} explicit owner budget exception(s) applied:`);
+  for (const entry of exceptionsApplied) console.log(`       ${entry.rule}  ${entry.path}  ${entry.detail}`);
+}
 
 const byRule = new Map();
 for (const v of violations) byRule.set(v.rule, (byRule.get(v.rule) || 0) + 1);
@@ -308,6 +356,8 @@ if (jsonOut) {
     limits: LIMITS,
     totals: { models: models.length, bytes: packBytes, triangles: packTris, imageBytes: packImage, pngBytes: packPng, uncompressedModels: uncompressed.length, pngFloorSkips, mimeMismatches: mism },
     ruleCounts: { ...Object.fromEntries(byRule), PACK_BUDGET: packOver ? 1 : 0 },
+    excludedByLedger: allFiles.length - files.length,
+    exceptionsApplied,
     violations,
     models
   }, null, 2));

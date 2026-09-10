@@ -16,14 +16,20 @@ import {createHash} from 'node:crypto';
 import {basename, dirname, join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {buildRuntimeCompatibility,canonicalRuntimeArtifacts,BALANCE_AUTHORITY_V1} from './runtime-compatibility.mjs';
+import {syncStartupPackRuntime} from './sync-startup-pack-runtime.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const www = join(root,'www');
 const beforeBytes = dirBytes(www);
-/* Galactic Exploration is an optional content channel, not base installer
-   weight. A normal pack must stay slim for browser/PWA and Android; the signed
-   541 MiB allowlist is included only for an explicit monolithic QA build. */
-const includeExploration = process.env.MASSFRONT_INCLUDE_EXPLORATION === '1';
+/* A player build is complete by default: its signed Galactic Exploration
+   closure and locally curated soundtrack ride with browser/PWA and Android.
+   The one slim mode is deliberately named as a diagnostic escape hatch so a
+   release cannot silently inherit the old content-omitting default. */
+const diagnosticSlim = process.env.MASSFRONT_DIAGNOSTIC_SLIM === '1';
+const includeExploration = !diagnosticSlim;
+// A self-consistent older module manifest must not hide a stale download engine.
+// Check before touching www so failure preserves the last usable packed player.
+if(includeExploration) await syncStartupPackRuntime({check:true});
 
 /* Authored / live-loaded V2 maps. Everything else under textures/materials is
    a generated 256px stub (~80 KB, many byte-identical across units). Those
@@ -33,6 +39,8 @@ const includeExploration = process.env.MASSFRONT_INCLUDE_EXPLORATION === '1';
    Shipping the stub roster was ~17 MB of installer weight that never decoded. */
 const KEEP_MATERIAL = /^(brood-gorger-v2|nova-rhino-v2|nova-factory-v2|nova-heavy-tank-v2|mf-world-structures-v2|mf2-carbon-cracks-v1|mf_mechanical_microdetail_v2|mf-worldkit-v4-(?:baseao|nre|masks)\.png$)/;
 const KEEP_MODIFIER = 'assets/modifiers/modifier-art-atlas-v1.png';
+const KEEP_BRAND = 'assets/brand/massfront-title-command-conquer-overwhelm-v1.png';
+const KEEP_BRAND_SHA256 = 'e11a316658c34d30a9b4aced6f2bdfb7ae7a47f967f93389acb55d8db67fb279';
 
 function dirBytes(p){
   if(!existsSync(p)) return 0;
@@ -50,9 +58,9 @@ function relFromRoot(abs){
 }
 /* .gitignore-shaped pack filter. Capacitor copies www/ verbatim, so junk that
    lands inside src/ or assets/ (node_modules, source maps, audit PNGs, .tmp)
-   becomes APK weight. Brand / cinematic PNGs are already inlined as data URIs
-   in index.html and story.js. The modifier atlas is deliberately a live loose
-   file: keeping it external avoids another multi-megabyte CSS data URI. */
+   becomes APK weight. The title loader remains inlined for cold-boot safety;
+   Galactic bootstrap alone reads the one owner-approved loose title asset.
+   Cinematic PNGs remain inlined in story.js. */
 function shouldPack(abs){
   const rel = relFromRoot(abs);
   const base = basename(abs);
@@ -64,7 +72,7 @@ function shouldPack(abs){
      duplicate ~4.9 MiB of full-resolution PNGs in every APK. */
   if(rel==='assets/source'||rel.startsWith('assets/source/')) return false;
   if(rel==='assets/packs'||rel.startsWith('assets/packs/')) return false;
-  if(rel==='assets/brand'||rel.startsWith('assets/brand/')) return false;
+  if(rel.startsWith('assets/brand/')&&rel!==KEEP_BRAND) return false;
   if(rel.startsWith('assets/modifiers/') && rel!==KEEP_MODIFIER) return false;
   if(rel==='assets/factions/cinematic'||rel.startsWith('assets/factions/cinematic/')) return false;
   if(rel==='assets/factions/overview.jpg') return false;
@@ -97,14 +105,12 @@ rmSync(join(www,'experimental'), {recursive:true, force:true});
    Hugging Face channel. Copying it into Capacitor duplicates every take inside
    the APK while no runtime URL ever reads that folder. */
 rmSync(join(www,'assets','packs'), {recursive:true, force:true});
-rmSync(join(www,'assets','brand'), {recursive:true, force:true});
 rmSync(join(www,'assets','factions','cinematic'), {recursive:true, force:true});
 rmSync(join(www,'assets','source'), {recursive:true, force:true});
 
-/* Explicit full-QA packs stage Galactic Exploration from the signed allowlist,
-   never from the 2.6 GiB authoring tree. This keeps Blender sources, autosaves,
-   tests, captures and rejected candidates out of www while making HEAD
-   ./modules/space_exploration/index.html succeed on that QA player path. */
+/* Stage Galactic Exploration from the signed allowlist, never from the 2.6 GiB
+   authoring tree. This keeps Blender sources, autosaves, tests, captures and
+   rejected candidates out of www while making the base player complete. */
 function stageExplorationPack(){
   const moduleRoot=join(root,'modules','space_exploration');
   const manifestPath=join(moduleRoot,'dist','exploration-content-manifest-v1.json');
@@ -133,15 +139,15 @@ function stageExplorationPack(){
   /* Preserve the content-contract bytes. Installation state belongs to the
      host/IndexedDB envelope; rewriting it here would invalidate the hash. */
   cpSync(manifestPath,installedManifest);
-  console.log('  optional Galactic Exploration pack: '+manifest.files.length+' files, '+(total/1048576).toFixed(2)+' MiB');
+  console.log('  Galactic Exploration base pack: '+manifest.files.length+' files, '+(total/1048576).toFixed(2)+' MiB');
 }
 if(includeExploration) stageExplorationPack();
 else rmSync(join(www,'modules'), {recursive:true, force:true});
 
-/* `checkGalactic` must never discover optional content by requesting a path
-   that a slim build deliberately omitted. Rewrite only the copied immutable
-   boot authority; the canonical source/default pack stays true, while a slim
-   package and every later OTA source read exact false without a network probe. */
+/* `checkGalactic` must never discover content by requesting a path that a
+   diagnostic-slim build deliberately omitted. Rewrite only the copied
+   immutable boot authority; normal packages stay true and diagnostic packages
+   read exact false without a network probe. */
 {
   const bootPath=join(www,'boot.js'),source=readFileSync(bootPath,'utf8');
   const marker=/window\.__MF_BUILD_HAS_GALACTIC_EXPLORATION=(?:true|false);/;
@@ -150,38 +156,12 @@ else rmSync(join(www,'modules'), {recursive:true, force:true});
     'window.__MF_BUILD_HAS_GALACTIC_EXPLORATION='+(includeExploration?'true':'false')+';'));
 }
 
-/* The soundtrack ships INSIDE the installer by default, and the reason is worth
-   recording because it reverses an earlier decision. The build had hit 51 MB and
-   music looked like the culprit, so it was moved to an on-demand Cloudflare
-   download. It was not the culprit: removing all ten megabytes changed the APK
-   by 900 bytes. The real cause was 35 MB of zip alignment padding, fixed in
-   tools/shrink-apk.sh, and once that was gone the whole thing fit comfortably.
-
-   Shipping it means the game works the moment it is installed, with no server to
-   stand up and nothing to configure. The pack system in src/assetpack.js stays —
-   it is the right answer for content that genuinely outgrows an installer — and
-   MASSFRONT_CLOUD_MUSIC=1 switches to it. The client already prefers a
-   downloaded pack over the bundled copy, so both paths work today. */
-/* Nine tracks ship inside the installer; the other six are download-only and
-   are stripped here. music.json still lists all fifteen and flags which is
-   which, so the player knows what exists and skips what it does not have.
-   Playlist music is AAC-only (.m4a). The .ogg pass is leftover insurance in
-   case an older ingest left a sibling behind. */
-if(process.env.MASSFRONT_CLOUD_MUSIC === '1'){
+/* Every locally curated playlist track ships in a normal player build even if
+   its catalog row also supports a downloaded-pack URL. The diagnostic-slim
+   switch may omit that directory; dual-codec adaptive beds and voices stay so
+   audio behavior remains testable. */
+if(diagnosticSlim){
   rmSync(join(www,'assets','audio','music'), {recursive:true, force:true});
-} else {
-  const mdir = join(www,'assets','audio','music');
-  const man = JSON.parse(readFileSync(join(www,'assets','audio','music.json'),'utf8'));
-  let stripped = 0;
-  for(const list of Object.values(man.playlists))
-    for(const t of list)
-      if(t.bundled === false){
-        for(const ext of ['.m4a','.ogg']){
-          const f = join(mdir, t.file.split('/').pop() + ext);
-          if(existsSync(f)){ rmSync(f); stripped++; }
-        }
-      }
-  if(stripped) console.log('  ' + stripped + ' download-only music files left out of the installer');
 }
 
 /* ---- VERIFY ---------------------------------------------------------------
@@ -191,7 +171,7 @@ if(process.env.MASSFRONT_CLOUD_MUSIC === '1'){
      * assets/data/manifest.json — must match that MANIFEST (OTA uses it)
      * assets/app.webmanifest — PWA icons
      * assets/audio/sfx.json — dual-codec effects (.ogg + .m4a)
-     * assets/audio/music.json — bundled AAC tracks
+     * assets/audio/music.json — locally curated AAC tracks
      * assets/audio/voice.json — dual-codec voice takes
    Anything named there and absent from www/ is a build that 404s on device. */
 const missing = [];
@@ -208,8 +188,19 @@ if(existsSync(join(www,'experimental')))
   missing.push('experimental/   (must not ship in Capacitor www/)');
 if(existsSync(join(www,'assets','packs')))
   missing.push('assets/packs/   (must not ship — Hugging Face voice staging duplicate)');
-if(existsSync(join(www,'assets','brand')))
-  missing.push('assets/brand/   (must not ship — already inlined in index.html)');
+const packedBrandRoot=join(www,'assets','brand');
+const packedBrandFiles=existsSync(packedBrandRoot)
+  ? readdirSync(packedBrandRoot,{withFileTypes:true}).filter(entry=>entry.isFile()).map(entry=>'assets/brand/'+entry.name).sort()
+  : [];
+if(JSON.stringify(packedBrandFiles)!==JSON.stringify([KEEP_BRAND]))
+  missing.push('assets/brand/   (must contain exactly the approved UGA loader title asset)');
+else {
+  const sourceBrand=readFileSync(join(root,KEEP_BRAND)),packedBrand=readFileSync(join(www,KEEP_BRAND));
+  const sourceHash=createHash('sha256').update(sourceBrand).digest('hex');
+  const packedHash=createHash('sha256').update(packedBrand).digest('hex');
+  if(sourceHash!==KEEP_BRAND_SHA256||packedHash!==KEEP_BRAND_SHA256)
+    missing.push(KEEP_BRAND+'   (canonical UGA loader title hash changed)');
+}
 if(existsSync(join(www,'assets','factions','cinematic')))
   missing.push('assets/factions/cinematic/   (must not ship — already inlined in story.js)');
 if(existsSync(join(www,'assets','source')))
@@ -221,7 +212,7 @@ if(existsSync(join(www,'node_modules'))||existsSync(join(www,'.tmp')))
 if(includeExploration)
   check('modules/space_exploration/index.html','Galactic Exploration player entry');
 else if(existsSync(join(www,'modules')))
-  missing.push('modules/   (base pack must stay slim; only MASSFRONT_INCLUDE_EXPLORATION=1 may stage Galactic content)');
+  missing.push('modules/   (MASSFRONT_DIAGNOSTIC_SLIM=1 must omit Galactic content)');
 
 const html = readFileSync(join(www,'index.html'),'utf8');
 for(const m of html.matchAll(/(?:src|href)\s*=\s*"([^"]+)"/g)) check(m[1],'index.html');
@@ -304,16 +295,15 @@ for(const bed of ['mus_ambient','mus_tension','mus_combat'])
 
 const musicPath = join(www,'assets','audio','music.json');
 if(!existsSync(musicPath)) missing.push('assets/audio/music.json   (playlist)');
-else if(process.env.MASSFRONT_CLOUD_MUSIC !== '1'){
+else if(!diagnosticSlim){
   const music = JSON.parse(readFileSync(musicPath,'utf8'));
   const seen = new Set();
   for(const list of Object.values(music.playlists||{}))
     for(const t of list){
-      if(t.bundled === false) continue;
       const stem = 'assets/audio/music/' + t.file.split('/').pop();
       if(seen.has(stem)) continue;
       seen.add(stem);
-      check(stem+'.m4a', 'bundled AAC music');
+      check(stem+'.m4a', 'locally curated AAC music');
     }
 }
 

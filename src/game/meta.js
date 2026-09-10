@@ -176,14 +176,7 @@ const DEF_SETTINGS={sound:true,music:true,fog:true,shake:true,fps:false,cine:tru
                       haptics:true,formationPreview:true,orderPaths:true,screenGrade:'neutral',
                       godMode:false,tutorialVoice:true,sfxVol:4,ambVol:4,musicVol:3,voiceVol:4,audioLevelSteps:2,
                       perf:'auto',menubg:'dim',healthBars:'select',teamIdMode:false,textScale:100,
-                     quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false,
-                     /* EXPERIMENTAL, OFF BY DEFAULT AND NEVER DEFAULTED ON.
-                        Gates the space-exploration module's menu entry. The
-                        module is not packaged (tools/pack-www.mjs refuses
-                        modules/), so with this off the game is byte-identical
-                        to before and with it on the entry only appears where a
-                        development checkout actually has the module present. */
-                     experimentalExploration:false};
+                     quality:mfGuessMobile()?'medium':'high', gfxAdvOpen:false};
 /* CAREER RECORD. The old set was four numbers, which is enough to compute a
    rank and nothing else — no history, no identity, nothing a player would want
    to look at. These are the ones a commander would actually care about. */
@@ -351,16 +344,13 @@ function metaHarden(){
       priorSettings[key]=clamp((priorSettings[key]|0)+1,1,4);
     priorSettings.audioLevelSteps=2;
   }
-  const migrateExploration=!Object.prototype.hasOwnProperty.call(priorSettings,'experimentalExploration')
-    &&Object.prototype.hasOwnProperty.call(priorSettings,'expExploration');
+  /* Galactic Command is now the primary strategic shell. Retire both preview
+     switches instead of carrying them into future saves where they imply that
+     the integrated game loop is still optional. */
+  delete priorSettings.experimentalExploration;
+  delete priorSettings.expExploration;
   META.settings={...DEF_SETTINGS,...priorSettings};
   META.settings.textScale=mfTextScaleValue(META.settings.textScale);
-  /* Compatibility adapter for the short-lived preview key. Preserve an
-     explicit opt-in from an existing local career, then remove the legacy key
-     so every subsequent save has one authoritative setting. New careers still
-     default off. */
-  if(migrateExploration) META.settings.experimentalExploration=!!priorSettings.expExploration;
-  delete META.settings.expExploration;
   /* gfxOver is a sparse bag. Sharing DEF_SETTINGS' empty object would make
      the first profile's taps leak into every later career. */
   if(!META.settings.gfxOver||typeof META.settings.gfxOver!=='object'||Array.isArray(META.settings.gfxOver))
@@ -421,15 +411,14 @@ function metaLoad(){
      from forcing their next three battles back through onboarding defaults. */
   if(loadedCareer&&!loadedStandardCount)META.standardMatches=META.matches||0;
   const needGfxMed=!(META.settings&&META.settings.gfxPhoneMed);
-  const needExplorationKey=!!(META.settings
-    &&!Object.prototype.hasOwnProperty.call(META.settings,'experimentalExploration')
-    &&Object.prototype.hasOwnProperty.call(META.settings,'expExploration'));
+  const needExplorationRetire=!!(META.settings&&(Object.prototype.hasOwnProperty.call(META.settings,'experimentalExploration')
+    ||Object.prototype.hasOwnProperty.call(META.settings,'expExploration')));
   const needCoreGrantRepair=Array.isArray(META.coreGrantPending)&&META.coreGrantPending.some(grant=>
     !grant||!Number.isFinite(Number(grant.amount))||Number(grant.amount)<=0||!grant.idemKey);
   const needAudioLevelV2=!(META.settings&&META.settings.audioLevelSteps===2);
   metaHarden();
   const overlapMigration=armoryRetireOverlaps();
-  if(needGfxMed||needExplorationKey||needCoreGrantRepair||needAudioLevelV2||needNewCareerGateSeed||overlapMigration.changed) metaSave();
+  if(needGfxMed||needExplorationRetire||needCoreGrantRepair||needAudioLevelV2||needNewCareerGateSeed||overlapMigration.changed) metaSave();
 }
 /* Local save is the source of truth for progress on THIS device. Harden it so a
    transient write failure (quota pressure, a WebView hiccup) does not silently
@@ -442,6 +431,10 @@ function metaSave(){
      metaHarden. Keep the retirement invariant at the serialization boundary
      so local, cloud, file-import and profile-switch paths all converge. */
   armoryRetireOverlaps();
+  if(META.settings){
+    delete META.settings.experimentalExploration;
+    delete META.settings.expExploration;
+  }
   let text;
   try{ text=JSON.stringify(META); }
   catch(e){ text=null; }
@@ -1542,6 +1535,8 @@ const WAR_MODES=[
 ];
 function renderWarRoom(){
   const g=document.getElementById('warGrid'); if(!g) return;
+  const continuation=document.querySelector('#warScr .warContinuation strong');
+  if(continuation) continuation.textContent=WAR_MODES.length+' OPERATIONS';
   const T=(typeof trainingUiState==='function')?trainingUiState():null;
   /* tutorial.js polls mission state while this screen is open. Record the
      exact state that produced these cards so the poll can refresh copy only
@@ -2080,23 +2075,20 @@ function renderSettings(){
   const HBD={always:'Bars hover over every visible unit and structure',
              select:'Bars appear above selected units and the opened structure',
              off:'All battlefield health bars are hidden'};
-  const explorationOn=!!META.settings.experimentalExploration;
+  const explorationOn=window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true;
   const textScale=mfTextScaleValue(META.settings.textScale);
   const explorationOpen=explorationOn
-    ?'<div class="sItem setRow" data-set="openExperimentalExploration" role="button" tabindex="0"><div class="sTx"><b>Open Experimental Galactic</b>'
-      +'<div class="sDs">Side preview only. Home, START, and the Standard war table stay where they are.</div></div>'
+    ?'<div class="sItem setRow" data-set="openExperimentalExploration" role="button" tabindex="0"><div class="sTx"><b>Return to UGA Headquarters</b>'
+      +'<div class="sDs">Manage ship sections, prepare expeditions, or choose a mode at the War Table.</div></div>'
       +'<div class="sBuy togB onT">OPEN</div></div>'
     :'';
-  h+=group('battle','GAMEPLAY & BATTLEFIELD','Information shown while commanding units and optional experimental experiences.',
+  h+=group('battle','GAMEPLAY & BATTLEFIELD','Information shown while commanding units.',
       tog('godMode','God Mode (Solo)','Infinite mass and energy, instant ability recharge, and invulnerable friendly units and structures')
      +tog('fog','Fog of War','Hide unexplored and unobserved battlefield areas')
      +cyc('healthBars','3D Health Bars',HBD[hb],HBL[hb],hb!=='off')
      +tog('shake','Impact Camera Shake','Recoil and explosions move the camera')
      +tog('haptics','Haptic Feedback','Short vibration cues for confirmations and impacts')
-      +tog('experimentalExploration','Experimental: Galactic Campaign',
-           'Optional side experiment. Does not replace the home menu, START, or the Standard war table. '
-          +'Open it from the row below when you want the preview.')
-      +explorationOpen);
+     +explorationOpen);
 
   const perf=META.settings.perf;
   const bg=META.settings.menubg||'dim';

@@ -459,3 +459,60 @@ Flags: `--dir`, `--json`, `--max-model-mb`, `--max-png-share`, `--min-png-bytes`
    other side of it.
 6. **Copy whatever `mf-platform-hs-v1` did.** 30 models, zero violations, 13% PNG. It is
    the only collection in the pack that already behaves.
+
+---
+
+## 14. Continuation result — geometry delivery completed locally
+
+The interrupted geometry pass is now implemented and verified. The exact build-only
+toolchain is locked at `@gltf-transform/core`, `@gltf-transform/extensions`, and
+`@gltf-transform/functions` 4.5.0 plus `draco3d` 1.5.7. The resulting 329-model
+delivery set is fully Draco encoded: 326 models were newly encoded, three existing
+Draco models were retained byte-for-byte, and the rejected Nordhall model remains
+preserved outside the signed runtime catalog.
+
+**Changelog: geometry ×3 compression with no runtime changes.** Model payload fell
+from 245.04 MiB to 74.38 MiB (×3.294; 170.65 MiB saved). The complete signed optional
+pack, including code and the newly enumerated KTX2/Basis decoder chain, is 98.22 MiB
+across 446 files. Its self-hash is
+`sha256-91120dfaf56cd0b880eb9c1f4afb85a560f0467333774a7dd520f1165e0725a6`.
+
+This pass does not simplify or decimate geometry. Position quantization is disabled;
+the verifier decodes every output and checks scene, node, mesh, primitive, material,
+texture bytes, transforms, and bounds against the pre-Draco candidate. Draco removed
+only two exact zero-area triangles from one inspected spire model; no visible surface
+was removed. A corrected single-LOD comparison on the hardware NVIDIA/D3D11 path
+showed matching representative models, with 0.257% changed pixels at worst and no
+console or HTTP errors. The earlier stacked/washed-out diagnostic rendered LOD0,
+LOD1, and LOD2 together and was invalid.
+
+The runtime manifest, catalog counts (326 entries: 320 world-kit plus six spline),
+budget gate, encoder mutation test, KTX2 loader wiring, bundle, and packed `www/`
+preview were regenerated locally. No OTA, APK, Hugging Face, Cloudflare, or production
+channel was published or activated.
+
+---
+
+## 15. Owner visual rejection and complete-base result
+
+Section 14 records the compression result before the subsequent visual review;
+it is not the current delivery count. The owner rejected 42 runtime models from
+the original 330-model review set, including all 33 `mf-building-hs-v1`
+duplicates, two unfinished container yards, five legacy Spline placeholders,
+the screenshot-visible Brutalist Spire Crown, and the UGA Command Cutaway. The
+runtime GLBs were deleted while authoring material remains only as rejected
+provenance. The command system uses its procedural management-scene fallback
+instead of mounting the rejected cutaway.
+
+The current signed base closure contains **404 files / 73.41 MiB**, including
+**287 GLBs / 49.6 MiB**. The world-model catalog contains **285 entries**:
+284 world-kit models and one retained Spline model. The manifest declares
+`delivery: "base"`, is not optional, and has self-hash
+`sha256-fa051b04bbe66a8ed21f5f0ecfcc439f13db45320aa16379a81d3e121a399fb9`.
+The catalog hash is
+`901fcee3575d78ae82cf29997adc213e3c6114dfc9dc216ee65745501975a4dd`.
+
+The rejection verifier, exact-path ledger gate, manifest integrity check, and
+model budget gate all pass with none of the 42 visually rejected runtime paths
+present. Normal browser/PWA and Android packaging now includes this signed
+closure; only explicit diagnostic-slim packaging may omit it.

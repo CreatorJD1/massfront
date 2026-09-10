@@ -9,10 +9,10 @@ let difficulty=1;
 let defenseFocus=0;             // 0 combined arms, 1 fortress / tower-defence cadence
 let infestationOn=true;         // neutral map nests, guards, spread, eruptions and tides
 let deploymentPackage='prepared'; // supported opening for newcomers; classic start remains selectable
-/* The isolated Galactic strategic layer is optional while experimental. This
-   callback is assigned during UI wiring; the home menu stays in this document
-   and its primary action may hand the War Table off to the module. */
-let mfOpenExploration=null;
+/* The Galactic strategic layer is the game's primary career shell. This
+   callback is assigned during UI wiring; tactical battles stay in this
+   document and the strategic shell hands deployments back through the bridge. */
+let mfOpenExploration=null,mfExplorationMenuSync=null,mfExplorationLaunching=false;
 let hudDeck='orders';           // one secondary command row at a time on phones
 /* OTA source can run inside an older packaged HTML shell. Upgrade the two new
    HUD surfaces before binding controls so the patch remains usable without an
@@ -64,11 +64,11 @@ function startFirstContactGuide(){
   const say=(delay,msg)=>firstContactTimers.push(setTimeout(()=>{
     if(running&&matchLive&&activeWarMode==='standard'&&!(typeof TUT!=='undefined'&&TUT.trainingMode)) toast(msg);
   },delay));
-  if(battle===1) say(900,'◇ FIRST CONTACT 1 / 3 — Standard medium theatre (*_medium). Locked stars stay on the galaxy. HQ is down. HUD pop reads n/500.');
-  else say(900,'◇ FIRST CONTACT '+battle+' / 3 — HQ, Reactor and Factory are deployed. Income next. HUD pop reads n/500 — 500 is this commander\'s cap.');
-  say(11000,'◆ CLAIM MASS — place an Extractor on a nearby deposit, then protect the route back to base.');
-  say(28500,'⚔ FORM A SCREEN — queue a small force. SINGLE-TAP ground is attack-move (fight on the way). DOUBLE-TAP open ground is retreat (break contact, no fighting).');
-  say(56000,'⌖ HOLD TERRITORY — construction stays inside HQ range until a Targeting Array extends your network.');
+  if(battle===1) say(900,'◇ FIRST CONTACT 1/3 — HQ online. Locked systems stay on the Galaxy map.');
+  else say(900,'◇ FIRST CONTACT '+battle+'/3 — Base online. Build your economy next.');
+  say(11000,'◆ CLAIM MASS — Build an Extractor on a nearby deposit, then defend it.');
+  say(28500,'⚔ FORM A SCREEN — Queue units. Tap to attack-move; double-tap to retreat.');
+  say(56000,'⌖ HOLD TERRITORY — Targeting Arrays extend your construction range.');
 }
 
 function setHudDeck(deck,quiet){
@@ -614,6 +614,8 @@ function resetWorld(){
   rebuildGrid();                                   // spatial grid must never hold stale chains
   heroIdx=-1; enemyHeroIdx=-1; enemyHeroIdxs.length=0;
   blds.length=0; rebuildBGrid();
+  if(typeof mfNavReset==='function')mfNavReset();
+  else if(typeof mfNavProgressReset==='function')mfNavProgressReset();
   if(typeof mfBuildingWorkFxReset==='function')mfBuildingWorkFxReset();
   craters.length=0; wrecks.length=0; rubbles.length=0; groundBurns.length=0;
   pFree=[]; pHigh=0; palive.fill(0); pSplit.fill(0);
@@ -645,7 +647,7 @@ function resetWorld(){
   beams.length=0; fogCov.fill(0); fogSeen.fill(0); fogSources.fill(0); fogScans.length=0;
   if(typeof mmPings!=='undefined') mmPings.length=0;
   meteors.length=0; stormTimer=200;
-  fields.length=0; ffNext=0; ufield.fill(-1); ushielded.fill(0); umarch.fill(0);
+  ushielded.fill(0); umarch.fill(0);
   ufireT.fill(0); uheal.fill(0);
   if(typeof uCrash!=='undefined'){ uCrash.fill(0); ualt.fill(0); uCtime.fill(0); }
   ubroodLed.fill(0);uMineT.fill(0);uMineNode.fill(-1);broodMassT=0;
@@ -2029,6 +2031,9 @@ function syncBattlefieldFromMap(key){
   const def=MAPDEFS[key]; if(!def) return false;
   if(typeof mfConquestMapOpen==='function'&&!mfConquestMapOpen(key))return false;
   curMap=key;
+  /* Every picker (War Table, galaxy UI, conquest advance) funnels through here,
+     so this is the one place the region can be kept in step with the site. */
+  if(def.region) curRegionId=def.region;
   if(def.theme&&typeof THEMES!=='undefined'&&THEMES[def.theme]) curTheme=def.theme;
   if(def.size) battlefieldPreset=battlefieldPresetKey(def.size);
   document.querySelectorAll('.bsbtn').forEach(b=>b.classList.toggle('on',b.dataset.bs===battlefieldPreset));
@@ -2426,6 +2431,10 @@ function returnToMainMenu(){
   renderMetaHead(); setupAttract();
   if(typeof storyCheck==='function') setTimeout(storyCheck,420);
 }
+/* Takeovers may wrap returnToMainMenu more than once across OTA/source load
+   orders. Protected onboarding must retain one stable path to the real base
+   cleanup so its faction gate is not unloaded by a Galactic return wrapper. */
+window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__=returnToMainMenu;
 function continueToNextMap(){
   /* Rewards already landed in endGame/metaGrant. This only launches the next
      unlocked War Table site — do not call returnToMainMenu first or the
@@ -2703,32 +2712,57 @@ function wire(){
       if(typeof renderOps==='function') renderOps();
     });
   });
-  /* EXPERIMENTAL SPACE EXPLORATION — same-tab strategic layer, with two gates.
+  /* GALACTIC EXPLORATION — same-tab strategic layer.
      The module is a separate document with its own three.js and its own WebGL
      canvas, so it is opened as a document rather than imported: two contexts
      fighting over one canvas is the failure this avoids, and a crash in an
      unfinished module then cannot take the RTS down with it.
-     Gate 1 is the player's setting. Gate 2 is a launch-time HEAD probe, because
-     the module is NOT in the installer. The existing home remains the home;
-     START enters live space for the world introduction, whose skippable choice
-     continues either to protected planetary Training or the Galactic War Table.
+     Complete installers enable this layer directly. Older/slim shells retain
+     their opt-in and installation fallback, checked by a launch-time HEAD probe.
+     START enters the stable Galactic home. Orbital travel begins only from its
+     deliberate Depart control; Training remains available from the War Table.
      Nothing here runs during a match or touches saves. */
   (function mfWireExploration(){
     const URL_='./modules/space_exploration/index.html';
-    mfOpenExploration=async function(entryView){
-      const enabled=!!(typeof META!=='undefined'&&META.settings&&META.settings.experimentalExploration);
-      if(!enabled){ if(typeof toast==='function') toast('Enable Experimental: Galactic Campaign first'); return false; }
+    mfOpenExploration=async function(entryView,options){
+      const enabled=window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true;
+      if(!enabled){ if(typeof toast==='function') toast('Galactic game content is not available in this installation'); return false; }
       entryView=entryView==='system'?'system':'campaign_hub';
+      if(mfExplorationLaunching)return false;
+      mfExplorationLaunching=true;
+      const launchButton=options&&options.launchButtonId?$(options.launchButtonId)
+        :entryView==='campaign_hub'?$('ugaBtn'):$('startBtn');
+      const finishLaunch=message=>{
+        mfExplorationLaunching=false;
+        if(launchButton){launchButton.classList.remove('is-launching');launchButton.removeAttribute('aria-busy');}
+        if(message&&typeof toast==='function')toast(message);
+        return false;
+      };
+      if(launchButton){launchButton.classList.add('is-launching');launchButton.setAttribute('aria-busy','true');}
+      if(typeof toast==='function')toast(entryView==='campaign_hub'
+        ?'Opening UGA Command — strategic controls are preparing'
+        :'Opening the UGA expedition — navigation is preparing');
+      /* Unlock and play BEFORE the first await. iOS only lets a page start audio
+         while it is still inside the user-gesture task; once execution resumes
+         after an await that permission is gone, so the confirmation tick for the
+         single most important button in the game was silent on exactly the
+         platform that ships as a PWA. Keep it synchronous with the tap. */
       initAudio(); sfx('ui');
-      let present=false,packUrl=URL_;
-      try{ const r=await fetch(URL_,{method:'HEAD',cache:'no-store'}); present=r.ok; }
+      /* Give the pressed control and status rail one real paint before same-tab
+         navigation starts parsing the separate WebGL document. On phones that
+         paint is the difference between a confirmed command and a dead tap. */
+      await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
+      let present=window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true,packUrl=URL_;
+      try{ if(!present){const r=await fetch(URL_,{method:'HEAD',cache:'no-store'}); present=r.ok;} }
       catch(e){}
       if(!present){
-        const packed=typeof mfInstallExplorationPack==='function'&&await mfInstallExplorationPack();
-        if(!packed||!packed.ok){ if(typeof toast==='function') toast('Galactic preview is not installed in this build'); return false; }
-        /* blob: index.html is a different origin than this ticket; do not navigate. */
+        let packed=null;
+        try{packed=typeof mfInstallExplorationPack==='function'&&await mfInstallExplorationPack();}
+        catch(e){return finishLaunch('Galactic content could not be prepared on this device');}
+        if(!packed||!packed.ok)return finishLaunch('Galactic preview is not installed in this build');
+        /* Cached bytes need a same-origin resource mount before navigation. */
         if(packed.openUrl) packUrl=packed.openUrl;
-        else { if(typeof toast==='function') toast('Galactic pack downloaded — War Room stays available in this build'); return false; }
+        else return finishLaunch('Galactic pack downloaded — War Room stays available in this build');
       }
       /* The isolated module returns through an opaque operation nonce.
          Bind that future request to the profile which actually opened it before
@@ -2779,16 +2813,45 @@ function wire(){
           &&stored.commissioning&&stored.commissioning.factionId===commissioning.factionId
           &&stored.commissioning.commanderId===commissioning.commanderId);
       }catch(e){}
-      if(!ticketReady){ if(typeof toast==='function') toast('Galactic link could not be secured on this device'); return false; }
+      if(!ticketReady)return finishLaunch('Galactic link could not be secured on this device');
       /* Same tab: the ship and RTS renderers must never compete for WebGL. */
-      try{ location.href=packUrl; return true; }
-      catch(e){ if(typeof toast==='function') toast('Galactic preview could not be opened'); return false; }
+      try{
+        if(typeof mfBeginExplorationMountLaunch==='function'&&!(await mfBeginExplorationMountLaunch(packUrl))){
+          return finishLaunch('Galactic content is not ready to launch safely');
+        }
+        if(options&&options.explicitRetry===true&&window.__MF_GALACTIC_BRIDGE
+           &&typeof window.__MF_GALACTIC_BRIDGE.clearClassicFallback==='function'){
+          window.__MF_GALACTIC_BRIDGE.clearClassicFallback();
+        }
+        location.href=packUrl;return true;
+      }
+      catch(e){return finishLaunch('Galactic preview could not be opened');}
     };
     /* boot() is asynchronous while the tail manifest scripts continue loading.
        If the career takeover mounted before wire(), this readiness handshake
        gives it the exact moment the base opener becomes wrappable. If it loads
        later, its ordinary init path sees the function directly. */
     try{window.dispatchEvent(new CustomEvent('massfront:exploration-ready'));}catch(e){}
+    /* MAIN MENU DOOR. The strategic layer was reachable only from
+       Settings > Gameplay > Return to UGA Headquarters, so the ship, galaxy
+       map, survey scanner and expedition contracts never appeared anywhere a
+       player looks for a mode. The Settings row stays as a returning shortcut;
+       this is the entry. Hidden - not disabled - when the payload is absent so
+       a slim install is not advertising content it cannot open. */
+    mfExplorationMenuSync=function(){
+      const btn=$('ugaBtn');if(!btn)return;
+      const on=window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true
+             ||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true;
+      btn.style.display=on?'':'none';
+      const dot=$('ugaDot');
+      if(dot)dot.style.display=on&&!(META&&META.flags&&META.flags.ugaSeen)?'':'none';
+    };
+    mfBindTap($('ugaBtn'),()=>{
+      if(typeof META!=='undefined'&&META){META.flags=META.flags||{};META.flags.ugaSeen=true;metaSave();}
+      mfExplorationMenuSync();
+      if(typeof mfOpenExploration==='function')mfOpenExploration('campaign_hub',{explicitRetry:true});
+    });
+    mfExplorationMenuSync();
   })();
 
   mfBindTap($('armoryBtn'),()=>{
@@ -2849,21 +2912,39 @@ function wire(){
     if(typeof renderOps==='function') renderOps();
     showFrontScreen('setupScr'); };
   window.openSkirmishSetup=()=>window.openPlanetarySetup('standard');
-  const openLegacyWarRoom=()=>{
+  /* The integrated strategic shell is a separate document. Its secured route
+     adapter needs one stable, non-rewarding entry point for the base game's
+     real mode chooser; reaching into this wire() closure made the existing
+     Training / Standard / Campaign cards impossible to open from UGA Command.
+     Keep START pointed at the integrated shell. This export is only the return
+     lane into the already-authored War Room. */
+  window.openWarRoom=()=>{
     /* Very old installs predate the War Room shell entirely (#warScr does not
        exist in their APK), so opening it would dead-end. Fall back to Battle
        Setup — where the planet/region picker lives — and the button works on
        every shell that has ever shipped. */
     if($('warScr')){
       if(typeof renderWarRoom==='function') renderWarRoom();
-      showFrontScreen('warScr');
-    } else if(typeof openSkirmishSetup==='function') openSkirmishSetup();
+      return showFrontScreen('warScr');
+    }
+    if(typeof openSkirmishSetup==='function'){ openSkirmishSetup(); return true; }
+    return false;
   };
-  mfBindTap($('startBtn'),()=>{ initAudio(); sfx('ui');
-    /* Experimental Galactic is a Settings side door. START always keeps the
-       installed home → War Room → Standard table. Hijacking this button made
-       the experiment look like it had replaced the menu. */
-    openLegacyWarRoom();
+  const openLegacyWarRoom=()=>window.openWarRoom();
+  mfBindTap($('startBtn'),async()=>{
+    /* A fast second tap arrives while the first launch is painting its status
+       rail. mfOpenExploration intentionally returns false for that duplicate;
+       treating it as a real failure opened the legacy War Room underneath the
+       in-flight Galactic navigation. The active launch already owns the tap. */
+    if(mfExplorationLaunching)return;
+    initAudio(); sfx('ui');
+    /* This retained dashboard button is a compact access/fallback layer, not a
+       second primary flow. It returns to the same stable UGA home as cold
+       launch; the player deliberately departs into orbital travel from there.
+       Older/slim installations still need their working local War Room. */
+    const enabled=window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true;
+    const opened=enabled&&typeof mfOpenExploration==='function'&&await mfOpenExploration('campaign_hub',{explicitRetry:true,launchButtonId:'startBtn'});
+    if(!opened)openLegacyWarRoom();
   });
   mfBindTap($('warBack'),()=>{ sfx('ui');
     renderMetaHead(); showFrontScreen('startScreen'); });
@@ -3150,6 +3231,8 @@ function wire(){
   mfBindNativePress($('formBtn'),()=>{armFormationOrder();});
   mfBindNativePress($('rallyBtn'),()=>{
     if(openBld<0) return;
+    const B=blds[openBld];
+    if(!B||!B.alive||!(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(B):B.team===0)||!Array.isArray(B.queue))return;
     armRally=openBld;
     closeMenus();
     toast('⚑ Tap the map to place the rally flag');
@@ -3183,9 +3266,25 @@ function wire(){
   mfBindNativePress($('placeRotR'),e=>{ e.preventDefault(); rotatePlacement(1); });
   mfBindNativePress($('repeatBtn'),()=>{
     if(openBld<0) return;
-    const B=blds[openBld]; B.repeat=!B.repeat;
+    const B=blds[openBld];
+    if(!B||!B.alive||!(typeof mfLocalOwnsBuilding==='function'?mfLocalOwnsBuilding(B):B.team===0)||!Array.isArray(B.queue))return;
+    const C=mfMatchConsumer();
+    if(C&&C.requiresLockstep()){
+      const active=!C.repeatIntent(openBld).active,receipt=C.submitRepeat(openBld,active);
+      if(!receipt){toast(C.lastFailure()||'Repeat order could not be sent');return;}
+      $('repeatBtn').textContent='REPEAT: '+(active?'ON':'OFF')+' — PENDING';
+      $('repeatBtn').classList.toggle('on',active);
+      $('repeatBtn').setAttribute('aria-pressed',String(active));
+      toast(active?'Repeat ON queued for the shared match tick':'Repeat OFF queued — existing queued units are retained');
+      sfx('ui');return;
+    }
+    B.repeat=!B.repeat;
     $('repeatBtn').textContent='REPEAT: '+(B.repeat?'ON':'OFF');
-    $('repeatBtn').classList.toggle('on',B.repeat); sfx('ui');
+    $('repeatBtn').classList.toggle('on',B.repeat);
+    $('repeatBtn').setAttribute('aria-pressed',String(B.repeat));
+    if(typeof toast==='function')toast(B.repeat?'Repeat enabled — completed units return to this queue':
+      'Repeat off — no new repeats; '+B.queue.length+' queued unit'+(B.queue.length===1?'':'s')+' remaining');
+    sfx('ui');
   });
   mfBindNativePress($('abOver'),()=>{ if(aiming===0){aiming=-1;return;} tryAbility(0); });
   mfBindNativePress($('abHeal'),()=>tryAbility(1));
@@ -3251,6 +3350,13 @@ async function boot(){
     const hit=R&&theatreMapId(R.maps,battlefieldPreset);
     if(hit&&MAPDEFS[hit]) curMap=hit;
   }
+  /* THE REGION HAS TO FOLLOW THE MAP.
+     Boot restored the last-played map but left curRegionId at its 'aelos_north'
+     declaration default, so a career whose last battle was on Karak/Vespera
+     reopened the War Table showing Aelos's region deck with a site selected
+     that is not in it. This is also what made a UGA operation's landing site
+     disagree with the War Table on return. */
+  if(MAPDEFS[curMap]&&MAPDEFS[curMap].region) curRegionId=MAPDEFS[curMap].region;
   deploymentPackage=DEPLOYMENT_PACKAGES[su.pkg]?su.pkg:'expedition';
   /* First-three Standard battles keep the supported landing. Theatre size
      follows the selected site — Standard is medium, not Compact or Large. */

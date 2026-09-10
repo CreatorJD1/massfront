@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+const source=fs.readFileSync(new URL('../boot.js',import.meta.url),'utf8');
+const display=source.slice(source.indexOf('  var bootStartedAt='),source.indexOf('  function rendererGateIndex'));
+assert.ok(display.includes('function bootProgress('));
+const ids=['mfBootCover','mfBootPct','mfBootPhase','mfBootDetail','mfBootCount','mfBootElapsed','mfBootSource','mfBootBar','mfBootFill'];
+const nodes=new Map(ids.map(id=>[id,{textContent:'',style:{},attrs:{},setAttribute(key,value){this.attrs[key]=value;}}]));
+let time=0,nextTimer=0;
+const timers=new Map();
+const context=vm.createContext({document:{getElementById:id=>nodes.get(id)||null},Date:{now:()=>time},
+  setTimeout:fn=>{timers.set(++nextTimer,fn);return nextTimer;},clearTimeout:id=>timers.delete(id)});
+vm.runInContext(display,context);
+const run=code=>vm.runInContext(code,context);
+run("bootSourceLabel='Packaged game';bootProgress(8,112,'src/engine/gl.js')");
+assert.equal(nodes.get('mfBootPhase').textContent,'Initializing graphics');
+assert.equal(nodes.get('mfBootCount').textContent,'8 / 112 scripts loaded');
+assert.equal(nodes.get('mfBootSource').textContent,'Packaged game');
+assert.equal(nodes.get('mfBootBar').attrs['aria-valuenow'],'8');
+run("bootProgress(112,112,'src/main.js','verify')");
+assert.equal(nodes.get('mfBootPhase').textContent,'Verifying installed update');
+assert.equal(nodes.get('mfBootCount').textContent,'112 / 112 scripts verified');
+run("bootProgress(112,112,'src/main.js')");
+assert.equal(nodes.get('mfBootPhase').textContent,'Starting game');
+assert.equal(nodes.get('mfBootPct').textContent,'100% FILES');
+assert.equal(nodes.get('mfBootFill').style.width,'100%');
+time=7000;
+const [timer,callback]=timers.entries().next().value;timers.delete(timer);callback();
+assert.equal(nodes.get('mfBootElapsed').textContent,'7s elapsed');
+nodes.delete('mfBootCover');
+run('bootProgress(112,112)');
+assert.equal(timers.size,0,'cover removal must clear the elapsed timer');
+nodes.clear();
+assert.doesNotThrow(()=>run('bootProgress(1,2);bootElapsed()'),'old shells without optional nodes remain supported');
+nodes.set('mfBootCover',{});time=121000;run('bootElapsed()');
+assert.equal(timers.size,0,'elapsed loop has a finite two-minute bound');
+console.log('Boot loading progress: PASS (script stages, truthful counts, final startup, optional nodes, bounded timer)');

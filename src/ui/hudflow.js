@@ -88,7 +88,19 @@ function mfFlowFrontOpen(){
     ? FRONT_SCREEN_IDS.concat('loadScr') : MF_FRONT_FALLBACK;
   for(const id of ids){
     const el=mfFlowEl(id);
-    if(el&&el.style.display&&el.style.display!=='none') return true;
+    if(!el||el.hidden) continue;
+    /* Intro and secured-route handoffs reveal #startScreen by removing the
+       global overlay gate; they do not need to write an inline display value.
+       Inline-only detection therefore called that visibly flex screen closed
+       and let stale structure/intel panels show through its translucent skin.
+       The rendered value is the contract here: it also respects stylesheet
+       gates and !important modal rules that an inline string cannot see. */
+    try{
+      const cs=getComputedStyle(el);
+      if(cs.display!=='none'&&cs.visibility!=='hidden') return true;
+    }catch(e){
+      if(el.style.display&&el.style.display!=='none') return true;
+    }
   }
   return false;
 }
@@ -146,6 +158,21 @@ function mfFlowLaneSide(ids,startY,gap){
     if(!mfFlowVis(el)) continue;
     mfFlowPlace(el,y);
     y+=el.offsetHeight+gap;
+  }
+  return y;
+}
+
+/* Short landscape has enough horizontal room for the centre notice beside a
+   corner condition chip. Raising every centre banner below the tallest corner
+   wasted that lane and put the notice on top of the docked Intel target. Only
+   inherit a side column's bottom when the two rendered boxes actually cross. */
+function mfFlowSideClear(el,startY,gap){
+  let y=startY;
+  const r=el.getBoundingClientRect();
+  for(const id of MF_LANE_L.concat(MF_LANE_R)){
+    const side=mfFlowEl(id); if(!side||!mfFlowVis(side)) continue;
+    const sr=side.getBoundingClientRect();
+    if(r.left<sr.right+gap&&r.right>sr.left-gap) y=Math.max(y,sr.bottom+gap);
   }
   return y;
 }
@@ -210,7 +237,8 @@ function mfFlowLayoutGo(){
   const lb=mfFlowLaneSide(cinematic?MF_LANE_L.filter(id=>id!=='heroBar'):MF_LANE_L,head+6,5);
   const rb=mfFlowLaneSide(MF_LANE_R,head+6,5);
 
-  let y=Math.max(head,lb,rb)+8;
+  const shortLandscape=cinematic&&window.innerWidth>window.innerHeight&&vh<=600;
+  let y=shortLandscape?head+8:Math.max(head,lb,rb)+8;
   const dock=mfFlowEl('cmdbar');
   const bottom=(dock&&mfFlowVis(dock)?dock.getBoundingClientRect().top:vh)-12;
   /* Two budgets, because they answer to different owners. Banners the GAME
@@ -233,6 +261,7 @@ function mfFlowLayoutGo(){
   let dropped=0;
   for(const v of live){
     if(v.s.id==='unitCard') continue;                 /* placed last, below */
+    if(shortLandscape) y=mfFlowSideClear(v.el,y,8);
     const h=v.el.offsetHeight;
     if(y+h>autoFloor&&MF_LANE_DROP[v.s.id]){
       /* Out of room. Hide it the way its own owner would, so it genuinely is
@@ -524,7 +553,7 @@ function mfNoticeLiveAllowed(pri,urgent,now){
   if(mfNLiveTimes.length>=MF_N_LIVE_MAX)return false;
   mfNLiveTimes.push(now);return true;
 }
-function mfNoticeSubmit(pri,key,dur,render,label,channel,forceUrgent){
+function mfNoticeSubmit(pri,key,dur,render,label,channel,forceUrgent,forceFront){
   mfNoticeHistoryAdd(pri,key,label,channel);
   const now=performance.now();
   const urgent=!!forceUrgent||pri<=MF_N_CRIT||MF_N_URGENT.test(String(label||''));
@@ -533,12 +562,17 @@ function mfNoticeSubmit(pri,key,dur,render,label,channel,forceUrgent){
     /* Repeated feedback counts up without pinning a banner on screen forever. */
     mfNUntil=Math.min(mfNUntil+450,now+(urgent?2100:1450));mfNoticeArm();return;
   }
-  if(!mfNoticeLiveAllowed(pri,urgent,now))return;
+  /* A direct targeting/fire confirmation is part of the control state, not
+     ambient chatter. It bypasses the live-rate budget but keeps ordinary
+     severity and the same bounded display duration. */
+  if(!forceFront&&!mfNoticeLiveAllowed(pri,urgent,now))return;
   const heat=mfFlowHeatV;
-  if(heat>0.5&&!urgent)dur=Math.round(dur*0.68);
+  /* A hot fight may shorten chatter, but command acknowledgement still needs
+     long enough to be read and matched to the unit response on a phone. */
+  if(heat>0.5&&!urgent)dur=Math.max(2000,Math.round(dur*0.82));
   /* Equal-priority routine notices queue instead of replacing one another.
      Only a genuinely urgent command may interrupt an ordinary command line. */
-  if(!mfNHold&&(now>=mfNUntil||pri<mfNPri||(urgent&&!mfNUrgent&&pri===mfNPri))){
+  if(!mfNHold&&(now>=mfNUntil||pri<mfNPri||(urgent&&!mfNUrgent&&pri===mfNPri)||(forceFront&&pri===mfNPri))){
     mfNoticeShow(pri,key,dur,render,1,urgent); return;
   }
   const dup=mfNQ.find(q=>q.key===key);
@@ -634,7 +668,11 @@ function mfFlowTick(){
 const mfFlowBaseToast=toast;
 toast=function(msg){
   const label=String(msg||'');
-  mfNoticeSubmit(MF_N_ORDER,'t:'+label,2200,()=>mfFlowBaseToast(label),label,'command',MF_N_URGENT.test(label));
+  /* Target/cancel/fire feedback is the state confirmation for a thumb press.
+     It may replace an equal-priority mission line without being misclassified
+     as a red critical alert in history. */
+  const direct=/\bTARGETING CANCELLED\b|\bFIRED\b|—\s*(?:tap|drag)\b/i.test(label);
+  mfNoticeSubmit(MF_N_ORDER,'t:'+label,2200,()=>mfFlowBaseToast(label),label,'command',MF_N_URGENT.test(label),direct);
 };
 
 const mfFlowBaseRadio=radioNotice;
@@ -894,9 +932,11 @@ if(typeof renderOps==='function'&&!renderOps.__mfThreatTabFix){
 /* ============================================================================
    MENU / SETTINGS CHROME
    ----------------------------------------------------------------------------
-   galaxyui.js#mfRenameFrontNav relabels #startBtn to DEPLOY and claims it
-   opens the war table. START always opens the installed War Room. Galactic
-   Campaign is Settings-only while it stays an experimental side module.
+   galaxyui.js#mfRenameFrontNav also writes #startBtn, and this runs after it,
+   so mfPatchHomeChrome below is the label that ships. Both now say DEPLOY, but
+   the aria-label here is the accurate one: the button enters the integrated
+   Galactic career shell, not the war table, while the installed War Room stays
+   the tactical fallback and return surface.
    trainingUiState()
    lives inside tutorial.js's IIFE, so meta.js's War Room card never receives
    SKIPS WAR TABLE. Settings copy in meta.js names engine internals (#grade,
@@ -906,12 +946,292 @@ if(typeof renderOps==='function'&&!renderOps.__mfThreatTabFix){
 function mfPatchHomeChrome(){
   const start=document.getElementById('startBtn');
   if(start){
-    start.innerHTML='▶&nbsp;START MASSFRONT';
-    start.setAttribute('aria-label','Start MASSFRONT');
+    /* Last writer on #startBtn, so this is the label that ships. The owner
+       concept names it DEPLOY, and the chevron is an element rather than a
+       glyph in the string so ui.css can letter-space it without touching the
+       words. A bare arrow glyph also pushed the label off centre. */
+    start.innerHTML='DEPLOY MASSFRONT <i class="ctaChev" aria-hidden="true">&#187;</i>';
+    start.setAttribute('aria-label','Deploy: open the Galactic command shell');
   }
+  mfRenderBarRank();
+  mfTrimUnlockRail();
+  mfEnsureMenuNavColumn();
+  mfInstallSlicePopout();
+  mfCloseSliceOuts(null);
   const sub=document.querySelector('#settingsScr .subMenuHead span');
   if(sub) sub.textContent='Audio · Gameplay · Display · Command · System';
 }
+/* ----------------------------------------------------------------------------
+   SLICE POPOUT
+   Each command slice carries a data-slice-desc that nothing ever showed. The
+   owner's concept expands the tapped slice and reveals that description, so the
+   first tap opens and the second enters - the second tap lands on the same
+   target, so it costs no travel, and it buys a menu that explains itself.
+
+   The description is a sibling panel rather than extra height on the slice
+   itself: the plate is a border-image whose left and right caps stretch to the
+   box height, so growing the button would rake the edge steeper and pull the
+   corner ticks long. The panel leaves the art at its authored proportions.
+
+   Reduced motion skips the whole thing and navigates on the first tap - an
+   animation is the entire value here, and without it the extra tap is just a
+   tax.
+   -------------------------------------------------------------------------- */
+function mfCloseSliceOuts(except){
+  const stack=document.querySelector('#startScreen .menuSlices');
+  if(!stack)return;
+  stack.querySelectorAll('.slice.is-open').forEach(slice=>{
+    if(slice===except)return;
+    slice.classList.remove('is-open');
+    slice.setAttribute('aria-expanded','false');
+    const panel=slice.nextElementSibling;
+    if(panel&&panel.classList.contains('sliceOut')){
+      panel.classList.remove('is-out');
+      panel.setAttribute('aria-hidden','true');
+    }
+  });
+}
+function mfInstallSlicePopout(){
+  const stack=document.querySelector('#startScreen .menuSlices');
+  if(!stack||stack.__mfSliceOut)return;
+  stack.__mfSliceOut=1;
+  const reduced=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion:reduce)').matches;
+  const panelFor=slice=>{
+    const next=slice.nextElementSibling;
+    if(next&&next.classList.contains('sliceOut'))return next;
+    const desc=(slice.getAttribute('data-slice-desc')||'').trim();
+    if(!desc)return null;
+    const panel=document.createElement('div');
+    panel.className='sliceOut';
+    panel.setAttribute('aria-hidden','true');
+    const text=document.createElement('span');
+    text.className='sliceOutTx';
+    text.textContent=desc;
+    const go=document.createElement('b');
+    go.className='sliceOutGo';
+    go.innerHTML='ENTER &#187;';
+    panel.appendChild(text);
+    panel.appendChild(go);
+    slice.insertAdjacentElement('afterend',panel);
+    return panel;
+  };
+  /* mfBindTap commits on pointerup, not on click, so the interception has to be
+     a capture-phase pointerup on the stack - a click listener would run after
+     the screen had already changed. The synthetic click that follows must be
+     swallowed too: mfBindTap treats a click with no pointer commit as the
+     keyboard path and would navigate anyway. Keyboard Enter, which produces a
+     click and no pointerup, therefore still opens the popout. */
+  let swallowClickUntil=0,press=null;
+  const openSlice=(slice,ev)=>{
+    const panel=panelFor(slice);
+    if(!panel)return false;
+    if(ev){ev.preventDefault();ev.stopPropagation();}
+    mfCloseSliceOuts(slice);
+    slice.classList.add('is-open');
+    slice.setAttribute('aria-expanded','true');
+    panel.classList.add('is-out');
+    panel.setAttribute('aria-hidden','false');
+    if(typeof sfx==='function')sfx('ui');
+    return true;
+  };
+  /* An already-open slice, a drag, or reduced motion all pass straight through
+     to the real navigation. */
+  const wants=(target,moved)=>{
+    const slice=target&&target.closest&&target.closest('.slice');
+    if(!slice||!stack.contains(slice))return null;
+    if(slice.classList.contains('is-open'))return null;
+    if(moved||reduced())return null;
+    return slice;
+  };
+  stack.addEventListener('pointerdown',ev=>{
+    press=ev.isPrimary===false?null:{id:ev.pointerId,x:ev.clientX,y:ev.clientY,moved:false};
+  },{capture:true,passive:true});
+  stack.addEventListener('pointermove',ev=>{
+    if(press&&ev.pointerId===press.id&&Math.hypot(ev.clientX-press.x,ev.clientY-press.y)>12)press.moved=true;
+  },{capture:true,passive:true});
+  stack.addEventListener('pointerup',ev=>{
+    const moved=!!(press&&press.id===ev.pointerId&&press.moved);
+    press=null;
+    const slice=wants(ev.target,moved);
+    if(slice&&openSlice(slice,ev))swallowClickUntil=Date.now()+700;
+  },true);
+  stack.addEventListener('click',ev=>{
+    if(Date.now()<swallowClickUntil){
+      swallowClickUntil=0;
+      ev.preventDefault();
+      ev.stopPropagation();
+      return;
+    }
+    const slice=wants(ev.target,false);
+    if(slice)openSlice(slice,ev);
+  },true);
+  /* ENTER inside the panel is the same action as tapping the open slice. */
+  stack.addEventListener('click',ev=>{
+    const panel=ev.target.closest&&ev.target.closest('.sliceOut');
+    if(!panel)return;
+    const slice=panel.previousElementSibling;
+    if(slice&&slice.classList.contains('slice'))slice.click();
+  });
+  stack.querySelectorAll('.slice[data-slice-desc]').forEach(slice=>{
+    slice.setAttribute('aria-expanded','false');
+  });
+}
+
+/* ----------------------------------------------------------------------------
+   FLOATING UPDATE POPUP
+   #updScr is two things at once: the boot launcher, which must own the whole
+   screen, and the update surface the player opens from the menu, which must
+   not. Taking the whole screen to report a background download is what made
+   the update read as a second loading screen. After the player has reached the
+   menu once, opening it floats a card over the live menu instead, and the card
+   minimises to a status pill so a download can run while they keep playing.
+
+   The float deliberately does not route through showFrontScreen: that hides
+   every other front screen, and the entire point is that the menu stays up.
+   Back and the footer still work, because they route to startScreen and that
+   hides #updScr the ordinary way - the wrapper just drops the float classes
+   whenever the destination is not #updScr.
+   -------------------------------------------------------------------------- */
+let MF_UPD_HOME_SEEN=false;
+const MF_UPD_MIN_KEY='mf_upd_float_min';
+function mfUpdFloatMinPref(){
+  try{ return localStorage.getItem(MF_UPD_MIN_KEY)==='1'; }catch(_){ return false; }
+}
+function mfUpdFloatSetMin(scr,min){
+  scr.classList.toggle('is-min',!!min);
+  document.body.classList.toggle('mfUpdMin',!!min);
+  const toggle=scr.querySelector('.mfFloatMin');
+  if(toggle){
+    toggle.textContent=min?'+':'\u2013';
+    toggle.setAttribute('aria-label',min?'Expand the update panel':'Minimise the update panel');
+    toggle.setAttribute('aria-expanded',min?'false':'true');
+  }
+  try{ localStorage.setItem(MF_UPD_MIN_KEY,min?'1':'0'); }catch(_){}
+}
+function mfEnsureUpdFloatBar(scr){
+  const scroll=scr.querySelector('#mfLauncherScroll');
+  if(!scroll||scroll.querySelector('.mfFloatBar'))return;
+  const bar=document.createElement('div');
+  bar.className='mfFloatBar';
+  const title=document.createElement('b');
+  title.className='mfFloatTitle';
+  title.textContent='GAME UPDATE';
+  const state=document.createElement('span');
+  state.className='mfFloatState';
+  const min=document.createElement('button');
+  min.type='button';
+  min.className='mfFloatMin';
+  const close=document.createElement('button');
+  close.type='button';
+  close.className='mfFloatClose';
+  close.textContent='\u2715';
+  close.setAttribute('aria-label','Close the update panel');
+  bar.appendChild(title);
+  bar.appendChild(state);
+  bar.appendChild(min);
+  bar.appendChild(close);
+  scroll.insertBefore(bar,scroll.firstChild);
+  min.addEventListener('click',ev=>{
+    ev.preventDefault(); ev.stopPropagation();
+    mfUpdFloatSetMin(scr,!scr.classList.contains('is-min'));
+    if(typeof sfx==='function')sfx('ui');
+  });
+  close.addEventListener('click',ev=>{
+    ev.preventDefault(); ev.stopPropagation();
+    mfCloseUpdFloat();
+    if(typeof sfx==='function')sfx('ui');
+  });
+  /* Minimised, the pill is the only thing on screen, so it has to carry the
+     live phase rather than a static title. */
+  const source=document.getElementById('updTxt');
+  const sync=()=>{ state.textContent=(source&&(source.textContent||'').trim())||''; };
+  sync();
+  if(source&&typeof MutationObserver==='function')
+    new MutationObserver(sync).observe(source,{childList:true,characterData:true,subtree:true});
+}
+function mfOpenUpdFloat(){
+  const scr=document.getElementById('updScr');
+  if(!scr)return false;
+  mfEnsureUpdFloatBar(scr);
+  scr.style.display='flex';
+  scr.classList.add('mfFloat');
+  document.body.classList.add('mfUpdFloating');
+  document.body.dataset.frontPopup='updScr';
+  mfUpdFloatSetMin(scr,mfUpdFloatMinPref());
+  if(typeof renderUpdatePanel==='function')renderUpdatePanel();
+  return true;
+}
+function mfCloseUpdFloat(){
+  const scr=document.getElementById('updScr');
+  if(!scr)return;
+  scr.style.display='none';
+  scr.classList.remove('mfFloat','is-min');
+  document.body.classList.remove('mfUpdFloating','mfUpdMin');
+  if(document.body.dataset.frontPopup==='updScr')delete document.body.dataset.frontPopup;
+}
+
+/* The command slices, the primary action and the dock are one thing - the
+   navigation - and short landscape has to lay them out as a column beside the
+   identity block. As loose siblings of a grid they shared row heights with the
+   left-hand children, so the tallest item in each row set the height for both
+   sides and the stack no longer fit 412px. Wrapping them lets the two columns
+   size independently. In portrait the wrapper is display:contents, so the
+   existing flex layout is untouched. */
+function mfEnsureMenuNavColumn(){
+  const screen=document.getElementById('startScreen');
+  if(!screen||document.getElementById('menuNavCol'))return;
+  const slices=screen.querySelector('.menuSlices');
+  const cta=document.getElementById('startBtn');
+  const dock=screen.querySelector('.menuStrip');
+  if(!slices||!cta||!dock)return;
+  const column=document.createElement('div');
+  column.id='menuNavCol';
+  slices.parentNode.insertBefore(column,slices);
+  column.appendChild(slices);
+  column.appendChild(cta);
+  column.appendChild(dock);
+}
+
+/* ----------------------------------------------------------------------------
+   RANK IN THE BANNER
+   The ACCOUNT RANK card and the commander badge were the same fact twice, and
+   the card spent a whole row saying it. Rank, the XP bar and the XP count fold
+   into the banner; the card is dropped from the rail.
+
+   ARSENAL REQUISITION goes with it. It was not a live "something is being
+   built" signal - it reads STORE for the next affordable perk and shows cores
+   against its price, which is the Arsenal screen's own opening statement. A
+   permanent tile advertising a shop is not worth a row of a phone menu.
+
+   Both are removed after renderNextUnlockRail rather than inside it, so
+   meta.js keeps one renderer and the rail can still carry a conquest track.
+   -------------------------------------------------------------------------- */
+function mfTrimUnlockRail(){
+  const rail=document.getElementById('mfNextUnlockRail');
+  if(!rail)return;
+  rail.querySelectorAll('.mfNextCard.type-rank,.mfNextCard.type-armory').forEach(card=>card.remove());
+  const empty=!rail.querySelector('.mfNextCard');
+  rail.hidden=empty;
+  rail.style.display=empty?'none':'';
+}
+function mfRenderBarRank(){
+  const fill=document.getElementById('metaXpFill');
+  const text=document.getElementById('metaXpTx');
+  const bar=document.getElementById('metaXp');
+  if(!fill||!text||!bar)return;
+  if(typeof metaRankIdx!=='function'||typeof RANKS==='undefined'||typeof META==='undefined')return;
+  const index=metaRankIdx();
+  const rank=RANKS[index];
+  const next=RANKS[index+1];
+  const progress=typeof metaRankProg==='function'?Math.max(0,Math.min(1,metaRankProg())):0;
+  const percent=Math.round(progress*100);
+  fill.style.width=(next?percent:100)+'%';
+  bar.setAttribute('aria-valuenow',String(next?percent:100));
+  text.textContent=next?((META.xp|0)+' / '+next.xp+' XP'):'MAX RANK';
+  const sub=document.getElementById('greetSub');
+  if(sub&&rank)sub.textContent=rank.nm+' · ACCOUNT RANK '+(index+1);
+}
+
 function mfPolishSettingsCopy(){
   const setDs=(sel,tx)=>{ const el=document.querySelector(sel); if(el) el.textContent=tx; };
   setDs('#setGroup-audio .setGroupDs','Effects, ambience, music, and voice are independent. Tap a volume row to cycle 25–100%.');
@@ -952,6 +1272,11 @@ function mfPolishWarRoomCopy(){
       el.classList.add('zeroXp');
   });
 }
+if(typeof renderMetaHead==='function'&&!renderMetaHead.__mfBarRank){
+  const _meta=renderMetaHead;
+  renderMetaHead=function(){ const out=_meta.apply(this,arguments); mfRenderBarRank(); mfTrimUnlockRail(); return out; };
+  renderMetaHead.__mfBarRank=1;
+}
 if(typeof mfRenameFrontNav==='function'&&!mfRenameFrontNav.__mfWarRoomLabel){
   const _rn=mfRenameFrontNav;
   mfRenameFrontNav=function(){ _rn.apply(this,arguments); mfPatchHomeChrome(); };
@@ -960,6 +1285,12 @@ if(typeof mfRenameFrontNav==='function'&&!mfRenameFrontNav.__mfWarRoomLabel){
 if(typeof showFrontScreen==='function'&&!showFrontScreen.__mfHomeChrome){
   const _show=showFrontScreen;
   showFrontScreen=function(id){
+    /* The launcher owns the screen at boot; after that the update surface is
+       a card over the live menu, so it never routes through the hide-all. */
+    if(id===("updScr")&&MF_UPD_HOME_SEEN&&document.body.dataset.frontScreen==="startScreen")
+      return mfOpenUpdFloat();
+    if(id!==("updScr"))mfCloseUpdFloat();
+    if(id===("startScreen"))MF_UPD_HOME_SEEN=true;
     const opened=_show.apply(this,arguments);
     mfPatchHomeChrome();
     if(typeof audMusicEnterScreen==='function') audMusicEnterScreen(id);

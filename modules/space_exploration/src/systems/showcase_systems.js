@@ -24,7 +24,7 @@ export const SHOWCASE_SYSTEMS = Object.freeze({
         discoverySiteIds: ['caldris_pelagic_archive', 'caldris_alloy_shelf'],
         mineralDeposits: [
           { id: 'caldris_alloy_shelf', type: 'alloys', amount: 620, x: 0.31, y: -0.18 },
-          { id: 'caldris_pelagic_archive', type: 'researchPoints', amount: 180, x: -0.37, y: 0.42 }
+          { id: 'caldris_pelagic_archive', surveyId: 'aelos_phase_trace', name: 'Outer Relay Phase Trace', type: 'researchPoints', amount: 180, x: -0.37, y: 0.42 }
         ]
       },
       {
@@ -34,7 +34,7 @@ export const SHOWCASE_SYSTEMS = Object.freeze({
         color: '#443820', veinColor: '#52e6c4', atmosphereColor: '#758b7b', ringColor: '#64756f', rings: true,
         discoverySiteIds: ['ithara_embassy_signal'],
         mineralDeposits: [
-          { id: 'ithara_embassy_signal', type: 'components', amount: 410, x: 0.12, y: 0.35 }
+          { id: 'ithara_embassy_signal', surveyId: 'aelos_traffic_census', name: 'Orbital Traffic Census', type: 'components', amount: 410, x: 0.12, y: 0.35 }
         ]
       }
     ],
@@ -73,7 +73,7 @@ export const SHOWCASE_SYSTEMS = Object.freeze({
         color: '#170b08', veinColor: '#ff6f32', atmosphereColor: '#765340', rings: false,
         discoverySiteIds: ['orison_drive_fragment', 'orison_bio_vault'],
         mineralDeposits: [
-          { id: 'orison_drive_fragment', type: 'researchPoints', amount: 360, x: 0.16, y: 0.28 },
+          { id: 'orison_drive_fragment', surveyId: 'veyra_derelict_echo', name: 'Derelict Distress Echo', type: 'researchPoints', amount: 360, x: 0.16, y: 0.28 },
           { id: 'orison_bio_vault', type: 'bioSamples', amount: 210, x: -0.42, y: -0.12 }
         ]
       },
@@ -84,7 +84,7 @@ export const SHOWCASE_SYSTEMS = Object.freeze({
         color: '#160b2e', veinColor: '#bf63ff', atmosphereColor: '#756c83', ringColor: '#6b6575', rings: true, isScanning: true,
         discoverySiteIds: ['nacre_cartography_core'],
         mineralDeposits: [
-          { id: 'nacre_cartography_core', type: 'components', amount: 540, x: 0.43, y: -0.38 }
+          { id: 'nacre_cartography_core', surveyId: 'veyra_photon_ring', name: 'Photon-Ring Spectrography', type: 'components', amount: 540, x: 0.43, y: -0.38 }
         ]
       }
     ],
@@ -123,8 +123,8 @@ export const SHOWCASE_SYSTEMS = Object.freeze({
         color: '#14283a', veinColor: '#db273f', atmosphereColor: '#7c5960', rings: false, isScanning: true,
         discoverySiteIds: ['meridian_lost_transponder', 'meridian_hive_complex'],
         mineralDeposits: [
-          { id: 'meridian_lost_transponder', type: 'researchPoints', amount: 420, x: -0.21, y: 0.36 },
-          { id: 'meridian_hive_complex', type: 'bioSamples', amount: 330, x: 0.39, y: -0.19 }
+          { id: 'meridian_lost_transponder', surveyId: 'karak_silent_beacons', name: 'Silent Beacon Triangulation', type: 'researchPoints', amount: 420, x: -0.21, y: 0.36 },
+          { id: 'meridian_hive_complex', surveyId: 'karak_hive_scan', name: 'Subsurface Hive Tomography', type: 'bioSamples', amount: 330, x: 0.39, y: -0.19 }
         ]
       },
       {

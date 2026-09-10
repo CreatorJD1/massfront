@@ -67,9 +67,12 @@ const fieldStudy=makeControl({id:'fieldStudyProbe',className:'bcard',panel:'prod
 const atlas=makeControl({id:'atlasProbe',className:'bcard mfAirliftCard',role:'button',panel:'prodGrid',dataset:{mfReleaseSafe:'1'}});
 const massflesh=makeControl({id:'massfleshProbe',className:'bcard mfMassCard',role:'button',panel:'prodGrid',dataset:{mfReleaseSafe:'1'}});
 const profReset=makeControl({id:'profReset',tagName:'BUTTON'});
-let toggles=0,studies=0,atlasQueues=0,massQueues=0,resets=0;
+const abilitiesTab=makeControl({id:'abilitiesTabProbe',className:'hudDeckBtn',tagName:'BUTTON'});
+const hotAbility=makeControl({id:'hotAbilityProbe',className:'hotSlot',tagName:'BUTTON'});
+let toggles=0,studies=0,atlasQueues=0,massQueues=0,resets=0,abilities=0;
 pointerdownOwner(queueBtn,()=>toggles++);
 pointerdownOwner(fieldStudy,()=>studies++);
+pointerdownOwner(hotAbility,()=>abilities++);
 releaseOwner(atlas,()=>atlasQueues++);
 releaseOwner(massflesh,()=>massQueues++);
 releaseOwner(profReset,()=>resets++);
@@ -98,6 +101,14 @@ check(toggles===1,'dragged queueBtn gesture was not cancelled');
 now+=1000;
 sendSafety(queueBtn,'pointerdown',3);sendSafety(queueBtn,'pointercancel',3);
 check(toggles===1,'cancelled queueBtn gesture replayed a command');
+
+/* Opening a benign command deck and immediately tapping the action it reveals
+   is one fluent touch sequence, not hardware bounce between risky controls. */
+now+=1000;
+sendSafety(abilitiesTab,'pointerdown',17);sendSafety(abilitiesTab,'pointerup',17);
+now+=40;
+sendSafety(hotAbility,'pointerdown',18);sendSafety(hotAbility,'pointerup',18);
+check(abilities===1,'benign ABILITIES navigation caused the immediate hot-slot press to be discarded');
 
 /* Run the real shared tap binder, not a release-owner approximation. The
    global guard replays setupStart through synthetic PointerEvents; those must
@@ -189,7 +200,9 @@ function endContext({box=false}={}){
     placing:null,lastTapShift:false,onTap(){taps++;},
     document:{getElementById(id){return id==='selbox'?selbox:id==='boxBtn'?boxBtn:null;}},
     unitHigh:1,ualive:[1],uteam:[0],utype:[0],TYPES:[{size:10}],ux:[5],uy:[5],usel:[0],
-    terrainH(){return 0;},w2s(){return [5,5];},clearSel(){},uiCommandAck(){},updateSelInfo(){selections++;}
+    terrainH(){return 0;},w2s(){return [5,5];},s2w(){return [5,5];},mfPointerMaxSpan(){return 0;},
+    forUnitsIn(x,y,r,fn){fn(0);},
+    clearSel(){},uiCommandAck(){},updateSelInfo(){selections++;}
   };
   vm.runInNewContext(endPtrSrc,ctx,{filename:'input-end-pointer-section.js'});
   return {ctx,p,selbox,get taps(){return taps;},get selections(){return selections;}};

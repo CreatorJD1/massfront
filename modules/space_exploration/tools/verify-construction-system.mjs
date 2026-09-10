@@ -37,12 +37,17 @@ const viewports = viewportRepeat === 1
     repeat: index + 1
   })));
 if (!viewports.length) throw new Error(`Unknown MF_CONSTRUCTION_VIEWPORT ${viewportFilter}.`);
+const EXPECTED_DISTRICT_IDS = [
+  'command', 'navigation', 'survey', 'mission_ops', 'research', 'fabricator',
+  'engineering', 'habitat', 'factions', 'hangar', 'logistics'
+].sort();
 const sourceFiles = [
   'index.html',
   'src/space_experience.js',
   'src/core/gltf_runtime_loader.js',
   'src/core/uga_command_scene.js',
   'src/core/window_emissive_bloom.js',
+  'src/ship/uga_blender_assets.js',
   'src/domain/construction.js',
   'src/domain/construction_catalog.js',
   'src/domain/state_store.js',
@@ -50,7 +55,6 @@ const sourceFiles = [
   'src/ui/uga_command.js',
   'lib/DRACOLoader.js',
   'lib/draco/gltf/draco_decoder.wasm',
-  'assets/runtime/models/uga-command-cutaway.glb',
   'tools/verify-construction-system.mjs'
 ];
 const MIME = {
@@ -178,7 +182,7 @@ async function seedRetrofitPrecondition(page) {
   });
 }
 
-async function clickAuthoredPlot(page, districtId, plotId = 'tier1') {
+async function clickRenderedPlot(page, districtId, plotId = 'tier1') {
   await page.waitForTimeout(850);
   const point = await page.evaluate(({ districtId, plotId }) => {
     const experience = window.__MASSFRONT_SPACE__;
@@ -218,7 +222,7 @@ async function clickAuthoredPlot(page, districtId, plotId = 'tier1') {
     });
     return candidates.sort((a, b) => Number(b.phase ?? -1) - Number(a.phase ?? -1))[0] || null;
   }, { districtId, plotId });
-  if (!point) throw new Error(`No visible authored ${districtId}/${plotId} plot point could be hit through the canvas.`);
+  if (!point) throw new Error(`No visible rendered ${districtId}/${plotId} plot point could be hit through the canvas.`);
   await page.mouse.click(point.x, point.y);
   await page.waitForSelector('.uga-construction-view', { state: 'visible', timeout: 10_000 });
   return point;
@@ -232,7 +236,7 @@ async function openConstruction(page, districtId = 'research', plotId = 'tier1')
     return veil?.classList.contains('ready') || veil?.classList.contains('failed');
   }, null, { timeout: 60_000 });
   const veil = await page.locator('#renderVeil').getAttribute('class');
-  if (/\bfailed\b/.test(veil || '')) throw new Error(`UGA authored cutaway failed to load: ${await page.locator('#loadStatus').textContent()}`);
+  if (/\bfailed\b/.test(veil || '')) throw new Error(`UGA command scene failed to initialize: ${await page.locator('#loadStatus').textContent()}`);
   const quick = page.locator('button[data-quick="construction"]');
   if (await quick.isVisible()) {
     await quick.click();
@@ -241,10 +245,70 @@ async function openConstruction(page, districtId = 'research', plotId = 'tier1')
     if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click();
     const open = page.locator('button[data-action="open-construction"]');
     if (await open.isVisible()) await open.click();
-    else await clickAuthoredPlot(page, districtId, plotId);
+    else await clickRenderedPlot(page, districtId, plotId);
   }
   await page.waitForSelector('.uga-construction-view', { state: 'visible' });
   await page.waitForTimeout(180);
+}
+
+async function commandSceneAudit(page) {
+  return page.evaluate(expectedIds => {
+    const experience = window.__MASSFRONT_SPACE__;
+    const scene = experience?.commandScene;
+    const stateDistrictIds = Object.keys(experience?.getState?.()?.ship?.districts || {}).sort();
+    const districtIds = [...(scene?.districtRoots?.keys?.() || [])].sort();
+    const focusIds = [...(scene?.focusAnchors?.keys?.() || [])].sort();
+    const originalFocus = scene?.selectedDistrictId || null;
+    const focusableIds = expectedIds.filter(id => scene?.focusDistrict?.(id, false));
+    if (originalFocus) scene?.focusDistrict?.(originalFocus, false);
+    const districts = expectedIds.map(id => {
+      const district = scene?.districtRoots?.get?.(id) || null;
+      const focus = scene?.focusAnchors?.get?.(id) || null;
+      let meshCount = 0;
+      let facilityBlockCount = 0;
+      let buildPlotCount = 0;
+      district?.traverse?.(object => {
+        if (object.isMesh) meshCount++;
+        if (object.name?.startsWith(`${id}_FacilityBlock_`)) facilityBlockCount++;
+        if (object.name?.startsWith(`BUILD_${id}_`)) buildPlotCount++;
+      });
+      return {
+        id,
+        rootName: district?.name || null,
+        focusName: focus?.name || null,
+        selectable: district?.userData?.selectable === true,
+        runtimeTopology: district?.userData?.runtimeTopology === true,
+        focusDistrictId: focus?.userData?.district_id || null,
+        cameraDistance: Number(focus?.userData?.camera_distance) || 0,
+        cameraHeight: Number(focus?.userData?.camera_height) || 0,
+        meshCount,
+        facilityBlockCount,
+        buildPlotCount,
+        dedicatedLayer: Boolean(district?.getObjectByName?.(`${id}_DedicatedDistrictLayer`))
+      };
+    });
+    return {
+      rootName: scene?.root?.name || null,
+      topologyName: scene?.deckTopologyRoot?.name || null,
+      topologyRuntime: scene?.deckTopologyRoot?.userData?.runtimeTopology === true,
+      stateDistrictIds,
+      districtIds,
+      focusIds,
+      focusableIds,
+      districts,
+      animatedDecorationCount: scene?.animatedDecorations?.length || 0,
+      droneCount: scene?.droneSwarm?.count || 0,
+      droneDataCount: scene?.droneData?.length || 0
+    };
+  }, EXPECTED_DISTRICT_IDS);
+}
+
+async function droneMatrix(page) {
+  return page.evaluate(() => Array.from(window.__MASSFRONT_SPACE__?.commandScene?.droneSwarm?.instanceMatrix?.array?.slice?.(0, 16) || []));
+}
+
+function sameIds(actual, expected = EXPECTED_DISTRICT_IDS) {
+  return actual.length === expected.length && actual.every((id, index) => id === expected[index]);
 }
 
 async function constructionState(page) {
@@ -368,7 +432,7 @@ async function runScenario(browser, target, url) {
     kind: target.kind,
     viewport: { width: target.width, height: target.height },
     startedAt: new Date().toISOString(),
-    checks: [], captures: [], layoutAudits: [], errors: [], requestsFailed: [], blockers: [], states: {}
+    checks: [], captures: [], layoutAudits: [], errors: [], requests: [], requestsFailed: [], blockers: [], states: {}
   };
   let page;
   try {
@@ -377,6 +441,7 @@ async function runScenario(browser, target, url) {
     page.on('console', message => {
       if (message.type() === 'error') scenario.errors.push({ type: 'console', message: message.text() });
     });
+    page.on('request', request => scenario.requests.push(request.url()));
     page.on('requestfailed', request => scenario.requestsFailed.push({ url: request.url(), error: request.failure()?.errorText || 'unknown' }));
     page.on('response', response => {
       if (response.status() >= 400 && !/favicon\.ico(?:\?|$)/.test(response.url())) scenario.errors.push({ type: 'http', status: response.status(), url: response.url() });
@@ -385,6 +450,38 @@ async function runScenario(browser, target, url) {
     await ready(page);
     await resetCampaign(page);
     await openConstruction(page, 'research');
+
+    const proceduralScene = await commandSceneAudit(page);
+    const droneBefore = await droneMatrix(page);
+    await page.waitForTimeout(120);
+    const droneAfter = await droneMatrix(page);
+    const droneDelta = droneBefore.length === droneAfter.length
+      ? Math.max(0, ...droneBefore.map((value, index) => Math.abs(value - droneAfter[index]))) : 0;
+    scenario.states.proceduralCommandScene = proceduralScene;
+    addCheck(scenario, 'command-scene:procedural-root-and-topology', proceduralScene.rootName === 'UGA_COMMAND_CUTAWAY_RUNTIME'
+      && proceduralScene.topologyName === 'UGA_RUNTIME_INTEGRATED_CUTAWAY' && proceduralScene.topologyRuntime, proceduralScene);
+    addCheck(scenario, 'command-scene:exact-district-and-focus-maps', sameIds(proceduralScene.stateDistrictIds)
+      && sameIds(proceduralScene.districtIds) && sameIds(proceduralScene.focusIds) && sameIds(proceduralScene.focusableIds), {
+      expected: EXPECTED_DISTRICT_IDS,
+      state: proceduralScene.stateDistrictIds,
+      districts: proceduralScene.districtIds,
+      focus: proceduralScene.focusIds,
+      focusable: proceduralScene.focusableIds
+    });
+    addCheck(scenario, 'command-scene:district-geometry-and-metadata', proceduralScene.districts.every(district => district.rootName === `DISTRICT_${district.id}`
+      && district.focusName === `FOCUS_${district.id}` && district.selectable && district.runtimeTopology
+      && district.focusDistrictId === district.id && district.cameraDistance > 0 && district.cameraHeight > 0
+      && district.meshCount > 0 && district.facilityBlockCount > 0 && district.buildPlotCount >= 3 && district.dedicatedLayer), proceduralScene.districts);
+    addCheck(scenario, 'command-scene:decoration-and-moving-traffic', proceduralScene.animatedDecorationCount >= 7
+      && proceduralScene.droneCount === 54 && proceduralScene.droneDataCount === 54 && droneDelta > 1e-6, {
+      animatedDecorationCount: proceduralScene.animatedDecorationCount,
+      droneCount: proceduralScene.droneCount,
+      droneDataCount: proceduralScene.droneDataCount,
+      droneDelta
+    });
+    addCheck(scenario, 'command-scene:retired-cutaway-not-requested', !scenario.requests.some(url => /uga-command-cutaway\.glb(?:[?#]|$)/i.test(url)), {
+      retiredRequests: scenario.requests.filter(url => /uga-command-cutaway\.glb(?:[?#]|$)/i.test(url))
+    });
 
     const quoteButton = page.locator('button[data-build-commission]');
     await quoteButton.scrollIntoViewIfNeeded();

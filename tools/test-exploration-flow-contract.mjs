@@ -1,0 +1,31 @@
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const ui=await readFile('modules/space_exploration/src/ui/uga_command.js','utf8');
+const experience=await readFile('modules/space_exploration/src/space_experience.js','utf8');
+function fn(source,name){const start=source.search(new RegExp(`^  (?:async )?function ${name}\\(`,'m'));assert(start>=0,name);const end=source.indexOf('\n  }',start);assert(end>start);return source.slice(start,end+4);}
+const personnel={commanders:{},specialists:{}};
+const catalog={missions:[{id:'test',landingZoneIds:['primary']}],factions:[{id:'nova'},{id:'dominion'}],commanders:[{id:'nova1',factionId:'nova'},{id:'dominion1',factionId:'dominion'},{id:'dominion2',factionId:'dominion'}],specialists:[],deploymentUnits:[{id:'recon_team',slotCost:1}],deploymentStructures:[],operationMods:[]};
+for(const p of catalog.commanders)personnel.commanders[p.id]={unlocked:true,status:'ready',injury:null};
+for(const factionId of ['nova','dominion'])for(let i=0;i<3;i++){const p={id:`${factionId}s${i}`,factionId};catalog.specialists.push(p);personnel.specialists[p.id]={unlocked:true,status:'ready',injury:null};}
+const state={personnel,factions:{nova:{resident:true,status:'ready'},dominion:{resident:true,status:'ready'}},commissioning:{completed:true,factionId:'dominion',commanderId:'dominion2'}};
+const drafts=new Map(),ctx=vm.createContext({getCatalog:()=>catalog,getState:()=>state,options:{getMissionEligibility:()=>({eligible:true})},deploymentDrafts:drafts,asArray:v=>Array.isArray(v)?v:Object.entries(v||{}).map(([id,o])=>({id,...o})),personnelState:(s,k,id)=>s.personnel[k][id]||{},personnelPortraitReady:()=>true,personnelSelect:()=>'',escapeHtml:String,prettyToken:String,icon:()=>'',portraitAuditPending:()=>false});
+vm.runInContext(['readyPersonnel','deploymentDraft','deploymentPanel'].map(n=>fn(ui,n)).join('\n'),ctx);
+vm.runInContext("deploymentPanel('test')",ctx);
+assert.equal(drafts.get('test').proxyFactionId,'dominion');assert.equal(drafts.get('test').commanderId,'dominion2');
+drafts.get('test').deploymentManifest.units[0].count=2;
+personnel.commanders.dominion2.injury={severity:'light'};
+vm.runInContext("deploymentPanel('test')",ctx);
+assert.equal(drafts.get('test').commanderId,'dominion1');assert.equal(drafts.get('test').deploymentManifest.units[0].count,2);
+state.factions.dominion.status='deployed';vm.runInContext("deploymentPanel('test')",ctx);
+assert.equal(drafts.get('test').proxyFactionId,'nova');assert.equal(drafts.get('test').commanderId,'nova1');assert(drafts.get('test').specialistIds.every(id=>id.startsWith('nova')));
+personnel.commanders.nova1.unlocked=false;
+const blocked=vm.runInContext("deploymentPanel('test')",ctx);assert(blocked.includes('data-deployment-confirm-state="blocked"'));
+const calls=[];const returnCtx=vm.createContext({operationKind:'debrief',closeOperationModal:()=>calls.push('close'),openUga:async id=>calls.push(`room:${id}`),ugaUi:{openView:id=>calls.push(`view:${id}`)}});
+vm.runInContext(fn(experience,'handleOperationModalAction'),returnCtx);await vm.runInContext('handleOperationModalAction()',returnCtx);
+assert.deepEqual(calls,['close','room:command','view:return-services']);
+assert(ui.includes("Crafting uses the base game's Development screen"));
+assert(!ui.includes('Crafting actions remain in the Fabrication district'));
+const servicesCtx=vm.createContext({hostRoutesAvailable:()=>false});vm.runInContext(fn(ui,'returnServicesPanel'),servicesCtx);
+const services=vm.runInContext('returnServicesPanel()',servicesCtx);assert(services.includes('data-host-route="development" disabled'));assert(services.includes('data-host-route="armory" disabled'));assert(!services.includes('data-host-route="buy"'));
+console.log('PASS preferred faction/commander, stale/injured/locked roster repair, cargo preservation, real debrief branch, honest host-only services');

@@ -1,6 +1,7 @@
 import { deepFreeze } from './deterministic.js';
+import { CANONICAL_COMMANDER_CATALOG_V1 } from './commander_catalog.js';
 
-export const CATALOG_VERSION = 6;
+export const CATALOG_VERSION = 8;
 
 export const RESOURCE_KEYS = deepFreeze([
   'credits',
@@ -106,7 +107,8 @@ export const FACTION_CATALOG = deepFreeze({
     id: 'uga',
     name: 'United Galactic Authority',
     shortName: 'UGA',
-    role: 'civilization_authority',
+    role: 'neutral_non_sovereign_coordinator',
+    sovereign: false,
     hireable: false,
     residentCapable: false,
     hostile: false,
@@ -114,7 +116,7 @@ export const FACTION_CATALOG = deepFreeze({
   },
   nova: {
     id: 'nova',
-    name: 'Nova Expeditionary Compact',
+    name: 'Nova Coalition',
     shortName: 'Nova',
     role: 'precision_expeditionary_force',
     hireable: true,
@@ -124,7 +126,7 @@ export const FACTION_CATALOG = deepFreeze({
   },
   dominion: {
     id: 'dominion',
-    name: 'Dominion Iron Assembly',
+    name: 'Crimson Dominion',
     shortName: 'Dominion',
     role: 'armored_industrial_force',
     hireable: true,
@@ -134,7 +136,7 @@ export const FACTION_CATALOG = deepFreeze({
   },
   syndicate: {
     id: 'syndicate',
-    name: 'Syndicate Veil Network',
+    name: 'Syndicate Coalition',
     shortName: 'Syndicate',
     role: 'covert_logistics_force',
     hireable: true,
@@ -507,27 +509,27 @@ export const DISCOVERY_CATALOG = deepFreeze({
 
 export const SURVEY_CATALOG = deepFreeze({
   aelos_traffic_census: {
-    id: 'aelos_traffic_census', systemId: 'aelos', name: 'Orbital Traffic Census', probeCost: 1, requiredSurveyLevel: 1,
+    id: 'aelos_traffic_census', systemId: 'aelos', planetId: 'aelos_ithara', name: 'Orbital Traffic Census', probeCost: 1, requiredSurveyLevel: 1,
     discoveryId: 'aelos_traffic_cipher', rewards: { credits: 500, components: 20, researchPoints: 60 }, intelligence: 1
   },
   aelos_phase_trace: {
-    id: 'aelos_phase_trace', systemId: 'aelos', name: 'Outer Relay Phase Trace', probeCost: 1, requiredSurveyLevel: 1,
+    id: 'aelos_phase_trace', systemId: 'aelos', planetId: 'aelos_caldris', name: 'Outer Relay Phase Trace', probeCost: 1, requiredSurveyLevel: 1,
     discoveryId: 'veyra_route_solution', rewards: { researchPoints: 100, fuel: 8 }, intelligence: 1, unlockSystemId: 'veyra', storyStep: 'veyra_route_open'
   },
   veyra_photon_ring: {
-    id: 'veyra_photon_ring', systemId: 'veyra', name: 'Photon-Ring Spectrography', probeCost: 1, requiredSurveyLevel: 2,
+    id: 'veyra_photon_ring', systemId: 'veyra', planetId: 'veyra_nacre', name: 'Photon-Ring Spectrography', probeCost: 1, requiredSurveyLevel: 2,
     discoveryId: 'veyra_photon_archive', rewards: { researchPoints: 220, components: 35 }, intelligence: 1
   },
   veyra_derelict_echo: {
-    id: 'veyra_derelict_echo', systemId: 'veyra', name: 'Derelict Distress Echo', probeCost: 1, requiredSurveyLevel: 2,
+    id: 'veyra_derelict_echo', systemId: 'veyra', planetId: 'veyra_orison', name: 'Derelict Distress Echo', probeCost: 1, requiredSurveyLevel: 2,
     discoveryId: 'karak_distress_vector', rewards: { researchPoints: 140, fuel: 10 }, intelligence: 1, unlockSystemId: 'karak', storyStep: 'karak_route_open'
   },
   karak_silent_beacons: {
-    id: 'karak_silent_beacons', systemId: 'karak', name: 'Silent Beacon Triangulation', probeCost: 1, requiredSurveyLevel: 2,
+    id: 'karak_silent_beacons', systemId: 'karak', planetId: 'karak_meridian', name: 'Silent Beacon Triangulation', probeCost: 1, requiredSurveyLevel: 2,
     discoveryId: 'karak_silence_pattern', rewards: { researchPoints: 180, bioSamples: 8 }, intelligence: 2, revealsInfestation: true, storyStep: 'karak_infestation_confirmed'
   },
   karak_hive_scan: {
-    id: 'karak_hive_scan', systemId: 'karak', name: 'Subsurface Hive Tomography', probeCost: 1, requiredSurveyLevel: 3,
+    id: 'karak_hive_scan', systemId: 'karak', planetId: 'karak_meridian', name: 'Subsurface Hive Tomography', probeCost: 1, requiredSurveyLevel: 3,
     discoveryId: 'karak_hive_geometry', rewards: { researchPoints: 260, bioSamples: 15 }, intelligence: 2, confirmsHiveTargets: true, storyStep: 'karak_hive_mapped'
   }
 });
@@ -544,11 +546,9 @@ export const RESEARCH_CATALOG = deepFreeze({
   syndicate_veil_doctrine: { id: 'syndicate_veil_doctrine', name: 'Syndicate Veil Doctrine', branch: 'syndicate', cost: 140, prerequisites: [], effects: ['syndicate_covert_bonus'] }
 });
 
-export const COMMANDER_CATALOG = deepFreeze({
-  nova_rhea_voss: { id: 'nova_rhea_voss', factionId: 'nova', name: 'Commander Rhea Voss', trait: 'measured_advance', initialLevel: 1 },
-  dominion_toren_vale: { id: 'dominion_toren_vale', factionId: 'dominion', name: 'Commander Toren Vale', trait: 'hold_the_line', initialLevel: 1 },
-  syndicate_mara_quill: { id: 'syndicate_mara_quill', factionId: 'syndicate', name: 'Commander Mara Quill', trait: 'ghost_logistics', initialLevel: 1 }
-});
+// Synchronous domain consumers must share the production roster. Legacy names
+// are resolved only while migrating saves, never as selectable personnel.
+export const COMMANDER_CATALOG = CANONICAL_COMMANDER_CATALOG_V1;
 
 export const SPECIALIST_CATALOG = deepFreeze({
   nova_scout_ilan: { id: 'nova_scout_ilan', factionId: 'nova', name: 'Ilan Reeve', role: 'recon', rating: 2, specialty: 'Pathfinder Telemetry', perk: '+30% Probe scan range & signal discovery rate', preferredDistrictIds: ['survey', 'hangar'] },
@@ -626,63 +626,63 @@ function mission(id, fields) {
 
 export const MISSION_CATALOG = deepFreeze({
   nova_heliograph_wake: mission('nova_heliograph_wake', {
-    title: 'Heliograph Wake', missionType: 'faction_conflict', systemId: 'aelos', siteId: 'aelos_heliograph', contractFactionId: 'nova', opponentFactionId: 'dominion', difficulty: 1,
+    title: 'Heliograph Wake', missionType: 'faction_conflict', systemId: 'aelos', siteId: 'aelos_heliograph', groundAreaId: 'aelos_heliograph', contractFactionId: 'nova', opponentFactionId: 'dominion', difficulty: 1,
     access: { type: 'faction_exclusive', factionId: 'nova' }, requirements: { intelligence: 1, researchIds: [], discoveryIds: ['aelos_traffic_cipher'] },
     objective: { type: 'secure_relay', targetIds: ['heliograph_control_spine'] },
     landingZoneIds: ['relay_shadow', 'maintenance_spar'], supportIds: ['survey_drones', 'field_lab'], doctrineIds: ['methodical', 'rapid'], recommendedDoctrineId: 'methodical',
     rewards: { credits: 800, alloys: 25, components: 35, bioSamples: 0, researchPoints: 70, fuel: 3, probes: 0, reputation: 8 }
   }),
   dominion_caldris_claim: mission('dominion_caldris_claim', {
-    title: 'Caldris Claim', missionType: 'faction_conflict', systemId: 'aelos', siteId: 'aelos_caldris', contractFactionId: 'dominion', opponentFactionId: 'syndicate', difficulty: 1,
+    title: 'Caldris Claim', missionType: 'faction_conflict', systemId: 'aelos', siteId: 'aelos_caldris', groundAreaId: 'aelos_caldris_customs', contractFactionId: 'dominion', opponentFactionId: 'syndicate', difficulty: 1,
     access: { type: 'faction_exclusive', factionId: 'dominion' }, requirements: { intelligence: 1, researchIds: [], discoveryIds: ['aelos_traffic_cipher'] },
     objective: { type: 'hold_infrastructure', targetIds: ['caldris_customs_core'] },
     landingZoneIds: ['customs_ring', 'cargo_lock'], supportIds: ['field_lab', 'heavy_lift'], doctrineIds: ['methodical', 'rapid'], recommendedDoctrineId: 'methodical',
     rewards: { credits: 900, alloys: 35, components: 25, bioSamples: 0, researchPoints: 60, fuel: 3, probes: 0, reputation: 8 }
   }),
   syndicate_black_manifest: mission('syndicate_black_manifest', {
-    title: 'Black Manifest', missionType: 'faction_conflict', systemId: 'aelos', siteId: 'aelos_freeport', contractFactionId: 'syndicate', opponentFactionId: 'nova', difficulty: 2,
+    title: 'Black Manifest', missionType: 'faction_conflict', systemId: 'aelos', siteId: 'aelos_freeport', groundAreaId: 'aelos_morrow_freeport', contractFactionId: 'syndicate', opponentFactionId: 'nova', difficulty: 2,
     access: { type: 'faction_exclusive', factionId: 'syndicate' }, requirements: { intelligence: 1, researchIds: [], discoveryIds: ['aelos_traffic_cipher'] },
     objective: { type: 'recover_manifest', targetIds: ['morrow_archive_stack'] },
     landingZoneIds: ['service_lock', 'freight_shadow'], supportIds: ['survey_drones', 'field_lab'], doctrineIds: ['covert', 'rapid'], recommendedDoctrineId: 'covert',
     rewards: { credits: 1000, alloys: 20, components: 40, bioSamples: 0, researchPoints: 80, fuel: 4, probes: 0, reputation: 9 }
   }),
   nova_orison_recovery: mission('nova_orison_recovery', {
-    title: 'Orison Recovery', missionType: 'faction_conflict', systemId: 'veyra', siteId: 'veyra_orison', contractFactionId: 'nova', opponentFactionId: 'syndicate', difficulty: 2,
+    title: 'Orison Recovery', missionType: 'faction_conflict', systemId: 'veyra', siteId: 'veyra_orison', groundAreaId: 'veyra_orison_derelict', contractFactionId: 'nova', opponentFactionId: 'syndicate', difficulty: 2,
     access: { type: 'faction_exclusive', factionId: 'nova' }, requirements: { intelligence: 1, researchIds: ['universal_spectral_cartography'], discoveryIds: ['veyra_photon_archive'] },
     objective: { type: 'recover_archive', targetIds: ['orison_memory_vault'] },
     landingZoneIds: ['broken_spine', 'aft_lattice'], supportIds: ['survey_drones', 'field_lab', 'medevac'], doctrineIds: ['methodical', 'covert'], recommendedDoctrineId: 'methodical',
     rewards: { credits: 1250, alloys: 35, components: 55, bioSamples: 0, researchPoints: 130, fuel: 5, probes: 0, reputation: 11 }
   }),
   dominion_lens_perimeter: mission('dominion_lens_perimeter', {
-    title: 'Lensing Perimeter', missionType: 'faction_conflict', systemId: 'veyra', siteId: 'veyra_lens', contractFactionId: 'dominion', opponentFactionId: 'nova', difficulty: 3,
+    title: 'Lensing Perimeter', missionType: 'faction_conflict', systemId: 'veyra', siteId: 'veyra_lens', groundAreaId: 'veyra_lensing_observatory', contractFactionId: 'dominion', opponentFactionId: 'nova', difficulty: 3,
     access: { type: 'faction_exclusive', factionId: 'dominion' }, requirements: { intelligence: 1, researchIds: ['universal_spectral_cartography'], discoveryIds: ['veyra_photon_archive'] },
     objective: { type: 'secure_observatory', targetIds: ['lensing_calibration_core'] },
     landingZoneIds: ['umbra_platform', 'coolant_trench'], supportIds: ['field_lab', 'heavy_lift', 'medevac'], doctrineIds: ['methodical', 'rapid'], recommendedDoctrineId: 'methodical',
     rewards: { credits: 1400, alloys: 60, components: 45, bioSamples: 0, researchPoints: 150, fuel: 6, probes: 0, reputation: 12 }
   }),
   syndicate_ossuary_dividend: mission('syndicate_ossuary_dividend', {
-    title: 'Ossuary Dividend', missionType: 'faction_conflict', systemId: 'veyra', siteId: 'veyra_ossuary', contractFactionId: 'syndicate', opponentFactionId: 'dominion', difficulty: 3,
+    title: 'Ossuary Dividend', missionType: 'faction_conflict', systemId: 'veyra', siteId: 'veyra_ossuary', groundAreaId: 'veyra_ossuary_vault', contractFactionId: 'syndicate', opponentFactionId: 'dominion', difficulty: 3,
     access: { type: 'faction_exclusive', factionId: 'syndicate' }, requirements: { intelligence: 2, researchIds: ['universal_spectral_cartography'], discoveryIds: ['veyra_photon_archive'] },
     objective: { type: 'extract_artifact', targetIds: ['ossuary_phase_engine'] },
     landingZoneIds: ['vault_aperture', 'collapsed_gallery'], supportIds: ['survey_drones', 'field_lab', 'medevac'], doctrineIds: ['covert', 'methodical'], recommendedDoctrineId: 'covert',
     rewards: { credits: 1500, alloys: 40, components: 60, bioSamples: 5, researchPoints: 170, fuel: 6, probes: 0, reputation: 12 }
   }),
   uga_pale_bloom: mission('uga_pale_bloom', {
-    title: 'Pale Bloom', missionType: 'uga_brood_purge', systemId: 'karak', siteId: 'karak_meridian', contractFactionId: null, opponentFactionId: 'brood', difficulty: 3,
+    title: 'Pale Bloom', missionType: 'uga_brood_purge', systemId: 'karak', siteId: 'karak_meridian', groundAreaId: 'karak_meridian_quarantine', contractFactionId: null, opponentFactionId: 'brood', difficulty: 3,
     access: { type: 'uga_brood_proxy' }, requirements: { intelligence: 2, researchIds: ['uga_brood_containment'], discoveryIds: ['karak_silence_pattern'], infestationRequired: true, hiveTargetsRequired: true },
     objective: { type: 'purge_brood', infestation: true, hiveTargetIds: ['meridian_breeder_nest'], nestCount: 1 },
     landingZoneIds: ['clinic_roof', 'transit_court'], supportIds: ['survey_drones', 'field_lab', 'medevac', 'heavy_lift'], doctrineIds: ['containment', 'methodical', 'rapid'], recommendedDoctrineId: 'containment',
     rewards: { credits: 1800, alloys: 55, components: 65, bioSamples: 28, researchPoints: 210, fuel: 8, probes: 1, reputation: 16 }
   }),
   uga_silent_spine: mission('uga_silent_spine', {
-    title: 'Silent Spine', missionType: 'uga_brood_purge', systemId: 'karak', siteId: 'karak_spine', contractFactionId: null, opponentFactionId: 'brood', difficulty: 4,
+    title: 'Silent Spine', missionType: 'uga_brood_purge', systemId: 'karak', siteId: 'karak_spine', groundAreaId: 'karak_transit_spine', contractFactionId: null, opponentFactionId: 'brood', difficulty: 4,
     access: { type: 'uga_brood_proxy' }, requirements: { intelligence: 3, researchIds: ['uga_brood_containment'], discoveryIds: ['karak_hive_geometry'], infestationRequired: true, hiveTargetsRequired: true, completedMissionIds: ['uga_pale_bloom'] },
     objective: { type: 'purge_brood', infestation: true, hiveTargetIds: ['spine_gestation_cluster', 'spine_feeder_root'], nestCount: 2 },
     landingZoneIds: ['maintenance_shaft', 'sealed_platform'], supportIds: ['field_lab', 'medevac', 'heavy_lift'], doctrineIds: ['containment', 'methodical'], recommendedDoctrineId: 'containment',
     rewards: { credits: 2300, alloys: 75, components: 80, bioSamples: 42, researchPoints: 270, fuel: 10, probes: 1, reputation: 20 }
   }),
   uga_hive_heart: mission('uga_hive_heart', {
-    title: 'Hive Heart', missionType: 'uga_brood_purge', systemId: 'karak', siteId: 'karak_hive', contractFactionId: null, opponentFactionId: 'brood', difficulty: 5,
+    title: 'Hive Heart', missionType: 'uga_brood_purge', systemId: 'karak', siteId: 'karak_hive', groundAreaId: 'karak_primary_hive', contractFactionId: null, opponentFactionId: 'brood', difficulty: 5,
     access: { type: 'uga_brood_proxy' }, requiredHangarLevel: 2, requiredReadiness: 65,
     requirements: { intelligence: 4, researchIds: ['uga_brood_containment'], discoveryIds: ['karak_hive_geometry'], infestationRequired: true, hiveTargetsRequired: true, completedMissionIds: ['uga_silent_spine'] },
     objective: { type: 'purge_brood', infestation: true, hiveTargetIds: ['karak_hive_heart'], nestCount: 1 },
@@ -690,6 +690,142 @@ export const MISSION_CATALOG = deepFreeze({
     rewards: { credits: 3200, alloys: 110, components: 120, bioSamples: 65, researchPoints: 360, fuel: 14, probes: 2, reputation: 28 }
   })
 });
+
+export const UGA_GROUND_AREA_CATALOG_VERSION = 1;
+export const UGA_GROUND_LOCATION_KIND = 'UgaGroundLocationV1';
+
+/* The difficulty ladder for a region's three maps. Every value here is one the
+   War Table Standard setup already offers — timer 0/300/600/900/1500, pace
+   0.7/1/1.6, crates 1/0, defence focus 0/1 — because this is not a second
+   ruleset, it is the same one, selected by which map of the region you took.
+   src/galactic-operations.js holds the mirror that applies these to the live
+   match; tools/test-uga-tactical-profiles.mjs asserts the two never diverge and
+   that no value drifts outside the authored Standard options. */
+export const UGA_GROUND_TACTICAL_PROFILES = deepFreeze({
+  compact: { tier: 1, timeLimit: 600, resPace: 1.6, crateRate: 1, defenseFocus: 0, wildcards: 0, enemies: 1 },
+  standard: { tier: 2, timeLimit: 900, resPace: 1, crateRate: 1, defenseFocus: 0, wildcards: 1, enemies: 1 },
+  large: { tier: 3, timeLimit: 1500, resPace: 0.7, crateRate: 1, defenseFocus: 1, wildcards: 2, enemies: 2 }
+});
+
+export function getUgaGroundTacticalProfile(size) {
+  return UGA_GROUND_TACTICAL_PROFILES[size] || UGA_GROUND_TACTICAL_PROFILES.standard;
+}
+
+function groundArea(id, fields) {
+  const mapNames = fields.mapNames;
+  const runtimeRegionId = fields.runtimeRegionId;
+  const maps = [
+    { id: `${id}_compact`, size: 'compact', name: mapNames.compact, runtimeTemplateMapId: `${runtimeRegionId}_small` },
+    { id: `${id}_standard`, size: 'standard', name: mapNames.standard, runtimeTemplateMapId: `${runtimeRegionId}_medium` },
+    { id: `${id}_large`, size: 'large', name: mapNames.large, runtimeTemplateMapId: `${runtimeRegionId}_large` }
+  ];
+  return {
+    schemaVersion: UGA_GROUND_AREA_CATALOG_VERSION,
+    id,
+    systemId: fields.systemId,
+    planetId: fields.planetId,
+    planetName: fields.planetName,
+    siteId: fields.siteId,
+    name: fields.name,
+    missionId: fields.missionId,
+    recommendedMapId: `${id}_standard`,
+    maps
+  };
+}
+
+/* UGA names are the player-facing location authority. runtimeTemplateMapId is
+   an internal terrain-kit reuse seam, never a claim that Orison is Nordhall or
+   Meridian is Vespera. The receiver validates the same exhaustive mapping
+   before using a template, so edited session data cannot select arbitrary RTS
+   content or leak a template world's identity into the operation contract. */
+export const UGA_GROUND_AREA_CATALOG = deepFreeze({
+  aelos_heliograph: groundArea('aelos_heliograph', {
+    systemId: 'aelos', planetId: 'aelos_caldris', planetName: 'Caldris', siteId: 'aelos_heliograph', name: 'Heliograph High Shelf', missionId: 'nova_heliograph_wake', runtimeRegionId: 'aelos_ridge',
+    mapNames: { compact: 'Relay Shadow', standard: 'Control Spine', large: 'Great Divide Array' }
+  }),
+  aelos_caldris_customs: groundArea('aelos_caldris_customs', {
+    systemId: 'aelos', planetId: 'aelos_caldris', planetName: 'Caldris', siteId: 'aelos_caldris', name: 'Caldris Customs Zone', missionId: 'dominion_caldris_claim', runtimeRegionId: 'aelos_north',
+    mapNames: { compact: 'Cargo Lock', standard: 'Customs Ring', large: 'Orbital Apron' }
+  }),
+  aelos_morrow_freeport: groundArea('aelos_morrow_freeport', {
+    systemId: 'aelos', planetId: 'aelos_ithara', planetName: 'Ithara', siteId: 'aelos_freeport', name: 'Morrow Freeport', missionId: 'syndicate_black_manifest', runtimeRegionId: 'aelos_coast',
+    mapNames: { compact: 'Service Lock', standard: 'Freight Shadow', large: 'Freeport Concourse' }
+  }),
+  veyra_orison_derelict: groundArea('veyra_orison_derelict', {
+    systemId: 'veyra', planetId: 'veyra_orison', planetName: 'Orison', siteId: 'veyra_orison', name: 'Orison Derelict', missionId: 'nova_orison_recovery', runtimeRegionId: 'nordhall_isles',
+    mapNames: { compact: 'Aft Lattice', standard: 'Broken Spine', large: 'Derelict Superstructure' }
+  }),
+  veyra_lensing_observatory: groundArea('veyra_lensing_observatory', {
+    systemId: 'veyra', planetId: 'veyra_nacre', planetName: 'Nacre', siteId: 'veyra_lens', name: 'Lensing Observatory', missionId: 'dominion_lens_perimeter', runtimeRegionId: 'nordhall_peaks',
+    mapNames: { compact: 'Coolant Trench', standard: 'Calibration Core', large: 'Umbra Platform' }
+  }),
+  veyra_ossuary_vault: groundArea('veyra_ossuary_vault', {
+    systemId: 'veyra', planetId: 'veyra_nacre', planetName: 'Nacre', siteId: 'veyra_ossuary', name: 'Ossuary Vault', missionId: 'syndicate_ossuary_dividend', runtimeRegionId: 'nordhall_frost',
+    mapNames: { compact: 'Vault Aperture', standard: 'Phase Engine Gallery', large: 'Collapsed Gallery' }
+  }),
+  karak_meridian_quarantine: groundArea('karak_meridian_quarantine', {
+    systemId: 'karak', planetId: 'karak_meridian', planetName: 'Meridian K-4', siteId: 'karak_meridian', name: 'Meridian Quarantine', missionId: 'uga_pale_bloom', runtimeRegionId: 'vespera_plateau',
+    mapNames: { compact: 'Clinic Roof', standard: 'Transit Court', large: 'Breeder Zone' }
+  }),
+  karak_transit_spine: groundArea('karak_transit_spine', {
+    systemId: 'karak', planetId: 'karak_meridian', planetName: 'Meridian K-4', siteId: 'karak_spine', name: 'Colony Transit Spine', missionId: 'uga_silent_spine', runtimeRegionId: 'vespera_dunes',
+    mapNames: { compact: 'Maintenance Shaft', standard: 'Sealed Platform', large: 'Gestation Junction' }
+  }),
+  karak_primary_hive: groundArea('karak_primary_hive', {
+    systemId: 'karak', planetId: 'karak_meridian', planetName: 'Meridian K-4', siteId: 'karak_hive', name: 'Karak Primary Hive', missionId: 'uga_hive_heart', runtimeRegionId: 'vespera_spire',
+    mapNames: { compact: 'Vascular Breach', standard: 'Thermal Vent', large: 'Hive Core' }
+  })
+});
+
+export function getUgaGroundAreaForMission(missionId) {
+  const areaId = MISSION_CATALOG[missionId]?.groundAreaId;
+  return areaId ? UGA_GROUND_AREA_CATALOG[areaId] || null : null;
+}
+
+export function getUgaGroundMapForMission(missionId, mapId) {
+  const area = getUgaGroundAreaForMission(missionId);
+  return area?.maps.find(map => map.id === mapId) || null;
+}
+
+export function getUgaGroundAreaOptions(missionId) {
+  const mission = MISSION_CATALOG[missionId];
+  const area = getUgaGroundAreaForMission(missionId);
+  if (!mission || !area) return null;
+  return {
+    schemaVersion: UGA_GROUND_AREA_CATALOG_VERSION,
+    missionId,
+    systemId: area.systemId,
+    planetId: area.planetId,
+    planetName: area.planetName,
+    areaId: area.id,
+    areaName: area.name,
+    recommendedMapId: area.recommendedMapId,
+    maps: area.maps.map(map => ({ id: map.id, size: map.size, name: map.name }))
+  };
+}
+
+export function createUgaGroundLocation(missionId, mapId) {
+  const mission = MISSION_CATALOG[missionId];
+  const area = getUgaGroundAreaForMission(missionId);
+  const map = getUgaGroundMapForMission(missionId, mapId);
+  if (!mission || !area || !map) return null;
+  return {
+    schemaVersion: UGA_GROUND_AREA_CATALOG_VERSION,
+    kind: UGA_GROUND_LOCATION_KIND,
+    systemId: area.systemId,
+    planetId: area.planetId,
+    areaId: area.id,
+    siteId: area.siteId,
+    mapId: map.id,
+    size: map.size,
+    display: {
+      systemName: SYSTEM_CATALOG[area.systemId].name,
+      planetName: area.planetName,
+      areaName: area.name,
+      mapName: map.name
+    }
+  };
+}
 
 export function validateCatalogs() {
   const errors = [];
@@ -716,6 +852,8 @@ export function validateCatalogs() {
   for (const mission of Object.values(MISSION_CATALOG)) {
     const site = SITE_CATALOG[mission.siteId];
     if (!SYSTEM_CATALOG[mission.systemId] || site?.systemId !== mission.systemId) errors.push(`${mission.id} has an invalid system/site target.`);
+    const area = UGA_GROUND_AREA_CATALOG[mission.groundAreaId];
+    if (!area || area.missionId !== mission.id || area.systemId !== mission.systemId || area.siteId !== mission.siteId) errors.push(`${mission.id} has an invalid ground-area target.`);
     if (mission.sponsorId !== 'uga') errors.push(`${mission.id} must be sponsored by UGA.`);
     if (!FACTION_CATALOG[mission.opponentFactionId]) errors.push(`${mission.id} has an unknown opponent.`);
     if (mission.missionType === 'uga_brood_purge') {
@@ -724,6 +862,21 @@ export function validateCatalogs() {
         errors.push(`${mission.id} violates UGA Brood purge invariants.`);
       }
       if (targets.some(id => !site?.hiveTargetIds.includes(id))) errors.push(`${mission.id} references an invalid hive target.`);
+    }
+  }
+  const knownPlanetIds = new Set(Object.values(SURVEY_CATALOG).map(survey => survey.planetId));
+  const groundMapIds = new Set();
+  const templateSuffix = { compact: '_small', standard: '_medium', large: '_large' };
+  for (const area of Object.values(UGA_GROUND_AREA_CATALOG)) {
+    if (area.schemaVersion !== UGA_GROUND_AREA_CATALOG_VERSION) errors.push(`${area.id} has an invalid UGA ground-area schema version.`);
+    if (!knownPlanetIds.has(area.planetId)) errors.push(`${area.id} references a planet with no authored survey identity.`);
+    if (area.maps.length !== 3 || area.maps.map(map => map.size).join(',') !== 'compact,standard,large') errors.push(`${area.id} must expose compact, standard, and large maps in order.`);
+    if (!area.maps.some(map => map.id === area.recommendedMapId && map.size === 'standard')) errors.push(`${area.id} must recommend its standard map without silently selecting it.`);
+    for (const map of area.maps) {
+      if (groundMapIds.has(map.id)) errors.push(`${map.id} is reused by more than one UGA area.`);
+      groundMapIds.add(map.id);
+      if (!map.runtimeTemplateMapId.endsWith(templateSuffix[map.size] || '__invalid__')) errors.push(`${map.id} has a mismatched internal terrain-template size.`);
+      if (/nordhall|vespera|pyraeth/i.test(`${area.name} ${area.planetName} ${map.name}`)) errors.push(`${map.id} leaks an internal terrain-template world into player-facing UGA copy.`);
     }
   }
   return { ok: errors.length === 0, errors };

@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { launchPwBrowser, closePwBrowser } from '../../../tools/pw-browser.mjs';
 import { assertHardwareGpu } from '../../../tools/chrome-gpu.mjs';
+import { loadProductionCommanderRosterSnapshot } from './tests/production-commander-roster.fixture.mjs';
 
 const moduleRoot = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const output = join(moduleRoot, 'tmp', 'responsive-interface-audit');
@@ -22,11 +23,17 @@ const viewports = [
 const errors = [];
 const captures = [];
 const browser = await launchPwBrowser();
+const productionRoster = await loadProductionCommanderRosterSnapshot();
 let page;
 
 async function settle(ms = 220) {
   await page.waitForTimeout(ms);
   await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+}
+
+async function waitForSpaceReady() {
+  await page.waitForFunction(() => window.__MASSFRONT_SPACE__?.ready, null, { timeout: 20_000 });
+  await page.evaluate(() => window.__MASSFRONT_SPACE__.ready);
 }
 
 async function audit(label, viewportName) {
@@ -58,6 +65,12 @@ async function audit(label, viewportName) {
       if (!scrollClips(element) && (rect.left < -1 || rect.top < -1 || rect.right > width + 1 || rect.bottom > height + 1)) clipped.push({ label, rect: [rect.left, rect.top, rect.right, rect.bottom].map(value => +value.toFixed(1)) });
     }
     const root = document.documentElement;
+    const moduleContextLost = window.__MASSFRONT_SPACE__?.engine?.renderer?.getContext?.().isContextLost();
+    let baseContextLost = null;
+    try {
+      if (typeof gl !== 'undefined' && gl?.isContextLost) baseContextLost = gl.isContextLost();
+    } catch (_) {}
+    const warRoomVisible = document.querySelector('#warScr') ? visible(document.querySelector('#warScr')) : false;
     return {
       label,
       viewportName,
@@ -66,8 +79,8 @@ async function audit(label, viewportName) {
       undersized,
       clipped,
       pageOverflow: { x: Math.max(0, root.scrollWidth - width), y: Math.max(0, root.scrollHeight - height) },
-      scene: document.querySelector('#moduleFrame')?.dataset.scene || '',
-      contextLost: window.__MASSFRONT_SPACE__?.engine?.renderer?.getContext?.().isContextLost() ?? true
+      scene: document.querySelector('#moduleFrame')?.dataset.scene || (warRoomVisible ? 'war-room' : ''),
+      contextLost: moduleContextLost ?? baseContextLost ?? true
     };
   }, { label, viewportName });
   return result;
@@ -79,6 +92,7 @@ async function capture(viewportName, label) {
   await page.screenshot({ path });
   const result = await audit(label, viewportName);
   captures.push({ ...result, path });
+  return result;
 }
 
 try {
@@ -89,14 +103,40 @@ try {
   page = await browser.newPage({ viewport: { width: 1440, height: 900 }, hasTouch: true, deviceScaleFactor: 1 });
   page.on('pageerror', error => errors.push(`page: ${error.message}`));
   page.on('console', message => { if (message.type() === 'error') errors.push(`console: ${message.text()}`); });
+  page.on('response', response => {
+    if (response.status() >= 400) errors.push(`http ${response.status()}: ${response.url()}`);
+  });
+  page.on('requestfailed', request => errors.push(`request: ${request.url()} - ${request.failure()?.errorText || 'failed'}`));
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-  await page.waitForFunction(() => window.__MASSFRONT_SPACE__?.ready, null, { timeout: 20_000 });
-  await page.evaluate(async () => {
+  await waitForSpaceReady();
+  await page.evaluate(async commanderRosterSnapshot => {
     const domain = await import('./src/domain/index.js');
-    localStorage.setItem(domain.DOMAIN_STORAGE_KEY, domain.serializeDomainState(domain.createShowcaseReadyDomainState()));
+    const hostModule = await import('./src/host/massfront_solo_host.js');
+    let storedProfiles = null;
+    try { storedProfiles = JSON.parse(localStorage.getItem('massfront_profiles_v1')); } catch (_) {}
+    const storedList = Array.isArray(storedProfiles?.list) ? storedProfiles.list : [];
+    const profileId = storedList.find(profile => profile?.id === storedProfiles?.active)?.id
+      || storedList.find(profile => typeof profile?.id === 'string' && profile.id)?.id
+      || 'p1';
+    const ticket = hostModule.createMassfrontGalacticEntryTicket(profileId, {
+      entryView: 'campaign_hub',
+      introRequired: false,
+      commanderRosterSnapshot,
+      commanderRosterFingerprint: commanderRosterSnapshot.fingerprint
+    });
+    sessionStorage.setItem(hostModule.MASSFRONT_GALACTIC_ENTRY_TICKET_KEY, JSON.stringify(ticket));
+  }, productionRoster);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await waitForSpaceReady();
+  await page.evaluate(async () => {
+    const host = window.__MASSFRONT_SPACE_HOST__;
+    const domain = await import('./src/domain/state_store.js');
+    const state = domain.createShowcaseReadyDomainState(host.commanderCatalogContext);
+    state.profileId = window.__MASSFRONT_SPACE__.getState().profileId;
+    await host.saveCampaignSnapshot(state);
   });
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.waitForFunction(() => window.__MASSFRONT_SPACE__?.ready, null, { timeout: 20_000 });
+  await waitForSpaceReady();
 
   for (const [viewportName, width, height] of viewports) {
     await page.setViewportSize({ width, height });
@@ -130,9 +170,34 @@ try {
       await page.evaluate(selector => document.querySelector(selector)?.click(), selector);
       await capture(viewportName, view);
     }
-    await page.click('[data-deck-filter="A"]');
-    await page.click('button[data-district="command"]');
-    await capture(viewportName, 'classic-terminal');
+    /* PLAY first opens the shallow Command access drawer so exploration stays
+       visible. Verify its single active dock state, then exercise the explicit
+       War Table escape and real Back control into this same strategic hub. */
+    await page.click('[data-nav="classic"]');
+    await page.waitForSelector('.uga-command-shell[data-view="classic"] .uga-command-war-table', { timeout: 30_000 });
+    const activeDock = await page.locator('.uga-command-nav button.is-active').evaluateAll(buttons => buttons.map(button => button.dataset.nav));
+    if (activeDock.length !== 1 || activeDock[0] !== 'classic') errors.push(`route: ${viewportName} PLAY drawer active dock ${JSON.stringify(activeDock)}`);
+    await Promise.all([
+      page.waitForURL(current => current.pathname.endsWith('/index.html')
+        && !current.pathname.includes('/modules/space_exploration/'), { timeout: 60_000 }),
+      page.click('.uga-command-war-table')
+    ]);
+    await page.waitForSelector('#warScr', { state: 'visible', timeout: 60_000 });
+    // Direct module layout runs do not pass through the base account portal.
+    // Establish the same offline identity a player selected before entering UGA
+    // so the portal cannot cover the War Room or its real Back control.
+    if (await page.locator('#apOverlay').isVisible()) {
+      await page.click('#apOfflineBtn');
+      await page.locator('#apOverlay').waitFor({ state: 'hidden', timeout: 30_000 });
+      await page.waitForSelector('#warScr', { state: 'visible', timeout: 30_000 });
+    }
+    const classic = await capture(viewportName, 'classic-terminal');
+    if (classic.scene !== 'war-room') errors.push(`route: ${viewportName} Classic did not reach the War Room`);
+    await Promise.all([
+      page.waitForURL(current => current.pathname.endsWith('/modules/space_exploration/index.html'), { timeout: 60_000 }),
+      page.click('#warBack')
+    ]);
+    await waitForSpaceReady();
   }
 
   const summary = {

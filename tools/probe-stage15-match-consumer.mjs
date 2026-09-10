@@ -94,7 +94,7 @@ const tick={tick:9,commands:[
 try{
   const a=await harness(),b=await harness();
   check('consumer registers through the real MFMatchRuntime seam',await a.evaluate(()=>window.__registered===window.MFMatchCommandConsumer));
-  check('adapter exposes only the explicit versioned command vocabulary',await a.evaluate(()=>MFMatchCommandConsumer.schemaVersion===1&&MFMatchCommandConsumer.supported.join(',')==='move,stop,hold,attack,guard,build,produce,research,commander,repair,recycle,upgrade'));
+  check('adapter exposes only the explicit versioned command vocabulary',await a.evaluate(()=>MFMatchCommandConsumer.schemaVersion===1&&MFMatchCommandConsumer.supported.join(',')==='move,stop,hold,attack,guard,build,produce,research,commander,repair,recycle,upgrade,repeat,rally,cancel_production'));
   check('skirmish seats resolve to distinct simulation authorities',await a.evaluate(()=>JSON.stringify([MFMatchCommandConsumer.seatAuthority(1),MFMatchCommandConsumer.seatAuthority(2)])===JSON.stringify([{seat:1,team:0,slot:-1},{seat:2,team:1,slot:5}])));
   check('public Repair and Recycle helpers submit exact stable building identities',await a.evaluate(()=>{
     const C=MFMatchCommandConsumer,before=__submitted.length;

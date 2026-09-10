@@ -581,8 +581,7 @@ const sourcePaths = [
   fileURLToPath(import.meta.url),
   join(moduleRoot, 'src', 'core', 'window_emissive_bloom.js'),
   join(moduleRoot, 'src', 'core', 'uga_command_scene.js'),
-  join(moduleRoot, 'src', 'ship', 'uga_blender_assets.js'),
-  join(moduleRoot, 'assets', 'models', 'uga-command-cutaway.glb')
+  join(moduleRoot, 'src', 'ship', 'uga_blender_assets.js')
 ];
 report.hashes = await Promise.all(sourcePaths.map(hashFile));
 

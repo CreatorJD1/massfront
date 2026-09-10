@@ -244,9 +244,10 @@ Need ($text.Contains("`$manifest.kind='full'")) 'Full delivery kind is not expli
 Need ($text.Contains('$manifest.kind="patch"')) 'Patch transport kind is missing'
 Need (-not $text.Contains('$manifest.kind=$Category')) 'Player category still overwrites transport kind'
 Need ($text.Contains('-Extra cannot be placed in executable files[] safely')) 'Untyped extras can still enter executable files[]'
-Need ($text.Contains("`$env:MASSFRONT_INCLUDE_EXPLORATION='0'")) 'Patch publisher still stages the monolithic Galactic pack locally'
-Need (-not $text.Contains("`$env:MASSFRONT_INCLUDE_EXPLORATION='1'")) 'Full publisher still forces the optional Galactic pack into base www/APK'
-Need ($text.Contains('Base www unexpectedly contains the optional Galactic pack')) 'Base package does not fail closed when optional exploration leaks into www'
+Need ($text.Contains("Need (`$env:MASSFRONT_DIAGNOSTIC_SLIM -ne '1')")) 'Publisher does not reject diagnostic-slim player releases'
+Need (-not $text.Contains("`$env:MASSFRONT_INCLUDE_EXPLORATION='0'")) 'Publisher still forces the retired slim-by-default policy'
+Need ($text.Contains('Base www is missing the signed Galactic Exploration runtime')) 'Base package does not fail closed when exploration is absent'
+Need ($text.Contains("`$basePackIds=@('voice','music','exploration','galactic-exploration')")) 'Publisher still carries stale optional metadata for base content'
 Need ($text.Contains('[switch]$IncludeSourceArchive')) 'Massive source archive channel is not explicitly opt-in'
 Need ($text.Contains("elseif(-not `$IncludeSourceArchive)")) 'Default player release does not explicitly skip source staging/upload'
 Need ($text.Contains('HTTP $([int]$response.StatusCode), expected 206')) 'Range gate does not require HTTP 206'
@@ -258,4 +259,4 @@ Need ($text.Contains("TryAddWithoutValidation('Origin',`$probeOrigin)")) 'Range 
 Need ($text.Contains("`$allowOrigin -eq '*' -or `$allowOrigin -ceq `$probeOrigin")) 'Range gate does not accept wildcard or exact echoed browser origin'
 Need (-not $text.Contains('$response=@(Invoke-RestMethod')) 'paths-info still wraps Invoke-RestMethod in a nested Object[]'
 
-Write-Host '{"status":"PASS","test":"publish-hf-release-safety","network":false,"differingSameVersion":"refused","independentArtifactResume":true,"deltaFullOverlay":true,"transportCategorySeparated":true,"systemCategory":true,"hotfixApkBuild":false,"sourceArchiveOptIn":true,"baseExplorationExcluded":true,"immutableFirst":true,"pinnedRemoteVerified":true,"firstLastRangeGate":true,"manifestsLast":true,"swVersionBump":true,"retiredIosReleaseLogic":false,"androidFullSyncFailClosed":true}' -ForegroundColor Green
+Write-Host '{"status":"PASS","test":"publish-hf-release-safety","network":false,"differingSameVersion":"refused","independentArtifactResume":true,"deltaFullOverlay":true,"transportCategorySeparated":true,"systemCategory":true,"hotfixApkBuild":false,"sourceArchiveOptIn":true,"baseExplorationIncluded":true,"diagnosticSlimPublishRefused":true,"immutableFirst":true,"pinnedRemoteVerified":true,"firstLastRangeGate":true,"manifestsLast":true,"swVersionBump":true,"retiredIosReleaseLogic":false,"androidFullSyncFailClosed":true}' -ForegroundColor Green

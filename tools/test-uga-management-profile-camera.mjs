@@ -38,6 +38,7 @@ for (const aspect of [0.45, 1, 1.78]) {
 }
 
 const sceneSource = await readFile(new URL('../modules/space_exploration/src/core/uga_command_scene.js', import.meta.url), 'utf8');
+const uiSource = await readFile(new URL('../modules/space_exploration/src/ui/uga_command.js', import.meta.url), 'utf8');
 assert.match(sceneSource, /const framing = this\._managementProfileFraming\(\);\s*this\._moveCamera\(framing\.position, framing\.target/);
 assert.doesNotMatch(sceneSource, /OVERVIEW_CAMERA\.x \* 1\.2|new THREE\.Vector3\(36, -68, 50\)/,
   'the old angled management overview must not return');
@@ -57,13 +58,17 @@ assert.ok(intensity('MANAGEMENT_PROFILE_RIM_INTENSITY') >= 4.00,
   'distant full-ship management profile needs an overview-only silhouette rim');
 assert.match(sceneSource, /new THREE\.DirectionalLight\(0x42b9ff, MANAGEMENT_RIM_INTENSITY\)/,
   'the management rim must remain visibly cyan rather than disappearing into the hull');
-assert.match(sceneSource, /material\.color\.lerp\(albedoFloor, 0\.38\)/,
-  'the distant carrier needs an overview-only diffuse floor, not only brighter lights');
-assert.match(sceneSource, /material\.emissive\.lerp\(emissiveFloor, 0\.72\)/,
-  'the distant carrier needs an overview-only detail floor on dark metallic materials');
-assert.match(sceneSource, /focusOverview\(animate = true\)[\s\S]*?this\._setProfileMaterialLift\(true\)/,
-  'overview profile grade must activate with the side elevation');
+assert.match(sceneSource, /material\.color\.lerp\(albedoFloor, 0\.12\)/,
+  'restored pale authored rooms need restrained overview lift, not the retired dark-hull grade');
+assert.match(sceneSource, /material\.emissive\.lerp\(emissiveFloor, 0\.18\)/,
+  'overview emission must not wash out the restored room textures');
+assert.match(sceneSource, /focusOverview\(animate = true\)[\s\S]*?this\._setProfileMaterialLift\(!procedural\)/,
+  'only the authored side elevation needs the near-black-hull material lift');
+assert.match(sceneSource, /return this\._fitProceduralCamera\(bounds, true\)/,
+  'the shared camera fitter must respect visible room bounds and inspector insets');
 assert.match(sceneSource, /focusDistrict\(id, animate = true\)[\s\S]*?this\._setProfileMaterialLift\(false\)/,
   'focused rooms must restore authored material values');
+assert.match(uiSource, /if \(\['command', 'construction'\]\.includes\(activeView\)\) call\('onDistrictFocus', selectedDistrictId\);\s*else call\('onOverviewFocus'\);/,
+  'collapsing a non-room inspector must preserve the full-ship overview instead of zooming to Command Core');
 
 console.log('UGA management side-profile camera + visibility rig: PASS');

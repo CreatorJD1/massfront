@@ -8,6 +8,7 @@ import {
 } from './ground_operation.js';
 import { DOMAIN_COMMANDER_ROSTER_FINGERPRINT, assertDomainState } from './state_store.js';
 import { advanceExpeditionCycles } from './construction.js';
+import { advanceSoloFrontPressure, applySoloFrontPressureDelta } from './progression.js';
 
 export const LEGACY_GROUND_RESULT_SCHEMA_VERSION = 2;
 export const GROUND_RESULT_SCHEMA_VERSION = 3;
@@ -130,16 +131,28 @@ function buildPersonnelDelta(operation, report) {
 }
 
 function buildWorldDelta(operation, report) {
-  if (operation.missionType !== 'uga_brood_purge') return { infestationSeverity: 0, hiveTargetsPurged: [], infestationCleared: false };
+  const currentV3 = operation.schemaVersion === GROUND_OPERATION_SCHEMA_VERSION;
+  const soloFrontPressure = report.outcome === 'victory'
+    ? -(8 + operation.difficulty * 2)
+    : report.outcome === 'partial'
+      ? -(3 + operation.difficulty)
+      : 3 + operation.difficulty;
+  if (operation.missionType !== 'uga_brood_purge') {
+    const worldDelta = { infestationSeverity: 0, hiveTargetsPurged: [], infestationCleared: false };
+    if (currentV3) worldDelta.soloFrontPressure = soloFrontPressure;
+    return worldDelta;
+  }
   let infestationSeverity;
   if (report.outcome === 'victory') infestationSeverity = -(15 + operation.difficulty * 5);
   else if (report.outcome === 'partial') infestationSeverity = -(5 + operation.difficulty * 2);
   else infestationSeverity = 3 + operation.difficulty;
-  return {
+  const worldDelta = {
     infestationSeverity,
     hiveTargetsPurged: report.primaryObjectiveComplete ? [...operation.battlefield.hiveTargetIds] : [],
     infestationCleared: operation.missionId === 'uga_hive_heart' && report.outcome === 'victory'
   };
+  if (currentV3) worldDelta.soloFrontPressure = soloFrontPressure;
+  return worldDelta;
 }
 
 function buildGroundResult(operation, report) {
@@ -312,7 +325,14 @@ export function applyGroundResult(state, result) {
   next.route = deepClone(operation.returnRoute);
   next.revision += 1;
   const advanced = advanceExpeditionCycles(next, 2, `operation:${result.resultId}`, 'operation');
-  return { state: advanced.state, applied: true, reason: 'applied', construction: advanced.completedJobs };
+  const pressured = advanceSoloFrontPressure(advanced.state, 2, `operation:${result.resultId}`);
+  // Legacy GroundResultV2 bytes never carried front pressure. Keeping that
+  // omission preserves its deterministic result ID and lets old pending
+  // operations resolve; only V3 applies the explicit mission relief/setback.
+  const resolved = operation.schemaVersion === GROUND_OPERATION_SCHEMA_VERSION
+    ? applySoloFrontPressureDelta(pressured, operation.systemId, result.worldDelta.soloFrontPressure, `mission:${result.missionId}:${result.outcome}`)
+    : pressured;
+  return { state: resolved, applied: true, reason: 'applied', construction: advanced.completedJobs };
 }
 
 function recoverPerson(person, cycles) {

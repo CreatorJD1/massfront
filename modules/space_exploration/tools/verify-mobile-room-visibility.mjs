@@ -37,7 +37,6 @@ const sourceEntries = [
   { key: 'src/core/window_emissive_bloom.js', local: join(moduleRoot, 'src', 'core', 'window_emissive_bloom.js'), served: 'src/core/window_emissive_bloom.js' },
   { key: 'lib/DRACOLoader.js', local: join(moduleRoot, 'lib', 'DRACOLoader.js'), served: 'lib/DRACOLoader.js' },
   { key: 'lib/draco/gltf/draco_decoder.wasm', local: join(moduleRoot, 'lib', 'draco', 'gltf', 'draco_decoder.wasm'), served: 'lib/draco/gltf/draco_decoder.wasm' },
-  { key: 'assets/runtime/models/uga-command-cutaway.glb', local: join(moduleRoot, 'assets', 'runtime', 'models', 'uga-command-cutaway.glb'), served: 'assets/runtime/models/uga-command-cutaway.glb' },
 ];
 
 function hashBuffer(buffer) {

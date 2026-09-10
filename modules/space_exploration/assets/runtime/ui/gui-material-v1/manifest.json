@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "id": "massfront-gui-material-v1",
+  "status": "user-approved-subset",
+  "sourceArchive": {
+    "name": "MASSFRONT_MASTER_ART_ARCHIVE_2026-09-06.zip",
+    "sha256": "02541e3bcab7b13acea8944daea1c4a8301fbcc3140938560f03141672b583cb"
+  },
+  "policy": {
+    "included": "Role-specific neutral frame layers only for runtime borders. CSS selects the matching 1x or 2x density and preserves transparent frame centers.",
+    "excluded": [
+      "commander or personnel portrait imagery and portrait sequences",
+      "menu illustration masters",
+      "wordmarks and emblems",
+      "unit-selection slots, unit rails, and selected-state overlays",
+      "state overlays with unresolved warning, error, damaged, or stalled semantics",
+      "review composites and source masters"
+    ]
+  },
+  "frameFamilies": {
+    "menu/submenu": {
+      "role": "full inspector or submenu surround",
+      "logicalSize": [320, 224],
+      "contentSafeRect": [25, 10, 270, 204],
+      "nineSlice": {
+        "insetPx1x": [27, 27, 27, 27],
+        "insetPx2x": [54, 54, 54, 54],
+        "cssSlicePercent": [12.053571, 8.4375, 12.053571, 8.4375]
+      }
+    },
+    "menu/entry": {
+      "role": "illustrated operation or navigation entry surround",
+      "logicalSize": [304, 84],
+      "contentSafeRect": [21, 10, 262, 64],
+      "nineSlice": {
+        "insetPx1x": [23, 23, 23, 23],
+        "insetPx2x": [46, 46, 46, 46],
+        "cssSlicePercent": [27.380952, 7.565789, 27.380952, 7.565789]
+      }
+    },
+    "controls/action": {
+      "role": "compact action surround with a 44 px logical hit area",
+      "logicalSize": [44, 44],
+      "contentSafeRect": [13, 10, 18, 24],
+      "nineSlice": {
+        "insetPx1x": [15, 15, 15, 15],
+        "insetPx2x": [30, 30, 30, 30],
+        "cssSlicePercent": [34.090909, 34.090909, 34.090909, 34.090909]
+      }
+    },
+    "hud/feed_container": {
+      "role": "expanded status or notification feed surround",
+      "logicalSize": [304, 180],
+      "contentSafeRect": [21, 10, 262, 160],
+      "nineSlice": {
+        "insetPx1x": [23, 23, 23, 23],
+        "insetPx2x": [46, 46, 46, 46],
+        "cssSlicePercent": [12.777778, 7.565789, 12.777778, 7.565789]
+      }
+    },
+    "hud/commander_resource_joined": {
+      "role": "joined commander portrait and resource rail surround",
+      "logicalSize": [320, 76],
+      "contentSafeRects": {
+        "portrait": [0, 0, 64, 76],
+        "resourceRail": [64, 28, 252, 48]
+      },
+      "rendering": "fixed-aspect-image-set",
+      "nineSlice": null,
+      "nineSliceReason": "The supplied frame is a fixed composite with a protected portrait-to-rail joint; global nine-slice scaling would distort that joint."
+    }
+  },
+  "assets": [
+    { "path": "1x/menu/primary_frame.png", "bytes": 9279, "sha256": "4de4c36def0a3a62d0c11cee6d8794dcce2aacfabca388edee9e1346c6c03da1" },
+    { "path": "1x/menu/tab_frame.png", "bytes": 4080, "sha256": "5d643f8a00526dd5a7665cf7b10d40399ed27884e9ac1ba1643d172d0a70952c" },
+    { "path": "1x/menu/entry_frame.png", "bytes": 9468, "sha256": "0d1344e19a6030d1f6d538358ab1224012f4817f6c5fdd7e16abf42c03992aa9" },
+    { "path": "1x/menu/submenu_frame.png", "bytes": 11314, "sha256": "7d7a78a8fb2b49cecc52138ff915d41b41f7eaa1d2452915dd3311cf90f7a5e9" },
+    { "path": "1x/controls/action_frame.png", "bytes": 1236, "sha256": "2368c26469ad63ffebf82e12a03b97adab71e8605445fb9cc6fc9047285f0295" },
+    { "path": "1x/hud/portrait_frame.png", "bytes": 4842, "sha256": "39dafc349b1fb50a815a8588222f3f4bc0b8d3811019924b257d07a69c13e4bb" },
+    { "path": "1x/hud/commander_resource_joined_frame.png", "bytes": 14054, "sha256": "f3df16959b732ad4ff544479cf57afd0a201319535c0dce8043981afe1bb2af4" },
+    { "path": "1x/hud/resource_rail_frame.png", "bytes": 8387, "sha256": "c19ab3b7f567a2a493fc13f578c2e2d016b588235c56db97db29bbc623d6387b" },
+    { "path": "1x/hud/context_frame.png", "bytes": 10508, "sha256": "17af8485233ce86b372eefa35926d385b24f4a7b0b28d916a3dd692c6a81893c" },
+    { "path": "1x/hud/production_card_frame.png", "bytes": 4257, "sha256": "0eec742c331570fc056ea4c2eaa9b993254bf2388e652455b97737924e81d093" },
+    { "path": "1x/hud/feed_row_frame.png", "bytes": 8940, "sha256": "877630387f59b3dcb433276169d959028437849120cd1b99a21b99995265e7a4" },
+    { "path": "1x/hud/feed_container_frame.png", "bytes": 9782, "sha256": "3070d8e62194c2b54b077593d3738536eef4d582e280911f07a0eaf98471ea39" },
+    { "path": "2x/menu/primary_frame.png", "bytes": 28373, "sha256": "4c9bb49f7d4d19e0263aa72eb32961168ad32129f207c7bf38923a4447cb030b" },
+    { "path": "2x/menu/tab_frame.png", "bytes": 12980, "sha256": "94fc67647c9b6d6819a0ee04637e41d545d280c02251a20f6c092073fe3826a5" },
+    { "path": "2x/menu/entry_frame.png", "bytes": 28824, "sha256": "b4410389d872e445ff22ec5367e42d617d98842d9c89bf19be1ffdf0b1d5d215" },
+    { "path": "2x/menu/submenu_frame.png", "bytes": 34680, "sha256": "5e215ec84a73308453d1cf58f5658e09b75596084803b5db3325e2f56f237a7e" },
+    { "path": "2x/controls/action_frame.png", "bytes": 3523, "sha256": "7ab74331a8eb5bc2ca05de0ac0caaf6f51c4bdf4f6593c53f83eb84565c4bde9" },
+    { "path": "2x/hud/portrait_frame.png", "bytes": 14501, "sha256": "acb795a47438a29a69fb863e99ca7494d5d182598e808d27a46e8da99f25a76a" },
+    { "path": "2x/hud/commander_resource_joined_frame.png", "bytes": 40166, "sha256": "520e41947db55c153738c06410577ea9c381885610cfbce276a3f3b7d50fddf1" },
+    { "path": "2x/hud/resource_rail_frame.png", "bytes": 24355, "sha256": "d556f556dcef8353c9fe05ec6d98a00601f36e5d795766ab6f01644248d2bdc9" },
+    { "path": "2x/hud/context_frame.png", "bytes": 31798, "sha256": "493f86ea6e35cd4dd4d029cde3b6fdaa3a3a50d405bfde0c197f9b0464c069c8" },
+    { "path": "2x/hud/production_card_frame.png", "bytes": 12816, "sha256": "5da031d89eb3fcf7309dd4e5e72e294589333f8c594958ae8f25a7816d9d57c5" },
+    { "path": "2x/hud/feed_row_frame.png", "bytes": 25541, "sha256": "506eda38e112d506db3dfb4e0316025405d6c18acc0a89d4ee0298e5ff4d378e" },
+    { "path": "2x/hud/feed_container_frame.png", "bytes": 29920, "sha256": "7243bbe40ad2843e3f230065b7f5655fb5a52204ea5f26364655de002b45f43d" }
+  ]
+}

@@ -28,28 +28,41 @@ const LIVE_MANIFEST = 'https://huggingface.co/datasets/CREATORJD/massfront-relea
 
 const LEDGERS = [
   ['Stage 10 pack failures', 'modules/space_exploration/assets/source/blender/world-kits/DISCARDED_STAGE10_PACK_FAILURES.json'],
+  ['Visual-quality rejects', 'modules/space_exploration/assets/source/blender/world-kits/DISCARDED_VISUAL_QUALITY_2026-09-05.json'],
   ['Stage 10 Spline exclusions', 'modules/space_exploration/assets/source/spline/world-prefabs/DISCARDED_STAGE10_SPLINE_EXCLUSIONS.json'],
   ['Spline props', 'modules/space_exploration/assets/source/spline/world-prefabs/DISCARDED_SPLINE_PROPS.json']
 ];
 
 const rejected = new Map();
+const rejectedPaths = new Map();
 for (const [label, rel] of LEDGERS) {
   const file = resolve(root, rel);
   if (!existsSync(file)) { console.log(`WARN  ledger missing: ${rel}`); continue; }
   const data = JSON.parse((await readFile(file, 'utf8')).replace(/^﻿/, ''));
   if (data.runtimeAllowed === true) { console.log(`WARN  ${label} is marked runtimeAllowed; skipping`); continue; }
   for (const id of data.ids || []) rejected.set(String(id).toLowerCase(), label);
+  for (const path of data.runtimePaths || []) rejectedPaths.set(String(path).replace(/\\/g, '/').toLowerCase(), label);
+  for (const entry of data.entries || []) {
+    if (entry?.path) rejectedPaths.set(String(entry.path).replace(/\\/g, '/').toLowerCase(), label);
+  }
 }
-if (!rejected.size) { console.log('FAIL  no rejected ids were loaded — this gate would pass vacuously.'); process.exit(1); }
-console.log(`Loaded ${rejected.size} rejected model id(s) from ${LEDGERS.length} ledger(s).`);
+if (!rejected.size && !rejectedPaths.size) { console.log('FAIL  no rejected model rules were loaded — this gate would pass vacuously.'); process.exit(1); }
+console.log(`Loaded ${rejected.size} rejected model id(s) and ${rejectedPaths.size} exact runtime path(s) from ${LEDGERS.length} ledger(s).`);
 
 function leaksIn(paths) {
   const found = [];
   for (const p of paths.filter((x) => x.toLowerCase().endsWith('.glb'))) {
-    const low = p.toLowerCase(), stem = basename(low).slice(0, -4);
+    const low = p.replace(/\\/g, '/').toLowerCase(), stem = basename(low).slice(0, -4);
+    if (rejectedPaths.has(low)) {
+      found.push({ path: p, id: low, label: rejectedPaths.get(low) });
+      continue;
+    }
+    const normalizedStem = stem.replace(/_/g, '-');
     for (const [id, label] of rejected) {
-      const tail = id.split('/').pop();
-      if (stem === tail || low.includes(tail) || low.includes(id)) { found.push({ path: p, id, label }); break; }
+      const idParts = id.split('/'), tail = idParts.pop();
+      const pathFamily = low.match(/(?:^|\/)world-models\/([^/]+)\//)?.[1] || '';
+      if (idParts.length && pathFamily && pathFamily !== idParts[idParts.length - 1]) continue;
+      if (stem === tail || normalizedStem.includes(tail.replace(/_/g, '-')) || low.includes(id)) { found.push({ path: p, id, label }); break; }
     }
   }
   return found;

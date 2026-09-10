@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import {
   STATUS,
+  analyzeProceduralCommandSources,
+  analyzeAuthoredCommand,
+  EXPECTED_DISTRICTS,
   analyzeMenuSources,
   canonicalManifestUnsigned,
   evaluateEvidence,
@@ -108,39 +111,51 @@ test('deterministic fingerprints ignore input order', () => {
   equal(fingerprintRecords(records), fingerprintRecords([...records].reverse()));
 });
 
-test('menu validator accepts DOM absence plus exact default-off flag', () => {
+test('menu validator accepts DOM absence, integrated capability gating, and base-included packaging', () => {
   const result = analyzeMenuSources({
     html: '<main id="startScreen"></main>',
-    meta: 'const META={settings:{experimentalExploration:false}};',
-    main: "const wanted=()=>META.settings.experimentalExploration; const URL_='./modules/space_exploration/index.html'; fetch(URL_,{method:'HEAD',cache:'no-store'}); if(!present){ return false; } location.href=URL_;",
-    pack: "const includeExploration = false; if (!includeExploration && existsSync(join(www,'modules'))) missing.push('must not ship');"
+    meta: "const retire=Object.prototype.hasOwnProperty.call(META.settings,'experimentalExploration')||Object.prototype.hasOwnProperty.call(META.settings,'expExploration'); delete META.settings.experimentalExploration; delete META.settings['expExploration']; const saved=JSON.stringify(META);",
+    main: "const enabled=window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true; if(!enabled){ return false; } const URL_='./modules/space_exploration/index.html'; fetch(URL_,{method:'HEAD',cache:'no-store'}); if(!present){ return false; } location.href=URL_;",
+    pack: "const diagnosticSlim = process.env.MASSFRONT_DIAGNOSTIC_SLIM === '1'; const includeExploration = !diagnosticSlim; if(includeExploration) stageExplorationPack();"
   });
   equal(checkStatus(result, 'menu:no-entry-in-dom-while-off'), STATUS.PASS);
-  equal(checkStatus(result, 'feature-flag:required-key-default-off'), STATUS.PASS);
-  equal(checkStatus(result, 'feature-flag:current-legacy-gate'), STATUS.PASS);
+  equal(checkStatus(result, 'product-model:no-active-legacy-exploration-setting'), STATUS.PASS);
   equal(checkStatus(result, 'menu:module-availability-gate'), STATUS.PASS);
-  equal(checkStatus(result, 'packaging:core-excludes-module-tree'), STATUS.PASS);
+  equal(checkStatus(result, 'packaging:base-includes-module-tree'), STATUS.PASS);
 });
 
-test('menu validator rejects a HEAD probe that does not block absent-module navigation', () => {
+test('menu validator rejects a HEAD probe without integrated capability authority', () => {
   const result = analyzeMenuSources({
     html: '<main id="startScreen"></main>',
-    meta: 'const META={settings:{experimentalExploration:false}};',
-    main: "const wanted=()=>META.settings.experimentalExploration; const URL_='./modules/space_exploration/index.html'; fetch(URL_,{method:'HEAD'}); location.href=URL_;",
+    meta: "const META={settings:{quality:'auto'}};",
+    main: "const URL_='./modules/space_exploration/index.html'; fetch(URL_,{method:'HEAD'}); location.href=URL_;",
     pack: "if(existsSync(join(www,'modules'))) missing.push('must not ship');"
   });
+  equal(checkStatus(result, 'product-model:no-active-legacy-exploration-setting'), STATUS.PASS);
   equal(checkStatus(result, 'menu:module-availability-gate'), STATUS.FAIL);
 });
 
 test('menu validator rejects a hidden legacy button as DOM absence proof', () => {
   const result = analyzeMenuSources({
     html: '<button id="exploreBtn" hidden>Explore</button>',
-    meta: 'const META={settings:{expExploration:false}};',
-    main: "const wanted=()=>META.settings.expExploration; const URL_='./modules/space_exploration/index.html';",
+    meta: 'const META={settings:{experimentalExploration:false}};',
+    main: "const wanted=()=>META.settings.experimentalExploration; const URL_='./modules/space_exploration/index.html';",
     pack: ''
   });
   equal(checkStatus(result, 'menu:no-entry-in-dom-while-off'), STATUS.FAIL);
-  equal(checkStatus(result, 'feature-flag:required-key-default-off'), STATUS.FAIL);
+  equal(checkStatus(result, 'product-model:no-active-legacy-exploration-setting'), STATUS.FAIL);
+});
+
+test('menu validator rejects active legacy definitions, runtime reads, and serialization', () => {
+  const fixtures = [
+    { meta: 'const DEF_SETTINGS={experimentalExploration:false};', main: '' },
+    { meta: '', main: 'if(META.settings.expExploration) launch();' },
+    { meta: 'const payload=JSON.stringify({expExploration:false});', main: '' }
+  ];
+  for (const fixture of fixtures) {
+    const result = analyzeMenuSources({ html: '<main id="startScreen"></main>', pack: '', ...fixture });
+    equal(checkStatus(result, 'product-model:no-active-legacy-exploration-setting'), STATUS.FAIL);
+  }
 });
 
 test('valid runtime manifest fixture passes integrity and parity', () => {
@@ -169,6 +184,8 @@ test('runtime allowlist excludes source code outside the standalone entry graph'
   ok(paths.includes('src/ui/main.css'));
   ok(!paths.includes('src/unused.js'));
   ok(paths.includes('assets/runtime/personnel/commander.webp'));
+  ok(paths.includes('lib/ktx2/KTX2Loader.js'));
+  ok(paths.includes('lib/ktx2/basis/basis_transcoder.wasm'));
 });
 
 test('missing runtime manifest is UNKNOWN', () => {
@@ -230,6 +247,66 @@ test('GLB parser and district coverage reject missing room focus nodes', () => {
   equal(missing.missingFocus, ['survey']);
   assert.throws(() => parseGlbJson(Buffer.from('not glb')));
   assertions += 1;
+});
+
+test('authored command contract rejects missing rooms, plots, and placeholder loaders', () => {
+  const loader = "const COMMAND_URL = new URL('../../assets/runtime/models/uga-authored-sections.glb?v=1', import.meta.url).href; export function loadUgaCommandCutaway() { return loadGlb(COMMAND_URL); }";
+  const commandScene = 'loadUgaCommandCutaway().then(root => { this.root = root; });';
+  const nodes = EXPECTED_DISTRICTS.flatMap(id => [{ name: `DISTRICT_${id}` }, { name: `FOCUS_${id}` },
+    ...(id === 'command' ? [] : [1, 2, 3].map(tier => ({ name: `BUILD_${id}_tier${tier}` }))) ]);
+  const valid = analyzeAuthoredCommand({ loader, commandScene, glb: { nodes } });
+  for (const row of valid.checks) equal(row.status, STATUS.PASS);
+  equal(checkStatus(analyzeAuthoredCommand({ loader: 'return Promise.resolve(new THREE.Group());', commandScene, glb: { nodes } }), 'districts:authored-loader-contract'), STATUS.FAIL);
+  equal(checkStatus(analyzeAuthoredCommand({ loader, commandScene, glb: { nodes: nodes.filter(node => node.name !== 'FOCUS_command') } }), 'districts:authored-room-graph'), STATUS.FAIL);
+  equal(checkStatus(analyzeAuthoredCommand({ loader, commandScene, glb: { nodes: nodes.filter(node => node.name !== 'BUILD_engineering_tier1') } }), 'districts:authored-build-plots'), STATUS.FAIL);
+});
+
+test('legacy procedural fallback contract remains independently tested', () => {
+  const loader = `
+    export function loadUgaCommandCutaway() {
+      return Promise.resolve(new THREE.Group());
+    }
+  `;
+  const commandScene = `
+    const layout = {
+      command: {},
+      navigation: {},
+      survey: {},
+      mission_ops: {},
+      research: {},
+      fabricator: {},
+      engineering: {},
+      habitat: {},
+      factions: {},
+      hangar: {},
+      logistics: {}
+    };
+    district.name = \`DISTRICT_\${id}\`;
+    district.userData = { district_id: id, selectable: true, runtimeTopology: true };
+    focus.name = \`FOCUS_\${id}\`;
+    focus.userData = { district_id: id, camera_distance: 20, camera_height: 11 };
+    for (const id of Object.keys(layout)) {
+      if (!this.districtRoots.has(id)) buildVirtualRoom(id);
+    }
+    topology.name = 'UGA_RUNTIME_INTEGRATED_CUTAWAY';
+    topology.userData.runtimeTopology = true;
+    lift.name = 'UGA_CentralLiftAndServiceSpine';
+    plate.name = \`UGA_Deck_\${deck}_SharedPressurePlate\`;
+    corridor.name = \`UGA_\${id}_RadialCorridor\`;
+    this.deckTopologyRoot = topology;
+    layer.name = \`\${id}_DedicatedDistrictLayer\`;
+    building.name = \`\${id}_FacilityBlock_\${i + 1}\`;
+    this._decorateDistricts(root);
+    this.animatedDecorations.push(() => {});
+    const droneCount = 54;
+    this.droneSwarm = new THREE.InstancedMesh(droneGeo, droneMat, droneCount);
+    root.add(this.droneSwarm);
+    this._createDroneTraffic(root);
+  `;
+  const accepted = analyzeProceduralCommandSources({ loader, commandScene });
+  ok(accepted.checks.every(item => item.status === STATUS.PASS), JSON.stringify(accepted, null, 2));
+  const stale = analyzeProceduralCommandSources({ loader: `${loader}\nconst COMMAND_URL = 'assets/runtime/models/uga-command-cutaway.glb';`, commandScene });
+  equal(checkStatus(stale, 'districts:no-retired-cutaway-request'), STATUS.FAIL);
 });
 
 if (!quiet) console.log(`readiness self-tests: PASS (${assertions} assertions)`);

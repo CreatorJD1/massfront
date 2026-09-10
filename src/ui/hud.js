@@ -630,7 +630,8 @@ function jumpToWaveWarning(){
   cam.x=waveThreat.x; cam.y=waveThreat.y; camFollow=-1; clampCam(); camUpdateMatrices(); sfx('ui');
 }
 function toast(msg){
-  const el=$('toast'); el.textContent=msg; el.style.opacity=1;
+  const el=$('toast'),copy=document.createElement('span');
+  copy.className='mfNoticeText';copy.textContent=msg;el.replaceChildren(copy);el.style.opacity=1;
   /* Messages share one reserved notification rail instead of appearing as
      arbitrary centre-screen popups over the build and command interfaces. */
   el.classList.add('noticeBox');
@@ -748,13 +749,11 @@ function updateSelInfo(){
       if(intelPrimaryUnit>=0&&ualive[intelPrimaryUnit]){ showUnitCard(intelPrimaryUnit,-1,true); sfx('ui'); }
     });
   }
-  /* Teach the affordance once per chassis: selection immediately explains the
-     first Rhino, Constructor, aircraft, etc.; later selections stay compact and
-     the always-visible info target reopens the card on demand. */
-  if(n===1&&!intelSeenTypes[utype[first]]){
-    intelSeenTypes[utype[first]]=1;
-    showUnitCard(first,-1,false);
-  }
+  /* Selection is an order gesture, never an inspection gesture. Automatically
+     opening this card on the first tap of every chassis covered the battlefield
+     at the exact moment the player was trying to command it. The persistent
+     info target above and the deliberate long-press path in input.js remain the
+     two explicit ways to inspect a unit. */
 }
 /* Cycle every eligible selected unit to its next stance. Units that share a
    chassis land on the same mode, so a mixed selection resolves per-type

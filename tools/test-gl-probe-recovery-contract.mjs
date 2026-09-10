@@ -80,8 +80,8 @@ for(const required of [
   "REFUSED_UNBOUNDED_OUTPUT",
   "entry.name.startsWith(name+'.partial-')",
   "allowedPaths:[outDir]",
-  "sourceBefore=await collectEvidenceIdentity({root})",
-  "sourceAfter=await collectEvidenceIdentity({root})",
+  "sourceBefore=await collectEvidenceIdentity({root,packageRoot:serveRoot,testedEntry:'index.html'})",
+  "sourceAfter=await collectEvidenceIdentity({root,packageRoot:serveRoot,testedEntry:'index.html'})",
   "machineOutcome:'PENDING_FINAL_RELEASE'",
   "schema:'massfront.gl-probe-recovery/v3'",
   "await guard.release({assertStable:true,name:'Stage 8 GL recovery final release'})",
@@ -90,7 +90,7 @@ for(const required of [
   "serviceWorkers:'block'",
   "row.networkIsolation=await installOfflineNetworkIsolation(page)",
   "networkEvidence.length===4&&networkEvidence.every(row=>!row.error&&offlineSnapshotPass(row.snapshot))",
-  "main:await sha256File(join(root,'src','main.js'))",
+  "main:await sha256File(join(serveRoot,'src','main.js'))",
   "const expectedForcedContextConsole='WebGL: CONTEXT_LOST_WEBGL: loseContext: context lost'",
   "if(message.type()!=='error')return",
   "body===expectedForcedContextConsole",
@@ -102,7 +102,7 @@ for(const required of [
 
 const acquired=at('guard=await acquireVerificationFreeze(');
 const prepared=at('outputPreparation=await prepareOutput()');
-const identityBefore=at('sourceBefore=await collectEvidenceIdentity({root})');
+const identityBefore=at("sourceBefore=await collectEvidenceIdentity({root,packageRoot:serveRoot,testedEntry:'index.html'})");
 const browserLaunch=at('browser=await launchPwBrowser({headless:true})');
 assert.ok(acquired>=0&&prepared>acquired&&identityBefore>prepared&&browserLaunch>identityBefore,
   'verification freeze and source identity must precede output cleanup and browser launch');
@@ -221,7 +221,7 @@ assert.ok(finalOffline>normalFinalized,
   'all offline page boundaries must finalize after the final browser capture');
 
 const finalArtifactInspection=source.lastIndexOf('await inspectPng(row.path)');
-const sourceAfter=at('sourceAfter=await collectEvidenceIdentity({root})');
+const sourceAfter=at("sourceAfter=await collectEvidenceIdentity({root,packageRoot:serveRoot,testedEntry:'index.html'})");
 const provisional=at('await writeJsonAtomic(reportPath,report)');
 const release=at("await guard.release({assertStable:true,name:'Stage 8 GL recovery final release'})");
 const pass=at("report.machineOutcome=failures===0&&guardReleased?'PASS':'FAIL'");

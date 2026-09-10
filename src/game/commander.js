@@ -124,8 +124,14 @@ function tryCommanderWeapon(slot){
   const W=commanderWeaponDef(slot);if(!W||heroIdx<0||!ualive[heroIdx]){toast('Commander weapon unavailable');return;}
   if(commanderWeaponCool[slot]>0){toast(W.nm+' REARMING — '+Math.ceil(commanderWeaponCool[slot])+'s');return;}
   if((W.energy||0)>resE[0]){toast(W.nm+' NEEDS '+W.energy+' ENERGY');return;}
-  if(aiming===7+slot){aiming=-1;toast(W.nm.toUpperCase()+' TARGETING CANCELLED');return;}
+  if(aiming===7+slot){
+    aiming=-1;commanderWeaponButtonState();if(typeof hotSlotSync==='function')hotSlotSync(false);
+    toast(W.nm.toUpperCase()+' TARGETING CANCELLED');return;
+  }
   aiming=7+slot;
+  /* A contextual hot-slot mirrors this owner. Paint the armed state in the
+     same press turn, including while gameplay is paused by a test or overlay. */
+  commanderWeaponButtonState();if(typeof hotSlotSync==='function')hotSlotSync(false);
   toast((W.em||'•')+' '+W.nm.toUpperCase()+' — tap within '+W.range+'m');
   if(typeof radioAck==='function')radioAck('ability',1,ux[heroIdx],uy[heroIdx]);
 }
@@ -149,6 +155,7 @@ function fireCommanderWeapon(slot,wx,wy){
   }
   if(W.energy)pay(0,0,W.energy);
   commanderWeaponCool[slot]=commanderCool(W.cool);aiming=-1;
+  commanderWeaponButtonState();if(typeof hotSlotSync==='function')hotSlotSync(false);
   const mz=typeof mfUnitMuzzle==='function'?mfUnitMuzzle(heroIdx):[hx,hy];
   const pk=fireProj(W.ptype,0,mz[0],mz[1],tx,ty,W.speed,W.damage*heroDmgMult,W.aoe||0,tgt);
   if(pk>=0){
@@ -159,6 +166,7 @@ function fireCommanderWeapon(slot,wx,wy){
   const C=playerCommanderDef(),col=C&&C.active&&C.active.col||[110,215,255];
   addParticle(0,mz[0],mz[1],0,0,.22,slot?22:13,col[0],col[1],col[2]);
   sfx(W.sfx||'shot',hx,hy,slot?1.45:1.05);shake=Math.max(shake,slot?2.4:.65);
+  toast((W.em||'•')+' '+W.nm.toUpperCase()+' FIRED — REARMING '+Math.ceil(commanderWeaponCool[slot])+'s');
   if(typeof radioAck==='function')radioAck('ability',1,tx,ty);
   return true;
 }

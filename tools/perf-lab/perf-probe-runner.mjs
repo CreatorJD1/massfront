@@ -423,14 +423,14 @@ async function assertPackedJsParity(sourceTree, packedTree, packedRoot) {
   }
 }
 
-export async function collectSourceIdentity() {
+export async function collectSourceIdentity({ sourceRuntime = false } = {}) {
   const gitHead = (await gitOutput(['rev-parse', 'HEAD'])).trim();
   const status = await gitOutput(['status', '--porcelain=v1', '--untracked-files=all']);
   const dirty = status.trim().length > 0;
 
   const sourceTree = await runtimeTree(ROOT);
   const packedRoot = join(ROOT, 'www');
-  const servingPacked = existsSync(join(packedRoot, 'index.html'));
+  const servingPacked = !sourceRuntime && existsSync(join(packedRoot, 'index.html'));
   const servedTree = servingPacked ? await runtimeTree(packedRoot, 'www/') : sourceTree;
   if (servingPacked) await assertPackedJsParity(sourceTree, servedTree, packedRoot);
   const runtimeFingerprint = servedTree.fingerprint;
@@ -484,13 +484,13 @@ async function collectConcurrentStage10Snapshot() {
   return { fingerprint: sha256(JSON.stringify(files)), files };
 }
 
-export async function startStaticServer() {
+export async function startStaticServer({ sourceRuntime = false } = {}) {
   /* Packaged verification must read www/, not the repo-root dev tree. Root
      index.html matches byte-for-byte today, but www/ is what Capacitor, OTA
      shell, and port-8901 acceptance actually ship — serving root hid stale
      www/ mistakes and made screenshots look like an old build. */
   const WWW = join(ROOT, 'www');
-  const SERVE_ROOT = existsSync(join(WWW, 'index.html')) ? WWW : ROOT;
+  const SERVE_ROOT = !sourceRuntime && existsSync(join(WWW, 'index.html')) ? WWW : ROOT;
   if (SERVE_ROOT !== ROOT) console.log('[static-server] serving packaged www/');
   const server = createServer(async (req, res) => {
     try {
@@ -593,6 +593,44 @@ async function clickVisible(page, selector, label, timeout = 20000) {
   return label;
 }
 
+export async function enterGalacticStandardRoute(page) {
+  await page.waitForFunction(() => window.__MASSFRONT_SPACE__, null, { timeout: 60000 });
+  /* Integrated launches now open Galactic Command directly. #btnUgaCommand is
+     intentionally hidden because the player is already on that surface; a
+     verifier that tries to press it again falsely reports a deployment fault.
+     Prove the player-visible Campaign Hub state, then use PLAY's Standard card. */
+  await page.waitForFunction(() => {
+    const visible = element => {
+      if (!element) return false;
+      const style = getComputedStyle(element), box = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0;
+    };
+    return window.__MASSFRONT_SPACE__?.scene === 'uga'
+      && document.getElementById('moduleFrame')?.dataset.entryView === 'campaign_hub'
+      && visible(document.querySelector('.uga-campaign-hub'))
+      && visible(document.querySelector('[data-nav="classic"]'));
+  }, null, { timeout: 60000 });
+  const entry = await page.evaluate(() => {
+    const hidden = element => {
+      if (!element) return true;
+      const style = getComputedStyle(element), box = element.getBoundingClientRect();
+      return style.display === 'none' || style.visibility === 'hidden' || box.width <= 0 || box.height <= 0;
+    };
+    return {
+      entryView: document.getElementById('moduleFrame')?.dataset.entryView || '',
+      scene: window.__MASSFRONT_SPACE__?.scene || '',
+      campaignHub: !hidden(document.querySelector('.uga-campaign-hub')),
+      redundantUgaControlHidden: hidden(document.getElementById('btnUgaCommand'))
+    };
+  });
+  if (entry.entryView !== 'campaign_hub' || entry.scene !== 'uga' || !entry.campaignHub || !entry.redundantUgaControlHidden)
+    throw new Error(`Integrated Galactic entry contract failed: ${JSON.stringify(entry)}`);
+  await clickVisible(page, '[data-nav="classic"]', 'PLAY', 30000);
+  await clickVisible(page, '[data-command-mode="standard"][data-hub-route="standard"]', 'STANDARD', 30000);
+  await page.waitForURL(/galacticRoute=/, { timeout: 30000 });
+  return entry;
+}
+
 export async function enterRealBattle(page, opts = {}) {
   const fromMainMenu = opts.fromMainMenu === true;
   await page.waitForFunction(() => !document.getElementById('mfBootCover'), null, { timeout: 90000 });
@@ -608,36 +646,45 @@ export async function enterRealBattle(page, opts = {}) {
      and it is swallowed, leaving the run stranded on the previous screen.
      Let each panel settle first. */
   if (!fromMainMenu) {
-    await clickVisible(page, '#apOfflineBtn', 'PLAY OFFLINE', 30000);
-    await page.waitForTimeout(700);
-    /* The account gate now hands control to the visual launcher.  Entering
-       offline mode there is a separate, authoritative step; bypassing it left
-       #startBtn correctly hidden behind the launcher and made every older
-       gameplay probe time out. */
-    const launcherOffline = page.locator('#mfLaunchOffline');
-    if (await launcherOffline.isVisible().catch(() => false)) {
-      await launcherOffline.click();
-    } else {
+    /* Fresh installs traverse updater -> intro -> account -> launcher, while a
+       remembered offline identity can omit either account or launcher. Walk
+       only explicit forward controls until the same main menu is reached. */
+    for (let gate = 0; gate < 6 && !await page.locator('#startBtn').isVisible().catch(() => false); gate++) {
       await page.waitForFunction(() => {
-        const button=document.getElementById('mfLaunchPlay');
-        return button&&getComputedStyle(button).display!=='none'&&!button.disabled&&/OFFLINE/i.test(button.textContent||'');
+        const visible=id=>{const node=document.getElementById(id),style=node&&getComputedStyle(node),box=node&&node.getBoundingClientRect();
+          return !!(node&&style.display!=='none'&&style.visibility!=='hidden'&&box.width>0&&box.height>0);};
+        const state=typeof mfLauncherSnapshot==='function'?mfLauncherSnapshot():null;
+        const primary=document.getElementById('mfLaunchPlay');
+        return location.pathname.includes('/modules/space_exploration/')&&!!window.__MASSFRONT_SPACE__||
+          visible('startBtn')||visible('mfIntroStart')||visible('apOfflineBtn')||visible('mfLaunchOffline')||
+          (visible('mfLaunchPlay')&&!primary.disabled&&state&&/^play-/.test(state.primary));
       }, null, { timeout: 30000 });
-      await page.locator('#mfLaunchPlay').click();
+      if (page.url().includes('/modules/space_exploration/')) break;
+      if (await page.locator('#startBtn').isVisible().catch(() => false)) break;
+      if (await page.locator('#mfIntroStart').isVisible().catch(() => false)) await page.locator('#mfIntroStart').click({timeout:3000}).catch(()=>{});
+      else if (await page.locator('#apOfflineBtn').isVisible().catch(() => false)) await page.locator('#apOfflineBtn').click();
+      else if (await page.locator('#mfLaunchOffline').isVisible().catch(() => false)) await page.locator('#mfLaunchOffline').click();
+      else await page.locator('#mfLaunchPlay').click();
+      await page.waitForTimeout(700);
     }
+  }
+  const viaGalactic=page.url().includes('/modules/space_exploration/');
+  if(viaGalactic){
+    await enterGalacticStandardRoute(page);
+  }else{
+    /* Fresh careers can offer onboarding after either the launcher path or a
+       probe's pre-seeded main-menu path. Follow the real experienced-player
+       choice instead of letting the modal intercept War Room. */
+    const onboardingSkip = page.locator('#mfOnboardingSkip');
+    if (await onboardingSkip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)) {
+      await onboardingSkip.click();
+      await page.waitForTimeout(350);
+    }
+    await clickVisible(page, '#startBtn', 'War Room', 30000);
+    await page.waitForTimeout(700);
+    await clickVisible(page, '.warCard[data-mode="standard"]', 'Standard match card', 30000);
     await page.waitForTimeout(700);
   }
-  /* Fresh careers can offer onboarding after either the launcher path or a
-     probe's pre-seeded main-menu path. Follow the real experienced-player
-     choice in both cases instead of letting the modal intercept War Room. */
-  const onboardingSkip = page.locator('#mfOnboardingSkip');
-  if (await onboardingSkip.waitFor({ state: 'visible', timeout: 3000 }).then(() => true).catch(() => false)) {
-    await onboardingSkip.click();
-    await page.waitForTimeout(350);
-  }
-  await clickVisible(page, '#startBtn', 'War Room', 30000);
-  await page.waitForTimeout(700);
-  await clickVisible(page, '.warCard[data-mode="standard"]', 'Standard match card', 30000);
-  await page.waitForTimeout(700);
 
   /* The war table is GALAXY -> SYSTEM -> PLANET -> REGION -> DEPLOY and each
      stage exposes its own commit control (#setupStart on some, a world/region
@@ -663,18 +710,48 @@ export async function enterRealBattle(page, opts = {}) {
       const r = el.getBoundingClientRect(), s = getComputedStyle(el);
       return r.width > 0 && r.height > 0 && s.display !== 'none' && s.visibility !== 'hidden';
     };
-    return [...document.querySelectorAll('[id^="mfStage"]')].filter(vis).map(el => el.id).join(',')
-      || (vis(document.getElementById('cmdbar')) ? 'in-world' : 'unknown');
+    const panels=[...document.querySelectorAll('[id^="mfStage"]')].filter(vis).map(el=>el.id).join(',');
+    if(panels)return panels;
+    /* During the secured-route first paint, setupScr is already visible a
+       frame before its selected stage panel gains geometry. The persistent
+       HUD DOM also has dimensions under menu CSS, so treating that instant as
+       in-world exits the setup loop before START BATTLE is ever pressed. */
+    if(vis(document.getElementById('setupScr')))
+      return 'setup:'+(typeof mfGalaxyStage!=='undefined'?mfGalaxyStage:'pending');
+    return vis(document.getElementById('cmdbar'))&&!document.body.classList.contains('menuMode') ? 'in-world' : 'unknown';
   }).catch(() => 'unknown');
 
   let setupClicks = 0;
-  for (let step = 0; step < 20; step++) {
+  /* Each of the five first-career orientation acknowledgements consumes its
+     own loop pass. Slow mobile paints can reveal the final card only after the
+     transition pass, so a 20-pass ceiling could expire with START BATTLE still
+     usable on screen. This remains bounded, but covers that complete route. */
+  for (let step = 0; step < 48; step++) {
     // The world is up once the carrier's DEPLOY BASE HERE control appears.
     if (await page.locator('#deployBtn').first().isVisible().catch(() => false)) break;
+    /* A fresh career receives one War Table orientation card per stage. Its
+       acknowledgement is part of the real player path and can sit above the
+       same stage whose forward control we are about to press. */
+    const primer=page.locator('.wtpDone').first();
+    if(await primer.isVisible().catch(()=>false)){
+      const beforePrimer=await page.evaluate(()=>typeof __wtpDebug==='function'?__wtpDebug():null);
+      await primer.tap({timeout:20000}).catch(()=>primer.click({timeout:20000}));
+      await page.waitForTimeout(700);
+      if(await primer.isVisible().catch(()=>false)){
+        const afterPrimer=await page.evaluate(()=>typeof __wtpDebug==='function'?__wtpDebug():null);
+        throw new Error('War-table orientation acknowledgement did not commit: '+JSON.stringify({beforePrimer,afterPrimer}));
+      }
+      continue;
+    }
     const before = await stageSignature();
-    // War table done: the match world is up. DEPLOY BASE HERE appears a moment
-    // later, so hand off to the wait below instead of hunting stage controls.
-    if (before === 'in-world') break;
+    /* The secured launch briefly hides setup before the next War Table paint.
+       A visible command dock in that handoff frame is not proof that the
+       carrier world owns input yet. Keep observing until DEPLOY BASE HERE is
+       actually visible; if setup returns, the next pass services its primer. */
+    if (before === 'in-world') { await page.waitForTimeout(850); continue; }
+    /* A route handoff can briefly have neither setup geometry nor an input-owning
+       world surface. It is a paint boundary, not a stalled player state. */
+    if (before === 'unknown') { await page.waitForTimeout(450); continue; }
     let advanced = false;
     for (const selector of ADVANCE) {
       const locator = page.locator(selector).first();
@@ -700,6 +777,9 @@ export async function enterRealBattle(page, opts = {}) {
   /* The match world loads with the carrier still airborne — the HUD says
      "tap ground to fly there, then DEPLOY". matchLive only becomes true once
      the base is actually placed, so the run must finish that placement. */
+  const deployReady=await page.locator('#deployBtn').first().isVisible().catch(()=>false);
+  const exitState=await stageSignature();
+  if(!deployReady&&exitState!=='in-world')throw new Error('War-table setup transition budget exhausted at '+exitState);
   await page.locator('#deployBtn').first().waitFor({ state: 'visible', timeout: 90000 });
   const canvasBox = await page.locator('#gl').boundingBox().catch(() => null);
   if (canvasBox) {

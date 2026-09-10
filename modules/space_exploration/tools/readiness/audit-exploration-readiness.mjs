@@ -8,6 +8,8 @@ import {
   EXPECTED_DISTRICTS,
   KNOWN_TOO_LARGE_RUNTIME_BYTES,
   STATUS,
+  analyzeProceduralCommandSources,
+  analyzeAuthoredCommand,
   analyzeMenuSources,
   buildReachability,
   check,
@@ -16,7 +18,6 @@ import {
   fileRecords,
   fingerprintRecords,
   formatBytes,
-  glbDistrictCoverage,
   hashFile,
   inventorySummary,
   markdownReport,
@@ -37,7 +38,8 @@ const repoRoot = resolve(moduleRoot, '..', '..');
 const readinessRoot = join(moduleRoot, 'tmp', 'readiness');
 const mainInputs = [
   'index.html', 'src/main.js', 'src/game/meta.js', 'boot.js', 'assets/data/manifest.json',
-  'tools/pack-www.mjs', 'tools/bundle-space-module.mjs'
+  'tools/pack-www.mjs', 'tools/bundle-space-module.mjs', 'tools/uga-lossless-textures.py',
+  'tools/uga-section-delivery-build.mjs', 'tools/uga-section-delivery-verify.mjs'
 ];
 const scopedSourcePrefixes = ['modules/space_exploration/'];
 const scopedSourceFiles = new Set(mainInputs);
@@ -428,6 +430,8 @@ async function buildAudit() {
     'modules/space_exploration/src/domain/account_profile.js',
     'modules/space_exploration/src/domain/catalog.js',
     'modules/space_exploration/src/domain/construction_catalog.js',
+    'modules/space_exploration/src/core/uga_command_scene.js',
+    'modules/space_exploration/src/ship/uga_blender_assets.js',
     'modules/space_exploration/src/ui/uga_command.js',
     'modules/space_exploration/tools/tests/exploration-host-v1.test.mjs',
     'modules/space_exploration/tools/tests/space-experience-host-seam.test.mjs',
@@ -516,14 +520,54 @@ async function buildAudit() {
   const catalogIds = catalogModule?.SHIP_DISTRICT_IDS || [];
   const catalogObjectIds = Object.keys(catalogModule?.DISTRICT_CATALOG || {});
   const uiIds = listFromConstArray(textFiles['modules/space_exploration/src/ui/uga_command.js'], 'DISTRICT_ORDER');
-  let cutaway = null;
+  const commandSceneSource = textFiles['modules/space_exploration/src/core/uga_command_scene.js'];
+  const commandLoaderSource = textFiles['modules/space_exploration/src/ship/uga_blender_assets.js'];
+  const proceduralCommand = analyzeProceduralCommandSources({ loader: commandLoaderSource, commandScene: commandSceneSource });
+  let authored = null;
+  let authoredError = null;
+  let authoredUnchanged = false;
+  let authoredProof = null;
+  try { authored = await inspectGlb(join(moduleRoot, 'assets', 'runtime', 'models', 'uga-authored-sections.glb')); }
+  catch (error) { authoredError = error?.message || String(error); }
+  if (authored) {
+    try {
+      const sourcePath = join(moduleRoot, 'assets', 'models', 'uga-command-cutaway.glb');
+      const runtimePath = join(moduleRoot, 'assets', 'runtime', 'models', 'uga-authored-sections.glb');
+      // Recompute semantic, non-image-byte and decoded-pixel parity against the
+      // actual runtime. A stale derivation report cannot authorize changed art.
+      const result = await execFile(process.env.MASSFRONT_PYTHON || 'python', [
+        join(repoRoot, 'tools', 'uga-lossless-textures.py'), '--verify-only', runtimePath
+      ], { cwd: repoRoot, encoding: 'utf8', windowsHide: true, timeout: 120000, maxBuffer: 8 * 1024 * 1024 });
+      authoredProof = JSON.parse(result.stdout);
+      authoredUnchanged = authoredProof.pass_ === true
+        && authoredProof.geometryUnchanged === true
+        && authoredProof.sceneSemanticsUnchanged === true
+        && authoredProof.pixelsIdentical === true
+        && authoredProof.sourceSha256 === await hashFile(sourcePath)
+        && authoredProof.candidateSha256 === await hashFile(runtimePath);
+      if (/uga-sections\/scene\.gltf/.test(commandLoaderSource)) {
+        // Chain the fresh source-pixel proof through the exact external graph,
+        // rather than certifying the preserved GLB while shipping other bytes.
+        const shared = await execFile(process.execPath, [join(repoRoot, 'tools', 'uga-section-delivery-verify.mjs')],
+          { cwd: repoRoot, encoding: 'utf8', windowsHide: true, timeout: 120000, maxBuffer: 8 * 1024 * 1024 });
+        const sharedProof = JSON.parse(shared.stdout);
+        authoredUnchanged = authoredUnchanged && sharedProof.status === 'PASS'
+          && sharedProof.sceneSemanticsExact === true && sharedProof.exactImageBytes === 44
+          && sharedProof.sourceSha256 === authoredProof.candidateSha256;
+        authoredProof.sharedResources = sharedProof;
+        const json = JSON.parse(await readFile(join(moduleRoot, 'assets/runtime/models/uga-sections/scene.gltf'), 'utf8'));
+        authored = { ...authored, json, nodeNames: (json.nodes || []).map(node => node.name).filter(Boolean),
+          materialNames: (json.materials || []).map(material => material.name).filter(Boolean) };
+      }
+    }
+    catch (error) { authoredUnchanged = false; authoredError = error?.message || String(error); }
+  }
+  const authoredCommand = analyzeAuthoredCommand({ loader: commandLoaderSource, commandScene: commandSceneSource, glb: authored?.json });
   let exterior = null;
-  let cutawayError = null;
+  let exteriorError = null;
   try {
-    cutaway = await inspectGlb(join(moduleRoot, 'assets', 'runtime', 'models', 'uga-command-cutaway.glb'));
     exterior = await inspectGlb(join(moduleRoot, 'assets', 'runtime', 'models', 'nexus-vii-civilization-ship.glb'));
-  } catch (error) { cutawayError = error?.message || String(error); }
-  const glbCoverage = cutaway ? glbDistrictCoverage(cutaway.json) : { missingDistrict: [...EXPECTED_DISTRICTS], missingFocus: [...EXPECTED_DISTRICTS], district: [], focus: [] };
+  } catch (error) { exteriorError = error?.message || String(error); }
   const facilities = Object.values(constructionModule?.CONSTRUCTION_FACILITY_CATALOG || {});
   const missingFacilityTiers = [];
   for (const districtId of EXPECTED_DISTRICTS.filter(id => id !== 'command')) {
@@ -531,22 +575,21 @@ async function buildAudit() {
       if (!facilities.some(entry => entry.districtId === districtId && entry.tier === tier)) missingFacilityTiers.push(`${districtId}:tier${tier}`);
     }
   }
-  const topologyNames = cutaway?.nodeNames || [];
   const topologyMarkers = {
-    transitOrCorridor: topologyNames.some(name => /transit|corridor|concourse/i.test(name)),
-    liftOrVertical: topologyNames.some(name => /lift|elevator|vertical/i.test(name)),
-    serviceTrunk: topologyNames.some(name => /service|trench|trunk/i.test(name)),
-    deckOrRoad: topologyNames.some(name => /deck|road|boulevard/i.test(name)),
-    glazedTunnel: topologyNames.some(name => /tunnel.*glaz|glaz.*tunnel|pressure.*glass/i.test(name))
+    integratedHull: /UGA_ContinuousArmoredHullBacking/.test(commandSceneSource),
+    sharedDecks: /UGA_Deck_\$\{deck\}_SharedPressurePlate/.test(commandSceneSource),
+    radialCorridors: /UGA_\$\{id\}_RadialCorridor/.test(commandSceneSource),
+    liftAndServiceSpine: /UGA_CentralLiftAndServiceSpine/.test(commandSceneSource),
+    districtTransitRoutes: /\$\{id\}_TransitRoute/.test(commandSceneSource)
   };
-  const materialNames = [...(cutaway?.materialNames || []), ...(exterior?.materialNames || [])];
+  const materialNames = exterior?.materialNames || [];
   const materialRoles = {
-    floor: materialNames.some(name => /floor|deck/i.test(name)),
-    wall: materialNames.some(name => /wall|cladding|armor/i.test(name)),
-    transit: materialNames.some(name => /transit/i.test(name)),
-    glazing: materialNames.some(name => /glass|glazing/i.test(name)),
-    machinery: materialNames.some(name => /machinery|systems/i.test(name)),
-    facility: materialNames.some(name => /surface/i.test(name)),
+    hull: /const\s+hullMaterial\s*=\s*new THREE\.MeshStandardMaterial/.test(commandSceneSource),
+    armor: /const\s+armorMaterial\s*=\s*new THREE\.MeshStandardMaterial/.test(commandSceneSource),
+    deck: /const\s+deckMaterials\s*=\s*\{/.test(commandSceneSource),
+    transit: /const\s+corridorMaterial\s*=|const\s+transitMat\s*=/.test(commandSceneSource),
+    glazing: /const\s+windowMat\s*=/.test(commandSceneSource),
+    facility: /FacilityBlock/.test(commandSceneSource) && /makeInteriorMat/.test(commandSceneSource),
     exteriorHull: materialNames.some(name => /ship hull/i.test(name))
   };
   const allRoomEvidence = await verifyStage11AllRoomEvidence();
@@ -557,22 +600,21 @@ async function buildAudit() {
     check('districts:ui-complete', setEquals(uiIds, EXPECTED_DISTRICTS) ? STATUS.PASS : STATUS.FAIL,
       setEquals(uiIds, EXPECTED_DISTRICTS) ? 'The command UI exposes all 11 required UGA functions.' : 'The command UI district order is incomplete.',
       { expected: EXPECTED_DISTRICTS, actual: uiIds, missing: EXPECTED_DISTRICTS.filter(id => !uiIds.includes(id)) }),
-    check('districts:glb-roots-and-focus', !cutawayError && !glbCoverage.missingDistrict.length && !glbCoverage.missingFocus.length ? STATUS.PASS : STATUS.FAIL,
-      !cutawayError && !glbCoverage.missingDistrict.length && !glbCoverage.missingFocus.length ? 'The authored cutaway contains a DISTRICT and FOCUS node for all 11 functions.' : 'The authored cutaway is unreadable or missing district/focus nodes.',
-      { error: cutawayError, missing: [...glbCoverage.missingDistrict, ...glbCoverage.missingFocus] }),
+    ...authoredCommand.checks,
+    check('districts:authored-source-preserved', authoredUnchanged ? STATUS.PASS : STATUS.FAIL,
+      authoredUnchanged ? 'Fresh decoding proves exact image pixels, authored scene semantics and non-image buffer bytes; lossless texture encoding is allowed, geometry simplification is not.' : 'Runtime authored geometry, semantics or decoded texture pixels failed fresh source comparison.', { authoredError, authoredProof }),
+    check('districts:authored-longitudinal-topology', ['NEXUS_VII_LONGITUDINAL_CUTAWAY', 'NexusVII_Keel', 'NexusVII_MidDeck', 'NexusVII_CeilingSpine'].every(name => authored?.nodeNames.includes(name)) ? STATUS.PASS : STATUS.FAIL,
+      'Authored longitudinal hull, keel, middle deck and ceiling spine must remain present; procedural radial markers are not a substitute.'),
     check('districts:construction-tier-coverage', !missingFacilityTiers.length ? STATUS.PASS : STATUS.FAIL,
       !missingFacilityTiers.length ? 'Every non-command district has Tier-1, Tier-2, and Tier-3 facility definitions.' : 'One or more districts lack required construction tiers.',
       { missing: missingFacilityTiers }),
-    check('districts:connected-topology-markers', Object.values(topologyMarkers).every(Boolean) ? STATUS.PASS : STATUS.FAIL,
-      Object.values(topologyMarkers).every(Boolean) ? 'The authored GLB contains transit, lift, service, deck/road, and glazed-tunnel topology markers.' : 'The authored GLB lacks one or more required connected-topology markers.',
-      { topologyMarkers }),
-    check('districts:separate-material-roles', Object.values(materialRoles).every(Boolean) ? STATUS.PASS : STATUS.FAIL,
-      Object.values(materialRoles).every(Boolean) ? 'Interior/exterior GLBs expose distinct floor, wall, transit, glazing, machinery, facility, and hull material roles.' : 'Required interior/exterior material roles are not all distinguishable.',
-      { materialRoles, materialNames }),
+    check('districts:authored-materials-present', !authoredError && authored?.materialNames.length > 1 ? STATUS.PASS : STATUS.FAIL,
+      !authoredError && authored?.materialNames.length > 1 ? 'The restored sections retain multiple authored material identities; visual readability still requires current browser evidence.' : 'The restored sections are unavailable or lack authored material identities.',
+      { authoredError, materialNames: authored?.materialNames || [] }),
     allRoomEvidence
   ];
   sections.push(section('room-district-coverage', 'NEXUS-VII room and district coverage', roomChecks, {
-    diagnostics: { catalogIds, uiIds, glbCoverage, missingFacilityTiers, topologyMarkers, materialRoles }
+    diagnostics: { catalogIds, uiIds, authoredCommand: authoredCommand.diagnostics, proceduralFallback: proceduralCommand.diagnostics, missingFacilityTiers, topologyMarkers, materialRoles }
   }));
 
   const mobileEvidence = await verifyMobileEvidence(start, legacyDirty);
@@ -654,7 +696,7 @@ async function buildAudit() {
   const optimizationVerification = optimizationEvidence.ok
     ? await verifyOptimizationEvidence(optimizationEvidence.value, start, moduleByPath)
     : { pass: false, reasons: ['No optimization evidence report exists.'], imageCount: 0, glbCount: 0, glbsPassDraco: false };
-  const compressedGlbs = [cutaway, exterior].filter(Boolean).map(entry => ({
+  const compressedGlbs = [exterior].filter(Boolean).map(entry => ({
     path: entry.path,
     extensions: entry.extensionsUsed,
     meshCompression: entry.extensionsUsed.some(name => /meshopt|draco/i.test(name))

@@ -1,6 +1,7 @@
 import {createHash} from 'node:crypto';
 import {buildMirrorManifest,assertManifestExact,verifyEntryRanges} from './mirror-release-contract.mjs';
 import {releaseDeliveryInventory,validateReleaseIdentity} from './release-delivery-contract.mjs';
+import {descriptorFromVerifiedOta,verifyRemoteExplorationDelivery} from './exploration-delivery-contract.mjs';
 
 export const MIRROR_HOST='https://massfront-update.jasondixon1994.workers.dev';
 const ORIGIN='https://creatorjd-massfront-playtest.static.hf.space';
@@ -46,6 +47,7 @@ async function request(fetchImpl,url,options={}){
 // checked before endpoint ranges, so a healthy delta cannot mask bad recovery.
 export async function verifyActivationPayloads(fetchImpl,candidate,{onProgress=()=>{}}={}){
   const {entries}=assertMirroredRelease(candidate);
+  const verifiedOta=new Map();
   let cursor=0,done=0;
   await Promise.all(Array.from({length:Math.min(4,entries.length)},async()=>{
     while(cursor<entries.length){
@@ -61,6 +63,7 @@ export async function verifyActivationPayloads(fetchImpl,candidate,{onProgress=(
         if(bytes.length!==entry.size||sha(bytes)!==entry.sha256.toLowerCase())fail(`Full-byte identity mismatch: ${entry.path}`);
         for(const chunk of entry.chunks||[])
           if(sha(bytes.subarray(chunk.offset,chunk.offset+chunk.size))!==chunk.sha256.toLowerCase())fail(`Chunk identity mismatch: ${entry.path}`);
+        if(entry.path==='ota/00-runtime.js'||entry.path==='src/assetpack.js')verifiedOta.set(entry.path,bytes);
       }finally{await cancel(response);}
       if(entry.ranged){
         const preflight=await request(fetchImpl,entry.url,{method:'OPTIONS',headers:{Origin:ORIGIN,
@@ -84,7 +87,14 @@ export async function verifyActivationPayloads(fetchImpl,candidate,{onProgress=(
       onProgress(++done,entries.length,entry.path);
     }
   }));
-  return {files:entries.length,bytes:entries.reduce((sum,entry)=>sum+entry.size,0)};
+  // This descriptor is decoded only from the exact immutable OTA artifacts
+  // just verified above, never from today's checkout or an unbound pack index.
+  // Keeping content out of files/full preserves legacy executable semantics.
+  const descriptor=descriptorFromVerifiedOta(verifiedOta,candidate.version),
+    result={files:entries.length,bytes:entries.reduce((sum,entry)=>sum+entry.size,0)};
+  if(descriptor)result.exploration=await verifyRemoteExplorationDelivery(fetchImpl,descriptor,
+    {onProgress:(done,total,path)=>onProgress(done,total,'content/'+path)});
+  return result;
 }
 
 // A complete verification must finish before publish can run. Rereading the

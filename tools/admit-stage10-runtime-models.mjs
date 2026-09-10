@@ -8,6 +8,13 @@ const moduleRoot = join(root, 'modules', 'space_exploration');
 const catalogPath = join(root, 'tmp', 'stage10-model-review', 'catalog.json');
 const pbrSummaryPath = join(root, 'tmp', 'stage10-model-repair', 'pbr-reports', 'summary.json');
 const unlockPath = join(moduleRoot, 'assets', 'source', 'blender', 'world-kits', 'USER_ACCEPTED_STAGE10_REPAIR_UNLOCKS.json');
+const exclusionLedgerPaths = [
+  join(moduleRoot, 'assets', 'source', 'EXCLUDED_OVERSIZE_V1.json'),
+  join(moduleRoot, 'assets', 'source', 'blender', 'world-kits', 'DISCARDED_STAGE10_PACK_FAILURES.json'),
+  join(moduleRoot, 'assets', 'source', 'blender', 'world-kits', 'DISCARDED_VISUAL_QUALITY_2026-09-05.json'),
+  join(moduleRoot, 'assets', 'source', 'spline', 'world-prefabs', 'DISCARDED_STAGE10_SPLINE_EXCLUSIONS.json'),
+  join(moduleRoot, 'assets', 'source', 'spline', 'world-prefabs', 'DISCARDED_SPLINE_PROPS.json')
+];
 const runtimeRoot = join(moduleRoot, 'assets', 'runtime', 'world-models');
 const runtimeCatalogPath = join(runtimeRoot, 'world-model-catalog-v1.json');
 
@@ -23,6 +30,14 @@ const accepted = [
   ...review.worldKits.flatMap(family => family.modules),
   ...review.splineExports
 ];
+const rejected = new Set();
+for (const ledgerPath of exclusionLedgerPaths) {
+  const ledger = await parse(ledgerPath);
+  if (ledger.runtimeAllowed === true) throw new Error(`Exclusion ledger permits runtime use: ${ledgerPath}`);
+  for (const id of ledger.ids || []) rejected.add(String(id).toLowerCase());
+  for (const entry of ledger.entries || []) if (entry?.catalogKey) rejected.add(String(entry.catalogKey).toLowerCase());
+}
+const admitted = accepted.filter(entry => !rejected.has(String(entry.key).toLowerCase()));
 const pbrByKey = new Map(pbr.items.map(item => [item.key, item]));
 const unlocked = new Set(unlocks.ids);
 
@@ -32,9 +47,14 @@ if (accepted.length !== 327 || review.counts?.worldKitModules !== 320 || review.
 if (review.repairLockedIds?.length || review.counts?.repairLocked) {
   throw new Error('Stage 10 catalogue still contains repair locks.');
 }
+if (admitted.length !== 285
+  || admitted.filter(entry => (entry.family || 'spline') !== 'spline').length !== 284
+  || admitted.filter(entry => (entry.family || 'spline') === 'spline').length !== 1) {
+  throw new Error('Runtime rejection ledgers do not resolve to the required 284 world-kit + 1 Spline delivery set.');
+}
 
 const records = [];
-for (const entry of accepted) {
+for (const entry of admitted) {
   const pbrItem = pbrByKey.get(entry.key);
   let selectedPath;
   let presentation;

@@ -3,9 +3,11 @@
 This file is the stable entry point for continuing MASSFRONT. It intentionally
 does not duplicate version numbers, stage completion claims, or release state.
 
-Latest cross-agent transfer: [Claude handoff after the published SYSTEM release](CLAUDE_HANDOFF_2026-09-04_V1.33.74.md).
-It identifies final receipts, remaining work, and stale statements in older
-status documents; read it before treating those statements as current authority.
+Latest continuation transfer: [Claude handoff for the integrated UGA overhaul](CLAUDE_HANDOFF.md).
+It records the current dirty checkout, corrected product contract, source and
+evidence state, release boundary, and exact next actions. The earlier
+[published SYSTEM handoff](CLAUDE_HANDOFF_2026-09-04_V1.33.74.md) is historical
+release context only.
 
 Companion art task: [ChatGPT GUI art kit brief](CHATGPT_GUI_ART_TASK_2026-09-04.md).
 It specifies transparent modular frames, menus/submenus, asset states, and the
@@ -17,11 +19,13 @@ Read in this order:
    verification rules.
 2. [`MASTER_PLAN.md`](MASTER_PLAN.md) — the authoritative product plan. This is
    a byte-identical repository copy of the owner-approved plan.
-3. [`MASTER_PLAN_STATUS.md`](MASTER_PLAN_STATUS.md) — current status and honest
+3. [`UGA_PLAYER_FLOW.md`](UGA_PLAYER_FLOW.md) — current integrated UGA product
+   model, canonical session, mobile presentation rules, and release gates.
+4. [`MASTER_PLAN_STATUS.md`](MASTER_PLAN_STATUS.md) — current status and honest
    blockers for all 18 delivery stages.
-4. [`README.md`](README.md) — documentation index, archive rules, and current
+5. [`README.md`](README.md) — documentation index, archive rules, and current
    stage records.
-5. [`FIVE_CHANNEL_UPDATE.md`](FIVE_CHANNEL_UPDATE.md) — mandatory release
+6. [`FIVE_CHANNEL_UPDATE.md`](FIVE_CHANNEL_UPDATE.md) — mandatory release
    synchronization procedure.
 
 The canonical local checkout is `C:\Users\Jason\Documents\Codex\MASSFRONT-main-source`.

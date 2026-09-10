@@ -101,7 +101,13 @@ mfUiEventRoot.addEventListener('pointerdown',ev=>{
      another control. That made a fast FEED-close → BUILD tap appear dead even
      though neither action could damage state. Risky actions still require a
      clean contact, and destructive confirmation can never be hardware bounce. */
-  if(mfUiLastTarget&&now-mfUiLastAt<180&&risk!=='benign'){
+  /* A benign navigation tap is allowed to reveal a risky control and be
+     followed immediately by a deliberate press. In particular, ABILITIES then
+     a hot-slot is one fluent thumb action; treating the tab's completed tap as
+     hardware bounce silently discarded the power and let the next map tap
+     become MOVE. Preserve bounce rejection only when the previous control was
+     itself disruptive/destructive. */
+  if(mfUiLastTarget&&now-mfUiLastAt<180&&risk!=='benign'&&mfUiRisk(mfUiLastTarget)!=='benign'){
     mfUiBlockedPointers.add(pid);mfUiSafetyAudit.bounceBlocks++;ev.preventDefault();ev.stopImmediatePropagation();return;
   }
   /* Production/build cards own a release/drag contract in hud.js (build cards

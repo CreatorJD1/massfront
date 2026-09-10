@@ -591,15 +591,15 @@ if($g -cne $originalGradle){
 
 Run 'Verify updater range retry contract' { node tools/test-updater-range-retry.mjs }
 Run 'Bundle syntax gate' { node tools/bundle.mjs }
-# The base runtime must stay independently updateable. Galactic Exploration is
-# a 541 MiB optional content pack with its own immutable manifest/version; it
-# must never be folded into www/, the APK, or a mutable global pack as a side
-# effect of cutting a SYSTEM/full release.
-$env:MASSFRONT_INCLUDE_EXPLORATION='0'
+# A publishable player is the complete player. Diagnostic slim mode is useful
+# for bounded local probes, but must never leak into a browser/PWA or Android
+# release through an inherited shell variable.
+Need ($env:MASSFRONT_DIAGNOSTIC_SLIM -ne '1') 'MASSFRONT_DIAGNOSTIC_SLIM=1 is diagnostic-only and cannot publish a player release.'
+Remove-Item Env:MASSFRONT_INCLUDE_EXPLORATION -ErrorAction SilentlyContinue
 Run 'Stage web build' { node tools/pack-www.mjs }
-Need (-not (Test-Path -LiteralPath (Join-Path $Root 'www\modules\space_exploration\index.html'))) 'Base www unexpectedly contains the optional Galactic pack; publish it through the typed pack pipeline instead.'
+Need (Test-Path -LiteralPath (Join-Path $Root 'www\modules\space_exploration\index.html')) 'Base www is missing the signed Galactic Exploration runtime.'
 if($PatchFrom){
-  Write-Host "Delta: optional content remains independently versioned; Android wrapper sync is skipped." -ForegroundColor Yellow
+  Write-Host "Delta: complete www is staged, but Android wrapper sync is skipped; installed native shells remain unchanged." -ForegroundColor Yellow
 } else {
   Run-CapacitorSyncFailClosed 'Android'
 }
@@ -710,11 +710,13 @@ if($PatchFrom){
 }
 Need ($publishFiles.Count -gt 0) "Refusing to publish an empty file list"
 
-$optionalPacks=@(); if($previousManifest.optionalPacks){ $optionalPacks=@($previousManifest.optionalPacks) }
-$hasExploration=$false
-foreach($p in $optionalPacks){ if([string]$p.id -eq 'exploration'){ $hasExploration=$true } }
-if(-not $hasExploration){
-  $optionalPacks += [pscustomobject]@{ id='exploration'; category='galactic'; optional=$true }
+$basePackIds=@('voice','music','exploration','galactic-exploration')
+$optionalPacks=@()
+if($previousManifest.optionalPacks){
+  # These IDs were optional in earlier slim packages. Carrying that stale
+  # advertisement into a complete player would make the launcher offer a
+  # duplicate download for bytes now guaranteed by www/APK packaging.
+  $optionalPacks=@($previousManifest.optionalPacks | Where-Object { $basePackIds -notcontains [string]$_.id })
 }
 
 $manifest=[ordered]@{
@@ -797,8 +799,8 @@ $keep=@(
   # 5.68 GiB and broke the HF LFS upload; evidence stays in the checkout, not
   # the collaborator handoff archive (same class as tmp/ and .tmp/).
   # These are development/source handoff material, not runtime payload. The
-  # optional Galactic module stays out of www/ and OTA, but must survive a
-  # full-source release archive together with its authoring references.
+  # signed Galactic runtime rides in www/APK; a full-source archive must also
+  # preserve its larger authoring tree and provenance references.
   'modules','source-media'
 )
 foreach($name in $keep){

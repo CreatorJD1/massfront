@@ -24,6 +24,7 @@ import {
 
 const FIXED_ISSUED_AT = 1_000_000;
 const FIXED_TTL_MS = 60_000;
+const PALE_BLOOM_MAP_ID = 'karak_meridian_quarantine_standard';
 
 function fixture({ now = FIXED_ISSUED_AT, nonce = '0123456789abcdef0123456789abcdef', accountId = 'local_expedition' } = {}) {
   const storage = createMemoryStorage();
@@ -44,7 +45,7 @@ function fixture({ now = FIXED_ISSUED_AT, nonce = '0123456789abcdef0123456789abc
     systemId: state.route.systemId,
     targetId: 'hangar'
   });
-  const launch = beginGroundOperation(state, { missionId: 'uga_pale_bloom' });
+  const launch = beginGroundOperation(state, { missionId: 'uga_pale_bloom', mapId: PALE_BLOOM_MAP_ID });
   const result = simulateGroundResult(launch.operation);
   return {
     database,

@@ -2,9 +2,8 @@ import { loadUgaCommandCutaway } from '../ship/uga_blender_assets.js';
 import { createUgaWindowEmissiveBloom } from './window_emissive_bloom.js?v=20260823-transit1';
 import { fitUgaManagementProfile, UGA_MANAGEMENT_PROFILE_CAMERA } from './uga_management_profile_camera.js?v=20260829-profile1';
 
-// The management overview is a technical cutaway, so it stays square to the
-// open pressure-bay side. District and deployment close-ups retain their own
-// purpose-built framing; only the full-ship management pose is axis-aligned.
+// Management is a longitudinal ship section: X is length, Z is deck height.
+// Keep the original modeled rooms open toward -Y, never a top-down deck map.
 const FALLBACK_OVERVIEW_BOUNDS = Object.freeze({
   min: Object.freeze({ x: -30, y: -4.5, z: -1 }),
   max: Object.freeze({ x: 30, y: 4.5, z: 11 })
@@ -183,14 +182,27 @@ export class UgaCommandScene {
           obj.userData.pathSpeed = Number(obj.userData.path_speed ?? (0.055 + (hash % 7) * 0.006));
         }
       });
-      this._buildRadialDeckTopology(root);
       this.districtDecorations = new Map();
       this.droneSwarm = null;
+      this._buildRadialDeckTopology(root);
       this._enhanceCutawayVisuals(root);
+      if (this.deckTopologyRoot?.name === 'NEXUS_VII_LONGITUDINAL_CUTAWAY') {
+        this.scene.children.filter(object => object.isLight).forEach(light => { light.intensity *= 0.55; });
+        this.authoredCarrierContext = [];
+        this.deckTopologyRoot.traverse(object => {
+          if (!object.isMesh) return;
+          for (let parent = object; parent; parent = parent.parent) {
+            if (parent.name?.startsWith('DISTRICT_')) return;
+          }
+          this.authoredCarrierContext.push({object, visible: object.visible});
+        });
+      }
+      if (this.deckTopologyRoot?.name === 'UGA_RUNTIME_INTEGRATED_CUTAWAY') {
+        // The retired near-black authored hull needed an exceptionally strong
+        // light rig. Procedural room materials use ordinary albedo values.
+        this.scene.children.filter(object => object.isLight).forEach(light => { light.intensity *= 0.32; });
+      }
       this.windowBloom.refresh();
-      // The longitudinal GLB owns room architecture, city density, transit
-      // pods and function landmarks. Do not stack the retired procedural room
-      // boxes or radial drone swarm over the authored dedicated layer.
       this.loaded = true;
       if (this.onReady) this.onReady(this);
       return this;
@@ -241,6 +253,11 @@ export class UgaCommandScene {
         } else if (obj.material) {
           const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
           materials.forEach(mat => {
+            // White structural emission exported at1.15 made opaque walls
+            // self-lit sheets. Preserve their maps but not that light output.
+            if (/^NEXUS-VII (?:Pressure Wall Cladding|.* Surfaces|Interior Deck Floor|Interior Armor|Interior Transit Way)$/.test(mat.name || '')) {
+              mat.emissiveIntensity = Math.min(0.12, Number(mat.emissiveIntensity) || 0);
+            }
             if ('envMapIntensity' in mat) mat.envMapIntensity = Math.max(1.05, Number(mat.envMapIntensity) || 0);
             if ('metalness' in mat) mat.metalness = Math.min(0.92, Math.max(0.12, Number(mat.metalness) || 0));
             if ('roughness' in mat) mat.roughness = Math.min(0.86, Math.max(0.18, Number(mat.roughness) || 0.5));
@@ -294,9 +311,9 @@ export class UgaCommandScene {
       // close-up but collapsed to a navy silhouette at the full-ship distance.
       // An overview-only material grade raises its diffuse floor and a small
       // cyan emissive floor; focusDistrict restores the exact authored values.
-      if (material.color) material.color.lerp(albedoFloor, 0.38);
-      if (material.emissive) material.emissive.lerp(emissiveFloor, 0.72);
-      material.emissiveIntensity = Math.max(0.82, base.emissiveIntensity);
+      if (material.color) material.color.lerp(albedoFloor, 0.12);
+      if (material.emissive) material.emissive.lerp(emissiveFloor, 0.18);
+      material.emissiveIntensity = Math.max(0.22, base.emissiveIntensity);
       if (Number.isFinite(base.metalness)) material.metalness = Math.min(0.72, base.metalness);
       if (Number.isFinite(base.roughness)) material.roughness = Math.max(0.38, base.roughness);
       material.needsUpdate = true;
@@ -304,14 +321,11 @@ export class UgaCommandScene {
   }
 
   _buildRadialDeckTopology(root) {
-    // The current GLB is already the ship-shaped, longitudinal NEXUS-VII
-    // cutaway. Earlier runtime code hid that authored vessel and replaced it
-    // with a floating radial diagram. Keep the old implementation below only
-    // as a source-reference during this migration; this path deliberately
-    // returns after preparing the real dedicated interior layer.
-    {
-      const carrier = root.getObjectByName('NEXUS_VII_LONGITUDINAL_CUTAWAY');
-      if (!carrier) throw new Error('NEXUS-VII longitudinal cutaway is missing from the authored GLB.');
+    // A future authored carrier keeps its dedicated longitudinal presentation.
+    // Without one, continue into the existing procedural command-deck builder
+    // so removing a rejected GLB cannot remove management functionality.
+    const carrier = root.getObjectByName('NEXUS_VII_LONGITUDINAL_CUTAWAY');
+    if (carrier) {
       carrier.visible = true;
       this.deckTopologyRoot = carrier;
 
@@ -518,10 +532,10 @@ export class UgaCommandScene {
       topology.add(rib);
     }
 
-    const lift = new THREE.Mesh(new THREE.CylinderGeometry(2.35, 2.65, 3.8, 20), armorMaterial.clone());
+    const lift = new THREE.Mesh(new THREE.CylinderGeometry(2.35, 2.65, 0.35, 20), armorMaterial.clone());
     lift.name = 'UGA_CentralLiftAndServiceSpine';
     lift.rotation.x = Math.PI / 2;
-    lift.position.z = 1.65;
+    lift.position.z = 0.45;
     lift.userData.runtimeTopology = true;
     topology.add(lift);
     const commandHalo = new THREE.Mesh(new THREE.TorusGeometry(4.3, 0.22, 8, 64), lineMaterial.clone());
@@ -535,7 +549,7 @@ export class UgaCommandScene {
       const district = new THREE.Group();
       district.name = `DISTRICT_${id}`;
       district.userData = { district_id: id, selectable: true, runtimeTopology: true };
-      const floor = new THREE.Mesh(new THREE.BoxGeometry(6.8, 5.0, 0.32), deckMaterials.A.clone());
+      const floor = new THREE.Mesh(new THREE.BoxGeometry(6.8, 5.0, 0.32), deckMaterials[layout[id]?.deck || 'A'].clone());
       floor.name = `${id}_DeckFloor`;
       floor.userData = { district_id: id, runtimeTopology: true };
       district.add(floor);
@@ -562,6 +576,33 @@ export class UgaCommandScene {
       holo.position.z = 2.0;
       holo.userData = { district_id: id, runtimeTopology: true };
       district.add(holo);
+      for (let tier = 1; tier <= 3; tier++) {
+        const plotId = `tier${tier}`;
+        const plot = new THREE.Group();
+        plot.name = `BUILD_${id}_${plotId}`;
+        plot.position.set((tier - 2) * 2.25, -1.45, .22);
+        plot.userData = { district_id: id, build_plot_id: plotId, unlock_tier: tier, runtimeTopology: true };
+        const foundation = new THREE.Mesh(new THREE.CylinderGeometry(.72, .82, .14, 10), deckMaterials[layout[id]?.deck || 'A'].clone());
+        foundation.rotation.x = Math.PI / 2;
+        foundation.userData = { district_id: id, build_plot_id: plotId, build_phase: 0, runtimeTopology: true };
+        plot.add(foundation);
+        const frame = new THREE.Mesh(new THREE.CylinderGeometry(.46, .58, 1.05, 8, 1, true), armorMaterial.clone());
+        frame.rotation.x = Math.PI / 2;
+        frame.position.z = .55;
+        frame.userData = { district_id: id, build_plot_id: plotId, build_phase: 1, runtimeTopology: true };
+        plot.add(frame);
+        const machinery = new THREE.Mesh(new THREE.CylinderGeometry(.42, .5, .7, 10), armorMaterial.clone());
+        machinery.rotation.x = Math.PI / 2;
+        machinery.position.z = .45;
+        machinery.userData = { district_id: id, build_plot_id: plotId, build_phase: 2, runtimeTopology: true };
+        plot.add(machinery);
+        const completed = new THREE.Mesh(new THREE.CylinderGeometry(.55, .68, 1.4, 12), armorMaterial.clone());
+        completed.rotation.x = Math.PI / 2;
+        completed.position.z = .72;
+        completed.userData = { district_id: id, build_plot_id: plotId, build_phase: 3, runtimeTopology: true };
+        plot.add(completed);
+        district.add(plot);
+      }
       const focus = new THREE.Object3D();
       focus.name = `FOCUS_${id}`;
       focus.position.set(0, -0.4, 2.1);
@@ -571,8 +612,9 @@ export class UgaCommandScene {
       this.districtRoots.set(id, district);
       this.focusAnchors.set(id, focus);
     };
-    if (!this.districtRoots.has('navigation')) buildVirtualRoom('navigation');
-    if (!this.districtRoots.has('mission_ops')) buildVirtualRoom('mission_ops');
+    for (const id of Object.keys(layout)) {
+      if (!this.districtRoots.has(id)) buildVirtualRoom(id);
+    }
 
     for (const [id, placement] of Object.entries(layout)) {
       const district = this.districtRoots.get(id);
@@ -606,6 +648,8 @@ export class UgaCommandScene {
     }
     root.add(topology);
     this.deckTopologyRoot = topology;
+    this._decorateDistricts(root);
+    this._createDroneTraffic(root);
   }
 
   _decorateDistricts(root) {
@@ -1159,8 +1203,88 @@ export class UgaCommandScene {
   _districtBounds(root) {
     if (!root) return null;
     root.updateWorldMatrix(true, true);
-    const bounds = new THREE.Box3().setFromObject(root);
+    const bounds = new THREE.Box3();
+    // Hidden future tiers and deployment previews must not pull the selected
+    // compartment camera hundreds of metres away from its usable floor.
+    root.traverseVisible(object => {
+      if (!object.isMesh || !object.geometry) return;
+      object.geometry.computeBoundingBox();
+      bounds.union(object.geometry.boundingBox.clone().applyMatrix4(object.matrixWorld));
+    });
     return bounds.isEmpty() ? null : bounds;
+  }
+
+  _fitProceduralCamera(bounds, overview = false) {
+    const canvas = this.renderer.domElement.getBoundingClientRect();
+    const shell = document.querySelector('.uga-command-shell:not([hidden])');
+    const panel = shell?.querySelector('.uga-context-panel')?.getBoundingClientRect();
+    const rail = shell?.querySelector('.uga-district-rail')?.getBoundingClientRect();
+    const portrait = this.camera.aspect < 0.9;
+    const horizontalRail = portrait || canvas.height <= 620;
+    const left = horizontalRail ? canvas.left + 16 : Math.max(canvas.left + 16, (rail?.right || canvas.left) + 12);
+    const right = portrait ? canvas.right - 16 : Math.min(canvas.right - 16, (panel?.left || canvas.right) - 12);
+    const topControls = ['.uga-command-header', '.uga-rail-top', ...(portrait ? ['.uga-district-list'] : [])]
+      .map(selector => shell?.querySelector(selector)?.getBoundingClientRect())
+      .filter(rect => rect && rect.height > 0);
+    const top = Math.max(canvas.top + (portrait ? 172 : 112), ...topControls.map(rect => rect.bottom + 10));
+    const bottom = portrait ? Math.min(canvas.bottom - 80, (panel?.top || canvas.bottom) - 16) : canvas.bottom - (canvas.height <= 620 ? 70 : 135);
+    // The overview is intrinsically much wider than it is tall. Let it use the
+    // full safe horizontal stage so portrait phones do not reduce the ship to
+    // a small object floating in empty space; the measured bounds still keep
+    // every extremity inside the reserved controls and inspector region.
+    const frameUse = overview ? 0.98 : 0.88;
+    const widthFraction = Math.max(0.25, (right - left) / canvas.width) * frameUse;
+    const heightFraction = Math.max(0.22, (bottom - top) / canvas.height) * frameUse;
+    const aim = new THREE.Vector2((left + right - 2 * canvas.left) / canvas.width - 1,
+      1 - (top + bottom - 2 * canvas.top) / canvas.height);
+    const target = bounds.getCenter(new THREE.Vector3());
+    const authored = this.deckTopologyRoot?.name === 'NEXUS_VII_LONGITUDINAL_CUTAWAY';
+    // A shallow oblique angle reveals the room floors without turning stacked
+    // decks into overlapping roofs. Overview keeps true horizontal ship length.
+    const direction = authored
+      ? new THREE.Vector3(overview ? 0 : 0.12, -1, overview ? 0.035 : 0.28).normalize()
+      : new THREE.Vector3(0.12, -0.62, 1).normalize();
+    const district = !overview && this.districtRoots.get(this.selectedDistrictId);
+    if (district) direction.applyAxisAngle(new THREE.Vector3(0, 0, 1), district.rotation.z);
+    const up = new THREE.Vector3(0, 0, 1);
+    const probe = this.camera.clone();
+    probe.up.copy(up);
+    const corners = boundsCorners(bounds);
+    const measure = distance => {
+      probe.position.copy(target).addScaledVector(direction, distance);
+      probe.lookAt(target);probe.updateMatrixWorld(true);
+      const projected = corners.map(corner => corner.clone().project(probe));
+      const minX = Math.min(...projected.map(point => point.x));
+      const maxX = Math.max(...projected.map(point => point.x));
+      const minY = Math.min(...projected.map(point => point.y));
+      const maxY = Math.max(...projected.map(point => point.y));
+      return {
+        width: (maxX - minX) / 2,
+        height: (maxY - minY) / 2,
+        centerX: (minX + maxX) / 2,
+        centerY: (minY + maxY) / 2
+      };
+    };
+    let low = 1, high = Math.max(10, bounds.getSize(new THREE.Vector3()).length() * 4);
+    for (let i = 0; i < 30; i++) {
+      const distance = (low + high) / 2, frame = measure(distance);
+      if (frame.width <= widthFraction && frame.height <= heightFraction) high = distance;
+      else low = distance;
+    }
+    const tangent = Math.tan(THREE.MathUtils.degToRad(this.camera.fov * 0.5));
+    // A bounds centre is not necessarily a projected centre under an oblique
+    // perspective view. Correct the rig against the measured silhouette so
+    // rotated Habitat, Research, and Fabricator rooms cannot drift off a phone
+    // edge while mathematically satisfying only width and height.
+    for (let iteration = 0; iteration < 2; iteration++) {
+      const frame = measure(high);
+      const rightAxis = new THREE.Vector3().setFromMatrixColumn(probe.matrixWorld, 0).normalize();
+      const upAxis = new THREE.Vector3().setFromMatrixColumn(probe.matrixWorld, 1).normalize();
+      target.addScaledVector(rightAxis, (frame.centerX - aim.x) * high * tangent * this.camera.aspect);
+      target.addScaledVector(upAxis, (frame.centerY - aim.y) * high * tangent);
+    }
+    this.camera.far = Math.max(300, high * 3);this.camera.updateProjectionMatrix();
+    return { position: target.clone().addScaledVector(direction, high), target, up };
   }
 
   _desiredFocusCenterX(shortLandscape) {
@@ -1191,6 +1315,7 @@ export class UgaCommandScene {
   }
 
   _fitDistrictCamera(bounds, anchor) {
+    if (this.deckTopologyRoot) return this._fitProceduralCamera(bounds);
     const aspect = Math.max(0.2, Number(this.camera.aspect) || 1);
     const shortLandscape = aspect >= 1.3 && this.viewportHeight <= 620;
     const portrait = aspect < 0.9;
@@ -1292,6 +1417,8 @@ export class UgaCommandScene {
   }
 
   _showOverviewCarrierContext() {
+    this.authoredCarrierContext?.forEach(({object, visible}) => { object.visible = visible; });
+    if (this.deckTopologyRoot?.name === 'UGA_RUNTIME_INTEGRATED_CUTAWAY') this.deckTopologyRoot.visible = true;
     this.deckTopologyRoot?.traverse(object => {
       if (CARRIER_CONTEXT_NAME.test(object.name)) object.visible = true;
     });
@@ -1299,6 +1426,16 @@ export class UgaCommandScene {
   }
 
   _showFocusedCarrierContext(bounds) {
+    if (this.authoredCarrierContext) {
+      // Keep every selected compartment mesh, but not exterior drive rings and
+      // shared hull skins that appeared as floating slices behind the room.
+      this.authoredCarrierContext.forEach(({object}) => { object.visible = false; });
+      this.gravityRings.forEach(ring => { ring.visible = false; });
+      return;
+    }
+    // The shared decks are contextual overview geometry, outside each room's
+    // physical/pickable floor. Their lift and pressure plates occluded rooms.
+    if (this.deckTopologyRoot?.name === 'UGA_RUNTIME_INTEGRATED_CUTAWAY') this.deckTopologyRoot.visible = false;
     this.deckTopologyRoot?.traverse(object => {
       const name = object.name || '';
       if (!CARRIER_CONTEXT_NAME.test(name)) return;
@@ -1361,6 +1498,13 @@ export class UgaCommandScene {
   }
 
   _managementProfileFraming() {
+    if (this.deckTopologyRoot) {
+      // Fit visible geometry only, inside the actual clear canvas region. The
+      // previous profile fit included hidden tiers and ignored the inspector.
+      const bounds = this._districtBounds(this.deckTopologyRoot) || new THREE.Box3();
+      this.districtRoots.forEach(root => { const room = this._districtBounds(root); if (room) bounds.union(room); });
+      return this._fitProceduralCamera(bounds, true);
+    }
     const bounds = this.deckTopologyRoot
       ? new THREE.Box3().setFromObject(this.deckTopologyRoot)
       : null;
@@ -1379,14 +1523,16 @@ export class UgaCommandScene {
   focusOverview(animate = true) {
     this.selectedDistrictId = null;
     this._setHighlight(null);
-    this._setProfileMaterialLift(true);
-    this.profileFill.visible = true;
-    this.profileRim.visible = true;
+    const procedural = this.deckTopologyRoot?.name === 'UGA_RUNTIME_INTEGRATED_CUTAWAY';
+    this._setProfileMaterialLift(!procedural);
+    this.profileFill.visible = !procedural;
+    this.profileRim.visible = !procedural;
     this.scene.fog.density = MANAGEMENT_PROFILE_FOG_DENSITY;
     this.districtRoots.forEach(root => { root.visible = true; });
     this._showOverviewCarrierContext();
     const framing = this._managementProfileFraming();
-    this._moveCamera(framing.position, framing.target, animate ? 0.82 : 0, framing.up);
+    this._moveCamera(framing.position, framing.target,
+      animate ? (this.camera.aspect < 0.9 || this.viewportHeight <= 620 ? 0.52 : 0.72) : 0, framing.up);
   }
 
   focusDistrict(id, animate = true) {
@@ -1406,7 +1552,11 @@ export class UgaCommandScene {
     if (!bounds) return false;
     this._showFocusedCarrierContext(bounds);
     const framing = this._fitDistrictCamera(bounds, target);
-    this._moveCamera(framing.position, framing.target, animate ? 0.92 : 0, framing.up);
+    // A one-second room flight feels disconnected on touch and leaves rapid
+    // deck changes visibly between compartments. Compact layouts settle before
+    // the management panel is readable; larger screens retain a gentle move.
+    const compact = this.camera.aspect < 0.9 || this.viewportHeight <= 620;
+    this._moveCamera(framing.position, framing.target, animate ? (compact ? 0.46 : 0.72) : 0, framing.up);
     return true;
   }
 
@@ -1566,7 +1716,12 @@ export class UgaCommandScene {
     this.pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
     this.pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
     this.raycaster.setFromCamera(this.pointer, this.camera);
-    const hits = this.raycaster.intersectObject(this.root, true);
+    const hits = this.raycaster.intersectObject(this.root, true).filter(hit => {
+      // Three raycasts hidden objects as well. Focus deliberately hides other
+      // rooms and the shared carrier; invisible plots must not steal taps.
+      for (let object = hit.object; object; object = object.parent) if (!object.visible) return false;
+      return true;
+    });
     const resolved = hits.map(hit => {
       let current = hit.object;
       let districtId = null;
@@ -1671,7 +1826,7 @@ export class UgaCommandScene {
       // The interior GLB is authored around a lower, cinematic AgX-style
       // exposure than open space. This also preserves detail in inset emitters
       // instead of clipping whole machinery caps to white.
-      this.renderer.toneMappingExposure = COMMAND_EXPOSURE;
+      this.renderer.toneMappingExposure = this.deckTopologyRoot?.name === 'UGA_RUNTIME_INTEGRATED_CUTAWAY' ? 0.82 : COMMAND_EXPOSURE;
       this.windowBloom.render(this.scene, this.camera);
     }
   }

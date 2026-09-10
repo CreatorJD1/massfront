@@ -16,12 +16,12 @@ assert.equal(auditCampaignHubRegistry().ok, true, 'campaign hub registry must re
 assert.deepEqual(
   CAMPAIGN_HUB_SESSION_TYPES.map(entry => [entry.id, entry.label]),
   [
-    ['standard-classic', 'Standard / Classic'],
+    ['standard-classic', 'Standard Deployment'],
     ['campaign', 'Campaign'],
     ['coop-versus', 'Co-op / Versus'],
     ['mmo', 'MMO']
   ],
-  'the product model must expose Standard / Classic, Campaign, Co-op / Versus, and MMO as distinct routes'
+  'Galactic Command must expose tactical deployments without presenting itself as a game mode'
 );
 
 const classic = getCampaignHubSessionType('standard-classic');
@@ -29,7 +29,10 @@ const campaign = getCampaignHubSessionType('campaign');
 const network = getCampaignHubSessionType('coop-versus');
 const mmo = getCampaignHubSessionType('mmo');
 assert.equal(classic.status, CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY);
-assert.equal(classic.routeId, 'classic');
+assert.equal(classic.routeId, 'standard');
+assert.deepEqual(getCampaignHubRoute(classic.routeId).target,
+  { kind: 'host-route', routeId: 'mode-standard' },
+  'Standard deployment must open solo setup directly, without the retired War Table');
 assert.equal(campaign.status, CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY);
 assert.equal(campaign.routeId, 'campaign');
 assert.equal(network.status, CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE);
@@ -45,18 +48,63 @@ assert.equal(campaignHubSessionIsReachable(mmo, { hostRoutes: true }), false, 'f
 for (const id of ['galactic-operations', 'galactic-research', 'galactic-intel']) {
   assert.equal(campaignHubRouteIsReachable(getCampaignHubRoute(id)), true, `${id} must keep its real local controller`);
 }
-assert.equal(CAMPAIGN_HUB_PRIMARY_NAV.find(entry => entry.id === 'missions').target.routeId, 'galactic-operations');
+assert.deepEqual(CAMPAIGN_HUB_PRIMARY_NAV.find(entry => entry.id === 'missions').target, { kind: 'view', view: 'progress' });
+assert.deepEqual(CAMPAIGN_HUB_PRIMARY_NAV.find(entry => entry.id === 'classic').target, { kind: 'hub' },
+  'Play must return to the stable strategic home and its shallow Basic Access layer');
+assert.deepEqual(CAMPAIGN_HUB_PRIMARY_NAV.find(entry => entry.id === 'more').target, { kind: 'view', view: 'services' },
+  'More must own the service directory instead of making it the cold-launch home');
 assert.equal(CAMPAIGN_HUB_QUICK_NAV.find(entry => entry.id === 'research').target.routeId, 'galactic-research');
+assert.equal(getCampaignHubRoute('home'), null, 'the retired main menu must not remain a Galactic destination');
+assert.equal(getCampaignHubRoute('classic'), null, 'the retired War Table must not remain a duplicate destination');
 
 const uiSource = await readFile(new URL('../modules/space_exploration/src/ui/uga_command.js', import.meta.url), 'utf8');
 const uiCss = await readFile(new URL('../modules/space_exploration/src/ui/uga_command.css', import.meta.url), 'utf8');
-assert.match(uiSource, /data-session-route=/, 'Campaign Hub must render explicit session selectors');
-assert.match(uiSource, /OFFLINE READY/);
-assert.match(uiSource, /PERSISTENT MMO/);
-assert.match(uiSource, /NETWORK UNAVAILABLE/);
+const homeStart = uiSource.indexOf('  function campaignHubPanel()');
+const servicesStart = uiSource.indexOf('  function campaignServicesPanel()', homeStart);
+const renderStart = uiSource.indexOf('  function renderContext()', servicesStart);
+assert.ok(homeStart >= 0 && servicesStart > homeStart && renderStart > servicesStart);
+const homeSource = uiSource.slice(homeStart, servicesStart);
+const servicesSource = uiSource.slice(servicesStart, renderStart);
+assert.match(homeSource, /uga-campaign-depart[\s\S]*?basicAccessPanel\(\)/,
+  'the cold strategic home must lead with deliberate exploration, then compact base play');
+assert.doesNotMatch(homeSource, /uga-hub-services|moreNavigationShortcuts|uga-session-types/,
+  'the cold strategic home must not lead with the long service directory or speculative session families');
+assert.match(servicesSource, /uga-campaign-services[\s\S]*?moreNavigationShortcuts\(\)[\s\S]*?uga-hub-services/,
+  'More must expose the existing service directory and phone-only shortcuts');
+for (const routeId of ['standard', 'training', 'campaign']) {
+  assert.match(uiSource, new RegExp(`\\['${routeId}',`), `Basic Access must expose ${routeId}`);
+}
+assert.match(uiSource, /data-host-route="war-room"/, 'Play drawer must preserve an explicit base War Table escape');
+assert.match(uiSource, /mapId:\s*value\('mapId'\)/,
+  'the deployment draft must emit the player-selected battlefield map');
+for (const selector of ['data-ground-route-stage="map"', 'data-selected-area-id=', 'data-selected-map-id=', 'data-selected-map-size=', 'data-ground-area=', 'data-ground-map=', 'data-map-size=']) {
+  assert.ok(uiSource.includes(selector), `deployment route must expose ${selector}`);
+}
+assert.doesNotMatch(uiSource, /runtimeTemplateMapId/,
+  'internal terrain-template identities must not leak into the UGA interface');
+assert.match(uiSource, /data-command-construction="build"/);
+assert.match(uiSource, /data-command-construction="upgrade"/);
+assert.match(uiSource, /data-hub-route="galactic-research"/);
+assert.match(uiSource, /data-host-route="development"/);
+assert.match(uiSource, /data-hub-route="inventory"/);
+assert.doesNotMatch(uiSource, /definition\.fixed\s*\?\s*classicTerminal\(\)/,
+  'Ship management must not duplicate the authoritative Basic Access mode picker');
+assert.match(uiSource, /if \(activeView === 'classic'\) return campaignHubPanel\(\)/,
+  'restored legacy classic view tokens must resolve to the current Campaign Hub');
+assert.match(uiSource, /activeView = view === 'classic' \? 'campaign_hub' : view/,
+  'the public UGA view API must normalize classic to the current Play authority');
+assert.doesNotMatch(uiSource, /Classic — Standard War Table|SELECT A MODE|CLASSIC \/ VERSUS · WAR TABLE/,
+  'Galactic Command must not present itself as a mode picker layered over the old War Table');
 assert.doesNotMatch(uiSource, /SIMULATE CINEMATIC LAUNCH|Simulated sector population|data-classic-field|data-classic-mode|onClassicMode/, 'the UI must not retain simulated placeholder launches');
-assert.match(uiCss, /\.uga-strategic-layer-model/);
-assert.match(uiCss, /\.uga-session-type-grid\s*\{[^}]*repeat\(2,/,
-  'the four session families must form a balanced two-column command grid before the mobile single-column breakpoint');
+assert.match(uiCss, /\.uga-basic-access-grid\s*\{[^}]*repeat\(2,/,
+  'Basic Access must stay a compact two-column control grid');
+assert.match(uiCss, /\.uga-basic-access-grid button::after,[\s\S]*?\.uga-command-nav button:not\(\.is-active\)::after\s*\{\s*display:\s*none;/,
+  'ordinary inactive rows must use clean neutral borders instead of ornate selection frames');
+assert.match(uiCss, /data-view="campaign_hub"[\s\S]*?\.uga-district-rail,[\s\S]*?\.uga-sheet-toggle\s*\{\s*display:\s*none !important;/,
+  'Campaign Hub must hide duplicate exit, ship-room, and collapsible-sheet chrome');
+assert.match(uiCss, /data-view="campaign_hub"[\s\S]*?\.uga-context-panel[\s\S]*?top:\s*var\(--uga-gap\);[\s\S]*?height:\s*auto;/,
+  'Campaign Hub must use the available compact stage instead of leaving an empty ship viewport');
+assert.match(uiCss, /\.uga-ground-route\s*\{[^}]*min-height:\s*54px/,
+  'planet, control area, and battlefield choice must remain a compact touch-safe route');
 
 console.log('Galactic Campaign Hub product model: PASS');

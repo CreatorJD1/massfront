@@ -15,6 +15,17 @@ import { registerRuntimeRenderer } from '../core/gltf_runtime_loader.js';
 const GALAXY_EXPOSURE = 1.12;
 const GALAXY_PORTRAIT_ASPECT = 0.78;
 
+export function clampProjectedLabelX(projectedX, viewportWidth, labelWidth, startClearance = 10, endClearance = 10) {
+  const width = Math.max(0, Number(viewportWidth) || 0);
+  const start = Math.min(width, Math.max(0, Number(startClearance) || 0));
+  const end = Math.min(width - start, Math.max(0, Number(endClearance) || 0));
+  const visibleWidth = width - start - end;
+  const measuredWidth = Math.max(0, Number(labelWidth) || 0);
+  if (measuredWidth >= visibleWidth) return start + visibleWidth * 0.5;
+  const halfWidth = measuredWidth * 0.5;
+  return Math.min(width - end - halfWidth, Math.max(start + halfWidth, projectedX));
+}
+
 function appendExtrudedPolygon(vertices, indices, polygon, depth) {
   const base = vertices.length / 3;
   const count = polygon.length;
@@ -205,6 +216,7 @@ export class GalaxyMapEngine {
     this.onSystemClick = options.onSystemClick || null;
     this.onSystemHover = options.onSystemHover || null;
     this.currentSystemId = options.currentSystemId || 'aelos';
+    this.systemStatuses = options.systemStatuses || {};
     this.seed = String(options.seed == null ? 'massfront-space-showcase' : options.seed);
     this.selectedId = this.currentSystemId;
     this._running = true;
@@ -601,6 +613,11 @@ export class GalaxyMapEngine {
     this._updateActiveRingPosition();
   }
 
+  setSystemStatuses(statuses) {
+    this.systemStatuses = statuses || {};
+    this._updateLabels();
+  }
+
   resize(w, h) {
     if (this._disposed) return;
     this.camera.aspect = w / h;
@@ -743,6 +760,18 @@ export class GalaxyMapEngine {
   // -------------------------------------------------------------
   _updateLabels() {
     if (!this.labelsLayer || !this._labelElements) return;
+    const w = this.renderer.domElement.clientWidth;
+    const h = this.renderer.domElement.clientHeight;
+    const compact = w <= 640 || (w <= 900 && h > w);
+    let startClearance = 10;
+    let endClearance = 10;
+    if (compact && window.visualViewport) {
+      const layerRect = this.labelsLayer.getBoundingClientRect();
+      const visibleLeft = window.visualViewport.offsetLeft;
+      const visibleRight = visibleLeft + window.visualViewport.width;
+      startClearance += Math.max(0, visibleLeft - layerRect.left);
+      endClearance += Math.max(0, layerRect.right - visibleRight);
+    }
     for (const [id, sys] of Object.entries(this.layout.systems)) {
       const data = this.data[id];
       if (!data) continue;
@@ -750,8 +779,6 @@ export class GalaxyMapEngine {
       if (!record) continue;
       const v = new THREE.Vector3(sys.coord.x, sys.coord.y, sys.coord.z);
       v.project(this.camera);
-      const w = this.renderer.domElement.clientWidth;
-      const h = this.renderer.domElement.clientHeight;
       const sx = (v.x * 0.5 + 0.5) * w;
       const sy = (-(v.y * 0.5) + 0.5) * h;
       const visible = v.z > -1 && v.z < 1 && sx > -80 && sx < w + 80 && sy > -80 && sy < h + 80;
@@ -760,10 +787,18 @@ export class GalaxyMapEngine {
 
       const isCurrent  = id === this.currentSystemId;
       const isSelected = id === this.selectedId;
+      const front = this.systemStatuses[id] || {};
       record.label.className = `galaxy-system-label${isCurrent ? ' current' : ''}${isSelected ? ' selected' : ''}`;
-      record.label.style.left = `${sx}px`;
+      record.label.dataset.frontState = front.state || 'unknown';
+      record.status.textContent = [isCurrent ? 'CURRENT' : '', front.shortLabel || ''].filter(Boolean).join(' · ');
+      // Projection still owns the beacon relationship. On compact viewports only,
+      // move the translated label center far enough inward to keep its live text
+      // inside the visible/safe-area gutter; the WebGL pick coordinate is untouched.
+      const labelX = compact
+        ? clampProjectedLabelX(sx, w, record.label.offsetWidth, startClearance, endClearance)
+        : sx;
+      record.label.style.left = `${labelX}px`;
       record.label.style.top = `${sy + 34}px`;
-      record.status.textContent = isCurrent ? '· CURRENT ·' : '';
     }
   }
 

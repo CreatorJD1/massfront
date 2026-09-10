@@ -134,7 +134,7 @@ if (process.argv.includes('--from-live')) {
 }
 const carried = Object.keys(index.packs).filter(p => p !== PACK);
 index.version = index.version || 1;
-index.packs[PACK] = { label: LABEL, bytes, files: entries };
+index.packs[PACK] = { delivery: 'base', label: LABEL, bytes, files: entries };
 writeFileSync(INDEX, JSON.stringify(index, null, 2) + '\n');
 
 /* ---- 5. say exactly what happened --------------------------------------- */

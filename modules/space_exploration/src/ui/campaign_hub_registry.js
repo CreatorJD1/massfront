@@ -80,9 +80,6 @@ export const CAMPAIGN_HUB_ROUTES = Object.freeze([
   route('logistics', 'Logistics & Cargo', 'logistics', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
     'Inspect fuel, probes, resources, and the expedition supply manifest from authoritative campaign state.',
     { kind: 'view', view: 'logistics' }, 'LOCAL CAMPAIGN CONTROLLER'),
-  route('classic', 'Classic MASSFRONT Terminal', 'terminal', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
-    'Open the Command Core launch terminal. Playable modes route to the real game; unavailable modes stay locked.',
-    { kind: 'view', view: 'classic' }, 'VALIDATED MODE ROUTER'),
   route('training', 'Training', 'terminal', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
     'Enter the real KEEL-guided protected training operation.',
     { kind: 'host-route', routeId: 'mode-training' }, 'PLAYABLE MASSFRONT MODE'),
@@ -100,22 +97,19 @@ export const CAMPAIGN_HUB_ROUTES = Object.freeze([
     null, 'LONG TERM // LOCKED'),
   route('coop', 'Co-op / Versus', 'factions', CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED,
     'Networked co-op and commander-versus-commander sessions are not implemented yet.',
-    null, 'NETWORK IN DEVELOPMENT // LOCKED'),
-  route('home', 'Return to MASSFRONT Home', 'crest', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
-    'Return to the existing MASSFRONT main menu without disabling Galactic Campaign.',
-    { kind: 'host-route', routeId: 'home' }, 'LIVE MASSFRONT HOME')
+    null, 'NETWORK IN DEVELOPMENT // LOCKED')
 ]);
 
 // These are product-level session families, not speculative game modes. The
 // The first two resolve to existing MASSFRONT routes; the two network families
 // remain separate and have no targets until real session authorities exist.
 export const CAMPAIGN_HUB_SESSION_TYPES = Object.freeze([
-  sessionType('standard-classic', 'Standard / Classic', 'command', CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY,
-    'Offline skirmish play against authored AI, with Training and Weekly Operations available from the same terminal.',
-    'classic', 'OFFLINE PLAY // AVAILABLE NOW'),
+  sessionType('standard-classic', 'Standard Deployment', 'command', CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY,
+    'Deploy from Galactic Command into an offline battle against AI opponents, with optional AI allies.',
+    'standard', 'TACTICAL OPERATION'),
   sessionType('campaign', 'Campaign', 'mission_ops', CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY,
     'Enter the existing playable Campaign Prologue and authored mission progression.',
-    'campaign', 'OFFLINE STORY // AVAILABLE NOW'),
+    'campaign', 'STORY MISSIONS'),
   sessionType('coop-versus', 'Co-op / Versus', 'factions', CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE,
     'Future commanders may cooperate or fight through this strategic layer. No synchronized session service exists in this build.',
     null, 'CO-OP VS NETWORK // NOT IMPLEMENTED'),
@@ -126,10 +120,13 @@ export const CAMPAIGN_HUB_SESSION_TYPES = Object.freeze([
 
 export const CAMPAIGN_HUB_PRIMARY_NAV = Object.freeze([
   Object.freeze({ id: 'galaxy', label: 'Galaxy', icon: 'overview', target: Object.freeze({ kind: 'host-action', action: 'open-galaxy' }) }),
-  Object.freeze({ id: 'ship', label: 'Ship', icon: 'command', target: Object.freeze({ kind: 'view', view: 'command' }) }),
-  Object.freeze({ id: 'missions', label: 'Missions', icon: 'contracts', target: Object.freeze({ kind: 'route', routeId: 'galactic-operations' }) }),
+  Object.freeze({ id: 'ship', label: 'Ship', ariaLabel: 'Ship / Development', icon: 'command', target: Object.freeze({ kind: 'view', view: 'command' }) }),
+  Object.freeze({ id: 'missions', label: 'Progress', ariaLabel: 'Progress / Operations', icon: 'contracts', target: Object.freeze({ kind: 'view', view: 'progress' }) }),
+  Object.freeze({ id: 'classic', label: 'Play', ariaLabel: 'Play / Command access', icon: 'terminal', target: Object.freeze({ kind: 'hub' }) }),
+  Object.freeze({ id: 'social', label: 'Social', icon: 'factions', target: Object.freeze({ kind: 'route', routeId: 'social' }) }),
+  Object.freeze({ id: 'settings', label: 'Settings', icon: 'engineering', target: Object.freeze({ kind: 'route', routeId: 'settings' }) }),
   Object.freeze({ id: 'crew', label: 'Crew', icon: 'staff', target: Object.freeze({ kind: 'route', routeId: 'crew' }) }),
-  Object.freeze({ id: 'more', label: 'More', icon: 'logistics', target: Object.freeze({ kind: 'hub' }) })
+  Object.freeze({ id: 'more', label: 'More', icon: 'logistics', target: Object.freeze({ kind: 'view', view: 'services' }) })
 ]);
 
 export const CAMPAIGN_HUB_QUICK_NAV = Object.freeze([
@@ -145,8 +142,8 @@ const REQUIRED_ROUTE_IDS = Object.freeze([
   'galactic-operations', 'galactic-research', 'galactic-intel',
   'operations', 'development', 'armory', 'orders', 'intel', 'profile',
   'inbox', 'social', 'settings', 'game-version', 'inventory', 'factions',
-  'crew', 'logistics', 'classic', 'training', 'standard', 'campaign',
-  'weekly', 'mmo', 'coop', 'home'
+  'crew', 'logistics', 'training', 'standard', 'campaign',
+  'weekly', 'mmo', 'coop'
 ]);
 const REQUIRED_SESSION_TYPE_IDS = Object.freeze(['standard-classic', 'campaign', 'coop-versus', 'mmo']);
 

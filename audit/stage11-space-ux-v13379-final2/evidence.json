@@ -1,0 +1,3876 @@
+{
+  "schema": "massfront.stage11-space-ux-acceptance.v2",
+  "startedUtc": "2026-09-08T07:44:29.721Z",
+  "finishedUtc": "2026-09-08T07:46:56.286Z",
+  "repository": {
+    "root": "C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple",
+    "head": "0975bf6edc5a39d3b2ec76a40a6155072c726381",
+    "branch": "cursor/strip-mass-node-bloom",
+    "dirty": true
+  },
+  "sourceStamp": "3d217f52775b73e7",
+  "sources": {
+    "index.html": {
+      "bytes": 444886,
+      "sha256": "95a9712077aa1c1f8a85ac64d92a33f262152724cdd186c5857d3f126e6e55ba"
+    },
+    "src/main.js": {
+      "bytes": 202248,
+      "sha256": "2f4ff291509bd083b44d558d57836d13668c0e36cbb15744911484643698d6d1"
+    },
+    "src/galactic-operations.js": {
+      "bytes": 69156,
+      "sha256": "ed5911b4804a9309bb115847856adb5aaa4b6626c933aafc9a58b45177d05210"
+    },
+    "src/career-faction-gate.js": {
+      "bytes": 29777,
+      "sha256": "ecafe9979ec0a9472767cbee5ed8e5cfb2b077cffead5a70b750393e2a9c5777"
+    },
+    "src/ui/hud.js": {
+      "bytes": 207210,
+      "sha256": "08b16448d0d964e7383341fc6af1703ca898e9822f316250c2766f9708d1c699"
+    },
+    "src/styles/ui.css": {
+      "bytes": 475028,
+      "sha256": "e12ede743f5597100344d853da0e18df1f0a8d9f86685daecf0712ec45d994b6"
+    },
+    "src/onboarding.js": {
+      "bytes": 28999,
+      "sha256": "dee3811bcb70aae5d6862fe16be212293ed3b2d807240100bc8cceb9b8249a87"
+    },
+    "src/tutorial.js": {
+      "bytes": 129752,
+      "sha256": "b7cbca36f00ca148df27fe25157d70ac79b3c569e3861fa704e90e2f37fa4f79"
+    },
+    "src/styles/tutorial.css": {
+      "bytes": 29039,
+      "sha256": "d60f368d3aef436e9b405ffbed22596b3aab83fc1b6d2163772b5d254c9d7507"
+    },
+    "modules/space_exploration/index.html": {
+      "bytes": 16752,
+      "sha256": "16cc086666adc53738ae288fb72b15683628f6f29e9d04c1d03c8c7e44407f89"
+    },
+    "modules/space_exploration/src/space_module.js": {
+      "bytes": 10057,
+      "sha256": "d3123b89f6e49d0164a716f0792b368f45e91bf4229eefa8dbc6cc0adc5aa205"
+    },
+    "modules/space_exploration/src/space_experience.js": {
+      "bytes": 97247,
+      "sha256": "a8ab97c4a3881d2e8020c312c839c8d22fb19eb29e2f6bbcefd6bb352da337e7"
+    },
+    "modules/space_exploration/src/core/uga_command_scene.js": {
+      "bytes": 85158,
+      "sha256": "07a5f5b034466178ff9b1e09f20ac9b012c58299826fc026b7c6e1dd24749e01"
+    },
+    "modules/space_exploration/src/core/uga_management_profile_camera.js": {
+      "bytes": 2268,
+      "sha256": "5860e6fb1a8f7a31628cb189401c63ae122188272d01e11d1a02dd4115787263"
+    },
+    "modules/space_exploration/src/ui/story_transmission_controller.js": {
+      "bytes": 19954,
+      "sha256": "0ba7eb8bb8708b8509c892f5a96b79d6095378d9271b42bb367fb2ec30cf78c2"
+    },
+    "modules/space_exploration/src/ui/campaign_hub_registry.js": {
+      "bytes": 14692,
+      "sha256": "15d998051a5da15a2ee3e2a48abb28e56d3817061b4a8333578c87dc6c1c0751"
+    },
+    "modules/space_exploration/src/ui/uga_command.js": {
+      "bytes": 125124,
+      "sha256": "1aa552bee1d87235e4e51b08c10f421bf71406454fc82c6aa735253272bf8d6d"
+    },
+    "modules/space_exploration/src/ui/uga_command.css": {
+      "bytes": 91700,
+      "sha256": "3c099fca6e85307cec3568ff5de8ff0d513e3d137ab6306aeb94b6459fcf6314"
+    },
+    "tools/test-galactic-entry-intro-ticket.mjs": {
+      "bytes": 3065,
+      "sha256": "4d2b309f851eca09df1a26531721d9d6bb235adb065412eef20bc83aac800795"
+    },
+    "tools/capture-stage11-space-ux.mjs": {
+      "bytes": 76595,
+      "sha256": "738bcedf3c084e63337e59c81565eadf1d1b3738ffb7c36c4613d37ebe37ebd9"
+    }
+  },
+  "gpu": [
+    {
+      "label": "fresh-base-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "fresh-space-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "skip-return-base-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "commissioned-space-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "classic-war-room-base-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "all-rooms-sandbox-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "all-rooms-reloaded-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "tutorial-choice-base-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "tutorial-choice-space-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    },
+    {
+      "label": "tutorial-choice-training-412x900",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+      "vendor": "Google Inc. (NVIDIA)",
+      "version": "",
+      "shadingLanguageVersion": ""
+    }
+  ],
+  "captures": [
+    {
+      "name": "02-world-intro-keel-story-rail-412x900",
+      "title": "Cinematic world introduction + normal-space KEEL",
+      "description": "A genuine new career enters the exterior Aelos system. KEEL occupies the dedicated story rail; there is no minimap receiver in the space document.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/02-world-intro-keel-story-rail-412x900.png",
+      "bytes": 141733,
+      "sha256": "832892e1e57e108a6d46ddec37f25119d3a76c1cd72775aca4e6519930261fb4",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "entryView": "system",
+        "scene": "system",
+        "storyRailHidden": "false",
+        "transmitting": true,
+        "channel": "UGA PERSONNEL LINK",
+        "speaker": "KEEL",
+        "title": "WELCOME TO THE AELOS ANCHORAGE",
+        "body": "Welcome aboard your UGA exploration ship. I am KEEL. Drag to look around, select a contact, and use ALIGN or AUTOPILOT to approach. SURVEY opens the scanner for a selected planet.",
+        "actions": [
+          {
+            "id": "first-entry-next",
+            "text": "01NEXT · YOUR MISSION LOOP›"
+          }
+        ],
+        "minimapNodes": 0,
+        "renderVeil": {
+          "ready": true,
+          "visibility": "hidden",
+          "opacity": "0",
+          "pointerEvents": "none"
+        }
+      }
+    },
+    {
+      "name": "03-optional-tutorial-choice-412x900",
+      "title": "Optional protected tutorial choice",
+      "description": "Both paths remain explicit: begin the protected planetary basics or skip directly to required faction commissioning.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/03-optional-tutorial-choice-412x900.png",
+      "bytes": 148110,
+      "sha256": "9de360bb1a13aee430c48dda24c9afb9344ae8db5a1ffe735dad152c21594ec9",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "entryView": "system",
+        "scene": "system",
+        "storyRailHidden": "false",
+        "transmitting": true,
+        "channel": "UGA PERSONNEL LINK",
+        "speaker": "KEEL",
+        "title": "SELECT YOUR STARTING PATH",
+        "body": "You command the UGA exploration ship. Survey points of interest, review an objective, then choose an available hired commander and deployment force. Return here after the mission to develop your ship. First, learn the field controls or arrange your first commander.",
+        "actions": [
+          {
+            "id": "begin-planetary-training",
+            "text": "01BEGIN BASIC TUTORIALProtected planetary mission covering navigation, selection, economy, construction and combat.RECOMMENDED · PROTECTED›"
+          },
+          {
+            "id": "skip-to-faction-selection",
+            "text": "02ARRANGE FIRST COMMANDERChoose the faction supplying your first commander. Select that available commander when preparing an objective.NO TRAINING MISSION›"
+          }
+        ],
+        "minimapNodes": 0,
+        "renderVeil": {
+          "ready": true,
+          "visibility": "hidden",
+          "opacity": "0",
+          "pointerEvents": "none"
+        }
+      }
+    },
+    {
+      "name": "04-faction-commander1-commissioning-412x900",
+      "title": "Faction + Commander 1 commissioning",
+      "description": "The visible Nova card grants Captain Elara Kai as Commander 1; the bound live state records equivalent real Commander 1 grants for all three playable factions while KEEL remains neutral UGA guidance.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/04-faction-commander1-commissioning-412x900.png",
+      "bytes": 243519,
+      "sha256": "d482d0867ab9b3001fbabfca4b58275b75181083caf561057f2370d194ff60a0",
+      "url": "http://127.0.0.1:53960/index.html",
+      "state": {
+        "skipBefore": {
+          "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+          "firstEntry": {
+            "started": true,
+            "choice": "",
+            "choicePending": false,
+            "continuation": {
+              "schema": "massfront.new-career-sequence.v1",
+              "required": true,
+              "moduleImplemented": true,
+              "nextStep": "faction-selection",
+              "afterTraining": "faction-selection",
+              "sequence": [
+                "faction-selection",
+                "starter-commander-1",
+                "full-uga-space"
+              ],
+              "catalogAuthority": "base-game-faction-and-commander-catalog"
+            }
+          },
+          "ticket": {
+            "schemaVersion": 2,
+            "kind": "MassfrontGalacticEntryV2",
+            "profileId": "p1",
+            "issuedAt": 1788853489177,
+            "expiresAt": 1789458289177,
+            "source": "massfront-base",
+            "entryView": "system",
+            "introRequired": true,
+            "commanderRosterSnapshot": {
+              "schemaVersion": 1,
+              "kind": "CommanderRosterSnapshotV1",
+              "source": "massfront-base",
+              "sourceVersion": 1,
+              "commanderCount": 9,
+              "commander1ByCampaignFaction": {
+                "nova": "nova_kai",
+                "dominion": "legion_vex",
+                "syndicate": "syndicate_renn"
+              },
+              "commanders": [
+                {
+                  "id": "nova_kai",
+                  "sourceFactionId": "nova",
+                  "campaignFactionId": "nova",
+                  "name": "Captain Elara Kai",
+                  "rank": "Captain",
+                  "shortName": "Kai",
+                  "callsign": "LANTERN",
+                  "role": "VANGUARD",
+                  "lore": {
+                    "key": "commander.nova_kai",
+                    "epithet": "The Clean Landing",
+                    "service": "Federation Expeditionary Command / 4th Landing Group",
+                    "bio": "Kai took Sombrero-I with fewer losses than the plan allowed for and has been quietly resented for it ever since. She fires first only when the shot ends the argument."
+                  },
+                  "chassis": {
+                    "heroType": 4,
+                    "unit": "Commander",
+                    "sprite": "cdr"
+                  },
+                  "passive": {
+                    "label": "Fire-Control · Commander damage +12%",
+                    "perk": "kai"
+                  },
+                  "baseline": {
+                    "index": 0,
+                    "label": "Orbital Blast"
+                  },
+                  "signature": {
+                    "id": "skybreaker",
+                    "label": "Skybreaker Salvo",
+                    "em": "✦"
+                  },
+                  "weapons": {
+                    "primary": "Rail Repeater",
+                    "secondary": "Cluster Cannon"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/nova_192.jpg",
+                    "alt": "Captain Elara Kai command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_nova_kai",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_nova_kai_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "nova_holt",
+                  "sourceFactionId": "nova",
+                  "campaignFactionId": "nova",
+                  "name": "Major Rowan Holt",
+                  "rank": "Major",
+                  "shortName": "Holt",
+                  "callsign": "ANVIL",
+                  "role": "ENGINEER",
+                  "lore": {
+                    "key": "commander.nova_holt",
+                    "epithet": "Forward Works",
+                    "service": "Federation Corps of Engineers / Forward Works Detachment",
+                    "bio": "Holt builds the position before he argues about it. Three of his forward depots are still standing on worlds the Federation formally abandoned."
+                  },
+                  "chassis": {
+                    "heroType": 4,
+                    "unit": "Commander",
+                    "sprite": "cdr"
+                  },
+                  "passive": {
+                    "label": "Forward Engineering · build speed +15%",
+                    "perk": "holt"
+                  },
+                  "baseline": {
+                    "index": 1,
+                    "label": "Repair Pulse"
+                  },
+                  "signature": {
+                    "id": "fieldworkshop",
+                    "label": "Field Workshop",
+                    "em": "⛭"
+                  },
+                  "weapons": {
+                    "primary": "Arc Welder",
+                    "secondary": "Nanite Charge"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/nova_192.jpg",
+                    "alt": "Major Rowan Holt command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_nova_holt",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_nova_holt_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "nova_vale",
+                  "sourceFactionId": "nova",
+                  "campaignFactionId": "nova",
+                  "name": "Cmdr. Sera Vale",
+                  "rank": "Commander",
+                  "shortName": "Vale",
+                  "callsign": "LONGSIGHT",
+                  "role": "TACTICIAN",
+                  "lore": {
+                    "key": "commander.nova_vale",
+                    "epithet": "Long Sight",
+                    "service": "Federation Reconnaissance Doctrine Office",
+                    "bio": "Vale reads a battlefield an hour before it happens and is usually right about the part nobody wanted to hear. Her recon doctrine is now standard across the Group."
+                  },
+                  "chassis": {
+                    "heroType": 4,
+                    "unit": "Commander",
+                    "sprite": "cdr"
+                  },
+                  "passive": {
+                    "label": "Recon Doctrine · army range +8%",
+                    "perk": "vale"
+                  },
+                  "baseline": {
+                    "index": 2,
+                    "label": "Combat Surge"
+                  },
+                  "signature": {
+                    "id": "ghostnet",
+                    "label": "Ghost Net",
+                    "em": "⌾"
+                  },
+                  "weapons": {
+                    "primary": "Spotter Rail",
+                    "secondary": "Ghost Flare"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/nova_192.jpg",
+                    "alt": "Cmdr. Sera Vale command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_nova_vale",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_nova_vale_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "legion_vex",
+                  "sourceFactionId": "legion",
+                  "campaignFactionId": "dominion",
+                  "name": "Lord Darion Vex",
+                  "rank": "Lord",
+                  "shortName": "Vex",
+                  "callsign": "ASCENDANT",
+                  "role": "JUGGERNAUT",
+                  "lore": {
+                    "key": "commander.legion_vex",
+                    "epithet": "The Grading Hand",
+                    "service": "Red Ascendancy / First Wardens, self-appointed",
+                    "bio": "Federation-trained, resigned his commission, took a third of his division with him. Treats every engagement as an examination he is setting for someone."
+                  },
+                  "chassis": {
+                    "heroType": 28,
+                    "unit": "Lord Darion Vex",
+                    "sprite": "praetor"
+                  },
+                  "passive": {
+                    "label": "Ascendant Plate · Commander health +18%",
+                    "perk": "vex"
+                  },
+                  "baseline": {
+                    "index": 0,
+                    "label": "Orbital Blast"
+                  },
+                  "signature": {
+                    "id": "seismicdecree",
+                    "label": "Seismic Decree",
+                    "em": "◆"
+                  },
+                  "weapons": {
+                    "primary": "Siege Autocannon",
+                    "secondary": "Breach Shell"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/ascendancy_192.jpg",
+                    "alt": "Lord Darion Vex command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_legion_vex",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_legion_vex_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "legion_korr",
+                  "sourceFactionId": "legion",
+                  "campaignFactionId": "dominion",
+                  "name": "Marshal Rhea Korr",
+                  "rank": "Marshal",
+                  "shortName": "Korr",
+                  "callsign": "CADENCE",
+                  "role": "WARMASTER",
+                  "lore": {
+                    "key": "commander.legion_korr",
+                    "epithet": "Cadence",
+                    "service": "Red Ascendancy / Marshal of the Crimson Advance",
+                    "bio": "Korr keeps a battle line moving at a tempo that breaks formations no single push could. Her Wardens do not retreat and are not ordered to."
+                  },
+                  "chassis": {
+                    "heroType": 28,
+                    "unit": "Lord Darion Vex",
+                    "sprite": "praetor"
+                  },
+                  "passive": {
+                    "label": "Martial Cadence · army damage +8%",
+                    "perk": "korr"
+                  },
+                  "baseline": {
+                    "index": 2,
+                    "label": "Combat Surge"
+                  },
+                  "signature": {
+                    "id": "crimsonadvance",
+                    "label": "Crimson Advance",
+                    "em": "⚔"
+                  },
+                  "weapons": {
+                    "primary": "Cadence Gun",
+                    "secondary": "Crimson Volley"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/ascendancy_192.jpg",
+                    "alt": "Marshal Rhea Korr command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_legion_korr",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_legion_korr_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "legion_dravik",
+                  "sourceFactionId": "legion",
+                  "campaignFactionId": "dominion",
+                  "name": "Prefect Amon Dravik",
+                  "rank": "Prefect",
+                  "shortName": "Dravik",
+                  "callsign": "REDOUBT",
+                  "role": "FORTIFIER",
+                  "lore": {
+                    "key": "commander.legion_dravik",
+                    "epithet": "The Iron Mandate",
+                    "service": "Red Ascendancy / Prefect of Fortifications",
+                    "bio": "Dravik fortifies ground the Ascendancy has no doctrinal interest in holding, and is never asked to explain why once the counterattack arrives."
+                  },
+                  "chassis": {
+                    "heroType": 28,
+                    "unit": "Lord Darion Vex",
+                    "sprite": "praetor"
+                  },
+                  "passive": {
+                    "label": "Iron Mandate · structures health +15%",
+                    "perk": "dravik"
+                  },
+                  "baseline": {
+                    "index": 1,
+                    "label": "Repair Pulse"
+                  },
+                  "signature": {
+                    "id": "ironredoubt",
+                    "label": "Iron Redoubt",
+                    "em": "▰"
+                  },
+                  "weapons": {
+                    "primary": "Bastion Gun",
+                    "secondary": "Redoubt Shell"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/ascendancy_192.jpg",
+                    "alt": "Prefect Amon Dravik command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_legion_dravik",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_legion_dravik_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "syndicate_renn",
+                  "sourceFactionId": "syndicate",
+                  "campaignFactionId": "syndicate",
+                  "name": "Broker Lys Renn",
+                  "rank": "Broker",
+                  "shortName": "Renn",
+                  "callsign": "LEDGER",
+                  "role": "BROKER",
+                  "lore": {
+                    "key": "commander.syndicate_renn",
+                    "epithet": "The Black Ledger",
+                    "service": "Syndicate Coalition / Accounts, Field Division",
+                    "bio": "Renn sells terrain telemetry to both sides of the same engagement and has never once been accused of inaccuracy. Adapt, profit, survive; she never said to whom."
+                  },
+                  "chassis": {
+                    "heroType": 29,
+                    "unit": "Broker Lys Renn",
+                    "sprite": "archon"
+                  },
+                  "passive": {
+                    "label": "Black Ledger · +1.5 mass / +6 energy",
+                    "perk": "renn"
+                  },
+                  "baseline": {
+                    "index": 2,
+                    "label": "Combat Surge"
+                  },
+                  "signature": {
+                    "id": "liquidation",
+                    "label": "Combat Liquidation",
+                    "em": "◇"
+                  },
+                  "weapons": {
+                    "primary": "Pulse Lance",
+                    "secondary": "Ion Cascade"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/syndicate_192.jpg",
+                    "alt": "Broker Lys Renn command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_syndicate_renn",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_syndicate_renn_"
+                  },
+                  "sourceArt": {
+                    "assetId": "syndicate-broker-lys-renn-v1",
+                    "assetType": "character-source",
+                    "status": "SOURCE_ACCEPTED_RUNTIME_UNREGISTERED",
+                    "runtimeReady": false,
+                    "runtimeRegistered": false,
+                    "canonicalPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1",
+                    "manifestPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1/syndicate-broker-lys-renn-v1.asset-manifest.json"
+                  }
+                },
+                {
+                  "id": "syndicate_nyx",
+                  "sourceFactionId": "syndicate",
+                  "campaignFactionId": "syndicate",
+                  "name": "Operative Nyx Calder",
+                  "rank": "Operative",
+                  "shortName": "Calder",
+                  "callsign": "GHOST",
+                  "role": "INFILTRATOR",
+                  "lore": {
+                    "key": "commander.syndicate_nyx",
+                    "epithet": "Ghost Optics",
+                    "service": "Syndicate Coalition / Infiltration, unlisted",
+                    "bio": "Calder appears in after-action reports as an equipment anomaly. Two Coalition auditors have tried to establish whether they are one person."
+                  },
+                  "chassis": {
+                    "heroType": 29,
+                    "unit": "Broker Lys Renn",
+                    "sprite": "archon"
+                  },
+                  "passive": {
+                    "label": "Ghost Optics · army range +10%",
+                    "perk": "nyx"
+                  },
+                  "baseline": {
+                    "index": 4,
+                    "label": "EMP Charge"
+                  },
+                  "signature": {
+                    "id": "phasebreach",
+                    "label": "Phase Breach",
+                    "em": "ϟ"
+                  },
+                  "weapons": {
+                    "primary": "Needle Lance",
+                    "secondary": "Phase Bolt"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/syndicate_192.jpg",
+                    "alt": "Operative Nyx Calder command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_syndicate_nyx",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_syndicate_nyx_"
+                  },
+                  "sourceArt": null
+                },
+                {
+                  "id": "syndicate_voss",
+                  "sourceFactionId": "syndicate",
+                  "campaignFactionId": "syndicate",
+                  "name": "Director Oren Voss",
+                  "rank": "Director",
+                  "shortName": "Voss",
+                  "callsign": "CORE",
+                  "role": "CONTROLLER",
+                  "lore": {
+                    "key": "commander.syndicate_voss",
+                    "epithet": "The Predictive Core",
+                    "service": "Syndicate Coalition / Directorate of Autonomous Systems",
+                    "bio": "Voss runs the engagement two seconds ahead of everyone standing in it, and considers the delay between his order and its execution a defect to be engineered out."
+                  },
+                  "chassis": {
+                    "heroType": 29,
+                    "unit": "Broker Lys Renn",
+                    "sprite": "archon"
+                  },
+                  "passive": {
+                    "label": "Predictive Core · cooldowns −14%",
+                    "perk": "voss"
+                  },
+                  "baseline": {
+                    "index": 1,
+                    "label": "Repair Pulse"
+                  },
+                  "signature": {
+                    "id": "naniterecall",
+                    "label": "Nanite Recall",
+                    "em": "⟲"
+                  },
+                  "weapons": {
+                    "primary": "Grid Pulse",
+                    "secondary": "Net Cascade"
+                  },
+                  "portrait": {
+                    "resolver": "commanderPortraitSrc",
+                    "fallback": "./assets/factions/syndicate_192.jpg",
+                    "alt": "Director Oren Voss command portrait"
+                  },
+                  "voice": {
+                    "bank": "cmdr_syndicate_voss",
+                    "channel": "cmdr",
+                    "slotPrefix": "vo_cmdr_syndicate_voss_"
+                  },
+                  "sourceArt": null
+                }
+              ],
+              "fingerprint": "fnv1a32:0aadcd2d"
+            },
+            "commanderRosterFingerprint": "fnv1a32:0aadcd2d",
+            "commissioning": {
+              "factionId": null,
+              "commanderId": null
+            }
+          }
+        },
+        "commission": {
+          "returnUrl": "http://127.0.0.1:53960/index.html",
+          "bridge": {
+            "status": "menu-route",
+            "reason": ""
+          },
+          "pagehide": {
+            "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+            "choice": {
+              "schema": "massfront.space-first-entry-choice.v1",
+              "profileId": "p1",
+              "choice": "skipped",
+              "outcome": "required-faction-selection",
+              "routeId": "new-career-faction",
+              "nextStep": "faction-selection",
+              "continuation": {
+                "schema": "massfront.new-career-sequence.v1",
+                "required": true,
+                "moduleImplemented": true,
+                "nextStep": "faction-selection",
+                "afterTraining": "faction-selection",
+                "sequence": [
+                  "faction-selection",
+                  "starter-commander-1",
+                  "full-uga-space"
+                ],
+                "catalogAuthority": "base-game-faction-and-commander-catalog"
+              }
+            },
+            "firstEntry": {
+              "started": true,
+              "choice": "skipped",
+              "choicePending": false,
+              "continuation": {
+                "schema": "massfront.new-career-sequence.v1",
+                "required": true,
+                "moduleImplemented": true,
+                "nextStep": "faction-selection",
+                "afterTraining": "faction-selection",
+                "sequence": [
+                  "faction-selection",
+                  "starter-commander-1",
+                  "full-uga-space"
+                ],
+                "catalogAuthority": "base-game-faction-and-commander-catalog"
+              }
+            },
+            "ticket": {
+              "schemaVersion": 2,
+              "kind": "MassfrontGalacticEntryV2",
+              "profileId": "p1",
+              "issuedAt": 1788853489177,
+              "expiresAt": 1789458289177,
+              "source": "massfront-base",
+              "entryView": "system",
+              "introRequired": true,
+              "commanderRosterSnapshot": {
+                "schemaVersion": 1,
+                "kind": "CommanderRosterSnapshotV1",
+                "source": "massfront-base",
+                "sourceVersion": 1,
+                "commanderCount": 9,
+                "commander1ByCampaignFaction": {
+                  "nova": "nova_kai",
+                  "dominion": "legion_vex",
+                  "syndicate": "syndicate_renn"
+                },
+                "commanders": [
+                  {
+                    "id": "nova_kai",
+                    "sourceFactionId": "nova",
+                    "campaignFactionId": "nova",
+                    "name": "Captain Elara Kai",
+                    "rank": "Captain",
+                    "shortName": "Kai",
+                    "callsign": "LANTERN",
+                    "role": "VANGUARD",
+                    "lore": {
+                      "key": "commander.nova_kai",
+                      "epithet": "The Clean Landing",
+                      "service": "Federation Expeditionary Command / 4th Landing Group",
+                      "bio": "Kai took Sombrero-I with fewer losses than the plan allowed for and has been quietly resented for it ever since. She fires first only when the shot ends the argument."
+                    },
+                    "chassis": {
+                      "heroType": 4,
+                      "unit": "Commander",
+                      "sprite": "cdr"
+                    },
+                    "passive": {
+                      "label": "Fire-Control · Commander damage +12%",
+                      "perk": "kai"
+                    },
+                    "baseline": {
+                      "index": 0,
+                      "label": "Orbital Blast"
+                    },
+                    "signature": {
+                      "id": "skybreaker",
+                      "label": "Skybreaker Salvo",
+                      "em": "✦"
+                    },
+                    "weapons": {
+                      "primary": "Rail Repeater",
+                      "secondary": "Cluster Cannon"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/nova_192.jpg",
+                      "alt": "Captain Elara Kai command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_nova_kai",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_nova_kai_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "nova_holt",
+                    "sourceFactionId": "nova",
+                    "campaignFactionId": "nova",
+                    "name": "Major Rowan Holt",
+                    "rank": "Major",
+                    "shortName": "Holt",
+                    "callsign": "ANVIL",
+                    "role": "ENGINEER",
+                    "lore": {
+                      "key": "commander.nova_holt",
+                      "epithet": "Forward Works",
+                      "service": "Federation Corps of Engineers / Forward Works Detachment",
+                      "bio": "Holt builds the position before he argues about it. Three of his forward depots are still standing on worlds the Federation formally abandoned."
+                    },
+                    "chassis": {
+                      "heroType": 4,
+                      "unit": "Commander",
+                      "sprite": "cdr"
+                    },
+                    "passive": {
+                      "label": "Forward Engineering · build speed +15%",
+                      "perk": "holt"
+                    },
+                    "baseline": {
+                      "index": 1,
+                      "label": "Repair Pulse"
+                    },
+                    "signature": {
+                      "id": "fieldworkshop",
+                      "label": "Field Workshop",
+                      "em": "⛭"
+                    },
+                    "weapons": {
+                      "primary": "Arc Welder",
+                      "secondary": "Nanite Charge"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/nova_192.jpg",
+                      "alt": "Major Rowan Holt command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_nova_holt",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_nova_holt_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "nova_vale",
+                    "sourceFactionId": "nova",
+                    "campaignFactionId": "nova",
+                    "name": "Cmdr. Sera Vale",
+                    "rank": "Commander",
+                    "shortName": "Vale",
+                    "callsign": "LONGSIGHT",
+                    "role": "TACTICIAN",
+                    "lore": {
+                      "key": "commander.nova_vale",
+                      "epithet": "Long Sight",
+                      "service": "Federation Reconnaissance Doctrine Office",
+                      "bio": "Vale reads a battlefield an hour before it happens and is usually right about the part nobody wanted to hear. Her recon doctrine is now standard across the Group."
+                    },
+                    "chassis": {
+                      "heroType": 4,
+                      "unit": "Commander",
+                      "sprite": "cdr"
+                    },
+                    "passive": {
+                      "label": "Recon Doctrine · army range +8%",
+                      "perk": "vale"
+                    },
+                    "baseline": {
+                      "index": 2,
+                      "label": "Combat Surge"
+                    },
+                    "signature": {
+                      "id": "ghostnet",
+                      "label": "Ghost Net",
+                      "em": "⌾"
+                    },
+                    "weapons": {
+                      "primary": "Spotter Rail",
+                      "secondary": "Ghost Flare"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/nova_192.jpg",
+                      "alt": "Cmdr. Sera Vale command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_nova_vale",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_nova_vale_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "legion_vex",
+                    "sourceFactionId": "legion",
+                    "campaignFactionId": "dominion",
+                    "name": "Lord Darion Vex",
+                    "rank": "Lord",
+                    "shortName": "Vex",
+                    "callsign": "ASCENDANT",
+                    "role": "JUGGERNAUT",
+                    "lore": {
+                      "key": "commander.legion_vex",
+                      "epithet": "The Grading Hand",
+                      "service": "Red Ascendancy / First Wardens, self-appointed",
+                      "bio": "Federation-trained, resigned his commission, took a third of his division with him. Treats every engagement as an examination he is setting for someone."
+                    },
+                    "chassis": {
+                      "heroType": 28,
+                      "unit": "Lord Darion Vex",
+                      "sprite": "praetor"
+                    },
+                    "passive": {
+                      "label": "Ascendant Plate · Commander health +18%",
+                      "perk": "vex"
+                    },
+                    "baseline": {
+                      "index": 0,
+                      "label": "Orbital Blast"
+                    },
+                    "signature": {
+                      "id": "seismicdecree",
+                      "label": "Seismic Decree",
+                      "em": "◆"
+                    },
+                    "weapons": {
+                      "primary": "Siege Autocannon",
+                      "secondary": "Breach Shell"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/ascendancy_192.jpg",
+                      "alt": "Lord Darion Vex command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_legion_vex",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_legion_vex_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "legion_korr",
+                    "sourceFactionId": "legion",
+                    "campaignFactionId": "dominion",
+                    "name": "Marshal Rhea Korr",
+                    "rank": "Marshal",
+                    "shortName": "Korr",
+                    "callsign": "CADENCE",
+                    "role": "WARMASTER",
+                    "lore": {
+                      "key": "commander.legion_korr",
+                      "epithet": "Cadence",
+                      "service": "Red Ascendancy / Marshal of the Crimson Advance",
+                      "bio": "Korr keeps a battle line moving at a tempo that breaks formations no single push could. Her Wardens do not retreat and are not ordered to."
+                    },
+                    "chassis": {
+                      "heroType": 28,
+                      "unit": "Lord Darion Vex",
+                      "sprite": "praetor"
+                    },
+                    "passive": {
+                      "label": "Martial Cadence · army damage +8%",
+                      "perk": "korr"
+                    },
+                    "baseline": {
+                      "index": 2,
+                      "label": "Combat Surge"
+                    },
+                    "signature": {
+                      "id": "crimsonadvance",
+                      "label": "Crimson Advance",
+                      "em": "⚔"
+                    },
+                    "weapons": {
+                      "primary": "Cadence Gun",
+                      "secondary": "Crimson Volley"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/ascendancy_192.jpg",
+                      "alt": "Marshal Rhea Korr command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_legion_korr",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_legion_korr_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "legion_dravik",
+                    "sourceFactionId": "legion",
+                    "campaignFactionId": "dominion",
+                    "name": "Prefect Amon Dravik",
+                    "rank": "Prefect",
+                    "shortName": "Dravik",
+                    "callsign": "REDOUBT",
+                    "role": "FORTIFIER",
+                    "lore": {
+                      "key": "commander.legion_dravik",
+                      "epithet": "The Iron Mandate",
+                      "service": "Red Ascendancy / Prefect of Fortifications",
+                      "bio": "Dravik fortifies ground the Ascendancy has no doctrinal interest in holding, and is never asked to explain why once the counterattack arrives."
+                    },
+                    "chassis": {
+                      "heroType": 28,
+                      "unit": "Lord Darion Vex",
+                      "sprite": "praetor"
+                    },
+                    "passive": {
+                      "label": "Iron Mandate · structures health +15%",
+                      "perk": "dravik"
+                    },
+                    "baseline": {
+                      "index": 1,
+                      "label": "Repair Pulse"
+                    },
+                    "signature": {
+                      "id": "ironredoubt",
+                      "label": "Iron Redoubt",
+                      "em": "▰"
+                    },
+                    "weapons": {
+                      "primary": "Bastion Gun",
+                      "secondary": "Redoubt Shell"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/ascendancy_192.jpg",
+                      "alt": "Prefect Amon Dravik command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_legion_dravik",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_legion_dravik_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "syndicate_renn",
+                    "sourceFactionId": "syndicate",
+                    "campaignFactionId": "syndicate",
+                    "name": "Broker Lys Renn",
+                    "rank": "Broker",
+                    "shortName": "Renn",
+                    "callsign": "LEDGER",
+                    "role": "BROKER",
+                    "lore": {
+                      "key": "commander.syndicate_renn",
+                      "epithet": "The Black Ledger",
+                      "service": "Syndicate Coalition / Accounts, Field Division",
+                      "bio": "Renn sells terrain telemetry to both sides of the same engagement and has never once been accused of inaccuracy. Adapt, profit, survive; she never said to whom."
+                    },
+                    "chassis": {
+                      "heroType": 29,
+                      "unit": "Broker Lys Renn",
+                      "sprite": "archon"
+                    },
+                    "passive": {
+                      "label": "Black Ledger · +1.5 mass / +6 energy",
+                      "perk": "renn"
+                    },
+                    "baseline": {
+                      "index": 2,
+                      "label": "Combat Surge"
+                    },
+                    "signature": {
+                      "id": "liquidation",
+                      "label": "Combat Liquidation",
+                      "em": "◇"
+                    },
+                    "weapons": {
+                      "primary": "Pulse Lance",
+                      "secondary": "Ion Cascade"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/syndicate_192.jpg",
+                      "alt": "Broker Lys Renn command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_syndicate_renn",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_syndicate_renn_"
+                    },
+                    "sourceArt": {
+                      "assetId": "syndicate-broker-lys-renn-v1",
+                      "assetType": "character-source",
+                      "status": "SOURCE_ACCEPTED_RUNTIME_UNREGISTERED",
+                      "runtimeReady": false,
+                      "runtimeRegistered": false,
+                      "canonicalPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1",
+                      "manifestPath": "modules/space_exploration/assets/source/blender/characters/syndicate-broker-lys-renn-v1/syndicate-broker-lys-renn-v1.asset-manifest.json"
+                    }
+                  },
+                  {
+                    "id": "syndicate_nyx",
+                    "sourceFactionId": "syndicate",
+                    "campaignFactionId": "syndicate",
+                    "name": "Operative Nyx Calder",
+                    "rank": "Operative",
+                    "shortName": "Calder",
+                    "callsign": "GHOST",
+                    "role": "INFILTRATOR",
+                    "lore": {
+                      "key": "commander.syndicate_nyx",
+                      "epithet": "Ghost Optics",
+                      "service": "Syndicate Coalition / Infiltration, unlisted",
+                      "bio": "Calder appears in after-action reports as an equipment anomaly. Two Coalition auditors have tried to establish whether they are one person."
+                    },
+                    "chassis": {
+                      "heroType": 29,
+                      "unit": "Broker Lys Renn",
+                      "sprite": "archon"
+                    },
+                    "passive": {
+                      "label": "Ghost Optics · army range +10%",
+                      "perk": "nyx"
+                    },
+                    "baseline": {
+                      "index": 4,
+                      "label": "EMP Charge"
+                    },
+                    "signature": {
+                      "id": "phasebreach",
+                      "label": "Phase Breach",
+                      "em": "ϟ"
+                    },
+                    "weapons": {
+                      "primary": "Needle Lance",
+                      "secondary": "Phase Bolt"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/syndicate_192.jpg",
+                      "alt": "Operative Nyx Calder command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_syndicate_nyx",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_syndicate_nyx_"
+                    },
+                    "sourceArt": null
+                  },
+                  {
+                    "id": "syndicate_voss",
+                    "sourceFactionId": "syndicate",
+                    "campaignFactionId": "syndicate",
+                    "name": "Director Oren Voss",
+                    "rank": "Director",
+                    "shortName": "Voss",
+                    "callsign": "CORE",
+                    "role": "CONTROLLER",
+                    "lore": {
+                      "key": "commander.syndicate_voss",
+                      "epithet": "The Predictive Core",
+                      "service": "Syndicate Coalition / Directorate of Autonomous Systems",
+                      "bio": "Voss runs the engagement two seconds ahead of everyone standing in it, and considers the delay between his order and its execution a defect to be engineered out."
+                    },
+                    "chassis": {
+                      "heroType": 29,
+                      "unit": "Broker Lys Renn",
+                      "sprite": "archon"
+                    },
+                    "passive": {
+                      "label": "Predictive Core · cooldowns −14%",
+                      "perk": "voss"
+                    },
+                    "baseline": {
+                      "index": 1,
+                      "label": "Repair Pulse"
+                    },
+                    "signature": {
+                      "id": "naniterecall",
+                      "label": "Nanite Recall",
+                      "em": "⟲"
+                    },
+                    "weapons": {
+                      "primary": "Grid Pulse",
+                      "secondary": "Net Cascade"
+                    },
+                    "portrait": {
+                      "resolver": "commanderPortraitSrc",
+                      "fallback": "./assets/factions/syndicate_192.jpg",
+                      "alt": "Director Oren Voss command portrait"
+                    },
+                    "voice": {
+                      "bank": "cmdr_syndicate_voss",
+                      "channel": "cmdr",
+                      "slotPrefix": "vo_cmdr_syndicate_voss_"
+                    },
+                    "sourceArt": null
+                  }
+                ],
+                "fingerprint": "fnv1a32:0aadcd2d"
+              },
+              "commanderRosterFingerprint": "fnv1a32:0aadcd2d",
+              "commissioning": {
+                "factionId": null,
+                "commanderId": null
+              }
+            },
+            "routeKey": "massfront.galactic.route.v1.8105bebdccdcca99f4b58819546af66a",
+            "route": {
+              "schemaVersion": 2,
+              "kind": "MassfrontGalacticRouteRequestV2",
+              "nonce": "8105bebdccdcca99f4b58819546af66a",
+              "profileId": "p1",
+              "routeId": "new-career-faction",
+              "issuedAt": 1788853492183,
+              "expiresAt": 1788853612183,
+              "source": "massfront-exploration",
+              "location": {
+                "systemId": "aelos",
+                "targetId": "nexus_vii"
+              },
+              "checksum": "b80420eb"
+            }
+          },
+          "phase": "faction-selection",
+          "guide": "KEEL · UGA COMMISSIONING GUIDE",
+          "options": [
+            {
+              "faction": "nova",
+              "commander": "Captain Elara Kai",
+              "grant": "COMMANDER 1",
+              "action": "COMMISSION NOVA"
+            },
+            {
+              "faction": "dominion",
+              "commander": "Lord Darion Vex",
+              "grant": "COMMANDER 1",
+              "action": "COMMISSION DOMINION"
+            },
+            {
+              "faction": "syndicate",
+              "commander": "Broker Lys Renn",
+              "grant": "COMMANDER 1",
+              "action": "COMMISSION SYNDICATE"
+            }
+          ]
+        },
+        "navigations": [
+          "http://127.0.0.1:53960/index.html",
+          "http://127.0.0.1:53960/modules/space_exploration/index.html",
+          "http://127.0.0.1:53960/index.html?galacticRoute=8105bebdccdcca99f4b58819546af66a",
+          "http://127.0.0.1:53960/index.html",
+          "http://127.0.0.1:53960/modules/space_exploration/index.html",
+          "http://127.0.0.1:53960/index.html?galacticRoute=f981edb62716e36a62b23101da5c6db4",
+          "http://127.0.0.1:53960/index.html"
+        ]
+      }
+    },
+    {
+      "name": "05-full-side-profile-management-412x900",
+      "title": "Full side-profile ship management",
+      "description": "The overview-only material grade, key and rim reveal the full vessel in an axis-aligned side elevation; focused room materials retain their authored values.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05-full-side-profile-management-412x900.png",
+      "bytes": 128677,
+      "sha256": "e9822279629b43d13eb4b2956e50aec254c3d45e7ea7f8c9a8059656c8539dc4",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "scene": "uga",
+        "cards": [],
+        "canvas": {
+          "width": 412,
+          "height": 900
+        },
+        "horizontalOverflow": 0,
+        "buttons": [],
+        "managementProfile": {
+          "selectedDistrictId": null,
+          "position": {
+            "x": -1.649997534624358,
+            "y": -227.54711108529895,
+            "z": 22.432396194463593
+          },
+          "target": {
+            "x": -1.649997534624358,
+            "y": 2.6968349280357162,
+            "z": 14.373858083996879
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "shipRoi": {
+          "roi": {
+            "x": 20,
+            "y": 342,
+            "width": 372,
+            "height": 207
+          },
+          "average": 47.33,
+          "p20": 3.8,
+          "p50": 3.8,
+          "p75": 4.51,
+          "p80": 151.59,
+          "p90": 203.73,
+          "contrastP80P20": 147.8,
+          "fractionAbove32": 0.2382
+        }
+      }
+    },
+    {
+      "name": "06-four-session-hub-offline-412x900",
+      "title": "Four-session Campaign Hub — offline routes",
+      "description": "The visible Standard / Classic and Campaign cards are both real, open routes in the integrated host.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/06-four-session-hub-offline-412x900.png",
+      "bytes": 146565,
+      "sha256": "aeee93cb8f026fe2171eca2c79baa516f24e9fcf5626de932a14685a5719cb4c",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "scene": "uga",
+        "cards": [
+          {
+            "label": "Standard Deployment",
+            "status": "READY TO PLAY",
+            "action": "OPEN",
+            "disabled": false,
+            "visiblePixels": 139.09375
+          },
+          {
+            "label": "Campaign",
+            "status": "READY TO PLAY",
+            "action": "OPEN",
+            "disabled": false,
+            "visiblePixels": 120.34375
+          },
+          {
+            "label": "Co-op / Versus",
+            "status": "NETWORK UNAVAILABLE",
+            "action": "UNAVAILABLE",
+            "disabled": true,
+            "visiblePixels": 0
+          },
+          {
+            "label": "MMO",
+            "status": "NETWORK UNAVAILABLE",
+            "action": "UNAVAILABLE",
+            "disabled": true,
+            "visiblePixels": 0
+          }
+        ],
+        "canvas": {
+          "width": 412,
+          "height": 900
+        },
+        "horizontalOverflow": 0,
+        "buttons": [
+          {
+            "text": "OPEN",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          },
+          {
+            "text": "OPEN",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          },
+          {
+            "text": "UNAVAILABLE",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          },
+          {
+            "text": "UNAVAILABLE",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          }
+        ]
+      }
+    },
+    {
+      "name": "07-four-session-hub-network-412x900",
+      "title": "Four-session Campaign Hub — network routes",
+      "description": "The visible Co-op / Versus and MMO cards remain separate and explicitly unavailable rather than routing to a fake local mode.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/07-four-session-hub-network-412x900.png",
+      "bytes": 115834,
+      "sha256": "7f34793f4284682de7e0a5da3042d3b7e6e08944c94d31bb0ef5fb3660f9eb78",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "scene": "uga",
+        "cards": [
+          {
+            "label": "Standard Deployment",
+            "status": "READY TO PLAY",
+            "action": "OPEN",
+            "disabled": false,
+            "visiblePixels": 139.09375
+          },
+          {
+            "label": "Campaign",
+            "status": "READY TO PLAY",
+            "action": "OPEN",
+            "disabled": false,
+            "visiblePixels": 129.296875
+          },
+          {
+            "label": "Co-op / Versus",
+            "status": "NETWORK UNAVAILABLE",
+            "action": "UNAVAILABLE",
+            "disabled": true,
+            "visiblePixels": 139.09375
+          },
+          {
+            "label": "MMO",
+            "status": "NETWORK UNAVAILABLE",
+            "action": "UNAVAILABLE",
+            "disabled": true,
+            "visiblePixels": 119.953125
+          }
+        ],
+        "canvas": {
+          "width": 412,
+          "height": 900
+        },
+        "horizontalOverflow": 0,
+        "buttons": [
+          {
+            "text": "OPEN",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          },
+          {
+            "text": "OPEN",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          },
+          {
+            "text": "UNAVAILABLE",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          },
+          {
+            "text": "UNAVAILABLE",
+            "width": 366,
+            "height": 44,
+            "left": 23,
+            "right": 389
+          }
+        ]
+      }
+    },
+    {
+      "name": "08-full-side-profile-management-915x412",
+      "title": "Landscape side-profile management",
+      "description": "The unobscured full-ship side elevation remains active at 915×412; the visible inspector is collapsed and runtime camera state proves it did not fall into an angled Command Core cutaway.",
+      "viewport": {
+        "width": 915,
+        "height": 412
+      },
+      "path": "screenshots/08-full-side-profile-management-915x412.png",
+      "bytes": 138391,
+      "sha256": "d611720f281fde272c62cf10bbb43badc81d1e56579e928f5fb710478de2b526",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "massfront",
+        "scene": "uga",
+        "cards": [
+          {
+            "label": "Standard Deployment",
+            "status": "READY TO PLAY",
+            "action": "OPEN",
+            "disabled": false,
+            "visiblePixels": 0
+          },
+          {
+            "label": "Campaign",
+            "status": "READY TO PLAY",
+            "action": "OPEN",
+            "disabled": false,
+            "visiblePixels": 0
+          },
+          {
+            "label": "Co-op / Versus",
+            "status": "NETWORK UNAVAILABLE",
+            "action": "UNAVAILABLE",
+            "disabled": true,
+            "visiblePixels": 0
+          },
+          {
+            "label": "MMO",
+            "status": "NETWORK UNAVAILABLE",
+            "action": "UNAVAILABLE",
+            "disabled": true,
+            "visiblePixels": 0
+          }
+        ],
+        "canvas": {
+          "width": 915,
+          "height": 412
+        },
+        "horizontalOverflow": 0,
+        "buttons": [
+          {
+            "text": "OPEN",
+            "width": 0,
+            "height": 0,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "text": "OPEN",
+            "width": 0,
+            "height": 0,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "text": "UNAVAILABLE",
+            "width": 0,
+            "height": 0,
+            "left": 0,
+            "right": 0
+          },
+          {
+            "text": "UNAVAILABLE",
+            "width": 0,
+            "height": 0,
+            "left": 0,
+            "right": 0
+          }
+        ],
+        "managementProfile": {
+          "selectedDistrictId": null,
+          "position": {
+            "x": 28.117176579072424,
+            "y": -89.98758316994693,
+            "z": 19.75027451115526
+          },
+          "target": {
+            "x": 28.117176579072424,
+            "y": 2.7713797733806835,
+            "z": 16.503710808138795
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "inspector": {
+          "shellExpanded": false,
+          "ariaExpanded": "false",
+          "bodyDisplay": "none",
+          "panelRect": {
+            "x": 578,
+            "y": 314,
+            "width": 329,
+            "height": 44
+          }
+        },
+        "shipRoi": {
+          "roi": {
+            "x": 64,
+            "y": 90,
+            "width": 787,
+            "height": 207
+          },
+          "average": 33.34,
+          "p20": 3.72,
+          "p50": 3.8,
+          "p75": 11.52,
+          "p80": 36.12,
+          "p90": 154.84,
+          "contrastP80P20": 32.4,
+          "fractionAbove32": 0.2087
+        }
+      }
+    },
+    {
+      "name": "05b-classic-massfront-terminal-412x900",
+      "title": "Classic MASSFRONT War Room",
+      "description": "The visible Classic tab opens the base-owned War Room; playable Standard/Campaign routes and unavailable network modes remain distinct.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05b-classic-massfront-terminal-412x900.png",
+      "bytes": 140957,
+      "sha256": "efbadd64fccf2ef35ff9bf36a8277c77688d6f4f7e5315d04bb8585495f2c2c2",
+      "url": "http://127.0.0.1:53960/index.html",
+      "state": {
+        "title": "⚔ WAR ROOM",
+        "modes": [
+          {
+            "id": "training",
+            "label": "TRAINING",
+            "locked": false,
+            "ariaDisabled": ""
+          },
+          {
+            "id": "standard",
+            "label": "STANDARD",
+            "locked": false,
+            "ariaDisabled": ""
+          },
+          {
+            "id": "campaign",
+            "label": "CAMPAIGN",
+            "locked": false,
+            "ariaDisabled": ""
+          },
+          {
+            "id": "mmo",
+            "label": "MMO",
+            "locked": true,
+            "ariaDisabled": "true"
+          },
+          {
+            "id": "coop",
+            "label": "CO-OP",
+            "locked": true,
+            "ariaDisabled": "true"
+          }
+        ],
+        "horizontalOverflow": 0
+      }
+    },
+    {
+      "name": "09-battle-minimap-commander-takeover-412x900",
+      "title": "Battle minimap takeover — Commander",
+      "description": "A real Commander cue in a live Standard battle temporarily replaces only the minimap with the authored profile/subtitle receiver.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/09-battle-minimap-commander-takeover-412x900.png",
+      "bytes": 537210,
+      "sha256": "0499949ad8a842177439868029d298adfa41eb904d50f653283d1ab21c3e9531",
+      "url": "http://127.0.0.1:53960/index.html",
+      "state": {
+        "route": {
+          "stages": [
+            {
+              "stage": "galaxy",
+              "label": "▶ ENTER SOMBRERO-I"
+            },
+            {
+              "stage": "system",
+              "label": "▶ ENTER AELOS"
+            },
+            {
+              "stage": "planet",
+              "label": "▶ OPEN REGION"
+            },
+            {
+              "stage": "region",
+              "label": "▶ CONFIGURE FORCE"
+            },
+            {
+              "stage": "deploy",
+              "label": "▶ START BATTLE"
+            }
+          ],
+          "live": {
+            "activeWarMode": "standard",
+            "matchLive": true,
+            "running": true,
+            "paused": false,
+            "simTime": 0.39999999999999997,
+            "playerFaction": "nova",
+            "playerCommanderId": "nova_kai",
+            "stage": "deploy",
+            "hudTacticalDock": true
+          }
+        },
+        "raised": {
+          "ok": true,
+          "reason": "queued",
+          "text": "New systems certified. Use them.",
+          "speaker": "Captain Elara Kai"
+        },
+        "active": {
+          "receiver": {
+            "ready": true,
+            "missing": false,
+            "bound": true,
+            "state": "hold",
+            "placement": "minimap",
+            "shown": 2,
+            "solved": 4,
+            "portraitFallbacks": 0,
+            "lastKey": "nova_kai|research.complete#0",
+            "portraitStage": "primary",
+            "text": "New systems certified. Use them.",
+            "who": "Captain Elara Kai",
+            "rank": "CAPTAIN · LANTERN",
+            "tag": "RESEARCH",
+            "audio": "silent",
+            "receiver": "hold",
+            "animation": "portrait",
+            "rect": {
+              "x": 7,
+              "y": 687,
+              "w": 99,
+              "h": 99
+            },
+            "overflow": {
+              "scroll": 22,
+              "client": 22
+            }
+          },
+          "wrapTransmission": "hold",
+          "wrapAttributes": [
+            [
+              "aria-label",
+              "Tactical minimap and command transmissions"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-receiver"
+            ],
+            [
+              "data-transmission",
+              "hold"
+            ],
+            [
+              "id",
+              "minimapWrap"
+            ],
+            [
+              "role",
+              "region"
+            ]
+          ],
+          "mapAttributes": [
+            [
+              "aria-keyshortcuts",
+              "ArrowUp ArrowDown ArrowLeft ArrowRight Home"
+            ],
+            [
+              "aria-label",
+              "Tactical minimap. Use arrow keys to pan the camera and Home to center the map"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-command"
+            ],
+            [
+              "height",
+              "256"
+            ],
+            [
+              "id",
+              "minimap"
+            ],
+            [
+              "role",
+              "application"
+            ],
+            [
+              "tabindex",
+              "0"
+            ],
+            [
+              "width",
+              "256"
+            ]
+          ],
+          "mapComputed": {
+            "display": "block",
+            "visibility": "visible",
+            "opacity": "0.17",
+            "filter": "hue-rotate(70deg) contrast(2.2)",
+            "animationName": "mfMinimapSignal",
+            "animationDuration": "0.62s",
+            "animationIterationCount": "infinite",
+            "transform": "none"
+          },
+          "mapRect": {
+            "x": 9,
+            "y": 689,
+            "width": 95,
+            "height": 95
+          },
+          "txState": "hold",
+          "txDisplay": "flex"
+        }
+      }
+    },
+    {
+      "name": "10-battle-minimap-exact-restoration-412x900",
+      "title": "Battle minimap restored",
+      "description": "After bounded enter, hold and exit, the transmission attribute is removed and the minimap returns to its exact baseline presentation with no persistent flicker.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/10-battle-minimap-exact-restoration-412x900.png",
+      "bytes": 547615,
+      "sha256": "832e81a97e7d11be8359b0bb2079f291a435e0a8ad5748f643000bc284657a78",
+      "url": "http://127.0.0.1:53960/index.html",
+      "state": {
+        "baseline": {
+          "receiver": {
+            "ready": true,
+            "missing": false,
+            "bound": true,
+            "state": "idle",
+            "placement": "minimap",
+            "shown": 1,
+            "solved": 2,
+            "portraitFallbacks": 0,
+            "lastKey": "nova_kai|objective.assigned#0",
+            "portraitStage": "primary",
+            "text": "New objective on the board. Move when ready.",
+            "who": "Captain Elara Kai",
+            "rank": "CAPTAIN · LANTERN",
+            "tag": "OBJECTIVE",
+            "audio": null,
+            "receiver": "",
+            "animation": "portrait",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 0,
+              "h": 0
+            },
+            "overflow": {
+              "scroll": 0,
+              "client": 0
+            }
+          },
+          "wrapTransmission": "",
+          "wrapAttributes": [
+            [
+              "aria-label",
+              "Tactical minimap and command transmissions"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-receiver"
+            ],
+            [
+              "id",
+              "minimapWrap"
+            ],
+            [
+              "role",
+              "region"
+            ]
+          ],
+          "mapAttributes": [
+            [
+              "aria-keyshortcuts",
+              "ArrowUp ArrowDown ArrowLeft ArrowRight Home"
+            ],
+            [
+              "aria-label",
+              "Tactical minimap. Use arrow keys to pan the camera and Home to center the map"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-command"
+            ],
+            [
+              "height",
+              "256"
+            ],
+            [
+              "id",
+              "minimap"
+            ],
+            [
+              "role",
+              "application"
+            ],
+            [
+              "tabindex",
+              "0"
+            ],
+            [
+              "width",
+              "256"
+            ]
+          ],
+          "mapComputed": {
+            "display": "block",
+            "visibility": "visible",
+            "opacity": "1",
+            "filter": "none",
+            "animationName": "none",
+            "animationDuration": "0s",
+            "animationIterationCount": "1",
+            "transform": "none"
+          },
+          "mapRect": {
+            "x": 9,
+            "y": 689,
+            "width": 95,
+            "height": 95
+          },
+          "txState": "idle",
+          "txDisplay": "none"
+        },
+        "timeline": [
+          {
+            "state": "enter",
+            "at": 21702.299999999814
+          },
+          {
+            "state": "hold",
+            "at": 21878.5
+          },
+          {
+            "state": "exit",
+            "at": 23284.39999999944
+          },
+          {
+            "state": "idle",
+            "at": 23513.89999999944
+          }
+        ],
+        "restored": {
+          "receiver": {
+            "ready": true,
+            "missing": false,
+            "bound": true,
+            "state": "idle",
+            "placement": "minimap",
+            "shown": 2,
+            "solved": 7,
+            "portraitFallbacks": 0,
+            "lastKey": "nova_kai|research.complete#0",
+            "portraitStage": "primary",
+            "text": "New systems certified. Use them.",
+            "who": "Captain Elara Kai",
+            "rank": "CAPTAIN · LANTERN",
+            "tag": "RESEARCH",
+            "audio": null,
+            "receiver": "",
+            "animation": "portrait",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 0,
+              "h": 0
+            },
+            "overflow": {
+              "scroll": 0,
+              "client": 0
+            }
+          },
+          "wrapTransmission": "",
+          "wrapAttributes": [
+            [
+              "aria-label",
+              "Tactical minimap and command transmissions"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-receiver"
+            ],
+            [
+              "id",
+              "minimapWrap"
+            ],
+            [
+              "role",
+              "region"
+            ]
+          ],
+          "mapAttributes": [
+            [
+              "aria-keyshortcuts",
+              "ArrowUp ArrowDown ArrowLeft ArrowRight Home"
+            ],
+            [
+              "aria-label",
+              "Tactical minimap. Use arrow keys to pan the camera and Home to center the map"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-command"
+            ],
+            [
+              "height",
+              "256"
+            ],
+            [
+              "id",
+              "minimap"
+            ],
+            [
+              "role",
+              "application"
+            ],
+            [
+              "tabindex",
+              "0"
+            ],
+            [
+              "width",
+              "256"
+            ]
+          ],
+          "mapComputed": {
+            "display": "block",
+            "visibility": "visible",
+            "opacity": "1",
+            "filter": "none",
+            "animationName": "none",
+            "animationDuration": "0s",
+            "animationIterationCount": "1",
+            "transform": "none"
+          },
+          "mapRect": {
+            "x": 9,
+            "y": 689,
+            "width": 95,
+            "height": 95
+          },
+          "txState": "idle",
+          "txDisplay": "none"
+        },
+        "stableIdle": {
+          "receiver": {
+            "ready": true,
+            "missing": false,
+            "bound": true,
+            "state": "idle",
+            "placement": "minimap",
+            "shown": 2,
+            "solved": 7,
+            "portraitFallbacks": 0,
+            "lastKey": "nova_kai|research.complete#0",
+            "portraitStage": "primary",
+            "text": "New systems certified. Use them.",
+            "who": "Captain Elara Kai",
+            "rank": "CAPTAIN · LANTERN",
+            "tag": "RESEARCH",
+            "audio": null,
+            "receiver": "",
+            "animation": "portrait",
+            "rect": {
+              "x": 0,
+              "y": 0,
+              "w": 0,
+              "h": 0
+            },
+            "overflow": {
+              "scroll": 0,
+              "client": 0
+            }
+          },
+          "wrapTransmission": "",
+          "wrapAttributes": [
+            [
+              "aria-label",
+              "Tactical minimap and command transmissions"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-receiver"
+            ],
+            [
+              "id",
+              "minimapWrap"
+            ],
+            [
+              "role",
+              "region"
+            ]
+          ],
+          "mapAttributes": [
+            [
+              "aria-keyshortcuts",
+              "ArrowUp ArrowDown ArrowLeft ArrowRight Home"
+            ],
+            [
+              "aria-label",
+              "Tactical minimap. Use arrow keys to pan the camera and Home to center the map"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-command"
+            ],
+            [
+              "height",
+              "256"
+            ],
+            [
+              "id",
+              "minimap"
+            ],
+            [
+              "role",
+              "application"
+            ],
+            [
+              "tabindex",
+              "0"
+            ],
+            [
+              "width",
+              "256"
+            ]
+          ],
+          "mapComputed": {
+            "display": "block",
+            "visibility": "visible",
+            "opacity": "1",
+            "filter": "none",
+            "animationName": "none",
+            "animationDuration": "0s",
+            "animationIterationCount": "1",
+            "transform": "none"
+          },
+          "mapRect": {
+            "x": 9,
+            "y": 689,
+            "width": 95,
+            "height": 95
+          },
+          "txState": "idle",
+          "txDisplay": "none"
+        }
+      }
+    },
+    {
+      "name": "11-battle-minimap-keel-takeover-412x900",
+      "title": "Battle minimap takeover — KEEL",
+      "description": "KEEL uses the same bounded minimap receiver only in battle; normal-space KEEL remains in the dedicated story rail.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/11-battle-minimap-keel-takeover-412x900.png",
+      "bytes": 545985,
+      "sha256": "b5b5a44243f24b0e7feef4069becf134e94f105a57ff3478e05ed9e643a3d45d",
+      "url": "http://127.0.0.1:53960/index.html",
+      "state": {
+        "keelCue": {
+          "schema": "massfront.keel-hint.v1",
+          "hintId": "battle-camera",
+          "context": "battle-camera",
+          "surface": "battle-minimap",
+          "speaker": "KEEL",
+          "speakerId": "keel",
+          "affiliation": "uga",
+          "speakerRole": "UGA EXPEDITION GUIDE",
+          "channel": "UGA PERSONNEL LINK",
+          "voiceId": "keen",
+          "profileId": "uga-keel-expedition-guide",
+          "animationId": "keel-tactical-link",
+          "text": "KEEL tactical receiver acceptance: battle guidance belongs in the minimap bay.",
+          "durationMs": 1400,
+          "priority": 50,
+          "issuedAt": 1788853538087,
+          "handled": true,
+          "presenter": "battle-minimap"
+        },
+        "keelActive": {
+          "receiver": {
+            "ready": true,
+            "missing": false,
+            "bound": true,
+            "state": "hold",
+            "placement": "minimap",
+            "shown": 3,
+            "solved": 9,
+            "portraitFallbacks": 0,
+            "lastKey": "keel|battle-camera#1788853538087",
+            "portraitStage": "primary",
+            "text": "KEEL tactical receiver acceptance: battle guidance belongs in the minimap bay.",
+            "who": "KEEL",
+            "rank": "UGA SHIP LIAISON",
+            "tag": "UGA GUIDANCE",
+            "receiver": "hold",
+            "animation": "portrait",
+            "rect": {
+              "x": 7,
+              "y": 687,
+              "w": 99,
+              "h": 99
+            },
+            "overflow": {
+              "scroll": 44,
+              "client": 33
+            }
+          },
+          "wrapTransmission": "hold",
+          "wrapAttributes": [
+            [
+              "aria-label",
+              "Tactical minimap and command transmissions"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-receiver"
+            ],
+            [
+              "data-transmission",
+              "hold"
+            ],
+            [
+              "id",
+              "minimapWrap"
+            ],
+            [
+              "role",
+              "region"
+            ]
+          ],
+          "mapAttributes": [
+            [
+              "aria-keyshortcuts",
+              "ArrowUp ArrowDown ArrowLeft ArrowRight Home"
+            ],
+            [
+              "aria-label",
+              "Tactical minimap. Use arrow keys to pan the camera and Home to center the map"
+            ],
+            [
+              "data-mf-hud-role",
+              "minimap-command"
+            ],
+            [
+              "height",
+              "256"
+            ],
+            [
+              "id",
+              "minimap"
+            ],
+            [
+              "role",
+              "application"
+            ],
+            [
+              "tabindex",
+              "0"
+            ],
+            [
+              "width",
+              "256"
+            ]
+          ],
+          "mapComputed": {
+            "display": "block",
+            "visibility": "visible",
+            "opacity": "0.2",
+            "filter": "hue-rotate(70deg) contrast(2.2)",
+            "animationName": "mfMinimapSignal",
+            "animationDuration": "0.62s",
+            "animationIterationCount": "infinite",
+            "transform": "none"
+          },
+          "mapRect": {
+            "x": 9,
+            "y": 689,
+            "width": 95,
+            "height": 95
+          },
+          "txState": "hold",
+          "txDisplay": "flex"
+        }
+      }
+    },
+    {
+      "name": "05a-01-command-controller-412x900",
+      "title": "Command Core room controller",
+      "description": "The current-source Command Core controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-01-command-controller-412x900.png",
+      "bytes": 149454,
+      "sha256": "f59b1b8e0c9cf1406dbae446b43e0ebb232be5244ce26c61c58c344eddaefd56",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "command",
+        "sceneLabel": "Command Core",
+        "heading": "Command Core",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2208,
+        "contextScrollHeight": 1084,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 2,
+        "managementProfile": {
+          "selectedDistrictId": "command",
+          "position": {
+            "x": -22.290647515229647,
+            "y": -52.86823504309123,
+            "z": 11.078390688453906
+          },
+          "target": {
+            "x": -26.29532918983409,
+            "y": -0.5075995102517132,
+            "z": 1.0695433591537853
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-02-navigation-controller-412x900",
+      "title": "Navigation Bridge room controller",
+      "description": "The current-source Navigation Bridge controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-02-navigation-controller-412x900.png",
+      "bytes": 202722,
+      "sha256": "dcb5f1f1e365e556daadeb6ded127ec18a549714c7688337118bcd2c4f7fb70f",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "navigation",
+        "sceneLabel": "Navigation Bridge",
+        "heading": "Navigation Bridge",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1716,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "navigation",
+          "position": {
+            "x": -21.61800157003568,
+            "y": -19.638776164095365,
+            "z": 9.644599987312928
+          },
+          "target": {
+            "x": -23.855324479341217,
+            "y": -0.3930533361308481,
+            "z": 4.403132081835362
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-03-survey-controller-412x900",
+      "title": "Survey Lab room controller",
+      "description": "The current-source Survey Lab controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-03-survey-controller-412x900.png",
+      "bytes": 207988,
+      "sha256": "78751add517dedb30c135de0d04585bb0b9d1e2371bff82c0555693aaca5a44c",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "survey",
+        "sceneLabel": "Survey Lab",
+        "heading": "Survey Lab",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2282,
+        "contextScrollHeight": 1010,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 10,
+        "managementProfile": {
+          "selectedDistrictId": "survey",
+          "position": {
+            "x": -14.718362483378808,
+            "y": -31.954987963453696,
+            "z": 13.724880281011764
+          },
+          "target": {
+            "x": -18.470861337293176,
+            "y": -0.6657579437737062,
+            "z": 4.96840540358113
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-04-mission-ops-controller-412x900",
+      "title": "Mission Operations room controller",
+      "description": "The current-source Mission Operations controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-04-mission-ops-controller-412x900.png",
+      "bytes": 196850,
+      "sha256": "c8a98a7df6c43c8196cda2478e7e6691446b5360c41269b4a6f683adb3a9afde",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "mission_ops",
+        "sceneLabel": "Mission Operations",
+        "heading": "Mission Operations",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1708,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "mission_ops",
+          "position": {
+            "x": -20.231332321908983,
+            "y": -18.649613742679563,
+            "z": 5.931074891027283
+          },
+          "target": {
+            "x": -22.429625962939053,
+            "y": -0.329836653169592,
+            "z": 0.8016998424580422
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-05-research-controller-412x900",
+      "title": "Research Directorate room controller",
+      "description": "The current-source Research Directorate controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-05-research-controller-412x900.png",
+      "bytes": 201878,
+      "sha256": "335daf5460af1f3d0ddb3f3a98f02d292664b0f24585599fec6dffeef312a656",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "research",
+        "sceneLabel": "Research Directorate",
+        "heading": "Research Directorate",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2268,
+        "contextScrollHeight": 1010,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 10,
+        "managementProfile": {
+          "selectedDistrictId": "research",
+          "position": {
+            "x": -6.393632781155016,
+            "y": -31.235820315950704,
+            "z": 12.876640597312857
+          },
+          "target": {
+            "x": -10.064906455349034,
+            "y": -0.6418443654841632,
+            "z": 4.310334354233744
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-06-fabricator-controller-412x900",
+      "title": "Fabrication & Armory room controller",
+      "description": "The current-source Fabrication & Armory controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-06-fabricator-controller-412x900.png",
+      "bytes": 228730,
+      "sha256": "9aabee75864ad2f074eebf899160b3902c8016a1813e7334875973c115fa4d0f",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "fabricator",
+        "sceneLabel": "Fabrication & Armory",
+        "heading": "Fabrication & Armory",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1665,
+        "contextScrollHeight": 1035,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "fabricator",
+          "position": {
+            "x": 4.229961104759308,
+            "y": -33.49645226448179,
+            "z": 14.12622886078426
+          },
+          "target": {
+            "x": 0.2941372689999291,
+            "y": -0.6979188510689732,
+            "z": 4.9426398599727435
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-07-engineering-controller-412x900",
+      "title": "Engineering & Drive room controller",
+      "description": "The current-source Engineering & Drive controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-07-engineering-controller-412x900.png",
+      "bytes": 208077,
+      "sha256": "fa71dca091f639f131254debf91f2a76f6f9b1d9a6b7b4f876d7ee28ad450a92",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "engineering",
+        "sceneLabel": "Engineering & Drive",
+        "heading": "Engineering & Drive",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2324,
+        "contextScrollHeight": 1010,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 10,
+        "managementProfile": {
+          "selectedDistrictId": "engineering",
+          "position": {
+            "x": 14.525212036047986,
+            "y": -33.61233976174103,
+            "z": 14.19026461734408
+          },
+          "target": {
+            "x": 10.575827105469921,
+            "y": -0.7007986199966177,
+            "z": 4.975033110786138
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-08-habitat-controller-412x900",
+      "title": "Habitat & Medical room controller",
+      "description": "The current-source Habitat & Medical controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-08-habitat-controller-412x900.png",
+      "bytes": 204301,
+      "sha256": "0676a99d34674e63ed0f3dc03e032a078fabd8fa8be1c6bd4d83ffeb9b5ac55b",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "habitat",
+        "sceneLabel": "Habitat & Medical",
+        "heading": "Habitat & Medical",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1736,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "habitat",
+          "position": {
+            "x": -9.73076959890325,
+            "y": -33.61659975234276,
+            "z": 9.866973070278467
+          },
+          "target": {
+            "x": -13.680653021310635,
+            "y": -0.7009045633052353,
+            "z": 0.6505784179137422
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-09-factions-controller-412x900",
+      "title": "Coalition Embassy room controller",
+      "description": "The current-source Coalition Embassy controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-09-factions-controller-412x900.png",
+      "bytes": 199632,
+      "sha256": "deeef017325ee3c40e58cfaa7a75670f194c00ef705eb8d0bb3a7e0080055e2f",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "factions",
+        "sceneLabel": "Coalition Embassy",
+        "heading": "Coalition Embassy",
+        "commissioned": true,
+        "tier": 3,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1558,
+        "contextScrollHeight": 854,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 8,
+        "managementProfile": {
+          "selectedDistrictId": "factions",
+          "position": {
+            "x": -5.436689731355872,
+            "y": -33.61677597721212,
+            "z": 9.179577373869552
+          },
+          "target": {
+            "x": -9.386594459040463,
+            "y": -0.7009032463897514,
+            "z": -0.03686699073193889
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-10-hangar-controller-412x900",
+      "title": "Strike & Expedition Bay room controller",
+      "description": "The current-source Strike & Expedition Bay controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-10-hangar-controller-412x900.png",
+      "bytes": 229269,
+      "sha256": "2614ac4811b94c6759eed3dd21d7f3726fc9b34c82bfcfa50ae90b7568b3a6c4",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "hangar",
+        "sceneLabel": "Strike & Expedition Bay",
+        "heading": "Strike & Expedition Bay",
+        "commissioned": true,
+        "tier": 2,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 2521,
+        "contextScrollHeight": 1180,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 9,
+        "managementProfile": {
+          "selectedDistrictId": "hangar",
+          "position": {
+            "x": 4.5432724436959235,
+            "y": -33.61679123823857,
+            "z": 9.144085261444268
+          },
+          "target": {
+            "x": 0.5933666166543965,
+            "y": -0.7009093462214938,
+            "z": -0.07236166831945202
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "05a-11-logistics-controller-412x900",
+      "title": "Logistics & Cargo room controller",
+      "description": "The current-source Logistics & Cargo controller is open against its matching authored cutaway district under the fully commissioned isolated showcase fixture.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/05a-11-logistics-controller-412x900.png",
+      "bytes": 222143,
+      "sha256": "4839b598eaee7832a8e2e445a76c1a936f994540a7d70bb147d958da6a9751d5",
+      "url": "http://127.0.0.1:53960/modules/space_exploration/index.html",
+      "state": {
+        "runtime": "sandbox",
+        "scene": "uga",
+        "view": "command",
+        "districtId": "logistics",
+        "sceneLabel": "Logistics & Cargo",
+        "heading": "Logistics & Cargo",
+        "commissioned": true,
+        "tier": 1,
+        "sheetExpanded": true,
+        "bodyDisplay": "block",
+        "bodyVisibility": "visible",
+        "contextTextLength": 1709,
+        "contextScrollHeight": 1049,
+        "contextClientHeight": 270,
+        "contextRect": {
+          "x": 0,
+          "y": 527,
+          "width": 412,
+          "height": 315
+        },
+        "horizontalOverflow": 0,
+        "telemetry": {
+          "contained": true,
+          "overlap": false,
+          "labelDisplay": "none",
+          "value": "298 / 480 MW",
+          "surplus": "+182 MW SURPLUS"
+        },
+        "actionableControls": 5,
+        "managementProfile": {
+          "selectedDistrictId": "logistics",
+          "position": {
+            "x": 14.288537414174318,
+            "y": -33.61675581842481,
+            "z": 9.142907081845772
+          },
+          "target": {
+            "x": 10.338631546601212,
+            "y": -0.7008735886487459,
+            "z": -0.07353994249148606
+          },
+          "up": {
+            "x": 0,
+            "y": 0,
+            "z": 1
+          },
+          "sideOn": false
+        },
+        "fixture": "createShowcaseReadyDomainState"
+      }
+    },
+    {
+      "name": "12-protected-planetary-training-412x900",
+      "title": "Protected planetary Training",
+      "description": "The tutorial branch lands in a real protected RTS match, not the ship cutaway. Training remains its own protected state and does not accept ordinary Commander chatter.",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "path": "screenshots/12-protected-planetary-training-412x900.png",
+      "bytes": 507327,
+      "sha256": "72e563d40f7f71c5531116c4d929a080d7660d1a543892f52224d3fd16a49f0f",
+      "url": "http://127.0.0.1:53960/index.html",
+      "state": {
+        "state": {
+          "done": false,
+          "basicDone": false,
+          "certified": false,
+          "active": true,
+          "course": "basic",
+          "total": 10,
+          "interrupted": false,
+          "progress": 0,
+          "rewarded": false,
+          "state": "PLANETARY BASICS ACTIVE",
+          "action": "▶ RESUME TRAINING"
+        },
+        "gate": {
+          "version": 1,
+          "profileId": "p1",
+          "armed": true,
+          "pending": true,
+          "phase": "training",
+          "canEnterSpaceCareer": false,
+          "factionId": null,
+          "runtimeFaction": null,
+          "commanderId": null,
+          "starterCommanderId": null
+        },
+        "bodyClass": "bgDim mf-cinematic-hud mfHudSecondaryOpen offline mfIntroDone trainingOperation",
+        "scene": "protected planetary RTS battle",
+        "keel": {
+          "ready": true,
+          "missing": false,
+          "bound": true,
+          "state": "idle",
+          "placement": "",
+          "shown": 0,
+          "solved": 0,
+          "portraitFallbacks": 0,
+          "lastKey": "",
+          "portraitStage": "",
+          "text": "",
+          "who": "",
+          "rank": "",
+          "tag": "",
+          "audio": null,
+          "receiver": "",
+          "animation": "",
+          "rect": {
+            "x": 0,
+            "y": 0,
+            "w": 0,
+            "h": 0
+          },
+          "overflow": {
+            "scroll": 0,
+            "client": 0
+          }
+        }
+      }
+    }
+  ],
+  "checks": [
+    {
+      "scope": "fresh-base-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "fresh-base-412x900",
+      "name": "integrated Galactic capability comes from the packaged or OTA contract",
+      "ok": true,
+      "detail": "{\"build\":true,\"ota\":false,\"legacyPreference\":false}"
+    },
+    {
+      "scope": "fresh-base-412x900",
+      "name": "real launcher exposes an enabled route to the title sequence",
+      "ok": true,
+      "detail": "{\"selector\":\"#mfLaunchPlay\",\"label\":\"CONTINUE TO INTRO\",\"snapshot\":{\"gate\":true,\"passed\":false,\"bypass\":false,\"phase\":\"updater\",\"primary\":\"play-offline\",\"identity\":{\"state\":\"pending\",\"signedIn\":false,\"verified\":false,\"source\":\"boot\",\"revision\":0},\"update\":{\"state\":\"idle\",\"status\":\"Ready\"},\"notesTab\":\"features\",\"historyTab\":\"published\"}}"
+    },
+    {
+      "scope": "fresh-space-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "player-entry",
+      "name": "launcher, title and offline identity continue directly into integrated Galactic space",
+      "ok": true,
+      "detail": "{\"entry\":{\"capability\":{\"build\":true,\"ota\":false,\"legacyPreference\":false},\"launcher\":{\"selector\":\"#mfLaunchPlay\",\"label\":\"CONTINUE TO INTRO\",\"snapshot\":{\"gate\":true,\"passed\":false,\"bypass\":false,\"phase\":\"updater\",\"primary\":\"play-offline\",\"identity\":{\"state\":\"pending\",\"signedIn\":false,\"verified\":false,\"source\":\"boot\",\"revision\":0},\"update\":{\"state\":\"idle\",\"status\":\"Ready\"},\"notesTab\":\"features\",\"historyTab\":\"published\"}},\"intro\":\"#mfIntroStart\",\"identity\":\"#apOfflineBtn\"},\"identity\":{\"state\":\"offline\",\"signedIn\":false,\"verified\":false,\"source\":\"offline-choice\",\"revision\":2}}"
+    },
+    {
+      "scope": "world-intro",
+      "name": "new career enters the exterior system scene",
+      "ok": true,
+      "detail": "system"
+    },
+    {
+      "scope": "world-intro",
+      "name": "normal-space KEEL uses the dedicated story rail",
+      "ok": true,
+      "detail": "{\"runtime\":\"massfront\",\"entryView\":\"system\",\"scene\":\"system\",\"storyRailHidden\":\"false\",\"transmitting\":true,\"channel\":\"UGA PERSONNEL LINK\",\"speaker\":\"KEEL\",\"title\":\"WELCOME TO THE AELOS ANCHORAGE\",\"body\":\"Welcome aboard your UGA exploration ship. I am KEEL. Drag to look around, select a contact, and use ALIGN or AUTOPILOT to approach. SURVEY opens the scanner for a selected planet.\",\"actions\":[{\"id\":\"first-entry-next\",\"text\":\"01NEXT · YOUR MISSION LOOP›\"}],\"minimapNodes\":0,\"renderVeil\":{\"ready\":true,\"visibility\":\"hidden\",\"opacity\":\"0\",\"pointerEvents\":\"none\"}}"
+    },
+    {
+      "scope": "world-intro",
+      "name": "space document contains no battle minimap receiver",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "scope": "world-intro",
+      "name": "opening veil is fully gone and stays gone before capture",
+      "ok": true,
+      "detail": "{\"ready\":true,\"visibility\":\"hidden\",\"opacity\":\"0\",\"pointerEvents\":\"none\"}"
+    },
+    {
+      "scope": "first-choice",
+      "name": "both optional tutorial paths are visible",
+      "ok": true,
+      "detail": "[{\"id\":\"begin-planetary-training\",\"text\":\"01BEGIN BASIC TUTORIALProtected planetary mission covering navigation, selection, economy, construction and combat.RECOMMENDED · PROTECTED›\"},{\"id\":\"skip-to-faction-selection\",\"text\":\"02ARRANGE FIRST COMMANDERChoose the faction supplying your first commander. Select that available commander when preparing an objective.NO TRAINING MISSION›\"}]"
+    },
+    {
+      "scope": "skip-return-base-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "commissioning",
+      "name": "skip route converges on required faction selection",
+      "ok": true,
+      "detail": "faction-selection"
+    },
+    {
+      "scope": "commissioning",
+      "name": "three playable factions expose real Commander 1 grants",
+      "ok": true,
+      "detail": "[{\"faction\":\"nova\",\"commander\":\"Captain Elara Kai\",\"grant\":\"COMMANDER 1\",\"action\":\"COMMISSION NOVA\"},{\"faction\":\"dominion\",\"commander\":\"Lord Darion Vex\",\"grant\":\"COMMANDER 1\",\"action\":\"COMMISSION DOMINION\"},{\"faction\":\"syndicate\",\"commander\":\"Broker Lys Renn\",\"grant\":\"COMMANDER 1\",\"action\":\"COMMISSION SYNDICATE\"}]"
+    },
+    {
+      "scope": "commissioned-space-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "commissioning",
+      "name": "selected faction and its Commander 1 crossed the secured ticket",
+      "ok": true,
+      "detail": "{\"ticket\":{\"factionId\":\"nova\",\"commanderId\":\"nova_kai\"},\"scene\":\"system\",\"introRequired\":false}"
+    },
+    {
+      "scope": "management",
+      "name": "ship management uses the full side-profile camera",
+      "ok": false,
+      "detail": "{\"selectedDistrictId\":null,\"position\":{\"x\":-1.649997534624358,\"y\":-227.54711108529895,\"z\":22.432396194463593},\"target\":{\"x\":-1.649997534624358,\"y\":2.6968349280357162,\"z\":14.373858083996879},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "management",
+      "name": "412x900 ship ROI has readable luminance and silhouette contrast",
+      "ok": true,
+      "detail": "{\"roi\":{\"x\":20,\"y\":342,\"width\":372,\"height\":207},\"average\":47.33,\"p20\":3.8,\"p50\":3.8,\"p75\":4.51,\"p80\":151.59,\"p90\":203.73,\"contrastP80P20\":147.8,\"fractionAbove32\":0.2382}"
+    },
+    {
+      "scope": "campaign-hub",
+      "name": "four product session families are distinct",
+      "ok": false,
+      "detail": "[{\"label\":\"Standard Deployment\",\"status\":\"READY TO PLAY\",\"action\":\"OPEN\",\"disabled\":false,\"visiblePixels\":0},{\"label\":\"Campaign\",\"status\":\"READY TO PLAY\",\"action\":\"OPEN\",\"disabled\":false,\"visiblePixels\":0},{\"label\":\"Co-op / Versus\",\"status\":\"NETWORK UNAVAILABLE\",\"action\":\"UNAVAILABLE\",\"disabled\":true,\"visiblePixels\":0},{\"label\":\"MMO\",\"status\":\"NETWORK UNAVAILABLE\",\"action\":\"UNAVAILABLE\",\"disabled\":true,\"visiblePixels\":0}]"
+    },
+    {
+      "scope": "campaign-hub",
+      "name": "offline routes open and network routes remain unavailable",
+      "ok": true,
+      "detail": "[{\"label\":\"Standard Deployment\",\"status\":\"READY TO PLAY\",\"action\":\"OPEN\",\"disabled\":false,\"visiblePixels\":0},{\"label\":\"Campaign\",\"status\":\"READY TO PLAY\",\"action\":\"OPEN\",\"disabled\":false,\"visiblePixels\":0},{\"label\":\"Co-op / Versus\",\"status\":\"NETWORK UNAVAILABLE\",\"action\":\"UNAVAILABLE\",\"disabled\":true,\"visiblePixels\":0},{\"label\":\"MMO\",\"status\":\"NETWORK UNAVAILABLE\",\"action\":\"UNAVAILABLE\",\"disabled\":true,\"visiblePixels\":0}]"
+    },
+    {
+      "scope": "campaign-hub",
+      "name": "412x900 cards and actions stay within the viewport",
+      "ok": true,
+      "detail": "{\"horizontalOverflow\":0,\"buttons\":[{\"text\":\"OPEN\",\"width\":366,\"height\":44,\"left\":23,\"right\":389},{\"text\":\"OPEN\",\"width\":366,\"height\":44,\"left\":23,\"right\":389},{\"text\":\"UNAVAILABLE\",\"width\":366,\"height\":44,\"left\":23,\"right\":389},{\"text\":\"UNAVAILABLE\",\"width\":366,\"height\":44,\"left\":23,\"right\":389}]}"
+    },
+    {
+      "scope": "campaign-hub",
+      "name": "Standard / Classic and Campaign cards are both visibly captured",
+      "ok": true,
+      "detail": "[{\"label\":\"Standard Deployment\",\"status\":\"READY TO PLAY\",\"action\":\"OPEN\",\"disabled\":false,\"visiblePixels\":139.09375},{\"label\":\"Campaign\",\"status\":\"READY TO PLAY\",\"action\":\"OPEN\",\"disabled\":false,\"visiblePixels\":120.34375}]"
+    },
+    {
+      "scope": "campaign-hub",
+      "name": "Co-op / Versus and MMO cards are both visibly captured",
+      "ok": true,
+      "detail": "[{\"label\":\"Co-op / Versus\",\"status\":\"NETWORK UNAVAILABLE\",\"action\":\"UNAVAILABLE\",\"disabled\":true,\"visiblePixels\":139.09375},{\"label\":\"MMO\",\"status\":\"NETWORK UNAVAILABLE\",\"action\":\"UNAVAILABLE\",\"disabled\":true,\"visiblePixels\":119.953125}]"
+    },
+    {
+      "scope": "landscape",
+      "name": "landscape explicitly restores the null-district axis-aligned management profile",
+      "ok": false,
+      "detail": "{\"selectedDistrictId\":null,\"position\":{\"x\":28.117176579072424,\"y\":-89.98758316994693,\"z\":19.75027451115526},\"target\":{\"x\":28.117176579072424,\"y\":2.7713797733806835,\"z\":16.503710808138795},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "landscape",
+      "name": "visible landscape inspector control collapses its body before capture",
+      "ok": true,
+      "detail": "{\"shellExpanded\":false,\"ariaExpanded\":\"false\",\"bodyDisplay\":\"none\",\"panelRect\":{\"x\":578,\"y\":314,\"width\":329,\"height\":44}}"
+    },
+    {
+      "scope": "landscape",
+      "name": "915x412 ship ROI retains readable luminance and contrast",
+      "ok": false,
+      "detail": "{\"roi\":{\"x\":64,\"y\":90,\"width\":787,\"height\":207},\"average\":33.34,\"p20\":3.72,\"p50\":3.8,\"p75\":11.52,\"p80\":36.12,\"p90\":154.84,\"contrastP80P20\":32.4,\"fractionAbove32\":0.2087}"
+    },
+    {
+      "scope": "landscape",
+      "name": "collapsed inspector does not overlap the measured ship ROI",
+      "ok": true,
+      "detail": "{\"panel\":{\"x\":578,\"y\":314,\"width\":329,\"height\":44},\"roi\":{\"x\":64,\"y\":90,\"width\":787,\"height\":207},\"overlapPixels\":0}"
+    },
+    {
+      "scope": "classic-war-room-base-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "standard-route",
+      "name": "Classic tab opens the real base War Room before Standard setup",
+      "ok": true,
+      "detail": "{\"title\":\"⚔ WAR ROOM\",\"modes\":[{\"id\":\"training\",\"label\":\"TRAINING\",\"locked\":false,\"ariaDisabled\":\"\"},{\"id\":\"standard\",\"label\":\"STANDARD\",\"locked\":false,\"ariaDisabled\":\"\"},{\"id\":\"campaign\",\"label\":\"CAMPAIGN\",\"locked\":false,\"ariaDisabled\":\"\"},{\"id\":\"mmo\",\"label\":\"MMO\",\"locked\":true,\"ariaDisabled\":\"true\"},{\"id\":\"coop\",\"label\":\"CO-OP\",\"locked\":true,\"ariaDisabled\":\"true\"}],\"horizontalOverflow\":0}"
+    },
+    {
+      "scope": "standard-route",
+      "name": "Classic War Room stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"title\":\"⚔ WAR ROOM\",\"modes\":[{\"id\":\"training\",\"label\":\"TRAINING\",\"locked\":false,\"ariaDisabled\":\"\"},{\"id\":\"standard\",\"label\":\"STANDARD\",\"locked\":false,\"ariaDisabled\":\"\"},{\"id\":\"campaign\",\"label\":\"CAMPAIGN\",\"locked\":false,\"ariaDisabled\":\"\"},{\"id\":\"mmo\",\"label\":\"MMO\",\"locked\":true,\"ariaDisabled\":\"true\"},{\"id\":\"coop\",\"label\":\"CO-OP\",\"locked\":true,\"ariaDisabled\":\"true\"}],\"horizontalOverflow\":0}"
+    },
+    {
+      "scope": "standard-route",
+      "name": "real War Table stage galaxy is active",
+      "ok": true,
+      "detail": "{\"stage\":\"galaxy\",\"label\":\"▶ ENTER SOMBRERO-I\"}"
+    },
+    {
+      "scope": "standard-route",
+      "name": "real War Table stage system is active",
+      "ok": true,
+      "detail": "{\"stage\":\"system\",\"label\":\"▶ ENTER AELOS\"}"
+    },
+    {
+      "scope": "standard-route",
+      "name": "real War Table stage planet is active",
+      "ok": true,
+      "detail": "{\"stage\":\"planet\",\"label\":\"▶ OPEN REGION\"}"
+    },
+    {
+      "scope": "standard-route",
+      "name": "real War Table stage region is active",
+      "ok": true,
+      "detail": "{\"stage\":\"region\",\"label\":\"▶ CONFIGURE FORCE\"}"
+    },
+    {
+      "scope": "standard-route",
+      "name": "Standard / Classic reaches the real deploy-stage START BATTLE action",
+      "ok": true,
+      "detail": "{\"stage\":\"deploy\",\"label\":\"▶ START BATTLE\"}"
+    },
+    {
+      "scope": "standard-route",
+      "name": "Standard / Classic opens a live non-Training RTS battle",
+      "ok": true,
+      "detail": "{\"activeWarMode\":\"standard\",\"matchLive\":true,\"running\":true,\"paused\":false,\"simTime\":0.39999999999999997,\"playerFaction\":\"nova\",\"playerCommanderId\":\"nova_kai\",\"stage\":\"deploy\",\"hudTacticalDock\":true}"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "minimap begins in an unmodified Standard-battle idle state",
+      "ok": true,
+      "detail": "{\"receiver\":{\"ready\":true,\"missing\":false,\"bound\":true,\"state\":\"idle\",\"placement\":\"minimap\",\"shown\":1,\"solved\":2,\"portraitFallbacks\":0,\"lastKey\":\"nova_kai|objective.assigned#0\",\"portraitStage\":\"primary\",\"text\":\"New objective on the board. Move when ready.\",\"who\":\"Captain Elara Kai\",\"rank\":\"CAPTAIN · LANTERN\",\"tag\":\"OBJECTIVE\",\"audio\":null,\"receiver\":\"\",\"animation\":\"portrait\",\"rect\":{\"x\":0,\"y\":0,\"w\":0,\"h\":0},\"overflow\":{\"scroll\":0,\"client\":0}},\"wrapTransmission\":\"\",\"wrapAttributes\":[[\"aria-label\",\"Tactical minimap and command transmissions\"],[\"data-mf-hud-role\",\"minimap-receiver\"],[\"id\",\"minimapWrap\"],[\"role\",\"region\"]],\"mapAttributes\":[[\"aria-keyshortcuts\",\"ArrowUp ArrowDown ArrowLeft ArrowRight Home\"],[\"aria-label\",\"Tactical minimap. Use arrow keys to pan the camera and Home to center the map\"],[\"data-mf-hud-role\",\"minimap-command\"],[\"height\",\"256\"],[\"id\",\"minimap\"],[\"role\",\"application\"],[\"tabindex\",\"0\"],[\"width\",\"256\"]],\"mapComputed\":{\"display\":\"block\",\"visibility\":\"visible\",\"opacity\":\"1\",\"filter\":\"none\",\"animationName\":\"none\",\"animationDuration\":\"0s\",\"animationIterationCount\":\"1\",\"transform\":\"none\"},\"mapRect\":{\"x\":9,\"y\":689,\"width\":95,\"height\":95},\"txState\":\"idle\",\"txDisplay\":\"none\"}"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "real Commander cue is accepted in the authoritative Standard battle",
+      "ok": true,
+      "detail": "{\"ok\":true,\"reason\":\"queued\",\"text\":\"New systems certified. Use them.\",\"speaker\":\"Captain Elara Kai\"}"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "Commander profile replaces only the minimap during hold",
+      "ok": true,
+      "detail": "{\"receiver\":{\"ready\":true,\"missing\":false,\"bound\":true,\"state\":\"hold\",\"placement\":\"minimap\",\"shown\":2,\"solved\":4,\"portraitFallbacks\":0,\"lastKey\":\"nova_kai|research.complete#0\",\"portraitStage\":\"primary\",\"text\":\"New systems certified. Use them.\",\"who\":\"Captain Elara Kai\",\"rank\":\"CAPTAIN · LANTERN\",\"tag\":\"RESEARCH\",\"audio\":\"silent\",\"receiver\":\"hold\",\"animation\":\"portrait\",\"rect\":{\"x\":7,\"y\":687,\"w\":99,\"h\":99},\"overflow\":{\"scroll\":22,\"client\":22}},\"wrapTransmission\":\"hold\",\"wrapAttributes\":[[\"aria-label\",\"Tactical minimap and command transmissions\"],[\"data-mf-hud-role\",\"minimap-receiver\"],[\"data-transmission\",\"hold\"],[\"id\",\"minimapWrap\"],[\"role\",\"region\"]],\"mapAttributes\":[[\"aria-keyshortcuts\",\"ArrowUp ArrowDown ArrowLeft ArrowRight Home\"],[\"aria-label\",\"Tactical minimap. Use arrow keys to pan the camera and Home to center the map\"],[\"data-mf-hud-role\",\"minimap-command\"],[\"height\",\"256\"],[\"id\",\"minimap\"],[\"role\",\"application\"],[\"tabindex\",\"0\"],[\"width\",\"256\"]],\"mapComputed\":{\"display\":\"block\",\"visibility\":\"visible\",\"opacity\":\"0.17\",\"filter\":\"hue-rotate(70deg) contrast(2.2)\",\"animationName\":\"mfMinimapSignal\",\"animationDuration\":\"0.62s\",\"animationIterationCount\":\"infinite\",\"transform\":\"none\"},\"mapRect\":{\"x\":9,\"y\":689,\"width\":95,\"height\":95},\"txState\":\"hold\",\"txDisplay\":\"flex\"}"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "receiver reaches the bounded exit state",
+      "ok": true,
+      "detail": "{\"receiver\":{\"ready\":true,\"missing\":false,\"bound\":true,\"state\":\"exit\",\"placement\":\"minimap\",\"shown\":2,\"solved\":7,\"portraitFallbacks\":0,\"lastKey\":\"nova_kai|research.complete#0\",\"portraitStage\":\"primary\",\"text\":\"New systems certified. Use them.\",\"who\":\"Captain Elara Kai\",\"rank\":\"CAPTAIN · LANTERN\",\"tag\":\"RESEARCH\",\"audio\":\"silent\",\"receiver\":\"exit\",\"animation\":\"portrait\",\"rect\":{\"x\":7,\"y\":687,\"w\":99,\"h\":99},\"overflow\":{\"scroll\":22,\"client\":22}},\"wrapTransmission\":\"exit\",\"wrapAttributes\":[[\"aria-label\",\"Tactical minimap and command transmissions\"],[\"data-mf-hud-role\",\"minimap-receiver\"],[\"data-transmission\",\"exit\"],[\"id\",\"minimapWrap\"],[\"role\",\"region\"]],\"mapAttributes\":[[\"aria-keyshortcuts\",\"ArrowUp ArrowDown ArrowLeft ArrowRight Home\"],[\"aria-label\",\"Tactical minimap. Use arrow keys to pan the camera and Home to center the map\"],[\"data-mf-hud-role\",\"minimap-command\"],[\"height\",\"256\"],[\"id\",\"minimap\"],[\"role\",\"application\"],[\"tabindex\",\"0\"],[\"width\",\"256\"]],\"mapComputed\":{\"display\":\"block\",\"visibility\":\"visible\",\"opacity\":\"0.55\",\"filter\":\"grayscale(0.5) contrast(1.35)\",\"animationName\":\"none\",\"animationDuration\":\"0s\",\"animationIterationCount\":\"1\",\"transform\":\"none\"},\"mapRect\":{\"x\":9,\"y\":689,\"width\":95,\"height\":95},\"txState\":\"exit\",\"txDisplay\":\"flex\"}"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "enter / hold / exit / idle sequence is bounded",
+      "ok": true,
+      "detail": "[{\"state\":\"enter\",\"at\":21702.299999999814},{\"state\":\"hold\",\"at\":21878.5},{\"state\":\"exit\",\"at\":23284.39999999944},{\"state\":\"idle\",\"at\":23513.89999999944}]"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "minimap DOM and computed presentation restore exactly",
+      "ok": true,
+      "detail": "baseline={\"mapAttributes\":[[\"aria-keyshortcuts\",\"ArrowUp ArrowDown ArrowLeft ArrowRight Home\"],[\"aria-label\",\"Tactical minimap. Use arrow keys to pan the camera and Home to center the map\"],[\"data-mf-hud-role\",\"minimap-command\"],[\"height\",\"256\"],[\"id\",\"minimap\"],[\"role\",\"application\"],[\"tabindex\",\"0\"],[\"width\",\"256\"]],\"mapComputed\":{\"animationDuration\":\"0s\",\"animationIterationCount\":\"1\",\"animationName\":\"none\",\"display\":\"block\",\"filter\":\"none\",\"opacity\":\"1\",\"transform\":\"none\",\"visibility\":\"visible\"},\"mapRect\":{\"height\":95,\"width\":95,\"x\":9,\"y\":689},\"txDisplay\":\"none\",\"txState\":\"idle\",\"wrapAttributes\":[[\"aria-label\",\"Tactical minimap and command transmissions\"],[\"data-mf-hud-role\",\"minimap-receiver\"],[\"id\",\"minimapWrap\"],[\"role\",\"region\"]],\"wrapTransmission\":\"\"} restored={\"mapAttributes\":[[\"aria-keyshortcuts\",\"ArrowUp ArrowDown ArrowLeft ArrowRight Home\"],[\"aria-label\",\"Tactical minimap. Use arrow keys to pan the camera and Home to center the map\"],[\"data-mf-hud-role\",\"minimap-command\"],[\"height\",\"256\"],[\"id\",\"minimap\"],[\"role\",\"application\"],[\"tabindex\",\"0\"],[\"width\",\"256\"]],\"mapComputed\":{\"animationDuration\":\"0s\",\"animationIterationCount\":\"1\",\"animationName\":\"none\",\"display\":\"block\",\"filter\":\"none\",\"opacity\":\"1\",\"transform\":\"none\",\"visibility\":\"visible\"},\"mapRect\":{\"height\":95,\"width\":95,\"x\":9,\"y\":689},\"txDisplay\":\"none\",\"txState\":\"idle\",\"wrapAttributes\":[[\"aria-label\",\"Tactical minimap and command transmissions\"],[\"data-mf-hud-role\",\"minimap-receiver\"],[\"id\",\"minimapWrap\"],[\"role\",\"region\"]],\"wrapTransmission\":\"\"}"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "no persistent signal/flicker remains after restoration",
+      "ok": true,
+      "detail": "{\"receiver\":{\"ready\":true,\"missing\":false,\"bound\":true,\"state\":\"idle\",\"placement\":\"minimap\",\"shown\":2,\"solved\":7,\"portraitFallbacks\":0,\"lastKey\":\"nova_kai|research.complete#0\",\"portraitStage\":\"primary\",\"text\":\"New systems certified. Use them.\",\"who\":\"Captain Elara Kai\",\"rank\":\"CAPTAIN · LANTERN\",\"tag\":\"RESEARCH\",\"audio\":null,\"receiver\":\"\",\"animation\":\"portrait\",\"rect\":{\"x\":0,\"y\":0,\"w\":0,\"h\":0},\"overflow\":{\"scroll\":0,\"client\":0}},\"wrapTransmission\":\"\",\"wrapAttributes\":[[\"aria-label\",\"Tactical minimap and command transmissions\"],[\"data-mf-hud-role\",\"minimap-receiver\"],[\"id\",\"minimapWrap\"],[\"role\",\"region\"]],\"mapAttributes\":[[\"aria-keyshortcuts\",\"ArrowUp ArrowDown ArrowLeft ArrowRight Home\"],[\"aria-label\",\"Tactical minimap. Use arrow keys to pan the camera and Home to center the map\"],[\"data-mf-hud-role\",\"minimap-command\"],[\"height\",\"256\"],[\"id\",\"minimap\"],[\"role\",\"application\"],[\"tabindex\",\"0\"],[\"width\",\"256\"]],\"mapComputed\":{\"display\":\"block\",\"visibility\":\"visible\",\"opacity\":\"1\",\"filter\":\"none\",\"animationName\":\"none\",\"animationDuration\":\"0s\",\"animationIterationCount\":\"1\",\"transform\":\"none\"},\"mapRect\":{\"x\":9,\"y\":689,\"width\":95,\"height\":95},\"txState\":\"idle\",\"txDisplay\":\"none\"}"
+    },
+    {
+      "scope": "battle-receiver",
+      "name": "KEEL battle hint selects the minimap presenter",
+      "ok": true,
+      "detail": "{\"keelCue\":{\"schema\":\"massfront.keel-hint.v1\",\"hintId\":\"battle-camera\",\"context\":\"battle-camera\",\"surface\":\"battle-minimap\",\"speaker\":\"KEEL\",\"speakerId\":\"keel\",\"affiliation\":\"uga\",\"speakerRole\":\"UGA EXPEDITION GUIDE\",\"channel\":\"UGA PERSONNEL LINK\",\"voiceId\":\"keen\",\"profileId\":\"uga-keel-expedition-guide\",\"animationId\":\"keel-tactical-link\",\"text\":\"KEEL tactical receiver acceptance: battle guidance belongs in the minimap bay.\",\"durationMs\":1400,\"priority\":50,\"issuedAt\":1788853538087,\"handled\":true,\"presenter\":\"battle-minimap\"},\"keelActive\":{\"receiver\":{\"ready\":true,\"missing\":false,\"bound\":true,\"state\":\"hold\",\"placement\":\"minimap\",\"shown\":3,\"solved\":9,\"portraitFallbacks\":0,\"lastKey\":\"keel|battle-camera#1788853538087\",\"portraitStage\":\"primary\",\"text\":\"KEEL tactical receiver acceptance: battle guidance belongs in the minimap bay.\",\"who\":\"KEEL\",\"rank\":\"UGA SHIP LIAISON\",\"tag\":\"UGA GUIDANCE\",\"receiver\":\"hold\",\"animation\":\"portrait\",\"rect\":{\"x\":7,\"y\":687,\"w\":99,\"h\":99},\"overflow\":{\"scroll\":44,\"client\":33}},\"wrapTransmission\":\"hold\",\"wrapAttributes\":[[\"aria-label\",\"Tactical minimap and command transmissions\"],[\"data-mf-hud-role\",\"minimap-receiver\"],[\"data-transmission\",\"hold\"],[\"id\",\"minimapWrap\"],[\"role\",\"region\"]],\"mapAttributes\":[[\"aria-keyshortcuts\",\"ArrowUp ArrowDown ArrowLeft ArrowRight Home\"],[\"aria-label\",\"Tactical minimap. Use arrow keys to pan the camera and Home to center the map\"],[\"data-mf-hud-role\",\"minimap-command\"],[\"height\",\"256\"],[\"id\",\"minimap\"],[\"role\",\"application\"],[\"tabindex\",\"0\"],[\"width\",\"256\"]],\"mapComputed\":{\"display\":\"block\",\"visibility\":\"visible\",\"opacity\":\"0.2\",\"filter\":\"hue-rotate(70deg) contrast(2.2)\",\"animationName\":\"mfMinimapSignal\",\"animationDuration\":\"0.62s\",\"animationIterationCount\":\"infinite\",\"transform\":\"none\"},\"mapRect\":{\"x\":9,\"y\":689,\"width\":95,\"height\":95},\"txState\":\"hold\",\"txDisplay\":\"flex\"}}"
+    },
+    {
+      "scope": "fresh-career",
+      "name": "no page errors",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "fresh-career",
+      "name": "no console errors",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "fresh-career",
+      "name": "no local request failures",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "all-rooms-sandbox-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "authored showcase fixture seeds all eleven commissioned room controllers in the isolated host",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"accountId\":\"local_expedition\",\"profileId\":\"local_expedition\",\"commissionedRooms\":11}"
+    },
+    {
+      "scope": "all-rooms-reloaded-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "decoded cutaway exposes every authored district root and focus anchor",
+      "ok": true,
+      "detail": "{\"anchors\":[\"command\",\"engineering\",\"fabricator\",\"factions\",\"habitat\",\"hangar\",\"logistics\",\"mission_ops\",\"navigation\",\"research\",\"survey\"],\"roots\":[\"command\",\"engineering\",\"fabricator\",\"factions\",\"habitat\",\"hangar\",\"logistics\",\"mission_ops\",\"navigation\",\"research\",\"survey\"]}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"command\",\"sceneLabel\":\"Command Core\",\"heading\":\"Command Core\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2208,\"contextScrollHeight\":1084,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":2},\"profile\":{\"selectedDistrictId\":\"command\",\"position\":{\"x\":-22.290647515229647,\"y\":-52.86823504309123,\"z\":11.078390688453906},\"target\":{\"x\":-26.29532918983409,\"y\":-0.5075995102517132,\"z\":1.0695433591537853},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"command\",\"sceneLabel\":\"Command Core\",\"heading\":\"Command Core\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2208,\"contextScrollHeight\":1084,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":2}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Command Core focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"command\",\"position\":{\"x\":-22.290647515229647,\"y\":-52.86823504309123,\"z\":11.078390688453906},\"target\":{\"x\":-26.29532918983409,\"y\":-0.5075995102517132,\"z\":1.0695433591537853},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"navigation\",\"sceneLabel\":\"Navigation Bridge\",\"heading\":\"Navigation Bridge\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1716,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"navigation\",\"position\":{\"x\":-21.61800157003568,\"y\":-19.638776164095365,\"z\":9.644599987312928},\"target\":{\"x\":-23.855324479341217,\"y\":-0.3930533361308481,\"z\":4.403132081835362},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"navigation\",\"sceneLabel\":\"Navigation Bridge\",\"heading\":\"Navigation Bridge\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1716,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Navigation Bridge focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"navigation\",\"position\":{\"x\":-21.61800157003568,\"y\":-19.638776164095365,\"z\":9.644599987312928},\"target\":{\"x\":-23.855324479341217,\"y\":-0.3930533361308481,\"z\":4.403132081835362},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"survey\",\"sceneLabel\":\"Survey Lab\",\"heading\":\"Survey Lab\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2282,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10},\"profile\":{\"selectedDistrictId\":\"survey\",\"position\":{\"x\":-14.718362483378808,\"y\":-31.954987963453696,\"z\":13.724880281011764},\"target\":{\"x\":-18.470861337293176,\"y\":-0.6657579437737062,\"z\":4.96840540358113},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"survey\",\"sceneLabel\":\"Survey Lab\",\"heading\":\"Survey Lab\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2282,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Survey Lab focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"survey\",\"position\":{\"x\":-14.718362483378808,\"y\":-31.954987963453696,\"z\":13.724880281011764},\"target\":{\"x\":-18.470861337293176,\"y\":-0.6657579437737062,\"z\":4.96840540358113},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"mission_ops\",\"sceneLabel\":\"Mission Operations\",\"heading\":\"Mission Operations\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1708,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"mission_ops\",\"position\":{\"x\":-20.231332321908983,\"y\":-18.649613742679563,\"z\":5.931074891027283},\"target\":{\"x\":-22.429625962939053,\"y\":-0.329836653169592,\"z\":0.8016998424580422},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"mission_ops\",\"sceneLabel\":\"Mission Operations\",\"heading\":\"Mission Operations\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1708,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Mission Operations focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"mission_ops\",\"position\":{\"x\":-20.231332321908983,\"y\":-18.649613742679563,\"z\":5.931074891027283},\"target\":{\"x\":-22.429625962939053,\"y\":-0.329836653169592,\"z\":0.8016998424580422},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"research\",\"sceneLabel\":\"Research Directorate\",\"heading\":\"Research Directorate\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2268,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10},\"profile\":{\"selectedDistrictId\":\"research\",\"position\":{\"x\":-6.393632781155016,\"y\":-31.235820315950704,\"z\":12.876640597312857},\"target\":{\"x\":-10.064906455349034,\"y\":-0.6418443654841632,\"z\":4.310334354233744},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"research\",\"sceneLabel\":\"Research Directorate\",\"heading\":\"Research Directorate\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2268,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Research Directorate focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"research\",\"position\":{\"x\":-6.393632781155016,\"y\":-31.235820315950704,\"z\":12.876640597312857},\"target\":{\"x\":-10.064906455349034,\"y\":-0.6418443654841632,\"z\":4.310334354233744},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"fabricator\",\"sceneLabel\":\"Fabrication & Armory\",\"heading\":\"Fabrication & Armory\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1665,\"contextScrollHeight\":1035,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"fabricator\",\"position\":{\"x\":4.229961104759308,\"y\":-33.49645226448179,\"z\":14.12622886078426},\"target\":{\"x\":0.2941372689999291,\"y\":-0.6979188510689732,\"z\":4.9426398599727435},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"fabricator\",\"sceneLabel\":\"Fabrication & Armory\",\"heading\":\"Fabrication & Armory\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1665,\"contextScrollHeight\":1035,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Fabrication & Armory focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"fabricator\",\"position\":{\"x\":4.229961104759308,\"y\":-33.49645226448179,\"z\":14.12622886078426},\"target\":{\"x\":0.2941372689999291,\"y\":-0.6979188510689732,\"z\":4.9426398599727435},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"engineering\",\"sceneLabel\":\"Engineering & Drive\",\"heading\":\"Engineering & Drive\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2324,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10},\"profile\":{\"selectedDistrictId\":\"engineering\",\"position\":{\"x\":14.525212036047986,\"y\":-33.61233976174103,\"z\":14.19026461734408},\"target\":{\"x\":10.575827105469921,\"y\":-0.7007986199966177,\"z\":4.975033110786138},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"engineering\",\"sceneLabel\":\"Engineering & Drive\",\"heading\":\"Engineering & Drive\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2324,\"contextScrollHeight\":1010,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":10}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Engineering & Drive focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"engineering\",\"position\":{\"x\":14.525212036047986,\"y\":-33.61233976174103,\"z\":14.19026461734408},\"target\":{\"x\":10.575827105469921,\"y\":-0.7007986199966177,\"z\":4.975033110786138},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"habitat\",\"sceneLabel\":\"Habitat & Medical\",\"heading\":\"Habitat & Medical\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1736,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"habitat\",\"position\":{\"x\":-9.73076959890325,\"y\":-33.61659975234276,\"z\":9.866973070278467},\"target\":{\"x\":-13.680653021310635,\"y\":-0.7009045633052353,\"z\":0.6505784179137422},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"habitat\",\"sceneLabel\":\"Habitat & Medical\",\"heading\":\"Habitat & Medical\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1736,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Habitat & Medical focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"habitat\",\"position\":{\"x\":-9.73076959890325,\"y\":-33.61659975234276,\"z\":9.866973070278467},\"target\":{\"x\":-13.680653021310635,\"y\":-0.7009045633052353,\"z\":0.6505784179137422},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"factions\",\"sceneLabel\":\"Coalition Embassy\",\"heading\":\"Coalition Embassy\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1558,\"contextScrollHeight\":854,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":8},\"profile\":{\"selectedDistrictId\":\"factions\",\"position\":{\"x\":-5.436689731355872,\"y\":-33.61677597721212,\"z\":9.179577373869552},\"target\":{\"x\":-9.386594459040463,\"y\":-0.7009032463897514,\"z\":-0.03686699073193889},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"factions\",\"sceneLabel\":\"Coalition Embassy\",\"heading\":\"Coalition Embassy\",\"commissioned\":true,\"tier\":3,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1558,\"contextScrollHeight\":854,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":8}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Coalition Embassy focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"factions\",\"position\":{\"x\":-5.436689731355872,\"y\":-33.61677597721212,\"z\":9.179577373869552},\"target\":{\"x\":-9.386594459040463,\"y\":-0.7009032463897514,\"z\":-0.03686699073193889},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"hangar\",\"sceneLabel\":\"Strike & Expedition Bay\",\"heading\":\"Strike & Expedition Bay\",\"commissioned\":true,\"tier\":2,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2521,\"contextScrollHeight\":1180,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":9},\"profile\":{\"selectedDistrictId\":\"hangar\",\"position\":{\"x\":4.5432724436959235,\"y\":-33.61679123823857,\"z\":9.144085261444268},\"target\":{\"x\":0.5933666166543965,\"y\":-0.7009093462214938,\"z\":-0.07236166831945202},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"hangar\",\"sceneLabel\":\"Strike & Expedition Bay\",\"heading\":\"Strike & Expedition Bay\",\"commissioned\":true,\"tier\":2,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":2521,\"contextScrollHeight\":1180,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":9}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Strike & Expedition Bay focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"hangar\",\"position\":{\"x\":4.5432724436959235,\"y\":-33.61679123823857,\"z\":9.144085261444268},\"target\":{\"x\":0.5933666166543965,\"y\":-0.7009093462214938,\"z\":-0.07236166831945202},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo opens its commissioned room controller",
+      "ok": true,
+      "detail": "{\"state\":{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"logistics\",\"sceneLabel\":\"Logistics & Cargo\",\"heading\":\"Logistics & Cargo\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1709,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5},\"profile\":{\"selectedDistrictId\":\"logistics\",\"position\":{\"x\":14.288537414174318,\"y\":-33.61675581842481,\"z\":9.142907081845772},\"target\":{\"x\":10.338631546601212,\"y\":-0.7008735886487459,\"z\":-0.07353994249148606},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo controller stays within the 412px viewport",
+      "ok": true,
+      "detail": "{\"runtime\":\"sandbox\",\"scene\":\"uga\",\"view\":\"command\",\"districtId\":\"logistics\",\"sceneLabel\":\"Logistics & Cargo\",\"heading\":\"Logistics & Cargo\",\"commissioned\":true,\"tier\":1,\"sheetExpanded\":true,\"bodyDisplay\":\"block\",\"bodyVisibility\":\"visible\",\"contextTextLength\":1709,\"contextScrollHeight\":1049,\"contextClientHeight\":270,\"contextRect\":{\"x\":0,\"y\":527,\"width\":412,\"height\":315},\"horizontalOverflow\":0,\"telemetry\":{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"},\"actionableControls\":5}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo power telemetry stays contained without label/value collisions",
+      "ok": true,
+      "detail": "{\"contained\":true,\"overlap\":false,\"labelDisplay\":\"none\",\"value\":\"298 / 480 MW\",\"surplus\":\"+182 MW SURPLUS\"}"
+    },
+    {
+      "scope": "all-rooms",
+      "name": "Logistics & Cargo focuses the matching authored cutaway district",
+      "ok": true,
+      "detail": "{\"selectedDistrictId\":\"logistics\",\"position\":{\"x\":14.288537414174318,\"y\":-33.61675581842481,\"z\":9.142907081845772},\"target\":{\"x\":10.338631546601212,\"y\":-0.7008735886487459,\"z\":-0.07353994249148606},\"up\":{\"x\":0,\"y\":0,\"z\":1},\"sideOn\":false}"
+    },
+    {
+      "scope": "all-room-controllers",
+      "name": "no page errors",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "all-room-controllers",
+      "name": "no console errors",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "all-room-controllers",
+      "name": "no local request failures",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "scope": "tutorial-choice-base-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "tutorial-choice-base-412x900",
+      "name": "integrated Galactic capability comes from the packaged or OTA contract",
+      "ok": true,
+      "detail": "{\"build\":true,\"ota\":false,\"legacyPreference\":false}"
+    },
+    {
+      "scope": "tutorial-choice-base-412x900",
+      "name": "real launcher exposes an enabled route to the title sequence",
+      "ok": true,
+      "detail": "{\"selector\":\"#mfLaunchPlay\",\"label\":\"CONTINUE TO INTRO\",\"snapshot\":{\"gate\":true,\"passed\":false,\"bypass\":false,\"phase\":\"updater\",\"primary\":\"play-offline\",\"identity\":{\"state\":\"pending\",\"signedIn\":false,\"verified\":false,\"source\":\"boot\",\"revision\":0},\"update\":{\"state\":\"idle\",\"status\":\"Ready\"},\"notesTab\":\"features\",\"historyTab\":\"published\"}}"
+    },
+    {
+      "scope": "tutorial-choice-space-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "tutorial-choice-training-412x900",
+      "name": "hardware GPU, never SwiftShader",
+      "ok": true,
+      "detail": "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028E0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    {
+      "scope": "training",
+      "name": "tutorial choice enters a protected planetary match",
+      "ok": true,
+      "detail": "{\"state\":{\"done\":false,\"basicDone\":false,\"certified\":false,\"active\":true,\"course\":\"basic\",\"total\":10,\"interrupted\":false,\"progress\":0,\"rewarded\":false,\"state\":\"PLANETARY BASICS ACTIVE\",\"action\":\"▶ RESUME TRAINING\"},\"gate\":{\"version\":1,\"profileId\":\"p1\",\"armed\":true,\"pending\":true,\"phase\":\"training\",\"canEnterSpaceCareer\":false,\"factionId\":null,\"runtimeFaction\":null,\"commanderId\":null,\"starterCommanderId\":null},\"bodyClass\":\"bgDim mf-cinematic-hud mfHudSecondaryOpen offline mfIntroDone trainingOperation\",\"scene\":\"protected planetary RTS battle\",\"keel\":{\"ready\":true,\"missing\":false,\"bound\":true,\"state\":\"idle\",\"placement\":\"\",\"shown\":0,\"solved\":0,\"portraitFallbacks\":0,\"lastKey\":\"\",\"portraitStage\":\"\",\"text\":\"\",\"who\":\"\",\"rank\":\"\",\"tag\":\"\",\"audio\":null,\"receiver\":\"\",\"animation\":\"\",\"rect\":{\"x\":0,\"y\":0,\"w\":0,\"h\":0},\"overflow\":{\"scroll\":0,\"client\":0}}}"
+    },
+    {
+      "scope": "run",
+      "name": "acceptance capture completed",
+      "ok": false,
+      "detail": "page.waitForSelector: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#mfCareerFactionGate') to be visible\u001b[22m\n\n    at runTrainingAndBattleFlow (C:\\Users\\Jason\\Documents\\Codex\\2026-08-01\\massfront-rts-mobile-game-for-apple\\tools\\capture-stage11-space-ux.mjs:1007:16)\n    at async file:///C:/Users/Jason/Documents/Codex/2026-08-01/massfront-rts-mobile-game-for-apple/tools/capture-stage11-space-ux.mjs:1126:5"
+    },
+    {
+      "scope": "source-binding",
+      "name": "acceptance-owned source did not change during capture",
+      "ok": true,
+      "detail": "20 files stable"
+    }
+  ],
+  "tests": [],
+  "pageDiagnostics": [
+    {
+      "label": "fresh-career",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "navigations": [
+        "http://127.0.0.1:53960/index.html",
+        "http://127.0.0.1:53960/modules/space_exploration/index.html",
+        "http://127.0.0.1:53960/index.html?galacticRoute=8105bebdccdcca99f4b58819546af66a",
+        "http://127.0.0.1:53960/index.html",
+        "http://127.0.0.1:53960/modules/space_exploration/index.html",
+        "http://127.0.0.1:53960/index.html?galacticRoute=f981edb62716e36a62b23101da5c6db4",
+        "http://127.0.0.1:53960/index.html"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "expectedNavigationAborts": [
+        "net::ERR_ABORTED http://127.0.0.1:53960/modules/space_exploration/index.html"
+      ],
+      "blockedExternal": [
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/update.json?download=true&mfcb=mtsd6h1x-8lq96aiidd",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json?mfcb=mtsd6h20-kb5y5ljpzmq",
+        "https://massfront-update.jasondixon1994.workers.dev/update.json?mfcb=mtsd6h22-135uk3zgta2n",
+        "https://huggingface.co/api/datasets/CREATORJD/massfront-releases?mfcb=mtsd6h23-ig26i7zmd09",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?t=1788853488764"
+      ]
+    },
+    {
+      "label": "all-room-controllers",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "navigations": [
+        "http://127.0.0.1:53960/modules/space_exploration/index.html",
+        "http://127.0.0.1:53960/modules/space_exploration/index.html"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "expectedNavigationAborts": [],
+      "blockedExternal": [
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788853540804",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788853542240",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788853544248",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/packs.json?download=true&t=1788853548262"
+      ]
+    },
+    {
+      "label": "training-and-battle",
+      "viewport": {
+        "width": 412,
+        "height": 900
+      },
+      "navigations": [
+        "http://127.0.0.1:53960/index.html",
+        "http://127.0.0.1:53960/modules/space_exploration/index.html",
+        "http://127.0.0.1:53960/index.html?galacticRoute=99c7316522aa57141d37929b3dba9e53",
+        "http://127.0.0.1:53960/index.html",
+        "http://127.0.0.1:53960/modules/space_exploration/index.html"
+      ],
+      "pageErrors": [],
+      "consoleErrors": [],
+      "requestFailures": [],
+      "expectedNavigationAborts": [
+        "net::ERR_ABORTED http://127.0.0.1:53960/modules/space_exploration/index.html"
+      ],
+      "blockedExternal": [
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/resolve/main/update.json?download=true&mfcb=mtsd83o0-l1pr5q34u3",
+        "https://huggingface.co/datasets/CREATORJD/massfront-releases/raw/main/update.json?mfcb=mtsd83o3-g5hspj3fppi",
+        "https://massfront-update.jasondixon1994.workers.dev/update.json?mfcb=mtsd83o5-sdbvpqsnnz",
+        "https://huggingface.co/api/datasets/CREATORJD/massfront-releases?mfcb=mtsd83o7-y2kyz96cf1i"
+      ]
+    }
+  ],
+  "unproven": [
+    "A complete manual play-through of every protected tutorial objective was not performed. The completion transaction is accelerated only after the real protected match starts, and is labelled as such.",
+    "Co-op / Versus and MMO cannot be entered because no synchronized session or persistent-sector authority exists in this build.",
+    "Capture run stopped early: page.waitForSelector: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#mfCareerFactionGate') to be visible\u001b[22m\n"
+  ],
+  "summary": {
+    "passed": 100,
+    "failed": 5,
+    "captures": 23,
+    "pageErrors": 0,
+    "consoleErrors": 0,
+    "localRequestFailures": 0
+  }
+}

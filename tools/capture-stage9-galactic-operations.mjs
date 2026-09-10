@@ -631,6 +631,23 @@ async function runFlow(browser,report,url){
     await paleBloom.tap({timeout:30_000});
     const planner=page.locator('.uga-deployment-planner[data-mission-id="uga_pale_bloom"]');
     await planner.waitFor({state:'visible',timeout:60_000});
+    const battlefieldSelect=planner.locator('[data-deploy="mapId"]');
+    await battlefieldSelect.waitFor({state:'visible',timeout:30_000});
+    const unselectedBattlefield=await planner.evaluate(element=>({
+      mapId:element.querySelector('[data-deploy="mapId"]')?.value||'',
+      mapChoices:[...element.querySelectorAll('[data-deploy="mapId"] option[data-ground-map]')].map(option=>({id:option.value,size:option.dataset.mapSize,label:option.textContent.trim()})),
+      areaId:element.dataset.selectedAreaId||'',
+      mapSize:element.dataset.selectedMapSize||'',
+      readiness:element.querySelector('[data-deployment-confirm-state]')?.dataset.deploymentConfirmState||null,
+      deployDisabled:!!element.querySelector('[data-action="deploy"]')?.disabled
+    }));
+    assertion(report,'uga-battlefield-selection','Battlefield identity requires one visible player choice',
+      unselectedBattlefield.mapId===''&&unselectedBattlefield.mapChoices.length===3
+        &&unselectedBattlefield.mapChoices.map(choice=>choice.size).join(',')==='compact,standard,large'
+        &&unselectedBattlefield.areaId==='karak_meridian_quarantine'
+        &&unselectedBattlefield.mapSize===''&&unselectedBattlefield.readiness==='blocked'
+        &&unselectedBattlefield.deployDisabled,unselectedBattlefield);
+    await battlefieldSelect.selectOption('karak_meridian_quarantine_standard');
     await page.waitForFunction(()=>document.querySelector('.uga-deployment-planner[data-mission-id="uga_pale_bloom"] [data-deployment-confirm-state="ready"]')
       &&!document.querySelector('.uga-deployment-planner[data-mission-id="uga_pale_bloom"] [data-action="deploy"]')?.disabled,
       null,{timeout:60_000});
@@ -651,6 +668,9 @@ async function runFlow(browser,report,url){
       faction:element.querySelector('[data-deploy="factionId"]')?.value||null,
       commander:element.querySelector('[data-deploy="commanderId"]')?.value||null,
       specialistIds:[...element.querySelectorAll('[data-specialist]')].map(select=>select.value),
+      areaId:element.dataset.selectedAreaId||null,
+      mapId:element.querySelector('[data-deploy="mapId"]')?.value||null,
+      mapSize:element.dataset.selectedMapSize||null,
       supportId:element.querySelector('[data-deploy="support"]')?.value||null,
       doctrineId:element.querySelector('[data-deploy="doctrine"]')?.value||null,
       modIds:[...element.querySelectorAll('[data-deploy-mod]:checked')].map(input=>input.dataset.deployMod),
@@ -661,6 +681,8 @@ async function runFlow(browser,report,url){
     assertion(report,'uga-loadout','Pale Bloom loadout is a valid solo resident-proxy team',
       ['nova','dominion','syndicate'].includes(loadout.faction)&&loadout.specialistIds.length===3
         &&new Set(loadout.specialistIds).size===3&&loadout.commander&&loadout.readiness==='ready'
+        &&loadout.areaId==='karak_meridian_quarantine'
+        &&loadout.mapId==='karak_meridian_quarantine_standard'&&loadout.mapSize==='standard'
         &&loadout.supportId&&loadout.doctrineId&&loadout.modIds.includes('repair_nanites')
         &&loadout.modIds.includes('survey_link')
         &&/CONFIRM & DEPLOY/.test(loadout.deployLabel),loadout);
@@ -686,12 +708,14 @@ async function runFlow(browser,report,url){
       }
       return {
         bridge:{active:bridge.active,status:bridge.status,reason:bridge.reason,
-          nonce:new URLSearchParams(location.search).get('groundOperation'),request:bridge.request},
+          nonce:new URLSearchParams(location.search).get('groundOperation'),request:bridge.request,
+          playerLocation:bridge.playerLocation,runtimeMapId:bridge.runtimeMapId},
         operation:{operationId:operation?.operationId,missionId:operation?.missionId,
           missionType:operation?.missionType,sponsorId:operation?.sponsorId,
           opponentFactionId:operation?.opponentFactionId,proxyFactionId:operation?.proxyFactionId,
           commanderId:operation?.commanderId,commanderRosterFingerprint:operation?.commanderRosterFingerprint,
-          playerCount:operation?.playerCount,allyCount:operation?.allyCount},
+          playerCount:operation?.playerCount,allyCount:operation?.allyCount,
+          battlefield:operation?.battlefield},
         match:{activeWarMode,playerFaction,playerCommanderId,curMap,curRegionId,goalSel,
           infestationOn,difficulty,enemyFaction:AI?.fac,activeAi:active.map(slot=>({
             diff:slot.diff,ally:slot.ally,zone:slot.zone,behavior:slot.behavior})),allyAiCount:allies.length},
@@ -710,9 +734,14 @@ async function runFlow(browser,report,url){
         &&setup.operation.opponentFactionId==='brood'&&setup.operation.proxyFactionId===expectedProxy
         &&setup.operation.commanderRosterFingerprint==='fnv1a32:0aadcd2d'
         &&expectedCommander===loadout.commander
+        &&setup.operation.battlefield?.location?.areaId===loadout.areaId
+        &&setup.operation.battlefield?.location?.mapId===loadout.mapId
+        &&setup.operation.battlefield?.location?.size===loadout.mapSize
+        &&setup.bridge.playerLocation?.mapId===loadout.mapId
+        &&setup.bridge.runtimeMapId==='vespera_plateau_medium'
         &&setup.match.activeWarMode==='galactic'&&setup.match.playerFaction===expectedFaction
-        &&setup.match.playerCommanderId===expectedCommander&&setup.match.curMap==='vespera_spire_medium'
-        &&setup.match.curRegionId==='vespera_spire'&&setup.match.goalSel==='purge'
+        &&setup.match.playerCommanderId===expectedCommander&&setup.match.curMap==='vespera_plateau_medium'
+        &&setup.match.curRegionId==='vespera_plateau'&&setup.match.goalSel==='purge'
         &&setup.match.infestationOn===true&&setup.match.difficulty===2
         &&setup.match.enemyFaction==='horde'&&setup.match.activeAi.length===1
         &&setup.match.activeAi[0].ally===false&&setup.match.activeAi[0].diff===2
@@ -763,7 +792,7 @@ async function runFlow(browser,report,url){
     assertion(report,'live-match','real production match runtime is deployed before terminal automation',
       live.matchLive&&live.running&&!live.gameEnded&&live.statsTime>0&&live.activeWarMode==='galactic'
         &&live.playerFaction===expectedFaction&&live.playerCommanderId===expectedCommander
-        &&live.curMap==='vespera_spire_medium'&&live.goalSel==='purge'&&live.infestationOn
+        &&live.curMap==='vespera_plateau_medium'&&live.goalSel==='purge'&&live.infestationOn
         &&live.enemyFaction==='horde'&&live.broodEnemy&&live.activeAiCount===1&&live.allyAiCount===0
         &&live.heroAlive&&live.playerUnits>0&&live.canvas.webgl2&&!live.canvas.contextLost
         &&live.canvas.glError===0
@@ -1236,17 +1265,17 @@ async function selfTest(){
   const indexSource=await readFile(join(moduleRoot,'index.html'),'utf8');
   const moduleSource=await readFile(join(moduleRoot,'src','space_module.js'),'utf8');
   const experienceSource=await readFile(join(moduleRoot,'src','space_experience.js'),'utf8');
-  if(!/space_module\.js\?v=20260829-entryintro2/.test(indexSource)
-    ||!/space_experience\.js\?v=20260829-entryintro2/.test(moduleSource)
-    ||!/massfront_solo_host\.js\?v=20260829-careergate1/.test(moduleSource)
-    ||!/uga_command\.js\?v=20260829-wartable2/.test(experienceSource))
+  if(!/space_module\.js\?v=20260908-uga81r1/.test(indexSource)
+    ||!/space_experience\.js\?v=20260908-uga81r1/.test(moduleSource)
+    ||!/massfront_solo_host\.js\?v=20260906-release5/.test(moduleSource)
+    ||!/uga_command\.js\?v=20260908-uga81r1/.test(experienceSource))
     throw new Error('SELF_TEST_STAGE9_CACHE_CHAIN_STALE');
   console.log(JSON.stringify({status:'PASS',moduleRuntime:{
     fingerprint:identity.runtimeFingerprint,moduleFileCount:identity.moduleFileCount,
     runtimeFileCount:identity.runtimeFileCount,expectedPathCount:identity.expectedPathCount,
     reachableCodeCount:identity.reachableCodeCount,reachableAssetCount:identity.reachableAssetCount
   },requiredPaths:required,packageExpectation,effectExpectation,
-  cacheVersions:{module:'20260829-entryintro2',host:'20260829-careergate1',operations:'20260829-wartable2'}},null,2));
+  cacheVersions:{module:'20260908-uga81r1',host:'20260906-release5',operations:'20260908-uga81r1'}},null,2));
 }
 
 (selfTestMode?selfTest():main()).catch(error=>{

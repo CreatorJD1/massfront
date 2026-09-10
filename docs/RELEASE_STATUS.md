@@ -1,57 +1,173 @@
 # MASSFRONT release status
 
-Last reconciled: 2026-09-02 (v1.33.73 shipped)
+Last reconciled: 2026-09-10 (v1.33.83 shipped)
 
-## Live
+## Live - v1.33.83 SYSTEM (2026-09-10)
 
-- In-game updater: **v1.33.73 HOTFIX** live on Stable, delivered as an OTA-only
-  patch against v1.33.72 (5 changed artifacts; no APK built or required). All
-  three channels verified by
-  `node tools/verify-release-channels.mjs --version 1.33.73`, delivery by
-  `node tools/probe-payload-cors.mjs`, and end to end by
-  `node tools/probe-live-ota.mjs --from 1.33.72 --expect 1.33.73`.
-  v1.33.72 before it was confirmed installing **over the air** on Jason's phone
-  2026-09-02 with no APK install.
-- Android installer: **v1.33.73 is the current APK**,
-  `MASSFRONT-v1.33.73-mobile-install.apk`, 138,091,701 bytes, SHA-256
-  `4341372131bdf5a4e9619ac6c6fb028da4d440aa8d87594dc53a6158b9c21371`,
-  versionCode 13373. Built from the packed v1.33.73 tree and verified before
-  upload to contain PACKAGED_REV 1.33.73, the commander XP chip, the uistack
-  rail enforcement and the ui.css `.uiPanelOpen` fix; the published LFS oid
-  matches the local hash byte for byte. It is the only surface that carries the
-  CSS half of the stack-rail fix natively -- installed players get the same
-  behaviour from the JS enforcement over the air.
-- Superseded: v1.33.64 APK,
-  `MASSFRONT-v1.33.64-mobile-install.apk`, 135,365,854 bytes, SHA-256
-  `e54a88cfed62269e6db6ef6cb1e411396e3cc2c5e3de060c1cf4cea486d5d77b`,
-  versionCode 13364. Installed and confirmed booting on Jason's phone.
-- Browser playtest: HF Space `CREATORJD/massfront-playtest` at commit
-  `565d44a1c46a57e1a86e8007a53257b3316e118a` (v1.33.65).
-- The OTA channel carries **JavaScript only** — 113 files, all `.js`. CSS,
-  `index.html`, `boot.js`, `sw.js` and `update-config.json` ship in the APK and
-  the Space alone, so any styling or DOM change needs a new installer.
-- **Publishing is four steps.** `tools/publish-hf-release.ps1` writes Hugging
-  Face; `tools/mirror-release-to-cloudflare.mjs --version X --apply` copies the
-  verified bytes into R2 and moves the worker pointer;
-  `node tools/repoint-manifests-to-mirror.mjs --apply` points the published
-  manifests at those redirect-free urls; `hf upload
-  CREATORJD/massfront-playtest www . --repo-type space` publishes the browser
-  build. Run `node tools/verify-release-channels.mjs --version X` and
-  `node tools/probe-payload-cors.mjs` after every publish.
-  The mirror has no retry and failed twice on 1.33.65 before succeeding.
-- **A release is not shipped until a device can download it.** Hugging Face
-  answers small files with a same-origin 307 but LFS-backed payloads with a 302
-  to a signed CDN on another origin. Every chunked file carries a `Range`
-  header, which makes the request non-simple and forces a preflight, and a
-  strict engine will not follow a preflighted request off-origin: Android
-  WebView refuses it, desktop Chrome follows it. The device reports NETWORK
-  READY, finds the update, and dies on the first chunked file with a flat
-  `network request failed`. Because every check ran in Chrome, the channel
-  verified clean while no device could download a byte. Payload urls are **not**
-  part of manifest identity (the client hashes path, size, sha256 and chunks
-  only), so they can be repointed on a live release without reissuing it.
-  `tools/probe-payload-cors.mjs` gates this, and the publisher now refuses to
-  report success without it.
+Main menu rebuilt on the authored MASSFRONT UI Production V3 pack. The command
+slices, the deploy action and the dock destinations are drawn from authored art
+with real pressed/selected states instead of gradients; tapping a slice reveals
+what it does before entering it; rank, experience, cores and record collapse
+into one commander banner; and the update surface floats over the live menu and
+minimises to a status pill rather than taking the screen.
+
+Every slice number in `src/styles/ui.css` is a restatement of one in the pack
+manifest, so `tools/test-menu-slice-geometry.mjs` reads
+`assets/textures/ui/mf-ui-v3/ASSET_MANIFEST.json` and fails on three kinds of
+drift: CSS against the manifest borders, shipped PNG bytes against the pack
+checksums, and any authored state that is never referenced.
+
+- In-game updater: **v1.33.83** active on Stable, HF + Cloudflare in agreement,
+  115 artifacts, manifest root
+  `5894baebf2907da9a4dad2341a4b833848c21177be7fbb4f453a59f7bcee6324`.
+  Expected-prior guard at activation: 1.33.82 /
+  `0ecf9c1cb1ca6c60a515972c21cde0e0e729d6b767755113f1c896cb2cba28c8`.
+  HF activation commit `75bb5394f663dc586ba3abbda77cc2307903da2d`; immutable
+  artifacts pinned at `bbb9adc6fd7c7ecf6b12661e6a2744c111fdb154`.
+- Exploration content: `/f/1.33.83/content-r1/`, 483 files (148,420,183 bytes),
+  manifest SHA-256
+  `5e56b78c82b4e9a3172fc63824be00c9eb6a3a430050a36e2183c0abe78b8833`.
+  This carries the release's UGA work: `account_ledger.js` and
+  `ground_control.js` are new; `catalog.js`, `uga_command.js` and
+  `uga_command.css` changed. The OTA builder requires the delivery descriptor
+  bound to the release being built, so the content namespace moved with it.
+- HF Space: commit `2f7c4686d452d520b94d3fa02804bb6d49b1f0b6`, serving
+  PACKAGED_REV 1.33.83.
+- Android: versionCode 13383, shrunk/aligned/signed via `tools/shrink-apk.ps1`
+  (`test-apk-release-gate` ok:true). `boot.js` changed, so a new package was
+  required rather than optional.
+- Gates: `verify-release-channels` PASS; `probe-payload-cors` PASS on all three
+  channels; 29/29 source acceptance; `verify-menu-chrome` 33/33;
+  `verify-launch-home-entry` and `test-menu-hud-isolation` PASS on hardware
+  RTX 4060 / ANGLE D3D11.
+
+### Version fields the five-channel table omits
+
+`sw.js` `MF_SW_VERSION` is a required bump and is not in the table in
+`docs/FIVE_CHANNEL_UPDATE.md`. The publisher refuses to build without it, which
+is how it was caught. `assets/data/exploration-pack-remote.json` must also move,
+but only together with a republished content namespace - it pins immutable
+content by SHA-256, so bumping its version alone would point at content that
+does not exist.
+
+### Known deviation
+
+16 retired `gui-material-v1/*_normal.png` files remain on the HF Space from an
+earlier GUI iteration. Every reference in packed `www/` is to the `_frame`
+variants, so they are unreferenced dead weight rather than a different build.
+They were left in place rather than deleting live files during an active
+release; worth reconciling in a quiet moment.
+
+
+## Live - v1.33.82 HOTFIX (2026-09-09)
+
+Fixes the bottom command dock sitting under the home indicator on installed
+phone builds. `body.mf-cinematic-hud #cmdbar` positioned itself as
+`bottom: calc(var(--sab) + var(--mfHudEdge))`, trusting the safe-area inset
+outright. Measured in WebKit (Safari engine) at iPhone 13 geometry 390x844:
+a reported 34px inset leaves the last dock row 40px of clearance, but a 0px
+inset leaves it **6px** - and the last row is DEPLOY BASE HERE, which is how it
+ended up cut in the owner capture. The gap is now floored at the full indicator
+height (34px clearance when the inset is missing); a device that reports its
+inset correctly is byte-for-byte unchanged at 38px. The legacy non-cinematic
+dock already floored itself this way via --mmDockPad; the cinematic dock never did.
+
+- In-game updater: **v1.33.82** active on Stable, HF + Cloudflare in agreement,
+  115 artifacts, manifest root `0ecf9c1cb1ca6c60a515972c21cde0e0e729d6b767755113f1c896cb2cba28c8`.
+  Expected-prior guard at activation: 1.33.81 / `e56111e5...`.
+- Exploration content: `/f/1.33.82/content-r1/`, 481 files (148,152,239 bytes),
+  manifest SHA-256 `74d39e8b76bd52fd7fd3374f1856e28efa2f1e3a0f64a4d5c28bd33fe6494296`.
+- HF Space: commit `77db5d11521879885c169f5334c567ea8395cca8`.
+- Android: versionCode 13382, shrunk/aligned/signed via tools/shrink-apk.ps1
+  (test-apk-release-gate ok:true).
+- Gates: verify-release-channels PASS; verify-live-space-release PASS, 0 page
+  errors; source + packed launch/home acceptance PASS on hardware RTX 4060;
+  source and www/ byte-identical across 173 compared files; 8 HUD-adjacent
+  contract tests PASS.
+
+### Still untested
+
+- Physical Apple Safari-installed PWA and physical Android device acceptance.
+  The dock fix above was proven in WebKit with an injected inset; no desktop
+  engine reports a real env(safe-area-inset-*), so an owner device check on
+  1.33.82 is what closes it.
+
+## Live — v1.33.81 OVERHAUL (2026-09-09)
+
+- In-game updater: **v1.33.81** is active on Stable across matching Hugging Face
+  and Cloudflare manifests. 115 artifacts, manifest root
+  `e56111e5930748e3550ded1c527045217f2d9a0ad1b900c6ac03a647177b072d`.
+  Prior root at activation was `ff4eb654...` at v1.33.80, used as the
+  expected-prior guard for both repointers.
+- Galactic Exploration content: immutable Cloudflare namespace
+  `/f/1.33.81/content-r2/`, 481 files (148,152,239 bytes), manifest SHA-256
+  `4bdbfd4c3076ade4e931125ab6c8353f32d0bc334bd55e67edc525adf4ea45e3`.
+  `content-r1` was left untouched, as required.
+- Browser/PWA playtest: packed www/ is live on HF Space
+  `CREATORJD/massfront-playtest` at commit
+  `e3b816202738433969f1be0e90d0974a0420099f`.
+- Android installer built: `MASSFRONT-v1.33.81-candidate-r2-mobile-install.apk`,
+  261,852,358 bytes, SHA-256
+  `f16962a15adfefb249ae82c5b2f697e5e59597eba0dcbdc16eb15fc0c7e0aa98`,
+  versionCode 13381. **Not** run through tools/shrink-apk.sh this cycle.
+- Verified after activation: `verify-release-channels --version 1.33.81` PASS on
+  all three channels; source and packed launch/home acceptance PASS on hardware
+  RTX 4060 / D3D11; source and www/ are byte-identical across 173 compared files.
+
+### Post-release re-verification (same day)
+
+Three items were flagged immediately after activation and all three were then
+disproved by measurement. Recording them so the corrections are not lost:
+
+- **Live HF Space gate.** `verify-live-space-release.mjs` first FAILED with page
+  error `HSCALE is not defined`. Re-run after the Space finished committing:
+  **PASS, 0 page errors**. The upload lands in 5 commits and the first run hit a
+  part-propagated tree. The packed tree itself is clean locally: 113/113 scripts,
+  `HSCALE` resolves to a number, no page errors. Not a shipped defect.
+- **APK optimisation.** The APK WAS shrunk, aligned and signed. The publisher runs
+  `tools/shrink-apk.ps1` (16 KiB-aware) with `zipalign -P 16 4` and a post-shrink
+  gate; `tools/test-apk-release-gate.mjs` returns ok:true and actively forbids the
+  legacy `shrink-apk.sh` that AGENTS.md still names. 261,852,358 bytes is the
+  optimised size for a content-bearing package, in line with 1.33.76-1.33.80.
+- **iPhone DEPLOY BASE HERE clipping** (owner capture taken on installed 1.33.80).
+  Not reproducible on 1.33.81. Measured on the packed tree at iPhone geometries
+  393x852 and 375x812 with `--safe-area-inset-bottom: 34px`: the control is 48px
+  tall, sits 40px above the viewport bottom and 6px clear of the home-indicator
+  safe area, and its label is not clipped (scrollHeight 46 = clientHeight 46).
+  The HUD repairs carried in this release appear to have fixed it. Needs an owner
+  device re-check on 1.33.81 before it is called closed.
+
+### Still untested
+
+- Physical Apple Safari-installed PWA and physical Android device acceptance.
+
+## Live (previous, v1.33.79 record)
+
+- In-game updater: **v1.33.79 OVERHAUL** is active on Stable through matching
+  Hugging Face and Cloudflare manifests. The full release contains 115
+  artifacts, 96,949,402 bytes, with manifest root
+  `94589e7169dac160bb27fafff0e1b57ef0507e6546d45e4ad04d95408b585bb3`.
+- Android installer: **v1.33.79 is the current APK**,
+  `MASSFRONT-v1.33.79-mobile-install.apk`, 260,847,561 bytes, SHA-256
+  `cb305cff7cfca7539d90eeb3bfda257e686397677ecfa0bdcd6ab64ed6fd068f`,
+  versionCode 13379. The optimized package is 16 KiB-aligned and v2/v3 signed
+  with one pinned signer.
+- Browser/PWA playtest: exact packed v1.33.79 is live on HF Space
+  `CREATORJD/massfront-playtest` at commit
+  `41b7d636397b2d8d0cc881fa5841dbc50725ead8`.
+- Galactic Exploration content: immutable Cloudflare namespace
+  `/f/1.33.79/content-r1/` serves all 473 files (147,930,767 bytes), bound by
+  manifest SHA-256
+  `edc34c6b67b26026da6e46db37a0890b85d9342e7073c76afec696c312193d6d`.
+- Automated acceptance passed: exact-channel comparison, public CORS/range
+  delivery, packed launcher/UGA/Standard/commissioning routes, all nine
+  operation bridges, protected Training and Skip convergence, 91 responsive
+  captures, deterministic navigation, and the live Space on hardware WebGL2.
+- Physical Android install/update and Apple Safari-installed PWA acceptance
+  remain device checks. Native iOS/IPA/TestFlight/App Store work is retired.
+
+See [`RELEASE_1.33.79_GALACTIC_INTEGRATION.md`](RELEASE_1.33.79_GALACTIC_INTEGRATION.md) for the concise
+release record and evidence paths.
 
 ## v1.33.73 HOTFIX — stack selection reachable, commander XP in session
 

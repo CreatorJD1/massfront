@@ -21,16 +21,22 @@ async function issueTicket(gateState) {
     Date,
     JSON,
     Promise,
+    requestAnimationFrame: callback => callback(0),
     fetch: async () => ({ ok: true }),
-    META: { settings: { experimentalExploration: true } },
+    META: { settings: {} },
+    __MF_BUILD_HAS_GALACTIC_EXPLORATION: true,
     PROFILES: { active: 'p1' },
     commanderRosterSnapshotV1: () => roster,
     sessionStorage,
     location,
+    $: () => null,
+    mfBindTap() {},
     initAudio() {},
     sfx() {},
     toast() {},
-    mfOpenExploration: null
+    mfOpenExploration: null,
+    mfExplorationMenuSync: null,
+    mfExplorationLaunching: false
   };
   context.window = context;
   context.window.MFNewCareerFactionGate = {

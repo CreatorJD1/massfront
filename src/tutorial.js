@@ -843,19 +843,21 @@ function evalSteps(){
    deliberate way out (pause > ABANDON MATCH) has always asked first; the
    accidental way out did not. Same question, same wording, before anything is
    thrown away. Guidance-only skips stay instant: nothing is lost. */
-function tutSkip(){
+function tutSkip(confirmedState){
   if(!TUT.active) return;
   var liveTraining=TUT.trainingMode&&(typeof running!=='undefined'&&running)&&
                    !(typeof gameEnded!=='undefined'&&gameEnded);
   if(liveTraining&&!tutSkipConfirmed&&typeof accConfirm==='function'){
+    var confirmState={trainingMode:!!TUT.trainingMode,basicMode:!!TUT.basicMode};
     accConfirm(TUT.basicMode
       ?'Skip the remaining basics and continue to required faction commissioning? This operation grants no payout.'
       :'Leave training and return to the menu? This operation grants no payout.',
-      function(){ tutSkipConfirmed=true; tutSkip(); tutSkipConfirmed=false; });
+      function(){ tutSkipConfirmed=true; tutSkip(confirmState); tutSkipConfirmed=false; });
     return;
   }
   TUT.active=false;
-  var wasTraining=TUT.trainingMode,wasBasic=TUT.basicMode;
+  var wasTraining=confirmedState?confirmedState.trainingMode:TUT.trainingMode;
+  var wasBasic=confirmedState?confirmedState.basicMode:TUT.basicMode;
   var M=tutMeta(),skipSaved=false; M.skipped=true; M.version=GUIDE_VERSION;
   if(wasBasic){M.basicSkipped=true;M.basicDone=false;}
   queue.length=0;
@@ -864,7 +866,15 @@ function tutSkip(){
   if(wasTraining){
     TUT.trainingMode=false; trainingLaunched=false; restoreTrainingConfig();
     if(typeof metaSave==='function')try{skipSaved=metaSave()!==false;}catch(e){skipSaved=false;}
-    if(typeof returnToMainMenu==='function') returnToMainMenu();
+    if(wasBasic&&typeof window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__==='function'){
+      /* Galactic Command owns ordinary main-menu returns. Commissioning is the
+         one protected base-document destination, so mark only this synchronous
+         cleanup call and clear the marker before any later navigation can use it. */
+      window.__MF_COMMISSIONING_RETURN_ACTIVE__=true;
+      try{window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__();}
+      finally{delete window.__MF_COMMISSIONING_RETURN_ACTIVE__;}
+    }
+    else if(typeof returnToMainMenu==='function') returnToMainMenu();
   } else if(typeof metaSave==='function')try{skipSaved=metaSave()!==false;}catch(e2){skipSaved=false;}
   speak(SKIP_LINE,4.0,'skip','skip');
   if(typeof sfx==='function'){ try{ sfx('ui'); }catch(e){} }
@@ -1421,4 +1431,3 @@ window.__tutDebug=function(){ return {TUT:TUT,MATCH:MATCH,REACT:REACT,STEPS:STEP
   keenKey:function(kind,id){ return 'vo_keen_'+keenLineId(kind,id); }}; };
 
 })();
-

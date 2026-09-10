@@ -42,14 +42,14 @@
    ============================================================================ */
 
 /* Bumped by the release script. Compared against the manifest's `version`. */
-const APP_VERSION = '1.33.74';
+const APP_VERSION = '1.33.83';
 
 /* Release notes for the PACKAGED build, bumped by the release script beside
    APP_VERSION and PACKAGED_REV. A device that has never taken an OTA has no
    download history to read notes from, and an offline device can never fetch
    them, so the build carries its own copy — otherwise a fresh install shows a
    permanently empty first entry in the mailbox. */
-const APP_NOTES = "System — Features: upgrade every owned building of the selected type from its building panel. Construction and production now show progress and faction-colored activity effects. Utility units show their active support role. Bug fixes: restored Brood organic foundations and connecting infestation veins; corrected production timing, healing cadence, and terrain refreshes. Multiplayer reconnects pause and replay missed commands without charging twice. Release delivery now verifies complete recovery files before activating an update. Upcoming: further large-army performance improvements and optional content packs.";
+const APP_NOTES = "Main menu rebuild on the authored production GUI pack — Features: the command slices, the primary deploy action and the dock destinations are now drawn from authored art rather than gradients, with real pressed and selected states; tapping a command slice reveals what it does before you enter it; a compact commander banner carries name, rank, experience, cores and record in one bar; the game-update surface floats over the live menu and minimises to a status pill so a download no longer takes the screen. Fixes: the primary action label no longer claims the war table it does not open; both hazard ends of that action stay put instead of one sweeping across it; the longest navigation label no longer truncates on a narrow phone; the bottom dock no longer sits under the home indicator in short landscape, where the menu is now two columns and fits without scrolling. Known incomplete work: guided practical space onboarding, optional Galactic allies, human co-op and Versus, dropped-session production restoration, and physical Safari and Android device acceptance. These are not completed features.";
 
 /* The channel URL in update-config.json remains publisher-configurable, but a
    production checker also needs one known-good recovery path. More importantly,

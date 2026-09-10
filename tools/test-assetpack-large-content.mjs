@@ -24,6 +24,8 @@ const logicalLargeFiles=[
   logicalLargeFile('world/transit.bin',256*MiB,11),
   logicalLargeFile('world/superstructures.bin',256*MiB,12)
 ];
+const logicalExplorationBytes=147627666;
+const logicalExplorationFile=logicalLargeFile('runtime/galactic-exploration.bin',logicalExplorationBytes,13);
 
 function fakeIndexedDb(){
   const databases=new Map();
@@ -58,7 +60,10 @@ function fakeIndexedDb(){
                 return {
                   get:key=>read(()=>store.get(key)),
                   getAllKeys:()=>read(()=>[...store.keys()]),
-                  put:(value,key)=>read(()=>store.set(key,value),true),
+                  put:(value,key)=>read(()=>{
+                    if(name==='massfront-packs'&&storeName==='meta'&&key==='index:active') api.activePointerWrites++;
+                    return store.set(key,value);
+                  },true),
                   delete:key=>read(()=>store.delete(key),true)
                 };
               }};
@@ -72,7 +77,8 @@ function fakeIndexedDb(){
       });
       return request;
     },
-    store(dbName,storeName){return ensure(dbName).stores.get(storeName);}
+    store(dbName,storeName){return ensure(dbName).stores.get(storeName);},
+    activePointerWrites:0
   };
   return api;
 }
@@ -88,6 +94,12 @@ const content={
   'resume-corrupt/retry.bin':Buffer.from('persisted partial retry'),
   'legacy-hashed/retry.bin':Buffer.from('legacy retry data'),
   'galactic-exploration/section.bin':Buffer.from('sectioned galactic content'),
+  'batch-shared/base.bin':Buffer.from('shared batch dependency'),
+  'batch-a/a.bin':Buffer.from('batch expansion alpha'),
+  'batch-b/b.bin':Buffer.from('batch expansion bravo'),
+  'manual-only/manual.bin':Buffer.from('manual pack must stay idle'),
+  'startup-a/a.bin':Buffer.from('startup expansion alpha'),
+  'startup-b/b.bin':Buffer.from('startup expansion bravo'),
   'legacy/tone.ogg':Buffer.from('old')
 };
 const entry=(name,data,chunk=4)=>buildAudioPackFileEntry(name,data,chunk);
@@ -124,6 +136,44 @@ const manifest={version:2,packs:{
     format:2,label:'Metadata-only 768 MiB plan',chunkSize:2*MiB,bytes:768*MiB,
     files:logicalLargeFiles
   },
+  'large-metadata-2':{
+    format:2,delivery:'manual',label:'Metadata-only 768 MiB plan B',chunkSize:2*MiB,bytes:768*MiB,
+    files:logicalLargeFiles
+  },
+  'large-metadata-3':{
+    format:2,delivery:'manual',label:'Metadata-only 768 MiB plan C',chunkSize:2*MiB,bytes:768*MiB,
+    files:logicalLargeFiles
+  },
+  'galactic-exploration-policy':{
+    format:2,delivery:'manual',label:'Metadata-only current Galactic payload',chunkSize:2*MiB,
+    bytes:logicalExplorationBytes,files:[logicalExplorationFile]
+  },
+  'batch-shared':{
+    format:2,delivery:'base',label:'Shared batch foundation',chunkSize:4,
+    bytes:content['batch-shared/base.bin'].length,
+    files:[entry('base.bin',content['batch-shared/base.bin'])]
+  },
+  'batch-a':{
+    format:2,delivery:'manual',label:'Batch expansion A',chunkSize:4,dependencies:['batch-shared'],
+    bytes:content['batch-a/a.bin'].length,files:[entry('a.bin',content['batch-a/a.bin'])]
+  },
+  'batch-b':{
+    format:2,delivery:'manual',label:'Batch expansion B',chunkSize:4,dependencies:['batch-shared'],
+    bytes:content['batch-b/b.bin'].length,files:[entry('b.bin',content['batch-b/b.bin'])]
+  },
+  'manual-only':{
+    format:2,delivery:'manual',label:'Manual-only expansion',chunkSize:4,
+    bytes:content['manual-only/manual.bin'].length,
+    files:[entry('manual.bin',content['manual-only/manual.bin'])]
+  },
+  'startup-a':{
+    format:2,delivery:'startup',label:'Startup expansion A',chunkSize:4,
+    bytes:content['startup-a/a.bin'].length,files:[entry('a.bin',content['startup-a/a.bin'])]
+  },
+  'startup-b':{
+    format:2,delivery:'startup',label:'Startup expansion B',chunkSize:4,
+    bytes:content['startup-b/b.bin'].length,files:[entry('b.bin',content['startup-b/b.bin'])]
+  },
   'resume-corrupt':{
     format:1,label:'Persisted partial integrity',chunkSize:4,
     bytes:content['resume-corrupt/retry.bin'].length,
@@ -141,8 +191,10 @@ let activeManifest=manifest;
 
 const idb=fakeIndexedDb();
 let quota=1024*1024*1024,usage=0,active=0,maxActive=0,failSecondChunk=true,failReplacementChunk=false;
-let failResumeCorrupt=true,persistenceGranted=false,persistRequests=0;
+let failResumeCorrupt=true,failBatchSecond=true,persistenceGranted=false,persistRequests=0;
 let networkAllowed=true,corruptLegacy=true;
+const connectionState={saveData:false,metered:false,cost:'',effectiveType:'4g',downlink:10,
+  addEventListener(){}};
 const requests=[];
 async function fetchMock(url,options={}){
   active++;maxActive=Math.max(maxActive,active);
@@ -198,6 +250,10 @@ async function fetchMock(url,options={}){
       failResumeCorrupt=false;
       throw new Error('simulated persisted-partial interruption');
     }
+    if(pack==='batch-b'&&start===4&&failBatchSecond){
+      failBatchSecond=false;
+      throw new Error('simulated aggregate-batch interruption');
+    }
     const body=data.subarray(start,end+1);
     return new Response(body,{status:206,headers:{
       'content-range':`bytes ${start}-${end}/${data.length}`,
@@ -207,11 +263,17 @@ async function fetchMock(url,options={}){
 }
 
 const source=await readFile(new URL('../src/assetpack.js',import.meta.url),'utf8');
+const heldWriterLocks=new Set();
+const testWriterLocks={async request(name,options,callback){
+  if(heldWriterLocks.has(name))return callback(null);
+  heldWriterLocks.add(name);
+  try{return await callback({name});}finally{heldWriterLocks.delete(name);}
+}};
 function loadPackRuntime(){
   const sandbox={
     Blob,Response,Headers,Uint8Array,Uint32Array,Map,Set,Date,Math,Object,Array,String,Number,RegExp,Error,TypeError,
     Promise,console,crypto:webcrypto,indexedDB:idb,fetch:fetchMock,
-    navigator:{storage:{
+    navigator:{connection:connectionState,locks:testWriterLocks,storage:{
       estimate:async()=>({quota,usage}),
       persisted:async()=>persistenceGranted,
       persist:async()=>{persistRequests++;persistenceGranted=true;return true;}
@@ -231,6 +293,9 @@ function loadPackRuntime(){
 let sandbox=loadPackRuntime();
 let packs=sandbox.MASSFRONT_ASSET_PACKS;
 assert.ok(packs,'public optional-pack API was not installed');
+assert.equal(typeof packs.installMany,'function','public API must expose aggregate installation');
+assert.equal(typeof packs.startup,'function','public API must expose data-driven startup installation');
+assert.equal(typeof packs.snapshot,'function','public API must expose aggregate transfer state');
 
 const built=buildAudioPackFileEntry('five.bin',Buffer.from('12345'),2);
 assert.equal(built.chunks.length,3);
@@ -246,6 +311,108 @@ const logicalLargePreflight=await packs.preflight('large-metadata');
 assert.equal(logicalLargePreflight.ok,true);
 assert.ok(logicalLargePreflight.required>768*MiB,
   'preflight must include assembly headroom beyond remaining logical bytes');
+const fileRequestsBeforeMultiGb=requests.length;
+const multiGb=await packs.installMany(['large-metadata','large-metadata-2','large-metadata-3']);
+assert.equal(multiGb.ok,false);
+assert.equal(multiGb.reason,'storage','a 2.25 GiB batch must fail at aggregate storage preflight on a 2 GiB quota');
+assert.equal(packs.snapshot().total,3*768*MiB,'aggregate accounting must remain exact above the signed 32-bit range');
+assert.equal(requests.length,fileRequestsBeforeMultiGb,'multi-GB storage refusal must happen before any payload request');
+
+/* One operation owns a future expansion batch. Shared dependencies appear once,
+   byte progress never resets between packs, and no new pack becomes active when
+   a later target fails. Verified finals/chunks remain staged for the retry. */
+const listed=await packs.list();
+assert.equal(listed.find(pack=>pack.id==='batch-shared').delivery,'base');
+assert.equal(listed.find(pack=>pack.id==='batch-a').delivery,'manual');
+assert.equal(listed.find(pack=>pack.id==='startup-a').delivery,'startup');
+const batchProgress=[];
+const activeWritesBeforeBatch=idb.activePointerWrites;
+const interruptedBatchPromise=packs.installMany(['batch-a','batch-b'],{
+  onProgress:(got,total,detail)=>batchProgress.push({got,total,detail})
+});
+const liveBatch=packs.snapshot();
+assert.equal(liveBatch.busy,true,'installMany must acquire one busy latch before its first await');
+assert.equal(liveBatch.state,'downloading');
+const concurrentInstall=await packs.install('manual-only');
+assert.equal(concurrentInstall.ok,false);
+assert.equal(concurrentInstall.reason,'busy','a second install must not interleave with an aggregate batch');
+const interruptedBatch=await interruptedBatchPromise;
+assert.equal(interruptedBatch.ok,false,'an interrupted target must fail the whole activation batch');
+assert.equal(idb.activePointerWrites,activeWritesBeforeBatch,
+  'a failed batch must not move the active manifest pointer');
+assert.equal((await packs.status('batch-a')).installed,false,
+  'an earlier verified target must remain staged until the whole batch verifies');
+const sharedBatchChunkRequests=manifest.packs['batch-shared'].files[0].chunks.length;
+assert.equal(requests.filter(r=>r.key==='batch-shared/base.bin').length,sharedBatchChunkRequests,
+  'a shared dependency must be fetched once for two targets (one request per manifest chunk)');
+assert.ok(batchProgress.length>0);
+assert.ok(batchProgress.every((row,index,all)=>Number.isFinite(row.got)&&row.got>=0&&row.got<=row.total
+  &&row.total===all[0].total&&(!index||row.got>=all[index-1].got)&&row.detail&&typeof row.detail==='object'),
+  'aggregate progress must be monotonic, bounded, and keep one total across pack boundaries');
+
+const resumedBatchProgress=[];
+const resumedBatch=await packs.installMany(['batch-a','batch-b'],{
+  onProgress:(got,total,detail)=>resumedBatchProgress.push({got,total,detail})
+});
+assert.equal(resumedBatch.ok,true);
+assert.deepEqual([...resumedBatch.packs],['batch-shared','batch-a','batch-b'],
+  'aggregate install order must contain one de-duplicated dependency before both targets');
+assert.equal(requests.filter(r=>r.key==='batch-shared/base.bin').length,sharedBatchChunkRequests,
+  'retry must reuse the verified dependency instead of downloading it again');
+assert.equal(idb.activePointerWrites,activeWritesBeforeBatch+1,
+  'all verified targets and dependencies must promote through one active-pointer write');
+assert.ok(resumedBatchProgress.length>0);
+assert.ok(resumedBatchProgress.every((row,index,all)=>row.total===all[0].total
+  &&row.got<=row.total&&(!index||row.got>=all[index-1].got)));
+assert.equal(resumedBatchProgress.at(-1).got,resumedBatchProgress.at(-1).total,
+  'successful aggregate progress must finish exactly at its advertised total');
+const readyBatch=packs.snapshot();
+assert.equal(readyBatch.busy,false);
+assert.equal(readyBatch.state,'ready');
+
+/* Startup selection is manifest data, not another hard-coded pack list. Base
+   dependencies are pulled only through their selected consumers, while manual
+   packs remain untouched. */
+for(const policy of [
+  {patch:{saveData:true},reason:'save-data'},
+  {patch:{metered:true},reason:'metered-network'},
+  {patch:{effectiveType:'3g',downlink:1.2},reason:'slow-network'}
+]){
+  Object.assign(connectionState,{saveData:false,metered:false,cost:'',effectiveType:'4g',downlink:10},policy.patch);
+  const before=requests.length,blocked=await packs.install('galactic-exploration-policy',{automatic:true});
+  assert.equal(blocked.ok,false);
+  assert.equal(blocked.reason,policy.reason);
+  assert.equal(requests.length,before,'automatic policy refusal must precede payload transfer');
+  assert.equal(packs.snapshot().state,'waiting');
+  assert.match(packs.snapshot().error,/use Install or Retry to download now/);
+}
+connectionState.saveData=true;
+const startupPayloadRequests=()=>requests.filter(row=>row.key==='startup-a/a.bin'||row.key==='startup-b/b.bin').length;
+const startupRequestsBefore=startupPayloadRequests(),blockedStartup=await packs.startup();
+assert.equal(blockedStartup.reason,'save-data');
+assert.equal(startupPayloadRequests(),startupRequestsBefore,'data-driven startup must use the same automatic policy');
+Object.assign(connectionState,{saveData:false,metered:false,cost:'',effectiveType:'3g',downlink:1.2});
+const explicitOnSlow=await packs.install('startup-a');
+assert.equal(explicitOnSlow.ok,true,'an explicit install must override the automatic slow-network pause');
+assert.equal((await packs.remove('startup-a')).ok,true);
+Object.assign(connectionState,{saveData:false,metered:false,cost:'',effectiveType:'4g',downlink:10});
+const manualRequestsBefore=requests.filter(r=>r.key==='manual-only/manual.bin').length;
+const activeWritesBeforeStartup=idb.activePointerWrites;
+const startupProgress=[];
+const startupResult=await packs.startup({
+  onProgress:(got,total,detail)=>startupProgress.push({got,total,detail})
+});
+assert.equal(startupResult.ok,true);
+assert.equal((await packs.status('startup-a')).installed,true);
+assert.equal((await packs.status('startup-b')).installed,true);
+assert.equal((await packs.status('manual-only')).installed,false,
+  'startup must select delivery=startup and leave delivery=manual idle');
+assert.equal(requests.filter(r=>r.key==='manual-only/manual.bin').length,manualRequestsBefore);
+assert.equal(idb.activePointerWrites,activeWritesBeforeStartup+1,
+  'startup packs must use the same one-write aggregate activation path');
+assert.ok(startupProgress.length>0);
+assert.equal(startupProgress.at(-1).got,startupProgress.at(-1).total);
+
 quota=1024*MiB;
 const first=await packs.install('galactic-command');
 assert.equal(first.ok,false,'interrupted install must not become active');
@@ -396,8 +563,20 @@ assert.equal((await packs.install('legacy')).ok,true,'verified legacy Blob must 
 assert.equal((await packs.status('legacy')).installed,true,'legacy size-keyed Blob must remain installed');
 assert.match(await packs.url('legacy','tone.ogg'),/^blob:test-/);
 
+connectionState.saveData=true;
+const explorationRequestsBefore=requests.filter(row=>row.key==='galactic-exploration/section.bin').length;
+const automaticExploration=await sandbox.mfInstallExplorationPack({automatic:true});
+assert.equal(automaticExploration.ok,false);
+assert.equal(automaticExploration.reason,'save-data');
+assert.equal(requests.filter(row=>row.key==='galactic-exploration/section.bin').length,explorationRequestsBefore,
+  'automatic Galactic delivery must stop before its first payload range');
 const exploration=await sandbox.mfInstallExplorationPack();
 assert.equal(exploration.ok,true,'legacy Galactic entry point must route through the generic pack installer');
+const cachedExplorationRequests=requests.filter(row=>row.key==='galactic-exploration/section.bin').length;
+const cachedAutomaticExploration=await sandbox.mfInstallExplorationPack({automatic:true});
+assert.equal(cachedAutomaticExploration.ok,true,'verified Galactic content must still mount under Save-Data');
+assert.equal(requests.filter(row=>row.key==='galactic-exploration/section.bin').length,cachedExplorationRequests);
+connectionState.saveData=false;
 assert.equal((await packs.status('galactic-exploration')).installed,true);
 assert.equal(idb.store('massfront-exploration-pack','files').size,0,
   'the retired whole-file exploration store must receive no new writes');
@@ -427,6 +606,10 @@ const chunkCapError=vm.runInContext(`(()=>{try{
   packNormalizeIndex({packs:{huge:{chunkSize:1,bytes:4097,files:[{name:'huge.bin',size:4097}]}}});return '';
 }catch(e){return e.message;}})()`,sandbox);
 assert.equal(chunkCapError,'chunks','synthetic legacy chunks must be capped before allocation');
+const unsafeStartupError=vm.runInContext(`(()=>{try{
+  packNormalizeIndex({packs:{unsafe:{format:1,delivery:'startup',bytes:1,files:[{name:'x.bin',size:1}]}}});return '';
+}catch(e){return e.message;}})()`,sandbox);
+assert.equal(unsafeStartupError,'startup-format','automatic delivery must require whole-file and per-chunk format-2 hashes');
 
 const scratchRoot=await mkdtemp(join(process.cwd(),'tmp','assetpack-builder-'));
 try{
@@ -443,6 +626,7 @@ try{
   assert.deepEqual(rebuilt.packs.voice,shared.packs.voice);
   assert.deepEqual(rebuilt.packs.future,prior.packs.future);
   assert.deepEqual(rebuilt.packs.sharedFuture,shared.packs.sharedFuture);
+  assert.equal(rebuilt.packs.music.delivery,'base','rebuilt current soundtrack metadata must remain base-delivery');
 
   const emptyRoot=join(scratchRoot,'empty');
   await mkdir(join(emptyRoot,'releases','audio-pack','pack','music'),{recursive:true});
@@ -456,6 +640,11 @@ console.log(JSON.stringify({
   interruptedReplacementKeptActive:true,postPromotionGc:true,
   persistedResumeAfterReload:true,damagedPartialRefetched:true,
   logicalLargeMetadataBytes:768*MiB,logicalLargeMetadataOnly:true,persistenceRequested:persistRequests,
+  logicalMultiPackBytes:3*768*MiB,multiGigabytePreflight:true,
+  aggregateBatchProgress:true,aggregateBatchAtomicPromotion:true,startupDeliverySelection:true,
+  automaticNetworkPolicy:true,explicitNetworkOverride:true,explorationAutomaticPolicy:true,
+  cachedMountBypassesNetworkPolicy:true,
+  logicalExplorationPolicyBytes:logicalExplorationBytes,
   builderPreservedOtherPacks:true,explorationUsesGenericEngine:true,
   storagePreflight:'blocked-before-fetch',wholeFileSha256:built.sha256
 },null,2));

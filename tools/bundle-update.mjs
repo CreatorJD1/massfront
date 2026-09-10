@@ -31,7 +31,13 @@ for(const need of ['assets/data/unitrows.js','src/engine/organicfx.js','src/rumb
    never delivered. The audio is useless without the list of what the audio is.
    37 KB inlined closes it; the pack still carries the actual sound. */
 const OTA_MIME={png:'image/png',jpg:'image/jpeg',json:'application/json',webp:'image/webp'};
+const explorationDelivery=JSON.parse(readFileSync(join(root,'assets/data/exploration-pack-remote.json'),'utf8'));
+const hasExplorationDelivery=explorationDelivery.schema==='MassfrontExplorationPackRemoteV2';
+if(hasExplorationDelivery&&(!/^[a-f0-9]{64}$/.test(explorationDelivery.manifestSha256||'')
+  ||!Number.isSafeInteger(explorationDelivery.manifestBytes)||explorationDelivery.manifestBytes<=0
+  ||explorationDelivery.version!==version))throw new Error('OTA Galactic delivery descriptor is not bound to this release');
 const otaBinaryAssets=[
+  'assets/data/exploration-pack-remote.json',
   'assets/brand/massfront-title-command-conquer-overwhelm-v1.png',
   'assets/modifiers/modifier-art-atlas-v1.png',
   'assets/factions/cinematic/terran-frontline-command-v1.png',
@@ -183,6 +189,7 @@ const preludeRuntimeBase=`(function(){
   /* Published before any source runs so a loader's first request already
      resolves. Absent in the APK/dev build, where the real files are on disk and
      the loaders fall back to their normal path. */
+  window.__MF_OTA_HAS_GALACTIC_DELIVERY=${JSON.stringify(hasExplorationDelivery)};
   window.__MF_OTA_ASSETS=${JSON.stringify(otaRuntimeAssets)};
   window.mf2AssetURL=function(path){
     var p=String(path||'');

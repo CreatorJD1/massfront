@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {readFileSync,existsSync} from 'node:fs';
 import {resolve} from 'node:path';
 
 const root=resolve(import.meta.dirname,'..');
 const read=file=>readFileSync(resolve(root,file),'utf8');
+const titleArt='assets/brand/massfront-title-command-conquer-overwhelm-v1.png';
+const titleArtHash='e11a316658c34d30a9b4aced6f2bdfb7ae7a47f967f93389acb55d8db67fb279';
 const html=read('index.html'),css=read('src/styles/ui.css'),launcher=read('src/launcher.js');
 const main=read('src/main.js'),intro=read('src/intro.js'),boot=read('boot.js');
 const manifest=JSON.parse(read('assets/data/manifest.json')).order;
@@ -30,6 +33,12 @@ assert.doesNotMatch(launcher,/getElementById\(['"]upd(?:Txt|Sub|Notes)['"]\).*te
   'launcher must not infer state from updater presentation text');
 assert.match(launcher,/showFrontScreen\('startScreen'\)/,'PLAY must hand off to the existing main menu');
 assert.doesNotMatch(launcher,/\.click\(\)|startBtn.*click/,'launcher must not auto-enter the War Room');
+assert.match(launcher,/mfOpenExploration\('campaign_hub'\)/,
+  'normal launch must enter the stable Galactic home');
+assert.doesNotMatch(launcher,/mfOpenExploration\('system'\)/,
+  'normal launch must not auto-depart into orbital travel');
+assert.match(main,/mfOpenExploration\('campaign_hub',\{explicitRetry:true,launchButtonId:'startBtn'\}\)/,
+  'the retained START button must return to Galactic home rather than auto-depart');
 assert.match(main,/mfLauncherShouldDeferAttract\(\)/,'main must defer the WebGL attract scene behind launcher');
 assert.match(intro,/mfLaunchPlay/,'intro focus must hand off to launcher CTA');
 assert.doesNotMatch(launcher,/MF_LAUNCHER_CATALOG\.find\([^\n]+\)\|\|MF_LAUNCHER_CATALOG\[0\]/,
@@ -71,8 +80,16 @@ assert.match(launcher,/transferring\?fmtBytesLive\(p\.bytes\):fmtBytes\(p\.bytes
 assert.match(launcher,/p\.speedBps\?fmtBytes\(p\.speedBps\)\+'\/s':\(transferring\?'0 B\/s':'—'\)/,
   'transfer speed must render as 0 B/s during a transfer, not as an em-dash');
 
-assert.match(launcher,/api\.status\(row\.id\)/,
-  'audio readiness must use stored-file status rather than activation metadata');
+const packs=JSON.parse(read('assets/packs/packs.json')).packs;
+for(const id of ['voice','music'])assert.equal(packs[id].delivery,'base',id+' must be base content');
+for(const entry of packs.voice.files)assert.ok(existsSync(resolve(root,'assets/audio/voice',entry.name)),
+  'base voice file missing: '+entry.name);
+for(const builder of ['tools/build-audio-pack.mjs','tools/build-voice-pack.mjs'])
+  assert.match(read(builder),/delivery:\s*'base'/,'audio builder must retain base delivery');
+assert.match(read('tools/pack-www.mjs'),/checkDual\('assets\/audio\/voice\/'/,
+  'packaging must verify both voice codecs');
+assert.match(launcher,/L\.packAudioReady=true;L\.packAudioIds=\[\]/,
+  'base audio must not request duplicate IndexedDB downloads');
 assert.match(launcher,/classList\.remove\('onlineOnly'\)/,
   'packaged Galactic content must stop looking internet-locked offline');
 assert.match(launcher,/localAhead=s\.state==='stale'/,
@@ -90,9 +107,19 @@ for(const selector of ['#updScr','.mfLauncherHero','.mfLauncherFoot','.mfLaunche
   assert.ok(css.includes(selector),'launcher CSS missing '+selector);
 assert.match(css,/@media\(orientation:landscape\) and \(min-width:640px\)/,
   'narrow phone landscape must not restore cramped two-column pack cards');
-for(const excluded of ['assets/brand/','assets/factions/cinematic/','assets/source/','assets/packs/'])
+for(const excluded of ['assets/factions/cinematic/','assets/source/','assets/packs/'])
   assert.ok(!html.includes(excluded),'launcher references pack-excluded asset '+excluded);
 for(const asset of ['assets/icons/splash-2732.png','assets/icons/icon-512.png',
-  'assets/textures/planets/war-table/aelos-basecolor-v1.png'])assert.ok(html.includes(asset),'launcher image missing '+asset);
+  'assets/textures/planets/war-table/aelos-basecolor-v1.png',titleArt])assert.ok(html.includes(asset),'launcher image missing '+asset);
+const brandRefs=[...html.matchAll(/(?:src|href)=["'](assets\/brand\/[^"']+)["']/g)].map(match=>match[1]);
+assert.deepEqual([...new Set(brandRefs)],[titleArt],
+  'launcher may reference only the canonical owner-approved title art under assets/brand');
+assert.equal(createHash('sha256').update(readFileSync(resolve(root,titleArt))).digest('hex'),titleArtHash,
+  'canonical owner-approved title art hash changed');
+const pack=read('tools/pack-www.mjs');
+assert.match(pack,/const KEEP_BRAND = 'assets\/brand\/massfront-title-command-conquer-overwhelm-v1\.png';/,
+  'pack must narrowly allow the canonical title art');
+assert.match(pack,/if\(rel\.startsWith\('assets\/brand\/'\)&&rel!==KEEP_BRAND\) return false;/,
+  'pack must continue excluding every other brand authoring asset');
 
 console.log('PASS launcher gateway static contract');

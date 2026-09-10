@@ -14,12 +14,128 @@
   const REQUEST_PREFIX='massfront.galactic.request.v1.';
   const RESULT_PREFIX='massfront.galactic.result.v1.';
   const ROUTE_PREFIX='massfront.galactic.route.v1.';
-  const CONTENT_VERSION='catalog-6';
+  const CLASSIC_FALLBACK_KEY='massfront.galactic.classic-fallback.v1';
+  const CLASSIC_FALLBACK_SEARCH='?galacticFallback=classic';
+  const CONTENT_VERSION='catalog-8';
+  const LEGACY_CONTENT_VERSION='catalog-7';
   const NONCE_RE=/^[A-Za-z0-9_-]{16,128}$/;
-  const BASE_ROUTE_IDS=new Set(['home','operations','development','armory','orders','intel',
-    'profile','inbox','social','settings','game-version','mode-training','mode-standard',
+  const BASE_ROUTE_IDS=new Set(['operations','development','armory','orders','intel',
+    'profile','inbox','social','settings','game-version','war-room','mode-training','mode-standard',
     'mode-campaign','mode-weekly','new-career-faction']);
   const PROXY_MAP={nova:'nova',dominion:'legion',syndicate:'syndicate'};
+  /* Secured menu routes carry only their UGA origin. They must not rewrite the
+     base War Table to a similarly themed homeworld: Veyra is not Nordhall and
+     Karak is not Vespera. Standard mode therefore opens at its real galaxy
+     stage, while authored operations use the separate battlefield authority
+     below after the player explicitly chooses a UGA map. */
+  const GALACTIC_EXPEDITION_LOCATION_CONTRACT={
+    aelos:new Set(['nexus_vii','aelos_caldris','aelos_ithara','aelos_embassy_spindle','aelos_logistics_array','aelos_veyra_gate','aelos_heliograph','aelos_freeport']),
+    veyra:new Set(['nexus_vii','veyra_orison','veyra_nacre','veyra_archive_hulk','veyra_aelos_gate','veyra_karak_gate','veyra_lens','veyra_ossuary']),
+    karak:new Set(['nexus_vii','karak_meridian','karak_tethys','karak_colony_spine','karak_lifeboat_field','karak_veyra_gate','karak_spine','karak_hive'])
+  };
+  function expeditionLocationAllowed(location){
+    const targets=GALACTIC_EXPEDITION_LOCATION_CONTRACT[location&&location.systemId];
+    const targetId=location&&location.targetId;
+    if(!targets||(targetId!==null&&targetId!==undefined&&!targets.has(targetId)))return null;
+    return {systemId:location.systemId,targetId:targetId==null?null:targetId};
+  }
+  const UGA_GROUND_LOCATION_KIND='UgaGroundLocationV1';
+  function ugaGroundArea(id,systemId,planetId,planetName,siteId,name,missionId,runtimeRegionId,mapNames){
+    return {schemaVersion:1,id,systemId,planetId,planetName,siteId,name,missionId,recommendedMapId:id+'_standard',maps:[
+      {id:id+'_compact',size:'compact',name:mapNames[0],runtimeTemplateMapId:runtimeRegionId+'_small'},
+      {id:id+'_standard',size:'standard',name:mapNames[1],runtimeTemplateMapId:runtimeRegionId+'_medium'},
+      {id:id+'_large',size:'large',name:mapNames[2],runtimeTemplateMapId:runtimeRegionId+'_large'}
+    ]};
+  }
+  /* Difficulty layering for a region's three maps, expressed ONLY in values the
+     War Table Standard setup already offers — timeRow 0/300/600/900/1500,
+     paceRow 0.7/1/1.6, crRow 1/0, defFocusRow 0/1. Nothing new is invented here;
+     these are the same functions a Standard match configures, finally driven by
+     which map of the region you dropped on instead of by constants.
+
+     Before this, every UGA operation ran timeLimit=1200, resPace=1, crateRate=1,
+     defenseFocus=0 no matter the region or the map — so compact and large played
+     identically and the only thing that moved was AI difficulty. 1200 was not
+     even one of the authored timer options.
+
+     The ladder: compact is a short rich scramble, standard is the neutral
+     reference match, large is a long lean grind that rewards fortifying. */
+  const UGA_GROUND_TACTICAL_PROFILES={
+    compact: {tier:1,timeLimit:600, resPace:1.6,crateRate:1,defenseFocus:0,wildcards:0,enemies:1},
+    standard:{tier:2,timeLimit:900, resPace:1,  crateRate:1,defenseFocus:0,wildcards:1,enemies:1},
+    large:   {tier:3,timeLimit:1500,resPace:0.7,crateRate:1,defenseFocus:1,wildcards:2,enemies:2}
+  };
+  /* Enemies never take sw or se — those are the two HQ landing zones a player
+     can choose, and an enemy sharing the player's spawn is not a difficulty
+     setting, it is a broken match. */
+  const UGA_ENEMY_ZONES=['ne','nw','c'];
+  function ugaGroundTacticalProfile(size){
+    return UGA_GROUND_TACTICAL_PROFILES[size]||UGA_GROUND_TACTICAL_PROFILES.standard;
+  }
+  /* The HQ Ship Landing Zone the player actually chose in the deployment planner.
+     Every mission authors two, the operation carries the choice as landingZoneId,
+     and the bridge used to discard it and spawn at 'sw' every single time — so
+     one of the two real decisions on the deployment screen did nothing.
+     The primary zone keeps 'sw', opposite the enemy at 'ne'; the alternate takes
+     'se', which starts closer to them. That is the tactical difference the choice
+     is offering, expressed in the same spawn zones Standard already uses.
+     tools/test-uga-deployment-bridge.mjs asserts this covers exactly the catalog's
+     landing zones, so adding one without a spawn fails the build. */
+  const UGA_LANDING_ZONE_SPAWNS={
+    relay_shadow:'sw',      maintenance_spar:'se',
+    customs_ring:'sw',      cargo_lock:'se',
+    service_lock:'sw',      freight_shadow:'se',
+    broken_spine:'sw',      aft_lattice:'se',
+    umbra_platform:'sw',    coolant_trench:'se',
+    vault_aperture:'sw',    collapsed_gallery:'se',
+    clinic_roof:'sw',       transit_court:'se',
+    maintenance_shaft:'sw', sealed_platform:'se',
+    vascular_breach:'sw',   thermal_vent:'se'
+  };
+  function ugaLandingSpawn(landingZoneId){
+    return UGA_LANDING_ZONE_SPAWNS[landingZoneId]||'sw';
+  }
+  /* Doctrine decides the landing package, using the two Standard already ships.
+     'expedition' was hardcoded, so a methodical or containment plan landed with
+     the same HQ-and-Constructor opening as a covert raid. prepared brings HQ,
+     Reactor, Factory and Constructor together; expedition is the build-from-zero
+     opening — which is what rapid and covert are choosing. */
+  const UGA_DOCTRINE_PACKAGES={methodical:'prepared',containment:'prepared',rapid:'expedition',covert:'expedition'};
+  function ugaDoctrinePackage(doctrineId){
+    return UGA_DOCTRINE_PACKAGES[doctrineId]||'expedition';
+  }
+  /* Player identity and internal terrain-template identity are deliberately
+     separate. Runtime map IDs never cross back into the UGA operation copy. */
+  const GALACTIC_GROUND_AREA_AUTHORITY={
+    nova_heliograph_wake:ugaGroundArea('aelos_heliograph','aelos','aelos_caldris','Caldris','aelos_heliograph','Heliograph High Shelf','nova_heliograph_wake','aelos_ridge',['Relay Shadow','Control Spine','Great Divide Array']),
+    dominion_caldris_claim:ugaGroundArea('aelos_caldris_customs','aelos','aelos_caldris','Caldris','aelos_caldris','Caldris Customs Zone','dominion_caldris_claim','aelos_north',['Cargo Lock','Customs Ring','Orbital Apron']),
+    syndicate_black_manifest:ugaGroundArea('aelos_morrow_freeport','aelos','aelos_ithara','Ithara','aelos_freeport','Morrow Freeport','syndicate_black_manifest','aelos_coast',['Service Lock','Freight Shadow','Freeport Concourse']),
+    nova_orison_recovery:ugaGroundArea('veyra_orison_derelict','veyra','veyra_orison','Orison','veyra_orison','Orison Derelict','nova_orison_recovery','nordhall_isles',['Aft Lattice','Broken Spine','Derelict Superstructure']),
+    dominion_lens_perimeter:ugaGroundArea('veyra_lensing_observatory','veyra','veyra_nacre','Nacre','veyra_lens','Lensing Observatory','dominion_lens_perimeter','nordhall_peaks',['Coolant Trench','Calibration Core','Umbra Platform']),
+    syndicate_ossuary_dividend:ugaGroundArea('veyra_ossuary_vault','veyra','veyra_nacre','Nacre','veyra_ossuary','Ossuary Vault','syndicate_ossuary_dividend','nordhall_frost',['Vault Aperture','Phase Engine Gallery','Collapsed Gallery']),
+    uga_pale_bloom:ugaGroundArea('karak_meridian_quarantine','karak','karak_meridian','Meridian K-4','karak_meridian','Meridian Quarantine','uga_pale_bloom','vespera_plateau',['Clinic Roof','Transit Court','Breeder Zone']),
+    uga_silent_spine:ugaGroundArea('karak_transit_spine','karak','karak_meridian','Meridian K-4','karak_spine','Colony Transit Spine','uga_silent_spine','vespera_dunes',['Maintenance Shaft','Sealed Platform','Gestation Junction']),
+    uga_hive_heart:ugaGroundArea('karak_primary_hive','karak','karak_meridian','Meridian K-4','karak_hive','Karak Primary Hive','uga_hive_heart','vespera_spire',['Vascular Breach','Thermal Vent','Hive Core'])
+  };
+  function playerGroundLocation(area,map){
+    return {schemaVersion:1,kind:UGA_GROUND_LOCATION_KIND,systemId:area.systemId,planetId:area.planetId,
+      areaId:area.id,siteId:area.siteId,mapId:map.id,size:map.size,display:{
+        systemName:{aelos:'Aelos',veyra:'Veyra',karak:'Karak'}[area.systemId],planetName:area.planetName,
+        areaName:area.name,mapName:map.name}};
+  }
+  function operationBattlefield(operation,contentVersion){
+    const area=GALACTIC_GROUND_AREA_AUTHORITY[operation&&operation.missionId];
+    if(!area||operation.systemId!==area.systemId||operation.siteId!==area.siteId)return null;
+    const supplied=operation.battlefield&&operation.battlefield.location;
+    const legacyRecovered=!supplied&&contentVersion===LEGACY_CONTENT_VERSION;
+    const mapId=legacyRecovered?area.recommendedMapId:supplied&&supplied.mapId;
+    const map=area.maps.find(entry=>entry.id===mapId);
+    if(!map)return null;
+    const playerLocation=playerGroundLocation(area,map);
+    if(!legacyRecovered&&!sameJson(supplied,playerLocation))return null;
+    return {playerLocation,runtimeMapId:map.runtimeTemplateMapId,runtimeRegionId:map.runtimeTemplateMapId.replace(/_(?:small|medium|large)$/,''),legacyRecovered};
+  }
+  const OPPONENT_MAP={brood:'horde',nova:'nova',dominion:'legion',syndicate:'syndicate'};
   const COMMANDER_ROSTER_FINGERPRINT='fnv1a32:0aadcd2d';
   const COMMANDER1_BY_FACTION={nova:'nova_kai',dominion:'legion_vex',syndicate:'syndicate_renn'};
   const COMMANDER_AUTHORITY=[
@@ -46,17 +162,52 @@
     defensive_emplacement:{slotCost:2,type:'turret'},
     forward_command:{slotCost:4,type:'fac'}
   };
-  const PALE_BLOOM_DOCTRINES=new Set(['containment','methodical','rapid']);
-  const PALE_BLOOM_SUPPORT=new Set(['survey_drones','field_lab','medevac','heavy_lift']);
-  const PALE_BLOOM_LANDING_ZONES=new Set(['clinic_roof','transit_court']);
+  /* This receiver cannot consume the exploration ES modules: every root src file
+     is a classic script in one global scope. Keep the small authored mission
+     authority here and lock its parity with tools/test-stage9-galactic-bridge.
+     Accepting only a general shape would let edited sessionStorage invent an
+     operation that the expedition catalog never authored. */
+  const GALACTIC_MISSION_AUTHORITY={
+    nova_heliograph_wake:{missionType:'faction_conflict',systemId:'aelos',siteId:'aelos_heliograph',contractFactionId:'nova',opponentFactionId:'dominion',accessFactionId:'nova',objective:{type:'secure_relay',targetIds:['heliograph_control_spine']},landingZoneIds:['relay_shadow','maintenance_spar'],supportIds:['survey_drones','field_lab'],doctrineIds:['methodical','rapid']},
+    dominion_caldris_claim:{missionType:'faction_conflict',systemId:'aelos',siteId:'aelos_caldris',contractFactionId:'dominion',opponentFactionId:'syndicate',accessFactionId:'dominion',objective:{type:'hold_infrastructure',targetIds:['caldris_customs_core']},landingZoneIds:['customs_ring','cargo_lock'],supportIds:['field_lab','heavy_lift'],doctrineIds:['methodical','rapid']},
+    syndicate_black_manifest:{missionType:'faction_conflict',systemId:'aelos',siteId:'aelos_freeport',contractFactionId:'syndicate',opponentFactionId:'nova',accessFactionId:'syndicate',objective:{type:'recover_manifest',targetIds:['morrow_archive_stack']},landingZoneIds:['service_lock','freight_shadow'],supportIds:['survey_drones','field_lab'],doctrineIds:['covert','rapid']},
+    nova_orison_recovery:{missionType:'faction_conflict',systemId:'veyra',siteId:'veyra_orison',contractFactionId:'nova',opponentFactionId:'syndicate',accessFactionId:'nova',objective:{type:'recover_archive',targetIds:['orison_memory_vault']},landingZoneIds:['broken_spine','aft_lattice'],supportIds:['survey_drones','field_lab','medevac'],doctrineIds:['methodical','covert']},
+    dominion_lens_perimeter:{missionType:'faction_conflict',systemId:'veyra',siteId:'veyra_lens',contractFactionId:'dominion',opponentFactionId:'nova',accessFactionId:'dominion',objective:{type:'secure_observatory',targetIds:['lensing_calibration_core']},landingZoneIds:['umbra_platform','coolant_trench'],supportIds:['field_lab','heavy_lift','medevac'],doctrineIds:['methodical','rapid']},
+    syndicate_ossuary_dividend:{missionType:'faction_conflict',systemId:'veyra',siteId:'veyra_ossuary',contractFactionId:'syndicate',opponentFactionId:'dominion',accessFactionId:'syndicate',objective:{type:'extract_artifact',targetIds:['ossuary_phase_engine']},landingZoneIds:['vault_aperture','collapsed_gallery'],supportIds:['survey_drones','field_lab','medevac'],doctrineIds:['covert','methodical']},
+    uga_pale_bloom:{missionType:'uga_brood_purge',systemId:'karak',siteId:'karak_meridian',contractFactionId:null,opponentFactionId:'brood',accessFactionId:null,objective:{type:'purge_brood',infestation:true,hiveTargetIds:['meridian_breeder_nest'],nestCount:1},landingZoneIds:['clinic_roof','transit_court'],supportIds:['survey_drones','field_lab','medevac','heavy_lift'],doctrineIds:['containment','methodical','rapid']},
+    uga_silent_spine:{missionType:'uga_brood_purge',systemId:'karak',siteId:'karak_spine',contractFactionId:null,opponentFactionId:'brood',accessFactionId:null,objective:{type:'purge_brood',infestation:true,hiveTargetIds:['spine_gestation_cluster','spine_feeder_root'],nestCount:2},landingZoneIds:['maintenance_shaft','sealed_platform'],supportIds:['field_lab','medevac','heavy_lift'],doctrineIds:['containment','methodical']},
+    uga_hive_heart:{missionType:'uga_brood_purge',systemId:'karak',siteId:'karak_hive',contractFactionId:null,opponentFactionId:'brood',accessFactionId:null,objective:{type:'purge_brood',infestation:true,hiveTargetIds:['karak_hive_heart'],nestCount:1},landingZoneIds:['vascular_breach','thermal_vent'],supportIds:['field_lab','medevac','heavy_lift'],doctrineIds:['containment','methodical']}
+  };
+  /* UGA objective names are more specific than the base RTS's four proven
+     victory rules. Faction contracts are all battles for control of a named
+     asset, so Domination is the honest production rule: control the theatre
+     when the clock expires, or break hostile command early. Brood operations
+     retain the dedicated hive rule. Never invent a fifth goal ID here: the old
+     `destroy` value was not registered by GOALS, so goalDef silently displayed
+     and executed Annihilation instead of the operation the player accepted. */
+  const TACTICAL_OBJECTIVE_RULES={
+    secure_relay:{id:'domination',em:'\u2691',hud:'RELAY',nm:'Relay Security',ds:'Control the most battlefield infrastructure when the clock ends to secure the relay.'},
+    hold_infrastructure:{id:'domination',em:'\u2691',hud:'HOLD',nm:'Infrastructure Hold',ds:'Hold the most battlefield infrastructure when the clock ends.'},
+    recover_manifest:{id:'domination',em:'\u25c7',hud:'MANIFEST',nm:'Manifest Recovery',ds:'Control the field when the clock ends so recovery teams can secure the manifest.'},
+    recover_archive:{id:'domination',em:'\u25c7',hud:'ARCHIVE',nm:'Archive Recovery',ds:'Control the field when the clock ends so recovery teams can secure the archive.'},
+    secure_observatory:{id:'domination',em:'\u2691',hud:'LENS',nm:'Observatory Security',ds:'Control the most battlefield infrastructure when the clock ends to secure the observatory.'},
+    extract_artifact:{id:'domination',em:'\u25c7',hud:'ARTIFACT',nm:'Artifact Extraction',ds:'Control the field when the clock ends so the artifact can be extracted.'},
+    purge_brood:{id:'purge',em:'\ud83d\udc1b',hud:'HIVES',nm:'Brood Purge',ds:'Destroy every active Brood hive before time runs out.'}
+  };
+  function resolveTacticalObjective(operation){
+    const objective=operation&&operation.objective,rule=TACTICAL_OBJECTIVE_RULES[objective&&objective.type];
+    if(!rule)throw new Error('GALACTIC_OPERATION_OBJECTIVE_UNMAPPED');
+    return Object.freeze({id:rule.id,em:rule.em,hud:rule.hud,nm:rule.nm,ds:rule.ds,objectiveType:objective.type});
+  }
+  const GROUND_OPERATION_V3_FIELDS=['schemaVersion','kind','profileId','sequence','launchRevision','missionId','missionType','systemId','siteId','sponsorId','contractFactionId','proxyFactionId','playerFactionId','opponentFactionId','commanderId','specialistIds','doctrineId','supportId','landingZoneId','configuration','objective','difficulty','intelligence','battlefield','scanTierAtLaunch','threatAtLaunch','factionSnapshot','personnelSnapshot','deploymentManifest','deploymentCost','rewardPlan','returnRoute','commanderRosterFingerprint','commanderIdentity','operationId','resultSeed','returnToken'];
   const OPERATION_MOD_IDS=new Set(['survey_link','repair_nanites','medical_cache']);
-  const DOCTRINE_SCORE_DELTA={containment:8,methodical:7,rapid:2};
+  const DOCTRINE_SCORE_DELTA={containment:8,methodical:7,rapid:2,covert:5};
   const SUPPORT_SCORE_DELTA={survey_drones:4,field_lab:2,medevac:1,heavy_lift:5};
   const PLAIN_OBJECT=Object.prototype;
   const bridge={active:false,status:'idle',reason:'',nonce:'',request:null,report:null,
                 sandboxMeta:null,returning:false,isolated:false,packageApplied:false,
                 packageSummary:null,reportCandidate:null,reportCandidateBytes:'',
-                operationEffects:null,naniteUnits:[],suppressedPersistentCrates:0,
+                operationEffects:null,tacticalGoal:null,playerLocation:null,runtimeMapId:'',naniteUnits:[],suppressedPersistentCrates:0,
                 suppressedPostMatchAds:0,suppressedBillboardImpressions:0,menuRouteActive:false};
 
   function clone(value){
@@ -103,6 +254,9 @@
   function exactKeys(value,keys){
     return !!value&&typeof value==='object'&&!Array.isArray(value)
       &&stableStringify(Object.keys(value).sort())===stableStringify(keys.slice().sort());
+  }
+  function sameJson(left,right){
+    try{return stableStringify(left)===stableStringify(right);}catch(e){return false;}
   }
   function commanderIdentityFromRoster(entry){
     return entry&&{
@@ -175,11 +329,13 @@
   function validateRouteRequest(request,nonce,profileId,now){
     const issues=[],at=Math.max(0,Math.floor(Number(now)||Date.now()));
     if(!request||typeof request!=='object'||Array.isArray(request))return result(false,['ROUTE_NOT_OBJECT']);
-    if(request.schemaVersion!==1||request.kind!=='MassfrontGalacticRouteRequestV1'
+    if(!exactKeys(request,['schemaVersion','kind','nonce','profileId','routeId','issuedAt','expiresAt','source','location','checksum']))issue(issues,'ROUTE_FIELDS_INVALID');
+    if(request.schemaVersion!==2||request.kind!=='MassfrontGalacticRouteRequestV2'
        ||request.source!=='massfront-exploration')issue(issues,'ROUTE_SCHEMA_INVALID');
     if(!NONCE_RE.test(text(nonce))||request.nonce!==nonce)issue(issues,'ROUTE_NONCE_INVALID');
     if(!text(profileId)||request.profileId!==profileId)issue(issues,'ROUTE_PROFILE_MISMATCH');
     if(!BASE_ROUTE_IDS.has(request.routeId))issue(issues,'ROUTE_TARGET_INVALID');
+    if(!exactKeys(request.location,['systemId','targetId'])||!expeditionLocationAllowed(request.location))issue(issues,'ROUTE_LOCATION_INVALID');
     if(!Number.isInteger(request.issuedAt)||!Number.isInteger(request.expiresAt)
        ||request.expiresAt<=request.issuedAt||request.expiresAt-request.issuedAt>2*60*1000
        ||request.expiresAt<=at||request.issuedAt>at+30000)issue(issues,'ROUTE_EXPIRED');
@@ -217,12 +373,12 @@
     return result(!issues.length,issues);
   }
   function validateDeploymentContract(operation){
-    const issues=[],manifest=operation&&operation.deploymentManifest,configuration=operation&&operation.configuration;
-    if(!PALE_BLOOM_DOCTRINES.has(operation&&operation.doctrineId)
+    const issues=[],mission=GALACTIC_MISSION_AUTHORITY[operation&&operation.missionId],manifest=operation&&operation.deploymentManifest,configuration=operation&&operation.configuration;
+    if(!mission||!mission.doctrineIds.includes(operation&&operation.doctrineId)
        ||configuration?.doctrineId!==operation.doctrineId||configuration?.approach!==operation.doctrineId)issue(issues,'OPERATION_DOCTRINE_INVALID');
-    if(!PALE_BLOOM_SUPPORT.has(operation&&operation.supportId)
+    if(!mission||!mission.supportIds.includes(operation&&operation.supportId)
        ||configuration?.supportId!==operation.supportId||configuration?.support!==operation.supportId)issue(issues,'OPERATION_SUPPORT_INVALID');
-    if(!PALE_BLOOM_LANDING_ZONES.has(operation&&operation.landingZoneId)
+    if(!mission||!mission.landingZoneIds.includes(operation&&operation.landingZoneId)
        ||configuration?.landingZoneId!==operation.landingZoneId
        ||operation?.battlefield?.landingZoneId!==operation.landingZoneId)issue(issues,'OPERATION_LANDING_ZONE_INVALID');
     if(!manifest||typeof manifest!=='object'||Array.isArray(manifest))return result(false,issues.concat('OPERATION_MANIFEST_INVALID'));
@@ -261,32 +417,37 @@
     if(envelope.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT)issue(issues,'REQUEST_COMMANDER_ROSTER_INVALID');
     if(!NONCE_RE.test(text(nonce))||envelope.nonce!==nonce)issue(issues,'REQUEST_NONCE_INVALID');
     if(!text(profileId)||envelope.accountId!==profileId||operation?.profileId!==profileId)issue(issues,'REQUEST_PROFILE_MISMATCH');
-    if(envelope.contentVersion!==CONTENT_VERSION)issue(issues,'REQUEST_CONTENT_VERSION_INVALID');
+    if(envelope.contentVersion!==CONTENT_VERSION&&envelope.contentVersion!==LEGACY_CONTENT_VERSION)issue(issues,'REQUEST_CONTENT_VERSION_INVALID');
     if(!Number.isInteger(envelope.issuedAt)||!Number.isInteger(envelope.expiresAt)
        ||envelope.expiresAt<=envelope.issuedAt||at>envelope.expiresAt||envelope.issuedAt>at+30000)issue(issues,'REQUEST_EXPIRED');
     try{if(envelope.checksum!==envelopeChecksum(envelope))issue(issues,'REQUEST_CHECKSUM_INVALID');}
     catch(e){issue(issues,'REQUEST_CHECKSUM_INVALID');}
     if(!operation||typeof operation!=='object'||Array.isArray(operation))issue(issues,'OPERATION_NOT_OBJECT');
     else {
+      if(!exactKeys(operation,GROUND_OPERATION_V3_FIELDS))issue(issues,'OPERATION_FIELDS_INVALID');
       if(operation.schemaVersion!==3||operation.kind!=='GroundOperationV3')issue(issues,'OPERATION_SCHEMA_INVALID');
       if(operation.commanderRosterFingerprint!==COMMANDER_ROSTER_FINGERPRINT
          ||operation.commanderRosterFingerprint!==envelope.commanderRosterFingerprint)issue(issues,'OPERATION_COMMANDER_ROSTER_INVALID');
-      if(operation.missionId!=='uga_pale_bloom'||operation.missionType!=='uga_brood_purge')issue(issues,'OPERATION_MISSION_INVALID');
-      if(operation.sponsorId!=='uga'||operation.contractFactionId!==null)issue(issues,'OPERATION_SPONSOR_INVALID');
-      if(operation.opponentFactionId!=='brood')issue(issues,'OPERATION_OPPONENT_INVALID');
+      const mission=GALACTIC_MISSION_AUTHORITY[operation.missionId];
+      if(!mission||operation.missionType!==mission.missionType||operation.systemId!==mission.systemId||operation.siteId!==mission.siteId)issue(issues,'OPERATION_MISSION_INVALID');
+      if(operation.sponsorId!=='uga'||operation.contractFactionId!==mission?.contractFactionId)issue(issues,'OPERATION_SPONSOR_INVALID');
+      if(operation.opponentFactionId!==mission?.opponentFactionId)issue(issues,'OPERATION_OPPONENT_INVALID');
       if(!Object.prototype.hasOwnProperty.call(PROXY_MAP,operation.proxyFactionId)
          ||operation.playerFactionId!==operation.proxyFactionId)issue(issues,'OPERATION_PROXY_INVALID');
-      if(operation.objective?.type!=='purge_brood'||operation.objective?.infestation!==true
-         ||!Array.isArray(operation.objective?.hiveTargetIds)||!operation.objective.hiveTargetIds.length)issue(issues,'OPERATION_OBJECTIVE_INVALID');
-      if(operation.battlefield?.infestationActive!==true
-         ||stableStringify(operation.battlefield?.hiveTargetIds||[])!==stableStringify(operation.objective?.hiveTargetIds||[]))issue(issues,'OPERATION_INFESTATION_INVALID');
+      if(!mission||!sameJson(operation.objective,mission.objective))issue(issues,'OPERATION_OBJECTIVE_INVALID');
+      const purge=mission?.missionType==='uga_brood_purge';
+      if(operation.battlefield?.infestationActive!==purge
+         ||!sameJson(operation.battlefield?.hiveTargetIds||[],purge?operation.objective?.hiveTargetIds||[]:[]))issue(issues,'OPERATION_INFESTATION_INVALID');
+      if(!operationBattlefield(operation,envelope.contentVersion))issue(issues,'OPERATION_BATTLEFIELD_INVALID');
+      if(mission&&((mission.accessFactionId===null&&operation.contractFactionId!==null)
+         ||(mission.accessFactionId!==null&&(operation.proxyFactionId!==mission.accessFactionId||operation.contractFactionId!==mission.accessFactionId))))issue(issues,'OPERATION_ACCESS_INVALID');
       if(!text(operation.operationId)||!text(operation.resultSeed)||!text(operation.returnToken))issue(issues,'OPERATION_IDENTITY_INVALID');
       const commanderRow=COMMANDER_BY_ID[operation.commanderId];
       const rosterCommander=Array.isArray(ticket?.commanderRosterSnapshot?.commanders)
         ?ticket.commanderRosterSnapshot.commanders.find(entry=>entry.id===operation.commanderId):null;
       const expectedIdentity=commanderIdentityFromRoster(rosterCommander);
       if(!commanderRow||commanderRow[2]!==operation.proxyFactionId
-         ||!expectedIdentity||stableStringify(operation.commanderIdentity)!==stableStringify(expectedIdentity)
+         ||!expectedIdentity||!sameJson(operation.commanderIdentity,expectedIdentity)
          ||operation.personnelSnapshot?.commander?.id!==operation.commanderId)issue(issues,'OPERATION_COMMANDER_INVALID');
       if(!text(operation.commanderId)||!Array.isArray(operation.specialistIds)
          ||operation.specialistIds.length!==3||new Set(operation.specialistIds).size!==3)issue(issues,'OPERATION_TEAM_INVALID');
@@ -332,7 +493,28 @@
     return typeof PROFILES!=='undefined'&&PROFILES&&text(PROFILES.active)?PROFILES.active:'';
   }
   function currentFlagOn(){
-    return !!(typeof META!=='undefined'&&META&&META.settings&&META.settings.experimentalExploration===true);
+    return window.__MF_BUILD_HAS_GALACTIC_EXPLORATION===true
+      ||window.__MF_OTA_HAS_GALACTIC_DELIVERY===true;
+  }
+  let classicFallbackActive=String(location.search||'')===CLASSIC_FALLBACK_SEARCH;
+  try{classicFallbackActive=classicFallbackActive||sessionStorage.getItem(CLASSIC_FALLBACK_KEY)==='1';}catch(e){}
+  function classicFallbackOn(){
+    if(classicFallbackActive)return true;
+    try{return sessionStorage.getItem(CLASSIC_FALLBACK_KEY)==='1';}catch(e){return false;}
+  }
+  function armClassicFallback(){
+    classicFallbackActive=true;
+    try{sessionStorage.setItem(CLASSIC_FALLBACK_KEY,'1');}catch(e){}
+    return true;
+  }
+  function clearClassicFallback(){
+    classicFallbackActive=false;
+    try{sessionStorage.removeItem(CLASSIC_FALLBACK_KEY);}catch(e){}
+    return !classicFallbackOn();
+  }
+  function explorationReturnTarget(query=''){
+    const target='./modules/space_exploration/index.html'+query;
+    return typeof mfContentExplorationReturnUrl==='function'?mfContentExplorationReturnUrl(target):target;
   }
   function stripBridgeQuery(){
     if(typeof history==='undefined'||typeof history.replaceState!=='function')return;
@@ -344,15 +526,11 @@
       return sessionStorage.getItem(ROUTE_PREFIX+nonce)===null;
     }catch(e){return false;}
   }
-  function openBaseRoute(routeId){
+  function openBaseRoute(routeId,location){
+    if(!expeditionLocationAllowed(location))return false;
     const show=id=>typeof showFrontScreen==='function'&&showFrontScreen(id);
     if(typeof initAudio==='function')initAudio();
     if(typeof sfx==='function')sfx('ui');
-    if(routeId==='home'){
-      bridge.menuRouteActive=false;
-      if(typeof renderMetaHead==='function')renderMetaHead();
-      return show('startScreen');
-    }
     bridge.menuRouteActive=true;
     if(routeId==='operations'||routeId==='mode-weekly'||routeId==='mode-campaign'){
       if(typeof MF_TAB_STATE!=='undefined')MF_TAB_STATE.opsScr=routeId==='mode-campaign'?'campaign':'weekly';
@@ -401,8 +579,25 @@
       if(typeof renderUpdatePanel==='function')renderUpdatePanel();
       return show('updScr');
     }
+    if(routeId==='war-room'){
+      if(typeof window.openWarRoom!=='function')return false;
+      /* The global strategic-home guard normally sends legacy warScr exits
+         back to UGA. This secured host route is the one deliberate exception:
+         allow the public owner to reveal the real Classic-mode surface once,
+         then restore interception so its Back control returns to UGA. */
+      warRoomRouteOpening=true;
+      try{return window.openWarRoom()!==false;}
+      finally{warRoomRouteOpening=false;}
+    }
     if(routeId==='mode-standard'){
-      if(typeof openSkirmishSetup==='function'){openSkirmishSetup();return true;}
+      if(typeof openSkirmishSetup==='function'){
+        openSkirmishSetup();
+        /* The base owner resets to galaxy and renders its own
+           galaxy -> system -> planet -> region -> map -> deploy sequence.
+           The UGA origin is navigation context, never permission to skip it or
+           to relabel a base homeworld as an exploration planet. */
+        return true;
+      }
       return false;
     }
     if(routeId==='mode-training'){
@@ -437,6 +632,12 @@
       return !!(window.MFNewCareerFactionGate
         &&typeof window.MFNewCareerFactionGate.afterOnboardingChoice==='function'
         &&typeof resumeTrainingMission==='function');
+    if(routeId==='war-room')return typeof window.openWarRoom==='function';
+    /* main.js installs the public Standard entry during async boot. Do not
+       consume the one-shot route record in the narrow gap before it exists;
+       otherwise the module reports a secured deployment while the base game
+       can only reject it after the nonce is already gone. */
+    if(routeId==='mode-standard')return typeof openSkirmishSetup==='function';
     return true;
   }
   function rejectMenuRoute(code,nonce){
@@ -456,10 +657,8 @@
        the authored abandon action can refund the deployment. A malformed nonce
        is never reflected into a URL. */
     setTimeout(()=>{
-      const target=NONCE_RE.test(bridge.nonce)
-        ?'./modules/space_exploration/index.html?groundRejected='+encodeURIComponent(bridge.nonce)
-        :'./modules/space_exploration/index.html';
-      try{location.href=target;}
+      const target=explorationReturnTarget(NONCE_RE.test(bridge.nonce)?'?groundRejected='+encodeURIComponent(bridge.nonce):'');
+      try{if(!target)throw new Error('Content return unavailable');location.href=target;}
       catch(e){bridge.status='return-error';bridge.reason='REJECTION_RETURN_FAILED';}
     },900);
   }
@@ -579,26 +778,87 @@
     const operation=bridge.request.operation,proxy=operation.proxyFactionId;
     activeWarMode='galactic';
     playerFaction=PROXY_MAP[proxy];playerCommanderId=operation.commanderId;
-    curMap='vespera_spire_medium';curTheme=MAPDEFS[curMap]?.theme||'ashland';curRegionId='vespera_spire';
-    battlefieldPreset='standard';deploymentPackage='expedition';playerStartZone='sw';spawnPick='player';
-    goalSel='purge';infestationOn=true;difficulty=2;defenseFocus=0;timeLimit=1200;
-    resPace=1;crateRate=crateRateBase=1;wcChoice=0;matchSetupArmed=false;
-    aiFactionSel='horde';
-    if(typeof AI!=='undefined'&&AI){AI.fac='horde';if(typeof aiFacPicked!=='undefined')aiFacPicked=true;}
+    const ground=operationBattlefield(operation,bridge.request.contentVersion);
+    if(!ground)throw new Error('GALACTIC_OPERATION_LOCATION_UNMAPPED');
+    const mapDef=typeof MAPDEFS!=='undefined'&&MAPDEFS[ground.runtimeMapId];
+    if(!mapDef||mapDef.region!==ground.runtimeRegionId||mapDef.size!==ground.playerLocation.size)throw new Error('GALACTIC_OPERATION_TEMPLATE_UNAVAILABLE');
+    bridge.playerLocation=freezeJson(clone(ground.playerLocation));bridge.runtimeMapId=ground.runtimeMapId;
+    curMap=ground.runtimeMapId;curTheme=mapDef.theme;curRegionId=mapDef.region;
+    /* The player's own deployment choices drive the match: their landing zone
+       sets the spawn, their doctrine sets the landing package. Both were
+       constants, which made two of the deployment screen's decisions cosmetic. */
+    battlefieldPreset=ground.playerLocation.size;
+    deploymentPackage=ugaDoctrinePackage(operation.doctrineId);
+    playerStartZone=ugaLandingSpawn(operation.landingZoneId);spawnPick='player';
+    /* The mission's own opponent and objective, not a permanent Brood purge.
+       A faction contract against the Dominion used to spawn the Horde. */
+    const tacticalGoal=resolveTacticalObjective(operation),purge=operation.missionType==='uga_brood_purge';
+    const enemy=OPPONENT_MAP[operation.opponentFactionId]||(purge?'horde':'legion');
+    const infested=purge&&operation.battlefield?.infestationActive!==false;
+    bridge.tacticalGoal=tacticalGoal;goalSel=tacticalGoal.id;infestationOn=infested?1:0;
+    difficulty=Math.max(0,Math.min(2,Number.isFinite(operation.difficulty)?operation.difficulty-1:2));
+    /* The region's map decides the rules, not a constant. */
+    const tac=ugaGroundTacticalProfile(ground.playerLocation.size);
+    bridge.tacticalProfile=freezeJson(clone(tac));
+    defenseFocus=tac.defenseFocus;timeLimit=tac.timeLimit;
+    /* Danger modifiers scale with the region's tier. wcChoice is the count
+       pickWildcards() draws, and it was pinned to 0, so a large region carried
+       no more hazard than a compact one. Note pickWildcards() still lets a
+       player's explicitly chosen Operations modifiers win over the draw — that
+       is their choice and this only sets how many are rolled otherwise. */
+    resPace=tac.resPace;crateRate=crateRateBase=tac.crateRate;wcChoice=tac.wildcards;matchSetupArmed=false;
+    aiFactionSel=enemy;
+    if(typeof AI!=='undefined'&&AI){AI.fac=enemy;if(typeof aiFacPicked!=='undefined')aiFacPicked=true;}
+    /* Enemy count comes from the region tier, not a fixed single opponent, so a
+       large region is a harder fight and not just a longer one. The old loop
+       also assigned diff=2 and immediately overwrote it with difficulty, and
+       parked an inactive slot on 'se' — which is now a player landing zone. */
     for(let i=0;i<aiSlots.length;i++){
-      aiSlots[i].on=i===0;aiSlots[i].diff=2;aiSlots[i].ally=false;
-      aiSlots[i].zone=i===0?'ne':(i===1?'se':'nw');aiSlots[i].behavior='balanced';
+      aiSlots[i].on=i<tac.enemies;aiSlots[i].ally=false;
+      aiSlots[i].zone=UGA_ENEMY_ZONES[i]||'c';aiSlots[i].behavior='balanced';
+      aiSlots[i].diff=difficulty;
     }
     if(typeof normalizeAiSlotsForBattlefield==='function')normalizeAiSlotsForBattlefield();
-    bridge.sandboxMeta.setup={d:2,t:curTheme,m:curMap,f:'horde',pf:playerFaction,pc:playerCommanderId,
-      bs:'standard',pkg:'expedition',g:'purge',tl:1200,rp:1,cr:1,ps:'sw',
-      ais:aiSlots.map(A=>({on:!!A.on,diff:A.diff|0,zone:A.zone,ally:false,behavior:'balanced'})),df:0,inf:1};
+    /* Report what was actually applied. These used to be literals that could
+       silently disagree with the globals set above; a setup record that lies
+       about the match it configured is worse than no record. */
+    bridge.sandboxMeta.setup={d:difficulty,t:curTheme,m:curMap,f:enemy,pf:playerFaction,pc:playerCommanderId,
+      bs:battlefieldPreset,pkg:deploymentPackage,g:goalSel,tl:timeLimit,rp:resPace,cr:crateRate,ps:playerStartZone,tier:tac.tier,wc:wcChoice,en:tac.enemies,
+      ais:aiSlots.map(A=>({on:!!A.on,diff:A.diff|0,zone:A.zone,ally:false,behavior:'balanced'})),df:defenseFocus,inf:infestationOn?1:0};
   }
   function dismissEntryOverlays(){
     for(const id of ['mfIntro','apOverlay','apConfirmOverlay','accDlg','dispatch']){
       const el=document.getElementById(id);if(el)el.style.display='none';
     }
     try{if(typeof apGateSatisfied==='function')apGateSatisfied();}catch(e){}
+  }
+  function operationLoadScreenModel(operation,location){
+    if(!operation||!location||!location.display)return null;
+    const display=location.display,planet=display.planetName||display.systemName||'UGA FRONT';
+    return {title:display.mapName||display.areaName||'UGA BATTLEFIELD',
+      eyebrow:'DEPLOYING TO  ·  '+planet,poi:display.areaName||'',
+      hook:operation.missionType==='uga_brood_purge'?'UGA CONTAINMENT OPERATION':'UGA PROXY OPERATION',
+      chips:[{key:'SYSTEM',value:display.systemName||location.systemId},
+        {key:'SCALE',value:location.size},{key:'THREAT',value:'T'+operation.difficulty}].filter(entry=>entry.value)};
+  }
+  function fillOperationLoadScreen(){
+    const operation=bridge.request&&bridge.request.operation;
+    const model=operationLoadScreenModel(operation,bridge.playerLocation);
+    if(!model)return false;
+    const setText=(id,value)=>{const el=document.getElementById(id);if(el)el.textContent=value||'';};
+    setText('loadTitle',model.title);setText('loadEyebrow',model.eyebrow);
+    setText('loadPoi',model.poi);setText('loadHook',model.hook);
+    const host=document.getElementById('loadStats');
+    if(host){
+      host.textContent='';
+      for(const entry of model.chips){
+        const chip=document.createElement('div'),key=document.createElement('span'),value=document.createElement('span');
+        chip.className='lsChip';key.className='lsK';value.className='lsV';
+        key.textContent=entry.key;value.textContent=String(entry.value).toUpperCase();
+        chip.appendChild(key);chip.appendChild(value);host.appendChild(chip);
+      }
+    }
+    return true;
   }
   function beginBattle(){
     bridge.active=true;bridge.isolated=true;bridge.status='launching';bridge.reason='';
@@ -609,6 +869,7 @@
     dismissEntryOverlays();
     if(typeof hideFrontScreens==='function')hideFrontScreens();
     if(typeof mfLoadScreenFill==='function')mfLoadScreenFill();
+    fillOperationLoadScreen();
     const load=document.getElementById('loadScr');if(load)load.style.display='flex';
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       try{
@@ -617,7 +878,13 @@
         if(load)load.style.display='none';
         if(typeof stopAttract==='function')stopAttract();
         if(typeof mfFlowLayout==='function')mfFlowLayout();
-        if(typeof toast==='function')toast('UGA PALE BLOOM — purge the active Brood infestation');
+        if(typeof toast==='function'){
+          const op=bridge.request&&bridge.request.operation;
+          const where=bridge.playerLocation?.display?.mapName||bridge.playerLocation?.display?.areaName||'selected battlefield';
+          toast(op&&op.missionType==='uga_brood_purge'
+            ?('UGA OPERATION · '+where+' — purge the active Brood infestation')
+            :('UGA OPERATION · '+where+' — break the '+String((op&&op.opponentFactionId)||'hostile').toUpperCase()+' hold'));
+        }
       }catch(e){
         if(load)load.style.display='none';
         console.error('Galactic operation launch failed',e);
@@ -712,8 +979,8 @@
   function returnRejectedToNexus(){
     if(bridge.returning)return false;
     bridge.returning=true;bridge.status='returning-rejected';
-    const target='./modules/space_exploration/index.html?groundRejected='+encodeURIComponent(bridge.nonce);
-    try{location.href=target;return true;}
+    const target=explorationReturnTarget('?groundRejected='+encodeURIComponent(bridge.nonce));
+    try{if(!target)throw new Error('Content return unavailable');location.href=target;return true;}
     catch(e){bridge.returning=false;bridge.status='return-error';bridge.reason='RETURN_NAVIGATION_FAILED';return false;}
   }
   function returnToNexus(){
@@ -723,14 +990,14 @@
       return false;
     }
     bridge.returning=true;bridge.status='returning';
-    const target='./modules/space_exploration/index.html?groundResult='+encodeURIComponent(bridge.nonce);
-    try{location.href=target;return true;}
+    const target=explorationReturnTarget('?groundResult='+encodeURIComponent(bridge.nonce));
+    try{if(!target)throw new Error('Content return unavailable');location.href=target;return true;}
     catch(e){bridge.returning=false;bridge.status='return-error';bridge.reason='RETURN_NAVIGATION_FAILED';if(typeof toast==='function')toast('NEXUS-VII return route could not be opened');return false;}
   }
   function returnExistingReportToNexus(record){
     bridge.active=false;bridge.report=clone(record);bridge.returning=true;bridge.status='returning-existing';bridge.reason='';
-    const target='./modules/space_exploration/index.html?groundResult='+encodeURIComponent(bridge.nonce);
-    try{location.href=target;return true;}
+    const target=explorationReturnTarget('?groundResult='+encodeURIComponent(bridge.nonce));
+    try{if(!target)throw new Error('Content return unavailable');location.href=target;return true;}
     catch(e){bridge.returning=false;bridge.status='return-error';bridge.reason='RETURN_NAVIGATION_FAILED';return false;}
   }
 
@@ -763,6 +1030,19 @@
   }
   if(typeof sessSnapshot==='function'){
     const base=sessSnapshot;sessSnapshot=function(){if(bridge.isolated)return false;return base.apply(this,arguments);};
+  }
+  if(typeof goalDef==='function'){
+    const base=goalDef;goalDef=function(){
+      if(bridge.active&&bridge.tacticalGoal)return bridge.tacticalGoal;
+      return base.apply(this,arguments);
+    };
+  }
+  if(typeof goalStatus==='function'){
+    const base=goalStatus;goalStatus=function(){
+      const status=base.apply(this,arguments);
+      if(!bridge.active||!bridge.tacticalGoal||bridge.tacticalGoal.id!=='domination')return status;
+      return bridge.tacticalGoal.em+' '+bridge.tacticalGoal.hud+' · '+String(status||'').replace(/^\u26f3\s*/, '');
+    };
   }
   if(typeof applyCrate==='function'){
     const base=applyCrate;applyCrate=function(kind){
@@ -816,8 +1096,24 @@
     };
   }
   if(typeof returnToMainMenu==='function'){
-    const base=returnToMainMenu;returnToMainMenu=function(){
-      if(bridge.active)return returnToNexus();
+    const base=returnToMainMenu;
+    /* Protected Training needs the base document to remain alive long enough
+       for its mandatory commissioning gate to mount. This narrow escape hatch
+       bypasses only the Galactic return interception; it still runs the full
+       ordinary menu cleanup owned by main.js/departure.js. */
+    if(typeof window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__!=='function')
+      window.__MF_RETURN_TO_BASE_FOR_COMMISSIONING__=function(){return base.apply(this,arguments);};
+    returnToMainMenu=function(){
+      if(bridge.active){
+        /* Protected new-career Training still owes the player the mandatory
+           faction/Commander gate. tutSkip() schedules that gate immediately
+           after this base-menu reset; navigating to NEXUS-VII here unloads the
+           callback before it can run and strands the career in training. */
+        let gateState=null;
+        try{gateState=window.MFNewCareerFactionGate&&window.MFNewCareerFactionGate.state();}catch(e){}
+        if(gateState&&gateState.phase==='training')return base.apply(this,arguments);
+        return returnToNexus();
+      }
       if(bridge.isolated)return returnRejectedToNexus();
       return base.apply(this,arguments);
     };
@@ -837,7 +1133,15 @@
     };
   }
 
+  let menuReturnContext=null,warRoomRouteOpening=false;
   const api={validateEntryTicket,validateRouteRequest,validateRequest,validateRequestMirror,validateTacticalReport,validateResultMirror,
+             resolveExpeditionLocation:location=>clone(expeditionLocationAllowed(location)),
+             groundAreaForMission:missionId=>clone(GALACTIC_GROUND_AREA_AUTHORITY[missionId]||null),
+             resolveOperationBattlefield:(operation,contentVersion=CONTENT_VERSION)=>clone(operationBattlefield(operation,contentVersion)),
+             describeOperationLoadScreen:(operation,location)=>clone(operationLoadScreenModel(operation,location)),
+             resolveTacticalObjective:operation=>clone(resolveTacticalObjective(operation)),
+             clearClassicFallback,
+             isMenuReturnContext:value=>value!==null&&value===menuReturnContext&&bridge.status==='menu-route',
              validateDeploymentContract,describeOperationEffects,checksum:envelopeChecksum};
   Object.defineProperties(api,{
     active:{enumerable:true,get:()=>bridge.active},
@@ -846,27 +1150,37 @@
     request:{enumerable:true,get:()=>clone(bridge.request)},
     report:{enumerable:true,get:()=>clone(bridge.report)},
     operationEffects:{enumerable:true,get:()=>clone(bridge.operationEffects)},
+    playerLocation:{enumerable:true,get:()=>clone(bridge.playerLocation)},
+    runtimeMapId:{enumerable:true,get:()=>bridge.runtimeMapId},
     packageApplied:{enumerable:true,get:()=>bridge.packageApplied},
     packageSummary:{enumerable:true,get:()=>clone(bridge.packageSummary)},
     menuRouteActive:{enumerable:true,get:()=>bridge.menuRouteActive},
+    classicFallbackActive:{enumerable:true,get:()=>classicFallbackOn()},
     isolation:{enumerable:true,get:()=>Object.freeze({active:bridge.isolated,droppedSessionPreserved:true,
       persistentCratesSuppressed:bridge.suppressedPersistentCrates,postMatchAdsSuppressed:bridge.suppressedPostMatchAds,
       billboardImpressionsSuppressed:bridge.suppressedBillboardImpressions})}
   });
   window.__MF_GALACTIC_BRIDGE=Object.freeze(api);
 
-  /* Base submenus keep their ordinary Back controls. When one was entered
-     from UGA Command, only a route back to home/the obsolete base War Room is
-     intercepted and returned to the Galactic Campaign Hub. The flag is
-     in-memory and cleared before navigation, so reloads and failed module
-     probes cannot form a redirect loop. */
+  /* Galactic Command owns both strategic-home destinations. Base submenus keep
+     their ordinary Back controls, but any attempt to reveal the retired home
+     or War Room returns to UGA Command. menuRouteActive still records a routed
+     submenu; unconditional interception also prevents unrelated legacy exits
+     from resurrecting a second strategic shell. */
   if(typeof showFrontScreen==='function'&&!showFrontScreen.__mfGalacticWarTable){
     const baseShowFrontScreen=showFrontScreen;
     showFrontScreen=function(id){
-      if(bridge.menuRouteActive&&(id==='startScreen'||id==='warScr')){
+      if(warRoomRouteOpening&&id==='warScr')return baseShowFrontScreen.apply(this,arguments);
+      if(window.__MF_COMMISSIONING_RETURN_ACTIVE__!==true&&!classicFallbackOn()&&currentFlagOn()&&(id==='startScreen'||id==='warScr')){
         bridge.menuRouteActive=false;
-        if(currentFlagOn()&&typeof mfOpenExploration==='function'){
-          Promise.resolve(mfOpenExploration('campaign_hub')).then(opened=>{
+        if(typeof mfOpenExploration==='function'){
+          // Only this synchronous call can authorize returning an existing
+          // neutral career. It grants no faction, personnel, or mission access.
+          menuReturnContext=Object.freeze({kind:'validated-menu-return'});
+          let opening;
+          try{opening=mfOpenExploration('campaign_hub',{menuReturn:menuReturnContext});}
+          finally{menuReturnContext=null;}
+          Promise.resolve(opening).then(opened=>{
             if(!opened)baseShowFrontScreen.call(this,id);
           });
           return true;
@@ -878,6 +1192,25 @@
   }
 
   const search=String(location.search||'');
+  if(search===CLASSIC_FALLBACK_SEARCH){
+    armClassicFallback();stripBridgeQuery();bridge.status='classic-fallback';bridge.reason='';
+    let fallbackTries=0;
+    const fallbackTick=function(){
+      if(++fallbackTries>1200){
+        bridge.status='classic-fallback-home';
+        if(typeof showFrontScreen==='function')showFrontScreen('startScreen');
+        return;
+      }
+      if(typeof bootConfirmed==='undefined'||!bootConfirmed||typeof window.openWarRoom!=='function'){
+        setTimeout(fallbackTick,50);return;
+      }
+      dismissEntryOverlays();
+      if(typeof mfDismissIntroForGalacticRoute==='function')mfDismissIntroForGalacticRoute();
+      bridge.status=window.openWarRoom()===false?'classic-fallback-home':'classic-fallback-war-room';
+      if(bridge.status==='classic-fallback-home'&&typeof showFrontScreen==='function')showFrontScreen('startScreen');
+    };
+    setTimeout(fallbackTick,0);return;
+  }
   const routeMatch=search.match(/^\?galacticRoute=([A-Za-z0-9_-]{16,128})$/);
   if(routeMatch){
     bridge.nonce=routeMatch[1];bridge.status='waiting-for-base-route';
@@ -897,10 +1230,17 @@
       /* A validated same-tab submenu handoff is navigation inside one game,
          not a fresh launch. Dismiss the cinematic only after consuming the
          secured record so an arbitrary query string cannot suppress it. */
+      /* revealFront() schedules the ordinary first-run account gate shortly
+         after the shell appears. A valid UGA handoff can finish inside that
+         delay, so dismissing only the cinematic allowed the account modal to
+         reopen over Standard's deployment plan and swallow START BATTLE.
+         Satisfy all entry overlays here, after validation and nonce
+         consumption, just as the ground-operation bridge does. */
+      dismissEntryOverlays();
       if(typeof mfDismissIntroForGalacticRoute==='function')mfDismissIntroForGalacticRoute();
       stripBridgeQuery();
       bridge.status='menu-route';bridge.reason='';
-      if(!openBaseRoute(request.routeId))rejectMenuRoute('ROUTE_TARGET_UNAVAILABLE',bridge.nonce);
+      if(!openBaseRoute(request.routeId,request.location))rejectMenuRoute('ROUTE_TARGET_UNAVAILABLE',bridge.nonce);
     };
     setTimeout(routeTick,0);
     return;

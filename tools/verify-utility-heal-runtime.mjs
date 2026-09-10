@@ -93,10 +93,10 @@ try{
   assert.match(F.hudBeforeCard,/\bHEAL\b/,'selected Warden does not report HEAL');
   assert.doesNotMatch(F.hudBeforeCard,/\bREADY\b/,'working Warden reports generic READY');
 
-  /* First-selection teaching may have opened the same card automatically. Close
-     it, then exercise the visible info affordance and its native close control. */
+  /* Selection must leave the battlefield unobstructed; inspection starts only
+     through the visible info affordance and ends through its native close. */
   const initialClose=page.locator('#unitCard .ucClose');
-  if(await initialClose.isVisible())await initialClose.click();
+  assert.equal(await initialClose.isVisible(),false,'selecting the Warden auto-opened its info card');
   await page.locator('#selInfo .selIntelBtn').click();
   await page.locator('#unitCard').waitFor({state:'visible',timeout:2500});
   report.card=await page.evaluate(()=>({visible:getComputedStyle($('unitCard')).display!=='none',

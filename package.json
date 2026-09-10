@@ -1,6 +1,6 @@
 {
   "name": "massfront",
-  "version": "1.33.74",
+  "version": "1.33.83",
   "description": "MASSFRONT — a large-scale mobile RTS",
   "private": true,
   "type": "module",
@@ -16,15 +16,19 @@
     "android:build": "npm run android:sync && cd android && ./gradlew assembleDebug",
     "verify:delivery": "node tools/probe-payload-cors.mjs",
     "verify:delivery:fast": "node tools/probe-payload-cors.mjs --no-browser",
+    "verify:exploration-geometry": "node tools/test-compress-exploration-geometry.mjs",
     "release:repoint": "node tools/repoint-manifests-to-mirror.mjs --apply"
   },
   "devDependencies": {
     "@babylonjs/core": "^7.54.3",
     "@capacitor/cli": "^8.5.0",
+    "@gltf-transform/core": "4.5.0",
+    "@gltf-transform/extensions": "4.5.0",
+    "@gltf-transform/functions": "4.5.0",
     "basis_universal": "^1.16.4-1",
+    "draco3d": "1.5.7",
     "playwright": "^1.62.1",
-    "vite": "^6.1.0",
-    "draco3d": "^1.5.7"
+    "vite": "^6.1.0"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

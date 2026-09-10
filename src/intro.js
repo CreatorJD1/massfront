@@ -82,6 +82,7 @@
        that never opened. Once only — revealFront can be reached twice. */
     if(!gateFired){
       gateFired=true;
+      try{window.dispatchEvent(new CustomEvent('massfront:intro-complete'));}catch(e){}
       setTimeout(function(){
         if(typeof mfAuthGate==='function'){ try{ mfAuthGate(); }catch(e){} }
       },340);
@@ -116,10 +117,10 @@
     var launcherWaiting=typeof window.mfLauncherShouldDeferAttract==='function'&&window.mfLauncherShouldDeferAttract();
     var play=document.getElementById(launcherWaiting?'mfLaunchPlay':'startBtn');
     /* The reveal's START button used to click #startBtn, which back then meant
-       PLAY and opened skirmish setup. #startBtn is now START MASSFRONT, so that
+       PLAY and opened skirmish setup. #startBtn is now DEPLOY MASSFRONT, so that
        same auto-click would throw every launch straight into the strategic
        layer. The intro hands off to the MAIN MENU and nowhere else; startNow
-       only decides whether START MASSFRONT gets focus immediately. */
+       only decides whether DEPLOY MASSFRONT gets focus immediately. */
     if(play) setTimeout(function(){try{play.focus({preventScroll:true});}catch(e){play.focus();}},startNow?120:90);
     else if(lastFocus) lastFocus.focus();
     /* First-run Standard still has to teach locked stars + medium theatre even
@@ -181,7 +182,14 @@
        shape may bypass the reveal; ordinary launches and look-alike query
        strings still receive the title screen. The route owner validates and
        consumes the secured session record later in galactic-operations.js. */
-    try{return /^\?galacticRoute=[A-Za-z0-9_-]{16,128}$/.test(String(location.search||''));}
+    try{
+      if(/^\?(?:(?:galacticRoute|groundOperation)=[A-Za-z0-9_-]{16,128}|galacticFallback=classic)$/.test(String(location.search||'')))return true;
+      /* The route owner strips its query before late boot consumers run. Keep
+         the recovered Classic session free of a second title gate even after
+         that URL cleanup, until the player deliberately retries UGA. */
+      return typeof sessionStorage!=='undefined'
+        &&sessionStorage.getItem('massfront.galactic.classic-fallback.v1')==='1';
+    }
     catch(e){return false;}
   }
   function dismissIntroForGalacticRoute(){
@@ -223,7 +231,13 @@
        established commander returning to the game. */
     /* Open on the next frame, not after a 650ms delay: the menu must never
        be visible first. The boot cover + intro.css keep it hidden until then. */
-    if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){openIntro();});
+    if(typeof window.mfLauncherAwaitingUpdateIntro==='function'&&window.mfLauncherAwaitingUpdateIntro()){
+      // Updating owns the first screen. Do not invoke revealFront here: it opens login.
+      document.body.classList.add('mfIntroDone');
+      var cover=document.getElementById('mfBootCover');if(cover)cover.remove();
+      el.hidden=true;el.setAttribute('aria-hidden','true');
+    }
+    else if(typeof requestAnimationFrame==='function') requestAnimationFrame(function(){openIntro();});
     else openIntro();
   }
   /* Safety net: if the intro never manages to open (module error, boot failure),

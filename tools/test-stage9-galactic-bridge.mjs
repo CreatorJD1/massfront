@@ -3,15 +3,22 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { createGroundOperationRequestV2 } from '../modules/space_exploration/src/domain/host_contract.js';
 import { beginGroundOperation } from '../modules/space_exploration/src/domain/ground_operation.js';
+import { CATALOG_VERSION, MISSION_CATALOG, getUgaGroundAreaForMission } from '../modules/space_exploration/src/domain/catalog.js';
+import { createGroundOperation } from '../modules/space_exploration/src/domain/ground_operation.js';
 import { createShowcaseReadyDomainState } from '../modules/space_exploration/src/domain/state_store.js';
 import { createMassfrontGalacticEntryTicket } from '../modules/space_exploration/src/host/massfront_solo_host.js';
 import { loadProductionCommanderRosterSnapshot } from '../modules/space_exploration/tools/tests/production-commander-roster.fixture.mjs';
 
 const source = fs.readFileSync(new URL('../src/galactic-operations.js', import.meta.url), 'utf8');
+const metaSource = fs.readFileSync(new URL('../src/game/meta.js', import.meta.url), 'utf8');
 assert.doesNotMatch(source, /\b(?:import|export)\s/, 'classic bridge source must not declare modules');
 assert.doesNotMatch(source, /sessClear\s*\(/, 'Galactic bridge must preserve an existing dropped-session snapshot');
+const goalBlock = metaSource.match(/const GOALS=\[([\s\S]*?)\];/);
+assert.ok(goalBlock, 'base RTS goal registry must remain readable');
+const registeredGoalIds = new Set([...goalBlock[1].matchAll(/id:'([^']+)'/g)].map(match => match[1]));
 
 let idleBillboardImpressions = 0;
+const ordinaryStandardGoal = Object.freeze({ id: 'annihilate', em: '\u2620', nm: 'Annihilation', ds: 'Destroy every enemy Commander' });
 const context = {
   console,
   document: { getElementById: () => null, createElement: () => ({}) },
@@ -20,6 +27,7 @@ const context = {
   setTimeout,
   clearTimeout,
   requestAnimationFrame: callback => callback(0),
+  goalDef: () => ordinaryStandardGoal,
   AD_PROVIDER: { reportImpression: () => { idleBillboardImpressions += 1; return 'standard-impression'; } }
 };
 context.window = context;
@@ -32,6 +40,7 @@ assert.equal(api.active, false);
 assert.equal(api.status, 'idle');
 assert.equal(context.AD_PROVIDER.reportImpression({}, {}), 'standard-impression');
 assert.equal(idleBillboardImpressions, 1, 'ordinary billboard impressions must remain unchanged outside Galactic play');
+assert.equal(context.goalDef(), ordinaryStandardGoal, 'ordinary Standard goalDef must remain unchanged outside an active Galactic operation');
 
 const now = Date.now();
 const profileId = 'p1';
@@ -54,6 +63,7 @@ const { operation } = beginGroundOperation(state, {
   missionId: 'uga_pale_bloom',
   factionId: 'nova',
   commanderId: 'nova_holt',
+  mapId: 'karak_meridian_quarantine_standard',
   deploymentManifest: {
     units: [{ id: 'recon_team', count: 1 }, { id: 'line_section', count: 1 }, { id: 'armored_element', count: 1 }],
     structures: [{ id: 'field_relay', count: 1 }],
@@ -66,11 +76,68 @@ const request = createGroundOperationRequestV2(operation, {
   accountId: profileId,
   issuedAt: now,
   ttlMs: 300_000,
-  contentVersion: 'catalog-6'
+  contentVersion: `catalog-${CATALOG_VERSION}`
 });
 const requestValidation = api.validateRequest(request, nonce, profileId, now + 1, ticket);
 assert.equal(requestValidation.ok, true, requestValidation.issues.join(','));
 assert.equal(api.validateDeploymentContract(operation).ok, true);
+const operationLoadScreen = api.describeOperationLoadScreen(operation, operation.battlefield.location);
+assert.deepEqual(JSON.parse(JSON.stringify(operationLoadScreen)), {
+  title: 'Transit Court',
+  eyebrow: 'DEPLOYING TO  ·  Meridian K-4',
+  poi: 'Meridian Quarantine',
+  hook: 'UGA CONTAINMENT OPERATION',
+  chips: [
+    { key: 'SYSTEM', value: 'Karak' },
+    { key: 'SCALE', value: 'standard' },
+    { key: 'THREAT', value: 'T3' }
+  ]
+});
+assert.doesNotMatch(JSON.stringify(operationLoadScreen), /Vespera|Nordhall|Pyraeth|vespera_|nordhall_|pyraeth_/i,
+  'UGA loading copy must not expose the internal RTS terrain template');
+
+// The classic receiver is an independent trust boundary. Lock its compact
+// mission authority to every authored module mission so the two documents
+// cannot drift back to a one-mission/one-side-only release.
+state.missions.uga_pale_bloom.completions = 1;
+state.missions.uga_silent_spine.completions = 1;
+let parityIndex = 0;
+for (const mission of Object.values(MISSION_CATALOG)) {
+  const parityOperation = createGroundOperation(state, {
+    missionId: mission.id,
+    factionId: mission.contractFactionId || 'nova',
+    mapId: getUgaGroundAreaForMission(mission.id).recommendedMapId
+  });
+  const parityNonce = `stage9_parity_${String(parityIndex).padStart(4, '0')}`;
+  const parityRequest = createGroundOperationRequestV2(parityOperation, {
+    nonce: parityNonce,
+    accountId: profileId,
+    issuedAt: now,
+    ttlMs: 300_000,
+    contentVersion: `catalog-${CATALOG_VERSION}`
+  });
+  const parityValidation = api.validateRequest(parityRequest, parityNonce, profileId, now + 1, ticket);
+  assert.equal(parityValidation.ok, true, `${mission.id}: ${parityValidation.issues.join(',')}`);
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(api.groundAreaForMission(mission.id))),
+    JSON.parse(JSON.stringify(getUgaGroundAreaForMission(mission.id))),
+    `${mission.id} classic receiver ground-area authority must match the module catalog`
+  );
+  const resolvedBattlefield = api.resolveOperationBattlefield(parityOperation, `catalog-${CATALOG_VERSION}`);
+  assert.deepEqual(JSON.parse(JSON.stringify(resolvedBattlefield.playerLocation)), parityOperation.battlefield.location,
+    `${mission.id} must preserve its player-facing battlefield identity`);
+  assert.equal(resolvedBattlefield.runtimeMapId,
+    getUgaGroundAreaForMission(mission.id).maps.find(map => map.id === parityOperation.battlefield.location.mapId).runtimeTemplateMapId);
+  assert.equal(resolvedBattlefield.legacyRecovered, false);
+  assert.equal(api.validateDeploymentContract(parityOperation).ok, true, `${mission.id} deployment contract`);
+  const tacticalObjective = api.resolveTacticalObjective(parityOperation);
+  assert.ok(registeredGoalIds.has(tacticalObjective.id), `${mission.id} must resolve to a registered base RTS goal`);
+  assert.equal(tacticalObjective.id, mission.missionType === 'uga_brood_purge' ? 'purge' : 'domination', `${mission.id} tactical semantics`);
+  assert.equal(tacticalObjective.objectiveType, mission.objective.type, `${mission.id} authored objective identity`);
+  assert.ok(tacticalObjective.hud && tacticalObjective.nm && tacticalObjective.ds, `${mission.id} player-facing objective copy`);
+  parityIndex += 1;
+}
+assert.equal(parityIndex, 9);
 const mirror = {
   schemaVersion: 2,
   kind: 'MassfrontGalacticRequestMirrorV2',
@@ -87,6 +154,21 @@ const tampered = structuredClone(request);
 tampered.operation.missionId = 'uga_hive_heart';
 assert.equal(api.validateRequest(tampered, nonce, profileId, now + 1, ticket).ok, false);
 assert.ok(api.validateRequest(tampered, nonce, profileId, now + 1, ticket).issues.includes('REQUEST_CHECKSUM_INVALID'));
+const relabeledBattlefield = structuredClone(request);
+relabeledBattlefield.operation.battlefield.location.display.mapName = 'Gloam Ramparts';
+relabeledBattlefield.checksum = api.checksum(relabeledBattlefield);
+const relabeledValidation = api.validateRequest(relabeledBattlefield, nonce, profileId, now + 1, ticket);
+assert.equal(relabeledValidation.ok, false);
+assert.ok(relabeledValidation.issues.includes('OPERATION_BATTLEFIELD_INVALID'));
+const legacyRequest = structuredClone(request);
+legacyRequest.contentVersion = 'catalog-7';
+delete legacyRequest.operation.battlefield.location;
+legacyRequest.checksum = api.checksum(legacyRequest);
+assert.equal(api.validateRequest(legacyRequest, nonce, profileId, now + 1, ticket).ok, true,
+  'an already-pending catalog-7 operation remains recoverable');
+const legacyBattlefield = api.resolveOperationBattlefield(legacyRequest.operation, legacyRequest.contentVersion);
+assert.equal(legacyBattlefield.legacyRecovered, true);
+assert.equal(legacyBattlefield.playerLocation.mapId, 'karak_meridian_quarantine_standard');
 assert.equal(api.validateRequestMirror({ ...mirror, operationId: 'foreign' }, nonce, profileId, now + 1, ticket).ok, false);
 const overCapacityOperation = structuredClone(operation);
 overCapacityOperation.deploymentManifest.units[0].count = 8;
@@ -169,8 +251,9 @@ const rejectedRuntime = {
   clearTimeout,
   requestAnimationFrame: callback => callback(0),
   bootConfirmed: true,
+  __MF_BUILD_HAS_GALACTIC_EXPLORATION: true,
   PROFILES: { active: profileId },
-  META: { settings: { experimentalExploration: true } },
+  META: { settings: { experimentalExploration: false } },
   newSkirmish: () => { rejectedSkirmishes += 1; }
 };
 rejectedRuntime.window = rejectedRuntime;
@@ -192,14 +275,20 @@ const session = new Map([
 const resultKey = `massfront.galactic.result.v1.${nonce}`;
 let failResultWrites = 1;
 let failedVictoryBytes = '';
-const spawnedUnits = [], spawnedStructures = [];
+const spawnedUnits = [], spawnedStructures = [], toasts = [];
+const createLoadNode = () => ({
+  className: '', textContent: '', style: {}, children: [],
+  appendChild(child) { this.children.push(child); return child; }
+});
+const loadNodes = new Map(['loadTitle', 'loadEyebrow', 'loadPoi', 'loadHook', 'loadStats', 'loadScr']
+  .map(id => [id, createLoadNode()]));
 const calls = { sessClear: 0, sessSnapshot: 0, metaGrant: 0, crate: 0, ad: 0, billboard: 0,
   scans: [], forcedCrates: 0, unitTicks: 0 };
 const runtime = {
   console,
   document: {
-    getElementById: () => null,
-    createElement: () => ({ className: '', textContent: '' }),
+    getElementById: id => loadNodes.get(id) || null,
+    createElement: () => createLoadNode(),
     querySelectorAll: () => []
   },
   location: { search: `?groundOperation=${nonce}`, href: '' },
@@ -220,21 +309,28 @@ const runtime = {
   requestAnimationFrame: callback => callback(0),
   performance,
   bootConfirmed: true,
+  __MF_BUILD_HAS_GALACTIC_EXPLORATION: true,
   PROFILES: { active: profileId },
-  META: { settings: { experimentalExploration: true }, marker: 'live-career' },
+  META: { settings: { experimentalExploration: false }, marker: 'live-career' },
   metaFresh: () => ({ settings: {} }),
   metaSave: () => true,
-  MAPDEFS: { vespera_spire_medium: { theme: 'crater' } },
+  MAPDEFS: { vespera_plateau_medium: { region: 'vespera_plateau', theme: 'ashland', size: 'standard' } },
   AI: { fac: 'nova' },
   aiSlots: Array.from({ length: 3 }, () => ({ on: false, diff: 0, ally: false, zone: '', behavior: '' })),
   normalizeAiSlotsForBattlefield: () => {},
   hideFrontScreens: () => {},
-  mfLoadScreenFill: () => {},
+  mfLoadScreenFill: () => {
+    loadNodes.get('loadTitle').textContent = 'Gloam Ramparts';
+    loadNodes.get('loadEyebrow').textContent = 'DEPLOYING TO  ·  VESPERA';
+    loadNodes.get('loadPoi').textContent = 'Cinder Reach';
+    loadNodes.get('loadHook').textContent = 'Internal template lore';
+    loadNodes.get('loadStats').textContent = 'VESPERA PLATEAU';
+  },
   stopAttract: () => {},
   mfFlowLayout: () => {},
   applyTheme: () => {},
   newSkirmish: () => {},
-  toast: () => {},
+  toast: message => { toasts.push(message); },
   pickupToast: () => {},
   carrier: { phase: 0, x: 500, y: 500 },
   deployCarrier: () => { runtime.carrier.phase = 2; return 'base-deploy'; },
@@ -270,6 +366,7 @@ const runtime = {
   mfCrateClaimer: 7,
   stats: { t: 420, kills: [36, 2], nests: 1 },
   heroIdx: 0,
+  goalDef: () => ordinaryStandardGoal,
   endGame: () => true,
   returnToMainMenu: () => {},
   continueToNextMap: () => {},
@@ -280,10 +377,50 @@ vm.createContext(runtime);
 vm.runInContext(source, runtime, { filename: 'src/galactic-operations.js' });
 await new Promise(resolve => setTimeout(resolve, 20));
 const liveApi = runtime.__MF_GALACTIC_BRIDGE;
-assert.equal(liveApi.status, 'battle');
+assert.equal(liveApi.status, 'battle', liveApi.reason);
 assert.equal(runtime.META.marker, 'live-career', 'temporary META must be restored after newSkirmish');
-assert.equal(runtime.deploymentPackage, 'expedition');
+/* The landing package follows the operation's doctrine now; it was a constant
+   'expedition' before, which is exactly what made the deployment screen's
+   doctrine choice cosmetic. Assert the rule, not the old literal, so this stays
+   true whichever doctrine the fixture carries. */
+{
+  const DOCTRINE_PACKAGES = { methodical: 'prepared', containment: 'prepared', rapid: 'expedition', covert: 'expedition' };
+  const doctrineId = liveApi.request?.operation?.doctrineId;
+  assert.ok(DOCTRINE_PACKAGES[doctrineId], `live operation carries an unmapped doctrine: ${doctrineId}`);
+  assert.equal(runtime.deploymentPackage, DOCTRINE_PACKAGES[doctrineId], 'landing package must follow the operation doctrine');
+}
 assert.equal(runtime.activeWarMode, 'galactic');
+assert.equal(runtime.goalSel, 'purge');
+assert.equal(runtime.battlefieldPreset, 'standard');
+assert.equal(liveApi.runtimeMapId, 'vespera_plateau_medium');
+assert.deepEqual(JSON.parse(JSON.stringify(liveApi.playerLocation)), operation.battlefield.location);
+assert.deepEqual({
+  title: loadNodes.get('loadTitle').textContent,
+  eyebrow: loadNodes.get('loadEyebrow').textContent,
+  poi: loadNodes.get('loadPoi').textContent,
+  hook: loadNodes.get('loadHook').textContent,
+  chips: loadNodes.get('loadStats').children.map(chip => ({
+    key: chip.children[0].textContent,
+    value: chip.children[1].textContent
+  }))
+}, {
+  title: 'Transit Court',
+  eyebrow: 'DEPLOYING TO  ·  Meridian K-4',
+  poi: 'Meridian Quarantine',
+  hook: 'UGA CONTAINMENT OPERATION',
+  chips: [
+    { key: 'SYSTEM', value: 'KARAK' },
+    { key: 'SCALE', value: 'STANDARD' },
+    { key: 'THREAT', value: 'T3' }
+  ]
+}, 'the selected UGA identity must overwrite the internal MAPDEF loading copy');
+assert.ok(toasts.some(message => message.includes('Transit Court')), 'tactical copy must use the selected UGA map name');
+assert.equal(toasts.some(message => /Gloam|Vespera|Nordhall/i.test(message)), false,
+  'internal terrain-template lore must not leak into tactical copy');
+assert.deepEqual(JSON.parse(JSON.stringify(runtime.goalDef())), {
+  id: 'purge', em: '\ud83d\udc1b', hud: 'HIVES', nm: 'Brood Purge',
+  ds: 'Destroy every active Brood hive before time runs out.', objectiveType: 'purge_brood'
+});
 assert.equal(runtime.playerCommanderId, operation.commanderId, 'base runtime must preserve the exact operation commander');
 assert.equal(runtime.deployCarrier(), 'base-deploy');
 assert.equal(liveApi.packageApplied, true);
@@ -376,8 +513,9 @@ const reloadRuntime = {
   clearTimeout,
   requestAnimationFrame: callback => callback(0),
   bootConfirmed: true,
+  __MF_BUILD_HAS_GALACTIC_EXPLORATION: true,
   PROFILES: { active: profileId },
-  META: { settings: { experimentalExploration: true }, marker: 'reload-career' },
+  META: { settings: { experimentalExploration: false }, marker: 'reload-career' },
   newSkirmish: () => { reloadSkirmishes += 1; }
 };
 reloadRuntime.window = reloadRuntime;
@@ -395,7 +533,10 @@ assert.equal(manifest.order.filter(path => path === 'src/galactic-operations.js'
 assert.ok(manifest.order.indexOf('src/galactic-operations.js') > manifest.order.indexOf('src/ui/hotslots.js'));
 assert.ok(manifest.order.indexOf('src/onboarding.js') > manifest.order.indexOf('src/galactic-operations.js'));
 const boot = fs.readFileSync(new URL('../boot.js', import.meta.url), 'utf8');
-assert.match(boot, /'\.\/src\/ui\/hotslots\.js','\.\/src\/galactic-operations\.js'/);
+const bootOrder = [...boot.match(/var MANIFEST=\[([\s\S]*?)\];/)[1].matchAll(/'([^']+)'/g)].map(match => match[1]);
+assert.equal(bootOrder.filter(path => path === './src/galactic-operations.js').length, 1);
+assert.ok(bootOrder.indexOf('./src/galactic-operations.js') > bootOrder.indexOf('./src/ui/hotslots.js'));
+assert.ok(bootOrder.indexOf('./src/onboarding.js') > bootOrder.indexOf('./src/galactic-operations.js'));
 const main = fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
 assert.match(main, /massfront\.galactic\.entry\.v1/);
 assert.match(main, /MassfrontGalacticEntryV2/);

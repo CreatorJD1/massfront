@@ -99,6 +99,7 @@ function makeHarness(){
   vm.runInContext(source, h.context, {filename:'src/launcher.js'});
   assert.equal(typeof h.context.initLauncherGateway,'function','launcher did not export its gateway');
   h.context.initLauncherGateway();
+  h.fire('massfront:intro-complete');
   /* Identity events are how auth tells the launcher anything changed. */
   h.fire('massfront:identity-state',{state:'pending',signedIn:false,verified:false,source:'gate-error',revision:2});
 
