@@ -22,11 +22,46 @@ export function assertMirroredRelease(candidate){
   return identity;
 }
 
-export function assertExpectedPrior(current,candidate,expected,label='live pointer'){
+export function assertExpectedPrior(current,candidate,expected,label='live pointer',options={}){
   const target=assertMirroredRelease(candidate),prior=validateReleaseIdentity(current,label);
   if(!expected||!/^\d+\.\d+\.\d+$/.test(expected.version||'')||!/^[a-f0-9]{64}$/i.test(expected.manifestRoot||''))
     fail('Activation requires --expected-prior-version and --expected-prior-root');
-  if(compareVersion(target.version,expected.version)<0)fail('Activation refuses a version downgrade');
+  /* Forward-only is the default because a pointer must never name bytes that
+     may not be publicly readable. A withdrawal is the one case where moving
+     back is correct, and it is safe for exactly one reason: verifyPayloads()
+     still re-verifies every file, range and content entry of the target before
+     the pointer moves, so a rollback target is proven readable by the same
+     evidence a forward release is. v1.33.84 shipped uninstallable and could not
+     be withdrawn, only superseded, which left players downloading a failing
+     93 MB until the replacement was cut. Deliberate, reasoned, and still fully
+     verified beats that. */
+  if(compareVersion(target.version,expected.version)<0){
+    if(!options.rollback)
+      fail('Activation refuses a version downgrade. A deliberate withdrawal must pass rollback with a reason.');
+    if(typeof options.reason!=='string'||options.reason.trim().length<8)
+      fail('A rollback requires a reason of at least 8 characters describing why the newer release is withdrawn');
+    /* Name the destination explicitly. Activation is otherwise driven by a file
+       path, and a rollback is the one operation where reaching for the wrong
+       prepared candidate silently succeeds: every other guard here would still
+       pass, because that older candidate is itself perfectly valid. Requiring
+       the operator to state the version proves intent about WHICH release. */
+    if(String(options.to||'')!==String(target.version))
+      fail(`Rollback target mismatch: asked for v${options.to||'(unstated)'} but the candidate is v${target.version}`);
+    /* Never withdraw onto something the installer will refuse. boot.js
+       validBundle() rejects a bundle whose category is not one of these four,
+       and it does so only after a full download - which is exactly how v1.33.84
+       became unwithdrawable. A rollback that lands on an uninstallable release
+       would strand every client instead of rescuing them. */
+    const category=String(candidate.category||'');
+    if(!['system','hotfix','content','overhaul'].includes(category))
+      fail(`Rollback target v${target.version} declares category '${category||'none'}'; boot.js would refuse to install it`);
+    /* A patch merges over the payload a client already has, so withdrawing onto
+       one depends on whatever that client last installed still being correct.
+       Only a full release is self-sufficient enough to be a rescue target. */
+    const kind=String(candidate.kind||'');
+    if(kind!=='full')
+      fail(`Rollback requires a full release; v${target.version} is kind '${kind||'none'}' and cannot stand alone`);
+  }
   if(prior.version===target.version&&prior.manifestRoot===target.manifestRoot){
     // A retry may find the target already active, but must still repair stale URLs.
     return {alreadyActive:JSON.stringify(current)===JSON.stringify(candidate)};
@@ -99,12 +134,12 @@ export async function verifyActivationPayloads(fetchImpl,candidate,{onProgress=(
 
 // A complete verification must finish before publish can run. Rereading the
 // pointer after the long transfer prevents overwriting a release made meanwhile.
-export async function activateWithChecks({candidate,expected,readCurrent,verifyPayloads,publish,checkpoint=async()=>{}}){
-  assertExpectedPrior(await readCurrent(),candidate,expected);
+export async function activateWithChecks({candidate,expected,readCurrent,verifyPayloads,publish,checkpoint=async()=>{},rollback=null}){
+  assertExpectedPrior(await readCurrent(),candidate,expected,'live pointer',rollback||{});
   await verifyPayloads(candidate);
   await checkpoint();
   const current=await readCurrent();
-  const state=assertExpectedPrior(current,candidate,expected);
+  const state=assertExpectedPrior(current,candidate,expected,'live pointer',rollback||{});
   if(!state.alreadyActive)await publish(candidate,current);
   assertManifestExact(await readCurrent(),candidate,'Activated pointer does not exactly match the prepared candidate');
   return {activated:!state.alreadyActive};

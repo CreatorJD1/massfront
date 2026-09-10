@@ -3,7 +3,7 @@
    only after the player has successfully fetched them. */
 'use strict';
 
-const MF_SW_VERSION = '1.33.84-shell1';
+const MF_SW_VERSION = '1.33.85-shell1';
 const MF_SW_PREFIX = 'massfront-pwa-';
 const MF_SW_CACHE = MF_SW_PREFIX + MF_SW_VERSION;
 /* Runtime code stays in the shell cache so an installed PWA always reaches the

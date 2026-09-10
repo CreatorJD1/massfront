@@ -18,6 +18,7 @@ const apply=process.argv.includes('--apply');
 const after=flag=>{const i=process.argv.indexOf(flag);return i<0?'':String(process.argv[i+1]||'');};
 const candidateFile=after('--manifest-file');
 const expected={version:after('--expected-prior-version'),manifestRoot:after('--expected-prior-root')};
+const rollback=process.argv.includes('--rollback')?{rollback:true,reason:after('--rollback-reason'),to:after('--rollback-to')}:null;
 const REPO='CREATORJD/massfront-releases';
 const WORKER='https://massfront-update.jasondixon1994.workers.dev/update.json';
 const HF=(name,revision='main')=>`https://huggingface.co/datasets/${REPO}/resolve/${revision}/${name}?download=true`;
@@ -39,7 +40,7 @@ const localPath=resolve(root,'update.json');
 if(!existsSync(localPath))throw new Error('Required local update.json is missing');
 const local=await readJson(localPath);
 const localResult=candidateFile
-  ?(assertExpectedPrior(local,mirror,expected,'local update.json'),{manifest:mirror,changed:1})
+  ?(assertExpectedPrior(local,mirror,expected,'local update.json',rollback||{}),{manifest:mirror,changed:1})
   :repointReleaseToMirror(local,mirror,{label:'local update.json'});
 const snapshot=await getJson(repoUrl,{bust:false});
 if(!/^[a-f0-9]{40}$/i.test(snapshot.sha||''))throw new Error('HF repository head is unavailable');
@@ -53,7 +54,7 @@ for(const name of requiredRemote(version)){
     if(candidateFile){
       if(remote&&name===`update-v${version}.json`&&remote.version!==version)
         throw new Error('Historical target is occupied by a different version');
-      if(remote)assertExpectedPrior(remote,mirror,expected,name);
+      if(remote)assertExpectedPrior(remote,mirror,expected,name,rollback||{});
       result={manifest:mirror,changed:remote&&JSON.stringify(remote)===JSON.stringify(mirror)?0:1};
     }else result=repointReleaseToMirror(remote,mirror,{label:name});
   }catch(e){throw new Error(`Required remote ${name} failed delivery identity: ${e.message}`);}

@@ -740,7 +740,17 @@ $manifest=[ordered]@{
 }
 # The OTA payload must stay files[0]: updApply reads the manifest order to
 # decide what to evaluate as the new source. Extras follow it as cached data.
-if($Category){ $manifest.category=$Category }
+# boot.js validBundle() refuses any bundle whose manifestCategory is not one of
+# system/hotfix/content/overhaul, and it applies that check AFTER the download
+# has completed and verified. A manifest published without a category therefore
+# passes every gate here, downloads clean on the device, and then fails at
+# restart with "the downloaded update was incomplete" - which reads as a corrupt
+# payload rather than a missing field. v1.33.84 shipped exactly that and had to
+# be superseded, because activation refuses a downgrade. Fail here instead.
+if(-not $Category){
+  throw 'A release category is required: pass -Category system|hotfix|content|overhaul. boot.js will refuse to install a manifest without one.'
+}
+$manifest.category=$Category
 $manifest.kind='full'
 if($PatchFrom){
   # kind:"patch" is what makes the client MERGE these files over the payload

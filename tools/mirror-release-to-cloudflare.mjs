@@ -19,6 +19,10 @@ const after=flag=>{const i=process.argv.indexOf(flag);return i<0?'':String(proce
 const version=after('--version'),prepare=args.has('--prepare-only'),activationPath=after('--activate-prepared');
 const sourcePath=after('--manifest');
 const expected={version:after('--expected-prior-version'),manifestRoot:after('--expected-prior-root')};
+/* Withdrawing a bad release. Forward-only is still the default; this asks for
+   the downgrade explicitly and records why, and every payload is re-verified
+   before the pointer moves exactly as on a forward activation. */
+const rollback=args.has('--rollback')?{rollback:true,reason:after('--rollback-reason'),to:after('--rollback-to')}:null;
 const sha=data=>crypto.createHash('sha256').update(data).digest('hex');
 const npx=process.platform==='win32'?'npx.cmd':'npx';
 const scratchRoot=path.join(root,'.tmp','ota-delivery-repair');
@@ -73,7 +77,7 @@ async function wholeFile(url,entry,{allowMissing=false}={}){
 
 if(activationPath){
   assertMirroredRelease(candidate);
-  const result=await activateWithChecks({candidate,expected,readCurrent:current,
+  const result=await activateWithChecks({candidate,expected,rollback,readCurrent:current,
     verifyPayloads:value=>verifyActivationPayloads(fetch,value,{onProgress:progress}),
     checkpoint:()=>assertNoVerificationFreeze(root),
     publish:async(value,prior)=>{
