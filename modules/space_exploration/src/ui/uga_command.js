@@ -1504,13 +1504,79 @@ export function createUgaCommand(options = {}) {
     return groundControlCache;
   }
 
+  /* ONE JOURNEY, ONE SET OF NUMBERS.
+     career-faction-gate.js numbered onboarding 01 WORLD LINK / 02 orientation /
+     03 COMMISSION / 04 UGA SPACE while this hub separately called commissioning
+     "STEP 1". COMMISSION therefore carried two different numbers depending on
+     which screen the player was looking at, and the hub's own numbering ran
+     1 COMMISSION / 2 SURVEY / 3 GROUND while its code could hand out STEP 3
+     before STEP 2 was ever current. One list fixes both. Arriving in UGA space
+     is not a step here because it is not an action the player performs.
+
+     04 and 05 are a cycle, not a finish line: survey reveals an operation,
+     ground resolves it, and the front moves. `loops` marks that pair so the rail
+     can say so instead of pretending the journey ends. */
+  const COMMAND_JOURNEY = [
+    { key: 'world-link', no: '01', name: 'WORLD LINK' },
+    { key: 'orientation', no: '02', name: 'ORIENTATION' },
+    { key: 'commission', no: '03', name: 'COMMISSION' },
+    { key: 'survey', no: '04', name: 'SURVEY', loops: true },
+    { key: 'ground', no: '05', name: 'GROUND', loops: true }
+  ];
+  /* KEEL is live canon from career-faction-gate.js: a neutral UGA guide who
+     commissions a choice and transfers authority. The lore bible's canon locks
+     forbid wording that implies UGA sovereignty, ownership of member worlds, or
+     command over a member military, so KEEL coordinates and records here - it
+     never orders, owns, or claims. */
+  const KEEL_DIRECTIVE = {
+    'world-link': 'Channel open. You are reading UGA traffic.',
+    orientation: 'Orientation logged. The theatre is yours to read.',
+    commission: 'I commission your choice and transfer command authority to your career. I do not choose for you.',
+    survey: 'Survey is how a front becomes legible. I coordinate the sweep; your fleet answers to you.',
+    ground: 'The operation is yours to run. The Authority records the outcome. It does not claim the ground.'
+  };
+  const OBJECTIVE_STEP_KEY = { commission: 'commission', scan: 'survey', deploy: 'ground' };
+
+  /* The rail needs every step and where the player stands in it, which the
+     single-objective early-return below cannot express on its own. */
+  function commandJourney(objective) {
+    const currentKey = OBJECTIVE_STEP_KEY[objective && objective.step] || 'survey';
+    const currentIndex = COMMAND_JOURNEY.findIndex(step => step.key === currentKey);
+    const cycled = currentKey === 'survey' && objective && objective.control
+      && Object.values(objective.control.areas || {}).some(area => (area.clearedMapIds || []).length > 0);
+    return COMMAND_JOURNEY.map((step, index) => {
+      /* A player back on SURVEY who has already taken ground has completed the
+         cycle once. Showing GROUND as "ahead" there would deny work they did. */
+      const status = index === currentIndex ? 'current'
+        : index < currentIndex ? 'done'
+        : (cycled && step.key === 'ground') ? 'done'
+        : 'ahead';
+      return Object.assign({}, step, { status, directive: KEEL_DIRECTIVE[step.key] || '' });
+    });
+  }
+
+  function journeyRailMarkup(objective) {
+    const steps = commandJourney(objective);
+    const current = steps.find(step => step.status === 'current');
+    const items = steps.map((step, index) => `<li class="uga-journey-step is-${step.status}" style="--uga-journey-index:${index}"${step.status === 'current' ? ' aria-current="step"' : ''}>
+        <b>${escapeHtml(step.no)}</b><span>${escapeHtml(step.name)}</span>
+      </li>`).join('');
+    const voice = current && current.directive
+      ? `<p class="uga-journey-keel"><small>KEEL</small>${escapeHtml(current.directive)}</p>`
+      : '';
+    return `<div class="uga-journey" role="group" aria-label="Command journey">
+      <ol class="uga-journey-rail">${items}</ol>
+      ${voice}
+    </div>`;
+  }
+
   function commandObjective() {
     const state = getState();
     const catalog = getCatalog();
 
     if (!state.commissioning?.completed) {
       return {
-        step: 'commission', eyebrow: 'STEP 1 // COMMISSION',
+        step: 'commission', eyebrow: '03 // COMMISSION',
         title: 'Hire your first commander',
         detail: 'Choose a faction and hire a commander. No ground operation can be prepared until a commander is on the roster.',
         label: 'HIRE COMMANDER',
@@ -1536,7 +1602,7 @@ export function createUgaCommand(options = {}) {
       const region = Object.values(control.areas).find(area => area.missionId === ready.id);
       const remaining = region ? region.totalMaps - region.clearedMapIds.length : 0;
       return {
-        step: 'deploy', eyebrow: 'STEP 3 // GROUND OPERATION',
+        step: 'deploy', eyebrow: '05 // GROUND OPERATION',
         title: `Prepare ${ready.name || ready.title || prettyToken(ready.id)}`,
         detail: region
           ? `${region.areaName} on ${region.planetName}. ${region.clearedMapIds.length} of ${region.totalMaps} maps cleared — take ${remaining === 1 ? 'the last one' : `${remaining} more`} and the region falls under your control.`
@@ -1551,7 +1617,7 @@ export function createUgaCommand(options = {}) {
        Both resolve the same way: go out and find the next objective. */
     const blocked = missions.filter(mission => !cleared.has(mission.id));
     return {
-      step: 'scan', eyebrow: blocked.length ? 'STEP 2 // SURVEY' : 'FRONTIER CLEAR',
+      step: 'scan', eyebrow: blocked.length ? '04 // SURVEY' : '04 // FRONTIER CLEAR',
       title: blocked.length ? 'Depart and scan for an objective' : 'Scan for the next frontier',
       detail: blocked.length
         ? 'Fly to a planet and run a survey. A successful scan reveals resources, a mission-bearing region, or both.'
@@ -1583,6 +1649,7 @@ export function createUgaCommand(options = {}) {
     const action = objective.step === 'scan' ? ''
       : `<button type="button" class="uga-primary-button" ${objective.attrs}>${escapeHtml(objective.label)}</button>`;
     return `<section class="uga-objective is-${escapeHtml(objective.step)}" data-objective="${escapeHtml(objective.step)}">
+      ${journeyRailMarkup(objective)}
       <header><small>${escapeHtml(objective.eyebrow)}</small><h3>${escapeHtml(objective.title)}</h3></header>
       <p>${escapeHtml(objective.detail)}</p>
       ${progress}
