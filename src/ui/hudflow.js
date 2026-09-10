@@ -1149,7 +1149,7 @@ function mfEnsureUpdFloatBar(scr){
   if(source&&typeof MutationObserver==='function')
     new MutationObserver(sync).observe(source,{childList:true,characterData:true,subtree:true});
 }
-function mfOpenUpdFloat(){
+function mfOpenUpdFloat(forceMin){
   const scr=document.getElementById('updScr');
   if(!scr)return false;
   mfEnsureUpdFloatBar(scr);
@@ -1157,7 +1157,10 @@ function mfOpenUpdFloat(){
   scr.classList.add('mfFloat');
   document.body.classList.add('mfUpdFloating');
   document.body.dataset.frontPopup='updScr';
-  mfUpdFloatSetMin(scr,mfUpdFloatMinPref());
+  /* Boot opens the surface already collapsed: an update the player has not
+     asked to see must never be the first thing between them and the menu.
+     Everywhere else the remembered preference still wins. */
+  mfUpdFloatSetMin(scr,forceMin===true?true:mfUpdFloatMinPref());
   if(typeof renderUpdatePanel==='function')renderUpdatePanel();
   return true;
 }

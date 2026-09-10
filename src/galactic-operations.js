@@ -649,7 +649,12 @@
     if(typeof showFrontScreen==='function')showFrontScreen('startScreen');
   }
   function rejectBridge(code){
-    bridge.status='rejected';bridge.reason=code||'REJECTED';bridge.active=false;
+    /* Isolation is a property of the bridge match, not of the session. It was
+       set beside active in beginBattle and must be released beside it, or the
+       next ordinary match silently loses every reward: metaGrant,
+       developRecord, endgameRecord, loot and session snapshots all short out
+       on bridge.isolated, and the debrief then renders with no payout. */
+    bridge.status='rejected';bridge.reason=code||'REJECTED';bridge.active=false;bridge.isolated=false;
     const say=()=>{if(typeof toast==='function')toast('Galactic operation rejected — return to NEXUS-VII and relaunch');};
     if(typeof toast==='function')say();else setTimeout(say,120);
     /* A rejected deep link must never leave the player at Standard as if the
@@ -995,7 +1000,7 @@
     catch(e){bridge.returning=false;bridge.status='return-error';bridge.reason='RETURN_NAVIGATION_FAILED';if(typeof toast==='function')toast('NEXUS-VII return route could not be opened');return false;}
   }
   function returnExistingReportToNexus(record){
-    bridge.active=false;bridge.report=clone(record);bridge.returning=true;bridge.status='returning-existing';bridge.reason='';
+    bridge.active=false;bridge.isolated=false;bridge.report=clone(record);bridge.returning=true;bridge.status='returning-existing';bridge.reason='';
     const target=explorationReturnTarget('?groundResult='+encodeURIComponent(bridge.nonce));
     try{if(!target)throw new Error('Content return unavailable');location.href=target;return true;}
     catch(e){bridge.returning=false;bridge.status='return-error';bridge.reason='RETURN_NAVIGATION_FAILED';return false;}

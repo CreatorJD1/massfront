@@ -94,7 +94,35 @@ const otaBinaryAssets=[
      APK would keep the old vocal playlist and then consult a stale remote
      music.json. Inlining the empty curated list makes packagedHasTracks false
      on every OTA client and blocks that overlay. */
-  'assets/audio/music.json'
+  'assets/audio/music.json',
+  /* MASSFRONT UI Production V3. Every one of these is reached only from a
+     url() in ui.css, so an OTA client took the rebuilt menu markup and its
+     stylesheet while the plates stayed behind in whatever installer it had.
+     The command slices then draw with no authored art and DEPLOY renders as
+     its dark-on-gold label over nothing. Exactly the cinematic command skin
+     case above: referenced from CSS, so it has to travel in the atomic
+     shell. tools/test-menu-slice-geometry.mjs guards the numbers; the guard
+     below is what keeps the bytes from going missing again. */
+  'assets/textures/ui/mf-ui-v3/accent_deploy_chevrons.png',
+  'assets/textures/ui/mf-ui-v3/accent_triple_slash.png',
+  'assets/textures/ui/mf-ui-v3/deploy_normal.png',
+  'assets/textures/ui/mf-ui-v3/deploy_pressed.png',
+  'assets/textures/ui/mf-ui-v3/frame_portrait_empty.png',
+  'assets/textures/ui/mf-ui-v3/icon_contracts.png',
+  'assets/textures/ui/mf-ui-v3/icon_rank_star.png',
+  'assets/textures/ui/mf-ui-v3/icon_settings.png',
+  'assets/textures/ui/mf-ui-v3/icon_social.png',
+  'assets/textures/ui/mf-ui-v3/menu_disabled.png',
+  'assets/textures/ui/mf-ui-v3/menu_normal.png',
+  'assets/textures/ui/mf-ui-v3/menu_pressed.png',
+  'assets/textures/ui/mf-ui-v3/menu_selected.png',
+  'assets/textures/ui/mf-ui-v3/nav_normal.png',
+  'assets/textures/ui/mf-ui-v3/nav_pressed.png',
+  'assets/textures/ui/mf-ui-v3/nav_selected.png',
+  'assets/textures/ui/mf-ui-v3/panel_player_info.png',
+  'assets/textures/ui/mf-ui-v3/progress_fill_cyan.png',
+  'assets/textures/ui/mf-ui-v3/progress_fill_gold.png',
+  'assets/textures/ui/mf-ui-v3/progress_track.png'
 ].map(path=>{
   const ext=path.split('.').pop().toLowerCase();
   const mime=OTA_MIME[ext];
@@ -182,6 +210,8 @@ const shellCss=shell.styles.map(file=>file.css).join('\n');
 if(shellCss.includes('../.data:')) throw new Error('OTA shell contains corrupt ../.data: asset URL');
 const panelAsset=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-hud-panel-material-v1.webp');
 if(!panelAsset||!shellCss.includes(panelAsset.uri)) throw new Error('OTA shell did not inline cinematic HUD panel material');
+const menuPlate=otaBinaryAssets.find(row=>row.path==='assets/textures/ui/mf-ui-v3/deploy_normal.png');
+if(!menuPlate||!shellCss.includes(menuPlate.uri)) throw new Error('OTA shell did not inline the UI Production V3 menu plates');
 const preludeRuntimeBase=`(function(){
   /* The shell object lives in the shell artifact only. Keeping a copy here
      too duplicated ~4.5 MB of markup and inlined CSS into an artifact that
