@@ -562,6 +562,15 @@
     if(L.gate)return true;document.body.classList.remove('mfLauncherGate');
     if(typeof showFrontScreen==='function')showFrontScreen('startScreen');if(typeof setupAttract==='function')setupAttract();return true;
   }
+  /* Same bfcache hazard as main.js. L.entering guards the one-shot auto-entry
+     into the campaign hub and is cleared in a promise finally that never runs
+     when the document navigates away mid-flight. A restored page therefore
+     comes back mid-entry and refuses to enter again. */
+  try{window.addEventListener('pageshow',function(e){
+    if(!e||!e.persisted)return;
+    L.entering=false;
+    try{window.dispatchEvent(new CustomEvent('massfront:bfcache-restore'));}catch(err){}
+  });}catch(e){}
   function mfLauncherShouldDeferAttract(){return !L.bypass&&!L.passed;}
   function mfLauncherSnapshot(){
     return {gate:L.gate,passed:L.passed,bypass:L.bypass,phase:L.phase,primary:L.primary,

@@ -2931,6 +2931,33 @@ function wire(){
     return false;
   };
   const openLegacyWarRoom=()=>window.openWarRoom();
+  /* SAFARI HANDS THE PAGE BACK WITH ITS JAVASCRIPT STILL RUNNING.
+
+     mfExplorationLaunching is a one-shot latch that stops a fast second tap
+     from opening a duplicate launch while the first is still painting. It is
+     set before same-tab navigation into the module and cleared only by
+     finishLaunch, because on the success path this document is gone.
+
+     It is not gone. Safari restores back/forward navigations from bfcache,
+     which resumes the JavaScript heap exactly as it was - so the player walks
+     into UGA Command, presses Back, and lands on a menu whose latch is still
+     true. Every DEPLOY MASSFRONT tap from then on hits the duplicate guard and
+     returns silently. The button is not disabled and throws no error, which is
+     why it reads as the menu being dead rather than as one stuck boolean.
+
+     pageshow with persisted=true is the only event that fires on a bfcache
+     restore; load does not. pagehide clears it too, so a cancelled navigation
+     cannot strand the button either. Both also drop the pressed styling, which
+     otherwise comes back frozen mid-launch. */
+  const mfResetExplorationLaunchLatch=()=>{
+    mfExplorationLaunching=false;
+    for(const id of ['startBtn','ugaBtn']){
+      const btn=$(id);if(!btn)continue;
+      btn.classList.remove('is-launching');btn.removeAttribute('aria-busy');
+    }
+  };
+  window.addEventListener('pageshow',e=>{if(e&&e.persisted)mfResetExplorationLaunchLatch();});
+  window.addEventListener('pagehide',mfResetExplorationLaunchLatch);
   mfBindTap($('startBtn'),async()=>{
     /* A fast second tap arrives while the first launch is painting its status
        rail. mfOpenExploration intentionally returns false for that duplicate;
