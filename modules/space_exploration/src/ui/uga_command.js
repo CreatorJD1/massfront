@@ -1046,6 +1046,15 @@ export function createUgaCommand(options = {}) {
     /* Research is the one job that genuinely cannot happen until its room is
        built, and the room already shows a commission card. Rendering the
        panel's own offline notice above it would say the same thing twice. */
+    /* COMMAND CORE IS GALACTIC COMMAND.
+       The ship commissions a command_core from first launch - the one district
+       with its own facility id rather than the generic tier1 core - and it
+       renders as a room with a holo table and console banks. It was briefly a
+       special case that replaced the whole district panel, which fixed the
+       disconnect but cost the Command Core the one thing every other room on
+       the ship has: its own identity header, sector, power draw and tier. It is
+       the seventh room with work now, on the same rule as the other six. */
+    if (districtId === 'command') return campaignHubPanel(true);
     if (districtId === 'research') return getState().ship?.districts?.research?.commissioned === false ? '' : withoutContextScroll(researchPanel());
     if (districtId === 'factions') return withoutContextScroll(factionPanel());
     if (districtId === 'mission_ops') return withoutContextScroll(contractsPanel());
@@ -1706,7 +1715,7 @@ export function createUgaCommand(options = {}) {
     </section>`;
   }
 
-  function campaignHubPanel() {
+  function campaignHubPanel(embedded = false) {
     /* ONE THING IS ASKING FOR YOU.
 
        The journey always has exactly one next action, and on the survey step
@@ -1717,7 +1726,7 @@ export function createUgaCommand(options = {}) {
        the step. Marking both would say two things are urgent when one is. */
     const objective = commandObjective();
     const departAttention = objective.step === 'scan' ? ' uga-attention' : '';
-    return `<div class="uga-context-scroll uga-campaign-hub"><div class="uga-section-title"><small>MASSFRONT STRATEGIC HOME // UGA COMMAND</small><h2>Galactic Command</h2><p>Command the expedition, deploy tactical operations, and open career services from one strategic interface.</p></div>
+    return `<div class="${embedded ? 'uga-campaign-hub' : 'uga-context-scroll uga-campaign-hub'}"><div class="uga-section-title"><small>MASSFRONT STRATEGIC HOME // UGA COMMAND</small><h2>Galactic Command</h2><p>Command the expedition, deploy tactical operations, and open career services from one strategic interface.</p></div>
       ${commandObjectivePanel(objective)}
       <button type="button" class="uga-campaign-depart${departAttention}" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>
       ${commandFrontPanel()}
@@ -1757,19 +1766,6 @@ export function createUgaCommand(options = {}) {
     // legacy terminal implementation as a compatibility helper, but never
     // render a second mode picker inside Ship or through an old view token.
     if (activeView === 'classic') return campaignHubPanel();
-    /* COMMAND CORE IS GALACTIC COMMAND.
-       The ship commissions a command_core from the first launch - it is the one
-       district with its own facility id rather than the generic tier1 core - and
-       it renders as a room with a holo table and console banks. Standing in it
-       used to show a build panel, while the actual business of commanding the
-       galaxy lived under a separate Play tab that had no relationship to the
-       ship at all. That is why the module read as two products: the strategic
-       home was not a place, it was a menu that happened to ship alongside one.
-       Entering the room now IS entering Galactic Command. The room's
-       construction and upgrade detail is unchanged and still reached through the
-       build route, which is where changing the ship belongs - not in front of
-       the player every time they come to give an order. */
-    if (selectedDistrictId === 'command') return campaignHubPanel();
     return districtPanel();
   }
 
@@ -2008,6 +2004,18 @@ export function createUgaCommand(options = {}) {
         }
       }
     }
+
+    /* FOLDING IS PART OF RENDERING.
+
+       Every section is rebuilt from markup on each render, so the fold
+       affordance - role, tabindex, aria-expanded, is-collapsed - has to be
+       re-applied with it. This used to run only after selectDistrict, which
+       meant the headers announced themselves as buttons when you walked into
+       a room and stopped being buttons the moment anything else re-rendered:
+       a resource tick, a construction cycle, expanding the sheet. A player who
+       folded SPECIALIST STATIONS away watched it silently unfold on the next
+       state change, which is worse than never having offered to fold it. */
+    applyCollapsedSections();
   }
 
   function selectDistrict(id, settings = {}) {
@@ -2025,7 +2033,6 @@ export function createUgaCommand(options = {}) {
     // no longer buys visibility and makes the upgrade path undiscoverable.
     sheetExpanded = true;
     render();
-    applyCollapsedSections();
     if (emit) call('onDistrictFocus', id);
     return api;
   }

@@ -13,11 +13,55 @@
  * writer of the ledger via metaGrantCores(), so there is exactly one earning
  * path and no chance of the two documents racing each other's saves.
  *
- * Rank is NOT derived here. The RANKS table lives in src/game/meta.js as a
- * classic script in the other document and cannot be imported; copying its
- * thresholds would silently drift the moment either side is retuned. Raw xp is
- * surfaced instead, and rank stays the classic shell's business.
+ * Rank IS derived here, and the objection that used to sit in this comment was
+ * the right one: RANKS lives in src/game/meta.js as a classic script in the
+ * other document, cannot be imported, and a copied threshold table drifts the
+ * moment either side is retuned - showing the player one rank in the main menu
+ * and a different one aboard their own ship. The answer is not to go without a
+ * rank, because a profile bar with no rank is a row of numbers. The answer is
+ * to make the drift loud: tools/test-uga-rank-mirror.mjs parses RANKS straight
+ * out of meta.js and fails the build if these two tables disagree by a single
+ * threshold, name or glyph. Copy without a gate drifts; copy with a gate is a
+ * mirror.
  */
+
+/* MIRROR OF src/game/meta.js RANKS. Do not edit one without the other -
+   test-uga-rank-mirror.mjs compares them element by element. */
+export const ACCOUNT_RANKS = Object.freeze([
+  Object.freeze({ nm: 'Recruit', em: '\u{1F397}', xp: 0 }),
+  Object.freeze({ nm: 'Private', em: '\u{1F396}', xp: 200 }),
+  Object.freeze({ nm: 'Corporal', em: '\u{1F949}', xp: 500 }),
+  Object.freeze({ nm: 'Sergeant', em: '\u{1F948}', xp: 1000 }),
+  Object.freeze({ nm: 'Lieutenant', em: '\u{1F947}', xp: 1800 }),
+  Object.freeze({ nm: 'Captain', em: '\u{1F3C5}', xp: 3000 }),
+  Object.freeze({ nm: 'Major', em: '\u2B50', xp: 4800 }),
+  Object.freeze({ nm: 'Colonel', em: '\u{1F31F}', xp: 7500 }),
+  Object.freeze({ nm: 'General', em: '\u2728', xp: 11500 }),
+  Object.freeze({ nm: 'Warmaster', em: '\u{1F451}', xp: 17000 })
+]);
+
+/* Same shape as metaRankIdx() + metaRankProg() in meta.js, in one pass: the
+   highest rank whose threshold the player has met, and how far they are into
+   the next one. The top rank reports full progress and no next threshold,
+   which is what the classic bar shows as MAX RANK. */
+export function accountRank(xp) {
+  const earned = Number.isFinite(Number(xp)) ? Number(xp) : 0;
+  let index = 0;
+  for (let i = 0; i < ACCOUNT_RANKS.length; i += 1) if (earned >= ACCOUNT_RANKS[i].xp) index = i;
+  const rank = ACCOUNT_RANKS[index];
+  const next = ACCOUNT_RANKS[index + 1] || null;
+  const progress = next ? (earned - rank.xp) / (next.xp - rank.xp) : 1;
+  return {
+    index,
+    level: index + 1,
+    name: rank.nm,
+    emoji: rank.em,
+    xp: earned,
+    nextXp: next ? next.xp : null,
+    progress: Math.max(0, Math.min(1, progress)),
+    max: !next
+  };
+}
 
 const PROFILE_INDEX_KEY = 'massfront_profiles_v1';
 const PROFILE_META_PREFIX = 'massfront_meta_';

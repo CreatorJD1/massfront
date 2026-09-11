@@ -67,7 +67,7 @@ assert.equal(getCampaignHubRoute('classic'), null, 'the retired War Table must n
 
 const uiSource = await readFile(new URL('../modules/space_exploration/src/ui/uga_command.js', import.meta.url), 'utf8');
 const uiCss = await readFile(new URL('../modules/space_exploration/src/ui/uga_command.css', import.meta.url), 'utf8');
-const homeStart = uiSource.indexOf('  function campaignHubPanel()');
+const homeStart = uiSource.indexOf('  function campaignHubPanel(');
 const servicesStart = uiSource.indexOf('  function campaignServicesPanel()', homeStart);
 const renderStart = uiSource.indexOf('  function renderContext()', servicesStart);
 assert.ok(homeStart >= 0 && servicesStart > homeStart && renderStart > servicesStart);
