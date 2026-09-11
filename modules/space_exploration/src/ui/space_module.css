@@ -70,6 +70,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .location-crumb small { color: #718e9d; font-size: 9px; }
 .location-crumb strong { font-size: 22px; letter-spacing: .22em; color: #ecfbff; line-height: 1.1; }
 .location-crumb span { color: var(--green); font-size: 8px; letter-spacing: .13em; }
+:root { --uga-res-row: 0px; }
 .expedition-resources { display: flex; align-items: stretch; }
 .expedition-resources > span { min-width: 72px; display: grid; place-content: center; padding: 8px 12px; border-left: 1px solid rgba(95, 194, 222, .14); }
 .expedition-resources small { color: #668899; font-size: 8px; letter-spacing: .14em; }
@@ -560,10 +561,25 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 .space-experience[data-scene="survey"] .uga-scene-controls { opacity: 0 !important; pointer-events: none !important; display: none !important; }
 
 @media (max-width: 1024px) {
-  .exploration-topbar { grid-template-columns: 1fr auto; }.location-crumb { order: 3; grid-column: 1 / -1; min-height: 48px; }.expedition-resources { display: none; }
+  /* The resource row is a new topbar line below 1024px, and the story rail is
+     positioned from the top with hard offsets. Publishing its height here - on
+     :root, so the rail actually inherits it rather than reading a sibling -
+     keeps the three breakpoint offsets from drifting apart as the row changes. */
+  :root { --uga-res-row: 48px; }
+  .exploration-topbar { grid-template-columns: 1fr auto; }.location-crumb { order: 3; grid-column: 1 / -1; min-height: 48px; }.expedition-resources { grid-column: 1 / -1; order: 4; min-height: 40px; overflow-x: auto; scrollbar-width: none; }
+  /* Fuel, probes and research were hidden outright below 1024px, so on every
+     phone the navigation view showed no expedition state at all - the player
+     could not see how many probes they had while deciding whether to survey.
+     Hidden is not compact. Own row, tighter metrics, and horizontal scroll if
+     the row still overflows; the values matter more than the chrome around
+     them. */
+  .expedition-resources::-webkit-scrollbar { display: none; }
+  .expedition-resources > span { min-width: 58px; padding: 5px 10px; }
+  .expedition-resources small { font-size: 7px; letter-spacing: .1em; }
+  .expedition-resources b { font-size: 12px; }
   .top-actions .icon-action { min-width: 44px; padding: 6px; }
   .top-actions .icon-action span { display: none; }
-  .story-rail { top: 153px; width: min(390px, calc(48vw - 18px)); }.story-rail.is-transmitting { width: min(410px, calc(50vw - 18px)); }.target-console { width: min(420px, 52vw); bottom: 105px; }
+  .story-rail { top: calc(153px + var(--uga-res-row, 0px)); width: min(390px, calc(48vw - 18px)); }.story-rail.is-transmitting { width: min(410px, calc(50vw - 18px)); }.target-console { width: min(420px, 52vw); bottom: 105px; }
   .helm-dock { min-width: 78vw; }.galaxy-info-pane { width: 42vw; }.survey-dossier { width: 48vw; }
 }
 
@@ -571,7 +587,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
   .space-experience { min-height: 100dvh; }.exploration-topbar { left: 9px; right: 9px; top: max(8px, env(safe-area-inset-top)); grid-template-columns: 1fr auto; min-height: 58px; }
   .mf-ident { min-width: 0; padding: 7px 10px; }.mf-mark { width: 34px; height: 34px; flex-basis: 34px; }.mf-ident b { font-size: 10px; }.mf-ident small { font-size: 6px; }
   .top-actions .icon-action { min-width: 44px; padding: 6px; }.top-actions .icon-action span { display: none; }.location-crumb { min-width: 0; padding: 5px 10px; }.location-crumb strong { font-size: 16px; }.location-crumb small, .location-crumb span { font-size: 6px; }
-  .story-rail, .story-rail.is-transmitting { left: 10px; top: 130px; width: calc(100% - 20px); max-height: min(48vh, 410px); }.story-rail-default { padding: 13px 15px; }.story-rail h1 { font-size: 18px; }.story-rail-default > p { font-size: 9px; }.story-steps { grid-template-columns: repeat(3, 1fr); margin: 10px 0; }.story-steps li { align-items: flex-start; gap: 5px; font-size: 7px; }.story-steps span { width: 21px; height: 21px; flex: 0 0 21px; }.system-tone { display: none; }
+  .story-rail, .story-rail.is-transmitting { left: 10px; top: calc(130px + var(--uga-res-row, 0px)); width: calc(100% - 20px); max-height: min(48vh, 410px); }.story-rail-default { padding: 13px 15px; }.story-rail h1 { font-size: 18px; }.story-rail-default > p { font-size: 9px; }.story-steps { grid-template-columns: repeat(3, 1fr); margin: 10px 0; }.story-steps li { align-items: flex-start; gap: 5px; font-size: 7px; }.story-steps span { width: 21px; height: 21px; flex: 0 0 21px; }.system-tone { display: none; }
   .story-transmission-copy { padding: 10px 12px 11px; }.story-transmission-identity strong { font-size: 18px; }.story-transmission h2 { margin-top: 8px; font-size: 11px; }.story-transmission-copy > p { font-size: 9px; line-height: 1.45; }.story-transmission-actions button { min-height: 80px; }.story-action-copy strong { font-size: 7px; }.story-action-copy small { font-size: 6.5px; }
   .target-console { right: 9px; left: 9px; bottom: 107px; width: auto; padding: 11px; }.target-console h2 { font-size: 15px; }.target-console p { font-size: 8px; margin-bottom: 8px; }.target-actions { grid-template-columns: repeat(3, 1fr); }.target-actions button { min-height: 44px; font-size: 7px; }.target-actions .primary { grid-column: 1 / -1; }
   .helm-dock { left: 9px; right: 9px; bottom: max(8px, env(safe-area-inset-bottom)); transform: none; min-width: 0; height: 92px; grid-template-columns: 1fr; gap: 5px; padding: 7px; }
@@ -775,7 +791,7 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
 @media (max-height: 620px) and (orientation: landscape) and (max-width: 1024px) {
   .exploration-topbar { left: 9px; right: 9px; top: 8px; min-height: 54px; }
   .location-crumb { min-height: 42px; }
-  .story-rail, .story-rail.is-transmitting { left: max(22px, env(safe-area-inset-left)); top: 151px; width: calc(50% - 46px); max-height: calc(100% - 244px); }
+  .story-rail, .story-rail.is-transmitting { left: max(22px, env(safe-area-inset-left)); top: calc(151px + var(--uga-res-row, 0px)); width: calc(50% - 46px); max-height: calc(100% - 244px); }
   .story-transmission-signal { min-height: 20px; padding: 0 9px; }.story-transmission-signal b { font-size: 6.5px; }.story-transmission-signal small { display: none; }
   .story-transmission-copy { padding: 5px 8px; }.story-transmission-identity small { font-size: 6px; }.story-transmission-identity strong { font-size: 13.5px; }.story-transmission-identity > b { display: none; }
   .story-transmission h2 { margin: 3px 0 2px; font-size: 9px; line-height: 1.2; }.story-transmission-copy > p { display: -webkit-box; overflow: hidden; font-size: 7.5px; line-height: 1.3; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }

@@ -106,8 +106,13 @@
   .top-actions .icon-action { min-width: 44px; min-height: 44px; padding: 5px; }
   .top-actions .icon-action svg { width: 16px; height: 16px; }
 
+  /* This pins the rail from the top and loads after space_module.css, so it
+     wins over the offsets there. The topbar gained a resource row below 1024px,
+     and at 68px the rail slid underneath it - the directive title was clipped
+     behind FUEL/PROBES. Same variable the module offsets use, so the row height
+     is stated once and every rail offset follows it. */
   .story-rail,
-  .story-rail.is-transmitting { top: 68px; max-height: min(52vh, 455px); }
+  .story-rail.is-transmitting { top: calc(68px + var(--uga-res-row, 0px)); max-height: min(52vh, 455px); }
   .story-transmission-copy { padding: 12px 14px 13px; }
   .story-transmission h2 { font-size: 13px; }
   .story-transmission-copy > p { font-size: 10.5px; line-height: 1.48; }

@@ -251,7 +251,15 @@ export function createSpaceExperience(container, options = {}) {
   const removers = [];
   const pointer = { active: false, id: null, x: 0, y: 0, lastX: 0, lastY: 0, moved: false };
   const navPointers = new Map();
-  const navCameraDefault = Object.freeze({ yaw: 0.55, pitch: 0.42, dist: 1.55 });
+  /* Opening at 1.55 framed the ship and little else, so arriving in orbit read
+     as "a model on a black background" rather than a place with a system around
+     it. Starting further out shows the orbital rings and neighbouring contacts
+     in the first frame, which is what makes the view legible as space. */
+  const navCameraDefault = Object.freeze({ yaw: 0.55, pitch: 0.42, dist: 2.4 });
+  /* The old 2.5 ceiling was barely above the old default - there was almost
+     nothing to pull back to. 4.5 lets a player actually survey the system
+     instead of only inspecting the hull. */
+  const NAV_CAM_MIN_DIST = 0.55, NAV_CAM_MAX_DIST = 4.5;
   const camState = { ...navCameraDefault };
   let pinchGap = 0;
   let raycaster = null;
@@ -2223,7 +2231,7 @@ export function createSpaceExperience(container, options = {}) {
       if (navPointers.size > 1) {
         const points = [...navPointers.values()];
         const nextGap = Math.max(12, Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y));
-        if (pinchGap > 0) camState.dist = Math.max(0.55, Math.min(2.5, camState.dist * pinchGap / nextGap));
+        if (pinchGap > 0) camState.dist = Math.max(NAV_CAM_MIN_DIST, Math.min(NAV_CAM_MAX_DIST, camState.dist * pinchGap / nextGap));
         pinchGap = nextGap;
         pointer.moved = true;
         return;
@@ -2273,7 +2281,7 @@ export function createSpaceExperience(container, options = {}) {
     listen(canvas, 'wheel', event => {
       if (sceneMode !== 'system') return;
       if (event.cancelable) event.preventDefault();
-      camState.dist = Math.max(0.55, Math.min(2.5, camState.dist + event.deltaY * 0.0015));
+      camState.dist = Math.max(NAV_CAM_MIN_DIST, Math.min(NAV_CAM_MAX_DIST, camState.dist + event.deltaY * 0.0015));
     }, { passive: false });
 
     bindAutopilotDock();
