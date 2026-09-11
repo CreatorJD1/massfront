@@ -1959,11 +1959,11 @@ export function createUgaCommand(options = {}) {
      right now, and reopening the district should respect that. */
   const collapsedSections = new Set();
   function sectionKey(section) {
-    const label = section.querySelector('header span');
+    const label = section.querySelector('header span, header small');
     return label ? label.textContent.trim() : '';
   }
   function applyCollapsedSections() {
-    for (const section of root.querySelectorAll('.uga-panel-section')) {
+    for (const section of root.querySelectorAll('.uga-panel-section, .uga-basic-access')) {
       const header = section.querySelector('header');
       if (!header) continue;
       const key = sectionKey(section);
@@ -1976,7 +1976,7 @@ export function createUgaCommand(options = {}) {
     }
   }
   root.addEventListener('click', event => {
-    const sectionHeader = event.target.closest('.uga-panel-section > header');
+    const sectionHeader = event.target.closest('.uga-panel-section > header, .uga-basic-access > header');
     if (sectionHeader && root.contains(sectionHeader) && !event.target.closest('button')) {
       const section = sectionHeader.parentElement;
       const key = sectionKey(section);

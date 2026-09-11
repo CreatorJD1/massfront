@@ -122,7 +122,19 @@ const otaBinaryAssets=[
   'assets/textures/ui/mf-ui-v3/panel_player_info.png',
   'assets/textures/ui/mf-ui-v3/progress_fill_cyan.png',
   'assets/textures/ui/mf-ui-v3/progress_fill_gold.png',
-  'assets/textures/ui/mf-ui-v3/progress_track.png'
+  'assets/textures/ui/mf-ui-v3/progress_track.png',
+  /* Panel and frame families. Admitted late because the module that needs
+     them could not reference authored art until the inliner learned its
+     path depth; listing them here is what lets that reference survive an
+     OTA rather than arriving as CSS pointing at bytes nobody sent. */
+  'assets/textures/ui/mf-ui-v3/panel_statistics.png',
+  'assets/textures/ui/mf-ui-v3/panel_rank.png',
+  'assets/textures/ui/mf-ui-v3/panel_requisition.png',
+  'assets/textures/ui/mf-ui-v3/panel_unit_description.png',
+  'assets/textures/ui/mf-ui-v3/frame_viewport.png',
+  'assets/textures/ui/mf-ui-v3/frame_faction.png',
+  'assets/textures/ui/mf-ui-v3/frame_unit_thumbnail.png',
+  'assets/textures/ui/mf-ui-v3/footer_base.png'
 ].map(path=>{
   const ext=path.split('.').pop().toLowerCase();
   const mime=OTA_MIME[ext];

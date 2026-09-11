@@ -2556,3 +2556,38 @@
 @media (prefers-reduced-motion: reduce) {
   .uga-panel-section > header::after { transition: none; }
 }
+
+/* PLATED SURFACES
+   panel_player_info carries modest 24px borders, which survives being stretched
+   to containers of very different heights. The heavier families - frame_viewport
+   at 92 logical, panel_statistics with its 108px header band - are authored for
+   fixed-size surfaces and would swallow a short card, so they stay unused until
+   there is a surface shaped for them. Restraint here is deliberate: plating
+   every box would trade "no art" for "ornament everywhere", which reads as
+   noisier, not richer. */
+.uga-basic-access,
+.uga-panel-section,
+.uga-command-front {
+  border: 24px solid transparent;
+  border-image: url('../../../../assets/textures/ui/mf-ui-v3/panel_player_info.png') 48 fill / 24px / 0 stretch;
+  background: none;
+  padding: 2px 8px 10px;
+}
+/* The plate already draws an edge; the old rules would sit inside it as a
+   second, competing border. */
+.uga-basic-access > header,
+.uga-panel-section > header { border-bottom: none; }
+.uga-basic-access { margin-top: 10px; }
+
+/* The hub's own top-level blocks fold too, not just district sections. */
+.uga-basic-access > header { cursor: pointer; position: relative; padding-right: 26px; user-select: none; }
+.uga-basic-access > header::after {
+  content: ""; position: absolute; right: 9px; top: 50%;
+  width: 7px; height: 7px; margin-top: -5px;
+  border-right: 1.5px solid var(--uga-cyan, #4fd8ff);
+  border-bottom: 1.5px solid var(--uga-cyan, #4fd8ff);
+  transform: rotate(45deg); transition: transform .2s ease;
+}
+.uga-basic-access.is-collapsed > header::after { transform: rotate(-45deg); margin-top: -2px; }
+.uga-basic-access.is-collapsed > *:not(header) { display: none; }
+@media (prefers-reduced-motion: reduce) { .uga-basic-access > header::after { transition: none; } }
