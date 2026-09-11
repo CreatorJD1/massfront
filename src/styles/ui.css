@@ -483,6 +483,23 @@ body.mfMenuOpen #hotUtilityPanel,body.menuMode #hotUtilityPanel{display:none!imp
    linear-gradient(var(--gold),var(--gold)) 100% 100%/14px 2px,
    linear-gradient(var(--gold),var(--gold)) 100% 100%/2px 14px;
   background-repeat:no-repeat;opacity:.85}
+/* THE BRACKETS BELONG TO THE OLD LAYOUT, NOT TO A BREAKPOINT.
+
+   #minimapWrap::after paints four gold corner brackets. That is the fallback
+   frame for the pre-dock HUD, and the tactical dock has always replaced it with
+   its own steel box - but the rule that switched it off lived inside
+   @media (max-width:600px) and (orientation:portrait), so the moment the dock
+   was running at any other viewport the player got BOTH: the dock's own layout
+   and a set of gold brackets bolted to a box that no longer wanted them, with
+   the map content bleeding to the edge because the dock's padding was gated the
+   same way.
+
+   Whether the brackets show is a question about which layout is running, not
+   about how wide the screen is. Scoped to the dock class alone, it is correct
+   at every viewport - and the base rule below it already draws the clean steel
+   box with padding that the dock wants. */
+body.hudTacticalDock #minimapWrap::after{content:none}
+body.hudTacticalDock #minimapWrap{padding:4px}
 #minimap{display:block;touch-action:none;border-radius:6px;image-rendering:crisp-edges;transition:opacity .18s ease,filter .18s ease}
 /* Global clamp. The canvas attributes are 256×256; without an authored
    CSS size a landscape / zoomed-out viewport painted that bitmap 1:1 and
