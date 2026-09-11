@@ -11,6 +11,7 @@ import {
   CAMPAIGN_HUB_QUICK_NAV,
   CAMPAIGN_HUB_ROUTES,
   CAMPAIGN_HUB_ROUTE_STATUS,
+  CAMPAIGN_HUB_SERVICE_GROUPS,
   campaignHubRouteIsReachable,
   campaignHubSessionIsReachable,
   getCampaignHubRoute,
@@ -1734,18 +1735,32 @@ export function createUgaCommand(options = {}) {
       ${basicAccessPanel()}</div>`;
   }
 
+  /* Grouped, not listed. Each shelf is a .uga-panel-section, which is the same
+     element the rooms use, so it inherits the authored plate and the fold
+     affordance without a second implementation of either - and a player who
+     folds MASSFRONT SERVICES away keeps it folded, because folding is part of
+     rendering now. The count sits in the header where the rooms put their
+     sequence number, so a shelf says how much is behind it before you open it. */
   function campaignServicesPanel() {
-    const serviceRoutes = CAMPAIGN_HUB_ROUTES.filter(entry => !CAMPAIGN_HUB_SESSION_ROUTE_IDS.has(entry.id));
-    return `<div class="uga-context-scroll uga-campaign-services"><div class="uga-section-title"><small>MORE</small><h2>Services</h2></div>
+    const shelves = CAMPAIGN_HUB_SERVICE_GROUPS.map(group => {
+      const entries = group.routeIds.map(getCampaignHubRoute).filter(Boolean);
+      if (!entries.length) return '';
+      return `<section class="uga-panel-section uga-service-shelf" data-service-group="${escapeHtml(group.id)}">
+        <header><span>${escapeHtml(group.label)}</span><small>${String(entries.length).padStart(2, '0')}</small></header>
+        <p class="uga-service-shelf-detail">${escapeHtml(group.detail)}</p>
+        <div class="uga-hub-route-list">${entries.map(entry => {
+          const reachable = hubRouteReachable(entry);
+          return `<article class="uga-hub-route is-${entry.status}${activeHubRouteId === entry.id ? ' is-selected' : ''}">
+            <span class="uga-hub-route-icon">${icon(entry.icon)}</span>
+            <div class="uga-hub-route-copy"><div><h3>${escapeHtml(entry.label)}</h3><span>${escapeHtml(hubStatusLabel(entry.status))}</span></div><p>${escapeHtml(entry.description)}</p><small>${escapeHtml(entry.detail)}</small></div>
+            <button type="button" data-hub-route="${escapeHtml(entry.id)}" ${reachable ? '' : 'disabled'}>${reachable ? 'OPEN' : 'UNAVAILABLE'}</button>
+          </article>`;
+        }).join('')}</div>
+      </section>`;
+    }).join('');
+    return `<div class="uga-context-scroll uga-campaign-services"><div class="uga-section-title"><small>MORE</small><h2>Services</h2><p>Every destination, shelved by where it happens. Tap a heading to fold it away.</p></div>
       ${moreNavigationShortcuts()}
-      <section class="uga-hub-services"><header><small>COMMAND SYSTEMS & SERVICES</small></header><div class="uga-hub-route-list">${serviceRoutes.map(entry => {
-      const reachable = hubRouteReachable(entry);
-      return `<article class="uga-hub-route is-${entry.status}${activeHubRouteId === entry.id ? ' is-selected' : ''}">
-        <span class="uga-hub-route-icon">${icon(entry.icon)}</span>
-        <div class="uga-hub-route-copy"><div><h3>${escapeHtml(entry.label)}</h3><span>${escapeHtml(hubStatusLabel(entry.status))}</span></div><p>${escapeHtml(entry.description)}</p><small>${escapeHtml(entry.detail)}</small></div>
-        <button type="button" data-hub-route="${escapeHtml(entry.id)}" ${reachable ? '' : 'disabled'}>${reachable ? 'OPEN' : 'UNAVAILABLE'}</button>
-      </article>`;
-    }).join('')}</div></section></div>`;
+      ${shelves}</div>`;
   }
 
   function renderContext() {
@@ -1948,6 +1963,17 @@ export function createUgaCommand(options = {}) {
     region('scene-label').textContent = viewLabel;
     root.dataset.view = activeView;
     root.dataset.district = selectedDistrictId;
+    /* A MENU WITH NO ROOM SHOULD NOT RESERVE ONE.
+
+       Only three views are about a place on the ship: a compartment, its
+       construction, and a deployment staging in the hangar. Services,
+       Progress, Inventory and the post-operation debrief are directories -
+       they were still laying out a room viewport, a district rail and a deck
+       filter above themselves and then leaving roughly 500px of black where
+       the room would have been. The strategic home already solved this by
+       taking the full stage; this is the same treatment, named once so a new
+       view gets it by default instead of having to remember to ask. */
+    root.dataset.stage = ['command', 'construction', 'deployment'].includes(activeView) ? 'room' : 'full';
     root.dataset.activeHubRoute = activeHubRouteId || '';
     const deploymentMode = activeView === 'deployment' && Boolean(selectedMissionId) && Boolean(root.querySelector('.uga-deployment-planner'));
     root.dataset.mode = deploymentMode ? 'deployment' : 'management';

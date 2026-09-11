@@ -2503,3 +2503,21 @@
 @media (prefers-reduced-motion: reduce) {
   .uga-attention { animation: none; box-shadow: 0 0 0 2px rgba(255, 181, 74, .44); }
 }
+
+/* FULL STAGE FOR THE VIEWS THAT ARE NOT A PLACE.
+   The campaign_hub rules above do this for the strategic home by naming that
+   one view. data-stage says the same thing about a category instead, so
+   Services, Progress, Inventory and the debrief stop reserving a room
+   viewport they never fill - and the next directory view inherits it rather
+   than shipping with a black band nobody notices until a screenshot. The exit
+   control stays: unlike the hub, these are places you have navigated into. */
+.uga-command-shell[data-stage="full"] .uga-district-rail,
+.uga-command-shell[data-stage="full"] .uga-scene-overlay,
+.uga-command-shell[data-stage="full"] .uga-quick-actions,
+.uga-command-shell[data-stage="full"] .uga-sheet-toggle { display: none !important; }
+.uga-command-shell[data-stage="full"] .uga-context-body { inset: 0; }
+.uga-command-shell[data-stage="full"] .uga-context-panel,
+.uga-command-shell[data-stage="full"].is-sheet-expanded .uga-context-panel {
+  top: var(--uga-gap);
+  height: auto;
+}

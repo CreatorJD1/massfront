@@ -145,6 +145,39 @@ export const CAMPAIGN_HUB_PRIMARY_NAV = Object.freeze([
   Object.freeze({ id: 'more', label: 'More', icon: 'logistics', target: Object.freeze({ kind: 'view', view: 'services' }) })
 ]);
 
+/* SERVICES IS A DIRECTORY, SO IT NEEDS SHELVES.
+
+   Seventeen routes rendered as one flat list is the screen that made the
+   module feel like text boxes: every destination equally loud, and no way to
+   tell that Research happens in a room on this ship while Armory opens the
+   base game. Grouping by status would sort them by how they are implemented,
+   which is a developer's axis. Players ask where a thing happens, so that is
+   the axis: aboard this vessel, out in MASSFRONT, or on your account.
+
+   auditCampaignHubRegistry checks these groups are exhaustive and disjoint
+   over every non-session route, because the failure mode of a hand-written
+   directory is a route that quietly stops being listed at all. */
+export const CAMPAIGN_HUB_SERVICE_GROUPS = Object.freeze([
+  Object.freeze({
+    id: 'expedition', label: 'ABOARD NEXUS-VII',
+    detail: 'Compartments and controllers that run from your own ship.',
+    routeIds: Object.freeze(['galactic-operations', 'galactic-research', 'galactic-intel', 'factions', 'crew', 'logistics', 'inventory'])
+  }),
+  Object.freeze({
+    id: 'massfront', label: 'MASSFRONT SERVICES',
+    detail: 'Live base-game screens. These open outside the expedition.',
+    routeIds: Object.freeze(['operations', 'development', 'armory', 'orders', 'intel'])
+  }),
+  Object.freeze({
+    id: 'account', label: 'ACCOUNT & SETTINGS',
+    detail: 'Your career record, messages, and how the game runs.',
+    routeIds: Object.freeze(['profile', 'inbox', 'social', 'settings', 'game-version'])
+  })
+]);
+
+/* The playable-session routes BASIC ACCESS owns. They are deliberately absent
+   from the directory: a mode picker is not a service. */
+const SESSION_ROUTE_IDS = new Set(['classic', 'training', 'standard', 'campaign', 'weekly', 'mmo', 'coop']);
 export const CAMPAIGN_HUB_QUICK_NAV = Object.freeze([
   Object.freeze({ id: 'construction', label: 'Construction', icon: 'build', target: Object.freeze({ kind: 'view', view: 'construction' }) }),
   Object.freeze({ id: 'research', label: 'Research', icon: 'research', target: Object.freeze({ kind: 'route', routeId: 'galactic-research' }) }),
@@ -200,8 +233,15 @@ export function auditCampaignHubRegistry() {
   const falseNetworkTargets = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => entry.status === CAMPAIGN_HUB_SESSION_STATUS.NETWORK_UNAVAILABLE && entry.routeId).map(entry => entry.id);
   const unreachableLocalRoutes = CAMPAIGN_HUB_ROUTES.filter(entry => entry.status !== CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED && !entry.target).map(entry => entry.id);
   const invalidOfflineSessionRoutes = CAMPAIGN_HUB_SESSION_TYPES.filter(entry => entry.status === CAMPAIGN_HUB_SESSION_STATUS.OFFLINE_READY && !ROUTES_BY_ID.has(entry.routeId)).map(entry => entry.id);
+  /* A directory that silently drops a destination is worse than no directory:
+     the route still exists, still works, and is simply unreachable. */
+  const groupedIds = CAMPAIGN_HUB_SERVICE_GROUPS.flatMap(group => group.routeIds);
+  const serviceIds = CAMPAIGN_HUB_ROUTES.filter(entry => !SESSION_ROUTE_IDS.has(entry.id)).map(entry => entry.id);
+  const ungroupedServices = serviceIds.filter(id => !groupedIds.includes(id));
+  const duplicateGroupedServices = groupedIds.filter((id, index) => groupedIds.indexOf(id) !== index);
+  const unknownGroupedServices = groupedIds.filter(id => !serviceIds.includes(id));
   return Object.freeze({
-    ok: duplicateIds.length === 0 && duplicateSessionIds.length === 0 && missingIds.length === 0 && missingSessionIds.length === 0 && invalidStatuses.length === 0 && invalidSessionStatuses.length === 0 && falseHostTargets.length === 0 && falseNetworkTargets.length === 0 && unreachableLocalRoutes.length === 0 && invalidOfflineSessionRoutes.length === 0,
+    ok: ungroupedServices.length === 0 && duplicateGroupedServices.length === 0 && unknownGroupedServices.length === 0 && duplicateIds.length === 0 && duplicateSessionIds.length === 0 && missingIds.length === 0 && missingSessionIds.length === 0 && invalidStatuses.length === 0 && invalidSessionStatuses.length === 0 && falseHostTargets.length === 0 && falseNetworkTargets.length === 0 && unreachableLocalRoutes.length === 0 && invalidOfflineSessionRoutes.length === 0,
     duplicateIds: Object.freeze(duplicateIds),
     duplicateSessionIds: Object.freeze(duplicateSessionIds),
     missingIds: Object.freeze(missingIds),
@@ -211,7 +251,10 @@ export function auditCampaignHubRegistry() {
     falseHostTargets: Object.freeze(falseHostTargets),
     falseNetworkTargets: Object.freeze(falseNetworkTargets),
     unreachableLocalRoutes: Object.freeze(unreachableLocalRoutes),
-    invalidOfflineSessionRoutes: Object.freeze(invalidOfflineSessionRoutes)
+    invalidOfflineSessionRoutes: Object.freeze(invalidOfflineSessionRoutes),
+    ungroupedServices: Object.freeze(ungroupedServices),
+    duplicateGroupedServices: Object.freeze(duplicateGroupedServices),
+    unknownGroupedServices: Object.freeze(unknownGroupedServices)
   });
 }
 

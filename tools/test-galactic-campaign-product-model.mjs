@@ -77,8 +77,27 @@ assert.match(homeSource, /uga-campaign-depart[\s\S]*?basicAccessPanel\(\)/,
   'the cold strategic home must lead with deliberate exploration, then compact base play');
 assert.doesNotMatch(homeSource, /uga-hub-services|moreNavigationShortcuts|uga-session-types/,
   'the cold strategic home must not lead with the long service directory or speculative session families');
-assert.match(servicesSource, /uga-campaign-services[\s\S]*?moreNavigationShortcuts\(\)[\s\S]*?uga-hub-services/,
-  'More must expose the existing service directory and phone-only shortcuts');
+/* SERVICES IS A DIRECTORY, SO IT NEEDS SHELVES.
+
+   Seventeen destinations in one flat list is the screen that read as text
+   boxes. The shelves are .uga-panel-section on purpose: that is the element
+   the rooms use, so the authored plate and the fold affordance come from the
+   same place rather than from a second implementation that can drift. */
+assert.match(servicesSource, /uga-campaign-services[\s\S]*?moreNavigationShortcuts\(\)[\s\S]*?\$\{shelves\}/,
+  'More must expose the shelved service directory and the phone-only shortcuts');
+assert.match(servicesSource, /CAMPAIGN_HUB_SERVICE_GROUPS\.map/,
+  'the directory must be built from the grouped registry, not listed flat');
+assert.match(servicesSource, /class="uga-panel-section uga-service-shelf"/,
+  'each shelf must be a panel section so plate and fold are inherited, never reimplemented');
+assert.match(servicesSource, /uga-hub-route-list/,
+  'shelving must not drop the route rows themselves');
+
+/* Exhaustive and disjoint, enforced in the registry itself: a route that falls
+   out of every group still exists and still works, and is simply unreachable. */
+const registryAudit = auditCampaignHubRegistry();
+assert.deepEqual([...registryAudit.ungroupedServices], [], 'every non-session route must sit on exactly one shelf');
+assert.deepEqual([...registryAudit.duplicateGroupedServices], [], 'a route must not appear on two shelves');
+assert.deepEqual([...registryAudit.unknownGroupedServices], [], 'a shelf must not name a route that does not exist');
 for (const routeId of ['standard', 'training', 'campaign']) {
   assert.match(uiSource, new RegExp(`\\['${routeId}',`), `Basic Access must expose ${routeId}`);
 }
