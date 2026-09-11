@@ -27,70 +27,9 @@
   isolation: isolate;
 }
 
-/* PLAY is a shallow access layer over the live exploration scene. Its cards
-   use the neutral menu frames; selection overlays stay reserved for actual
-   in-world selection, and the gold primary frame marks only the War Table. */
-.uga-command-access { display: grid; gap: 9px; }
-.uga-command-access-title { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; min-width: 0; }
-.uga-command-access-title small { color: #7293a1; font: 7px/1 Consolas, monospace; letter-spacing: .1em; }
-.uga-command-access-title h2 { margin: 0; overflow: hidden; color: #e7f5fb; font-size: 17px; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
-.uga-command-mode-row {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(112px, 1fr);
-  gap: 7px;
-  overflow-x: auto;
-  overscroll-behavior-inline: contain;
-  scroll-snap-type: x proximity;
-  scrollbar-width: thin;
-}
-.uga-command-mode {
-  position: relative;
-  isolation: isolate;
-  min-width: 0;
-  min-height: 76px;
-  padding: 8px 22px 7px 9px;
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  grid-template-rows: 15px 20px 16px;
-  column-gap: 7px;
-  align-items: center;
-  scroll-snap-align: start;
-  border: 1px solid var(--uga-line);
-  border-radius: 8px;
-  background: var(--uga-panel-soft);
-  color: #91aab5;
-  text-align: left;
-}
-.uga-command-mode::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  opacity: .58;
-  border: 23px solid transparent;
-  border-image-source: var(--mf-gui-entry);
-  border-image-slice: 27.380952% 7.565789%;
-  border-image-width: 23px;
-}
-.uga-command-mode > span { grid-row: 1 / 4; width: 24px; height: 24px; display: grid; place-items: center; color: #83a3b0; }
-.uga-command-mode > span .uga-svg { width: 18px; height: 18px; }
-.uga-command-mode small,
-.uga-command-mode strong,
-.uga-command-mode em { min-width: 0; overflow: hidden; display: block; text-overflow: ellipsis; white-space: nowrap; }
-.uga-command-mode small { color: var(--uga-green); font: 7px/1 Consolas, monospace; letter-spacing: .1em; }
-.uga-command-mode strong { color: #e1eff5; font-size: 11px; line-height: 1; }
-.uga-command-mode em { color: #78929e; font: 8px/1 sans-serif; }
-.uga-command-mode > .uga-svg { position: absolute; right: 8px; top: 31px; width: 13px; height: 13px; color: #829aa6; }
-.uga-command-mode:not(:disabled) { cursor: pointer; }
-.uga-command-mode:not(:disabled):hover,
-.uga-command-mode:not(:disabled):focus-visible { border-color: rgba(57, 215, 255, .65); background: rgba(13, 62, 82, .58); }
-.uga-command-mode:not(:disabled):focus-visible { outline: 2px solid var(--uga-cyan); outline-offset: -2px; }
-.uga-command-mode.is-locked { color: #78848b; border-color: rgba(255, 181, 74, .18); background: rgba(30, 25, 20, .5); }
-.uga-command-mode.is-locked small,
-.uga-command-mode.is-locked > .uga-svg { color: var(--uga-amber); }
-.uga-command-mode:disabled { cursor: not-allowed; }
+/* Galactic Command reads the front before it offers anything else. The mode
+   cards that used to open this block belonged to a duplicate terminal no
+   route reached; BASIC ACCESS is the one mode picker now. */
 .uga-command-front {
   position: relative;
   isolation: isolate;
@@ -105,18 +44,10 @@
   border-radius: 8px;
   background: rgba(3, 18, 28, .88);
 }
-.uga-command-front::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  opacity: .55;
-  border: 17px solid transparent;
-  border-image-source: var(--mf-gui-context);
-  border-image-slice: 20.454545% 8.4375%;
-  border-image-width: 17px;
-}
+/* No second frame. The PLATED SURFACES rule below gives this card the same
+   panel_player_info plate the objective above it wears, so the older context
+   overlay would draw a frame inside a frame on the one card a player reads
+   first. The plate is the frame. */
 .uga-command-front > span { grid-row: 1 / 3; width: 32px; height: 32px; display: grid; place-items: center; color: var(--uga-green); }
 .uga-command-front.is-warning > span { color: var(--uga-amber); }
 .uga-command-front.is-danger > span { color: #ff665e; }
@@ -176,50 +107,8 @@
 .uga-command-quick button:disabled { color: #5f717a; cursor: not-allowed; }
 .uga-command-quick .uga-svg { width: 15px; height: 15px; }
 .uga-command-quick span { overflow: hidden; font-size: 8px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.uga-command-war-table {
-  position: relative;
-  isolation: isolate;
-  min-height: 48px;
-  padding: 0 20px;
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto 16px;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid rgba(255, 181, 74, .5);
-  border-radius: 8px;
-  background: linear-gradient(110deg, rgba(100, 58, 11, .72), rgba(25, 25, 23, .9));
-  color: #ffe0a3;
-  text-align: left;
-  cursor: pointer;
-}
-.uga-command-war-table::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  border: 23px solid transparent;
-  border-image-source: var(--mf-gui-primary);
-  border-image-slice: 41.071429% 7.565789%;
-  border-image-width: 23px;
-}
-.uga-command-war-table > .uga-svg { width: 17px; height: 17px; }
-.uga-command-war-table span { font-size: 10px; font-weight: 800; letter-spacing: .1em; }
-.uga-command-war-table small { color: #c3a16e; font: 7px/1 Consolas, monospace; letter-spacing: .07em; }
-.uga-command-war-table:disabled { color: #64747b; border-color: var(--uga-line); background: rgba(29, 37, 41, .62); cursor: not-allowed; }
 
 @media (max-width: 480px) and (orientation: portrait) {
-  .uga-command-shell[data-view="classic"].is-sheet-expanded .uga-context-panel { height: min(62%, 368px); }
-  .uga-command-access { gap: 7px; }
-  .uga-command-access-title small { font-size: 7px; }
-  .uga-command-access-title h2 { font-size: 15px; }
-  .uga-command-mode-row { grid-auto-columns: 106px; gap: 5px; padding-bottom: 1px; }
-  .uga-command-mode { min-height: 72px; padding: 7px 19px 6px 7px; grid-template-columns: 21px minmax(0, 1fr); grid-template-rows: 14px 18px 15px; column-gap: 5px; }
-  .uga-command-mode > span { width: 21px; height: 21px; }
-  .uga-command-mode > span .uga-svg { width: 16px; height: 16px; }
-  .uga-command-mode strong { font-size: 10px; }
-  .uga-command-mode em { font-size: 7px; }
-  .uga-command-mode > .uga-svg { right: 6px; top: 29px; }
   .uga-command-front { min-height: 68px; padding: 7px 8px; grid-template-columns: 27px minmax(0, 1fr) 82px; gap: 3px 6px; }
   .uga-command-front > span { width: 27px; height: 27px; }
   .uga-command-front > span .uga-svg { width: 18px; height: 18px; }
@@ -230,8 +119,6 @@
   .uga-command-quick button { min-height: 44px; flex-direction: column; gap: 2px; }
   .uga-command-quick .uga-svg { width: 14px; height: 14px; }
   .uga-command-quick span { font-size: 7px; }
-  .uga-command-war-table { min-height: 44px; padding: 0 15px; grid-template-columns: 18px minmax(0, 1fr) auto 14px; gap: 6px; }
-  .uga-command-war-table small { font-size: 6px; }
 }
 
 .uga-command-shell[hidden] { display: none !important; }

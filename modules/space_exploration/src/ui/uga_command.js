@@ -899,7 +899,33 @@ export function createUgaCommand(options = {}) {
     }).join('');
   }
 
-  function classicTerminal() {
+  /* Situational awareness for the strategic home.
+
+     This is the one part of the retired classic terminal worth keeping. That
+     terminal was a second, unreachable "choose a deployment" screen carrying
+     its own mode picker, its own Build/Research/Craft row and its own War
+     Table button - a whole duplicate of the hub that no route could reach,
+     which is how the module ended up with three different answers to "what do
+     I play". Only this block said something the hub did not: where the
+     expedition actually is and how hard the front is pushing back. The
+     objective above says what to do next; this says what you are looking at. */
+  /* The five things a commander does to their own ship, in the one place they
+     are actually standing. These shortcuts existed only inside the retired
+     classic terminal, so every handler behind them - openCommandConstruction
+     for build and upgrade, the research route, the host Development and
+     Inventory routes - has been live and unreachable. Putting the row in the
+     strategic home is what finally connects "command the expedition" to
+     "change the ship it commands". */
+  function commandQuickPanel() {
+    return `<nav class="uga-command-quick" aria-label="Command quick access">
+      <button type="button" data-command-construction="build">${icon('build')}<span>Build</span></button>
+      <button type="button" data-hub-route="galactic-research">${icon('research')}<span>Research</span></button>
+      <button type="button" data-host-route="development" ${hostRoutesAvailable() ? '' : 'disabled aria-disabled="true"'}>${icon('fabricator')}<span>Craft</span></button>
+      <button type="button" data-command-construction="upgrade">${icon('upgrade')}<span>Upgrade</span></button>
+      <button type="button" data-hub-route="inventory">${icon('inventory')}<span>Inventory</span></button>
+    </nav>`;
+  }
+  function commandFrontPanel() {
     const state = getState();
     const systems = state.world?.systems || {};
     const systemId = state.route?.systemId || Object.keys(systems).find(id => systems[id]?.discovered) || 'aelos';
@@ -913,38 +939,12 @@ export function createUgaCommand(options = {}) {
     const systemCount = Object.keys(systems).length;
     const intelligence = Number(state.intelligence?.bySystem?.[systemId]) || 0;
     const operations = Array.isArray(state.operations?.history) ? state.operations.history.length : 0;
-    const modes = [
-      ['training', 'Guided live-fire'],
-      ['standard', 'Solo vs AI'],
-      ['campaign', 'Story missions'],
-      ['coop', 'Network unavailable'],
-      ['mmo', 'Authority unavailable']
-    ];
-    return `<div class="uga-context-scroll uga-command-access">
-      <div class="uga-command-access-title"><small>PLAY // BASIC ACCESS</small><h2>Choose a deployment</h2></div>
-      <div class="uga-command-mode-row" aria-label="Playable and unavailable MASSFRONT sessions">${modes.map(([id, detail]) => {
-        const entry = getCampaignHubRoute(id);
-        const reachable = hubRouteReachable(entry);
-        const locked = entry?.status === CAMPAIGN_HUB_ROUTE_STATUS.HOST_REQUIRED;
-        const status = reachable ? 'READY' : locked ? 'LOCKED' : 'BASE HOST';
-        const label = id === 'campaign' ? 'Campaign' : entry?.label || prettyToken(id);
-        return `<button type="button" class="uga-command-mode${reachable ? ' is-ready' : ' is-locked'}" data-command-mode="${escapeHtml(id)}" ${reachable ? `data-hub-route="${escapeHtml(id)}"` : 'disabled aria-disabled="true"'} aria-label="${escapeHtml(`${label}. ${status}. ${detail}`)}"><span>${icon(entry?.icon || 'terminal')}</span><small>${escapeHtml(status)}</small><strong>${escapeHtml(label)}</strong><em>${escapeHtml(detail)}</em>${icon(reachable ? 'chevron' : 'lock')}</button>`;
-      }).join('')}</div>
-      <section class="uga-command-front is-${frontTone}" aria-label="Current Galactic front status">
-        <span>${icon(infestation.confirmed ? 'warning' : 'overview')}</span>
-        <div><small>CURRENT SYSTEM</small><strong>${escapeHtml(prettyToken(systemId))}</strong><p>${escapeHtml(frontLabel)}${hasPressure ? ` · PRESSURE ${formatValue(pressure)}` : ''}</p></div>
-        <dl><div><dt>ROUTES</dt><dd>${formatValue(discovered)} / ${formatValue(systemCount)}</dd></div><div><dt>INTEL</dt><dd>${formatValue(intelligence)}</dd></div><div><dt>OPS</dt><dd>${formatValue(operations)}</dd></div></dl>
-        <button type="button" data-nav="galaxy">OPEN GALAXY${icon('chevron')}</button>
-      </section>
-      <nav class="uga-command-quick" aria-label="Command quick access">
-        <button type="button" data-command-construction="build">${icon('build')}<span>Build</span></button>
-        <button type="button" data-hub-route="galactic-research">${icon('research')}<span>Research</span></button>
-        <button type="button" data-host-route="development" ${hostRoutesAvailable() ? '' : 'disabled aria-disabled="true"'}>${icon('fabricator')}<span>Craft</span></button>
-        <button type="button" data-command-construction="upgrade">${icon('upgrade')}<span>Upgrade</span></button>
-        <button type="button" data-hub-route="inventory">${icon('inventory')}<span>Inventory</span></button>
-      </nav>
-      <button type="button" class="uga-command-war-table" data-host-route="war-room" ${hostRoutesAvailable() ? '' : 'disabled aria-disabled="true"'}>${icon('terminal')}<span>WAR TABLE</span><small>${hostRoutesAvailable() ? 'ALL BASE MODES' : 'BASE HOST REQUIRED'}</small>${icon('chevron')}</button>
-    </div>`;
+    return `<section class="uga-command-front is-${frontTone}" aria-label="Current Galactic front status">
+      <span>${icon(infestation.confirmed ? 'warning' : 'overview')}</span>
+      <div><small>CURRENT SYSTEM</small><strong>${escapeHtml(prettyToken(systemId))}</strong><p>${escapeHtml(frontLabel)}${hasPressure ? ` · PRESSURE ${formatValue(pressure)}` : ''}</p></div>
+      <dl><div><dt>ROUTES</dt><dd>${formatValue(discovered)} / ${formatValue(systemCount)}</dd></div><div><dt>INTEL</dt><dd>${formatValue(intelligence)}</dd></div><div><dt>OPS</dt><dd>${formatValue(operations)}</dd></div></dl>
+      <button type="button" data-nav="galaxy">OPEN GALAXY${icon('chevron')}</button>
+    </section>`;
   }
 
   function constructionQueueMarkup(status) {
@@ -1661,6 +1661,8 @@ export function createUgaCommand(options = {}) {
     return `<div class="uga-context-scroll uga-campaign-hub"><div class="uga-section-title"><small>MASSFRONT STRATEGIC HOME // UGA COMMAND</small><h2>Galactic Command</h2><p>Command the expedition, deploy tactical operations, and open career services from one strategic interface.</p></div>
       ${commandObjectivePanel()}
       <button type="button" class="uga-campaign-depart" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>
+      ${commandFrontPanel()}
+      ${commandQuickPanel()}
       ${basicAccessPanel()}</div>`;
   }
 

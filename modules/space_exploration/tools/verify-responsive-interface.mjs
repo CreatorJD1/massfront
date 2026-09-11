@@ -170,17 +170,18 @@ try {
       await page.evaluate(selector => document.querySelector(selector)?.click(), selector);
       await capture(viewportName, view);
     }
-    /* PLAY first opens the shallow Command access drawer so exploration stays
-       visible. Verify its single active dock state, then exercise the explicit
-       War Table escape and real Back control into this same strategic hub. */
+    /* PLAY opens Galactic Command - the single strategic home. Verify its one
+       active dock state, then exercise the War Table escape and real Back
+       control into that same hub. The War Table button lives in BASIC ACCESS
+       now; the separate classic terminal that used to own one is gone. */
     await page.click('[data-nav="classic"]');
-    await page.waitForSelector('.uga-command-shell[data-view="classic"] .uga-command-war-table', { timeout: 30_000 });
+    await page.waitForSelector('.uga-command-shell[data-view="campaign_hub"] .uga-basic-access [data-host-route="war-room"]', { timeout: 30_000 });
     const activeDock = await page.locator('.uga-command-nav button.is-active').evaluateAll(buttons => buttons.map(button => button.dataset.nav));
     if (activeDock.length !== 1 || activeDock[0] !== 'classic') errors.push(`route: ${viewportName} PLAY drawer active dock ${JSON.stringify(activeDock)}`);
     await Promise.all([
       page.waitForURL(current => current.pathname.endsWith('/index.html')
         && !current.pathname.includes('/modules/space_exploration/'), { timeout: 60_000 }),
-      page.click('.uga-command-war-table')
+      page.click('.uga-basic-access [data-host-route="war-room"]')
     ]);
     await page.waitForSelector('#warScr', { state: 'visible', timeout: 60_000 });
     // Direct module layout runs do not pass through the base account portal.
