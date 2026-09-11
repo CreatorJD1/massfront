@@ -148,4 +148,26 @@ for (const name of ['researchPanel', 'factionPanel', 'contractsPanel', 'intelPan
     `${name} must stay uga-context-scroll wrapped; withoutContextScroll silently passes anything else through`);
 }
 
+/* THE AMBER SIGNAL MEANS "HERE".
+
+   One action-level attention at a time, and it moves with the journey step:
+   the objective's own button normally, Depart on the survey step where the
+   objective deliberately renders no button of its own. Marking both would say
+   two things are urgent when one is, and the moment a third and fourth surface
+   wear this it stops meaning anything. */
+assert.match(uiSource, /class="uga-primary-button uga-attention" \$\{objective\.attrs\}/,
+  'the objective action must carry the attention signal');
+assert.match(uiSource, /const departAttention = objective\.step === 'scan' \? ' uga-attention' : ''/,
+  'Depart must carry the signal on the one step where Depart is the objective action');
+assert.match(uiSource, /uga-job-card is-\$\{escapeHtml\(job\.status \|\| 'queued'\)\}\$\{job\.status === 'active' \? ' uga-attention' : ''\}/,
+  'the active construction job is the unlock with an ETA and must be marked');
+assert.equal((uiSource.match(/uga-attention/g) || []).length, 3,
+  'attention is a scarce signal: exactly the objective action, Depart on survey, and the active job');
+
+/* Reduced motion drops the movement, never the signal - this is information
+   about what to do next, not decoration. */
+assert.match(uiCss, /@keyframes ugaAttention/, 'the attention signal must be a slow pulse');
+assert.match(uiCss, /prefers-reduced-motion: reduce\)\s*\{\s*\.uga-attention\s*\{[^}]*animation:\s*none;[^}]*box-shadow:/,
+  'reduced motion must keep the amber ring and drop only the animation');
+
 console.log('Galactic Campaign Hub product model: PASS');

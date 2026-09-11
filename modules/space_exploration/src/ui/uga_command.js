@@ -962,7 +962,7 @@ export function createUgaCommand(options = {}) {
         const facility = facilitiesCatalog(getCatalog())[job.facilityId] || {};
         const progress = Math.min(100, Math.floor((Number(job.workCompleted) || 0) / Math.max(1, Number(job.workRequired) || 1) * 100));
         const cancelKey = `cancel:${job.id}`;
-        return `<article class="uga-job-card is-${escapeHtml(job.status || 'queued')}">
+        return `<article class="uga-job-card is-${escapeHtml(job.status || 'queued')}${job.status === 'active' ? ' uga-attention' : ''}">
           <div class="uga-job-order"><b>${String(index + 1).padStart(2, '0')}</b><span>${escapeHtml(prettyToken(job.status || 'queued'))}</span></div>
           <div class="uga-job-copy"><small>${escapeHtml(prettyToken(job.kind))} · TIER ${formatValue(job.targetTier)}</small><b>${escapeHtml(facility.name || prettyToken(job.facilityId))}</b><div class="uga-job-progress"><i style="--value:${progress}%"></i><span>${formatValue(job.workCompleted)} / ${formatValue(job.workRequired)} WORK</span></div></div>
           <div class="uga-job-controls">
@@ -1678,8 +1678,7 @@ export function createUgaCommand(options = {}) {
     };
   }
 
-  function commandObjectivePanel() {
-    const objective = commandObjective();
+  function commandObjectivePanel(objective = commandObjective()) {
     /* Territory is the progress that matters — "operations cleared" counted
        paperwork, this counts ground held. Maps are shown alongside regions so a
        player mid-region sees movement instead of a stuck 0. */
@@ -1697,7 +1696,7 @@ export function createUgaCommand(options = {}) {
        step and Depart remains the single way to take it. Steps that go somewhere
        Depart cannot reach (hiring, preparing a deployment) keep their own action. */
     const action = objective.step === 'scan' ? ''
-      : `<button type="button" class="uga-primary-button" ${objective.attrs}>${escapeHtml(objective.label)}</button>`;
+      : `<button type="button" class="uga-primary-button uga-attention" ${objective.attrs}>${escapeHtml(objective.label)}</button>`;
     return `<section class="uga-objective is-${escapeHtml(objective.step)}" data-objective="${escapeHtml(objective.step)}">
       ${journeyRailMarkup(objective)}
       <header><small>${escapeHtml(objective.eyebrow)}</small><h3>${escapeHtml(objective.title)}</h3></header>
@@ -1708,9 +1707,19 @@ export function createUgaCommand(options = {}) {
   }
 
   function campaignHubPanel() {
+    /* ONE THING IS ASKING FOR YOU.
+
+       The journey always has exactly one next action, and on the survey step
+       that action is Depart - the objective deliberately renders no button of
+       its own there rather than duplicating the control directly below it. So
+       the attention signal has to move with the step: it sits on the
+       objective's own button when there is one, and on Depart when Depart is
+       the step. Marking both would say two things are urgent when one is. */
+    const objective = commandObjective();
+    const departAttention = objective.step === 'scan' ? ' uga-attention' : '';
     return `<div class="uga-context-scroll uga-campaign-hub"><div class="uga-section-title"><small>MASSFRONT STRATEGIC HOME // UGA COMMAND</small><h2>Galactic Command</h2><p>Command the expedition, deploy tactical operations, and open career services from one strategic interface.</p></div>
-      ${commandObjectivePanel()}
-      <button type="button" class="uga-campaign-depart" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>
+      ${commandObjectivePanel(objective)}
+      <button type="button" class="uga-campaign-depart${departAttention}" data-action="exit">${icon('chevron')}<span><small>EXPLORE THE FRONTIER</small><b>DEPART / RETURN TO ORBIT</b></span></button>
       ${commandFrontPanel()}
       ${commandQuickPanel()}
       ${basicAccessPanel()}</div>`;

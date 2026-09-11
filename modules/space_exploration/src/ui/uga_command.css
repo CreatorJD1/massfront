@@ -2478,3 +2478,28 @@
 .uga-basic-access.is-collapsed > header::after { transform: rotate(-45deg); margin-top: -2px; }
 .uga-basic-access.is-collapsed > *:not(header) { display: none; }
 @media (prefers-reduced-motion: reduce) { .uga-basic-access > header::after { transition: none; } }
+
+/* THE AMBER SIGNAL
+   One shared class for the two things a commander must not miss: the single
+   action that advances the journey, and the construction job whose completion
+   is the next unlock. It is a slow pulse rather than a fast one because this
+   is a strategic screen - a blink at UI speed reads as an error state, and
+   everything it lands on is already a legitimate control the player can take
+   their time over.
+
+   Scope is the whole point. The moment a third and fourth surface wear this,
+   it stops meaning "here" and becomes decoration, so the rule is: exactly one
+   action-level attention at a time plus any genuinely active job. Reduced
+   motion keeps the amber ring and drops only the movement - the signal is
+   information, not an effect, so it must survive the preference. */
+.uga-attention {
+  position: relative;
+  animation: ugaAttention 2600ms ease-in-out infinite;
+}
+@keyframes ugaAttention {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 181, 74, 0); }
+  50% { box-shadow: 0 0 0 3px rgba(255, 181, 74, .34), 0 0 20px rgba(255, 181, 74, .26); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .uga-attention { animation: none; box-shadow: 0 0 0 2px rgba(255, 181, 74, .44); }
+}
