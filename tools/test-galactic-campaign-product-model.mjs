@@ -24,6 +24,7 @@ assert.deepEqual(
   'Galactic Command must expose tactical deployments without presenting itself as a game mode'
 );
 
+const nlToken = '\n';
 const classic = getCampaignHubSessionType('standard-classic');
 const campaign = getCampaignHubSessionType('campaign');
 const network = getCampaignHubSessionType('coop-versus');
@@ -113,5 +114,38 @@ assert.match(uiCss, /data-view="campaign_hub"[\s\S]*?\.uga-context-panel[\s\S]*?
   'Campaign Hub must use the available compact stage instead of leaving an empty ship viewport');
 assert.match(uiCss, /\.uga-ground-route\s*\{[^}]*min-height:\s*54px/,
   'planet, control area, and battlefield choice must remain a compact touch-safe route');
+
+/* THE SHIP IS THE MENU.
+
+   Research, the Embassy, Mission Operations, the Survey archive, the crew
+   roster and the cargo hold are compartments aboard NEXUS-VII, and their
+   routes have to land in those compartments. A route that drifts back to a
+   free-floating view recreates the split this replaced: a player walks to the
+   Research Directorate to do research and finds a construction panel. */
+const ROOM_ROUTES = Object.freeze({ 'galactic-operations': 'mission_ops', 'galactic-research': 'research', 'galactic-intel': 'survey', factions: 'factions', crew: 'habitat', logistics: 'logistics' });
+const districtIds = new Set([...uiSource.matchAll(/^  (\w+): \{$/gm)].map(match => match[1]));
+for (const [routeId, districtId] of Object.entries(ROOM_ROUTES)) {
+  const target = getCampaignHubRoute(routeId)?.target;
+  assert.equal(target?.kind, 'district', `${routeId} must open the room that does the work, not a separate view`);
+  assert.equal(target.districtId, districtId, `${routeId} must open ${districtId}`);
+  assert.ok(districtIds.has(districtId), `${districtId} must be a district the UI can render`);
+}
+
+/* roomWorkBody takes one uga-context-scroll wrapper off each work panel so a
+   room renders one scroll, not two nested ones. It returns unrecognised markup
+   untouched rather than throwing, because a throw there would blank the
+   interface mid-session - which is exactly why the shape is asserted here
+   instead, where a panel that stops being wrapped fails a build and not a
+   player. */
+assert.match(uiSource, /function roomWorkBody\(districtId\)/, 'rooms must resolve their own work');
+assert.match(uiSource, /function withoutContextScroll\(markup\)/, 'room work must be unwrapped before it is embedded');
+for (const name of ['researchPanel', 'factionPanel', 'contractsPanel', 'intelPanel', 'crewPanel', 'logisticsPanel']) {
+  const start = uiSource.indexOf(`  function ${name}(`);
+  assert.ok(start > 0, `${name} must exist for its room to render it`);
+  const end = uiSource.indexOf(`${nlToken}  }${nlToken}`, start);
+  const body = uiSource.slice(start, end < 0 ? undefined : end);
+  assert.ok(body.includes('<div class="uga-context-scroll'),
+    `${name} must stay uga-context-scroll wrapped; withoutContextScroll silently passes anything else through`);
+}
 
 console.log('Galactic Campaign Hub product model: PASS');

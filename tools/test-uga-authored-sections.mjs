@@ -42,7 +42,12 @@ try {
   await page.evaluate(()=>window.__MASSFRONT_SPACE__.ready);
   const gpu=await assertHardwareGpu(page);
   await page.click('#btnUgaCommand');
-  await page.waitForFunction(()=>window.__MASSFRONT_SPACE__?.commandScene?.loaded);
+  /* UGA COMMAND opens the strategic hub with loadVisual:false - controls come up
+     immediately and the ship interior streams behind them. Only onDistrictFocus
+     calls requestUgaVisual, so waiting on commandScene.loaded straight off this
+     click waits forever. Enter a room the way a player does, then wait. */
+  await page.click('.uga-command-nav [data-nav="ship"]');
+  await page.waitForFunction(()=>window.__MASSFRONT_SPACE__?.commandScene?.loaded, null, {polling:250});
   for (const [viewport,size] of Object.entries({landscape:{width:1440,height:900},portrait:{width:412,height:900},phoneLandscape:{width:900,height:412}})) {
     await page.setViewportSize(size);
     await page.click('[data-action="overview"]');

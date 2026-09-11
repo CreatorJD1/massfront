@@ -1028,6 +1028,48 @@ export function createUgaCommand(options = {}) {
     </div>`;
   }
 
+  /* THE SHIP IS THE MENU.
+
+     NEXUS-VII commissions a Research Directorate, a Coalition Embassy, a
+     Mission Operations deck, a Survey Lab, a Habitat and a Logistics hold -
+     and until now standing in any of them showed tier plots and module
+     sockets, while the actual research, recruiting, contracts, archive,
+     roster and cargo lived under separate tabs that never mentioned a room.
+     A player who walked to the Research Directorate to do research found
+     construction. That is the same disconnect the Command Core had, repeated
+     five more times, and it is why the module read as a ship bolted to a menu
+     rather than a ship you command from.
+
+     A room now opens with its work and keeps its hardware below, so there is
+     one place each job happens and it is somewhere you can walk to. */
+  function roomWorkBody(districtId) {
+    /* Research is the one job that genuinely cannot happen until its room is
+       built, and the room already shows a commission card. Rendering the
+       panel's own offline notice above it would say the same thing twice. */
+    if (districtId === 'research') return getState().ship?.districts?.research?.commissioned === false ? '' : withoutContextScroll(researchPanel());
+    if (districtId === 'factions') return withoutContextScroll(factionPanel());
+    if (districtId === 'mission_ops') return withoutContextScroll(contractsPanel());
+    if (districtId === 'survey') return withoutContextScroll(intelPanel());
+    if (districtId === 'habitat') return withoutContextScroll(crewPanel());
+    if (districtId === 'logistics') return withoutContextScroll(logisticsPanel());
+    return '';
+  }
+
+  /* Each of those panels owns a uga-context-scroll because each is also a
+     whole context in its own right. Inside a room the district panel is
+     already providing one, so take exactly one wrapper off. A shape this does
+     not recognise is returned untouched - a nested scroll looks wrong but
+     still renders, where a throw here would blank the interface mid-session.
+     test-galactic-campaign-product-model.mjs asserts the shape instead, so a
+     panel that stops being scroll-wrapped fails a gate rather than a player. */
+  function withoutContextScroll(markup) {
+    const open = markup.indexOf('>');
+    const close = markup.lastIndexOf('</div>');
+    if (open < 0 || close <= open) return markup;
+    if (!markup.slice(0, open).includes('uga-context-scroll')) return markup;
+    if (markup.slice(close + 6).trim()) return markup;
+    return markup.slice(open + 1, close);
+  }
   function districtPanel() {
     const catalog = districtsCatalog(getCatalog());
     const definition = normalizeDistrict(selectedDistrictId, catalog);
@@ -1039,10 +1081,16 @@ export function createUgaCommand(options = {}) {
       ? Object.entries(capacity).map(([key, value]) => `${prettyToken(key)} ${formatValue(value)}`).join(' // ')
       : capacity ? `${formatValue(capacity)} CAPACITY` : '';
     const powerDraw = activeTier?.capacity?.powerDrawMW ?? definition.basePowerDrawMW ?? 10;
+    const work = roomWorkBody(selectedDistrictId);
 
     if (districtState.commissioned === false) return `<div class="uga-context-scroll">
       <div class="uga-context-heading"><div class="uga-heading-icon">${icon(selectedDistrictId)}</div><div><span class="uga-sector-pill is-${definition.sector}">${escapeHtml(definition.deckName)}</span><h2>${escapeHtml(definition.name)}</h2></div><div class="uga-heading-badges"><span class="uga-tier-badge">UNCOMMISSIONED</span></div></div>
       <p class="uga-district-description">${escapeHtml(definition.description)}</p>
+      ${/* A dark compartment does not suspend the job. Recruiting a resident
+           faction and reading contracts are how a commander reaches step 03,
+           and Mission Operations and the Embassy both start uncommissioned -
+           gating them behind their own construction would strand the player
+           in front of a commission card with no way to afford it. */ work}
       <section class="uga-commission-card"><div><small>VISIBLE COMPARTMENT // SYSTEMS OFFLINE</small><h3>Commission the Tier-1 core</h3><p>This district remains physically present aboard NEXUS-VII, but staffing, modules, and its operational controller stay locked until construction completes.</p></div><button type="button" class="uga-primary-button" data-action="open-construction">OPEN CONSTRUCTION</button></section>
     </div>`;
 
@@ -1058,6 +1106,8 @@ export function createUgaCommand(options = {}) {
           <span class="uga-tier-badge">${definition.fixed ? 'FIXED' : `TIER ${districtState.tier}`}</span>
         </div>
       </div>
+      ${work}
+      ${work ? `<div class="uga-section-title"><small>COMPARTMENT HARDWARE</small><h2>${escapeHtml(definition.name)} Systems</h2><p>Tier, staffing, module sockets and authorized architecture for this compartment.</p></div>` : ''}
       ${canUpgrade ? `<section class="uga-upgrade-block">
         <div><small>CURRENT TIER ${districtState.tier} · NEXT TIER ${districtState.tier + 1}</small><b>Choose your next facility</b><p>Compare benefits, costs and power before authorizing construction.</p></div>
         <button type="button" class="uga-primary-button" data-action="upgrade">VIEW TIER ${districtState.tier + 1} FACILITIES${icon('chevron')}</button>
@@ -1431,7 +1481,7 @@ export function createUgaCommand(options = {}) {
 
   function logisticsPanel() {
     const state = getState();
-    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>IMPLEMENTED // LOCAL CAMPAIGN CONTROLLER</small><h2>Logistics & Cargo</h2><p>Authoritative fuel, probes, materials, and expedition stores. Crafting uses the base game's Development screen; choose its Crafting tab.</p><button type="button" class="uga-primary-button" data-host-route="development" ${hostRoutesAvailable() ? '' : 'disabled'}>${hostRoutesAvailable() ? 'OPEN DEVELOPMENT · CRAFTING' : 'CRAFTING REQUIRES THE BASE GAME'}</button></div><div class="uga-logistics-grid">${Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => `<article>${icon(iconName)}<span>${escapeHtml(label)}</span><b>${formatValue(state.resources?.[key] ?? state.economy?.[key])}</b></article>`).join('')}</div><section class="uga-panel-section"><header><span>INSTALLED & STORED MODULES</span><small>01</small></header>${manifestRows(moduleManifest())}</section></div>`;
+    return `<div class="uga-context-scroll"><div class="uga-section-title"><small>IMPLEMENTED // LOCAL CAMPAIGN CONTROLLER</small><h2>Stores & Manifest</h2><p>Authoritative fuel, probes, materials, and expedition stores. Crafting uses the base game's Development screen; choose its Crafting tab.</p><button type="button" class="uga-primary-button" data-host-route="development" ${hostRoutesAvailable() ? '' : 'disabled'}>${hostRoutesAvailable() ? 'OPEN DEVELOPMENT · CRAFTING' : 'CRAFTING REQUIRES THE BASE GAME'}</button></div><div class="uga-logistics-grid">${Object.entries(RESOURCE_META).map(([key, [label, iconName]]) => `<article>${icon(iconName)}<span>${escapeHtml(label)}</span><b>${formatValue(state.resources?.[key] ?? state.economy?.[key])}</b></article>`).join('')}</div><section class="uga-panel-section"><header><span>INSTALLED & STORED MODULES</span><small>01</small></header>${manifestRows(moduleManifest())}</section></div>`;
   }
 
   function returnServicesPanel() {
@@ -1716,13 +1766,20 @@ export function createUgaCommand(options = {}) {
 
   function quickActions() {
     const active = entry => (entry.id === 'construction' && activeView === 'construction') ||
-      (entry.id === 'research' && activeView === 'research') ||
+      (entry.id === 'research' && (activeView === 'research' || (activeView === 'command' && selectedDistrictId === 'research'))) ||
       (entry.id === 'armory' && activeView === 'command' && selectedDistrictId === 'fabricator') ||
       (entry.id === 'hub' && activeView === 'campaign_hub');
     return CAMPAIGN_HUB_QUICK_NAV.map(entry => `<button type="button" data-quick="${escapeHtml(entry.id)}" class="${active(entry) ? 'is-active' : ''}">${icon(entry.icon)}<span>${escapeHtml(entry.label)}</span></button>`).join('');
   }
 
   function navigation() {
+    /* Exactly one dock lights, and Ship owns every compartment. Crew, Research
+       and the rest are shortcuts into rooms now, the way the Research pill in
+       quick access always was - being in a room is being on the ship, and the
+       Crew dock is not even rendered at narrow widths, so letting it claim the
+       Habitat would leave no dock lit at all there. The stale view tokens stay
+       in the lists so an older saved route still highlights something while it
+       resolves. */
     const active = id => (id === 'ship' && ['command', 'construction', 'return-services'].includes(activeView)) ||
       (id === 'missions' && ['progress', 'contracts', 'deployment'].includes(activeView)) ||
       (id === 'classic' && ['campaign_hub', 'classic'].includes(activeView)) ||

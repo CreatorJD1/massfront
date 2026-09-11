@@ -28,16 +28,24 @@ const sessionType = (id, label, icon, status, description, routeId = null, detai
   id, label, icon, status, description, routeId, detail
 });
 
+/* ROUTES LAND IN ROOMS.
+
+   Research, the Embassy, Mission Operations, the Survey archive, the crew
+   roster and the cargo hold are all compartments aboard NEXUS-VII, so their
+   routes target the district rather than a free-floating view. The view
+   tokens still resolve for anything holding an older route, but nothing here
+   issues them any more: a job should have one address, and it should be a
+   place on the ship. */
 export const CAMPAIGN_HUB_ROUTES = Object.freeze([
   route('galactic-operations', 'Galactic Expedition Operations', 'mission_ops', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
     'Open the local expedition contract board and deployment planner backed by Galactic campaign state.',
-    { kind: 'view', view: 'contracts' }, 'LOCAL GALACTIC CONTROLLER'),
+    { kind: 'district', districtId: 'mission_ops' }, 'LOCAL GALACTIC CONTROLLER'),
   route('galactic-research', 'Galactic Expedition Research', 'research', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
     'Open the local expedition research controller without leaving the shared strategic layer.',
-    { kind: 'view', view: 'research' }, 'LOCAL GALACTIC CONTROLLER'),
+    { kind: 'district', districtId: 'research' }, 'LOCAL GALACTIC CONTROLLER'),
   route('galactic-intel', 'Galactic Expedition Intel', 'intel', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
     'Inspect local expedition discoveries and intelligence recorded in Galactic campaign state.',
-    { kind: 'view', view: 'intel' }, 'LOCAL GALACTIC CONTROLLER'),
+    { kind: 'district', districtId: 'survey' }, 'LOCAL GALACTIC CONTROLLER'),
   route('operations', 'MASSFRONT Operations', 'contracts', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
     'Open the existing weekly operations and playable campaign mission ladder in MASSFRONT.',
     { kind: 'host-route', routeId: 'operations' }, 'LIVE MASSFRONT SUBMENU'),
@@ -73,13 +81,13 @@ export const CAMPAIGN_HUB_ROUTES = Object.freeze([
     { kind: 'view', view: 'inventory' }, 'READ-ONLY LOCAL MANIFEST'),
   route('factions', 'Factions & Embassy', 'factions', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
     'Manage resident coalition factions and inspect their campaign readiness from the Embassy controller.',
-    { kind: 'view', view: 'factions' }, 'LOCAL CAMPAIGN CONTROLLER'),
+    { kind: 'district', districtId: 'factions' }, 'LOCAL CAMPAIGN CONTROLLER'),
   route('crew', 'Crew & Profile', 'staff', CAMPAIGN_HUB_ROUTE_STATUS.LOCAL_PREVIEW,
     'Review the locally available commander and specialist roster. Account profile synchronization still requires a host.',
-    { kind: 'view', view: 'crew' }, 'READ-ONLY LOCAL ROSTER'),
+    { kind: 'district', districtId: 'habitat' }, 'READ-ONLY LOCAL ROSTER'),
   route('logistics', 'Logistics & Cargo', 'logistics', CAMPAIGN_HUB_ROUTE_STATUS.IMPLEMENTED,
     'Inspect fuel, probes, resources, and the expedition supply manifest from authoritative campaign state.',
-    { kind: 'view', view: 'logistics' }, 'LOCAL CAMPAIGN CONTROLLER'),
+    { kind: 'district', districtId: 'logistics' }, 'LOCAL CAMPAIGN CONTROLLER'),
   route('training', 'Training', 'terminal', CAMPAIGN_HUB_ROUTE_STATUS.HOST_ROUTE,
     'Enter the real KEEL-guided protected training operation.',
     { kind: 'host-route', routeId: 'mode-training' }, 'PLAYABLE MASSFRONT MODE'),
