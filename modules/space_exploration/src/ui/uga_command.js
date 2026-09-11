@@ -1696,6 +1696,19 @@ export function createUgaCommand(options = {}) {
     // legacy terminal implementation as a compatibility helper, but never
     // render a second mode picker inside Ship or through an old view token.
     if (activeView === 'classic') return campaignHubPanel();
+    /* COMMAND CORE IS GALACTIC COMMAND.
+       The ship commissions a command_core from the first launch - it is the one
+       district with its own facility id rather than the generic tier1 core - and
+       it renders as a room with a holo table and console banks. Standing in it
+       used to show a build panel, while the actual business of commanding the
+       galaxy lived under a separate Play tab that had no relationship to the
+       ship at all. That is why the module read as two products: the strategic
+       home was not a place, it was a menu that happened to ship alongside one.
+       Entering the room now IS entering Galactic Command. The room's
+       construction and upgrade detail is unchanged and still reached through the
+       build route, which is where changing the ship belongs - not in front of
+       the player every time they come to give an order. */
+    if (selectedDistrictId === 'command') return campaignHubPanel();
     return districtPanel();
   }
 
