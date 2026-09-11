@@ -1000,3 +1000,29 @@ svg { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-wi
     font-size: 8px;
   }
 }
+
+/* Persistent chrome dot. The base game marks unread mail and social activity
+   with a status dot; carrying the same signal here keeps one meaning for one
+   mark rather than teaching the player a second vocabulary in space. */
+.icon-action { position: relative; }
+.chrome-dot {
+  position: absolute; top: 5px; right: 5px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--uga-amber, #ffb54a);
+  box-shadow: 0 0 7px rgba(255, 181, 74, .75);
+}
+.chrome-dot[hidden] { display: none; }
+
+/* Chrome shares the resource row rather than the action nav. Seven 44px icon
+   actions do not fit a 412px topbar - adding mail, social and settings to the
+   nav silently pushed RECENTER and FULLSCREEN off the bar. The resource row has
+   spare width to its right, and status belongs beside status. */
+.space-chrome { display: none; }
+@media (max-width: 1024px) {
+  .space-chrome {
+    display: flex; align-items: center; gap: 4px;
+    grid-column: 1 / -1; order: 5; justify-self: end;
+    margin-top: -44px; margin-right: 4px; height: 40px;
+  }
+  .space-chrome .icon-action { min-width: 40px; min-height: 40px; padding: 5px; }
+}

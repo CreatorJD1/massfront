@@ -2147,6 +2147,24 @@ export function createSpaceExperience(container, options = {}) {
     // UGA COMMAND is the persistent strategic home, not a resume button for a
     // previously hidden ship inspector. Room art still streams only when the
     // player explicitly chooses a vessel/room action from that hub.
+    /* Mail, social and settings exist in the base game and are already routable
+       through openBaseRoute - the module simply never offered a way in, so a
+       player in space could not reach their inbox without leaving the module
+       entirely. These open the real base screens rather than module copies;
+       duplicating them here would be two implementations of one feature. When
+       there is no host (standalone module) the controls are hidden rather than
+       dead, matching how host-owned routes are handled everywhere else. */
+    const hostChrome = typeof host.openBaseRoute === 'function';
+    const openHostChrome = routeId => host.openBaseRoute(routeId, {
+      systemId: state.route.systemId,
+      targetId: selectedTarget?.id || state.route.targetId || null
+    });
+    for (const [id, routeId] of [['btnSpaceInbox', 'inbox'], ['btnSpaceSocial', 'social'], ['btnSpaceSettings', 'settings']]) {
+      const button = $(id);
+      if (!button) continue;
+      if (!hostChrome) { button.hidden = true; continue; }
+      listen(button, 'click', () => { openHostChrome(routeId); });
+    }
     listen($('btnUgaCommand'), 'click', () => openCampaignHub());
     listen($('btnGalaxyMap'), 'click', openGalaxy);
     listen($('btnAutopilotMap'), 'click', openGalaxy);
