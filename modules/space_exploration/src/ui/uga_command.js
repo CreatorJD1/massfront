@@ -1218,6 +1218,11 @@ export function createUgaCommand(options = {}) {
     </section>`;
   }
 
+  function debriefCount(state) {
+    const history = state?.operations?.history;
+    return Array.isArray(history) ? history.length : 0;
+  }
+
   function contractsPanel() {
     const catalog = getCatalog();
     const state = getState();
@@ -1225,6 +1230,8 @@ export function createUgaCommand(options = {}) {
     return `<div class="uga-context-scroll">
       <div class="uga-section-title"><small>SPONSORSHIP AND ELIGIBILITY</small><h2>Contracts</h2><p>Faction conflicts require their resident sponsor. Brood purges are issued only by UGA.</p></div>
       ${!state.commissioning?.completed ? `<section class="uga-commission-card"><div><h3>Hire your first commander</h3><p>Choose a faction and complete commander hiring before planning ground missions. Once hired, select an available commander from that faction in the Deployment Hangar.</p></div><button type="button" class="uga-primary-button" data-host-route="new-career-faction" ${hostRoutesAvailable() ? '' : 'disabled'}>HIRE COMMANDER</button></section>` : ''}
+      <section class="uga-panel-section" aria-label="Available operations">
+        <header><span>AVAILABLE OPERATIONS</span><small>${String(missions.length).padStart(2, '0')}</small></header>
       <div class="uga-record-list">${missions.length ? missions.map(mission => {
         const locks = missionLocks(mission, state);
         const isBrood = isBroodMission(mission);
@@ -1242,7 +1249,19 @@ export function createUgaCommand(options = {}) {
           ${locks.length ? `<ul>${locks.map(lock => `<li>${icon('lock')}${escapeHtml(lock)}</li>`).join('')}</ul>` : `<span class="uga-mission-ready">${icon('check')} READY FOR PLANNING</span>`}
         </button>`;
       }).join('') : '<div class="uga-empty-state">No operation packages are currently available.</div>'}</div>
-      ${debriefArchive(state, catalog)}
+      </section>
+      /* AN OPERATION BOARD IS NOT A BRIEFING DOCUMENT.
+         Mission Operations measured 902 words in one scroll where the next
+         densest compartment held 284. Every contract was rendering its full
+         summary, its lock list and its sponsor line at once, and the debrief
+         archive sat underneath at the same weight as the live board - so the
+         thing you came to do was buried under the thing you already did. Both
+         are shelves now, and a player who has read their debriefs folds them
+         away for good. */
+      <section class="uga-panel-section" aria-label="Operation debriefs">
+        <header><span>DEBRIEF ARCHIVE</span><small>${String(debriefCount(state)).padStart(2, '0')}</small></header>
+        ${debriefArchive(state, catalog)}
+      </section>
     </div>`;
   }
 
@@ -2071,7 +2090,13 @@ export function createUgaCommand(options = {}) {
      Collapsed state is per-section and remembered for the session: a player who
      folds SPECIALIST STATIONS away is telling us they are not working on that
      right now, and reopening the district should respect that. */
-  const collapsedSections = new Set();
+  /* Seeded, not empty. Shelving the operation board cut nothing on its own
+     because both shelves opened by default - the measured density actually
+     rose. What a player came to Mission Operations to do is take a contract;
+     the archive of what they already did is reference, and reference starts
+     folded. They are the only two surfaces that open closed, and reopening one
+     is remembered for the session like any other fold. */
+  const collapsedSections = new Set(['DEBRIEF ARCHIVE', 'VISUAL UPGRADES & ARCHITECTURE']);
   function sectionKey(section) {
     const label = section.querySelector('header span, header small');
     return label ? label.textContent.trim() : '';

@@ -395,7 +395,7 @@
 .uga-tier-badge { padding: 6px 7px; color: var(--uga-amber); border: 1px solid rgba(255, 181, 74, .42); background: rgba(111, 63, 8, .18); font: 7px/1 Consolas, monospace; letter-spacing: .12em; }
 
 .uga-tier-rail { height: 29px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 12px 0 10px; }
-.uga-tier-rail span { position: relative; display: flex; align-items: center; padding: 0 7px; gap: 6px; color: #526d7d; border: 1px solid rgba(98, 151, 175, .14); background: rgba(26, 55, 69, .14); }
+.uga-tier-rail span { position: relative; display: flex; align-items: center; padding: 0 7px; gap: 6px; color: #6f8fa3; border: 1px solid rgba(98, 151, 175, .14); background: rgba(26, 55, 69, .14); }
 .uga-tier-rail span i { width: 5px; height: 5px; border: 1px solid currentColor; transform: rotate(45deg); }
 .uga-tier-rail span b { font: 7px/1 Consolas, monospace; }
 .uga-tier-rail span.is-on { color: var(--uga-cyan); border-color: rgba(66, 221, 255, .3); background: rgba(19, 98, 126, .22); }
@@ -408,20 +408,20 @@
 @keyframes uga-pulse { 50% { opacity: .35; } }
 
 .uga-panel-section { margin-top: 12px; }
-.uga-panel-section > header { height: 23px; display: flex; align-items: center; justify-content: space-between; color: #9db8ca; border-bottom: 1px solid rgba(92, 196, 232, .18); }
+.uga-panel-section > header { min-height: 44px; display: flex; align-items: center; justify-content: space-between; color: #9db8ca; border-bottom: 1px solid rgba(92, 196, 232, .18); }
 .uga-panel-section > header span { font-size: 7px; font-weight: 800; letter-spacing: .13em; }
-.uga-panel-section > header small { color: #405f73; font: 7px/1 Consolas, monospace; }
+.uga-panel-section > header small { color: #6f8fa3; font: 9px/1 Consolas, monospace; }
 
-.uga-feature { min-height: 31px; display: flex; align-items: center; gap: 8px; padding: 5px 3px; color: #597487; border-bottom: 1px solid rgba(92, 196, 232, .08); }
+.uga-feature { min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 5px 3px; color: #6f8fa3; border-bottom: 1px solid rgba(92, 196, 232, .08); }
 .uga-feature .uga-svg { width: 13px; height: 13px; }
 .uga-feature span { display: grid; grid-template-columns: 48px 1fr; align-items: center; gap: 7px; font-size: 8px; }
-.uga-feature span b { color: #516b7d; font: 6px/1 Consolas, monospace; }
+.uga-feature span b { color: #6f8fa3; font: 7px/1 Consolas, monospace; }
 .uga-feature.is-unlocked { color: #c4dbe9; }
 .uga-feature.is-unlocked .uga-svg, .uga-feature.is-unlocked span b { color: var(--uga-green); }
 
 .uga-socket-list { margin-top: 3px; }
 .uga-socket { min-height: 46px; display: grid; grid-template-columns: 31px minmax(75px, 1fr) minmax(84px, .8fr) auto; align-items: center; gap: 7px; border-bottom: 1px solid rgba(92, 196, 232, .1); }
-.uga-socket.is-locked { color: #526b7b; }
+.uga-socket.is-locked { color: #7b9cb0; }
 .uga-socket-mark { position: relative; width: 28px; height: 28px; display: grid; place-items: center; color: var(--uga-cyan); border: 1px solid rgba(66, 221, 255, .26); }
 .uga-socket-mark .uga-svg { width: 13px; height: 13px; }
 .uga-socket-mark span { position: absolute; top: -4px; right: -4px; padding: 1px 2px; color: #7696a8; background: #07131d; font: 5px/1 Consolas, monospace; }
@@ -793,7 +793,7 @@
 .uga-hub-route.is-local-preview .uga-hub-route-copy > div > span { color: var(--uga-amber); }
 .uga-hub-route.is-host-required .uga-hub-route-copy > div > span { color: #7d91a0; }
 .uga-hub-route-copy p { margin: 4px 0; color: #91a9b8; font-size: 8px; line-height: 1.4; overflow-wrap: anywhere; }
-.uga-hub-route-copy small { display: block; color: #5d7b8e; font: 6px/1.2 Consolas, monospace; letter-spacing: .08em; }
+.uga-hub-route-copy small { display: block; color: #88a9bd; font: 8px/1.2 Consolas, monospace; letter-spacing: .08em; }
 .uga-hub-route > button {
   min-width: 82px;
   min-height: 44px;
@@ -2521,3 +2521,19 @@
   top: var(--uga-gap);
   height: auto;
 }
+
+/* AUDIT FLOOR
+   Measured on 2026-09-11 across eleven compartments and five menus at 412x900
+   and 915x412: 66 controls under the 44px minimum and 183 text runs under the
+   WCAG AA floor, the worst at 2.88:1 in 7px type. Both had a single cause -
+   captions that became controls without being resized, and a 6-7px monospace
+   scale inherited from a desktop mock.
+
+   Only the tap floor is set globally, because that one is unconditional: a
+   thing you press is at least 44px regardless of what it says. The type fixes
+   above are deliberately per-rule instead - a blanket minimum font-size would
+   reflow components this audit never measured, and guessing at a hundred
+   surfaces is how you trade a contrast problem for a layout one. The rest of
+   the 6-7px scale is logged in the audit and gets measured before it moves. */
+.uga-panel-section > header,
+.uga-basic-access > header { min-height: 44px; }
