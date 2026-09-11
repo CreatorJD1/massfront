@@ -1944,11 +1944,47 @@ export function createUgaCommand(options = {}) {
     // no longer buys visibility and makes the upgrade path undiscoverable.
     sheetExpanded = true;
     render();
+    applyCollapsedSections();
     if (emit) call('onDistrictFocus', id);
     return api;
   }
 
+  /* CATEGORIES THAT FOLD.
+     The hub stacked every section open at once, so a district view was a wall
+     of text boxes and the thing a player actually wanted was somewhere down a
+     scroll. These sections already share one header shape with a number, so
+     folding is a behaviour on the existing pattern rather than a new component.
+     Collapsed state is per-section and remembered for the session: a player who
+     folds SPECIALIST STATIONS away is telling us they are not working on that
+     right now, and reopening the district should respect that. */
+  const collapsedSections = new Set();
+  function sectionKey(section) {
+    const label = section.querySelector('header span');
+    return label ? label.textContent.trim() : '';
+  }
+  function applyCollapsedSections() {
+    for (const section of root.querySelectorAll('.uga-panel-section')) {
+      const header = section.querySelector('header');
+      if (!header) continue;
+      const key = sectionKey(section);
+      const collapsed = collapsedSections.has(key);
+      section.classList.toggle('is-collapsed', collapsed);
+      header.setAttribute('role', 'button');
+      header.setAttribute('tabindex', '0');
+      header.setAttribute('aria-expanded', String(!collapsed));
+      header.setAttribute('aria-label', `${key || 'Section'}, ${collapsed ? 'collapsed' : 'expanded'}`);
+    }
+  }
   root.addEventListener('click', event => {
+    const sectionHeader = event.target.closest('.uga-panel-section > header');
+    if (sectionHeader && root.contains(sectionHeader) && !event.target.closest('button')) {
+      const section = sectionHeader.parentElement;
+      const key = sectionKey(section);
+      if (collapsedSections.has(key)) collapsedSections.delete(key); else collapsedSections.add(key);
+      applyCollapsedSections();
+      if (typeof sfx === 'function') sfx('ui');
+      return;
+    }
     const button = event.target.closest('button');
     if (!button || !root.contains(button)) return;
     if (button.dataset.deckFilter) {

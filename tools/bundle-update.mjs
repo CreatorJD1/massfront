@@ -194,7 +194,13 @@ const inlineOtaBinaryRefs=text=>{
     /* Longest first. `./assets/...` is a suffix of `../../assets/...`; doing
        the short replacement first used to create the invalid `../.data:` URL
        in every retained OTA stylesheet. */
-    const refs=['../../'+asset.path,'./'+asset.path,asset.path];
+    /* Longest first, always. '../../assets/x' contains 'assets/x', so a short
+       replacement run first rewrites the tail and leaves '../../data:...' -
+       the corrupt URL the guard below catches. The four-level form is what
+       modules/space_exploration/src/ui/*.css needs to reach the repo root;
+       without it the module could not reference any authored UI art over OTA,
+       which is why that module was built entirely on CSS gradients. */
+    const refs=['../../../../'+asset.path,'../../'+asset.path,'./'+asset.path,asset.path];
     for(const ref of refs) out=out.split(ref).join(asset.uri);
   }
   return out;

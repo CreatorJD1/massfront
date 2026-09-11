@@ -2511,3 +2511,48 @@
   .uga-journey-step, .uga-journey-keel { animation: none; }
   .uga-journey-step { transition: none; }
 }
+
+/* AUTHORED PLATE ON THE DIRECTIVE CARD
+   The module drew every surface with CSS gradients while the main menu ran on
+   the authored UI Production V3 pack, so the two halves of the game did not
+   look like the same product. It was not a choice: the OTA inliner only
+   resolved '../../assets/...', and this stylesheet sits four levels deep, so
+   any authored reference here would have shipped as a corrupt data URL.
+   bundle-update.mjs now resolves the module depth, so the pack is reachable.
+
+   Slice comes from ASSET_MANIFEST.json, not from measuring the PNG:
+   borders_logical [24,24,24,24] x (png_2x 768 / logical 384) = 48. The border
+   box stays at the logical 24px so the plate's chamfers land at authored size
+   rather than being stretched to whatever the card happens to be. */
+.uga-objective {
+  border: 24px solid transparent;
+  border-image: url('../../../../assets/textures/ui/mf-ui-v3/panel_player_info.png') 48 fill / 24px / 0 stretch;
+  background: none;
+  padding: 2px 6px 10px;
+}
+/* The plate supplies the frame, so the amber rule that used to stand in for one
+   would now read as a second border drawn over authored art. */
+.uga-objective.is-commission,
+.uga-objective[data-objective] { box-shadow: none; }
+
+/* FOLDABLE CATEGORIES
+   Header carries the affordance so the whole bar is the target - a 12px
+   chevron is not a touch target, and the header already spans the panel. */
+.uga-panel-section > header { cursor: pointer; position: relative; padding-right: 26px; user-select: none; }
+.uga-panel-section > header::after {
+  content: ""; position: absolute; right: 9px; top: 50%;
+  width: 7px; height: 7px; margin-top: -5px;
+  border-right: 1.5px solid var(--uga-cyan, #4fd8ff);
+  border-bottom: 1.5px solid var(--uga-cyan, #4fd8ff);
+  transform: rotate(45deg);
+  transition: transform .2s ease;
+}
+.uga-panel-section.is-collapsed > header::after { transform: rotate(-45deg); margin-top: -2px; }
+.uga-panel-section.is-collapsed > *:not(header) { display: none; }
+/* A folded section still reports what it is hiding, so folding does not mean
+   forgetting. */
+.uga-panel-section.is-collapsed > header { opacity: .72; }
+.uga-panel-section > header:focus-visible { outline: 2px solid var(--uga-cyan, #4fd8ff); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .uga-panel-section > header::after { transition: none; }
+}
