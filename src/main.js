@@ -1469,6 +1469,43 @@ function stopAttract(){
      so a landscape desktop window is not stuck with the hidden-canvas size. */
   if(typeof resize==='function') resize();
 }
+/* A FROZEN MATCH MUST SAY SO.
+
+   frame() schedules its own next frame on its FIRST line, then runs the whole
+   simulation step unguarded. One exception anywhere in that step - a bad unit,
+   a null structure, a malformed order - and the rest of the frame never runs,
+   while requestAnimationFrame keeps firing forever. The result is the worst
+   shape a failure can take: the canvas holds its last good frame, HUD CSS
+   animations and audio keep playing so the game looks alive, pause does nothing
+   because `paused` is only read inside the body that is throwing, and queued
+   abilities are never consumed. The player reports "it froze" and there is
+   nothing in the log, because the same error is thrown and discarded sixty
+   times a second with no one listening.
+
+   This does not swallow the error and carry on - continuing a deterministic
+   simulation past an exception is how you turn a crash into a desync. It stops
+   the match deliberately, once, and names the cause: console, a visible toast,
+   and window.mfSimFailure so a probe or a bug report can read it back. A halted
+   match that explains itself can be diagnosed; a silent freeze cannot. */
+let mfSimFailure=null;
+function mfReportSimFailure(error,phase){
+  if(mfSimFailure) return;
+  const detail={
+    phase:phase||'sim',
+    message:String(error&&error.message||error),
+    stack:String(error&&error.stack||''),
+    tick:typeof tick==='number'?tick:null,
+    clock:typeof matchClock==='number'?matchClock:null,
+    when:new Date().toISOString()
+  };
+  mfSimFailure=detail;
+  try{window.mfSimFailure=detail;}catch(e){}
+  try{console.error('MASSFRONT '+detail.phase+' failure at tick '+detail.tick,error);}catch(e){}
+  /* Halt rather than repeat. The next frame would throw in the same place. */
+  try{paused=true;}catch(e){}
+  try{if(typeof toast==='function')toast('Simulation halted: '+detail.message.slice(0,80));}catch(e){}
+}
+
 function frame(ts){
   requestAnimationFrame(frame);
   if(typeof mfPerfFrameBegin==='function') mfPerfFrameBegin();
@@ -1538,6 +1575,7 @@ function frame(ts){
   if(running&&!paused&&!gameEnded){
     if(typeof mfPerfBegin==='function') mfPerfBegin('sim');
     const simDt=MF_SIM_DT;
+    try{
     acc+=dt*gameSpeed;
     const debtCap=simDt*MF_SIM_DEBT_TICKS;
     if(acc>debtCap){mfSimDebtClamped+=Math.floor((acc-debtCap)/simDt);acc=debtCap;}
@@ -1634,6 +1672,7 @@ function frame(ts){
       checkVictory();
       if(gameEnded){acc=0;break;}
     }
+    }catch(error){ mfReportSimFailure(error,'sim'); }
     if(typeof mfPerfEnd==='function') mfPerfEnd('sim');
   }
   if(!running && attractOn && attractVisible){
