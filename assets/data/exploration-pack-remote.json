@@ -1,10 +1,10 @@
 {
   "schema": "MassfrontExplorationPackRemoteV2",
   "kind": "ExplorationPackRemote",
-  "version": "1.33.86",
-  "base": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.86/content-r1/",
-  "manifest": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.86/content-r1/exploration-content-manifest-v2.json",
-  "manifestSha256": "f3950556f3c24ddbbf2c54a28e07ca79c360aaffb2934b0a463766416300c239",
+  "version": "1.33.87",
+  "base": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/content-r1/",
+  "manifest": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/content-r1/exploration-content-manifest-v2.json",
+  "manifestSha256": "c2306ec6145952049b15eaa6a757af01a4b8661623f0b7285a725b5f69660859",
   "manifestBytes": 246328,
   "downloadQuery": ""
 }
