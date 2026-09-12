@@ -428,6 +428,25 @@
 .uga-socket-copy { min-width: 0; }
 .uga-socket-copy small { display: block; color: #6e8b9d; font-size: 6px; line-height: 1; text-transform: uppercase; }
 .uga-socket-copy b { display: block; margin-top: 4px; font-size: 7px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* What an installed module does, under its name. constructionEffectMarkup
+   emits bare <span>s meant for a flex row, so without this they inherit the
+   <em> italic and butt straight into one another — "survey intelligence10 MW
+   draw" on one line at body size. Small, upright, and spaced apart. */
+.uga-socket-effects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-top: 3px;
+  font-style: normal;
+  font-size: 6px;
+  line-height: 1.25;
+  color: #6e8b9d;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.uga-socket-effects span { display: inline-flex; gap: 3px; white-space: nowrap; }
+.uga-socket-effects b { color: #8fd8ff; font-size: 6px; font-weight: 700; }
+
 .uga-module-picker select, .uga-deployment-planner select {
   width: 100%;
   min-height: 44px;
