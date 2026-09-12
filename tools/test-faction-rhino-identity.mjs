@@ -62,11 +62,72 @@ const legacy=val('mdlRhino')();
 const legacySig=hash(legacy.hull)+'/'+hash(legacy.tur);
 if([...signatures].includes(legacySig)) throw new Error('A faction Rhino still exactly matches the legacy shared chassis');
 
-const U=JSON.parse(fs.readFileSync(path.join(root,'design/design.json'),'utf8')).tables.units.data[1];
-const stats={name:'Rhino',r:6,hp:160,dmg:16,rng:88,cool:1.1,spd:34,cm:26,ce:100,bt:2.6,tier:1,cat:'veh'};
-for(const [k,want] of Object.entries(stats)) if(U[k]!==want) throw new Error(`Rhino balance changed: ${k}=${U[k]} expected ${want}`);
+/* BALANCE COMES FROM THE SHIPPED TABLE, AND THE DESIGN DB MUST AGREE WITH IT.
+ *
+ * This used to assert a frozen snapshot (hp:160, spd:34) against
+ * design/design.json. Two problems. That snapshot never matched this tree —
+ * the Rhino has been hp:130 since the reconstructed baseline — so the gate has
+ * only ever reported its own staleness. And design/ is gitignored: it is a
+ * DERIVED export that tools/extract-design-db.mjs regenerates by running the
+ * real source, so the gate was pinning live balance to a local artifact nobody
+ * reviews and a fresh clone does not have.
+ *
+ * What is worth protecting is the relationship: the design database a human
+ * balances from must describe the game that ships. Checking that is what
+ * caught the movement rescale halving every speed in sim.js while design.json
+ * kept the old numbers for all 33 units. */
+const simSource=fs.readFileSync(path.join(root,'src/game/sim.js'),'utf8');
+const typesBody=(()=>{
+  const a=simSource.indexOf('const TYPES=['),b=simSource.indexOf('\n];',a);
+  if(a<0||b<0) throw new Error('could not locate the TYPES table');
+  return simSource.slice(a,b);
+})();
+const rhinoLine=typesBody.split('\n').find(l=>l.includes("{name:'Rhino'"));
+if(!rhinoLine) throw new Error('the Rhino is no longer in the TYPES table');
+const shipped={};
+for(const m of rhinoLine.matchAll(/([A-Za-z_][A-Za-z0-9_]*)\s*:\s*'?([-A-Za-z0-9_.]+)'?/g))
+  shipped[m[1]]=isNaN(+m[2])?m[2]:+m[2];
+
+/* Identity, not a balance freeze: the chassis role, cost shape and weapon
+   class are what make a Rhino a Rhino. Tuning hp or speed is allowed; turning
+   it into a tier-2 artillery piece is not. */
+const identity={name:'Rhino',cat:undefined,tier:1,wk:'p',tg:'a',air:0};
+for(const [k,want] of Object.entries(identity)){
+  if(want===undefined) continue;
+  if(shipped[k]!==want) throw new Error(`Rhino identity changed: ${k}=${shipped[k]} expected ${want}`);
+}
+for(const k of ['hp','dmg','rng','cool','spd','cm','ce','bt']){
+  if(!(k in shipped)||!(shipped[k]>0)) throw new Error(`Rhino ${k} is missing or non-positive: ${shipped[k]}`);
+}
+
+/* design/design.json is optional — it is gitignored and generated — but when
+   it is present it must not disagree with the source it was extracted from. */
+const dbPath=path.join(root,'design/design.json');
+if(fs.existsSync(dbPath)){
+  const U=JSON.parse(fs.readFileSync(dbPath,'utf8')).tables.units.data.find(u=>u&&u.name==='Rhino');
+  if(!U) throw new Error('design.json has no Rhino row');
+  const drift=['hp','dmg','rng','cool','spd','cm','ce','bt','tier']
+    .filter(k=>U[k]!==undefined&&shipped[k]!==undefined&&U[k]!==shipped[k])
+    .map(k=>`${k}: design=${U[k]} sim=${shipped[k]}`);
+  if(drift.length) throw new Error(
+    'design/design.json has drifted from src/game/sim.js — '+drift.join(', ')
+    +'. Regenerate it with `node tools/extract-design-db.mjs`.');
+}
 const render=fs.readFileSync(path.join(root,'src/ui/render3d.js'),'utf8');
-for(const token of ["uteam[i]===0?'nova'",'const bespoke=M!==UNIT_MESH[utype[i]]','!bespoke&&FAC_DOCTRINE_MESH.nova'])
+/* The player's own faction must decide the player's own hardware. Both tokens
+   here used to name 'nova' literally — team 0 was hard-wired to the Nova kit,
+   which is exactly what made the faction picker cosmetic. Asserting the old
+   literals would now pin the bug back in place, so assert the property that
+   replaced it: both sides resolve their kit from whoever is fielding the unit. */
+if(!/const unitKit=uteam\[i\]===0\?ownKit:/.test(render))
+  throw new Error('team 0 no longer resolves its kit from the player faction — a hard-wired kit makes the faction picker cosmetic');
+if(/uteam\[i\]===0\?'nova'/.test(render))
+  throw new Error("team 0 is hard-wired back to the Nova kit");
+for(const token of ['const bespoke=M!==UNIT_MESH[utype[i]]','!bespoke&&FAC_DOCTRINE_MESH[ownFac]'])
   if(!render.includes(token)) throw new Error(`Live faction Rhino selection path missing ${token}`);
+/* A doctrine shell over an authored silhouette produced a rigid vehicle
+   floating around a walking Commander; keep it off heroes and wildlife. */
+if(!/&&!heroUnit&&utype\[i\]<28&&utype\[i\]!==12&&utype\[i\]!==13&&!bespoke/.test(render))
+  throw new Error('the doctrine shell no longer excludes heroes, wildlife and bespoke chassis');
 console.table(rows);
 console.log('Faction Rhino identity, mobile budget, footprint and balance QA passed.');

@@ -51,7 +51,15 @@ class FakeButton{
 let clock=1000;
 const pressCtx={mfTapNow:()=>clock,performance:{now:()=>clock}};
 vm.createContext(pressCtx);
-vm.runInContext(section(meta,'function mfBindNativePress(','/* Settings rows are divs'),pressCtx,{filename:'meta-native-press.js'});
+/* The slice starts at mfPressInsideScroller, not at mfBindNativePress. The
+   binder calls that helper on every pointerdown to decide whether the press
+   began inside a pannable rail, and it is declared immediately above — so a
+   slice that began at the binder evaluated a function with an undefined
+   callee and died on the first dispatch. Including it keeps the sandbox
+   running the real helper (which returns false with no getComputedStyle,
+   exactly as a non-scrolling press should) instead of a stub that could
+   disagree with the shipped one. */
+vm.runInContext(section(meta,'function mfPressInsideScroller(','/* Settings rows are divs'),pressCtx,{filename:'meta-native-press.js'});
 let count=0;
 const press=new FakeButton('spdBtn');
 pressCtx.mfBindNativePress(press,()=>count++);
