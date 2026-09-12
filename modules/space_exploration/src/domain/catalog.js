@@ -116,7 +116,13 @@ export const FACTION_CATALOG = deepFreeze({
   },
   nova: {
     id: 'nova',
-    name: 'Nova Coalition',
+    /* The canonical name, from src/faction-id.js. This read "Nova Coalition",
+       which is not merely a different label: the identity seam resolves any
+       name containing "coalition" to the Syndicate before it ever looks for
+       "nova", so the player's own faction canonicalised to a DIFFERENT faction
+       — wrong runtime key and wrong art kit — anywhere an exploration name was
+       fed back through it. The other three entries here already match. */
+    name: 'Terran Frontline Command',
     shortName: 'Nova',
     role: 'precision_expeditionary_force',
     hireable: true,

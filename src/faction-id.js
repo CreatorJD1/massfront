@@ -12,10 +12,18 @@
   Object.keys(DEF).forEach(function(id){LOOKUP[id]=id;DEF[id].aliases.forEach(function(a){LOOKUP[a]=id;});});
   function clean(v){return String(v==null?'':v).trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');}
   function canonical(v){var s=clean(v);if(!s)return null;if(s==='random')return 'random';if(LOOKUP[s])return LOOKUP[s];
-    if(s.includes('machine')||s.includes('syndicate')||s.includes('coalition'))return 'syndicate';
+    /* DISTINCTIVE TOKENS BEFORE SHARED ONES.
+       'coalition' belongs to two factions — Syndicate Coalition, and the
+       legacy Nova Coalition name — so matching it first meant any Nova string
+       carrying that word resolved to the Syndicate: wrong runtime key, wrong
+       art kit, silently. A faction's own name has to outrank a generic word
+       that several of them share. The exact-alias LOOKUP above still wins over
+       all of this; these are only the fuzzy fallbacks. */
+    if(s.includes('nova')||s.includes('terran')||s.includes('frontline')||s.includes('federation'))return 'nova';
     if(s.includes('brood')||s.includes('horde')||s.includes('infestation')||s.includes('swarm'))return 'brood';
     if(s.includes('dominion')||s.includes('legion')||s.includes('red ascendancy')||s==='ascendancy')return 'dominion';
-    if(s.includes('nova')||s.includes('terran')||s.includes('frontline')||s.includes('federation'))return 'nova';return null;
+    if(s.includes('machine')||s.includes('syndicate')||s.includes('coalition'))return 'syndicate';
+    return null;
   }
   function runtime(v){var id=canonical(v);return id==='random'?'random':id&&DEF[id].runtime||null;}
   function art(v){var id=canonical(v);return id&&id!=='random'?DEF[id].art:null;}
