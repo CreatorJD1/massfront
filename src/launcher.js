@@ -526,7 +526,23 @@
          choice when /me rejects it instead of leaving PLAY disabled forever. */
       if(L.phase==='login'&&L.identity.state==='pending'&&L.identity.source==='signed-out'&&typeof mfAuthGate==='function')
         setTimeout(function(){try{mfAuthGate();}catch(e){}},0);
-      if(!L.bypass&&L.phase==='login'&&(L.identity.state==='connected'||L.identity.state==='offline'))enterGame(L.identity.state==='offline');
+      /* ENTERING THE GAME IS NOT A THING THAT HAPPENS TWICE.
+
+         This fires on every identity settle, and identity settles more than
+         once: a cached token verifies late, the offline portal resolves, the
+         network flips. The only guard was L.phase==='login' - and the
+         intro-complete listener below puts the phase BACK to 'login'. So a
+         player already sitting on the main menu, or on Contracts, or on Tech &
+         Development, could be picked up by a late identity event and navigated
+         into UGA Command, because enterGame()'s normal-career path owns one
+         destination and takes it.
+
+         That is the reported "contracts and tech and development take me
+         straight to UGA command and not their proper channels": the base route
+         opened correctly and was then overtaken.
+
+         enterGame already records that the gate was passed. Consult it. */
+      if(!L.bypass&&!L.passed&&L.phase==='login'&&(L.identity.state==='connected'||L.identity.state==='offline'))enterGame(L.identity.state==='offline');
     });
     window.addEventListener('massfront:intro-complete',function(){if(!L.bypass){L.phase='login';renderAll();}});
     window.addEventListener('massfront:update-state',function(event){
