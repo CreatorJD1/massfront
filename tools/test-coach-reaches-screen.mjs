@@ -93,4 +93,22 @@ for (const [name, cue] of [['energy stall', 'Build ☀ Reactors'], ['mass stall'
 }
 assert.match(tickBody, /fullAcc>12/, 'the storage-full branch must still fire on sustained overflow');
 
+/* 5. THE COOLDOWNS ARE MATCH-SCOPED. coachCd is set to 30-45 seconds after a
+      banner. Nothing reset it, so a match that ended just after one opened the
+      NEXT match with every economy warning suppressed for that long — the exact
+      window where a player most needs the stall warnings. */
+const coachReset = hud.slice(hud.indexOf('function mfCoachMatchReset(){'));
+const resetBody = coachReset.slice(0, coachReset.indexOf('\n}'));
+assert.ok(resetBody.length > 20, 'mfCoachMatchReset must exist');
+for (const v of ['coachCd', 'stallEAcc', 'stallMAcc', 'fullAcc']) {
+  assert.ok(new RegExp(v + '\\s*=\\s*0').test(resetBody), `${v} must be cleared at the match boundary`);
+}
+assert.match(resetBody, /clearTimeout\(coachHideT\)/,
+  'the pending hide timer must be cancelled, or it fires over the next match\'s first banner');
+const main = (await readFile(new URL('../src/main.js', import.meta.url), 'utf8'))
+  .replace(/\/\*[\s\S]*?\*\//g, b => ' '.repeat(b.length));
+const world = main.slice(main.indexOf('function resetWorld(){'));
+assert.match(world.slice(0, world.indexOf('\nfunction ')), /mfCoachMatchReset\(\)/,
+  'resetWorld must clear the coaching cooldowns at the same boundary it clears the event feed');
+
 console.log(`coach reaches screen: PASS (submitted at ${coachPriorityName}, admitted by the live rail, budget and ladder intact)`);

@@ -616,6 +616,7 @@ function resetWorld(){
   if(typeof commanderDialogueReset==='function') commanderDialogueReset();
   if(typeof cmdrTxReset==='function') cmdrTxReset();
   if(typeof mfNoticeMatchReset==='function') mfNoticeMatchReset();
+  if(typeof mfCoachMatchReset==='function') mfCoachMatchReset();
   ualive.fill(0); usel.fill(0); ugen.fill(0); utgtg.fill(-1);
   freeList=[]; unitHigh=0; teamCount[0]=0; teamCount[1]=0;
   if(typeof activeUnitReset==='function')activeUnitReset();

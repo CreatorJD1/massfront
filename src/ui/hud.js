@@ -1281,6 +1281,16 @@ function showCoach(msg){
   clearTimeout(coachHideT);
   coachHideT=setTimeout(()=>el.style.opacity=0,5200);
 }
+/* Coaching cooldowns are match-scoped. Nothing reset them, so a match that
+   ended just after a STORAGE FULL banner left coachCd at 45 — and the NEXT
+   match then opened with every economy warning suppressed for its first
+   forty-five seconds, which is exactly the window where a player most needs
+   the LOW ENERGY one. Called from resetWorld() beside the event feed. */
+function mfCoachMatchReset(){
+  coachCd=0; stallEAcc=0; stallMAcc=0; fullAcc=0;
+  clearTimeout(coachHideT); coachHideT=0;
+  const el=$('coach'); if(el) el.style.opacity=0;
+}
 function coachTick(){                              // called ~6x/sec from updateHUD
   if(!running||demoMode) return;
   coachCd-=0.16;
