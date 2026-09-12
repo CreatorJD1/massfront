@@ -413,13 +413,43 @@ function mfNoticeHistoryAdd(pri,key,label,channel){
   /* A burst can interleave two event types (damage / income / damage). Search
      the recent bounded feed rather than deduplicating only adjacent rows. */
   const hit=mfNHistory.findIndex(n=>n.key===key&&n.channel===ch&&now-n.t<8000);
+  let fresh=true;
   if(hit>=0){
-    const row=mfNHistory.splice(hit,1)[0];row.n++;row.t=now;row.at=at;mfNHistory.unshift(row);
+    const row=mfNHistory.splice(hit,1)[0];
+    /* A row the player has not read yet is already counted. Bumping its x2 to
+       x3 adds nothing new to read, so it must not add to the badge. */
+    fresh=!row.unread;
+    row.n++;row.t=now;row.at=at;mfNHistory.unshift(row);
   }else mfNHistory.unshift({pri,key,label,channel:ch,t:now,at,n:1});
   if(mfNHistory.length>MF_N_HISTORY_MAX)mfNHistory.length=MF_N_HISTORY_MAX;
-  if(!mfNoticeHistoryShown())mfNUnread++;
+  /* THE BADGE COUNTS ROWS, NOT SUBMISSIONS.
+     mfNUnread used to increment on every call, while the panel it opens shows
+     deduplicated rows capped at MF_N_HISTORY_MAX. A single match reached "99+"
+     on a feed holding thirty entries, because one base attack or one stalled
+     factory submits the same line dozens of times. The number on the button
+     has to be the number of things waiting to be read, or it is just a
+     busyness meter that always reads FULL. */
+  if(!mfNoticeHistoryShown()){
+    mfNHistory[0].unread=true;
+    if(fresh)mfNUnread++;
+    /* Rows evicted by the cap are no longer readable, so they cannot stay in
+       the count either. */
+    if(mfNUnread>mfNHistory.length)mfNUnread=mfNHistory.length;
+  }
   mfNoticeBadgeSync();
   if(mfNoticeHistoryShown())mfNoticeHistoryRender();
+}
+/* The event feed is MATCH-scoped, like commander dialogue and the transmission
+   queue that reset beside it in resetWorld(). Nothing cleared it, so a second
+   deployment opened with the first one's base alerts, kill lines and stall
+   warnings still listed, and a badge that had never returned to zero because
+   the only thing that zeroes it is the player opening the panel. */
+function mfNoticeMatchReset(){
+  mfNHistory.length=0;mfNUnread=0;mfNHistoryFilter='all';
+  mfNQ.length=0;mfNLiveTimes.length=0;
+  mfNKey='';mfNPri=99;mfNRender=null;mfNUrgent=false;mfNUntil=0;mfNCount=1;mfNHold=false;
+  try{mfNoticeBadgeSync();}catch(e){}
+  if(mfNoticeHistoryShown()){try{mfNoticeHistoryRender();}catch(e){}}
 }
 function mfNoticeLogShell(){
   let dock=mfFlowEl('mfNoticeDock');
@@ -490,7 +520,12 @@ function mfNoticeHistoryRender(){
 function mfNoticeHistoryOpen(){
   /* A battlefield feed is not a modal. Production, selection and camera input
      stay available around it while the player glances at recent events. */
-  const el=mfNoticeHistoryShell();mfNUnread=0;mfNoticeBadgeSync();mfNoticeHistoryRender();el.style.display='flex';
+  const el=mfNoticeHistoryShell();
+  mfNUnread=0;
+  /* Clear the per-row flag too, or a later repeat of a row that was unread
+     when the feed opened is treated as already counted and never re-badges. */
+  for(const n of mfNHistory)n.unread=false;
+  mfNoticeBadgeSync();mfNoticeHistoryRender();el.style.display='flex';
   document.body.classList.add('mfNoticeFeedOpen');
   const btn=mfNoticeLogShell();btn.setAttribute('aria-expanded','true');
   mfFlowQueueLayout();
