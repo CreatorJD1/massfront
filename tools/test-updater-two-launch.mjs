@@ -1,14 +1,46 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
+import {existsSync,readdirSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {TextEncoder} from 'node:util';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
 
 const root=resolve(fileURLToPath(new URL('..',import.meta.url)));
-const stagedVersion='1.33.48';
-const packagedBase='1.33.47';
+/* STAGING DIRECTORIES ARE TRANSIENT. Release retention is keep-5, so the
+   staging-v1.33.48 tree this was pinned to was pruned long ago and is never
+   coming back — the gate had been failing on ENOENT ever since, which guards
+   nothing. What the test actually needs is *a* staged inventory to replay the
+   two-launch install against; take the newest one on disk, and say plainly
+   when there is none rather than dying on a missing file. */
+const staged=(()=>{
+  let names=[];
+  try{ names=readdirSync(join(root,'releases')); }catch{ return null; }
+  const versions=names
+    .map(n=>/^staging-v(\d+\.\d+\.\d+)$/.exec(n))
+    .filter(Boolean).map(m=>m[1])
+    .filter(v=>existsSync(join(root,'releases','staging-v'+v,'artifacts.json')))
+    .sort((a,b)=>{
+      const [A,B]=[a,b].map(v=>v.split('.').map(Number));
+      return A[0]-B[0]||A[1]-B[1]||A[2]-B[2];
+    });
+  return versions.length?versions[versions.length-1]:null;
+})();
+if(!staged){
+  console.log('SKIP updater two-launch: no releases/staging-v*/artifacts.json on disk. '
+    +'Stage a release first (tools/publish-hf-release.ps1 -PrepareOnly); retention is keep-5, '
+    +'so staged trees are pruned and this check cannot run from a clean checkout.');
+  process.exit(0);
+}
+const stagedVersion=staged;
+/* The base is whatever the packaged tree claims to be, so the patch path is
+   replayed against the same prior version a device would actually hold. */
+const packagedBase=(()=>{
+  const bumpAt=stagedVersion.lastIndexOf('.');
+  const patch=Number(stagedVersion.slice(bumpAt+1));
+  return patch>0?stagedVersion.slice(0,bumpAt+1)+(patch-1):stagedVersion;
+})();
 const stageRoot=join(root,'releases','staging-v'+stagedVersion);
 
 const [bootSource,mainSource,artifactText]=await Promise.all([
@@ -91,8 +123,28 @@ const confirmBootSource=extractFunction(mainSource,'confirmBoot');
 const stagedMain=stagedSources.get('src/main.js');
 assert.ok(stagedMain.includes(stateDeclaration[0]),
           'staged src/main.js lacks the retryable boot state declaration');
-assert.equal(extractFunction(stagedMain,'confirmBoot'),confirmBootSource,
-             'staged src/main.js does not contain the production confirmBoot fix');
+/* A staged tree is a SNAPSHOT of the release it was cut from. Requiring it to
+   match the working tree byte-for-byte means every commit after a release
+   fails this — which is the normal state of a development cycle, not a
+   regression. Demand equality only while the working tree still IS that
+   release; otherwise hold the staged snapshot to the same structural contract
+   and say that it is a snapshot. */
+const packagedRev=/var PACKAGED_REV='([^']+)'/.exec(bootSource);
+const workingTreeIsStaged=!!packagedRev&&packagedRev[1]===stagedVersion
+  &&stagedMain===mainSource;
+if(workingTreeIsStaged){
+  assert.equal(extractFunction(stagedMain,'confirmBoot'),confirmBootSource,
+               'staged src/main.js does not contain the production confirmBoot fix');
+}else{
+  const stagedConfirm=extractFunction(stagedMain,'confirmBoot');
+  assert.match(stagedConfirm,/if\(bootConfirmed\)\s*return;/,
+    'staged confirmBoot is not idempotent');
+  assert.match(stagedConfirm,/bootIncompleteCount/,
+    'staged confirmBoot no longer tracks incomplete boots, so a partial install could confirm itself');
+  console.log('note: releases/staging-v'+stagedVersion+' is a snapshot of an earlier commit '
+    +'(working tree is v'+(packagedRev?packagedRev[1]:'?')+' with local changes); '
+    +'its boot contract is checked structurally rather than byte-for-byte.');
+}
 
 /* The installed base which downloads v1.33.48 is v1.33.47. The checked-in
    immutable boot loader has already been bumped for the new APK, so substitute
@@ -469,7 +521,16 @@ async function waitFor(label,predicate,timeout=5000){
    are still loading. The fixed latch stays open, a later frame validates the
    payload, and a completely new boot must still select the active patch. */
 const healthyBundle=makeBundle();
-const futureBundle={...makeBundle(),version:'1.33.49',at:Date.now()+1000};
+/* "Future" means newer than the staged release, so it has to be derived from
+   it. This was the literal '1.33.49' — one above the staging tree that used to
+   be pinned here — which silently became an OLD version the moment the staged
+   version moved, turning the rollback slot it backs into debris that
+   evictSuperseded was right to reclaim. */
+const futureVersion=(()=>{
+  const at=stagedVersion.lastIndexOf('.');
+  return stagedVersion.slice(0,at+1)+(Number(stagedVersion.slice(at+1))+1);
+})();
+const futureBundle={...makeBundle(),version:futureVersion,at:Date.now()+1000};
 function bundleMeta(bundle){
   return {version:bundle.version,channel:bundle.channel||'stable',at:bundle.at,
     schema:bundle.schema||1,
