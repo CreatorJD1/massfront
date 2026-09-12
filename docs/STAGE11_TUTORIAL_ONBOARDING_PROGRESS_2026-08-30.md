@@ -3,7 +3,7 @@
 Status: source implementation, static/runtime-contract tests, and the integrated
 local hardware-GPU browser acceptance pass are complete at this checkpoint and
 recorded in
-[`STAGES_11_13_HANDOFF_2026-08-30.md`](STAGES_11_13_HANDOFF_2026-08-30.md) and
+`STAGES_11_13_HANDOFF_2026-08-30.md` (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md) and
 [`evidence/stage11/evidence.json`](evidence/stage11/evidence.json). The optional
 runtime package is locally built and verified. Owner production approval and
 physical-phone safe-area acceptance remain open.

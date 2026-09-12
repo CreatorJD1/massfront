@@ -1,6 +1,6 @@
 # ChatGPT task — MASSFRONT creative GUI art kit
 
-Prepared 2026-09-04. **Art-generation brief and coder handoff, not an implemented UI or a release.** This supplements the [Claude handoff](CLAUDE_HANDOFF_2026-09-04_V1.33.74.md); it does not replace the original 18-stage plan.
+Prepared 2026-09-04. **Art-generation brief and coder handoff, not an implemented UI or a release.** This supplements the Claude handoff (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md); it does not replace the original 18-stage plan.
 
 ## Start the ChatGPT task
 

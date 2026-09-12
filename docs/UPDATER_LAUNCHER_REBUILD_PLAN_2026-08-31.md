@@ -269,7 +269,7 @@ locked rather than producing missing-content controls.
 
 Only after the full-core OTA and launcher/updater overhaul pass their physical
 device gates, resume
-[`GALACTIC_COMMAND_LAYER_HANDOFF_2026-08-31.md`](GALACTIC_COMMAND_LAYER_HANDOFF_2026-08-31.md).
+`GALACTIC_COMMAND_LAYER_HANDOFF_2026-08-31.md` (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md).
 That handoff remains the authority for the paused work; do not replace it with
 a newly invented Galactic plan.
 

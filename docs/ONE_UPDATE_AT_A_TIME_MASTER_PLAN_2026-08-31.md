@@ -367,7 +367,7 @@ Deliver one stage-batched SYSTEM release in this order:
    deterministic replays keep matching field/state hashes.
 
 Detailed source evidence and the implementation contract live in
-[`GAMEPLAY_COMMAND_SYSTEM_HANDOFF_2026-08-31.md`](GAMEPLAY_COMMAND_SYSTEM_HANDOFF_2026-08-31.md).
+`GAMEPLAY_COMMAND_SYSTEM_HANDOFF_2026-08-31.md` (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md).
 
 ## Update 5 — OVERHAUL: cinematic command interface, saved palette and War Table
 
@@ -438,7 +438,7 @@ references only; all art, layout, copy and motion remain original MASSFRONT work
 ## Update 6 — OVERHAUL: Galactic Command repair and authority wiring
 
 Resume the existing **Cursor Space Command plan audit**:
-[`GALACTIC_COMMAND_LAYER_HANDOFF_2026-08-31.md`](GALACTIC_COMMAND_LAYER_HANDOFF_2026-08-31.md),
+`GALACTIC_COMMAND_LAYER_HANDOFF_2026-08-31.md` (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md),
 not a newly invented replacement plan.
 
 The audit's current-state findings remain part of this master plan:
@@ -596,7 +596,7 @@ HOTFIX is a controlled exception, not a place to hide unfinished scope.
 
 After the 18-stage release gates are genuinely closed, build the lore-aware
 visual editor described in
-[`POST_STAGE18_VISUAL_EDITOR_UI_HANDOFF_2026-08-31.md`](POST_STAGE18_VISUAL_EDITOR_UI_HANDOFF_2026-08-31.md):
+`POST_STAGE18_VISUAL_EDITOR_UI_HANDOFF_2026-08-31.md` (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md):
 
 - visual level/object placement, snapping, layers, paths, spawns, objectives,
   collision, lighting and budget validation;

@@ -1,7 +1,9 @@
 # AGENTS.md — MASSFRONT
 
-Read this before touching anything. It is short on purpose; the long version is
-`docs/HANDOFF.md`.
+Read this before touching anything. It is short on purpose. The current state of
+the work — live release, unreleased commits, open items and the traps that cost
+real hours — is the single pass-down at `docs/CODEX_HANDOFF.md`.
+`docs/HANDOFF.md` remains the stable doc index.
 
 MASSFRONT is a Supreme-Commander-style mobile RTS: a hand-written WebGL2 engine
 in plain JavaScript, packaged for Android with Capacitor and installed on Apple

@@ -3,11 +3,14 @@
 This file is the stable entry point for continuing MASSFRONT. It intentionally
 does not duplicate version numbers, stage completion claims, or release state.
 
-Latest continuation transfer: [Claude handoff for the integrated UGA overhaul](CLAUDE_HANDOFF.md).
-It records the current dirty checkout, corrected product contract, source and
-evidence state, release boundary, and exact next actions. The earlier
-[published SYSTEM handoff](CLAUDE_HANDOFF_2026-09-04_V1.33.74.md) is historical
-release context only.
+The single current pass-down is [`CODEX_HANDOFF.md`](CODEX_HANDOFF.md). It records
+the live release, the unreleased commits, the defects repaired, the traps that cost
+real hours, and what is deliberately still open.
+
+Every earlier pass-down was removed on 2026-09-12 rather than archived. There were
+sixteen of them, each true on the day it was written and wrong by the time anyone read
+it, and a reader had no way to tell which one was current. Do not create dated
+siblings of the file above — rewrite it in place.
 
 Companion art task: [ChatGPT GUI art kit brief](CHATGPT_GUI_ART_TASK_2026-09-04.md).
 It specifies transparent modular frames, menus/submenus, asset states, and the

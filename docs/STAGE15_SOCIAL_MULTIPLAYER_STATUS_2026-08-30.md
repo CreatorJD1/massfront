@@ -4,7 +4,7 @@ Date: 2026-08-31
 State: **LOCALLY COMPLETE FOR THE SUPPORTED 1.33.49 MODES — release configuration active; not deployed**
 
 The earlier moderation-only checkpoint was misnumbered as Stage 14 and is now
-preserved as a [historical Stage 15 foundation handoff](archive/stages/15/STAGE15_SOCIAL_MULTIPLAYER_FOUNDATION_HANDOFF_2026-08-30.md).
+preserved as a historical Stage 15 foundation handoff (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md).
 
 Remaining post-release work stays in
 [`POST_1.33.49_MASTER_PLAN.md`](POST_1.33.49_MASTER_PLAN.md). This status does

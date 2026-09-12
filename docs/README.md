@@ -23,9 +23,9 @@ may provide evidence, but it never overrides those two files.
 - Stage 10: [processing preparation](MASTER_PLAN_STAGE10_LAYOUT_PROCESSING_PREP_2026-08-29.md),
   [implementation progress](MASTER_PLAN_STAGE10_LAYOUT_PROGRESS_2026-08-29.md),
   and [model-review ledger](STAGE10_MODEL_REVIEW_LEDGER_2026-08-29.md)
-- Stages 11–13: [combined handoff](STAGES_11_13_HANDOFF_2026-08-30.md)
+- Stages 11–13: combined handoff (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md)
   and [Stage 11 tutorial record](STAGE11_TUTORIAL_ONBOARDING_PROGRESS_2026-08-30.md)
-- Stage 14: [PWA/OTA handoff](STAGE14_PWA_OTA_HANDOFF_2026-08-30.md)
+- Stage 14: PWA/OTA handoff (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md)
 - Stage 15: [current integration status](STAGE15_SOCIAL_MULTIPLAYER_STATUS_2026-08-30.md)
 - Stage 18: [current release/channel status](RELEASE_STATUS.md)
 
@@ -36,7 +36,7 @@ may provide evidence, but it never overrides those two files.
 - Cloudflare updates: [CLOUDFLARE-UPDATES.md](CLOUDFLARE-UPDATES.md)
 - Tutorial design: [TUTORIAL.md](TUTORIAL.md)
 - Galactic Exploration: [SPACE_EXPLORATION_MODULE_DESIGN.md](SPACE_EXPLORATION_MODULE_DESIGN.md)
-- Lore-aware visual editor and image/motion-first UI: [post-Stage 18 handoff](POST_STAGE18_VISUAL_EDITOR_UI_HANDOFF_2026-08-31.md)
+- Lore-aware visual editor and image/motion-first UI: post-Stage 18 handoff (pass-down removed 2026-09-12 — see docs/CODEX_HANDOFF.md)
 - Performance architecture: [performance/](performance/)
 
 ## Archive policy
