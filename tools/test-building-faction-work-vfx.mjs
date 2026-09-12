@@ -125,6 +125,23 @@ const researchCall=source.slice(source.indexOf("if(B.res>=0){"),source.indexOf("
 assert(researchCall.indexOf('if(payStream(')>=0&&researchCall.indexOf('if(payStream(')<researchCall.indexOf('B.resT+=dt;')&&
   researchCall.indexOf('B.resT+=dt;')<researchCall.indexOf("mfBuildingWorkFx(B,b,'researching',dt)"),'research only after payment');
 assert.match(source,/B\.prodT\+=work;\s*if\(work>0\)mfBuildingWorkFx\(B,b,'producing',dt\)/,'production only after paid work');
-assert.match(fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),/blds\.length=0;\s*rebuildBGrid\(\);\s*if\(typeof mfBuildingWorkFxReset==='function'\)mfBuildingWorkFxReset\(\)/,'resetWorld explicitly rearms same-array VFX state');
+/* WHAT MATTERS IS THE ORDER, NOT ADJACENCY.
+   The emitter keys off building slots, so its state has to be rearmed AFTER
+   the building array is emptied or a new match inherits the old base's work
+   plumes. This asserted the three statements as one contiguous run, which
+   broke the moment navigation reset was inserted between them — a correct
+   change that this read as the rearm having been deleted. */
+{
+  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+  const reset=main.slice(main.indexOf('function resetWorld(){'));
+  const body=reset.slice(0,reset.indexOf('\nfunction '));
+  const cleared=body.indexOf('blds.length=0;');
+  const rebuilt=body.indexOf('rebuildBGrid()');
+  const rearmed=body.search(/if\(typeof mfBuildingWorkFxReset==='function'\)mfBuildingWorkFxReset\(\)/);
+  assert.ok(cleared>=0,'resetWorld must still empty the building array');
+  assert.ok(rebuilt>cleared,'the building grid must be rebuilt after the array is emptied');
+  assert.ok(rearmed>rebuilt,
+    'resetWorld must rearm the work-VFX state after clearing buildings, or a new match inherits the previous base\'s work plumes');
+}
 
 console.log('building faction work VFX: PASS');

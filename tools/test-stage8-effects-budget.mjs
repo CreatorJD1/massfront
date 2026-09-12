@@ -75,7 +75,11 @@ assert(!meta.includes("META.settings.perf=(nq==='low')?'low':'auto';"),
 assert(meta.includes('const dprIgnored=')&&meta.includes('&&!dprIgnored)'),
   'Resolution Scale must disclose and visually reject an ignored live DPR cap');
 
-const perfBlock=between(main,"if(META.settings.perf==='low')",'if(running&&!paused)');
+/* End marker stops before the closing paren: the sim step's entry condition
+   has since grown terms (gameEnded, and the simulation-halt latch), and this
+   block is bounded by where the sim step BEGINS, not by how many things it
+   checks first. */
+const perfBlock=between(main,"if(META.settings.perf==='low')",'if(running&&!paused');
 assert(perfBlock.indexOf('perfFloor')<perfBlock.indexOf('GFX.particles'),
   'the preset floor must be resolved before applying particle density');
 

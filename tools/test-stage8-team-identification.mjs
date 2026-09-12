@@ -353,7 +353,11 @@ assert.ok(hudSource.includes('else mm.fillRect(B.x*k-s/2,B.y*k-s/2,s,s);'),
 assert.ok(hudSource.includes('else mm.fillRect(ux[i]*k-d/2,uy[i]*k-d/2,d,d);'),
   'default unit minimap fast path changed');
 const minimapSource=sourceSlice(hudSource,'function renderMinimap(){','function mmViewCorners(){','minimap renderer');
-const bldLoop=sourceSlice(minimapSource,'for(const B of blds){','const total=','minimap building loop');
+/* The building loop ends where the unit loop's stride is computed. It used to
+   be bounded by `const total=`, which the entity-count perf work hoisted ABOVE
+   both loops — so the end needle could never be found after the start and this
+   whole disclosure section stopped running. */
+const bldLoop=sourceSlice(minimapSource,'for(const B of blds){','const step=total>','minimap building loop');
 assertOrdered(bldLoop,'fogEntityVisible','mmTeamIdQueue','building marker bypasses fog disclosure');
 assertOrdered(bldLoop,'intelRadarContact','mmTeamIdQueue','building marker bypasses radar disclosure');
 assertOrdered(bldLoop,'intelRadarContact','if(!visB&&!radarB) continue;',
