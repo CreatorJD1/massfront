@@ -426,8 +426,15 @@ assert.doesNotMatch(hudflow, /aria-label','[^']*war table/i,
   'the primary action enters the Galactic command shell; it must not promise the war table');
 assert.match(main, /mfOpenExploration\('campaign_hub',\{explicitRetry:true,launchButtonId:'startBtn'\}\)/,
   'START must enter the stable Galactic home; orbital travel requires deliberate Depart');
-assert.match(main, /mfOpenExploration\('campaign_hub',\{explicitRetry:true\}\)/,
-  'the visible UGA Command control must be an explicit retry that can leave Classic fallback');
+/* UGA COMMAND NOW OPENS ON THE SHIP IN SPACE.
+   This pinned the whole call, including 'campaign_hub' — which meant both menu
+   doors led to the same War Table panel and the button named after the ship
+   never showed the ship. The property this assertion exists to protect is the
+   explicit retry, so that the control can still climb out of Classic fallback;
+   the destination is a separate, deliberate decision, covered by
+   tools/test-uga-command-opens-in-space.mjs. */
+assert.match(main, /mfOpenExploration\('system',\{explicitRetry:true,launchButtonId:'ugaBtn'\}\)/,
+  'the visible UGA Command control must be an explicit retry that can leave Classic fallback, and must open in space');
 assert.match(main, /options&&options\.explicitRetry===true[\s\S]*?clearClassicFallback\(\);[\s\S]*?location\.href=packUrl/,
   'the Classic latch must clear only after UGA ticket and mount preparation succeed');
 assert.match(main, /if\(!opened\)openLegacyWarRoom\(\)/, 'packaged build must keep the installed War Room fallback');

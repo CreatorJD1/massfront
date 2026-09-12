@@ -2924,7 +2924,14 @@ function wire(){
     mfBindTap($('ugaBtn'),()=>{
       if(typeof META!=='undefined'&&META){META.flags=META.flags||{};META.flags.ugaSeen=true;metaSave();}
       mfExplorationMenuSync();
-      if(typeof mfOpenExploration==='function')mfOpenExploration('campaign_hub',{explicitRetry:true});
+      /* UGA COMMAND OPENS IN SPACE. This door used to land on the War Table
+         panel, which is DEPLOY MASSFRONT's job — two buttons, one destination,
+         and the ship the button is named after never appeared. 'system' is the
+         existing entry view for exactly this (the career gate's own
+         'full-uga-space' step already uses it): the orbital scene with the
+         Ark, from which the ship interior, the galaxy map and the War Table
+         are all one deliberate step away. */
+      if(typeof mfOpenExploration==='function')mfOpenExploration('system',{explicitRetry:true,launchButtonId:'ugaBtn'});
     });
     mfExplorationMenuSync();
   })();

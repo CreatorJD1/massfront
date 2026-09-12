@@ -1743,8 +1743,13 @@ export function createSpaceExperience(container, options = {}) {
       await openCampaignHub({ persist: false });
       return;
     }
+    /* A saved 'uga' scene does NOT override a door that asked for space.
+       The ship interior is a UI mode, not a place in the galaxy: resuming into
+       it is not the same as resuming a survey or a galaxy selection, which are
+       positions the player navigated to and expects back. UGA COMMAND opens on
+       the ship in space, every time, and the interior is one tap from there. */
     if (savedRoute.scene === 'uga') {
-      await openUga(null, { persist: false });
+      setScene('system', { persist: false });
       return;
     }
     if (savedRoute.scene === 'galaxy') {

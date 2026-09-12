@@ -1062,7 +1062,68 @@ export function createUgaCommand(options = {}) {
     if (districtId === 'survey') return withoutContextScroll(intelPanel());
     if (districtId === 'habitat') return withoutContextScroll(crewPanel());
     if (districtId === 'logistics') return withoutContextScroll(logisticsPanel());
+    /* THE LAST FOUR ROOMS HAD NO JOB IN THEM.
+       Every district renders the same compartment chrome — tier rail, staffing,
+       visual upgrades, module sockets — so a room with no work body does not
+       read as unfinished, it reads as a room whose work is not unlocked yet.
+       Four of the eleven were in that state, and three of them already had a
+       panel written for them that nothing routed here:
+
+         engineering  constructionPanel() — the Stores & Manifest room links
+                      straight to it with "UPGRADE SHIP · ENGINEERING", and the
+                      button landed on an empty compartment.
+         hangar       deploymentViewPanel() — the deployment-sections action
+                      calls selectDistrict('hangar') expecting the planner, and
+                      the planner was not there.
+         fabricator   inventoryPanel() — Fabrication & Armory is where the
+                      manifest belongs. */
+    if (districtId === 'engineering') return withoutContextScroll(constructionPanel());
+    if (districtId === 'hangar') return withoutContextScroll(deploymentViewPanel());
+    if (districtId === 'fabricator') return withoutContextScroll(inventoryPanel());
+    if (districtId === 'navigation') return navigationPanel();
     return '';
+  }
+
+  /* The Navigation Bridge is the only one of the four with no panel already
+     written, and it is the room the ship departs from — so it answers the two
+     questions a bridge exists to answer: where are we, and can we leave.
+     Departure reuses the same onExit the Command Core's objective card raises,
+     rather than inventing a second route out of the ship. */
+  function navigationPanel() {
+    const state = getState();
+    const catalog = getCatalog();
+    const systemId = state.route?.systemId || 'aelos';
+    const systems = asArray(catalog.systems || catalog.SHOWCASE_SYSTEMS);
+    const current = systems.find(entry => entry.id === systemId) || null;
+    const known = asArray(state.world?.systems && Object.entries(state.world.systems)
+      .filter(([, entry]) => entry && entry.discovered !== false)
+      .map(([id, entry]) => ({ id, ...entry })));
+    const fuel = Math.max(0, Math.floor(Number(state.resources?.fuel) || 0));
+    const probes = Math.max(0, Math.floor(Number(state.resources?.probes) || 0));
+    const canDepart = fuel > 0;
+    return `<div class="uga-section-title"><small>ASTROGATION // CURRENT PLOT</small><h2>Navigation Bridge</h2>
+        <p>The ship's position, the systems on file, and the consumables a departure spends.</p></div>
+      <div class="uga-record-list">
+        <article class="uga-record-card">
+          <span class="uga-record-sigil">${icon('navigation')}</span>
+          <div><small>CURRENT SYSTEM</small><h3>${escapeHtml(current?.name || prettyToken(systemId))}</h3>
+            <p>${escapeHtml(current?.summary || current?.description || 'Holding station at the expedition anchorage.')}</p></div>
+        </article>
+        <article class="uga-record-card">
+          <span class="uga-record-sigil">${icon('power')}</span>
+          <div><small>TRANSIT STORES</small><h3>${fuel} fuel · ${probes} probes</h3>
+            <p>${canDepart ? 'Sufficient for departure. Probes are spent on orbital surveys once underway.'
+              : 'No fuel aboard. Recover fuel from an operation or the Stores & Manifest before plotting a departure.'}</p></div>
+        </article>
+        <article class="uga-record-card">
+          <span class="uga-record-sigil">${icon('survey')}</span>
+          <div><small>SYSTEMS ON FILE</small><h3>${known.length || 1} charted</h3>
+            <p>${known.length > 1 ? escapeHtml(known.map(entry => prettyToken(entry.id)).join(' · '))
+              : 'Only the anchorage is charted. Survey further out to resolve the next vector.'}</p></div>
+        </article>
+      </div>
+      <button type="button" class="uga-primary-button" data-action="exit"${canDepart ? '' : ' disabled'}>
+        ${canDepart ? 'DEPART THE SHIP' : 'DEPARTURE UNAVAILABLE — NO FUEL'}${icon('chevron')}</button>`;
   }
 
   /* Each of those panels owns a uga-context-scroll because each is also a
