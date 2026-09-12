@@ -36,8 +36,26 @@ export function calculateFacilityCapabilities(state, { includeOffline = false } 
       const facility = CONSTRUCTION_FACILITY_CATALOG[facilityId];
       if (facility) addEffects(result, facility.effects);
     }
+    /* INSTALLED MODULES COUNT TOO.
+       A socket module used to change exactly one thing: the power bill. It had
+       a name, a cost, an install flow and a place in the room, and the only
+       consequence of fitting one was drawing more megawatts — so "personalise
+       your sections with modules" was a purchase, not a decision.
+       Aggregating them HERE rather than at each call site is what makes them
+       real everywhere at once: thirty-odd consumers already read these
+       capabilities for survey yield, transit fuel, construction cost, injury
+       bands, deployment slots and faction standing, and every one of them now
+       honours a module without knowing modules exist. */
+    for (const moduleId of Object.values(district.modules || {})) {
+      const module = MODULE_CATALOG[moduleId];
+      if (module) addEffects(result, module.effects);
+    }
   }
   result.transitFuelPct = Math.max(-25, result.transitFuelPct || 0);
+  /* Commander learning is bounded for the same reason transit fuel is: these
+     stack across eleven rooms, and an unbounded product turns a long campaign
+     into a single-operation promotion. */
+  if (result.commanderXpPct) result.commanderXpPct = Math.min(60, result.commanderXpPct);
   return result;
 }
 

@@ -448,6 +448,7 @@ export function createUgaCommand(options = {}) {
       constructionMaterialCostPct: '% alloy/component cost', cycleOldestWork: ' oldest-job work per cycle', constructionSlots: ' active construction slot', retrofitSalvagePct: '% retrofit salvage', cancelRefundBonusPct: '% cancellation refund',
       powerGenerationMW: ' MW generation', constructionPowerPerSlotMW: ' MW per construction slot', personnelRecoveryCycles: ' personnel recovery cycles', districtWorkEverySecondCycle: ' district work every second cycle',
       injurySeverityBands: ' injury severity band', allDistrictWorkEverySecondCycle: ' work to all expansions every second cycle', factionReputationPct: '% faction reputation', factionRecoveryCycles: ' faction recovery cycles',
+      commanderXpPct: '% commander experience',
       factionLoyaltyPct: '% faction loyalty', crossFactionSpecialists: ' cross-faction specialist', materialRewardPct: '% material rewards', transitProbeRestore: ' probe after transit', victoryProbeRestore: ' probe after victory', victoryFuelRestore: ' fuel after victory'
     };
     const entries = Object.entries(effects);
@@ -885,6 +886,22 @@ export function createUgaCommand(options = {}) {
     }).join('');
   }
 
+  /* An installed module reports what it is doing; an empty socket reports what
+     the module on offer would do. Both read the same catalog the domain
+     aggregates from, so the card cannot promise an effect the ship will not
+     apply. Power draw stays visible because it is the cost of the choice. */
+  function socketEffectMarkup(modules, installedId, choices) {
+    const shown = installedId || (Array.isArray(choices) && choices.length === 1 ? choices[0] : null);
+    const module = shown ? modules[shown] : null;
+    if (!module) return '';
+    const effects = module.effects || {};
+    const draw = Number(module.powerDrawMW) || 0;
+    const generation = Number(module.powerGenerationBonusMW) || 0;
+    const power = generation ? `+${generation} MW generated` : draw ? `${draw} MW draw` : '';
+    if (!Object.keys(effects).length) return power ? `<em class="uga-socket-effects">${escapeHtml(power)}</em>` : '';
+    return `<em class="uga-socket-effects">${constructionEffectMarkup(effects)}${power ? `<span>${escapeHtml(power)}</span>` : ''}</em>`;
+  }
+
   function socketRows(definition, districtState) {
     if (!definition.sockets.length) return '<div class="uga-empty-state">The Command Core is fixed and does not accept internal modules.</div>';
     const modules = getCatalog().modules || getCatalog().MODULE_CATALOG || {};
@@ -894,7 +911,14 @@ export function createUgaCommand(options = {}) {
       const choices = socket.compatibleModuleTypes || [];
       return `<article class="uga-socket ${locked ? 'is-locked' : ''}">
         <div class="uga-socket-mark">${icon(locked ? 'lock' : 'component')}<span>${String(index + 1).padStart(2, '0')}</span></div>
-        <div class="uga-socket-copy"><small>${escapeHtml(socket.name)}</small><b>${escapeHtml(installed ? modules[installed]?.name || prettyToken(installed) : locked ? `UNLOCKS AT TIER ${socket.unlockTier}` : 'EMPTY SOCKET')}</b></div>
+        <div class="uga-socket-copy"><small>${escapeHtml(socket.name)}</small><b>${escapeHtml(installed ? modules[installed]?.name || prettyToken(installed) : locked ? `UNLOCKS AT TIER ${socket.unlockTier}` : 'EMPTY SOCKET')}</b>
+          ${/* What the module DOES, on the card that offers it. Sockets used to
+                show a name, a cost and nothing else, which was honest while a
+                module only changed the power bill and is not any more. An
+                effect a player cannot read before paying for it is not a
+                choice, and one they cannot read after installing it is not a
+                reward. */ ''}
+          ${socketEffectMarkup(modules, installed, locked ? null : choices)}</div>
         ${!locked && !installed && choices.length ? `<label class="uga-module-picker"><span class="sr-only">Module</span><select data-module-choice="${escapeHtml(socket.id)}">${choices.map(type => `<option value="${escapeHtml(type)}">${escapeHtml(modules[type]?.name || prettyToken(type))}</option>`).join('')}</select></label><button type="button" class="uga-mini-button" data-install="${escapeHtml(socket.id)}">INSTALL</button>` : ''}
       </article>`;
     }).join('');

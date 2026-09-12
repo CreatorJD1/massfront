@@ -114,7 +114,18 @@ function buildFactionDelta(operation, report) {
 }
 
 function buildPersonnelDelta(operation, report) {
-  const xp = report.outcome === 'victory' ? 42 + report.secondaryObjectivesComplete * 6 : report.outcome === 'partial' ? 24 : 12;
+  const baseXp = report.outcome === 'victory' ? 42 + report.secondaryObjectivesComplete * 6 : report.outcome === 'partial' ? 24 : 12;
+  /* THE SHIP TEACHES ITS COMMANDERS.
+     Every other reward an operation pays already passes through the facility
+     capabilities — research, materials, bio samples, fuel and probes all scale
+     with what has been built and installed. Experience was the one that did
+     not: a flat number, identical on a bare hull and on a fully fitted ship,
+     so no room a player upgraded could make their commanders grow faster.
+     Same seam, same shape as operationResearchRewardPct in buildRewards. */
+  const effects = operation.configuration?.facilityEffects || {};
+  const xp = effects.commanderXpPct
+    ? Math.max(1, Math.floor(baseXp * (100 + effects.commanderXpPct) / 100))
+    : baseXp;
   const loyalty = report.outcome === 'victory' ? 2 : report.outcome === 'partial' ? 0 : -1;
   const injuryType = operation.missionType === 'uga_brood_purge' ? 'brood_exposure_trauma' : 'operational_trauma';
   const readinessFor = band => band === 'none' ? -8 : band === 'light' ? -15 : band === 'moderate' ? -25 : -38;
