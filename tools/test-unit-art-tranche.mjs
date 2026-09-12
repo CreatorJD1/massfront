@@ -23,14 +23,38 @@ const targets=[
   {id:6,name:'Longbow',scale:1.0,tur:true,turH:4.45},
   {id:7,name:'Hornet',scale:1.0,tur:true,turH:4.45},
   {id:8,name:'TITAN',scale:.62,tur:false},
-  {id:9,name:'Pyro',scale:1.0,tur:true,turH:4.45},
+  /* The Pyro is a flame TROOPER — infantry in a sealed suit — not a vehicle.
+     Its row here carried scale:1.0 with a 4.45 turret, copied from the Longbow
+     and Hornet rows above it, and described a machine that has never existed.
+     Infantry is sub-scale and has no turret. */
+  {id:9,name:'Pyro',scale:0.95,tur:false,infantry:true},
   {id:14,name:'Corvette',scale:1.0,naval:1,tur:true,turH:3.8},
   {id:15,name:'Dreadnought',scale:1.0,naval:1,tur:true,turH:5.6},
   {id:16,name:'Bombard',scale:1.0,tur:true,turH:5.95},
   {id:17,name:'Raptor',scale:1.0,air:1,tur:false},
   {id:18,name:'Scorcher',scale:1.0,tur:true,turH:6.1},
-  {id:25,name:'Kestrel',scale:.92,tur:false},
+  {id:25,name:'Kestrel',scale:.92,air:1,tur:false},
 ];
+
+/* air/naval are not art choices — they are the simulation's own role flags, and
+   a model that disagrees with TYPES flies or floats differently from the unit
+   it draws. Derive them instead of hand-maintaining a second copy, which is how
+   the Kestrel's `air` quietly went missing from the row above. */
+{
+  const sim=fs.readFileSync(path.join(root,'src/game/sim.js'),'utf8');
+  const a=sim.indexOf('const TYPES=['),b=sim.indexOf('\n];',a);
+  if(a<0||b<0)throw new Error('could not read the TYPES table');
+  const rows=sim.slice(a,b).split('\n').filter(l=>l.includes("{name:'"));
+  for(const spec of targets){
+    const line=rows[spec.id];
+    if(!line)throw new Error(spec.name+': TYPES has no row at index '+spec.id);
+    const named=/\{name:'([^']+)'/.exec(line)[1];
+    if(named!==spec.name)throw new Error('TYPES index '+spec.id+' is '+named+', not '+spec.name+' — the roster was reordered');
+    const air=/\bair:\s*1\b/.test(line)?1:undefined;
+    if((spec.air||undefined)!==air)
+      throw new Error(spec.name+': art tranche says air='+(spec.air||0)+' but TYPES says air='+(air||0));
+  }
+}
 
 function inspect(mesh,label,allMats){
   if(!mesh||!ArrayBuffer.isView(mesh.v)||!ArrayBuffer.isView(mesh.i)||mesh.v.length%STRIDE)
@@ -82,7 +106,13 @@ for(const spec of targets){
   if(mats.size<5)throw new Error(spec.name+': only '+mats.size+' semantic material zones');
   if(livery<.005||livery>.45)
     throw new Error(spec.name+': explicit livery coverage '+(livery*100).toFixed(2)+'% outside 0.5%-45%');
-  if(bore<24)throw new Error(spec.name+': no measurable hollow +X bore/thruster geometry');
+  /* A hollow TWR_BORE muzzle or thruster is a VEHICLE property. Infantry
+     carry hand weapons whose barrels are not modelled that way — the Striker,
+     the other trooper in the roster, has none either — so requiring one of the
+     Pyro was requiring it to stop being a person. */
+  if(spec.infantry){
+    if(bore)throw new Error(spec.name+': infantry gained vehicle bore geometry');
+  }else if(bore<24)throw new Error(spec.name+': no measurable hollow +X bore/thruster geometry');
   rows.push({unit:spec.name,vertices:verts,triangles:tris,materials:mats.size,
     livery:(livery*100).toFixed(1)+'%',boreVertices:bore});
 }

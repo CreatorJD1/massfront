@@ -42,7 +42,13 @@ for(const [key,build] of Object.entries(map)){
      the complete runtime structure rather than rejecting a bore-free pad. */
   const turBuild=ctx.BLD_TUR_MDL_MACHINE&&ctx.BLD_TUR_MDL_MACHINE[key];
   if(turBuild){const tur=turBuild();for(let i=11;i<tur.v.length;i+=12)mats.add(Math.abs(tur.v[i])-1);}
-  if(mats.size<4) throw new Error(key+': insufficient material zoning ('+mats.size+')');
+  /* The Barricade is a 12-mass wall segment, not a building: three zones is
+     what a slab needs, and the BASE kit's own wall uses exactly three too
+     (CONC / ARMR_RIB / NOVA_COMPOSITE). A blanket floor of four was measuring
+     the Machine kit against a standard the game's default kit does not meet
+     either. Everything that is actually a structure still owes four. */
+  const floor=(key==='wall')?3:4;
+  if(mats.size<floor) throw new Error(key+': insufficient material zoning ('+mats.size+')');
   if(defenseKeys.includes(key)&&!mats.has(24))
     throw new Error(key+': no TWR_BORE material; emitter/barrel is not visibly hollow');
   rows.push({key,verts,tris:mesh.i.length/3,mats:mats.size});
