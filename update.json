@@ -1,31 +1,30 @@
 {
-  "fullRoot": "b803ac015c4db223f4eebbd9dc7f072640332b17a1a64a40dce2be8afbf4f8c7",
+  "fullRoot": "e2e48176dbb973193ddabb3a01d4c72f42da8e83263f8a69eb9b783f033a7c5d",
   "upcoming": [
     "Crafting, hiring and research move into the ship interior instead of opening base-game screens.",
     "Co-op folded into Standard rather than a separate game mode."
   ],
-  "patchFrom": "1.33.86",
+  "patchFrom": "1.33.87",
   "packsIndex": "packs.json",
   "minBaseVersion": "1.22.0",
   "optionalPacks": [],
-  "notes": "A match that stops now says why, instead of looking alive while nothing responds.",
+  "notes": "The tactical minimap keeps its proper padded frame at every screen size.",
   "fixes": [
-    "A simulation error no longer freezes a match silently. The game loop scheduled its next frame before running the step, so one exception left the canvas holding its last frame while audio and HUD animations kept playing, pause did nothing, and abilities queued orders nothing consumed. The match now halts once and reports the cause.",
-    "Removed an unused engine file from the shipped runtime so updates can ship as deltas again."
+    "The minimap no longer draws two frames at once. The gold corner brackets belong to the older HUD layout, and the rule removing them for the tactical dock - along with its padding - was gated behind a phone-width media query, so at any other viewport you got the dock plus brackets bolted to a box that did not want them, with the map bleeding to the edge."
   ],
-  "version": "1.33.87",
-  "manifestRoot": "30e8723bc1a7eda322b00732e5e0082f9c7eff8944b6cb1db5d24c02acf8f6fd",
+  "version": "1.33.88",
+  "manifestRoot": "200dd2a03da198fbc708de4d88939a99d31a31ea61f142c4a288d37eb73c5038",
   "files": [
     {
       "path": "ota/00-runtime.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/ota/00-runtime.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/ota/00-runtime.js",
       "size": 25152283,
-      "sha256": "c752d63d81c5a6650a5339caa3e6c0ad6e78c3ba7d12aa6622fa649f28d6ec93",
+      "sha256": "95f195fc34d0bc1aa3373afcadea5f24d8914baea8050c7f6e2346339cfc1dd7",
       "chunks": [
         {
           "offset": 0,
           "size": 4194304,
-          "sha256": "a289ef839f0b1c3bce0688fccfe34fd66d08b69ea7d2407e025ebce7760dec43"
+          "sha256": "c85d69ecc33eedfb6753fadfc101e59eff7b64be33cd4514fcc72949017b08d6"
         },
         {
           "offset": 4194304,
@@ -56,65 +55,52 @@
     },
     {
       "path": "ota/01-shell.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/ota/01-shell.js",
-      "size": 5423924,
-      "sha256": "b7de18b2e9093e31969e6eda384c73139ca11bb9ed0ba2780fd85637719cf198",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/ota/01-shell.js",
+      "size": 5424950,
+      "sha256": "cc92481f1c766f0c51fae37752c31186e77ae59739fb2795adff3723ba5063e6",
       "chunks": [
         {
           "offset": 0,
           "size": 4194304,
-          "sha256": "9212dd915cfbe7ddf8690ab99084dbc643295a69b44b820ea034b49d6e5bdf05"
+          "sha256": "e79cefc27ef7dd74bdf6507568a7329ae3138631b73b4f84b7af317c848e033f"
         },
         {
           "offset": 4194304,
-          "size": 1229620,
-          "sha256": "88659905f99f7c7569a103d0576d43b93c3acbaa3ed836087f14593a396b579b"
+          "size": 1230646,
+          "sha256": "d835bc9b9117299538caaa6c462c15a1c057e6c6fda5161d9c880429f2ca19d1"
         }
       ]
     },
     {
       "path": "src/assetpack.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/assetpack.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/assetpack.js",
       "size": 73240,
-      "sha256": "92608322ab004da816ab0903bb281f0181843e367fc85da470a52526fe53c8ce",
+      "sha256": "175dbaea49f3ad6cf3150397502a5cf23b94bf1b1081159fe758febb84a579eb",
       "chunks": [
         {
           "offset": 0,
           "size": 73240,
-          "sha256": "92608322ab004da816ab0903bb281f0181843e367fc85da470a52526fe53c8ce"
+          "sha256": "175dbaea49f3ad6cf3150397502a5cf23b94bf1b1081159fe758febb84a579eb"
         }
       ]
     },
     {
       "path": "src/updater.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/updater.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/updater.js",
       "size": 164946,
-      "sha256": "ffd82d37068eabf481a305a03b71ad8d2e3fda01130078ae2041341205b0cf66",
+      "sha256": "adb6e6547d60b99bb49d4a5a25b48110f8171ca7fbb84b6d92548c090db94aa3",
       "chunks": [
         {
           "offset": 0,
           "size": 164946,
-          "sha256": "ffd82d37068eabf481a305a03b71ad8d2e3fda01130078ae2041341205b0cf66"
-        }
-      ]
-    },
-    {
-      "path": "src/main.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/main.js",
-      "size": 204697,
-      "sha256": "cfaa47d8b34fd5902a28b1046c75f390ecb6828ed0cebc4c8f9f9f71b391f724",
-      "chunks": [
-        {
-          "offset": 0,
-          "size": 204697,
-          "sha256": "cfaa47d8b34fd5902a28b1046c75f390ecb6828ed0cebc4c8f9f9f71b391f724"
+          "sha256": "adb6e6547d60b99bb49d4a5a25b48110f8171ca7fbb84b6d92548c090db94aa3"
         }
       ]
     }
   ],
-  "base": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/",
+  "base": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/",
   "kind": "patch",
-  "runtimeRoot": "c26776dcb3dda0ad00630a264d2af3fd401f0951006199c5c3221c141a9c34b5",
+  "runtimeRoot": "0c7d114cb0c1733766bfde4bb0247379662932d98693d128b263c9e8af4509ca",
   "channel": "stable",
   "category": "hotfix",
   "severity": "recommended",
@@ -122,14 +108,14 @@
   "full": [
     {
       "path": "ota/00-runtime.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/ota/00-runtime.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/ota/00-runtime.js",
       "size": 25152283,
-      "sha256": "c752d63d81c5a6650a5339caa3e6c0ad6e78c3ba7d12aa6622fa649f28d6ec93",
+      "sha256": "95f195fc34d0bc1aa3373afcadea5f24d8914baea8050c7f6e2346339cfc1dd7",
       "chunks": [
         {
           "offset": 0,
           "size": 4194304,
-          "sha256": "a289ef839f0b1c3bce0688fccfe34fd66d08b69ea7d2407e025ebce7760dec43"
+          "sha256": "c85d69ecc33eedfb6753fadfc101e59eff7b64be33cd4514fcc72949017b08d6"
         },
         {
           "offset": 4194304,
@@ -160,25 +146,25 @@
     },
     {
       "path": "ota/01-shell.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/ota/01-shell.js",
-      "size": 5423924,
-      "sha256": "b7de18b2e9093e31969e6eda384c73139ca11bb9ed0ba2780fd85637719cf198",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/ota/01-shell.js",
+      "size": 5424950,
+      "sha256": "cc92481f1c766f0c51fae37752c31186e77ae59739fb2795adff3723ba5063e6",
       "chunks": [
         {
           "offset": 0,
           "size": 4194304,
-          "sha256": "9212dd915cfbe7ddf8690ab99084dbc643295a69b44b820ea034b49d6e5bdf05"
+          "sha256": "e79cefc27ef7dd74bdf6507568a7329ae3138631b73b4f84b7af317c848e033f"
         },
         {
           "offset": 4194304,
-          "size": 1229620,
-          "sha256": "88659905f99f7c7569a103d0576d43b93c3acbaa3ed836087f14593a396b579b"
+          "size": 1230646,
+          "sha256": "d835bc9b9117299538caaa6c462c15a1c057e6c6fda5161d9c880429f2ca19d1"
         }
       ]
     },
     {
       "path": "assets/data/theatreprofiles-stage10.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/theatreprofiles-stage10.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/theatreprofiles-stage10.js",
       "size": 9297,
       "sha256": "02c0096f6cc060f0271bfad65fed82d3d2985ab944d72e0bdc122b6c2506e91a",
       "chunks": [
@@ -191,7 +177,7 @@
     },
     {
       "path": "assets/data/interiortopology-stage10.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/interiortopology-stage10.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/interiortopology-stage10.js",
       "size": 39275,
       "sha256": "05230b584611ceef993ea7de792416633a996f53363db32539e5882869935928",
       "chunks": [
@@ -204,7 +190,7 @@
     },
     {
       "path": "assets/data/orbitaltopology-stage10.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/orbitaltopology-stage10.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/orbitaltopology-stage10.js",
       "size": 38121,
       "sha256": "0487ce755444572372037234684e003bd31c84f456dbf40c9ce9ccf1e5ec6d44",
       "chunks": [
@@ -217,7 +203,7 @@
     },
     {
       "path": "src/game/determinism.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/determinism.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/determinism.js",
       "size": 4501,
       "sha256": "ef7dc7132ffc5337e35e2d849feb2645383ad23a66a854214d6225f910fb63d1",
       "chunks": [
@@ -230,7 +216,7 @@
     },
     {
       "path": "assets/data/unitrows.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/unitrows.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/unitrows.js",
       "size": 2356,
       "sha256": "8d4ed590e6a6220416aa374d68cf87ad3619f0fe3adf4541b7e120b66494ec6a",
       "chunks": [
@@ -243,7 +229,7 @@
     },
     {
       "path": "assets/data/unitsheet.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/unitsheet.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/unitsheet.js",
       "size": 1621322,
       "sha256": "2772396c5354ace1f2be3111611407a51e716acdde90bbfa49f9f0e20fc2272c",
       "chunks": [
@@ -256,7 +242,7 @@
     },
     {
       "path": "assets/data/itemart.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/itemart.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/itemart.js",
       "size": 1096462,
       "sha256": "77286ac75e154d2d1418aed650e4406aac883ba29e480b31f39b411d1fee7e79",
       "chunks": [
@@ -269,7 +255,7 @@
     },
     {
       "path": "assets/data/planetart.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/planetart.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/planetart.js",
       "size": 3293,
       "sha256": "1491a8dcb051eebc60f748aa7d5b6cb0879ec1233348d01fb1ffaea8c5f06f3c",
       "chunks": [
@@ -282,7 +268,7 @@
     },
     {
       "path": "src/engine/gl.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/gl.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/gl.js",
       "size": 28924410,
       "sha256": "c0f6abd1245d929fdaccca8a155fa00e41672cf07383dd56374556a25c185b88",
       "chunks": [
@@ -325,7 +311,7 @@
     },
     {
       "path": "src/engine/planetpreview.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/planetpreview.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/planetpreview.js",
       "size": 24828,
       "sha256": "a5d96dfcefc1cb14f49f0bcaf31dc8fbb8c470119875f6f6e9b8daad486fb170",
       "chunks": [
@@ -338,7 +324,7 @@
     },
     {
       "path": "src/engine/perf.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/perf.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/perf.js",
       "size": 43399,
       "sha256": "7c006f7f6d62d78b044bbf2315882fc41b2345fa8ae8d85ba6b2506cf65d6db8",
       "chunks": [
@@ -351,7 +337,7 @@
     },
     {
       "path": "src/engine/noisegen.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/noisegen.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/noisegen.js",
       "size": 14869,
       "sha256": "e67a060ca7f7153b1b71e5755569538a88afe2da80f5b769dc2db6bd8f74f364",
       "chunks": [
@@ -364,7 +350,7 @@
     },
     {
       "path": "src/engine/factionenergy.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/factionenergy.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/factionenergy.js",
       "size": 7149,
       "sha256": "43c7bdcb8e75571833d1559303bd715a28acc6ccfa9fbb328231888a84a80bd6",
       "chunks": [
@@ -377,7 +363,7 @@
     },
     {
       "path": "src/engine/ordnancetrails.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/ordnancetrails.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/ordnancetrails.js",
       "size": 31484,
       "sha256": "28b9e64e5f27e9a0e2f1fb5954e77f714520b650b691dfa83f354d7e8349e2f1",
       "chunks": [
@@ -390,7 +376,7 @@
     },
     {
       "path": "src/engine/terragen.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/terragen.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/terragen.js",
       "size": 20623,
       "sha256": "57ed991599a7014004faecf10bc68c3fe45ddcfcf927ef4ef692f8de419e5286",
       "chunks": [
@@ -403,7 +389,7 @@
     },
     {
       "path": "src/terralab.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/terralab.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/terralab.js",
       "size": 18426,
       "sha256": "0015c0398dc71ac47fc91735f6c0a72a6e95126699b10736b0829ab31e144f26",
       "chunks": [
@@ -416,7 +402,7 @@
     },
     {
       "path": "src/engine/mesh.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/mesh.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/mesh.js",
       "size": 229772,
       "sha256": "ef829166d705204e4985595b797f2c2b97fba07533759564a64a2e251392769b",
       "chunks": [
@@ -429,7 +415,7 @@
     },
     {
       "path": "src/engine/billboard.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/billboard.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/billboard.js",
       "size": 11582,
       "sha256": "5646ea0ca60fba9c762355a012753220907d39dc1bbc823b2eb0d1787b1c2aa3",
       "chunks": [
@@ -442,7 +428,7 @@
     },
     {
       "path": "src/engine/macrofx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/macrofx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/macrofx.js",
       "size": 5528787,
       "sha256": "e9baa55bcd5722d37dd57cb3865fe4d35e7a011b923a905c6fbd4bb31d80ddf0",
       "chunks": [
@@ -460,7 +446,7 @@
     },
     {
       "path": "src/engine/shieldfx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/shieldfx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/shieldfx.js",
       "size": 20848,
       "sha256": "88d3323cd7d427d0d537464471891d4ace86755c8264716c4192ffbc14dc5d1d",
       "chunks": [
@@ -473,7 +459,7 @@
     },
     {
       "path": "src/engine/tacticons.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/tacticons.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/tacticons.js",
       "size": 44761,
       "sha256": "61033ca44c43a8f716c24b685987f4f4ead4b5527b1cba81bd5e65fce4176b2f",
       "chunks": [
@@ -486,7 +472,7 @@
     },
     {
       "path": "src/engine/gpufx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/gpufx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/gpufx.js",
       "size": 24100,
       "sha256": "5adcce639ccec730c2429c46249b769f98c7baa424b88627dccf79f35e9294aa",
       "chunks": [
@@ -499,7 +485,7 @@
     },
     {
       "path": "src/engine/volfx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/volfx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/volfx.js",
       "size": 1431780,
       "sha256": "dce919bcf54de0f8a5f241fcf9731ea7dc7e6bb31c5eb15c0349ec3780157231",
       "chunks": [
@@ -512,7 +498,7 @@
     },
     {
       "path": "src/engine/shockwave.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/shockwave.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/shockwave.js",
       "size": 20767,
       "sha256": "3b06fce2482ce2bffefceee7a0fb04827cd076d746330f65d9be83f99f268151",
       "chunks": [
@@ -525,7 +511,7 @@
     },
     {
       "path": "src/engine/vfxlayers.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/vfxlayers.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/vfxlayers.js",
       "size": 13149,
       "sha256": "8022eb3a9c5198ca597d78481e45acce114c5c552391d483ee4094f906a854cd",
       "chunks": [
@@ -538,7 +524,7 @@
     },
     {
       "path": "src/engine/organicfx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/organicfx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/organicfx.js",
       "size": 9419,
       "sha256": "7dd4e3a64625f33a7f0bd6e1904de9a8dc224ff699891a7bf46bfb82a5572752",
       "chunks": [
@@ -551,7 +537,7 @@
     },
     {
       "path": "assets/basis/basis_transcoder.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/basis/basis_transcoder.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/basis/basis_transcoder.js",
       "size": 57578,
       "sha256": "c77147fa0ec7b751fbbd812ddf348af1f85d31e519a5640ad564d7e14d411e0f",
       "chunks": [
@@ -564,7 +550,7 @@
     },
     {
       "path": "src/engine/materials.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/materials.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/materials.js",
       "size": 12283360,
       "sha256": "3d7df1a09d03561500717910d762c27218b03a6daa523fec3cd2878b18022bfc",
       "chunks": [
@@ -587,7 +573,7 @@
     },
     {
       "path": "src/engine/materials-v2.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/materials-v2.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/materials-v2.js",
       "size": 77057,
       "sha256": "c111a0374a723cebae0488a58dfe9f0482205f5294b25a3db70804134d32b2f8",
       "chunks": [
@@ -600,7 +586,7 @@
     },
     {
       "path": "src/engine/terrain.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/terrain.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/terrain.js",
       "size": 96781,
       "sha256": "25cf439d5fe1db9f882cb0d8d90ca3d6dd4daad812dbdef536e8618caedf0a9c",
       "chunks": [
@@ -613,7 +599,7 @@
     },
     {
       "path": "src/engine/models-world-data.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-world-data.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-world-data.js",
       "size": 756923,
       "sha256": "b6e7b7c84e5e628ff0d131de38ccdf4944ddd6ed5478c4154337a1ff9c6770ad",
       "chunks": [
@@ -626,7 +612,7 @@
     },
     {
       "path": "src/engine/models-world-loader.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-world-loader.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-world-loader.js",
       "size": 9106,
       "sha256": "920c424342f8d27db316236cd9bc850d48c1cb416e681268c0b36d76bccc4c6f",
       "chunks": [
@@ -639,7 +625,7 @@
     },
     {
       "path": "src/engine/models.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models.js",
       "size": 241861,
       "sha256": "855f9c281e33ee85809f8abceebabe3e680c8009e08a4dd9c370967b771cdade",
       "chunks": [
@@ -652,7 +638,7 @@
     },
     {
       "path": "assets/data/worldkit.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/worldkit.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/worldkit.js",
       "size": 406107,
       "sha256": "92f9dcea81157f161726416aecf0f2edcae0b24346f11122f51e574221a17fb7",
       "chunks": [
@@ -665,7 +651,7 @@
     },
     {
       "path": "assets/data/locationgrammar.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/locationgrammar.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/locationgrammar.js",
       "size": 17114,
       "sha256": "483849186656601b19811d9d3b457cbeb70ac9e92abc8ddcc3b4c3a5a70ae57a",
       "chunks": [
@@ -678,7 +664,7 @@
     },
     {
       "path": "assets/data/sitetemplates.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/sitetemplates.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/sitetemplates.js",
       "size": 20418,
       "sha256": "9dbf3906cfd572f1c85c4a06b18652d8aa39403347b58c0bc77cb64f715583e1",
       "chunks": [
@@ -691,7 +677,7 @@
     },
     {
       "path": "assets/data/sitetemplates-stage9.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/sitetemplates-stage9.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/sitetemplates-stage9.js",
       "size": 13174,
       "sha256": "7c1ac5b1cea4f71fbd9c4778b0d8efabaf8f1bf0e983a3b4ae302a990b29a532",
       "chunks": [
@@ -704,7 +690,7 @@
     },
     {
       "path": "assets/data/locationplans.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/locationplans.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/locationplans.js",
       "size": 15747,
       "sha256": "49d8f91fbf43f7fefac5c35f00a8413d790e5c6f4955606cb2bb70502176dd84",
       "chunks": [
@@ -717,7 +703,7 @@
     },
     {
       "path": "assets/data/battlefieldtopology-stage10.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/battlefieldtopology-stage10.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/battlefieldtopology-stage10.js",
       "size": 30980,
       "sha256": "741b375bd72091527eec175036b7c75ecafe2ca3f7d22e5f4a299adf1b9c2200",
       "chunks": [
@@ -730,7 +716,7 @@
     },
     {
       "path": "src/engine/worldsites.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/worldsites.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/worldsites.js",
       "size": 28706,
       "sha256": "7995bf6b980033a66d710847daeac14272cf99d1d3a2528560993f9610034f42",
       "chunks": [
@@ -743,7 +729,7 @@
     },
     {
       "path": "assets/data/meshes.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/assets/data/meshes.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/assets/data/meshes.js",
       "size": 7792151,
       "sha256": "fb452c74979fe7224b92aa14e19f29c6fcfeaad4de543d74bb881541cdaaa226",
       "chunks": [
@@ -761,7 +747,7 @@
     },
     {
       "path": "src/engine/models-legion.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-legion.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-legion.js",
       "size": 31836,
       "sha256": "0f67a65b282c80c12d781a09cf75849d2df62b83c1668e9f6ef583b7a37f980d",
       "chunks": [
@@ -774,7 +760,7 @@
     },
     {
       "path": "src/engine/models-machine.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-machine.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-machine.js",
       "size": 42892,
       "sha256": "ff6a138015f21c82a157cc5ef5a5d3010c937549cf0938b70637b9d8308a5f82",
       "chunks": [
@@ -787,7 +773,7 @@
     },
     {
       "path": "src/engine/models-infestation.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-infestation.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-infestation.js",
       "size": 46183,
       "sha256": "881091a2a5d4fd5d0dd0f3d1d05a059f72ba3c0af4719f2bb8d49b7d5b75f2fd",
       "chunks": [
@@ -800,7 +786,7 @@
     },
     {
       "path": "src/engine/models-civic.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-civic.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-civic.js",
       "size": 7747,
       "sha256": "c311f992141eb02d66ed7f2a686fcf17c6f4ee73f553491eccc242cf75e2759d",
       "chunks": [
@@ -813,7 +799,7 @@
     },
     {
       "path": "src/engine/models-skyline.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-skyline.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-skyline.js",
       "size": 10264,
       "sha256": "add0acb2f7ae4b8f2ed9293b3a6f7b1ef12bbfb5f3efcf3d21c466ce6e00351b",
       "chunks": [
@@ -826,7 +812,7 @@
     },
     {
       "path": "src/engine/materials-world-v2.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/materials-world-v2.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/materials-world-v2.js",
       "size": 25539,
       "sha256": "86cb230b440987160e275678ab764c70bc73c6de2236bd559edefca418724995",
       "chunks": [
@@ -839,7 +825,7 @@
     },
     {
       "path": "src/engine/models-units-nova.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-units-nova.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-units-nova.js",
       "size": 100636,
       "sha256": "a78dea6369893c63e389ebf6d2543679e217e7319346de65efac64c7602763f6",
       "chunks": [
@@ -852,7 +838,7 @@
     },
     {
       "path": "src/engine/models-units-legion.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-units-legion.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-units-legion.js",
       "size": 76662,
       "sha256": "5e61f5f0d496a9944fc0bc634328cf5317ea2c8943bd706f18e4e536c6582e21",
       "chunks": [
@@ -865,7 +851,7 @@
     },
     {
       "path": "src/engine/models-units-syndicate.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-units-syndicate.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-units-syndicate.js",
       "size": 72182,
       "sha256": "b3501cfb7daccabc6d49f9c8ac56fd477b5b5630977f707f240e17c881efb306",
       "chunks": [
@@ -878,7 +864,7 @@
     },
     {
       "path": "src/engine/models-units-brood.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/models-units-brood.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/models-units-brood.js",
       "size": 108956,
       "sha256": "f2b9c5153997adcad8bdd2e52360d920584afa623d914e2daaac65182cd407c6",
       "chunks": [
@@ -891,7 +877,7 @@
     },
     {
       "path": "src/engine/brood-crowd.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/brood-crowd.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/brood-crowd.js",
       "size": 7449,
       "sha256": "07d1b2e91d4b1a1b8762be7721f36e998e36b6da26a8442ab65dfc591e1c8757",
       "chunks": [
@@ -904,7 +890,7 @@
     },
     {
       "path": "src/engine/modkit.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/modkit.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/modkit.js",
       "size": 9338,
       "sha256": "da7f00d051d53c1ca4851450bca37cc80f6f846167b7d003b1d0296e057106ff",
       "chunks": [
@@ -917,7 +903,7 @@
     },
     {
       "path": "src/engine/physics.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/physics.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/physics.js",
       "size": 51701,
       "sha256": "40d8362261aa33a6bb6e1b41e11e9654ac25b05c192792920185e5640e244615",
       "chunks": [
@@ -930,7 +916,7 @@
     },
     {
       "path": "src/engine/cloudfx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/cloudfx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/cloudfx.js",
       "size": 15507,
       "sha256": "1d224787d53993cbc083966027bf44fe3f72e498b5c422ef056bad629c57ab2d",
       "chunks": [
@@ -943,7 +929,7 @@
     },
     {
       "path": "src/engine/cloudpostfx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/engine/cloudpostfx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/engine/cloudpostfx.js",
       "size": 23656,
       "sha256": "cfa97ca37cac18de9fb338f7dfcde42751beb3f2ed3eb39617ea7e7c03d7ed61",
       "chunks": [
@@ -956,7 +942,7 @@
     },
     {
       "path": "src/game/utilityjobs.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/utilityjobs.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/utilityjobs.js",
       "size": 17852,
       "sha256": "3969f19a6699a14be31c4de8dba65e542c6beed1592ed7c84a3acf1c6c8cabb9",
       "chunks": [
@@ -969,7 +955,7 @@
     },
     {
       "path": "src/game/sim.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/sim.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/sim.js",
       "size": 554149,
       "sha256": "b34a11a166d05a2d5a3e8981048503418b5a43b743bec672ce16e15027c17905",
       "chunks": [
@@ -982,7 +968,7 @@
     },
     {
       "path": "src/game/airwarfare.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/airwarfare.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/airwarfare.js",
       "size": 31282,
       "sha256": "4a663b8359cd5b282b38dfa18c2bfcb1be2ca2d5e3073efc0ffb3e73aaab57ec",
       "chunks": [
@@ -995,7 +981,7 @@
     },
     {
       "path": "src/game/economy.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/economy.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/economy.js",
       "size": 37552,
       "sha256": "8008da86ac086e6f6a55671afe0438b1b22e161d009e72919e9c600cf2497f07",
       "chunks": [
@@ -1008,7 +994,7 @@
     },
     {
       "path": "src/game/commander.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/commander.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/commander.js",
       "size": 95092,
       "sha256": "127e7e80e3c4bee79b243c78d44c04bfc738bd9074716b1dbb7d1f8d3acb17dd",
       "chunks": [
@@ -1021,7 +1007,7 @@
     },
     {
       "path": "src/game/meta.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/meta.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/meta.js",
       "size": 132863,
       "sha256": "7610a8b60ecda6ce061d3e2cc467ae4cdbc32b1ba405e73100649668a1a6de70",
       "chunks": [
@@ -1034,7 +1020,7 @@
     },
     {
       "path": "src/game/ai.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/ai.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/ai.js",
       "size": 69807,
       "sha256": "6768ad1487b3b13c238ede2c60b8339560a5e2a61474d1b07e7c8d458eade8aa",
       "chunks": [
@@ -1047,7 +1033,7 @@
     },
     {
       "path": "src/ui/input.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/input.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/input.js",
       "size": 90641,
       "sha256": "86d855b4034d6cbea72a09d549b97ee37f0334bf3c17c24fc7eccc094083d42e",
       "chunks": [
@@ -1060,7 +1046,7 @@
     },
     {
       "path": "src/ui/facticons.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/facticons.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/facticons.js",
       "size": 18235,
       "sha256": "bf21107ec756382c67e215e47b32317a1cb22061983ca38709e499aa90f78c87",
       "chunks": [
@@ -1073,7 +1059,7 @@
     },
     {
       "path": "src/ui/hud.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/hud.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/hud.js",
       "size": 225163,
       "sha256": "d6c549aec139683153f63f28ccdcbefac23bd4b949456ac85f5ca26893b8159e",
       "chunks": [
@@ -1086,7 +1072,7 @@
     },
     {
       "path": "src/ui/render3d.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/render3d.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/render3d.js",
       "size": 229160,
       "sha256": "b14cc01cfd03e70b5ab2fb0fa58c602ce9c83d414650d2d70d1091b1526a05a3",
       "chunks": [
@@ -1099,7 +1085,7 @@
     },
     {
       "path": "src/ui/orderfx.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/orderfx.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/orderfx.js",
       "size": 8323,
       "sha256": "2ab81ef78dfab2ec5c78665a0dd75d1264a39f77e2a6a68a4cc83adf4dc49897",
       "chunks": [
@@ -1112,7 +1098,7 @@
     },
     {
       "path": "src/airlift.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/airlift.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/airlift.js",
       "size": 58520,
       "sha256": "fdce5239fa44abd52df6119158a80e6c84dbf1271bb7b70d16064a5329c4fe41",
       "chunks": [
@@ -1125,7 +1111,7 @@
     },
     {
       "path": "src/airlift-factions.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/airlift-factions.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/airlift-factions.js",
       "size": 7125,
       "sha256": "75d6301da658055ffd95d284d43df238ca7de3c0ef09d110229fe60522a7fd52",
       "chunks": [
@@ -1138,7 +1124,7 @@
     },
     {
       "path": "src/rumble.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/rumble.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/rumble.js",
       "size": 9787,
       "sha256": "393cb53bb014ede478fa2ad435c6db8ff7172550feb08b371ea136893fb51201",
       "chunks": [
@@ -1151,7 +1137,7 @@
     },
     {
       "path": "src/factions.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/factions.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/factions.js",
       "size": 335227,
       "sha256": "2c9a959c0369fdbe4030125b8eb3ba036748281090554e808488c96377146670",
       "chunks": [
@@ -1164,7 +1150,7 @@
     },
     {
       "path": "src/factext.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/factext.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/factext.js",
       "size": 38778,
       "sha256": "b6612e237120af25296b9a307519a18dd1d7c6d678cd836e392f5936f6881941",
       "chunks": [
@@ -1177,7 +1163,7 @@
     },
     {
       "path": "src/offline.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/offline.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/offline.js",
       "size": 15610,
       "sha256": "ef4bbac7030286853baf7d8c63ddbd358e26c6208420458c275fdd21eada0ffc",
       "chunks": [
@@ -1190,7 +1176,7 @@
     },
     {
       "path": "src/audio.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/audio.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/audio.js",
       "size": 156905,
       "sha256": "bcd554d894aea3b63a069b998da787be263515d2dd9323320e147e1a649c6083",
       "chunks": [
@@ -1203,20 +1189,20 @@
     },
     {
       "path": "src/assetpack.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/assetpack.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/assetpack.js",
       "size": 73240,
-      "sha256": "92608322ab004da816ab0903bb281f0181843e367fc85da470a52526fe53c8ce",
+      "sha256": "175dbaea49f3ad6cf3150397502a5cf23b94bf1b1081159fe758febb84a579eb",
       "chunks": [
         {
           "offset": 0,
           "size": 73240,
-          "sha256": "92608322ab004da816ab0903bb281f0181843e367fc85da470a52526fe53c8ce"
+          "sha256": "175dbaea49f3ad6cf3150397502a5cf23b94bf1b1081159fe758febb84a579eb"
         }
       ]
     },
     {
       "path": "src/content-mount.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/content-mount.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/content-mount.js",
       "size": 14674,
       "sha256": "fdd14a20e3217ff52a9aec9d17cc4ce22a8d2ca3975ad218d5d36b6164a70a74",
       "chunks": [
@@ -1229,7 +1215,7 @@
     },
     {
       "path": "src/hazards.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/hazards.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/hazards.js",
       "size": 23160,
       "sha256": "2f10b409a4972ccf3af3564b5d947c0736a13a7c9bd3b4c80ae43ca143f8c6be",
       "chunks": [
@@ -1242,7 +1228,7 @@
     },
     {
       "path": "src/game/statehash.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/statehash.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/statehash.js",
       "size": 13868,
       "sha256": "ece58d7907570fa0f110efc70a8ce608b8a84f738fb2889b4ccbb2172428db98",
       "chunks": [
@@ -1255,7 +1241,7 @@
     },
     {
       "path": "src/authportal.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/authportal.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/authportal.js",
       "size": 110884,
       "sha256": "0f1352a38d3734c54435f8ce4b122d0dab74d25d5f8c5aa467cacca1775c76d6",
       "chunks": [
@@ -1268,7 +1254,7 @@
     },
     {
       "path": "src/tutorial.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/tutorial.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/tutorial.js",
       "size": 131954,
       "sha256": "6f771832225e098fe37b09b3d2cbe35f109e0db0fdf7b0795f3258c897e103a4",
       "chunks": [
@@ -1281,7 +1267,7 @@
     },
     {
       "path": "src/adboards.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/adboards.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/adboards.js",
       "size": 56686,
       "sha256": "690099160ab728749afee387e70dc09ae897de9dee530df3a0d19238b8681e61",
       "chunks": [
@@ -1294,7 +1280,7 @@
     },
     {
       "path": "src/storeui.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/storeui.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/storeui.js",
       "size": 42326,
       "sha256": "6e79f6291ba4978669ec685d41434de5d414025371fc8ce230d0989e4f876971",
       "chunks": [
@@ -1307,7 +1293,7 @@
     },
     {
       "path": "src/restree3d.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/restree3d.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/restree3d.js",
       "size": 24229,
       "sha256": "55b2dd11b64eb2711e2fb4d5621ba861852973dbb3c80b6c02f2dde3af6cc71d",
       "chunks": [
@@ -1320,7 +1306,7 @@
     },
     {
       "path": "src/develop.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/develop.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/develop.js",
       "size": 34891,
       "sha256": "04420be271e5a05e97a4aacc0d5872e071fe4cd303ef5383f25c8f56bf1af7eb",
       "chunks": [
@@ -1333,7 +1319,7 @@
     },
     {
       "path": "src/factiondoctrine.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/factiondoctrine.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/factiondoctrine.js",
       "size": 17290,
       "sha256": "71b8647c4b504a30eaa9586afa56f35ed9c954e3ad77bfa76f7fb3589c5062f0",
       "chunks": [
@@ -1346,7 +1332,7 @@
     },
     {
       "path": "src/endgame.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/endgame.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/endgame.js",
       "size": 27651,
       "sha256": "f490a3d3885aa4b00b61643df1fc353a98a75a64c42177f364dec1b337add809",
       "chunks": [
@@ -1359,7 +1345,7 @@
     },
     {
       "path": "src/story.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/story.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/story.js",
       "size": 1085597,
       "sha256": "4cd17fba5c0ceaeae832e613ce89dac1075e7a4162f69b8424a46bd6131722e3",
       "chunks": [
@@ -1372,7 +1358,7 @@
     },
     {
       "path": "src/socialui.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/socialui.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/socialui.js",
       "size": 98880,
       "sha256": "53f1d119ffde9fc9d212a30f25628b56c4cc2bfc1182b01c054d8cb43ec3fbf4",
       "chunks": [
@@ -1385,7 +1371,7 @@
     },
     {
       "path": "src/game/matchconsumer.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/game/matchconsumer.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/game/matchconsumer.js",
       "size": 51554,
       "sha256": "4fdb0e7dfccafd07675207776a449cc61cb030dbc52c0425169816a9adaecce6",
       "chunks": [
@@ -1398,7 +1384,7 @@
     },
     {
       "path": "src/daily.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/daily.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/daily.js",
       "size": 16702,
       "sha256": "9a1ae5070bc351d92c2c4991406fc256ff3ea899f49b19e62299d444a93384cc",
       "chunks": [
@@ -1411,7 +1397,7 @@
     },
     {
       "path": "src/account.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/account.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/account.js",
       "size": 43807,
       "sha256": "e788e70cd2191b52bd48712a765d365888824648bec79f32f0fab978a86e4bad",
       "chunks": [
@@ -1424,7 +1410,7 @@
     },
     {
       "path": "src/economy-net.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/economy-net.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/economy-net.js",
       "size": 18398,
       "sha256": "d0a021fd43489795cae9dbabda314c6c298919aee7af3a0a293bbbe009dc175f",
       "chunks": [
@@ -1437,20 +1423,20 @@
     },
     {
       "path": "src/updater.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/updater.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/updater.js",
       "size": 164946,
-      "sha256": "ffd82d37068eabf481a305a03b71ad8d2e3fda01130078ae2041341205b0cf66",
+      "sha256": "adb6e6547d60b99bb49d4a5a25b48110f8171ca7fbb84b6d92548c090db94aa3",
       "chunks": [
         {
           "offset": 0,
           "size": 164946,
-          "sha256": "ffd82d37068eabf481a305a03b71ad8d2e3fda01130078ae2041341205b0cf66"
+          "sha256": "adb6e6547d60b99bb49d4a5a25b48110f8171ca7fbb84b6d92548c090db94aa3"
         }
       ]
     },
     {
       "path": "src/intro.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/intro.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/intro.js",
       "size": 208516,
       "sha256": "e1fc95ea0c4494c9d052f3effd5f84014010c5f83b4c1e6e01961f2e92db0395",
       "chunks": [
@@ -1463,7 +1449,7 @@
     },
     {
       "path": "src/launcher.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/launcher.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/launcher.js",
       "size": 39392,
       "sha256": "25e4ac55c18b55f022f64fb95fb42f656f98ae4b6111cb4ead6b77c2949eff2b",
       "chunks": [
@@ -1476,7 +1462,7 @@
     },
     {
       "path": "src/session.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/session.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/session.js",
       "size": 64491,
       "sha256": "fb0c85f292635fc22a52b6ed4a97cf9d83f54e6b2258834098495f7d1bbe75c6",
       "chunks": [
@@ -1489,7 +1475,7 @@
     },
     {
       "path": "src/faction-id.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/faction-id.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/faction-id.js",
       "size": 6471,
       "sha256": "3699ff8bda97ee7d17858978235d065d191c1002700c0290a251a57a0fc08a76",
       "chunks": [
@@ -1502,7 +1488,7 @@
     },
     {
       "path": "src/glrecover.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/glrecover.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/glrecover.js",
       "size": 15147,
       "sha256": "a80f6cbcf9f92c7b08667b7b567dd1b422c1d523317c4ca5c647635451d1f8e3",
       "chunks": [
@@ -1515,7 +1501,7 @@
     },
     {
       "path": "src/main.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/main.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/main.js",
       "size": 204697,
       "sha256": "cfaa47d8b34fd5902a28b1046c75f390ecb6828ed0cebc4c8f9f9f71b391f724",
       "chunks": [
@@ -1528,7 +1514,7 @@
     },
     {
       "path": "src/intel.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/intel.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/intel.js",
       "size": 18589,
       "sha256": "eeeb33390160d00455a4f64db36b1befe333cb588de415ca465d6a2d49a8a903",
       "chunks": [
@@ -1541,7 +1527,7 @@
     },
     {
       "path": "src/repairbay.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/repairbay.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/repairbay.js",
       "size": 21379,
       "sha256": "93f444e4191927ecdcd2f866c0022aaa3c16555758ec8f31611a9aa65711606f",
       "chunks": [
@@ -1554,7 +1540,7 @@
     },
     {
       "path": "src/galaxyui.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/galaxyui.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/galaxyui.js",
       "size": 134853,
       "sha256": "d05c36f0949a3fda7de2efe29de7e00b6f5c4b0249b3aef799d5b003ea48caa7",
       "chunks": [
@@ -1567,7 +1553,7 @@
     },
     {
       "path": "src/departure.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/departure.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/departure.js",
       "size": 9855,
       "sha256": "94f9ba683362cc2fc52839e324f4021e3bc11d97cef7b38394718db34bec5e57",
       "chunks": [
@@ -1580,7 +1566,7 @@
     },
     {
       "path": "src/warprimer.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/warprimer.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/warprimer.js",
       "size": 15684,
       "sha256": "ebbad3129e4f717e86eb3a282933c1a200c2834af3b46879231e500d3469cd2b",
       "chunks": [
@@ -1593,7 +1579,7 @@
     },
     {
       "path": "src/uistack.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/uistack.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/uistack.js",
       "size": 6982,
       "sha256": "0cd9415e162295d266da6977ab18695e25c8fae696ff7915ebe02c80d9aef157",
       "chunks": [
@@ -1606,7 +1592,7 @@
     },
     {
       "path": "src/ui/hudflow.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/hudflow.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/hudflow.js",
       "size": 65278,
       "sha256": "8196bea643a768c052b4279fc0ec77e3b5d4c062fa5409df4f1ae1c1af07a196",
       "chunks": [
@@ -1619,7 +1605,7 @@
     },
     {
       "path": "src/ui/hotslots.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/hotslots.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/hotslots.js",
       "size": 28232,
       "sha256": "5746ee12a533e0bec852dfd7f8623682af7038fb294ed1e7b4236b774a70ed26",
       "chunks": [
@@ -1632,7 +1618,7 @@
     },
     {
       "path": "src/ui/unit-stack-hotbar.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/unit-stack-hotbar.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/unit-stack-hotbar.js",
       "size": 15971,
       "sha256": "cb59aa735ded2d1a1f4fab2dd118e28e0d46333099931a366ccffb3dde0cc3d9",
       "chunks": [
@@ -1645,7 +1631,7 @@
     },
     {
       "path": "src/galactic-operations.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/galactic-operations.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/galactic-operations.js",
       "size": 85801,
       "sha256": "9524fd06b2b16f66c03292b8c194990b5b3b69c6e25831ad8dcdee0ae0b6553f",
       "chunks": [
@@ -1658,7 +1644,7 @@
     },
     {
       "path": "src/onboarding.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/onboarding.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/onboarding.js",
       "size": 29048,
       "sha256": "de00b076d88174b051e7aab47a8438cd630c979f40dfe6812db4046d60380848",
       "chunks": [
@@ -1671,7 +1657,7 @@
     },
     {
       "path": "src/career-faction-gate.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/career-faction-gate.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/career-faction-gate.js",
       "size": 29962,
       "sha256": "7cc7807029d983ca7cf84e703c018c957509d24d4c73191ca8f0259fedc42b47",
       "chunks": [
@@ -1684,7 +1670,7 @@
     },
     {
       "path": "src/ui/cinematic-hud.js",
-      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.87/src/ui/cinematic-hud.js",
+      "url": "https://massfront-update.jasondixon1994.workers.dev/f/1.33.88/src/ui/cinematic-hud.js",
       "size": 46358,
       "sha256": "468d513332ed40cb7c39dc3bc1d362178dba4be957690f0ae51649a77a1279b2",
       "chunks": [
@@ -1697,7 +1683,7 @@
     }
   ],
   "features": [
-    "A halted match names its cause on screen and in the log, with the tick it failed on, so a freeze can be reported and fixed instead of guessed at."
+    "Whether the minimap shows corner brackets now depends on which HUD layout is running, not on how wide the screen is, so the docked frame stays locked and padded at every viewport."
   ],
-  "payloadRoot": "66ea853a7f9a8136df50bcd37fec0149defe0c25139021a0099c8d0a5ffe9cae"
+  "payloadRoot": "abbbac0a4c3b576f68ebf730dc1eb5a96ef8b051f607d0ca7ce9a2d016d7ee90"
 }
