@@ -43,6 +43,12 @@ function authorityContext(dt){
   const ctx=vm.createContext({running:true,paused:false,gameEnded:false,demoMode:true,matchLive:true,
     acc:0,dt,gameSpeed:1,MF_SIM_DT:1/30,MF_SIM_MAX_STEPS:3,MF_SIM_DEBT_TICKS:8,
     mfSimDebtClamped:0,mfSimNetworkWaitFrames:0,tick:0,carrier:{active:false},
+    /* The authority block reads the halt latch as part of its own entry
+       condition, so the sandbox has to carry it. Reporting is recorded rather
+       than swallowed: a throw inside the step would otherwise leave this
+       harness asserting on a step that never ran. */
+    mfSimFailure:null,failures:[],
+    mfReportSimFailure(error,phase){this.failures.push(phase+': '+(error&&error.message||error));this.mfSimFailure={phase};},
     mfMatchConsumer:()=>null});
   const noop=()=>{};
   for(const name of ['carrierTick','camAuthTick','projTick','bldTick','fortTick','buildZoneTick',
@@ -55,6 +61,7 @@ function authorityContext(dt){
 function terminalRun(dt){
   const ctx=authorityContext(dt);
   for(let i=0;i<6;i++)vm.runInContext(authority,ctx);
+  assert.deepEqual(ctx.failures,[],'the authority step must not report a simulation failure in this harness');
   return {tick:ctx.tick,gameEnded:ctx.gameEnded,acc:ctx.acc};
 }
 assert.deepEqual(terminalRun(1/30),{tick:2,gameEnded:true,acc:0},'fast callbacks must stop at the terminal tick');

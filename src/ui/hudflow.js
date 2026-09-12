@@ -726,7 +726,24 @@ showCoach=function(msg){
      factory the message referred to. Advice now uses the same compact,
      deduplicated event rail as orders and remains available in EVENT FEED. */
   const old=mfFlowEl('coach');if(old)old.style.opacity=0;
-  mfNoticeSubmit(MF_N_INFO,'coach:'+String(msg).replace(/\s+/g,' ').trim(),3000,
+  /* MF_N_ORDER, not MF_N_INFO. mfNoticeLiveAllowed() rejects everything at
+     MF_N_INFO or below outright — "only alerts and direct command
+     acknowledgements use the one-line live rail" — so submitting coaching at
+     exactly MF_N_INFO meant it never reached the battlefield at all. It went
+     straight into the event feed, which the player has to open to read.
+
+     That is not what the paragraph above describes and it is not what the
+     three messages are for. STORAGE FULL, LOW MASS and LOW ENERGY are the
+     game's only explanation of the most punishing state it can put a player
+     in, and two of them still played a notify sound — so the build was
+     pinging the player about a problem while showing them nothing. Measured:
+     a bare HQ fills both banks about three minutes into every match and then
+     discards its whole income silently.
+
+     ORDER is the priority the rail was built to carry, so coaching now takes
+     the same compact, rate-budgeted line as an order. It cannot spam: coachCd
+     already holds these to one every 30-45 seconds. */
+  mfNoticeSubmit(MF_N_ORDER,'coach:'+String(msg).replace(/\s+/g,' ').trim(),3600,
     ()=>mfFlowBaseToast(msg),msg,'command');
 };
 

@@ -21,8 +21,11 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
 
 /* 1. The sim step is guarded at all. */
-const simOpen = source.indexOf("if(running&&!paused&&!gameEnded){");
-assert.ok(simOpen > 0, 'the simulation step must still exist');
+const simOpen = source.search(/if\(running&&!paused&&!gameEnded&&!mfSimFailure\)\{/);
+assert.ok(simOpen > 0,
+  'the simulation step must still exist AND its entry condition must read the halt latch — reporting is '
+  + 'one-shot, so without that term the pause menu\'s RESUME re-enters the throwing step and the reporter '
+  + 'returns early with nothing on screen, putting the player back in the silent freeze');
 const simClose = source.indexOf("mfReportSimFailure(error,'sim')", simOpen);
 assert.ok(simClose > simOpen, 'the simulation step must be wrapped so one bad tick cannot kill the loop silently');
 const guarded = source.slice(simOpen, simClose);
@@ -55,6 +58,16 @@ assert.match(reporter, /console\.error/, 'the failure must reach the console');
 assert.match(reporter, /window\.mfSimFailure\s*=/, 'the failure must be readable by a probe or bug report');
 assert.match(reporter, /toast\(/, 'the player must be told the match stopped, not left staring at a live-looking freeze');
 assert.match(reporter, /tick:/, 'the report must carry the tick so the failure can be located');
+
+/* 5b. A halt is match-scoped. The latch is deliberately sticky inside a match,
+       so resetWorld() has to clear it or one bad match leaves every later match
+       frozen from its first frame with no message - the report already fired. */
+const reset = source.slice(source.indexOf('function resetWorld(){'));
+const resetBody = reset.slice(0, reset.indexOf('\nfunction '));
+assert.match(resetBody, /mfSimFailure\s*=\s*null/,
+  'resetWorld must clear the halt latch, or a single failed match ends the session');
+assert.ok(source.indexOf('let mfSimFailure=null;') < source.indexOf('function resetWorld(){'),
+  'the latch must be declared above resetWorld, which clears it, so the binding is never in the temporal dead zone');
 
 /* 6. And it must not be wrapped so broadly that rendering and input die with
       the simulation - the guard exists to keep the rest of the frame alive. */
