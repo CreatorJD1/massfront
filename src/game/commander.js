@@ -676,7 +676,14 @@ function heroXP(x){
     if(heroLvl===3){ abUnlock[2]=true; toast('⚡ COMBAT SURGE unlocked'); }
     sfx('level');
   }
-  if(pendingLevels>0 && document.getElementById('levelUp').style.display!=='flex') showLevelUp();
+  /* heroXP runs inside the simulation step, on every kill. An unguarded
+     dereference here is not a cosmetic failure: a missing #levelUp throws out
+     of the sim block sixty times a second while rendering and audio continue,
+     which reads to the player as a frozen match with no error. The element is
+     part of the shipped shell today, but OTA installs a new index.html
+     independently of this file, so the lookup has to survive not finding it. */
+  const luEl=document.getElementById('levelUp');
+  if(pendingLevels>0 && (!luEl||luEl.style.display!=='flex')) showLevelUp();
 }
 
 /* The eight level-up cards. Nova is the base roster's own voice so these ARE
@@ -716,10 +723,22 @@ function flashScreen(){
 
 function showLevelUp(){
   if(pendingLevels<=0) return;
-  paused=true;
+  /* PAUSE LAST, NOT FIRST.
+     `paused=true` used to run before any of the DOM work below. Every line
+     between it and `el.style.display='flex'` is a way to leave the match
+     stopped with NOTHING on screen: a missing #levelUp or #luLvl after an OTA
+     shell change, a short UPGRADES pool making `pick` undefined, a throwing
+     faction text hook. The rendering thread is unaffected, so audio and CSS
+     animation carry on and the game looks alive - and the only thing in the
+     build that clears `paused` is a tap on a card that was never created.
+     That is a permanent, silent freeze, which is precisely the shape of the
+     freeze reported from live play. Build the chooser, verify it has choices,
+     show it, and only then stop the clock. */
   const el=document.getElementById('levelUp');
-  document.getElementById('luLvl').textContent='Commander reached level '+(heroLvl-pendingLevels+1+0)+' — choose an upgrade';
+  const head=document.getElementById('luLvl');
   const cards=document.getElementById('luCards');
+  if(!el||!head||!cards) return;
+  head.textContent='Commander reached level '+(heroLvl-pendingLevels+1+0)+' — choose an upgrade';
   cards.innerHTML='';
   /* Draw INDICES, not the card objects: the words on a card are resolved
      through the player's faction kit (src/factext.js) and the index is what
@@ -727,9 +746,10 @@ function showLevelUp(){
      never overridden, so the effect can never drift from the promise. */
   const pool=UPGRADES.map((u,i)=>i);
   const upKit=(typeof factionTextKit==='function')?factionTextKit(0):undefined;
-  for(let k=0;k<2;k++){
+  for(let k=0;k<2&&pool.length;k++){
     const gi=pool.splice(Math.floor(mfSimRandom()*pool.length),1)[0];
     const pick=UPGRADES[gi];
+    if(!pick) continue;
     const upEm=(typeof factionUpgradeEm==='function')?factionUpgradeEm(gi,upKit)||pick.em:pick.em;
     const upNm=(typeof factionUpgradeName==='function')?factionUpgradeName(gi,upKit)||pick.nm:pick.nm;
     const upDs=(typeof factionUpgradeDesc==='function')?factionUpgradeDesc(gi,upKit)||pick.ds:pick.ds;
@@ -745,7 +765,18 @@ function showLevelUp(){
     });
     cards.appendChild(d);
   }
+  /* A chooser with nothing to choose cannot be dismissed. Award the level
+     silently rather than stopping the match behind an empty panel - and
+     release the clock, because the recursive call from a card tap reaches
+     here with the previous chooser's pause still held. */
+  if(!cards.children.length){
+    el.style.display='none';
+    pendingLevels=0;
+    paused=false;
+    return;
+  }
   el.style.display='flex';
+  paused=true;
 }
 
 // ---------- abilities ----------
