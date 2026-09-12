@@ -920,6 +920,25 @@ function newSkirmish(){
 
 /* ---------- deploy the carrier: this is what actually starts the match ---------- */
 function deployCarrier(){
+  /* LANDING HAPPENS ONCE.
+
+     Resuming a session arms the carrier through newSkirmish() and then polls
+     every 250ms to land it automatically, because a player nine minutes into a
+     fight should not be asked to pick a drop site again. Meanwhile the DEPLOY
+     button is still on screen - this function is what hides it - and its
+     handler calls straight in with no check of its own.
+
+     So there are two callers racing, and the only thing between them was the
+     poll's own `if(matchLive) return`. matchLive is not set until partway
+     through the landing, well after the HQ, the commander and the constructor
+     have been spawned, so a tap inside that window ran the whole sequence a
+     second time: two drops, two HQs, two starting armies.
+
+     carrierCanDeploy() cannot catch this - it asks whether the GROUND is
+     landable, not whether you have already landed on it. The guard belongs
+     here rather than on either caller, so every future entry point inherits it.
+     Silent on purpose: a duplicate is not a player error to report. */
+  if(typeof matchLive!=='undefined'&&matchLive) return;
   if(!carrierCanDeploy()){
     toast('⛔ Cannot deploy here — need solid, flat ground clear of active structures');
     sfx('alarm'); return;
