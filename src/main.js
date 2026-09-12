@@ -4,6 +4,11 @@
    MAIN — game setup, loop, win/lose, wiring
    ============================================================ */
 let running=false, paused=false, demoMode=false, gameEnded=false;
+/* Declared with the rest of the match state rather than beside
+   mfReportSimFailure further down: resetWorld() clears it and sits above that
+   point in the file, so keeping the binding here means a future top-level
+   caller cannot hit the temporal dead zone. */
+let mfSimFailure=null;
 let matchLive=false;            // false during the carrier drop / deploy phase
 let difficulty=1;
 let defenseFocus=0;             // 0 combined arms, 1 fortress / tower-defence cadence
@@ -599,11 +604,18 @@ function initSpawnPlanner(){
 
 function resetWorld(){
   clearFirstContactGuide();
+  /* A halted simulation is match-scoped. The halt latch is deliberately sticky
+     inside a match (see frame()), so without clearing it here one bad match
+     would leave every later match frozen from the first frame with no message
+     - the report already fired for the previous one. */
+  mfSimFailure=null;
+  try{window.mfSimFailure=null;}catch(e){}
   /* Commander dialogue is match-scoped. Clear queued subtitles/audio gates at
      the same authoritative world boundary as units and projectiles so a cue
      from the previous operation cannot leak into the next deployment. */
   if(typeof commanderDialogueReset==='function') commanderDialogueReset();
   if(typeof cmdrTxReset==='function') cmdrTxReset();
+  if(typeof mfNoticeMatchReset==='function') mfNoticeMatchReset();
   ualive.fill(0); usel.fill(0); ugen.fill(0); utgtg.fill(-1);
   freeList=[]; unitHigh=0; teamCount[0]=0; teamCount[1]=0;
   if(typeof activeUnitReset==='function')activeUnitReset();
@@ -1506,7 +1518,6 @@ function stopAttract(){
    the match deliberately, once, and names the cause: console, a visible toast,
    and window.mfSimFailure so a probe or a bug report can read it back. A halted
    match that explains itself can be diagnosed; a silent freeze cannot. */
-let mfSimFailure=null;
 function mfReportSimFailure(error,phase){
   if(mfSimFailure) return;
   const detail={
@@ -1591,7 +1602,12 @@ function frame(ts){
        silently disabled every effect gated above 0.32. */
     if(typeof GFX!=='undefined'&&GFX.particles) perfScale*=GFX.particles;
   }
-  if(running&&!paused&&!gameEnded){
+  /* A halt is STICKY. Reporting is one-shot, so without this gate the pause
+     menu's RESUME clears `paused`, the sim re-enters the same throwing code,
+     and mfReportSimFailure returns early with nothing on screen — the player
+     is back in the original silent freeze, having been told once that it was
+     explained. resetWorld() clears the latch, so a new match still starts. */
+  if(running&&!paused&&!gameEnded&&!mfSimFailure){
     if(typeof mfPerfBegin==='function') mfPerfBegin('sim');
     const simDt=MF_SIM_DT;
     try{
