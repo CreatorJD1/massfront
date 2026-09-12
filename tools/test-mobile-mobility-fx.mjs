@@ -25,8 +25,14 @@ for(const marker of ['const movementFx=ftype[i]===10','ty===10','movementFx&&((i
   need(render.includes(marker),`movement dust render path missing ${marker}`);
 need(/const unitKit=uteam\[i\]===0\?ownKit:uteam\[i\]===2\?'horde':/.test(render),
   'Brood fallback is not scoped to the rendered unit');
-need(/uteam\[i\]===1&&AI\.fac&&FACTIONS\[AI\.fac\]\?FACTIONS\[AI\.fac\]\.kit:null/.test(render),
+/* The enemy kit is loop-invariant and was correctly hoisted out of the per-unit
+   loop, so the inline ternary this used to match is gone. Assert the two halves
+   of the property instead: it is resolved from the AI's OWN faction, and team 1
+   is what uses it. */
+need(/const enemyKit=\([^)]*AI\.fac[\s\S]{0,120}FACTIONS\[AI\.fac\]\.kit:null/.test(render),
   'enemy unit kit is not resolved from its own faction');
+need(/uteam\[i\]===1\?enemyKit:/.test(render),
+  'enemy units no longer draw from the resolved enemy kit');
 
 const infantryRoadMarch=speed('Striker')*1.12*1.18;
 const tankRoadMarch=speed('Rhino')*1.12*1.18;

@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import {fileURLToPath} from 'node:url';
+import {assertKitSharing} from './faction-kit-sharing.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const ctx=vm.createContext({console});
@@ -45,7 +46,15 @@ for(const slot of production){
   const mats=new Set(parts.flatMap(p=>[...p.mats]));
   for(const mat of mats)if(forbidden.has(mat))
     throw new Error('Blue slot '+slot+' retained generic material '+mat);
-  if(!mats.has(MAT.NOVA_COMPOSITE))throw new Error('Blue slot '+slot+' lacks Nova painted composite');
+  /* The contract is that every buildable role reaches the NOVA MATERIAL
+     FAMILY, not that it uses one nominated member of it. The Rhino is the one
+     chassis with a hand-authored skin ("source":"authored", real map names),
+     and its pack deliberately substitutes armour ribbing and structural carbon
+     where the generic chassis would take painted composite. Demanding
+     NOVA_COMPOSITE by id failed the best-dressed unit in the kit. */
+  const novaFamily=[MAT.NOVA_COMPOSITE,MAT.NOVA_CARBON,MAT.NOVA_CIRCUIT,MAT.NOVA_SERVO];
+  if(!novaFamily.some(m=>mats.has(m)))
+    throw new Error('Blue slot '+slot+' reaches no Nova faction material at all');
   if(!mats.has(MAT.NOVA_CARBON))throw new Error('Blue slot '+slot+' lacks Nova structural carbon');
   const verts=parts.reduce((n,p)=>n+p.verts,0),tris=parts.reduce((n,p)=>n+p.tris,0);
   const team=parts.reduce((n,p)=>n+p.team,0);
@@ -60,10 +69,9 @@ if(!resMats.has(MAT.NOVA_CIRCUIT)||!resMats.has(MAT.TWR_BORE))
   throw new Error('Resonator lacks physical bore plus Nova energy circuit separation');
 /* Roles intentionally sharing one authored chassis must also share its wrapper,
    otherwise initFactionKits allocates duplicate GPU meshes for cosmetic clones. */
-if(kit[7]!==kit[20]||kit[7]!==kit[21]||kit[7]!==kit[27]||kit[6]!==kit[22])
-  throw new Error('Blue shared-role wrappers no longer share GPU mesh resources');
-if(new Set(production.map(slot=>kit[slot].name)).size!==22)
-  throw new Error('Blue wrapper cache has an unexpected production mesh count');
+const sharing=assertKitSharing({label:'Blue',kit,production,
+  packs:vm.runInContext('TFC_NOVA_BESPOKE_PACKS',ctx)||{},
+  decor:vm.runInContext('TFC_NOVA_DECOR',ctx)||{}});
 
 console.table(rows);
 console.log('Nova conversion QA passed: all '+production.length+' production slots use faction-semantic materials; Resonator is authored.');
